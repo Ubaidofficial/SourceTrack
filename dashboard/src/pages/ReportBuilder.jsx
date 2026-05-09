@@ -109,7 +109,7 @@ const COLORS = [
   'rgba(236, 72, 153, 0.8)'
 ]
 
-async function getFlexibleReport(siteKey, model, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null, granularity = 'day', attributionWindow = null) {
+async function getFlexibleReport(siteKey, model, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null, granularity = 'day', attributionWindow = null, attributeBy = 'conversion_date') {
   const params = new URLSearchParams({ site_key: siteKey, model, date_from: dateFrom, date_to: dateTo, group_by: groupBy, metric })
   if (groupBy2) params.set('group_by2', groupBy2)
   if (granularity && granularity !== 'day') params.set('time_granularity', granularity)
@@ -206,8 +206,8 @@ export default function ReportBuilder() {
 
   const filterKey = JSON.stringify(filters)
   const { data, isLoading } = useQuery({
-    queryKey: ['report', site?.site_key, model, groupBy, metric, dateFrom, dateTo, filterKey, groupBy2, granularity, attributionWindow],
-    queryFn: () => getFlexibleReport(site?.site_key, model, dateFrom, dateTo, groupBy, metric, filters, groupBy2, granularity, attributionWindow),
+    queryKey: ['report', site?.site_key, model, groupBy, metric, dateFrom, dateTo, filterKey, groupBy2, granularity, attributionWindow, attributeBy],
+    queryFn: () => getFlexibleReport(site?.site_key, model, dateFrom, dateTo, groupBy, metric, filters, groupBy2, granularity, attributionWindow, attributeBy),
     enabled: !!site
   })
 
@@ -296,6 +296,10 @@ export default function ReportBuilder() {
     setDateFrom(report.dateFrom)
     setDateTo(report.dateTo)
     setGranularity(report.granularity || 'day')
+    setGroupBy2(report.groupBy2 || null)
+    setShowGroupBy2(!!report.groupBy2)
+    setAttributionWindow(report.attributionWindow || null)
+    setAttributeBy(report.attributeBy || 'conversion_date')
     setFilters(report.filters || {})
     setFilterCount(Object.keys(report.filters || {}).length)
     setEditingId(report.id)
@@ -344,7 +348,7 @@ export default function ReportBuilder() {
 
   const handleExportCSV = () => {
     if (!site) return
-    const params = new URLSearchParams({ site_key: site.site_key, model, date_from: dateFrom, date_to: dateTo, group_by: effectiveGroupBy, metric })
+    const params = new URLSearchParams({ site_key: site.site_key, model, date_from: dateFrom, date_to: dateTo, group_by: groupBy, metric })
     if (filters.source) params.set('filter_source', filters.source)
     if (filters.medium) params.set('filter_medium', filters.medium)
     if (filters.campaign) params.set('filter_campaign', filters.campaign)
@@ -580,7 +584,7 @@ export default function ReportBuilder() {
               <label className="block text-xs font-medium text-gray-500 mb-1">Attribution Window</label>
               <select value={attributionWindow || ''} onChange={(e) => setAttributionWindow(e.target.value || null)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500">
-                <option value="">LTV (all time)</option>
+                <option value="">All time (LTV)</option>
                 <option value="1">1 day</option>
                 <option value="7">7 days</option>
                 <option value="14">14 days</option>

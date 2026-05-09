@@ -115,8 +115,8 @@ function WidgetCard({ widget, siteKey, onEdit, onDuplicate, onRemove, onMoveUp, 
 
   const { data, isLoading } = useQueries({
     queries: [{
-      queryKey: ['widget', widget.id, siteKey, metric, groupBy],
-      queryFn: () => getFlexibleReport(siteKey, widget.model, widget.dateFrom, widget.dateTo, groupBy, metric, widget.filters, widget.groupBy2, widget.granularity, widget.attributionWindow),
+      queryKey: ['widget', widget.id, siteKey, metric, groupBy, widget.attributeBy],
+      queryFn: () => getFlexibleReport(siteKey, widget.model, widget.dateFrom, widget.dateTo, groupBy, metric, widget.filters, widget.groupBy2, widget.granularity, widget.attributionWindow, widget.attributeBy || 'conversion_date'),
       enabled: !!siteKey
     }]
   })[0]

@@ -242,6 +242,9 @@ const GROUP_COLUMNS = {
   }
 }
 
+// Confirmed with PostHog/ClickHouse formatDateTime:
+// day (%Y-%m-%d) ✓, week (%Y-W%V) ✓, month (%Y-%m) ✓, year (%Y) ✓
+// quarter: %Q is NOT a valid ClickHouse formatDateTime specifier — uses concat(toYear,toQuarter) instead
 const GRANULARITY_MAP = {
   day: "'%Y-%m-%d'",
   week: "'%Y-W%V'",
@@ -261,7 +264,9 @@ export async function getFlexibleReport(siteKey, model, dateFrom, dateTo, groupB
   const safeSite = esc(siteKey)
 
   const dimExpr = groupBy === 'date' && granularity !== 'day'
-    ? `formatDateTime(timestamp, ${GRANULARITY_MAP[granularity] || GRANULARITY_MAP.day})`
+    ? granularity === 'quarter'
+      ? "concat(toString(toYear(timestamp)), '-Q', toString(toQuarter(timestamp)))"
+      : `formatDateTime(timestamp, ${GRANULARITY_MAP[granularity] || GRANULARITY_MAP.day})`
     : GROUP_COLUMNS[groupBy]?.[model]
 
   if (!dimExpr) {
@@ -271,7 +276,9 @@ export async function getFlexibleReport(siteKey, model, dateFrom, dateTo, groupB
   let dim2Expr = null
   if (groupBy2) {
     dim2Expr = groupBy2 === 'date'
-      ? `formatDateTime(timestamp, ${GRANULARITY_MAP[granularity] || GRANULARITY_MAP.day})`
+      ? granularity === 'quarter'
+        ? "concat(toString(toYear(timestamp)), '-Q', toString(toQuarter(timestamp)))"
+        : `formatDateTime(timestamp, ${GRANULARITY_MAP[granularity] || GRANULARITY_MAP.day})`
       : GROUP_COLUMNS[groupBy2]?.[model]
     if (!dim2Expr) {
       throw new Error(`Unsupported group_by2: ${groupBy2} for model: ${model}`)
@@ -346,7 +353,10 @@ export async function getFlexibleReport(siteKey, model, dateFrom, dateTo, groupB
       throw new Error(`Unknown metric: ${metric}`)
   }
 
-  // Attribution window: filter touch events within N days of conversion
+  // Attribution window: expands the lower date bound backward by N days.
+  // For fixed windows (1/7/14/30/60/90), this includes conversions from (date_from - N days).
+  // 'ltv' is currently a no-op (no additional time constraint) — it is NOT true lifetime value logic.
+  // TODO: confirm — true LTV would require per-user conversion aggregation across all time.
   let windowClause = ''
   if (attributionWindow && attributionWindow !== 'ltv' && Number(attributionWindow) > 0) {
     windowClause = `\n    AND timestamp >= toDateTime('${fromDate}') - INTERVAL ${Number(attributionWindow)} DAY`
