@@ -80,12 +80,12 @@ const GRANULARITY = [
 ]
 
 const PRESETS = [
-  { name: 'AI Sources Performance', model: 'ai_platforms', groupBy: 'ai_source', groupBy2: null, metric: 'ai_revenue', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { has_ai_source: 'true' } },
-  { name: 'Top Lead Sources', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'leads', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { min_conversions: '1' } },
-  { name: 'Campaign Revenue', model: 'last_touch', groupBy: 'campaign', groupBy2: null, metric: 'revenue', days: 90, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { min_conversions: '5' } },
-  { name: 'Top Landing Pages by Conversions', model: 'first_touch', groupBy: 'landing_page', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: {} },
-  { name: 'Conversion Trend Over Time', model: 'last_touch', groupBy: 'date', groupBy2: null, metric: 'conversions', days: 30, chartType: 'line', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: {} },
-  { name: 'AI Conversion Share', model: 'ai_platforms', groupBy: 'ai_source', groupBy2: null, metric: 'ai_conversion_share', days: 30, chartType: 'pie', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { has_ai_source: 'true' } }
+  { name: 'AI Revenue by Source', model: 'ai_platforms', groupBy: 'ai_source', groupBy2: null, metric: 'ai_revenue', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { has_ai_source: 'true' }, desc: 'See which AI platforms send the most revenue' },
+  { name: 'Best Lead Sources', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'leads', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { min_conversions: '1' }, desc: 'Which channels bring in the most leads' },
+  { name: 'Campaign Revenue', model: 'last_touch', groupBy: 'campaign', groupBy2: null, metric: 'revenue', days: 90, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { min_conversions: '5' }, desc: 'Revenue performance across campaigns' },
+  { name: 'Top Landing Pages', model: 'first_touch', groupBy: 'landing_page', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: {}, desc: 'Which pages convert visitors best' },
+  { name: 'Conversion Trend', model: 'last_touch', groupBy: 'date', groupBy2: null, metric: 'conversions', days: 30, chartType: 'line', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: {}, desc: 'How conversions are trending over time' },
+  { name: 'AI Platform Share', model: 'ai_platforms', groupBy: 'ai_source', groupBy2: null, metric: 'ai_conversion_share', days: 30, chartType: 'pie', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { has_ai_source: 'true' }, desc: 'Share of AI-driven conversions by platform' }
 ]
 
 const STORAGE_KEY = 'sourcetrack_saved_reports'
@@ -431,8 +431,9 @@ export default function ReportBuilder() {
             <div className="grid grid-cols-1 gap-1.5">
               {PRESETS.map((p) => (
                 <button key={p.name} onClick={() => applyPreset(p)}
-                  className="w-full text-left px-3 py-2.5 text-sm text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-100 hover:border-gray-200">
-                  {p.name}
+                  className="w-full text-left px-3 py-2.5 text-sm bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-100 hover:border-gray-200">
+                  <span className="text-gray-700 font-medium">{p.name}</span>
+                  {p.desc && <span className="block text-xs text-gray-400 mt-0.5">{p.desc}</span>}
                 </button>
               ))}
             </div>
@@ -607,9 +608,14 @@ export default function ReportBuilder() {
               <select value={attributeBy} onChange={(e) => setAttributeBy(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
                 <option value="conversion_date">Conversion Date</option>
-                {/* TODO: confirm — add First Seen Date, Original Source Date in future */}
+                <option value="first_seen_date">First Seen Date</option>
+                <option value="original_source_date">Original Source Date</option>
               </select>
-              <p className="text-xs text-gray-400 mt-1">The event date used to place each conversion in the report timeline.</p>
+              <p className="text-xs text-gray-400 mt-1">
+                {attributeBy === 'conversion_date' && 'Group conversions by the date they occurred.'}
+                {attributeBy === 'first_seen_date' && 'Group conversions by the date each visitor was first seen.'}
+                {attributeBy === 'original_source_date' && 'Group conversions by the date of the first UTM-tagged touchpoint. Visitors without UTM source data are excluded.'}
+              </p>
             </div>
           </div>
 

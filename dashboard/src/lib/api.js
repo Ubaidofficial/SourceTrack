@@ -1,10 +1,22 @@
+import { supabase } from './supabase'
+
 const API_BASE = '/api'
+
+async function getAuthHeaders() {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (session?.access_token) {
+    return { Authorization: `Bearer ${session.access_token}` }
+  }
+  return {}
+}
 
 export async function fetchApi(path, options = {}) {
   const url = `${API_BASE}${path}`
+  const { headers: extraHeaders, ...rest } = options
+  const authHeaders = await getAuthHeaders()
   const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-    ...options
+    headers: { 'Content-Type': 'application/json', ...authHeaders, ...extraHeaders },
+    ...rest
   })
 
   if (res.status === 402) {

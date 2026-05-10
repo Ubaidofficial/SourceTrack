@@ -3,17 +3,19 @@
 [cmd]: https://commandcode.ai/
 
 # code-style
-- Output complete files only — never use "rest unchanged" or truncated placeholders. Confidence: 0.85
-- Do not invent provider URLs, model names, headers, env vars, package names, route names, tables, or PostHog properties. Use only values explicitly listed in prompts or SYSTEM.md. Confidence: 0.85
-- Use console.error only inside catch blocks. Never use console.log. Confidence: 0.85
-- All async code must use async/await + try/catch. No .then() chains. Confidence: 0.85
-
+See [code-style/taste.md](code-style/taste.md)
 # safety
 - Never expose raw internal errors (provider, parsing, PostHog) to the client. Always return sanitized error messages. Confidence: 0.85
 - Never weaken or bypass security checks (auth, CSRF, CORS) unless explicitly required and justified in code comments. Confidence: 0.85
 
 # ai
 - All AI output must be deterministic: always set temperature to 0. Confidence: 0.85
+
+# api
+- All API responses must use the shape { success, data, error }. Confidence: 0.80
+
+# code-style
+- Use SourceTrack lime/charcoal/neutral palette for UI — avoid purple/blue SaaS gradients. Confidence: 0.70
 
 # workflow
 - When unsure about any detail, write `TODO: confirm` instead of guessing or inventing values. Confidence: 0.85

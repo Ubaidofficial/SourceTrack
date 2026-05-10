@@ -25,12 +25,22 @@ router.get('/snippet', async (req, res) => {
 
     const { data: site, error } = await supabase
       .from('sites')
-      .select('site_key')
+      .select('site_key, company_id, owner_id')
       .eq('id', siteId)
       .single()
 
     if (error || !site) {
       return res.status(404).json({ success: false, data: null, error: 'Site not found' })
+    }
+
+    // Verify user has access to this site
+    if (req.user.role !== 'super_admin') {
+      if (site.company_id && site.company_id !== req.user.company_id) {
+        return res.status(403).json({ success: false, data: null, error: 'Access denied' })
+      }
+      if (!site.company_id && site.owner_id !== req.user.id) {
+        return res.status(403).json({ success: false, data: null, error: 'Access denied' })
+      }
     }
 
     const apiUrl = process.env.FRONTEND_URL || `http://localhost:${process.env.PORT || 3000}`

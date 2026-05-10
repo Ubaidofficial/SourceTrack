@@ -472,3 +472,97 @@ Update this file after each DeepSeek session with:
 
 **TODOs:**
 - None
+
+### Session 32 — Auth Hardening + Google OAuth
+**Files modified:**
+- api/index.js — added requireUserAuth + requireSiteMembership chain to all customer analytics routes
+- api/middleware/auth.js — validateSiteKey expanded; requireSiteMembership middleware added
+- api/routes/onboarding.js — ownership verification added to all handlers
+- api/routes/install.js — ownership verification added to snippet handler
+- dashboard/src/lib/api.js — fetchApi auto-attaches Supabase JWT
+- dashboard/src/pages/Login.jsx — Google OAuth + unscoped query fix
+- dashboard/src/pages/Signup.jsx — Google OAuth + unscoped query fix
+
+**Completed:**
+- All customer analytics routes now require JWT auth + site membership (dashboard, leads, attribution, journey, export, debugger, cohorts, alerts, hygiene, ai-chat)
+- Previously unprotected routes (onboarding, install, campaigns, integrations) now require JWT + ownership
+- requireSiteMembership middleware: checks company_id match, legacy owner_id fallback, super_admin bypass
+- Google OAuth flow: signInWithOAuth on Login ("Continue with Google") and Signup ("Sign up with Google")
+- fetchApi auto-sends JWT on every API call
+- Login/Signup sites queries scoped to the authenticated user
+- Dashboard build: 1993 modules, passes
+
+**Remaining gaps:**
+- HogQL mismatch: attribution/journey/export pass raw site_key string to HogQL but tracker stores UUID — queries may fail for some sites
+- Frontend pages still use owner_id queries (works via RLS but should migrate to company_id lookups)
+- No company creation/management UI yet
+- Google OAuth post-auth goes to /dashboard — should check onboarding_completed
+
+**Manual setup for Google OAuth:**
+1. Google Cloud Console → APIs & Services → Credentials → Create OAuth 2.0 Client ID (Web application)
+2. Add redirect URI from Supabase Authentication (format: `https://<project>.supabase.co/auth/v1/callback`)
+3. Supabase Dashboard → Authentication → Providers → Google → enable + paste client ID/secret
+4. Supabase Dashboard → Authentication → URL Configuration → add frontend URL to redirect allowlist
+
+### Session 33 — Lead Detail Polish + AI Storytelling + UX Refinements
+**Files modified:**
+- dashboard/src/pages/LeadDetail.jsx — AI insight card, identity card, lime CTA
+- dashboard/src/pages/Dashboard.jsx — AI empty state, revenue share callout, Sparkles
+- dashboard/src/pages/ReportBuilder.jsx — preset names + descriptions
+- dashboard/src/lib/seedReports.js — descriptions on all 15 seeds
+
+**Completed:**
+- Lead Detail: platform-specific AI insights for ChatGPT/Claude/Perplexity, anonymous vs identified identity summary
+- Dashboard AI section: dynamic share % in subtitle, contextual callout box based on share size
+- AI empty state: Sparkles icon + setup CTA instead of bare text
+- Presets renamed: "AI Revenue by Source", "Best Lead Sources", "AI Platform Share", etc.
+- All presets and seeds have inline descriptions for better discoverability
+- Dashboard build: 1993 modules, passes
+
+**Remaining gaps:**
+- AI insights only have copy for ChatGPT/Claude/Perplexity — Grok/Copilot/DeepSeek get generic messaging
+- Frontend still uses owner_id for site queries
+- No company-aware site selection UX yet
+
+### Session 34 — Recent Activity Preview on Lead Detail
+**Files modified:**
+- api/routes/journey.js — added optional `?limit=N` query param (1-500)
+- dashboard/src/pages/LeadDetail.jsx — compact timeline with last 10 events
+
+**Completed:**
+- Journey endpoint supports `?limit=N` for fetching subsets (used for Lead Detail preview)
+- Lead Detail: "Recent Activity" timeline shows last 10 events with event type icons (pageview eye, conversion cart), AI source pills, conversion values, page URL paths, timestamps
+- Full "Open Full Journey" link unchanged
+- Dashboard build: 1993 modules, passes
+
+**Remaining gaps:**
+- Timeline is static (10 events max) — no lazy loading
+- AI insights only cover ChatGPT/Claude/Perplexity
+
+### Session 35 — attributeBy Expansion (First Seen Date + Original Source Date)
+**Files modified:**
+- api/lib/attribution-engine.js — JOIN subquery for first_seen_date and original_source_date
+- api/routes/attribution.js — attribute_by validation
+- dashboard/src/pages/ReportBuilder.jsx — Attribute By dropdown with 3 options
+
+**Completed:**
+- `conversion_date`: unchanged (conversion's own timestamp)
+- `first_seen_date`: groups by visitor's first event timestamp (MIN per distinct_id)
+- `original_source_date`: groups by first UTM-tagged event timestamp; excludes visitors without UTM source
+- All 3 options in Report Builder dropdown with contextual helper text
+- Day/week/month/quarter/year granularity works for all modes
+- Cache key includes attributeBy
+- Dashboard build: 1993 modules, passes
+
+**Caveats:**
+- original_source_date excludes visitors with no UTM source — truthful exclusion
+- JOIN subquery overhead on large tables
+- Non-date dimensions unchanged by attributeBy
+
+### Session 35.1 — Granularity Verification + Daily Bug Fix
+**Files modified:**
+- api/lib/attribution-engine.js — dimExpr condition fixed, GROUP_COLUMNS.date entries cleared
+
+**Bug fixed:** Daily granularity was using hardcoded `timestamp` from GROUP_COLUMNS.date, ignoring attributeBy. Fixed to always use `refTs` for date grouping.
+
+**Verified:** All 15 combos work (3 attributeBy × 5 granularities). Week uses `%Y-W%V` (zero-padded ISO 8601). Quarter uses `concat(toYear,toQuarter)`. All labels sort correctly. groupBy2=date uses same expressions — no separate issues.

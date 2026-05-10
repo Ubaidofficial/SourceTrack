@@ -8,6 +8,7 @@ export async function journey(req, res) {
   try {
     const { visitorId } = req.params
     const siteKey = req.query.site_key || req.body?.site_key
+    const limit = Math.min(Math.max(parseInt(req.query.limit) || 500, 1), 500)
 
     if (!visitorId) {
       return res.status(400).json({ success: false, data: null, error: 'visitorId is required' })
@@ -31,7 +32,7 @@ export async function journey(req, res) {
       WHERE properties.site_id = '${esc(siteKey)}'
         AND distinct_id = '${esc(visitorId)}'
       ORDER BY timestamp ASC
-      LIMIT 500
+      LIMIT ${limit}
     `
 
     const rows = await queryHogQL(sql, 'journey')

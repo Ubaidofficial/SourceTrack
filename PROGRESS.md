@@ -521,21 +521,103 @@
 
 **TODOs:**
 - [ ] user_id must be supplied by the integrating site (e.g., after login) — the tracker does not auto-detect it
-## Session 31 — Dashboard Seeding by Business Type
-**Files created:**
-- dashboard/src/lib/seedReports.js — seed report definitions and idempotent seeding logic
-
+## Session 32 — Auth Hardening + Google OAuth
 **Files modified:**
-- dashboard/src/pages/Onboarding.jsx — calls seedReportsForBusiness after onboarding completion
+- api/index.js — added requireUserAuth + requireSiteMembership to dashboard, leads, attribution, journey, export, events, cohorts, alerts, hygiene, ai-chat routes
+- api/middleware/auth.js — validateSiteKey now selects company_id + owner_id; added requireSiteMembership middleware
+- api/routes/onboarding.js — added ownership verification to status/update/complete handlers
+- api/routes/install.js — added ownership verification to snippet handler
+- dashboard/src/lib/api.js — fetchApi now auto-attaches Supabase JWT token
+- dashboard/src/pages/Login.jsx — added Google OAuth sign-in button; fixed unscoped sites query
+- dashboard/src/pages/Signup.jsx — added Google OAuth sign-up button; fixed unscoped sites query
 
 **Completed:**
-- 5 starter reports per business type: eCommerce (Revenue by Source, Conversion Trend, AI Revenue Share, Top Landing Pages, Campaign Revenue), SaaS (Signups by Source, Conversion Trend, AI-Assisted Signups, Landing Page Performance, Campaign Performance), LeadGen (Leads by Source, Conversion Rate by Source, AI Source Impact, Landing Page Leads, Campaign Leads)
-- All seed reports use only existing metrics (revenue, conversions, leads, conversion_rate, ai_revenue_share, ai_conversion_share, ai_conversions), dimensions (source, date, ai_source, landing_page, campaign), models (last_touch, first_touch, ai_platforms), and filters (has_ai_source, min_conversions)
-- Reports seeded to `sourcetrack_saved_reports` (Report Builder's localStorage key) — visible immediately in Report Builder's "Saved Reports" panel
-- Idempotent: `sourcetrack_seeded_v1` flag prevents duplicate seeding; seed IDs prefixed with `seed_` prefix to avoid collision with user-created reports
-- Seeding triggers on successful `/onboarding/complete` call during step 6 verification
-- No new libraries, no backend changes, no fake metrics
-- Dashboard build: 1991 modules, passes
+- All customer-facing analytics routes now require JWT auth + company membership (dashboard, leads, attribution, journey, export, debugger, cohorts, alerts, hygiene, ai-chat)
+- Previously unprotected routes (onboarding, install/snippet, campaigns, integrations) now require JWT auth + site ownership
+- Public tracker routes (track/identify/conversion) unchanged — remain site-key-only
+- requireSiteMembership middleware enforces company membership on site-scoped routes with legacy owner_id fallback
+- Super admins bypass all membership checks
+- Google OAuth sign-in/sign-up added to Login and Signup pages using supabase.auth.signInWithOAuth
+- fetchApi auto-attaches Supabase JWT to all API calls
+- Login/Signup sites queries now scoped to the authenticated user's owner_id
+- Dashboard build: 1993 modules, passes
+
+**Manual setup required:**
+- Supabase Dashboard → Authentication → Providers → enable Google, configure OAuth client ID/secret
+- Supabase Dashboard → Authentication → URL Configuration → add frontend URL to redirect allowlist
+- Google Cloud Console → create OAuth 2.0 credentials, add redirect URI from Supabase
 
 **TODOs:**
-- [ ] Reports are seeded to Report Builder saved reports — dashboard itself is a fixed server-side layout and does not render widgets
+- [ ] HogQL data mismatch: attribution/journey/export pass raw site_key string to HogQL `WHERE properties.site_id =` but tracker stores UUID — queries may return empty results
+- [ ] Frontend pages still query sites with `.eq('owner_id', user.id)` — need migration to company_id lookups
+- [ ] No company creation/management UI
+- [ ] Google OAuth post-auth routing goes to /dashboard; should check onboarding_completed for proper redirect
+
+## Session 33 — Lead Detail Polish + AI Storytelling + UX Refinements
+**Files modified:**
+- dashboard/src/pages/LeadDetail.jsx — added AI insight callout card, identity summary, lime-accented journey CTA
+- dashboard/src/pages/Dashboard.jsx — improved AI empty state, revenue share callout, dynamic subtitle
+- dashboard/src/pages/ReportBuilder.jsx — renamed presets, added desc fields
+- dashboard/src/lib/seedReports.js — added desc to all 15 seeds
+
+**Completed:**
+- Lead Detail: platform-specific AI insights (ChatGPT/Claude/Perplexity context), anonymous vs identified identity card, lime CTA
+- Dashboard: AI share % in subtitle + contextual callout (>20%=significant, >5%=growing, emerging)
+- AI empty state: Sparkles icon + "Set up tracking" CTA button
+- Presets renamed for actionability: "AI Revenue by Source", "Best Lead Sources", "Conversion Trend", "AI Platform Share"
+- All presets and seeds now have inline descriptions
+- Dashboard build: 1993 modules, passes
+
+**TODOs:**
+- [x] Compact timeline preview on LeadDetail — completed in Session 34
+- [ ] Extend AI insights to Grok/Copilot/DeepSeek (currently ChatGPT/Claude/Perplexity only)
+
+## Session 34 — Recent Activity Preview on Lead Detail
+**Files modified:**
+- api/routes/journey.js — added optional `?limit=N` query param (clamped 1-500, default 500)
+- dashboard/src/pages/LeadDetail.jsx — added compact timeline section (last 10 events), second useQuery for journey data
+
+**Completed:**
+- Journey endpoint now supports `?limit=N` for fetching event subsets
+- Lead Detail shows "Recent Activity" timeline with last 10 events: timestamp, event type badge, AI source pill, conversion value, page URL path
+- Dashboard build: 1993 modules, passes
+
+**TODOs:**
+- [ ] Timeline events are static — no lazy loading (10 events per load is fine for current use)
+
+## Session 35 — attributeBy Expansion (First Seen Date + Original Source Date)
+**Files modified:**
+- api/lib/attribution-engine.js — added JOIN subquery logic for first_seen_date and original_source_date attributeBy modes; refTs variable replaces timestamp in dimExpr/dim2Expr when using alternate attribution; JOIN applied to conversion_rate and AI share subqueries; cache key includes attributeBy
+- api/routes/attribution.js — added ALLOWED_ATTRIBUTE_BY validation set + param validation
+- dashboard/src/pages/ReportBuilder.jsx — updated Attribute By dropdown with all 3 options, contextual helper text per mode
+
+**Completed:**
+- `attributeBy=conversion_date`: preserved current behavior (conversion's own timestamp)
+- `attributeBy=first_seen_date`: conversions grouped by visitor's MIN(timestamp) across all events (per distinct_id)
+- `attributeBy=original_source_date`: conversions grouped by MIN(timestamp) of first UTM-tagged event per visitor; visitors with no UTM source are excluded (truthful exclusion)
+- All 3 options validated in backend route, forwarded to engine, available in Report Builder dropdown
+- Day/week/month/quarter/year granularity supported for all 3 modes (refTs uses same formatDateTime/quarter concat logic)
+- Dashboard build: 1993 modules, passes
+
+**Caveats / limitations:**
+- `original_source_date` excludes visitors without any UTM source data — truthful exclusion, not a bug
+- The JOIN subquery runs per request; performance may degrade on very large event tables
+- Non-date dimensions (source, campaign, etc.) are unaffected by attributeBy — only date-based grouping changes
+
+## Session 35.1 — Granularity Verification + Daily Bug Fix
+**Files modified:**
+- api/lib/attribution-engine.js — fixed dimExpr to always use refTs for date grouping (removed `&& granularity !== 'day'` bypass); cleared GROUP_COLUMNS.date entries to null (dead code after fix)
+
+**Bug found and fixed:**
+- Daily granularity (`day`) was using `GROUP_COLUMNS.date` which hardcoded `timestamp` — ignored `attributeBy` settings. `first_seen_date` and `original_source_date` with daily grouping would silently bucket by the conversion's own timestamp instead of the alternate date.
+- Fixed by changing dimExpr condition from `groupBy === 'date' && granularity !== 'day'` to simply `groupBy === 'date'`, so ALL date granularities use `refTs`.
+
+**Verified combinations (3 attributeBy × 5 granularities = 15):**
+- Day: `formatDateTime(refTs, '%Y-%m-%d')` → e.g. `2025-01-15`
+- Week: `formatDateTime(refTs, '%Y-W%V')` → e.g. `2025-W03` (ISO 8601, zero-padded 01-53)
+- Month: `formatDateTime(refTs, '%Y-%m')` → e.g. `2025-01`
+- Quarter: `concat(toString(toYear(refTs)), '-Q', toString(toQuarter(refTs)))` → e.g. `2025-Q1`
+- Year: `formatDateTime(refTs, '%Y')` → e.g. `2025`
+- All labels sort correctly alphabetically (zero-padded week numbers, single-digit quarters)
+- `groupBy2=date` uses identical dim2Expr with refTs — no separate issues
+- `GRANULARITY_MAP.quarter: "'%Y-Q'"` remains dead code (documented) — quarter always uses concat()

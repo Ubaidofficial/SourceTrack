@@ -19,7 +19,7 @@ import {
 } from 'chart.js'
 import {
   DollarSign, Users, Bot, TrendingUp,
-  ArrowRight, Download, ExternalLink
+  ArrowRight, Download, ExternalLink, Sparkles
 } from 'lucide-react'
 import MetricTile from '../components/MetricTile'
 import DashboardCard from '../components/DashboardCard'
@@ -272,7 +272,9 @@ export default function Dashboard() {
           {/* Row 2: AI Sources Performance + Revenue Source Attribution */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <DashboardCard title="AI Sources Performance"
-              subtitle="Revenue and conversions from AI platforms"
+              subtitle={aiRevResults.length > 0
+                ? `AI platforms drive ${aiShareTotal.toFixed(1)}% of your total revenue`
+                : 'Revenue and conversions from AI platforms'}
               action={
                 <button onClick={() => navigate('/report-builder')} className="text-xs text-gray-900 hover:text-gray-700 font-medium">
                   Analyze
@@ -280,26 +282,48 @@ export default function Dashboard() {
               }
             >
               {aiRevResults.length === 0 ? (
-                <p className="text-sm text-gray-400 py-6 text-center">No AI-source traffic detected yet. AI platforms like ChatGPT and Claude will appear here.</p>
+                <div className="text-center py-8">
+                  <Sparkles className="w-10 h-10 text-lime-300 mx-auto mb-3" />
+                  <p className="text-sm text-gray-600 font-medium mb-1">Track AI-platform traffic to your site</p>
+                  <p className="text-xs text-gray-400 max-w-xs mx-auto">
+                    When visitors arrive from ChatGPT, Claude, Perplexity, or other AI tools, they'll appear here with attribution data.
+                  </p>
+                  <button onClick={() => navigate('/snippet')}
+                    className="mt-4 px-4 py-2 bg-lime-100 text-lime-800 rounded-lg text-xs font-medium hover:bg-lime-200">
+                    Set up tracking
+                  </button>
+                </div>
               ) : (
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="text-left py-2.5 px-3 text-xs font-medium text-gray-500">AI Source</th>
-                      <th className="text-right py-2.5 px-3 text-xs font-medium text-gray-500">Revenue</th>
-                      <th className="text-right py-2.5 px-3 text-xs font-medium text-gray-500">Conversions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {aiRevResults.slice(0, 5).map((r, i) => (
-                      <tr key={i} className="border-b border-gray-50">
-                        <td className="py-2.5 px-3 text-gray-900 font-medium">{r.dim_value || 'unknown'}</td>
-                        <td className="py-2.5 px-3 text-right text-gray-900">${(r.ai_revenue || 0).toFixed(0)}</td>
-                        <td className="py-2.5 px-3 text-right text-gray-600">{(r.ai_conversions || 0).toLocaleString()}</td>
+                <>
+                  {aiShareTotal > 0 && (
+                    <div className="mb-4 p-3 bg-lime-50 rounded-lg border border-lime-200">
+                      <p className="text-xs text-lime-800">
+                        <span className="font-semibold">{aiShareTotal.toFixed(1)}%</span> of your revenue comes from AI platforms.
+                        {aiShareTotal > 20 ? ' This is a significant channel — consider optimizing for AI visibility.' :
+                         aiShareTotal > 5 ? ' Growing steadily — AI is becoming a meaningful acquisition channel.' :
+                         ' Still emerging — track this trend as AI search adoption grows.'}
+                      </p>
+                    </div>
+                  )}
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100">
+                        <th className="text-left py-2.5 px-3 text-xs font-medium text-gray-500">AI Source</th>
+                        <th className="text-right py-2.5 px-3 text-xs font-medium text-gray-500">Revenue</th>
+                        <th className="text-right py-2.5 px-3 text-xs font-medium text-gray-500">Conversions</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {aiRevResults.slice(0, 5).map((r, i) => (
+                        <tr key={i} className="border-b border-gray-50">
+                          <td className="py-2.5 px-3 text-gray-900 font-medium">{r.dim_value || 'unknown'}</td>
+                          <td className="py-2.5 px-3 text-right text-gray-900">${(r.ai_revenue || 0).toFixed(0)}</td>
+                          <td className="py-2.5 px-3 text-right text-gray-600">{(r.ai_conversions || 0).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
               )}
               {aiTrendResults.length > 0 && (
                 <div className="h-32 mt-4">

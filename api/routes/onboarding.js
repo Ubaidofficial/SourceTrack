@@ -69,12 +69,22 @@ router.get('/status', async (req, res) => {
 
     const { data: site, error } = await supabase
       .from('sites')
-      .select('id, site_key, onboarding_completed, onboarding_state')
+      .select('id, site_key, onboarding_completed, onboarding_state, company_id, owner_id')
       .eq('id', siteId)
       .single()
 
     if (error || !site) {
       return res.status(404).json({ success: false, data: null, error: 'Site not found' })
+    }
+
+    // Verify user has access to this site
+    if (req.user.role !== 'super_admin') {
+      if (site.company_id && site.company_id !== req.user.company_id) {
+        return res.status(403).json({ success: false, data: null, error: 'Access denied' })
+      }
+      if (!site.company_id && site.owner_id !== req.user.id) {
+        return res.status(403).json({ success: false, data: null, error: 'Access denied' })
+      }
     }
 
     if (site.onboarding_completed) {
@@ -120,12 +130,22 @@ router.post('/update', async (req, res) => {
 
     const { data: site, error: fetchErr } = await supabase
       .from('sites')
-      .select('id, onboarding_state, onboarding_completed')
+      .select('id, onboarding_state, onboarding_completed, company_id, owner_id')
       .eq('id', site_id)
       .single()
 
     if (fetchErr || !site) {
       return res.status(404).json({ success: false, data: null, error: 'Site not found' })
+    }
+
+    // Verify user has access to this site
+    if (req.user.role !== 'super_admin') {
+      if (site.company_id && site.company_id !== req.user.company_id) {
+        return res.status(403).json({ success: false, data: null, error: 'Access denied' })
+      }
+      if (!site.company_id && site.owner_id !== req.user.id) {
+        return res.status(403).json({ success: false, data: null, error: 'Access denied' })
+      }
     }
 
     if (site.onboarding_completed) {
@@ -209,6 +229,16 @@ router.post('/complete', async (req, res) => {
 
     if (fetchErr || !site) {
       return res.status(404).json({ success: false, data: null, error: 'Site not found' })
+    }
+
+    // Verify user has access to this site
+    if (req.user.role !== 'super_admin') {
+      if (site.company_id && site.company_id !== req.user.company_id) {
+        return res.status(403).json({ success: false, data: null, error: 'Access denied' })
+      }
+      if (!site.company_id && site.owner_id !== req.user.id) {
+        return res.status(403).json({ success: false, data: null, error: 'Access denied' })
+      }
     }
 
     if (site.onboarding_completed) {

@@ -6,7 +6,8 @@ import { fetchApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 import {
   ArrowLeft, Copy, Check, Globe, Clock, MousePointerClick,
-  DollarSign, MapPin, Bot, Route, Layers
+  DollarSign, MapPin, Bot, Route, Layers, Sparkles, UserCircle, Hash, Calendar,
+  Eye, ShoppingCart
 } from 'lucide-react'
 import DashboardCard from '../components/DashboardCard'
 import MetricTile from '../components/MetricTile'
@@ -40,13 +41,18 @@ export default function LeadDetail() {
     load()
   }, [user])
 
-  const { data, isLoading, isError } = useQuery({
+  const { data: lead, isLoading, isError } = useQuery({
     queryKey: ['lead-detail', site?.site_key, leadId],
     queryFn: () => fetchApi(`/leads/${encodeURIComponent(leadId)}?site_key=${site.site_key}`),
     enabled: !!site && !!leadId
   })
 
-  const lead = data?.data
+  const { data: recentEvents, isLoading: eventsLoading } = useQuery({
+    queryKey: ['lead-timeline', site?.site_key, leadId],
+    queryFn: () => fetchApi(`/journey/${encodeURIComponent(leadId)}?site_key=${site.site_key}&limit=10`),
+    enabled: !!site && !!leadId
+  })
+
   const isAI = lead?.ai_source && AI_SOURCES.includes(lead.ai_source)
 
   const handleCopyId = () => {
@@ -223,12 +229,134 @@ export default function LeadDetail() {
         </DashboardCard>
       </div>
 
+      {/* Recent Activity Timeline */}
+      <DashboardCard title="Recent Activity" subtitle={recentEvents?.events?.length > 0 ? `Last ${recentEvents.events.length} event${recentEvents.events.length === 1 ? '' : 's'}` : 'No events recorded'}>
+        {eventsLoading ? (
+          <div className="flex items-center justify-center py-6">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-300" />
+          </div>
+        ) : !recentEvents?.events || recentEvents.events.length === 0 ? (
+          <p className="text-sm text-gray-400 py-4 text-center">No events recorded yet for this visitor.</p>
+        ) : (
+          <div className="space-y-2 max-h-72 overflow-y-auto">
+            {recentEvents.events.map((e, i) => (
+              <div key={i} className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                <div className={`p-1.5 rounded-lg flex-shrink-0 ${
+                  e.event === '$conversion' ? 'bg-lime-100' :
+                  e.event === '$pageview' ? 'bg-gray-100' :
+                  'bg-blue-50'
+                }`}>
+                  {e.event === '$conversion' ? (
+                    <ShoppingCart className="w-4 h-4 text-lime-700" />
+                  ) : e.event === '$pageview' ? (
+                    <Eye className="w-4 h-4 text-gray-500" />
+                  ) : (
+                    <Layers className="w-4 h-4 text-blue-500" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-xs font-medium ${
+                      e.event === '$conversion' ? 'text-lime-700' :
+                      e.event === '$pageview' ? 'text-gray-600' :
+                      'text-blue-600'
+                    }`}>
+                      {e.event === '$conversion' ? 'Conversion' :
+                       e.event === '$pageview' ? 'Pageview' :
+                       e.event === 'install_verified' ? 'Install Verified' :
+                       e.event}
+                    </span>
+                    {e.ai_source && (
+                      <span className="px-1.5 py-0.5 text-xs bg-lime-50 text-lime-700 rounded-full font-medium">
+                        {e.ai_source}
+                      </span>
+                    )}
+                    {e.is_conversion && e.conversion_value != null && (
+                      <span className="text-xs text-gray-700 font-medium">${Number(e.conversion_value).toFixed(0)}</span>
+                    )}
+                    <span className="text-xs text-gray-400 ml-auto flex-shrink-0">
+                      {new Date(e.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  {e.page_url && (
+                    <p className="text-xs text-gray-400 truncate mt-0.5" title={e.page_url}>
+                      {(() => { try { return new URL(e.page_url).pathname } catch { return e.page_url } })()}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </DashboardCard>
+
+      {/* AI Source Insight */}
+      {isAI && (
+        <DashboardCard title="AI Source Insight" subtitle="This visitor came from an AI platform"
+          className="border-lime-200 border-l-2">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-lime-100 rounded-xl flex-shrink-0">
+              <Sparkles className="w-6 h-6 text-lime-700" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-sm text-gray-900">
+                This visitor discovered you through <span className="font-semibold text-lime-800">{lead.ai_source}</span> — an AI-powered search or assistant platform.
+              </p>
+              {lead.ai_source === 'ChatGPT' && (
+                <p className="text-xs text-gray-500">ChatGPT users often research products before buying. These leads typically have high intent.</p>
+              )}
+              {lead.ai_source === 'Claude' && (
+                <p className="text-xs text-gray-500">Claude users tend to be technical buyers researching deeply before converting.</p>
+              )}
+              {lead.ai_source === 'Perplexity' && (
+                <p className="text-xs text-gray-500">Perplexity traffic often comes from comparison shoppers evaluating multiple options.</p>
+              )}
+              {(lead.revenue > 0 && lead.conversions > 0) && (
+                <p className="text-xs text-gray-700 mt-1 font-medium">
+                  Revenue from AI: ${lead.revenue.toFixed(0)} across {lead.conversions} conversion{lead.conversions === 1 ? '' : 's'}.
+                </p>
+              )}
+            </div>
+          </div>
+        </DashboardCard>
+      )}
+
+      {/* Identity Summary */}
+      <DashboardCard title="Identity" subtitle={lead.id && lead.id.includes('-') ? 'Anonymous visitor ID' : 'Known user ID'}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-lg ${lead.id && lead.id.includes('-') ? 'bg-gray-100' : 'bg-green-100'}`}>
+              {lead.id && lead.id.includes('-') ? (
+                <Hash className="w-5 h-5 text-gray-500" />
+              ) : (
+                <UserCircle className="w-5 h-5 text-green-600" />
+              )}
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 uppercase tracking-wider">Status</p>
+              <p className="text-sm font-medium text-gray-900">
+                {lead.id && lead.id.includes('-') ? 'Anonymous' : 'Identified'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-gray-100">
+              <Calendar className="w-5 h-5 text-gray-500" />
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 uppercase tracking-wider">Activity</p>
+              <p className="text-sm font-medium text-gray-900">{lead.active_days || 0} active day{(lead.active_days || 0) === 1 ? '' : 's'}</p>
+            </div>
+          </div>
+        </div>
+      </DashboardCard>
+
       {/* Journey CTA Card */}
-      <DashboardCard title="Visitor Journey" subtitle="See the full event timeline for this visitor">
+      <DashboardCard title="Full Journey" subtitle="See the complete event timeline for this visitor">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-gray-100 rounded-lg">
-              <Layers className="w-6 h-6 text-gray-700" />
+            <div className="p-3 bg-lime-100 rounded-lg">
+              <Route className="w-6 h-6 text-lime-700" />
             </div>
             <div>
               <p className="text-sm text-gray-500">
@@ -237,7 +365,7 @@ export default function LeadDetail() {
             </div>
           </div>
           <button onClick={() => navigate(`/journey?visitorId=${encodeURIComponent(lead.id)}`)}
-            className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 flex items-center gap-2 whitespace-nowrap">
+            className="px-4 py-2 bg-lime-600 text-white rounded-lg text-sm font-medium hover:bg-lime-700 flex items-center gap-2 whitespace-nowrap">
             <Route className="w-4 h-4" />
             Open Full Journey
           </button>

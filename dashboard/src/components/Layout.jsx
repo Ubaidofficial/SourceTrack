@@ -1,7 +1,7 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, FileBarChart, Route, MessageSquare, Code, Bug, Settings,
-  Users, BarChart3, Plug, LogOut, Menu, X, Bot
+  Users, BarChart3, Plug, LogOut, Menu, X, Bot, Shield
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
@@ -29,11 +29,12 @@ const PAGE_TITLES = {
   '/integrations': 'Integrations',
   '/snippet': 'Install Tracking',
   '/debugger': 'Event Debugger',
-  '/settings': 'Settings'
+  '/settings': 'Settings',
+  '/admin': 'Super Admin'
 }
 
 export default function Layout({ children }) {
-  const { signOut, user } = useAuth()
+  const { signOut, user, role } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -91,6 +92,22 @@ export default function Layout({ children }) {
               <span className="truncate">{label}</span>
             </NavLink>
           ))}
+          {role === 'super_admin' && (
+            <NavLink
+              to="/admin"
+              onClick={() => setSidebarOpen(false)}
+              className={({ isActive }) =>
+                `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'bg-lime-100 text-lime-800'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }`
+              }
+            >
+              <Shield className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">Admin</span>
+            </NavLink>
+          )}
         </nav>
 
         <div className="p-3 border-t border-gray-200">

@@ -235,16 +235,21 @@ const GROUP_COLUMNS = {
     ai_platforms: "COALESCE(NULLIF(properties.device_type, ''), 'unknown')"
   },
   date: {
-    first_touch: "formatDateTime(timestamp, '%Y-%m-%d')",
-    last_touch: "formatDateTime(timestamp, '%Y-%m-%d')",
-    linear: "formatDateTime(timestamp, '%Y-%m-%d')",
-    ai_platforms: "formatDateTime(timestamp, '%Y-%m-%d')"
+    // These entries are dead code — date dimExpr is now always generated
+    // via formatDateTime(refTs, ...) to support attributeBy.
+    // Kept for documentation of the expected format per model.
+    first_touch: null,
+    last_touch: null,
+    linear: null,
+    ai_platforms: null
   }
 }
 
 // Confirmed with PostHog/ClickHouse formatDateTime:
 // day (%Y-%m-%d) ✓, week (%Y-W%V) ✓, month (%Y-%m) ✓, year (%Y) ✓
-// quarter: %Q is NOT a valid ClickHouse formatDateTime specifier — uses concat(toYear,toQuarter) instead
+// quarter uses concat(toYear,toQuarter) since %Q is not a valid ClickHouse specifier.
+// The quarter entry below is dead code kept for documentation — the actual quarter path
+// uses the concat() expression in dimExpr/dim2Expr directly.
 const GRANULARITY_MAP = {
   day: "'%Y-%m-%d'",
   week: "'%Y-W%V'",
@@ -253,8 +258,13 @@ const GRANULARITY_MAP = {
   year: "'%Y'"
 }
 
+// attributeBy: determines which timestamp is used for date-based grouping.
+// - 'conversion_date': uses the conversion event's own timestamp (default, current behavior)
+// - 'first_seen_date': uses the visitor's first event timestamp (MIN(timestamp) per distinct_id)
+// - 'original_source_date': uses the first event timestamp where UTM source was present
+// Non-date dimensions (source, campaign, etc.) are unaffected by attributeBy.
 export async function getFlexibleReport(siteKey, model, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null, granularity = 'day', attributionWindow = null, attributeBy = 'conversion_date') {
-  const filterKey = JSON.stringify(filters) + groupBy2 + granularity + attributionWindow
+  const filterKey = JSON.stringify(filters) + groupBy2 + granularity + attributionWindow + attributeBy
   const key = cacheKey(`${model}:${groupBy}:${metric}:${filterKey}`, siteKey, dateFrom, dateTo)
   const cached = cache.get(key)
   if (cached) return cached
@@ -263,10 +273,43 @@ export async function getFlexibleReport(siteKey, model, dateFrom, dateTo, groupB
   const toDate = toHogDate(dateTo)
   const safeSite = esc(siteKey)
 
-  const dimExpr = groupBy === 'date' && granularity !== 'day'
+  // Determine reference timestamp and optional JOIN for non-conversion_date attribution
+  let refTs = 'timestamp'
+  let refJoin = ''
+  const needsAltDate = (groupBy === 'date' || groupBy2 === 'date') &&
+    (attributeBy === 'first_seen_date' || attributeBy === 'original_source_date')
+
+  if (needsAltDate) {
+    if (attributeBy === 'first_seen_date') {
+      refJoin = `
+    INNER JOIN (
+      SELECT distinct_id, MIN(timestamp) AS ref_ts
+      FROM events
+      WHERE properties.site_id = '${safeSite}'
+      GROUP BY distinct_id
+    ) _ref ON events.distinct_id = _ref.distinct_id`
+      refTs = '_ref.ref_ts'
+    } else if (attributeBy === 'original_source_date') {
+      // Original source date: first timestamp where UTM source was present.
+      // Visitors with no UTM source in any event are excluded from results
+      // (truthful exclusion — cannot attribute to an original source that doesn't exist).
+      refJoin = `
+    INNER JOIN (
+      SELECT distinct_id, MIN(timestamp) AS ref_ts
+      FROM events
+      WHERE properties.site_id = '${safeSite}'
+        AND properties.utm_source IS NOT NULL
+        AND properties.utm_source != ''
+      GROUP BY distinct_id
+    ) _ref ON events.distinct_id = _ref.distinct_id`
+      refTs = '_ref.ref_ts'
+    }
+  }
+
+  const dimExpr = groupBy === 'date'
     ? granularity === 'quarter'
-      ? "concat(toString(toYear(timestamp)), '-Q', toString(toQuarter(timestamp)))"
-      : `formatDateTime(timestamp, ${GRANULARITY_MAP[granularity] || GRANULARITY_MAP.day})`
+      ? `concat(toString(toYear(${refTs})), '-Q', toString(toQuarter(${refTs})))`
+      : `formatDateTime(${refTs}, ${GRANULARITY_MAP[granularity] || GRANULARITY_MAP.day})`
     : GROUP_COLUMNS[groupBy]?.[model]
 
   if (!dimExpr) {
@@ -277,8 +320,8 @@ export async function getFlexibleReport(siteKey, model, dateFrom, dateTo, groupB
   if (groupBy2) {
     dim2Expr = groupBy2 === 'date'
       ? granularity === 'quarter'
-        ? "concat(toString(toYear(timestamp)), '-Q', toString(toQuarter(timestamp)))"
-        : `formatDateTime(timestamp, ${GRANULARITY_MAP[granularity] || GRANULARITY_MAP.day})`
+        ? `concat(toString(toYear(${refTs})), '-Q', toString(toQuarter(${refTs})))`
+        : `formatDateTime(${refTs}, ${GRANULARITY_MAP[granularity] || GRANULARITY_MAP.day})`
       : GROUP_COLUMNS[groupBy2]?.[model]
     if (!dim2Expr) {
       throw new Error(`Unsupported group_by2: ${groupBy2} for model: ${model}`)
@@ -403,7 +446,7 @@ export async function getFlexibleReport(siteKey, model, dateFrom, dateTo, groupB
       ${dimExpr} AS dim_value${dim2Expr ? `,\n      ${dim2Expr} AS dim_value2` : ''},
       ${metricCol} AS metric_value
       ${extraSelect}
-    FROM events
+    FROM events${refJoin}
     WHERE properties.site_id = '${safeSite}'
       AND timestamp >= toDateTime('${fromDate}')${windowClause}
       AND timestamp <= toDateTime('${toDate}')
@@ -435,7 +478,7 @@ export async function getFlexibleReport(siteKey, model, dateFrom, dateTo, groupB
         SELECT
           ${dimExpr} AS dim_value${dim2Expr ? `,\n          ${dim2Expr} AS dim_value2` : ''},
           COUNT(DISTINCT distinct_id) AS sessions
-        FROM events
+        FROM events${refJoin}
         WHERE properties.site_id = '${safeSite}'
           AND event = '$pageview'
           AND timestamp >= toDateTime('${fromDate}')
@@ -461,7 +504,7 @@ export async function getFlexibleReport(siteKey, model, dateFrom, dateTo, groupB
       SELECT
         ${dimExpr} AS dim_value${dim2Expr ? `,\n        ${dim2Expr} AS dim_value2` : ''},
         ${metric === 'ai_conversion_share' ? 'COUNT(*)' : `SUM(toFloat64OrZero(toString(properties.conversion_value)))`} AS ai_value
-      FROM events
+      FROM events${refJoin}
       WHERE properties.site_id = '${safeSite}'
         AND event = '$conversion'
         AND properties.ai_source IS NOT NULL

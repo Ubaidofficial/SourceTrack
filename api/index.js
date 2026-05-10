@@ -8,6 +8,7 @@ import WebSocket from 'ws'
 
 import { defaultLimit, trackLimit } from './middleware/rate-limit.js'
 import { validateSiteKey } from './middleware/auth.js'
+import { requireSiteMembership } from './middleware/auth.js'
 import { detectAIPlatform } from './middleware/ai-platform.js'
 import { track } from './routes/track.js'
 import { identify } from './routes/identify.js'
@@ -26,6 +27,8 @@ import { dashboardRouter } from './routes/dashboard.js'
 import { leadsRouter } from './routes/leads-server.js'
 import { campaignsRouter } from './routes/campaigns.js'
 import { integrationsRouter } from './routes/integrations.js'
+import { adminRouter } from './routes/admin.js'
+import { requireUserAuth } from './middleware/user-auth.js'
 import { billingWebhookHandler, billingRouter } from './routes/billing.js'
 
 const app = express()
@@ -124,21 +127,22 @@ app.use('/api/track', trackLimit)
 app.post('/api/track', validateSiteKey, detectAIPlatform, track)
 app.post('/api/identify', validateSiteKey, identify)
 app.post('/api/conversion', validateSiteKey, detectAIPlatform, conversion)
-app.get('/api/attribution', validateSiteKey, defaultLimit, attribution)
-app.get('/api/journey/:visitorId', validateSiteKey, defaultLimit, journey)
-app.use('/api/ai-chat', aiChatRouter)
-app.use('/api/install', installRouter)
-app.use('/api/events', eventsRouter)
-app.use('/api/cohorts', cohortsRouter)
-app.use('/api/alerts', alertsRouter)
-app.use('/api/hygiene', hygieneRouter)
-app.use('/api/export', exportRouter)
-app.use('/api/onboarding', onboardingRouter)
-app.use('/api/dashboard', dashboardRouter)
-app.use('/api/leads', leadsRouter)
-app.use('/api/campaigns', campaignsRouter)
-app.use('/api/integrations', integrationsRouter)
+app.get('/api/attribution', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, attribution)
+app.get('/api/journey/:visitorId', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, journey)
+app.use('/api/ai-chat', requireUserAuth, validateSiteKey, requireSiteMembership, aiChatRouter)
+app.use('/api/install', requireUserAuth, installRouter)
+app.use('/api/events', requireUserAuth, validateSiteKey, requireSiteMembership, eventsRouter)
+app.use('/api/cohorts', requireUserAuth, validateSiteKey, requireSiteMembership, cohortsRouter)
+app.use('/api/alerts', requireUserAuth, validateSiteKey, requireSiteMembership, alertsRouter)
+app.use('/api/hygiene', requireUserAuth, validateSiteKey, requireSiteMembership, hygieneRouter)
+app.use('/api/export', requireUserAuth, validateSiteKey, requireSiteMembership, exportRouter)
+app.use('/api/onboarding', requireUserAuth, onboardingRouter)
+app.use('/api/dashboard', requireUserAuth, validateSiteKey, requireSiteMembership, dashboardRouter)
+app.use('/api/leads', requireUserAuth, validateSiteKey, requireSiteMembership, leadsRouter)
+app.use('/api/campaigns', requireUserAuth, validateSiteKey, requireSiteMembership, campaignsRouter)
+app.use('/api/integrations', requireUserAuth, validateSiteKey, requireSiteMembership, integrationsRouter)
 app.use('/api/billing', billingRouter)
+app.use('/api/admin', requireUserAuth, adminRouter)
 
 // 7. Health check
 app.get('/health', (_req, res) => {
