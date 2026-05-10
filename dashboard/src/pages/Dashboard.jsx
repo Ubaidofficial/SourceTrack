@@ -133,7 +133,7 @@ export default function Dashboard() {
     labels: timeResults.map(r => r.dim_value || ''),
     datasets: [{
       label: 'Revenue', data: timeResults.map(r => r.revenue || 0),
-      borderColor: 'rgba(99, 102, 241, 1)', backgroundColor: 'rgba(99, 102, 241, 0.08)',
+      borderColor: 'rgba(17, 24, 39, 1)', backgroundColor: 'rgba(17, 24, 39, 0.08)',
       fill: true, tension: 0.3, pointRadius: 2
     }]
   }

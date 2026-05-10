@@ -6,8 +6,10 @@
 
   var script = document.currentScript
   var siteKey = ''
+  var userIdSelector = ''
   if (script) {
     siteKey = script.getAttribute('data-site-key') || ''
+    userIdSelector = script.getAttribute('data-user-id-selector') || ''
   }
 
   if (!siteKey) {
@@ -18,7 +20,7 @@
     ? window.__trackiq_config.api_url
     : (script && script.src ? new URL(script.src).origin : window.location.origin)
 
-  window.__trackiq_config = { site_key: siteKey, api_url: apiUrl }
+  window.__trackiq_config = { site_key: siteKey, api_url: apiUrl, user_id_selector: userIdSelector }
 
   var queue = []
   var trackerReady = false

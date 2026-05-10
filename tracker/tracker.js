@@ -210,4 +210,22 @@
       domain: window.location.hostname
     })
   }
+
+  // Optional user_id auto-detection via DOM selector configured in the install snippet.
+  // Reads only data-trackiq-user-id attribute from the matching element — no textContent fallback.
+  // The __trackiq_auto_identified guard prevents duplicate identify calls within a single page
+  // load (the tracker re-initializes on each navigation, so a new page load → fresh guard).
+  // TODO confirm: preferred auto-detection contract — currently DOM-selector + data attribute
+  if (config.user_id_selector && !window.__trackiq_auto_identified) {
+    window.__trackiq_auto_identified = true
+    try {
+      var el = document.querySelector(config.user_id_selector)
+      if (el) {
+        var autoUserId = el.getAttribute('data-trackiq-user-id')
+        if (autoUserId) {
+          window.__trackiq.identify({ user_id: autoUserId })
+        }
+      }
+    } catch (_e) { /* selector invalid — silently skip */ }
+  }
 })()

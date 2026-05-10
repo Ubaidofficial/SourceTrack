@@ -235,10 +235,15 @@ export default function Onboarding() {
         const json = await res.json()
         if (json.data?.status === 'verified') {
           setVerificationState('success')
-          await fetchApi('/onboarding/complete', {
+          const completeRes = await fetchApi('/onboarding/complete', {
             method: 'POST',
             body: JSON.stringify({ site_id: siteId })
           })
+          if (!completeRes || completeRes.success === false) {
+            setVerificationState('failed')
+            setError(completeRes?.error || 'Installation could not be verified. Please try again.')
+            return
+          }
           seedReportsForBusiness(businessType)
           setTimeout(() => {
             navigate('/dashboard', { replace: true, state: { toast: 'Setup complete! Your dashboard is ready.' } })
@@ -478,6 +483,7 @@ export default function Onboarding() {
                   <X className="w-6 h-6 text-red-500" />
                 </div>
                 <p className="text-lg font-semibold text-gray-900">Script not detected yet</p>
+                {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
                 <ul className="text-sm text-[#6F7070] mt-3 space-y-1">
                   <li>Make sure the script is published (GTM users must click Publish)</li>
                   <li>It may take 1-2 minutes for the first event to appear</li>

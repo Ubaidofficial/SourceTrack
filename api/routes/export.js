@@ -30,6 +30,8 @@ router.get('/report', validateSiteKey, async (req, res) => {
     if (req.query.filter_country) filters.country = req.query.filter_country
     if (req.query.filter_device_type) filters.device_type = req.query.filter_device_type
     if (req.query.filter_is_conversion) filters.is_conversion = req.query.filter_is_conversion
+    if (req.query.filter_has_ai_source) filters.has_ai_source = req.query.filter_has_ai_source
+    if (req.query.filter_min_conversions) filters.min_conversions = req.query.filter_min_conversions
 
     const results = await getFlexibleReport(siteKey, model, date_from, date_to, group_by, metric, filters)
 

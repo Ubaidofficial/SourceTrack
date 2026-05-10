@@ -359,6 +359,8 @@ export default function ReportBuilder() {
     if (filters.country) params.set('filter_country', filters.country)
     if (filters.device_type) params.set('filter_device_type', filters.device_type)
     if (filters.is_conversion) params.set('filter_is_conversion', filters.is_conversion)
+    if (filters.has_ai_source) params.set('filter_has_ai_source', filters.has_ai_source)
+    if (filters.min_conversions) params.set('filter_min_conversions', filters.min_conversions)
     window.open(`/api/export/report?${params}`, '_blank')
   }
 
@@ -403,11 +405,13 @@ export default function ReportBuilder() {
         <div className="flex items-center gap-2">
           {canPreview && (
             <>
-              <button onClick={handleAddToDashboard}
+              {/* TODO confirm: "Add to Dashboard" writes widgets to localStorage but the Dashboard
+                  does not yet render them. Re-enable this button once widget rendering is implemented. */}
+              {false && <button onClick={handleAddToDashboard}
                 className="px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1">
                 <LayoutDashboard className="w-4 h-4" />
                 Add to Dashboard
-              </button>
+              </button>}
               <button onClick={handleExportCSV}
                 className="px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1">
                 <Download className="w-4 h-4" />

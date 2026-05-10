@@ -21,11 +21,13 @@ router.get('/overview', validateSiteKey, async (req, res) => {
 
     const [
       revenueResults,
+      sourceConvResults,
       sessionsResults,
       leadsResults,
       prevRevenueResults,
       prevLeadsResults,
       aiRevResults,
+      aiConvResults,
       aiShareResults,
       aiTrendResults,
       landingResults,
@@ -39,11 +41,14 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       alertRows
     ] = await Promise.all([
       getFlexibleReport(siteKey, 'first_touch', dateFrom, dateTo, 'source', 'revenue', {}),
+      // Option 1: query conversions separately alongside revenue so frontend tables show real counts
+      getFlexibleReport(siteKey, 'first_touch', dateFrom, dateTo, 'source', 'conversions', {}),
       getFlexibleReport(siteKey, 'first_touch', dateFrom, dateTo, 'source', 'sessions', {}),
       getFlexibleReport(siteKey, 'first_touch', dateFrom, dateTo, 'source', 'leads', {}),
       getFlexibleReport(siteKey, 'first_touch', prevDateFrom, prevDateTo, 'source', 'revenue', {}),
       getFlexibleReport(siteKey, 'first_touch', prevDateFrom, prevDateTo, 'source', 'leads', {}),
       getFlexibleReport(siteKey, 'ai_platforms', dateFrom, dateTo, 'ai_source', 'ai_revenue', { has_ai_source: 'true' }),
+      getFlexibleReport(siteKey, 'ai_platforms', dateFrom, dateTo, 'ai_source', 'ai_conversions', { has_ai_source: 'true' }),
       getFlexibleReport(siteKey, 'ai_platforms', dateFrom, dateTo, 'ai_source', 'ai_revenue_share', { has_ai_source: 'true' }),
       getFlexibleReport(siteKey, 'ai_platforms', dateFrom, dateTo, 'date', 'ai_revenue', { has_ai_source: 'true' }),
       getFlexibleReport(siteKey, 'first_touch', dateFrom, dateTo, 'landing_page', 'revenue', {}),
@@ -72,6 +77,23 @@ router.get('/overview', validateSiteKey, async (req, res) => {
           AND event = '$pageview'
       `, 'dash_alerts')
     ])
+
+    // Merge conversion counts into revenue rows so frontend tables show real values.
+    // Option 1: query conversions separately and join by dim_value.
+    const convByDim = {}
+    for (const r of sourceConvResults) {
+      convByDim[r.dim_value] = r.conversions
+    }
+    for (const r of revenueResults) {
+      r.conversions = convByDim[r.dim_value] || 0
+    }
+    const aiConvByDim = {}
+    for (const r of aiConvResults) {
+      aiConvByDim[r.dim_value] = r.ai_conversions
+    }
+    for (const r of aiRevResults) {
+      r.ai_conversions = aiConvByDim[r.dim_value] || 0
+    }
 
     const totalRevenue = revenueResults.reduce((sum, r) => sum + (r.revenue || 0), 0)
     const totalConversions = revenueResults.reduce((sum, r) => sum + (r.conversions || 0), 0)
