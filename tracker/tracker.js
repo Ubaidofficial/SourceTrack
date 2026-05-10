@@ -144,12 +144,21 @@
     setCookie(idCookieName + '_seen', '1')
   }
 
-  function sendIdentify(traits) {
-    var blob = new Blob([JSON.stringify({
+  function sendIdentify(traits, userId) {
+    var payload = {
       site_key: SITE_KEY,
       anonymous_id: anonymousId,
       traits: traits || {}
-    })], { type: 'application/json' })
+    }
+    if (userId) {
+      payload.user_id = userId
+    }
+    if (ftData) {
+      if (ftData.source) payload.first_touch_source = ftData.source
+      if (ftData.medium) payload.first_touch_medium = ftData.medium
+      if (ftData.campaign) payload.first_touch_campaign = ftData.campaign
+    }
+    var blob = new Blob([JSON.stringify(payload)], { type: 'application/json' })
 
     try {
       if (navigator.sendBeacon) {
@@ -168,7 +177,19 @@
 
   window.__trackiq = {
     id: function () { return anonymousId },
-    identify: function (traits) { sendIdentify(traits) },
+    identify: function (traits) {
+      var userId = null
+      var cleaned = traits || {}
+      if (cleaned.user_id) {
+        userId = cleaned.user_id
+        var copy = {}
+        for (var k in cleaned) {
+          if (k !== 'user_id') copy[k] = cleaned[k]
+        }
+        cleaned = copy
+      }
+      sendIdentify(cleaned, userId)
+    },
     event: function (name, props) { sendEvent(name, props) },
     conversion: function (value, props) {
       var p = props || {}

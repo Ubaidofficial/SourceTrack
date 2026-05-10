@@ -120,7 +120,7 @@ export default function EventDebugger() {
       {/* Health */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
         <div className="flex items-center gap-2 mb-3">
-          <Bug className="w-4 h-4 text-indigo-600" />
+          <Bug className="w-4 h-4 text-gray-700" />
           <h3 className="text-sm font-semibold text-gray-700">Health</h3>
         </div>
 

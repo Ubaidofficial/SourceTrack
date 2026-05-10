@@ -96,7 +96,7 @@ export default function Snippet() {
     <div className="space-y-6 max-w-2xl">
       <div>
         <h2 className="text-2xl font-bold text-gray-900">Install</h2>
-        <p className="text-sm text-gray-500 mt-1">Add TrackIQ to your website in 30 seconds</p>
+        <p className="text-sm text-gray-500 mt-1">Add SourceTrack to your website in 30 seconds</p>
       </div>
 
       {/* Status */}
@@ -131,7 +131,7 @@ export default function Snippet() {
             <div className="col-span-2">
               <Link
                 to="/debugger"
-                className="inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 font-medium"
+                className="inline-flex items-center gap-1 text-xs text-gray-700 hover:text-gray-800 font-medium"
               >
                 <Bug className="w-3.5 h-3.5" />
                 See recent events in Debugger
@@ -144,7 +144,7 @@ export default function Snippet() {
       {/* Snippet */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
         <div className="flex items-center gap-2">
-          <Code className="w-5 h-5 text-indigo-600" />
+          <Code className="w-5 h-5 text-gray-700" />
           <h3 className="font-semibold text-gray-900">Install Snippet</h3>
         </div>
 
@@ -181,7 +181,7 @@ export default function Snippet() {
         <button
           onClick={handleTest}
           disabled={testLoading || !site}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+          className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 flex items-center gap-2"
         >
           {testLoading ? (
             <>

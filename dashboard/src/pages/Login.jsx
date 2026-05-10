@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { supabase } from '../lib/supabase'
 
 export default function Login() {
   const { signIn } = useAuth()
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -15,6 +17,14 @@ export default function Login() {
     setLoading(true)
     try {
       await signIn(email, password)
+
+      const { data: sites } = await supabase
+        .from('sites')
+        .select('onboarding_completed')
+        .limit(1)
+
+      const hasCompleted = sites?.some((s) => s.onboarding_completed)
+      navigate(hasCompleted ? '/dashboard' : '/onboarding', { replace: true })
     } catch (err) {
       setError(err.message)
     } finally {
@@ -42,7 +52,7 @@ export default function Login() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
             />
           </div>
 
@@ -53,20 +63,20 @@ export default function Login() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+            className="w-full py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
           >
             {loading ? 'Signing in...' : 'Sign in'}
           </button>
 
           <p className="text-center text-sm text-gray-500">
-            Don't have an account? <Link to="/signup" className="text-indigo-600 hover:underline">Sign up</Link>
+            Don't have an account? <Link to="/signup" className="text-gray-900 hover:underline">Sign up</Link>
           </p>
         </form>
       </div>

@@ -105,7 +105,7 @@ export default function Settings() {
 
   const apiUrl = import.meta.env.VITE_API_URL || window.location.origin
   const snippet = site
-    ? `<script>\nwindow.__trackiq_config = {\n  site_key: "${site.site_key}",\n  api_url: "${apiUrl}"\n}\n</script>\n<script src="${apiUrl}/tracker.min.js" async></script>`
+    ? `<script async src="${apiUrl}/tracker/loader.min.js" data-site-key="${site.site_key}"></script>`
     : ''
 
   const handleCopy = async () => {
@@ -120,7 +120,7 @@ export default function Settings() {
   }
 
   const planLabel = site?.plan === 'pro' ? 'Pro' : site?.plan === 'inactive' ? 'Inactive' : 'Trial'
-  const planColor = site?.plan === 'pro' ? 'text-indigo-600' : site?.plan === 'inactive' ? 'text-red-600' : 'text-amber-600'
+  const planColor = site?.plan === 'pro' ? 'text-gray-900' : site?.plan === 'inactive' ? 'text-red-600' : 'text-amber-600'
 
   return (
     <div className="space-y-6 max-w-lg">
@@ -158,7 +158,7 @@ export default function Settings() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
               placeholder="My Website"
             />
           </div>
@@ -168,7 +168,7 @@ export default function Settings() {
               type="text"
               value={domain}
               onChange={(e) => setDomain(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
               placeholder="example.com"
             />
           </div>
@@ -177,7 +177,7 @@ export default function Settings() {
             <button
               type="submit"
               disabled={saving}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+              className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
             >
               {saving ? 'Saving...' : 'Save'}
             </button>
@@ -207,7 +207,7 @@ export default function Settings() {
             <button
               onClick={handleSubscribe}
               disabled={loadingCheckout}
-              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+              className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 disabled:opacity-50"
             >
               {loadingCheckout ? 'Loading...' : site?.plan === 'trial' ? 'Upgrade to Pro' : 'Reactivate'}
             </button>
@@ -246,7 +246,7 @@ export default function Settings() {
       {site && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-3">
           <div className="flex items-center gap-2">
-            <Code className="w-5 h-5 text-indigo-600" />
+            <Code className="w-5 h-5 text-gray-700" />
             <h3 className="text-sm font-semibold text-gray-700">Tracking Snippet</h3>
           </div>
 

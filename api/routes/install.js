@@ -1,12 +1,51 @@
 import { Router } from 'express'
+import { createClient } from '@supabase/supabase-js'
+import WebSocket from 'ws'
 import { validateSiteKey } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
 
 const router = Router()
 
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY,
+  { realtime: { transport: WebSocket } }
+)
+
 function esc(str) {
   return str.replace(/'/g, "''")
 }
+
+router.get('/snippet', async (req, res) => {
+  try {
+    const siteId = req.query.site_id
+    if (!siteId) {
+      return res.status(400).json({ success: false, data: null, error: 'site_id is required' })
+    }
+
+    const { data: site, error } = await supabase
+      .from('sites')
+      .select('site_key')
+      .eq('id', siteId)
+      .single()
+
+    if (error || !site) {
+      return res.status(404).json({ success: false, data: null, error: 'Site not found' })
+    }
+
+    const apiUrl = process.env.FRONTEND_URL || `http://localhost:${process.env.PORT || 3000}`
+    const snippet = `<script async src="${apiUrl}/tracker/loader.min.js" data-site-key="${site.site_key}"></script>`
+
+    return res.status(200).json({
+      success: true,
+      data: { snippet, site_key: site.site_key },
+      error: null
+    })
+  } catch (_err) {
+    console.error(_err)
+    return res.status(500).json({ success: false, data: null, error: 'Snippet generation failed' })
+  }
+})
 
 router.get('/status', validateSiteKey, async (req, res) => {
   try {

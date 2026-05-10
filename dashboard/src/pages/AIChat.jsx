@@ -106,15 +106,15 @@ export default function AIChat() {
         {messages.map((msg, i) => (
           <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : ''}`}>
             {msg.role === 'assistant' && (
-              <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${msg.isError ? 'bg-red-100' : 'bg-indigo-100'}`}>
-                <Bot className={`w-4 h-4 ${msg.isError ? 'text-red-600' : 'text-indigo-600'}`} />
+              <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${msg.isError ? 'bg-red-100' : 'bg-gray-100'}`}>
+                <Bot className={`w-4 h-4 ${msg.isError ? 'text-red-600' : 'text-gray-700'}`} />
               </div>
             )}
 
             <div className={`max-w-[80%] ${msg.role === 'user' ? 'order-1' : ''}`}>
               <div className={`rounded-lg px-4 py-2 text-sm ${
                 msg.role === 'user'
-                  ? 'bg-indigo-600 text-white'
+                  ? 'bg-gray-900 text-white'
                   : msg.isError
                     ? 'bg-red-50 text-red-700 border border-red-200'
                     : 'bg-white border border-gray-200 text-gray-900'
@@ -160,8 +160,8 @@ export default function AIChat() {
 
         {loading && (
           <div className="flex gap-3">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
-              <Bot className="w-4 h-4 text-indigo-600" />
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+              <Bot className="w-4 h-4 text-gray-700" />
             </div>
             <div className="bg-white border border-gray-200 rounded-lg px-4 py-3">
               <div className="flex gap-1.5">
@@ -185,12 +185,12 @@ export default function AIChat() {
           placeholder="Ask a question about your data..."
           disabled={loading}
           maxLength={500}
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 disabled:opacity-50"
         />
         <button
           onClick={handleSend}
           disabled={loading || !input.trim()}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+          className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 flex items-center gap-2"
         >
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
         </button>

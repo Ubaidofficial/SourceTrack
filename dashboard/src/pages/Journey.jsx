@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { getJourney } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -7,6 +8,7 @@ import { Search, Globe, Bot, MousePointerClick, Clock, MapPin } from 'lucide-rea
 
 export default function Journey() {
   const { user } = useAuth()
+  const [searchParams] = useSearchParams()
   const [site, setSite] = useState(null)
   const [visitorId, setVisitorId] = useState('')
   const [searchId, setSearchId] = useState('')
@@ -23,6 +25,14 @@ export default function Journey() {
     }
     load()
   }, [user])
+
+  useEffect(() => {
+    const vid = searchParams.get('visitorId')
+    if (vid) {
+      setVisitorId(vid)
+      setSearchId(vid)
+    }
+  }, [searchParams])
 
   const { data, isLoading } = useQuery({
     queryKey: ['journey', site?.site_key, searchId],
@@ -56,13 +66,13 @@ export default function Journey() {
               value={visitorId}
               onChange={(e) => setVisitorId(e.target.value)}
               placeholder="Enter visitor ID..."
-              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
             />
           </div>
           <button
             type="submit"
             disabled={!visitorId.trim()}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
+            className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
           >
             Search
           </button>
@@ -72,7 +82,7 @@ export default function Journey() {
       {/* Loading */}
       {isLoading && (
         <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
         </div>
       )}
 
@@ -87,15 +97,15 @@ export default function Journey() {
           {events.length === 0 ? (
             <p className="text-sm text-gray-400">No events found for this visitor.</p>
           ) : (
-            <div className="relative pl-6 border-l-2 border-indigo-200 space-y-5">
+            <div className="relative pl-6 border-l-2 border-gray-200 space-y-5">
               {events.map((e, i) => {
                 const Icon = eventIcons[e.event] || Clock
                 return (
                   <div key={i} className="relative -left-[31px] flex gap-3">
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
-                      e.is_conversion ? 'bg-green-100' : 'bg-indigo-100'
+                      e.is_conversion ? 'bg-green-100' : 'bg-gray-100'
                     }`}>
-                      <Icon className={`w-3.5 h-3.5 ${e.is_conversion ? 'text-green-600' : 'text-indigo-600'}`} />
+                      <Icon className={`w-3.5 h-3.5 ${e.is_conversion ? 'text-green-600' : 'text-gray-700'}`} />
                     </div>
                     <div className="pb-4">
                       <div className="flex items-center gap-2">

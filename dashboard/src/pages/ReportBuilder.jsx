@@ -50,10 +50,10 @@ const METRICS = [
   { key: 'leads', label: 'Leads', format: (v) => v.toLocaleString(), group: 'Core', desc: 'Identified users' },
   { key: 'conversion_rate', label: 'Conversion Rate', format: (v) => `${v.toFixed(1)}%`, group: 'Conversion', desc: 'Conversions / sessions' },
   { key: 'avg_conversion_value', label: 'Avg Conversion Value', format: (v) => `$${v.toFixed(2)}`, group: 'Conversion', desc: 'Average revenue per conversion' },
-  { key: 'ai_conversions', label: 'AI Conversions', format: (v) => v.toLocaleString(), group: 'AI', desc: 'Conversions with AI source' },
-  { key: 'ai_revenue', label: 'AI Revenue', format: (v) => `$${v.toFixed(2)}`, group: 'AI', desc: 'Revenue from AI traffic' },
-  { key: 'ai_conversion_share', label: 'AI Conversion Share', format: (v) => `${v.toFixed(1)}%`, group: 'AI', desc: '% of conversions from AI' },
-  { key: 'ai_revenue_share', label: 'AI Revenue Share', format: (v) => `${v.toFixed(1)}%`, group: 'AI', desc: '% of revenue from AI' }
+  { key: 'ai_conversions', label: 'AI Conversions', format: (v) => v.toLocaleString(), group: 'AI', desc: 'Conversions from AI tools (ChatGPT, Claude, etc.)' },
+  { key: 'ai_revenue', label: 'AI Revenue', format: (v) => `$${v.toFixed(2)}`, group: 'AI', desc: 'Revenue from AI-referred visitors' },
+  { key: 'ai_conversion_share', label: 'AI Conversion Share', format: (v) => `${v.toFixed(1)}%`, group: 'AI', desc: '% of all conversions that came from AI' },
+  { key: 'ai_revenue_share', label: 'AI Revenue Share', format: (v) => `${v.toFixed(1)}%`, group: 'AI', desc: '% of all revenue that came from AI' }
 ]
 
 const CHART_TYPES = [
@@ -80,12 +80,12 @@ const GRANULARITY = [
 ]
 
 const PRESETS = [
-  { name: 'AI Sources Performance', model: 'ai_platforms', groupBy: 'ai_source', metric: 'ai_revenue', days: 30, chartType: 'bar', filters: { has_ai_source: 'true' } },
-  { name: 'Top Lead Sources', model: 'last_touch', groupBy: 'source', metric: 'leads', days: 30, chartType: 'bar', filters: { min_conversions: '1' } },
-  { name: 'Campaign Revenue', model: 'last_touch', groupBy: 'campaign', metric: 'revenue', days: 90, chartType: 'bar', filters: { min_conversions: '5' } },
-  { name: 'Top Landing Pages by Conversions', model: 'first_touch', groupBy: 'landing_page', metric: 'conversions', days: 30, chartType: 'bar', filters: {} },
-  { name: 'Conversion Trend Over Time', model: 'last_touch', groupBy: 'date', metric: 'conversions', days: 30, chartType: 'line', filters: {} },
-  { name: 'AI Conversion Share', model: 'ai_platforms', groupBy: 'ai_source', metric: 'ai_conversion_share', days: 30, chartType: 'pie', filters: { has_ai_source: 'true' } }
+  { name: 'AI Sources Performance', model: 'ai_platforms', groupBy: 'ai_source', groupBy2: null, metric: 'ai_revenue', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { has_ai_source: 'true' } },
+  { name: 'Top Lead Sources', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'leads', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { min_conversions: '1' } },
+  { name: 'Campaign Revenue', model: 'last_touch', groupBy: 'campaign', groupBy2: null, metric: 'revenue', days: 90, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { min_conversions: '5' } },
+  { name: 'Top Landing Pages by Conversions', model: 'first_touch', groupBy: 'landing_page', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: {} },
+  { name: 'Conversion Trend Over Time', model: 'last_touch', groupBy: 'date', groupBy2: null, metric: 'conversions', days: 30, chartType: 'line', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: {} },
+  { name: 'AI Conversion Share', model: 'ai_platforms', groupBy: 'ai_source', groupBy2: null, metric: 'ai_conversion_share', days: 30, chartType: 'pie', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { has_ai_source: 'true' } }
 ]
 
 const STORAGE_KEY = 'sourcetrack_saved_reports'
@@ -99,14 +99,14 @@ function saveToStore(key, data) {
 }
 
 const COLORS = [
-  'rgba(99, 102, 241, 0.8)',
-  'rgba(34, 197, 94, 0.8)',
-  'rgba(249, 115, 22, 0.8)',
-  'rgba(239, 68, 68, 0.8)',
-  'rgba(168, 85, 247, 0.8)',
-  'rgba(14, 165, 233, 0.8)',
-  'rgba(245, 158, 11, 0.8)',
-  'rgba(236, 72, 153, 0.8)'
+  'rgba(17, 24, 39, 0.85)',
+  'rgba(215, 245, 80, 0.85)',
+  'rgba(107, 114, 128, 0.85)',
+  'rgba(55, 65, 81, 0.85)',
+  'rgba(209, 213, 219, 0.85)',
+  'rgba(31, 41, 55, 0.85)',
+  'rgba(180, 195, 60, 0.85)',
+  'rgba(156, 163, 175, 0.85)'
 ]
 
 async function getFlexibleReport(siteKey, model, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null, granularity = 'day', attributionWindow = null, attributeBy = 'conversion_date') {
@@ -224,14 +224,17 @@ export default function ReportBuilder() {
     setReportName(preset.name)
     setModel(preset.model)
     setGroupBy(preset.groupBy)
+    setGroupBy2(preset.groupBy2 || null)
+    setShowGroupBy2(!!preset.groupBy2)
     setMetric(preset.metric)
     setChartType(preset.chartType || 'bar')
+    setGranularity(preset.granularity || 'day')
+    setAttributionWindow(preset.attributionWindow || null)
+    setAttributeBy(preset.attributeBy || 'conversion_date')
     if (preset.groupBy === 'date') {
       setChartType('line')
-      setDatePreset(preset.days || 30)
-    } else {
-      setDatePreset(preset.days || 30)
     }
+    setDatePreset(preset.days || 30)
     const range = getDefaultDateRange(preset.days || 30)
     setDateFrom(range.from)
     setDateTo(range.to)
@@ -369,7 +372,7 @@ export default function ReportBuilder() {
       label: metricLabel,
       data: results.slice(0, 15).map(r => getMetricValue(r)),
       backgroundColor: results.slice(0, 15).map((_, i) => COLORS[i % COLORS.length]),
-      borderColor: chartType === 'line' ? 'rgba(99, 102, 241, 1)' : undefined,
+      borderColor: chartType === 'line' ? 'rgba(17, 24, 39, 1)' : undefined,
       borderRadius: chartType === 'bar' ? 4 : 0,
       tension: 0.3
     }]
@@ -421,10 +424,10 @@ export default function ReportBuilder() {
           {/* Presets */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Quick Start</h3>
-            <div className="grid grid-cols-1 gap-1">
+            <div className="grid grid-cols-1 gap-1.5">
               {PRESETS.map((p) => (
                 <button key={p.name} onClick={() => applyPreset(p)}
-                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 rounded-lg transition-colors">
+                  className="w-full text-left px-3 py-2.5 text-sm text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-100 hover:border-gray-200">
                   {p.name}
                 </button>
               ))}
@@ -434,25 +437,25 @@ export default function ReportBuilder() {
           {/* Step 1: Name */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-2 mb-3">
-              <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-xs flex items-center justify-center font-bold">1</span>
+              <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">1</span>
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Report Name</h3>
             </div>
             <input type="text" value={reportName} onChange={(e) => setReportName(e.target.value)}
               placeholder="e.g. Weekly Revenue by Source" maxLength={60}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
           </div>
 
           {/* Step 2: Date Range */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-2 mb-3">
-              <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-xs flex items-center justify-center font-bold">2</span>
+              <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">2</span>
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Date Range</h3>
             </div>
             <div className="flex flex-wrap gap-1.5 mb-2">
               {DATE_PRESETS.map((p) => (
                 <button key={p.label} onClick={() => handleDatePreset(p)}
                   className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
-                    datePreset === p.days ? 'bg-indigo-100 text-indigo-700 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    datePreset === p.days ? 'bg-lime-100 text-lime-800 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}>
                   {p.label}
                 </button>
@@ -461,9 +464,9 @@ export default function ReportBuilder() {
             {datePreset === 0 && (
               <div className="grid grid-cols-2 gap-2">
                 <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                  className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+                  className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
                 <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                  className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+                  className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
               </div>
             )}
             {(groupBy === 'date' || groupBy2 === 'date') && (
@@ -473,7 +476,7 @@ export default function ReportBuilder() {
                   {GRANULARITY.map(g => (
                     <button key={g.key} onClick={() => setGranularity(g.key)}
                       className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
-                        granularity === g.key ? 'bg-indigo-100 text-indigo-700 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        granularity === g.key ? 'bg-lime-100 text-lime-800 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                       }`}>
                       {g.label}
                     </button>
@@ -486,7 +489,7 @@ export default function ReportBuilder() {
           {/* Step 3: Metric */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-2 mb-3">
-              <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-xs flex items-center justify-center font-bold">3</span>
+              <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">3</span>
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Metric</h3>
             </div>
             <div className="relative">
@@ -513,8 +516,8 @@ export default function ReportBuilder() {
                         <div className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase bg-gray-50">{group}</div>
                         {groupMetrics.map((m) => (
                           <button key={m.key} onClick={() => { setMetric(m.key); setShowMetricDropdown(false); setMetricSearch('') }}
-                            className={`w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 transition-colors ${
-                              metric === m.key ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-700'
+                            className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${
+                              metric === m.key ? 'bg-lime-50 text-lime-800 font-medium' : 'text-gray-700'
                             }`}>
                             <div>{m.label}</div>
                             {m.desc && <div className="text-xs text-gray-400">{m.desc}</div>}
@@ -531,14 +534,14 @@ export default function ReportBuilder() {
           {/* Step 4: Group By */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-2 mb-3">
-              <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-xs flex items-center justify-center font-bold">4</span>
+              <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">4</span>
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Group By</h3>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {DIMENSIONS.map((d) => (
                 <button key={d.key} onClick={() => setGroupBy(d.key)}
                   className={`px-2.5 py-1.5 text-xs rounded-full transition-colors ${
-                    groupBy === d.key ? 'bg-indigo-100 text-indigo-700 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    groupBy === d.key ? 'bg-lime-100 text-lime-800 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}>
                   {d.label}
                 </button>
@@ -546,7 +549,7 @@ export default function ReportBuilder() {
             </div>
             {!showGroupBy2 ? (
               <button onClick={() => setShowGroupBy2(true)}
-                className="mt-2 text-xs text-indigo-600 hover:text-indigo-700 font-medium">
+                className="mt-2 text-xs text-gray-900 hover:text-gray-800 font-medium">
                 + Add another Group By
               </button>
             ) : (
@@ -560,7 +563,7 @@ export default function ReportBuilder() {
                   {DIMENSIONS.filter(d => d.key !== groupBy || d.key === 'date').map((d) => (
                     <button key={d.key} onClick={() => setGroupBy2(d.key)}
                       className={`px-2.5 py-1.5 text-xs rounded-full transition-colors ${
-                        groupBy2 === d.key ? 'bg-indigo-100 text-indigo-700 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        groupBy2 === d.key ? 'bg-lime-100 text-lime-800 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                       }`}>
                       {d.label}
                     </button>
@@ -573,17 +576,18 @@ export default function ReportBuilder() {
           {/* Step 5: Model */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-2 mb-3">
-              <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-xs flex items-center justify-center font-bold">5</span>
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Attribution Model</h3>
+              <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">5</span>
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Attribution</h3>
             </div>
             <select value={model} onChange={(e) => setModel(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
               {MODELS.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
             </select>
+            <p className="text-xs text-gray-400 mt-1">How credit is assigned to each touchpoint in the customer journey.</p>
             <div className="mt-2">
               <label className="block text-xs font-medium text-gray-500 mb-1">Attribution Window</label>
               <select value={attributionWindow || ''} onChange={(e) => setAttributionWindow(e.target.value || null)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
                 <option value="">All time (LTV)</option>
                 <option value="1">1 day</option>
                 <option value="7">7 days</option>
@@ -592,25 +596,27 @@ export default function ReportBuilder() {
                 <option value="60">60 days</option>
                 <option value="90">90 days</option>
               </select>
+              <p className="text-xs text-gray-400 mt-1">How far back from the first conversion to look for touchpoints. &quot;All time&quot; adds no time limit.</p>
             </div>
             <div className="mt-2">
               <label className="block text-xs font-medium text-gray-500 mb-1">Attribute By</label>
               <select value={attributeBy} onChange={(e) => setAttributeBy(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
                 <option value="conversion_date">Conversion Date</option>
                 {/* TODO: confirm — add First Seen Date, Original Source Date in future */}
               </select>
+              <p className="text-xs text-gray-400 mt-1">The event date used to place each conversion in the report timeline.</p>
             </div>
           </div>
 
           {/* Step 6: Chart Type */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-2 mb-3">
-              <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-xs flex items-center justify-center font-bold">6</span>
+              <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">6</span>
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Chart</h3>
             </div>
             <select value={chartType} onChange={(e) => setChartType(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
               {CHART_TYPES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
             </select>
           </div>
@@ -623,7 +629,7 @@ export default function ReportBuilder() {
                 <span className="w-5 h-5 rounded-full bg-gray-100 text-gray-500 text-xs flex items-center justify-center font-bold">7</span>
                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Filters</h3>
                 {filterCount > 0 ? (
-                  <span className="px-1.5 py-0.5 text-xs bg-indigo-100 text-indigo-700 rounded-full">{filterCount} active</span>
+                  <span className="px-1.5 py-0.5 text-xs bg-lime-100 text-lime-800 rounded-full">{filterCount} active</span>
                 ) : (
                   <span className="text-xs text-gray-400">None</span>
                 )}
@@ -635,9 +641,9 @@ export default function ReportBuilder() {
             {filterCount > 0 && !showFilters && (
               <div className="flex flex-wrap gap-1.5 mt-2">
                 {Object.entries(filters).map(([key, value]) => (
-                  <span key={key} className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-indigo-50 text-indigo-700 rounded-full">
+                  <span key={key} className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-lime-50 text-lime-800 rounded-full">
                     {key}: {String(value)}
-                    <button onClick={() => applyFilter(key, undefined)} className="text-indigo-400 hover:text-indigo-700">&times;</button>
+                    <button onClick={() => applyFilter(key, undefined)} className="text-lime-600 hover:text-gray-800">&times;</button>
                   </span>
                 ))}
               </div>
@@ -648,27 +654,27 @@ export default function ReportBuilder() {
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Source</label>
                   <input type="text" value={filters.source || ''} onChange={(e) => applyFilter('source', e.target.value || undefined)}
-                    placeholder="e.g. google" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+                    placeholder="e.g. google" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Medium</label>
                   <input type="text" value={filters.medium || ''} onChange={(e) => applyFilter('medium', e.target.value || undefined)}
-                    placeholder="e.g. cpc" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+                    placeholder="e.g. cpc" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Campaign</label>
                   <input type="text" value={filters.campaign || ''} onChange={(e) => applyFilter('campaign', e.target.value || undefined)}
-                    placeholder="e.g. summer_sale" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+                    placeholder="e.g. summer_sale" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Country</label>
                   <input type="text" value={filters.country || ''} onChange={(e) => applyFilter('country', e.target.value || undefined)}
-                    placeholder="e.g. US" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+                    placeholder="e.g. US" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Device</label>
                   <select value={filters.device_type || ''} onChange={(e) => applyFilter('device_type', e.target.value || undefined)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
                     <option value="">Any</option><option value="desktop">Desktop</option><option value="mobile">Mobile</option><option value="tablet">Tablet</option>
                   </select>
                 </div>
@@ -678,7 +684,7 @@ export default function ReportBuilder() {
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">AI Source</label>
                     <select value={filters.ai_source || ''} onChange={(e) => applyFilter('ai_source', e.target.value || undefined)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
                       <option value="">Any</option>
                       <option value="ChatGPT">ChatGPT</option><option value="Claude">Claude</option>
                       <option value="Perplexity">Perplexity</option><option value="Gemini">Gemini</option>
@@ -689,21 +695,22 @@ export default function ReportBuilder() {
                   <div className="mt-2">
                     <label className="block text-xs font-medium text-gray-500 mb-1">Has AI Source</label>
                     <select value={filters.has_ai_source || ''} onChange={(e) => applyFilter('has_ai_source', e.target.value || undefined)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500">
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
                       <option value="">Any</option>
                       <option value="true">Yes</option>
                       <option value="false">No</option>
                     </select>
+                    <p className="text-xs text-gray-400 mt-1">Show only traffic from or excluding AI platforms (ChatGPT, Claude, etc.).</p>
                   </div>
                   <div className="mt-2">
                     <label className="block text-xs font-medium text-gray-500 mb-1">Min Conversions</label>
                     <input type="number" value={filters.min_conversions || ''} onChange={(e) => applyFilter('min_conversions', e.target.value || undefined)}
-                      placeholder="e.g. 10" min="0" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+                      placeholder="e.g. 10" min="0" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
                   </div>
                   <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer mt-2">
                     <input type="checkbox" checked={filters.is_conversion === 'true'}
                       onChange={(e) => applyFilter('is_conversion', e.target.checked ? 'true' : undefined)}
-                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                      className="rounded border-gray-300 text-gray-900 focus:ring-gray-900" />
                     Conversions only
                   </label>
                 </div>
@@ -720,16 +727,16 @@ export default function ReportBuilder() {
           {/* Save */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
             <div className="flex items-center gap-2 mb-3">
-              <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 text-xs flex items-center justify-center font-bold">✓</span>
+              <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">✓</span>
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Save Report</h3>
             </div>
             <div className="space-y-2">
               <input type="text" value={reportName} onChange={(e) => setReportName(e.target.value)}
                 placeholder="Report name..." maxLength={60}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
               <div className="flex gap-2">
                 <button onClick={handleSave}
-                  className="flex-1 px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 flex items-center justify-center gap-1">
+                  className="flex-1 px-3 py-2 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 flex items-center justify-center gap-1">
                   <Bookmark className="w-4 h-4" />
                   {editingId ? 'Update' : 'Save'}
                 </button>
@@ -747,19 +754,19 @@ export default function ReportBuilder() {
           {savedReports.length > 0 && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Saved Reports</h3>
-              <div className="space-y-1">
+              <div className="space-y-0.5">
                 {savedReports.map((r) => (
-                  <div key={r.id} className="flex items-center justify-between group">
+                  <div key={r.id} className="flex items-center justify-between group px-2 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
                     <button onClick={() => handleLoad(r)}
-                      className="flex-1 text-left px-2 py-1.5 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 rounded transition-colors">
+                      className="flex-1 text-left text-sm text-gray-700 hover:text-gray-900 transition-colors truncate">
                       {r.name}
                     </button>
-                    <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => handleDuplicate(r)} className="p-1 text-gray-300 hover:text-indigo-500" title="Duplicate">
-                        <Copy className="w-3 h-3" />
+                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
+                      <button onClick={() => handleDuplicate(r)} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors" title="Duplicate">
+                        <Copy className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => handleDelete(r.id)} className="p-1 text-gray-300 hover:text-red-500" title="Delete">
-                        <Trash2 className="w-3 h-3" />
+                      <button onClick={() => handleDelete(r.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors" title="Delete">
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>

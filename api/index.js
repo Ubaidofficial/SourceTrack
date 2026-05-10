@@ -21,10 +21,28 @@ import { cohortsRouter } from './routes/cohorts.js'
 import { alertsRouter } from './routes/alerts.js'
 import { hygieneRouter } from './routes/hygiene.js'
 import { exportRouter } from './routes/export.js'
+import { onboardingRouter } from './routes/onboarding.js'
+import { dashboardRouter } from './routes/dashboard.js'
+import { leadsRouter } from './routes/leads-server.js'
+import { campaignsRouter } from './routes/campaigns.js'
+import { integrationsRouter } from './routes/integrations.js'
 import { billingWebhookHandler, billingRouter } from './routes/billing.js'
 
 const app = express()
 const PORT = process.env.PORT || 3000
+
+if (!process.env.POSTHOG_API_KEY) {
+  console.error('FATAL: POSTHOG_API_KEY is not set')
+  process.exit(1)
+}
+if (!process.env.POSTHOG_PERSONAL_API_KEY) {
+  console.error('FATAL: POSTHOG_PERSONAL_API_KEY is not set')
+  process.exit(1)
+}
+if (!process.env.POSTHOG_PROJECT_ID) {
+  console.error('FATAL: POSTHOG_PROJECT_ID is not set')
+  process.exit(1)
+}
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -115,6 +133,11 @@ app.use('/api/cohorts', cohortsRouter)
 app.use('/api/alerts', alertsRouter)
 app.use('/api/hygiene', hygieneRouter)
 app.use('/api/export', exportRouter)
+app.use('/api/onboarding', onboardingRouter)
+app.use('/api/dashboard', dashboardRouter)
+app.use('/api/leads', leadsRouter)
+app.use('/api/campaigns', campaignsRouter)
+app.use('/api/integrations', integrationsRouter)
 app.use('/api/billing', billingRouter)
 
 // 7. Health check
