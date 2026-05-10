@@ -211,7 +211,7 @@ Update this file after each DeepSeek session with:
 - [x] Tracker first_touch props on identify — completed Session 30
 - Custom conversion creation
 - Watch Video modal content
-- Dashboard seeding by business type
+- [x] Dashboard seeding by business type — completed Session 31
 - Multi-site onboarding
 - Agency/client mode
 - Multi-site onboarding
@@ -295,6 +295,22 @@ Update this file after each DeepSeek session with:
 
 **TODOs:**
 - user_id must be supplied by the integrating site
+
+### Session 31 — Dashboard Seeding by Business Type
+**Files created:**
+- dashboard/src/lib/seedReports.js — seed definitions + idempotent logic
+
+**Files modified:**
+- dashboard/src/pages/Onboarding.jsx — calls seed after completion
+
+**Completed:**
+- 5 starter reports per business type (eCommerce/SaaS/LeadGen) with business-appropriate metrics
+- Reports use only existing metrics, dimensions, models, and filters
+- Idempotent via `sourcetrack_seeded_v1` flag
+- Dashboard build: 1991 modules, passes
+
+**TODOs:**
+- Reports seeded to Report Builder, not the fixed-layout Dashboard
 
 ### Session 26 — Campaigns Backend
 **Files created:**

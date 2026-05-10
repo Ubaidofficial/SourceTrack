@@ -241,7 +241,7 @@
 - [x] Tracker first_touch_* props on identify calls — completed Session 30
 - [ ] Custom conversion creation UI (custom option disabled)
 - [ ] Watch Video modal content (placeholder only)
-- [ ] Seed default dashboard widgets by business type
+- [x] Seed default dashboard widgets by business type — completed Session 31 (seeded as Report Builder reports)
 - [ ] Multi-site onboarding flow (currently one site per user)
 - [ ] Agency/client mode
 ## Session 18 — Dashboard Screen Design Pass
@@ -521,3 +521,21 @@
 
 **TODOs:**
 - [ ] user_id must be supplied by the integrating site (e.g., after login) — the tracker does not auto-detect it
+## Session 31 — Dashboard Seeding by Business Type
+**Files created:**
+- dashboard/src/lib/seedReports.js — seed report definitions and idempotent seeding logic
+
+**Files modified:**
+- dashboard/src/pages/Onboarding.jsx — calls seedReportsForBusiness after onboarding completion
+
+**Completed:**
+- 5 starter reports per business type: eCommerce (Revenue by Source, Conversion Trend, AI Revenue Share, Top Landing Pages, Campaign Revenue), SaaS (Signups by Source, Conversion Trend, AI-Assisted Signups, Landing Page Performance, Campaign Performance), LeadGen (Leads by Source, Conversion Rate by Source, AI Source Impact, Landing Page Leads, Campaign Leads)
+- All seed reports use only existing metrics (revenue, conversions, leads, conversion_rate, ai_revenue_share, ai_conversion_share, ai_conversions), dimensions (source, date, ai_source, landing_page, campaign), models (last_touch, first_touch, ai_platforms), and filters (has_ai_source, min_conversions)
+- Reports seeded to `sourcetrack_saved_reports` (Report Builder's localStorage key) — visible immediately in Report Builder's "Saved Reports" panel
+- Idempotent: `sourcetrack_seeded_v1` flag prevents duplicate seeding; seed IDs prefixed with `seed_` prefix to avoid collision with user-created reports
+- Seeding triggers on successful `/onboarding/complete` call during step 6 verification
+- No new libraries, no backend changes, no fake metrics
+- Dashboard build: 1991 modules, passes
+
+**TODOs:**
+- [ ] Reports are seeded to Report Builder saved reports — dashboard itself is a fixed server-side layout and does not render widgets
