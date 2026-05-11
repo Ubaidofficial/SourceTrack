@@ -20,7 +20,7 @@ import {
 } from 'chart.js'
 import {
   RefreshCw, Bookmark, Trash2, Download, Copy,
-  Search, ChevronDown, ArrowRight, LayoutDashboard, Plus
+  Search, ChevronDown, ArrowRight, Plus
 } from 'lucide-react'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend)
@@ -28,7 +28,8 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineEleme
 const MODELS = [
   { key: 'first_touch', label: 'First Touch' },
   { key: 'last_touch', label: 'Last Touch' },
-  { key: 'linear', label: 'Linear' },
+  { key: 'first_touch_non_direct', label: 'First Touch (Non-Direct)' },
+  { key: 'last_touch_non_direct', label: 'Last Touch (Non-Direct)' },
   { key: 'ai_platforms', label: 'AI Platforms' }
 ]
 
@@ -89,15 +90,7 @@ const PRESETS = [
   { name: 'AI Platform Share', model: 'ai_platforms', groupBy: 'ai_source', groupBy2: null, metric: 'ai_conversion_share', days: 30, chartType: 'pie', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { has_ai_source: 'true' }, desc: 'Share of AI-driven conversions by platform' }
 ]
 
-const STORAGE_KEY = 'sourcetrack_saved_reports'
-const DASHBOARD_KEY = 'sourcetrack_dashboard_widgets_staging'
 
-function loadFromStore(key) {
-  try { return JSON.parse(localStorage.getItem(key)) || [] } catch { return [] }
-}
-function saveToStore(key, data) {
-  try { localStorage.setItem(key, JSON.stringify(data)) } catch { /* quota */ }
-}
 
 const COLORS = [
   'rgba(17, 24, 39, 0.85)',
@@ -160,7 +153,6 @@ export default function ReportBuilder() {
   const [filterCount, setFilterCount] = useState(0)
 
   // UI state
-  const [savedReports, setSavedReports] = useState(() => loadFromStore(STORAGE_KEY))
   const [editingId, setEditingId] = useState(null)
   const [metricSearch, setMetricSearch] = useState('')
   const [showMetricDropdown, setShowMetricDropdown] = useState(false)
@@ -212,6 +204,18 @@ export default function ReportBuilder() {
     enabled: !!site
   })
 
+  const { data: savedReports, isLoading: reportsLoading, refetch: refetchReports } = useQuery({
+    queryKey: ['saved-reports', site?.site_key],
+    queryFn: async () => {
+      if (!site?.site_key) return []
+      return fetchApi(`/reports/saved?site_key=${encodeURIComponent(site.site_key)}`)
+    },
+    enabled: !!site?.site_key,
+    initialData: []
+  })
+
+  const [saveFeedback, setSaveFeedback] = useState(null)
+
   const results = data?.results || []
   const metricDef = METRICS.find(m => m.key === metric)
   const metricLabel = metricDef?.label || 'Value'
@@ -262,92 +266,68 @@ export default function ReportBuilder() {
     })
   }
 
-  const handleSave = () => {
-    const name = reportName.trim() || `Report ${new Date().toLocaleDateString()}`
-    const report = {
-      id: editingId || Date.now().toString(),
-      name,
-      model,
-      groupBy,
-      metric,
-      chartType,
-      datePreset,
-      dateFrom,
-      dateTo,
-      granularity,
-      groupBy2,
-      attributionWindow,
-      attributeBy,
-      filters,
-      createdAt: editingId ? savedReports.find(r => r.id === editingId)?.createdAt : new Date().toISOString()
-    }
-    const updated = editingId
-      ? savedReports.map(r => r.id === editingId ? report : r)
-      : [...savedReports, report]
-    setSavedReports(updated)
-    saveToStore(STORAGE_KEY, updated)
-    setReportName('')
-    setEditingId(null)
-  }
-
   const handleEdit = (report) => {
-    setReportName(report.name)
-    setModel(report.model)
-    setGroupBy(report.groupBy)
-    setMetric(report.metric)
-    setChartType(report.chartType)
-    setDatePreset(report.datePreset)
-    setDateFrom(report.dateFrom)
-    setDateTo(report.dateTo)
-    setGranularity(report.granularity || 'day')
-    setGroupBy2(report.groupBy2 || null)
-    setShowGroupBy2(!!report.groupBy2)
-    setAttributionWindow(report.attributionWindow || null)
-    setAttributeBy(report.attributeBy || 'conversion_date')
-    setFilters(report.filters || {})
-    setFilterCount(Object.keys(report.filters || {}).length)
+    const cfg = report.config || report
+    setReportName(report.name || cfg.name)
+    setModel(cfg.model || 'last_touch')
+    setGroupBy(cfg.groupBy || 'source')
+    setMetric(cfg.metric || 'revenue')
+    setChartType(cfg.chartType || 'bar')
+    setDatePreset(0)
+    setDateFrom(cfg.dateFrom || format(subDays(new Date(), 30), 'yyyy-MM-dd'))
+    setDateTo(cfg.dateTo || format(new Date(), 'yyyy-MM-dd'))
+    setGranularity(cfg.granularity || 'day')
+    setGroupBy2(cfg.groupBy2 || null)
+    setShowGroupBy2(!!cfg.groupBy2)
+    setAttributionWindow(cfg.attributionWindow || null)
+    setAttributeBy(cfg.attributeBy || 'conversion_date')
+    setFilters(cfg.filters || {})
+    setFilterCount(Object.keys(cfg.filters || {}).length)
     setEditingId(report.id)
     queryClient.invalidateQueries({ queryKey: ['report'] })
   }
 
-  const handleDuplicate = (report) => {
-    const dup = { ...report, id: Date.now().toString(), name: `${report.name} (copy)` }
-    const updated = [...savedReports, dup]
-    setSavedReports(updated)
-    saveToStore(STORAGE_KEY, updated)
+  const handleSave = async () => {
+    const name = reportName.trim() || `Report ${new Date().toLocaleDateString()}`
+    const config = {
+      model, groupBy, metric, chartType, dateFrom, dateTo,
+      granularity, groupBy2, attributionWindow, attributeBy,
+      filters
+    }
+    try {
+      await fetchApi('/reports/saved', {
+        method: 'POST',
+        body: { name, config }
+      })
+      setSaveFeedback('saved')
+      setReportName('')
+      setEditingId(null)
+      refetchReports()
+    } catch {
+      setSaveFeedback('error')
+    }
+    setTimeout(() => setSaveFeedback(null), 2500)
   }
 
-  const handleDelete = (id) => {
-    const updated = savedReports.filter(r => r.id !== id)
-    setSavedReports(updated)
-    saveToStore(STORAGE_KEY, updated)
+  const handleDuplicate = async (report) => {
+    try {
+      await fetchApi('/reports/saved', {
+        method: 'POST',
+        body: { name: `${report.name} (copy)`, config: report.config }
+      })
+      refetchReports()
+    } catch { /* silent */ }
+  }
+
+  const handleDelete = async (id) => {
+    try {
+      await fetchApi(`/reports/saved/${id}`, { method: 'DELETE' })
+      refetchReports()
+    } catch { /* silent */ }
   }
 
   const handleLoad = (report) => {
     handleEdit(report)
-  }
-
-  const handleAddToDashboard = () => {
-    const name = reportName.trim() || `Report ${new Date().toLocaleDateString()}`
-    const widget = {
-      id: Date.now().toString(),
-      name,
-      model,
-      groupBy,
-      metric,
-      chartType,
-      dateFrom,
-      dateTo,
-      granularity,
-      groupBy2,
-      attributionWindow,
-      attributeBy,
-      filters,
-      siteKey: site?.site_key
-    }
-    const widgets = loadFromStore(DASHBOARD_KEY)
-    widgets.push(widget)
-    saveToStore(DASHBOARD_KEY, widgets)
   }
 
   const handleExportCSV = () => {
@@ -405,20 +385,11 @@ export default function ReportBuilder() {
         </div>
         <div className="flex items-center gap-2">
           {canPreview && (
-            <>
-              {/* TODO confirm: "Add to Dashboard" writes widgets to localStorage but the Dashboard
-                  does not yet render them. Re-enable this button once widget rendering is implemented. */}
-              {false && <button onClick={handleAddToDashboard}
-                className="px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1">
-                <LayoutDashboard className="w-4 h-4" />
-                Add to Dashboard
-              </button>}
-              <button onClick={handleExportCSV}
-                className="px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1">
-                <Download className="w-4 h-4" />
-                Export
-              </button>
-            </>
+            <button onClick={handleExportCSV}
+              className="px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1">
+              <Download className="w-4 h-4" />
+              Export
+            </button>
           )}
         </div>
       </div>
@@ -594,7 +565,7 @@ export default function ReportBuilder() {
               <label className="block text-xs font-medium text-gray-500 mb-1">Attribution Window</label>
               <select value={attributionWindow || ''} onChange={(e) => setAttributionWindow(e.target.value || null)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
-                <option value="">All time (LTV)</option>
+                <option value="">No lookback (date range only)</option>
                 <option value="1">1 day</option>
                 <option value="7">7 days</option>
                 <option value="14">14 days</option>
@@ -602,7 +573,7 @@ export default function ReportBuilder() {
                 <option value="60">60 days</option>
                 <option value="90">90 days</option>
               </select>
-              <p className="text-xs text-gray-400 mt-1">How far back from the first conversion to look for touchpoints. &quot;All time&quot; adds no time limit.</p>
+              <p className="text-xs text-gray-400 mt-1">How far back from conversion to look for touchpoints. &quot;No lookback&quot; uses only the selected date range.</p>
             </div>
             <div className="mt-2">
               <label className="block text-xs font-medium text-gray-500 mb-1">Attribute By</label>
@@ -758,6 +729,12 @@ export default function ReportBuilder() {
                   </button>
                 )}
               </div>
+              {saveFeedback === 'saved' && (
+                <p className="text-xs text-green-600 mt-1.5">Report saved to backend</p>
+              )}
+              {saveFeedback === 'error' && (
+                <p className="text-xs text-red-600 mt-1.5">Failed to save — try again</p>
+              )}
             </div>
           </div>
 

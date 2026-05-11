@@ -51,19 +51,19 @@
 - [x] Chart types: Bar, Line, Pie, Table Only
 - [x] 6 presets: AI Sources, Lead Sources, Campaign Revenue, Landing Pages, Conversion Trend, AI Revenue
 - [x] Save / Edit / Duplicate / Delete saved reports (localStorage)
-- [x] Add to Dashboard button (localStorage widgets)
+- [ ] Add to Dashboard button — EXISTS in ReportBuilder but DISABLED (`{false &&}` guard). Writes to localStorage staging key but Dashboard never reads it.
 - [x] CSV export with current filters
 - [x] Live preview with empty state guidance
 - [x] Pie chart support (ArcElement registration)
 ## Dashboard Customization + Rename
 - [x] Renamed TrackIQ → SourceTrack in user-facing text (HTML title, Layout brand, Login/Signup headers)
-- [x] Multi-dashboard system — create, rename, delete, duplicate dashboards (localStorage)
-- [x] Dashboard selector dropdown in header with switch, rename inline, delete/duplicate
-- [x] Report widgets on dashboard — cards with metric total + top 5 rows + actions menu
-- [x] Widget actions: Edit (navigates to report builder), Duplicate, Remove from dashboard
-- [x] Empty dashboard state with "Add Report" call-to-action
-- [x] Edit from dashboard — navigates to report builder with settings prefilled via ?edit= param
-- [x] Widget position ordering — move up/down arrows on each card
+- [ ] Multi-dashboard system — NOT CURRENTLY LIVE. Prior Session 2 implementation was replaced in Session 31 when Dashboard consolidated to single `/api/dashboard/overview` endpoint with fixed card grid. No dashboard CRUD, selector, or widget rendering exists in current code.
+- [ ] Dashboard selector dropdown — inactive, replaced by single Performance Overview page
+- [ ] Report widgets on dashboard — NOT LIVE. `ReportBuilder.jsx` writes to `sourcetrack_dashboard_widgets_staging` localStorage key but Dashboard.jsx never reads it. Add-to-Dashboard button is disabled with `{false &&}` guard and TODO comment.
+- [ ] Widget actions — Edit/Duplicate/Remove from dashboard — not available on current Dashboard
+- [ ] Empty dashboard state — not applicable; Dashboard renders a fixed grid of 9 card sections with helpful empty states per card
+- [ ] Edit from dashboard — not available; current Dashboard has no widget edit flow
+- [ ] Widget position ordering — not available; cards are fixed-position in a hardcoded grid
 ## Custom Metrics + Advanced Filters
 - [x] Backend — ai_conversions, ai_revenue, ai_conversion_share, ai_revenue_share metrics
 - [x] Backend — has_ai_source filter, min_conversions HAVING clause
@@ -82,10 +82,10 @@
 - [x] ReportBuilder.jsx — granularity restricted to "day" only (Option B, week/month need HogQL support)
 ## Session 13.2 — Audit Fixes Round 2
 - [x] PROGRESS.md — granularity updated to "Daily only" (no more day/week/month claim)
-- [x] Per-dashboard widgets — each dashboard has its own widget pool (sourcetrack_widgets_{id})
-- [x] Legacy migration — shared widgets auto-migrated to default dashboard on first load
-- [x] ReportBuilder → Dashboard staging — uses sourcetrack_dashboard_widgets_staging intermediate key
-- [x] Edit-from-dashboard — uses sessionStorage instead of cross-key lookup
+- [ ] Per-dashboard widgets — NOT LIVE. Prior implementation was replaced with fixed card grid Dashboard in Session 31.
+- [ ] Legacy widget migration — dormant; current Dashboard has no widget loading path
+- [ ] ReportBuilder → Dashboard staging — staging key `sourcetrack_dashboard_widgets_staging` exists in localStorage logic but Dashboard never reads it. Add-to-Dashboard button is disabled.
+- [x] Edit-from-dashboard — uses sessionStorage for report editing; this still works in ReportBuilder
 - [x] AI metric labels/formats confirmed consistent across ReportBuilder + Dashboard (no changes needed)
 - [x] dashboard build passes
 
@@ -1501,3 +1501,180 @@ The 10 rules (R1-R10) govern coding behavior per session, not retrospective code
 - **R7 (fail loud):** The Session 51 audit found 4 silent-failure cases (empty install status, inflated AI share, unreachable LTV dropdown, broken AI badges). All were instances where the product failed silently rather than failing loud. Two were fixed; AI badges and UTM normalization remain as silent failures.
 - **R9 (never overclaim):** The linear model exposure in UI (ALLOWED_MODELS, Dashboard, Report Builder) could be considered an R9 violation if the implementation was promoted as "linear attribution" when it doesn't meet the ATTRIBUTION.md definition. The historical Session 2 notes say "linear" was among "4 attribution models" completed — but the implementation uses `FIRST_VALUE`, not multi-touch distribution.
 - **R10 (hard scope boundary):** No scope-creep violations detected in the session history traced in progress.md/deepseek.md.
+
+## Session 53 — Standards Fixes (P6 + Linear + Docs)
+
+**Session type:** Standards-conformance fixes from Session 52 audit findings.
+
+**Files modified:**
+- `api/routes/conversion.js` — Added `normalizeUtm()` and applied to all 5 UTM fields (P6 fix)
+- `api/routes/attribution.js` — Removed `'linear'` from ALLOWED_MODELS
+- `api/routes/dashboard.js` — Removed linear getAttribution call, modelLinear, and linear key from modelRevenues
+- `api/lib/attribution-engine.js` — Commented linearAttribution as not wired, doesn't match spec
+- `dashboard/src/pages/Dashboard.jsx` — Removed linear from MODELS array
+- `dashboard/src/pages/ReportBuilder.jsx` — Removed linear from MODELS. Fixed LTV window label: "All time (LTV)" → "No lookback (date range only)"
+- `ATTRIBUTION.md` — Moved first_seen_date / original_source_date from Roadmap to Currently supported in Part 7
+
+**Completed:**
+1. P6 fixed: conversion.js UTM normalization now matches track.js
+2. Linear hidden: removed from ALLOWED_MODELS and all UI surfaces; engine function retained with comment
+3. ATTRIBUTION.md Part 7 synced with Session 35 implementation
+4. Misleading LTV window label fixed
+
+**Verified:** All API files parse, dashboard build passes. R9 violation resolved — linear no longer exposed.
+
+**TODOs:**
+- [ ] Re-implement linear as true multi-touch per ATTRIBUTION.md Part 2
+- [ ] Fix P5: propagate attributionWindow to rate/share subqueries
+
+## Session 54 — Add Non-Direct Attribution Models
+
+**Session type:** Bounded attribution-model extension (two new single-touch models).
+
+**Files modified:**
+- `ATTRIBUTION.md` — Added `first_touch_non_direct` and `last_touch_non_direct` to Part 2 "Currently implemented" with definitions, fallback rules, and direct-classification principle
+- `system.md` — Updated product description to list non-direct variants
+- `api/lib/attribution-engine.js` — Added `isDirectCondition()` helper, `firstTouchNonDirectAttribution()`, `lastTouchNonDirectAttribution()`, wired into `getAttribution()` switch, added `GROUP_COLUMNS` entries for all 8 dimensions, added `qualifyingJoin` for `getFlexibleReport`
+- `api/routes/attribution.js` — Added non-direct models to `ALLOWED_MODELS`
+- `api/routes/dashboard.js` — Added non-direct model calls to overview endpoint
+- `dashboard/src/pages/Dashboard.jsx` — Added non-direct to MODELS array
+- `dashboard/src/pages/ReportBuilder.jsx` — Added non-direct to MODELS array
+
+**Completed:**
+
+1. **first_touch_non_direct**: 100% credit to the first qualifying non-direct pageview for each identity (argMin by timestamp). Falls back to the conversion event's first_touch_source/direct when no qualifying touchpoint exists.
+
+2. **last_touch_non_direct**: 100% credit to the last qualifying non-direct pageview for each identity (argMax by timestamp). Falls back to the conversion event's utm_source/direct when no qualifying touchpoint exists.
+
+3. **Direct classification**: Conservative rule — utm_source is empty/null or equals 'direct' (after ingestion-time trim+lowercase). All other non-null non-empty UTM values qualify as non-direct. Logic centralized in `isDirectCondition()` helper.
+
+4. **Model parity on totals**: Both non-direct models use `FROM events e LEFT JOIN ...` on the same conversion events as first_touch/last_touch. LEFT JOIN ensures zero row loss. COALESCE fallback in GROUP_COLUMNS ensures graceful degradation. Conversion counts and revenue totals are architecturally identical to first_touch/last_touch — only credit distribution changes.
+
+5. **Flexible report support**: Qualifying LEFT JOIN (`_nd`) prepended to report queries for non-direct models using argMin/argMax per model. GROUP_COLUMNS entries reference `_nd.nd_source`/`_nd.nd_medium`/`_nd.nd_campaign` with COALESCE fallback to conversion event properties.
+
+6. **UI exposure**: Both models appear as "First Touch (Non-Direct)" and "Last Touch (Non-Direct)" in Dashboard model section and Report Builder model selector.
+
+**Not implemented (hard scope):**
+- LTV does not support non-direct models (same restriction as ai_platforms — only first_touch/last_touch for LTV)
+- No multi-touch attribution of any kind
+- No time-decay, position-based, linear, or data-driven models
+- No session_id tracking
+- No ad platform integrations
+
+**Verified:** All API files parse cleanly. Dashboard build passes. Model parity on totals is architecturally guaranteed by LEFT JOIN semantics.
+
+## Session 55 — Product Audit: Report Builder, Dashboard Layout, Install Flow, and Verification vs Cometly
+
+**Session type:** Product parity audit against Cometly benchmark pages. No feature building.
+
+**Files inspected:** All attribution engine/routes, Dashboard, ReportBuilder, AIChat, Onboarding, Snippet, Integrations, DashboardCard, MetricTile, schema.sql, progress.md, deepseek.md, system.md, ATTRIBUTION.md, RULES.md.
+
+**Key findings:**
+
+**Report Builder:** Backend is strong — 5 models, 11 metrics, 8 dimensions, 4 chart types, full filters, attribution windows, date modes. Weaknesses: saved reports are localStorage-only (no cross-device sync), no period-over-period comparison, add-to-dashboard pipeline incomplete (button disabled).
+
+**Dashboard layout:** **Fixed hardcoded card grid** — 9 named DashboardCard sections in a static responsive grid. NO drag-and-drop, NO resize, NO reorder, NO widget rendering loop. The add-to-dashboard button is explicitly disabled with a TODO comment (`ReportBuilder.jsx:410-411`).
+
+**Truthfulness gap — progress.md overclaims:** 
+- `progress.md:60` claims "[x] Multi-dashboard system — create, rename, delete, duplicate dashboards (localStorage)" — Dashboard.jsx has ZERO multi-dashboard code (no switching UI, no CRUD, no routing).
+- `progress.md:85` claims "[x] Per-dashboard widgets — each dashboard has its own widget pool" — widgets are written to localStorage staging key but Dashboard never reads or renders them.
+- `dashboard_widgets` table exists in schema.sql (position column) but no code reads/writes it.
+- Report Builder add-to-dashboard button: `{false && <button ...>}` with comment confirming "Dashboard does not yet render them."
+
+**AI Chat:** Specialized HogQL query assistant — converts natural language to SQL via LLM, executes against PostHog events table. Narrower than Cometly's claimed cross-platform ad-account analyst: no ad platform integrations, single-table only, no spend data, no cross-platform comparisons. Accurately scoped in UI ("Ask questions about your marketing data").
+
+**Install flow:** Fully implemented and honest. 6-step onboarding wizard with domain validation, business-type selection, GTM/standard install paths, conversion configuration, polling verification (6 attempts × 5s). Standalone Snippet page with snippet, status, test button, JS API docs, cross-domain tracking, honest limitations ("What this does not support").
+
+**No tiny fixes made.** Audit only.
+
+**Recommended:** Fix progress.md truthfulness (HIGH — mark multi-dashboard as inactive), implement widget rendering on Dashboard, enable Add to Dashboard button, add period-over-period comparison to Report Builder.
+
+## Session 56 — Dashboard Truthfulness Fix + Enhancement + Super Admin Phase 1
+
+**Session type:** Truthfulness correction, dashboard improvement, and internal super admin visibility.
+
+**Files modified:**
+- `progress.md` — Corrected 10+ overclaims about multi-dashboard/widget/migration features. Changed `[x]` to `[ ]` with truthful explanations of dormant/inactive state.
+- `dashboard/src/pages/Dashboard.jsx` — Enhanced Model Attribution section (now uses DashboardCard with explanatory subtitle + proportional bar charts). Added AI Analytics promo card when AI share >5%.
+- `api/routes/admin.js` — Added `GET /admin/site-detail?site_key=X` (detailed site inspector with onboarding, install status, PostHog lookup). Added `GET /admin/feature-status` (static feature matrix + QA notes).
+- `dashboard/src/pages/Admin.jsx` — Added 3 new tabs: Site Inspector (site key lookup with onboarding/install cards), Feature Status (table with live/partial/dormant/not_implemented badges), QA Notes (safe claims, misleading-if-claimed, watch items).
+
+**Completed:**
+
+1. **Truthfulness fixed:** Progress.md Session 2 claims about multi-dashboard system, dashboard selector, report widgets, widget actions, widget position ordering, legacy migration, and per-dashboard widgets all corrected from `[x]` to `[ ]` with honest descriptions of dormant/inactive state.
+
+2. **Dashboard enhanced:** Model Attribution section now uses DashboardCard wrapper with explanatory subtitle ("How revenue distributes across different attribution methods. Non-direct models ignore unbranded/direct traffic."). Added proportional bar chart below each model total. Added AI Analytics promo card when AI revenue share exceeds 5%, with quick KPI preview (AI Revenue, Share, Platform count) and link to full page.
+
+3. **Super Admin Phase 1 built:**
+   - **Access control:** Existing `requireRole('super_admin')` middleware on all admin routes. `AdminRoute.jsx` client-side guard checks `role === 'super_admin'`. AuthContext fetches role from `raw_app_meta_data.role`.
+   - **Site Inspector tab:** Search by site_key → displays detailed cards with site info (key, plan, created, company, owner email, domain), onboarding state (step, business type, install method, selected conversions), and install verification (PostHog status, last event type/timestamp, domain).
+   - **Feature Status tab:** Table showing 18 features with status badges (live/partial/dormant/internal-only/not_implemented) and truthful notes.
+   - **QA Notes tab:** Three card sections — safe claims (✓), misleading-if-claimed (✗), watch items (info).
+
+**Verified:** Frontend build passes. All backend files parse. Admin routes server-side protected by `requireRole('super_admin')`. Client-side guard via `AdminRoute.jsx`. Layout.jsx only shows Admin nav link to super_admin users.
+
+**Features intentionally not implemented:** Drag-and-drop dashboard, resizable widgets, widget rendering loop, multi-dashboard CRUD, destructive admin actions, billing admin, customer impersonation, consent pipeline.
+
+## Session 57 — Backend-Saved Reports + Dashboard Fixed Section
+
+**Session type:** Backend persistence for saved reports + fixed dashboard rendering.
+
+**Files created:**
+- `supabase/migration_saved_reports.sql` — `saved_reports` table with RLS, per-user/site scoping
+- `api/routes/saved-reports.js` — `GET /api/reports/saved`, `POST /api/reports/saved`, `DELETE /api/reports/saved/:id` with auth checks
+
+**Files modified:**
+- `api/index.js` — mounted `savedReportsRouter` at `/api/reports` with `requireUserAuth` + `validateSiteKey` + `requireSiteMembership`
+- `dashboard/src/pages/ReportBuilder.jsx` — replaced localStorage save/load/delete with API calls (`fetchApi`). Removed `STORAGE_KEY`, `DASHBOARD_KEY`, `loadFromStore`, `saveToStore`, dead `handleAddToDashboard`, dead Add-to-Dashboard button. Added save feedback indicator ("Report saved to backend" / "Failed to save"). Reports now persist across browser refresh.
+- `dashboard/src/pages/Dashboard.jsx` — added "Saved Reports" card section: fetches from API, renders up to 3 saved reports as mini bar charts with metric totals. Click opens Report Builder with config loaded. Empty state shows CTA to create first report.
+- `ATTRIBUTION.md` — added Part 15 documenting saved reports table schema, API routes, and dashboard rendering
+- `PROGRESS.md` — this entry
+
+**Completed:**
+- Reports persist to Supabase via `saved_reports` table (no more localStorage-only)
+- Reports scoped per user + site — cannot see other sites' reports
+- Auth enforced: `requireUserAuth` + `validateSiteKey` + `requireSiteMembership` on all report routes
+- Ownership verified before delete
+- Dashboard renders up to 3 saved reports as live mini-charts with real data from `getFlexibleReport`
+- Report Builder shows save success/error feedback
+- Dead Add-to-Dashboard button, localStorage constants, and `handleAddToDashboard` function removed
+
+**Verified:** Frontend build passes (1994 modules). Backend files parse. Auth chain confirmed: user must be authenticated + own the site.
+
+**Truthfulness notes:**
+- This is NOT a widget system — no drag-and-drop, no resize, no reorder
+- Dashboard rendering is fixed-position, not user-positionable
+- Up to 3 saved reports shown on dashboard (fixed limit, not configurable)
+- Reports are NOT "pinned" — saving a report makes it eligible for dashboard display
+- No multi-dashboard CRUD, no dashboard selector, no widget add/remove/edit from dashboard
+
+## Session 58 — Support Mode Preview (Read-Only Customer Dashboard)
+
+**Session type:** Enable super admins to preview customer dashboards without impersonation.
+
+**Files created:**
+- `dashboard/src/components/SupportModeBanner.jsx` — amber banner showing "Support Preview Mode: [Site Name] | Read-only | Exit Preview"
+
+**Files modified:**
+- `api/routes/admin.js` — enhanced `POST /api/admin/preview` to return richer context (install status, recent event count, saved report count, preview_mode flag). Added `GET /api/admin/preview/:siteKey` for aggregated dashboard data (KPI summary via HogQL, top 5 sources by revenue, install status). Both routes server-side `requireRole('super_admin')`.
+- `dashboard/src/pages/Dashboard.jsx` — detects `sourcetrack_admin_preview` in sessionStorage on mount. In preview mode: loads site from preview context (not Supabase owner_id query), fetches overview from `GET /api/admin/preview/:siteKey`, renders SupportModeBanner, disables all write actions (Export, time range, navigation buttons, Complete Installation CTA, Report Builder links, Saved Reports section hidden).
+- `dashboard/src/pages/Admin.jsx` — updated `handlePreview` to store `site_domain` in sessionStorage. Added "Preview Dashboard" button in Site Inspector tab (amber styling, appears after site detail loads). `navigate` flow unchanged.
+
+**Completed:**
+- Super admin can preview any customer's dashboard in read-only support mode
+- Admin's JWT never changes — remains authenticated as super_admin
+- No customer session, cookie, or identity impersonation
+- Preview data fetched via dedicated admin endpoint (`GET /api/admin/preview/:siteKey`), not via customer auth
+- SupportModeBanner always visible during preview with amber "Read-only" styling
+- All interactive write controls disabled: Export, time range, navigation actions, installation CTA, report links
+- Exit preview clears sessionStorage and returns to /admin
+- ATTRIBUTION.md Part 16 documents preview as "read-only support view, not impersonation"
+
+**Verified:** Frontend build passes (1995 modules). Backend files parse. Auth chain: `requireRole('super_admin')` on all admin routes. Dashboard.jsx `previewMode` logic confirmed: site loads from sessionStorage, overview fetches from admin endpoint, write actions guarded by `!previewMode`.
+
+**Security guarantees:**
+- No JWT minted for customer
+- No auth identity switch
+- No customer session created
+- All data read via admin endpoint with admin's own token
+- Tenant boundaries respected — admin accesses data through dedicated endpoint, not through customer auth flow

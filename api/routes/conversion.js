@@ -23,6 +23,11 @@ function enrich(req) {
   }
 }
 
+function normalizeUtm(value) {
+  if (!value || typeof value !== 'string') return value
+  return value.trim().toLowerCase()
+}
+
 export async function conversion(req, res) {
   try {
     const enriched = enrich(req)
@@ -34,11 +39,11 @@ export async function conversion(req, res) {
       conversion_value: req.body.conversion_value,
       page_url: req.body.page_url,
       referrer: req.body.referrer,
-      utm_source: req.body.utm_source,
-      utm_medium: req.body.utm_medium,
-      utm_campaign: req.body.utm_campaign,
-      utm_content: req.body.utm_content,
-      utm_term: req.body.utm_term,
+      utm_source: normalizeUtm(req.body.utm_source),
+      utm_medium: normalizeUtm(req.body.utm_medium),
+      utm_campaign: normalizeUtm(req.body.utm_campaign),
+      utm_content: normalizeUtm(req.body.utm_content),
+      utm_term: normalizeUtm(req.body.utm_term),
       ai_source: enriched.ai_source,
       device_type: enriched.device_type,
       country: enriched.country,

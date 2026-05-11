@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueries } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { fetchApi } from '../lib/api'
@@ -19,18 +19,20 @@ import {
 } from 'chart.js'
 import {
   DollarSign, Users, Bot, TrendingUp,
-  ArrowRight, Download, ExternalLink, Sparkles
+  ArrowRight, Download, ExternalLink, Sparkles, Bookmark
 } from 'lucide-react'
 import MetricTile from '../components/MetricTile'
 import DashboardCard from '../components/DashboardCard'
 import StatusBadge from '../components/StatusBadge'
+import SupportModeBanner from '../components/SupportModeBanner'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend)
 
 const MODELS = [
   { key: 'first_touch', label: 'First Touch' },
   { key: 'last_touch', label: 'Last Touch' },
-  { key: 'linear', label: 'Linear' },
+  { key: 'first_touch_non_direct', label: 'First Touch (Non-Direct)' },
+  { key: 'last_touch_non_direct', label: 'Last Touch (Non-Direct)' },
   { key: 'ai_platforms', label: 'AI Platforms' }
 ]
 
@@ -43,6 +45,20 @@ const CONVERSION_LABELS = {
 const STAGE_LABELS = {
   lead_created: 'Lead Created', qualified: 'Qualified',
   opportunity: 'Opportunity', closed_won: 'Closed Won'
+}
+
+const METRIC_DEFS = {
+  revenue: { label: 'Revenue', format: (v) => `$${v.toFixed(2)}` },
+  conversions: { label: 'Conversions', format: (v) => v.toLocaleString() },
+  sessions: { label: 'Sessions', format: (v) => v.toLocaleString() },
+  leads: { label: 'Leads', format: (v) => v.toLocaleString() },
+  conversion_rate: { label: 'Conversion Rate', format: (v) => `${v.toFixed(1)}%` },
+  avg_conversion_value: { label: 'Avg Value', format: (v) => `$${v.toFixed(2)}` },
+  ai_conversions: { label: 'AI Conversions', format: (v) => v.toLocaleString() },
+  ai_revenue: { label: 'AI Revenue', format: (v) => `$${v.toFixed(2)}` },
+  ai_conversion_share: { label: 'AI Conv Share', format: (v) => `${v.toFixed(1)}%` },
+  ai_revenue_share: { label: 'AI Rev Share', format: (v) => `${v.toFixed(1)}%` },
+  ltv_revenue: { label: 'LTV Revenue', format: (v) => `$${v.toFixed(2)}` }
 }
 
 const COLORS = [
@@ -72,8 +88,25 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [site, setSite] = useState(null)
   const [timeRange, setTimeRange] = useState(30)
+  const [previewMode, setPreviewMode] = useState(false)
+  const [previewSiteName, setPreviewSiteName] = useState('')
+  const [previewSiteDomain, setPreviewSiteDomain] = useState('')
 
   useEffect(() => {
+    // Check for support-mode preview context
+    const previewRaw = sessionStorage.getItem('sourcetrack_admin_preview')
+    if (previewRaw) {
+      try {
+        const preview = JSON.parse(previewRaw)
+        setPreviewMode(true)
+        setPreviewSiteName(preview.site_name || '')
+        setPreviewSiteDomain(preview.site_domain || '')
+        setSite({ site_key: preview.site_key, name: preview.site_name, domain: preview.site_domain })
+        return
+      } catch { /* corrupt preview data */ }
+    }
+
+    // Normal mode: load user's own site
     async function load() {
       const { data } = await supabase
         .from('sites')
@@ -87,13 +120,58 @@ export default function Dashboard() {
   }, [user])
 
   const { data: overview, isLoading } = useQuery({
-    queryKey: ['dashboard-overview', site?.site_key, timeRange],
+    queryKey: ['dashboard-overview', site?.site_key, timeRange, previewMode],
     queryFn: async () => {
       if (!site?.site_key) return null
+      if (previewMode) {
+        return fetchApi(`/admin/preview/${encodeURIComponent(site.site_key)}`)
+      }
       const params = new URLSearchParams({ site_key: site.site_key, days: String(timeRange) })
       return fetchApi(`/dashboard/overview?${params}`)
     },
     enabled: !!site?.site_key
+  })
+
+  const { data: savedReports = [] } = useQuery({
+    queryKey: ['saved-reports-dash', site?.site_key],
+    queryFn: async () => {
+      if (!site?.site_key) return []
+      return fetchApi(`/reports/saved?site_key=${encodeURIComponent(site.site_key)}`)
+    },
+    enabled: !!site?.site_key && !previewMode
+  })
+
+  const topReports = (savedReports || []).slice(0, 3)
+
+  const reportQueries = useQueries({
+    queries: topReports.map((r) => {
+      const cfg = r.config || {}
+      return {
+        queryKey: ['saved-report-data', r.id, site?.site_key],
+        queryFn: async () => {
+          if (!site?.site_key) return null
+          const params = new URLSearchParams({
+            site_key: site.site_key,
+            model: cfg.model || 'last_touch',
+            date_from: cfg.dateFrom || format(subDays(new Date(), 30), 'yyyy-MM-dd'),
+            date_to: cfg.dateTo || format(new Date(), 'yyyy-MM-dd'),
+            group_by: cfg.groupBy || 'source',
+            metric: cfg.metric || 'revenue'
+          })
+          if (cfg.granularity && cfg.granularity !== 'day') params.set('time_granularity', cfg.granularity)
+          if (cfg.groupBy2) params.set('group_by2', cfg.groupBy2)
+          if (cfg.attributionWindow) params.set('attribution_window', cfg.attributionWindow)
+          if (cfg.attributeBy && cfg.attributeBy !== 'conversion_date') params.set('attribute_by', cfg.attributeBy)
+          if (cfg.filters) {
+            Object.entries(cfg.filters).forEach(([k, v]) => {
+              if (v) params.set(`filter_${k}`, v)
+            })
+          }
+          return fetchApi(`/attribution?${params}`)
+        },
+        enabled: !!site?.site_key && !!cfg.metric
+      }
+    })
   })
 
   const kpis = overview?.kpis || {}
@@ -171,31 +249,37 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {previewMode && (
+        <SupportModeBanner siteName={previewSiteName} siteDomain={previewSiteDomain} />
+      )}
+
       {/* Header Toolbar */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Performance Overview</h2>
           {site && <p className="text-sm text-gray-500 mt-0.5">{site.domain || site.name}</p>}
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex bg-gray-100 rounded-lg p-1">
-            {TIME_RANGES.map(tr => (
-              <button
-                key={tr.label}
-                onClick={() => setTimeRange(tr.days)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                  timeRange === tr.days ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {tr.label}
-              </button>
-            ))}
+        {!previewMode && (
+          <div className="flex items-center gap-3">
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              {TIME_RANGES.map(tr => (
+                <button
+                  key={tr.label}
+                  onClick={() => setTimeRange(tr.days)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                    timeRange === tr.days ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                >
+                  {tr.label}
+                </button>
+              ))}
+            </div>
+            <button onClick={handleExport}
+              className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5">
+              <Download className="w-4 h-4" /> Export
+            </button>
           </div>
-          <button onClick={handleExport}
-            className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5">
-            <Download className="w-4 h-4" /> Export
-          </button>
-        </div>
+        )}
       </div>
 
       {isLoading ? (
@@ -222,11 +306,11 @@ export default function Dashboard() {
           {/* Row 1: Recent Leads + Revenue Trend */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <DashboardCard title="Recent Leads" subtitle="Latest attributed conversions by source"
-              action={
+              action={!previewMode && (
                 <button onClick={() => navigate('/leads')} className="text-xs text-gray-900 hover:text-gray-700 font-medium flex items-center gap-1">
                   View all <ArrowRight className="w-3 h-3" />
                 </button>
-              }
+              )}
               className="lg:col-span-2"
             >
               {recentLeadsData.length === 0 ? (
@@ -280,11 +364,11 @@ export default function Dashboard() {
               subtitle={aiRevResults.length > 0
                 ? `AI platforms drive ${aiShareTotal.toFixed(1)}% of your total revenue`
                 : 'Revenue and conversions from AI platforms'}
-              action={
+              action={!previewMode && (
                 <button onClick={() => navigate('/report-builder')} className="text-xs text-gray-900 hover:text-gray-700 font-medium">
                   Analyze
                 </button>
-              }
+              )}
             >
               {aiRevResults.length === 0 ? (
                 <div className="text-center py-8">
@@ -346,11 +430,11 @@ export default function Dashboard() {
 
             <DashboardCard title="Revenue Source Attribution"
               subtitle="Top channels by attributed revenue"
-              action={
+              action={!previewMode && (
                 <button onClick={() => navigate('/campaigns')} className="text-xs text-gray-900 hover:text-gray-700 font-medium flex items-center gap-1">
                   View all <ArrowRight className="w-3 h-3" />
                 </button>
-              }
+              )}
             >
               {activeResults.length === 0 ? (
                 <p className="text-sm text-gray-400 py-6 text-center">No attribution data yet. Start sending events to see source breakdown.</p>
@@ -379,15 +463,50 @@ export default function Dashboard() {
             </DashboardCard>
           </div>
 
+          {/* AI Analytics promo — shown when AI share is meaningful */}
+          {aiShareTotal > 5 && !previewMode && (
+            <DashboardCard
+              title="AI Analytics"
+              subtitle={`AI-driven traffic accounts for ${aiShareTotal.toFixed(1)}% of your revenue — use AI Analytics for deeper insights`}
+              action={
+                <button onClick={() => navigate('/ai-analytics')} className="text-xs text-lime-800 hover:text-lime-700 font-medium flex items-center gap-1">
+                  Open AI Analytics <ArrowRight className="w-3 h-3" />
+                </button>
+              }
+            >
+              <div className="flex items-center gap-4">
+                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-lime-100 flex items-center justify-center">
+                  <Sparkles className="w-6 h-6 text-lime-600" />
+                </div>
+                <div className="flex-1">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-xs text-gray-500">AI Revenue</p>
+                      <p className="text-lg font-semibold text-gray-900">${totalAIRevenue.toFixed(0)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">AI Share</p>
+                      <p className="text-lg font-semibold text-gray-900">{aiShareTotal.toFixed(1)}%</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Platforms</p>
+                      <p className="text-lg font-semibold text-gray-900">{aiRevResults.length}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </DashboardCard>
+          )}
+
           {/* Row 3: Conversion Events + Landing Pages */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <DashboardCard title="Conversion Events"
               subtitle="Tracked conversion types across your site"
-              action={
+              action={!previewMode && (
                 <button onClick={() => navigate('/settings')} className="text-xs text-gray-900 hover:text-gray-700 font-medium">
                   Configure
                 </button>
-              }
+              )}
             >
               <div className="grid grid-cols-2 gap-3">
                 {Object.entries(CONVERSION_LABELS).map(([key, label]) => {
@@ -507,11 +626,11 @@ export default function Dashboard() {
 
             <DashboardCard title="Tracking Health"
               subtitle="Install status and data quality"
-              action={
+              action={!previewMode && (
                 <button onClick={() => navigate('/integrations')} className="text-xs text-gray-900 hover:text-gray-700 font-medium flex items-center gap-1">
                   Details <ExternalLink className="w-3 h-3" />
                 </button>
-              }
+              )}
             >
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -544,7 +663,7 @@ export default function Dashboard() {
                     label={overview?.health?.status === 'healthy' ? 'Healthy' : overview?.health?.status === 'silent_24h' ? 'Silent >24h' : 'No data'}
                   />
                 </div>
-                {(!installData || installData?.status !== 'verified') && (
+                {(!installData || installData?.status !== 'verified') && !previewMode && (
                   <div className="mt-3 pt-3 border-t border-gray-100">
                     <button onClick={() => navigate('/snippet')}
                       className="w-full py-2 text-sm text-gray-900 bg-gray-50 rounded-lg hover:bg-gray-100 font-medium">
@@ -556,17 +675,124 @@ export default function Dashboard() {
             </DashboardCard>
           </div>
 
-          {/* Row 5: Model Attribution quick view */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {modelRevenues.map((m, i) => (
-              <div key={m.model} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                <p className="text-xs text-gray-500">{m.label}</p>
-                <p className="text-lg font-bold text-gray-900 mt-0.5" style={{ color: COLORS[i % COLORS.length] }}>
-                  ${m.total.toFixed(0)}
-                </p>
+          {/* Row 5: Model Attribution comparison */}
+          <DashboardCard title="Attribution Models"
+            subtitle="How revenue distributes across different attribution methods. Non-direct models ignore unbranded/direct traffic."
+          >
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              {modelRevenues.map((m, i) => {
+                const maxRev = Math.max(...modelRevenues.map(x => x.total), 1)
+                const barWidth = maxRev > 0 ? (m.total / maxRev) * 100 : 0
+                return (
+                  <div key={m.model} className="bg-white rounded-lg border border-gray-200 p-3 text-center">
+                    <p className="text-xs text-gray-500 mb-1">{m.label}</p>
+                    <p className="text-base font-bold text-gray-900" style={{ color: COLORS[i % COLORS.length] }}>
+                      ${m.total.toFixed(0)}
+                    </p>
+                    <div className="mt-2 h-1 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all" style={{
+                        width: `${barWidth}%`,
+                        backgroundColor: COLORS[i % COLORS.length].replace('0.85)', '1)')
+                      }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </DashboardCard>
+
+          {/* Saved Reports — up to 3 backend-persisted reports rendered as mini-charts */}
+          {!previewMode && (savedReports.length > 0 ? (
+            <DashboardCard title="Saved Reports"
+              subtitle="Your saved report configurations — data fetched live"
+              action={!previewMode && (
+                <button onClick={() => navigate('/report-builder')} className="text-xs text-gray-900 hover:text-gray-700 font-medium flex items-center gap-1">
+                  Report Builder <ArrowRight className="w-3 h-3" />
+                </button>
+              )}
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {topReports.map((report, idx) => {
+                  const cfg = report.config || {}
+                  const reportData = reportQueries[idx]?.data
+                  const results = reportData?.results || []
+                  const total = results.reduce((s, r) => {
+                    const metricKey = cfg.metric || 'revenue'
+                    return s + (r[metricKey] || r.revenue || r.conversions || r.sessions || 0)
+                  }, 0)
+                  const metricDef = METRIC_DEFS[cfg.metric] || METRIC_DEFS.revenue
+                  const maxVal = Math.max(...results.slice(0, 4).map(r => {
+                    const mk = cfg.metric || 'revenue'
+                    return r[mk] || r.revenue || r.conversions || r.sessions || 0
+                  }), 1)
+
+                  return (
+                    <button
+                      key={report.id}
+                      onClick={() => {
+                        sessionStorage.setItem('sourcetrack_edit_widget', JSON.stringify({
+                          id: report.id, name: report.name, ...cfg
+                        }))
+                        navigate(`/report-builder?edit=${report.id}`)
+                      }}
+                      className="bg-gray-50 rounded-lg p-3 text-left hover:bg-gray-100 transition-colors border border-gray-100 hover:border-gray-300"
+                    >
+                      <p className="text-xs font-medium text-gray-900 truncate">{report.name}</p>
+                      <p className="text-lg font-bold text-gray-900 mt-0.5">
+                        {metricDef.format(total)}
+                      </p>
+                      <p className="text-xs text-gray-400">{metricDef.label} total</p>
+
+                      {results.length > 0 ? (
+                        <div className="mt-2 space-y-1">
+                          {results.slice(0, 5).map((r, i) => {
+                            const mk = cfg.metric || 'revenue'
+                            const val = r[mk] || r.revenue || r.conversions || r.sessions || 0
+                            const barW = maxVal > 0 ? (val / maxVal) * 100 : 0
+                            return (
+                              <div key={i} className="flex items-center gap-1.5">
+                                <span className="text-xs text-gray-500 w-16 truncate flex-shrink-0">
+                                  {r.dim_value || '—'}
+                                </span>
+                                <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                  <div className="h-full bg-gray-900 rounded-full transition-all" style={{ width: `${barW}%` }} />
+                                </div>
+                                <span className="text-xs text-gray-600 w-12 text-right flex-shrink-0">
+                                  {metricDef.format(val)}
+                                </span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : reportQueries[idx]?.isLoading ? (
+                        <div className="h-16 flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400" />
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-400 mt-2">No data for this period</p>
+                      )}
+                    </button>
+                  )
+                })}
               </div>
-            ))}
-          </div>
+            </DashboardCard>
+          ) : (
+            <DashboardCard title="Saved Reports"
+              subtitle="Save reports from Report Builder to see them here"
+            >
+              <div className="text-center py-6">
+                <Bookmark className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">No saved reports yet</p>
+                <p className="text-xs text-gray-400 mt-1 max-w-xs mx-auto">
+                  Build and save reports in the Report Builder — up to 3 will appear here with live data.
+                </p>
+                <button onClick={() => navigate('/report-builder')}
+                  className="mt-3 px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800">
+                  Create your first saved report
+                </button>
+              </div>
+            </DashboardCard>
+          ))}
 
           {/* Alerts Banner */}
           {alerts.length > 0 && (

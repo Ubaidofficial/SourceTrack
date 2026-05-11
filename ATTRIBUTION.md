@@ -93,6 +93,18 @@ first_touch: 100% credit to the first tracked source for this identity within th
 
 last_touch: 100% credit to the most recent source before conversion within the lookback window
 
+first_touch_non_direct: 100% credit to the first qualifying non-direct touchpoint for the identity.
+Fallback: if no non-direct touchpoint exists, credit the first available touchpoint (including direct).
+Implemented Session 54. Uses argMin over pageviews with non-empty, non-'direct' UTM source.
+
+last_touch_non_direct: 100% credit to the last qualifying non-direct touchpoint before conversion.
+Fallback: if no non-direct touchpoint exists, credit the last available touchpoint (including direct).
+Implemented Session 54. Uses argMax over pageviews with non-empty, non-'direct' UTM source.
+
+Direct classification: a touchpoint is direct when utm_source is empty/null or equals 'direct' (after trim+lowercase normalization). All other UTM-bearing touchpoints qualify as non-direct.
+
+These are single-touch models, not multi-touch. They share conversion and revenue totals with first_touch / last_touch — only credit distribution changes.
+
 Roadmap — not yet implemented
 The following are defined here so future sessions implement them correctly when scheduled.
 
@@ -362,11 +374,11 @@ Part 7 — Attribution date modes
 Currently supported
 conversion_date: bucket each conversion by the date the conversion occurred
 
+first_seen_date: bucket by the date the identity first appeared in the system (implemented Session 35)
+
+original_source_date: bucket by the first qualifying source touchpoint date; visitors without UTM source are excluded (implemented Session 35)
+
 Roadmap — defined for future correct implementation
-first_seen_date: bucket by the date the identity first appeared in the system
-
-original_source_date: bucket by the first qualifying source touchpoint date
-
 identified_date: bucket by the date an anonymous lead became identified
 
 Bucketing correctness rules
@@ -638,3 +650,51 @@ when a metric is unreliable, fail loud rather than presenting false precision
 Conflict rule
 If another document, prompt, or UI text conflicts with this file on attribution behavior,
 this file wins until it is intentionally updated.
+
+### Part 15 — Saved Reports and Dashboard Rendering (Session 57)
+
+Saved reports are backend-persisted via the `saved_reports` table with per-user, per-site scoping.
+
+Schema:
+- `id` (UUID, PK)
+- `user_id` (FK → auth.users)
+- `site_id` (FK → sites)
+- `name` (text)
+- `config` (JSONB — stores model, groupBy, metric, chartType, dateFrom, dateTo, granularity, groupBy2, attributionWindow, attributeBy, filters)
+- `created_at`, `updated_at` (timestamptz)
+
+API:
+- `GET /api/reports/saved` — list saved reports for current user + site (auth required)
+- `POST /api/reports/saved` — create a saved report (auth required, validates user owns the site)
+- `DELETE /api/reports/saved/:id` — delete a saved report (auth required, validates ownership)
+
+Dashboard rendering (Session 57):
+- Dashboard renders up to 3 saved reports in a fixed "Saved Reports" card section
+- Each shows: report name, primary metric total, mini bar chart of top results
+- Click opens Report Builder with the saved config loaded
+- This is NOT a widget system — no drag-and-drop, no resize, no multi-dashboard
+- Dashboard rendering is fixed-position, not user-reorderable
+- Reports are scoped per site — users cannot see other sites' saved reports
+
+### Part 16 — Super Admin Support Preview (Session 58)
+
+Super admins can view customer dashboards in a read-only support preview mode without impersonation.
+
+Access:
+- `POST /api/admin/preview` — initiates preview context (returns site metadata + install status + event counts)
+- `GET /api/admin/preview/:siteKey` — returns aggregated dashboard-safe data (KPI summary, top sources, install status) using PostHog HogQL filtered by siteKey
+- All routes require server-side `super_admin` role — enforced by `requireRole('super_admin')` middleware
+
+How it works:
+- Super admin clicks "Preview Dashboard" from the Site Inspector tab
+- Preview context is stored in `sessionStorage` (not auth — no JWT, cookie, or identity switch)
+- Dashboard detects the preview context, loads data from `GET /api/admin/preview/:siteKey` instead of the regular user dashboard endpoint
+- SupportModeBanner is displayed (amber bar with "Support Preview Mode: [Site Name]" + "Read-only" badge + "Exit Preview" button)
+- All write actions, navigation links, and interactive controls are disabled in preview mode
+- Admin remains authenticated as super_admin throughout — no customer JWT is minted
+
+What this is NOT:
+- Not customer impersonation — admin identity never changes
+- Not a customer JWT session — admin uses their own auth token
+- Not write-access to customer data — dashboard is read-only
+- Not tenant boundary bypass — data is fetched via dedicated admin endpoint, not via customer auth

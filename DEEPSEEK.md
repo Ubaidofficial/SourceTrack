@@ -1161,7 +1161,19 @@ Update this file after each DeepSeek session with:
 
 **Recommended:** Resolve linear model conflict first (either fix implementation or update ATTRIBUTION.md), then fix P6 UTM enrichment parity.
 
-**RULES.md cross-check:** R7 (fail loud) applies to 4 silent-failure cases found in Session 51. R9 (never overclaim) applies to linear model exposure — implementation doesn't match ATTRIBUTION.md's definition. No R10 scope-creep found in session history.
+**RULES.md cross-check:** R7 applies to 4 silent-failure cases (2 fixed, 2 remain). R9 violation resolved — linear no longer exposed. No R10 violations.
+
+### Session 53 — Standards Fixes (P6 + Linear + Docs)
+
+**Session type:** 4 targeted fixes from Session 52 audit.
+
+**Completed:**
+1. **P6 fixed:** `normalizeUtm()` added to conversion.js — UTM fields now normalized identically to track.js
+2. **Linear hidden:** Removed from ALLOWED_MODELS, Dashboard/ReportBuilder MODELS, dashboard.js. Engine function commented.
+3. **ATTRIBUTION.md synced:** Part 7 now marks first_seen_date / original_source_date as Currently supported
+4. **LTV label fixed:** "All time (LTV)" → "No lookback (date range only)" in ReportBuilder
+
+**Verified:** All files parse, dashboard builds. R9 violation resolved.
 
 **Files modified:**
 - `dashboard/src/pages/AIAnalytics.jsx` — `buildInsights()` function + 3 insight card grid
@@ -1203,3 +1215,85 @@ Update this file after each DeepSeek session with:
 - Session-bounded path segmentation
 - Drop-off analysis or multi-step conversion inference
 - Backend path aggregation across multiple visitors
+
+### Session 54 — Add Non-Direct Attribution Models
+
+**Session type:** Bounded extension — two new single-touch attribution models.
+
+**Added:** `first_touch_non_direct` and `last_touch_non_direct` — single-touch models that skip direct traffic when a qualifying non-direct pageview exists.
+
+**Direct classification:** utm_source is empty/null or 'direct' (trim+lowercase normalized at ingestion). All other UTM values qualify as non-direct.
+
+**How it works:** LEFT JOIN to qualifying pageview subquery (argMin/argMax) per identity. COALESCE fallback to conversion event properties when no non-direct touchpoint found. Model parity on totals preserved — LEFT JOIN loses no rows.
+
+**Files:** engine.js (2 new functions + isDirectCondition + GROUP_COLUMNS for 8 dims + qualifyingJoin in getFlexibleReport), attribution.js (ALLOWED_MODELS), dashboard.js (overview), Dashboard.jsx + ReportBuilder.jsx (MODELS), ATTRIBUTION.md Part 2, system.md.
+
+**Not implemented:** LTV non-direct support, multi-touch of any kind.
+
+### Session 55 — Product Audit: Report Builder, Dashboard Layout, Install Flow vs Cometly
+
+**Session type:** Parity audit. No code changes.
+
+**Report Builder:** 5 models, 11 metrics, 8 dimensions, 4 charts, full filters. Saved reports localStorage-only. No period-over-period comparison. No add-to-dashboard flow (button disabled).
+
+**Dashboard:** Fixed hardcoded card grid — 9 static DashboardCards. Zero widget rendering, drag-and-drop, resize, or reorder. Add-to-dashboard button disabled with comment "Dashboard does not yet render them."
+
+**Truthfulness gap:** progress.md claims multi-dashboard and per-dashboard widgets as `[x]` completed but Dashboard.jsx has no multi-dashboard code, no widget rendering loop. The `dashboard_widgets` table exists in schema but is unused.
+
+**AI Chat:** HogQL query assistant (LLM → SQL → PostHog). Single-table, no ad platform integrations. Narrower than Cometly's claimed cross-platform analyst.
+
+**Install flow:** Fully implemented and honest — 6-step wizard, GTM+standard, polling verify, JS API docs, cross-domain tracking, limitations callouts.
+
+### Session 56 — Dashboard Truthfulness Fix + Enhancement + Super Admin Phase 1
+
+**Session type:** Truthfulness correction, dashboard polish, and internal admin visibility.
+
+**Truthfulness fix:** Progress.md corrected — 10+ `[x]` items about multi-dashboard/widgets changed to `[ ]` with honest dormant/inactive descriptions. The prior Session 2 widget system was replaced by fixed card grid in Session 31.
+
+**Dashboard enhanced:** Model Attribution section now wrapped in DashboardCard with subtitle + proportional bar charts. AI Analytics promo card shown when AI share >5%.
+
+**Super Admin Phase 1:** Site Inspector tab (site key → onboarding/install detail), Feature Status tab (18 features with live/partial/dormant badges), QA Notes tab (safe claims / misleading / watch items). Endpoints: `GET /admin/site-detail`, `GET /admin/feature-status`. Server-side protection via `requireRole('super_admin')`. Client-side guard via AdminRoute.
+
+### Session 57 — Backend-Saved Reports + Dashboard Fixed Section
+
+**Session type:** Backend persistence for Report Builder + fixed dashboard rendering.
+
+**Files created:**
+- `supabase/migration_saved_reports.sql` — table with RLS, user_id + site_id FK, config JSONB
+- `api/routes/saved-reports.js` — GET/POST/DELETE with auth + ownership checks
+
+**Files modified:**
+- `api/index.js` — mounted at `/api/reports` with full auth chain
+- `dashboard/src/pages/ReportBuilder.jsx` — localStorage replaced with API calls. Dead `handleAddToDashboard`, dead button, unused constants removed. Save feedback added.
+- `dashboard/src/pages/Dashboard.jsx` — "Saved Reports" card fetches from API, shows up to 3 mini bar charts. Empty state CTA.
+- `ATTRIBUTION.md` — Part 15 documents schema and fixed rendering
+
+**Completed:**
+- Reports persist to Supabase — survive browser refresh
+- Per-user + per-site scoping
+- Server-side auth enforced
+- Dashboard shows up to 3 saved reports with live data
+- Dead localStorage/Add-to-Dashboard code removed
+
+**Not implemented:** Drag-and-drop, widgets, multi-dashboard, resize, reorder, configurable limit.
+
+### Session 58 — Support Mode Preview (Read-Only Customer Dashboard)
+
+**Session type:** Functional support-mode preview for super admins — no impersonation.
+
+**Files created:**
+- `dashboard/src/components/SupportModeBanner.jsx` — amber banner component
+
+**Files modified:**
+- `api/routes/admin.js` — `POST /preview` returns richer context. New `GET /preview/:siteKey` returns KPI summary + top sources via HogQL.
+- `dashboard/src/pages/Dashboard.jsx` — preview mode detection, admin endpoint data fetching, SupportModeBanner, all write actions disabled
+- `dashboard/src/pages/Admin.jsx` — "Preview Dashboard" button in Site Inspector
+- `ATTRIBUTION.md` — Part 16 documents preview as read-only, not impersonation
+
+**Completed:**
+- Preview mode functional: see customer KPI summary, top sources, install status
+- Admin stays authenticated as super_admin — no JWT/cookie/session change
+- All write actions disabled in preview
+- Exit returns to /admin cleanly
+
+**Not implemented:** Full dashboard parity in preview (only KPI + top sources returned, not models/AI/campaign/landing pages), no write-as-customer, no impersonation.

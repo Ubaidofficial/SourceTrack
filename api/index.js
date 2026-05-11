@@ -30,6 +30,7 @@ import { leadsRouter } from './routes/leads-server.js'
 import { campaignsRouter } from './routes/campaigns.js'
 import { integrationsRouter } from './routes/integrations.js'
 import { adminRouter } from './routes/admin.js'
+import { savedReportsRouter } from './routes/saved-reports.js'
 import { requireUserAuth } from './middleware/user-auth.js'
 import { billingWebhookHandler, billingRouter } from './routes/billing.js'
 
@@ -147,6 +148,7 @@ app.use('/api/campaigns', requireUserAuth, validateSiteKey, requireSiteMembershi
 app.use('/api/integrations', requireUserAuth, validateSiteKey, requireSiteMembership, integrationsRouter)
 app.use('/api/billing', billingRouter)
 app.use('/api/admin', requireUserAuth, adminRouter)
+app.use('/api/reports', requireUserAuth, validateSiteKey, requireSiteMembership, savedReportsRouter)
 
 // 7. Health check
 app.get('/health', (_req, res) => {

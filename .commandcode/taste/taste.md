@@ -19,3 +19,9 @@ See [code-style/taste.md](code-style/taste.md)
 
 # workflow
 See [workflow/taste.md](workflow/taste.md)
+
+# auditing
+- For zero-edit verification audits: do NOT edit files, write code, or change docs. Report findings precisely with PASS/FAIL/PARTIAL/UNVERIFIED verdicts per check. Suggest follow-up fixes in report only. Confidence: 0.70
+
+# planning
+- When scoping a session, include an explicit "what NOT to build" section alongside deliverables. This prevents scope creep and clarifies boundaries. Confidence: 0.70

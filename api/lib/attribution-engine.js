@@ -77,6 +77,110 @@ async function lastTouchAttribution(siteKey, dateFrom, dateTo) {
   }))
 }
 
+// Direct classification helper — used by non-direct attribution models.
+// A touchpoint is direct when UTM source (trimmed+lowercased per ingestion normalization)
+// is empty, null, or equal to 'direct'.
+// This is intentionally conservative; only non-empty non-'direct' UTM sources qualify.
+function isDirectCondition(tableAlias = 'events') {
+  return `(${tableAlias}.properties.utm_source IS NULL OR ${tableAlias}.properties.utm_source = '' OR ${tableAlias}.properties.utm_source = 'direct')`
+}
+
+async function firstTouchNonDirectAttribution(siteKey, dateFrom, dateTo) {
+  const fromDate = toHogDate(dateFrom)
+  const toDate = toHogDate(dateTo)
+
+  const sql = `
+    SELECT
+      COALESCE(NULLIF(ft.utm_source, ''), 'direct') AS source,
+      COALESCE(NULLIF(ft.utm_medium, ''), 'none') AS medium,
+      ft.utm_campaign AS campaign,
+      COUNT(*) AS conversions,
+      SUM(toFloat64OrZero(toString(e.properties.conversion_value))) AS revenue
+    FROM events e
+    LEFT JOIN (
+      SELECT distinct_id,
+        argMin(properties.utm_source, timestamp) AS utm_source,
+        argMin(properties.utm_medium, timestamp) AS utm_medium,
+        argMin(properties.utm_campaign, timestamp) AS utm_campaign
+      FROM events
+      WHERE properties.site_id = '${esc(siteKey)}'
+        AND event = '$pageview'
+        AND properties.utm_source IS NOT NULL
+        AND properties.utm_source != ''
+        AND properties.utm_source != 'direct'
+        AND timestamp >= toDateTime('${fromDate}')
+        AND timestamp <= toDateTime('${toDate}')
+      GROUP BY distinct_id
+    ) ft ON e.distinct_id = ft.distinct_id
+    WHERE e.properties.site_id = '${esc(siteKey)}'
+      AND e.event = '$conversion'
+      AND e.timestamp >= toDateTime('${fromDate}')
+      AND e.timestamp <= toDateTime('${toDate}')
+    GROUP BY source, medium, campaign
+    ORDER BY revenue DESC
+    LIMIT 50000
+  `
+
+  const rows = await queryHogQL(sql, 'first_touch_non_direct_attribution')
+  return rows.map(([source, medium, campaign, conversions, revenue]) => ({
+    source,
+    medium,
+    campaign: campaign || null,
+    conversions: Number(conversions) || 0,
+    revenue: Number(revenue) || 0
+  }))
+}
+
+async function lastTouchNonDirectAttribution(siteKey, dateFrom, dateTo) {
+  const fromDate = toHogDate(dateFrom)
+  const toDate = toHogDate(dateTo)
+
+  const sql = `
+    SELECT
+      COALESCE(NULLIF(lt.utm_source, ''), 'direct') AS source,
+      COALESCE(NULLIF(lt.utm_medium, ''), 'none') AS medium,
+      lt.utm_campaign AS campaign,
+      COUNT(*) AS conversions,
+      SUM(toFloat64OrZero(toString(e.properties.conversion_value))) AS revenue
+    FROM events e
+    LEFT JOIN (
+      SELECT distinct_id,
+        argMax(properties.utm_source, timestamp) AS utm_source,
+        argMax(properties.utm_medium, timestamp) AS utm_medium,
+        argMax(properties.utm_campaign, timestamp) AS utm_campaign
+      FROM events
+      WHERE properties.site_id = '${esc(siteKey)}'
+        AND event = '$pageview'
+        AND properties.utm_source IS NOT NULL
+        AND properties.utm_source != ''
+        AND properties.utm_source != 'direct'
+        AND timestamp >= toDateTime('${fromDate}')
+        AND timestamp <= toDateTime('${toDate}')
+      GROUP BY distinct_id
+    ) lt ON e.distinct_id = lt.distinct_id
+    WHERE e.properties.site_id = '${esc(siteKey)}'
+      AND e.event = '$conversion'
+      AND e.timestamp >= toDateTime('${fromDate}')
+      AND e.timestamp <= toDateTime('${toDate}')
+    GROUP BY source, medium, campaign
+    ORDER BY revenue DESC
+    LIMIT 50000
+  `
+
+  const rows = await queryHogQL(sql, 'last_touch_non_direct_attribution')
+  return rows.map(([source, medium, campaign, conversions, revenue]) => ({
+    source,
+    medium,
+    campaign: campaign || null,
+    conversions: Number(conversions) || 0,
+    revenue: Number(revenue) || 0
+  }))
+}
+
+// NOT CURRENTLY WIRED: linear model is removed from ALLOWED_MODELS in api/routes/attribution.js.
+// This implementation uses FIRST_VALUE(conversion_value) per user — not true multi-touch linear
+// as defined by ATTRIBUTION.md Part 2 ("equal credit distributed across all touchpoints").
+// Kept for reference; re‑enable only after implementing per-touchpoint credit distribution.
 async function linearAttribution(siteKey, dateFrom, dateTo) {
   const fromDate = toHogDate(dateFrom)
   const toDate = toHogDate(dateTo)
@@ -177,6 +281,12 @@ export async function getAttribution(siteKey, model, dateFrom, dateTo) {
     case 'last_touch':
       results = await lastTouchAttribution(siteKey, dateFrom, dateTo)
       break
+    case 'first_touch_non_direct':
+      results = await firstTouchNonDirectAttribution(siteKey, dateFrom, dateTo)
+      break
+    case 'last_touch_non_direct':
+      results = await lastTouchNonDirectAttribution(siteKey, dateFrom, dateTo)
+      break
     case 'linear':
       results = await linearAttribution(siteKey, dateFrom, dateTo)
       break
@@ -196,43 +306,57 @@ const GROUP_COLUMNS = {
     first_touch: "COALESCE(NULLIF(properties.first_touch_source, ''), 'direct')",
     last_touch: "COALESCE(NULLIF(properties.utm_source, ''), 'direct')",
     linear: "COALESCE(NULLIF(properties.utm_source, ''), 'direct')",
-    ai_platforms: 'properties.ai_source'
+    ai_platforms: 'properties.ai_source',
+    first_touch_non_direct: "COALESCE(NULLIF(_nd.nd_source, ''), COALESCE(NULLIF(properties.first_touch_source, ''), 'direct'))",
+    last_touch_non_direct: "COALESCE(NULLIF(_nd.nd_source, ''), COALESCE(NULLIF(properties.utm_source, ''), 'direct'))"
   },
   medium: {
     first_touch: "COALESCE(NULLIF(properties.first_touch_medium, ''), 'none')",
     last_touch: "COALESCE(NULLIF(properties.utm_medium, ''), 'none')",
     linear: "COALESCE(NULLIF(properties.utm_medium, ''), 'none')",
-    ai_platforms: "'—'"
+    ai_platforms: "'—'",
+    first_touch_non_direct: "COALESCE(NULLIF(_nd.nd_medium, ''), COALESCE(NULLIF(properties.first_touch_medium, ''), 'none'))",
+    last_touch_non_direct: "COALESCE(NULLIF(_nd.nd_medium, ''), COALESCE(NULLIF(properties.utm_medium, ''), 'none'))"
   },
   campaign: {
     first_touch: 'properties.first_touch_campaign',
     last_touch: 'properties.utm_campaign',
     linear: 'properties.utm_campaign',
-    ai_platforms: "'—'"
+    ai_platforms: "'—'",
+    first_touch_non_direct: 'COALESCE(_nd.nd_campaign, properties.first_touch_campaign)',
+    last_touch_non_direct: 'COALESCE(_nd.nd_campaign, properties.utm_campaign)'
   },
   ai_source: {
     first_touch: "COALESCE(NULLIF(properties.ai_source, ''), 'none')",
     last_touch: "COALESCE(NULLIF(properties.ai_source, ''), 'none')",
     linear: "COALESCE(NULLIF(properties.ai_source, ''), 'none')",
-    ai_platforms: 'properties.ai_source'
+    ai_platforms: 'properties.ai_source',
+    first_touch_non_direct: "COALESCE(NULLIF(properties.ai_source, ''), 'none')",
+    last_touch_non_direct: "COALESCE(NULLIF(properties.ai_source, ''), 'none')"
   },
   landing_page: {
     first_touch: "COALESCE(NULLIF(properties.page_url, ''), '/')",
     last_touch: "COALESCE(NULLIF(properties.page_url, ''), '/')",
     linear: "COALESCE(NULLIF(properties.page_url, ''), '/')",
-    ai_platforms: "COALESCE(NULLIF(properties.page_url, ''), '/')"
+    ai_platforms: "COALESCE(NULLIF(properties.page_url, ''), '/')",
+    first_touch_non_direct: "COALESCE(NULLIF(properties.page_url, ''), '/')",
+    last_touch_non_direct: "COALESCE(NULLIF(properties.page_url, ''), '/')"
   },
   country: {
     first_touch: "COALESCE(NULLIF(properties.country, ''), 'unknown')",
     last_touch: "COALESCE(NULLIF(properties.country, ''), 'unknown')",
     linear: "COALESCE(NULLIF(properties.country, ''), 'unknown')",
-    ai_platforms: "COALESCE(NULLIF(properties.country, ''), 'unknown')"
+    ai_platforms: "COALESCE(NULLIF(properties.country, ''), 'unknown')",
+    first_touch_non_direct: "COALESCE(NULLIF(properties.country, ''), 'unknown')",
+    last_touch_non_direct: "COALESCE(NULLIF(properties.country, ''), 'unknown')"
   },
   device: {
     first_touch: "COALESCE(NULLIF(properties.device_type, ''), 'unknown')",
     last_touch: "COALESCE(NULLIF(properties.device_type, ''), 'unknown')",
     linear: "COALESCE(NULLIF(properties.device_type, ''), 'unknown')",
-    ai_platforms: "COALESCE(NULLIF(properties.device_type, ''), 'unknown')"
+    ai_platforms: "COALESCE(NULLIF(properties.device_type, ''), 'unknown')",
+    first_touch_non_direct: "COALESCE(NULLIF(properties.device_type, ''), 'unknown')",
+    last_touch_non_direct: "COALESCE(NULLIF(properties.device_type, ''), 'unknown')"
   },
   date: {
     // These entries are dead code — date dimExpr is now always generated
@@ -241,7 +365,9 @@ const GROUP_COLUMNS = {
     first_touch: null,
     last_touch: null,
     linear: null,
-    ai_platforms: null
+    ai_platforms: null,
+    first_touch_non_direct: null,
+    last_touch_non_direct: null
   }
 }
 
@@ -304,6 +430,29 @@ export async function getFlexibleReport(siteKey, model, dateFrom, dateTo, groupB
     ) _ref ON events.distinct_id = _ref.distinct_id`
       refTs = '_ref.ref_ts'
     }
+  }
+
+  // Non-direct attribution models: LEFT JOIN that finds the first/last qualifying non-direct
+  // pageview for each distinct_id. When no qualifying touchpoint exists, _nd.* columns are
+  // NULL and the COALESCE in GROUP_COLUMNS falls back to the conversion event's own
+  // first_touch/last_touch properties. This preserves model-parity totals.
+  let qualifyingJoin = ''
+  if (model === 'first_touch_non_direct' || model === 'last_touch_non_direct') {
+    const ndAggFn = model === 'first_touch_non_direct' ? 'argMin' : 'argMax'
+    qualifyingJoin = `
+    LEFT JOIN (
+      SELECT distinct_id,
+        ${ndAggFn}(properties.utm_source, timestamp) AS nd_source,
+        ${ndAggFn}(properties.utm_medium, timestamp) AS nd_medium,
+        ${ndAggFn}(properties.utm_campaign, timestamp) AS nd_campaign
+      FROM events
+      WHERE properties.site_id = '${safeSite}'
+        AND event = '$pageview'
+        AND properties.utm_source IS NOT NULL
+        AND properties.utm_source != ''
+        AND properties.utm_source != 'direct'
+      GROUP BY distinct_id
+    ) _nd ON events.distinct_id = _nd.distinct_id`
   }
 
   const dimExpr = groupBy === 'date'
@@ -537,7 +686,7 @@ export async function getFlexibleReport(siteKey, model, dateFrom, dateTo, groupB
       ${dimExpr} AS dim_value${dim2Expr ? `,\n      ${dim2Expr} AS dim_value2` : ''},
       ${metricCol} AS metric_value
       ${extraSelect}
-    FROM events${refJoin}
+    FROM events${refJoin}${qualifyingJoin}
     WHERE properties.site_id = '${safeSite}'
       AND timestamp >= toDateTime('${fromDate}')${windowClause}
       AND timestamp <= toDateTime('${toDate}')

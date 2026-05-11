@@ -33,7 +33,8 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       timeResults,
       modelFirstTouch,
       modelLastTouch,
-      modelLinear,
+      modelFTND,
+      modelLTND,
       modelAI,
       installRows,
       alertRows,
@@ -55,7 +56,8 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       getFlexibleReport(siteKey, 'first_touch', dateFrom, dateTo, 'date', 'revenue', {}),
       getAttribution(siteKey, 'first_touch', dateFrom, dateTo),
       getAttribution(siteKey, 'last_touch', dateFrom, dateTo),
-      getAttribution(siteKey, 'linear', dateFrom, dateTo),
+      getAttribution(siteKey, 'first_touch_non_direct', dateFrom, dateTo),
+      getAttribution(siteKey, 'last_touch_non_direct', dateFrom, dateTo),
       getAttribution(siteKey, 'ai_platforms', dateFrom, dateTo),
       queryHogQL(`
         SELECT event, timestamp, properties.page_url AS page_url
@@ -138,7 +140,8 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     const modelRevenues = {
       first_touch: modelFirstTouch.reduce((s, r) => s + (r.revenue || 0), 0),
       last_touch: modelLastTouch.reduce((s, r) => s + (r.revenue || 0), 0),
-      linear: modelLinear.reduce((s, r) => s + (r.revenue || 0), 0),
+      first_touch_non_direct: modelFTND.reduce((s, r) => s + (r.revenue || 0), 0),
+      last_touch_non_direct: modelLTND.reduce((s, r) => s + (r.revenue || 0), 0),
       ai_platforms: modelAI.reduce((s, r) => s + (r.revenue || 0), 0)
     }
 

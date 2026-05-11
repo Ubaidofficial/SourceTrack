@@ -1,7 +1,7 @@
 # SYSTEM.md — TrackIQ
 
 ## Product
-TrackIQ is a marketing attribution SaaS. It tracks first-touch, last-touch, linear attribution, and AI platform attribution (which AI tools send traffic that converts: ChatGPT, Claude, Perplexity, Gemini, etc.).
+TrackIQ is a marketing attribution SaaS. It tracks first-touch, last-touch, first-touch non-direct, last-touch non-direct, and AI platform attribution (which AI tools send traffic that converts: ChatGPT, Claude, Perplexity, Gemini, etc.).
 
 ## Stack
 - Backend: Node.js v20 + Express → Railway
