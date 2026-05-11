@@ -14,7 +14,7 @@ import { track } from './routes/track.js'
 import { identify } from './routes/identify.js'
 import { conversion } from './routes/conversion.js'
 import { conversionOffline } from './routes/conversion-offline.js'
-import { attribution } from './routes/attribution.js'
+import { attribution, attributionExplain } from './routes/attribution.js'
 import { journey } from './routes/journey.js'
 import { aiChatRouter } from './routes/ai-chat.js'
 import { installRouter } from './routes/install.js'
@@ -33,6 +33,7 @@ import { adminRouter } from './routes/admin.js'
 import { savedReportsRouter } from './routes/saved-reports.js'
 import { requireUserAuth } from './middleware/user-auth.js'
 import { billingWebhookHandler, billingRouter } from './routes/billing.js'
+import { sessionsOverview, visitorSessions } from './routes/sessions.js'
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -132,6 +133,7 @@ app.post('/api/identify', validateSiteKey, identify)
 app.post('/api/conversion', validateSiteKey, detectAIPlatform, conversion)
 app.post('/api/conversion/offline', validateSiteKey, conversionOffline)
 app.get('/api/attribution', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, attribution)
+app.get('/api/attribution/explain', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, attributionExplain)
 app.get('/api/journey/:visitorId', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, journey)
 app.use('/api/ai-chat', requireUserAuth, validateSiteKey, requireSiteMembership, aiChatRouter)
 app.use('/api/install', requireUserAuth, installRouter)
@@ -149,6 +151,8 @@ app.use('/api/integrations', requireUserAuth, validateSiteKey, requireSiteMember
 app.use('/api/billing', billingRouter)
 app.use('/api/admin', requireUserAuth, adminRouter)
 app.use('/api/reports', requireUserAuth, validateSiteKey, requireSiteMembership, savedReportsRouter)
+app.get('/api/sessions/overview', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, sessionsOverview)
+app.get('/api/sessions', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, visitorSessions)
 
 // 7. Health check
 app.get('/health', (_req, res) => {

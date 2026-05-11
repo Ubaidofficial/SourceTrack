@@ -149,6 +149,14 @@ export default function Admin() {
     if (activeTab === 'feature_status' && !featureStatus) loadFeatureStatus()
   }, [activeTab, featureStatus])
 
+  useEffect(() => {
+    if (activeTab === 'audit_log') loadAuditLog()
+  }, [activeTab])
+
+  useEffect(() => {
+    if (activeTab === 'qa_notes') loadQaNotes()
+  }, [activeTab])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -184,14 +192,14 @@ export default function Admin() {
       </div>
 
       <div className="flex gap-2 border-b border-gray-200">
-        {['companies', 'users', 'sites', 'site_inspector', 'feature_status', 'qa_notes'].map(tab => (
+        {['companies', 'users', 'sites', 'site_inspector', 'feature_status', 'qa_notes', 'audit_log'].map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === tab
                 ? 'border-gray-900 text-gray-900'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}>
-            {tab === 'site_inspector' ? 'Site Inspector' : tab === 'feature_status' ? 'Features' : tab === 'qa_notes' ? 'QA Notes' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {tab === 'site_inspector' ? 'Site Inspector' : tab === 'feature_status' ? 'Features' : tab === 'qa_notes' ? 'QA Notes' : tab === 'audit_log' ? 'Audit Log' : tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
         ))}
       </div>
@@ -391,6 +399,38 @@ export default function Admin() {
 
       {activeTab === 'feature_status' && (
         <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-500">
+              {featureStatus?.last_verified ? (
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  Last verified: {new Date(featureStatus.last_verified).toLocaleString()}
+                </span>
+              ) : 'Loading provenance...'}
+            </p>
+            <button
+              onClick={handleRecheck}
+              disabled={rechecking}
+              className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${rechecking ? 'animate-spin' : ''}`} />
+              {rechecking ? 'Rechecking...' : 'Recheck All Features'}
+            </button>
+          </div>
+
+          {recheckDiffs && recheckDiffs.length > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p className="text-sm font-medium text-amber-800 mb-1">Status changes detected:</p>
+              <ul className="space-y-1">
+                {recheckDiffs.map((d, i) => (
+                  <li key={i} className="text-xs text-amber-700">
+                    {d.feature}: <span className="line-through">{d.previous}</span> → <span className="font-medium">{d.current}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {featureLoading ? (
             <div className="flex items-center justify-center py-10">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
@@ -402,6 +442,7 @@ export default function Admin() {
                   <tr className="border-b border-gray-100">
                     <th className="text-left py-2.5 px-3 text-xs font-medium text-gray-500">Feature</th>
                     <th className="text-left py-2.5 px-3 text-xs font-medium text-gray-500">Status</th>
+                    <th className="text-left py-2.5 px-3 text-xs font-medium text-gray-500">Method</th>
                     <th className="text-left py-2.5 px-3 text-xs font-medium text-gray-500">Notes</th>
                   </tr>
                 </thead>
@@ -418,6 +459,7 @@ export default function Admin() {
                           label={f.status.replace(/_/g, ' ')}
                         />
                       </td>
+                      <td className="py-2.5 px-3 text-xs text-gray-400">{f.verification_method || 'static-audit'}</td>
                       <td className="py-2.5 px-3 text-xs text-gray-600">{f.notes}</td>
                     </tr>
                   ))}
@@ -431,55 +473,164 @@ export default function Admin() {
       )}
 
       {activeTab === 'qa_notes' && (
-        <div className="space-y-6">
-          <DashboardCard title="QA Notes — Safe Claims" subtitle="What can truthfully be stated about the product">
-            <ul className="space-y-2 text-sm text-gray-700">
-              {(featureStatus?.qa_notes?.safe_claims || [
-                'Single-touch attribution with 5 models',
-                'AI platform detection via deterministic referrer matching',
-                'AI Chat is a HogQL query assistant',
-                'Dashboard is a fixed card grid (not widgetized)',
-                'LTV is cumulative historical revenue, not predictive',
-                'Install flow is complete with honest limitations'
-              ]).map((claim, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <span className="text-green-600 mt-0.5">✓</span> {claim}
-                </li>
-              ))}
-            </ul>
-          </DashboardCard>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-500">Editable truthfulness notes — persisted to database</p>
+            <button
+              onClick={() => { setQaFormMode('create'); setQaFormData({ feature_key: '', note_type: 'watch', note_text: '' }) }}
+              className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5"
+            >
+              <Plus className="w-3.5 h-3.5" /> Add Note
+            </button>
+          </div>
 
-          <DashboardCard title="QA Notes — Would Be Misleading" subtitle="Claims that would not match current product reality">
-            <ul className="space-y-2 text-sm text-gray-700">
-              {(featureStatus?.qa_notes?.misleading_if_claimed || [
-                'Multi-dashboard system with CRUD',
-                'Widgetized dashboard with drag-and-drop',
-                'Cross-platform ad-account analyst in AI Chat',
-                'Linear attribution',
-                'Consent-aware tracking pipeline'
-              ]).map((claim, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <span className="text-red-500 mt-0.5">✗</span> {claim}
-                </li>
-              ))}
-            </ul>
-          </DashboardCard>
+          {qaFormMode && (
+            <DashboardCard title={qaFormMode === 'edit' ? 'Edit Note' : 'New Note'}>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Feature Key</label>
+                  <input
+                    type="text"
+                    value={qaFormData.feature_key}
+                    onChange={(e) => setQaFormData({ ...qaFormData, feature_key: e.target.value })}
+                    placeholder="e.g. widgetized_dashboard"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Type</label>
+                  <select
+                    value={qaFormData.note_type}
+                    onChange={(e) => setQaFormData({ ...qaFormData, note_type: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                  >
+                    <option value="safe_claim">Safe Claim</option>
+                    <option value="watch">Watch Item</option>
+                    <option value="misleading">Misleading if Claimed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Note</label>
+                  <textarea
+                    value={qaFormData.note_text}
+                    onChange={(e) => setQaFormData({ ...qaFormData, note_text: e.target.value })}
+                    placeholder="Describe the claim, watch item, or misleading statement..."
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={handleQaSave} className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800">
+                    Save
+                  </button>
+                  <button onClick={() => setQaFormMode(null)} className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </DashboardCard>
+          )}
 
-          <DashboardCard title="QA Notes — Watch Items" subtitle="Dormant code, stale data, or things worth checking">
-            <ul className="space-y-2 text-sm text-gray-700">
-              {(featureStatus?.qa_notes?.watch_items || [
-                'sourcetrack_dashboard_widgets_staging localStorage key',
-                'dashboard_widgets table in schema (unused)',
-                'Reports are localStorage-only',
-                'AI_SOURCES frontend constant only lists 7/10 platforms'
-              ]).map((item, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <Info className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </DashboardCard>
+          {qaLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+            </div>
+          ) : (
+            <DashboardCard title="QA Notes" subtitle={`${qaNotes.length} note${qaNotes.length !== 1 ? 's' : ''}`}>
+              {qaNotes.length === 0 ? (
+                <p className="text-sm text-gray-400 py-6 text-center">No QA notes yet. Add one above.</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="text-left py-2.5 px-3 text-xs font-medium text-gray-500">Feature</th>
+                      <th className="text-left py-2.5 px-3 text-xs font-medium text-gray-500">Type</th>
+                      <th className="text-left py-2.5 px-3 text-xs font-medium text-gray-500">Note</th>
+                      <th className="text-right py-2.5 px-3 text-xs font-medium text-gray-500">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {qaNotes.map((n) => (
+                      <tr key={n.id} className="border-b border-gray-50 hover:bg-gray-50">
+                        <td className="py-2.5 px-3 text-gray-900 font-medium">{n.feature_key}</td>
+                        <td className="py-2.5 px-3">
+                          <StatusBadge
+                            status={n.note_type === 'safe_claim' ? 'verified' : n.note_type === 'misleading' ? 'error' : 'warning'}
+                            label={n.note_type.replace(/_/g, ' ')}
+                          />
+                        </td>
+                        <td className="py-2.5 px-3 text-gray-600">{n.note_text}</td>
+                        <td className="py-2.5 px-3 text-right">
+                          <div className="flex items-center gap-1 justify-end">
+                            <button
+                              onClick={() => { setQaFormMode('edit'); setQaFormData({ id: n.id, feature_key: n.feature_key, note_type: n.note_type, note_text: n.note_text }) }}
+                              className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                              title="Edit"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleQaDelete(n.id)}
+                              className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </DashboardCard>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'audit_log' && (
+        <div className="space-y-4">
+          {auditLoading ? (
+            <div className="flex items-center justify-center py-10">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+            </div>
+          ) : (
+            <DashboardCard title="Audit Log" subtitle={`${auditLog.length} recent admin actions`}>
+              {auditLog.length === 0 ? (
+                <p className="text-sm text-gray-400 py-6 text-center">No audit entries yet.</p>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="text-left py-2.5 px-3 text-xs font-medium text-gray-500">Time</th>
+                      <th className="text-left py-2.5 px-3 text-xs font-medium text-gray-500">Admin</th>
+                      <th className="text-left py-2.5 px-3 text-xs font-medium text-gray-500">Action</th>
+                      <th className="text-left py-2.5 px-3 text-xs font-medium text-gray-500">Target</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auditLog.map((entry) => (
+                      <tr key={entry.id} className="border-b border-gray-50 hover:bg-gray-50">
+                        <td className="py-2.5 px-3 text-gray-500 text-xs whitespace-nowrap">
+                          {new Date(entry.created_at).toLocaleString()}
+                        </td>
+                        <td className="py-2.5 px-3 text-gray-900">{entry.admin_email || entry.admin_user_id?.slice(0, 8) || '—'}</td>
+                        <td className="py-2.5 px-3">
+                          <StatusBadge
+                            status={entry.action === 'recheck_features' ? 'warning' : 'active'}
+                            label={entry.action.replace(/_/g, ' ')}
+                          />
+                        </td>
+                        <td className="py-2.5 px-3 text-gray-600 text-xs">
+                          {entry.target_type ? `${entry.target_type}: ${entry.target_id || '—'}` : '—'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </DashboardCard>
+          )}
         </div>
       )}
     </div>

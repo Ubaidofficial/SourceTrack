@@ -1678,3 +1678,264 @@ The 10 rules (R1-R10) govern coding behavior per session, not retrospective code
 - No customer session created
 - All data read via admin endpoint with admin's own token
 - Tenant boundaries respected — admin accesses data through dedicated endpoint, not through customer auth flow
+
+## Session 59 — Super Admin Phase 2: Recheck, Provenance, Audit Log
+
+**Session type:** Add recheck automation, status provenance, and audit logging to Super Admin.
+
+**Files created:**
+- `supabase/migration_admin_phase2.sql` — `admin_audit_log` and `qa_notes` tables with RLS policies
+
+**Files modified:**
+- `api/routes/admin.js` —
+  - Added `last_verified` and `verification_method` to `GET /feature-status`
+  - Added `POST /feature-status/recheck` with server-side probes (route existence, module imports) that derive live/dormant/partial statuses
+  - Added `GET /audit-log` returning last 100 entries enriched with admin email
+  - Added `GET /qa-notes`, `POST /qa-notes`, `PUT /qa-notes/:id`, `DELETE /qa-notes/:id` for editable truthfulness notes
+  - Added `makeAuditLogger` helper; all admin actions (preview, site detail, feature status, recheck) are auto-logged to `admin_audit_log`
+- `dashboard/src/pages/Admin.jsx` —
+  - Added `Audit Log` tab showing recent admin actions (timestamp, admin email, action, target)
+  - Added `Recheck All Features` button in Features tab with diff display (amber banner when status changes detected)
+  - Added provenance column (`verification_method`) to feature status table
+  - Replaced static QA Notes tab with editable version: add/edit/delete notes via API, persisted to database
+  - Added `RefreshCw`, `Clock`, `Plus`, `Trash2`, `Edit3` icons
+
+**Completed:**
+- Feature status provenance: each feature shows `last_verified` timestamp and `verification_method`
+- Server-side recheck probes route existence and module imports to derive status
+- Recheck diffs displayed inline when status changes
+- Audit log records all admin actions with admin email enrichment
+- QA Notes fully editable and persisted to Supabase (replaces static frontend arrays)
+- All audit/QA operations require `super_admin` role
+- ATTRIBUTION.md Part 17 documents Phase 2 scope and limits
+
+**Verified:** Frontend build passes (1995 modules). Backend files parse. Auth chain: `requireRole('super_admin')` on all admin routes. Audit log auto-inserts on preview, site detail, feature status, and recheck.
+
+**What was NOT built:**
+- No automated CI/CD integration for status checks (manual recheck only)
+- No user-facing audit log (internal super admin only)
+- No detailed code diffing (only existence checks)
+- No alerting/notifications on status changes
+
+## Session 60 — Attribution Explanation Layer
+
+**Session type:** Add attribution explanation UI showing why credit was assigned, touchpoint count, and time-to-convert.
+
+**Files created:**
+- `dashboard/src/components/ConversionExplanationModal.jsx` — reusable modal showing conversion details, explanation card, journey summary tiles, journey timeline with attributed touch highlighted and skipped touches grayed, model logic tooltip
+
+**Files modified:**
+- `api/lib/attribution-engine.js` — added `getAttributionExplanation(siteKey, model, distinctId)` function:
+  - Queries conversion event for the visitor (value, timestamp, UTM, first-touch, ai_source, ingestion method)
+  - Queries all events (journey) for the visitor, ordered chronologically
+  - Builds explanation object with `attributed_to`, `reason`, `fallback` flag, `journey_summary` (touchpoint_count, duration_days, total_events), `skipped_touches`, `all_touches`
+  - Per-model logic: first_touch reads first_touch_* from conversion event; last_touch reads utm_* from conversion event; first_touch_non_direct / last_touch_non_direct query pageviews and find earliest/latest non-direct; ai_platforms reads ai_source
+- `api/routes/attribution.js` — added `attributionExplain` handler for `GET /api/attribution/explain` with validation for `site_key`, `model`, `distinct_id`; returns 404 if no conversion found
+- `api/index.js` — mounted `GET /api/attribution/explain` with full auth chain (`requireUserAuth`, `validateSiteKey`, `requireSiteMembership`, `defaultLimit`)
+- `dashboard/src/pages/ReportBuilder.jsx` —
+  - Added `ConversionExplanationModal` import
+  - Added `showExplanation` toggle state + "Show Explanation" / "Hide Explanation" button in table header
+  - When enabled, adds "Explanation" column to results table with brief model-specific text per row (e.g., "First visit UTM", "Earliest non-direct")
+  - Clicking explanation text opens modal in generic mode (model explanation without specific conversion)
+- `dashboard/src/pages/Dashboard.jsx` —
+  - Added `ConversionExplanationModal` import
+  - Added `explainModalOpen` and `explainModel` state
+  - Attribution model cards in "Attribution Models" section are now clickable buttons
+  - Click opens modal in generic mode for that model
+
+**Completed:**
+- Attribution explanation backend: per-visitor conversion + journey query, model-specific reason generation
+- Explanation modal: conversion details, attributed source, reason text, fallback indicator, journey summary (touchpoints, duration, total events), timeline with attributed touch highlighted in green, skipped touches grayed/strikethrough
+- Model logic tooltip in modal explaining how each single-touch model works
+- Report Builder: optional Explanation column toggle with brief inline text per row
+- Dashboard: clickable attribution model cards open explanation modal
+- All routes protected by full auth chain (user auth + site ownership)
+- ATTRIBUTION.md Part 18 documents explanation schema and model descriptions
+
+**Verified:** Frontend build passes (1996 modules). Backend files parse. Auth chain: `requireUserAuth` + `validateSiteKey` + `requireSiteMembership` on `/api/attribution/explain`.
+
+**What was NOT built:**
+- No multi-touch credit distribution visualization (single-touch only)
+- No "what-if" model comparison (shows actual attribution only)
+- No journey editing or manual attribution override
+- No aggregate journey analytics (e.g., "most common paths")
+- No explanation for `ltv_revenue` metric (per-identity aggregation, not per-conversion)
+
+## Session 61 — LTV Non-Direct Model Support
+
+**Session type:** Functional — extend LTV calculation to support first_touch_non_direct and last_touch_non_direct models.
+
+**Files modified:**
+- `api/lib/attribution-engine.js` — LTV branch now supports all single-touch models:
+  - Removed `first_touch`/`last_touch` only restriction
+  - Added `first_touch_non_direct` and `last_touch_non_direct` cases to `ltvPersonDimExpr`
+  - Added conditional LEFT JOIN for non-direct LTV (qualifying pageviews subquery with `argMin`/`argMax`)
+  - `events` table remains unaliased so existing filter clauses work
+  - UUID exclusion applied to all LTV models
+- `dashboard/src/pages/ReportBuilder.jsx` — LTV metric description updated to state support for all single-touch models including non-direct variants
+- `dashboard/src/pages/Dashboard.jsx` — new "LTV by Model" card:
+  - Fetches LTV revenue for all four single-touch models via parallel `useQueries`
+  - Shows total LTV per model as clickable buttons
+  - Selected model shows top 5 sources by LTV with horizontal bar chart
+  - Model selector dropdown in card header
+  - Loading states for each model query
+- `ATTRIBUTION.md` — Part 19 documents LTV non-direct support; Part 6 updated with model support details
+
+**Completed:**
+- LTV metric available for first_touch_non_direct and last_touch_non_direct in Report Builder
+- Dashboard LTV card shows all four models with comparison
+- LTV SQL uses same non-direct LEFT JOIN pattern as regular attribution
+- Fallback logic: first_touch_non_direct falls back to first_touch cookie; last_touch_non_direct falls back to conversion page UTM
+- All builds pass
+
+**Verified:** Frontend build passes (1996 modules). Backend files parse. LTV SQL syntax validated.
+
+**What was NOT built:**
+- No predictive LTV (only historical sum)
+- No cohort-based LTV analysis
+- No LTV time-decay or weighting
+- No customer-level LTV drilldown (aggregate only)
+
+## Auth/Onboarding Regression Fix (Session 62 pre-work)
+
+**Root cause:** Super admins without owned sites were routed to onboarding after sign-in. Domain registration failed when the user's site already existed but wasn't found by owner_id query. Generic "Failed to register domain" swallowed real errors.
+
+**Files modified:**
+- `dashboard/src/pages/Login.jsx` — After email/password sign-in, super admins (detected via `raw_app_meta_data.role`) are now routed to `/admin` instead of checking for owned sites.
+- `dashboard/src/pages/Onboarding.jsx` — Domain registration now checks for existing site by `owner_id + domain` (not just domain globally). If found, resumes existing onboarding state instead of failing. Insert errors now show specific messages (duplicate key, constraint errors) instead of generic text.
+
+**Completed:**
+- Super admins no longer trapped in onboarding loop after sign-in
+- Domain registration is idempotent — existing sites are resumed, not recreated
+- Specific error messages replace generic "Failed to register domain"
+- Build passes
+
+## Session 62 — Sessionization Foundation
+
+**Session type:** Functional — implement sessionization as a derived-on-read foundation layer.
+
+**Files modified:**
+- `api/lib/sessionization.js` — NEW: `deriveSessions(events)` groups events into sessions using 30-minute inactivity timeout; `sessionAggregates(sessions)` computes totals/averages; `annotateSessions(sessions)` adds converting_session_index and per-session summaries
+- `api/routes/sessions.js` — NEW: `GET /api/sessions/overview` returns session aggregates + time series for dashboard; `GET /api/sessions` returns per-visitor session list for explanation modal
+- `api/index.js` — mounts `/api/sessions/overview` and `/api/sessions` with auth chain
+- `api/lib/attribution-engine.js` — `getAttributionExplanation` now derives sessions from journey events and includes `session_count`, `first_session_at`, `last_session_at`, `converting_session_index`, and `sessions` array; NEW `getSessionReport()` derives sessions from pageviews and aggregates by dimension for Report Builder; `getFlexibleReport` delegates session metrics to `getSessionReport`
+- `api/routes/attribution.js` — `ALLOWED_METRICS` expanded with `session_count`, `avg_session_duration`, `pages_per_session`, `conversion_sessions`
+- `dashboard/src/components/ConversionExplanationModal.jsx` — added session summary tiles (sessions, converting session index, pages in converting session); added Event Timeline / Session Timeline toggle; Session Timeline shows sessions with entry source, duration, page count, conversion indicator
+- `dashboard/src/pages/Dashboard.jsx` — new "Session Analytics" card: total sessions, avg duration, pages/session, conversion sessions, sessions-over-time bar chart; honest note about derived-on-read
+- `dashboard/src/pages/ReportBuilder.jsx` — renamed existing "Sessions" metric to "Unique Visitors" (truthful); added "Session" metric group with `session_count`, `avg_session_duration`, `pages_per_session`, `conversion_sessions`
+- `ATTRIBUTION.md` — Part 20 documents sessionization rules, session definition, backend/frontend changes, and what is NOT built
+- `progress.md` — this entry
+- `deepseek.md` — updated model/session lineage
+
+**Completed:**
+- Sessionization utility with 30-minute inactivity rule
+- Dashboard Session Analytics card with time series
+- Report Builder session metrics (4 new metrics)
+- Attribution explanation modal with session-grouped timeline
+- Per-visitor session API for modal
+- All builds pass (frontend 1996 modules, backend syntax verified)
+
+**What was NOT built:**
+- No persisted sessions table (derive-on-read only)
+- No real-time session engine
+- No session-level attribution (sessions are behavioral, not credit-assigning)
+- No cross-device session stitching
+- No session replay or heatmap data
+
+## Session 63 — Install Page Simplification
+
+**Session type:** UX simplification — reduce cognitive load on the Install page by separating basic vs advanced setup.
+
+**Files modified:**
+- `dashboard/src/pages/Snippet.jsx` — restructured into Basic Install (above fold) + Advanced Setup (collapsed accordion sections below)
+
+**Completed:**
+- SourceTrack Pixel section: one primary script block, 3-line instructions, copy button, plain-language helper text ("For most websites, this single script is enough to start tracking traffic and attribution")
+- "What this captures automatically" callout: pageviews, UTMs, referrers, AI sources, country, device type
+- Install status indicator (inline, compact — Receiving data / Waiting for first event / Checking...)
+- Verify Installation section with test button and debugger link
+- Advanced Setup sections ALL collapsed by default using `AccordionSection` component:
+  - JavaScript API (trackiq.id, identify, event, conversion)
+  - Identity Stitching (explicit API call + auto-detection meta tag option)
+  - Cross-Domain Tracking
+  - Booking Attribution
+  - Webhook Identity & Contact Linkage
+  - Outbound Webhooks
+  - Architecture: How events flow
+- Each advanced section has a "When you need this" one-liner descriptor
+- Auto-detection snippet variant kept inside Identity Stitching accordion — no longer visible by default, clearly labeled as "alternative configuration of the same pixel"
+- Build passes (1996 modules)
+
+**Copy changes:**
+- "Install Snippet" → "SourceTrack Pixel"
+- "Add SourceTrack to your website in 30 seconds" → "Add the SourceTrack Pixel to your website"
+- "Install verified! Events are flowing." → "Install verified. Events are being received."
+- "Verified" → "Receiving data"
+- All "What this does not support" banners preserved for honesty
+
+**What was NOT built:**
+- No new tracking capabilities
+- No commerce plugins or no-script installs
+- No backend changes
+- No onboarding flow changes
+- No drag/drop or widget system changes
+
+## Session 64 — Report-First Dashboard + Onboarding Alignment
+
+**Session type:** UX restructuring — empty-state dashboard for new users, report-first layout, starter templates, onboarding install consistency with Session 63.
+
+**Files modified:**
+- `dashboard/src/pages/Dashboard.jsx` — restructured: empty state when no saved reports exist, saved reports moved to top, "Create Report" header CTA, starter template buttons
+- `dashboard/src/lib/seedReports.js` — rewritten to use API (`POST /api/reports/saved`) instead of localStorage. Accepts `siteKey` parameter.
+- `dashboard/src/pages/Onboarding.jsx` — Step 3: "SourceTrack Pixel" is recommended primary with badge, GTM is secondary with "Advanced" label. Verification failure message neutralized (removed GTM-specific wording). Updated `seedReportsForBusiness` calls to pass `siteKey`.
+
+**Completed:**
+- **Empty-state dashboard:** When no saved reports exist, shows clean empty state with "No reports yet" message, "Create Report" CTA, and 3 template buttons (Sources, Totals, Conversion Trend). The fixed analytics grid is hidden until at least one saved report exists.
+- **Report-first layout:** Saved Reports moved from bottom to top (right after KPI strip). Renamed to "Your Reports" with "New Report" action button.
+- **Header "Create Report" button:** Gray-900 primary button in toolbar, navigates to Report Builder.
+- **Starter templates:** `createStarterReport()` function creates pre-configured Sources (revenue by source), Totals (conversions over time), and Conversion Trend reports via API with one click from the empty state.
+- **seedReports.js fixed:** Now writes 5 reports per business type to the API (`POST /api/reports/saved`) instead of orphaned localStorage. Idempotent via `sourcetrack_seeded_v1` localStorage flag.
+- **Onboarding aligned:** Step 3 now shows "SourceTrack Pixel" as recommended primary (with lime "Recommended" badge), "Google Tag Manager" as secondary ("Advanced" descriptor). GTM option preserved but visually de-emphasized.
+- **Verification message:** "Make sure the script is published on your live site" replaces old GTM-specific language.
+- Build passes (1996 modules)
+
+**What was NOT built:**
+- No drag/drop widget builder
+- No multi-dashboard
+- No new attribution models
+- No no-script install paths
+- No backend reporting changes
+- No Cometly parity claims
+- No data migration for old localStorage seed reports (new onboarding users get API-persisted seeds)
+
+## Session 64.5 — Pixel Generator with Dynamic Toggles
+
+**Session type:** UX enhancement — transform the static install snippet into a dynamic Pixel Generator with configurable toggle controls.
+
+**Files modified:**
+- `dashboard/src/pages/Snippet.jsx` — added toggle state (`autoIdentify`, `idSelector`), `buildSnippet()` function for dynamic snippet generation, Pixel Options toggle panel in the SourceTrack Pixel card
+
+**Completed:**
+- Pixel Generator UI: toggle controls panel ("Pixel Options") inside the SourceTrack Pixel card
+- **Auto-identify toggle:** On/off toggle adds/removes `data-user-id-selector` attribute from the pixel snippet. When enabled, shows a text input for the CSS selector (default: `[data-trackiq-user-id]`). Includes plain-language help text and meta tag example.
+- **Dynamic snippet generation:** `buildSnippet()` rebuilds the `<script>` tag string on every state change — snippet updates in real time as toggles change
+- **Copy button:** Copies the current generated snippet (not a static default)
+- Existing verification flow, status indicator, and Advanced Setup accordions untouched
+- Build passes (1996 modules)
+
+**Toggle audit — what was added vs what was NOT added:**
+
+| Toggle | Implemented? | Reason |
+|---|---|---|
+| Auto-identify users | **Yes** | Loader reads `data-user-id-selector` (line 13 of loader.js). Tracker fires identify automatically. End-to-end verified in code. |
+| Auto-capture clicks/forms | **No** | Loader has no `data-autocapture` read. Tracker only sends explicit `$pageview` and manual events. Would require new tracker event listeners. |
+| Privacy/Cookieless mode | **No** | Tracker identity is cookie-based (3 cookies + localStorage). No persistence toggle exists. Would require major tracker rewrite. |
+| Cross-domain tracking | **No** | Already works via `getCrossDomainUrl()` and URL params — not attribute-driven. Documented in Advanced Setup accordion. |
+| Custom tracking domain | **No** | API URL derived from script src origin. No `data-tracking-host` support. Requires Railway proxy/DNS infrastructure. |
+
+**What was NOT built:**
+- No fake toggles for unsupported features
+- No loader.js or tracker.js changes
+- No backend PostHog config changes
+- No Railway infrastructure changes
+- No new attribution models

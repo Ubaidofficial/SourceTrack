@@ -333,6 +333,13 @@ Current LTV definition
 LTV in SourceTrack means historical attributed revenue summed for a given identity
 within the selected report configuration and selected attribution model.
 
+LTV model support
+LTV is supported for all single-touch models: first_touch, last_touch, first_touch_non_direct, last_touch_non_direct (added Session 61)
+
+first_touch_non_direct LTV: finds the earliest non-direct pageview per identity; if none exists, falls back to the first_touch cookie value; sums all conversion values for that identity and attributes to the resolved source
+
+last_touch_non_direct LTV: finds the latest non-direct pageview per identity; if none exists, falls back to the conversion page UTM; sums all conversion values for that identity and attributes to the resolved source
+
 LTV correctness rules
 LTV must be grouped by identity, not by session
 
@@ -668,13 +675,16 @@ API:
 - `POST /api/reports/saved` — create a saved report (auth required, validates user owns the site)
 - `DELETE /api/reports/saved/:id` — delete a saved report (auth required, validates ownership)
 
-Dashboard rendering (Session 57):
-- Dashboard renders up to 3 saved reports in a fixed "Saved Reports" card section
+Dashboard rendering (Session 57, updated Session 64):
+- Dashboard shows an empty state when no saved reports exist (no fixed analytics grid shown)
+- When saved reports exist, renders up to 3 in a "Your Reports" section at the top of the dashboard
 - Each shows: report name, primary metric total, mini bar chart of top results
 - Click opens Report Builder with the saved config loaded
+- Starter templates (Sources, Totals, Conversion Trend) create reports with one click from the empty state
 - This is NOT a widget system — no drag-and-drop, no resize, no multi-dashboard
-- Dashboard rendering is fixed-position, not user-reorderable
+- Dashboard fixed analytics grid appears below saved reports as overview data
 - Reports are scoped per site — users cannot see other sites' saved reports
+- Seed reports created during onboarding are persisted via API (Session 64 fix from localStorage)
 
 ### Part 16 — Super Admin Support Preview (Session 58)
 
@@ -698,3 +708,137 @@ What this is NOT:
 - Not a customer JWT session — admin uses their own auth token
 - Not write-access to customer data — dashboard is read-only
 - Not tenant boundary bypass — data is fetched via dedicated admin endpoint, not via customer auth
+
+### Part 17 — Super Admin Phase 2: Recheck, Provenance, Audit Log (Session 59)
+
+Feature status provenance:
+- `GET /api/admin/feature-status` returns `last_verified` timestamp and `verification_method` per feature
+- `POST /api/admin/feature-status/recheck` runs server-side probes (route existence, module imports) and returns updated statuses + diffs
+- Provenance fields: `last_verified` (ISO timestamp), `verification_method` (`code-audit` | `server-probe`)
+
+Audit logging:
+- Supabase table `admin_audit_log`: `id`, `admin_user_id`, `action`, `target_type`, `target_id`, `metadata` (JSONB), `created_at`
+- Logged actions: `preview_dashboard`, `view_site_detail`, `view_feature_status`, `recheck_features`
+- `GET /api/admin/audit-log` returns last 100 entries enriched with admin email
+
+QA Notes:
+- Supabase table `qa_notes`: `id`, `feature_key`, `note_type` (`safe_claim` | `watch` | `misleading`), `note_text`, `created_by`, `created_at`, `updated_at`
+- `GET /api/admin/qa-notes` — list all notes
+- `POST /api/admin/qa-notes` — create note (requires `feature_key`, `note_type`, `note_text`)
+- `PUT /api/admin/qa-notes/:id` — update note text/type
+- `DELETE /api/admin/qa-notes/:id` — delete note
+- All operations require `super_admin` role
+
+What this is NOT:
+- Not automated CI/CD integration for status checks (manual recheck only)
+- Not user-facing audit log (internal super admin only)
+- Not detailed code diffing (only existence checks)
+- Not alerting/notifications on status changes
+
+### Part 18 — Attribution Explanation Layer (Session 60)
+
+Attribution explanation: for any single-touch attribution result, show WHY credit was assigned.
+
+Backend:
+- `getAttributionExplanation(siteKey, model, distinctId)` in `api/lib/attribution-engine.js`
+  - Queries the conversion event for the visitor
+  - Queries all events (journey) for the visitor
+  - Builds explanation object with:
+    - `model`: attribution model used
+    - `attributed_to`: { source, medium, campaign }
+    - `reason`: human-readable explanation string
+    - `fallback`: true if model fell back (e.g., no non-direct touchpoints found)
+    - `touchpoint_count`: number of pageview events in journey
+    - `journey_duration_days`: days between first and last touchpoint
+    - `skipped_touches`: array of direct touches that were skipped (non-direct models only)
+    - `all_touches`: chronological list of all pageviews with source/medium/campaign/page_url
+- `GET /api/attribution/explain?site_key=X&model=Y&distinct_id=Z`
+  - Requires `requireUserAuth`, `validateSiteKey`, `requireSiteMembership`
+  - Returns full explanation object or 404 if no conversion found
+
+Frontend:
+- `ConversionExplanationModal` component — reusable modal showing:
+  - Conversion details (value, date, attributed source, ingestion method)
+  - Explanation card (green for normal, amber for fallback) with model name + reason
+  - Journey summary tiles (touchpoints, duration, total events)
+  - Journey timeline: all pageviews chronologically, attributed touch highlighted in green, skipped touches grayed/strikethrough
+  - "Why this attribution?" section explaining the model logic
+- Report Builder: "Show Explanation" toggle adds an Explain column to the table. Each row shows brief model-specific text (e.g., "First visit UTM", "Earliest non-direct"). Click opens modal in generic mode (model explanation without specific conversion).
+- Dashboard: Attribution model cards in "Attribution Models" section are clickable. Click opens modal in generic mode for that model.
+
+Model explanations:
+- `first_touch`: "First Touch assigns 100% credit to the first UTM source this visitor ever encountered. The value is stored in a browser cookie at their initial visit and sent with every conversion event."
+- `last_touch`: "Last Touch assigns 100% credit to the UTM source on the page at the time of conversion. If no UTM params are present, the conversion is attributed to 'direct'."
+- `first_touch_non_direct`: "First Touch (Non-Direct) finds the earliest pageview with a non-empty, non-direct UTM source. Direct touches are skipped. If the visitor never had a non-direct pageview, it falls back to the first-touch cookie value."
+- `last_touch_non_direct`: "Last Touch (Non-Direct) finds the latest pageview with a non-empty, non-direct UTM source. Direct touches are skipped. If the visitor never had a non-direct pageview, it falls back to the conversion page UTM."
+- `ai_platforms`: "AI Platform attribution detects the referrer at conversion time and matches it against known AI platform domains."
+
+What this is NOT:
+- Not multi-touch credit distribution visualization (single-touch only)
+- Not "what-if" model comparison (shows actual attribution only)
+- Not journey editing or manual attribution override
+- Not aggregate journey analytics (e.g., "most common paths")
+- Not per-conversion journey drilldown for `ltv_revenue` (LTV is per-identity aggregation; the explanation modal shows model logic but not a specific conversion's journey)
+
+### Part 19 — LTV Non-Direct Model Support (Session 61)
+
+LTV revenue now supports all single-touch models including non-direct variants.
+
+Backend changes:
+- `getFlexibleReport` LTV branch removed the `first_touch`/`last_touch` only restriction
+- `first_touch_non_direct` LTV: LEFT JOIN qualifying pageviews (earliest non-direct per distinct_id); dimension expressions fall back to `first_touch_*` cookie values when no qualifying pageview exists
+- `last_touch_non_direct` LTV: LEFT JOIN qualifying pageviews (latest non-direct per distinct_id); dimension expressions fall back to conversion event UTM values when no qualifying pageview exists
+- UUID exclusion applied to all LTV models (anonymous-only visitors excluded)
+- `events` table remains unaliased in LTV SQL so existing `properties.` and `timestamp.` references in filter clauses work without modification
+
+Frontend changes:
+- Report Builder: LTV metric description updated to state support for all single-touch models including non-direct variants
+- Dashboard: new "LTV by Model" card showing:
+  - Total LTV for each of the four single-touch models (first_touch, last_touch, first_touch_non_direct, last_touch_non_direct)
+  - Clickable model buttons to select which model's breakdown to view
+  - Top 5 sources by LTV for the selected model, with horizontal bar visualization
+  - Loading states for each model query
+
+What this is NOT:
+- Not predictive LTV (only historical sum)
+- Not cohort-based LTV analysis
+- Not LTV time-decay or weighting
+- Not customer-level LTV drilldown (aggregate only)
+
+### Part 20 — Sessionization Foundation (Session 62)
+
+Sessionization is derived on read from pageview events using a 30-minute inactivity timeout.
+Sessions are NOT materialized in a database table. Every session query computes sessions at request time.
+
+Session definition:
+- A session starts with the first event after 30+ minutes of inactivity, or the first event for a visitor
+- A session ends at the last event before the next session starts, or at the last event overall
+- Session duration = last event timestamp - first event timestamp (seconds)
+- Entry source = UTM source of the first pageview in the session (or 'direct' if none)
+- Entry medium = UTM medium of the first pageview in the session (or 'none' if none)
+- Entry campaign = UTM campaign of the first pageview in the session (or null if none)
+- Entry page = page_url of the first pageview in the session
+- Exit page = page_url of the last pageview in the session
+- Pageview count = count of $pageview events in the session
+- Event count = count of all events ($pageview + $conversion) in the session
+- Contains conversion = true if any $conversion event falls within the session's time bounds
+
+Backend:
+- `api/lib/sessionization.js` — `deriveSessions(events)` groups events into sessions
+- `api/routes/sessions.js` — `GET /api/sessions/overview` for dashboard aggregates; `GET /api/sessions` for per-visitor session list
+- `api/lib/attribution-engine.js` — `getSessionReport()` derives sessions from pageviews and aggregates by dimension for Report Builder
+- `getFlexibleReport` delegates session metrics (`session_count`, `avg_session_duration`, `pages_per_session`, `conversion_sessions`) to `getSessionReport`
+- Session queries are limited to 50,000 pageview events per query for performance
+
+Frontend:
+- Dashboard: "Session Analytics" card showing total sessions, avg duration, pages/session, conversion sessions, and sessions-over-time chart
+- Report Builder: new "Session" metric group with `session_count`, `avg_session_duration`, `pages_per_session`, `conversion_sessions`
+- Attribution Explanation Modal: toggle between "Event Timeline" and "Session Timeline"; session summary tiles (session count, converting session index, pages in converting session)
+- The existing "Sessions" metric in Report Builder was renamed to "Unique Visitors" to fix the mislabel
+
+What this is NOT:
+- Not a persisted sessions table (no migration, no materialization)
+- Not real-time session tracking
+- Not session-level attribution (sessions are behavioral, not credit-assigning)
+- Not cross-device session stitching
+- Not session replay or heatmap data

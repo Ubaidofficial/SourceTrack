@@ -19,6 +19,14 @@ export default function Login() {
       await signIn(email, password)
 
       const { data: { session } } = await supabase.auth.getSession()
+
+      // Super admins go to admin panel — they may not own sites directly
+      const metaRole = session?.user?.raw_app_meta_data?.role
+      if (metaRole === 'super_admin') {
+        navigate('/admin', { replace: true })
+        return
+      }
+
       const { data: sites } = await supabase
         .from('sites')
         .select('onboarding_completed')

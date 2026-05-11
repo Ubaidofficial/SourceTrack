@@ -8,3 +8,4 @@
 - Execute the highest-priority incomplete task and stop after one substantial task unless a second is trivially finishable. Do not offer multiple directions, replan the roadmap, or ask which task to choose. Confidence: 0.70
 - Before writing any code, produce an explicit internal checkpoint: list files inspected, the chosen implementation path, and which alternative paths were rejected. Confidence: 0.70
 - Stop and report a precise blocker when the repo cannot support a narrow improvement without major rewrite, or when implementation would require misleading UI/docs claims. Do not proceed with speculative or overstated work. Confidence: 0.65
+- Before implementing changes, produce a pre-implementation audit report of the current state covering relevant systems, capabilities, and gaps. Do not start coding until the audit is complete. Confidence: 0.70

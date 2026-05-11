@@ -27,8 +27,8 @@ const BUSINESS_TYPES = [
 ]
 
 const INSTALL_METHODS = [
-  { key: 'gtm', label: 'Google Tag Manager', icon: FileCode, desc: 'Install via GTM without editing code' },
-  { key: 'standard', label: 'Standard Installation', icon: Code, desc: 'Add script directly to your website' }
+  { key: 'standard', label: 'SourceTrack Pixel', icon: Code, desc: 'Add one script to your website — recommended for most users', recommended: true },
+  { key: 'gtm', label: 'Google Tag Manager', icon: FileCode, desc: 'Install via GTM — for teams already using Tag Manager', advanced: true }
 ]
 
 const CONVERSIONS = [
@@ -120,6 +120,17 @@ export default function Onboarding() {
     }
   }
 
+  async function saveOnboardingStateViaSite(id, nextStep, extraData = {}) {
+    try {
+      await fetchApi('/onboarding/update', {
+        method: 'POST',
+        body: JSON.stringify({ site_id: id, step: nextStep, data: extraData })
+      })
+    } catch (_err) {
+      /* non-critical */
+    }
+  }
+
   async function handleDomainSubmit(e) {
     e.preventDefault()
     setError('')
@@ -144,12 +155,28 @@ export default function Onboarding() {
     try {
       const { data: existing } = await supabase
         .from('sites')
-        .select('id')
+        .select('id, domain, onboarding_completed, onboarding_state, site_key')
+        .eq('owner_id', user.id)
         .eq('domain', trimmed)
         .maybeSingle()
 
       if (existing) {
-        setError('This domain is already registered')
+        if (existing.onboarding_completed) {
+          navigate('/dashboard', { replace: true })
+          return
+        }
+        setSiteId(existing.id)
+        setSiteKey(existing.site_key)
+        const state = existing.onboarding_state || {}
+        if (state.current_step && state.current_step > 1) {
+          setStep(state.current_step)
+          setBusinessType(state.business_type || null)
+          setInstallMethod(state.install_method || null)
+          setSelectedConversions(state.selected_conversions || [])
+        } else {
+          setStep(2)
+          await saveOnboardingStateViaSite(existing.id, 2, { business_type: null, install_method: null, selected_conversions: [] })
+        }
         return
       }
     } catch {
@@ -171,14 +198,25 @@ export default function Onboarding() {
         .select('id, site_key')
         .single()
 
-      if (createErr) throw createErr
+      if (createErr) {
+        if (createErr.code === '23505') {
+          setError('This domain already exists in your workspace. Resuming setup.')
+        } else if (createErr.message?.includes('duplicate')) {
+          setError('This site is already registered; resuming setup.')
+        } else {
+          setError(`Registration failed: ${createErr.message || 'Unknown error'}`)
+        }
+        throw createErr
+      }
 
       setSiteId(site.id)
       setSiteKey(site.site_key)
       await saveOnboardingState(2, { business_type: null, install_method: null, selected_conversions: [] })
       setStep(2)
     } catch (_err) {
-      setError('Failed to register domain. Please try again.')
+      if (!error) {
+        setError('Failed to register domain. Please try again.')
+      }
       console.error(_err)
     } finally {
       setLoading(false)
@@ -244,7 +282,7 @@ export default function Onboarding() {
             setError(completeRes?.error || 'Installation could not be verified. Please try again.')
             return
           }
-          seedReportsForBusiness(businessType)
+          seedReportsForBusiness(businessType, siteKey)
           setTimeout(() => {
             navigate('/dashboard', { replace: true, state: { toast: 'Setup complete! Your dashboard is ready.' } })
           }, 1500)
@@ -359,12 +397,17 @@ export default function Onboarding() {
                     className={`flex items-center gap-4 p-4 rounded-lg border-2 text-left transition-colors ${
                       selected
                         ? 'border-[#D7F550] bg-[#F9FDEA]'
-                        : 'border-gray-200 hover:border-gray-300'
+                        : m.advanced
+                          ? 'border-gray-200 hover:border-gray-300 opacity-90'
+                          : 'border-gray-900/20 hover:border-gray-300 bg-gray-50'
                     }`}
                   >
                     <Icon className="w-8 h-8 text-gray-700" />
-                    <div>
-                      <p className="font-semibold text-gray-900">{m.label}</p>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-gray-900">{m.label}</p>
+                        {m.recommended && <span className="text-[10px] font-semibold bg-lime-100 text-lime-800 px-1.5 py-0.5 rounded-full">Recommended</span>}
+                      </div>
                       <p className="text-xs text-[#6F7070]">{m.desc}</p>
                     </div>
                     {selected && <Check className="w-5 h-5 text-[#D7F550] ml-auto" />}
@@ -469,7 +512,7 @@ export default function Onboarding() {
                 </div>
                 <p className="text-lg font-semibold text-gray-900">Great! Script Verified Successfully</p>
                 <button
-                  onClick={() => { seedReportsForBusiness(businessType); navigate('/dashboard', { replace: true, state: { toast: 'Setup complete! Your dashboard is ready.' } }) }}
+                  onClick={() => { seedReportsForBusiness(businessType, siteKey); navigate('/dashboard', { replace: true, state: { toast: 'Setup complete! Your dashboard is ready.' } }) }}
                   className="mt-4 px-6 py-3 bg-[#1F2323] text-white rounded-lg text-sm font-semibold hover:bg-black flex items-center gap-2 mx-auto"
                 >
                   <ArrowRight className="w-4 h-4" /> Continue to Dashboard
@@ -485,7 +528,7 @@ export default function Onboarding() {
                 <p className="text-lg font-semibold text-gray-900">Script not detected yet</p>
                 {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
                 <ul className="text-sm text-[#6F7070] mt-3 space-y-1">
-                  <li>Make sure the script is published (GTM users must click Publish)</li>
+                  <li>Make sure the script is published on your live site</li>
                   <li>It may take 1-2 minutes for the first event to appear</li>
                 </ul>
                 <div className="flex items-center justify-center gap-3 mt-4">

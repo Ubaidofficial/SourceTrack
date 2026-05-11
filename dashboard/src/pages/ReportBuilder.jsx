@@ -20,8 +20,9 @@ import {
 } from 'chart.js'
 import {
   RefreshCw, Bookmark, Trash2, Download, Copy,
-  Search, ChevronDown, ArrowRight, Plus
+  Search, ChevronDown, ArrowRight, Plus, HelpCircle
 } from 'lucide-react'
+import ConversionExplanationModal from '../components/ConversionExplanationModal'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend)
 
@@ -45,7 +46,7 @@ const DIMENSIONS = [
 ]
 
 const METRICS = [
-  { key: 'sessions', label: 'Sessions', format: (v) => v.toLocaleString(), group: 'Core', desc: 'Unique visitors' },
+  { key: 'sessions', label: 'Unique Visitors', format: (v) => v.toLocaleString(), group: 'Core', desc: 'Count of distinct visitors (distinct_id). Not session-based.' },
   { key: 'conversions', label: 'Conversions', format: (v) => v.toLocaleString(), group: 'Core', desc: 'Completed conversion events' },
   { key: 'revenue', label: 'Revenue', format: (v) => `$${v.toFixed(2)}`, group: 'Core', desc: 'Total conversion value' },
   { key: 'leads', label: 'Leads', format: (v) => v.toLocaleString(), group: 'Core', desc: 'Identified users' },
@@ -55,7 +56,11 @@ const METRICS = [
   { key: 'ai_revenue', label: 'AI Revenue', format: (v) => `$${v.toFixed(2)}`, group: 'AI', desc: 'Revenue from AI-referred visitors' },
   { key: 'ai_conversion_share', label: 'AI Conversion Share', format: (v) => `${v.toFixed(1)}%`, group: 'AI', desc: '% of all conversions that came from AI' },
   { key: 'ai_revenue_share', label: 'AI Revenue Share', format: (v) => `${v.toFixed(1)}%`, group: 'AI', desc: '% of all revenue that came from AI' },
-  { key: 'ltv_revenue', label: 'LTV Revenue v1 (identified users)', format: (v) => `$${v.toFixed(2)}`, group: 'LTV', desc: 'Cumulative realized revenue (not predictive LTV) — sums all conversion_values per distinct_id, then attributes to first-touch or last-touch source. Anonymous-only visitors (UUID format) excluded. Requires first_touch or last_touch model.' }
+  { key: 'ltv_revenue', label: 'LTV Revenue v1 (identified users)', format: (v) => `$${v.toFixed(2)}`, group: 'LTV', desc: 'Cumulative realized revenue (not predictive LTV) — sums all conversion_values per distinct_id, then attributes to the source under the selected model. Anonymous-only visitors (UUID format) excluded. Supports all single-touch models including non-direct variants.' },
+  { key: 'session_count', label: 'Session Count', format: (v) => v.toLocaleString(), group: 'Session', desc: 'Number of sessions derived from pageview events using 30-minute inactivity rule. Sessions attributed by entry source (first pageview UTM). Computed on read — not materialized. Limited to 50,000 pageview events per query.' },
+  { key: 'avg_session_duration', label: 'Avg Session Duration', format: (v) => `${Math.round(v / 60)}m`, group: 'Session', desc: 'Average session duration in seconds. Derived from pageview timestamps using 30-minute inactivity rule. Computed on read — not materialized.' },
+  { key: 'pages_per_session', label: 'Pages per Session', format: (v) => v.toFixed(1), group: 'Session', desc: 'Average pageviews per session. Derived from pageview events using 30-minute inactivity rule. Computed on read — not materialized.' },
+  { key: 'conversion_sessions', label: 'Conversion Sessions', format: (v) => v.toLocaleString(), group: 'Session', desc: 'Sessions that contained at least one conversion event. Derived on read from pageview + conversion events. Computed on read — not materialized.' }
 ]
 
 const CHART_TYPES = [
@@ -151,6 +156,8 @@ export default function ReportBuilder() {
   const [filters, setFilters] = useState({})
   const [showFilters, setShowFilters] = useState(false)
   const [filterCount, setFilterCount] = useState(0)
+  const [showExplanation, setShowExplanation] = useState(false)
+  const [explainModalOpen, setExplainModalOpen] = useState(false)
 
   // UI state
   const [editingId, setEditingId] = useState(null)
@@ -810,8 +817,19 @@ export default function ReportBuilder() {
 
               {/* Table */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="p-4 border-b border-gray-100">
+                <div className="p-4 border-b border-gray-100 flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-gray-700">Data</h3>
+                  <button
+                    onClick={() => setShowExplanation(!showExplanation)}
+                    className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
+                      showExplanation
+                        ? 'bg-gray-900 text-white border-gray-900'
+                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <HelpCircle className="w-3.5 h-3.5" />
+                    {showExplanation ? 'Hide Explanation' : 'Show Explanation'}
+                  </button>
                 </div>
                 {isLoading ? (
                   <div className="p-8 text-center">
@@ -827,6 +845,7 @@ export default function ReportBuilder() {
                           <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Dimension</th>
                           {groupBy2 && <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Dimension 2</th>}
                           <th className="text-right py-2 px-4 text-gray-500 font-medium text-xs">{metricLabel}</th>
+                          {showExplanation && <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Explanation</th>}
                         </tr>
                       </thead>
                       <tbody>
@@ -835,6 +854,21 @@ export default function ReportBuilder() {
                             <td className="py-2 px-4 text-gray-900">{r.dim_value}</td>
                             {groupBy2 && <td className="py-2 px-4 text-gray-600">{r.dim_value2}</td>}
                             <td className="py-2 px-4 text-right font-medium text-gray-900">{metricFormat(getMetricValue(r))}</td>
+                            {showExplanation && (
+                              <td className="py-2 px-4">
+                                <button
+                                  onClick={() => setExplainModalOpen(true)}
+                                  className="text-xs text-gray-500 hover:text-gray-900 flex items-center gap-1"
+                                >
+                                  <HelpCircle className="w-3 h-3" />
+                                  {model === 'first_touch' && 'First visit UTM'}
+                                  {model === 'last_touch' && 'Conversion page UTM'}
+                                  {model === 'first_touch_non_direct' && 'Earliest non-direct'}
+                                  {model === 'last_touch_non_direct' && 'Latest non-direct'}
+                                  {model === 'ai_platforms' && 'AI referrer match'}
+                                </button>
+                              </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>
@@ -846,6 +880,13 @@ export default function ReportBuilder() {
           )}
         </div>
       </div>
+
+      <ConversionExplanationModal
+        isOpen={explainModalOpen}
+        onClose={() => setExplainModalOpen(false)}
+        siteKey={site?.site_key}
+        model={model}
+      />
     </div>
   )
 }

@@ -19,12 +19,14 @@ import {
 } from 'chart.js'
 import {
   DollarSign, Users, Bot, TrendingUp,
-  ArrowRight, Download, ExternalLink, Sparkles, Bookmark
+  ArrowRight, Download, ExternalLink, Sparkles, Bookmark,
+  FileText, BarChart3, Plus
 } from 'lucide-react'
 import MetricTile from '../components/MetricTile'
 import DashboardCard from '../components/DashboardCard'
 import StatusBadge from '../components/StatusBadge'
 import SupportModeBanner from '../components/SupportModeBanner'
+import ConversionExplanationModal from '../components/ConversionExplanationModal'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend)
 
@@ -89,6 +91,9 @@ export default function Dashboard() {
   const [site, setSite] = useState(null)
   const [timeRange, setTimeRange] = useState(30)
   const [previewMode, setPreviewMode] = useState(false)
+  const [explainModalOpen, setExplainModalOpen] = useState(false)
+  const [explainModel, setExplainModel] = useState(null)
+  const [ltvModel, setLtvModel] = useState('first_touch')
   const [previewSiteName, setPreviewSiteName] = useState('')
   const [previewSiteDomain, setPreviewSiteDomain] = useState('')
 
@@ -174,6 +179,45 @@ export default function Dashboard() {
     })
   })
 
+  // LTV comparison: fetch LTV revenue for all single-touch models
+  const ltvQueries = useQueries({
+    queries: MODELS.filter(m => m.key !== 'ai_platforms').map((m) => ({
+      queryKey: ['ltv-model', m.key, site?.site_key, timeRange],
+      queryFn: async () => {
+        if (!site?.site_key) return null
+        const from = format(subDays(new Date(), timeRange), 'yyyy-MM-dd')
+        const to = format(new Date(), 'yyyy-MM-dd')
+        const params = new URLSearchParams({
+          site_key: site.site_key,
+          model: m.key,
+          date_from: from,
+          date_to: to,
+          group_by: 'source',
+          metric: 'ltv_revenue'
+        })
+        return fetchApi(`/attribution?${params}`)
+      },
+      enabled: !!site?.site_key
+    }))
+  })
+
+  // Session analytics query
+  const { data: sessionOverview, isLoading: sessionsLoading } = useQuery({
+    queryKey: ['sessions-overview', site?.site_key, timeRange],
+    queryFn: async () => {
+      if (!site?.site_key) return null
+      const from = format(subDays(new Date(), timeRange), 'yyyy-MM-dd')
+      const to = format(new Date(), 'yyyy-MM-dd')
+      const params = new URLSearchParams({
+        site_key: site.site_key,
+        date_from: from,
+        date_to: to
+      })
+      return fetchApi(`/sessions/overview?${params}`)
+    },
+    enabled: !!site?.site_key
+  })
+
   const kpis = overview?.kpis || {}
   const totalRevenue = kpis.revenue || 0
   const totalConversions = kpis.conversions || 0
@@ -247,6 +291,44 @@ export default function Dashboard() {
     window.open(`/api/export/report?${params}`, '_blank')
   }
 
+  const createStarterReport = async (template) => {
+    if (!site?.site_key) return
+    const today = format(new Date(), 'yyyy-MM-dd')
+    const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd')
+    const configs = {
+      sources: {
+        name: 'Sources', metric: 'revenue', groupBy: 'source', model: 'last_touch',
+        chartType: 'bar', dateFrom: thirtyDaysAgo, dateTo: today, filters: {}
+      },
+      totals: {
+        name: 'Totals', metric: 'conversions', groupBy: 'date', model: 'last_touch',
+        chartType: 'line', dateFrom: thirtyDaysAgo, dateTo: today, filters: {}
+      },
+      trend: {
+        name: 'Conversion Trend', metric: 'conversions', groupBy: 'date', model: 'last_touch',
+        chartType: 'line', dateFrom: thirtyDaysAgo, dateTo: today, filters: {}
+      }
+    }
+    const cfg = configs[template]
+    if (!cfg) return
+    await fetchApi('/reports/saved', {
+      method: 'POST',
+      body: JSON.stringify({
+        site_key: site.site_key,
+        name: cfg.name,
+        config: {
+          model: cfg.model, groupBy: cfg.groupBy, groupBy2: null, metric: cfg.metric,
+          chartType: cfg.chartType, datePreset: 30, dateFrom: cfg.dateFrom, dateTo: cfg.dateTo,
+          granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date',
+          filters: cfg.filters
+        }
+      })
+    })
+    window.location.reload()
+  }
+
+  const isEmpty = !isLoading && savedReports.length === 0
+
   return (
     <div className="space-y-6">
       {previewMode && (
@@ -261,6 +343,10 @@ export default function Dashboard() {
         </div>
         {!previewMode && (
           <div className="flex items-center gap-3">
+            <button onClick={() => navigate('/report-builder')}
+              className="px-3 py-1.5 text-sm text-white bg-gray-900 rounded-lg hover:bg-gray-800 flex items-center gap-1.5">
+              <Plus className="w-3.5 h-3.5" /> Create Report
+            </button>
             <div className="flex bg-gray-100 rounded-lg p-1">
               {TIME_RANGES.map(tr => (
                 <button
@@ -286,6 +372,55 @@ export default function Dashboard() {
         <div className="flex items-center justify-center py-20">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
         </div>
+      ) : isEmpty ? (
+        /* Empty state — no saved reports */
+        <div className="max-w-2xl mx-auto py-12 text-center space-y-8">
+          <div>
+            <BarChart3 className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">No reports yet</h3>
+            <p className="text-sm text-gray-500 max-w-md mx-auto">
+              Your dashboard is empty because no reports have been created yet.
+              Build reports for the metrics and attribution views you care about.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <button
+              onClick={() => navigate('/report-builder')}
+              className="w-full max-w-sm py-3 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-gray-800 flex items-center justify-center gap-2 mx-auto"
+            >
+              <Plus className="w-4 h-4" /> Create Report
+            </button>
+          </div>
+
+          <div>
+            <p className="text-xs text-gray-400 mb-3">Or start with a template</p>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={() => createStarterReport('sources')}
+                className="px-5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 flex items-center gap-2"
+              >
+                <FileText className="w-4 h-4 text-gray-400" /> Sources
+              </button>
+              <button
+                onClick={() => createStarterReport('totals')}
+                className="px-5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 flex items-center gap-2"
+              >
+                <BarChart3 className="w-4 h-4 text-gray-400" /> Totals
+              </button>
+              <button
+                onClick={() => createStarterReport('trend')}
+                className="px-5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 flex items-center gap-2"
+              >
+                <TrendingUp className="w-4 h-4 text-gray-400" /> Conversion Trend
+              </button>
+            </div>
+          </div>
+
+          <p className="text-xs text-gray-400 max-w-sm mx-auto">
+            Templates use live attribution data. Build reports in the Report Builder for more metric and filter options.
+          </p>
+        </div>
       ) : (
         <>
           {/* KPI Strip */}
@@ -302,6 +437,83 @@ export default function Dashboard() {
             <MetricTile label="Avg Value" value={`$${avgValue.toFixed(2)}`}
               icon={DollarSign} iconBg="bg-orange-100" iconColor="text-orange-600" />
           </div>
+
+          {/* Saved Reports — shown first, above the analytics wall */}
+          {!previewMode && (savedReports.length > 0 ? (
+            <DashboardCard title="Your Reports"
+              subtitle="Saved report configurations — data fetched live"
+              action={
+                <button onClick={() => navigate('/report-builder')} className="text-xs text-gray-900 hover:text-gray-700 font-medium flex items-center gap-1">
+                  <Plus className="w-3 h-3" /> New Report
+                </button>
+              }
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {topReports.map((report, idx) => {
+                  const cfg = report.config || {}
+                  const reportData = reportQueries[idx]?.data
+                  const results = reportData?.results || []
+                  const total = results.reduce((s, r) => {
+                    const metricKey = cfg.metric || 'revenue'
+                    return s + (r[metricKey] || r.revenue || r.conversions || r.sessions || 0)
+                  }, 0)
+                  const metricDef = METRIC_DEFS[cfg.metric] || METRIC_DEFS.revenue
+                  const maxVal = Math.max(...results.slice(0, 4).map(r => {
+                    const mk = cfg.metric || 'revenue'
+                    return r[mk] || r.revenue || r.conversions || r.sessions || 0
+                  }), 1)
+
+                  return (
+                    <button
+                      key={report.id}
+                      onClick={() => {
+                        sessionStorage.setItem('sourcetrack_edit_widget', JSON.stringify({
+                          id: report.id, name: report.name, ...cfg
+                        }))
+                        navigate(`/report-builder?edit=${report.id}`)
+                      }}
+                      className="bg-gray-50 rounded-lg p-3 text-left hover:bg-gray-100 transition-colors border border-gray-100 hover:border-gray-300"
+                    >
+                      <p className="text-xs font-medium text-gray-900 truncate">{report.name}</p>
+                      <p className="text-lg font-bold text-gray-900 mt-0.5">
+                        {metricDef.format(total)}
+                      </p>
+                      <p className="text-xs text-gray-400">{metricDef.label} total</p>
+
+                      {results.length > 0 ? (
+                        <div className="mt-2 space-y-1">
+                          {results.slice(0, 5).map((r, i) => {
+                            const mk = cfg.metric || 'revenue'
+                            const val = r[mk] || r.revenue || r.conversions || r.sessions || 0
+                            const barW = maxVal > 0 ? (val / maxVal) * 100 : 0
+                            return (
+                              <div key={i} className="flex items-center gap-1.5">
+                                <span className="text-xs text-gray-500 w-16 truncate flex-shrink-0">
+                                  {r.dim_value || '—'}
+                                </span>
+                                <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                  <div className="h-full bg-gray-900 rounded-full transition-all" style={{ width: `${barW}%` }} />
+                                </div>
+                                <span className="text-xs text-gray-600 w-12 text-right flex-shrink-0">
+                                  {metricDef.format(val)}
+                                </span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : reportQueries[idx]?.isLoading ? (
+                        <div className="h-16 flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400" />
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-400 mt-2">No data for this period</p>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </DashboardCard>
+          ) : null)}
 
           {/* Row 1: Recent Leads + Revenue Trend */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -684,7 +896,11 @@ export default function Dashboard() {
                 const maxRev = Math.max(...modelRevenues.map(x => x.total), 1)
                 const barWidth = maxRev > 0 ? (m.total / maxRev) * 100 : 0
                 return (
-                  <div key={m.model} className="bg-white rounded-lg border border-gray-200 p-3 text-center">
+                  <button
+                    key={m.model}
+                    onClick={() => { setExplainModel(m.model); setExplainModalOpen(true) }}
+                    className="bg-white rounded-lg border border-gray-200 p-3 text-center hover:bg-gray-50 transition-colors text-left"
+                  >
                     <p className="text-xs text-gray-500 mb-1">{m.label}</p>
                     <p className="text-base font-bold text-gray-900" style={{ color: COLORS[i % COLORS.length] }}>
                       ${m.total.toFixed(0)}
@@ -695,106 +911,146 @@ export default function Dashboard() {
                         backgroundColor: COLORS[i % COLORS.length].replace('0.85)', '1)')
                       }} />
                     </div>
-                  </div>
+                  </button>
                 )
               })}
             </div>
           </DashboardCard>
 
-          {/* Saved Reports — up to 3 backend-persisted reports rendered as mini-charts */}
-          {!previewMode && (savedReports.length > 0 ? (
-            <DashboardCard title="Saved Reports"
-              subtitle="Your saved report configurations — data fetched live"
-              action={!previewMode && (
-                <button onClick={() => navigate('/report-builder')} className="text-xs text-gray-900 hover:text-gray-700 font-medium flex items-center gap-1">
-                  Report Builder <ArrowRight className="w-3 h-3" />
-                </button>
-              )}
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {topReports.map((report, idx) => {
-                  const cfg = report.config || {}
-                  const reportData = reportQueries[idx]?.data
-                  const results = reportData?.results || []
-                  const total = results.reduce((s, r) => {
-                    const metricKey = cfg.metric || 'revenue'
-                    return s + (r[metricKey] || r.revenue || r.conversions || r.sessions || 0)
-                  }, 0)
-                  const metricDef = METRIC_DEFS[cfg.metric] || METRIC_DEFS.revenue
-                  const maxVal = Math.max(...results.slice(0, 4).map(r => {
-                    const mk = cfg.metric || 'revenue'
-                    return r[mk] || r.revenue || r.conversions || r.sessions || 0
-                  }), 1)
+          {/* Row 5b: LTV Comparison */}
+          <DashboardCard
+            title="LTV by Model"
+            subtitle="Lifetime value comparison across attribution models. LTV varies by model due to different attribution rules."
+            action={(
+              <select
+                value={ltvModel}
+                onChange={(e) => setLtvModel(e.target.value)}
+                className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
+              >
+                {MODELS.filter(m => m.key !== 'ai_platforms').map(m => (
+                  <option key={m.key} value={m.key}>{m.label}</option>
+                ))}
+              </select>
+            )}
+          >
+            {/* Model totals */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+              {MODELS.filter(m => m.key !== 'ai_platforms').map((m, i) => {
+                const q = ltvQueries[i]
+                const results = q?.data?.results || []
+                const total = results.reduce((s, r) => s + (r.ltv_revenue || 0), 0)
+                const isSelected = ltvModel === m.key
+                return (
+                  <button
+                    key={m.key}
+                    onClick={() => setLtvModel(m.key)}
+                    className={`text-left rounded-lg border p-3 transition-colors ${
+                      isSelected ? 'border-gray-900 bg-gray-50' : 'border-gray-200 bg-white hover:bg-gray-50'
+                    }`}
+                  >
+                    <p className="text-xs text-gray-500 mb-1">{m.label}</p>
+                    <p className="text-sm font-bold text-gray-900">${total.toFixed(0)}</p>
+                    {q.isLoading && <p className="text-[10px] text-gray-400 mt-1">Loading…</p>}
+                  </button>
+                )
+              })}
+            </div>
 
-                  return (
-                    <button
-                      key={report.id}
-                      onClick={() => {
-                        sessionStorage.setItem('sourcetrack_edit_widget', JSON.stringify({
-                          id: report.id, name: report.name, ...cfg
-                        }))
-                        navigate(`/report-builder?edit=${report.id}`)
-                      }}
-                      className="bg-gray-50 rounded-lg p-3 text-left hover:bg-gray-100 transition-colors border border-gray-100 hover:border-gray-300"
-                    >
-                      <p className="text-xs font-medium text-gray-900 truncate">{report.name}</p>
-                      <p className="text-lg font-bold text-gray-900 mt-0.5">
-                        {metricDef.format(total)}
-                      </p>
-                      <p className="text-xs text-gray-400">{metricDef.label} total</p>
+            {/* Selected model breakdown */}
+            {(() => {
+              const selectedIdx = MODELS.filter(m => m.key !== 'ai_platforms').findIndex(m => m.key === ltvModel)
+              const q = ltvQueries[selectedIdx]
+              const results = (q?.data?.results || []).slice(0, 5)
+              const maxVal = Math.max(...results.map(r => r.ltv_revenue || 0), 1)
+              if (q?.isLoading) {
+                return <div className="text-xs text-gray-400 py-4 text-center">Loading LTV breakdown…</div>
+              }
+              if (results.length === 0) {
+                return <div className="text-xs text-gray-400 py-4 text-center">No LTV data for this model</div>
+              }
+              return (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-gray-500 mb-2">Top sources by LTV — {MODELS.find(m => m.key === ltvModel)?.label}</p>
+                  {results.map((r, i) => {
+                    const val = r.ltv_revenue || 0
+                    const pct = maxVal > 0 ? (val / maxVal) * 100 : 0
+                    return (
+                      <div key={r.dim_value || i} className="flex items-center gap-3">
+                        <span className="text-xs text-gray-600 w-24 truncate">{r.dim_value || 'unknown'}</span>
+                        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full bg-gray-900 transition-all" style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="text-xs font-medium text-gray-900 w-16 text-right">${val.toFixed(0)}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })()}
+          </DashboardCard>
 
-                      {results.length > 0 ? (
-                        <div className="mt-2 space-y-1">
-                          {results.slice(0, 5).map((r, i) => {
-                            const mk = cfg.metric || 'revenue'
-                            const val = r[mk] || r.revenue || r.conversions || r.sessions || 0
-                            const barW = maxVal > 0 ? (val / maxVal) * 100 : 0
-                            return (
-                              <div key={i} className="flex items-center gap-1.5">
-                                <span className="text-xs text-gray-500 w-16 truncate flex-shrink-0">
-                                  {r.dim_value || '—'}
-                                </span>
-                                <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                  <div className="h-full bg-gray-900 rounded-full transition-all" style={{ width: `${barW}%` }} />
-                                </div>
-                                <span className="text-xs text-gray-600 w-12 text-right flex-shrink-0">
-                                  {metricDef.format(val)}
-                                </span>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      ) : reportQueries[idx]?.isLoading ? (
-                        <div className="h-16 flex items-center justify-center">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400" />
-                        </div>
-                      ) : (
-                        <p className="text-xs text-gray-400 mt-2">No data for this period</p>
-                      )}
-                    </button>
-                  )
-                })}
+          {/* Row 5c: Session Analytics */}
+          <DashboardCard
+            title="Session Analytics"
+            subtitle="Sessions derived from pageview events using 30-minute inactivity rule."
+          >
+            {sessionsLoading ? (
+              <div className="py-8 text-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto" />
               </div>
-            </DashboardCard>
-          ) : (
-            <DashboardCard title="Saved Reports"
-              subtitle="Save reports from Report Builder to see them here"
-            >
-              <div className="text-center py-6">
-                <Bookmark className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                <p className="text-sm text-gray-500">No saved reports yet</p>
-                <p className="text-xs text-gray-400 mt-1 max-w-xs mx-auto">
-                  Build and save reports in the Report Builder — up to 3 will appear here with live data.
+            ) : !sessionOverview?.data ? (
+              <div className="py-8 text-center text-sm text-gray-400">No session data available</div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
+                    <p className="text-xs text-gray-500 mb-1">Total Sessions</p>
+                    <p className="text-lg font-bold text-gray-900">{(sessionOverview.data.total_sessions || 0).toLocaleString()}</p>
+                  </div>
+                  <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
+                    <p className="text-xs text-gray-500 mb-1">Avg Duration</p>
+                    <p className="text-lg font-bold text-gray-900">
+                      {Math.round((sessionOverview.data.avg_duration_seconds || 0) / 60)}m
+                    </p>
+                  </div>
+                  <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
+                    <p className="text-xs text-gray-500 mb-1">Pages / Session</p>
+                    <p className="text-lg font-bold text-gray-900">{sessionOverview.data.avg_pageviews_per_session || 0}</p>
+                  </div>
+                  <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
+                    <p className="text-xs text-gray-500 mb-1">Conv. Sessions</p>
+                    <p className="text-lg font-bold text-gray-900">{(sessionOverview.data.conversion_sessions || 0).toLocaleString()}</p>
+                  </div>
+                </div>
+
+                {sessionOverview.data.time_series?.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500 mb-2">Sessions over time</p>
+                    <div className="h-24 flex items-end gap-1">
+                      {(() => {
+                        const series = sessionOverview.data.time_series
+                        const max = Math.max(...series.map(d => d.sessions), 1)
+                        return series.slice(-14).map((d, i) => (
+                          <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                            <div
+                              className="w-full bg-gray-900 rounded-sm"
+                              style={{ height: `${(d.sessions / max) * 100}%`, minHeight: 2 }}
+                            />
+                            <span className="text-[9px] text-gray-400">{d.date.slice(5)}</span>
+                          </div>
+                        ))
+                      })()}
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-[10px] text-gray-400">
+                  Derived on read from pageview events. 30-minute inactivity threshold. Not materialized.
                 </p>
-                <button onClick={() => navigate('/report-builder')}
-                  className="mt-3 px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800">
-                  Create your first saved report
-                </button>
               </div>
-            </DashboardCard>
-          ))}
+            )}
+          </DashboardCard>
 
-          {/* Alerts Banner */}
           {alerts.length > 0 && (
             <DashboardCard title={`${alerts.length} Alert${alerts.length > 1 ? 's' : ''}`} subtitle="Issues requiring attention">
               <div className="space-y-2">
@@ -815,6 +1071,13 @@ export default function Dashboard() {
           )}
         </>
       )}
+
+      <ConversionExplanationModal
+        isOpen={explainModalOpen}
+        onClose={() => setExplainModalOpen(false)}
+        siteKey={site?.site_key}
+        model={explainModel}
+      />
     </div>
   )
 }

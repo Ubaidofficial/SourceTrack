@@ -1,8 +1,13 @@
-import { getAttribution, getFlexibleReport } from '../lib/attribution-engine.js'
+import { getAttribution, getFlexibleReport, getAttributionExplanation } from '../lib/attribution-engine.js'
 
 const ALLOWED_MODELS = new Set(['first_touch', 'last_touch', 'first_touch_non_direct', 'last_touch_non_direct', 'ai_platforms'])
 const ALLOWED_GROUPS = new Set(['source', 'medium', 'campaign', 'ai_source', 'landing_page', 'country', 'device', 'date'])
-const ALLOWED_METRICS = new Set(['revenue', 'conversions', 'sessions', 'leads', 'conversion_rate', 'avg_conversion_value', 'ai_conversions', 'ai_revenue', 'ai_conversion_share', 'ai_revenue_share', 'ltv_revenue'])
+const ALLOWED_METRICS = new Set([
+  'revenue', 'conversions', 'sessions', 'leads', 'conversion_rate',
+  'avg_conversion_value', 'ai_conversions', 'ai_revenue', 'ai_conversion_share',
+  'ai_revenue_share', 'ltv_revenue',
+  'session_count', 'avg_session_duration', 'pages_per_session', 'conversion_sessions'
+])
 const ALLOWED_GRANULARITY = new Set(['day', 'week', 'month', 'quarter', 'year'])
 const ALLOWED_WINDOWS = new Set(['ltv', '1', '7', '14', '30', '60', '90'])
 const ALLOWED_ATTRIBUTE_BY = new Set(['conversion_date', 'first_seen_date', 'original_source_date'])
@@ -139,5 +144,48 @@ export async function attribution(req, res) {
   } catch (err) {
     console.error(err)
     res.status(500).json({ success: false, data: null, error: 'Attribution query failed' })
+  }
+}
+
+// GET /api/attribution/explain — explain WHY credit was assigned for a specific visitor
+// Query params: site_key, model, distinct_id
+export async function attributionExplain(req, res) {
+  try {
+    const { site_key, model, distinct_id } = req.query
+
+    if (!site_key || !model || !distinct_id) {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        error: 'site_key, model, and distinct_id are required'
+      })
+    }
+
+    if (!ALLOWED_MODELS.has(model)) {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        error: `Invalid model. Must be one of: ${[...ALLOWED_MODELS].join(', ')}`
+      })
+    }
+
+    const explanation = await getAttributionExplanation(site_key, model, distinct_id)
+
+    if (!explanation) {
+      return res.status(404).json({
+        success: false,
+        data: null,
+        error: 'No conversion found for this visitor'
+      })
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: explanation,
+      error: null
+    })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ success: false, data: null, error: 'Attribution explanation failed' })
   }
 }
