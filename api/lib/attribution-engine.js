@@ -328,7 +328,7 @@ export async function getFlexibleReport(siteKey, model, dateFrom, dateTo, groupB
     }
   }
 
-  let metricCol, metricLabel, eventFilter, extraSelect
+  let metricCol, metricLabel, eventFilter, extraSelect, isLTVRevenue = false
 
   switch (metric) {
     case 'revenue':
@@ -392,14 +392,17 @@ export async function getFlexibleReport(siteKey, model, dateFrom, dateTo, groupB
       eventFilter = "AND event = '$conversion'"
       extraSelect = ''
       break
+    case 'ltv_revenue':
+      isLTVRevenue = true
+      metricLabel = 'ltv_revenue'
+      break
     default:
       throw new Error(`Unknown metric: ${metric}`)
   }
 
   // Attribution window: expands the lower date bound backward by N days.
   // For fixed windows (1/7/14/30/60/90), this includes conversions from (date_from - N days).
-  // 'ltv' is currently a no-op (no additional time constraint) — it is NOT true lifetime value logic.
-  // TODO: confirm — true LTV would require per-user conversion aggregation across all time.
+  // 'ltv' is currently a no-op for non-LTV metrics; LTV computes per-user aggregation independently.
   let windowClause = ''
   if (attributionWindow && attributionWindow !== 'ltv' && Number(attributionWindow) > 0) {
     windowClause = `\n    AND timestamp >= toDateTime('${fromDate}') - INTERVAL ${Number(attributionWindow)} DAY`
@@ -439,6 +442,94 @@ export async function getFlexibleReport(siteKey, model, dateFrom, dateTo, groupB
   }
   if (filters.has_ai_source === 'false') {
     filterClauses += `\n    AND (properties.ai_source IS NULL OR properties.ai_source = '')`
+  }
+
+  // LTV v1: per-distinct_id revenue aggregation with first-touch / last-touch attribution.
+  // UUID exclusion: anonymous-only visitors whose distinct_id matches the UUIDv4 format
+  // (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx) are excluded. These visitors never completed
+  // identification via $identify / ph.alias() and cannot be reliably stitched across
+  // sessions or devices. This is the same heuristic used in LeadDetail.jsx.
+  if (isLTVRevenue) {
+    if (model !== 'first_touch' && model !== 'last_touch') {
+      throw new Error(`ltv_revenue metric only supports first_touch and last_touch models. Received: ${model}`)
+    }
+
+    function ltvPersonDimExpr(gb, md) {
+      if (gb === 'date') {
+        return granularity === 'quarter'
+          ? `concat(toString(toYear(MAX(timestamp))), '-Q', toString(toQuarter(MAX(timestamp))))`
+          : `formatDateTime(MAX(timestamp), ${GRANULARITY_MAP[granularity] || GRANULARITY_MAP.day})`
+      }
+
+      if (md === 'first_touch') {
+        switch (gb) {
+          case 'source': return "any(COALESCE(NULLIF(properties.first_touch_source, ''), 'direct'))"
+          case 'medium': return "any(COALESCE(NULLIF(properties.first_touch_medium, ''), 'none'))"
+          case 'campaign': return 'any(properties.first_touch_campaign)'
+          case 'ai_source': return "any(COALESCE(NULLIF(properties.ai_source, ''), 'none'))"
+          case 'landing_page': return "argMin(COALESCE(NULLIF(properties.page_url, ''), '/'), timestamp)"
+          case 'country': return "any(COALESCE(NULLIF(properties.country, ''), 'unknown'))"
+          case 'device': return "any(COALESCE(NULLIF(properties.device_type, ''), 'unknown'))"
+          default: throw new Error(`Unsupported group_by for LTV first_touch: ${gb}`)
+        }
+      }
+
+      // last_touch — inner subquery only scans conversion events, so argMax(timestamp)
+      // correctly returns the most recent conversion's property value.
+      switch (gb) {
+        case 'source': return "argMax(COALESCE(NULLIF(properties.utm_source, ''), 'direct'), timestamp)"
+        case 'medium': return "argMax(COALESCE(NULLIF(properties.utm_medium, ''), 'none'), timestamp)"
+        case 'campaign': return 'argMax(properties.utm_campaign, timestamp)'
+        case 'ai_source': return "argMax(COALESCE(NULLIF(properties.ai_source, ''), 'none'), timestamp)"
+        case 'landing_page': return "argMax(COALESCE(NULLIF(properties.page_url, ''), '/'), timestamp)"
+        case 'country': return "argMax(COALESCE(NULLIF(properties.country, ''), 'unknown'), timestamp)"
+        case 'device': return "argMax(COALESCE(NULLIF(properties.device_type, ''), 'unknown'), timestamp)"
+        default: throw new Error(`Unsupported group_by for LTV last_touch: ${gb}`)
+      }
+    }
+
+    const ltvDimExpr = ltvPersonDimExpr(groupBy, model)
+    const ltvDim2Expr = groupBy2 ? ltvPersonDimExpr(groupBy2, model) : null
+
+    // UUID exclusion rule: distinct_ids that match the UUIDv4 pattern
+    // (8-4-4-4-12 hex chars) are anonymous-only visitors who never completed
+    // identification via $identify. They are excluded from LTV because they
+    // cannot be reliably stitched across sessions or devices.
+    const uuidExclusion = "AND NOT match(distinct_id, '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')"
+
+    const ltvSql = `
+    SELECT
+      ltv_dim AS dim_value${ltvDim2Expr ? `,\n      ltv_dim2 AS dim_value2` : ''},
+      SUM(total_revenue) AS metric_value
+    FROM (
+      SELECT
+        distinct_id,
+        ${ltvDimExpr} AS ltv_dim${ltvDim2Expr ? `,\n        ${ltvDim2Expr} AS ltv_dim2` : ''},
+        SUM(toFloat64OrZero(toString(properties.conversion_value))) AS total_revenue
+      FROM events
+      WHERE properties.site_id = '${safeSite}'
+        AND event = '$conversion'
+        AND timestamp >= toDateTime('${fromDate}')${windowClause}
+        AND timestamp <= toDateTime('${toDate}')
+        ${uuidExclusion}${filterClauses}
+      GROUP BY distinct_id
+      HAVING total_revenue > 0
+    )
+    GROUP BY ltv_dim${ltvDim2Expr ? ', ltv_dim2' : ''}
+    ${havingClause}
+    ORDER BY metric_value DESC
+    LIMIT 50000
+  `
+
+    const ltvRows = await queryHogQL(ltvSql, 'flexible_report_ltv')
+    const ltvResults = ltvRows.map(([dimValue, dimValue2, metricValue]) => ({
+      dim_value: dimValue || 'unknown',
+      ...(ltvDim2Expr ? { dim_value2: dimValue2 || 'unknown' } : {}),
+      ltv_revenue: Number(metricValue) || 0
+    }))
+
+    cache.set(key, ltvResults)
+    return ltvResults
   }
 
   const sql = `

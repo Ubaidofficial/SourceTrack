@@ -566,3 +566,40 @@ Update this file after each DeepSeek session with:
 **Bug fixed:** Daily granularity was using hardcoded `timestamp` from GROUP_COLUMNS.date, ignoring attributeBy. Fixed to always use `refTs` for date grouping.
 
 **Verified:** All 15 combos work (3 attributeBy × 5 granularities). Week uses `%Y-W%V` (zero-padded ISO 8601). Quarter uses `concat(toYear,toQuarter)`. All labels sort correctly. groupBy2=date uses same expressions — no separate issues.
+
+### Session 35.2 — Railway Build Fix + LTV Attribution v1
+
+**Files modified:**
+- `package.json` — removed `postinstall` script (was calling `geoip-lite.startWatchingDataUpdate()` and hanging Railway builds)
+- `SYSTEM.md` — replaced `geoip-lite deploy rule` with `geoip-lite deploy note` (bundled data only, no auto-updates)
+- `api/lib/attribution-engine.js` — added `ltv_revenue` metric with per-distinct_id SQL pattern
+- `api/routes/attribution.js` — added `ltv_revenue` to ALLOWED_METRICS
+- `dashboard/src/pages/ReportBuilder.jsx` — added LTV Revenue v1 metric in new "LTV" group
+
+**Completed:**
+- Railway build timeout fixed: postinstall removed, `npm install` completes in <1s
+- GeoIP uses bundled database — no runtime auto-update, country lookups still work
+- LTV v1: `SUM(conversion_value)` per identified `distinct_id`, attributed to first-touch or last-touch source dimensions
+- First-touch LTV uses `any(properties.first_touch_source/medium/campaign)` (same value on every event)
+- Last-touch LTV uses `argMax(properties.utm_source/medium/campaign, timestamp)` on conversion events only
+- UUID exclusion via `NOT match(distinct_id, '^[uuid-pattern]$')` — same heuristic as LeadDetail.jsx
+- Supports all 8 groupBy dimensions, groupBy2, filters, date range, attribution window, 5 granularities
+- Report Builder exposes "LTV Revenue v1 (identified users)" with inline description
+
+**Identity assumptions:**
+- Identity key: `distinct_id` — PostHog resolves aliases via `ph.alias()` in `/api/identify`
+- After aliasing, anonymous UUID events merge into identified user_id's person record
+- `first_touch_source/medium/campaign` set via `$set_once` on identify (never overwritten per person)
+- Anonymous-only visitors (UUID distinct_ids, never identified) excluded from LTV
+
+**UUID exclusion rule (mandatory — must be documented wherever LTV is surfaced):**
+- Anonymous-only visitors whose `distinct_id` remains a UUID and who never complete identification are excluded from LTV v1
+- They must not be heuristically stitched, guessed, or included in identified-user LTV totals
+- This is reflected in metric label ("identified users"), metric description, code comments, and this doc
+
+**Caveats:**
+- If an app uses UUIDs as user_ids (e.g., Supabase auth UUIDs), identified users would be incorrectly excluded
+- Linear and ai_platforms models not supported for LTV v1 (would require per-person touchpoint splitting)
+- Date grouping for LTV uses `MAX(timestamp)` per distinct_id (most recent conversion date)
+- GeoIP uses bundled database — freshness depends on npm package publish date
+- No predictive LTV, cohort LTV, CRM-grade unification, or revenue forecasting claimed

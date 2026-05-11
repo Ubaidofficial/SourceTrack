@@ -621,3 +621,67 @@
 - All labels sort correctly alphabetically (zero-padded week numbers, single-digit quarters)
 - `groupBy2=date` uses identical dim2Expr with refTs — no separate issues
 - `GRANULARITY_MAP.quarter: "'%Y-Q'"` remains dead code (documented) — quarter always uses concat()
+
+## Session 35.2 — Railway Build Fix + LTV Attribution v1
+
+### Task A — Fix Railway Build Timeout
+**Files modified:**
+- `package.json` — removed `postinstall` script that called `geoip-lite.startWatchingDataUpdate()` during `npm ci`
+
+**Files modified (docs):**
+- `SYSTEM.md` — replaced `geoip-lite deploy rule` section with `geoip-lite deploy note`, documenting that GeoIP now uses bundled data only (no auto-updates)
+
+**Completed:**
+- Railway builds no longer hang on geoip-lite data download during postinstall
+- `npm install` completes in <1s (was hanging until timeout)
+- Runtime `geoip.lookup(ip)` still works using packaged database
+- `startWatchingDataUpdate()` was never called at runtime — only in the removed postinstall script
+
+**Caveats:**
+- GeoIP freshness depends on how recently `geoip-lite` npm package was published
+- Country lookups may become stale over months; manual `npm update geoip-lite` restores freshness
+
+### Task B — LTV Attribution v1
+**Files modified:**
+- `api/lib/attribution-engine.js` — added `ltv_revenue` metric with per-distinct_id revenue aggregation; supports first_touch and last_touch models only; inner subquery groups by distinct_id, outer query groups by attribution dimension
+- `api/routes/attribution.js` — added `ltv_revenue` to `ALLOWED_METRICS`
+- `dashboard/src/pages/ReportBuilder.jsx` — added `ltv_revenue` metric in new "LTV" group: "LTV Revenue v1 (identified users)" with honest description and UUID exclusion note
+
+**Completed:**
+- LTV = `SUM(conversion_value)` across all conversions per identified `distinct_id`
+- First-touch LTV: attributes all person revenue to `first_touch_source/medium/campaign`
+- Last-touch LTV: attributes all person revenue to most recent conversion's UTM source/medium/campaign (via `argMax(..., timestamp)`)
+- Anonymous-only visitors excluded via `NOT match(distinct_id, ...)` UUID regex
+- Supports all 8 groupBy dimensions (source, medium, campaign, ai_source, landing_page, country, device, date)
+- Supports groupBy2 (secondary dimension)
+- Supports all existing filters, date range, attribution window
+- Supports all 5 granularities for date grouping (uses `MAX(timestamp)` per distinct_id as person's attributed date)
+- `ltv_revenue` metric validated in route whitelist
+- Report Builder metric selector shows "LTV Revenue v1 (identified users)" in new "LTV" group
+- Metric description explains anonymous exclusion and model support
+- First-touch and last-touch produce materially different outputs when journeys differ ✓
+- No double counting — `GROUP BY distinct_id` ensures each person counted once ✓
+- Dashboard build: passes
+
+**Identity assumptions documented:**
+- Identity key: `distinct_id` (PostHog person ID, resolves aliases via `ph.alias()`)
+- Anonymous-only visitors (UUID-format distinct_ids) excluded — cannot be stitched across sessions/devices
+- If an app uses UUIDs as user_ids, those identified users would be incorrectly excluded
+- No cross-domain or cross-device identity stitching beyond PostHog's built-in alias merging
+
+**Explicit UUID exclusion rule:**
+- `NOT match(distinct_id, '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')`
+- Excludes all UUIDv4-format distinct_ids from LTV aggregation
+- Documented in engine code comments, metric help text, and DEEPSEEK.md
+
+**What is NOT claimed:**
+- Predictive LTV or revenue forecasting
+- Cohort-based LTV
+- CRM-grade customer unification
+- Cross-domain or cross-device identity stitching
+- Full customer lifetime beyond `distinct_id` scope
+- Support for linear or ai_platforms attribution models with LTV
+
+**TODOs:**
+- [ ] If user_id values are UUID-format, the exclusion regex would incorrectly reject identified users
+- [ ] Linear attribution model not supported for LTV (would require per-touchpoint revenue splitting per person — scope exceeds v1)

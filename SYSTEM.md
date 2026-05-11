@@ -167,9 +167,5 @@ If `express.json()` runs first, Stripe webhook verification breaks.
 - Server-side only: `SUPABASE_SERVICE_KEY`
 - Frontend only: `SUPABASE_ANON_KEY`
 
-## geoip-lite deploy rule
-`package.json` must include:
-```json
-"postinstall": "node -e "require('geoip-lite').startWatchingDataUpdate()""
-```
-Without this, country lookups return null silently.
+## geoip-lite deploy note
+GeoIP uses the bundled database shipped with `geoip-lite`. No auto-update runs at build time or runtime (the `postinstall` script that called `startWatchingDataUpdate()` was removed in Session 35.2 — it caused Railway build timeouts during `npm ci`). Country lookups still work using the bundled data. Freshness depends on how recently `geoip-lite` was published/updated.

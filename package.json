@@ -6,8 +6,7 @@
   "scripts": {
     "start": "node api/index.js",
     "dev": "nodemon api/index.js",
-    "build:tracker": "esbuild tracker/tracker.js --bundle --minify --outfile=tracker/tracker.min.js && esbuild tracker/loader.js --minify --outfile=tracker/loader.min.js",
-    "postinstall": "node -e \"require('geoip-lite').startWatchingDataUpdate()\""
+    "build:tracker": "esbuild tracker/tracker.js --bundle --minify --outfile=tracker/tracker.min.js && esbuild tracker/loader.js --minify --outfile=tracker/loader.min.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

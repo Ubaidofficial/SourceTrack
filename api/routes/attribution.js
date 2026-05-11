@@ -2,7 +2,7 @@ import { getAttribution, getFlexibleReport } from '../lib/attribution-engine.js'
 
 const ALLOWED_MODELS = new Set(['first_touch', 'last_touch', 'linear', 'ai_platforms'])
 const ALLOWED_GROUPS = new Set(['source', 'medium', 'campaign', 'ai_source', 'landing_page', 'country', 'device', 'date'])
-const ALLOWED_METRICS = new Set(['revenue', 'conversions', 'sessions', 'leads', 'conversion_rate', 'avg_conversion_value', 'ai_conversions', 'ai_revenue', 'ai_conversion_share', 'ai_revenue_share'])
+const ALLOWED_METRICS = new Set(['revenue', 'conversions', 'sessions', 'leads', 'conversion_rate', 'avg_conversion_value', 'ai_conversions', 'ai_revenue', 'ai_conversion_share', 'ai_revenue_share', 'ltv_revenue'])
 const ALLOWED_GRANULARITY = new Set(['day', 'week', 'month', 'quarter', 'year'])
 const ALLOWED_WINDOWS = new Set(['ltv', '1', '7', '14', '30', '60', '90'])
 const ALLOWED_ATTRIBUTE_BY = new Set(['conversion_date', 'first_seen_date', 'original_source_date'])
