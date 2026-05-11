@@ -311,6 +311,15 @@ export default function LeadDetail() {
               {lead.ai_source === 'Perplexity' && (
                 <p className="text-xs text-gray-500">Perplexity traffic often comes from comparison shoppers evaluating multiple options.</p>
               )}
+              {lead.ai_source === 'Grok' && (
+                <p className="text-xs text-gray-500">Grok users tend to be early adopters exploring emerging tools and products.</p>
+              )}
+              {lead.ai_source === 'Copilot' && (
+                <p className="text-xs text-gray-500">Copilot traffic often comes from professionals researching within their existing Microsoft workflow.</p>
+              )}
+              {lead.ai_source === 'Gemini' && (
+                <p className="text-xs text-gray-500">Gemini users span a broad audience — from casual searchers to deep researchers in the Google ecosystem.</p>
+              )}
               {(lead.revenue > 0 && lead.conversions > 0) && (
                 <p className="text-xs text-gray-700 mt-1 font-medium">
                   Revenue from AI: ${lead.revenue.toFixed(0)} across {lead.conversions} conversion{lead.conversions === 1 ? '' : 's'}.

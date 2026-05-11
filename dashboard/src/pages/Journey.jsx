@@ -4,7 +4,13 @@ import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { getJourney } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
-import { Search, Globe, Bot, MousePointerClick, Clock, MapPin } from 'lucide-react'
+import { Search, Globe, Bot, MousePointerClick, Clock, MapPin, Filter, ArrowRight, GitBranch } from 'lucide-react'
+
+const FILTERS = [
+  { key: 'all', label: 'All Events' },
+  { key: 'conversions', label: 'Conversions' },
+  { key: 'ai', label: 'AI Touchpoints' }
+]
 
 export default function Journey() {
   const { user } = useAuth()
@@ -12,6 +18,7 @@ export default function Journey() {
   const [site, setSite] = useState(null)
   const [visitorId, setVisitorId] = useState('')
   const [searchId, setSearchId] = useState('')
+  const [filter, setFilter] = useState('all')
 
   useEffect(() => {
     async function load() {
@@ -41,10 +48,52 @@ export default function Journey() {
   })
 
   const events = data?.events || []
+
+  const filteredEvents = filter === 'all'
+    ? events
+    : filter === 'conversions'
+      ? events.filter(e => e.event === '$conversion')
+      : events.filter(e => e.ai_source != null && e.ai_source !== '')
   const eventIcons = {
     '$pageview': Globe,
     '$conversion': MousePointerClick
   }
+
+  // Build a simple pre-conversion path summary from ordered events.
+  // Rule: extract pathname from page_url, deduplicate consecutive identical pages,
+  // stop at the first conversion event. If no conversion, show all deduplicated touchpoints.
+  // Labeled as a simple summary — NOT full path analytics.
+  function buildPathSummary(allEvents) {
+    if (!allEvents || allEvents.length === 0) return null
+
+    const firstConversionIdx = allEvents.findIndex(e => e.event === '$conversion')
+    const preConversion = firstConversionIdx >= 0
+      ? allEvents.slice(0, firstConversionIdx + 1)
+      : allEvents
+
+    const segments = []
+    for (const e of preConversion) {
+      let label = null
+      if (e.page_url) {
+        try { label = new URL(e.page_url).pathname } catch { label = e.page_url }
+        // Clean trailing slash for consistency
+        if (label.length > 1 && label.endsWith('/')) label = label.slice(0, -1)
+      }
+      if (!label || label === '/') {
+        label = e.utm_source || 'unknown'
+      }
+      // Deduplicate consecutive identical segments
+      if (segments.length === 0 || segments[segments.length - 1] !== label) {
+        segments.push(label)
+      }
+    }
+
+    // Mark the last segment as conversion if it was one
+    const hasConversion = firstConversionIdx >= 0
+    return { segments, hasConversion }
+  }
+
+  const pathSummary = events.length > 0 ? buildPathSummary(events) : null
 
   return (
     <div className="space-y-6">
@@ -91,14 +140,72 @@ export default function Journey() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="mb-4">
             <h3 className="text-sm font-semibold text-gray-700">Visitor: {data.visitor_id}</h3>
-            <p className="text-xs text-gray-400 mt-1">{data.event_count} events found</p>
+            <p className="text-xs text-gray-400 mt-1">
+              {filteredEvents.length} of {data.event_count} events
+              {filter !== 'all' ? ` (filtered)` : ''}
+            </p>
           </div>
+
+          {/* Filter toggles */}
+          {events.length > 0 && (
+            <div className="flex items-center gap-2 mb-4 pb-4 border-b border-gray-100">
+              <Filter className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              {FILTERS.map(f => (
+                <button
+                  key={f.key}
+                  onClick={() => setFilter(f.key)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
+                    filter === f.key
+                      ? 'bg-gray-900 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Path Summary */}
+          {pathSummary && pathSummary.segments.length >= 2 && (
+            <div className="mb-4 pb-4 border-b border-gray-100">
+              <div className="flex items-center gap-1.5 mb-2">
+                <GitBranch className="w-3.5 h-3.5 text-gray-400" />
+                <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">
+                  Pre-conversion path summary
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap text-xs">
+                {pathSummary.segments.map((seg, idx) => (
+                  <span key={idx} className="flex items-center gap-1.5">
+                    <span className={`px-2 py-1 rounded font-medium ${
+                      idx === pathSummary.segments.length - 1 && pathSummary.hasConversion
+                        ? 'bg-lime-100 text-lime-800'
+                        : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {seg}
+                    </span>
+                    {idx < pathSummary.segments.length - 1 && (
+                      <ArrowRight className="w-3 h-3 text-gray-300 flex-shrink-0" />
+                    )}
+                  </span>
+                ))}
+              </div>
+              <p className="text-xs text-gray-400 mt-1.5">
+                Consecutive duplicate pages merged. Based on ordered event data only — not full path analytics.
+              </p>
+            </div>
+          )}
 
           {events.length === 0 ? (
             <p className="text-sm text-gray-400">No events found for this visitor.</p>
+          ) : filteredEvents.length === 0 ? (
+            <p className="text-sm text-gray-400 py-4 text-center">
+              No {filter === 'conversions' ? 'conversion' : filter === 'ai' ? 'AI-referred' : ''} events found for this visitor.
+            </p>
           ) : (
             <div className="relative pl-6 border-l-2 border-gray-200 space-y-5">
-              {events.map((e, i) => {
+              {filteredEvents.map((e, i) => {
                 const Icon = eventIcons[e.event] || Clock
                 return (
                   <div key={i} className="relative -left-[31px] flex gap-3">

@@ -603,3 +603,88 @@ Update this file after each DeepSeek session with:
 - Date grouping for LTV uses `MAX(timestamp)` per distinct_id (most recent conversion date)
 - GeoIP uses bundled database — freshness depends on npm package publish date
 - No predictive LTV, cohort LTV, CRM-grade unification, or revenue forecasting claimed
+
+### Session 36 — Per-Lead AI Insights Expansion
+
+**Files modified:**
+- `dashboard/src/pages/LeadDetail.jsx` — added platform-specific AI insight copy for Grok, Copilot, Gemini
+
+**Completed:**
+- AI insight card now covers 6 of 7 detected platforms (ChatGPT, Claude, Perplexity, Grok, Copilot, Gemini)
+- DeepSeek intentionally excluded — detection still works (StatusBadge rendered) but no platform-specific insight paragraph
+- AI-origin classification unchanged (Session 33 `isAI` flag + StatusBadge)
+- All UI states (loading, empty, error, non-AI lead) already handled via existing guard clauses
+
+**Not implemented — blocked on data availability:**
+- Per-lead AI vs non-AI revenue/conversion split: the `/leads/:leadId` endpoint returns aggregate stats per distinct_id without filtering by AI source. Adding a split would require backend changes to query AI-filtered sub-aggregates. Not added to avoid fake metrics.
+- Journey timeline filtering by event type (Task 2 — not yet started)
+- Simple path visualization (Task 3 — not yet started)
+
+**Verified in code:**
+- `ai_source` field returned by `/leads/:leadId` endpoint (Session 21, `argMin` on conversion events)
+- `AI_SOURCES` array includes all 7 platforms (ChatGPT, Claude, Perplexity, Gemini, Grok, Copilot, DeepSeek)
+- AI insight card renders for any `isAI` lead; platform-specific copy shown via conditional blocks
+
+**Remaining gaps:**
+- DeepSeek-specific insight copy pending
+- Per-lead AI/non-AI split metrics not queryable from current endpoint shape
+- Tasks 2 (journey filters) completed Session 37; Task 3 (path visualization) not yet started
+
+### Session 37 — Journey Timeline Filtering
+
+**Files modified:**
+- `dashboard/src/pages/Journey.jsx` — added filter toggle bar (All Events, Conversions, AI Touchpoints)
+
+**Completed:**
+- Three filter pill buttons rendered as a toggle bar below the visitor header
+- "Conversions Only" filters client-side to `event === '$conversion'`
+- "AI Touchpoints Only" filters client-side to `ai_source IS NOT NULL AND ai_source != ''`
+- Event count updates to show filtered vs total: "3 of 45 events (filtered)"
+- Empty filter results show truthful message (e.g., "No conversion events found for this visitor.")
+- No backend changes — all filtering is client-side on existing journey response data
+- Filter pills use gray-900 active state (matching SourceTrack design system)
+- Dashboard build: passes
+
+**Verified in code:**
+- Backend returns `ai_source` and `event` fields on every journey event (from `queryHogQL` in `api/routes/journey.js`)
+- `ai_source` is non-null only for events where the AI platform detection middleware matched a referrer
+- `event` is always a string — `$pageview`, `$conversion`, `$identify`, `install_verified`
+- Client-side filtering on the `<500 event response array is efficient and safe
+
+**Not implemented — blocked:**
+- Session grouping: no `session_id` property exists in events. The tracker does not generate session IDs, and `IDENTITY_DESIGN.md §1.3` confirms this is not yet implemented. Cannot reliably derive session boundaries. If added later, the filter toggle bar can accept a fourth "Session Groups" option.
+- Path visualization (Task 3 — not started)
+
+**Remaining gaps:**
+- Task 3 (simple path visualization v1) completed Session 38
+- DeepSeek-specific AI insight copy (from Session 36)
+- Channel-level path labels for path summary (currently page-path only)
+
+### Session 38 — Simple Path Visualization v1
+
+**Files modified:**
+- `dashboard/src/pages/Journey.jsx` — added `buildPathSummary()` function and path summary UI
+
+**Completed:**
+- Pre-conversion path summary displayed above journey timeline as horizontal pill row
+- Rule: extracts pathname from `page_url`, deduplicates consecutive identical pages, stops at first conversion
+- Falls back to `utm_source` for root/URL-less events, shows `'unknown'` when no label is available
+- Conversion endpoint highlighted with lime background (matching SourceTrack design)
+- Path hidden when <2 distinct touchpoints (insufficient data — truthful empty state)
+- Helper text: "Consecutive duplicate pages merged. Based on ordered event data only — not full path analytics."
+- Uses only existing journey endpoint data — no backend changes
+
+**Verified in code:**
+- `page_url` and `utm_source` from `api/routes/journey.js` HogQL query
+- `event === '$conversion'` reliably identifies conversion events
+- Events ordered by `timestamp ASC` — sequential extraction is safe
+- Consecutive deduplication is documentable and truthful
+
+**Inferred but not fully verified:**
+- Performance impact negligible — array operations on ≤500 events per visitor
+
+**Not implemented:**
+- Channel-level path labels (e.g., "Google Ads → /pricing")
+- Session-bounded path segmentation
+- Drop-off analysis or multi-step conversion inference
+- Backend path aggregation across multiple visitors
