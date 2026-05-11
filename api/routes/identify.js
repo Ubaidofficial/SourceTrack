@@ -7,6 +7,19 @@ export async function identify(req, res) {
     const setProps = traits || {}
     const setOnceProps = {}
 
+    if (typeof req.body.source_system === 'string') {
+      const ss = req.body.source_system.trim()
+      if (ss.length > 0) setProps.source_system = ss
+    }
+    if (typeof req.body.external_id === 'string') {
+      const ext = req.body.external_id.trim()
+      if (ext.length > 0) setProps.external_id = ext
+    }
+    if (typeof req.body.contact_email === 'string') {
+      const em = req.body.contact_email.trim()
+      if (em.length > 0) setProps.contact_email = em
+    }
+
     if (req.body.first_touch_source) {
       setOnceProps.first_touch_source = req.body.first_touch_source
     }

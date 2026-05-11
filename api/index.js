@@ -13,6 +13,7 @@ import { detectAIPlatform } from './middleware/ai-platform.js'
 import { track } from './routes/track.js'
 import { identify } from './routes/identify.js'
 import { conversion } from './routes/conversion.js'
+import { conversionOffline } from './routes/conversion-offline.js'
 import { attribution } from './routes/attribution.js'
 import { journey } from './routes/journey.js'
 import { aiChatRouter } from './routes/ai-chat.js'
@@ -24,6 +25,7 @@ import { hygieneRouter } from './routes/hygiene.js'
 import { exportRouter } from './routes/export.js'
 import { onboardingRouter } from './routes/onboarding.js'
 import { dashboardRouter } from './routes/dashboard.js'
+import { aiAnalyticsRouter } from './routes/ai-analytics.js'
 import { leadsRouter } from './routes/leads-server.js'
 import { campaignsRouter } from './routes/campaigns.js'
 import { integrationsRouter } from './routes/integrations.js'
@@ -127,6 +129,7 @@ app.use('/api/track', trackLimit)
 app.post('/api/track', validateSiteKey, detectAIPlatform, track)
 app.post('/api/identify', validateSiteKey, identify)
 app.post('/api/conversion', validateSiteKey, detectAIPlatform, conversion)
+app.post('/api/conversion/offline', validateSiteKey, conversionOffline)
 app.get('/api/attribution', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, attribution)
 app.get('/api/journey/:visitorId', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, journey)
 app.use('/api/ai-chat', requireUserAuth, validateSiteKey, requireSiteMembership, aiChatRouter)
@@ -138,6 +141,7 @@ app.use('/api/hygiene', requireUserAuth, validateSiteKey, requireSiteMembership,
 app.use('/api/export', requireUserAuth, validateSiteKey, requireSiteMembership, exportRouter)
 app.use('/api/onboarding', requireUserAuth, onboardingRouter)
 app.use('/api/dashboard', requireUserAuth, validateSiteKey, requireSiteMembership, dashboardRouter)
+app.use('/api/ai-analytics', requireUserAuth, validateSiteKey, requireSiteMembership, aiAnalyticsRouter)
 app.use('/api/leads', requireUserAuth, validateSiteKey, requireSiteMembership, leadsRouter)
 app.use('/api/campaigns', requireUserAuth, validateSiteKey, requireSiteMembership, campaignsRouter)
 app.use('/api/integrations', requireUserAuth, validateSiteKey, requireSiteMembership, integrationsRouter)

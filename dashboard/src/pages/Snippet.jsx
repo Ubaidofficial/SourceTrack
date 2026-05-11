@@ -236,6 +236,253 @@ export default function Snippet() {
         </div>
       </div>
 
+      {/* Cross-Domain Tracking v1 */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <LinkIcon className="w-5 h-5 text-gray-700" />
+          <h3 className="font-semibold text-gray-900">Cross-Domain Tracking v1</h3>
+        </div>
+
+        <p className="text-sm text-gray-600">
+          Preserve attribution when a visitor moves from one tracked domain to another within your setup.
+          Uses query-parameter pass-through — simple, explicit, and documentable. Both domains must have the SourceTrack snippet installed.
+        </p>
+
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+          <p className="font-medium">What this does not support</p>
+          <ul className="text-xs mt-1 space-y-0.5 list-disc list-inside">
+            <li>Cross-device identity (different browser/device = different visitor)</li>
+            <li>Automatic third-party checkout domains</li>
+            <li>Subdomain-wide cookies without explicit setup on both ends</li>
+            <li>Automatic link decoration — you explicitly call <code className="bg-amber-100 px-1 rounded text-xs">getCrossDomainUrl()</code></li>
+          </ul>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-medium text-gray-700">Decorate outgoing links</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Call <code className="bg-gray-100 px-1 rounded text-xs">getCrossDomainUrl()</code> on the URL before setting it on links or forms pointing to another tracked domain.
+            </p>
+            <code className="block bg-gray-100 px-3 py-1.5 rounded text-xs mt-1.5 whitespace-pre-wrap">
+              {'// Before setting a link href to app.example.com:\nvar link = document.getElementById("app-link")\nlink.href = window.trackiq.getCrossDomainUrl(link.href)'}
+            </code>
+            <p className="text-xs text-gray-400 mt-1">
+              This appends <code className="bg-gray-100 px-1 rounded text-xs">?__tq_id=...</code> and <code className="bg-gray-100 px-1 rounded text-xs">?__tq_ft=...</code> with the current anonymous ID and first-touch source/medium/campaign.
+            </p>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium text-gray-700">Form-based cross-domain handoff</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              If the receiving domain reads the form submission and renders the tracker, add a hidden field:
+            </p>
+            <code className="block bg-gray-100 px-3 py-1.5 rounded text-xs mt-1.5">
+              {'<input type="hidden" data-trackiq="__tq_id" name="anonymous_id" />'}
+            </code>
+            <p className="text-xs text-gray-400 mt-1">
+              The tracker will populate it with the current anonymous ID on page load.
+            </p>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium text-gray-700">What the receiving domain does automatically</p>
+            <ul className="text-xs text-gray-600 mt-1 space-y-0.5 list-disc list-inside">
+              <li>Reads <code className="bg-gray-100 px-1 rounded text-xs">__tq_id</code> from URL and restores the cookie if not already present</li>
+              <li>Reads <code className="bg-gray-100 px-1 rounded text-xs">__tq_ft</code> from URL and restores first-touch context if not already present</li>
+              <li>Strips <code className="bg-gray-100 px-1 rounded text-xs">__tq_*</code> params from the visible URL after reading</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* Booking Attribution v1 */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <LinkIcon className="w-5 h-5 text-gray-700" />
+          <h3 className="font-semibold text-gray-900">Booking Attribution v1</h3>
+        </div>
+
+        <p className="text-sm text-gray-600">
+          Track scheduled meetings and booked calls as a differentiated conversion subtype. Compatible with Calendly-style booking flows — uses a documented handoff pattern, not a native integration.
+        </p>
+
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+          <p className="font-medium">What this does not support</p>
+          <ul className="text-xs mt-1 space-y-0.5 list-disc list-inside">
+            <li>Native Calendly OAuth or API integration</li>
+            <li>Automatic booking ingestion from third-party systems</li>
+            <li>Webhook-based booking completion callbacks</li>
+            <li>Full booking platform coverage beyond documented manual wiring</li>
+          </ul>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-medium text-gray-700">Step 1 — Carry attribution into the booking form</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Add hidden fields to your form so SourceTrack context survives the handoff. The tracker populates these automatically.
+            </p>
+            <code className="block bg-gray-100 px-3 py-1.5 rounded text-xs mt-1.5 whitespace-pre-wrap">
+              {'<!-- Add to your booking form (e.g., Calendly embed pre-fill): -->\n<input type="hidden" data-trackiq="__tq_id" name="anonymous_id" />\n<input type="hidden" data-trackiq="utm_source" name="utm_source" />'}
+            </code>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium text-gray-700">Step 2 — Decorate the booking link (cross-domain)</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              If your booking tool runs on a different domain, decorate the link before navigation. Both domains must have the SourceTrack snippet installed.
+            </p>
+            <code className="block bg-gray-100 px-3 py-1.5 rounded text-xs mt-1.5 whitespace-pre-wrap">
+              {'// Before opening Calendly popup or navigating to booking page:\nvar bookingUrl = "https://calendly.com/your-link"\nvar decorated = window.trackiq.getCrossDomainUrl(bookingUrl)\n// Use decorated in your link or iframe src'}
+            </code>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium text-gray-700">Step 3 — Fire booking conversion on confirmation</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              On your confirmation/thank-you page (after booking is completed), fire a conversion with the meeting or booking subtype.
+            </p>
+            <code className="block bg-gray-100 px-3 py-1.5 rounded text-xs mt-1.5 whitespace-pre-wrap">
+              {'// On booking confirmation page:\nwindow.trackiq.conversion(0, { conversion_type: "meeting", form_name: "Calendly" })\n// Or use "booking" type:\nwindow.trackiq.conversion(0, { conversion_type: "booking", form_name: "Calendly" })'}
+            </code>
+            <p className="text-xs text-gray-400 mt-1">
+              The booking will appear as a distinguished conversion subtype in your Dashboard Conversion Events card and attribution reports.
+            </p>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium text-gray-700">How it works under the hood</p>
+            <ul className="text-xs text-gray-600 mt-1 space-y-0.5 list-disc list-inside">
+              <li>Hidden fields carry your anonymous ID + UTM context into the booking form</li>
+              <li>Cross-domain params (<code className="bg-gray-100 px-1 rounded text-xs">__tq_id</code>) preserve identity if the booking tool is on a different domain</li>
+              <li>Confirmation-page conversion fires <code className="bg-gray-100 px-1 rounded text-xs">$conversion</code> with <code className="bg-gray-100 px-1 rounded text-xs">conversion_type</code> and optional <code className="bg-gray-100 px-1 rounded text-xs">form_name</code></li>
+              <li>Attribution context (source/medium/campaign) flows through the entire journey</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      {/* Webhook Identity & Contact Linkage v1 */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <LinkIcon className="w-5 h-5 text-gray-700" />
+          <h3 className="font-semibold text-gray-900">Webhook Identity & Contact Linkage v1</h3>
+        </div>
+
+        <p className="text-sm text-gray-600">
+          Link tracked anonymous visitors to downstream CRM/contact identities via the Identify API. Suitable for Zapier, n8n, or custom webhook workflows.
+        </p>
+
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+          <p className="font-medium">What this does not support</p>
+          <ul className="text-xs mt-1 space-y-0.5 list-disc list-inside">
+            <li>Native HubSpot, Salesforce, or CRM integration</li>
+            <li>Automatic bidirectional sync</li>
+            <li>Fuzzy or "smart" identity matching — linkage is explicit and deterministic</li>
+            <li>Email-only identity resolution — email is set as a person property, not an identity key</li>
+          </ul>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-medium text-gray-700">Zapier / n8n example payload</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              POST to <code className="bg-gray-100 px-1 rounded text-xs">/api/identify</code> when a new contact is created in your CRM.
+            </p>
+            <code className="block bg-gray-100 px-3 py-1.5 rounded text-xs mt-1.5 whitespace-pre-wrap">
+              {'POST /api/identify\nContent-Type: application/json\n\n{\n  "site_key": "your-site-key",\n  "anonymous_id": "__ti_id_from_visitor",\n  "user_id": "usr_abc123",\n  "source_system": "hubspot",\n  "external_id": "hs-contact-456",\n  "contact_email": "lead@example.com",\n  "traits": {\n    "contact_name": "Jane Doe",\n    "crm_stage": "lead",\n    "company": "Acme Corp"\n  }\n}'}
+            </code>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium text-gray-700">How linkage works</p>
+            <ul className="text-xs text-gray-600 mt-1 space-y-0.5 list-disc list-inside">
+              <li><code className="bg-gray-100 px-1 rounded text-xs">user_id</code> + <code className="bg-gray-100 px-1 rounded text-xs">anonymous_id</code> trigger identity stitching (<code className="bg-gray-100 px-1 rounded text-xs">ph.alias()</code>) — the anonymous browser history merges into the identified person</li>
+              <li><code className="bg-gray-100 px-1 rounded text-xs">source_system</code> and <code className="bg-gray-100 px-1 rounded text-xs">external_id</code> are stored as person properties — use these to correlate with your CRM</li>
+              <li><code className="bg-gray-100 px-1 rounded text-xs">contact_email</code> is stored as a person property — not used for identity resolution</li>
+              <li>All <code className="bg-gray-100 px-1 rounded text-xs">traits</code> keys become PostHog person properties via $set</li>
+              <li>Linkage is deterministic — no fuzzy matching or automatic deduplication across identifiers</li>
+            </ul>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium text-gray-700">Getting the anonymous_id into your CRM</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Use hidden fields in your forms to capture the visitor's anonymous ID. The tracker populates these automatically.
+            </p>
+            <code className="block bg-gray-100 px-3 py-1.5 rounded text-xs mt-1.5">
+              {'<input type="hidden" data-trackiq="anonymous_id" name="source_track_id" />'}
+            </code>
+            <p className="text-xs text-gray-400 mt-1">
+              When the form is submitted, the anonymous ID flows to your CRM. Use it in the identify call to link the tracked visitor to the CRM contact.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Outbound Webhooks v1 */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <LinkIcon className="w-5 h-5 text-gray-700" />
+          <h3 className="font-semibold text-gray-900">Outbound Webhooks v1</h3>
+        </div>
+
+        <p className="text-sm text-gray-600">
+          SourceTrack can POST conversion events to an external webhook URL. Consume these in Zapier, n8n, or any HTTP endpoint for real-time automation.
+        </p>
+
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+          <p className="font-medium">What this does not support</p>
+          <ul className="text-xs mt-1 space-y-0.5 list-disc list-inside">
+            <li>Retries, delivery history, signatures, or guaranteed delivery</li>
+            <li>Multi-destination configuration (single webhook URL per deployment)</li>
+            <li>Native Zapier/n8n integration — this is a generic HTTP webhook they can consume</li>
+            <li>Broad event coverage — only conversion events are sent in v1</li>
+          </ul>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-medium text-gray-700">Configuration</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Set the <code className="bg-gray-100 px-1 rounded text-xs">WEBHOOK_URL</code> environment variable on your backend deployment.
+            </p>
+            <code className="block bg-gray-100 px-3 py-1.5 rounded text-xs mt-1.5">
+              WEBHOOK_URL=https://hooks.zapier.com/hooks/catch/your-id
+            </code>
+            <p className="text-xs text-gray-400 mt-1">
+              If unset, no webhooks are sent — tracking works normally without it.
+            </p>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium text-gray-700">Events sent</p>
+            <ul className="text-xs text-gray-600 mt-1 space-y-0.5 list-disc list-inside">
+              <li><code className="bg-gray-100 px-1 rounded text-xs">conversion</code> — on-site conversions (POST /api/conversion)</li>
+              <li><code className="bg-gray-100 px-1 rounded text-xs">conversion.offline</code> — offline/CRM-stage conversions (POST /api/conversion/offline)</li>
+            </ul>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium text-gray-700">Example payload (Zapier/n8n compatible)</p>
+            <code className="block bg-gray-100 px-3 py-1.5 rounded text-xs mt-1.5 whitespace-pre-wrap">
+              {'{\n  "event_id": "uuid",\n  "event_type": "conversion",\n  "occurred_at": "2025-01-15T10:30:00Z",\n  "source": "sourcetrack",\n  "data": {\n    "site_id": "...",\n    "anonymous_id": "...",\n    "conversion_type": "lead",\n    "conversion_value": 100,\n    "form_name": "Contact Form",\n    "ingestion_method": "offline",\n    "external_id": "sf-abc-123"\n  }\n}'}
+            </code>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium text-gray-700">Delivery model</p>
+            <ul className="text-xs text-gray-600 mt-1 space-y-0.5 list-disc list-inside">
+              <li>Best-effort synchronous POST (5 second timeout)</li>
+              <li>Fire-and-forget — webhook failure does not affect tracking</li>
+              <li>No retries, no delivery history, no signatures in v1</li>
+              <li>Data includes only verified, non-PII fields from the conversion event</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       {/* Identity Stitching */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
         <div className="flex items-center gap-2">
@@ -298,6 +545,63 @@ export default function Snippet() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Architecture: Server-Routed Ingestion */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <LinkIcon className="w-5 h-5 text-gray-700" />
+          <h3 className="font-semibold text-gray-900">Architecture: Server-Routed Ingestion</h3>
+        </div>
+
+        <p className="text-sm text-gray-600">
+          All tracked events (pageviews, conversions, identify calls) are routed through SourceTrack's backend before reaching PostHog. This is how event enrichment works today — IP-based geo detection, device type parsing, and AI platform identification all happen server-side.
+        </p>
+
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+          <p className="font-medium">What this does not mean</p>
+          <ul className="text-xs mt-1 space-y-0.5 list-disc list-inside">
+            <li>Not cookieless — identity relies on browser storage (cookies with localStorage backup for same-domain continuity). Clearing all site data still resets the anonymous ID.</li>
+            <li>Not a first-party subdomain — events go to the SourceTrack API domain, not a customer-owned subdomain</li>
+            <li>Not ad-blocker resistant — requests to the tracking domain may still be blocked by ad blockers</li>
+            <li>Not a replacement for client-side tracking — the tracker still runs in the browser and sends events via HTTP</li>
+          </ul>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-medium text-gray-700">How events flow</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Browser (tracker.js) → POST to SourceTrack backend → Server-side enrichment → PostHog
+            </p>
+            <ul className="text-xs text-gray-600 mt-1 space-y-0.5 list-disc list-inside">
+              <li>Pageviews and custom events: <code className="bg-gray-100 px-1 rounded text-xs">POST /api/track</code></li>
+              <li>On-site conversions: <code className="bg-gray-100 px-1 rounded text-xs">POST /api/conversion</code></li>
+              <li>Identity calls: <code className="bg-gray-100 px-1 rounded text-xs">POST /api/identify</code></li>
+              <li>Offline/CRM conversions: <code className="bg-gray-100 px-1 rounded text-xs">POST /api/conversion/offline</code></li>
+            </ul>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium text-gray-700">Server-side enrichment</p>
+            <ul className="text-xs text-gray-600 mt-1 space-y-0.5 list-disc list-inside">
+              <li>IP → country detection (via geoip-lite)</li>
+              <li>User-Agent → device type (desktop, mobile, tablet)</li>
+              <li>Referrer → AI platform detection (ChatGPT, Claude, Perplexity, etc.)</li>
+              <li>UTM normalization (trim + lowercase)</li>
+              <li>Server timestamp added to every event</li>
+            </ul>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium text-gray-700">How this is labeled in data</p>
+            <p className="text-xs text-gray-600 mt-0.5">
+              On-site events (pageviews, browser conversions) are tagged with <code className="bg-gray-100 px-1 rounded text-xs">ingestion_method: 'server_routed'</code> in PostHog properties.
+              Offline/CRM conversions use <code className="bg-gray-100 px-1 rounded text-xs">ingestion_method: 'offline'</code>.
+              These markers let you distinguish event origins in queries and reports.
+            </p>
           </div>
         </div>
       </div>

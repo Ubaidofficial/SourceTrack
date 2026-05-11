@@ -54,7 +54,7 @@ const METRICS = [
   { key: 'ai_revenue', label: 'AI Revenue', format: (v) => `$${v.toFixed(2)}`, group: 'AI', desc: 'Revenue from AI-referred visitors' },
   { key: 'ai_conversion_share', label: 'AI Conversion Share', format: (v) => `${v.toFixed(1)}%`, group: 'AI', desc: '% of all conversions that came from AI' },
   { key: 'ai_revenue_share', label: 'AI Revenue Share', format: (v) => `${v.toFixed(1)}%`, group: 'AI', desc: '% of all revenue that came from AI' },
-  { key: 'ltv_revenue', label: 'LTV Revenue v1 (identified users)', format: (v) => `$${v.toFixed(2)}`, group: 'LTV', desc: 'Summed revenue from all conversions per identified visitor. Anonymous visitors excluded (they cannot be stitched across sessions). Requires first_touch or last_touch model.' }
+  { key: 'ltv_revenue', label: 'LTV Revenue v1 (identified users)', format: (v) => `$${v.toFixed(2)}`, group: 'LTV', desc: 'Cumulative realized revenue (not predictive LTV) — sums all conversion_values per distinct_id, then attributes to first-touch or last-touch source. Anonymous-only visitors (UUID format) excluded. Requires first_touch or last_touch model.' }
 ]
 
 const CHART_TYPES = [
@@ -514,7 +514,7 @@ export default function ReportBuilder() {
                         className="flex-1 bg-transparent text-sm outline-none" />
                     </div>
                   </div>
-                  {['Core', 'Conversion', 'AI'].map(group => {
+                  {['Core', 'Conversion', 'AI', 'LTV'].map(group => {
                     const groupMetrics = filteredMetrics.filter(m => m.group === group)
                     if (groupMetrics.length === 0) return null
                     return (

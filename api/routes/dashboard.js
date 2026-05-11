@@ -12,7 +12,6 @@ function esc(str) {
 router.get('/overview', validateSiteKey, async (req, res) => {
   try {
     const siteKey = req.query.site_key || req.body?.site_key
-    const siteId = String(req.site.id)
     const days = Math.min(Math.max(parseInt(req.query.days) || 30, 1), 90)
     const dateTo = new Date().toISOString().slice(0, 10)
     const dateFrom = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
@@ -28,7 +27,6 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       prevLeadsResults,
       aiRevResults,
       aiConvResults,
-      aiShareResults,
       aiTrendResults,
       landingResults,
       campaignResults,
@@ -38,7 +36,9 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       modelLinear,
       modelAI,
       installRows,
-      alertRows
+      alertRows,
+      convTypeRows,
+      stageRows
     ] = await Promise.all([
       getFlexibleReport(siteKey, 'first_touch', dateFrom, dateTo, 'source', 'revenue', {}),
       // Option 1: query conversions separately alongside revenue so frontend tables show real counts
@@ -49,7 +49,6 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       getFlexibleReport(siteKey, 'first_touch', prevDateFrom, prevDateTo, 'source', 'leads', {}),
       getFlexibleReport(siteKey, 'ai_platforms', dateFrom, dateTo, 'ai_source', 'ai_revenue', { has_ai_source: 'true' }),
       getFlexibleReport(siteKey, 'ai_platforms', dateFrom, dateTo, 'ai_source', 'ai_conversions', { has_ai_source: 'true' }),
-      getFlexibleReport(siteKey, 'ai_platforms', dateFrom, dateTo, 'ai_source', 'ai_revenue_share', { has_ai_source: 'true' }),
       getFlexibleReport(siteKey, 'ai_platforms', dateFrom, dateTo, 'date', 'ai_revenue', { has_ai_source: 'true' }),
       getFlexibleReport(siteKey, 'first_touch', dateFrom, dateTo, 'landing_page', 'revenue', {}),
       getFlexibleReport(siteKey, 'last_touch', dateFrom, dateTo, 'campaign', 'revenue', {}),
@@ -61,7 +60,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       queryHogQL(`
         SELECT event, timestamp, properties.page_url AS page_url
         FROM events
-        WHERE properties.site_id = '${esc(siteId)}'
+        WHERE properties.site_id = '${esc(siteKey)}'
         ORDER BY timestamp DESC
         LIMIT 1
       `, 'dash_install'),
@@ -73,9 +72,37 @@ router.get('/overview', validateSiteKey, async (req, res) => {
           COUNT(CASE WHEN timestamp >= now() - INTERVAL 1 HOUR THEN 1 END) AS count_hour,
           MAX(timestamp) AS last_event
         FROM events
-        WHERE properties.site_id = '${esc(siteId)}'
+        WHERE properties.site_id = '${esc(siteKey)}'
           AND event = '$pageview'
-      `, 'dash_alerts')
+      `, 'dash_alerts'),
+      queryHogQL(`
+        SELECT
+          COALESCE(properties.conversion_type, 'untyped') AS conv_type,
+          COUNT(*) AS count,
+          SUM(toFloat64OrZero(toString(properties.conversion_value))) AS revenue
+        FROM events
+        WHERE properties.site_id = '${esc(siteKey)}'
+          AND event = '$conversion'
+          AND timestamp >= toDateTime('${dateFrom} 00:00:00')
+          AND timestamp <= toDateTime('${dateTo} 23:59:59')
+        GROUP BY conv_type
+        ORDER BY count DESC
+      `, 'dash_conv_types'),
+      queryHogQL(`
+        SELECT
+          properties.conversion_type AS stage,
+          COUNT(*) AS count,
+          SUM(toFloat64OrZero(toString(properties.conversion_value))) AS revenue
+        FROM events
+        WHERE properties.site_id = '${esc(siteKey)}'
+          AND event = '$conversion'
+          AND properties.ingestion_method = 'offline'
+          AND properties.conversion_type IN ('lead_created', 'qualified', 'opportunity', 'closed_won')
+          AND timestamp >= toDateTime('${dateFrom} 00:00:00')
+          AND timestamp <= toDateTime('${dateTo} 23:59:59')
+        GROUP BY stage
+        ORDER BY count DESC
+      `, 'dash_stages')
     ])
 
     // Merge conversion counts into revenue rows so frontend tables show real values.
@@ -106,7 +133,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     const prevLeads = prevLeadsResults.reduce((sum, r) => sum + (r.leads || 0), 0)
 
     const totalAIRevenue = aiRevResults.reduce((sum, r) => sum + (r.ai_revenue || 0), 0)
-    const aiShareTotal = aiShareResults.reduce((sum, r) => sum + (r.ai_revenue_share || 0), 0)
+    const aiShareTotal = totalRevenue > 0 ? (totalAIRevenue / totalRevenue) * 100 : 0
 
     const modelRevenues = {
       first_touch: modelFirstTouch.reduce((s, r) => s + (r.revenue || 0), 0),
@@ -140,6 +167,16 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       alerts.push({ id: 'silent', metric: 'Tracking', message: 'No events in the last 24 hours', severity: 'high', suggested_action: 'Check your snippet is still live on your site.' })
     }
 
+    const conversionTypes = {}
+    for (const [convType, count, revenue] of (convTypeRows || [])) {
+      conversionTypes[convType] = { count: Number(count) || 0, revenue: Number(revenue) || 0 }
+    }
+
+    const pipelineStages = {}
+    for (const [stage, count, revenue] of (stageRows || [])) {
+      pipelineStages[stage] = { count: Number(count) || 0, revenue: Number(revenue) || 0 }
+    }
+
     return res.status(200).json({
       success: true,
       data: {
@@ -166,7 +203,9 @@ router.get('/overview', validateSiteKey, async (req, res) => {
         revenue_trend: timeResults,
         install: installData,
         health: { status: healthStatus, count_day: countDay, count_hour: countHour },
-        alerts
+        alerts,
+        conversion_types: conversionTypes,
+        pipeline_stages: pipelineStages
       },
       error: null
     })

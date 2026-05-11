@@ -45,20 +45,39 @@
   var ltCookieName = '__ti_lt_' + SITE_KEY
 
   var anonymousId = getCookie(idCookieName)
+  var qp = new URLSearchParams(window.location.search)
   if (!anonymousId) {
-    anonymousId = uuidv4()
+    var xdId = qp.get('__tq_id')
+    if (xdId) {
+      anonymousId = xdId
+    } else {
+      try { anonymousId = localStorage.getItem(idCookieName) } catch (_e) { /* unavailable */ }
+      if (!anonymousId) {
+        anonymousId = uuidv4()
+      }
+    }
     setCookie(idCookieName, anonymousId)
   }
+  try { localStorage.setItem(idCookieName, anonymousId) } catch (_e) { /* unavailable */ }
 
   var utm = getUtmParams()
   var now = new Date().toISOString()
 
   if (!getCookie(ftCookieName)) {
-    var ft = { timestamp: now }
-    if (utm.utm_source) {
-      ft.source = utm.utm_source
-      ft.medium = utm.utm_medium
-      ft.campaign = utm.utm_campaign
+    var xdFt = qp.get('__tq_ft')
+    var ft = null
+    if (xdFt) {
+      try {
+        ft = JSON.parse(xdFt)
+      } catch (_e) { ft = null }
+    }
+    if (!ft) {
+      ft = { timestamp: now }
+      if (utm.utm_source) {
+        ft.source = utm.utm_source
+        ft.medium = utm.utm_medium
+        ft.campaign = utm.utm_campaign
+      }
     }
     setCookie(ftCookieName, JSON.stringify(ft))
   }
@@ -129,6 +148,7 @@
       if (prop === 'utm_source') el.value = utm.utm_source || ''
       if (prop === 'utm_medium') el.value = utm.utm_medium || ''
       if (prop === 'utm_campaign') el.value = utm.utm_campaign || ''
+      if (prop === '__tq_id') el.value = anonymousId
     }
   }
 
@@ -194,13 +214,51 @@
     conversion: function (value, props) {
       var p = props || {}
       p.conversion_value = value
+      if (props) {
+        if (typeof props.conversion_type === 'string') {
+          var ct = props.conversion_type.trim()
+          if (ct.length > 0) p.conversion_type = ct
+        }
+        if (typeof props.form_name === 'string') {
+          var fn = props.form_name.trim().slice(0, 120).replace(/[^a-zA-Z0-9 _-]/g, '')
+          if (fn.length > 0) p.form_name = fn
+        }
+      }
       sendEvent('$conversion', p)
     },
-    page: function () { sendEvent('$pageview') }
+    page: function () { sendEvent('$pageview') },
+    getCrossDomainUrl: function (url) {
+      if (typeof url !== 'string') return url
+      var u
+      try {
+        u = new URL(url, window.location.href)
+      } catch (_e) {
+        return url
+      }
+      u.searchParams.set('__tq_id', anonymousId)
+      if (ftData && (ftData.source || ftData.medium || ftData.campaign)) {
+        var ftPayload = {}
+        if (ftData.source) ftPayload.s = ftData.source
+        if (ftData.medium) ftPayload.m = ftData.medium
+        if (ftData.campaign) ftPayload.c = ftData.campaign
+        u.searchParams.set('__tq_ft', JSON.stringify(ftPayload))
+      }
+      return u.href
+    }
   }
 
   if (!window.trackiq) {
     window.trackiq = window.__trackiq
+  }
+
+  // Cross-domain v1: strip __tq_ params from URL after reading them
+  if (qp.has('__tq_id') || qp.has('__tq_ft')) {
+    try {
+      var cleanUrl = new URL(window.location.href)
+      cleanUrl.searchParams.delete('__tq_id')
+      cleanUrl.searchParams.delete('__tq_ft')
+      window.history.replaceState(null, '', cleanUrl.pathname + cleanUrl.search + cleanUrl.hash)
+    } catch (_e) { /* ignore */ }
   }
 
   sendEvent('$pageview')

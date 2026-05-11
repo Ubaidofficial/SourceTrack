@@ -78,6 +78,12 @@
           window.__trackiq.page()
         }
       })
+    },
+    getCrossDomainUrl: function (url) {
+      if (trackerReady && window.__trackiq && window.__trackiq.getCrossDomainUrl) {
+        return window.__trackiq.getCrossDomainUrl(url)
+      }
+      return url
     }
   }
 

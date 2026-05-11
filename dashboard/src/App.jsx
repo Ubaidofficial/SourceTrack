@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard'
 import ReportBuilder from './pages/ReportBuilder'
 import Journey from './pages/Journey'
 import AIChat from './pages/AIChat'
+import AIAnalytics from './pages/AIAnalytics'
 import Snippet from './pages/Snippet'
 import Settings from './pages/Settings'
 import Onboarding from './pages/Onboarding'
@@ -63,6 +64,7 @@ export default function App() {
             <Route path="/report-builder" element={<ProtectedRoute><ReportBuilder /></ProtectedRoute>} />
             <Route path="/journey" element={<ProtectedRoute><Journey /></ProtectedRoute>} />
             <Route path="/ai-chat" element={<ProtectedRoute><AIChat /></ProtectedRoute>} />
+            <Route path="/ai-analytics" element={<ProtectedRoute><AIAnalytics /></ProtectedRoute>} />
             <Route path="/snippet" element={<ProtectedRoute><Snippet /></ProtectedRoute>} />
             <Route path="/debugger" element={<ProtectedRoute><EventDebugger /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

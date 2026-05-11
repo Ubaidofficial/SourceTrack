@@ -50,7 +50,8 @@ export async function track(req, res) {
         ai_source: enriched.ai_source,
         device_type: enriched.device_type,
         country: enriched.country,
-        server_timestamp: enriched.server_timestamp
+        server_timestamp: enriched.server_timestamp,
+        ingestion_method: 'server_routed'
       }
     })
 

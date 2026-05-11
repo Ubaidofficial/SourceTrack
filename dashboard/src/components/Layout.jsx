@@ -1,7 +1,7 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, FileBarChart, Route, MessageSquare, Code, Bug, Settings,
-  Users, BarChart3, Plug, LogOut, Menu, X, Bot, Shield
+  Users, BarChart3, Plug, LogOut, Menu, X, Bot, Shield, TrendingUp
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
@@ -13,6 +13,7 @@ const navItems = [
   { to: '/report-builder', label: 'Reports', icon: FileBarChart },
   { to: '/journey', label: 'Journeys', icon: Route },
   { to: '/ai-chat', label: 'AI Chat', icon: Bot },
+  { to: '/ai-analytics', label: 'AI Analytics', icon: TrendingUp },
   { to: '/integrations', label: 'Integrations', icon: Plug },
   { to: '/snippet', label: 'Install', icon: Code },
   { to: '/debugger', label: 'Debugger', icon: Bug },
@@ -26,6 +27,7 @@ const PAGE_TITLES = {
   '/report-builder': 'Report Builder',
   '/journey': 'Visitor Journeys',
   '/ai-chat': 'AI Chat',
+  '/ai-analytics': 'AI Analytics',
   '/integrations': 'Integrations',
   '/snippet': 'Install Tracking',
   '/debugger': 'Event Debugger',

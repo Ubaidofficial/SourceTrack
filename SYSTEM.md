@@ -129,6 +129,30 @@ Use only these unless a session explicitly adds another one:
 - `properties.page_url`
 - `properties.referrer`
 - `properties.server_timestamp`
+- `properties.conversion_type`
+- `properties.form_name`
+- `properties.ingestion_method`
+- `properties.external_id`
+- `properties.source_system`
+- `properties.contact_email`
+
+## CRM stage values (Session 43)
+When `conversion_type` is used for pipeline stages via `POST /api/conversion/offline`, the standard values are:
+- `lead_created` — new lead entered CRM
+- `qualified` — lead qualified by sales
+- `opportunity` — deal/opportunity created
+- `closed_won` — deal closed/won
+
+Stages are ingested as `$conversion` events with `ingestion_method: 'offline'` and the stage value in `conversion_type`. Stages are API-driven only — no automatic CRM sync, no bidirectional updates.
+
+## LTV (Session 35.2, polished Session 47)
+SourceTrack LTV means **cumulative realized revenue** from tracked conversion events, not predicted future value. It is computed as:
+- `SUM(conversion_value)` across all `$conversion` events for the same `distinct_id`
+- Attributed to a source dimension via first-touch or last-touch model
+- Anonymous-only visitors (UUID-format distinct_ids) are excluded — they cannot be stitched across sessions/devices
+- Only `first_touch` and `last_touch` attribution models are supported (no linear or ai_platforms for LTV)
+
+Labeled as "LTV Revenue v1 (identified users)" in Report Builder. Not predictive LTV — label reflects cumulative historical revenue per identity.
 
 ## Cookie spec (tracker.js)
 All cookies must be:

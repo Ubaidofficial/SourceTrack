@@ -37,7 +37,12 @@ const MODELS = [
 const AI_SOURCES = ['ChatGPT', 'Claude', 'Perplexity', 'Gemini', 'Grok', 'Copilot', 'DeepSeek']
 const CONVERSION_LABELS = {
   purchase: 'Purchase', trial: 'Free Trial', lead: 'Lead Form',
-  signup: 'Sign Up', meeting: 'Meeting'
+  signup: 'Sign Up', meeting: 'Meeting', booking: 'Booking'
+}
+
+const STAGE_LABELS = {
+  lead_created: 'Lead Created', qualified: 'Qualified',
+  opportunity: 'Opportunity', closed_won: 'Closed Won'
 }
 
 const COLORS = [
@@ -385,17 +390,34 @@ export default function Dashboard() {
               }
             >
               <div className="grid grid-cols-2 gap-3">
-                {Object.entries(CONVERSION_LABELS).map(([key, label]) => (
-                  <div key={key} className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-xs text-gray-500">{label}</p>
-                    <p className="text-lg font-semibold text-gray-900 mt-0.5">
-                      {/* TODO confirm: per-type conversion counts not available from current aggregation */}
-                      —
+                {Object.entries(CONVERSION_LABELS).map(([key, label]) => {
+                  const typeData = overview?.conversion_types?.[key]
+                  const hasData = typeData && typeData.count > 0
+                  return (
+                    <div key={key} className="bg-gray-50 rounded-lg p-3">
+                      <p className="text-xs text-gray-500">{label}</p>
+                      <p className="text-lg font-semibold text-gray-900 mt-0.5">
+                        {hasData ? typeData.count.toLocaleString() : '—'}
+                      </p>
+                      <StatusBadge status={hasData ? 'active' : 'pending'} label={hasData ? 'Active' : 'Not tracking'} />
+                    </div>
+                  )
+                })}
+                {overview?.conversion_types?.untyped && overview.conversion_types.untyped.count > 0 && (
+                  <div className="bg-amber-50 rounded-lg p-3 border border-amber-100">
+                    <p className="text-xs text-amber-700">Untagged</p>
+                    <p className="text-lg font-semibold text-amber-900 mt-0.5">
+                      {overview.conversion_types.untyped.count.toLocaleString()}
                     </p>
-                    <StatusBadge status="pending" label="Tracking" />
+                    <StatusBadge status="warning" label="Needs type" />
                   </div>
-                ))}
+                )}
               </div>
+              {Object.values(overview?.conversion_types || {}).every(t => !t || t.count === 0) && (
+                <p className="text-xs text-gray-400 mt-3">
+                  When conversions specify a type (e.g., lead, purchase), counts appear here. Previous conversions without a type are counted as untagged.
+                </p>
+              )}
             </DashboardCard>
 
             <DashboardCard title="Landing Page Performance"
@@ -423,6 +445,38 @@ export default function Dashboard() {
               )}
             </DashboardCard>
           </div>
+
+          {/* Row 3.5: Pipeline Stages */}
+          <DashboardCard title="Pipeline Stages"
+            subtitle={`CRM stages from offline conversions — ${Object.values(overview?.pipeline_stages || {}).reduce((s, t) => s + (t.count || 0), 0)} total in period`}
+            action={
+              <span className="text-xs text-gray-400">API-driven</span>
+            }
+          >
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {Object.entries(STAGE_LABELS).map(([key, label]) => {
+                const stageData = overview?.pipeline_stages?.[key]
+                const hasData = stageData && stageData.count > 0
+                return (
+                  <div key={key} className={`rounded-lg p-3 ${hasData ? 'bg-gray-50' : 'bg-gray-50/50'}`}>
+                    <p className="text-xs text-gray-500">{label}</p>
+                    <p className="text-lg font-semibold text-gray-900 mt-0.5">
+                      {hasData ? stageData.count.toLocaleString() : '—'}
+                    </p>
+                    {hasData && stageData.revenue > 0 && (
+                      <p className="text-xs text-gray-400 mt-0.5">${stageData.revenue.toFixed(0)}</p>
+                    )}
+                    <StatusBadge status={hasData ? 'active' : 'pending'} label={hasData ? 'Active' : 'No data'} />
+                  </div>
+                )
+              })}
+            </div>
+            {Object.values(overview?.pipeline_stages || {}).every(t => !t || t.count === 0) && (
+              <p className="text-xs text-gray-400 mt-3">
+                Send offline conversions with stage-type conversion_type values (lead_created, qualified, opportunity, closed_won) via POST /api/conversion/offline. Only offline conversions with known stage types are counted.
+              </p>
+            )}
+          </DashboardCard>
 
           {/* Row 4: Campaign Performance + Tracking Health */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

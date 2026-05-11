@@ -660,6 +660,521 @@ Update this file after each DeepSeek session with:
 - DeepSeek-specific AI insight copy (from Session 36)
 - Channel-level path labels for path summary (currently page-path only)
 
+### Session 39 — Lead / Contact Form Tracking as Conversion Subtyping
+
+**Files modified:**
+- `tracker/tracker.js` — `conversion()` accepts optional `conversion_type` and `form_name` props
+- `tracker/tracker.min.js` — rebuilt (3.8kb)
+- `api/routes/conversion.js` — accepts `conversion_type` and `form_name` from req.body, stores as PostHog properties
+- `api/routes/dashboard.js` — per-type conversion counts query added to overview endpoint
+- `dashboard/src/pages/Dashboard.jsx` — "Conversion Events" card shows real per-type data
+- `SYSTEM.md` — added `properties.conversion_type` and `properties.form_name` to allowed PostHog properties
+
+**Completed:**
+- Tracker `trackiq.conversion(value, { conversion_type: 'lead', form_name: 'Contact Form' })` supports subtyping
+- `conversion_type`: trimmed and checked for non-empty; `form_name`: trimmed, truncated to 120 chars, sanitized to alphanumeric + space/hyphen/underscore, only persisted if non-empty after sanitization
+- Backend mirrors same sanitization; stores as PostHog properties on `$conversion` event
+- Dashboard overview queries `GROUP BY COALESCE(properties.conversion_type, 'untyped')` for per-type counts
+- "Conversion Events" card: real counts for purchase/trial/lead/signup/meeting with Active/Not tracking badges
+- "Untagged" conversions shown in amber card with "Needs type" badge
+- Core event name stays `$conversion` — this is conversion subtyping metadata, NOT a new event system
+
+**Verified in code:**
+- Tracker `sendEvent` routes `$conversion` to `/api/conversion` (unchanged)
+- Loader passes `(value, props)` transparently through queue — no changes needed
+- Backend `enrich()` runs before properties object is built — subtype props don't interfere
+- `properties.conversion_type` queriable in HogQL via standard POST endpoint
+- All existing conversions without type appear as `untyped` with honest "Needs type" badge
+
+**Inferred but not fully verified:**
+- PostHog ClickHouse performance on `COALESCE` grouping — query pattern follows existing styles in the codebase
+- No backend validation restricting `conversion_type` values (open-ended by design)
+
+**Not implemented:**
+- Per-type conversion filtering on Leads/LeadDetail/Journey pages
+- Per-type revenue breakdown on the Conversion Events card (counts only in card; revenue available in API payload)
+- Form field value capture (only form_name label/id tracked)
+- Backend conversion_type whitelist
+- Per-type time-series or trend charts
+
+**Caveats / truthful positioning:**
+- This is conversion subtyping — NOT a full lead-events platform or form analytics system
+- `form_name` is a non-PII label identifier (e.g., "Contact Form"), not raw field contents
+- Pre-existing conversions show as "Untagged" until client code sends `conversion_type`
+- Not claiming Cometly/Usermaven form analytics parity from this feature
+
+**TODOs:**
+- [ ] Per-type filtering on Leads/LeadDetail/Journey
+- [ ] Per-type revenue display on Conversion Events card
+- [ ] Conversion type validation on backend if needed
+- [ ] Per-type time-series aggregation for trend analysis
+
+### Session 40 — Cross-Domain Tracking v1
+
+**Files modified:**
+- `tracker/tracker.js` — `__tq_id`/`__tq_ft` URL param reading + cookie restoration + `getCrossDomainUrl()` + hidden field support
+- `tracker/tracker.min.js` — rebuilt (4.5kb)
+- `tracker/loader.js` — exposed `getCrossDomainUrl()` in queue API
+- `tracker/loader.min.js` — rebuilt (1.4kb)
+- `dashboard/src/pages/Snippet.jsx` — added Cross-Domain Tracking v1 section with docs and explicit limitations
+
+**Completed:**
+- **Receiving domain (automatic):** tracker reads `__tq_id` from URL and restores `__ti_id_{siteKey}` cookie if not already present. Reads `__tq_ft` (JSON `{s,m,c}`) and restores `__ti_ft_{siteKey}` cookie if not already present. Strips both params from visible URL via `history.replaceState`.
+- **Sending domain (user-controlled):** `window.trackiq.getCrossDomainUrl(url)` appends `__tq_id` (anonymous ID) and `__tq_ft` (first-touch source/medium/campaign as JSON) params. User explicitly decorates links before navigation.
+- **Form-based handoff:** `data-trackiq="__tq_id"` hidden input populated by tracker for cross-domain form submissions.
+- **Loader:** `getCrossDomainUrl()` exposed synchronously — returns original URL if tracker not loaded.
+- **Install docs:** new Cross-Domain Tracking v1 section with usage instructions and explicit "What this does not support" list.
+- Single-domain behavior unchanged — params only activate when present in URL.
+
+**Verified in code:**
+- `qp` declared once at IIFE scope, reused for both ID and FT restoration — avoids redundant `URLSearchParams` construction
+- Anonymous ID resolution: existing cookie takes priority; `__tq_id` only used when no cookie exists
+- First-touch cookie: never overwritten if already present on receiving domain
+- `URLSearchParams.set()` / `get()` handle encoding/decoding correctly — no double-encoding
+- URL cleanup uses `qp.has()` (checks presence regardless of cookie state) — always strips consumed params
+- `history.replaceState` in try/catch — never breaks page load
+- Loader `getCrossDomainUrl` returns synchronously (not queued like event methods)
+
+**Inferred but not fully verified:**
+- Cross-domain flow across >2 hops — each hop appends fresh `__tq_ft` with current first-touch data
+- JSON round-trip through `{s,m,c}` keys — `ftData` parsing already handles JSON in existing cookie path
+- End-to-end: both domains running tracker, visitor follows decorated link, receiving domain restores cookies, pageview event sent with correct anonymous_id and first-touch context
+
+**Not implemented:**
+- Automatic link decoration (no `cross_domain_links` config) — user explicitly calls `getCrossDomainUrl()`
+- TLD cookie sharing (`domain=.example.com`) for subdomain setups
+- Ignored referrers (payment gateways, auth redirects)
+- Backend cross-domain dedup or alias merging
+- Subdomain-only cookie sharing without param pass-through
+- Cross-device identity (explicitly excluded — different browser/device = different visitor)
+- Automatic third-party checkout domain support
+
+**Caveats / truthful positioning:**
+- Query-param pass-through only — NOT a full cross-domain identity platform
+- Both domains must have SourceTrack tracker installed
+- User must explicitly call `getCrossDomainUrl()` on outgoing links
+- Not claiming Cometly/Usermaven cross-domain parity
+
+**TODOs:**
+- [ ] TLD cookie support for subdomain setups
+- [ ] Automatic link decoration via config
+- [ ] Ignored referrers
+- [ ] Backend alias merging for cross-domain identity
+- [ ] End-to-end integration test
+
+### Session 41 — Booking Attribution v1 (Calendly-Compatible Pattern)
+
+**Files modified:**
+- `dashboard/src/pages/Dashboard.jsx` — added `booking` to CONVERSION_LABELS
+- `dashboard/src/pages/Snippet.jsx` — added Booking Attribution v1 section with Calendly-compatible wiring docs
+
+**Completed:**
+- `booking` conversion type now visible alongside `meeting` in Dashboard Conversion Events card
+- Install page documents 3-step Calendly-compatible pattern:
+  1. Hidden fields for attribution context carry-through into booking forms
+  2. Link decoration via `getCrossDomainUrl()` for cross-domain booking flows
+  3. Conversion fire on confirmation page with `conversion_type: "meeting" | "booking"`
+- Explicit limitations documented: no native Calendly OAuth, no webhooks, no automatic booking ingestion
+- "How it works under the hood" documents attribution flow per-step
+- No tracker or backend changes — all infrastructure already present from Sessions 39 + 40
+
+**Verified in code:**
+- `conversion_type` subtyping already in tracker + backend (Session 39) — accepts any string including `booking`
+- `data-trackiq="__tq_id"` hidden field already populated (Session 40)
+- `getCrossDomainUrl()` already exposed (Session 40)
+- Dashboard overview `GROUP BY COALESCE(properties.conversion_type, 'untyped')` — `booking` type auto-counted
+- Conversion Events card iterates CONVERSION_LABELS keys and matches against `conversion_types` in overview payload
+- `form_name` sanitization handles "Calendly" string safely (Session 39)
+- Dashboard build passes
+
+**Inferred but not fully verified:**
+- Calendly embed pre-fill support for hidden fields — depends on Calendly's pre-fill query param API
+- Cross-domain Calendly flow — if Calendly domain doesn't run tracker, `__tq_id` param is unused on that domain
+- Post-booking callback — user must fire conversion on their own confirmation page, not Calendly's
+
+**Not implemented:**
+- Native Calendly OAuth or API integration
+- Webhook-based booking completion callbacks
+- Automatic booking ingestion from third-party tools
+- Dedicated booking pipeline analytics
+- Calendly embed pre-fill automation (manual wiring documented)
+
+**Caveats / truthful positioning:**
+- Documented wiring pattern — NOT a native Calendly integration
+- User must manually add hidden fields and fire conversions
+- Not claiming full booking platform coverage
+- Not claiming Calendly parity or any scheduling tool integration
+
+**TODOs:**
+- [ ] End-to-end Calendly flow test
+- [ ] Calendly embed post-booking callback
+- [ ] Dedicated booking analytics pipeline
+
+### Session 42 — Offline Conversions v1 Intake
+
+**Files created:**
+- `api/routes/conversion-offline.js` — POST /api/conversion/offline endpoint
+
+**Files modified:**
+- `api/index.js` — imported and mounted `conversionOffline` at `/api/conversion/offline`
+- `SYSTEM.md` — added `properties.ingestion_method` and `properties.external_id` to allowed PostHog properties
+
+**Completed:**
+- `POST /api/conversion/offline` accepts: `conversion_value` (number, required), `user_id` or `anonymous_id` (at least one required), optional `conversion_type`, `form_name`, `timestamp`, `external_id`, `utm_source`, `utm_medium`, `utm_campaign`
+- `user_id` takes priority as `distinctId` for `ph.capture()`; falls back to `anonymous_id`
+- All offline conversions marked with `ingestion_method: 'offline'` — queryable via `properties.ingestion_method` in HogQL
+- `external_id` stored as caller reference (order ID, CRM record ID)
+- `form_name` and `conversion_type` sanitized same as tracker route
+- `timestamp` validated as parseable ISO; defaults to server time if invalid
+- UTM fields optional — no enrichment (no IP geo, no UA parsing, no AI detection)
+- Response returns `distinct_id` + `ingestion_method` for caller confirmation
+- Mounted with `validateSiteKey` only — API-only in v1, no dashboard UI
+- Same `ph.capture()` → `ph.shutdown()` pattern as existing conversion route
+
+**Verified in code:**
+- `ph.capture({ distinctId, event: '$conversion', properties })` accepts any string as `distinctId` — `user_id` works
+- `ingestion_method: 'offline'` stored as PostHog property — queryable via HogQL
+- Existing `$conversion` event naming preserved — offline conversions appear in attribution queries
+- Existing conversion route unchanged
+- Route mounted after `express.json()` — body parsing works
+- Syntax check: both files parse cleanly
+- Dashboard build passes
+
+**Inferred but not fully verified:**
+- PostHog alias merging: offline conversions keyed on `user_id` properly attribute to already-merged persons
+- HogQL `WHERE event = '$conversion'` correctly includes offline conversions
+- `properties.ingestion_method` filterable for online vs offline breakdown
+
+**Not implemented:**
+- Batch ingestion (single event per call)
+- Deduplication / idempotency
+- CSV/file upload
+- Dashboard UI for offline conversion ingestion
+- Offline vs online breakdown in any dashboard view
+- Email-based identity matching (only `user_id` + `anonymous_id`)
+- CRM sync, ad-platform imports, bidirectional integration
+
+**Identity matching limitations:**
+- Only `user_id` (from identify flow) or `anonymous_id` (browser cookie) supported
+- `email` not accepted as distinctId — emails are traits, not identity keys
+- No pre-validation of identity existence — unrecognized `user_id` creates new PostHog person
+- Offline conversions keyed on `user_id` won't dedup against on-site conversions keyed on `anonymous_id`
+
+**Truthful positioning:**
+- Single-event API intake endpoint — NOT CRM sync, NOT integration platform
+- API-only in v1 — no dashboard UI, no file upload, no batch
+- Not claiming closed-loop revenue attribution or CRM integration maturity
+
+**TODOs:**
+- [ ] Batch ingestion
+- [ ] Idempotency/dedup key
+- [ ] Offline vs online dashboard breakdown
+- [ ] Email-based matching
+- [ ] CSV upload
+
+### Session 43 — CRM Stage Attribution v1
+
+**Files modified:**
+- `api/routes/dashboard.js` — `pipeline_stages` HogQL query grouping offline conversions by stage-type `conversion_type`
+- `dashboard/src/pages/Dashboard.jsx` — `STAGE_LABELS` constant + "Pipeline Stages" card
+- `SYSTEM.md` — CRM stage values section documenting standardized stage names
+
+**Completed:**
+- Standardized stage values: `lead_created`, `qualified`, `opportunity`, `closed_won`
+- Stages ingested via existing `POST /api/conversion/offline` with `conversion_type` set to stage value — no new endpoints
+- HogQL query filters to offline-only conversions with known stage values: `ingestion_method = 'offline'` + `conversion_type IN (...)`
+- `pipeline_stages` object in dashboard overview payload — count + revenue per stage
+- "Pipeline Stages" card on dashboard: 4 tiles (Lead Created, Qualified, Opportunity, Closed Won) with Active/No data badges
+- Tile shows revenue when >0; subtitle sums total staged conversions; "API-driven" badge in action slot
+- Empty state explains: send offline conversions with stage conversion_type via `/api/conversion/offline`
+- Stages use `conversion_type` property — documented honestly, not pretending a separate CRM object model
+
+**Verified in code:**
+- Offline route already accepts `conversion_type` (Session 42) — no ingestion changes
+- HogQL filter ensures stage-only counts: offline method + known stage values only
+- `STAGE_LABELS` keys match HogQL IN clause values exactly
+- Pipeline Stages card reads `overview?.pipeline_stages` — same pattern as Conversion Events card
+- Dashboard build + API syntax check pass
+
+**Inferred but not fully verified:**
+- No stage progression enforcement — stages are raw event counts
+- Same lead in multiple stages counted separately (aggregate, not per-entity)
+- Revenue per stage from `conversion_value` — multi-counted if same value sent per stage
+
+**Not implemented:**
+- Stage progression / state machine
+- Per-deal deduplication
+- Pipeline velocity / stage timeline
+- Stage filtering on Leads/LeadDetail
+- Automatic CRM sync or native integrations
+
+**Truthful positioning:**
+- API-driven stage ingestion via `conversion_type` — NOT a native CRM integration
+- Honest documentation: stages are `$conversion` events with known `conversion_type` values
+- No automatic sync, no bidirectional updates, no pipeline management UI
+- Not claiming HubSpot/Salesforce integration or closed-loop revenue attribution
+
+**TODOs:**
+- [ ] Stage progression enforcement
+- [ ] Per-deal dedup key
+- [ ] Pipeline velocity visualization
+- [ ] Stage filtering on Leads/LeadDetail
+
+### Session 44 — AI Analytics Dashboard v1
+
+**Files created:**
+- `api/routes/ai-analytics.js` — GET /api/ai-analytics/overview endpoint
+- `dashboard/src/pages/AIAnalytics.jsx` — dedicated AI Analytics page
+
+**Files modified:**
+- `api/index.js` — imported and mounted `aiAnalyticsRouter` at `/api/ai-analytics`
+- `dashboard/src/App.jsx` — added `/ai-analytics` route
+- `dashboard/src/components/Layout.jsx` — added "AI Analytics" nav item (TrendingUp icon) + page title
+
+**Completed:**
+- New `/ai-analytics` page with comprehensive AI-source performance view
+- Backend `/api/ai-analytics/overview` aggregates AI data server-side:
+  - Top AI platforms by revenue + conversions (ai_platforms model)
+  - AI revenue trend daily (ai_platforms model with date grouping)
+  - Non-AI revenue + conversions (has_ai_source:false filter)
+  - AI + non-AI sessions for conversion rate computation
+- KPIs server-side: AI revenue, conversions, sessions, share %, conversion rate, AOV + non-AI counterparts
+- Frontend sections: KPI strip, AI vs Non-AI comparison row, AOV comparison with delta, About AI tracking card, Top Platforms bar chart + table, Revenue Trend line chart, Platform Detail table
+- Empty state explains AI tracking mechanics + setup CTA
+- Route requires full auth chain (user auth + site membership)
+- Navigation in sidebar between AI Chat and Integrations
+
+**Verified in code:**
+- `getFlexibleReport` with `ai_platforms` model + `has_ai_source` filter already supported
+- `has_ai_source: 'false'` filter for non-AI comparisons — filter logic uses `ai_source IS NULL OR ai_source = ''`
+- `sessions` metric with AI filter — pageview events carry `ai_source` from referrer detection middleware
+- All AI metrics derived from real `ai_source` detection only — no synthetic data
+- Dashboard build + API syntax pass
+
+**Inferred but not fully verified:**
+- `has_ai_source: 'false'` correctly excludes AI-sourced pageviews from non-AI session counts
+- AI share % denominator includes all conversions including offline (which lack `ai_source`)
+
+**Not implemented:**
+- AI prediction, lead scoring, content optimization
+- Multi-platform trend charts (per-platform line over time)
+- AI traffic volume trends (pageview counts)
+- AI-specific conversion subtype breakdown
+- Date range selector on AI Analytics page
+
+**Truthful positioning:**
+- All metrics from real `ai_source` detection — no prediction or synthetic metrics
+- "About AI Source Tracking" card explicitly disclaims prediction/scoring
+- Not claiming AI prediction or optimization capabilities
+
+**TODOs:**
+- [ ] Multi-platform trend chart
+- [ ] AI traffic volume trends
+- [ ] AI conversion subtype breakdown
+- [ ] Date range selector
+
+### Session 45 — Webhook Identity / Contact Linkage v1
+
+**Files modified:**
+- `api/routes/identify.js` — extended with top-level `source_system`, `external_id`, `contact_email` fields
+- `SYSTEM.md` — added `properties.source_system` and `properties.contact_email`
+- `dashboard/src/pages/Snippet.jsx` — "Webhook Identity & Contact Linkage v1" section with Zapier/n8n docs
+
+**Completed:**
+- Extended `/api/identify` with three new optional top-level fields: `source_system`, `external_id`, `contact_email` — all trimmed and stored as PostHog person properties via `$set`
+- Reused existing identify route — no new endpoints, smallest safe approach
+- `ph.alias()` unchanged — identity stitching still requires `user_id` + `anonymous_id`
+- Install page documents Zapier/n8n webhook pattern: example payload, linkage explanation, hidden field for `anonymous_id` capture, explicit limitations
+
+**Verified in code:**
+- Existing `traits` passthrough via `$set` — new fields follow same pattern
+- `ph.alias()` requires both identifiers — linkage remains explicit and deterministic
+- Backwards compatible — existing calls without new fields work unchanged
+- API + dashboard build pass
+
+**Inferred but not fully verified:**
+- Zapier/n8n can POST to public `/api/identify` with site_key auth
+- Person properties set via `$set` accessible via PostHog person API, not yet in leads-server HogQL queries
+
+**Not implemented:**
+- LeadDetail UI for linked contact identity
+- Native CRM integration
+- Email-based identity resolution
+- Dedicated webhook endpoint with API key auth
+
+**Truthful positioning:**
+- Identity linkage via existing `/api/identify` — NOT native CRM integration
+- Deterministic only — no fuzzy matching
+- `contact_email` is a person property, not an identity key
+- API-only — no LeadDetail UI yet
+
+**TODOs:**
+- [ ] Surface linked identity in LeadDetail
+- [ ] Dedicated webhook endpoint
+- [ ] Email-based resolution
+
+### Session 46 — Outbound Webhooks v1 (Best-Effort)
+
+**Files created:**
+- `api/lib/webhook.js` — dispatch utility (fire-and-forget, 5s timeout, env var config)
+
+**Files modified:**
+- `api/routes/conversion.js` — calls `dispatchWebhook('conversion', props)` after `ph.shutdown()`
+- `api/routes/conversion-offline.js` — calls `dispatchWebhook('conversion.offline', props)` after `ph.shutdown()`
+- `dashboard/src/pages/Snippet.jsx` — "Outbound Webhooks v1" section with config, payload, delivery docs
+
+**Completed:**
+- `dispatchWebhook(eventType, properties)` — reads `WEBHOOK_URL` env var, builds stable JSON envelope, fires POST with 5s timeout, fire-and-forget
+- Data includes only verified non-PII fields: site_id, anonymous_id, user_id, conversion_type, conversion_value, form_name, ingestion_method, external_id, source_system
+- No-op when `WEBHOOK_URL` unset — tracking works normally
+- Install page: config via env var, events sent (conversion + conversion.offline), example payload, delivery model, explicit limitations
+- No new routes, no event bus, no DB changes
+
+**Verified in code:**
+- Webhook fires after `ph.shutdown()` — PostHog event flushed first
+- Not awaited — failure doesn't affect tracking response
+- `AbortController` handles timeout cleanly
+- Only verified properties in payload
+- All files parse, dashboard build passes
+
+**Not implemented:**
+- Retries, delivery history, signatures, multi-destination, broad event coverage
+- UI config (env var only)
+- Native Zapier/n8n integration
+
+**Truthful positioning:**
+- Generic HTTP webhook — NOT native integration
+- Best-effort only — no delivery guarantees
+- Single destination, conversion events only
+
+**TODOs:**
+- [ ] Multi-destination config
+- [ ] Retries + history
+- [ ] HMAC signatures
+- [ ] Broader event coverage
+- [ ] Settings UI
+
+### Session 47 — LTV Truthfulness Polish (Task 2 only)
+
+**Task 1 already complete from Session 35.2** — `ltv_revenue` metric in attribution engine, integrated into Report Builder.
+
+**Files modified:**
+- `dashboard/src/pages/ReportBuilder.jsx` — updated LTV metric description for explicit truthful labeling
+- `SYSTEM.md` — added LTV definition section
+
+**Completed:**
+- Metric description now explicitly states "Cumulative realized revenue (not predictive LTV)", documents distinct_id grouping, UUID exclusion, and model limitations
+- SYSTEM.md defines LTV as `SUM(conversion_value)` per `distinct_id`, first-touch or last-touch attribution, anonymous exclusion, no predictive value
+
+**Verified from Session 35.2:**
+- `ltv_revenue` in attribution engine, route validation, and Report Builder
+- UUID exclusion regex, 8 groupBy dimensions, first_touch/last_touch support
+
+**Truthful positioning:**
+- "LTV" = cumulative historical revenue, not predictive
+- Anonymous-only visitors excluded
+- Only first_touch/last_touch models
+
+### Session 48 — Server-Routed Tracking Groundwork v1
+
+**Files modified:**
+- `api/routes/track.js` — added `ingestion_method: 'server_routed'` to pageview/custom event properties
+- `api/routes/conversion.js` — added `ingestion_method: 'server_routed'` to on-site conversion properties
+- `dashboard/src/pages/Snippet.jsx` — "Architecture: Server-Routed Ingestion" section
+
+**Completed:**
+- On-site events now labeled with `ingestion_method: 'server_routed'` (symmetric with offline's `'offline'`)
+- Architecture already server-routed — tracker sends to SourceTrack backend, which enriches and stores in PostHog
+- Install page documents: event flow, enrichment steps, endpoints, limitations
+- No behavior change — this labels and documents existing architecture
+
+**Verified in code:**
+- Events go through `/api/track` and `/api/conversion` on SourceTrack backend — no browser-to-PostHog path
+- Server-side enrichment already active: IP geo, device, AI platform detection
+- Added property is additive — doesn't break existing queries
+
+**Truthful positioning:**
+- Documents existing architecture — not new routing behavior
+- Not cookieless, not first-party subdomain, not ad-blocker resistant
+
+**TODOs:**
+- [ ] First-party subdomain routing
+- [ ] Cookieless identity
+
+### Session 49 — Identity Resilience Groundwork v1
+
+**Files modified:**
+- `tracker/tracker.js` — localStorage backup/restore for anonymous ID
+- `tracker/tracker.min.js` — rebuilt (4.6kb)
+- `dashboard/src/pages/Snippet.jsx` — updated Architecture section line
+
+**Exact code path:** `tracker/tracker.js` lines 46-57 — `localStorage.getItem(idCookieName)` fallback before `uuidv4()`, `localStorage.setItem(idCookieName, anonymousId)` on every init. Wrapped in try/catch.
+
+**Completed:**
+- Priority: cookie → cross-domain param → localStorage → new UUID
+- localStorage always written to keep backup current
+- Same-domain only, browser storage dependent
+
+**Verified:** cookie priority preserved, localStorage fallback deterministic, wrapped in try/catch, builds pass.
+
+**Truthful positioning:** Same-domain continuity only. Not cookieless. Clearing all site data still resets ID.
+
+### Session 50 — AI Recommendations / Insights v1
+
+**Files modified:**
+- `dashboard/src/pages/AIAnalytics.jsx` — `buildInsights()` function + 3 insight card grid
+
+**Exact code path:** `AIAnalytics.jsx` lines 96-120 (insight computation), lines 172-184 (insight card rendering).
+
+**Completed:**
+- 3 rule-based insight cards: AI conversion rate advantage (>5% or >30%), AI AOV advantage (>10%), dominant AI platform (1.5x second)
+- All insights client-side from existing kpis/platforms data
+- No new backend queries, no predictive models
+
+**Truthful positioning:** Rule-based comparisons only — no AI prediction, scoring, or automation.
+
+### Session 51 — Full Implementation Audit & Sanity Check
+
+**Session type:** Audit — 14 feature areas inspected, 3 critical bugs fixed
+
+**Tiny fixes made:**
+1. `dashboard.js` — `siteId` (row ID) → `siteKey` (UUID) in 4 HogQL queries (install/conversion types/pipeline stages all returned empty data)
+2. `dashboard.js` — AI revenue share now computed as `(totalAIRevenue / totalRevenue) * 100` instead of broken per-source share sum
+3. `ReportBuilder.jsx` — Added `'LTV'` to metric dropdown filter groups (LTV was defined but unreachable in UI)
+
+**Verified strengths:** Tracker/id/ingestion fully verified. Attribution engine functional across all 4 models/11 metrics/8 dimensions. AI detection detects 10 platforms correctly. Install page remarkably honest — all sections have "What this does not support" disclaimers. Webhooks/offline/stage ingestion verified end-to-end.
+
+**Gaps documented (not fixed):** Linear model multi-conversion truncation, attributionWindow expansion missing in rate/share subqueries, AI_SOURCES only lists 7/10 platforms in frontend, conversion.js missing UTM normalization, Dashboard AI badges broken, Leads list missing identity status column, LTV "All time" label misleading.
+
+**Recommended next:** Fix conversion.js UTM normalization, update AI_SOURCES to 10 platforms, fix Dashboard AI badge, add Leads identity status column.
+
+### Session 52 — ATTRIBUTION.md Standards-Conformance Audit
+
+**Session type:** Standards audit. Cross-referenced ATTRIBUTION.md Parts 1-14 and RULES.md (R1-R10) against code, UI, and docs. RULES.md exists (72 lines, 10 rules) — earlier "empty file" finding was a tool read error, corrected here.
+
+**No code changes.** This session identified standards violations and doc/code conflicts.
+
+**Key violations found:**
+1. **P6 (enrichment consistency):** track.js normalizes UTM but conversion.js does not — same fields, different enrichment paths. Direct violation of Part 5 rule: "the same input must produce the same enrichment output regardless of route."
+2. **Part 2 + 13 (linear model):** ATTRIBUTION.md defines linear as "equal credit distributed across all touchpoints" and Part 13 lists it as NOT implemented. But code has `linear` in ALLOWED_MODELS, Dashboard, and Report Builder. Implementation uses `FIRST_VALUE(conversion_value)` — not true linear. ATTRIBUTION.md wins per its own Part 14 conflict rule: "this file wins until it is intentionally updated."
+3. **ATTRIBUTION.md stale:** Part 7 lists first_seen_date/original_source_date as "roadmap" but Session 35 implemented them. Opposite direction — code ahead of spec.
+
+**Recommended:** Resolve linear model conflict first (either fix implementation or update ATTRIBUTION.md), then fix P6 UTM enrichment parity.
+
+**RULES.md cross-check:** R7 (fail loud) applies to 4 silent-failure cases found in Session 51. R9 (never overclaim) applies to linear model exposure — implementation doesn't match ATTRIBUTION.md's definition. No R10 scope-creep found in session history.
+
+**Files modified:**
+- `dashboard/src/pages/AIAnalytics.jsx` — `buildInsights()` function + 3 insight card grid
+
+**Exact code path:** `AIAnalytics.jsx` lines 96-120 (insight computation), lines 172-184 (insight card rendering).
+
+**Completed:**
+- 3 rule-based insight cards: AI conversion rate advantage (>5% or >30%), AI AOV advantage (>10%), dominant AI platform (1.5x second)
+- All insights client-side from existing kpis/platforms data
+- No new backend queries, no predictive models
+
+**Truthful positioning:** Rule-based comparisons only — no AI prediction, scoring, or automation.
+
 ### Session 38 — Simple Path Visualization v1
 
 **Files modified:**
