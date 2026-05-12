@@ -42,6 +42,10 @@ function eventBadgeClass(event, isConversion) {
   return 'bg-gray-100 text-gray-700'
 }
 
+function normalizeEventName(eventName = '') {
+  return String(eventName).replace(/^\$/, '').toLowerCase()
+}
+
 export default function EventDebugger() {
   const { user } = useAuth()
   const [site, setSite] = useState(null)
@@ -50,6 +54,7 @@ export default function EventDebugger() {
   const [edge, setEdge] = useState(null)
   const [hygiene, setHygiene] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
   const [selectedEvent, setSelectedEvent] = useState(null)
   const [filters, setFilters] = useState({
@@ -85,27 +90,32 @@ export default function EventDebugger() {
 
   const fetchAll = useCallback(async () => {
     if (!site) return
-    setLoading(true)
-    setError('')
+
+    const isInitialLoad = !health && events.length === 0
+    if (isInitialLoad) setLoading(true)
+    setRefreshing(true)
 
     try {
       const [eventsData, healthData, edgeData, hygieneData] = await Promise.all([
-        fetchApi(buildLatestEventsPath()),
+        getLatestEvents(site.site_key),
         getEventHealth(site.site_key),
         getEdgeCases(site.site_key),
-        fetchApi(`/hygiene/utms?${new URLSearchParams({ site_key: site.site_key })}`)
+        (async () => {
+          const params = new URLSearchParams({ site_key: site.site_key })
+          return fetchApi(`/hygiene/utms?${params}`)
+        })()
       ])
-
       setEvents(eventsData?.events || [])
       setHealth(healthData)
       setEdge(edgeData)
       setHygiene(hygieneData)
-    } catch (err) {
-      setError(err?.message || 'Failed to load Event Logger data')
+    } catch (_err) {
+      /* silent */
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
-  }, [site, buildLatestEventsPath])
+  }, [site, health, events.length])
 
   useEffect(() => {
     if (site) fetchAll()
@@ -183,7 +193,7 @@ export default function EventDebugger() {
           disabled={loading || !site}
           className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
         >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-4 h-4 ${loading || refreshing ? 'animate-spin' : ''}`} />
           Refresh
         </button>
       </div>
@@ -370,7 +380,7 @@ export default function EventDebugger() {
           </div>
         )}
 
-        {loading && (
+        {loading && events.length === 0 && (
           <div className="flex items-center justify-center py-12">
             <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
           </div>
