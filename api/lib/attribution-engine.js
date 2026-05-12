@@ -1153,7 +1153,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
   })
 
   if (metric === 'conversion_rate' && results.length > 0) {
-    const sessKey = cacheKey(`sessions:${groupBy}${groupBy2 || ''}`, siteId, dateFrom, dateTo)
+    const sessKey = cacheKey(`sessions:${groupBy}${groupBy2 || ''}:${attributionWindow || 'ltv'}`, siteId, dateFrom, dateTo)
     let sessionsByDim = cache.get(sessKey)
     if (!sessionsByDim) {
       const sessSql = `
@@ -1163,7 +1163,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
         FROM events${refJoin}
         WHERE properties.site_id = '${safeSite}'
           AND event = '$pageview'
-          AND timestamp >= toDateTime('${fromDate}')
+          AND timestamp >= toDateTime('${fromDate}')${windowClause}
           AND timestamp <= toDateTime('${toDate}')${filterClauses}
         GROUP BY dim_value${dim2Expr ? ', dim_value2' : ''}
         LIMIT 50000
@@ -1191,7 +1191,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
         AND event = '$conversion'
         AND properties.ai_source IS NOT NULL
         AND properties.ai_source != ''
-        AND timestamp >= toDateTime('${fromDate}')
+        AND timestamp >= toDateTime('${fromDate}')${windowClause}
         AND timestamp <= toDateTime('${toDate}')${filterClauses}
       GROUP BY dim_value${dim2Expr ? ', dim_value2' : ''}
       LIMIT 50000
