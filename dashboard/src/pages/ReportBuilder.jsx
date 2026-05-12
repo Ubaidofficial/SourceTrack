@@ -36,9 +36,11 @@ const MODELS = [
 
 const DIMENSIONS = [
   { key: 'date', label: 'Time' },
+  { key: 'channel', label: 'Channel' },
   { key: 'source', label: 'Source' },
   { key: 'medium', label: 'Medium' },
   { key: 'campaign', label: 'Campaign' },
+  { key: 'conversion_type', label: 'Conversion Type' },
   { key: 'ai_source', label: 'AI Source' },
   { key: 'landing_page', label: 'Landing Page' },
   { key: 'country', label: 'Country' },
@@ -88,7 +90,7 @@ const GRANULARITY = [
 
 const PRESETS = [
   { name: 'AI Revenue by Source', model: 'ai_platforms', groupBy: 'ai_source', groupBy2: null, metric: 'ai_revenue', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { has_ai_source: 'true' }, desc: 'See which AI platforms send the most revenue' },
-  { name: 'Best Lead Sources', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'leads', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { min_conversions: '1' }, desc: 'Which channels bring in the most leads' },
+  { name: 'Best Lead Sources', model: 'last_touch', groupBy: 'channel', groupBy2: null, metric: 'leads', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { min_conversions: '1' }, desc: 'Which channels bring in the most leads' },
   { name: 'Campaign Revenue', model: 'last_touch', groupBy: 'campaign', groupBy2: null, metric: 'revenue', days: 90, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { min_conversions: '5' }, desc: 'Revenue performance across campaigns' },
   { name: 'Top Landing Pages', model: 'first_touch', groupBy: 'landing_page', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: {}, desc: 'Which pages convert visitors best' },
   { name: 'Conversion Trend', model: 'last_touch', groupBy: 'date', groupBy2: null, metric: 'conversions', days: 30, chartType: 'line', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: {}, desc: 'How conversions are trending over time' },
@@ -302,15 +304,20 @@ export default function ReportBuilder() {
       filters
     }
     try {
-      await fetchApi('/reports/saved', {
-        method: 'POST',
-        body: { name, config }
+      const saveUrl = editingId
+        ? `/reports/saved/${editingId}?site_key=${encodeURIComponent(site.site_key)}`
+        : `/reports/saved?site_key=${encodeURIComponent(site.site_key)}`
+
+      await fetchApi(saveUrl, {
+        method: editingId ? 'PUT' : 'POST',
+        body: JSON.stringify({ name, config })
       })
       setSaveFeedback('saved')
       setReportName('')
       setEditingId(null)
       refetchReports()
-    } catch {
+    } catch (err) {
+      console.error('Save report failed:', err)
       setSaveFeedback('error')
     }
     setTimeout(() => setSaveFeedback(null), 2500)
@@ -318,9 +325,9 @@ export default function ReportBuilder() {
 
   const handleDuplicate = async (report) => {
     try {
-      await fetchApi('/reports/saved', {
+      await fetchApi(`/reports/saved?site_key=${encodeURIComponent(site.site_key)}`, {
         method: 'POST',
-        body: { name: `${report.name} (copy)`, config: report.config }
+        body: { site_key: site.site_key, name: `${report.name} (copy)`, config: report.config }
       })
       refetchReports()
     } catch { /* silent */ }
@@ -328,7 +335,7 @@ export default function ReportBuilder() {
 
   const handleDelete = async (id) => {
     try {
-      await fetchApi(`/reports/saved/${id}`, { method: 'DELETE' })
+      await fetchApi(`/reports/saved/${id}?site_key=${encodeURIComponent(site.site_key)}`, { method: 'DELETE' })
       refetchReports()
     } catch { /* silent */ }
   }
@@ -641,6 +648,23 @@ export default function ReportBuilder() {
             {showFilters && (
               <div className="space-y-2 mt-3 pt-3 border-t border-gray-100">
                 <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Channel</label>
+                  <select value={filters.channel || ''} onChange={(e) => applyFilter('channel', e.target.value || undefined)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
+                    <option value="">Any</option>
+                    <option value="Organic Search">Organic Search</option>
+                    <option value="Paid Search">Paid Search</option>
+                    <option value="Organic Social">Organic Social</option>
+                    <option value="Paid Social">Paid Social</option>
+                    <option value="Email">Email</option>
+                    <option value="AI">AI</option>
+                    <option value="Direct">Direct</option>
+                    <option value="Referral">Referral</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Source</label>
                   <input type="text" value={filters.source || ''} onChange={(e) => applyFilter('source', e.target.value || undefined)}
                     placeholder="e.g. google" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
@@ -671,6 +695,11 @@ export default function ReportBuilder() {
                 <div className="pt-2 border-t border-gray-100">
                   <p className="text-xs font-medium text-gray-400 uppercase mb-2">Advanced</p>
                   <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Conversion Type</label>
+                    <input type="text" value={filters.conversion_type || ''} onChange={(e) => applyFilter('conversion_type', e.target.value || undefined)}
+                      placeholder="e.g. lead_created, purchase" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
+                  </div>
+                  <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">AI Source</label>
                     <select value={filters.ai_source || ''} onChange={(e) => applyFilter('ai_source', e.target.value || undefined)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
@@ -679,6 +708,8 @@ export default function ReportBuilder() {
                       <option value="Perplexity">Perplexity</option><option value="Gemini">Gemini</option>
                       <option value="Grok">Grok</option><option value="Copilot">Copilot</option>
                       <option value="DeepSeek">DeepSeek</option>
+                      <option value="You.com AI">You.com AI</option><option value="Phind">Phind</option>
+                      <option value="Kagi">Kagi</option>
                     </select>
                   </div>
                   <div className="mt-2">

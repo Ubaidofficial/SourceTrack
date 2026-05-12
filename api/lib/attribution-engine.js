@@ -308,6 +308,27 @@ export async function getAttribution(siteId, model, dateFrom, dateTo) {
  * Limited to 50,000 pageview events per query for performance.
  * Sessions are attributed by entry source (UTM source of the first pageview in the session).
  */
+
+function channelFromEvent(event = {}) {
+  const props = event.properties || event
+  const source = String(props.utm_source || props.source || '').toLowerCase()
+  const medium = String(props.utm_medium || props.medium || '').toLowerCase()
+  const referrer = String(props.referrer || '').toLowerCase()
+  const aiSource = String(props.ai_source || '').trim()
+
+  if (aiSource) return 'AI'
+  if (['cpc', 'ppc', 'paid', 'paid_search', 'sem'].includes(medium)) return 'Paid Search'
+  if (['paid_social', 'paidsocial', 'social_paid'].includes(medium)) return 'Paid Social'
+  if (['email', 'newsletter'].includes(medium)) return 'Email'
+  if (['social', 'organic_social'].includes(medium)) return 'Organic Social'
+  if (['organic', 'seo'].includes(medium)) return 'Organic Search'
+  if (['google', 'bing', 'duckduckgo', 'yahoo', 'brave'].includes(source)) return 'Organic Search'
+  if (['facebook', 'instagram', 'linkedin', 'twitter', 'x', 'tiktok', 'youtube', 'reddit'].includes(source)) return 'Organic Social'
+  if (['mailchimp', 'klaviyo', 'hubspot', 'sendgrid', 'customer.io'].includes(source)) return 'Email'
+  if (!referrer) return 'Direct'
+  return 'Referral'
+}
+
 export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null) {
   const key = cacheKey(`session:${groupBy}:${metric}:${JSON.stringify(filters)}:${groupBy2 || ''}`, siteId, dateFrom, dateTo)
   const cached = cache.get(key)
@@ -319,6 +340,30 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
 
   // Build filter clauses (same pattern as getFlexibleReport)
   let filterClauses = ''
+  if (filters.channel) {
+    filterClauses += `
+    AND COALESCE(
+  multiIf(
+    properties.ai_source IS NOT NULL AND properties.ai_source != '', 'AI',
+    lower(COALESCE(properties.utm_medium, '')) IN ('cpc','ppc','paid','paid_search','sem'), 'Paid Search',
+    lower(COALESCE(properties.utm_medium, '')) IN ('paid_social','paidsocial','social_paid'), 'Paid Social',
+    lower(COALESCE(properties.utm_medium, '')) IN ('email','newsletter'), 'Email',
+    lower(COALESCE(properties.utm_medium, '')) IN ('social','organic_social'), 'Organic Social',
+    lower(COALESCE(properties.utm_medium, '')) IN ('organic','seo'), 'Organic Search',
+    lower(COALESCE(properties.utm_source, '')) IN ('google','bing','duckduckgo','yahoo','brave') AND lower(COALESCE(properties.utm_medium, '')) NOT IN ('cpc','ppc','paid','paid_search','sem'), 'Organic Search',
+    lower(COALESCE(properties.utm_source, '')) IN ('facebook','instagram','linkedin','twitter','x','tiktok','youtube','reddit') AND lower(COALESCE(properties.utm_medium, '')) NOT IN ('paid_social','paidsocial','social_paid'), 'Organic Social',
+    lower(COALESCE(properties.utm_source, '')) IN ('mailchimp','klaviyo','hubspot','sendgrid','customer.io'), 'Email',
+    properties.referrer IS NULL OR properties.referrer = '', 'Direct',
+    'Referral'
+  ),
+  'Other'
+) = '${esc(filters.channel)}'`
+  }
+
+  if (filters.conversion_type) {
+    filterClauses += `
+    AND properties.conversion_type = '${esc(filters.conversion_type)}'`
+  }
   if (filters.source) {
     filterClauses += `\n    AND properties.utm_source = '${esc(filters.source)}'`
   }
@@ -419,6 +464,9 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
   // Group sessions by dimension
   const dimKey = (sess) => {
     switch (groupBy) {
+    case 'channel': return CHANNEL_DIM_SQL
+      case 'conversion_type': return "COALESCE(NULLIF(any(properties.conversion_type), ''), 'untyped')"
+      case 'channel': return channelFromEvent(sess.entry_event || sess.events?.[0] || sess)
       case 'source': return sess.entry_source || 'direct'
       case 'medium': return sess.entry_medium || 'none'
       case 'campaign': return sess.entry_campaign || 'unknown'
@@ -687,7 +735,42 @@ export async function getAttributionExplanation(siteId, model, distinctId) {
   return explanation
 }
 
+
+const CHANNEL_DIM_SQL = `
+COALESCE(
+  multiIf(
+    properties.ai_source IS NOT NULL AND properties.ai_source != '', 'AI',
+    lower(COALESCE(properties.utm_medium, '')) IN ('cpc','ppc','paid','paid_search','sem'), 'Paid Search',
+    lower(COALESCE(properties.utm_medium, '')) IN ('paid_social','paidsocial','social_paid'), 'Paid Social',
+    lower(COALESCE(properties.utm_medium, '')) IN ('email','newsletter'), 'Email',
+    lower(COALESCE(properties.utm_medium, '')) IN ('social','organic_social'), 'Organic Social',
+    lower(COALESCE(properties.utm_medium, '')) IN ('organic','seo'), 'Organic Search',
+    lower(COALESCE(properties.utm_source, '')) IN ('google','bing','duckduckgo','yahoo','brave') AND lower(COALESCE(properties.utm_medium, '')) NOT IN ('cpc','ppc','paid','paid_search','sem'), 'Organic Search',
+    lower(COALESCE(properties.utm_source, '')) IN ('facebook','instagram','linkedin','twitter','x','tiktok','youtube','reddit') AND lower(COALESCE(properties.utm_medium, '')) NOT IN ('paid_social','paidsocial','social_paid'), 'Organic Social',
+    lower(COALESCE(properties.utm_source, '')) IN ('mailchimp','klaviyo','hubspot','sendgrid','customer.io'), 'Email',
+    properties.referrer IS NULL OR properties.referrer = '', 'Direct',
+    'Referral'
+  ),
+  'Other'
+)
+`
+
 const GROUP_COLUMNS = {
+
+  channel: {
+    first_touch: CHANNEL_DIM_SQL,
+    last_touch: CHANNEL_DIM_SQL,
+    first_touch_non_direct: CHANNEL_DIM_SQL,
+    last_touch_non_direct: CHANNEL_DIM_SQL,
+    ai_platforms: CHANNEL_DIM_SQL
+  },
+  conversion_type: {
+    first_touch: "COALESCE(NULLIF(properties.conversion_type, ''), 'untyped')",
+    last_touch: "COALESCE(NULLIF(properties.conversion_type, ''), 'untyped')",
+    first_touch_non_direct: "COALESCE(NULLIF(properties.conversion_type, ''), 'untyped')",
+    last_touch_non_direct: "COALESCE(NULLIF(properties.conversion_type, ''), 'untyped')",
+    ai_platforms: "COALESCE(NULLIF(properties.conversion_type, ''), 'untyped')"
+  },
   source: {
     first_touch: "COALESCE(NULLIF(properties.first_touch_source, ''), 'direct')",
     last_touch: "COALESCE(NULLIF(properties.utm_source, ''), 'direct')",

@@ -278,8 +278,13 @@ app.get('/health', (_req, res) => {
 })
 
 // 8. Global error handler
-app.use((_err, _req, res, _next) => {
-  res.status(500).json({ success: false, data: null, error: 'Internal server error' })
+app.use((err, req, res, next) => {
+  console.error('Global API error:', err)
+  return res.status(500).json({
+    success: false,
+    data: null,
+    error: 'Internal server error'
+  })
 })
 
 

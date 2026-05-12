@@ -13,7 +13,7 @@ import DashboardCard from '../components/DashboardCard'
 import MetricTile from '../components/MetricTile'
 import StatusBadge from '../components/StatusBadge'
 
-const AI_SOURCES = ['ChatGPT', 'Claude', 'Perplexity', 'Gemini', 'Grok', 'Copilot', 'DeepSeek']
+const AI_SOURCES = ['ChatGPT', 'Claude', 'Perplexity', 'Gemini', 'Grok', 'Copilot', 'DeepSeek', 'You.com AI', 'Phind', 'Kagi']
 
 function truncateId(id) {
   if (!id) return 'unknown'

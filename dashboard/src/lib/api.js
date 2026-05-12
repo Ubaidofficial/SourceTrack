@@ -10,6 +10,25 @@ async function getAuthHeaders() {
   return {}
 }
 
+
+function normalizeFetchOptions(options = {}) {
+  const next = { ...options }
+  const headers = { ...(next.headers || {}) }
+
+  if (
+    next.body &&
+    typeof next.body === 'object' &&
+    !(next.body instanceof FormData) &&
+    !(next.body instanceof Blob)
+  ) {
+    next.body = JSON.stringify(next.body)
+    headers['Content-Type'] = headers['Content-Type'] || 'application/json'
+  }
+
+  next.headers = headers
+  return next
+}
+
 export async function fetchApi(path, options = {}) {
   const url = `${API_BASE}${path}`
   const { headers: extraHeaders, ...rest } = options

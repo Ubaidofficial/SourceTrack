@@ -38,7 +38,7 @@ const MODELS = [
   { key: 'ai_platforms', label: 'AI Platforms' }
 ]
 
-const AI_SOURCES = ['ChatGPT', 'Claude', 'Perplexity', 'Gemini', 'Grok', 'Copilot', 'DeepSeek']
+const AI_SOURCES = ['ChatGPT', 'Claude', 'Perplexity', 'Gemini', 'Grok', 'Copilot', 'DeepSeek', 'You.com AI', 'Phind', 'Kagi']
 const CONVERSION_LABELS = {
   purchase: 'Purchase', trial: 'Free Trial', lead: 'Lead Form',
   signup: 'Sign Up', meeting: 'Meeting', booking: 'Booking'

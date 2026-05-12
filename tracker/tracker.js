@@ -32,7 +32,10 @@
   function getUtmParams() {
     var params = new URLSearchParams(window.location.search)
     return {
-      utm_source: params.get('utm_source') || null,
+      ref: params.get('ref') || null,
+      source: params.get('source') || null,
+      via: params.get('via') || null,
+      utm_source: params.get('utm_source') || params.get('ref') || params.get('source') || params.get('via') || null,
       utm_medium: params.get('utm_medium') || null,
       utm_campaign: params.get('utm_campaign') || null,
       utm_content: params.get('utm_content') || null,
@@ -110,6 +113,9 @@
       utm_campaign: utm.utm_campaign,
       utm_content: utm.utm_content,
       utm_term: utm.utm_term,
+      ref_param: utm.ref,
+      source_param: utm.source,
+      via_param: utm.via,
       first_touch_source: ftData ? ftData.source || null : null,
       first_touch_medium: ftData ? ftData.medium || null : null,
       first_touch_campaign: ftData ? ftData.campaign || null : null
@@ -148,6 +154,16 @@
       if (prop === 'utm_source') el.value = utm.utm_source || ''
       if (prop === 'utm_medium') el.value = utm.utm_medium || ''
       if (prop === 'utm_campaign') el.value = utm.utm_campaign || ''
+      if (prop === 'utm_content') el.value = utm.utm_content || ''
+      if (prop === 'utm_term') el.value = utm.utm_term || ''
+      if (prop === 'ref') el.value = utm.ref || ''
+      if (prop === 'source') el.value = utm.source || ''
+      if (prop === 'via') el.value = utm.via || ''
+      if (prop === 'utm_content') el.value = utm.utm_content || ''
+      if (prop === 'utm_term') el.value = utm.utm_term || ''
+      if (prop === 'ref') el.value = utm.ref || ''
+      if (prop === 'source') el.value = utm.source || ''
+      if (prop === 'via') el.value = utm.via || ''
       if (prop === '__tq_id') el.value = anonymousId
     }
   }
