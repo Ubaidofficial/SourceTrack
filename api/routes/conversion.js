@@ -4,6 +4,34 @@ import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
 import { dispatchWebhook } from '../lib/webhook.js'
 
+function getFirstTouchFields(body = {}) {
+  const props = body.properties || {};
+
+  return {
+    first_touch_source:
+      body.first_touch_source ||
+      body.firstTouchSource ||
+      props.first_touch_source ||
+      props.firstTouchSource ||
+      'direct',
+
+    first_touch_medium:
+      body.first_touch_medium ||
+      body.firstTouchMedium ||
+      props.first_touch_medium ||
+      props.firstTouchMedium ||
+      'none',
+
+    first_touch_campaign:
+      body.first_touch_campaign ||
+      body.firstTouchCampaign ||
+      props.first_touch_campaign ||
+      props.firstTouchCampaign ||
+      ''
+  };
+}
+
+
 function enrich(req) {
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || ''
   const ua = req.headers['user-agent'] || ''
@@ -37,6 +65,7 @@ export async function conversion(req, res) {
       anonymous_id: req.body.anonymous_id,
       is_conversion: true,
       conversion_value: req.body.conversion_value,
+      ...getFirstTouchFields(req.body),
       page_url: req.body.page_url,
       referrer: req.body.referrer,
       utm_source: normalizeUtm(req.body.utm_source),

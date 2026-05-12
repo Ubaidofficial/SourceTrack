@@ -2,6 +2,34 @@ import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
 import { dispatchWebhook } from '../lib/webhook.js'
 
+function getFirstTouchFields(body = {}) {
+  const props = body.properties || {};
+
+  return {
+    first_touch_source:
+      body.first_touch_source ||
+      body.firstTouchSource ||
+      props.first_touch_source ||
+      props.firstTouchSource ||
+      'direct',
+
+    first_touch_medium:
+      body.first_touch_medium ||
+      body.firstTouchMedium ||
+      props.first_touch_medium ||
+      props.firstTouchMedium ||
+      'none',
+
+    first_touch_campaign:
+      body.first_touch_campaign ||
+      body.firstTouchCampaign ||
+      props.first_touch_campaign ||
+      props.firstTouchCampaign ||
+      ''
+  };
+}
+
+
 export async function conversionOffline(req, res) {
   try {
     const value = req.body.conversion_value
@@ -30,6 +58,7 @@ export async function conversionOffline(req, res) {
       site_id: req.site.id,
       is_conversion: true,
       conversion_value: value,
+      ...getFirstTouchFields(req.body),
       ingestion_method: 'offline',
       server_timestamp: eventTimestamp
     }
