@@ -2083,3 +2083,25 @@ Next:
 
 Next:
 - Session 77: Source/channel taxonomy v1.
+
+## Session 77 - Source/channel taxonomy v1
+
+- Confirmed backend already supports `group_by=channel` in attribution reports.
+- Confirmed Report Builder already exposes Channel as a first-class dimension.
+- Updated channel taxonomy label:
+  - `AI` is now reported as `AI Search`.
+- Fixed session report channel grouping bug:
+  - Removed duplicate JS `case 'channel': return CHANNEL_DIM_SQL` from session grouping.
+  - Session reports now use `channelFromEvent()` for channel names.
+- Added Report Builder quick-start presets:
+  - Revenue by Channel
+  - Conversions by Channel
+- Updated Report Builder channel filter to use `AI Search`.
+- QA passed:
+  - Report Builder channel presets visible.
+  - Channel report preview request returns without 500/HogQL error.
+  - `node --check` passed for attribution files.
+  - Dashboard build passed with only existing Vite chunk-size warning.
+
+Next:
+- Session 78: UTM/ref/source/via end-to-end verification.

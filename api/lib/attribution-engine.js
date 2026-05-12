@@ -316,7 +316,7 @@ function channelFromEvent(event = {}) {
   const referrer = String(props.referrer || '').toLowerCase()
   const aiSource = String(props.ai_source || '').trim()
 
-  if (aiSource) return 'AI'
+  if (aiSource) return 'AI Search'
   if (['cpc', 'ppc', 'paid', 'paid_search', 'sem'].includes(medium)) return 'Paid Search'
   if (['paid_social', 'paidsocial', 'social_paid'].includes(medium)) return 'Paid Social'
   if (['email', 'newsletter'].includes(medium)) return 'Email'
@@ -344,7 +344,7 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
     filterClauses += `
     AND COALESCE(
   multiIf(
-    properties.ai_source IS NOT NULL AND properties.ai_source != '', 'AI',
+    properties.ai_source IS NOT NULL AND properties.ai_source != '', 'AI Search',
     lower(COALESCE(properties.utm_medium, '')) IN ('cpc','ppc','paid','paid_search','sem'), 'Paid Search',
     lower(COALESCE(properties.utm_medium, '')) IN ('paid_social','paidsocial','social_paid'), 'Paid Social',
     lower(COALESCE(properties.utm_medium, '')) IN ('email','newsletter'), 'Email',
@@ -464,7 +464,6 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
   // Group sessions by dimension
   const dimKey = (sess) => {
     switch (groupBy) {
-    case 'channel': return CHANNEL_DIM_SQL
       case 'conversion_type': return "COALESCE(NULLIF(any(properties.conversion_type), ''), 'untyped')"
       case 'channel': return channelFromEvent(sess.entry_event || sess.events?.[0] || sess)
       case 'source': return sess.entry_source || 'direct'
@@ -739,7 +738,7 @@ export async function getAttributionExplanation(siteId, model, distinctId) {
 const CHANNEL_DIM_SQL = `
 COALESCE(
   multiIf(
-    properties.ai_source IS NOT NULL AND properties.ai_source != '', 'AI',
+    properties.ai_source IS NOT NULL AND properties.ai_source != '', 'AI Search',
     lower(COALESCE(properties.utm_medium, '')) IN ('cpc','ppc','paid','paid_search','sem'), 'Paid Search',
     lower(COALESCE(properties.utm_medium, '')) IN ('paid_social','paidsocial','social_paid'), 'Paid Social',
     lower(COALESCE(properties.utm_medium, '')) IN ('email','newsletter'), 'Email',

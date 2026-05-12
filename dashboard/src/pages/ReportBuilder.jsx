@@ -89,6 +89,8 @@ const GRANULARITY = [
 ]
 
 const PRESETS = [
+  { name: 'Revenue by Channel', model: 'last_touch', groupBy: 'channel', groupBy2: null, metric: 'revenue', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: {}, desc: 'Revenue grouped by high-level marketing channel' },
+  { name: 'Conversions by Channel', model: 'last_touch', groupBy: 'channel', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: {}, desc: 'Conversions grouped by high-level marketing channel' },
   { name: 'AI Revenue by Source', model: 'ai_platforms', groupBy: 'ai_source', groupBy2: null, metric: 'ai_revenue', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { has_ai_source: 'true' }, desc: 'See which AI platforms send the most revenue' },
   { name: 'Best Lead Sources', model: 'last_touch', groupBy: 'channel', groupBy2: null, metric: 'leads', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { min_conversions: '1' }, desc: 'Which channels bring in the most leads' },
   { name: 'Campaign Revenue', model: 'last_touch', groupBy: 'campaign', groupBy2: null, metric: 'revenue', days: 90, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { min_conversions: '5' }, desc: 'Revenue performance across campaigns' },
@@ -657,7 +659,7 @@ export default function ReportBuilder() {
                     <option value="Organic Social">Organic Social</option>
                     <option value="Paid Social">Paid Social</option>
                     <option value="Email">Email</option>
-                    <option value="AI">AI</option>
+                    <option value="AI Search">AI Search</option>
                     <option value="Direct">Direct</option>
                     <option value="Referral">Referral</option>
                     <option value="Other">Other</option>
