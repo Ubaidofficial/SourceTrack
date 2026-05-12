@@ -70,8 +70,8 @@ router.get('/overview', validateSiteKey, async (req, res) => {
         SELECT
           SUM(CASE WHEN timestamp >= now() - INTERVAL 7 DAY THEN 1 ELSE 0 END) AS this_week,
           SUM(CASE WHEN timestamp >= now() - INTERVAL 14 DAY AND timestamp < now() - INTERVAL 7 DAY THEN 1 ELSE 0 END) AS last_week,
-          COUNT(CASE WHEN timestamp >= now() - INTERVAL 1 DAY THEN 1 END) AS count_day,
-          COUNT(CASE WHEN timestamp >= now() - INTERVAL 1 HOUR THEN 1 END) AS count_hour,
+          countIf(timestamp >= now() - INTERVAL 1 DAY) AS count_day,
+          countIf(timestamp >= now() - INTERVAL 1 HOUR) AS count_hour,
           MAX(timestamp) AS last_event
         FROM events
         WHERE properties.site_id = '${esc(posthogSiteId)}'
@@ -80,8 +80,8 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       queryHogQL(`
         SELECT
           COALESCE(properties.conversion_type, 'untyped') AS conv_type,
-          COUNT(*) AS count,
-          SUM(toFloat64OrZero(toString(properties.conversion_value))) AS revenue
+          count() AS count,
+          SUM(toFloatOrZero(toString(properties.conversion_value))) AS revenue
         FROM events
         WHERE properties.site_id = '${esc(posthogSiteId)}'
           AND event = '$conversion'
@@ -93,8 +93,8 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       queryHogQL(`
         SELECT
           properties.conversion_type AS stage,
-          COUNT(*) AS count,
-          SUM(toFloat64OrZero(toString(properties.conversion_value))) AS revenue
+          count() AS count,
+          SUM(toFloatOrZero(toString(properties.conversion_value))) AS revenue
         FROM events
         WHERE properties.site_id = '${esc(posthogSiteId)}'
           AND event = '$conversion'

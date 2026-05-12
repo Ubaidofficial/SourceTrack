@@ -245,7 +245,7 @@ router.get('/preview/:siteKey', async (req, res) => {
     try {
       const kpiRows = await queryHogQL(`
         SELECT
-          sumIf(toFloat64OrZero(toString(properties.conversion_value)), event = '$conversion') AS revenue,
+          sumIf(toFloatOrZero(toString(properties.conversion_value)), event = '$conversion') AS revenue,
           countIf(event = '$conversion') AS conversions,
           countIf(event = '$pageview') AS sessions,
           count(DISTINCT distinct_id) AS leads
@@ -270,7 +270,7 @@ router.get('/preview/:siteKey', async (req, res) => {
       const srcRows = await queryHogQL(`
         SELECT
           COALESCE(properties.utm_source, 'direct') AS source,
-          sumIf(toFloat64OrZero(toString(properties.conversion_value)), event = '$conversion') AS revenue,
+          sumIf(toFloatOrZero(toString(properties.conversion_value)), event = '$conversion') AS revenue,
           countIf(event = '$conversion') AS conversions
         FROM events
         WHERE properties.site_id = '${posthogSiteId}'

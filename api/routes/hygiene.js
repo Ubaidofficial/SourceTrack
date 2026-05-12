@@ -14,7 +14,7 @@ router.get('/utms', validateSiteKey, async (req, res) => {
 
     // Missing UTM source on pageviews
     const missingSourceSql = `
-      SELECT COUNT(*) AS cnt
+      SELECT count() AS cnt
       FROM events
       WHERE properties.site_id = '${siteId}'
         AND event = '$pageview'
@@ -26,7 +26,7 @@ router.get('/utms', validateSiteKey, async (req, res) => {
     const campaignSql = `
       SELECT
         properties.utm_campaign AS campaign,
-        COUNT(*) AS cnt
+        count() AS cnt
       FROM events
       WHERE properties.site_id = '${siteId}'
         AND event = '$pageview'
@@ -42,7 +42,7 @@ router.get('/utms', validateSiteKey, async (req, res) => {
     const referrerSql = `
       SELECT
         properties.referrer AS referrer,
-        COUNT(*) AS cnt
+        count() AS cnt
       FROM events
       WHERE properties.site_id = '${siteId}'
         AND event = '$pageview'
@@ -57,19 +57,19 @@ router.get('/utms', validateSiteKey, async (req, res) => {
 
     // Missing conversion values
     const missingConvSql = `
-      SELECT COUNT(*) AS cnt
+      SELECT count() AS cnt
       FROM events
       WHERE properties.site_id = '${siteId}'
         AND event = '$conversion'
         AND timestamp >= now() - INTERVAL 30 DAY
-        AND (properties.conversion_value IS NULL OR properties.conversion_value = '' OR toFloat64OrZero(toString(properties.conversion_value)) = 0)
+        AND (properties.conversion_value IS NULL OR properties.conversion_value = '' OR toFloatOrZero(toString(properties.conversion_value)) = 0)
     `
 
     // Low event activity: days with < 5 events in last 30 days
     const lowActivitySql = `
       SELECT
         formatDateTime(timestamp, '%Y-%m-%d') AS day,
-        COUNT(*) AS cnt
+        count() AS cnt
       FROM events
       WHERE properties.site_id = '${siteId}'
         AND timestamp >= now() - INTERVAL 30 DAY

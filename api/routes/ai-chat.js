@@ -28,7 +28,7 @@ Rules:
   properties.country
   properties.page_url
 - Default date filter: timestamp >= now() - INTERVAL 30 DAY
-- Revenue expression: toFloat64OrZero(toString(properties.conversion_value))
+- Revenue expression: toFloatOrZero(toString(properties.conversion_value))
 - AI source null check: properties.ai_source IS NOT NULL AND properties.ai_source != ''
 - Allowed SQL operations: SELECT, WHERE, GROUP BY, ORDER BY, LIMIT, count(), countIf(), sum(), uniq()
 - Do not use any table other than events

@@ -1924,6 +1924,35 @@ The 10 rules (R1-R10) govern coding behavior per session, not retrospective code
 
 **Runtime QA:** Still pending (blocked by migration + PostHog TLS).
 
+## Session 69B — Migration Final Safety Check + Status
+
+**Session type:** Final migration safety verification (static), no SQL applied.
+
+**No edits to migration file.** The Session 69A hardened file was re-read and re-verified in this session. All safety checks passed:
+- Zero `DROP TABLE` in active SQL (only in comments)
+- Zero `CASCADE` in active SQL (only in comments)
+- Zero `DELETE FROM`
+- Single `ALTER COLUMN site_key TYPE text USING site_key::text` — backward-compatible
+- All `site_key` references use string literal `'1'`
+- 44 `ADD COLUMN IF NOT EXISTS` — sites (7) + shell tables (37)
+- Backfills: `WHERE id IS NULL`, `WHERE plan IS NULL`, `WHERE created_at IS NULL` — idempotent
+- Company/membership: `WHERE NOT EXISTS` — idempotent
+
+**`validateSiteKey` compatibility:**
+- Selects `id, plan, created_at, company_id, owner_id` — all will exist after migration
+- `.eq('site_key', siteKey)` works with text column + string value
+- `requireSiteMembership` legacy fallback + company path both functional
+
+**No code changes needed.** Auth middleware is already written to handle the post-migration schema.
+
+**Migration status:** Reviewed safe — NOT applied. No DB access in this environment.
+
+**PostHog:** TLS handshake still fails (`tlsv1 alert decode error`) — analytics runtime QA blocked.
+
+**Runtime QA:** Not executed. Requires: 1) migration applied, 2) PostHog reachable, 3) authenticated test user.
+
+**Recommended next:** Session 70 — Apply migration (SQL Editor) + fix PostHog TLS + rerun runtime QA.
+
 
 ## Session 66 — Fix Site Identity Mismatch in HogQL Analytics Queries
 

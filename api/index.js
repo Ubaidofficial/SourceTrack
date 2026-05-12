@@ -42,6 +42,58 @@ const app = express()
 
 
 
+
+
+
+// Session 71 early public /api/events alias
+// Must be registered before authenticated /api middleware.
+app.post('/api/events', express.json({ limit: '100kb' }), async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+
+  try {
+    const fetch = global.fetch || (await import('node-fetch')).default;
+    const port = process.env.PORT || 3000;
+
+    const response = await fetch('http://localhost:' + port + '/api/track', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Origin': req.headers.origin || ''
+      },
+      body: JSON.stringify(req.body || {})
+    });
+
+    const text = await response.text();
+
+    res.status(response.status);
+
+    try {
+      return res.json(JSON.parse(text));
+    } catch {
+      return res.send(text);
+    }
+  } catch (err) {
+    console.error('Early /api/events alias failed:', err);
+    return res.status(500).json({
+      success: false,
+      data: null,
+      error: 'Events alias failed'
+    });
+  }
+});
+
+app.options('/api/events', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  return res.status(200).send('OK');
+});
 // Session 70 hard CORS fix for pixel API routes
 app.use((req, res, next) => {
   const isPixelRoute =

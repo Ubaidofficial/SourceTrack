@@ -273,7 +273,7 @@ router.post('/complete', async (req, res) => {
     // PostHog ingestion latency profiles.
     try {
       const installSql = `
-        SELECT COUNT(*) AS cnt
+        SELECT count() AS cnt
         FROM events
         WHERE properties.site_id = '${esc(String(site.id))}'
           AND event = '$pageview'

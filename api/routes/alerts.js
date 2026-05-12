@@ -63,7 +63,7 @@ router.get('/', validateSiteKey, async (req, res) => {
 
     // 3. AI source traffic below threshold
     const aiSql = `
-      SELECT properties.ai_source, COUNT(*) AS cnt
+      SELECT properties.ai_source, count() AS cnt
       FROM events
       WHERE properties.site_id = '${siteId}'
         AND event = '$pageview'
@@ -90,7 +90,7 @@ router.get('/', validateSiteKey, async (req, res) => {
 
     // 4. Install silent / no recent events
     const recentSql = `
-      SELECT COUNT(*) AS cnt, MAX(timestamp) AS last_ts
+      SELECT count() AS cnt, MAX(timestamp) AS last_ts
       FROM events
       WHERE properties.site_id = '${siteId}'
         AND timestamp >= now() - INTERVAL 24 HOUR

@@ -75,14 +75,14 @@ router.get('/health', validateSiteKey, async (req, res) => {
     `
 
     const countHourSql = `
-      SELECT COUNT(*) AS cnt
+      SELECT count() AS cnt
       FROM events
       WHERE properties.site_id = '${siteId}'
         AND timestamp >= now() - INTERVAL 1 HOUR
     `
 
     const countDaySql = `
-      SELECT COUNT(*) AS cnt
+      SELECT count() AS cnt
       FROM events
       WHERE properties.site_id = '${siteId}'
         AND timestamp >= now() - INTERVAL 24 HOUR
@@ -136,7 +136,7 @@ router.get('/edge-cases', validateSiteKey, async (req, res) => {
     const siteId = esc(req.site.id)
 
     const multiDomainSql = `
-      SELECT properties.page_url AS page_url, COUNT(*) AS cnt
+      SELECT properties.page_url AS page_url, count() AS cnt
       FROM events
       WHERE properties.site_id = '${siteId}'
         AND properties.page_url IS NOT NULL
@@ -147,7 +147,7 @@ router.get('/edge-cases', validateSiteKey, async (req, res) => {
     `
 
     const aiNoUtmSql = `
-      SELECT COUNT(*) AS cnt
+      SELECT count() AS cnt
       FROM events
       WHERE properties.site_id = '${siteId}'
         AND properties.ai_source IS NOT NULL
@@ -157,7 +157,7 @@ router.get('/edge-cases', validateSiteKey, async (req, res) => {
     `
 
     const utmNoAiSql = `
-      SELECT COUNT(*) AS cnt
+      SELECT count() AS cnt
       FROM events
       WHERE properties.site_id = '${siteId}'
         AND properties.utm_source IS NOT NULL

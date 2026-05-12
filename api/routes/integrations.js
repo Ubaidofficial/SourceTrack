@@ -22,7 +22,7 @@ router.get('/overview', async (req, res) => {
 
     // Hygiene queries
     const missingSourceSql = `
-      SELECT COUNT(*) AS cnt
+      SELECT count() AS cnt
       FROM events
       WHERE properties.site_id = '${safeSite}'
         AND event = '$pageview'
@@ -31,7 +31,7 @@ router.get('/overview', async (req, res) => {
     `
 
     const campaignSql = `
-      SELECT properties.utm_campaign AS campaign, COUNT(*) AS cnt
+      SELECT properties.utm_campaign AS campaign, count() AS cnt
       FROM events
       WHERE properties.site_id = '${safeSite}'
         AND event = '$pageview'
@@ -44,7 +44,7 @@ router.get('/overview', async (req, res) => {
     `
 
     const referrerSql = `
-      SELECT properties.referrer AS referrer, COUNT(*) AS cnt
+      SELECT properties.referrer AS referrer, count() AS cnt
       FROM events
       WHERE properties.site_id = '${safeSite}'
         AND event = '$pageview'
@@ -58,16 +58,16 @@ router.get('/overview', async (req, res) => {
     `
 
     const missingConvSql = `
-      SELECT COUNT(*) AS cnt
+      SELECT count() AS cnt
       FROM events
       WHERE properties.site_id = '${safeSite}'
         AND event = '$conversion'
         AND timestamp >= now() - INTERVAL 30 DAY
-        AND (properties.conversion_value IS NULL OR properties.conversion_value = '' OR toFloat64OrZero(toString(properties.conversion_value)) = 0)
+        AND (properties.conversion_value IS NULL OR properties.conversion_value = '' OR toFloatOrZero(toString(properties.conversion_value)) = 0)
     `
 
     const lowActivitySql = `
-      SELECT formatDateTime(timestamp, '%Y-%m-%d') AS day, COUNT(*) AS cnt
+      SELECT formatDateTime(timestamp, '%Y-%m-%d') AS day, count() AS cnt
       FROM events
       WHERE properties.site_id = '${safeSite}'
         AND timestamp >= now() - INTERVAL 30 DAY
@@ -99,7 +99,7 @@ router.get('/overview', async (req, res) => {
     `
 
     const aiSql = `
-      SELECT properties.ai_source, COUNT(*) AS cnt
+      SELECT properties.ai_source, count() AS cnt
       FROM events
       WHERE properties.site_id = '${safeSite}'
         AND event = '$pageview'
@@ -112,7 +112,7 @@ router.get('/overview', async (req, res) => {
     `
 
     const recentSql = `
-      SELECT COUNT(*) AS cnt, MAX(timestamp) AS last_ts
+      SELECT count() AS cnt, MAX(timestamp) AS last_ts
       FROM events
       WHERE properties.site_id = '${safeSite}'
         AND timestamp >= now() - INTERVAL 24 HOUR

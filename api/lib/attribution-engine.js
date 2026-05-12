@@ -25,8 +25,8 @@ async function firstTouchAttribution(siteId, dateFrom, dateTo) {
       COALESCE(NULLIF(properties.first_touch_source, ''), 'direct') AS source,
       COALESCE(NULLIF(properties.first_touch_medium, ''), 'none') AS medium,
       properties.first_touch_campaign AS campaign,
-      COUNT(*) AS conversions,
-      SUM(toFloat64OrZero(toString(properties.conversion_value))) AS revenue
+      count() AS conversions,
+      SUM(toFloatOrZero(toString(properties.conversion_value))) AS revenue
     FROM events
     WHERE properties.site_id = '${esc(siteId)}'
       AND event = '$conversion'
@@ -56,8 +56,8 @@ async function lastTouchAttribution(siteId, dateFrom, dateTo) {
       COALESCE(NULLIF(properties.utm_source, ''), 'direct') AS source,
       COALESCE(NULLIF(properties.utm_medium, ''), 'none') AS medium,
       properties.utm_campaign AS campaign,
-      COUNT(*) AS conversions,
-      SUM(toFloat64OrZero(toString(properties.conversion_value))) AS revenue
+      count() AS conversions,
+      SUM(toFloatOrZero(toString(properties.conversion_value))) AS revenue
     FROM events
     WHERE properties.site_id = '${esc(siteId)}'
       AND event = '$conversion'
@@ -95,11 +95,11 @@ async function firstTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
       COALESCE(NULLIF(ft.utm_source, ''), 'direct') AS source,
       COALESCE(NULLIF(ft.utm_medium, ''), 'none') AS medium,
       ft.utm_campaign AS campaign,
-      COUNT(*) AS conversions,
-      SUM(toFloat64OrZero(toString(e.properties.conversion_value))) AS revenue
+      count() AS conversions,
+      SUM(toFloatOrZero(toString(e.properties.conversion_value))) AS revenue
     FROM events e
     LEFT JOIN (
-      SELECT distinct_id,
+      SELECT distinct_id AS distinct_id,
         argMin(properties.utm_source, timestamp) AS utm_source,
         argMin(properties.utm_medium, timestamp) AS utm_medium,
         argMin(properties.utm_campaign, timestamp) AS utm_campaign
@@ -141,11 +141,11 @@ async function lastTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
       COALESCE(NULLIF(lt.utm_source, ''), 'direct') AS source,
       COALESCE(NULLIF(lt.utm_medium, ''), 'none') AS medium,
       lt.utm_campaign AS campaign,
-      COUNT(*) AS conversions,
-      SUM(toFloat64OrZero(toString(e.properties.conversion_value))) AS revenue
+      count() AS conversions,
+      SUM(toFloatOrZero(toString(e.properties.conversion_value))) AS revenue
     FROM events e
     LEFT JOIN (
-      SELECT distinct_id,
+      SELECT distinct_id AS distinct_id,
         argMax(properties.utm_source, timestamp) AS utm_source,
         argMax(properties.utm_medium, timestamp) AS utm_medium,
         argMax(properties.utm_campaign, timestamp) AS utm_campaign
@@ -199,14 +199,14 @@ async function linearAttribution(siteId, dateFrom, dateTo) {
         e.properties.utm_source AS source,
         e.properties.utm_medium AS medium,
         e.properties.utm_campaign AS campaign,
-        toFloat64OrZero(toString(cv.conversion_value)) / cv.tp_count AS share
+        toFloatOrZero(toString(cv.conversion_value)) / cv.tp_count AS share
       FROM events e
       INNER JOIN (
         SELECT
           ce.distinct_id,
           FIRST_VALUE(ce.properties.conversion_value) AS conversion_value,
           (
-            SELECT COUNT(*)
+            SELECT count()
             FROM events pe
             WHERE pe.properties.site_id = '${esc(siteId)}'
               AND pe.event = '$pageview'
@@ -247,8 +247,8 @@ async function aiPlatformAttribution(siteId, dateFrom, dateTo) {
   const sql = `
     SELECT
       properties.ai_source AS source,
-      COUNT(*) AS conversions,
-      SUM(toFloat64OrZero(toString(properties.conversion_value))) AS revenue
+      count() AS conversions,
+      SUM(toFloatOrZero(toString(properties.conversion_value))) AS revenue
     FROM events
     WHERE properties.site_id = '${esc(siteId)}'
       AND event = '$conversion'
@@ -338,7 +338,7 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
   // Query pageviews for session derivation
   const sql = `
     SELECT
-      distinct_id,
+      distinct_id AS distinct_id,
       timestamp,
       properties.page_url,
       properties.utm_source,
@@ -351,7 +351,7 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
       AND event = '$pageview'
       AND timestamp >= toDateTime('${fromDate}')
       AND timestamp <= toDateTime('${toDate}')${filterClauses}
-    ORDER BY distinct_id ASC, timestamp ASC
+    ORDER BY e.distinct_id ASC, timestamp ASC
     LIMIT 50000
   `
 
@@ -360,14 +360,14 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
   // Also query conversions for conversion_sessions metric
   const convSql = `
     SELECT
-      distinct_id,
+      distinct_id AS distinct_id,
       timestamp
     FROM events
     WHERE properties.site_id = '${safeSite}'
       AND event = '$conversion'
       AND timestamp >= toDateTime('${fromDate}')
       AND timestamp <= toDateTime('${toDate}')${filterClauses}
-    ORDER BY distinct_id ASC, timestamp ASC
+    ORDER BY e.distinct_id ASC, timestamp ASC
     LIMIT 50000
   `
 
@@ -499,7 +499,7 @@ export async function getAttributionExplanation(siteId, model, distinctId) {
   const convSql = `
     SELECT
       timestamp,
-      toFloat64OrZero(toString(properties.conversion_value)) AS conversion_value,
+      toFloatOrZero(toString(properties.conversion_value)) AS conversion_value,
       properties.utm_source,
       properties.utm_medium,
       properties.utm_campaign,
@@ -693,16 +693,16 @@ const GROUP_COLUMNS = {
     last_touch: "COALESCE(NULLIF(properties.utm_source, ''), 'direct')",
     linear: "COALESCE(NULLIF(properties.utm_source, ''), 'direct')",
     ai_platforms: 'properties.ai_source',
-    first_touch_non_direct: "COALESCE(NULLIF(_nd.nd_source, ''), COALESCE(NULLIF(properties.first_touch_source, ''), 'direct'))",
-    last_touch_non_direct: "COALESCE(NULLIF(_nd.nd_source, ''), COALESCE(NULLIF(properties.utm_source, ''), 'direct'))"
+    first_touch_non_direct: "COALESCE(NULLIF(any(_nd.nd_source), ''), COALESCE(NULLIF(properties.first_touch_source, ''), 'direct'))",
+    last_touch_non_direct: "COALESCE(NULLIF(any(_nd.nd_source), ''), COALESCE(NULLIF(properties.utm_source, ''), 'direct'))"
   },
   medium: {
     first_touch: "COALESCE(NULLIF(properties.first_touch_medium, ''), 'none')",
     last_touch: "COALESCE(NULLIF(properties.utm_medium, ''), 'none')",
     linear: "COALESCE(NULLIF(properties.utm_medium, ''), 'none')",
     ai_platforms: "'—'",
-    first_touch_non_direct: "COALESCE(NULLIF(_nd.nd_medium, ''), COALESCE(NULLIF(properties.first_touch_medium, ''), 'none'))",
-    last_touch_non_direct: "COALESCE(NULLIF(_nd.nd_medium, ''), COALESCE(NULLIF(properties.utm_medium, ''), 'none'))"
+    first_touch_non_direct: "COALESCE(NULLIF(any(_nd.nd_medium), ''), COALESCE(NULLIF(properties.first_touch_medium, ''), 'none'))",
+    last_touch_non_direct: "COALESCE(NULLIF(any(_nd.nd_medium), ''), COALESCE(NULLIF(properties.utm_medium, ''), 'none'))"
   },
   campaign: {
     first_touch: 'properties.first_touch_campaign',
@@ -795,7 +795,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     if (attributeBy === 'first_seen_date') {
       refJoin = `
     INNER JOIN (
-      SELECT distinct_id, MIN(timestamp) AS ref_ts
+      SELECT distinct_id AS distinct_id, MIN(timestamp) AS ref_ts
       FROM events
       WHERE properties.site_id = '${safeSite}'
       GROUP BY distinct_id
@@ -807,7 +807,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
       // (truthful exclusion — cannot attribute to an original source that doesn't exist).
       refJoin = `
     INNER JOIN (
-      SELECT distinct_id, MIN(timestamp) AS ref_ts
+      SELECT distinct_id AS distinct_id, MIN(timestamp) AS ref_ts
       FROM events
       WHERE properties.site_id = '${safeSite}'
         AND properties.utm_source IS NOT NULL
@@ -827,7 +827,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     const ndAggFn = model === 'first_touch_non_direct' ? 'argMin' : 'argMax'
     qualifyingJoin = `
     LEFT JOIN (
-      SELECT distinct_id,
+      SELECT distinct_id AS distinct_id,
         ${ndAggFn}(properties.utm_source, timestamp) AS nd_source,
         ${ndAggFn}(properties.utm_medium, timestamp) AS nd_medium,
         ${ndAggFn}(properties.utm_campaign, timestamp) AS nd_campaign
@@ -867,62 +867,62 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
 
   switch (metric) {
     case 'revenue':
-      metricCol = `SUM(toFloat64OrZero(toString(properties.conversion_value)))`
+      metricCol = `SUM(toFloatOrZero(toString(properties.conversion_value)))`
       metricLabel = 'revenue'
       eventFilter = "AND event = '$conversion'"
       extraSelect = ''
       break
     case 'conversions':
-      metricCol = 'COUNT(*)'
+      metricCol = 'count()'
       metricLabel = 'conversions'
       eventFilter = "AND event = '$conversion'"
       extraSelect = ''
       break
     case 'sessions':
-      metricCol = 'COUNT(DISTINCT distinct_id)'
+      metricCol = 'count(DISTINCT distinct_id)'
       metricLabel = 'sessions'
       eventFilter = "AND event = '$pageview'"
       extraSelect = ''
       break
     case 'leads':
       // TODO: confirm what defines a lead event
-      metricCol = 'COUNT(*)'
+      metricCol = 'count()'
       metricLabel = 'leads'
       eventFilter = "AND event = '$identify'"
       extraSelect = ''
       break
     case 'conversion_rate':
-      metricCol = 'COUNT(*)'
+      metricCol = 'count()'
       metricLabel = 'conversion_rate'
       eventFilter = "AND event = '$conversion'"
       extraSelect = ''
       break
     case 'avg_conversion_value':
-      metricCol = `AVG(toFloat64OrZero(toString(properties.conversion_value)))`
+      metricCol = `AVG(toFloatOrZero(toString(properties.conversion_value)))`
       metricLabel = 'avg_conversion_value'
       eventFilter = "AND event = '$conversion'"
       extraSelect = ''
       break
     case 'ai_conversions':
-      metricCol = 'COUNT(*)'
+      metricCol = 'count()'
       metricLabel = 'ai_conversions'
       eventFilter = "AND event = '$conversion' AND properties.ai_source IS NOT NULL AND properties.ai_source != ''"
       extraSelect = ''
       break
     case 'ai_revenue':
-      metricCol = `SUM(toFloat64OrZero(toString(properties.conversion_value)))`
+      metricCol = `SUM(toFloatOrZero(toString(properties.conversion_value)))`
       metricLabel = 'ai_revenue'
       eventFilter = "AND event = '$conversion' AND properties.ai_source IS NOT NULL AND properties.ai_source != ''"
       extraSelect = ''
       break
     case 'ai_conversion_share':
-      metricCol = 'COUNT(*)'
+      metricCol = 'count()'
       metricLabel = 'ai_conversion_share'
       eventFilter = "AND event = '$conversion'"
       extraSelect = ''
       break
     case 'ai_revenue_share':
-      metricCol = `SUM(toFloat64OrZero(toString(properties.conversion_value)))`
+      metricCol = `SUM(toFloatOrZero(toString(properties.conversion_value)))`
       metricLabel = 'ai_revenue_share'
       eventFilter = "AND event = '$conversion'"
       extraSelect = ''
@@ -1020,9 +1020,9 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
 
       if (md === 'first_touch_non_direct') {
         switch (gb) {
-          case 'source': return "COALESCE(NULLIF(_nd.nd_source, ''), COALESCE(NULLIF(any(properties.first_touch_source), ''), 'direct'))"
-          case 'medium': return "COALESCE(NULLIF(_nd.nd_medium, ''), COALESCE(NULLIF(any(properties.first_touch_medium), ''), 'none'))"
-          case 'campaign': return "COALESCE(NULLIF(_nd.nd_campaign, ''), any(properties.first_touch_campaign))"
+          case 'source': return "COALESCE(NULLIF(any(_nd.nd_source), ''), COALESCE(NULLIF(any(properties.first_touch_source), ''), 'direct'))"
+          case 'medium': return "COALESCE(NULLIF(any(_nd.nd_medium), ''), COALESCE(NULLIF(any(properties.first_touch_medium), ''), 'none'))"
+          case 'campaign': return "COALESCE(NULLIF(any(_nd.nd_campaign), ''), any(properties.first_touch_campaign))"
           case 'ai_source': return "any(COALESCE(NULLIF(properties.ai_source, ''), 'none'))"
           case 'landing_page': return "argMin(COALESCE(NULLIF(properties.page_url, ''), '/'), timestamp)"
           case 'country': return "any(COALESCE(NULLIF(properties.country, ''), 'unknown'))"
@@ -1033,9 +1033,9 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
 
       if (md === 'last_touch_non_direct') {
         switch (gb) {
-          case 'source': return "COALESCE(NULLIF(_nd.nd_source, ''), COALESCE(NULLIF(argMax(properties.utm_source, timestamp), ''), 'direct'))"
-          case 'medium': return "COALESCE(NULLIF(_nd.nd_medium, ''), COALESCE(NULLIF(argMax(properties.utm_medium, timestamp), ''), 'none'))"
-          case 'campaign': return "COALESCE(NULLIF(_nd.nd_campaign, ''), argMax(properties.utm_campaign, timestamp))"
+          case 'source': return "COALESCE(NULLIF(any(_nd.nd_source), ''), COALESCE(NULLIF(argMax(properties.utm_source, timestamp), ''), 'direct'))"
+          case 'medium': return "COALESCE(NULLIF(any(_nd.nd_medium), ''), COALESCE(NULLIF(argMax(properties.utm_medium, timestamp), ''), 'none'))"
+          case 'campaign': return "COALESCE(NULLIF(any(_nd.nd_campaign), ''), argMax(properties.utm_campaign, timestamp))"
           case 'ai_source': return "argMax(COALESCE(NULLIF(properties.ai_source, ''), 'none'), timestamp)"
           case 'landing_page': return "argMax(COALESCE(NULLIF(properties.page_url, ''), '/'), timestamp)"
           case 'country': return "argMax(COALESCE(NULLIF(properties.country, ''), 'unknown'), timestamp)"
@@ -1065,7 +1065,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     // (8-4-4-4-12 hex chars) are anonymous-only visitors who never completed
     // identification via $identify. They are excluded from LTV because they
     // cannot be reliably stitched across sessions or devices.
-    const uuidExclusion = "AND NOT match(distinct_id, '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')"
+    const uuidExclusion = "AND NOT match(events.distinct_id, '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')"
 
     // Non-direct LTV: LEFT JOIN qualifying pageviews to attribute each distinct_id.
     // The main table remains unaliased so properties./timestamp. resolve correctly
@@ -1074,7 +1074,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     if (isNonDirect) {
       ltvJoin = `
     LEFT JOIN (
-      SELECT distinct_id,
+      SELECT distinct_id AS distinct_id,
         ${ndAggFn}(properties.utm_source, timestamp) AS nd_source,
         ${ndAggFn}(properties.utm_medium, timestamp) AS nd_medium,
         ${ndAggFn}(properties.utm_campaign, timestamp) AS nd_campaign
@@ -1096,7 +1096,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
       SELECT
         events.distinct_id,
         ${ltvDimExpr} AS ltv_dim${ltvDim2Expr ? `,\n        ${ltvDim2Expr} AS ltv_dim2` : ''},
-        SUM(toFloat64OrZero(toString(properties.conversion_value))) AS total_revenue
+        SUM(toFloatOrZero(toString(properties.conversion_value))) AS total_revenue
       FROM events${ltvJoin}
       WHERE properties.site_id = '${safeSite}'
         AND event = '$conversion'
@@ -1159,7 +1159,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
       const sessSql = `
         SELECT
           ${dimExpr} AS dim_value${dim2Expr ? `,\n          ${dim2Expr} AS dim_value2` : ''},
-          COUNT(DISTINCT distinct_id) AS sessions
+          count(DISTINCT distinct_id) AS sessions
         FROM events${refJoin}
         WHERE properties.site_id = '${safeSite}'
           AND event = '$pageview'
@@ -1185,7 +1185,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     const shareSql = `
       SELECT
         ${dimExpr} AS dim_value${dim2Expr ? `,\n        ${dim2Expr} AS dim_value2` : ''},
-        ${metric === 'ai_conversion_share' ? 'COUNT(*)' : `SUM(toFloat64OrZero(toString(properties.conversion_value)))`} AS ai_value
+        ${metric === 'ai_conversion_share' ? 'count()' : `SUM(toFloatOrZero(toString(properties.conversion_value)))`} AS ai_value
       FROM events${refJoin}
       WHERE properties.site_id = '${safeSite}'
         AND event = '$conversion'
