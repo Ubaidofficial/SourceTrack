@@ -16,7 +16,7 @@ const navItems = [
   { to: '/ai-analytics', label: 'AI Analytics', icon: TrendingUp },
   { to: '/integrations', label: 'Integrations', icon: Plug },
   { to: '/snippet', label: 'Install', icon: Code },
-  { to: '/debugger', label: 'Debugger', icon: Bug },
+  { to: '/debugger', label: 'Event Logger', icon: Bug },
   { to: '/settings', label: 'Settings', icon: Settings }
 ]
 
@@ -30,7 +30,7 @@ const PAGE_TITLES = {
   '/ai-analytics': 'AI Analytics',
   '/integrations': 'Integrations',
   '/snippet': 'Install Tracking',
-  '/debugger': 'Event Debugger',
+  '/debugger': 'Event Logger',
   '/settings': 'Settings',
   '/admin': 'Super Admin'
 }

@@ -33,7 +33,7 @@ router.get('/', validateSiteKey, async (req, res) => {
         metric: 'Traffic',
         message: `Traffic dropped ${Math.round((1 - thisWeek / lastWeek) * 100)}% this week vs last`,
         comparison: `${thisWeek} vs ${lastWeek} pageviews`,
-        suggested_action: 'Check Install page and Event Debugger for tracker issues.'
+        suggested_action: 'Check Install page and Event Logger for tracker issues.'
       })
     }
 
@@ -57,7 +57,7 @@ router.get('/', validateSiteKey, async (req, res) => {
         metric: 'Conversions',
         message: `Conversions dropped ${Math.round((1 - today / yesterday) * 100)}% today vs yesterday`,
         comparison: `${today} vs ${yesterday} conversions`,
-        suggested_action: 'Verify conversion tracking in Event Debugger and check funnel pages.'
+        suggested_action: 'Verify conversion tracking in Event Logger and check funnel pages.'
       })
     }
 

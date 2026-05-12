@@ -290,7 +290,7 @@ export default function Snippet() {
             className="inline-flex items-center gap-1 text-xs text-gray-700 hover:text-gray-800 font-medium"
           >
             <Bug className="w-3.5 h-3.5" />
-            See recent events in Debugger
+            See recent events in Event Logger
           </Link>
         )}
       </div>

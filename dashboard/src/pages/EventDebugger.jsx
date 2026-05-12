@@ -104,7 +104,7 @@ export default function EventDebugger() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Event Debugger</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Event Logger</h2>
           <p className="text-sm text-gray-500 mt-1">Inspect incoming events and verify tracking health</p>
         </div>
         <button

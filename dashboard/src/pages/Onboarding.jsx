@@ -532,7 +532,7 @@ export default function Onboarding() {
                   <li>It may take 1-2 minutes for the first event to appear</li>
                 </ul>
                 <div className="flex items-center justify-center gap-3 mt-4">
-                  <a href="/debugger" className="text-sm text-gray-900 hover:underline">Open Event Debugger</a>
+                  <a href="/debugger" className="text-sm text-gray-900 hover:underline">Open Event Logger</a>
                   <button
                     onClick={handleVerify}
                     className="px-4 py-2 bg-[#1F2323] text-white rounded-lg text-sm font-semibold hover:bg-black flex items-center gap-2"

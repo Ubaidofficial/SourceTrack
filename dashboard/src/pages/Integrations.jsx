@@ -78,7 +78,7 @@ export default function Integrations() {
         </div>
         <button onClick={() => navigate('/debugger')}
           className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5">
-          <Bug className="w-4 h-4" /> Event Debugger
+          <Bug className="w-4 h-4" /> Event Logger
         </button>
       </div>
 

@@ -145,7 +145,7 @@ export default function AIAnalytics() {
               <li>Conversions from AI-sourced traffic are attributed to the specific platform</li>
               <li>This page shows AI revenue, conversions, conversion rates, and trends</li>
             </ul>
-            <p className="text-gray-400 mt-3">If your site gets AI traffic but nothing appears here, check the Debugger for pageview events with ai_source values.</p>
+            <p className="text-gray-400 mt-3">If your site gets AI traffic but nothing appears here, check the Event Logger for pageview events with ai_source values.</p>
           </div>
           <button onClick={() => window.location.href = '/snippet'}
             className="mt-6 px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800">
