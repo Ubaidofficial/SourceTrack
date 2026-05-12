@@ -31,11 +31,12 @@ function normalizeFetchOptions(options = {}) {
 
 export async function fetchApi(path, options = {}) {
   const url = `${API_BASE}${path}`
-  const { headers: extraHeaders, ...rest } = options
+  const normalizedOptions = normalizeFetchOptions(options)
+  const { headers: extraHeaders, ...rest } = normalizedOptions
   const authHeaders = await getAuthHeaders()
   const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...authHeaders, ...extraHeaders },
-    ...rest
+    ...rest,
+    headers: { 'Content-Type': 'application/json', ...authHeaders, ...extraHeaders }
   })
 
   if (res.status === 402) {

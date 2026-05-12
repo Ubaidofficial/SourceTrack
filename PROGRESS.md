@@ -2020,3 +2020,66 @@ The 10 rules (R1-R10) govern coding behavior per session, not retrospective code
 - No backend PostHog config changes
 - No Railway infrastructure changes
 - No new attribution models
+
+## Session 76 - Saved Reports Stabilization
+
+- Confirmed Session 75 branch is merged into `main` and pushed.
+- Verified `main` is at commit `572d295 Fix report saves and source tracking`.
+- Fixed global dashboard API body handling:
+  - `fetchApi()` now calls `normalizeFetchOptions()`.
+  - Plain object request bodies are centrally JSON-stringified.
+  - `Content-Type: application/json` is applied automatically for object bodies.
+- This prevents future `[object Object]` request body bugs outside Report Builder.
+- Manual QA passed:
+  - Saved report Save works.
+  - Refresh persistence works.
+  - Edit/Update works.
+  - Duplicate works.
+  - Delete works.
+  - No saved-report 500s observed.
+- Dashboard build passed with only the existing Vite chunk-size warning.
+
+Next:
+- Session 77: Source/channel taxonomy v1.
+
+## Session 76 - Saved Reports Stabilization
+
+- Confirmed Session 75 branch is merged into `main` and pushed.
+- Verified `main` is at commit `572d295 Fix report saves and source tracking`.
+- Fixed global dashboard API body handling:
+  - `fetchApi()` now calls `normalizeFetchOptions()`.
+  - Plain object request bodies are centrally JSON-stringified.
+  - `Content-Type: application/json` is applied automatically for object bodies.
+- This prevents future `[object Object]` request body bugs outside Report Builder.
+- Manual QA passed:
+  - Saved report Save works.
+  - Refresh persistence works.
+  - Edit/Update works.
+  - Duplicate works.
+  - Delete works.
+  - No saved-report 500s observed.
+- Dashboard build passed with only the existing Vite chunk-size warning.
+
+Next:
+- Session 77: Source/channel taxonomy v1.
+
+## Session 76 - Saved Reports Stabilization
+
+- Confirmed Session 75 branch is merged into `main` and pushed.
+- Verified `main` is at commit `572d295 Fix report saves and source tracking`.
+- Fixed global dashboard API body handling:
+  - `fetchApi()` now calls `normalizeFetchOptions()`.
+  - Plain object request bodies are centrally JSON-stringified.
+  - `Content-Type: application/json` is applied automatically for object bodies.
+- This prevents future `[object Object]` request body bugs outside Report Builder.
+- Manual QA passed:
+  - Saved report Save works.
+  - Refresh persistence works.
+  - Edit/Update works.
+  - Duplicate works.
+  - Delete works.
+  - No saved-report 500s observed.
+- Dashboard build passed with only the existing Vite chunk-size warning.
+
+Next:
+- Session 77: Source/channel taxonomy v1.
