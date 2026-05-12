@@ -124,6 +124,9 @@ Conversion fields:
 - `utm_campaign`
 - `utm_content`
 - `utm_term`
+- `ref_param`
+- `source_param`
+- `via_param`
 - `first_touch_source`
 - `first_touch_medium`
 - `first_touch_campaign`
@@ -136,10 +139,6 @@ Backend enriches with:
 - `server_timestamp`
 - `ai_source`
 - `ingestion_method = server_routed`
-
-Known gap:
-
-- `conversion.js` should be checked for `ref_param`, `source_param`, and `via_param` parity with `track.js`.
 
 ## Identify capture
 

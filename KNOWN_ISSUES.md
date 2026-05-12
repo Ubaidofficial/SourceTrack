@@ -20,19 +20,7 @@ Current rule:
 - Treat migrations and live Supabase verification as source of truth.
 - Do not rely on `schema.sql` alone.
 
-### 2. Conversion route may need ref/source/via parity check
-
-`tracker/tracker.js` and `api/routes/track.js` support:
-
-- `ref_param`
-- `source_param`
-- `via_param`
-
-Session 78 should confirm whether `api/routes/conversion.js` also persists these on conversion events.
-
-This matters because conversion events should preserve fallback attribution params, not only pageview events.
-
-### 3. Dashboard widgets policy not verified
+### 2. Dashboard widgets policy not verified
 
 RLS policies are verified for:
 
@@ -49,7 +37,7 @@ Relevant future session:
 
 - Session 81 dashboard saved-report widgets
 
-### 4. No paid ad click-ID capture yet
+### 3. No paid ad click-ID capture yet
 
 Do not claim Cometly/Usermaven paid attribution parity.
 
@@ -69,7 +57,7 @@ Missing or unverified:
 
 These should be captured before claiming strong paid-ad attribution parity.
 
-### 5. No ad spend ingestion yet
+### 4. No ad spend ingestion yet
 
 Do not claim:
 
@@ -82,7 +70,7 @@ Do not claim:
 
 unless new code proves it.
 
-### 6. AI referrer detection can undercount
+### 5. AI referrer detection can undercount
 
 AI source detection depends on referrer. Some AI tools strip referrers.
 
@@ -94,7 +82,7 @@ Unsafe claim:
 
     SourceTrack has universal AI traffic detection.
 
-### 7. HogQL gotchas
+### 6. HogQL gotchas
 
 Avoid:
 
@@ -108,7 +96,7 @@ Prefer:
 - `countIf()`
 - qualified aliases
 
-### 8. Backup files can confuse audits
+### 7. Backup files can confuse audits
 
 Old `.bak` files may exist from prior sessions.
 
@@ -119,6 +107,10 @@ Before production readiness or broad audits, check:
 Do not commit unnecessary `.bak` files.
 
 ## Recently fixed
+
+### Conversion ref/source/via parity (Session 78)
+
+`api/routes/conversion.js` now persists `ref_param`, `source_param`, and `via_param` on conversion events, matching `api/routes/track.js`.
 
 ### Saved report request body bug
 

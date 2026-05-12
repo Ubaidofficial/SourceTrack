@@ -237,6 +237,7 @@ export default function Snippet() {
           <ul className="list-disc list-inside space-y-0.5">
             <li>Pageviews and session activity</li>
             <li>Traffic sources — UTM params, referrers, direct visits</li>
+            <li>ref/source/via URL params as attribution fallbacks</li>
             <li>AI platform traffic — ChatGPT, Claude, Perplexity, and others</li>
             <li>Visitor country and device type</li>
           </ul>

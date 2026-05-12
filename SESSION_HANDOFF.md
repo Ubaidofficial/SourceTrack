@@ -6,7 +6,7 @@ This file is intentionally short. It tells the next agent exactly where to conti
 
 ## Current branch
 
-`session-78-agent-docs-context`
+`session-78-utm-param-verification`
 
 ## Current main baseline
 
@@ -18,6 +18,15 @@ Latest known main commits:
 
 ## Last completed product work
 
+Session 78 (current):
+
+- Code-inspected tracker.js sends all UTM/ref/source/via/first-touch fields correctly — no tracker changes needed.
+- Fixed `/api/conversion` parity gap: added `ref_param`, `source_param`, `via_param` persistence.
+- Added `utm_content`, `utm_term`, `ref_param`, `source_param`, `via_param` to events.js SQL SELECT and top-level mapping.
+- Added 8 new detail cards to EventDebugger.jsx drawer: `utm_content`, `utm_term`, `ref_param`, `source_param`, `via_param`, `first_touch_source`, `first_touch_medium`, `first_touch_campaign`.
+- Updated Snippet.jsx copy to mention ref/source/via fallback support.
+- Updated DATA_CAPTURE_SPEC.md, KNOWN_ISSUES.md, SESSION_HANDOFF.md.
+
 Session 77:
 
 - Added/verified channel taxonomy v1.
@@ -26,77 +35,25 @@ Session 77:
 - Added `Conversions by Channel` Report Builder preset.
 - Fixed session report channel grouping bug.
 
-## Current task
+## Files changed in this session
 
-Create agent context docs so GPT, Claude, DeepSeek, and future agents can code faster with less repeated context gathering.
+- `api/routes/conversion.js` — added ref_param/source_param/via_param
+- `api/routes/events.js` — added utm_content/utm_term/ref_param/source_param/via_param to SQL SELECT and mapping
+- `dashboard/src/pages/EventDebugger.jsx` — added 8 new detail cards
+- `dashboard/src/pages/Snippet.jsx` — added ref/source/via fallback mention
+- `DATA_CAPTURE_SPEC.md` — updated conversion fields, removed known gap
+- `KNOWN_ISSUES.md` — removed conversion parity issue, moved to recently fixed
+- `SESSION_HANDOFF.md` — this file
 
-## Files created in this docs session
+## Still needs manual QA
 
-- `AGENT_BRIEF.md`
-- `ARCHITECTURE.md`
-- `DATA_CAPTURE_SPEC.md`
-- `SUPABASE_SCHEMA.md`
-- `QA_RUNBOOK.md`
-- `KNOWN_ISSUES.md`
-- `SESSION_HANDOFF.md`
-
-## Existing docs to keep
-
-- `RULES.md`
-- `SYSTEM.md`
-- `ATTRIBUTION.md`
-- `IDENTITY_DESIGN.md`
-- `PROGRESS.md`
-- `DEEPSEEK.md`
-
-## Important verified context
-
-- Supabase core tables exist:
-  - `sites`
-  - `companies`
-  - `company_members`
-  - `saved_reports`
-  - `dashboard_widgets`
-  - `admin_audit_log`
-  - `qa_notes`
-- RLS/policies verified for:
-  - `admin_audit_log`
-  - `companies`
-  - `company_members`
-  - `qa_notes`
-  - `saved_reports`
-  - `sites`
-- `dashboard_widgets` policy may still need work later.
-- `schema.sql` is stale; use migrations/live Supabase verification as truth.
-
-## Next product session
-
-Session 78: UTM/ref/source/via end-to-end verification.
-
-Goals:
-
-- Verify URL params flow from test URL to tracker payload.
-- Verify `/api/track` persists UTM/ref/source/via fields.
-- Verify Event Logger exposes raw fields.
-- Verify Report Builder can report on captured source/channel data.
-- Confirm conversion events carry first-touch fields.
-- Check/fix whether conversion events persist:
-  - `ref_param`
-  - `source_param`
-  - `via_param`
-
-## Session 78 test URLs
-
-Open these with API, dashboard, and static server running:
-
-    http://localhost:8080/sourcetrack-test.html?utm_source=google&utm_medium=cpc&utm_campaign=session78
-    http://localhost:8080/sourcetrack-test.html?ref=twitter
-    http://localhost:8080/sourcetrack-test.html?source=newsletter&via=email
-
-Then check:
-
-    http://localhost:5173/debugger
-    http://localhost:5173/report-builder
+- Verify conversion events carry ref_param/source_param/via_param in PostHog
+- Verify Event Logger shows new detail card fields populated
+- Verify Snippet.jsx copy renders correctly
+- Run the Session 78 test URLs:
+  - `http://localhost:8080/sourcetrack-test.html?utm_source=google&utm_medium=cpc&utm_campaign=session78`
+  - `http://localhost:8080/sourcetrack-test.html?ref=twitter`
+  - `http://localhost:8080/sourcetrack-test.html?source=newsletter&via=email`
 
 ## Standard checks
 
