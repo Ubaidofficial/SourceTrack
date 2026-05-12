@@ -6,7 +6,7 @@ const router = Router()
 
 router.get('/overview', validateSiteKey, async (req, res) => {
   try {
-    const siteKey = req.query.site_key || req.body?.site_key
+    const posthogSiteId = String(req.site.id)
     const days = Math.min(Math.max(parseInt(req.query.days) || 30, 1), 90)
     const dateTo = new Date().toISOString().slice(0, 10)
     const dateFrom = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
@@ -20,13 +20,13 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       aiSessions,
       nonAISessions
     ] = await Promise.all([
-      getFlexibleReport(siteKey, 'ai_platforms', dateFrom, dateTo, 'ai_source', 'ai_revenue', { has_ai_source: 'true' }),
-      getFlexibleReport(siteKey, 'ai_platforms', dateFrom, dateTo, 'ai_source', 'ai_conversions', { has_ai_source: 'true' }),
-      getFlexibleReport(siteKey, 'ai_platforms', dateFrom, dateTo, 'date', 'ai_revenue', { has_ai_source: 'true' }),
-      getFlexibleReport(siteKey, 'first_touch', dateFrom, dateTo, 'source', 'revenue', { has_ai_source: 'false' }),
-      getFlexibleReport(siteKey, 'first_touch', dateFrom, dateTo, 'source', 'conversions', { has_ai_source: 'false' }),
-      getFlexibleReport(siteKey, 'first_touch', dateFrom, dateTo, 'source', 'sessions', { has_ai_source: 'true' }),
-      getFlexibleReport(siteKey, 'first_touch', dateFrom, dateTo, 'source', 'sessions', { has_ai_source: 'false' })
+      getFlexibleReport(posthogSiteId, 'ai_platforms', dateFrom, dateTo, 'ai_source', 'ai_revenue', { has_ai_source: 'true' }),
+      getFlexibleReport(posthogSiteId, 'ai_platforms', dateFrom, dateTo, 'ai_source', 'ai_conversions', { has_ai_source: 'true' }),
+      getFlexibleReport(posthogSiteId, 'ai_platforms', dateFrom, dateTo, 'date', 'ai_revenue', { has_ai_source: 'true' }),
+      getFlexibleReport(posthogSiteId, 'first_touch', dateFrom, dateTo, 'source', 'revenue', { has_ai_source: 'false' }),
+      getFlexibleReport(posthogSiteId, 'first_touch', dateFrom, dateTo, 'source', 'conversions', { has_ai_source: 'false' }),
+      getFlexibleReport(posthogSiteId, 'first_touch', dateFrom, dateTo, 'source', 'sessions', { has_ai_source: 'true' }),
+      getFlexibleReport(posthogSiteId, 'first_touch', dateFrom, dateTo, 'source', 'sessions', { has_ai_source: 'false' })
     ])
 
     const aiConvByDim = {}

@@ -9,12 +9,7 @@ function esc(str) {
 
 router.get('/overview', async (req, res) => {
   try {
-    const siteKey = req.query.site_key
-    if (!siteKey) {
-      return res.status(400).json({ success: false, data: null, error: 'site_key is required' })
-    }
-
-    const safeSite = esc(siteKey)
+    const safeSite = esc(String(req.site.id))
 
     // Install status query
     const installSql = `

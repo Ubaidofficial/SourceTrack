@@ -8,15 +8,15 @@ function toHogDate(iso) {
   return iso.replace('T', ' ').replace(/\.\d+Z?$/, '').replace('Z', '')
 }
 
-function cacheKey(model, siteKey, dateFrom, dateTo) {
-  return `${model}:${siteKey}:${dateFrom}:${dateTo}`
+function cacheKey(model, siteId, dateFrom, dateTo) {
+  return `${model}:${siteId}:${dateFrom}:${dateTo}`
 }
 
 function esc(str) {
   return str.replace(/'/g, "''")
 }
 
-async function firstTouchAttribution(siteKey, dateFrom, dateTo) {
+async function firstTouchAttribution(siteId, dateFrom, dateTo) {
   const fromDate = toHogDate(dateFrom)
   const toDate = toHogDate(dateTo)
 
@@ -28,7 +28,7 @@ async function firstTouchAttribution(siteKey, dateFrom, dateTo) {
       COUNT(*) AS conversions,
       SUM(toFloat64OrZero(toString(properties.conversion_value))) AS revenue
     FROM events
-    WHERE properties.site_id = '${esc(siteKey)}'
+    WHERE properties.site_id = '${esc(siteId)}'
       AND event = '$conversion'
       AND timestamp >= toDateTime('${fromDate}')
       AND timestamp <= toDateTime('${toDate}')
@@ -47,7 +47,7 @@ async function firstTouchAttribution(siteKey, dateFrom, dateTo) {
   }))
 }
 
-async function lastTouchAttribution(siteKey, dateFrom, dateTo) {
+async function lastTouchAttribution(siteId, dateFrom, dateTo) {
   const fromDate = toHogDate(dateFrom)
   const toDate = toHogDate(dateTo)
 
@@ -59,7 +59,7 @@ async function lastTouchAttribution(siteKey, dateFrom, dateTo) {
       COUNT(*) AS conversions,
       SUM(toFloat64OrZero(toString(properties.conversion_value))) AS revenue
     FROM events
-    WHERE properties.site_id = '${esc(siteKey)}'
+    WHERE properties.site_id = '${esc(siteId)}'
       AND event = '$conversion'
       AND timestamp >= toDateTime('${fromDate}')
       AND timestamp <= toDateTime('${toDate}')
@@ -86,7 +86,7 @@ function isDirectCondition(tableAlias = 'events') {
   return `(${tableAlias}.properties.utm_source IS NULL OR ${tableAlias}.properties.utm_source = '' OR ${tableAlias}.properties.utm_source = 'direct')`
 }
 
-async function firstTouchNonDirectAttribution(siteKey, dateFrom, dateTo) {
+async function firstTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
   const fromDate = toHogDate(dateFrom)
   const toDate = toHogDate(dateTo)
 
@@ -104,7 +104,7 @@ async function firstTouchNonDirectAttribution(siteKey, dateFrom, dateTo) {
         argMin(properties.utm_medium, timestamp) AS utm_medium,
         argMin(properties.utm_campaign, timestamp) AS utm_campaign
       FROM events
-      WHERE properties.site_id = '${esc(siteKey)}'
+      WHERE properties.site_id = '${esc(siteId)}'
         AND event = '$pageview'
         AND properties.utm_source IS NOT NULL
         AND properties.utm_source != ''
@@ -113,7 +113,7 @@ async function firstTouchNonDirectAttribution(siteKey, dateFrom, dateTo) {
         AND timestamp <= toDateTime('${toDate}')
       GROUP BY distinct_id
     ) ft ON e.distinct_id = ft.distinct_id
-    WHERE e.properties.site_id = '${esc(siteKey)}'
+    WHERE e.properties.site_id = '${esc(siteId)}'
       AND e.event = '$conversion'
       AND e.timestamp >= toDateTime('${fromDate}')
       AND e.timestamp <= toDateTime('${toDate}')
@@ -132,7 +132,7 @@ async function firstTouchNonDirectAttribution(siteKey, dateFrom, dateTo) {
   }))
 }
 
-async function lastTouchNonDirectAttribution(siteKey, dateFrom, dateTo) {
+async function lastTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
   const fromDate = toHogDate(dateFrom)
   const toDate = toHogDate(dateTo)
 
@@ -150,7 +150,7 @@ async function lastTouchNonDirectAttribution(siteKey, dateFrom, dateTo) {
         argMax(properties.utm_medium, timestamp) AS utm_medium,
         argMax(properties.utm_campaign, timestamp) AS utm_campaign
       FROM events
-      WHERE properties.site_id = '${esc(siteKey)}'
+      WHERE properties.site_id = '${esc(siteId)}'
         AND event = '$pageview'
         AND properties.utm_source IS NOT NULL
         AND properties.utm_source != ''
@@ -159,7 +159,7 @@ async function lastTouchNonDirectAttribution(siteKey, dateFrom, dateTo) {
         AND timestamp <= toDateTime('${toDate}')
       GROUP BY distinct_id
     ) lt ON e.distinct_id = lt.distinct_id
-    WHERE e.properties.site_id = '${esc(siteKey)}'
+    WHERE e.properties.site_id = '${esc(siteId)}'
       AND e.event = '$conversion'
       AND e.timestamp >= toDateTime('${fromDate}')
       AND e.timestamp <= toDateTime('${toDate}')
@@ -182,7 +182,7 @@ async function lastTouchNonDirectAttribution(siteKey, dateFrom, dateTo) {
 // This implementation uses FIRST_VALUE(conversion_value) per user — not true multi-touch linear
 // as defined by ATTRIBUTION.md Part 2 ("equal credit distributed across all touchpoints").
 // Kept for reference; re‑enable only after implementing per-touchpoint credit distribution.
-async function linearAttribution(siteKey, dateFrom, dateTo) {
+async function linearAttribution(siteId, dateFrom, dateTo) {
   const fromDate = toHogDate(dateFrom)
   const toDate = toHogDate(dateTo)
 
@@ -208,18 +208,18 @@ async function linearAttribution(siteKey, dateFrom, dateTo) {
           (
             SELECT COUNT(*)
             FROM events pe
-            WHERE pe.properties.site_id = '${esc(siteKey)}'
+            WHERE pe.properties.site_id = '${esc(siteId)}'
               AND pe.event = '$pageview'
               AND pe.distinct_id = ce.distinct_id
           ) AS tp_count
         FROM events ce
-        WHERE ce.properties.site_id = '${esc(siteKey)}'
+        WHERE ce.properties.site_id = '${esc(siteId)}'
           AND ce.event = '$conversion'
           AND ce.timestamp >= toDateTime('${fromDate}')
           AND ce.timestamp <= toDateTime('${toDate}')
         GROUP BY ce.distinct_id
       ) cv ON e.distinct_id = cv.distinct_id
-      WHERE e.properties.site_id = '${esc(siteKey)}'
+      WHERE e.properties.site_id = '${esc(siteId)}'
         AND e.event = '$pageview'
         AND e.properties.utm_source IS NOT NULL
         AND e.properties.utm_source != ''
@@ -240,7 +240,7 @@ async function linearAttribution(siteKey, dateFrom, dateTo) {
   }))
 }
 
-async function aiPlatformAttribution(siteKey, dateFrom, dateTo) {
+async function aiPlatformAttribution(siteId, dateFrom, dateTo) {
   const fromDate = toHogDate(dateFrom)
   const toDate = toHogDate(dateTo)
 
@@ -250,7 +250,7 @@ async function aiPlatformAttribution(siteKey, dateFrom, dateTo) {
       COUNT(*) AS conversions,
       SUM(toFloat64OrZero(toString(properties.conversion_value))) AS revenue
     FROM events
-    WHERE properties.site_id = '${esc(siteKey)}'
+    WHERE properties.site_id = '${esc(siteId)}'
       AND event = '$conversion'
       AND properties.ai_source IS NOT NULL
       AND properties.ai_source != ''
@@ -269,30 +269,30 @@ async function aiPlatformAttribution(siteKey, dateFrom, dateTo) {
   }))
 }
 
-export async function getAttribution(siteKey, model, dateFrom, dateTo) {
-  const key = cacheKey(model, siteKey, dateFrom, dateTo)
+export async function getAttribution(siteId, model, dateFrom, dateTo) {
+  const key = cacheKey(model, siteId, dateFrom, dateTo)
   const cached = cache.get(key)
   if (cached) return cached
 
   let results
   switch (model) {
     case 'first_touch':
-      results = await firstTouchAttribution(siteKey, dateFrom, dateTo)
+      results = await firstTouchAttribution(siteId, dateFrom, dateTo)
       break
     case 'last_touch':
-      results = await lastTouchAttribution(siteKey, dateFrom, dateTo)
+      results = await lastTouchAttribution(siteId, dateFrom, dateTo)
       break
     case 'first_touch_non_direct':
-      results = await firstTouchNonDirectAttribution(siteKey, dateFrom, dateTo)
+      results = await firstTouchNonDirectAttribution(siteId, dateFrom, dateTo)
       break
     case 'last_touch_non_direct':
-      results = await lastTouchNonDirectAttribution(siteKey, dateFrom, dateTo)
+      results = await lastTouchNonDirectAttribution(siteId, dateFrom, dateTo)
       break
     case 'linear':
-      results = await linearAttribution(siteKey, dateFrom, dateTo)
+      results = await linearAttribution(siteId, dateFrom, dateTo)
       break
     case 'ai_platforms':
-      results = await aiPlatformAttribution(siteKey, dateFrom, dateTo)
+      results = await aiPlatformAttribution(siteId, dateFrom, dateTo)
       break
     default:
       throw new Error(`Unknown attribution model: ${model}`)
@@ -308,14 +308,14 @@ export async function getAttribution(siteKey, model, dateFrom, dateTo) {
  * Limited to 50,000 pageview events per query for performance.
  * Sessions are attributed by entry source (UTM source of the first pageview in the session).
  */
-export async function getSessionReport(siteKey, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null) {
-  const key = cacheKey(`session:${groupBy}:${metric}:${JSON.stringify(filters)}:${groupBy2 || ''}`, siteKey, dateFrom, dateTo)
+export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null) {
+  const key = cacheKey(`session:${groupBy}:${metric}:${JSON.stringify(filters)}:${groupBy2 || ''}`, siteId, dateFrom, dateTo)
   const cached = cache.get(key)
   if (cached) return cached
 
   const fromDate = toHogDate(dateFrom)
   const toDate = toHogDate(dateTo)
-  const safeSite = esc(siteKey)
+  const safeSite = esc(siteId)
 
   // Build filter clauses (same pattern as getFlexibleReport)
   let filterClauses = ''
@@ -491,8 +491,8 @@ export async function getSessionReport(siteKey, dateFrom, dateTo, groupBy, metri
 
 // Attribution explanation: for a given distinct_id, site, and model, return WHY
 // credit was assigned — the specific touchpoint, journey timeline, and model logic.
-export async function getAttributionExplanation(siteKey, model, distinctId) {
-  const safeSite = esc(siteKey)
+export async function getAttributionExplanation(siteId, model, distinctId) {
+  const safeSite = esc(siteId)
   const safeId = esc(distinctId)
 
   // 1. Fetch the conversion event for this visitor
@@ -775,15 +775,15 @@ const GRANULARITY_MAP = {
 // - 'first_seen_date': uses the visitor's first event timestamp (MIN(timestamp) per distinct_id)
 // - 'original_source_date': uses the first event timestamp where UTM source was present
 // Non-date dimensions (source, campaign, etc.) are unaffected by attributeBy.
-export async function getFlexibleReport(siteKey, model, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null, granularity = 'day', attributionWindow = null, attributeBy = 'conversion_date') {
+export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null, granularity = 'day', attributionWindow = null, attributeBy = 'conversion_date') {
   const filterKey = JSON.stringify(filters) + groupBy2 + granularity + attributionWindow + attributeBy
-  const key = cacheKey(`${model}:${groupBy}:${metric}:${filterKey}`, siteKey, dateFrom, dateTo)
+  const key = cacheKey(`${model}:${groupBy}:${metric}:${filterKey}`, siteId, dateFrom, dateTo)
   const cached = cache.get(key)
   if (cached) return cached
 
   const fromDate = toHogDate(dateFrom)
   const toDate = toHogDate(dateTo)
-  const safeSite = esc(siteKey)
+  const safeSite = esc(siteId)
 
   // Determine reference timestamp and optional JOIN for non-conversion_date attribution
   let refTs = 'timestamp'
@@ -937,7 +937,7 @@ export async function getFlexibleReport(siteKey, model, dateFrom, dateTo, groupB
     case 'conversion_sessions':
       // Session metrics are derived on read from pageview events.
       // They bypass the standard attribution SQL path and use getSessionReport.
-      return getSessionReport(siteKey, dateFrom, dateTo, groupBy, metric, filters, groupBy2)
+      return getSessionReport(siteId, dateFrom, dateTo, groupBy, metric, filters, groupBy2)
     default:
       throw new Error(`Unknown metric: ${metric}`)
   }
@@ -1153,7 +1153,7 @@ export async function getFlexibleReport(siteKey, model, dateFrom, dateTo, groupB
   })
 
   if (metric === 'conversion_rate' && results.length > 0) {
-    const sessKey = cacheKey(`sessions:${groupBy}${groupBy2 || ''}`, siteKey, dateFrom, dateTo)
+    const sessKey = cacheKey(`sessions:${groupBy}${groupBy2 || ''}`, siteId, dateFrom, dateTo)
     let sessionsByDim = cache.get(sessKey)
     if (!sessionsByDim) {
       const sessSql = `

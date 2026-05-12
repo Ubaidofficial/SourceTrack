@@ -4,3 +4,19 @@ dist/
 .DS_Store
 *.log
 tracker/tracker.min.js
+
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Local debug backups
+*.bak
+*.bak.*
+*.bak-*
+api/index.js.bak*
+tracker/*.bak*
+
+# Build outputs
+dist/
+dashboard/dist/

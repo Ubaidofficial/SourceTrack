@@ -16,10 +16,7 @@ function statusFor(conversions) {
 
 async function overview(req, res) {
   try {
-    const siteKey = req.query.site_key || req.body?.site_key
-    if (!siteKey) {
-      return res.status(400).json({ success: false, data: null, error: 'site_key is required' })
-    }
+    const posthogSiteId = String(req.site.id)
 
     const dimension = req.query.dimension || 'source'
     if (!ALLOWED_DIMS.has(dimension)) {
@@ -37,9 +34,9 @@ async function overview(req, res) {
     const prevDateFrom = fmtDate(new Date(today - (days + 1) * 86400000))
 
     const [currentRevenue, currentConversions, prevRevenue] = await Promise.all([
-      getFlexibleReport(siteKey, 'last_touch', dateFrom, dateTo, dimension, 'revenue', {}),
-      getFlexibleReport(siteKey, 'last_touch', dateFrom, dateTo, dimension, 'conversions', {}),
-      getFlexibleReport(siteKey, 'last_touch', prevDateFrom, prevDateTo, dimension, 'revenue', {})
+      getFlexibleReport(posthogSiteId, 'last_touch', dateFrom, dateTo, dimension, 'revenue', {}),
+      getFlexibleReport(posthogSiteId, 'last_touch', dateFrom, dateTo, dimension, 'conversions', {}),
+      getFlexibleReport(posthogSiteId, 'last_touch', prevDateFrom, prevDateTo, dimension, 'revenue', {})
     ])
 
     const conversionsMap = {}

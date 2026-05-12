@@ -16,9 +16,10 @@ function toHogDate(iso) {
  */
 export async function sessionsOverview(req, res) {
   try {
-    const { site_key, date_from, date_to } = req.query
-    if (!site_key || !date_from || !date_to) {
-      return res.status(400).json({ success: false, data: null, error: 'site_key, date_from, and date_to are required' })
+    const { date_from, date_to } = req.query
+    const posthogSiteId = String(req.site.id)
+    if (!date_from || !date_to) {
+      return res.status(400).json({ success: false, data: null, error: 'date_from and date_to are required' })
     }
 
     const fromDate = toHogDate(date_from)
@@ -34,7 +35,7 @@ export async function sessionsOverview(req, res) {
         properties.utm_medium,
         properties.utm_campaign
       FROM events
-      WHERE properties.site_id = '${esc(site_key)}'
+      WHERE properties.site_id = '${esc(posthogSiteId)}'
         AND event = '$pageview'
         AND timestamp >= toDateTime('${fromDate}')
         AND timestamp <= toDateTime('${toDate}')
@@ -51,7 +52,7 @@ export async function sessionsOverview(req, res) {
         timestamp,
         properties.conversion_value
       FROM events
-      WHERE properties.site_id = '${esc(site_key)}'
+      WHERE properties.site_id = '${esc(posthogSiteId)}'
         AND event = '$conversion'
         AND timestamp >= toDateTime('${fromDate}')
         AND timestamp <= toDateTime('${toDate}')
@@ -141,9 +142,10 @@ export async function sessionsOverview(req, res) {
  */
 export async function visitorSessions(req, res) {
   try {
-    const { site_key, distinct_id } = req.query
-    if (!site_key || !distinct_id) {
-      return res.status(400).json({ success: false, data: null, error: 'site_key and distinct_id are required' })
+    const { distinct_id } = req.query
+    const posthogSiteId = String(req.site.id)
+    if (!distinct_id) {
+      return res.status(400).json({ success: false, data: null, error: 'distinct_id is required' })
     }
 
     const sql = `
@@ -156,7 +158,7 @@ export async function visitorSessions(req, res) {
         properties.utm_campaign,
         properties.conversion_value
       FROM events
-      WHERE properties.site_id = '${esc(site_key)}'
+      WHERE properties.site_id = '${esc(posthogSiteId)}'
         AND distinct_id = '${esc(distinct_id)}'
         AND (event = '$pageview' OR event = '$conversion')
       ORDER BY timestamp ASC

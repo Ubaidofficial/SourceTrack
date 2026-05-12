@@ -152,14 +152,14 @@ router.post('/preview', async (req, res) => {
       return res.status(404).json({ success: false, data: null, error: 'Site not found' })
     }
 
-    // Get install status via PostHog
+    // Get install status via PostHog — filter by internal site.id
     const { queryHogQL } = await import('../lib/posthog.js')
     let installInfo = null
     try {
       const rows = await queryHogQL(`
         SELECT event, timestamp
         FROM events
-        WHERE properties.site_id = '${site.site_key.replace(/'/g, "''")}'
+        WHERE properties.site_id = '${String(site.id).replace(/'/g, "''")}'
         ORDER BY timestamp DESC
         LIMIT 1
       `, 'admin_preview_install')
@@ -186,7 +186,7 @@ router.post('/preview', async (req, res) => {
       const ecRows = await queryHogQL(`
         SELECT count()
         FROM events
-        WHERE properties.site_id = '${site.site_key.replace(/'/g, "''")}'
+        WHERE properties.site_id = '${String(site.id).replace(/'/g, "''")}'
           AND timestamp >= now() - INTERVAL 24 HOUR
       `, 'admin_preview_recent')
       recentEventCount = Number(ecRows?.[0]?.[0]) || 0
@@ -238,7 +238,7 @@ router.get('/preview/:siteKey', async (req, res) => {
     }
 
     const { queryHogQL } = await import('../lib/posthog.js')
-    const escapedKey = siteKey.replace(/'/g, "''")
+    const posthogSiteId = String(site.id).replace(/'/g, "''")
 
     // KPI summary: revenue, conversions, sessions, leads (last 30 days)
     let kpis = { revenue: 0, conversions: 0, sessions: 0, leads: 0 }
@@ -250,7 +250,7 @@ router.get('/preview/:siteKey', async (req, res) => {
           countIf(event = '$pageview') AS sessions,
           count(DISTINCT distinct_id) AS leads
         FROM events
-        WHERE properties.site_id = '${escapedKey}'
+        WHERE properties.site_id = '${posthogSiteId}'
           AND timestamp >= now() - INTERVAL 30 DAY
       `, 'admin_preview_kpis')
       if (kpiRows && kpiRows.length > 0) {
@@ -273,7 +273,7 @@ router.get('/preview/:siteKey', async (req, res) => {
           sumIf(toFloat64OrZero(toString(properties.conversion_value)), event = '$conversion') AS revenue,
           countIf(event = '$conversion') AS conversions
         FROM events
-        WHERE properties.site_id = '${escapedKey}'
+        WHERE properties.site_id = '${posthogSiteId}'
           AND timestamp >= now() - INTERVAL 30 DAY
         GROUP BY source
         HAVING revenue > 0
@@ -293,7 +293,7 @@ router.get('/preview/:siteKey', async (req, res) => {
       const instRows = await queryHogQL(`
         SELECT event, timestamp
         FROM events
-        WHERE properties.site_id = '${escapedKey}'
+        WHERE properties.site_id = '${posthogSiteId}'
         ORDER BY timestamp DESC
         LIMIT 1
       `, 'admin_preview_overview')
@@ -358,14 +358,14 @@ router.get('/site-detail', async (req, res) => {
       ownerEmail = user?.email || null
     } catch { /* non-critical */ }
 
-    // Check install status — reuse existing PostHog query pattern
+    // Check install status — filter by internal site.id
     const { queryHogQL } = await import('../lib/posthog.js')
     let installStatus = null
     try {
       const rows = await queryHogQL(`
         SELECT event, timestamp, properties.page_url AS page_url
         FROM events
-        WHERE properties.site_id = '${siteKey.replace(/'/g, "''")}'
+        WHERE properties.site_id = '${String(site.id).replace(/'/g, "''")}'
         ORDER BY timestamp DESC
         LIMIT 1
       `, 'admin_site_detail')

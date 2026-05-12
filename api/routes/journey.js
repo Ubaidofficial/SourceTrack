@@ -7,7 +7,7 @@ function esc(str) {
 export async function journey(req, res) {
   try {
     const { visitorId } = req.params
-    const siteKey = req.query.site_key || req.body?.site_key
+    const posthogSiteId = String(req.site.id)
     const limit = Math.min(Math.max(parseInt(req.query.limit) || 500, 1), 500)
 
     if (!visitorId) {
@@ -29,7 +29,7 @@ export async function journey(req, res) {
         properties.device_type,
         properties.country
       FROM events
-      WHERE properties.site_id = '${esc(siteKey)}'
+      WHERE properties.site_id = '${esc(posthogSiteId)}'
         AND distinct_id = '${esc(visitorId)}'
       ORDER BY timestamp ASC
       LIMIT ${limit}

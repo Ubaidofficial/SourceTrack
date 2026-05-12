@@ -15,7 +15,7 @@ const ALLOWED_ATTRIBUTE_BY = new Set(['conversion_date', 'first_seen_date', 'ori
 export async function attribution(req, res) {
   try {
     const { model, date_from, date_to, group_by, metric } = req.query
-    const siteKey = req.query.site_key || req.body?.site_key
+    const posthogSiteId = String(req.site.id)
 
     if (!model || !ALLOWED_MODELS.has(model)) {
       return res.status(400).json({
@@ -107,7 +107,7 @@ export async function attribution(req, res) {
       if (req.query.filter_has_ai_source) filters.has_ai_source = req.query.filter_has_ai_source
       if (req.query.filter_min_conversions) filters.min_conversions = req.query.filter_min_conversions
 
-      const results = await getFlexibleReport(siteKey, model, date_from, date_to, group_by, metric, filters,
+      const results = await getFlexibleReport(posthogSiteId, model, date_from, date_to, group_by, metric, filters,
         req.query.group_by2 || null,
         req.query.time_granularity || 'day',
         req.query.attribution_window || null,
@@ -129,7 +129,7 @@ export async function attribution(req, res) {
       })
     }
 
-    const results = await getAttribution(siteKey, model, date_from, date_to)
+    const results = await getAttribution(posthogSiteId, model, date_from, date_to)
 
     res.status(200).json({
       success: true,
@@ -152,6 +152,7 @@ export async function attribution(req, res) {
 export async function attributionExplain(req, res) {
   try {
     const { site_key, model, distinct_id } = req.query
+    const posthogSiteId = String(req.site.id)
 
     if (!site_key || !model || !distinct_id) {
       return res.status(400).json({
@@ -169,7 +170,7 @@ export async function attributionExplain(req, res) {
       })
     }
 
-    const explanation = await getAttributionExplanation(site_key, model, distinct_id)
+    const explanation = await getAttributionExplanation(posthogSiteId, model, distinct_id)
 
     if (!explanation) {
       return res.status(404).json({

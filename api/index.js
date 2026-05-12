@@ -36,6 +36,55 @@ import { billingWebhookHandler, billingRouter } from './routes/billing.js'
 import { sessionsOverview, visitorSessions } from './routes/sessions.js'
 
 const app = express()
+
+
+
+
+
+
+// Session 70 hard CORS fix for pixel API routes
+app.use((req, res, next) => {
+  const isPixelRoute =
+    req.path === '/api/track' ||
+    req.path === '/track' ||
+    req.path.includes('/tracking') ||
+    req.path.includes('/pageview') ||
+    req.path.includes('/tracker');
+
+  if (isPixelRoute) {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.header('Access-Control-Max-Age', '86400');
+    res.header('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+
+  if (isPixelRoute && req.method === 'OPTIONS') {
+    return res.status(200).send('OK');
+  }
+
+  next();
+});
+// Session 70 global pixel CORS fix
+app.use((req, res, next) => {
+  if (
+    req.path.includes('/track') ||
+    req.path.includes('/pageview') ||
+    req.path.includes('/tracking') ||
+    req.path.includes('/tracker')
+  ) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+
+  next();
+});
 const PORT = process.env.PORT || 3000
 
 if (!process.env.POSTHOG_API_KEY) {
@@ -103,9 +152,26 @@ async function isAllowedOrigin(origin) {
 }
 
 // 1. helmet
-app.use(helmet())
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }))
 
 // 1b. Static tracker files (before body parsing, public)
+
+// Allow SourceTrack pixel assets to load on customer websites
+
+// Root alias required by tracker/loader.min.js
+app.get('/tracker.min.js', (req, res) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.type('application/javascript')
+  res.sendFile(process.cwd() + '/tracker/tracker.min.js')
+})
+
+app.use('/tracker', (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  next()
+})
+
 app.use('/tracker', express.static('tracker'))
 
 // 2. Stripe webhook (MUST be before express.json)
@@ -163,6 +229,89 @@ app.get('/health', (_req, res) => {
 app.use((_err, _req, res, _next) => {
   res.status(500).json({ success: false, data: null, error: 'Internal server error' })
 })
+
+
+
+// Session 70 root /track alias
+// Tracker currently posts to /track, but backend routes are under /api.
+app.post('/track', express.json({ limit: '100kb' }), async (req, res) => {
+  try {
+    const fetch = global.fetch || (await import('node-fetch')).default;
+
+    const response = await fetch('http://localhost:' + (process.env.PORT || 3000) + '/api/track', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Origin': req.headers.origin || ''
+      },
+      body: JSON.stringify(req.body || {})
+    });
+
+    const text = await response.text();
+    res.status(response.status);
+
+    response.headers.forEach((value, key) => {
+      if (!['content-encoding', 'content-length', 'transfer-encoding'].includes(key.toLowerCase())) {
+        res.setHeader(key, value);
+      }
+    });
+
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+
+    try {
+      return res.json(JSON.parse(text));
+    } catch {
+      return res.send(text);
+    }
+  } catch (err) {
+    console.error('Root /track alias failed:', err);
+    return res.status(500).json({
+      success: false,
+      error: 'Track alias failed'
+    });
+  }
+});
+
+
+
+
+// Session 70 /api/events alias to avoid browser/adblock blocking /track
+app.post('/api/events', express.json({ limit: '100kb' }), async (req, res) => {
+  try {
+    const fetch = global.fetch || (await import('node-fetch')).default;
+
+    const response = await fetch('http://localhost:' + (process.env.PORT || 3000) + '/api/track', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Origin': req.headers.origin || ''
+      },
+      body: JSON.stringify(req.body || {})
+    });
+
+    const text = await response.text();
+
+    res.status(response.status);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+
+    try {
+      return res.json(JSON.parse(text));
+    } catch {
+      return res.send(text);
+    }
+  } catch (err) {
+    console.error('/api/events alias failed:', err);
+    return res.status(500).json({
+      success: false,
+      error: 'Events alias failed'
+    });
+  }
+});
+
 
 app.listen(PORT, () => {
   process.stdout.write(`TrackIQ running on port ${PORT}\n`)

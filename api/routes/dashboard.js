@@ -11,7 +11,7 @@ function esc(str) {
 
 router.get('/overview', validateSiteKey, async (req, res) => {
   try {
-    const siteKey = req.query.site_key || req.body?.site_key
+    const posthogSiteId = String(req.site.id)
     const days = Math.min(Math.max(parseInt(req.query.days) || 30, 1), 90)
     const dateTo = new Date().toISOString().slice(0, 10)
     const dateFrom = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
@@ -41,28 +41,28 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       convTypeRows,
       stageRows
     ] = await Promise.all([
-      getFlexibleReport(siteKey, 'first_touch', dateFrom, dateTo, 'source', 'revenue', {}),
+      getFlexibleReport(posthogSiteId, 'first_touch', dateFrom, dateTo, 'source', 'revenue', {}),
       // Option 1: query conversions separately alongside revenue so frontend tables show real counts
-      getFlexibleReport(siteKey, 'first_touch', dateFrom, dateTo, 'source', 'conversions', {}),
-      getFlexibleReport(siteKey, 'first_touch', dateFrom, dateTo, 'source', 'sessions', {}),
-      getFlexibleReport(siteKey, 'first_touch', dateFrom, dateTo, 'source', 'leads', {}),
-      getFlexibleReport(siteKey, 'first_touch', prevDateFrom, prevDateTo, 'source', 'revenue', {}),
-      getFlexibleReport(siteKey, 'first_touch', prevDateFrom, prevDateTo, 'source', 'leads', {}),
-      getFlexibleReport(siteKey, 'ai_platforms', dateFrom, dateTo, 'ai_source', 'ai_revenue', { has_ai_source: 'true' }),
-      getFlexibleReport(siteKey, 'ai_platforms', dateFrom, dateTo, 'ai_source', 'ai_conversions', { has_ai_source: 'true' }),
-      getFlexibleReport(siteKey, 'ai_platforms', dateFrom, dateTo, 'date', 'ai_revenue', { has_ai_source: 'true' }),
-      getFlexibleReport(siteKey, 'first_touch', dateFrom, dateTo, 'landing_page', 'revenue', {}),
-      getFlexibleReport(siteKey, 'last_touch', dateFrom, dateTo, 'campaign', 'revenue', {}),
-      getFlexibleReport(siteKey, 'first_touch', dateFrom, dateTo, 'date', 'revenue', {}),
-      getAttribution(siteKey, 'first_touch', dateFrom, dateTo),
-      getAttribution(siteKey, 'last_touch', dateFrom, dateTo),
-      getAttribution(siteKey, 'first_touch_non_direct', dateFrom, dateTo),
-      getAttribution(siteKey, 'last_touch_non_direct', dateFrom, dateTo),
-      getAttribution(siteKey, 'ai_platforms', dateFrom, dateTo),
+      getFlexibleReport(posthogSiteId, 'first_touch', dateFrom, dateTo, 'source', 'conversions', {}),
+      getFlexibleReport(posthogSiteId, 'first_touch', dateFrom, dateTo, 'source', 'sessions', {}),
+      getFlexibleReport(posthogSiteId, 'first_touch', dateFrom, dateTo, 'source', 'leads', {}),
+      getFlexibleReport(posthogSiteId, 'first_touch', prevDateFrom, prevDateTo, 'source', 'revenue', {}),
+      getFlexibleReport(posthogSiteId, 'first_touch', prevDateFrom, prevDateTo, 'source', 'leads', {}),
+      getFlexibleReport(posthogSiteId, 'ai_platforms', dateFrom, dateTo, 'ai_source', 'ai_revenue', { has_ai_source: 'true' }),
+      getFlexibleReport(posthogSiteId, 'ai_platforms', dateFrom, dateTo, 'ai_source', 'ai_conversions', { has_ai_source: 'true' }),
+      getFlexibleReport(posthogSiteId, 'ai_platforms', dateFrom, dateTo, 'date', 'ai_revenue', { has_ai_source: 'true' }),
+      getFlexibleReport(posthogSiteId, 'first_touch', dateFrom, dateTo, 'landing_page', 'revenue', {}),
+      getFlexibleReport(posthogSiteId, 'last_touch', dateFrom, dateTo, 'campaign', 'revenue', {}),
+      getFlexibleReport(posthogSiteId, 'first_touch', dateFrom, dateTo, 'date', 'revenue', {}),
+      getAttribution(posthogSiteId, 'first_touch', dateFrom, dateTo),
+      getAttribution(posthogSiteId, 'last_touch', dateFrom, dateTo),
+      getAttribution(posthogSiteId, 'first_touch_non_direct', dateFrom, dateTo),
+      getAttribution(posthogSiteId, 'last_touch_non_direct', dateFrom, dateTo),
+      getAttribution(posthogSiteId, 'ai_platforms', dateFrom, dateTo),
       queryHogQL(`
         SELECT event, timestamp, properties.page_url AS page_url
         FROM events
-        WHERE properties.site_id = '${esc(siteKey)}'
+        WHERE properties.site_id = '${esc(posthogSiteId)}'
         ORDER BY timestamp DESC
         LIMIT 1
       `, 'dash_install'),
@@ -74,7 +74,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
           COUNT(CASE WHEN timestamp >= now() - INTERVAL 1 HOUR THEN 1 END) AS count_hour,
           MAX(timestamp) AS last_event
         FROM events
-        WHERE properties.site_id = '${esc(siteKey)}'
+        WHERE properties.site_id = '${esc(posthogSiteId)}'
           AND event = '$pageview'
       `, 'dash_alerts'),
       queryHogQL(`
@@ -83,7 +83,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
           COUNT(*) AS count,
           SUM(toFloat64OrZero(toString(properties.conversion_value))) AS revenue
         FROM events
-        WHERE properties.site_id = '${esc(siteKey)}'
+        WHERE properties.site_id = '${esc(posthogSiteId)}'
           AND event = '$conversion'
           AND timestamp >= toDateTime('${dateFrom} 00:00:00')
           AND timestamp <= toDateTime('${dateTo} 23:59:59')
@@ -96,7 +96,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
           COUNT(*) AS count,
           SUM(toFloat64OrZero(toString(properties.conversion_value))) AS revenue
         FROM events
-        WHERE properties.site_id = '${esc(siteKey)}'
+        WHERE properties.site_id = '${esc(posthogSiteId)}'
           AND event = '$conversion'
           AND properties.ingestion_method = 'offline'
           AND properties.conversion_type IN ('lead_created', 'qualified', 'opportunity', 'closed_won')

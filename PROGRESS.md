@@ -1903,6 +1903,58 @@ The 10 rules (R1-R10) govern coding behavior per session, not retrospective code
 - No drag/drop widget builder
 - No multi-dashboard
 - No new attribution models
+
+## Session 69A — Migration Review + Hardening
+
+**Session type:** Migration safety review and hardening (no SQL applied).
+
+**Issues found in Session 68 migration:**
+- **6 `DROP TABLE ... CASCADE` operations** — unacceptable for a safe additive migration. Replaced with `ALTER TABLE ADD COLUMN IF NOT EXISTS` for all 6 shell tables.
+- **`site_key` kept as integer** — incompatible with onboarding which generates UUID strings via `crypto.randomUUID()`. Converted to `text` type using `USING site_key::text` (preserves legacy value `1` as `'1'`). Added `DEFAULT gen_random_uuid()::text` for future inserts.
+- **Accidental `pg` dependency** — installed in Session 68 for QA connection attempts. Removed from `node_modules` (was never in `package.json`).
+
+**Hardened migration:** `supabase/migration_session_68_schema_alignment.sql` updated:
+- Zero `DROP TABLE`, zero `CASCADE`, zero `DELETE FROM`
+- `site_key` converted integer → text (backward-compatible)
+- All 6 shell tables repaired via `ALTER TABLE ADD COLUMN IF NOT EXISTS` (idempotent)
+- All sites columns added with safe backfills
+- Default company + membership created for legacy owner
+
+**Status:** Migration hardened — NOT yet applied. Manual DB password or SQL Editor required.
+
+**Runtime QA:** Still pending (blocked by migration + PostHog TLS).
+
+
+## Session 66 — Fix Site Identity Mismatch in HogQL Analytics Queries
+
+**Session type:** Surgical bug-fix (no new features).
+
+**Problem:** Event ingestion stored `req.site.id` as PostHog `properties.site_id`, but analytics routes passed public `site_key` into HogQL event filters. Since `sites.id` and `sites.site_key` are independent UUIDs (`gen_random_uuid()`), queries filtered by a different identifier than what ingestion stored — silently returning empty data.
+
+**Fix:** All analytics routes now use `req.site.id` for PostHog HogQL event filtering, consistent with ingestion.
+
+**Files modified:**
+- `api/routes/dashboard.js` — `siteKey` (query param) → `posthogSiteId` (`req.site.id`) for all `getFlexibleReport`/`getAttribution`/raw HogQL calls
+- `api/routes/attribution.js` — `siteKey` (query param) → `posthogSiteId` (`req.site.id`) for engine calls
+- `api/routes/campaigns.js` — `siteKey` → `posthogSiteId` for `getFlexibleReport` calls
+- `api/routes/integrations.js` — `esc(siteKey)` → `esc(String(req.site.id))` for all raw HogQL
+- `api/routes/ai-analytics.js` — `siteKey` → `posthogSiteId` for `getFlexibleReport` calls
+- `api/routes/sessions.js` — `esc(site_key)` → `esc(posthogSiteId)` for all raw HogQL
+- `api/routes/export.js` — `siteKey` → `posthogSiteId` for `getFlexibleReport`
+- `api/routes/journey.js` — `esc(siteKey)` → `esc(posthogSiteId)` for raw HogQL
+- `api/routes/admin.js` — `site.site_key` → `String(site.id)` for all HogQL event queries in preview endpoints
+- `api/lib/attribution-engine.js` — renamed `siteKey` → `siteId` parameter across all exported and internal functions
+
+**Unchanged by design:**
+- Public `site_key` remains the pixel/API lookup key and frontend query param
+- `validateSiteKey` middleware looks up sites by public `site_key`, sets `req.site.id`
+- Event ingestion continues storing `req.site.id` as `properties.site_id`
+- Frontend continues sending `site_key` in query params (backward compatible)
+- `events.js`, `install.js`, `leads-server.js` already used correct pattern — unchanged
+- All frontend files unchanged
+
+**Runtime QA required:** Verify with live authenticated browser/API testing that all analytics surfaces now return data.
+
 - No no-script install paths
 - No backend reporting changes
 - No Cometly parity claims

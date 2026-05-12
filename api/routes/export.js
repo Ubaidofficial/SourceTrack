@@ -16,7 +16,7 @@ function escapeCsv(val) {
 router.get('/report', validateSiteKey, async (req, res) => {
   try {
     const { model, date_from, date_to, group_by, metric } = req.query
-    const siteKey = req.query.site_key || req.body?.site_key
+    const posthogSiteId = String(req.site.id)
 
     if (!model || !date_from || !date_to || !group_by || !metric) {
       return res.status(400).json({ success: false, data: null, error: 'model, date_from, date_to, group_by, metric are required' })
@@ -33,7 +33,7 @@ router.get('/report', validateSiteKey, async (req, res) => {
     if (req.query.filter_has_ai_source) filters.has_ai_source = req.query.filter_has_ai_source
     if (req.query.filter_min_conversions) filters.min_conversions = req.query.filter_min_conversions
 
-    const results = await getFlexibleReport(siteKey, model, date_from, date_to, group_by, metric, filters)
+    const results = await getFlexibleReport(posthogSiteId, model, date_from, date_to, group_by, metric, filters)
 
     if (!results || results.length === 0) {
       return res.status(200)
