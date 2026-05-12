@@ -47,6 +47,8 @@ Session 77:
 
 ## Still needs manual QA
 
+Manual QA items are tracked in `MANUAL_QA_BACKLOG.md`.
+
 - Verify conversion events carry ref_param/source_param/via_param in PostHog
 - Verify Event Logger shows new detail card fields populated
 - Verify Snippet.jsx copy renders correctly
