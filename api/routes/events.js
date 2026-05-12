@@ -4,16 +4,76 @@ import { queryHogQL } from '../lib/posthog.js'
 
 const router = Router()
 
-function esc(str) {
-  return str.replace(/'/g, "''")
+function esc(value = '') {
+  return String(value).replace(/'/g, "''")
+}
+
+function isValidDate(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))
+}
+
+function clampLimit(value) {
+  const n = Number.parseInt(value, 10)
+  if (!Number.isFinite(n)) return 100
+  return Math.max(1, Math.min(n, 500))
 }
 
 router.get('/latest', validateSiteKey, async (req, res) => {
   try {
+    const siteId = esc(req.site.id)
+    const {
+      event_type,
+      source,
+      date_from,
+      date_to,
+      search,
+      limit
+    } = req.query
+
+    const where = [`properties.site_id = '${siteId}'`]
+
+    if (event_type && event_type !== 'all') {
+      where.push(`event = '${esc(event_type)}'`)
+    }
+
+    if (source) {
+      const safeSource = esc(String(source).trim().toLowerCase())
+      where.push(`(
+        lower(COALESCE(toString(properties.utm_source), '')) = '${safeSource}'
+        OR lower(COALESCE(toString(properties.first_touch_source), '')) = '${safeSource}'
+        OR lower(COALESCE(toString(properties.ai_source), '')) = '${safeSource}'
+      )`)
+    }
+
+    if (isValidDate(date_from)) {
+      where.push(`timestamp >= toDateTime('${esc(date_from)} 00:00:00')`)
+    }
+
+    if (isValidDate(date_to)) {
+      where.push(`timestamp <= toDateTime('${esc(date_to)} 23:59:59')`)
+    }
+
+    if (search) {
+      const safeSearch = esc(String(search).trim().toLowerCase())
+      where.push(`(
+        lower(toString(event)) LIKE '%${safeSearch}%'
+        OR lower(toString(distinct_id)) LIKE '%${safeSearch}%'
+        OR lower(COALESCE(toString(properties.page_url), '')) LIKE '%${safeSearch}%'
+        OR lower(COALESCE(toString(properties.referrer), '')) LIKE '%${safeSearch}%'
+        OR lower(COALESCE(toString(properties.utm_source), '')) LIKE '%${safeSearch}%'
+        OR lower(COALESCE(toString(properties.utm_medium), '')) LIKE '%${safeSearch}%'
+        OR lower(COALESCE(toString(properties.utm_campaign), '')) LIKE '%${safeSearch}%'
+        OR lower(COALESCE(toString(properties.ai_source), '')) LIKE '%${safeSearch}%'
+        OR lower(COALESCE(toString(properties.conversion_type), '')) LIKE '%${safeSearch}%'
+        OR lower(COALESCE(toString(properties.ingestion_method), '')) LIKE '%${safeSearch}%'
+      )`)
+    }
+
     const sql = `
       SELECT
         event,
         timestamp,
+        distinct_id,
         properties.page_url AS page_url,
         properties.referrer AS referrer,
         properties.ai_source AS ai_source,
@@ -23,32 +83,50 @@ router.get('/latest', validateSiteKey, async (req, res) => {
         properties.utm_source AS utm_source,
         properties.utm_medium AS utm_medium,
         properties.utm_campaign AS utm_campaign,
-        properties.conversion_value AS conversion_value
+        properties.first_touch_source AS first_touch_source,
+        properties.first_touch_medium AS first_touch_medium,
+        properties.first_touch_campaign AS first_touch_campaign,
+        properties.conversion_type AS conversion_type,
+        properties.conversion_value AS conversion_value,
+        properties.ingestion_method AS ingestion_method,
+        properties AS raw_properties
       FROM events
-      WHERE properties.site_id = '${esc(req.site.id)}'
+      WHERE ${where.join('\n        AND ')}
       ORDER BY timestamp DESC
-      LIMIT 50
+      LIMIT ${clampLimit(limit)}
     `
 
     const rows = await queryHogQL(sql, 'events_latest')
 
     const events = rows.map(([
-      event, timestamp, pageUrl, referrer,
+      event, timestamp, distinctId, pageUrl, referrer,
       aiSource, isConversion, deviceType, country,
-      utmSource, utmMedium, utmCampaign, conversionValue
+      utmSource, utmMedium, utmCampaign,
+      firstTouchSource, firstTouchMedium, firstTouchCampaign,
+      conversionType, conversionValue, ingestionMethod, rawProperties
     ]) => ({
       event,
       timestamp,
+      distinct_id: distinctId || null,
       page_url: pageUrl || null,
       referrer: referrer || null,
       ai_source: aiSource || null,
-      is_conversion: isConversion === true || isConversion === 'true' || isConversion === 1,
+      is_conversion: event === '$conversion' || isConversion === true || isConversion === 'true' || isConversion === 1,
       device_type: deviceType || null,
       country: country || null,
+      source: utmSource || firstTouchSource || null,
+      medium: utmMedium || firstTouchMedium || null,
+      campaign: utmCampaign || firstTouchCampaign || null,
       utm_source: utmSource || null,
       utm_medium: utmMedium || null,
       utm_campaign: utmCampaign || null,
-      conversion_value: conversionValue ? Number(conversionValue) || 0 : null
+      first_touch_source: firstTouchSource || null,
+      first_touch_medium: firstTouchMedium || null,
+      first_touch_campaign: firstTouchCampaign || null,
+      conversion_type: conversionType || null,
+      conversion_value: conversionValue ? Number(conversionValue) || 0 : null,
+      ingestion_method: ingestionMethod || null,
+      properties: rawProperties || {}
     }))
 
     return res.status(200).json({
@@ -56,8 +134,8 @@ router.get('/latest', validateSiteKey, async (req, res) => {
       data: { events, count: events.length },
       error: null
     })
-  } catch (_err) {
-    console.error(_err)
+  } catch (err) {
+    console.error(err)
     return res.status(500).json({ success: false, data: null, error: 'Failed to fetch events' })
   }
 })
@@ -107,11 +185,7 @@ router.get('/health', validateSiteKey, async (req, res) => {
     if (lastEvent) {
       const lastTime = new Date(lastEvent).getTime()
       const dayAgo = Date.now() - 24 * 60 * 60 * 1000
-      if (lastTime > dayAgo) {
-        status = isActive ? 'healthy' : 'silent_24h'
-      } else {
-        status = 'silent_24h'
-      }
+      status = lastTime > dayAgo ? (isActive ? 'healthy' : 'silent_24h') : 'silent_24h'
     }
 
     return res.status(200).json({
@@ -125,8 +199,8 @@ router.get('/health', validateSiteKey, async (req, res) => {
       },
       error: null
     })
-  } catch (_err) {
-    console.error(_err)
+  } catch (err) {
+    console.error(err)
     return res.status(500).json({ success: false, data: null, error: 'Health check failed' })
   }
 })
@@ -175,7 +249,9 @@ router.get('/edge-cases', validateSiteKey, async (req, res) => {
       try {
         const u = new URL(row[0])
         domains.add(u.hostname)
-      } catch (_e) { /* ignore */ }
+      } catch (_e) {
+        /* ignore bad urls */
+      }
     }
 
     return res.status(200).json({
@@ -189,8 +265,8 @@ router.get('/edge-cases', validateSiteKey, async (req, res) => {
       },
       error: null
     })
-  } catch (_err) {
-    console.error(_err)
+  } catch (err) {
+    console.error(err)
     return res.status(500).json({ success: false, data: null, error: 'Edge case check failed' })
   }
 })
