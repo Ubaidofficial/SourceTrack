@@ -20,3 +20,4 @@ tracker/*.bak*
 # Build outputs
 dist/
 dashboard/dist/
+sourcetrack-test.html
