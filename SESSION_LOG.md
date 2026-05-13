@@ -16,6 +16,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 | 84.2 | 2026-05-13 | `session-84-dashboard-shell` | **Complete — table replacement.** Replaced 5 raw tables in Dashboard.jsx with DashboardTable primitive: Recent Leads, AI Sources Performance, Revenue Source Attribution, Landing Page Performance, Campaign Performance. All values, formatting, status badges, empty messages preserved. `npm run build` passes. `git diff --check` clean. | N/A | No |
 | 84.3 | 2026-05-13 | `session-84-dashboard-shell` | **Complete — wrapper + empty states.** Added `.st-container` to Dashboard root wrapper. Replaced Revenue Trend "No data yet" inline empty state and AI Sources custom empty state with `<EmptyState>` component. `npm run build` passes. `git diff --check` clean. | N/A | No |
 | 84.4 | 2026-05-13 | `session-84-dashboard-shell` | **Complete — token color alignment.** 5 safe st-token replacements: sidebar nav active (`bg-st-lime/10 text-st-black`), admin link active (`bg-st-lime/20 text-st-black`), Live badge (`bg-st-lime/20 text-st-black`), 2 Create Report CTAs (`bg-st-black hover:bg-st-black/90`). Chart color, text hierarchy, data-viz fills skipped. `npm run build` passes. | N/A | No |
+| 84.5 | 2026-05-13 | `session-84-dashboard-shell` | **Complete — FilterBar integration.** Replaced time range pill group + export button with `<FilterBar>`. TIME_RANGES, timeRange state, setTimeRange, handleExport unchanged. `npm run build` passes. | N/A | No |
 
 ## Session numbering note
 

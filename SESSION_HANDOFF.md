@@ -6,12 +6,12 @@ This file is intentionally short. It tells the next agent exactly where to conti
 
 ## Current branch
 
-`session-84-dashboard-shell` (84.4 token color alignment complete)
+`session-84-dashboard-shell` (84.5 FilterBar integration complete)
 
 ## Next recommended session
 
-**Session 84.5:** FilterBar integration + remaining st-token migration (if any).
-Branch: `session-84-dashboard-shell`. Remainder: integrate FilterBar for time range, any remaining st-token migration, session closeout audit.
+**Session 84.6:** Session 84 closeout audit + manual QA prep.
+Branch: `session-84-dashboard-shell`. Final audit: verify all primitives wired, all items from IMPLEMENTATION_GAP_LIST resolved or deferred, prep for merge to main.
 
 ## Current main baseline
 
@@ -53,6 +53,10 @@ Session 80:
 - Saved report management UX: metadata cards, New report reset, Save/Update distinction, DELETE site-scoping.
 
 ## Files changed in this session
+
+Session 84.5:
+- `dashboard/src/pages/Dashboard.jsx` — replaced time range pill group + export button with `<FilterBar>`
+- `SESSION_HANDOFF.md`, `SESSION_LOG.md`, `AI_SESSION_PLAN.md`, `SESSION_STATE.md`, `IMPLEMENTATION_GAP_LIST.md`, `BUG_REVIEW_LOG.md` — updated
 
 Session 84.4:
 - `dashboard/src/components/Layout.jsx` — sidebar nav active (`bg-st-lime/10 text-st-black`), admin link active (`bg-st-lime/20 text-st-black`), Live badge (`bg-st-lime/20 text-st-black`)

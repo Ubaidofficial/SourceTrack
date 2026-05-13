@@ -111,6 +111,19 @@ Update at the end of each session to reflect completed work and revised prioriti
 - **Skipped:** Chart color (#D7F550), text hierarchy, data-viz fills
 - **Risk level:** Low
 
+### Session 84.5: Dashboard FilterBar integration
+
+- **Branch:** `session-84-dashboard-shell`
+- **Status:** Complete
+- **Objective:** Replace Dashboard time range pill group + export button with `<FilterBar>`.
+- **Completed:**
+  - Imported `FilterBar` from `../components/FilterBar`
+  - Replaced time range pills (352-363) + export button (365-368) with single `<FilterBar>`
+  - `dateButtons` mapped from `TIME_RANGES` (days → key)
+  - `activeDate={timeRange}`, `onDateChange={setTimeRange}`, `onExport={handleExport}`
+  - `npm run build` passes
+- **Risk level:** Low
+
 ### Session 85: Onboarding Figma alignment
 
 - **Branch:** `session-85-onboarding-figma`

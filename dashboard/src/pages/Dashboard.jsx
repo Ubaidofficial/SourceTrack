@@ -26,6 +26,7 @@ import MetricTile from '../components/MetricTile'
 import DashboardCard from '../components/DashboardCard'
 import DashboardTable from '../components/DashboardTable'
 import EmptyState from '../components/EmptyState'
+import FilterBar from '../components/FilterBar'
 import StatusBadge from '../components/StatusBadge'
 import SupportModeBanner from '../components/SupportModeBanner'
 import ConversionExplanationModal from '../components/ConversionExplanationModal'
@@ -349,23 +350,12 @@ export default function Dashboard() {
               className="px-3 py-1.5 text-sm text-white bg-st-black rounded-lg hover:bg-st-black/90 flex items-center gap-1.5">
               <Plus className="w-3.5 h-3.5" /> Create Report
             </button>
-            <div className="flex bg-gray-100 rounded-lg p-1">
-              {TIME_RANGES.map(tr => (
-                <button
-                  key={tr.label}
-                  onClick={() => setTimeRange(tr.days)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                    timeRange === tr.days ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  {tr.label}
-                </button>
-              ))}
-            </div>
-            <button onClick={handleExport}
-              className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5">
-              <Download className="w-4 h-4" /> Export
-            </button>
+            <FilterBar
+              dateButtons={TIME_RANGES.map((tr) => ({ key: tr.days, label: tr.label }))}
+              activeDate={timeRange}
+              onDateChange={setTimeRange}
+              onExport={handleExport}
+            />
           </div>
         )}
       </div>

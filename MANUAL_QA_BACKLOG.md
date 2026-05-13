@@ -371,7 +371,7 @@ Result notes:
 
 ---
 
-## Session 84.2–84.4 — Dashboard table replacement + wrapper + EmptyState + token colors
+## Session 84.2–84.5 — Dashboard table replacement + wrapper + EmptyState + token colors + FilterBar
 
 Status: Pending
 
@@ -421,6 +421,16 @@ Checklist:
 - Confirm Create Report button (empty state welcome screen) uses `bg-st-black` with `hover:bg-st-black/90`.
 - Confirm other Dashboard CTA buttons (Analyze, View all, Details, etc.) remain unchanged.
 - Confirm chart colors unchanged (`#D7F550` stays for AI trend).
+
+### Session 84.5 — FilterBar integration
+
+- Confirm time range controls now render as rounded-full FilterBar pills (not the old segmented control).
+- Confirm active time range pill shows `bg-st-lime/15 text-st-black` styling.
+- Confirm clicking a different time range (24h, 7 days, 30 days) updates data correctly.
+- Confirm Export button is rendered by FilterBar (right-aligned, `ml-auto`).
+- Confirm Export button opens CSV download as before.
+- Confirm Create Report button (left of FilterBar) still renders and navigates to /report-builder.
+- Confirm Revenue Trend subtitle still shows `Last N days` matching active time range.
 
 Files changed:
 
