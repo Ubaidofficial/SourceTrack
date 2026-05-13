@@ -6,12 +6,12 @@ This file is intentionally short. It tells the next agent exactly where to conti
 
 ## Current branch
 
-`session-84-dashboard-shell` (Session 84 complete — all primitives integrated)
+`session-85-onboarding-figma` (85.2 token color migration complete)
 
 ## Next recommended session
 
-**Session 85:** Onboarding Figma alignment audit.
-Branch: `session-85-onboarding-figma` (new branch off main). Audit existing onboarding code against `ONBOARDING_FLOW_SPEC.md`.
+**Session 86:** Report Builder Figma-style polish.
+Branch: `session-86-report-builder-figma` (new branch off main). Restyle Report Builder using st primitives per IMPLEMENTATION_GAP_LIST.md.
 
 ## Current main baseline
 
@@ -53,6 +53,12 @@ Session 80:
 - Saved report management UX: metadata cards, New report reset, Save/Update distinction, DELETE site-scoping.
 
 ## Files changed in this session
+
+Session 85.2:
+- `dashboard/src/pages/Onboarding.jsx` — 29 st-token color replacements (hex → st-lime/st-black/st-gray), top bar logo `text-indigo-600` → `text-st-black`
+- `dashboard/src/components/OnboardingCard.jsx` — removed inline `fontWeight` styles, `text-[#6F7070]` → `text-st-gray`
+- `dashboard/src/components/OnboardingProgress.jsx` — `#D7F550` → `st-lime`, `bg-black` → `bg-st-black`
+- `SESSION_HANDOFF.md`, `SESSION_LOG.md`, `AI_SESSION_PLAN.md`, `SESSION_STATE.md`, `IMPLEMENTATION_GAP_LIST.md`, `BUG_REVIEW_LOG.md` — updated
 
 Session 84.5:
 - `dashboard/src/pages/Dashboard.jsx` — replaced time range pill group + export button with `<FilterBar>`

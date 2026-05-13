@@ -69,6 +69,22 @@ None confirmed at runtime.
 **Known gaps deferred:** Chart color (#D7F550) per guard rule. Text hierarchy not migrated. Browser QA pending.
 **Risk level:** Low — all changes are cosmetic/component swaps, no logic touched.
 
+### Session 85.1 update
+
+**Date:** 2026-05-13
+**Review type:** Onboarding Figma alignment audit (read-only).
+**Files audited:** `Onboarding.jsx`, `OnboardingCard.jsx`, `OnboardingProgress.jsx`, `api/routes/onboarding.js`, `ONBOARDING_FLOW_SPEC.md`.
+**Confirmed issues:** None. Business logic intact. Only gaps: hex colors, inline styles, 5-vs-6 step stepper.
+**No implementation code changed.**
+
+### Session 85.2 update
+
+**Date:** 2026-05-13
+**Review type:** Onboarding token color migration.
+**Files changed:** `Onboarding.jsx` (29 replacements), `OnboardingCard.jsx` (2 replacements), `OnboardingProgress.jsx` (3 replacements).
+**Build:** `npm run build` passed.
+**Confirmed issues:** None. All hex colors replaced with st tokens.
+
 **Risk notes:**
 - Inter is loaded via Google Fonts CDN. Acceptable for development; external font dependency should be reviewed before production if strict self-hosting is required.
 - New primitives (`DashboardTable`, `FilterBar`, `EmptyState`) are now integrated into `Dashboard.jsx` (Sessions 84.2–84.5). No regression risk.

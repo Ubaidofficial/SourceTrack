@@ -6,27 +6,26 @@ Update at the start and end of every session.
 
 ## Current Session
 
-- **Session:** 84.6 — Dashboard stabilization and handoff
-- **Branch:** `session-84-dashboard-shell`
+- **Session:** 85.2 — Onboarding token color migration
+- **Branch:** `session-85-onboarding-figma`
 - **Started:** 2026-05-13
 - **Status:** Complete
 
 ## Active Blockers
 
-None. Session 84 primitives fully integrated. Chart color (#D7F550 → #CCF03F) intentionally deferred per guard rule. Browser QA pending in MANUAL_QA_BACKLOG.md.
+None. Onboarding color tokens migrated to st namespace. 5-vs-6 step stepper count deferred. Watch Video modal content placeholder. Browser QA pending.
 
 ## Upcoming Session
 
-- **Session 85:** Onboarding Figma alignment
+- **Session 85.3:** Onboarding structural alignment (optional)
 - **Branch:** `session-85-onboarding-figma`
-- **Prerequisites:** Session 84 complete; new branch off main
+- **Prerequisites:** Session 85.2 complete; product decision on 5-vs-6 step stepper
 
 ## Last Completed Sessions
 
-- **Session 84.5:** FilterBar integration (Complete)
-- **Session 84.4:** Token color alignment (Complete)
-- **Session 84.2-84.3:** Tables + wrapper + EmptyState (Complete)
-- **Session 84.1:** Dashboard alignment audit (Complete)
+- **Session 85.2:** Onboarding token color migration (Complete)
+- **Session 85.1:** Onboarding Figma alignment audit (Complete)
+- **Session 84.6:** Dashboard stabilization and handoff (Complete)
 
 ## Uncommitted Changes
 

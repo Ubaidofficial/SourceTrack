@@ -8,12 +8,12 @@ export default function OnboardingCard({ icon: Icon, title, subtitle, children, 
       )}
       <div className="flex items-center gap-3 mb-2">
         {Icon && <Icon className="w-6 h-6 text-black" />}
-        <h2 className="text-xl font-semibold text-gray-900" style={{ fontWeight: 600, fontSize: '20px' }}>
+        <h2 className="text-xl font-semibold text-gray-900">
           {title}
         </h2>
       </div>
       {subtitle && (
-        <p className="text-sm text-[#6F7070] mb-6" style={{ fontWeight: 400 }}>
+        <p className="text-sm text-st-gray mb-6">
           {subtitle}
         </p>
       )}

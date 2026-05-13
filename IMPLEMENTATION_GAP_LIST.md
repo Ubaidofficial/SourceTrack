@@ -87,12 +87,12 @@ Do not claim features are implemented unless verified in code and QA.
 
 | Feature | Status | Verified | Notes |
 |---|---|---|---|
-| Basic onboarding flow | ⚠️ | Unverified | Code exists, Figma parity unknown |
-| 5-step Figma stepper | ❌ | — | Planned Session 85 |
-| Business type selection | ❌ | — | Planned Session 85 |
-| GTM + Standard install paths | ❌ | — | Planned Session 85 |
-| Conversion configuration | ❌ | — | Planned Session 85 |
-| Script verification | ⚠️ | Unverified | `/api/install/status` exists |
+| Basic onboarding flow | ✅ | Sessions 85.1–85.2 | Code verified; st token colors migrated |
+| 5-step Figma stepper | ⚠️ | Session 85.1 audit | Current code uses 6 steps; design/product decision needed |
+| Business type selection | ✅ | Sessions 85.1–85.2 | Implemented + st colors |
+| GTM + Standard install paths | ✅ | Sessions 85.1–85.2 | Both paths implemented + st colors |
+| Conversion configuration | ✅ | Sessions 85.1–85.2 | Implemented + st colors |
+| Script verification | ✅ | Session 85.1 audit | Verified; polls /api/install/status; logs errors |
 
 ## Leads & Journey
 

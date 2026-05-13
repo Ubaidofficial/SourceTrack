@@ -327,12 +327,12 @@ export default function Onboarding() {
                 placeholder="ex: google.com"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-black"
               />
-              <p className="text-xs text-[#6F7070] mt-1">We'll use this URL to personalize your set up process</p>
+              <p className="text-xs text-st-gray mt-1">We'll use this URL to personalize your set up process</p>
               {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
               <button
                 type="submit"
                 disabled={loading}
-                className="mt-4 w-full py-3 bg-[#1F2323] text-white rounded-lg text-sm font-semibold hover:bg-black disabled:opacity-50"
+                className="mt-4 w-full py-3 bg-st-black text-white rounded-lg text-sm font-semibold hover:bg-st-black/90 disabled:opacity-50"
               >
                 {loading ? 'Confirming...' : 'Confirm Domain'}
               </button>
@@ -359,16 +359,16 @@ export default function Onboarding() {
                     onClick={() => handleBusinessTypeSelect(bt.key)}
                     className={`flex items-center gap-4 p-4 rounded-lg border-2 text-left transition-colors ${
                       selected
-                        ? 'border-[#D7F550] bg-[#F9FDEA]'
+                        ? 'border-st-lime bg-st-lime/10'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
                     <Icon className="w-8 h-8 text-gray-700" />
                     <div>
                       <p className="font-semibold text-gray-900">{bt.label}</p>
-                      <p className="text-xs text-[#6F7070]">{bt.desc}</p>
+                      <p className="text-xs text-st-gray">{bt.desc}</p>
                     </div>
-                    {selected && <Check className="w-5 h-5 text-[#D7F550] ml-auto" />}
+                    {selected && <Check className="w-5 h-5 text-st-lime ml-auto" />}
                   </button>
                 )
               })}
@@ -396,7 +396,7 @@ export default function Onboarding() {
                     onClick={() => handleInstallMethodSelect(m.key)}
                     className={`flex items-center gap-4 p-4 rounded-lg border-2 text-left transition-colors ${
                       selected
-                        ? 'border-[#D7F550] bg-[#F9FDEA]'
+                        ? 'border-st-lime bg-st-lime/10'
                         : m.advanced
                           ? 'border-gray-200 hover:border-gray-300 opacity-90'
                           : 'border-gray-900/20 hover:border-gray-300 bg-gray-50'
@@ -408,9 +408,9 @@ export default function Onboarding() {
                         <p className="font-semibold text-gray-900">{m.label}</p>
                         {m.recommended && <span className="text-[10px] font-semibold bg-lime-100 text-lime-800 px-1.5 py-0.5 rounded-full">Recommended</span>}
                       </div>
-                      <p className="text-xs text-[#6F7070]">{m.desc}</p>
+                      <p className="text-xs text-st-gray">{m.desc}</p>
                     </div>
-                    {selected && <Check className="w-5 h-5 text-[#D7F550] ml-auto" />}
+                    {selected && <Check className="w-5 h-5 text-st-lime ml-auto" />}
                   </button>
                 )
               })}
@@ -431,7 +431,7 @@ export default function Onboarding() {
             onBack={() => setStep(3)}
           >
             <p className="text-sm font-medium text-gray-700">Configure Conversions</p>
-            <p className="text-xs text-[#6F7070] mt-1 mb-4">
+            <p className="text-xs text-st-gray mt-1 mb-4">
               Define what success means for your business. Select or create conversion events to track.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -446,18 +446,18 @@ export default function Onboarding() {
                       conv.disabled
                         ? 'border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed'
                         : selected
-                        ? 'border-[#D7F550] bg-[#F9FDEA]'
+                        ? 'border-st-lime bg-st-lime/10'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
                     <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                      selected ? 'border-black bg-black' : 'border-gray-300'
+                      selected ? 'border-st-black bg-st-black' : 'border-gray-300'
                     }`}>
                       {selected && <Check className="w-3 h-3 text-white" />}
                     </div>
                     <div>
                       <p className="font-semibold text-sm text-gray-900">{conv.label}</p>
-                      <p className="text-xs text-[#6F7070]">{conv.desc}</p>
+                      <p className="text-xs text-st-gray">{conv.desc}</p>
                     </div>
                   </button>
                 )
@@ -465,7 +465,7 @@ export default function Onboarding() {
             </div>
             <button
               onClick={handleConversionsContinue}
-              className="mt-6 w-full py-3 bg-[#1F2323] text-white rounded-lg text-sm font-semibold hover:bg-black"
+              className="mt-6 w-full py-3 bg-st-black text-white rounded-lg text-sm font-semibold hover:bg-st-black/90"
             >
               Continue
             </button>
@@ -484,14 +484,14 @@ export default function Onboarding() {
             <p className="text-sm font-medium text-gray-700 mb-1">
               Let us Verify SourceTrack Script in {installMethod === 'gtm' ? 'GTM' : 'Your Site'}
             </p>
-            <p className="text-xs text-[#6F7070] mb-4">
+            <p className="text-xs text-st-gray mb-4">
               Click the button below to check if your tracking script is live and sending data.
             </p>
 
             {verificationState === 'idle' && (
               <button
                 onClick={handleVerify}
-                className="w-full py-3 bg-[#1F2323] text-white rounded-lg text-sm font-semibold hover:bg-black flex items-center justify-center gap-2"
+                className="w-full py-3 bg-st-black text-white rounded-lg text-sm font-semibold hover:bg-st-black/90 flex items-center justify-center gap-2"
               >
                 <Play className="w-4 h-4" /> Run Verification
               </button>
@@ -501,19 +501,19 @@ export default function Onboarding() {
               <div className="text-center py-6">
                 <RefreshCw className="w-8 h-8 animate-spin text-gray-400 mx-auto mb-3" />
                 <p className="text-sm text-gray-600">Checking installation...</p>
-                <p className="text-xs text-[#6F7070] mt-1">This may take up to 30 seconds</p>
+                <p className="text-xs text-st-gray mt-1">This may take up to 30 seconds</p>
               </div>
             )}
 
             {verificationState === 'success' && (
               <div className="text-center py-6">
-                <div className="w-12 h-12 rounded-full bg-[#F9FDEA] flex items-center justify-center mx-auto mb-3">
-                  <Check className="w-6 h-6 text-[#D7F550]" />
+                <div className="w-12 h-12 rounded-full bg-st-lime/10 flex items-center justify-center mx-auto mb-3">
+                  <Check className="w-6 h-6 text-st-lime" />
                 </div>
                 <p className="text-lg font-semibold text-gray-900">Great! Script Verified Successfully</p>
                 <button
                   onClick={() => { seedReportsForBusiness(businessType, siteKey); navigate('/dashboard', { replace: true, state: { toast: 'Setup complete! Your dashboard is ready.' } }) }}
-                  className="mt-4 px-6 py-3 bg-[#1F2323] text-white rounded-lg text-sm font-semibold hover:bg-black flex items-center gap-2 mx-auto"
+                  className="mt-4 px-6 py-3 bg-st-black text-white rounded-lg text-sm font-semibold hover:bg-st-black/90 flex items-center gap-2 mx-auto"
                 >
                   <ArrowRight className="w-4 h-4" /> Continue to Dashboard
                 </button>
@@ -527,7 +527,7 @@ export default function Onboarding() {
                 </div>
                 <p className="text-lg font-semibold text-gray-900">Script not detected yet</p>
                 {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
-                <ul className="text-sm text-[#6F7070] mt-3 space-y-1">
+                <ul className="text-sm text-st-gray mt-3 space-y-1">
                   <li>Make sure the script is published on your live site</li>
                   <li>It may take 1-2 minutes for the first event to appear</li>
                 </ul>
@@ -535,7 +535,7 @@ export default function Onboarding() {
                   <a href="/debugger" className="text-sm text-gray-900 hover:underline">Open Event Logger</a>
                   <button
                     onClick={handleVerify}
-                    className="px-4 py-2 bg-[#1F2323] text-white rounded-lg text-sm font-semibold hover:bg-black flex items-center gap-2"
+                    className="px-4 py-2 bg-st-black text-white rounded-lg text-sm font-semibold hover:bg-st-black/90 flex items-center gap-2"
                   >
                     <RefreshCw className="w-4 h-4" /> Try Again
                   </button>
@@ -564,7 +564,7 @@ export default function Onboarding() {
         {isGTM ? (
           <>
             <p className="text-sm font-medium text-gray-700 mb-1">Connect SourceTrack via Google Tag Manager</p>
-            <p className="text-xs text-[#6F7070] mb-4">
+            <p className="text-xs text-st-gray mb-4">
               Easily add SourceTrack to your website using Google Tag Manager (GTM) without editing your site's code manually.
             </p>
             <ol className="list-decimal list-inside text-sm text-gray-700 space-y-2 mb-4">
@@ -578,7 +578,7 @@ export default function Onboarding() {
         ) : (
           <>
             <p className="text-sm font-medium text-gray-700 mb-1">Standard Installation</p>
-            <p className="text-xs text-[#6F7070] mb-4">
+            <p className="text-xs text-st-gray mb-4">
               Add the SourceTrack tracking script directly to your website's &lt;head&gt; section.
             </p>
             <ol className="list-decimal list-inside text-sm text-gray-700 space-y-2 mb-4">
@@ -605,7 +605,7 @@ export default function Onboarding() {
             await saveOnboardingState(5, { install_method: installMethod })
             setStep(5)
           }}
-          className="mt-6 w-full py-3 bg-[#1F2323] text-white rounded-lg text-sm font-semibold hover:bg-black"
+          className="mt-6 w-full py-3 bg-st-black text-white rounded-lg text-sm font-semibold hover:bg-st-black/90"
         >
           Continue
         </button>
@@ -616,7 +616,7 @@ export default function Onboarding() {
   return (
     <div className="min-h-screen bg-[#F9FAFB] flex flex-col">
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white">
-        <h1 className="text-xl font-bold text-indigo-600">SourceTrack</h1>
+        <h1 className="text-xl font-bold text-st-black">SourceTrack</h1>
         <button
           onClick={() => setVideoModalOpen(true)}
           className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
@@ -626,7 +626,7 @@ export default function Onboarding() {
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-8">
-        <p className="text-xs text-[#6F7070] uppercase tracking-wider mb-1">Step {step} of 6</p>
+        <p className="text-xs text-st-gray uppercase tracking-wider mb-1">Step {step} of 6</p>
         <p className="text-lg font-semibold text-gray-900 mb-6">{STEP_TITLES[step]}</p>
         <OnboardingProgress currentStep={step} />
         {renderStepContent()}
@@ -644,16 +644,16 @@ export default function Onboarding() {
             <div className="bg-gray-100 rounded-lg h-48 flex items-center justify-center">
               <Play className="w-12 h-12 text-gray-300" />
             </div>
-            <p className="text-sm text-[#6F7070] mt-3 text-center">
+            <p className="text-sm text-st-gray mt-3 text-center">
               A walkthrough video will help you set up tracking in under 2 minutes.
             </p>
-            <p className="text-xs text-[#6F7070] mt-1 text-center">
+            <p className="text-xs text-st-gray mt-1 text-center">
               {/* TODO confirm: Watch Video modal content */}
               Video content coming soon.
             </p>
             <button
               onClick={() => setVideoModalOpen(false)}
-              className="mt-4 w-full py-2 bg-[#1F2323] text-white rounded-lg text-sm font-semibold hover:bg-black"
+              className="mt-4 w-full py-2 bg-st-black text-white rounded-lg text-sm font-semibold hover:bg-st-black/90"
             >
               Close
             </button>

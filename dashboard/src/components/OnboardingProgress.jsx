@@ -11,16 +11,16 @@ export default function OnboardingProgress({ currentStep, totalSteps = 6 }) {
             <div
               className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
                 isCompleted
-                  ? 'bg-[#D7F550] text-black'
+                  ? 'bg-st-lime text-black'
                   : isCurrent
-                  ? 'bg-black text-white'
+                  ? 'bg-st-black text-white'
                   : 'bg-gray-200 text-gray-500'
               }`}
             >
               {isCompleted ? '✓' : stepNum}
             </div>
             {stepNum < totalSteps && (
-              <div className={`w-8 h-0.5 ${stepNum < currentStep ? 'bg-[#D7F550]' : 'bg-gray-200'}`} />
+              <div className={`w-8 h-0.5 ${stepNum < currentStep ? 'bg-st-lime' : 'bg-gray-200'}`} />
             )}
           </div>
         )
