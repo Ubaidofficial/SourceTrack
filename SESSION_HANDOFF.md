@@ -6,12 +6,12 @@ This file is intentionally short. It tells the next agent exactly where to conti
 
 ## Current branch
 
-`session-83-figma-tokens` (Session 83 complete — stabilization done, ready for Session 84)
+`session-84-dashboard-shell` (Session 84.1 audit complete; implementation pending in 84.2)
 
 ## Next recommended session
 
-**Session 84:** Dashboard shell/card/table visual alignment.
-Branch: `session-84-dashboard-shell`. Prerequisites: Session 83 token layer + shared primitives + stabilization complete.
+**Session 84.2:** Dashboard shell/card/table visual alignment implementation.
+Branch: `session-84-dashboard-shell`. Phase 1: replace raw tables with DashboardTable. Phase 2: wrapper + empty states. Phase 3: sidebar + colors. Phase 4: FilterBar for time range.
 
 ## Current main baseline
 

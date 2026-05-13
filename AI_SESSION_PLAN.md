@@ -66,7 +66,14 @@ Update at the end of each session to reflect completed work and revised prioriti
   - DesignSystem.jsx: added OnboardingCard demo (was imported but unused)
 - **Risk level:** Low
 
-### Session 84: Dashboard shell/card/table visual alignment
+### Session 84.1: Dashboard shell/card/table visual alignment repo audit
+
+- **Branch:** `session-84-dashboard-shell`
+- **Status:** Complete — audit done; implementation plan ready
+- **Findings:** 5 raw tables, 6+ inline empty states, no st-container wrapper, sidebar/time range/CTA colors outdated
+- **Risk level:** Low (audit only)
+
+### Session 84.2: Dashboard shell/card/table visual alignment implementation
 
 - **Branch:** `session-84-dashboard-shell`
 - **Status:** Planned
