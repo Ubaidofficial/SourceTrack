@@ -6,12 +6,12 @@ This file is intentionally short. It tells the next agent exactly where to conti
 
 ## Current branch
 
-`session-84-dashboard-shell` (84.5 FilterBar integration complete)
+`session-84-dashboard-shell` (Session 84 complete — all primitives integrated)
 
 ## Next recommended session
 
-**Session 84.6:** Session 84 closeout audit + manual QA prep.
-Branch: `session-84-dashboard-shell`. Final audit: verify all primitives wired, all items from IMPLEMENTATION_GAP_LIST resolved or deferred, prep for merge to main.
+**Session 85:** Onboarding Figma alignment audit.
+Branch: `session-85-onboarding-figma` (new branch off main). Audit existing onboarding code against `ONBOARDING_FLOW_SPEC.md`.
 
 ## Current main baseline
 

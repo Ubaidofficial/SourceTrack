@@ -129,8 +129,8 @@ Do not claim features are implemented unless verified in code and QA.
 | `<DashboardTable>` | ✅ | Session 83.2 | New component. Props: columns, rows, onRowClick, emptyMessage. |
 | `<FilterBar>` | ✅ | Session 83.2 | New component. Props: dateButtons, activeDate, onDateChange, onExport. |
 | `<EmptyState>` | ✅ | Session 83.2 | New component. Props: icon, title, description, action. |
-| Layout sidebar active state | ⚠️ | Session 83.1 audit | Uses `bg-gray-100`; Figma expects lime accent. |
-| Layout top bar | ⚠️ | Session 83.1 audit | Minimal (page title only); missing search, notifications, theme toggle, date buttons, Export. |
+| Layout sidebar active state | ✅ | Session 84.4 | Now uses `bg-st-lime/10 text-st-black` |
+| Layout top bar | ⚠️ | Session 83.1 audit | Minimal (page title only); "Live" badge fixed (84.4); missing search, notifications, theme toggle |
 | Visual test page (`/design-system`) | ✅ | Session 83.2 | Route added, shows all tokens and components. |
 
 ## Competitor Parity

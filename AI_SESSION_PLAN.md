@@ -124,6 +124,20 @@ Update at the end of each session to reflect completed work and revised prioriti
   - `npm run build` passes
 - **Risk level:** Low
 
+### Session 84.6: Dashboard stabilization and handoff
+
+- **Branch:** `session-84-dashboard-shell`
+- **Status:** Complete
+- **Objective:** Final static review/build/docs pass for all Session 84 work.
+- **Confirmed:**
+  - All primitives wired: DashboardTable, st-container, EmptyState, st tokens, FilterBar
+  - No data-fetching or query logic changed
+  - Tracking docs reconciled (stale references fixed)
+  - `npm run build` passes
+  - Session 84 complete; ready for Session 85 (Onboarding)
+- **Remaining gaps:** Chart color (#D7F550) deferred per guard rule. Text hierarchy not migrated.
+- **Risk level:** None
+
 ### Session 85: Onboarding Figma alignment
 
 - **Branch:** `session-85-onboarding-figma`

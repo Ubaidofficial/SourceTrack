@@ -17,6 +17,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 | 84.3 | 2026-05-13 | `session-84-dashboard-shell` | **Complete — wrapper + empty states.** Added `.st-container` to Dashboard root wrapper. Replaced Revenue Trend "No data yet" inline empty state and AI Sources custom empty state with `<EmptyState>` component. `npm run build` passes. `git diff --check` clean. | N/A | No |
 | 84.4 | 2026-05-13 | `session-84-dashboard-shell` | **Complete — token color alignment.** 5 safe st-token replacements: sidebar nav active (`bg-st-lime/10 text-st-black`), admin link active (`bg-st-lime/20 text-st-black`), Live badge (`bg-st-lime/20 text-st-black`), 2 Create Report CTAs (`bg-st-black hover:bg-st-black/90`). Chart color, text hierarchy, data-viz fills skipped. `npm run build` passes. | N/A | No |
 | 84.5 | 2026-05-13 | `session-84-dashboard-shell` | **Complete — FilterBar integration.** Replaced time range pill group + export button with `<FilterBar>`. TIME_RANGES, timeRange state, setTimeRange, handleExport unchanged. `npm run build` passes. | N/A | No |
+| 84.6 | 2026-05-13 | `session-84-dashboard-shell` | **Complete — stabilization and handoff.** Final static review: all primitives confirmed wired (DashboardTable, st-container, EmptyState, st tokens, FilterBar), no data/logic changes, tracking docs reconciled. `npm run build` passes. Session 84 complete, ready for Session 85. | N/A | No |
 
 ## Session numbering note
 

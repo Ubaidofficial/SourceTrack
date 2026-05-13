@@ -59,7 +59,15 @@ None confirmed at runtime.
 **Review type:** Static implementation audit + build validation.  
 **Build:** `npm run build` passed (2000 modules).  
 **`git diff --check`:** Passed.  
-**Confirmed issues:** None.  
+**Confirmed issues:** None.
+
+### Session 84.6 update
+
+**Date:** 2026-05-13
+**Review type:** Stabilization and handoff — final static review of all Session 84 work.
+**Confirmed:** All primitives wired (DashboardTable, st-container, EmptyState, st tokens, FilterBar). No data/logic changes. All builds pass.
+**Known gaps deferred:** Chart color (#D7F550) per guard rule. Text hierarchy not migrated. Browser QA pending.
+**Risk level:** Low — all changes are cosmetic/component swaps, no logic touched.
 
 **Risk notes:**
 - Inter is loaded via Google Fonts CDN. Acceptable for development; external font dependency should be reviewed before production if strict self-hosting is required.

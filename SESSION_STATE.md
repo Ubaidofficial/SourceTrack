@@ -6,27 +6,27 @@ Update at the start and end of every session.
 
 ## Current Session
 
-- **Session:** 84.5 — Dashboard FilterBar integration
+- **Session:** 84.6 — Dashboard stabilization and handoff
 - **Branch:** `session-84-dashboard-shell`
 - **Started:** 2026-05-13
 - **Status:** Complete
 
 ## Active Blockers
 
-None currently. Browser QA from Sessions 75–80 and Session 83 design-system visual QA remain deferred.
+None. Session 84 primitives fully integrated. Chart color (#D7F550 → #CCF03F) intentionally deferred per guard rule. Browser QA pending in MANUAL_QA_BACKLOG.md.
 
 ## Upcoming Session
 
-- **Session 84.2:** Dashboard shell/card/table visual alignment implementation
-- **Branch:** `session-84-dashboard-shell`
-- **Prerequisites:** Session 84.1 audit complete; implementation plan available
+- **Session 85:** Onboarding Figma alignment
+- **Branch:** `session-85-onboarding-figma`
+- **Prerequisites:** Session 84 complete; new branch off main
 
-## Last Completed Session
+## Last Completed Sessions
 
-- **Session 84.1:** Dashboard alignment audit (Complete — no code changed)
-- **Session 83.5:** Stabilization and handoff (Complete — 2 fixes applied)
-- **Session 83.2:** Token layer + shared primitives + design-system preview (Complete)
-- **Session 83.1:** Figma tokens / shared UI primitives repo audit (Complete)
+- **Session 84.5:** FilterBar integration (Complete)
+- **Session 84.4:** Token color alignment (Complete)
+- **Session 84.2-84.3:** Tables + wrapper + EmptyState (Complete)
+- **Session 84.1:** Dashboard alignment audit (Complete)
 
 ## Uncommitted Changes
 
