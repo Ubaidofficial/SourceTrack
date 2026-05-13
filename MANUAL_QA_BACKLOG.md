@@ -196,6 +196,44 @@ Result notes:
 
 ---
 
+## Session 79 — Report Builder filter UX polish
+
+Status: Pending
+
+Goal: verify channel filter is wired end-to-end, quick filter buttons work, and helper copy renders.
+
+Checklist:
+
+- Open Report Builder.
+- Expand Filters section (Step 7).
+- Confirm helper copy shows: "UTMs are captured automatically by the pixel." and "Filters only narrow this report; they are not required for tracking."
+- Click each Quick Channel button (Organic, Paid, Social, Email, AI, Direct):
+  - Organic → Channel dropdown shows Organic Search
+  - Paid → Channel dropdown shows Paid Search
+  - Social → Channel dropdown shows Organic Social
+  - Email → Channel dropdown shows Email
+  - AI → Channel dropdown shows AI Search, Has AI Source set to Yes
+  - Direct → Channel dropdown shows Direct
+- Run a report with a channel filter.
+- Confirm Network tab request includes `filter_channel=<value>`.
+- Confirm response is 200.
+- Click a common source quick-select button (e.g. google).
+- Confirm Source input fills with that value.
+- Type a custom source manually — confirm it works.
+- Export CSV with a channel filter — confirm filter_channel is in the URL.
+- Confirm quick filter buttons and manual inputs coexist (can override each other).
+
+Files related:
+
+- dashboard/src/pages/ReportBuilder.jsx
+- api/routes/attribution.js
+
+Result notes:
+
+- Pending.
+
+---
+
 ## Supabase schema/RLS verification
 
 Status: Mostly passed

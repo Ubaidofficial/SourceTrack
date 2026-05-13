@@ -97,6 +97,7 @@ export async function attribution(req, res) {
       }
 
       const filters = {}
+      if (req.query.filter_channel) filters.channel = req.query.filter_channel
       if (req.query.filter_source) filters.source = req.query.filter_source
       if (req.query.filter_medium) filters.medium = req.query.filter_medium
       if (req.query.filter_campaign) filters.campaign = req.query.filter_campaign

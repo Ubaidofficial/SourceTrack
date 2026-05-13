@@ -118,6 +118,7 @@ async function getFlexibleReport(siteKey, model, dateFrom, dateTo, groupBy, metr
   if (granularity && granularity !== 'day') params.set('time_granularity', granularity)
   if (attributionWindow) params.set('attribution_window', attributionWindow)
   if (attributeBy && attributeBy !== 'conversion_date') params.set('attribute_by', attributeBy)
+  if (filters.channel) params.set('filter_channel', filters.channel)
   if (filters.source) params.set('filter_source', filters.source)
   if (filters.medium) params.set('filter_medium', filters.medium)
   if (filters.campaign) params.set('filter_campaign', filters.campaign)
@@ -277,6 +278,16 @@ export default function ReportBuilder() {
     })
   }
 
+  const applyQuickChannelFilter = (channel, hasAiSource = false) => {
+    setFilters(prev => {
+      const next = { ...prev, channel }
+      if (hasAiSource) next.has_ai_source = 'true'
+      else delete next.has_ai_source
+      setFilterCount(Object.keys(next).length)
+      return next
+    })
+  }
+
   const handleEdit = (report) => {
     const cfg = report.config || report
     setReportName(report.name || cfg.name)
@@ -349,6 +360,7 @@ export default function ReportBuilder() {
   const handleExportCSV = () => {
     if (!site) return
     const params = new URLSearchParams({ site_key: site.site_key, model, date_from: dateFrom, date_to: dateTo, group_by: groupBy, metric })
+    if (filters.channel) params.set('filter_channel', filters.channel)
     if (filters.source) params.set('filter_source', filters.source)
     if (filters.medium) params.set('filter_medium', filters.medium)
     if (filters.campaign) params.set('filter_campaign', filters.campaign)
@@ -649,6 +661,32 @@ export default function ReportBuilder() {
 
             {showFilters && (
               <div className="space-y-2 mt-3 pt-3 border-t border-gray-100">
+                <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-500 space-y-1">
+                  <p>UTMs are captured automatically by the pixel.</p>
+                  <p>Filters only narrow this report; they are not required for tracking.</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Quick Channel</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { label: 'Organic', channel: 'Organic Search' },
+                      { label: 'Paid', channel: 'Paid Search' },
+                      { label: 'Social', channel: 'Organic Social' },
+                      { label: 'Email', channel: 'Email' },
+                      { label: 'AI', channel: 'AI Search', ai: true },
+                      { label: 'Direct', channel: 'Direct' }
+                    ].map(({ label, channel, ai }) => (
+                      <button key={label} onClick={() => applyQuickChannelFilter(channel, !!ai)}
+                        className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
+                          filters.channel === channel
+                            ? 'bg-lime-100 text-lime-800 font-medium'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Channel</label>
                   <select value={filters.channel || ''} onChange={(e) => applyFilter('channel', e.target.value || undefined)}
@@ -670,6 +708,18 @@ export default function ReportBuilder() {
                   <label className="block text-xs font-medium text-gray-500 mb-1">Source</label>
                   <input type="text" value={filters.source || ''} onChange={(e) => applyFilter('source', e.target.value || undefined)}
                     placeholder="e.g. google" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {['google', 'bing', 'facebook', 'instagram', 'linkedin', 'twitter', 'x', 'tiktok', 'reddit', 'youtube', 'chatgpt', 'perplexity', 'newsletter'].map(src => (
+                      <button key={src} onClick={() => applyFilter('source', src)}
+                        className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
+                          filters.source === src
+                            ? 'bg-lime-100 text-lime-800 font-medium'
+                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                        }`}>
+                        {src}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Medium</label>
