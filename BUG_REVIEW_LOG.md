@@ -67,6 +67,15 @@ None confirmed at runtime.
 - Design-system route (`/design-system`) is public (no auth wrapper). This is intentional for development but should be gated or removed before production.
 - Manual visual QA deferred to `MANUAL_QA_BACKLOG.md`.
 
+### Session 84.1 update
+
+**Date:** 2026-05-13
+**Review type:** Dashboard alignment audit (read-only).
+**Files audited:** `Dashboard.jsx` (1084 lines), `Layout.jsx` (156 lines).
+**Confirmed issues:** None — audit was gap analysis, not bug hunt.
+**No implementation code changed.**
+**Implementation plan ready for 84.2** — 4 phases: tables → wrapper/empty-states → sidebar/colors → FilterBar.
+
 ### Next review
 
 After Session 82 manual QA, update this log with any runtime bugs found.
