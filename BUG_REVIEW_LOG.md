@@ -53,6 +53,13 @@ None confirmed at runtime.
 **No new bugs found.** Audit was a design-gap inventory, not a bug hunt.  
 **No implementation code changed.**
 
+### Session 85.4 update
+
+**Date:** 2026-05-13
+**Review type:** Onboarding stabilization and handoff.
+**Confirmed:** 29 st-token references across 3 files, 0 hardcoded hex colors, 0 inline fontWeight styles, step count/flow logic/API calls preserved. `npm run build` passes.
+**Session 85 complete.** Ready for Session 86 (Report Builder).
+
 ### Session 83.2 update
 
 **Date:** 2026-05-13  

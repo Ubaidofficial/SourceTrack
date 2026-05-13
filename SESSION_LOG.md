@@ -21,6 +21,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 | 85.1 | 2026-05-13 | `session-85-onboarding-figma` | **Complete — audit.** Audited Onboarding.jsx, OnboardingCard.jsx, OnboardingProgress.jsx, and backend API against ONBOARDING_FLOW_SPEC.md. Classified 20+ gaps: all business logic intact, color tokens are the only code-level gap. 5-vs-6 step stepper decision deferred. | N/A | No |
 | 85.2 | 2026-05-13 | `session-85-onboarding-figma` | **Complete — token color migration.** 29 hex-color replacements across Onboarding.jsx, OnboardingCard.jsx, OnboardingProgress.jsx: `#D7F550` → st-lime, `#F9FDEA` → st-lime/10, `#1F2323` → st-black, `#6F7070` → st-gray, `text-indigo-600` → text-st-black. Removed inline `fontWeight` styles. `npm run build` passes. | N/A | No |
 | 85.3 | 2026-05-13 | `session-85-onboarding-figma` | **Complete — stepper audit, no code changed.** Audited 6-step code vs 5-step Figma spec. Found zero safe cosmetic changes: any stepper alignment requires backend MAX_STEP change + state machine refactor. 5-vs-6 is a product/design decision, not a bug. Recommendation: ship 6-step as-is. | N/A | No |
+| 85.4 | 2026-05-13 | `session-85-onboarding-figma` | **Complete — stabilization and handoff.** Final static review: all tokens migrated (29 st-lime/black/gray), no hardcoded hex remain, inline font styles removed, step count/flow logic/API calls preserved. `npm run build` passes. Session 85 complete, ready for Session 86. | N/A | No |
 
 ## Session numbering note
 
