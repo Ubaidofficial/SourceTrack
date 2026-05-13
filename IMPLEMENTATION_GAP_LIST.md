@@ -88,7 +88,7 @@ Do not claim features are implemented unless verified in code and QA.
 | Feature | Status | Verified | Notes |
 |---|---|---|---|
 | Basic onboarding flow | ✅ | Sessions 85.1–85.2 | Code verified; st token colors migrated |
-| 5-step Figma stepper | ⚠️ | Session 85.1 audit | Current code uses 6 steps; design/product decision needed |
+| 5-step Figma stepper | ⚠️ | Session 85.3 audit | 6-step code vs 5-step Figma; needs product/design decision, not a bug |
 | Business type selection | ✅ | Sessions 85.1–85.2 | Implemented + st colors |
 | GTM + Standard install paths | ✅ | Sessions 85.1–85.2 | Both paths implemented + st colors |
 | Conversion configuration | ✅ | Sessions 85.1–85.2 | Implemented + st colors |

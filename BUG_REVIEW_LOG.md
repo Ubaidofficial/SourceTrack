@@ -85,6 +85,14 @@ None confirmed at runtime.
 **Build:** `npm run build` passed.
 **Confirmed issues:** None. All hex colors replaced with st tokens.
 
+### Session 85.3 update
+
+**Date:** 2026-05-13
+**Review type:** Onboarding stepper alignment audit (read-only).
+**Files audited:** `Onboarding.jsx`, `OnboardingProgress.jsx`, `ONBOARDING_FLOW_SPEC.md`.
+**Finding:** 5-step Figma spec vs 6-step code. Zero safe cosmetic-only changes possible — any stepper alignment requires backend `MAX_STEP` change + state machine refactor. Not a bug; structural UX decision deferred.
+**No implementation code changed.**
+
 **Risk notes:**
 - Inter is loaded via Google Fonts CDN. Acceptable for development; external font dependency should be reviewed before production if strict self-hosting is required.
 - New primitives (`DashboardTable`, `FilterBar`, `EmptyState`) are now integrated into `Dashboard.jsx` (Sessions 84.2–84.5). No regression risk.

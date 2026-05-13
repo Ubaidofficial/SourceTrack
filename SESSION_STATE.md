@@ -6,26 +6,26 @@ Update at the start and end of every session.
 
 ## Current Session
 
-- **Session:** 85.2 — Onboarding token color migration
+- **Session:** 85.3 — Onboarding stepper/product-decision audit
 - **Branch:** `session-85-onboarding-figma`
 - **Started:** 2026-05-13
 - **Status:** Complete
 
 ## Active Blockers
 
-None. Onboarding color tokens migrated to st namespace. 5-vs-6 step stepper count deferred. Watch Video modal content placeholder. Browser QA pending.
+None. Onboarding color tokens migrated (85.2). 5-vs-6 step stepper is a product/design decision, not a bug. Watch Video modal content remains placeholder. Browser QA pending.
 
 ## Upcoming Session
 
-- **Session 85.3:** Onboarding structural alignment (optional)
+- **Session 85.4:** Onboarding stabilization and handoff
 - **Branch:** `session-85-onboarding-figma`
-- **Prerequisites:** Session 85.2 complete; product decision on 5-vs-6 step stepper
+- **Prerequisites:** Session 85.3 complete; product decision on stepper deferred
 
 ## Last Completed Sessions
 
+- **Session 85.3:** Onboarding stepper audit (Complete — no code changed)
 - **Session 85.2:** Onboarding token color migration (Complete)
 - **Session 85.1:** Onboarding Figma alignment audit (Complete)
-- **Session 84.6:** Dashboard stabilization and handoff (Complete)
 
 ## Uncommitted Changes
 

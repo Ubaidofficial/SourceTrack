@@ -141,14 +141,16 @@ Update at the end of each session to reflect completed work and revised prioriti
 ### Session 85: Onboarding Figma alignment
 
 - **Branch:** `session-85-onboarding-figma`
-- **Status:** In progress (85.1 audit + 85.2 colors done)
+- **Status:** In progress (85.1 audit + 85.2 colors + 85.3 stepper audit done)
 - **Objective:** Align onboarding with `ONBOARDING_FLOW_SPEC.md`.
 - **Completed:**
-  - 85.1: Full audit — onboarding flow, API, persistence all verified. Only gaps: hex colors, inline styles.
-  - 85.2: Token color migration — 29 hex replacements across Onboarding.jsx, OnboardingCard.jsx, OnboardingProgress.jsx.
+  - 85.1: Full audit — onboarding flow, API, persistence all verified.
+  - 85.2: Token color migration — 29 hex replacements.
+  - 85.3: Stepper audit — 6-step code vs 5-step Figma spec. Zero safe cosmetic changes without structural refactor. Product decision deferred.
 - **Remaining:**
-  - Product decision needed: 5-step (Figma) vs 6-step (current code) stepper
+  - 5-vs-6 stepper: product/design decision needed
   - Watch Video modal content placeholder
+  - 85.4: stabilization and handoff
 - **Out of scope:** Dashboard variant switching, logic changes
 - **Risk level:** Low
 

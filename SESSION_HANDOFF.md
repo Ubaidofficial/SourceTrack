@@ -6,12 +6,12 @@ This file is intentionally short. It tells the next agent exactly where to conti
 
 ## Current branch
 
-`session-85-onboarding-figma` (85.2 token color migration complete)
+`session-85-onboarding-figma` (85.3 stepper audit complete; no code changed)
 
 ## Next recommended session
 
-**Session 86:** Report Builder Figma-style polish.
-Branch: `session-86-report-builder-figma` (new branch off main). Restyle Report Builder using st primitives per IMPLEMENTATION_GAP_LIST.md.
+**Session 85.4:** Onboarding stabilization and handoff.
+Branch: `session-85-onboarding-figma`. Final static review, close out onboarding session.
 
 ## Current main baseline
 
@@ -53,6 +53,10 @@ Session 80:
 - Saved report management UX: metadata cards, New report reset, Save/Update distinction, DELETE site-scoping.
 
 ## Files changed in this session
+
+Session 85.3:
+- No implementation code changed.
+- `SESSION_HANDOFF.md`, `SESSION_LOG.md`, `AI_SESSION_PLAN.md`, `SESSION_STATE.md`, `IMPLEMENTATION_GAP_LIST.md`, `BUG_REVIEW_LOG.md` — updated
 
 Session 85.2:
 - `dashboard/src/pages/Onboarding.jsx` — 29 st-token color replacements (hex → st-lime/st-black/st-gray), top bar logo `text-indigo-600` → `text-st-black`
