@@ -19,6 +19,7 @@ import LeadDetail from './pages/LeadDetail'
 import Campaigns from './pages/Campaigns'
 import Integrations from './pages/Integrations'
 import Admin from './pages/Admin'
+import DesignSystem from './pages/DesignSystem'
 import AdminRoute from './components/AdminRoute'
 
 const queryClient = new QueryClient()
@@ -70,6 +71,7 @@ export default function App() {
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
             <Route path="/admin" element={<AdminRoute><Layout><Admin /></Layout></AdminRoute>} />
+            <Route path="/design-system" element={<DesignSystem />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </BrowserRouter>

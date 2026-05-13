@@ -270,6 +270,50 @@ Result notes:
 
 ---
 
+## Session 83 — Design system token layer & primitives
+
+Status: Pending
+
+Goal: verify design-system preview page renders correctly and existing app routes are not broken.
+
+Checklist:
+
+- Visit `/design-system`.
+- Confirm color swatches render for all `st` tokens (black, gray, lime, green, orange, red).
+- Confirm typography renders with Inter font family.
+- Confirm `.st-container` preview respects 1320px max-width and 24px side padding.
+- Confirm `DashboardTable` renders headers, rows, custom cells (StatusBadge), and empty state.
+- Confirm `FilterBar` renders date buttons, active state (lime background), and export button.
+- Confirm `EmptyState` renders icon, title, description, and optional action button.
+- Confirm `MetricTile` renders with values, deltas, and icons.
+- Confirm `StatusBadge` renders all 8 variants correctly.
+- Confirm `OnboardingProgress` renders 5-step stepper.
+- Confirm existing routes still load normally:
+  - Dashboard
+  - Report Builder
+  - Event Logger
+  - Onboarding
+- Confirm `/design-system` is accessible without authentication.
+- Confirm Google Fonts load and no console errors appear.
+- Document any production concern about external font dependency.
+
+Files related:
+
+- dashboard/index.html
+- dashboard/tailwind.config.js
+- dashboard/src/index.css
+- dashboard/src/components/DashboardTable.jsx
+- dashboard/src/components/FilterBar.jsx
+- dashboard/src/components/EmptyState.jsx
+- dashboard/src/pages/DesignSystem.jsx
+- dashboard/src/App.jsx
+
+Result notes:
+
+- Pending.
+
+---
+
 ## Supabase schema/RLS verification
 
 Status: Mostly passed
