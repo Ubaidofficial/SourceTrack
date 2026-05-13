@@ -105,9 +105,17 @@ Tracker, only if tracker source changed:
     cd "$HOME/Desktop/trackiq"
     npm run build:tracker
 
+## Docs note
+
+- `DOCS_INDEX.md` and `PROJECT_CONTEXT_COMPACT.md` now exist and should be read before future coding sessions.
+- `FIGMA_DESIGN_SYSTEM.md` and `DASHBOARD_FEATURE_GAP.md` renamed (dropped `_UPDATED` suffix).
+- `PROGRESS.md` and `DEEPSEEK.md` remain historical archives — do not treat as proof of current implementation.
+- Figma-derived docs are design specs and must be verified against code before claiming live implementation.
+
 ## Rules reminder
 
-- Read `RULES.md` and `PROGRESS.md` at the start of every coding session.
+- Read `RULES.md`, `AGENT_BRIEF.md`, `PROJECT_CONTEXT_COMPACT.md`, `SESSION_HANDOFF.md`, and `KNOWN_ISSUES.md` at the start of every coding session.
+- Use `DOCS_INDEX.md` to find task-specific docs.
 - Treat `PROGRESS.md` as history, not proof.
 - Verify behavior in code and QA before claiming fixed.
 - Make surgical changes only.
