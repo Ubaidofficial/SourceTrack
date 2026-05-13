@@ -234,6 +234,42 @@ Result notes:
 
 ---
 
+## Session 80 — Saved report management UX
+
+Status: Pending
+
+Goal: verify saved reports are visible, editable, duplicable, deletable, and resettable from Report Builder.
+
+Checklist:
+
+- Open Report Builder.
+- Save a new report.
+- Confirm Saved Reports panel shows the report.
+- Confirm saved report row shows name, metric, group-by, model, and date range.
+- Load the saved report.
+- Confirm fields populate correctly.
+- Update the saved report.
+- Confirm success message says "Report updated".
+- Click New report.
+- Confirm form resets to defaults and saved reports remain.
+- Duplicate a saved report.
+- Confirm duplicate appears.
+- Delete duplicate.
+- Refresh the page.
+- Confirm remaining saved reports persist.
+- Confirm Network tab has no 500s.
+
+Files related:
+
+- dashboard/src/pages/ReportBuilder.jsx
+- api/routes/saved-reports.js
+
+Result notes:
+
+- Pending.
+
+---
+
 ## Supabase schema/RLS verification
 
 Status: Mostly passed

@@ -316,6 +316,7 @@ export default function ReportBuilder() {
       granularity, groupBy2, attributionWindow, attributeBy,
       filters
     }
+    const wasEditing = !!editingId
     try {
       const saveUrl = editingId
         ? `/reports/saved/${editingId}?site_key=${encodeURIComponent(site.site_key)}`
@@ -325,7 +326,7 @@ export default function ReportBuilder() {
         method: editingId ? 'PUT' : 'POST',
         body: JSON.stringify({ name, config })
       })
-      setSaveFeedback('saved')
+      setSaveFeedback(wasEditing ? 'updated' : 'saved')
       setReportName('')
       setEditingId(null)
       refetchReports()
@@ -355,6 +356,42 @@ export default function ReportBuilder() {
 
   const handleLoad = (report) => {
     handleEdit(report)
+  }
+
+  const resetReport = () => {
+    setEditingId(null)
+    setReportName('')
+    setModel('last_touch')
+    setGroupBy('source')
+    setMetric('revenue')
+    setChartType('bar')
+    setDatePreset(30)
+    setDateFrom(format(subDays(new Date(), 30), 'yyyy-MM-dd'))
+    setDateTo(format(new Date(), 'yyyy-MM-dd'))
+    setGranularity('day')
+    setGroupBy2(null)
+    setShowGroupBy2(false)
+    setAttributionWindow(null)
+    setAttributeBy('conversion_date')
+    setFilters({})
+    setFilterCount(0)
+    setSaveFeedback(null)
+    setShowFilters(false)
+  }
+
+  function getSavedReportMeta(report) {
+    const cfg = report.config || {}
+    return {
+      metricLabel: METRICS.find(m => m.key === cfg.metric)?.label || cfg.metric || 'Metric',
+      groupLabel: DIMENSIONS.find(d => d.key === cfg.groupBy)?.label || cfg.groupBy || 'Source',
+      modelLabel: MODELS.find(m => m.key === cfg.model)?.label || cfg.model || 'Last Touch',
+      dateLabel: cfg.dateFrom && cfg.dateTo
+        ? `${cfg.dateFrom} → ${cfg.dateTo}`
+        : cfg.datePreset
+          ? `Last ${cfg.datePreset} days`
+          : 'Date range',
+      filterCount: Object.keys(cfg.filters || {}).length
+    }
   }
 
   const handleExportCSV = () => {
@@ -798,10 +835,19 @@ export default function ReportBuilder() {
 
           {/* Save */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">✓</span>
-              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Save Report</h3>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">✓</span>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Save Report</h3>
+              </div>
+              <button onClick={resetReport}
+                className="text-xs text-gray-500 hover:text-gray-900">
+                New report
+              </button>
             </div>
+            {editingId && (
+              <p className="text-xs text-gray-400 mb-2">Editing saved report</p>
+            )}
             <div className="space-y-2">
               <input type="text" value={reportName} onChange={(e) => setReportName(e.target.value)}
                 placeholder="Report name..." maxLength={60}
@@ -810,17 +856,20 @@ export default function ReportBuilder() {
                 <button onClick={handleSave}
                   className="flex-1 px-3 py-2 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 flex items-center justify-center gap-1">
                   <Bookmark className="w-4 h-4" />
-                  {editingId ? 'Update' : 'Save'}
+                  {editingId ? 'Update report' : 'Save report'}
                 </button>
                 {editingId && (
-                  <button onClick={() => { setEditingId(null); setReportName('') }}
+                  <button onClick={resetReport}
                     className="px-3 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">
                     Cancel
                   </button>
                 )}
               </div>
               {saveFeedback === 'saved' && (
-                <p className="text-xs text-green-600 mt-1.5">Report saved to backend</p>
+                <p className="text-xs text-green-600 mt-1.5">Report saved</p>
+              )}
+              {saveFeedback === 'updated' && (
+                <p className="text-xs text-green-600 mt-1.5">Report updated</p>
               )}
               {saveFeedback === 'error' && (
                 <p className="text-xs text-red-600 mt-1.5">Failed to save — try again</p>
@@ -832,23 +881,44 @@ export default function ReportBuilder() {
           {savedReports.length > 0 && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Saved Reports</h3>
-              <div className="space-y-0.5">
-                {savedReports.map((r) => (
-                  <div key={r.id} className="flex items-center justify-between group px-2 py-1.5 rounded-lg hover:bg-gray-50 transition-colors">
-                    <button onClick={() => handleLoad(r)}
-                      className="flex-1 text-left text-sm text-gray-700 hover:text-gray-900 transition-colors truncate">
-                      {r.name}
-                    </button>
-                    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
-                      <button onClick={() => handleDuplicate(r)} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors" title="Duplicate">
-                        <Copy className="w-3.5 h-3.5" />
-                      </button>
-                      <button onClick={() => handleDelete(r.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors" title="Delete">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+              <div className="space-y-2">
+                {savedReports.map((r) => {
+                  const meta = getSavedReportMeta(r)
+                  return (
+                    <div key={r.id} className="rounded-lg border border-gray-100 p-3 hover:bg-gray-50 transition-colors">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{r.name}</p>
+                          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
+                            <span className="text-xs text-gray-500">{meta.metricLabel}</span>
+                            <span className="text-xs text-gray-400">{meta.groupLabel}</span>
+                            <span className="text-xs text-gray-400">{meta.modelLabel}</span>
+                            <span className="text-xs text-gray-400">{meta.dateLabel}</span>
+                            {meta.filterCount > 0 && (
+                              <span className="text-xs text-lime-700 bg-lime-50 px-1.5 py-0.5 rounded">
+                                {meta.filterCount} filter{meta.filterCount > 1 ? 's' : ''}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <button onClick={() => handleLoad(r)}
+                            className="px-2 py-1 text-xs text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors">
+                            Load
+                          </button>
+                          <button onClick={() => handleDuplicate(r)}
+                            className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors">
+                            Duplicate
+                          </button>
+                          <button onClick={() => handleDelete(r.id)}
+                            className="px-2 py-1 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors">
+                            Delete
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}

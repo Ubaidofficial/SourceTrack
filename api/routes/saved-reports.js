@@ -134,25 +134,25 @@ router.delete('/saved/:id', async (req, res) => {
       return res.status(400).json({ success: false, data: null, error: 'Report ID is required' })
     }
 
-    // Verify ownership before delete
     const { data: existing, error: fetchErr } = await supabase
       .from('saved_reports')
-      .select('id, user_id')
+      .select('id, user_id, site_id')
       .eq('id', id)
+      .eq('user_id', req.user.id)
+      .eq('site_id', req.site.id)
       .maybeSingle()
 
     if (fetchErr) throw fetchErr
     if (!existing) {
       return res.status(404).json({ success: false, data: null, error: 'Report not found' })
     }
-    if (existing.user_id !== req.user.id) {
-      return res.status(403).json({ success: false, data: null, error: 'You do not own this report' })
-    }
 
     const { error } = await supabase
       .from('saved_reports')
       .delete()
       .eq('id', id)
+      .eq('user_id', req.user.id)
+      .eq('site_id', req.site.id)
 
     if (error) throw error
 
