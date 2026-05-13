@@ -98,6 +98,19 @@ Update at the end of each session to reflect completed work and revised prioriti
   - `npm run build` passes, `git diff --check` clean
 - **Risk level:** Low
 
+### Session 84.4: Dashboard/Layout token color alignment
+
+- **Branch:** `session-84-dashboard-shell`
+- **Status:** Complete
+- **Objective:** Safe st-token replacements for sidebar active, CTA buttons, and Live badge.
+- **Completed:**
+  - Layout.jsx: sidebar nav active `bg-gray-100 text-gray-900` → `bg-st-lime/10 text-st-black`
+  - Layout.jsx: admin link active `bg-lime-100 text-lime-800` → `bg-st-lime/20 text-st-black`
+  - Layout.jsx: Live badge `bg-lime-100 text-lime-800` → `bg-st-lime/20 text-st-black`
+  - Dashboard.jsx: 2 Create Report CTAs `bg-gray-900 hover:bg-gray-800` → `bg-st-black hover:bg-st-black/90`
+- **Skipped:** Chart color (#D7F550), text hierarchy, data-viz fills
+- **Risk level:** Low
+
 ### Session 85: Onboarding Figma alignment
 
 - **Branch:** `session-85-onboarding-figma`

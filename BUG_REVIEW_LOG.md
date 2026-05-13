@@ -84,6 +84,15 @@ None confirmed at runtime.
 **Build:** `npm run build` passed.
 **Confirmed issues:** None.
 
+### Session 84.4 update
+
+**Date:** 2026-05-13
+**Review type:** Token color alignment (5 safe replacements).
+**Files changed:** `dashboard/src/components/Layout.jsx` (sidebar nav active, admin link active, Live badge), `dashboard/src/pages/Dashboard.jsx` (2 Create Report CTAs).
+**Build:** `npm run build` passed.
+**Confirmed issues:** None.
+**Skipped:** Chart color (#D7F550), text hierarchy, data-viz fills per guard rules.
+
 ### Session 84.3 update
 
 **Date:** 2026-05-13

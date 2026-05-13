@@ -6,12 +6,12 @@ This file is intentionally short. It tells the next agent exactly where to conti
 
 ## Current branch
 
-`session-84-dashboard-shell` (84.3 wrapper + empty states complete)
+`session-84-dashboard-shell` (84.4 token color alignment complete)
 
 ## Next recommended session
 
-**Session 84.4:** Sidebar + top bar color alignment.
-Branch: `session-84-dashboard-shell`. Phase 3: sidebar active color (`bg-st-lime/10 text-st-black`), CTA button colors (`bg-st-black`), chart color (`#CCF03F`), "Live" badge st tokens.
+**Session 84.5:** FilterBar integration + remaining st-token migration (if any).
+Branch: `session-84-dashboard-shell`. Remainder: integrate FilterBar for time range, any remaining st-token migration, session closeout audit.
 
 ## Current main baseline
 
@@ -53,6 +53,11 @@ Session 80:
 - Saved report management UX: metadata cards, New report reset, Save/Update distinction, DELETE site-scoping.
 
 ## Files changed in this session
+
+Session 84.4:
+- `dashboard/src/components/Layout.jsx` — sidebar nav active (`bg-st-lime/10 text-st-black`), admin link active (`bg-st-lime/20 text-st-black`), Live badge (`bg-st-lime/20 text-st-black`)
+- `dashboard/src/pages/Dashboard.jsx` — 2 Create Report CTAs (`bg-st-black hover:bg-st-black/90`)
+- `SESSION_HANDOFF.md`, `SESSION_LOG.md`, `AI_SESSION_PLAN.md`, `SESSION_STATE.md`, `IMPLEMENTATION_GAP_LIST.md`, `BUG_REVIEW_LOG.md` — updated
 
 Session 84.3:
 - `dashboard/src/pages/Dashboard.jsx` — added `EmptyState` import, `.st-container` wrapper, replaced Revenue Trend & AI Sources inline empty states with `<EmptyState>` component

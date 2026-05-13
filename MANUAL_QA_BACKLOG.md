@@ -371,7 +371,7 @@ Result notes:
 
 ---
 
-## Session 84.2–84.3 — Dashboard table replacement + wrapper + EmptyState
+## Session 84.2–84.4 — Dashboard table replacement + wrapper + EmptyState + token colors
 
 Status: Pending
 
@@ -407,13 +407,25 @@ Checklist:
 - Confirm full "No reports yet" welcome screen renders unchanged (BarChart3 icon, templates, Create Report button).
 - Confirm saved report cards still show "No data for this period" text when empty.
 - Confirm time range buttons (24h, 7 days, 30 days) still work.
-- Confirm sidebar/top bar still render with current colors (not yet migrated to st tokens).
+- Confirm sidebar/top bar now use st tokens: active nav link has lime accent background, Live badge uses st-lime/20.
 - Confirm Create Report button in header still navigates to /report-builder.
 - Confirm Export button still opens CSV export.
+
+### Session 84.4 — Token color alignment
+
+- Confirm sidebar active nav link shows `bg-st-lime/10 text-st-black` (light lime background, dark text).
+- Confirm sidebar inactive nav links still look normal.
+- Confirm admin sidebar link (super_admin only) active state uses `bg-st-lime/20 text-st-black`.
+- Confirm "Live" badge on Dashboard uses `bg-st-lime/20 text-st-black` rounded-full.
+- Confirm Create Report button (header) uses `bg-st-black` with `hover:bg-st-black/90`.
+- Confirm Create Report button (empty state welcome screen) uses `bg-st-black` with `hover:bg-st-black/90`.
+- Confirm other Dashboard CTA buttons (Analyze, View all, Details, etc.) remain unchanged.
+- Confirm chart colors unchanged (`#D7F550` stays for AI trend).
 
 Files changed:
 
 - dashboard/src/pages/Dashboard.jsx
+- dashboard/src/components/Layout.jsx
 
 Result notes:
 

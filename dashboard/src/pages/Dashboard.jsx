@@ -346,7 +346,7 @@ export default function Dashboard() {
         {!previewMode && (
           <div className="flex items-center gap-3">
             <button onClick={() => navigate('/report-builder')}
-              className="px-3 py-1.5 text-sm text-white bg-gray-900 rounded-lg hover:bg-gray-800 flex items-center gap-1.5">
+              className="px-3 py-1.5 text-sm text-white bg-st-black rounded-lg hover:bg-st-black/90 flex items-center gap-1.5">
               <Plus className="w-3.5 h-3.5" /> Create Report
             </button>
             <div className="flex bg-gray-100 rounded-lg p-1">
@@ -389,7 +389,7 @@ export default function Dashboard() {
           <div className="space-y-3">
             <button
               onClick={() => navigate('/report-builder')}
-              className="w-full max-w-sm py-3 bg-gray-900 text-white rounded-lg text-sm font-semibold hover:bg-gray-800 flex items-center justify-center gap-2 mx-auto"
+              className="w-full max-w-sm py-3 bg-st-black text-white rounded-lg text-sm font-semibold hover:bg-st-black/90 flex items-center justify-center gap-2 mx-auto"
             >
               <Plus className="w-4 h-4" /> Create Report
             </button>

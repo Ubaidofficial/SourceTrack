@@ -85,7 +85,7 @@ export default function Layout({ children }) {
               className={({ isActive }) =>
                 `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-gray-100 text-gray-900'
+                    ? 'bg-st-lime/10 text-st-black'
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`
               }
@@ -101,7 +101,7 @@ export default function Layout({ children }) {
               className={({ isActive }) =>
                 `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-lime-100 text-lime-800'
+                    ? 'bg-st-lime/20 text-st-black'
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`
               }
@@ -136,7 +136,7 @@ export default function Layout({ children }) {
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-semibold text-gray-900">{pageTitle}</h2>
                 {location.pathname === '/dashboard' && (
-                  <span className="px-2 py-0.5 text-xs font-medium bg-lime-100 text-lime-800 rounded-full">Live</span>
+                  <span className="px-2 py-0.5 text-xs font-medium bg-st-lime/20 text-st-black rounded-full">Live</span>
                 )}
               </div>
             )}

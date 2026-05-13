@@ -6,7 +6,7 @@ Update at the start and end of every session.
 
 ## Current Session
 
-- **Session:** 84.3 — Dashboard wrapper and EmptyState integration
+- **Session:** 84.4 — Dashboard/Layout token color alignment
 - **Branch:** `session-84-dashboard-shell`
 - **Started:** 2026-05-13
 - **Status:** Complete

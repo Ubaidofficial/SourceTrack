@@ -76,12 +76,12 @@ Do not claim features are implemented unless verified in code and QA.
 | Inline empty states → `<EmptyState>` | ✅ | Session 84.3 | Revenue Trend + AI Sources replaced with `<EmptyState>` |
 | Time range → `<FilterBar>` | ❌ | Session 84.1 audit | Custom button bar; can use FilterBar |
 | `.st-container` wrapper | ✅ | Session 84.3 | Dashboard.jsx now uses `.st-container` |
-| CTA button colors (`bg-gray-900`) | ❌ | Session 84.1 audit | Should be `bg-st-black` |
-| Chart color (`#D7F550`) | ❌ | Session 84.1 audit | Should be `#CCF03F` (st-lime) |
-| Sidebar active (`bg-gray-100`) | ❌ | Session 84.1 audit | Should be `bg-st-lime/10 text-st-black` |
-| Top bar "Live" badge | ❌ | Session 84.1 audit | Should use st tokens |
+| CTA button colors (`bg-gray-900`) | ✅ | Session 84.4 | 2 Create Report CTAs → `bg-st-black` |
+| Chart color (`#D7F550`) | ❌ | Session 84.4 audit | Skipped; guard rule "do not change chart colors" |
+| Sidebar active (`bg-gray-100`) | ✅ | Session 84.4 | Sidebar nav active → `bg-st-lime/10 text-st-black` |
+| Top bar "Live" badge | ✅ | Session 84.4 | Live badge → `bg-st-lime/20 text-st-black` |
 | Business-specific dashboards | 🎨 | — | 4 variants in Figma spec |
-| Figma visual alignment | ⚠️ | Sessions 84.2–84.3 | Tables + wrapper + empty states done; sidebar/colors/FilterBar pending |
+| Figma visual alignment | ⚠️ | Sessions 84.2–84.4 | Tables + wrapper + empty states + sidebar/CTAs done; chart color + FilterBar pending |
 
 ## Onboarding
 
