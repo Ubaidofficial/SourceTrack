@@ -368,3 +368,53 @@ Checklist:
 Result notes:
 
 - Future work.
+
+---
+
+## Session 84.2–84.3 — Dashboard table replacement + wrapper + EmptyState
+
+Status: Pending
+
+Goal: verify Dashboard primitives render correctly and no regressions introduced.
+
+Prerequisites:
+
+- Dashboard with actual data (or preview mode via support banner).
+- Vite dev server running.
+
+Checklist:
+
+### Session 84.2 — DashboardTable
+
+- Confirm Dashboard loads without errors.
+- Confirm Recent Leads card uses `<DashboardTable>` with Source, Conversions, Revenue, Status columns.
+- Confirm AI badges render in Source column for AI platforms.
+- Confirm Revenue Source Attribution card uses `<DashboardTable>` with Source, Revenue, Share columns.
+- Confirm AI Sources Performance card uses `<DashboardTable>` with AI Source, Revenue, Conversions columns.
+- Confirm Landing Page Performance card uses `<DashboardTable>` with Page, Revenue columns.
+- Confirm Campaign Performance card uses `<DashboardTable>` with Campaign, Revenue columns.
+- Confirm all table empty messages match original text.
+
+### Session 84.3 — .st-container + EmptyState
+
+- Confirm Dashboard page width is constrained to 1320px with visible side padding.
+- Confirm Revenue Trend card shows `<EmptyState>` with TrendingUp icon and "No data yet" title when no trend data.
+- Confirm AI Sources card shows `<EmptyState>` with Sparkles icon, "Track AI-platform traffic to your site" title, description text, and "Set up tracking" button that navigates to /snippet.
+- Confirm AI Sources empty state action button is present and clickable.
+
+### Regression checks
+
+- Confirm full "No reports yet" welcome screen renders unchanged (BarChart3 icon, templates, Create Report button).
+- Confirm saved report cards still show "No data for this period" text when empty.
+- Confirm time range buttons (24h, 7 days, 30 days) still work.
+- Confirm sidebar/top bar still render with current colors (not yet migrated to st tokens).
+- Confirm Create Report button in header still navigates to /report-builder.
+- Confirm Export button still opens CSV export.
+
+Files changed:
+
+- dashboard/src/pages/Dashboard.jsx
+
+Result notes:
+
+- Pending.

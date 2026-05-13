@@ -63,7 +63,7 @@ None confirmed at runtime.
 
 **Risk notes:**
 - Inter is loaded via Google Fonts CDN. Acceptable for development; external font dependency should be reviewed before production if strict self-hosting is required.
-- New primitives (`DashboardTable`, `FilterBar`, `EmptyState`) are previewed in `/design-system` but not yet integrated into production pages. No regression risk.
+- New primitives (`DashboardTable`, `FilterBar`, `EmptyState`) are previewed in `/design-system`. `DashboardTable` and `EmptyState` are now integrated into `Dashboard.jsx` (Sessions 84.2–84.3). `FilterBar` is not yet integrated. No regression risk.
 - Design-system route (`/design-system`) is public (no auth wrapper). This is intentional for development but should be gated or removed before production.
 - Manual visual QA deferred to `MANUAL_QA_BACKLOG.md`.
 
@@ -75,6 +75,22 @@ None confirmed at runtime.
 **Confirmed issues:** None — audit was gap analysis, not bug hunt.
 **No implementation code changed.**
 **Implementation plan ready for 84.2** — 4 phases: tables → wrapper/empty-states → sidebar/colors → FilterBar.
+
+### Session 84.2 update
+
+**Date:** 2026-05-13
+**Review type:** Dashboard table replacement.
+**Files changed:** `dashboard/src/pages/Dashboard.jsx` — 5 raw tables replaced with `<DashboardTable>`.
+**Build:** `npm run build` passed.
+**Confirmed issues:** None.
+
+### Session 84.3 update
+
+**Date:** 2026-05-13
+**Review type:** Dashboard wrapper + EmptyState integration.
+**Files changed:** `dashboard/src/pages/Dashboard.jsx` — imported `EmptyState`, added `.st-container` wrapper, replaced Revenue Trend and AI Sources inline empty states with `<EmptyState>`.
+**Build:** `npm run build` passed.
+**Confirmed issues:** None.
 
 ### Next review
 

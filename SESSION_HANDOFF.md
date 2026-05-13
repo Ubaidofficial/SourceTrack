@@ -6,12 +6,12 @@ This file is intentionally short. It tells the next agent exactly where to conti
 
 ## Current branch
 
-`session-84-dashboard-shell` (Session 84.1 audit complete; implementation pending in 84.2)
+`session-84-dashboard-shell` (84.3 wrapper + empty states complete)
 
 ## Next recommended session
 
-**Session 84.2:** Dashboard shell/card/table visual alignment implementation.
-Branch: `session-84-dashboard-shell`. Phase 1: replace raw tables with DashboardTable. Phase 2: wrapper + empty states. Phase 3: sidebar + colors. Phase 4: FilterBar for time range.
+**Session 84.4:** Sidebar + top bar color alignment.
+Branch: `session-84-dashboard-shell`. Phase 3: sidebar active color (`bg-st-lime/10 text-st-black`), CTA button colors (`bg-st-black`), chart color (`#CCF03F`), "Live" badge st tokens.
 
 ## Current main baseline
 
@@ -54,6 +54,11 @@ Session 80:
 
 ## Files changed in this session
 
+Session 84.3:
+- `dashboard/src/pages/Dashboard.jsx` — added `EmptyState` import, `.st-container` wrapper, replaced Revenue Trend & AI Sources inline empty states with `<EmptyState>` component
+- `SESSION_HANDOFF.md`, `SESSION_LOG.md`, `AI_SESSION_PLAN.md`, `SESSION_STATE.md`, `IMPLEMENTATION_GAP_LIST.md` — updated
+
+Session 83.2:
 - `dashboard/index.html` — added Inter font Google Fonts link
 - `dashboard/tailwind.config.js` — added `st` color namespace + Inter font family
 - `dashboard/src/index.css` — added `.st-container` utility class

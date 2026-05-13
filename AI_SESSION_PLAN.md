@@ -76,14 +76,27 @@ Update at the end of each session to reflect completed work and revised prioriti
 ### Session 84.2: Dashboard shell/card/table visual alignment implementation
 
 - **Branch:** `session-84-dashboard-shell`
-- **Status:** Planned
+- **Status:** Complete — 5 raw tables replaced with DashboardTable
 - **Objective:** Apply P1 primitives to existing dashboard page.
 - **Scope:**
-  - Restyle `Dashboard.jsx` 9-card grid with primitives
-  - Restyle KPI row, tables, sidebar, topbar
-  - Add empty states to cards without data
-- **Out of scope:** New cards, business dashboard routing
+  - Restyle `Dashboard.jsx` tables with DashboardTable primitive
+- **Completed:**
+  - Replaced 5 raw tables: Recent Leads, AI Sources, Revenue Source Attribution, Landing Pages, Campaigns
+  - All values, formatting, status badges, empty messages preserved
+  - `npm run build` passes
 - **Risk level:** Medium
+
+### Session 84.3: Dashboard wrapper + EmptyState integration
+
+- **Branch:** `session-84-dashboard-shell`
+- **Status:** Complete
+- **Objective:** Add `.st-container` wrapper and replace inline empty states with `<EmptyState>`.
+- **Completed:**
+  - Added `.st-container` to Dashboard root wrapper
+  - Replaced Revenue Trend "No data yet" inline empty state with `<EmptyState>` (TrendingUp icon)
+  - Replaced AI Sources custom empty state with `<EmptyState>` (Sparkles icon + "Set up tracking" action)
+  - `npm run build` passes, `git diff --check` clean
+- **Risk level:** Low
 
 ### Session 85: Onboarding Figma alignment
 

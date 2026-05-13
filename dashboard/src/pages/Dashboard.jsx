@@ -24,6 +24,8 @@ import {
 } from 'lucide-react'
 import MetricTile from '../components/MetricTile'
 import DashboardCard from '../components/DashboardCard'
+import DashboardTable from '../components/DashboardTable'
+import EmptyState from '../components/EmptyState'
 import StatusBadge from '../components/StatusBadge'
 import SupportModeBanner from '../components/SupportModeBanner'
 import ConversionExplanationModal from '../components/ConversionExplanationModal'
@@ -330,7 +332,7 @@ export default function Dashboard() {
   const isEmpty = !isLoading && savedReports.length === 0
 
   return (
-    <div className="space-y-6">
+    <div className="st-container space-y-6">
       {previewMode && (
         <SupportModeBanner siteName={previewSiteName} siteDomain={previewSiteDomain} />
       )}
@@ -528,40 +530,27 @@ export default function Dashboard() {
               {recentLeadsData.length === 0 ? (
                 <p className="text-sm text-gray-400 py-6 text-center">No recent leads yet. Data will appear as conversions flow in.</p>
               ) : (
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="text-left py-2.5 px-3 text-xs font-medium text-gray-500">Source</th>
-                      <th className="text-right py-2.5 px-3 text-xs font-medium text-gray-500">Conversions</th>
-                      <th className="text-right py-2.5 px-3 text-xs font-medium text-gray-500">Revenue</th>
-                      <th className="text-right py-2.5 px-3 text-xs font-medium text-gray-500">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentLeadsData.map((r, i) => {
-                      const isAI = AI_SOURCES.includes(r.source)
-                      return (
-                        <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                          <td className="py-2.5 px-3 text-gray-900 flex items-center gap-2">
-                            {r.source}
-                            {isAI && <StatusBadge status="verified" label="AI" />}
-                          </td>
-                          <td className="py-2.5 px-3 text-right text-gray-600">{r.conversions}</td>
-                          <td className="py-2.5 px-3 text-right font-medium text-gray-900">${r.revenue.toFixed(0)}</td>
-                          <td className="py-2.5 px-3 text-right">
-                            <StatusBadge status="active" label="Active" />
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+                <DashboardTable
+                  columns={[
+                    { key: 'source', label: 'Source', render: (r) => (
+                      <span className="flex items-center gap-2">
+                        {r.source}
+                        {AI_SOURCES.includes(r.source) && <StatusBadge status="verified" label="AI" />}
+                      </span>
+                    )},
+                    { key: 'conversions', label: 'Conversions', render: (r) => r.conversions, cellClassName: 'text-right text-gray-600' },
+                    { key: 'revenue', label: 'Revenue', render: (r) => `$${r.revenue.toFixed(0)}`, cellClassName: 'text-right font-medium text-gray-900' },
+                    { key: 'status', label: 'Status', render: () => <StatusBadge status="active" label="Active" />, cellClassName: 'text-right' }
+                  ]}
+                  rows={recentLeadsData}
+                  emptyMessage="No recent leads yet. Data will appear as conversions flow in."
+                />
               )}
             </DashboardCard>
 
             <DashboardCard title="Revenue Trend" subtitle={`Last ${timeRange} days`}>
               {timeResults.length === 0 ? (
-                <div className="h-48 flex items-center justify-center text-sm text-gray-400">No data yet</div>
+                <EmptyState icon={TrendingUp} title="No data yet" description="Revenue trend data will appear as conversions flow in." />
               ) : (
                 <div className="h-48">
                   <Line data={revTrendData} options={chartOpts('$')} />
@@ -583,17 +572,12 @@ export default function Dashboard() {
               )}
             >
               {aiRevResults.length === 0 ? (
-                <div className="text-center py-8">
-                  <Sparkles className="w-10 h-10 text-lime-300 mx-auto mb-3" />
-                  <p className="text-sm text-gray-600 font-medium mb-1">Track AI-platform traffic to your site</p>
-                  <p className="text-xs text-gray-400 max-w-xs mx-auto">
-                    When visitors arrive from ChatGPT, Claude, Perplexity, or other AI tools, they'll appear here with attribution data.
-                  </p>
-                  <button onClick={() => navigate('/snippet')}
-                    className="mt-4 px-4 py-2 bg-lime-100 text-lime-800 rounded-lg text-xs font-medium hover:bg-lime-200">
-                    Set up tracking
-                  </button>
-                </div>
+                <EmptyState
+                  icon={Sparkles}
+                  title="Track AI-platform traffic to your site"
+                  description="When visitors arrive from ChatGPT, Claude, Perplexity, or other AI tools, they'll appear here with attribution data."
+                  action={{ label: 'Set up tracking', onClick: () => navigate('/snippet') }}
+                />
               ) : (
                 <>
                   {aiShareTotal > 0 && (
@@ -606,24 +590,14 @@ export default function Dashboard() {
                       </p>
                     </div>
                   )}
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-100">
-                        <th className="text-left py-2.5 px-3 text-xs font-medium text-gray-500">AI Source</th>
-                        <th className="text-right py-2.5 px-3 text-xs font-medium text-gray-500">Revenue</th>
-                        <th className="text-right py-2.5 px-3 text-xs font-medium text-gray-500">Conversions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {aiRevResults.slice(0, 5).map((r, i) => (
-                        <tr key={i} className="border-b border-gray-50">
-                          <td className="py-2.5 px-3 text-gray-900 font-medium">{r.dim_value || 'unknown'}</td>
-                          <td className="py-2.5 px-3 text-right text-gray-900">${(r.ai_revenue || 0).toFixed(0)}</td>
-                          <td className="py-2.5 px-3 text-right text-gray-600">{(r.ai_conversions || 0).toLocaleString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <DashboardTable
+                    columns={[
+                      { key: 'aiSource', label: 'AI Source', render: (r) => <span className="font-medium">{r.dim_value || 'unknown'}</span> },
+                      { key: 'aiRevenue', label: 'Revenue', render: (r) => `$${(r.ai_revenue || 0).toFixed(0)}`, cellClassName: 'text-right text-gray-900' },
+                      { key: 'aiConversions', label: 'Conversions', render: (r) => (r.ai_conversions || 0).toLocaleString(), cellClassName: 'text-right text-gray-600' }
+                    ]}
+                    rows={aiRevResults.slice(0, 5)}
+                  />
                 </>
               )}
               {aiTrendResults.length > 0 && (
@@ -651,26 +625,15 @@ export default function Dashboard() {
               {activeResults.length === 0 ? (
                 <p className="text-sm text-gray-400 py-6 text-center">No attribution data yet. Start sending events to see source breakdown.</p>
               ) : (
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="text-left py-2.5 px-3 text-xs font-medium text-gray-500">Source</th>
-                      <th className="text-right py-2.5 px-3 text-xs font-medium text-gray-500">Revenue</th>
-                      <th className="text-right py-2.5 px-3 text-xs font-medium text-gray-500">Share</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {activeResults.slice(0, 7).map((r, i) => (
-                      <tr key={i} className="border-b border-gray-50">
-                        <td className="py-2.5 px-3 text-gray-900">{r.dim_value || r.source || 'unknown'}</td>
-                        <td className="py-2.5 px-3 text-right text-gray-900 font-medium">${(r.revenue || 0).toFixed(0)}</td>
-                        <td className="py-2.5 px-3 text-right text-gray-500">
-                          {totalRevenue > 0 ? `${((r.revenue / totalRevenue) * 100).toFixed(1)}%` : '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <DashboardTable
+                  columns={[
+                    { key: 'source', label: 'Source', render: (r) => r.dim_value || r.source || 'unknown' },
+                    { key: 'revenue', label: 'Revenue', render: (r) => `$${(r.revenue || 0).toFixed(0)}`, cellClassName: 'text-right font-medium text-gray-900' },
+                    { key: 'share', label: 'Share', render: (r) => totalRevenue > 0 ? `${((r.revenue / totalRevenue) * 100).toFixed(1)}%` : '—', cellClassName: 'text-right text-gray-500' }
+                  ]}
+                  rows={activeResults.slice(0, 7)}
+                  emptyMessage="No attribution data yet. Start sending events to see source breakdown."
+                />
               )}
             </DashboardCard>
           </div>
@@ -757,22 +720,14 @@ export default function Dashboard() {
               {landingResults.length === 0 ? (
                 <p className="text-sm text-gray-400 py-6 text-center">Landing page data will appear after your first attributed conversions.</p>
               ) : (
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="text-left py-2.5 px-3 text-xs font-medium text-gray-500">Page</th>
-                      <th className="text-right py-2.5 px-3 text-xs font-medium text-gray-500">Revenue</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {landingResults.slice(0, 5).map((r, i) => (
-                      <tr key={i} className="border-b border-gray-50">
-                        <td className="py-2.5 px-3 text-gray-900 text-xs truncate max-w-[200px]">{r.dim_value || 'unknown'}</td>
-                        <td className="py-2.5 px-3 text-right font-medium text-gray-900">${(r.revenue || 0).toFixed(0)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <DashboardTable
+                  columns={[
+                    { key: 'page', label: 'Page', render: (r) => <span className="text-xs truncate max-w-[200px] block">{r.dim_value || 'unknown'}</span> },
+                    { key: 'revenue', label: 'Revenue', render: (r) => `$${(r.revenue || 0).toFixed(0)}`, cellClassName: 'text-right font-medium text-gray-900' }
+                  ]}
+                  rows={landingResults.slice(0, 5)}
+                  emptyMessage="Landing page data will appear after your first attributed conversions."
+                />
               )}
             </DashboardCard>
           </div>
@@ -817,22 +772,14 @@ export default function Dashboard() {
               {campaignResults.length === 0 ? (
                 <p className="text-sm text-gray-400 py-6 text-center">Campaign data will appear when UTM-tagged traffic converts.</p>
               ) : (
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="text-left py-2.5 px-3 text-xs font-medium text-gray-500">Campaign</th>
-                      <th className="text-right py-2.5 px-3 text-xs font-medium text-gray-500">Revenue</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {campaignResults.slice(0, 5).map((r, i) => (
-                      <tr key={i} className="border-b border-gray-50">
-                        <td className="py-2.5 px-3 text-gray-900">{r.dim_value || 'unknown'}</td>
-                        <td className="py-2.5 px-3 text-right font-medium text-gray-900">${(r.revenue || 0).toFixed(0)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <DashboardTable
+                  columns={[
+                    { key: 'campaign', label: 'Campaign', render: (r) => r.dim_value || 'unknown' },
+                    { key: 'revenue', label: 'Revenue', render: (r) => `$${(r.revenue || 0).toFixed(0)}`, cellClassName: 'text-right font-medium text-gray-900' }
+                  ]}
+                  rows={campaignResults.slice(0, 5)}
+                  emptyMessage="Campaign data will appear when UTM-tagged traffic converts."
+                />
               )}
             </DashboardCard>
 

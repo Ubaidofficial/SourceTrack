@@ -6,10 +6,10 @@ Update at the start and end of every session.
 
 ## Current Session
 
-- **Session:** 84.1 — Dashboard shell/card/table visual alignment repo audit
+- **Session:** 84.3 — Dashboard wrapper and EmptyState integration
 - **Branch:** `session-84-dashboard-shell`
 - **Started:** 2026-05-13
-- **Status:** Complete — audit done; implementation plan ready for 84.2
+- **Status:** Complete
 
 ## Active Blockers
 

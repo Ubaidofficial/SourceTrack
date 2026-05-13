@@ -72,16 +72,16 @@ Do not claim features are implemented unless verified in code and QA.
 | KPI cards | ⚠️ | Code inspection | Basic KPIs; no business-specific variants |
 | Charts (revenue, AI) | ⚠️ | Code inspection | Basic chart cards |
 | Add-to-Dashboard button | ❌ | Code inspection | Disabled with `{false &&}` guard |
-| Raw tables → `<DashboardTable>` | ❌ | Session 84.1 audit | 5 raw tables in Dashboard.jsx; need replacement |
-| Inline empty states → `<EmptyState>` | ❌ | Session 84.1 audit | 6+ inline patterns; need `<EmptyState>` |
+| Raw tables → `<DashboardTable>` | ✅ | Session 84.2 | 5 raw tables replaced; build passes |
+| Inline empty states → `<EmptyState>` | ✅ | Session 84.3 | Revenue Trend + AI Sources replaced with `<EmptyState>` |
 | Time range → `<FilterBar>` | ❌ | Session 84.1 audit | Custom button bar; can use FilterBar |
-| `.st-container` wrapper | ❌ | Session 84.1 audit | Dashboard.jsx needs wrapper |
+| `.st-container` wrapper | ✅ | Session 84.3 | Dashboard.jsx now uses `.st-container` |
 | CTA button colors (`bg-gray-900`) | ❌ | Session 84.1 audit | Should be `bg-st-black` |
 | Chart color (`#D7F550`) | ❌ | Session 84.1 audit | Should be `#CCF03F` (st-lime) |
 | Sidebar active (`bg-gray-100`) | ❌ | Session 84.1 audit | Should be `bg-st-lime/10 text-st-black` |
 | Top bar "Live" badge | ❌ | Session 84.1 audit | Should use st tokens |
 | Business-specific dashboards | 🎨 | — | 4 variants in Figma spec |
-| Figma visual alignment | ⚠️ | Session 84.1 audit | Plan ready; implementation pending in 84.2 |
+| Figma visual alignment | ⚠️ | Sessions 84.2–84.3 | Tables + wrapper + empty states done; sidebar/colors/FilterBar pending |
 
 ## Onboarding
 
