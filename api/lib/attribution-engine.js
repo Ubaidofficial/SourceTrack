@@ -1561,3 +1561,66 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
   cache.set(key, finalResult)
   return finalResult
 }
+
+// Get pre-aggregated attribution from batch job results
+export async function getPreAggregatedAttribution({
+  siteId,
+  model,
+  dateFrom,
+  dateTo,
+  groupBy = 'source',
+  metric = 'revenue'
+}) {
+  const { createClient } = await import('@supabase/supabase-js')
+  const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_KEY
+  )
+
+  // Determine which attribution field to use
+  const sourceField = model === 'first_touch' ? 'first_touch_source' : 'last_touch_source'
+  const mediumField = model === 'first_touch' ? 'first_touch_medium' : 'last_touch_medium'
+  const campaignField = model === 'first_touch' ? 'first_touch_campaign' : 'last_touch_campaign'
+
+  let selectField, groupField
+  if (groupBy === 'source') {
+    selectField = sourceField
+    groupField = sourceField
+  } else if (groupBy === 'medium') {
+    selectField = mediumField
+    groupField = mediumField
+  } else if (groupBy === 'campaign') {
+    selectField = campaignField
+    groupField = campaignField
+  }
+
+  const { data, error } = await supabase
+    .from('attributed_conversions')
+    .select(`${selectField}, conversion_value`)
+    .eq('site_id', siteId)
+    .gte('conversion_date', dateFrom)
+    .lte('conversion_date', dateTo)
+    .not(selectField, 'is', null)
+
+  if (error) throw new Error(`Supabase query failed: ${error.message}`)
+
+  // Aggregate by dimension
+  const aggregated = {}
+  for (const row of data || []) {
+    const dimValue = row[selectField] || 'direct'
+    if (!aggregated[dimValue]) {
+      aggregated[dimValue] = { revenue: 0, conversions: 0 }
+    }
+    aggregated[dimValue].revenue += parseFloat(row.conversion_value || 0)
+    aggregated[dimValue].conversions += 1
+  }
+
+  // Format results
+  const results = Object.entries(aggregated).map(([dim_value, stats]) => ({
+    dim_value,
+    revenue: parseFloat(stats.revenue.toFixed(2)),
+    conversions: stats.conversions
+  }))
+
+  return results.sort((a, b) => b[metric] - a[metric])
+}
