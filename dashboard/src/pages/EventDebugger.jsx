@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import { getEventHealth, getEdgeCases, fetchApi } from '../lib/api'
+import { getEventHealth, getEdgeCases, fetchApi, getLatestEvents } from '../lib/api'
 import {
   RefreshCw,
   Bug,

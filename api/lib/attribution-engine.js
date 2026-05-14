@@ -18,7 +18,7 @@ function esc(str) {
 
 async function firstTouchAttribution(siteId, dateFrom, dateTo) {
   const fromDate = toHogDate(dateFrom)
-  const toDate = toHogDate(dateTo)
+  const toDate = toHogDate(dateTo) + " 23:59:59"
 
   const sql = `
     SELECT
@@ -49,7 +49,7 @@ async function firstTouchAttribution(siteId, dateFrom, dateTo) {
 
 async function lastTouchAttribution(siteId, dateFrom, dateTo) {
   const fromDate = toHogDate(dateFrom)
-  const toDate = toHogDate(dateTo)
+  const toDate = toHogDate(dateTo) + " 23:59:59"
 
   const sql = `
     SELECT
@@ -88,7 +88,7 @@ function isDirectCondition(tableAlias = 'events') {
 
 async function firstTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
   const fromDate = toHogDate(dateFrom)
-  const toDate = toHogDate(dateTo)
+  const toDate = toHogDate(dateTo) + " 23:59:59"
 
   const sql = `
     SELECT
@@ -134,7 +134,7 @@ async function firstTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
 
 async function lastTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
   const fromDate = toHogDate(dateFrom)
-  const toDate = toHogDate(dateTo)
+  const toDate = toHogDate(dateTo) + " 23:59:59"
 
   const sql = `
     SELECT
@@ -184,7 +184,7 @@ async function lastTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
 // Kept for reference; re‑enable only after implementing per-touchpoint credit distribution.
 async function linearAttribution(siteId, dateFrom, dateTo) {
   const fromDate = toHogDate(dateFrom)
-  const toDate = toHogDate(dateTo)
+  const toDate = toHogDate(dateTo) + " 23:59:59"
 
   const sql = `
     SELECT
@@ -242,7 +242,7 @@ async function linearAttribution(siteId, dateFrom, dateTo) {
 
 async function aiPlatformAttribution(siteId, dateFrom, dateTo) {
   const fromDate = toHogDate(dateFrom)
-  const toDate = toHogDate(dateTo)
+  const toDate = toHogDate(dateTo) + " 23:59:59"
 
   const sql = `
     SELECT
@@ -341,7 +341,7 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
   if (cached) return cached
 
   const fromDate = toHogDate(dateFrom)
-  const toDate = toHogDate(dateTo)
+  const toDate = toHogDate(dateTo) + " 23:59:59"
   const safeSite = esc(siteId)
 
   // Build filter clauses (same pattern as getFlexibleReport)
@@ -876,7 +876,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
   if (cached) return cached
 
   const fromDate = toHogDate(dateFrom)
-  const toDate = toHogDate(dateTo)
+  const toDate = toHogDate(dateTo) + " 23:59:59"
   const safeSite = esc(siteId)
 
   // Linear attribution: split each conversion equally across all prior UTM-tagged pageviews.
@@ -1474,9 +1474,16 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     ${orderClause}
     LIMIT 50000
   `
-
   const rows = await queryHogQL(sql, 'flexible_report')
-  const results = rows.map(([dimValue, dimValue2, metricValue, ...extra]) => {
+
+
+  const results = rows.map((row) => {
+    const hasDim2 = dim2Expr != null
+    const dimValue = row[0]
+    const dimValue2 = hasDim2 ? row[1] : null
+    const metricValue = hasDim2 ? row[2] : row[1]
+    const extra = hasDim2 ? row.slice(3) : row.slice(2)
+
     const item = {
       dim_value: dimValue || 'unknown',
       ...(dim2Expr ? { dim_value2: dimValue2 || 'unknown' } : {}),
