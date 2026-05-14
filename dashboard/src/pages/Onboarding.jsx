@@ -73,12 +73,24 @@ export default function Onboarding() {
 
   async function loadOnboardingStatus() {
     try {
-      const { data: sites } = await supabase
+      const { data: member } = await supabase
+        .from('company_members')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      const query = supabase
         .from('sites')
         .select('id, site_key, onboarding_completed, onboarding_state, domain')
-        .eq('owner_id', user.id)
         .order('created_at', { ascending: true })
         .limit(1)
+
+      if (member?.company_id) {
+        query.eq('company_id', member.company_id)
+      } else {
+        query.eq('owner_id', user.id)
+      }
+      const { data: sites } = await query
 
       const site = sites?.[0]
       if (!site) return
@@ -153,12 +165,23 @@ export default function Onboarding() {
     }
 
     try {
-      const { data: existing } = await supabase
+      const { data: member } = await supabase
+        .from('company_members')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      const query = supabase
         .from('sites')
         .select('id, domain, onboarding_completed, onboarding_state, site_key')
-        .eq('owner_id', user.id)
         .eq('domain', trimmed)
-        .maybeSingle()
+
+      if (member?.company_id) {
+        query.eq('company_id', member.company_id)
+      } else {
+        query.eq('owner_id', user.id)
+      }
+      const { data: existing } = await query.maybeSingle()
 
       if (existing) {
         if (existing.onboarding_completed) {

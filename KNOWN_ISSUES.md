@@ -156,3 +156,9 @@ Authenticated dashboard/report endpoints require a Bearer token. A curl request 
     Missing or invalid Authorization header
 
 This is expected for protected API routes.
+
+### 9. /api/collect missing CORS headers (Fixed in Session 92)
+POST /api/collect, /api/conversion, /api/identify were blocked by CORS 
+when called from tracker on a different origin (localhost:8080, customer websites).
+Fixed by adding /api/collect, /api/conversion, /api/identify to isPixelRoute 
+check in both middleware blocks + explicit CORS headers on /api/collect route.

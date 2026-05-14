@@ -33,6 +33,7 @@ import { adminRouter } from './routes/admin.js'
 import { savedReportsRouter } from './routes/saved-reports.js'
 import { requireUserAuth } from './middleware/user-auth.js'
 import { billingWebhookHandler, billingRouter } from './routes/billing.js'
+import { serverEventsRouter } from './routes/server-events.js'
 import { sessionsOverview, visitorSessions } from './routes/sessions.js'
 
 const app = express()
@@ -41,13 +42,17 @@ const app = express()
 app.use((req, res, next) => {
   const isPixelRoute =
     req.path === '/api/track' ||
+    req.path === '/api/collect' ||
+    req.path === '/api/conversion' ||
+    req.path === '/api/identify' ||
     req.path === '/track' ||
     req.path.includes('/tracking') ||
     req.path.includes('/pageview') ||
     req.path.includes('/tracker');
 
   if (isPixelRoute) {
-    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
     res.header('Access-Control-Max-Age', '86400');
@@ -63,12 +68,16 @@ app.use((req, res, next) => {
 // Session 70 global pixel CORS fix
 app.use((req, res, next) => {
   if (
+    req.path === '/api/collect' ||
+    req.path === '/api/conversion' ||
+    req.path === '/api/identify' ||
     req.path.includes('/track') ||
     req.path.includes('/pageview') ||
     req.path.includes('/tracking') ||
     req.path.includes('/tracker')
   ) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
@@ -156,14 +165,16 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }))
 // Root alias required by tracker/loader.min.js
 app.get('/tracker.min.js', (req, res) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
-  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*')
+  res.setHeader('Access-Control-Allow-Credentials', 'true')
   res.type('application/javascript')
   res.sendFile(process.cwd() + '/tracker/tracker.min.js')
 })
 
 app.use('/tracker', (req, res, next) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
-  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*')
+  res.setHeader('Access-Control-Allow-Credentials', 'true')
   next()
 })
 
@@ -190,14 +201,22 @@ app.use('/api/track', trackLimit)
 
 // 6. Routes
 app.post('/api/track', validateSiteKey, detectAIPlatform, track)
-app.post('/api/collect', validateSiteKey, detectAIPlatform, track)
+app.post('/api/collect', (req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*')
+    res.setHeader('Access-Control-Allow-Credentials', 'true')
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
+    next()
+  }, validateSiteKey, detectAIPlatform, track)
 app.options('/api/collect', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
-  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
-  return res.status(200).send('OK')
-})
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*')
+    res.setHeader('Access-Control-Allow-Credentials', 'true')
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
+    res.setHeader('Access-Control-Max-Age', '86400')
+    return res.status(200).send('OK')
+  })
 app.post('/api/identify', validateSiteKey, identify)
 app.post('/api/conversion', validateSiteKey, detectAIPlatform, conversion)
 app.post('/api/conversion/offline', validateSiteKey, conversionOffline)
@@ -265,7 +284,8 @@ app.post('/track', express.json({ limit: '100kb' }), async (req, res) => {
       }
     });
 
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
 
     try {

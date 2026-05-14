@@ -15,12 +15,19 @@ export default function AIChat() {
 
   useEffect(() => {
     async function load() {
-      const { data } = await supabase
-        .from('sites')
-        .select('site_key')
-        .eq('owner_id', user.id)
-        .limit(1)
+      const { data: member } = await supabase
+        .from('company_members')
+        .select('company_id')
+        .eq('user_id', user.id)
         .maybeSingle()
+
+      const query = supabase.from('sites').select('site_key').limit(1)
+      if (member?.company_id) {
+        query.eq('company_id', member.company_id)
+      } else {
+        query.eq('owner_id', user.id)
+      }
+      const { data } = await query.maybeSingle()
       setSiteKey(data?.site_key || null)
       setSiteLoading(false)
     }
