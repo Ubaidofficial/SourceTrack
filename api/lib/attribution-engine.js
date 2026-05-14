@@ -298,8 +298,14 @@ export async function getAttribution(siteId, model, dateFrom, dateTo) {
       throw new Error(`Unknown attribution model: ${model}`)
   }
 
-  cache.set(key, results)
-  return results
+  const isTruncated = Array.isArray(results) && results.length >= 50000
+
+  const finalResult = isTruncated
+    ? { results, truncated: true, truncated_at: 50000 }
+    : results
+
+  cache.set(key, finalResult)
+  return finalResult
 }
 
 /**
@@ -396,7 +402,7 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
       AND event = '$pageview'
       AND timestamp >= toDateTime('${fromDate}')
       AND timestamp <= toDateTime('${toDate}')${filterClauses}
-    ORDER BY e.distinct_id ASC, timestamp ASC
+    ORDER BY distinct_id ASC, timestamp ASC
     LIMIT 50000
   `
 
@@ -412,7 +418,7 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
       AND event = '$conversion'
       AND timestamp >= toDateTime('${fromDate}')
       AND timestamp <= toDateTime('${toDate}')${filterClauses}
-    ORDER BY e.distinct_id ASC, timestamp ASC
+    ORDER BY distinct_id ASC, timestamp ASC
     LIMIT 50000
   `
 
@@ -532,8 +538,14 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
 
   results.sort((a, b) => (b[metric] || 0) - (a[metric] || 0))
 
-  cache.set(key, results)
-  return results
+  const isTruncated = rows.length >= 50000 || convRows.length >= 50000
+
+  const finalResult = isTruncated
+    ? { results, truncated: true, truncated_at: 50000 }
+    : results
+
+  cache.set(key, finalResult)
+  return finalResult
 }
 
 // Attribution explanation: for a given distinct_id, site, and model, return WHY
@@ -867,6 +879,178 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
   const toDate = toHogDate(dateTo)
   const safeSite = esc(siteId)
 
+  // Linear attribution: split each conversion equally across all prior UTM-tagged pageviews.
+  // Conversions with zero eligible touchpoints are excluded.
+  // Group by source only. attributionWindow and groupBy2 not supported for linear.
+  if (model === 'linear') {
+    const sql = `
+    SELECT
+      dim_value,
+      sum(fractional_revenue) AS revenue,
+      sum(fractional_conversions) AS conversions,
+      count() AS touchpoints
+    FROM (
+      SELECT
+        COALESCE(NULLIF(toString(pv.properties.utm_source), ''), 'direct') AS dim_value,
+        toFloatOrZero(toString(cv.properties.conversion_value)) / touch_counts.touch_count AS fractional_revenue,
+        1 / touch_counts.touch_count AS fractional_conversions
+      FROM events cv
+      INNER JOIN (
+        SELECT
+          cv_inner.uuid AS conversion_uuid,
+          count() AS touch_count
+        FROM events cv_inner
+        INNER JOIN events pv_inner
+          ON pv_inner.distinct_id = cv_inner.distinct_id
+          AND pv_inner.properties.site_id = cv_inner.properties.site_id
+          AND pv_inner.event = '$pageview'
+          AND pv_inner.timestamp <= cv_inner.timestamp
+          AND pv_inner.properties.utm_source IS NOT NULL
+          AND pv_inner.properties.utm_source != ''
+        WHERE cv_inner.properties.site_id = '${safeSite}'
+          AND cv_inner.event = '$conversion'
+          AND cv_inner.timestamp >= toDateTime('${fromDate}')
+          AND cv_inner.timestamp <= toDateTime('${toDate}')
+        GROUP BY cv_inner.uuid
+        HAVING touch_count > 0
+      ) touch_counts ON touch_counts.conversion_uuid = cv.uuid
+      INNER JOIN events pv
+        ON pv.distinct_id = cv.distinct_id
+        AND pv.properties.site_id = cv.properties.site_id
+        AND pv.event = '$pageview'
+        AND pv.timestamp <= cv.timestamp
+        AND pv.properties.utm_source IS NOT NULL
+        AND pv.properties.utm_source != ''
+      WHERE cv.properties.site_id = '${safeSite}'
+        AND cv.event = '$conversion'
+        AND cv.timestamp >= toDateTime('${fromDate}')
+        AND cv.timestamp <= toDateTime('${toDate}')
+    )
+    GROUP BY dim_value
+    ORDER BY revenue DESC
+    LIMIT 50000
+  `
+
+    const rows = await queryHogQL(sql, 'flexible_report_linear')
+    const results = rows.map(([dimValue, revenue, conversions, touchpoints]) => ({
+      dim_value: dimValue || 'unknown',
+      revenue: Number(revenue) || 0,
+      conversions: Number(conversions) || 0,
+      touchpoints: Number(touchpoints) || 0
+    }))
+
+    const isTruncated = rows.length >= 50000
+    const returnValue = isTruncated
+      ? { results, truncated: true, truncated_at: 50000 }
+      : results
+
+    cache.set(key, returnValue)
+    return returnValue
+  }
+
+  // Days to Convert: average days between first UTM-tagged pageview and conversion.
+  // Excludes conversions with zero eligible UTM touchpoints.
+  // Group by first-touch source only. attributionWindow and groupBy2 not supported.
+  if (metric === 'days_to_convert') {
+    const sql = `
+    SELECT
+      dim_value,
+      round(avg(days_gap), 1) AS days_to_convert,
+      count() AS conversions
+    FROM (
+      SELECT
+        cv.uuid AS conversion_uuid,
+        argMin(COALESCE(NULLIF(toString(pv.properties.utm_source), ''), 'direct'), pv.timestamp) AS dim_value,
+        dateDiff('day', min(pv.timestamp), cv.timestamp) AS days_gap
+      FROM events cv
+      INNER JOIN events pv
+        ON pv.distinct_id = cv.distinct_id
+        AND pv.properties.site_id = cv.properties.site_id
+        AND pv.event = '$pageview'
+        AND pv.timestamp <= cv.timestamp
+        AND pv.properties.utm_source IS NOT NULL
+        AND pv.properties.utm_source != ''
+      WHERE cv.properties.site_id = '${safeSite}'
+        AND cv.event = '$conversion'
+        AND cv.timestamp >= toDateTime('${fromDate}')
+        AND cv.timestamp <= toDateTime('${toDate}')
+      GROUP BY cv.uuid, cv.timestamp
+      HAVING days_gap >= 0
+    )
+    GROUP BY dim_value
+    HAVING conversions > 0
+    ORDER BY days_to_convert ASC
+    LIMIT 50000
+  `
+
+    const rows = await queryHogQL(sql, 'flexible_report_days_to_convert')
+    const results = rows.map(([dimValue, daysToConvert, conversions]) => ({
+      dim_value: dimValue || 'unknown',
+      days_to_convert: Number(daysToConvert) || 0,
+      conversions: Number(conversions) || 0
+    }))
+
+    const isTruncated = rows.length >= 50000
+    const returnValue = isTruncated
+      ? { results, truncated: true, truncated_at: 50000 }
+      : results
+
+    cache.set(key, returnValue)
+    return returnValue
+  }
+
+  // Touchpoints per Conversion: average pageview touchpoints preceding each conversion.
+  // Does not require UTM source on touchpoints (counts all pageviews).
+  // Group by first-touch source only. attributionWindow and groupBy2 not supported.
+  if (metric === 'touchpoints_per_conversion') {
+    const sql = `
+    SELECT
+      dim_value,
+      round(avg(touch_count), 1) AS touchpoints_per_conversion,
+      count() AS conversions
+    FROM (
+      SELECT
+        cv.uuid AS conversion_uuid,
+        COALESCE(
+          argMinIf(toString(pv.properties.utm_source), pv.timestamp, pv.properties.utm_source IS NOT NULL AND pv.properties.utm_source != ''),
+          NULLIF(toString(cv.properties.utm_source), ''),
+          'direct'
+        ) AS dim_value,
+        countIf(pv.event = '$pageview') AS touch_count
+      FROM events cv
+      INNER JOIN events pv
+        ON pv.distinct_id = cv.distinct_id
+        AND pv.properties.site_id = cv.properties.site_id
+        AND pv.timestamp <= cv.timestamp
+      WHERE cv.properties.site_id = '${safeSite}'
+        AND cv.event = '$conversion'
+        AND cv.timestamp >= toDateTime('${fromDate}')
+        AND cv.timestamp <= toDateTime('${toDate}')
+      GROUP BY cv.uuid, cv.properties.utm_source
+      HAVING touch_count > 0
+    )
+    GROUP BY dim_value
+    HAVING conversions > 0
+    ORDER BY touchpoints_per_conversion DESC
+    LIMIT 50000
+  `
+
+    const rows = await queryHogQL(sql, 'flexible_report_touchpoints_per_conversion')
+    const results = rows.map(([dimValue, touchpointsPerConversion, conversions]) => ({
+      dim_value: dimValue || 'unknown',
+      touchpoints_per_conversion: Number(touchpointsPerConversion) || 0,
+      conversions: Number(conversions) || 0
+    }))
+
+    const isTruncated = rows.length >= 50000
+    const returnValue = isTruncated
+      ? { results, truncated: true, truncated_at: 50000 }
+      : results
+
+    cache.set(key, returnValue)
+    return returnValue
+  }
+
   // Determine reference timestamp and optional JOIN for non-conversion_date attribution
   let refTs = 'timestamp'
   let refJoin = ''
@@ -967,10 +1151,16 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
       extraSelect = ''
       break
     case 'leads':
-      // TODO: confirm what defines a lead event
       metricCol = 'count()'
       metricLabel = 'leads'
-      eventFilter = "AND event = '$identify'"
+      eventFilter = `AND event = '$conversion' AND (
+      lower(COALESCE(toString(properties.conversion_type), '')) IN (
+        'lead', 'signup', 'sign_up', 'trial', 'free_trial', 'meeting',
+        'book_demo', 'schedule_meeting', 'contact_form', 'mql', 'form'
+      )
+      OR properties.conversion_type IS NULL
+      OR toString(properties.conversion_type) = ''
+    )`
       extraSelect = ''
       break
     case 'conversion_rate':
@@ -1024,13 +1214,71 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
       throw new Error(`Unknown metric: ${metric}`)
   }
 
-  // Attribution window: expands the lower date bound backward by N days.
-  // For fixed windows (1/7/14/30/60/90), this includes conversions from (date_from - N days).
-  // 'ltv' is currently a no-op for non-LTV metrics; LTV computes per-user aggregation independently.
-  let windowClause = ''
-  if (attributionWindow && attributionWindow !== 'ltv' && Number(attributionWindow) > 0) {
-    windowClause = `\n    AND timestamp >= toDateTime('${fromDate}') - INTERVAL ${Number(attributionWindow)} DAY`
+  // Attribution window: when set on a touchpoint model, only credit pageview touchpoints
+  // that occurred within N days before each conversion. If no qualifying touchpoint exists
+  // inside the window, the conversion falls back to 'direct'.
+  const hasAttributionWindow =
+    attributionWindow &&
+    attributionWindow !== 'ltv' &&
+    Number(attributionWindow) > 0
+
+  const windowDays = hasAttributionWindow ? Number(attributionWindow) : null
+
+  const isTouchModel = model === 'first_touch' || model === 'last_touch' || model === 'first_touch_non_direct' || model === 'last_touch_non_direct'
+
+  // Windowed attribution: find the qualifying pageview touchpoint within N days of each conversion.
+  let windowJoin = ''
+  let windowedDimExpr = null
+  let windowedDim2Expr = null
+
+  if (isTouchModel && hasAttributionWindow) {
+    const aggFn = (model === 'first_touch' || model === 'first_touch_non_direct') ? 'argMin' : 'argMax'
+    const ndFilter = (model === 'first_touch_non_direct' || model === 'last_touch_non_direct')
+      ? `\n        AND _pv.properties.utm_source != 'direct'`
+      : ''
+
+    windowJoin = `
+    LEFT JOIN (
+      SELECT
+        events.uuid AS _win_uuid,
+        ${aggFn}(_pv.properties.utm_source, _pv.timestamp) AS _w_source,
+        ${aggFn}(_pv.properties.utm_medium, _pv.timestamp) AS _w_medium,
+        ${aggFn}(_pv.properties.utm_campaign, _pv.timestamp) AS _w_campaign
+      FROM events
+      LEFT JOIN events AS _pv
+        ON _pv.distinct_id = events.distinct_id
+        AND _pv.properties.site_id = events.properties.site_id
+        AND _pv.event = '$pageview'
+        AND _pv.properties.utm_source IS NOT NULL
+        AND _pv.properties.utm_source != ''${ndFilter}
+        AND _pv.timestamp >= events.timestamp - INTERVAL ${windowDays} DAY
+        AND _pv.timestamp <= events.timestamp
+      WHERE events.properties.site_id = '${safeSite}'
+        AND events.event = '$conversion'
+        AND events.timestamp >= toDateTime('${fromDate}')
+        AND events.timestamp <= toDateTime('${toDate}')
+      GROUP BY events.uuid
+    ) _win ON events.uuid = _win._win_uuid`
+
+    if (groupBy === 'source' || groupBy === 'medium' || groupBy === 'campaign') {
+      windowedDimExpr = groupBy === 'source'
+        ? "COALESCE(NULLIF(_win._w_source, ''), 'direct')"
+        : groupBy === 'medium'
+          ? "COALESCE(NULLIF(_win._w_medium, ''), 'none')"
+          : '_win._w_campaign'
+    }
+
+    if (groupBy2 === 'source' || groupBy2 === 'medium' || groupBy2 === 'campaign') {
+      windowedDim2Expr = groupBy2 === 'source'
+        ? "COALESCE(NULLIF(_win._w_source, ''), 'direct')"
+        : groupBy2 === 'medium'
+          ? "COALESCE(NULLIF(_win._w_medium, ''), 'none')"
+          : '_win._w_campaign'
+    }
   }
+
+  const effectiveDimExpr = windowedDimExpr || dimExpr
+  const effectiveDim2Expr = windowedDim2Expr || dim2Expr
 
   const orderClause = groupBy === 'date' ? 'ORDER BY dim_value ASC' : 'ORDER BY metric_value DESC'
 
@@ -1182,7 +1430,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
       FROM events${ltvJoin}
       WHERE properties.site_id = '${safeSite}'
         AND event = '$conversion'
-        AND timestamp >= toDateTime('${fromDate}')${windowClause}
+        AND timestamp >= toDateTime('${fromDate}')
         AND timestamp <= toDateTime('${toDate}')
         ${uuidExclusion}${filterClauses}
       GROUP BY events.distinct_id
@@ -1201,21 +1449,27 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
       ltv_revenue: Number(metricValue) || 0
     }))
 
-    cache.set(key, ltvResults)
-    return ltvResults
+    const ltvTruncated = ltvRows.length >= 50000
+
+    const finalLtvResult = ltvTruncated
+      ? { results: ltvResults, truncated: true, truncated_at: 50000 }
+      : ltvResults
+
+    cache.set(key, finalLtvResult)
+    return finalLtvResult
   }
 
   const sql = `
     SELECT
-      ${dimExpr} AS dim_value${dim2Expr ? `,\n      ${dim2Expr} AS dim_value2` : ''},
+      ${effectiveDimExpr} AS dim_value${effectiveDim2Expr ? `,\n      ${effectiveDim2Expr} AS dim_value2` : ''},
       ${metricCol} AS metric_value
       ${extraSelect}
-    FROM events${refJoin}${qualifyingJoin}
+    FROM events${refJoin}${qualifyingJoin}${windowJoin}
     WHERE properties.site_id = '${safeSite}'
-      AND timestamp >= toDateTime('${fromDate}')${windowClause}
+      AND timestamp >= toDateTime('${fromDate}')
       AND timestamp <= toDateTime('${toDate}')
       ${eventFilter}${filterClauses}
-    GROUP BY dim_value${dim2Expr ? ', dim_value2' : ''}
+    GROUP BY dim_value${effectiveDim2Expr ? ', dim_value2' : ''}
     ${havingClause}
     ${orderClause}
     LIMIT 50000
@@ -1245,7 +1499,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
         FROM events${refJoin}
         WHERE properties.site_id = '${safeSite}'
           AND event = '$pageview'
-          AND timestamp >= toDateTime('${fromDate}')${windowClause}
+          AND timestamp >= toDateTime('${fromDate}')
           AND timestamp <= toDateTime('${toDate}')${filterClauses}
         GROUP BY dim_value${dim2Expr ? ', dim_value2' : ''}
         LIMIT 50000
@@ -1273,7 +1527,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
         AND event = '$conversion'
         AND properties.ai_source IS NOT NULL
         AND properties.ai_source != ''
-        AND timestamp >= toDateTime('${fromDate}')${windowClause}
+        AND timestamp >= toDateTime('${fromDate}')
         AND timestamp <= toDateTime('${toDate}')${filterClauses}
       GROUP BY dim_value${dim2Expr ? ', dim_value2' : ''}
       LIMIT 50000
@@ -1291,6 +1545,12 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     }
   }
 
-  cache.set(key, results)
-  return results
+  const isTruncated = rows.length >= 50000
+
+  const finalResult = isTruncated
+    ? { results, truncated: true, truncated_at: 50000 }
+    : results
+
+  cache.set(key, finalResult)
+  return finalResult
 }

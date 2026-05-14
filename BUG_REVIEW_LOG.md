@@ -150,4 +150,42 @@ None confirmed at runtime.
 
 ### Next review
 
-After Session 82 manual QA, update this log with any runtime bugs found.
+After Session 90.1 implementation, review for any new issues. B6 leads/conversions duplication will be addressed in Session 90.4.
+
+### Session 91.5 update
+
+**Date:** 2026-05-14
+**Review type:** Feature verification — static validation only. No runtime QA.
+**Sessions verified:** 91.1 (Leads event type badges + attribution model filter), 91.2 (Journey modal), 91.3 (KPI chart type), 91.4 (Rolling vs fixed date toggle).
+**Checks passed:** All verification greps confirmed. `node --check api/routes/leads-server.js` passed. `npm run build` passed (2.36s).
+**Confirmed issues:** None.
+**Remaining caveats:** Manual/browser QA deferred. B7 HogQL runtime QA still needed. Mark as Qualified button in JourneyModal is UI-only.
+**No implementation files were edited in this session.**
+
+### Session 86.2 update
+
+**Date:** 2026-05-14
+**Review type:** Bug-fix queue verification (B1–B8 + B2.1). Static validation + rebuild only. No runtime QA.
+
+**Fixed and verified:**
+
+| Bug | Description | Files |
+|---|---|---|
+| B1 | Removed per-request `ph.shutdown()` from 4 route files | track.js, conversion.js, identify.js, conversion-offline.js |
+| B2 | Removed public POST /api/events aliases; added /api/collect + OPTIONS | api/index.js |
+| B2.1 | Tracker non-conversion events now POST to /api/collect | tracker/tracker.js, tracker.min.js, loader.min.js |
+| B3 | Fixed cross-domain first-touch key serialization (abbreviated → full) | tracker/tracker.js, tracker.min.js |
+| B4 | Fixed `getSessionReport()` ORDER BY undefined alias `e` | attribution-engine.js |
+| B5 | Added company_members site-loading fallback for 4 dashboard pages | Dashboard.jsx, Leads.jsx, Campaigns.jsx, Journey.jsx |
+| B6 | Leads metric now counts `$conversion` instead of `$identify` | attribution-engine.js |
+| B7 | Fixed attribution window from date-range expansion to touchpoint-window JOIN | attribution-engine.js |
+| B8 | Added 50K-row truncation detection + ReportBuilder warning banner | attribution-engine.js, attribution.js, ReportBuilder.jsx |
+
+**Validation:** All backend files pass `node --check`. `npm run build:tracker` passes. Dashboard `npm run build` passes. 14 files changed, 199 insertions, 145 deletions.
+
+**Remaining caveats:**
+- B6: `leads` and `conversions` both count `$conversion` — identical numbers until leads is refined by conversion_type.
+- B7: Windowed self-join SQL needs runtime QA against PostHog HogQL to confirm correct temporal filtering.
+- B2/B2.1: Public ingestion is now `/api/collect`; `/api/events` is authenticated Event Debugger only.
+
+**Risk level:** Low — all changes are surgical bug fixes. No new features, no refactors, no scope creep.

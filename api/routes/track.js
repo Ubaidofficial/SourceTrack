@@ -50,6 +50,14 @@ export async function track(req, res) {
         first_touch_source: normalizeUtm(req.body.first_touch_source),
         first_touch_medium: normalizeUtm(req.body.first_touch_medium),
         first_touch_campaign: normalizeUtm(req.body.first_touch_campaign),
+        gclid: req.body.gclid || null,
+        gbraid: req.body.gbraid || null,
+        wbraid: req.body.wbraid || null,
+        fbclid: req.body.fbclid || null,
+        msclkid: req.body.msclkid || null,
+        ttclid: req.body.ttclid || null,
+        li_fat_id: req.body.li_fat_id || null,
+        twclid: req.body.twclid || null,
         ai_source: enriched.ai_source,
         device_type: enriched.device_type,
         country: enriched.country,
@@ -58,7 +66,6 @@ export async function track(req, res) {
       }
     })
 
-    await ph.shutdown()
 
     res.status(200).json({ success: true, data: { received: true }, error: null })
   } catch (_err) {

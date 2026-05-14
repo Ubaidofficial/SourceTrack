@@ -1,8 +1,15 @@
 import { Router } from 'express'
+import { createClient } from '@supabase/supabase-js'
+import WebSocket from 'ws'
 import { validateSiteKey } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
 
 const router = Router()
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY,
+  { realtime: { transport: WebSocket } }
+)
 
 function esc(str) {
   return str.replace(/'/g, "''")
@@ -18,6 +25,7 @@ router.get('/', validateSiteKey, async (req, res) => {
     const siteId = String(req.site.id)
     const search = (req.query.search || '').toLowerCase()
     const filterAI = req.query.ai || 'all'
+    const attributionModel = req.query.attribution_model === 'last_touch' ? 'last_touch' : 'first_touch'
     const dateFrom = req.query.date_from
     const dateTo = req.query.date_to
     const limit = Math.min(parseInt(req.query.limit) || 50, 200)
@@ -54,7 +62,7 @@ router.get('/', validateSiteKey, async (req, res) => {
 
     let leads = rows.map(([
       distinctId, firstSeen, lastSeen, pageviews, conversions, totalRevenue,
-      source, medium, campaign, aiSource, country, firstPageUrl
+      source, medium, campaign, aiSource, country, firstPageUrl, lastConversionType
     ]) => ({
       id: distinctId,
       first_seen: firstSeen,
@@ -67,7 +75,8 @@ router.get('/', validateSiteKey, async (req, res) => {
       campaign: campaign || null,
       ai_source: aiSource || null,
       country: country || null,
-      first_page_url: firstPageUrl || null
+      first_page_url: firstPageUrl || null,
+      last_conversion_type: lastConversionType || null
     }))
 
     if (search) {
@@ -167,6 +176,38 @@ router.get('/:leadId', validateSiteKey, async (req, res) => {
   } catch (_err) {
     console.error(_err)
     return res.status(500).json({ success: false, data: null, error: 'Lead detail failed' })
+  }
+})
+
+router.patch('/:leadId/qualify', validateSiteKey, async (req, res) => {
+  try {
+    const { leadId } = req.params
+    const qualified = req.body.qualified !== false
+    const notes = req.body.notes || ''
+
+    if (!leadId || leadId.trim() === '') {
+      return res.status(400).json({ success: false, data: null, error: 'leadId is required' })
+    }
+
+    const { data, error } = await supabase
+      .from('lead_qualifications')
+      .upsert({
+        site_id: req.site.id,
+        visitor_id: leadId,
+        qualified,
+        qualified_by: req.user?.id || null,
+        qualified_at: new Date().toISOString(),
+        notes
+      }, { onConflict: 'site_id,visitor_id' })
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return res.status(200).json({ success: true, data, error: null })
+  } catch (err) {
+    console.error(err)
+    return res.status(500).json({ success: false, data: null, error: 'Qualification failed' })
   }
 })
 

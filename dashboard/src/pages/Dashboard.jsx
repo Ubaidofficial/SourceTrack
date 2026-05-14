@@ -88,6 +88,17 @@ function formatDeltaVal(current, previous) {
   return { pct, up: pct >= 0 }
 }
 
+function getRollingDateRange(days) {
+  const safeDays = Number(days) > 0 ? Number(days) : 30
+  const to = new Date()
+  const from = new Date()
+  from.setDate(to.getDate() - safeDays)
+  return {
+    from: from.toISOString().slice(0, 10),
+    to: to.toISOString().slice(0, 10)
+  }
+}
+
 export default function Dashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -116,12 +127,24 @@ export default function Dashboard() {
 
     // Normal mode: load user's own site
     async function load() {
-      const { data } = await supabase
+      const { data: member } = await supabase
+        .from('company_members')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      const query = supabase
         .from('sites')
         .select('site_key, name, domain')
-        .eq('owner_id', user.id)
         .limit(1)
-        .maybeSingle()
+
+      if (member?.company_id) {
+        query.eq('company_id', member.company_id)
+      } else {
+        query.eq('owner_id', user.id)
+      }
+
+      const { data } = await query.maybeSingle()
       setSite(data)
     }
     load()
@@ -154,15 +177,18 @@ export default function Dashboard() {
   const reportQueries = useQueries({
     queries: topReports.map((r) => {
       const cfg = r.config || {}
+      const reportDateRange = cfg.isRolling
+        ? getRollingDateRange(cfg.rollingDays || 30)
+        : { from: cfg.dateFrom || format(subDays(new Date(), 30), 'yyyy-MM-dd'), to: cfg.dateTo || format(new Date(), 'yyyy-MM-dd') }
       return {
-        queryKey: ['saved-report-data', r.id, site?.site_key],
+        queryKey: ['saved-report-data', r.id, site?.site_key, cfg.isRolling ? `rolling-${cfg.rollingDays || 30}` : null],
         queryFn: async () => {
           if (!site?.site_key) return null
           const params = new URLSearchParams({
             site_key: site.site_key,
             model: cfg.model || 'last_touch',
-            date_from: cfg.dateFrom || format(subDays(new Date(), 30), 'yyyy-MM-dd'),
-            date_to: cfg.dateTo || format(new Date(), 'yyyy-MM-dd'),
+            date_from: reportDateRange.from,
+            date_to: reportDateRange.to,
             group_by: cfg.groupBy || 'source',
             metric: cfg.metric || 'revenue'
           })
@@ -471,6 +497,9 @@ export default function Dashboard() {
                         {metricDef.format(total)}
                       </p>
                       <p className="text-xs text-gray-400">{metricDef.label} total</p>
+                      {cfg.isRolling && (
+                        <p className="text-xs text-lime-700 mt-0.5">Rolling — last {cfg.rollingDays || 30} days</p>
+                      )}
 
                       {results.length > 0 ? (
                         <div className="mt-2 space-y-1">

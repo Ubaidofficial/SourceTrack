@@ -69,6 +69,7 @@ const CHART_TYPES = [
   { key: 'bar', label: 'Bar' },
   { key: 'line', label: 'Line' },
   { key: 'pie', label: 'Pie' },
+  { key: 'kpi', label: 'KPI' },
   { key: 'table', label: 'Table Only' }
 ]
 
@@ -138,6 +139,26 @@ function getDefaultDateRange(days) {
   return { from: format(subDays(new Date(), days), 'yyyy-MM-dd'), to: format(new Date(), 'yyyy-MM-dd') }
 }
 
+function getRollingDateRange(days) {
+  const safeDays = Number(days) > 0 ? Number(days) : 30
+  return getDefaultDateRange(safeDays)
+}
+
+function getPriorPeriod(dateFrom, dateTo) {
+  const from = new Date(dateFrom)
+  const to = new Date(dateTo)
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
+    return null
+  }
+  const durationMs = to.getTime() - from.getTime()
+  const priorTo = new Date(from.getTime() - 24 * 60 * 60 * 1000)
+  const priorFrom = new Date(priorTo.getTime() - durationMs)
+  return {
+    date_from: priorFrom.toISOString().slice(0, 10),
+    date_to: priorTo.toISOString().slice(0, 10)
+  }
+}
+
 export default function ReportBuilder() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
@@ -153,6 +174,8 @@ export default function ReportBuilder() {
   const [datePreset, setDatePreset] = useState(30)
   const [dateFrom, setDateFrom] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'))
   const [dateTo, setDateTo] = useState(format(new Date(), 'yyyy-MM-dd'))
+  const [isRolling, setIsRolling] = useState(false)
+  const [rollingDays, setRollingDays] = useState(30)
   const [granularity, setGranularity] = useState('day')
   const [groupBy2, setGroupBy2] = useState(null)
   const [showGroupBy2, setShowGroupBy2] = useState(false)
@@ -206,13 +229,19 @@ export default function ReportBuilder() {
     setAttributeBy(widget.attributeBy || 'conversion_date')
     setFilters(widget.filters || {})
     setFilterCount(Object.keys(widget.filters || {}).length)
+    setIsRolling(Boolean(widget.isRolling))
+    setRollingDays(widget.rollingDays || 30)
     setEditingId(widget.id)
   }, [searchParams])
 
+  const effectiveDateRange = isRolling ? getRollingDateRange(rollingDays) : { from: dateFrom, to: dateTo }
+  const effectiveDateFrom = effectiveDateRange.from
+  const effectiveDateTo = effectiveDateRange.to
+
   const filterKey = JSON.stringify(filters)
   const { data, isLoading } = useQuery({
-    queryKey: ['report', site?.site_key, model, groupBy, metric, dateFrom, dateTo, filterKey, groupBy2, granularity, attributionWindow, attributeBy],
-    queryFn: () => getFlexibleReport(site?.site_key, model, dateFrom, dateTo, groupBy, metric, filters, groupBy2, granularity, attributionWindow, attributeBy),
+    queryKey: ['report', site?.site_key, model, groupBy, metric, effectiveDateFrom, effectiveDateTo, filterKey, groupBy2, granularity, attributionWindow, attributeBy],
+    queryFn: () => getFlexibleReport(site?.site_key, model, effectiveDateFrom, effectiveDateTo, groupBy, metric, filters, groupBy2, granularity, attributionWindow, attributeBy),
     enabled: !!site
   })
 
@@ -227,6 +256,22 @@ export default function ReportBuilder() {
   })
 
   const [saveFeedback, setSaveFeedback] = useState(null)
+  const [priorReportData, setPriorReportData] = useState(null)
+
+  const priorPeriod = getPriorPeriod(effectiveDateFrom, effectiveDateTo)
+  const { data: priorRes } = useQuery({
+    queryKey: ['report-prior', site?.site_key, model, groupBy, metric, effectiveDateFrom, effectiveDateTo, filterKey, groupBy2, granularity, attributionWindow, attributeBy],
+    queryFn: () => getFlexibleReport(site?.site_key, model, priorPeriod.date_from, priorPeriod.date_to, groupBy, metric, filters, groupBy2, granularity, attributionWindow, attributeBy),
+    enabled: !!site && chartType === 'kpi' && !!priorPeriod
+  })
+
+  useEffect(() => {
+    if (chartType !== 'kpi') {
+      setPriorReportData(null)
+    } else if (priorRes) {
+      setPriorReportData(priorRes)
+    }
+  }, [chartType, priorRes])
 
   const results = data?.results || []
   const metricDef = METRICS.find(m => m.key === metric)
@@ -258,6 +303,8 @@ export default function ReportBuilder() {
     setFilters(preset.filters || {})
     setFilterCount(Object.keys(preset.filters || {}).length)
     setShowFilters(false)
+    setIsRolling(false)
+    setRollingDays(30)
     setEditingId(null)
   }, [])
 
@@ -305,6 +352,8 @@ export default function ReportBuilder() {
     setAttributeBy(cfg.attributeBy || 'conversion_date')
     setFilters(cfg.filters || {})
     setFilterCount(Object.keys(cfg.filters || {}).length)
+    setIsRolling(Boolean(cfg.isRolling))
+    setRollingDays(cfg.rollingDays || 30)
     setEditingId(report.id)
     queryClient.invalidateQueries({ queryKey: ['report'] })
   }
@@ -314,7 +363,7 @@ export default function ReportBuilder() {
     const config = {
       model, groupBy, metric, chartType, dateFrom, dateTo,
       granularity, groupBy2, attributionWindow, attributeBy,
-      filters
+      filters, isRolling, rollingDays
     }
     const wasEditing = !!editingId
     try {
@@ -375,6 +424,8 @@ export default function ReportBuilder() {
     setAttributeBy('conversion_date')
     setFilters({})
     setFilterCount(0)
+    setIsRolling(false)
+    setRollingDays(30)
     setSaveFeedback(null)
     setShowFilters(false)
   }
@@ -396,7 +447,7 @@ export default function ReportBuilder() {
 
   const handleExportCSV = () => {
     if (!site) return
-    const params = new URLSearchParams({ site_key: site.site_key, model, date_from: dateFrom, date_to: dateTo, group_by: groupBy, metric })
+    const params = new URLSearchParams({ site_key: site.site_key, model, date_from: effectiveDateFrom, date_to: effectiveDateTo, group_by: groupBy, metric })
     if (filters.channel) params.set('filter_channel', filters.channel)
     if (filters.source) params.set('filter_source', filters.source)
     if (filters.medium) params.set('filter_medium', filters.medium)
@@ -439,7 +490,35 @@ export default function ReportBuilder() {
   }
 
   const total = results.reduce((s, r) => s + getMetricValue(r), 0)
-  const canPreview = site && metric && groupBy && dateFrom && dateTo
+
+  function getKpiValue(rows, m) {
+    if (!rows || rows.length === 0) return null
+    const row = rows[0]
+    if (row[m] !== undefined) return row[m]
+    for (const key of Object.keys(row)) {
+      if (key !== 'dim_value' && key !== 'dim_value2' && typeof row[key] === 'number') return row[key]
+    }
+    return null
+  }
+
+  function formatKpiValue(value, m) {
+    if (value === null || value === undefined) return '—'
+    const revenueMetrics = ['revenue', 'ai_revenue', 'ltv_revenue', 'avg_conversion_value']
+    const rateMetrics = ['conversion_rate', 'ai_conversion_share', 'ai_revenue_share']
+    if (revenueMetrics.includes(m)) return `$${Number(value).toFixed(2)}`
+    if (rateMetrics.includes(m)) return `${Number(value).toFixed(1)}%`
+    if (Math.abs(value) >= 1000000) return `${(value / 1000000).toFixed(1)}M`
+    if (Math.abs(value) >= 1000) return `${(value / 1000).toFixed(1)}K`
+    return Number(value).toLocaleString()
+  }
+
+  function formatKpiDelta(currentVal, priorVal) {
+    if (!priorVal || priorVal === 0) return null
+    const delta = ((currentVal - priorVal) / priorVal) * 100
+    return { value: delta, label: `${delta >= 0 ? '+' : ''}${delta.toFixed(1)}%`, positive: delta >= 0 }
+  }
+
+  const canPreview = site && metric && groupBy && effectiveDateFrom && effectiveDateTo
 
   return (
     <div className="space-y-6">
@@ -493,23 +572,65 @@ export default function ReportBuilder() {
               <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">2</span>
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Date Range</h3>
             </div>
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {DATE_PRESETS.map((p) => (
-                <button key={p.label} onClick={() => handleDatePreset(p)}
-                  className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
-                    datePreset === p.days ? 'bg-lime-100 text-lime-800 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}>
-                  {p.label}
-                </button>
-              ))}
+
+            <div className="flex items-center gap-2 mb-3">
+              <button
+                type="button"
+                onClick={() => setIsRolling(true)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${
+                  isRolling ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200'
+                }`}
+              >
+                Rolling
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsRolling(false)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${
+                  !isRolling ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200'
+                }`}
+              >
+                Fixed
+              </button>
             </div>
-            {datePreset === 0 && (
-              <div className="grid grid-cols-2 gap-2">
-                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                  className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
-                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                  className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
+
+            {isRolling ? (
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Rolling window</label>
+                <select
+                  value={rollingDays}
+                  onChange={e => setRollingDays(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                >
+                  <option value={7}>Last 7 days</option>
+                  <option value={14}>Last 14 days</option>
+                  <option value={30}>Last 30 days</option>
+                  <option value={60}>Last 60 days</option>
+                  <option value={90}>Last 90 days</option>
+                </select>
+                <p className="mt-1 text-xs text-gray-400">This report will update automatically based on the current date.</p>
               </div>
+            ) : (
+              <>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {DATE_PRESETS.map((p) => (
+                    <button key={p.label} onClick={() => handleDatePreset(p)}
+                      className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
+                        datePreset === p.days ? 'bg-lime-100 text-lime-800 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}>
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+                {datePreset === 0 && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+                      className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
+                    <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+                      className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
+                  </div>
+                )}
+              </>
             )}
             {(groupBy === 'date' || groupBy2 === 'date') && (
               <div className="mt-2">
@@ -936,6 +1057,13 @@ export default function ReportBuilder() {
             </div>
           ) : (
             <>
+              {data?.truncated && (
+                <div className="mb-3 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-center gap-2">
+                  <span>⚠</span>
+                  <span>Results may be incomplete — this report hit the 50,000 event limit. Try a shorter date range for accurate data.</span>
+                </div>
+              )}
+
               {/* Summary */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                 <div className="flex items-center justify-between">
@@ -965,6 +1093,40 @@ export default function ReportBuilder() {
                       {chartType === 'pie' && <Pie data={chartData} options={chartOptions} />}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* KPI */}
+              {chartType === 'kpi' && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
+                    </div>
+                  ) : results.length === 0 ? (
+                    <div className="py-12 text-center text-gray-400 text-sm">No KPI data yet</div>
+                  ) : (() => {
+                    const currentVal = getKpiValue(results, metric)
+                    const priorRows = priorReportData?.results
+                    const priorVal = getKpiValue(priorRows, metric)
+                    const delta = formatKpiDelta(currentVal, priorVal)
+                    return (
+                      <div>
+                        <p className="text-sm text-gray-500">{metricLabel}</p>
+                        <div className="mt-2 text-4xl font-semibold text-gray-900">{formatKpiValue(currentVal, metric)}</div>
+                        <div className="mt-3 text-sm">
+                          {delta ? (
+                            <span className={delta.positive ? 'text-green-600' : 'text-red-600'}>
+                              {delta.label}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">No prior comparison</span>
+                          )}
+                          <span className="text-gray-400 ml-2">vs previous period</span>
+                        </div>
+                      </div>
+                    )
+                  })()}
                 </div>
               )}
 

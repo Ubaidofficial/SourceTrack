@@ -151,49 +151,202 @@ Update at the end of each session to reflect completed work and revised prioriti
 - **Remaining:** Watch Video modal content placeholder. 5-vs-6 stepper decision deferred to product/design.
 - **Risk level:** Low
 
-### Session 86: Report Builder Figma-style polish
+### Session 86: Report Builder Figma-style polish + bug-fix queue
 
 - **Branch:** `session-86-report-builder-figma`
-- **Status:** Planned
-- **Objective:** Apply P1 primitives to Report Builder without changing functionality.
-- **Scope:** Restyle 7-step sidebar, presets, filters, save panel, preview area
-- **Out of scope:** New presets, new metrics, new chart types
-- **Risk level:** Low
+- **Status:** Bug-fix queue (B1–B8 + B2.1) complete and verified. Polish **deferred** — not started.
+- **Deferred (86.3–86.6, postponed for later):**
+  - 86.3: Report Builder safe Figma polish (st tokens + EmptyState)
+  - 86.4: Static polish verification
+  - 86.5: Manual/runtime QA
+  - 86.6: Commit/handoff
+- **Bug-fix queue — Complete:**
+  - B1: Removed per-request `ph.shutdown()` from 4 route files
+  - B2: Removed public POST /api/events aliases, added /api/collect
+  - B2.1: Tracker non-conversion events now POST to /api/collect
+  - B3: Fixed cross-domain first-touch serialization keys
+  - B4: Fixed `getSessionReport()` ORDER BY undefined alias `e`
+  - B5: Added `company_members` site-loading fallback for 4 dashboard pages
+  - B6: Leads metric counts `$conversion` instead of `$identify`
+  - B7: Fixed attribution window from date expansion to touchpoint-window JOIN
+  - B8: Added 50K-row truncation detection + ReportBuilder warning banner
+- **Validation:** All backend `node --check` passes. `npm run build:tracker` passes. Dashboard `npm run build` passes.
+- **Caveats:** B6 leads/conversions duplication intentional (addressed in 90.4). B7 needs runtime HogQL QA. B2/B2.1 public endpoint is now /api/collect.
+- **Risk level:** Low (bug fixes) / Medium (deferred polish)
 
-### Session 87: Leads + Journey Figma alignment
+### Session 90.1: Linear attribution model
 
-- **Branch:** `session-87-leads-journey-figma`
+- **Branch:** `session-90-backend-tracker` (created from `session-86-report-builder-figma` with verified B1–B8/B2.1 baseline). Do not recreate from main.
 - **Status:** Planned
-- **Objective:** Restyle Leads page, build Journey modal per Figma.
-- **Scope:** Leads table, Journey modal with lead summary card and activity timeline
-- **Out of scope:** CRM integration, lead qualification backend
+- **Objective:** Implement linear attribution model alongside existing single-touch models.
+- **Type:** Backend only
+- **Files:** `api/lib/attribution-engine.js`, `api/routes/attribution.js`
 - **Risk level:** Medium
 
-### Session 88: Campaigns Figma alignment + data model planning
+### Session 90.2: Days to Convert metric
 
-- **Branch:** `session-88-campaigns-figma`
+- **Branch:** `session-90-backend-tracker`
 - **Status:** Planned
-- **Objective:** Restyle Campaigns page, create dashboard implementation plan.
-- **Scope:** Campaigns KPI row, table, filters, `DASHBOARD_IMPLEMENTATION_PLAN.md`
-- **Out of scope:** Ad spend ingestion
+- **Objective:** Add time-to-conversion metric to attribution engine.
+- **Type:** Backend only
+- **Files:** `api/lib/attribution-engine.js`, `api/routes/attribution.js`
+- **Risk level:** Medium
+
+### Session 90.3: Touchpoints per Conversion metric
+
+- **Branch:** `session-90-backend-tracker`
+- **Status:** Planned
+- **Objective:** Count pageview touchpoints preceding each conversion.
+- **Type:** Backend only
+- **Files:** `api/lib/attribution-engine.js`, `api/routes/attribution.js`
+- **Risk level:** Medium
+
+### Session 90.4: Differentiate Leads from Conversions by conversion_type
+
+- **Branch:** `session-90-backend-tracker`
+- **Status:** Planned
+- **Objective:** Filter leads metric by conversion_type (lead, signup, trial, etc.) so leads ≠ conversions.
+- **Type:** Backend only
+- **Files:** `api/lib/attribution-engine.js`
 - **Risk level:** Low
 
-### Session 89: Revenue/General business dashboard
+### Session 90.5: Click ID capture
 
-- **Branch:** `session-89-revenue-dashboard`
+- **Branch:** `session-90-backend-tracker`
 - **Status:** Planned
-- **Objective:** Implement first business dashboard variant.
-- **Scope:** Revenue dashboard with real-data widgets, empty-state placeholders for unsupported metrics
-- **Out of scope:** Other variants, widget drag-and-drop
+- **Objective:** Capture ad platform click IDs (gclid, fbclid, etc.) from URL parameters.
+- **Type:** Tracker + API routes
+- **Files:** `tracker/tracker.js`, `tracker/tracker.min.js`, `tracker/loader.min.js`, `api/routes/track.js`, `api/routes/conversion.js`
+- **Risk level:** Medium
+
+### Session 90.6: Cross-domain cookie domain config
+
+- **Branch:** `session-90-backend-tracker`
+- **Status:** Planned
+- **Objective:** Add configurable cookie domain for cross-subdomain tracking.
+- **Type:** Tracker only
+- **Files:** `tracker/tracker.js`, `tracker/tracker.min.js`, `tracker/loader.min.js`
+- **Risk level:** Medium
+
+### Session 90.7: Cookieless fingerprint fallback
+
+- **Branch:** `session-90-backend-tracker`
+- **Status:** Planned
+- **Objective:** Generate and persist anonymous visitor fingerprints when cookies are blocked.
+- **Type:** Tracker only
+- **Files:** `tracker/tracker.js`, `tracker/tracker.min.js`, `tracker/loader.min.js`
 - **Risk level:** High
 
-### Session 90: E-commerce + Lead Gen + SaaS dashboards
+### Session 90.8: Server-side tracking API
 
-- **Branch:** `session-90-business-dashboards`
+- **Branch:** `session-90-backend-tracker`
 - **Status:** Planned
-- **Objective:** Implement remaining 3 dashboard variants.
-- **Scope:** E-commerce, Lead Gen, SaaS dashboards following same pattern as Revenue
-- **Out of scope:** Ad spend, MRR pipeline, CRM sync
+- **Objective:** Add API-key-authenticated server-side event ingestion endpoint.
+- **Type:** Backend + migration
+- **Files:** `supabase/migration_server_api_keys.sql`, `api/routes/server-events.js`, `api/index.js`
+- **Risk level:** Medium
+
+### Session 90.9: Mark as Qualified backend
+
+- **Branch:** `session-90-backend-tracker`
+- **Status:** Planned
+- **Objective:** Add lead qualification endpoint (PATCH visitor status).
+- **Type:** Backend + migration
+- **Files:** `supabase/migration_lead_qualification.sql`, `api/routes/leads-server.js`
+- **Risk level:** Medium
+
+### Session 90.10: Stripe revenue webhook
+
+- **Branch:** `session-90-backend-tracker`
+- **Status:** Deferred — not cancelled. Requires Stripe signing secret configuration not yet available.
+- **Objective:** Ingest Stripe checkout.session.completed events as revenue conversions.
+- **Type:** Backend + migration
+- **Files:** `supabase/migration_revenue_events.sql`, `api/routes/stripe-revenue.js`, `api/index.js`
+- **Risk level:** High
+
+### Session 90.11: Campaign costs backend
+
+- **Branch:** `session-90-backend-tracker`
+- **Status:** Deferred — not cancelled. Manual ad spend entry is deferred; cost/conversion sync will be handled later through Google Ads, Meta Ads, Microsoft Ads, and LinkedIn Ads integrations.
+- **Objective:** Add campaign cost tracking table and API for ROI calculations.
+- **Type:** Backend + migration
+- **Files:** `supabase/migration_campaign_costs.sql`, `api/routes/costs.js`, `api/index.js`
+- **Risk level:** Medium
+
+### Session 90.12: Calendly webhook connector
+
+- **Branch:** `session-90-backend-tracker`
+- **Status:** Deferred — not cancelled. Calendly should be designed later as a full native integration flow similar to Cometly, not implemented now as a simple webhook-only connector.
+- **Objective:** Accept Calendly booking webhooks and create conversion events.
+- **Type:** Backend + migration
+- **Files:** `api/routes/calendly.js`, `api/index.js`, `supabase/migration_calendly.sql`
+- **Risk level:** Medium
+
+### Session 91.1: Leads event type badges and attribution model filter
+
+- **Branch:** `session-90-backend-tracker`
+- **Status:** Complete
+- **Objective:** Add conversion type badges and attribution model filter to All Leads page.
+- **Deliverables:** Event type column with styled badges, attribution model dropdown (First Touch / Last Touch), backend `attribution_model` param support in leads-server.
+- **Files:** `dashboard/src/pages/Leads.jsx`, `api/routes/leads-server.js`
+- **Risk level:** Low
+
+### Session 91.2: Journey modal overlay on All Leads
+
+- **Branch:** `session-90-backend-tracker`
+- **Status:** Complete
+- **Objective:** Add journey modal overlay triggered from All Leads page.
+- **Deliverables:** `JourneyModal` component, click-to-open from leads table, `getJourney` API integration, All Activity display, Sync To CRM / Mark as Qualified buttons (UI-only).
+- **Files:** `dashboard/src/components/JourneyModal.jsx`, `dashboard/src/pages/Leads.jsx`
+- **Caveat:** Mark as Qualified button is UI-only — backend wiring not complete.
+- **Risk level:** Low
+
+### Session 91.3: Report Builder KPI chart type
+
+- **Branch:** `session-90-backend-tracker`
+- **Status:** Complete
+- **Objective:** Add KPI chart type showing one large metric with percent delta vs prior period.
+- **Deliverables:** KPI option in CHART_TYPES, `getPriorPeriod` helper, `priorReportData` state + `useQuery`, KPI card UI with formatted value and delta, helper functions (`getKpiValue`, `formatKpiValue`, `formatKpiDelta`).
+- **Files:** `dashboard/src/pages/ReportBuilder.jsx`
+- **Risk level:** Low
+
+### Session 91.4: Rolling vs fixed date toggle
+
+- **Branch:** `session-90-backend-tracker`
+- **Status:** Complete
+- **Objective:** Add rolling date support so saved reports use dynamic "Last N days" instead of fixed dates.
+- **Deliverables:** Rolling/Fixed toggle in ReportBuilder date section, `getRollingDateRange` helpers in ReportBuilder + Dashboard, `effectiveDateFrom`/`effectiveDateTo` in all queries, `isRolling`/`rollingDays` in save/load config, Dashboard recomputes rolling dates dynamically, rolling indicator on Dashboard saved report cards.
+- **Files:** `dashboard/src/pages/ReportBuilder.jsx`, `dashboard/src/pages/Dashboard.jsx`
+- **Risk level:** Low
+
+### Session 91.5: Feature verification and docs update
+
+- **Branch:** `session-90-backend-tracker`
+- **Status:** Complete
+- **Objective:** Verify Sessions 91.1–91.4, update tracking docs.
+- **Type:** Docs + verification only. No implementation files edited.
+- **Verification:** All greps confirmed, `node --check api/routes/leads-server.js` passed, `npm run build` passed.
+- **Risk level:** None
+
+### Session 90.13: Backend/tracker phase verification and docs closure
+
+- **Branch:** `session-90-backend-tracker`
+- **Status:** Planned
+- **Objective:** Verify all 90.x implementations (90.1–90.9), update tracking docs, close backend/tracker phase.
+- **Type:** Docs + verification only
+- **Risk level:** Low
+
+> **Branch note:** All 90.x sessions continue on `session-90-backend-tracker`, created from `session-86-report-builder-figma` with the verified B1–B8 + B2.1 bug-fix baseline preserved. Do not recreate from main — main is at Session 85.4 without the bug fixes.
+
+### Session 87–89: Frontend/UI alignment (deferred)
+
+Sessions 87 (Leads + Journey), 88 (Campaigns), and 89 (Revenue dashboard) remain planned for frontend Figma alignment, but run after backend/tracker Sessions 90.1–90.9.
+
+### Session 90: Business dashboards (was E-commerce/Lead Gen/SaaS, now renumbered)
+
+- **Status:** Planned — runs after 90.x backend/tracker and 87–89 frontend alignment.
+- **Scope:** E-commerce, Lead Gen, SaaS dashboard variants.
+- **Risk level:** High
 - **Risk level:** High
 
 ## Integration Strategy
@@ -201,4 +354,6 @@ Update at the end of each session to reflect completed work and revised prioriti
 - Each session uses its own branch off main
 - After each session: `node --check` + `npm run build` + manual QA → merge to main
 - No long-running integration branches
+- Manual QA gates must pass before merge
+ong-running integration branches
 - Manual QA gates must pass before merge

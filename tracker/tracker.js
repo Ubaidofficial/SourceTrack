@@ -7,6 +7,13 @@
   var SITE_KEY = config.site_key
   var API_URL = config.api_url.replace(/\/$/, '')
 
+  var COOKIE_DOMAIN = ''
+  try {
+    var _scriptTag = document.currentScript ||
+      document.querySelector('script[data-site-key="' + SITE_KEY + '"]')
+    COOKIE_DOMAIN = (_scriptTag && _scriptTag.getAttribute('data-cookie-domain')) || ''
+  } catch(_e) { COOKIE_DOMAIN = '' }
+
   function uuidv4() {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
       return crypto.randomUUID()
@@ -25,8 +32,32 @@
   }
 
   function setCookie(name, value) {
+    var domainPart = COOKIE_DOMAIN ? '; domain=' + COOKIE_DOMAIN : ''
     document.cookie = name + '=' + encodeURIComponent(value) +
-      '; SameSite=None; Secure; path=/; max-age=31536000'
+      '; SameSite=None; Secure; path=/; max-age=31536000' + domainPart
+  }
+
+  function generateFingerprint() {
+    try {
+      var parts = [
+        navigator.userAgent || '',
+        navigator.language || '',
+        (screen.width || 0) + 'x' + (screen.height || 0),
+        (screen.colorDepth || 0) + '',
+        (new Date().getTimezoneOffset()) + '',
+        (navigator.hardwareConcurrency || 0) + '',
+        (navigator.maxTouchPoints || 0) + ''
+      ]
+      var str = parts.join('||')
+      var hash = 0
+      for (var i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i)
+        hash = hash & hash
+      }
+      return 'fp_' + Math.abs(hash).toString(16)
+    } catch(_e) {
+      return null
+    }
   }
 
   function getUtmParams() {
@@ -48,20 +79,40 @@
   var ltCookieName = '__ti_lt_' + SITE_KEY
 
   var anonymousId = getCookie(idCookieName)
+  var idType = 'cookie'
   var qp = new URLSearchParams(window.location.search)
   if (!anonymousId) {
     var xdId = qp.get('__tq_id')
     if (xdId) {
       anonymousId = xdId
+      idType = 'cross_domain'
     } else {
       try { anonymousId = localStorage.getItem(idCookieName) } catch (_e) { /* unavailable */ }
-      if (!anonymousId) {
-        anonymousId = uuidv4()
-      }
+      if (anonymousId) idType = 'localStorage'
     }
-    setCookie(idCookieName, anonymousId)
   }
+
+  if (!anonymousId) {
+    try { anonymousId = sessionStorage.getItem(idCookieName) } catch (_e) {}
+    if (anonymousId) idType = 'session'
+  }
+
+  if (!anonymousId) {
+    var fp = generateFingerprint()
+    if (fp) {
+      anonymousId = fp
+      idType = 'fingerprint'
+    }
+  }
+
+  if (!anonymousId) {
+    anonymousId = uuidv4()
+    idType = 'generated'
+  }
+
+  setCookie(idCookieName, anonymousId)
   try { localStorage.setItem(idCookieName, anonymousId) } catch (_e) { /* unavailable */ }
+  try { sessionStorage.setItem(idCookieName, anonymousId) } catch (_e) {}
 
   var utm = getUtmParams()
   var now = new Date().toISOString()
@@ -106,6 +157,7 @@
       site_key: SITE_KEY,
       event: event,
       anonymous_id: anonymousId,
+      id_type: idType,
       page_url: window.location.href,
       referrer: document.referrer || null,
       utm_source: utm.utm_source,
@@ -131,13 +183,13 @@
 
     try {
       if (navigator.sendBeacon) {
-        navigator.sendBeacon(API_URL + '/api/' + (event === '$conversion' ? 'conversion' : 'track'), blob)
+        navigator.sendBeacon(API_URL + '/api/' + (event === '$conversion' ? 'conversion' : 'collect'), blob)
       } else {
         /* fallthrough to fetch */
         throw new Error('no beacon')
       }
     } catch (_e) {
-      fetch(API_URL + '/api/' + (event === '$conversion' ? 'conversion' : 'track'), {
+      fetch(API_URL + '/api/' + (event === '$conversion' ? 'conversion' : 'collect'), {
         method: 'POST',
         body: blob,
         keepalive: true
@@ -184,6 +236,7 @@
     var payload = {
       site_key: SITE_KEY,
       anonymous_id: anonymousId,
+      id_type: idType,
       traits: traits || {}
     }
     if (userId) {

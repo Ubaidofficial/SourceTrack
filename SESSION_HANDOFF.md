@@ -6,20 +6,89 @@ This file is intentionally short. It tells the next agent exactly where to conti
 
 ## Current branch
 
-`session-85-onboarding-figma` (Session 85 complete)
+`session-90-backend-tracker` (created from session-86-report-builder-figma)
 
 ## Next recommended session
 
-**Session 86:** Report Builder Figma-style polish.
-Branch: `session-86-report-builder-figma` (new branch off main). Restyle Report Builder using st primitives per IMPLEMENTATION_GAP_LIST.md.
+**Session 90.13:** Backend/tracker phase verification and docs closure. Branch: `session-90-backend-tracker` (continue). Verify all 90.x implementations, update tracking docs, close backend/tracker phase.
 
-## Current main baseline
+**Deferred (later):** 86.3–86.6 Report Builder polish / verification / QA / commit. 87–89 frontend alignment. All postponed — not cancelled.
 
-Latest known main commits:
+## Sessions 91.1–91.4 summary
 
-- `b600b74 Add channel taxonomy report presets`
-- `787cbfa Stabilize saved report API requests`
-- `572d295 Fix report saves and source tracking`
+### 91.1: Leads event type badges and attribution model filter
+
+- Added `CONVERSION_TYPE_BADGE` config object with styled color/icon/cta mappings for 9 conversion types
+- Added Event Type column with colored badges in leads table
+- Added attribution model dropdown (First Touch / Last Touch) to Leads page
+- Backend `leads-server.js` accepts `attribution_model` query param
+- `node --check api/routes/leads-server.js` passes
+
+### 91.2: Journey modal overlay on All Leads
+
+- Added `JourneyModal` component (`dashboard/src/components/JourneyModal.jsx`)
+- Clicking a visitor ID in leads table opens JourneyModal overlay
+- Modal shows: All Activity timeline, Sync To CRM button, Mark as Qualified button
+- Mark as Qualified is UI-only — no backend wiring yet
+- JourneyModal uses `getJourney` from `../lib/api.js`
+
+### 91.3: Report Builder KPI chart type
+
+- Added `{ key: 'kpi', label: 'KPI' }` to CHART_TYPES
+- Added `getPriorPeriod` helper computing same-duration prior period
+- Added `priorReportData` state, prior period `useQuery` (enabled only for kpi)
+- Added KPI helpers: `getKpiValue`, `formatKpiValue`, `formatKpiDelta`
+- KPI card: large metric value, green/red delta vs prior period, "vs previous period" caption
+- Formatted by metric type (currency/percent/compact)
+- Save/load works naturally — chartType persisted in config
+
+### 91.4: Rolling vs fixed date toggle
+
+- Added Rolling/Fixed toggle in ReportBuilder date section
+- Added `getRollingDateRange` helpers in both ReportBuilder and Dashboard
+- `effectiveDateFrom`/`effectiveDateTo` derived from rolling or fixed mode
+- All API queries, prior period, KPI prior, export CSV use effective dates
+- Save config includes `isRolling` and `rollingDays`
+- Dashboard `reportQueries` recomputes rolling dates dynamically
+- Dashboard saved report cards show "Rolling — last N days" indicator
+- Old saved reports without `isRolling` default to fixed mode
+
+### 91.5: Feature verification and docs update
+
+- Static verification greps confirmed for all 91.1–91.4 features
+- `node --check api/routes/leads-server.js` passed
+- `npm run build` passed (2.36s, 0 errors)
+- Docs updated: AI_SESSION_PLAN.md, SESSION_STATE.md, SESSION_HANDOFF.md, BUG_REVIEW_LOG.md
+
+## Remaining caveats
+
+- Manual/browser QA required for all 91.x features.
+- B7 runtime HogQL QA still required.
+- Mark as Qualified UI action is not fully wired — UI-only.
+- Stripe, manual campaign costs, and Calendly native integration remain deferred.
+
+**Bug-fix queue complete (B1–B8 + B2.1):**
+
+| Bug | Fix |
+|---|---|
+| B1 | Removed `await ph.shutdown()` from 4 route files |
+| B2 | Removed public POST /api/events aliases; added /api/collect + OPTIONS |
+| B2.1 | Tracker now POSTs non-conversion events to /api/collect |
+| B3 | Fixed cross-domain first-touch key serialization (abbreviated → full) |
+| B4 | Fixed `getSessionReport()` ORDER BY undefined alias `e` |
+| B5 | Added `company_members` site-loading fallback for 4 dashboard pages |
+| B6 | Leads metric now counts `$conversion` instead of `$identify` |
+| B7 | Corrected attribution window from date expansion to touchpoint-window JOIN |
+| B8 | Added 50K-row truncation detection + ReportBuilder warning banner |
+
+**Validation:** All backend `node --check` pass. `npm run build:tracker` pass. Dashboard `npm run build` pass. 14 files, 199 insertions, 145 deletions.
+
+**Remaining caveats:**
+- B6: `leads` and `conversions` both count `$conversion` — identical numbers until leads is refined.
+- B7: Windowed self-join SQL needs runtime QA against PostHog HogQL.
+- B2/B2.1: Public ingestion is now `/api/collect`; `/api/events` is authenticated Event Debugger only.
+
+**Safe next steps (86.3):** Report Builder polish — st token color replacements + 3 EmptyState replacements. No DashboardTable, FilterBar, text hierarchy, or layout changes. No browser QA.
 
 ## Last completed product work
 

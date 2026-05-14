@@ -76,6 +76,14 @@ export async function conversion(req, res) {
       ref_param: normalizeUtm(req.body.ref_param || req.body.ref),
       source_param: normalizeUtm(req.body.source_param || req.body.source),
       via_param: normalizeUtm(req.body.via_param || req.body.via),
+      gclid: req.body.gclid || null,
+      gbraid: req.body.gbraid || null,
+      wbraid: req.body.wbraid || null,
+      fbclid: req.body.fbclid || null,
+      msclkid: req.body.msclkid || null,
+      ttclid: req.body.ttclid || null,
+      li_fat_id: req.body.li_fat_id || null,
+      twclid: req.body.twclid || null,
       ai_source: enriched.ai_source,
       device_type: enriched.device_type,
       country: enriched.country,
@@ -98,7 +106,6 @@ export async function conversion(req, res) {
       properties: props
     })
 
-    await ph.shutdown()
 
     dispatchWebhook('conversion', props)
 

@@ -47,7 +47,6 @@ export async function identify(req, res) {
       })
     }
 
-    await ph.shutdown()
 
     res.status(200).json({ success: true, data: { received: true }, error: null })
   } catch (_err) {

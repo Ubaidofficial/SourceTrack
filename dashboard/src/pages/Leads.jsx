@@ -19,18 +19,32 @@ export default function Leads() {
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [filterAI, setFilterAI] = useState('all')
+  const [attributionModel, setAttributionModel] = useState('first_touch')
+  const [journeyVisitorId, setJourneyVisitorId] = useState(null)
 
   const dateFrom = format(subDays(new Date(), 30), 'yyyy-MM-dd')
   const dateTo = format(new Date(), 'yyyy-MM-dd')
 
   useEffect(() => {
     async function load() {
-      const { data } = await supabase
+      const { data: member } = await supabase
+        .from('company_members')
+        .select('company_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      const query = supabase
         .from('sites')
         .select('site_key, name')
-        .eq('owner_id', user.id)
         .limit(1)
-        .maybeSingle()
+
+      if (member?.company_id) {
+        query.eq('company_id', member.company_id)
+      } else {
+        query.eq('owner_id', user.id)
+      }
+
+      const { data } = await query.maybeSingle()
       setSite(data)
     }
     load()
@@ -42,13 +56,14 @@ export default function Leads() {
   }, [search])
 
   const { data: leadsData, isLoading } = useQuery({
-    queryKey: ['leads-page', site?.site_key, debouncedSearch, filterAI, dateFrom, dateTo],
+    queryKey: ['leads-page', site?.site_key, debouncedSearch, filterAI, attributionModel, dateFrom, dateTo],
     queryFn: async () => {
       if (!site?.site_key) return null
       const params = new URLSearchParams({
         site_key: site.site_key,
         date_from: dateFrom,
         date_to: dateTo,
+        attribution_model: attributionModel,
         limit: '100'
       })
       if (debouncedSearch) params.set('search', debouncedSearch)
@@ -100,6 +115,11 @@ export default function Leads() {
           <option value="ai">AI Sources</option>
           <option value="non-ai">Non-AI Sources</option>
         </select>
+        <select value={attributionModel} onChange={e => setAttributionModel(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
+          <option value="first_touch">First Touch</option>
+          <option value="last_touch">Last Touch</option>
+        </select>
       </div>
 
       <DashboardCard title="All Leads" subtitle={`${totalLeads} visitors`}>
@@ -118,6 +138,7 @@ export default function Leads() {
                 <tr className="border-b border-gray-100">
                   <th className="text-left py-3 px-3 text-xs font-medium text-gray-500">Visitor</th>
                   <th className="text-left py-3 px-3 text-xs font-medium text-gray-500">Source</th>
+                  <th className="text-left py-3 px-3 text-xs font-medium text-gray-500">Event Type</th>
                   <th className="text-right py-3 px-3 text-xs font-medium text-gray-500">Conversions</th>
                   <th className="text-right py-3 px-3 text-xs font-medium text-gray-500">Revenue</th>
                   <th className="text-left py-3 px-3 text-xs font-medium text-gray-500">Last seen</th>
@@ -141,6 +162,23 @@ export default function Leads() {
                           <span className="text-xs text-gray-400">{lead.medium}</span>
                         )}
                       </td>
+                      <td className="py-3 px-3">
+                        {lead.last_conversion_type ? (() => {
+                          const key = String(lead.last_conversion_type).toLowerCase()
+                          const style = CONVERSION_TYPE_BADGE[key] || {
+                            bg: 'bg-gray-100',
+                            text: 'text-gray-600',
+                            label: lead.last_conversion_type
+                          }
+                          return (
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${style.bg} ${style.text}`}>
+                              {style.label}
+                            </span>
+                          )
+                        })() : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
+                      </td>
                       <td className="py-3 px-3 text-right text-gray-600">{lead.conversions}</td>
                       <td className="py-3 px-3 text-right font-medium text-gray-900">
                         ${lead.revenue.toFixed(0)}
@@ -161,7 +199,7 @@ export default function Leads() {
                             View
                           </button>
                           <button
-                            onClick={() => navigate(`/journey?visitorId=${encodeURIComponent(lead.id)}`)}
+                            onClick={() => setJourneyVisitorId(lead.id || lead.visitor_id || lead.anonymous_id)}
                             className="text-xs text-gray-900 hover:text-gray-700 font-medium flex items-center gap-1"
                           >
                             Journey <ArrowRight className="w-3 h-3" />
@@ -176,6 +214,15 @@ export default function Leads() {
           </div>
         )}
       </DashboardCard>
+
+      {journeyVisitorId && (
+        <JourneyModal
+          visitorId={journeyVisitorId}
+          siteKey={site?.site_key}
+          onClose={() => setJourneyVisitorId(null)}
+          onQualified={() => setJourneyVisitorId(null)}
+        />
+      )}
     </div>
   )
 }

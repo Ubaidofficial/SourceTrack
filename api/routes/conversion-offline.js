@@ -96,7 +96,6 @@ export async function conversionOffline(req, res) {
       properties: props
     })
 
-    await ph.shutdown()
 
     dispatchWebhook('conversion.offline', props)
 

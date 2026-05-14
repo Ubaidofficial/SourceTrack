@@ -1,12 +1,13 @@
 import { getAttribution, getFlexibleReport, getAttributionExplanation } from '../lib/attribution-engine.js'
 
-const ALLOWED_MODELS = new Set(['first_touch', 'last_touch', 'first_touch_non_direct', 'last_touch_non_direct', 'ai_platforms'])
+const ALLOWED_MODELS = new Set(['first_touch', 'last_touch', 'first_touch_non_direct', 'last_touch_non_direct', 'ai_platforms', 'linear'])
 const ALLOWED_GROUPS = new Set(['channel', 'source', 'medium', 'campaign', 'ai_source', 'landing_page', 'country', 'device', 'conversion_type', 'date'])
 const ALLOWED_METRICS = new Set([
   'revenue', 'conversions', 'sessions', 'leads', 'conversion_rate',
   'avg_conversion_value', 'ai_conversions', 'ai_revenue', 'ai_conversion_share',
   'ai_revenue_share', 'ltv_revenue',
-  'session_count', 'avg_session_duration', 'pages_per_session', 'conversion_sessions'
+  'session_count', 'avg_session_duration', 'pages_per_session', 'conversion_sessions',
+  'days_to_convert', 'touchpoints_per_conversion'
 ])
 const ALLOWED_GRANULARITY = new Set(['day', 'week', 'month', 'quarter', 'year'])
 const ALLOWED_WINDOWS = new Set(['ltv', '1', '7', '14', '30', '60', '90'])
@@ -108,12 +109,15 @@ export async function attribution(req, res) {
       if (req.query.filter_has_ai_source) filters.has_ai_source = req.query.filter_has_ai_source
       if (req.query.filter_min_conversions) filters.min_conversions = req.query.filter_min_conversions
 
-      const results = await getFlexibleReport(posthogSiteId, model, date_from, date_to, group_by, metric, filters,
+      const reportResult = await getFlexibleReport(posthogSiteId, model, date_from, date_to, group_by, metric, filters,
         req.query.group_by2 || null,
         req.query.time_granularity || 'day',
         req.query.attribution_window || null,
         req.query.attribute_by || 'conversion_date'
       )
+
+      const results = reportResult?.results ?? reportResult
+      const truncated = reportResult?.truncated ?? false
 
       return res.status(200).json({
         success: true,
@@ -124,13 +128,17 @@ export async function attribution(req, res) {
           group_by,
           metric,
           filters: Object.keys(filters).length > 0 ? filters : undefined,
-          results
+          results,
+          ...(truncated ? { truncated, truncation_warning: 'Results are limited to 50,000 events. Use a shorter date range for complete data.' } : {})
         },
         error: null
       })
     }
 
-    const results = await getAttribution(posthogSiteId, model, date_from, date_to)
+    const attrResult = await getAttribution(posthogSiteId, model, date_from, date_to)
+
+    const results = attrResult?.results ?? attrResult
+    const truncated = attrResult?.truncated ?? false
 
     res.status(200).json({
       success: true,
@@ -138,7 +146,8 @@ export async function attribution(req, res) {
         model,
         date_from,
         date_to,
-        results
+        results,
+        ...(truncated ? { truncated, truncation_warning: 'Results are limited to 50,000 events. Use a shorter date range for complete data.' } : {})
       },
       error: null
     })
