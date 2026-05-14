@@ -1,4 +1,4 @@
-import { getAttribution, getFlexibleReport, getAttributionExplanation } from '../lib/attribution-engine.js'
+import { getAttribution, getFlexibleReport, getAttributionExplanation, getPreAggregatedAttribution, getLinearAttribution } from '../lib/attribution-engine.js'
 
 const ALLOWED_MODELS = new Set(['first_touch', 'last_touch', 'first_touch_non_direct', 'last_touch_non_direct', 'ai_platforms', 'linear'])
 const ALLOWED_GROUPS = new Set(['channel', 'source', 'medium', 'campaign', 'ai_source', 'landing_page', 'country', 'device', 'conversion_type', 'date'])
@@ -108,6 +108,37 @@ export async function attribution(req, res) {
       if (req.query.filter_is_conversion) filters.is_conversion = req.query.filter_is_conversion
       if (req.query.filter_has_ai_source) filters.has_ai_source = req.query.filter_has_ai_source
       if (req.query.filter_min_conversions) filters.min_conversions = req.query.filter_min_conversions
+
+      // Use pre-aggregated data for first_touch, last_touch, and linear
+      if (model === "first_touch" || model === "last_touch") {
+        try {
+          const results = await getPreAggregatedAttribution({
+            siteId: req.site.id,
+            model,
+            dateFrom: date_from,
+            dateTo: date_to,
+            groupBy: group_by,
+            metric
+          })
+          return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results } })
+        } catch (error) {
+          console.error("Pre-aggregated attribution failed:", error)
+        }
+      }
+      if (model === "linear") {
+        try {
+          const results = await getLinearAttribution({
+            siteId: req.site.id,
+            dateFrom: date_from,
+            dateTo: date_to,
+            groupBy: group_by,
+            metric
+          })
+          return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results } })
+        } catch (error) {
+          console.error("Linear attribution failed:", error)
+        }
+      }
 
       const reportResult = await getFlexibleReport(posthogSiteId, model, date_from, date_to, group_by, metric, filters,
         req.query.group_by2 || null,

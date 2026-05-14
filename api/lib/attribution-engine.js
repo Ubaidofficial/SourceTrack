@@ -1624,3 +1624,49 @@ export async function getPreAggregatedAttribution({
 
   return results.sort((a, b) => b[metric] - a[metric])
 }
+
+// Get linear attribution from pre-aggregated data
+export async function getLinearAttribution({
+  siteId,
+  dateFrom,
+  dateTo,
+  groupBy = 'source',
+  metric = 'revenue'
+}) {
+  const { createClient } = await import('@supabase/supabase-js')
+  const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_KEY
+  )
+
+  const { data, error } = await supabase
+    .from('attributed_conversions')
+    .select('linear_attribution')
+    .eq('site_id', siteId)
+    .gte('conversion_date', dateFrom)
+    .lte('conversion_date', dateTo)
+    .not('linear_attribution', 'is', null)
+
+  if (error) throw new Error(`Supabase query failed: ${error.message}`)
+
+  const aggregated = {}
+  for (const row of data || []) {
+    const linearData = row.linear_attribution || []
+    for (const touch of linearData) {
+      const dimValue = touch[groupBy] || 'direct'
+      if (!aggregated[dimValue]) {
+        aggregated[dimValue] = { revenue: 0, conversions: 0 }
+      }
+      aggregated[dimValue].revenue += parseFloat(touch.attributed_value || 0)
+      aggregated[dimValue].conversions += 1
+    }
+  }
+
+  const results = Object.entries(aggregated).map(([dim_value, stats]) => ({
+    dim_value,
+    revenue: parseFloat(stats.revenue.toFixed(2)),
+    conversions: stats.conversions
+  }))
+
+  return results.sort((a, b) => b[metric] - a[metric])
+}

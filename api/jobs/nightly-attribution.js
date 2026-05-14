@@ -1,4 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
+// TODO: Add attribution window support
+// - Add columns: first_touch_source_7d, first_touch_source_30d, etc.
+// - Modify touchpoints query to calculate for each window
+// - Update API to read from windowed columns based on attribution_window param
+
 import dotenv from 'dotenv'
 dotenv.config()
 
@@ -141,7 +146,8 @@ async function processConversion(site, conversion) {
       AND properties.utm_source IS NOT NULL
       AND properties.utm_source != ''
       AND timestamp <= toDateTime('${conversion.timestamp}')
-      AND timestamp >= toDateTime('${conversion.timestamp}') - INTERVAL 90 DAY
+      // TODO: Add attribution_window support - replace 90 DAY with configurable window
+      AND timestamp >= toDateTime('${conversion.timestamp}'), toDateTime('${conversion.timestamp}') - INTERVAL 90 DAY)
     ORDER BY timestamp ASC
     LIMIT 500
   `
