@@ -411,6 +411,7 @@ export default function EventDebugger() {
                   <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Source</th>
                   <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Medium</th>
                   <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Campaign</th>
+                  <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Click IDs</th>
                   <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">AI Source</th>
                   <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Page</th>
                   <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Referrer</th>
@@ -442,6 +443,9 @@ export default function EventDebugger() {
                     <td className="py-2 px-4 text-gray-600 text-xs">{e.source || '—'}</td>
                     <td className="py-2 px-4 text-gray-600 text-xs">{e.medium || '—'}</td>
                     <td className="py-2 px-4 text-gray-600 text-xs max-w-[160px] truncate">{e.campaign || '—'}</td>
+                    <td className="py-2 px-4 text-gray-600 text-xs text-[10px]">
+                      {[e.gclid, e.fbclid, e.msclkid, e.ttclid].filter(Boolean).map(id => id.slice(0, 8)).join(", ") || "—"}
+                    </td>
                     <td className="py-2 px-4 text-gray-600 text-xs">{e.ai_source || '—'}</td>
                     <td className="py-2 px-4 text-gray-600 text-xs max-w-[200px] truncate">{formatPath(e.page_url)}</td>
                     <td className="py-2 px-4 text-gray-500 text-xs max-w-[150px] truncate">{formatHost(e.referrer)}</td>

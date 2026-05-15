@@ -70,11 +70,7 @@
       utm_medium: params.get('utm_medium') || null,
       utm_campaign: params.get('utm_campaign') || null,
       utm_content: params.get('utm_content') || null,
-      utm_term: params.get('utm_term') || null,
-      gclid: params.get('gclid') || null,
-      fbclid: params.get('fbclid') || null,
-      msclkid: params.get('msclkid') || null,
-      ttclid: params.get('ttclid') || null
+      utm_term: params.get('utm_term') || null
     }
   }
 
@@ -169,10 +165,6 @@
       utm_campaign: utm.utm_campaign,
       utm_content: utm.utm_content,
       utm_term: utm.utm_term,
-      gclid: utm.gclid,
-      fbclid: utm.fbclid,
-      msclkid: utm.msclkid,
-      ttclid: utm.ttclid,
       ref_param: utm.ref,
       source_param: utm.source,
       via_param: utm.via,
