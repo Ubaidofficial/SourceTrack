@@ -146,8 +146,7 @@ async function processConversion(site, conversion) {
       AND properties.utm_source IS NOT NULL
       AND properties.utm_source != ''
       AND timestamp <= toDateTime('${conversion.timestamp}')
-      // TODO: Add attribution_window support - replace 90 DAY with configurable window
-      AND timestamp >= toDateTime('${conversion.timestamp}'), toDateTime('${conversion.timestamp}') - INTERVAL 90 DAY)
+      AND timestamp >= toDateTime('${conversion.timestamp}') - INTERVAL 90 DAY
     ORDER BY timestamp ASC
     LIMIT 500
   `
