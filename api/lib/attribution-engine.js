@@ -1590,6 +1590,9 @@ export async function getPreAggregatedAttribution({
     selectField = mediumField
     groupField = mediumField
   } else if (groupBy === 'campaign') {
+  } else {
+    selectField = sourceField
+    groupField = sourceField
     selectField = campaignField
     groupField = campaignField
   }
