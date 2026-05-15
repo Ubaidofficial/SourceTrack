@@ -12,7 +12,7 @@ export const trackLimit = rateLimit({
 
 export const defaultLimit = rateLimit({
   windowMs: 60_000,
-  max: 300,
+  max: 100,
   standardHeaders: true,
   legacyHeaders: false,
   handler(_req, res) {
