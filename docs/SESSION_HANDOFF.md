@@ -1,14 +1,17 @@
-## Last completed: T5.2 — Scale/Pause/Kill Verdicts ✅
-- attributionVerdicts() appended to api/routes/attribution.js
-- GET /api/attribution/verdicts?site_key=X&date_from=X&date_to=X
-- Uses callAI() → DeepSeek, returns [{campaign, verdict, reason, signal}]
-- Registered in index.js
+## Last completed: T3.1 — Cookieless Tracking Mode ✅
+- tracker.js: cookieless=true skips all cookies/localStorage
+- Uses session-scoped UUID only — GDPR Art. 5 compliant
+- Cross-domain __tq_id still works in cookieless mode
+- Activate with: window.__trackiq_config = { cookieless: true, ... }
 
-## Next: T5.3 — Weekly Digest Email
-Create: api/jobs/weekly-digest.js
-Uses: callAI() for 3-sentence summary, Resend for email delivery
-Cron: 0 8 * * 1 (Monday 8 AM)
+## Next: T7 — Analytics Product
+Largest remaining work. New lightweight tracker + pageviews table + Analytics.jsx page.
+Files to create:
+  tracker/analytics.js (new lightweight tracker)
+  api/routes/analytics.js (collect + summary endpoints)
+  dashboard/src/pages/Analytics.jsx
+Supabase: CREATE TABLE pageviews (...)
 
-Paste to start:
-  ls ~/Desktop/trackiq/api/jobs/
-  grep "RESEND\|resend" ~/Desktop/trackiq/.env
+Start with:
+  ls ~/Desktop/trackiq/tracker/
+  grep -n "analytics" ~/Desktop/trackiq/api/index.js | head -5
