@@ -1,17 +1,18 @@
-## Last completed: T3.1 — Cookieless Tracking Mode ✅
-- tracker.js patched at line 85 — cookieless block wraps normal ID resolution
-- cookieless=true: session-scoped UUID only, no cookies, no localStorage
-- Syntax verified clean
-- Activate: window.__trackiq_config = { site_key: 'X', api_url: 'Y', cookieless: true }
+## Last completed: T7 — Analytics Product ✅
+- tracker/analytics.js: lightweight cookieless tracker, SPA support, sendBeacon on unload
+- api/routes/analytics.js: POST /collect (public) + GET /summary (auth)
+- dashboard/src/pages/Analytics.jsx: pageviews, bounce rate, top pages, sources, AI traffic, devices, countries
+- Supabase: pageviews table created (no FK, validated in API)
+- Wired: index.js + App.jsx
 
-## Next: T7 — Analytics Product
-Largest remaining work. 4 files to create:
-1. tracker/analytics.js — lightweight cookieless tracker
-2. api/routes/analytics.js — POST /collect + GET /summary
-3. Supabase: CREATE TABLE pageviews
-4. dashboard/src/pages/Analytics.jsx
+## Add to sidebar nav (optional next step)
+In dashboard/src/components/Layout.jsx or Sidebar.jsx:
+  Add link to /analytics
 
-Start next session with:
-  ls ~/Desktop/trackiq/tracker/
-  grep -n "analytics" ~/Desktop/trackiq/api/index.js | head -5
-  ls ~/Desktop/trackiq/dashboard/src/pages/ | grep -i anal
+## Remaining from plan
+- T6.2: Generic webhook receiver (any CRM → conversions)
+- T8: Pricing tier enforcement
+- Add STRIPE keys to .env to activate billing
+- Add RESEND_API_KEY for weekly digest
+
+## Project status: ~95% of planned features complete
