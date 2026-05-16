@@ -1,11 +1,14 @@
-## Last completed: T4.4 — Custom Tracking Domain ✅
-- Supabase: custom_domain + custom_domain_verified columns on sites
-- api/routes/custom-domain.js: GET, POST, POST /verify (DNS check)
-- Settings.jsx: input + CNAME instructions + verify button + verified snippet
-- index.js: /api/custom-domain registered
+## Last completed: T5.1 — DeepSeek swap ✅
+- ai-client.js already uses DeepSeek via OpenAI-compatible SDK
+- AI_PROVIDER=deepseek is the default, Anthropic never wired
+- ai-analytics.js has zero LLM calls — pure data aggregation
+- No code changes needed
 
-## Next: T5.1 — Swap all AI routes to DeepSeek
-Files to check:
-  grep -rn "anthropic\|Anthropic\|claude" ~/Desktop/trackiq/api/routes/ --include="*.js" -l
-  cat ~/Desktop/trackiq/api/routes/ai-chat.js
-  cat ~/Desktop/trackiq/api/routes/ai-analytics.js
+## Next: T5.2 — Scale/Pause/Kill Verdicts
+Add to api/routes/attribution.js:
+  GET /api/attribution/verdicts?site_key=X&date_from=X&date_to=X
+  Uses callAI() from lib/ai-client.js
+  Returns [{campaign, verdict: SCALE|PAUSE|KILL, reason, signal}]
+
+Paste to start:
+  tail -30 ~/Desktop/trackiq/api/routes/attribution.js
