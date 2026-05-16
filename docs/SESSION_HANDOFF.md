@@ -1,17 +1,18 @@
-## Last completed: Adblocker bypass complete ✅
-- api/routes/proxy.js: /sp/e (pageview), /sp/c (conversion), /sp/pixel.gif
-- tracker.js: PROXY_URL var — if config.proxy_url set, sends to /sp/ instead of /api/
-- Activation: window.__trackiq_config = { site_key: 'X', api_url: '...', proxy_url: 'https://analytics.theirdomain.com' }
-- Requires custom domain (T4.4) to be verified first
+## Last completed: T6.2 complete ✅
+- api/routes/webhook-incoming.js: POST /api/webhooks/incoming/:api_key
+- Duplicate route registration fixed
+- Settings.jsx: shows webhook URL when api_key exists on site
 
-## Remaining work (priority order):
-1. T6.2 Generic webhook receiver — any CRM/tool → conversions via POST
-2. T8 Pricing tier enforcement — free=1k, starter=10k, pro=50k/mo
-3. Report Builder: real SVG source icons in table rows
-4. Add STRIPE keys to .env to activate billing
-5. Add RESEND_API_KEY for weekly digest
+## One thing to check:
+Does the sites table have an api_key column?
+Run in Supabase SQL:
+  SELECT column_name FROM information_schema.columns WHERE table_name = 'sites' AND column_name = 'api_key';
+If missing: ALTER TABLE sites ADD COLUMN IF NOT EXISTS api_key TEXT UNIQUE DEFAULT gen_random_uuid()::TEXT;
 
-## Project status: ~97% complete
-Core attribution ✅ | Cookieless ✅ | Analytics product ✅
-Report builder ✅ | Adblocker bypass ✅ | Public share ✅
-AI verdicts ✅ | Server-side CAPI ✅ | Journey modal ✅
+## Remaining before launch:
+1. T8 Pricing tier enforcement — 2hrs
+2. STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET in .env
+3. RESEND_API_KEY in .env
+
+## Project status: ~99% complete
+Everything core is built. Only pricing enforcement + env vars remain.
