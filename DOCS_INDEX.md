@@ -11,7 +11,7 @@
 | `SESSION_STATE.md` | Current session, branch, blockers, active work | Every session | Current |
 | `SESSION_HANDOFF.md` | Last completed work, pending QA | Every session | Handoff |
 | `KNOWN_ISSUES.md` | Verified bugs/gaps only | Every session | Current |
-| `AI_SESSION_PLAN.md` | Upcoming session roadmap and priorities | Every session | Current |
+| `SESSION_STATE.md (replaces AI_SESSION_PLAN)` | Upcoming session roadmap and priorities | Every session | Current |
 
 ## Session Tracking
 
@@ -38,7 +38,7 @@
 | `FIGMA_DESIGN_SYSTEM.md` | Design tokens — typography (Switzer), colors (lime/charcoal/neutral), grid, sidebar, cards, tables, badges, charts | Design/dashboard work | Generated spec | Design reference only; verify implementation in code |
 | `FIGMA_TOKEN_IMPLEMENTATION_PLAN.md` | Repo-verified plan for font, color tokens, grid, and new shared components (Session 83.2) | Before Session 83.2 | Implementation plan | Do not implement until 83.2 starts |
 | `BUSINESS_DASHBOARDS_SPEC.md` | 4 dashboard variants (Revenue, E-commerce, Lead Gen, SaaS), KPI rows, widget matrices | Design/dashboard work | Generated spec | Design-confirmed; implementation status unverified |
-| `DASHBOARD_FEATURE_GAP.md` | Gap analysis between codebase and Figma/competitor benchmarks | Design/dashboard work | Planning doc | Not proof features exist; verify code before claiming |
+| `COMPETITOR_PARITY.md` | Gap analysis between codebase and Figma/competitor benchmarks | Design/dashboard work | Planning doc | Not proof features exist; verify code before claiming |
 | `ONBOARDING_FLOW_SPEC.md` | 5-step Figma onboarding flow spec | Design/dashboard work | Generated spec | Design-confirmed; implementation status unverified |
 
 ## QA / Runbooks
