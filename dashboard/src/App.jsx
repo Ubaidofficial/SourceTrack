@@ -19,6 +19,7 @@ import LeadDetail from './pages/LeadDetail'
 import Campaigns from './pages/Campaigns'
 import Integrations from './pages/Integrations'
 import Admin from './pages/Admin'
+import Analytics from './pages/Analytics'
 import DesignSystem from './pages/DesignSystem'
 import AdminRoute from './components/AdminRoute'
 

@@ -39,6 +39,7 @@ import jobStatusRouter from './routes/job-status.js'
 import { serverEventsRouter } from './routes/server-events.js'
 import { sessionsOverview, visitorSessions } from './routes/sessions.js'
 import liveRouter from './routes/live.js'
+import analyticsRouter from './routes/analytics.js'
 
 const app = express()
 
@@ -248,6 +249,7 @@ app.use('/api/billing', billingRouter)
 app.use('/api/admin', requireUserAuth, adminRouter)
 app.use('/api/jobs', requireUserAuth, jobStatusRouter)
 app.use('/api/live', liveRouter)
+app.use("/api/analytics", analyticsRouter)
 app.get('/api/sessions/overview', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, sessionsOverview)
 app.get('/api/sessions', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, visitorSessions)
 
