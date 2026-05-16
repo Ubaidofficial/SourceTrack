@@ -214,7 +214,7 @@ async function processConversion(site, conversion) {
     first_touch_campaign: attribution.first_touch?.campaign || null,
     first_touch_timestamp: attribution.first_touch?.timestamp || null,
     
-    last_touch_source: attribution.last_touch?.source || null,
+    last_touch_source: attribution.last_touch?.source || attribution.last_touch?.derived_source || null,
     last_touch_medium: attribution.last_touch?.medium || null,
     last_touch_campaign: attribution.last_touch?.campaign || null,
     last_touch_timestamp: attribution.last_touch?.timestamp || null,
