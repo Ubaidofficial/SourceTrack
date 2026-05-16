@@ -82,6 +82,25 @@
   var ftCookieName = '__ti_ft_' + SITE_KEY
   var ltCookieName = '__ti_lt_' + SITE_KEY
 
+  // ── Cookieless mode ──────────────────────────────────────────────────────
+  var cookieless = !!(config && config.cookieless)
+  var anonymousId, idType
+  if (cookieless) {
+    var qp_cl = new URLSearchParams(window.location.search)
+    var xdId_cl = qp_cl.get('__tq_id')
+    if (xdId_cl) {
+      anonymousId = xdId_cl
+      idType = 'cross_domain'
+    } else {
+      try { anonymousId = sessionStorage.getItem(idCookieName) } catch (_e) {}
+      if (!anonymousId) {
+        anonymousId = uuidv4()
+        try { sessionStorage.setItem(idCookieName, anonymousId) } catch (_e) {}
+      }
+      idType = 'cookieless'
+    }
+  } else {
+  // ── Normal mode ──────────────────────────────────────────────────────────
   var anonymousId = getCookie(idCookieName)
   var idType = 'cookie'
   var qp = new URLSearchParams(window.location.search)
@@ -117,6 +136,7 @@
   setCookie(idCookieName, anonymousId)
   try { localStorage.setItem(idCookieName, anonymousId) } catch (_e) { /* unavailable */ }
   try { sessionStorage.setItem(idCookieName, anonymousId) } catch (_e) {}
+  } // end cookieless else
 
   var utm = getUtmParams()
   var now = new Date().toISOString()
