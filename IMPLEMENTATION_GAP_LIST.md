@@ -152,3 +152,55 @@ Do not claim features are implemented unless verified in code and QA.
 | Payment provider attribution | ✅ | — | — | ❌ |
 
 Legend: ✅ = implemented and verified, ⚠️ = partially implemented, ❌ = missing, — = unknown/not applicable
+
+## Sessions 94-96 Updates
+
+### Channel Classification (Session 95)
+| Feature | Status | Notes |
+|---|---|---|
+| channel column in attributed_conversions | ✅ | Added + indexed |
+| channel_30d column | ✅ | 30-day window channel |
+| channelFromEvent() with click IDs | ✅ | gclid/fbclid/msclkid/ttclid detection |
+| group_by=channel in pre-aggregated API | ✅ | Was silently broken, now fixed |
+| Batch job writes channel | ✅ | On every conversion |
+
+### Journey Touchpoints (Session 95 — CRITICAL BUG FIX)
+| Feature | Status | Notes |
+|---|---|---|
+| All channels visible in journey | ✅ | Removed utm_source IS NOT NULL filter |
+| referrer + ai_source in touchpoints | ✅ | Added to SELECT and row mapping |
+| derived_source for organic/direct/AI | ✅ | Hostname derived from referrer |
+
+### Campaign Costs (Session 95-96)
+| Feature | Status | Notes |
+|---|---|---|
+| campaign_costs table | ✅ | Manual spend entry |
+| GET/POST/DELETE /api/campaign-costs | ✅ | Full CRUD |
+| ROAS = revenue/spend | ✅ | In campaigns route |
+| CPL = spend/conversions | ✅ | In campaigns route |
+
+### Conversion Status (Session 96)
+| Feature | Status | Notes |
+|---|---|---|
+| status column on attributed_conversions | ✅ | lead/mql/sql/customer/rejected |
+| lead_qualifications table | ✅ | Per-visitor qualification |
+| PATCH /api/leads/:id/qualify | ✅ | Writes to both tables |
+| SQL% in dashboard response | ✅ | sql_percent field |
+
+### Business Type Switching (Session 96)
+| Feature | Status | Notes |
+|---|---|---|
+| business_type column on sites | ✅ | saas/ecommerce/leadgen |
+| Onboarding saves business_type | ✅ | Writes to column on step update |
+| auth middleware includes business_type | ✅ | In req.site |
+| Dashboard returns business_type | ✅ | In API response |
+| Frontend renders different KPI cards | ❌ | Backend done, frontend not yet built |
+
+### Infrastructure (Session 94)
+| Feature | Status | Notes |
+|---|---|---|
+| data-quality-check.js | ✅ | Runs 3 AM via cron |
+| Event logger NodeCache caching | ✅ | 60s cache, parallel health queries |
+| Mark as Qualified wired | ✅ | Calls PATCH API |
+| GTM default → Standard | ✅ | useState('standard') |
+| Journey modal overlay | ✅ | LeadDetail uses modal not navigate() |
