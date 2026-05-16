@@ -343,6 +343,7 @@
   if (isFirstVisit) {
     sendEvent('install_verified', {
       domain: window.location.hostname
+
     })
   }
 
@@ -363,4 +364,16 @@
       }
     } catch (_e) { /* selector invalid — silently skip */ }
   }
+
+  // Outbound link auto-tracking
+  document.addEventListener('click', function(e) {
+    var a = e.target && e.target.closest && e.target.closest('a[href]')
+    if (!a) return
+    try {
+      var url = new URL(a.href)
+      if (url.hostname !== window.location.hostname && url.protocol.startsWith('http')) {
+        sendEvent('outbound_click', { outbound_url: url.href, outbound_domain: url.hostname })
+      }
+    } catch(_e) {}
+  }, true)
 })()

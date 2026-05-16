@@ -129,6 +129,9 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     const totalRevenue = revenueResults.reduce((sum, r) => sum + (r.revenue || 0), 0)
     const totalConversions = revenueResults.reduce((sum, r) => sum + (r.conversions || 0), 0)
     const totalSessions = sessionsResults.reduce((sum, r) => sum + (r.sessions || 0), 0)
+    const bounceRateSql = `SELECT countIf(pv_count = 1) * 100.0 / count() FROM (SELECT distinct_id, count() AS pv_count FROM events WHERE event = '$pageview' AND properties.site_id = '${posthogSiteId}' AND timestamp >= toDateTime('${dateFrom}') AND timestamp <= toDateTime('${dateTo} 23:59:59') GROUP BY distinct_id)`
+    let bounceRate = null
+    try { const br = await queryHogQL(bounceRateSql, 'bounce_rate'); bounceRate = br?.[0]?.[0] ? parseFloat(Number(br[0][0]).toFixed(1)) : null } catch(_e) {}
     const totalLeads = leadsResults.reduce((sum, r) => sum + (r.leads || 0), 0)
     // SQL% — qualified leads / total leads from attributed_conversions
     const { count: sqlCount } = await supabaseAdmin.from('attributed_conversions').select('*', { count: 'exact', head: true }).eq('site_id', req.site.id).eq('status', 'sql').gte('conversion_date', dateFrom).lte('conversion_date', dateTo)
@@ -197,6 +200,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
           revenue_prev: prevRevenue,
           conversions: totalConversions,
           sessions: totalSessions,
+          bounce_rate: bounceRate,
           leads: totalLeads,
           sql_percent: sqlPercent,
           leads_prev: prevLeads,
