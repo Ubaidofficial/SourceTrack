@@ -41,6 +41,7 @@ import { sessionsOverview, visitorSessions } from './routes/sessions.js'
 import liveRouter from './routes/live.js'
 import analyticsRouter from './routes/analytics.js'
 import proxyRouter from './routes/proxy.js'
+import webhookIncomingRouter from './routes/webhook-incoming.js'
 
 const app = express()
 
