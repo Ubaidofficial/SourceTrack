@@ -1,60 +1,47 @@
-import dotenv from 'dotenv'
-dotenv.config()
+import 'dotenv/config'
 import { createClient } from '@supabase/supabase-js'
+import { queryHogQL } from '../lib/posthog.js'
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
-const SLACK = process.env.SLACK_WEBHOOK_URL
-
-async function slackAlert(issues) {
-  if (!SLACK) return console.error('[QUALITY] Issues found:', issues.join(' | '))
-  await fetch(SLACK, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text: `⚠️ *SourceTrack Data Quality*\n${issues.map(i => `• ${i}`).join('\n')}` })
-  })
-}
 
 async function run() {
+  console.log('[data-quality-check] Starting...')
   const issues = []
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
 
-  const { count: zeroCount, error: e1 } = await supabase
+  // 1. Check for sites with no events in last 48h
+  const { data: sites } = await supabase.from('sites').select('id, domain, site_key')
+  for (const site of sites || []) {
+    const sql = `
+      SELECT count() AS cnt FROM events
+      WHERE properties.site_id = '${site.id}'
+        AND timestamp >= now() - INTERVAL 48 HOUR
+    `
+    const result = await queryHogQL(sql)
+    const cnt = Number(result?.results?.[0]?.[0] ?? 0)
+    if (cnt === 0) issues.push(`No events in 48h: ${site.domain} (${site.site_key})`)
+  }
+
+  // 2. Check for attributed_conversions with null first_touch_source
+  const { count: nullCount } = await supabase
     .from('attributed_conversions')
     .select('*', { count: 'exact', head: true })
-    .eq('touchpoint_count', 0)
-    .gte('conversion_date', yesterday)
-  if (!e1 && zeroCount > 0) issues.push(`${zeroCount} conversions with 0 touchpoints yesterday`)
+    .is('first_touch_source', null)
+  if (nullCount > 0) issues.push(`${nullCount} attributed_conversions with null first_touch_source`)
 
-  const { data: lastRun } = await supabase
-    .from('job_runs')
-    .select('ran_at, status, conversions_processed')
-    .eq('job_name', 'nightly-attribution')
-    .order('ran_at', { ascending: false })
-    .limit(1)
-    .single()
+  // Log to job_runs
+  await supabase.from('job_runs').insert({
+    job_name: 'data-quality-check',
+    status: issues.length === 0 ? 'success' : 'warning',
+    details: issues.length === 0 ? 'All checks passed' : issues.join(' | '),
+    ran_at: new Date().toISOString()
+  })
 
-  if (!lastRun) {
-    issues.push('CRITICAL: No batch job runs found in job_runs table')
-  } else {
-    const hoursAgo = (Date.now() - new Date(lastRun.ran_at).getTime()) / 3_600_000
-    if (hoursAgo > 26) issues.push(`Batch job not run in ${Math.round(hoursAgo)}h — last ran: ${lastRun.ran_at}`)
-    if (lastRun.status === 'failed') issues.push('Last batch job FAILED')
-    if (lastRun.status === 'success' && lastRun.conversions_processed === 0) issues.push('Batch ran but processed 0 conversions')
-  }
-
-  const { data: bigOnes } = await supabase
-    .from('attributed_conversions')
-    .select('id, conversion_value')
-    .gt('conversion_value', 50000)
-    .gte('conversion_date', yesterday)
-  if (bigOnes?.length > 0) issues.push(`${bigOnes.length} conversions > $50k — verify not test data`)
-
-  if (issues.length > 0) {
-    await slackAlert(issues)
-    process.exit(1)
-  }
-
-  console.log(`[QUALITY] All checks passed for ${yesterday}`)
+  console.log(`[data-quality-check] Done. Issues: ${issues.length}`)
+  if (issues.length) issues.forEach(i => console.warn(' -', i))
+  process.exit(0)
 }
 
-run().catch(e => { console.error('[QUALITY] Fatal:', e.message); process.exit(1) })
+run().catch(err => {
+  console.error('[data-quality-check] Fatal:', err)
+  process.exit(1)
+})

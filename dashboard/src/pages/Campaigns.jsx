@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { fetchApi } from '../lib/api'
 import { format, subDays } from 'date-fns'
 import { useAuth } from '../contexts/AuthContext'
-import { Search, Download, TrendingUp, TrendingDown, Filter, Eye } from 'lucide-react'
+import { Search, Download, TrendingUp, TrendingDown, Filter, Eye, Pencil, Check } from 'lucide-react'
 import DashboardCard from '../components/DashboardCard'
 import MetricTile from '../components/MetricTile'
 import StatusBadge from '../components/StatusBadge'
@@ -48,6 +48,9 @@ function statusLabel(status) {
 export default function Campaigns() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const [spendMap, setSpendMap] = useState({}) // { campaignName: spend }
+  const [editingSpend, setEditingSpend] = useState(null)
+  const [spendInput, setSpendInput] = useState('')
   const [site, setSite] = useState(null)
   const [activeDim, setActiveDim] = useState('source')
   const [dateRange, setDateRange] = useState(30)
@@ -111,6 +114,33 @@ export default function Campaigns() {
       y: { beginAtZero: true, ticks: { callback: (v) => `$${v}`, maxTicksLimit: 4 }, grid: { color: '#f3f4f6' } },
       x: { grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 11 } } }
     }
+  }
+
+
+  const { data: costsData, refetch: refetchCosts } = useQuery({
+    queryKey: ['campaign-costs', site?.site_key, dateFrom, dateTo],
+    queryFn: async () => {
+      if (!site?.site_key) return []
+      const res = await fetchApi(`/campaign-costs?site_key=${site.site_key}&date_from=${dateFrom}&date_to=${dateTo}`)
+      return res.data || []
+    },
+    enabled: !!site?.site_key,
+    onSuccess: (data) => {
+      const map = {}
+      data.forEach(c => { map[c.campaign_name] = c.spend })
+      setSpendMap(map)
+    }
+  })
+
+  async function saveSpend(campaignName) {
+    const spend = parseFloat(spendInput) || 0
+    await fetchApi('/campaign-costs', {
+      method: 'POST',
+      body: JSON.stringify({ site_key: site.site_key, campaign_name: campaignName, spend, period_start: dateFrom, period_end: dateTo })
+    })
+    setSpendMap(prev => ({ ...prev, [campaignName]: spend }))
+    setEditingSpend(null)
+    refetchCosts()
   }
 
   return (
@@ -239,6 +269,12 @@ export default function Campaigns() {
                     <th className="text-right py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Trend
                     </th>
+                    <th className="text-right py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Spend ✏️
+                    </th>
+                    <th className="text-right py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      ROAS
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -259,6 +295,35 @@ export default function Campaigns() {
                         </td>
                         <td className="py-3 px-4 text-right text-gray-500">
                           ${(r.avg_value || 0).toFixed(2)}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          {editingSpend === r.name ? (
+                            <div className="flex items-center justify-end gap-1">
+                              <input
+                                type="number"
+                                className="w-20 text-right border border-gray-300 rounded px-1 py-0.5 text-xs"
+                                value={spendInput}
+                                onChange={e => setSpendInput(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && saveSpend(r.name)}
+                                autoFocus
+                              />
+                              <button onClick={() => saveSpend(r.name)} className="text-green-600 hover:text-green-700">
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-end gap-1 group">
+                              <span className="text-gray-600">{spendMap[r.name] ? `$${Number(spendMap[r.name]).toFixed(0)}` : '—'}</span>
+                              <button onClick={() => { setEditingSpend(r.name); setSpendInput(spendMap[r.name] || '') }} className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600">
+                                <Pencil className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 px-4 text-right text-gray-600">
+                          {spendMap[r.name] && spendMap[r.name] > 0
+                            ? <span className={Number(r.revenue || 0) / spendMap[r.name] >= 1 ? 'text-green-600 font-medium' : 'text-red-500'}>{(Number(r.revenue || 0) / spendMap[r.name]).toFixed(2)}x</span>
+                            : <span className="text-gray-300">—</span>}
                         </td>
                         <td className="py-3 px-4 text-right">
                           {r.trend != null ? (

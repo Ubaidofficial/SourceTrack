@@ -14,6 +14,7 @@ const AI_SOURCES = ['ChatGPT', 'Claude', 'Perplexity', 'Gemini', 'Grok', 'Copilo
 
 export default function Leads() {
   const { user } = useAuth()
+  const [statusMap, setStatusMap] = useState({})
   const navigate = useNavigate()
   const [site, setSite] = useState(null)
   const [search, setSearch] = useState('')
@@ -142,6 +143,7 @@ export default function Leads() {
                   <th className="text-right py-3 px-3 text-xs font-medium text-gray-500">Conversions</th>
                   <th className="text-right py-3 px-3 text-xs font-medium text-gray-500">Revenue</th>
                   <th className="text-left py-3 px-3 text-xs font-medium text-gray-500">Last seen</th>
+                  <th className="text-left py-3 px-3 text-xs font-medium text-gray-500">Status</th>
                   <th className="text-right py-3 px-3 text-xs font-medium text-gray-500">Country</th>
                   <th className="text-right py-3 px-3 text-xs font-medium text-gray-500"></th>
                 </tr>
@@ -188,6 +190,38 @@ export default function Leads() {
                       </td>
                       <td className="py-3 px-3 text-right text-gray-500 text-xs">
                         {lead.country || '—'}
+                      </td>
+                      <td className="py-3 px-3">
+                        {(() => {
+                          const STATUS_STYLES = {
+                            lead:     'bg-gray-100 text-gray-600',
+                            mql:      'bg-blue-50 text-blue-600',
+                            sql:      'bg-purple-50 text-purple-600',
+                            customer: 'bg-green-50 text-green-700',
+                            rejected: 'bg-red-50 text-red-500'
+                          }
+                          const cur = statusMap[lead.id] || lead.status || 'lead'
+                          return (
+                            <select
+                              value={cur}
+                              onChange={async (e) => {
+                                const newStatus = e.target.value
+                                setStatusMap(prev => ({ ...prev, [lead.id]: newStatus }))
+                                await fetchApi(`/leads/${lead.id}/qualify`, {
+                                  method: 'PATCH',
+                                  body: JSON.stringify({ status: newStatus })
+                                })
+                              }}
+                              className={`text-xs font-medium px-2 py-0.5 rounded-full border-0 cursor-pointer ${STATUS_STYLES[cur] || STATUS_STYLES.lead}`}
+                            >
+                              <option value="lead">Lead</option>
+                              <option value="mql">MQL</option>
+                              <option value="sql">SQL</option>
+                              <option value="customer">Customer</option>
+                              <option value="rejected">Rejected</option>
+                            </select>
+                          )
+                        })()}
                       </td>
                       <td className="py-3 px-3 text-right">
                         <div className="flex items-center justify-end gap-2">

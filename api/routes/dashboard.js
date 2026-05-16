@@ -230,4 +230,16 @@ router.get('/overview', validateSiteKey, async (req, res) => {
   }
 })
 
+
+router.get('/live', validateSiteKey, async (req, res) => {
+  try {
+    const posthogSiteId = String(req.site.id)
+    const sql = `SELECT count(DISTINCT distinct_id) FROM events WHERE event = '$pageview' AND properties.site_id = '${posthogSiteId}' AND timestamp >= now() - INTERVAL 5 MINUTE`
+    const rows = await queryHogQL(sql, 'live_visitors')
+    const count = Number(rows?.[0]?.[0]) || 0
+    res.json({ success: true, data: { live_visitors: count } })
+  } catch (err) {
+    res.json({ success: true, data: { live_visitors: 0 } })
+  }
+})
 export { router as dashboardRouter }

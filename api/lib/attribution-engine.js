@@ -916,7 +916,14 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
       count() AS touchpoints
     FROM (
       SELECT
-        COALESCE(NULLIF(toString(pv.properties.utm_source), ''), 'direct') AS dim_value,
+        ${groupBy === 'channel' ? `CASE
+          WHEN pv.properties.utm_medium IN ('cpc','ppc','paid','paid_search','paidsearch') THEN 'Paid Search'
+          WHEN pv.properties.utm_medium IN ('paid_social','paidsocial') OR pv.properties.utm_source IN ('facebook','instagram','linkedin','twitter','tiktok') THEN 'Paid Social'
+          WHEN pv.properties.utm_medium = 'email' OR pv.properties.utm_source = 'email' THEN 'Email'
+          WHEN pv.properties.utm_medium IN ('affiliate','partner') THEN 'Affiliate'
+          WHEN pv.properties.utm_source IS NOT NULL AND pv.properties.utm_source != '' THEN 'Organic Search'
+          ELSE 'Direct'
+        END` : `COALESCE(NULLIF(toString(pv.properties.utm_source), ''), 'direct')`} AS dim_value,
         toFloatOrZero(toString(cv.properties.conversion_value)) / touch_counts.touch_count AS fractional_revenue,
         1 / touch_counts.touch_count AS fractional_conversions
       FROM events cv

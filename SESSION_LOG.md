@@ -31,3 +31,4 @@ Session 82 proper will be the manual QA closeout session.
 | 95 | 2026-05-16 | `main` | CRITICAL BUG FIX: journey touchpoints now include all channels (organic/direct/referral/AI), channel classifier + channel/channel_30d columns in batch job, manual campaign spend→ROAS+CPL in campaigns route | Partial QA | No |
 | 96 | 2026-05-16 | `main` | Conversion status progression (lead/mql/sql/customer/rejected), lead_qualifications table, SQL% in dashboard API, business_type column + onboarding saves it + auth middleware + dashboard returns it | Partial QA | No |
 | 96.3 | 2026-05-16 | `main` | Outbound link auto-tracking in tracker.js, bounce rate HogQL query + dashboard response | Partial QA | — |
+| 96.4 | 2026-05-16 | `main` | Public dashboard share link — /api/public/:token, public_share_token + public_share_enabled on sites, returns top sources/campaigns/channels | QA passed | — |

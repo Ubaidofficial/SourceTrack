@@ -182,36 +182,35 @@ router.get('/:leadId', validateSiteKey, async (req, res) => {
 router.patch('/:leadId/qualify', validateSiteKey, async (req, res) => {
   try {
     const { leadId } = req.params
-    const qualified = req.body.qualified !== false
-    const notes = req.body.notes || ''
-
+    const { status, notes } = req.body
+    const VALID = ['lead', 'mql', 'sql', 'customer', 'rejected']
     if (!leadId || leadId.trim() === '') {
       return res.status(400).json({ success: false, data: null, error: 'leadId is required' })
     }
+    const newStatus = VALID.includes(status) ? status : (req.body.qualified !== false ? 'sql' : 'rejected')
 
     const { data, error } = await supabase
       .from('lead_qualifications')
       .upsert({
         site_id: req.site.id,
         visitor_id: leadId,
-        qualified,
+        qualified: newStatus !== 'rejected',
         qualified_by: req.user?.id || null,
         qualified_at: new Date().toISOString(),
-        notes
+        notes: notes || ''
       }, { onConflict: 'site_id,visitor_id' })
       .select()
       .single()
 
     if (error) throw error
-    // Also update attributed_conversions status
-    const newStatus = qualified ? 'sql' : 'rejected'
+
     await supabase
       .from('attributed_conversions')
       .update({ status: newStatus, qualified_at: new Date().toISOString(), qualified_by: req.user?.id || null })
       .eq('site_id', req.site.id)
       .eq('distinct_id', leadId)
 
-    return res.status(200).json({ success: true, data, error: null })
+    return res.status(200).json({ success: true, data: { ...data, status: newStatus }, error: null })
   } catch (err) {
     console.error(err)
     return res.status(500).json({ success: false, data: null, error: 'Qualification failed' })

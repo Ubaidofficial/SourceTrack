@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { createCheckout, getBillingPortal } from '../lib/api'
-import { Copy, Check, Code, ExternalLink } from 'lucide-react'
+import { Copy, Check, Code, ExternalLink, Globe, Link2 } from 'lucide-react'
 
 export default function Settings() {
   const { user } = useAuth()
@@ -14,6 +14,10 @@ export default function Settings() {
   const [name, setName] = useState('')
   const [domain, setDomain] = useState('')
   const [saving, setSaving] = useState(false)
+  const [shareEnabled, setShareEnabled] = useState(false)
+  const [shareToken, setShareToken] = useState(null)
+  const [shareLoading, setShareLoading] = useState(false)
+  const [shareCopied, setShareCopied] = useState(false)
   const [message, setMessage] = useState('')
   const [copied, setCopied] = useState(false)
   const [loadingCheckout, setLoadingCheckout] = useState(false)
@@ -46,6 +50,8 @@ export default function Settings() {
     const { data } = await query.maybeSingle()
     setSite(data)
     if (data) {
+      setShareEnabled(!!data.public_share_enabled)
+      setShareToken(data.public_share_token || null)
       setName(data.name || '')
       setDomain(data.domain || '')
     }
@@ -126,6 +132,34 @@ export default function Settings() {
     }
   }
 
+  const handleShareToggle = async () => {
+    if (!site) return
+    setShareLoading(true)
+    try {
+      const newEnabled = !shareEnabled
+      const { data, error } = await supabase
+        .from('sites')
+        .update({ public_share_enabled: newEnabled })
+        .eq('id', site.id)
+        .select('public_share_token, public_share_enabled')
+        .single()
+      if (error) throw error
+      setShareEnabled(!!data.public_share_enabled)
+      setShareToken(data.public_share_token || null)
+    } catch (err) {
+      setMessage('Error updating share settings')
+    } finally {
+      setShareLoading(false)
+    }
+  }
+
+  const handleShareCopy = () => {
+    const url = `${window.location.origin}/public/${shareToken}`
+    navigator.clipboard.writeText(url)
+    setShareCopied(true)
+    setTimeout(() => setShareCopied(false), 2000)
+  }
+
   const planLabel = site?.plan === 'pro' ? 'Pro' : site?.plan === 'inactive' ? 'Inactive' : 'Trial'
   const planColor = site?.plan === 'pro' ? 'text-gray-900' : site?.plan === 'inactive' ? 'text-red-600' : 'text-amber-600'
 
@@ -146,130 +180,31 @@ export default function Settings() {
         </div>
       )}
 
-      {/* Site Settings */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4">Site Configuration</h3>
-
-        {site && (
-          <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-            <p className="text-xs text-gray-500">Site Key</p>
-            <p className="text-sm font-mono text-gray-900">{site.site_key}</p>
-          </div>
-        )}
-
-        <form onSubmit={handleSave} className="space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Site Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
-              placeholder="My Website"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1">Domain</label>
-            <input
-              type="text"
-              value={domain}
-              onChange={(e) => setDomain(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
-              placeholder="example.com"
-            />
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              type="submit"
-              disabled={saving}
-              className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : 'Save'}
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* Plan + Billing */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
-        <h3 className="text-sm font-semibold text-gray-700">Plan & Billing</h3>
-
+      <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <Globe className="w-5 h-5 text-gray-700" />
+          <h3 className="text-sm font-semibold text-gray-700">Public Dashboard</h3>
+        </div>
+        <p className="text-xs text-gray-400">Share a read-only view of your analytics with anyone — no login required.</p>
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-gray-500">Current plan</p>
-            <p className={`text-lg font-semibold ${planColor}`}>{planLabel}</p>
-          </div>
-
-          {site?.plan === 'pro' ? (
-            <button
-              onClick={handlePortal}
-              disabled={loadingPortal}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 flex items-center gap-2"
-            >
-              {loadingPortal ? 'Loading...' : 'Manage Billing'} <ExternalLink className="w-3.5 h-3.5" />
-            </button>
-          ) : (
-            <button
-              onClick={handleSubscribe}
-              disabled={loadingCheckout}
-              className="px-4 py-2 text-sm font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 disabled:opacity-50"
-            >
-              {loadingCheckout ? 'Loading...' : site?.plan === 'trial' ? 'Upgrade to Pro' : 'Reactivate'}
-            </button>
-          )}
+          <span className="text-sm text-gray-600">{shareEnabled ? 'Sharing enabled' : 'Sharing disabled'}</span>
+          <button onClick={handleShareToggle} disabled={shareLoading} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${shareEnabled ? 'bg-blue-600' : 'bg-gray-200'}`}>
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${shareEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+          </button>
         </div>
-
-        {site?.plan === 'trial' && site?.created_at && (
-          <TrialDays created_at={site.created_at} />
+        {shareEnabled && shareToken && (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-center gap-2">
+            <Link2 className="w-4 h-4 text-gray-400 shrink-0" />
+            <span className="text-xs text-gray-500 truncate flex-1">{`${window.location.origin}/public/${shareToken}`}</span>
+            <button onClick={handleShareCopy} className="p-1 hover:bg-gray-200 rounded transition-colors">
+              {shareCopied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 text-gray-500" />}
+            </button>
+            <a href={`${window.location.origin}/public/${shareToken}`} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-gray-200 rounded transition-colors">
+              <ExternalLink className="w-4 h-4 text-gray-500" />
+            </a>
+          </div>
         )}
       </div>
-
-      {/* Ignored Referrers */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-3">
-        <h3 className="text-sm font-semibold text-gray-700">Ignored Referrers & Sources</h3>
-        <p className="text-xs text-gray-400">
-          Referrers from these domains will not overwrite attribution. Useful for payment gateways and auth redirects.
-        </p>
-        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
-          <p className="text-sm text-amber-700">
-            TODO: confirm exact persistence — this list is currently hardcoded as defaults.
-          </p>
-          <ul className="list-disc list-inside text-xs text-amber-600 mt-1 space-y-0.5">
-            <li>paypal.com</li>
-            <li>checkout.stripe.com</li>
-            <li>accounts.google.com</li>
-            <li>login.microsoftonline.com</li>
-            <li>appleid.apple.com</li>
-          </ul>
-        </div>
-        <p className="text-xs text-gray-400">
-          Configuration UI will be built once the sites.config JSONB column is confirmed in the schema.
-        </p>
-      </div>
-
-      {/* Snippet */}
-      {site && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-3">
-          <div className="flex items-center gap-2">
-            <Code className="w-5 h-5 text-gray-700" />
-            <h3 className="text-sm font-semibold text-gray-700">Tracking Snippet</h3>
-          </div>
-
-          <p className="text-xs text-gray-400">Add this to the &lt;head&gt; of your website to start tracking.</p>
-
-          <div className="bg-gray-900 rounded-lg p-4 relative">
-            <pre className="text-green-400 text-xs overflow-x-auto whitespace-pre-wrap">{snippet}</pre>
-            <button
-              onClick={handleCopy}
-              className="absolute top-3 right-3 p-1.5 bg-gray-800 hover:bg-gray-700 rounded text-gray-300 transition-colors"
-            >
-              {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

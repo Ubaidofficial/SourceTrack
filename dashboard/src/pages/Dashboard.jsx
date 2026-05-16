@@ -240,14 +240,28 @@ export default function Dashboard() {
       const params = new URLSearchParams({
         site_key: site.site_key,
         date_from: from,
-        date_to: to
+
       })
       return fetchApi(`/sessions/overview?${params}`)
     },
     enabled: !!site?.site_key
   })
 
+  const { data: liveData } = useQuery({
+    queryKey: ['live-visitors', site?.site_key],
+    queryFn: async () => {
+      if (!site?.site_key) return { live_visitors: 0 }
+      const res = await fetch(`/api/live?site_key=${site.site_key}`)
+      return res.json()
+    },
+    enabled: !!site?.site_key && !previewMode,
+    refetchInterval: 30000,
+  })
+  const liveCount = liveData?.live_visitors ?? 0
+
   const kpis = overview?.kpis || {}
+  const businessType = overview?.business_type || site?.business_type || 'saas'
+
   const totalRevenue = kpis.revenue || 0
   const totalConversions = kpis.conversions || 0
   const totalSessions = kpis.sessions || 0
@@ -372,6 +386,13 @@ export default function Dashboard() {
         </div>
         {!previewMode && (
           <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 border border-green-200 text-green-700 text-sm font-medium">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+              </span>
+              {liveCount} live now
+            </div>
             <button onClick={() => navigate('/report-builder')}
               className="px-3 py-1.5 text-sm text-white bg-st-black rounded-lg hover:bg-st-black/90 flex items-center gap-1.5">
               <Plus className="w-3.5 h-3.5" /> Create Report
@@ -443,17 +464,26 @@ export default function Dashboard() {
         <>
           {/* KPI Strip */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-            <MetricTile label="Revenue" value={`$${totalRevenue.toFixed(0)}`} delta={revenueDelta}
-              icon={DollarSign} iconBg="bg-green-100" iconColor="text-green-600" />
-            <MetricTile label="Leads" value={totalLeads.toLocaleString()} delta={leadsDelta}
-              icon={Users} iconBg="bg-blue-100" iconColor="text-blue-600" />
-            <MetricTile label="AI Revenue" value={`$${totalAIRevenue.toFixed(0)}`}
-              delta={aiDelta}
-              icon={Bot} iconBg="bg-lime-100" iconColor="text-lime-700" />
-            <MetricTile label="Conversion Rate" value={`${convRate.toFixed(1)}%`}
-              icon={TrendingUp} iconBg="bg-purple-100" iconColor="text-purple-600" />
-            <MetricTile label="Avg Value" value={`$${avgValue.toFixed(2)}`}
-              icon={DollarSign} iconBg="bg-orange-100" iconColor="text-orange-600" />
+            {/* KPI Tiles — switch by business type */}
+            {businessType === 'leadgen' ? (<>
+              <MetricTile label="Total Leads" value={totalLeads.toLocaleString()} delta={leadsDelta} />
+              <MetricTile label="AI Leads" value={(kpis.ai_leads || 0).toLocaleString()} />
+              <MetricTile label="SQL%" value={kpis.sql_count && totalLeads > 0 ? `${((kpis.sql_count / totalLeads) * 100).toFixed(1)}%` : '—'} />
+              <MetricTile label="Conversion Rate" value={`${convRate.toFixed(1)}%`} />
+              <MetricTile label="Avg Value" value={`$${avgValue.toFixed(2)}`} />
+            </>) : businessType === 'ecommerce' ? (<>
+              <MetricTile label="Revenue" value={`$${totalRevenue.toFixed(0)}`} delta={revenueDelta} />
+              <MetricTile label="Orders" value={totalConversions.toLocaleString()} />
+              <MetricTile label="AOV" value={totalConversions > 0 ? `$${(totalRevenue / totalConversions).toFixed(2)}` : '—'} />
+              <MetricTile label="AI Revenue" value={`$${totalAIRevenue.toFixed(0)}`} />
+              <MetricTile label="Conversion Rate" value={`${convRate.toFixed(1)}%`} />
+            </>) : (<>
+              <MetricTile label="Revenue" value={`$${totalRevenue.toFixed(0)}`} delta={revenueDelta} />
+              <MetricTile label="Leads" value={totalLeads.toLocaleString()} delta={leadsDelta} />
+              <MetricTile label="AI Revenue" value={`$${totalAIRevenue.toFixed(0)}`} />
+              <MetricTile label="Conversion Rate" value={`${convRate.toFixed(1)}%`} />
+              <MetricTile label="Avg Value" value={`$${avgValue.toFixed(2)}`} />
+            </>)}
           </div>
 
           {/* Saved Reports — shown first, above the analytics wall */}
@@ -578,7 +608,6 @@ export default function Dashboard() {
             </DashboardCard>
           </div>
 
-          {/* Row 2: AI Sources Performance + Revenue Source Attribution */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <DashboardCard title="AI Sources Performance"
               subtitle={aiRevResults.length > 0
@@ -633,28 +662,7 @@ export default function Dashboard() {
               )}
             </DashboardCard>
 
-            <DashboardCard title="Revenue Source Attribution"
-              subtitle="Top channels by attributed revenue"
-              action={!previewMode && (
-                <button onClick={() => navigate('/campaigns')} className="text-xs text-gray-900 hover:text-gray-700 font-medium flex items-center gap-1">
-                  View all <ArrowRight className="w-3 h-3" />
-                </button>
-              )}
-            >
-              {activeResults.length === 0 ? (
-                <p className="text-sm text-gray-400 py-6 text-center">No attribution data yet. Start sending events to see source breakdown.</p>
-              ) : (
-                <DashboardTable
-                  columns={[
-                    { key: 'source', label: 'Source', render: (r) => r.dim_value || r.source || 'unknown' },
-                    { key: 'revenue', label: 'Revenue', render: (r) => `$${(r.revenue || 0).toFixed(0)}`, cellClassName: 'text-right font-medium text-gray-900' },
-                    { key: 'share', label: 'Share', render: (r) => totalRevenue > 0 ? `${((r.revenue / totalRevenue) * 100).toFixed(1)}%` : '—', cellClassName: 'text-right text-gray-500' }
-                  ]}
-                  rows={activeResults.slice(0, 7)}
-                  emptyMessage="No attribution data yet. Start sending events to see source breakdown."
-                />
-              )}
-            </DashboardCard>
+
           </div>
 
           {/* AI Analytics promo — shown when AI share is meaningful */}
@@ -783,24 +791,8 @@ export default function Dashboard() {
             )}
           </DashboardCard>
 
-          {/* Row 4: Campaign Performance + Tracking Health */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <DashboardCard title="Campaign Performance"
-              subtitle="Revenue by marketing campaign"
-            >
-              {campaignResults.length === 0 ? (
-                <p className="text-sm text-gray-400 py-6 text-center">Campaign data will appear when UTM-tagged traffic converts.</p>
-              ) : (
-                <DashboardTable
-                  columns={[
-                    { key: 'campaign', label: 'Campaign', render: (r) => r.dim_value || 'unknown' },
-                    { key: 'revenue', label: 'Revenue', render: (r) => `$${(r.revenue || 0).toFixed(0)}`, cellClassName: 'text-right font-medium text-gray-900' }
-                  ]}
-                  rows={campaignResults.slice(0, 5)}
-                  emptyMessage="Campaign data will appear when UTM-tagged traffic converts."
-                />
-              )}
-            </DashboardCard>
+
 
             <DashboardCard title="Tracking Health"
               subtitle="Install status and data quality"
