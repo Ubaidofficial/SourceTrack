@@ -408,7 +408,7 @@ export default function ReportBuilder() {
     try {
       await fetchApi(`/reports/saved?site_key=${encodeURIComponent(site.site_key)}`, {
         method: 'POST',
-        body: { site_key: site.site_key, name: `${report.name} (copy)`, config: report.config }
+        body: JSON.stringify({ site_key: site.site_key, name: `${report.name} (copy)`, config: report.config })
       })
       refetchReports()
     } catch { /* silent */ }
@@ -893,61 +893,88 @@ export default function ReportBuilder() {
                   <p>UTMs are captured automatically by the pixel.</p>
                   <p>Filters only narrow this report; they are not required for tracking.</p>
                 </div>
+                {/* Grouped Source Picker */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Quick Channel</label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {[
-                      { label: 'Organic', channel: 'Organic Search' },
-                      { label: 'Paid', channel: 'Paid Search' },
-                      { label: 'Social', channel: 'Organic Social' },
-                      { label: 'Email', channel: 'Email' },
-                      { label: 'AI', channel: 'AI Search', ai: true },
-                      { label: 'Direct', channel: 'Direct' }
-                    ].map(({ label, channel, ai }) => (
-                      <button key={label} onClick={() => applyQuickChannelFilter(channel, !!ai)}
-                        className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
-                          filters.channel === channel
-                            ? 'bg-lime-100 text-lime-800 font-medium'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}>
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Channel</label>
-                  <select value={filters.channel || ''} onChange={(e) => applyFilter('channel', e.target.value || undefined)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
-                    <option value="">Any</option>
-                    <option value="Organic Search">Organic Search</option>
-                    <option value="Paid Search">Paid Search</option>
-                    <option value="Organic Social">Organic Social</option>
-                    <option value="Paid Social">Paid Social</option>
-                    <option value="Email">Email</option>
-                    <option value="AI Search">AI Search</option>
-                    <option value="Direct">Direct</option>
-                    <option value="Referral">Referral</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Source</label>
-                  <input type="text" value={filters.source || ''} onChange={(e) => applyFilter('source', e.target.value || undefined)}
-                    placeholder="e.g. google" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
-                  <div className="flex flex-wrap gap-1 mt-1.5">
-                    {['google', 'bing', 'facebook', 'instagram', 'linkedin', 'twitter', 'x', 'tiktok', 'reddit', 'youtube', 'chatgpt', 'perplexity', 'newsletter'].map(src => (
-                      <button key={src} onClick={() => applyFilter('source', src)}
-                        className={`px-2 py-0.5 text-xs rounded-full transition-colors ${
-                          filters.source === src
-                            ? 'bg-lime-100 text-lime-800 font-medium'
-                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                        }`}>
-                        {src}
-                      </button>
-                    ))}
-                  </div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1.5">Sources</label>
+                  <p className="text-[10px] text-gray-400 mb-2">Select a channel or specific source. Leave blank for all.</p>
+                  {[
+                    { group: 'Organic Search', channel: 'Organic Search', icon: '🔍', sources: [
+                      { label: 'Google Organic', src: 'google', icon: 'G' },
+                      { label: 'Bing Organic', src: 'bing', icon: 'B' },
+                      { label: 'DuckDuckGo', src: 'duckduckgo', icon: 'D' },
+                      { label: 'Yahoo Organic', src: 'yahoo', icon: 'Y' },
+                    ]},
+                    { group: 'Paid Search', channel: 'Paid Search', icon: '💰', sources: [
+                      { label: 'Google Ads', src: 'google', icon: 'G' },
+                      { label: 'Microsoft Ads', src: 'bing', icon: 'B' },
+                    ]},
+                    { group: 'Organic Social', channel: 'Organic Social', icon: '👥', sources: [
+                      { label: 'Facebook', src: 'facebook', icon: 'f' },
+                      { label: 'Instagram', src: 'instagram', icon: 'ig' },
+                      { label: 'LinkedIn', src: 'linkedin', icon: 'in' },
+                      { label: 'Twitter / X', src: 'twitter', icon: 'X' },
+                      { label: 'TikTok', src: 'tiktok', icon: 'tt' },
+                      { label: 'Reddit', src: 'reddit', icon: 'r/' },
+                      { label: 'YouTube', src: 'youtube', icon: 'yt' },
+                    ]},
+                    { group: 'Paid Social', channel: 'Paid Social', icon: '📢', sources: [
+                      { label: 'Facebook Ads', src: 'facebook', icon: 'f' },
+                      { label: 'Instagram Ads', src: 'instagram', icon: 'ig' },
+                      { label: 'LinkedIn Ads', src: 'linkedin', icon: 'in' },
+                      { label: 'TikTok Ads', src: 'tiktok', icon: 'tt' },
+                    ]},
+                    { group: 'AI Search', channel: 'AI Search', icon: '✦', sources: [
+                      { label: 'ChatGPT', src: 'chatgpt', icon: 'gpt' },
+                      { label: 'Claude', src: 'claude', icon: 'cl' },
+                      { label: 'Perplexity', src: 'perplexity', icon: 'px' },
+                      { label: 'Gemini', src: 'gemini', icon: 'G' },
+                      { label: 'Grok', src: 'grok', icon: 'X' },
+                      { label: 'DeepSeek', src: 'deepseek', icon: 'ds' },
+                    ]},
+                    { group: 'Email', channel: 'Email', icon: '✉️', sources: [
+                      { label: 'Newsletter', src: 'newsletter', icon: 'nl' },
+                    ]},
+                    { group: 'Direct', channel: 'Direct', icon: '→', sources: [] },
+                    { group: 'Referral', channel: 'Referral', icon: '🔗', sources: [] },
+                  ].map(({ group, channel, icon, sources }) => {
+                    const isChannelActive = filters.channel === channel && !filters.source
+                    return (
+                      <div key={group} className="mb-0.5">
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => { applyFilter('channel', channel); applyFilter('source', undefined); if (channel === 'AI Search') applyFilter('has_ai_source', 'true'); else applyFilter('has_ai_source', undefined) }}
+                            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg flex-1 text-left transition-colors ${isChannelActive ? 'bg-lime-100 text-lime-800 font-semibold' : 'bg-gray-50 text-gray-700 hover:bg-gray-100'}`}
+                          >
+                            <span className="text-[11px]">{icon}</span>
+                            <span className="font-medium">{group}</span>
+                          </button>
+                          {isChannelActive && (
+                            <button onClick={() => { applyFilter('channel', undefined); applyFilter('source', undefined); applyFilter('has_ai_source', undefined) }} className="text-gray-300 hover:text-red-400 text-sm px-1">&times;</button>
+                          )}
+                        </div>
+                        {sources.length > 0 && (
+                          <div className="ml-3 mt-0.5 space-y-0.5 mb-1">
+                            {sources.map(({ label, src, icon: si }) => {
+                              const isActive = filters.source === src && filters.channel === channel
+                              return (
+                                <button key={label}
+                                  onClick={() => { applyFilter('channel', channel); applyFilter('source', src); if (channel === 'AI Search') applyFilter('has_ai_source', 'true'); else applyFilter('has_ai_source', undefined) }}
+                                  className={`flex items-center gap-2 w-full px-2 py-1 text-xs rounded transition-colors ${isActive ? 'bg-lime-50 text-lime-800 font-medium' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'}`}
+                                >
+                                  <span className="w-4 h-4 rounded text-[9px] bg-gray-200 flex items-center justify-center flex-shrink-0 font-bold">{si}</span>
+                                  {label}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                  {(filters.channel || filters.source) && (
+                    <button onClick={() => { applyFilter('channel', undefined); applyFilter('source', undefined); applyFilter('has_ai_source', undefined) }}
+                      className="mt-2 text-xs text-red-400 hover:text-red-600">Clear source filter</button>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-500 mb-1">Medium</label>
