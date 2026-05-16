@@ -1,18 +1,19 @@
 ## Last completed: T6.2 complete ✅
 - api/routes/webhook-incoming.js: POST /api/webhooks/incoming/:api_key
-- Duplicate route registration fixed
-- Settings.jsx: shows webhook URL when api_key exists on site
-
-## One thing to check:
-Does the sites table have an api_key column?
-Run in Supabase SQL:
-  SELECT column_name FROM information_schema.columns WHERE table_name = 'sites' AND column_name = 'api_key';
-If missing: ALTER TABLE sites ADD COLUMN IF NOT EXISTS api_key TEXT UNIQUE DEFAULT gen_random_uuid()::TEXT;
+- GET /api/webhooks/incoming/test/:api_key for verification  
+- Settings.jsx: shows webhook URL (api_key column confirmed exists)
+- Duplicate route fixed
 
 ## Remaining before launch:
-1. T8 Pricing tier enforcement — 2hrs
-2. STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET in .env
-3. RESEND_API_KEY in .env
+1. T8 Pricing tier enforcement — free=1k/mo, starter=10k, pro=50k
+   File to create: api/middleware/tier-check.js
+   Wire into: track.js + conversion.js routes
+2. STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET → .env (billing already coded)
+3. RESEND_API_KEY → .env (resend.com free tier)
 
-## Project status: ~99% complete
-Everything core is built. Only pricing enforcement + env vars remain.
+## To start T8:
+  cat ~/Desktop/trackiq/api/routes/track.js | head -10
+  grep -n "requireUserAuth\|validateSiteKey\|app.post.*track\|app.post.*conversion" ~/Desktop/trackiq/api/index.js | head -10
+
+## Project status: 99% complete
+Only T8 + env vars between you and launch.
