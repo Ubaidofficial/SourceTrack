@@ -6,6 +6,7 @@
 
   var SITE_KEY = config.site_key
   var API_URL = config.api_url.replace(/\/$/, '')
+  var PROXY_URL = (config.proxy_url || '').replace(/\/$/, '')
 
   var COOKIE_DOMAIN = ''
   try {
@@ -211,13 +212,15 @@
 
     try {
       if (navigator.sendBeacon) {
-        navigator.sendBeacon(API_URL + '/api/' + (event === '$conversion' ? 'conversion' : 'collect'), blob)
+        var _ep = PROXY_URL ? (PROXY_URL + '/sp/' + (event === '$conversion' ? 'c' : 'e')) : (API_URL + '/api/' + (event === '$conversion' ? 'conversion' : 'collect'))
+        navigator.sendBeacon(_ep, blob)
       } else {
         /* fallthrough to fetch */
         throw new Error('no beacon')
       }
     } catch (_e) {
-      fetch(API_URL + '/api/' + (event === '$conversion' ? 'conversion' : 'collect'), {
+      var _fep = PROXY_URL ? (PROXY_URL + '/sp/' + (event === '$conversion' ? 'c' : 'e')) : (API_URL + '/api/' + (event === '$conversion' ? 'conversion' : 'collect'))
+      fetch(_fep, {
         method: 'POST',
         body: blob,
         keepalive: true
