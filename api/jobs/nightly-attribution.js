@@ -11,6 +11,33 @@ import { createClient as _createClient } from '@supabase/supabase-js'
 const _supabase = _createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
 const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL
 
+function channelFromEvent(props = {}) {
+  const medium = String(props.utm_medium || props.medium || '').toLowerCase().trim()
+  const source = String(props.utm_source || props.derived_source || '').toLowerCase().trim()
+  const ref = String(props.referrer || '').toLowerCase()
+  const aiSource = String(props.ai_source || '').trim()
+  const aiDomains = ['chatgpt.com','chat.openai.com','claude.ai','perplexity.ai','gemini.google.com','grok.com','deepseek.com','copilot.microsoft.com']
+  if (aiSource) return 'AI Search'
+  if (aiDomains.some(d => ref.includes(d))) return 'AI Search'
+  if (props.gclid || props.gbraid || props.wbraid || props.msclkid) return 'Paid Search'
+  if (['cpc','ppc','paid','paid_search','sem'].includes(medium)) return 'Paid Search'
+  if (props.fbclid || props.ttclid || props.li_fat_id) return 'Paid Social'
+  if (['paid_social','paidsocial','social_paid'].includes(medium)) return 'Paid Social'
+  if (['email','newsletter','mailing'].includes(medium)) return 'Email'
+  if (['sms','text'].includes(medium)) return 'SMS'
+  const searchEngines = ['google.','bing.','yahoo.','duckduckgo.','ecosia.']
+  if (searchEngines.some(se => ref.includes(se))) return 'Organic Search'
+  if (['google','bing','yahoo','duckduckgo'].includes(source) && !medium) return 'Organic Search'
+  const socialDomains = ['facebook.com','instagram.com','linkedin.com','twitter.com','x.com','tiktok.com','reddit.com','youtube.com']
+  if (socialDomains.some(s => ref.includes(s))) return 'Organic Social'
+  if (['facebook','instagram','linkedin','twitter','x','tiktok','reddit'].includes(source) && !medium) return 'Organic Social'
+  if (['mailchimp','klaviyo','hubspot','sendgrid'].includes(source)) return 'Email'
+  if (ref && ref.length > 5) return 'Referral'
+  if (!source || source === 'direct') return 'Direct'
+  if (source) return 'Other Campaign'
+  return 'Direct'
+}
+
 async function _slackAlert(emoji, heading, detail) {
   if (!SLACK_WEBHOOK_URL) return console.log(`[ALERT] ${emoji} ${heading}: ${detail}`)
   await fetch(SLACK_WEBHOOK_URL, {
@@ -222,7 +249,27 @@ async function processConversion(site, conversion) {
     linear_attribution: attribution.linear,
     touchpoint_count: touchpoints.length,
     
-    processing_version: '1.0'
+    processing_version: '1.0',
+    channel: channelFromEvent({
+      utm_source: touchpoints[0]?.utm_source,
+      utm_medium: touchpoints[0]?.utm_medium,
+      referrer: touchpoints[0]?.referrer,
+      ai_source: touchpoints[0]?.ai_source,
+      derived_source: touchpoints[0]?.derived_source,
+      gclid: touchpoints[0]?.utm_source === 'google' ? true : null,
+      fbclid: touchpoints[0]?.utm_source === 'facebook' ? true : null
+    }),
+    channel_30d: (() => {
+      const tp30 = touchpoints.filter(tp => new Date(tp.timestamp) >= new Date(new Date(conversion.timestamp) - 30 * 86400000))
+      const first30 = tp30[0]
+      return first30 ? channelFromEvent({
+        utm_source: first30.utm_source,
+        utm_medium: first30.utm_medium,
+        referrer: first30.referrer,
+        ai_source: first30.ai_source,
+        derived_source: first30.derived_source
+      }) : null
+    })()
   }
   
   const { error } = await supabase

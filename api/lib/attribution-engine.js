@@ -315,24 +315,49 @@ export async function getAttribution(siteId, model, dateFrom, dateTo) {
  * Sessions are attributed by entry source (UTM source of the first pageview in the session).
  */
 
-function channelFromEvent(event = {}) {
-  const props = event.properties || event
-  const source = String(props.utm_source || props.source || '').toLowerCase()
-  const medium = String(props.utm_medium || props.medium || '').toLowerCase()
-  const referrer = String(props.referrer || '').toLowerCase()
+export function channelFromEvent(props = {}) {
+  const medium = String(props.utm_medium || props.medium || '').toLowerCase().trim()
+  const source = String(props.utm_source || props.source || props.derived_source || '').toLowerCase().trim()
+  const ref = String(props.referrer || '').toLowerCase()
   const aiSource = String(props.ai_source || '').trim()
+  const gclid = props.gclid || props.gbraid || props.wbraid
+  const fbclid = props.fbclid
+  const msclkid = props.msclkid
+  const ttclid = props.ttclid
+  const liclid = props.li_fat_id
 
+  const aiDomains = ['chatgpt.com','chat.openai.com','claude.ai','perplexity.ai','gemini.google.com','grok.com','deepseek.com','copilot.microsoft.com','poe.com','you.com','phind.com','kagi.com','meta.ai','chat.mistral.ai']
   if (aiSource) return 'AI Search'
-  if (['cpc', 'ppc', 'paid', 'paid_search', 'sem'].includes(medium)) return 'Paid Search'
-  if (['paid_social', 'paidsocial', 'social_paid'].includes(medium)) return 'Paid Social'
-  if (['email', 'newsletter'].includes(medium)) return 'Email'
-  if (['social', 'organic_social'].includes(medium)) return 'Organic Social'
-  if (['organic', 'seo'].includes(medium)) return 'Organic Search'
-  if (['google', 'bing', 'duckduckgo', 'yahoo', 'brave'].includes(source)) return 'Organic Search'
-  if (['facebook', 'instagram', 'linkedin', 'twitter', 'x', 'tiktok', 'youtube', 'reddit'].includes(source)) return 'Organic Social'
-  if (['mailchimp', 'klaviyo', 'hubspot', 'sendgrid', 'customer.io'].includes(source)) return 'Email'
-  if (!referrer) return 'Direct'
-  return 'Referral'
+  if (aiDomains.some(d => ref.includes(d))) return 'AI Search'
+
+  const paidSearchMediums = ['cpc','ppc','paid','paid_search','paidsearch','sem']
+  const searchSources = ['google','bing','yahoo','duckduckgo','baidu','yandex','brave']
+  if (gclid || msclkid) return 'Paid Search'
+  if (paidSearchMediums.includes(medium)) return 'Paid Search'
+
+  const socialSources = ['facebook','instagram','linkedin','twitter','x','tiktok','pinterest','reddit','snapchat','youtube']
+  if (fbclid || ttclid || liclid) return 'Paid Social'
+  if (['paid_social','paidsocial','social_paid'].includes(medium)) return 'Paid Social'
+
+  if (['display','banner','gdn','expandable','retargeting'].includes(medium)) return 'Display'
+  if (['email','e-mail','newsletter','mailing','edm'].includes(medium)) return 'Email'
+  if (['sms','text','mms'].includes(medium)) return 'SMS'
+
+  const searchEngines = ['google.','bing.','yahoo.','duckduckgo.','ecosia.','kagi.','brave.']
+  if (searchEngines.some(se => ref.includes(se))) return 'Organic Search'
+  if (source && searchSources.includes(source) && !medium) return 'Organic Search'
+
+  const socialDomains = ['facebook.com','instagram.com','linkedin.com','twitter.com','x.com','tiktok.com','pinterest.com','reddit.com','youtube.com','snapchat.com']
+  if (socialDomains.some(s => ref.includes(s))) return 'Organic Social'
+  if (source && socialSources.includes(source) && !medium) return 'Organic Social'
+
+  const emailSources = ['mailchimp','klaviyo','hubspot','sendgrid','customer.io','brevo','activecampaign']
+  if (emailSources.includes(source)) return 'Email'
+
+  if (ref && ref.length > 5) return 'Referral'
+  if (!source || source === 'direct') return 'Direct'
+  if (source) return 'Other Campaign'
+  return 'Direct'
 }
 
 export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null) {
@@ -1590,11 +1615,14 @@ export async function getPreAggregatedAttribution({
     selectField = mediumField
     groupField = mediumField
   } else if (groupBy === 'campaign') {
+    selectField = campaignField
+    groupField = campaignField
+  } else if (groupBy === 'channel') {
+    selectField = 'channel'
+    groupField = 'channel'
   } else {
     selectField = sourceField
     groupField = sourceField
-    selectField = campaignField
-    groupField = campaignField
   }
 
   const { data, error } = await supabase
