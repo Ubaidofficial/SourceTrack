@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import WebSocket from 'ws'
 // TODO: Add attribution window support
 // - Add columns: first_touch_source_7d, first_touch_source_30d, etc.
 // - Modify touchpoints query to calculate for each window
@@ -8,7 +9,8 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 import { createClient as _createClient } from '@supabase/supabase-js'
-const _supabase = _createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
+import WebSocket from 'ws'
+const _supabase = _createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { realtime: { transport: WebSocket } })
 const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL
 
 function channelFromEvent(props = {}) {

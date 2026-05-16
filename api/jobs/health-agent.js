@@ -1,10 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
+import WebSocket from 'ws'
 
 import OpenAI from 'openai'
 import dotenv from 'dotenv'
 dotenv.config()
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { realtime: { transport: WebSocket } })
 const deepseek = new OpenAI({
   baseURL: 'https://api.deepseek.com',
   apiKey: process.env.DEEPSEEK_API_KEY

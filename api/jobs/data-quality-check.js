@@ -1,8 +1,9 @@
 import 'dotenv/config'
 import { createClient } from '@supabase/supabase-js'
+import WebSocket from 'ws'
 import { queryHogQL } from '../lib/posthog.js'
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { realtime: { transport: WebSocket } })
 
 async function run() {
   console.log('[data-quality-check] Starting...')
