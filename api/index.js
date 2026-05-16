@@ -28,6 +28,7 @@ import { dashboardRouter } from './routes/dashboard.js'
 import { aiAnalyticsRouter } from './routes/ai-analytics.js'
 import { leadsRouter } from './routes/leads-server.js'
 import { campaignsRouter } from './routes/campaigns.js'
+import { campaignCostsRouter } from './routes/campaign-costs.js'
 import { integrationsRouter } from './routes/integrations.js'
 import { adminRouter } from './routes/admin.js'
 import { savedReportsRouter } from './routes/saved-reports.js'
@@ -237,6 +238,7 @@ app.use('/api/ai-analytics', requireUserAuth, validateSiteKey, requireSiteMember
 app.use('/api/leads', requireUserAuth, validateSiteKey, requireSiteMembership, leadsRouter)
 app.use('/api/campaigns', requireUserAuth, validateSiteKey, requireSiteMembership, campaignsRouter)
 app.use('/api/integrations', requireUserAuth, validateSiteKey, requireSiteMembership, integrationsRouter)
+app.use('/api/campaign-costs', requireUserAuth, validateSiteKey, campaignCostsRouter)
 app.use('/api/server', serverEventsRouter)
 app.use('/api/billing', billingRouter)
 app.use('/api/admin', requireUserAuth, adminRouter)

@@ -1,5 +1,7 @@
 import express from 'express'
 import { getFlexibleReport } from '../lib/attribution-engine.js'
+import { createClient } from '@supabase/supabase-js'
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
 
 const ALLOWED_DIMS = new Set(['source', 'medium', 'campaign', 'ai_source'])
 const MAX_DAYS = 365
@@ -33,10 +35,11 @@ async function overview(req, res) {
     const prevDateTo = fmtDate(new Date(today - 86400000))
     const prevDateFrom = fmtDate(new Date(today - (days + 1) * 86400000))
 
-    const [currentRevenue, currentConversions, prevRevenue] = await Promise.all([
+    const [currentRevenue, currentConversions, prevRevenue, spendData] = await Promise.all([
       getFlexibleReport(posthogSiteId, 'last_touch', dateFrom, dateTo, dimension, 'revenue', {}),
       getFlexibleReport(posthogSiteId, 'last_touch', dateFrom, dateTo, dimension, 'conversions', {}),
-      getFlexibleReport(posthogSiteId, 'last_touch', prevDateFrom, prevDateTo, dimension, 'revenue', {})
+      getFlexibleReport(posthogSiteId, 'last_touch', prevDateFrom, prevDateTo, dimension, 'revenue', {}),
+      supabase.from('campaign_costs').select('campaign_name, spend').eq('site_id', req.site.id).gte('period_start', dateFrom).lte('period_end', dateTo)
     ])
 
     const conversionsMap = {}
@@ -51,6 +54,12 @@ async function overview(req, res) {
       prevRevenueMap[key] = Number(row.revenue) || 0
     }
 
+    const spendMap = {}
+    for (const row of spendData?.data || []) {
+      const key = (row.campaign_name || '').toLowerCase()
+      spendMap[key] = (spendMap[key] || 0) + parseFloat(row.spend || 0)
+    }
+
     let rows = currentRevenue.map(row => {
       const name = row.dim_value || 'unknown'
       const revenue = Number(row.revenue) || 0
@@ -59,7 +68,10 @@ async function overview(req, res) {
       const prevRev = prevRevenueMap[name] || 0
       const trend = prevRev > 0 ? ((revenue - prevRev) / prevRev) * 100 : null
 
-      return { name, revenue, conversions, avg_value: avgValue, trend, status: statusFor(conversions) }
+      const spend = spendMap[name.toLowerCase()] || 0
+      const roas = spend > 0 ? parseFloat((revenue / spend).toFixed(2)) : null
+      const cpl = spend > 0 && conversions > 0 ? parseFloat((spend / conversions).toFixed(2)) : null
+      return { name, revenue, conversions, avg_value: avgValue, trend, status: statusFor(conversions), spend, roas, cpl }
     })
 
     // Filtering
@@ -90,7 +102,9 @@ async function overview(req, res) {
           total_revenue: totalRevenue,
           total_conversions: totalConversions,
           active_channels: activeChannels,
-          avg_value: avgValue
+          avg_value: avgValue,
+          total_spend: rows.reduce((s, r) => s + (r.spend || 0), 0),
+          avg_roas: (() => { const withRoas = rows.filter(r => r.roas !== null); return withRoas.length ? parseFloat((withRoas.reduce((s, r) => s + r.roas, 0) / withRoas.length).toFixed(2)) : null })()
         },
         rows
       },
