@@ -1,12 +1,13 @@
 import express from 'express'
 import { createClient } from '@supabase/supabase-js'
+import WebSocket from 'ws'
 import { requireUserAuth } from '../middleware/user-auth.js'
 import { validateSiteKey } from '../middleware/auth.js'
 import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 
 const router = express.Router()
-function getSupabase() { return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY) }
+function getSupabase() { return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { global: { fetch }, realtime: { transport: WebSocket } }) }
 
 router.post('/collect', async (req, res) => {
   try {

@@ -10,10 +10,11 @@ import geoip from 'geoip-lite'
 import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
 import { createClient } from '@supabase/supabase-js'
+import WebSocket from 'ws'
 
 const router = express.Router()
 function getSupabase() {
-  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
+  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { global: { fetch }, realtime: { transport: WebSocket } })
 }
 
 const AI_DOMAINS = {

@@ -3,7 +3,8 @@ import { validateSiteKey } from '../middleware/auth.js'
 import { getFlexibleReport, getAttribution } from '../lib/attribution-engine.js'
 import { queryHogQL } from '../lib/posthog.js'
 import { createClient } from '@supabase/supabase-js'
-const supabaseAdmin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
+import WebSocket from 'ws'
+const supabaseAdmin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { global: { fetch }, realtime: { transport: WebSocket } })
 
 const router = Router()
 
