@@ -6,7 +6,7 @@ import { createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
 import { sendMetaCAPI, sendGoogleConversion, sendMicrosoftConversion, sendLinkedInConversion } from '../lib/conversion-sync.js'
 import { createClient as _sbClient } from '@supabase/supabase-js'
-const _convSupabase = _sbClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
+const _convSupabase = _sbClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { realtime: { transport: WebSocket } })
 
 function enrich(req) {
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || ''
