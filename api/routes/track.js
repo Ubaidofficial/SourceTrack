@@ -3,6 +3,7 @@ import geoip from 'geoip-lite'
 import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
 import { createClient } from '@supabase/supabase-js'
+import WebSocket from 'ws'
 import { sendMetaCAPI, sendGoogleConversion, sendMicrosoftConversion, sendLinkedInConversion } from '../lib/conversion-sync.js'
 import { createClient as _sbClient } from '@supabase/supabase-js'
 const _convSupabase = _sbClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
