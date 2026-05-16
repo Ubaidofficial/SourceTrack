@@ -1,28 +1,34 @@
-import { TrendingUp, TrendingDown } from 'lucide-react'
-
-export default function MetricTile({ label, value, delta, icon: Icon, iconBg = 'bg-gray-100', iconColor = 'text-gray-600' }) {
-  const isUp = delta?.up ?? (delta?.pct >= 0)
-  const showDelta = delta !== null && delta !== undefined
-
+const MetricTile = ({ label, value, format = 'number', isEmpty = false, trend = null }) => {
+  const formatValue = (val, fmt) => {
+    if (val == null) return null
+    const n = Number(val)
+    switch (fmt) {
+      case 'currency': return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: n >= 10000 ? 0 : 2 }).format(n)
+      case 'percent': return `${n >= 0 ? '+' : ''}${n.toFixed(1)}%`
+      case 'number': return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(n)
+      case 'text': return String(val)
+      default: return String(val)
+    }
+  }
+  const isEmptyState = isEmpty || value == null
+  const displayValue = isEmptyState ? null : formatValue(value, format)
+  const trendPositive = trend != null && trend > 0
+  const trendNegative = trend != null && trend < 0
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-      <div className="flex items-center gap-3">
-        {Icon && (
-          <div className={`p-2 rounded-lg ${iconBg}`}>
-            <Icon className={`w-5 h-5 ${iconColor}`} />
-          </div>
-        )}
-        <div className="min-w-0">
-          <p className="text-xs text-gray-500 font-medium truncate">{label}</p>
-          <p className="text-xl font-bold text-gray-900 mt-0.5">{value}</p>
-          {showDelta && (
-            <p className={`text-xs font-medium mt-0.5 flex items-center gap-1 ${isUp ? 'text-green-600' : 'text-red-500'}`}>
-              {isUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-              {isUp ? '+' : ''}{Math.abs(delta.pct).toFixed(0)}% vs prev. 30d
-            </p>
-          )}
-        </div>
-      </div>
+    <div className="metric-tile bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex flex-col gap-1">
+      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</p>
+      {displayValue != null ? (
+        <p className="text-2xl font-semibold text-gray-900 tabular-nums">{displayValue}</p>
+      ) : (
+        <p className="text-2xl font-semibold text-gray-300">—</p>
+      )}
+      {isEmptyState && <p className="text-xs text-gray-400 italic mt-0.5">Not yet tracked</p>}
+      {!isEmptyState && trend != null && (
+        <p className={`text-xs font-medium mt-0.5 ${trendPositive ? 'text-green-600' : trendNegative ? 'text-red-500' : 'text-gray-400'}`}>
+          {trendPositive ? '▲' : trendNegative ? '▼' : '—'} {Math.abs(trend).toFixed(1)}% vs last period
+        </p>
+      )}
     </div>
   )
 }
+export default MetricTile

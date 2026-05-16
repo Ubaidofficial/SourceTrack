@@ -194,7 +194,7 @@ Legend: ✅ = implemented and verified, ⚠️ = partially implemented, ❌ = mi
 | Onboarding saves business_type | ✅ | Writes to column on step update |
 | auth middleware includes business_type | ✅ | In req.site |
 | Dashboard returns business_type | ✅ | In API response |
-| Frontend renders different KPI cards | ❌ | Backend done, frontend not yet built |
+| Frontend renders different KPI cards | ✅ | Completed Session 97 — getKpiConfig + kpiConfig.map in Dashboard.jsx |
 
 ### Infrastructure (Session 94)
 | Feature | Status | Notes |

@@ -99,6 +99,53 @@ function getRollingDateRange(days) {
   }
 }
 
+
+// ─── T3.4: KPI Config by business_type ─────────────────────────────────────
+const getKpiConfig = (businessType) => {
+  switch (businessType) {
+    case 'saas': return [
+      { key: 'revenue',       label: 'Revenue',       format: 'currency' },
+      { key: 'mrr_estimate',  label: 'MRR (est.)',    format: 'currency', emptyState: true },
+      { key: 'ai_revenue',    label: 'AI Revenue',    format: 'currency' },
+      { key: 'trial_to_paid', label: 'Trial → Paid', format: 'percent',  emptyState: true },
+      { key: 'best_cac',      label: 'Best CAC',      format: 'currency', emptyState: true },
+    ]
+    case 'ecommerce': return [
+      { key: 'revenue',    label: 'Total Revenue', format: 'currency' },
+      { key: 'aov',        label: 'AOV',           format: 'currency', emptyState: true },
+      { key: 'orders',     label: 'Orders',        format: 'number' },
+      { key: 'ai_roas',    label: 'AI ROAS',       format: 'number' },
+      { key: 'best_roas',  label: 'Best ROAS',     format: 'number',   emptyState: true },
+    ]
+    case 'leadgen': return [
+      { key: 'total_leads', label: 'Total Leads', format: 'number' },
+      { key: 'lead_growth', label: 'Lead Growth', format: 'percent' },
+      { key: 'ai_leads',    label: 'AI Leads',    format: 'number' },
+      { key: 'sql_percent', label: 'SQL %',       format: 'percent',  emptyState: true },
+      { key: 'best_cpl',    label: 'Best CPL',    format: 'currency', emptyState: true },
+    ]
+    default: return [
+      { key: 'revenue',     label: 'Revenue',     format: 'currency' },
+      { key: 'top_channel', label: 'Top Channel', format: 'text' },
+      { key: 'conversion',  label: 'Conversion',  format: 'percent' },
+      { key: 'cpc',         label: 'CPC',         format: 'currency' },
+      { key: 'roas',        label: 'ROAS / ROI',  format: 'number',   emptyState: true },
+    ]
+  }
+}
+const computeMrrEstimate = (d) => {
+  if (!d?.revenue) return null
+  const days = new Date().getDate()
+  return days < 3 ? null : (d.revenue / days) * 30
+}
+const computeAov = (d) => (!d?.revenue || !d?.orders || d.orders === 0) ? null : d.revenue / d.orders
+const enrichKpis = (kpis, businessType) => ({
+  ...kpis,
+  mrr_estimate: kpis.mrr_estimate ?? (businessType === 'saas' ? computeMrrEstimate(kpis) : null),
+  aov: kpis.aov ?? (businessType === 'ecommerce' ? computeAov(kpis) : null),
+})
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default function Dashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -261,6 +308,8 @@ export default function Dashboard() {
 
   const kpis = overview?.kpis || {}
   const businessType = overview?.business_type || site?.business_type || 'saas'
+  const kpiConfig    = getKpiConfig(businessType)
+  const enrichedKpis = enrichKpis(kpis, businessType)
 
   const totalRevenue = kpis.revenue || 0
   const totalConversions = kpis.conversions || 0
@@ -462,28 +511,21 @@ export default function Dashboard() {
         </div>
       ) : (
         <>
-          {/* KPI Strip */}
+          {/* KPI Strip — T3.4: business-type aware */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-            {/* KPI Tiles — switch by business type */}
-            {businessType === 'leadgen' ? (<>
-              <MetricTile label="Total Leads" value={totalLeads.toLocaleString()} delta={leadsDelta} />
-              <MetricTile label="AI Leads" value={(kpis.ai_leads || 0).toLocaleString()} />
-              <MetricTile label="SQL%" value={kpis.sql_count && totalLeads > 0 ? `${((kpis.sql_count / totalLeads) * 100).toFixed(1)}%` : '—'} />
-              <MetricTile label="Conversion Rate" value={`${convRate.toFixed(1)}%`} />
-              <MetricTile label="Avg Value" value={`$${avgValue.toFixed(2)}`} />
-            </>) : businessType === 'ecommerce' ? (<>
-              <MetricTile label="Revenue" value={`$${totalRevenue.toFixed(0)}`} delta={revenueDelta} />
-              <MetricTile label="Orders" value={totalConversions.toLocaleString()} />
-              <MetricTile label="AOV" value={totalConversions > 0 ? `$${(totalRevenue / totalConversions).toFixed(2)}` : '—'} />
-              <MetricTile label="AI Revenue" value={`$${totalAIRevenue.toFixed(0)}`} />
-              <MetricTile label="Conversion Rate" value={`${convRate.toFixed(1)}%`} />
-            </>) : (<>
-              <MetricTile label="Revenue" value={`$${totalRevenue.toFixed(0)}`} delta={revenueDelta} />
-              <MetricTile label="Leads" value={totalLeads.toLocaleString()} delta={leadsDelta} />
-              <MetricTile label="AI Revenue" value={`$${totalAIRevenue.toFixed(0)}`} />
-              <MetricTile label="Conversion Rate" value={`${convRate.toFixed(1)}%`} />
-              <MetricTile label="Avg Value" value={`$${avgValue.toFixed(2)}`} />
-            </>)}
+            {kpiConfig.map((metric) => {
+              const rawValue = enrichedKpis?.[metric.key] ?? null
+              const isEmpty  = metric.emptyState === true && rawValue == null
+              return (
+                <MetricTile
+                  key={metric.key}
+                  label={metric.label}
+                  value={rawValue}
+                  format={metric.format}
+                  isEmpty={isEmpty}
+                />
+              )
+            })}
           </div>
 
           {/* Saved Reports — shown first, above the analytics wall */}
