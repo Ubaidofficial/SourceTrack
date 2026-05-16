@@ -220,7 +220,7 @@ export default function Leads() {
           visitorId={journeyVisitorId}
           siteKey={site?.site_key}
           onClose={() => setJourneyVisitorId(null)}
-          onQualified={() => setJourneyVisitorId(null)}
+          onQualified={async () => { try { await fetchApi(`/leads/${journeyVisitorId}/qualify`, { method: 'PATCH', body: JSON.stringify({ qualified: true }) }) } catch(e) { console.error('qualify failed', e) } setJourneyVisitorId(null) }}
         />
       )}
     </div>

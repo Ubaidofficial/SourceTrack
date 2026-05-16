@@ -61,7 +61,7 @@ export default function Onboarding() {
 
   const [domain, setDomain] = useState('')
   const [businessType, setBusinessType] = useState(null)
-  const [installMethod, setInstallMethod] = useState(null)
+  const [installMethod, setInstallMethod] = useState('standard')
   const [selectedConversions, setSelectedConversions] = useState([])
   const [snippet, setSnippet] = useState('')
   const [verificationState, setVerificationState] = useState('idle')

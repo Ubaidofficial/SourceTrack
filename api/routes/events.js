@@ -3,6 +3,8 @@ import { validateSiteKey } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
 
 const router = Router()
+import NodeCache from 'node-cache'
+const eventsCache = new NodeCache({ stdTTL: 60, checkperiod: 30 })
 
 function esc(value = '') {
   return String(value).replace(/'/g, "''")
@@ -105,6 +107,9 @@ router.get('/latest', validateSiteKey, async (req, res) => {
       LIMIT ${clampLimit(limit)}
     `
 
+    const cacheKey = `latest:${siteId}:${event_type||''}:${source||''}:${date_from||''}:${date_to||''}:${search||''}:${limit||''}`
+    const cached = eventsCache.get(cacheKey)
+    if (cached) return res.json(cached)
     const rows = await queryHogQL(sql, 'events_latest')
 
     const events = rows.map(([
@@ -144,11 +149,9 @@ router.get('/latest', validateSiteKey, async (req, res) => {
       properties: rawProperties || {}
     }))
 
-    return res.status(200).json({
-      success: true,
-      data: { events, count: events.length },
-      error: null
-    })
+    const response = { success: true, data: { events, count: events.length }, error: null }
+    eventsCache.set(cacheKey, response)
+    return res.status(200).json(response)
   } catch (err) {
     console.error(err)
     return res.status(500).json({ success: false, data: null, error: 'Failed to fetch events' })
@@ -181,9 +184,19 @@ router.get('/health', validateSiteKey, async (req, res) => {
         AND timestamp >= now() - INTERVAL 24 HOUR
     `
 
-    const lastRows = await queryHogQL(lastEventSql, 'events_health_last')
-    const hourRows = await queryHogQL(countHourSql, 'events_health_hour')
-    const dayRows = await queryHogQL(countDaySql, 'events_health_day')
+    const healthCacheKey = `health:${siteId}`
+    const cachedHealth = eventsCache.get(healthCacheKey)
+    let lastRows, hourRows, dayRows
+    if (cachedHealth) {
+      ;[lastRows, hourRows, dayRows] = cachedHealth
+    } else {
+      ;[lastRows, hourRows, dayRows] = await Promise.all([
+        queryHogQL(lastEventSql, 'events_health_last'),
+        queryHogQL(countHourSql, 'events_health_hour'),
+        queryHogQL(countDaySql, 'events_health_day')
+      ])
+      eventsCache.set(healthCacheKey, [lastRows, hourRows, dayRows], 120)
+    }
 
     const lastEvent = lastRows?.[0]?.[0] || null
     const countHour = Number(hourRows?.[0]?.[0]) || 0

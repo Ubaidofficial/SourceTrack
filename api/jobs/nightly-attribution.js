@@ -7,6 +7,33 @@ import { createClient } from '@supabase/supabase-js'
 import dotenv from 'dotenv'
 dotenv.config()
 
+import { createClient as _createClient } from '@supabase/supabase-js'
+const _supabase = _createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
+const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL
+
+async function _slackAlert(emoji, heading, detail) {
+  if (!SLACK_WEBHOOK_URL) return console.log(`[ALERT] ${emoji} ${heading}: ${detail}`)
+  await fetch(SLACK_WEBHOOK_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: `${emoji} *${heading}*\n${detail}` })
+  })
+}
+
+async function _writeJobRun({ status, conversions_processed, error_message, duration_ms }) {
+  await _supabase.from('job_runs').insert({
+    job_name: 'nightly-attribution',
+    status,
+    conversions_processed: conversions_processed ?? 0,
+    error_message: error_message ?? null,
+    duration_ms: duration_ms ?? 0,
+    ran_at: new Date().toISOString()
+  })
+}
+
+let _processed = 0
+const _t0 = Date.now()
+
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
@@ -22,7 +49,7 @@ async function main() {
   
   if (!POSTHOG_PERSONAL_API_KEY || !POSTHOG_PROJECT_ID || !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
     logError('Missing required environment variables')
-    process.exit(1)
+    throw new Error("Missing required environment variables")
   }
   
   try {
@@ -32,12 +59,12 @@ async function main() {
     
     if (sitesError) {
       logError('Failed to fetch sites', sitesError)
-      process.exit(1)
+      throw new Error("Failed to fetch sites")
     }
     
     if (!sites || sites.length === 0) {
       log('No sites found')
-      process.exit(0)
+      return
     }
     
     log(`Found ${sites.length} sites to process`)
@@ -59,11 +86,12 @@ async function main() {
     
     const duration = ((Date.now() - startTime) / 1000).toFixed(2)
     log(`Completed: ${totalProcessed} conversions processed, ${totalFailed} failed, ${duration}s`)
-    process.exit(0)
+    _processed = totalProcessed
+    return
     
   } catch (error) {
     logError('Critical failure', error)
-    process.exit(1)
+    throw error
   }
 }
 
@@ -138,13 +166,14 @@ async function processConversion(site, conversion) {
       timestamp,
       properties.utm_source,
       properties.utm_medium,
-      properties.utm_campaign
+      properties.utm_campaign,
+      properties.referrer,
+      properties.ai_source
     FROM events
     WHERE event = '$pageview'
       AND distinct_id = '${conversion.distinct_id}'
       AND properties.site_id = '${site.id}'
-      AND properties.utm_source IS NOT NULL
-      AND properties.utm_source != ''
+
       AND timestamp <= toDateTime('${conversion.timestamp}')
       AND timestamp >= toDateTime('${conversion.timestamp}') - INTERVAL 90 DAY
     ORDER BY timestamp ASC
@@ -161,9 +190,12 @@ async function processConversion(site, conversion) {
   
   const touchpoints = (touchpointRows || []).map(row => ({
     timestamp: row[0],
-    utm_source: row[1],
-    utm_medium: row[2],
-    utm_campaign: row[3]
+    utm_source: row[1] || null,
+    utm_medium: row[2] || null,
+    utm_campaign: row[3] || null,
+    referrer: row[4] || null,
+    ai_source: row[5] || null,
+    derived_source: row[1] || row[5] || (row[4] ? (() => { try { return new URL(row[4]).hostname.replace('www.', '') } catch (_e) { return null } })() : null) || 'direct'
   }))
   
   const attribution = calculateAttribution(touchpoints, convValue)
@@ -177,7 +209,7 @@ async function processConversion(site, conversion) {
     conversion_type: conversion.conversion_type || null,
     conversion_value: convValue,
     
-    first_touch_source: attribution.first_touch?.source || null,
+    first_touch_source: attribution.first_touch?.source || attribution.first_touch?.derived_source || null,
     first_touch_medium: attribution.first_touch?.medium || null,
     first_touch_campaign: attribution.first_touch?.campaign || null,
     first_touch_timestamp: attribution.first_touch?.timestamp || null,
@@ -284,3 +316,12 @@ function sleep(ms) {
 }
 
 main()
+  .then(() => {
+    _writeJobRun({ status: 'success', conversions_processed: _processed, duration_ms: Date.now() - _t0 })
+    _slackAlert('✅', 'Attribution Job — SUCCESS', `Processed ${_processed} conversions in ${Date.now() - _t0}ms`)
+  })
+  .catch(err => {
+    _writeJobRun({ status: 'failed', conversions_processed: _processed, error_message: err.message, duration_ms: Date.now() - _t0 })
+    _slackAlert('🔴', 'Attribution Job — FAILED', err.message)
+    process.exit(1)
+  })

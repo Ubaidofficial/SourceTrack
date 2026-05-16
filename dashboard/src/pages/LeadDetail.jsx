@@ -12,6 +12,7 @@ import {
 import DashboardCard from '../components/DashboardCard'
 import MetricTile from '../components/MetricTile'
 import StatusBadge from '../components/StatusBadge'
+import JourneyModal from '../components/JourneyModal'
 
 const AI_SOURCES = ['ChatGPT', 'Claude', 'Perplexity', 'Gemini', 'Grok', 'Copilot', 'DeepSeek', 'You.com AI', 'Phind', 'Kagi']
 
@@ -25,6 +26,7 @@ export default function LeadDetail() {
   const { user } = useAuth()
   const { leadId } = useParams()
   const navigate = useNavigate()
+  const [showJourney, setShowJourney] = useState(false)
   const [site, setSite] = useState(null)
   const [copied, setCopied] = useState(false)
 
@@ -132,7 +134,7 @@ export default function LeadDetail() {
             </div>
           </div>
 
-          <button onClick={() => navigate(`/journey?visitorId=${encodeURIComponent(lead.id)}`)}
+          <button onClick={() => setShowJourney(true)}
             className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 flex items-center gap-2">
             <Route className="w-4 h-4" />
             View Journey
@@ -380,13 +382,26 @@ export default function LeadDetail() {
               </p>
             </div>
           </div>
-          <button onClick={() => navigate(`/journey?visitorId=${encodeURIComponent(lead.id)}`)}
+          <button onClick={() => setShowJourney(true)}
             className="px-4 py-2 bg-lime-600 text-white rounded-lg text-sm font-medium hover:bg-lime-700 flex items-center gap-2 whitespace-nowrap">
             <Route className="w-4 h-4" />
             Open Full Journey
           </button>
         </div>
       </DashboardCard>
+      {showJourney && (
+        <JourneyModal
+          visitorId={lead?.id}
+          siteKey={lead?.site_key}
+          onClose={() => setShowJourney(false)}
+          onQualified={async () => {
+            try {
+              await fetchApi(`/leads/${lead?.id}/qualify`, { method: 'PATCH', body: JSON.stringify({ qualified: true }) })
+            } catch(e) { console.error('qualify failed', e) }
+            setShowJourney(false)
+          }}
+        />
+      )}
     </div>
   )
 }

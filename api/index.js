@@ -33,6 +33,7 @@ import { adminRouter } from './routes/admin.js'
 import { savedReportsRouter } from './routes/saved-reports.js'
 import { requireUserAuth } from './middleware/user-auth.js'
 import { billingWebhookHandler, billingRouter } from './routes/billing.js'
+import jobStatusRouter from './routes/job-status.js'
 import { serverEventsRouter } from './routes/server-events.js'
 import { sessionsOverview, visitorSessions } from './routes/sessions.js'
 
@@ -239,7 +240,7 @@ app.use('/api/integrations', requireUserAuth, validateSiteKey, requireSiteMember
 app.use('/api/server', serverEventsRouter)
 app.use('/api/billing', billingRouter)
 app.use('/api/admin', requireUserAuth, adminRouter)
-app.use('/api/reports', requireUserAuth, validateSiteKey, requireSiteMembership, savedReportsRouter)
+app.use('/api/jobs', requireUserAuth, jobStatusRouter)
 app.get('/api/sessions/overview', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, sessionsOverview)
 app.get('/api/sessions', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, visitorSessions)
 

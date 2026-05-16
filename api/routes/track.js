@@ -2,6 +2,10 @@ import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
+import { createClient } from '@supabase/supabase-js'
+import { sendMetaCAPI, sendGoogleConversion, sendMicrosoftConversion, sendLinkedInConversion } from '../lib/conversion-sync.js'
+import { createClient as _sbClient } from '@supabase/supabase-js'
+const _convSupabase = _sbClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
 
 function enrich(req) {
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || ''
@@ -66,6 +70,25 @@ export async function track(req, res) {
       }
     })
 
+    // Conversion sync to ad platforms
+    if (req.body.event === '$conversion' || req.body.event_type === 'conversion') {
+      const { data: convSite } = await _convSupabase
+        .from('sites')
+        .select('meta_pixel_id, meta_capi_token, google_ads_customer_id, google_ads_conversion_action_id, google_ads_developer_token, microsoft_tag_id, microsoft_capi_token, linkedin_partner_id, linkedin_capi_token')
+        .eq('site_key', req.body.site_key)
+        .single()
+
+      if (convSite) {
+        Promise.allSettled([
+          sendMetaCAPI(convSite, { ...req.body, ip_address: req.ip }),
+          sendGoogleConversion(convSite, req.body),
+          sendMicrosoftConversion(convSite, req.body),
+          sendLinkedInConversion(convSite, req.body)
+        ]).then(results => results.forEach((r, i) => {
+          if (r.status === 'rejected') console.error(`[ConvSync ${i}]`, r.reason?.message)
+        }))
+      }
+    }
 
     res.status(200).json({ success: true, data: { received: true }, error: null })
   } catch (_err) {
