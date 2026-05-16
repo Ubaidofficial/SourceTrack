@@ -231,3 +231,62 @@ export async function attributionExplain(req, res) {
     res.status(500).json({ success: false, data: null, error: 'Attribution explanation failed' })
   }
 }
+
+// ─── T5.2: Scale/Pause/Kill Verdicts ─────────────────────────────────────────
+export async function attributionVerdicts(req, res) {
+  try {
+    const { date_from, date_to } = req.query
+    const posthogSiteId = String(req.site.id)
+
+    if (!date_from || !date_to) {
+      return res.status(400).json({ success: false, data: null, error: 'date_from and date_to required' })
+    }
+
+    const campaigns = await getPreAggregatedAttribution({
+      siteId: posthogSiteId,
+      model: 'first_touch',
+      dateFrom: date_from,
+      dateTo: date_to,
+      groupBy: 'campaign',
+      metric: 'all'
+    })
+
+    if (!campaigns?.length) return res.json({ success: true, data: [], error: null })
+
+    const { callAI } = await import('../lib/ai-client.js')
+
+    const systemPrompt = `You are a marketing attribution analyst. Given campaign performance data, return a verdict for each campaign.
+Return ONLY a valid JSON array. No markdown, no backticks, no preamble.
+Schema: [{"campaign":"name","verdict":"SCALE"|"PAUSE"|"KILL","reason":"max 10 words","signal":"Scale Now"|"Monitor"|"Pause"|"Invest"}]
+Rules:
+- SCALE: high revenue, positive trend, good conversion rate
+- PAUSE: low revenue but some conversions, needs review
+- KILL: zero or near-zero revenue, no conversions`
+
+    const userMessage = JSON.stringify(
+      campaigns.slice(0, 20).map(c => ({
+        campaign: c.dim_value || 'unknown',
+        revenue: c.revenue || 0,
+        conversions: c.conversions || 0,
+        sessions: c.sessions || 0
+      }))
+    )
+
+    let verdicts = []
+    try {
+      const aiText = await callAI(systemPrompt, userMessage)
+      const clean = aiText.replace(/```json|```/g, '').trim()
+      verdicts = JSON.parse(clean)
+      if (!Array.isArray(verdicts)) verdicts = []
+    } catch (aiErr) {
+      console.error('[verdicts] AI parse error:', aiErr.message)
+      verdicts = []
+    }
+
+    return res.json({ success: true, data: verdicts, error: null })
+  } catch (err) {
+    console.error('[verdicts]', err)
+    res.status(500).json({ success: false, data: null, error: 'Verdicts failed' })
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
