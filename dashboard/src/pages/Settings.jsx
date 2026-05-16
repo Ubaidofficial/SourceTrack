@@ -16,6 +16,7 @@ export default function Settings() {
   const [saving, setSaving] = useState(false)
   const [shareEnabled, setShareEnabled] = useState(false)
   const [shareToken, setShareToken] = useState(null)
+  const [apiKey, setApiKey] = useState(null)
   const [shareLoading, setShareLoading] = useState(false)
   const [shareCopied, setShareCopied] = useState(false)
   const [message, setMessage] = useState('')

@@ -252,6 +252,7 @@ app.use('/api/jobs', requireUserAuth, jobStatusRouter)
 app.use('/api/live', liveRouter)
 app.use("/api/analytics", analyticsRouter)
 app.use("/sp", proxyRouter)
+app.use("/api/webhooks/incoming", webhookIncomingRouter)
 app.get('/api/sessions/overview', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, sessionsOverview)
 app.get('/api/sessions', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, visitorSessions)
 
