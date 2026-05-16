@@ -40,6 +40,7 @@ import { serverEventsRouter } from './routes/server-events.js'
 import { sessionsOverview, visitorSessions } from './routes/sessions.js'
 import liveRouter from './routes/live.js'
 import analyticsRouter from './routes/analytics.js'
+import proxyRouter from './routes/proxy.js'
 
 const app = express()
 
@@ -250,6 +251,7 @@ app.use('/api/admin', requireUserAuth, adminRouter)
 app.use('/api/jobs', requireUserAuth, jobStatusRouter)
 app.use('/api/live', liveRouter)
 app.use("/api/analytics", analyticsRouter)
+app.use("/sp", proxyRouter)
 app.get('/api/sessions/overview', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, sessionsOverview)
 app.get('/api/sessions', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, visitorSessions)
 
