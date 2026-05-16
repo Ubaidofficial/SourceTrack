@@ -195,7 +195,7 @@ router.post('/update', async (req, res) => {
 
     const { error: updateErr } = await supabase
       .from('sites')
-      .update({ onboarding_state: merged })
+      .update({ onboarding_state: merged, ...(merged.business_type ? { business_type: merged.business_type } : {}) })
       .eq('id', site_id)
 
     if (updateErr) {

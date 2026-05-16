@@ -191,6 +191,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       data: {
         date_from: dateFrom,
         date_to: dateTo,
+        business_type: req.site.business_type || 'saas',
         kpis: {
           revenue: totalRevenue,
           revenue_prev: prevRevenue,
