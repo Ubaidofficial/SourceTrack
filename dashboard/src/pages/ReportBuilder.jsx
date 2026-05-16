@@ -170,6 +170,16 @@ export default function ReportBuilder() {
   const [model, setModel] = useState('last_touch')
   const [groupBy, setGroupBy] = useState('source')
   const [metric, setMetric] = useState('revenue')
+  const [selectedMetrics, setSelectedMetrics] = useState(['revenue'])
+
+  const toggleMetric = (key) => {
+    setSelectedMetrics(prev =>
+      prev.includes(key)
+        ? prev.length > 1 ? prev.filter(k => k !== key) : prev
+        : [...prev, key]
+    )
+    setMetric(key) // keep single metric in sync for backward compat
+  }
   const [chartType, setChartType] = useState('bar')
   const [datePreset, setDatePreset] = useState(30)
   const [dateFrom, setDateFrom] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'))
@@ -269,7 +279,7 @@ export default function ReportBuilder() {
   const { data: priorRes } = useQuery({
     queryKey: ['report-prior', site?.site_key, model, groupBy, metric, effectiveDateFrom, effectiveDateTo, filterKey, groupBy2, granularity, attributionWindow, attributeBy],
     queryFn: () => getFlexibleReport(site?.site_key, model, priorPeriod.date_from, priorPeriod.date_to, groupBy, metric, filters, groupBy2, granularity, attributionWindow, attributeBy),
-    enabled: !!site && chartType === 'kpi' && !!priorPeriod
+    enabled: !!site && !!priorPeriod
   })
 
   useEffect(() => {
@@ -348,6 +358,7 @@ export default function ReportBuilder() {
     setModel(cfg.model || 'last_touch')
     setGroupBy(cfg.groupBy || 'source')
     setMetric(cfg.metric || 'revenue')
+    setSelectedMetrics(cfg.selectedMetrics || [cfg.metric || 'revenue'])
     setChartType(cfg.chartType || 'bar')
     setDatePreset(0)
     setDateFrom(cfg.dateFrom || format(subDays(new Date(), 30), 'yyyy-MM-dd'))
@@ -368,7 +379,7 @@ export default function ReportBuilder() {
   const handleSave = async () => {
     const name = reportName.trim() || `Report ${new Date().toLocaleDateString()}`
     const config = {
-      model, groupBy, metric, chartType, dateFrom, dateTo,
+      model, groupBy, metric, selectedMetrics, chartType, dateFrom, dateTo,
       granularity, groupBy2, attributionWindow, attributeBy,
       filters, isRolling, rollingDays
     }
@@ -472,16 +483,37 @@ export default function ReportBuilder() {
     return row[metric] || row.revenue || row.conversions || row.sessions || row.leads || row.conversion_rate || row.avg_conversion_value || 0
   }
 
+  const MULTI_COLORS = [
+    'rgba(17, 24, 39, 0.85)',
+    'rgba(132, 204, 22, 0.85)',
+    'rgba(59, 130, 246, 0.85)',
+    'rgba(249, 115, 22, 0.85)',
+  ]
+  const isMultiMetric = selectedMetrics.length > 1
+  const chartLabels = results.slice(0, 15).map(r => groupBy2 ? `${r.dim_value} / ${r.dim_value2}` : r.dim_value)
   const chartData = {
-    labels: results.slice(0, 15).map(r => groupBy2 ? `${r.dim_value} / ${r.dim_value2}` : r.dim_value),
-    datasets: [{
-      label: metricLabel,
-      data: results.slice(0, 15).map(r => getMetricValue(r)),
-      backgroundColor: results.slice(0, 15).map((_, i) => COLORS[i % COLORS.length]),
-      borderColor: chartType === 'line' ? 'rgba(17, 24, 39, 1)' : undefined,
-      borderRadius: chartType === 'bar' ? 4 : 0,
-      tension: 0.3
-    }]
+    labels: chartLabels,
+    datasets: isMultiMetric
+      ? selectedMetrics.map((mk, mi) => {
+          const mDef = METRICS.find(x => x.key === mk)
+          return {
+            label: mDef?.label || mk,
+            data: results.slice(0, 15).map(r => r[mk] ?? 0),
+            backgroundColor: MULTI_COLORS[mi % MULTI_COLORS.length],
+            borderColor: chartType === 'line' ? MULTI_COLORS[mi % MULTI_COLORS.length] : undefined,
+            borderRadius: chartType === 'bar' ? 4 : 0,
+            tension: 0.3,
+            stack: chartType === 'bar' ? 'stack0' : undefined,
+          }
+        })
+      : [{
+          label: metricLabel,
+          data: results.slice(0, 15).map(r => getMetricValue(r)),
+          backgroundColor: results.slice(0, 15).map((_, i) => COLORS[i % COLORS.length]),
+          borderColor: chartType === 'line' ? 'rgba(17, 24, 39, 1)' : undefined,
+          borderRadius: chartType === 'bar' ? 4 : 0,
+          tension: 0.3
+        }]
   }
 
   const chartOptions = {
@@ -662,10 +694,28 @@ export default function ReportBuilder() {
               <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">3</span>
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Metric</h3>
             </div>
+            {/* Selected metric pills */}
+            {selectedMetrics.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {selectedMetrics.map(k => {
+                  const m = METRICS.find(x => x.key === k)
+                  return (
+                    <span key={k} className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-lime-100 text-lime-800 rounded-full font-medium">
+                      {m?.label || k}
+                      {selectedMetrics.length > 1 && (
+                        <button onClick={() => toggleMetric(k)} className="text-lime-600 hover:text-red-500 ml-0.5">&times;</button>
+                      )}
+                    </span>
+                  )
+                })}
+              </div>
+            )}
             <div className="relative">
               <div className="flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm cursor-pointer hover:border-gray-400"
                 onClick={() => setShowMetricDropdown(!showMetricDropdown)}>
-                <span className="flex-1 text-gray-900">{metricDef?.label || 'Select metric'}</span>
+                <span className="flex-1 text-gray-500 text-xs">
+                  {selectedMetrics.length === 0 ? 'Select metrics...' : `+ Add metric (${selectedMetrics.length} selected)`}
+                </span>
                 <ChevronDown className="w-4 h-4 text-gray-400" />
               </div>
               {showMetricDropdown && (
@@ -677,22 +727,35 @@ export default function ReportBuilder() {
                         placeholder="Search metrics..." onClick={(e) => e.stopPropagation()}
                         className="flex-1 bg-transparent text-sm outline-none" />
                     </div>
+                    <p className="text-[10px] text-gray-400 mt-1 px-1">Click to add/remove. Up to 4 metrics.</p>
                   </div>
-                  {['Core', 'Conversion', 'AI', 'LTV'].map(group => {
+                  {['Core', 'Conversion', 'AI', 'LTV', 'Session'].map(group => {
                     const groupMetrics = filteredMetrics.filter(m => m.group === group)
                     if (groupMetrics.length === 0) return null
                     return (
                       <div key={group}>
                         <div className="px-3 py-1.5 text-xs font-semibold text-gray-400 uppercase bg-gray-50">{group}</div>
-                        {groupMetrics.map((m) => (
-                          <button key={m.key} onClick={() => { setMetric(m.key); setShowMetricDropdown(false); setMetricSearch('') }}
-                            className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors ${
-                              metric === m.key ? 'bg-lime-50 text-lime-800 font-medium' : 'text-gray-700'
-                            }`}>
-                            <div>{m.label}</div>
-                            {m.desc && <div className="text-xs text-gray-400">{m.desc}</div>}
-                          </button>
-                        ))}
+                        {groupMetrics.map((m) => {
+                          const isSelected = selectedMetrics.includes(m.key)
+                          return (
+                            <button key={m.key}
+                              onClick={() => {
+                                if (selectedMetrics.length < 4 || isSelected) toggleMetric(m.key)
+                                if (selectedMetrics.length === 1 && !isSelected) setShowMetricDropdown(false)
+                              }}
+                              className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors flex items-center gap-2 ${
+                                isSelected ? 'bg-lime-50 text-lime-800 font-medium' : 'text-gray-700'
+                              }`}>
+                              <span className={`w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center text-[10px] ${isSelected ? 'bg-lime-500 border-lime-500 text-white' : 'border-gray-300'}`}>
+                                {isSelected ? '✓' : ''}
+                              </span>
+                              <div>
+                                <div>{m.label}</div>
+                                {m.desc && <div className="text-xs text-gray-400 font-normal">{m.desc.slice(0, 60)}{m.desc.length > 60 ? '…' : ''}</div>}
+                              </div>
+                            </button>
+                          )
+                        })}
                       </div>
                     )
                   })}
@@ -1164,35 +1227,97 @@ export default function ReportBuilder() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-gray-100 bg-gray-50">
-                          <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Dimension</th>
-                          {groupBy2 && <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Dimension 2</th>}
-                          <th className="text-right py-2 px-4 text-gray-500 font-medium text-xs">{metricLabel}</th>
-                          {showExplanation && <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Explanation</th>}
+                          <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">
+                            {DIMENSIONS.find(d => d.key === groupBy)?.label || 'Dimension'}
+                          </th>
+                          {groupBy2 && <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">
+                            {DIMENSIONS.find(d => d.key === groupBy2)?.label || 'Dimension 2'}
+                          </th>}
+                          {selectedMetrics.map(mk => (
+                            <th key={mk} className="text-right py-2 px-4 text-gray-500 font-medium text-xs">
+                              {METRICS.find(m => m.key === mk)?.label || mk}
+                            </th>
+                          ))}
+                          {selectedMetrics.map(mk => (
+                            <th key={mk + '_chg'} className="text-right py-2 px-4 text-gray-400 font-medium text-xs">
+                              vs prior
+                            </th>
+                          ))}
+                          {showExplanation && <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Why</th>}
+                        </tr>
+                        {/* Summary row */}
+                        <tr className="border-b border-gray-200 bg-gray-100">
+                          <td className="py-2 px-4 text-xs font-semibold text-gray-700">Summary</td>
+                          {groupBy2 && <td />}
+                          {selectedMetrics.map(mk => {
+                            const mDef = METRICS.find(m => m.key === mk)
+                            const fmt = mDef?.format || (v => String(v))
+                            const total = results.reduce((s, r) => s + (r[mk] ?? 0), 0)
+                            return <td key={mk} className="py-2 px-4 text-right text-xs font-bold text-gray-900">{fmt(total)}</td>
+                          })}
+                          {selectedMetrics.map(mk => {
+                            const curTotal = results.reduce((s, r) => s + (r[mk] ?? 0), 0)
+                            const priorRows = priorReportData?.results || []
+                            const priorTotal = priorRows.reduce((s, r) => s + (r[mk] ?? 0), 0)
+                            const delta = priorTotal > 0 ? ((curTotal - priorTotal) / priorTotal) * 100 : null
+                            return (
+                              <td key={mk + '_chg_sum'} className="py-2 px-4 text-right text-xs">
+                                {delta !== null
+                                  ? <span className={delta >= 0 ? 'text-green-600 font-semibold' : 'text-red-500 font-semibold'}>
+                                      {delta >= 0 ? '+' : ''}{delta.toFixed(1)}%
+                                    </span>
+                                  : <span className="text-gray-300">—</span>
+                                }
+                              </td>
+                            )
+                          })}
+                          {showExplanation && <td />}
                         </tr>
                       </thead>
                       <tbody>
-                        {results.map((r, i) => (
-                          <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
-                            <td className="py-2 px-4 text-gray-900">{r.dim_value}</td>
-                            {groupBy2 && <td className="py-2 px-4 text-gray-600">{r.dim_value2}</td>}
-                            <td className="py-2 px-4 text-right font-medium text-gray-900">{metricFormat(getMetricValue(r))}</td>
-                            {showExplanation && (
-                              <td className="py-2 px-4">
-                                <button
-                                  onClick={() => setExplainModalOpen(true)}
-                                  className="text-xs text-gray-500 hover:text-gray-900 flex items-center gap-1"
-                                >
-                                  <HelpCircle className="w-3 h-3" />
-                                  {model === 'first_touch' && 'First visit UTM'}
-                                  {model === 'last_touch' && 'Conversion page UTM'}
-                                  {model === 'first_touch_non_direct' && 'Earliest non-direct'}
-                                  {model === 'last_touch_non_direct' && 'Latest non-direct'}
-                                  {model === 'ai_platforms' && 'AI referrer match'}
-                                </button>
-                              </td>
-                            )}
-                          </tr>
-                        ))}
+                        {results.map((r, i) => {
+                          const priorRows = priorReportData?.results || []
+                          const priorRow = priorRows.find(p => p.dim_value === r.dim_value)
+                          return (
+                            <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
+                              <td className="py-2 px-4 text-gray-900 font-medium">{r.dim_value || '—'}</td>
+                              {groupBy2 && <td className="py-2 px-4 text-gray-600">{r.dim_value2}</td>}
+                              {selectedMetrics.map(mk => {
+                                const mDef = METRICS.find(m => m.key === mk)
+                                const fmt = mDef?.format || (v => String(v))
+                                return <td key={mk} className="py-2 px-4 text-right font-medium text-gray-900">{fmt(r[mk] ?? 0)}</td>
+                              })}
+                              {selectedMetrics.map(mk => {
+                                const cur = r[mk] ?? 0
+                                const prior = priorRow?.[mk] ?? 0
+                                const delta = prior > 0 ? ((cur - prior) / prior) * 100 : null
+                                return (
+                                  <td key={mk + '_chg'} className="py-2 px-4 text-right text-xs">
+                                    {delta !== null
+                                      ? <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-semibold ${delta >= 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+                                          {delta >= 0 ? '+' : ''}{delta.toFixed(1)}%
+                                        </span>
+                                      : <span className="text-gray-300 text-[11px]">- ↓</span>
+                                    }
+                                  </td>
+                                )
+                              })}
+                              {showExplanation && (
+                                <td className="py-2 px-4">
+                                  <button onClick={() => setExplainModalOpen(true)}
+                                    className="text-xs text-gray-500 hover:text-gray-900 flex items-center gap-1">
+                                    <HelpCircle className="w-3 h-3" />
+                                    {model === 'first_touch' && 'First visit UTM'}
+                                    {model === 'last_touch' && 'Conversion page UTM'}
+                                    {model === 'first_touch_non_direct' && 'Earliest non-direct'}
+                                    {model === 'last_touch_non_direct' && 'Latest non-direct'}
+                                    {model === 'ai_platforms' && 'AI referrer match'}
+                                  </button>
+                                </td>
+                              )}
+                            </tr>
+                          )
+                        })}
                       </tbody>
                     </table>
                   </div>
