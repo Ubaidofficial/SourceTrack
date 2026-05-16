@@ -2,6 +2,8 @@ import { Router } from 'express'
 import { validateSiteKey } from '../middleware/auth.js'
 import { getFlexibleReport, getAttribution } from '../lib/attribution-engine.js'
 import { queryHogQL } from '../lib/posthog.js'
+import { createClient } from '@supabase/supabase-js'
+const supabaseAdmin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY)
 
 const router = Router()
 
@@ -128,6 +130,10 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     const totalConversions = revenueResults.reduce((sum, r) => sum + (r.conversions || 0), 0)
     const totalSessions = sessionsResults.reduce((sum, r) => sum + (r.sessions || 0), 0)
     const totalLeads = leadsResults.reduce((sum, r) => sum + (r.leads || 0), 0)
+    // SQL% — qualified leads / total leads from attributed_conversions
+    const { count: sqlCount } = await supabaseAdmin.from('attributed_conversions').select('*', { count: 'exact', head: true }).eq('site_id', req.site.id).eq('status', 'sql').gte('conversion_date', dateFrom).lte('conversion_date', dateTo)
+    const { count: totalLeadCount } = await supabaseAdmin.from('attributed_conversions').select('*', { count: 'exact', head: true }).eq('site_id', req.site.id).gte('conversion_date', dateFrom).lte('conversion_date', dateTo)
+    const sqlPercent = totalLeadCount > 0 ? parseFloat(((sqlCount || 0) / totalLeadCount * 100).toFixed(1)) : 0
     const convRate = totalSessions > 0 ? (totalConversions / totalSessions) * 100 : 0
     const avgValue = totalConversions > 0 ? totalRevenue / totalConversions : 0
 
@@ -191,6 +197,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
           conversions: totalConversions,
           sessions: totalSessions,
           leads: totalLeads,
+          sql_percent: sqlPercent,
           leads_prev: prevLeads,
           ai_revenue: totalAIRevenue,
           ai_revenue_share: aiShareTotal,
