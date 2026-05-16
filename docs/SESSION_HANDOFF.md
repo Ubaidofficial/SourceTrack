@@ -1,17 +1,17 @@
 ## Last completed: T3.1 — Cookieless Tracking Mode ✅
-- tracker.js: cookieless=true skips all cookies/localStorage
-- Uses session-scoped UUID only — GDPR Art. 5 compliant
-- Cross-domain __tq_id still works in cookieless mode
-- Activate with: window.__trackiq_config = { cookieless: true, ... }
+- tracker.js patched at line 85 — cookieless block wraps normal ID resolution
+- cookieless=true: session-scoped UUID only, no cookies, no localStorage
+- Syntax verified clean
+- Activate: window.__trackiq_config = { site_key: 'X', api_url: 'Y', cookieless: true }
 
 ## Next: T7 — Analytics Product
-Largest remaining work. New lightweight tracker + pageviews table + Analytics.jsx page.
-Files to create:
-  tracker/analytics.js (new lightweight tracker)
-  api/routes/analytics.js (collect + summary endpoints)
-  dashboard/src/pages/Analytics.jsx
-Supabase: CREATE TABLE pageviews (...)
+Largest remaining work. 4 files to create:
+1. tracker/analytics.js — lightweight cookieless tracker
+2. api/routes/analytics.js — POST /collect + GET /summary
+3. Supabase: CREATE TABLE pageviews
+4. dashboard/src/pages/Analytics.jsx
 
-Start with:
+Start next session with:
   ls ~/Desktop/trackiq/tracker/
   grep -n "analytics" ~/Desktop/trackiq/api/index.js | head -5
+  ls ~/Desktop/trackiq/dashboard/src/pages/ | grep -i anal
