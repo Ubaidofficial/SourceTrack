@@ -162,3 +162,14 @@ POST /api/collect, /api/conversion, /api/identify were blocked by CORS
 when called from tracker on a different origin (localhost:8080, customer websites).
 Fixed by adding /api/collect, /api/conversion, /api/identify to isPixelRoute 
 check in both middleware blocks + explicit CORS headers on /api/collect route.
+### 4. Journey touchpoints previously excluded organic/direct/AI (FIXED Session 95)
+The nightly-attribution.js touchpoints query had `utm_source IS NOT NULL` filter — organic search, direct, referral and AI referral visits were invisible in every user's journey. Fixed in Session 95 by removing the filter and adding referrer + ai_source + derived_source to the query.
+
+### 5. channel column in attributed_conversions was missing (FIXED Session 95)
+group_by=channel in attribution API was silently broken — no channel column existed. Fixed in Session 95: added channel + channel_30d columns, channelFromEvent() enhanced with click ID detection, batch job writes channel on every conversion.
+
+### 6. data-quality-check.js was missing (FIXED Session 94)
+Crontab ran this file at 3 AM every night — file didn't exist, silently crashing. Fixed in Session 94.
+
+### 7. _st cross-domain system was redundant (FIXED Session 94)
+Two conflicting cross-domain systems existed. _st system built in error — removed. __tq_id/__tq_ft system is the correct one, carries full attribution data.

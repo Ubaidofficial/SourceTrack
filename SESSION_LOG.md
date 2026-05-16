@@ -27,3 +27,6 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 Session 82.1 is a bootstrap sub-session for creating project tracking infrastructure.  
 Session 82 proper will be the manual QA closeout session.
+| 94 | 2026-05-15 | `main` | Remove _st cross-domain redundancy, data-quality-check.js created, GTM default→standard, Mark as Qualified wired to API, journey modal navigate()→modal overlay, event logger NodeCache caching | Partial QA | No |
+| 95 | 2026-05-16 | `main` | CRITICAL BUG FIX: journey touchpoints now include all channels (organic/direct/referral/AI), channel classifier + channel/channel_30d columns in batch job, manual campaign spend→ROAS+CPL in campaigns route | Partial QA | No |
+| 96 | 2026-05-16 | `main` | Conversion status progression (lead/mql/sql/customer/rejected), lead_qualifications table, SQL% in dashboard API, business_type column + onboarding saves it + auth middleware + dashboard returns it | Partial QA | No |
