@@ -126,6 +126,17 @@ export default function Leads() {
             className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
           />
         </div>
+        <select value={filterSource} onChange={e => setFilterSource(e.target.value)}
+          className="px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
+          <option value="all">All Types</option>
+          <option value="organic">Organic</option>
+          <option value="paid">Paid</option>
+          <option value="ai">AI</option>
+          <option value="social">Social</option>
+          <option value="email">Email</option>
+          <option value="direct">Direct</option>
+          <option value="referral">Referral</option>
+        </select>
         <select value={filterAI} onChange={e => setFilterAI(e.target.value)}
           className="px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
           <option value="all">All Sources</option>
