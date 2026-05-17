@@ -5,7 +5,7 @@
     "buildCommand": "cd /app/dashboard && npm install && npm run build"
   },
   "deploy": {
-    "startCommand": "cd /app/dashboard && npx serve -s dist -l $PORT",
+    "startCommand": "npx serve -s /app/dashboard/dist -l $PORT",
     "healthcheckPath": "/",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
