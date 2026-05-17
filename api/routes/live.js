@@ -4,6 +4,8 @@ import { queryHogQL } from '../lib/posthog.js'
 import { createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
 
+function getSupabase() { return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { global: { fetch }, realtime: { transport: WebSocket } }) }
+
 const router = express.Router()
 
 router.get('/', requireUserAuth, async (req, res) => {
@@ -11,7 +13,7 @@ router.get('/', requireUserAuth, async (req, res) => {
     const { site_key } = req.query
     if (!site_key) return res.status(400).json({ error: 'site_key required' })
 
-    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { global: { fetch }, realtime: { transport: WebSocket } })
+    const supabase = getSupabase()
     const { data: site } = await supabase
       .from('sites').select('id').eq('site_key', site_key).single()
 

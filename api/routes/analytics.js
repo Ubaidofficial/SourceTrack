@@ -14,13 +14,23 @@ const BOT_UA_PATTERN = /bot|crawl|spider|slurp|mediapartners|adsbot|facebookexte
 
 router.post('/collect', async (req, res) => {
   try {
-    const { site_key, url, referrer, utm_source, utm_medium, utm_campaign, device, browser, session_id, duration_seconds } = req.body
+    const { site_key, url, referrer, utm_source, utm_medium, utm_campaign, device, browser, session_id, duration_seconds, entry_page, exit_page, event_type, event_name, properties } = req.body
     if (!site_key || !url) return res.status(400).json({ error: 'site_key and url required' })
 
     // Bot filter — silent drop, 200 so crawlers don't retry
     const ua = req.headers['user-agent'] || ''
     if (!ua || BOT_UA_PATTERN.test(ua)) return res.json({ ok: true })
-    const supabase = getSupabase()
+
+
+    // Handle outbound clicks and custom events
+    if (event_type === 'outbound_click' || event_type === 'custom') {
+      await supabase.from('custom_events').insert({
+        site_id: site.id, event_type, event_name: event_name || event_type,
+        url: url || null, session_id: session_id || null,
+        properties: properties || {}, timestamp: new Date().toISOString()
+      })
+      return res.json({ ok: true })
+    }
     const { data: site } = await supabase.from('sites').select('id').eq('site_key', site_key).single()
     if (!site) return res.status(404).json({ error: 'Site not found' })
     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || ''
@@ -35,7 +45,7 @@ router.post('/collect', async (req, res) => {
       await supabase.from('pageviews').update({ duration_seconds }).eq('site_id', site.id).eq('session_id', session_id).eq('url', url)
       return res.json({ ok: true })
     }
-    await supabase.from('pageviews').insert({ site_id: site.id, url, referrer: referrer || null, utm_source: utm_source || null, utm_medium: utm_medium || null, utm_campaign: utm_campaign || null, country, device: device || parser.getDevice().type || 'desktop', browser: browser || serverBrowser, session_id: session_id || null, duration_seconds: 0, ai_source, timestamp: new Date().toISOString() })
+    await supabase.from('pageviews').insert({ site_id: site.id, url, referrer: referrer || null, utm_source: utm_source || null, utm_medium: utm_medium || null, utm_campaign: utm_campaign || null, country, device: device || parser.getDevice().type || 'desktop', browser: browser || serverBrowser, session_id: session_id || null, duration_seconds: 0, ai_source, entry_page: entry_page || url, exit_page: exit_page || null, timestamp: new Date().toISOString() })
     res.json({ ok: true })
   } catch (err) { console.error('[analytics/collect]', err.message); res.status(500).json({ error: 'Collection failed' }) }
 })
@@ -81,6 +91,67 @@ router.get('/summary', requireUserAuth, validateSiteKey, async (req, res) => {
     const trend = Object.entries(dayCounts).sort((a, b) => a[0].localeCompare(b[0])).slice(-14).map(([date, views]) => ({ date, views }))
     res.json({ success: true, data: { period: { days, from: from.slice(0, 10), to: new Date().toISOString().slice(0, 10) }, kpis: { pageviews: pv.length, unique_visitors: uniqueSessions, bounce_rate: bounceRate, avg_duration_seconds: avgDuration }, top_pages: topPages, top_sources: topSources, ai_sources: aiSources, devices: deviceCounts, top_countries: topCountries, trend } })
   } catch (err) { console.error('[analytics/summary]', err.message); res.status(500).json({ error: 'Summary failed' }) }
+})
+
+
+router.get('/entry-exit', requireUserAuth, validateSiteKey, async (req, res) => {
+  try {
+    const siteId = String(req.site.id)
+    const days = parseInt(req.query.days) || 30
+    const from = new Date(Date.now() - days * 86400000).toISOString()
+    const supabase = getSupabase()
+    const { data: rows } = await supabase.from('pageviews')
+      .select('entry_page, exit_page, session_id')
+      .eq('site_id', siteId).gte('timestamp', from).limit(20000)
+    if (!rows) return res.json({ success: true, data: { entry_pages: [], exit_pages: [] } })
+    const entryCount = {}, exitCount = {}, totalSessions = new Set()
+    rows.forEach(r => {
+      if (r.session_id) totalSessions.add(r.session_id)
+      if (r.entry_page) entryCount[r.entry_page] = (entryCount[r.entry_page] || 0) + 1
+      if (r.exit_page) exitCount[r.exit_page] = (exitCount[r.exit_page] || 0) + 1
+    })
+    const total = totalSessions.size || 1
+    const entry_pages = Object.entries(entryCount).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([page,count])=>({page,count,pct:Math.round(count/total*100)}))
+    const exit_pages = Object.entries(exitCount).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([page,count])=>({page,count,pct:Math.round(count/total*100)}))
+    res.json({ success: true, data: { entry_pages, exit_pages } })
+  } catch (err) { res.status(500).json({ success: false, error: err.message }) }
+})
+
+router.get('/outbound', requireUserAuth, validateSiteKey, async (req, res) => {
+  try {
+    const siteId = String(req.site.id)
+    const days = parseInt(req.query.days) || 30
+    const from = new Date(Date.now() - days * 86400000).toISOString()
+    const supabase = getSupabase()
+    const { data: rows } = await supabase.from('custom_events')
+      .select('properties, url').eq('site_id', siteId).eq('event_type', 'outbound_click').gte('timestamp', from).limit(5000)
+    if (!rows) return res.json({ success: true, data: [] })
+    const destCount = {}
+    rows.forEach(r => {
+      const dest = r.properties?.destination || 'unknown'
+      if (!destCount[dest]) destCount[dest] = { destination: dest, count: 0 }
+      destCount[dest].count++
+    })
+    res.json({ success: true, data: Object.values(destCount).sort((a,b)=>b.count-a.count).slice(0,20) })
+  } catch (err) { res.status(500).json({ success: false, error: err.message }) }
+})
+
+router.get('/custom-events', requireUserAuth, validateSiteKey, async (req, res) => {
+  try {
+    const siteId = String(req.site.id)
+    const days = parseInt(req.query.days) || 30
+    const from = new Date(Date.now() - days * 86400000).toISOString()
+    const supabase = getSupabase()
+    const { data: rows } = await supabase.from('custom_events')
+      .select('event_name, properties, url, timestamp').eq('site_id', siteId).eq('event_type', 'custom')
+      .gte('timestamp', from).order('timestamp', { ascending: false }).limit(5000)
+    if (!rows) return res.json({ success: true, data: { events: [], recent: [] } })
+    const eventCount = {}
+    rows.forEach(r => { const n = r.event_name || 'unnamed'; eventCount[n] = (eventCount[n]||0)+1 })
+    const events = Object.entries(eventCount).sort((a,b)=>b[1]-a[1]).map(([name,count])=>({name,count}))
+    const recent = rows.slice(0,50).map(r=>({ name: r.event_name, url: r.url, properties: r.properties, timestamp: r.timestamp }))
+    res.json({ success: true, data: { events, recent } })
+  } catch (err) { res.status(500).json({ success: false, error: err.message }) }
 })
 
 export default router
