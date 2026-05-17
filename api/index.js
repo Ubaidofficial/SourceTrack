@@ -99,18 +99,10 @@ app.use((req, res, next) => {
 });
 const PORT = process.env.PORT || 3000
 
-if (!process.env.POSTHOG_API_KEY) {
-  console.error('FATAL: POSTHOG_API_KEY is not set')
-  process.exit(1)
-}
-if (!process.env.POSTHOG_PERSONAL_API_KEY) {
-  console.error('FATAL: POSTHOG_PERSONAL_API_KEY is not set')
-  process.exit(1)
-}
-if (!process.env.POSTHOG_PROJECT_ID) {
-  console.error('FATAL: POSTHOG_PROJECT_ID is not set')
-  process.exit(1)
-}
+// Warn if PostHog vars missing but don't crash — Railway injects these at runtime
+if (!process.env.POSTHOG_API_KEY) console.warn('WARN: POSTHOG_API_KEY is not set')
+if (!process.env.POSTHOG_PERSONAL_API_KEY) console.warn('WARN: POSTHOG_PERSONAL_API_KEY is not set')
+if (!process.env.POSTHOG_PROJECT_ID) console.warn('WARN: POSTHOG_PROJECT_ID is not set')
 
 function getSupabase() {
   return createClient(
