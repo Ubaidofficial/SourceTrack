@@ -33,7 +33,8 @@ export default function Leads() {
   const [site, setSite] = useState(null)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [filterAI, setFilterAI] = useState('all')
+  const [filterAI, setFilterAI]         = useState('all')
+  const [filterSource, setFilterSource] = useState('all')
   const [attributionModel, setAttributionModel] = useState('first_touch')
   const [journeyVisitorId, setJourneyVisitorId] = useState(null)
 

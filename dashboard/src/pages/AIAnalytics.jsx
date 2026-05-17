@@ -691,7 +691,7 @@ function VerdictCard({ siteKey }) {
     try {
       const today    = new Date().toISOString().slice(0, 10)
       const thirtyAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
-      const result = await fetchApi(`/api/attribution/verdicts?site_key=${siteKey}&date_from=${thirtyAgo}&date_to=${today}`)
+      const result = await fetchApi(`/attribution/verdicts?site_key=${siteKey}&date_from=${thirtyAgo}&date_to=${today}`)
       setVerdicts(result?.data || [])
     } catch (err) {
       setError(err.message || 'Verdicts failed')
