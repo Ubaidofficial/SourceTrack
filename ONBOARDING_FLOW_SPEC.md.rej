@@ -1,9 +1,0 @@
-diff a/ONBOARDING_FLOW_SPEC.md b/ONBOARDING_FLOW_SPEC.md	(rejected hunks)
-@@ -1,6 +1,7 @@
- # Onboarding Flow Spec — Figma
- 
- Status: design-confirmed from screenshots. Implementation must be verified in code.
-+Implementation status: ✅ Visually implemented S97 T1.1 — logic complete since S17/S24, visual aligned S97
- 
- ## Flow
- 
