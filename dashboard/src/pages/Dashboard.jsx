@@ -411,14 +411,19 @@ export default function Dashboard() {
     }
   }
 
-  const chartOpts = (prefix = '$') => ({
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      y: { beginAtZero: true, ticks: { callback: (v) => `${prefix}${v}`, maxTicksLimit: 5 }, grid: { color: '#f3f4f6' } },
-      x: { ticks: { maxTicksLimit: 8 }, grid: { display: false } }
+  const chartOpts = (prefix = '$') => {
+    const isDark = document.documentElement.classList.contains('dark')
+    const gridColor = isDark ? '#2A2E2E' : '#f3f4f6'
+    const tickColor = isDark ? '#9CA3AF' : '#6b7280'
+    return {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, ticks: { callback: (v) => `${prefix}${v}`, maxTicksLimit: 5 }, grid: { color: gridColor } },
+        x: { ticks: { maxTicksLimit: 8 }, grid: { display: false } }
+      }
     }
-  })
+  }
 
   const recentLeadsData = activeResults.slice(0, 10).map(r => ({
     source: r.dim_value || r.source || 'unknown',
@@ -485,11 +490,11 @@ export default function Dashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-st-black">Performance Overview</h2>
-          {site && <p className="text-sm text-st-gray mt-0.5">{site.domain || site.name}</p>}
+          {site && <p className="text-sm text-st-gray dark:text-gray-400 mt-0.5">{site.domain || site.name}</p>}
         </div>
         {!previewMode && (
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 border border-green-200 text-green-700 text-sm font-medium">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 dark:bg-green-900/20 border border-green-200 text-green-700 text-sm font-medium">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
@@ -519,8 +524,8 @@ export default function Dashboard() {
         <div className="max-w-2xl mx-auto py-12 text-center space-y-8">
           <div>
             <BarChart3 className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-st-black mb-2">No reports yet</h3>
-            <p className="text-sm text-st-gray max-w-md mx-auto">
+            <h3 className="text-xl font-semibold text-st-black dark:text-white mb-2">No reports yet</h3>
+            <p className="text-sm text-st-gray dark:text-gray-400 max-w-md mx-auto">
               Your dashboard is empty because no reports have been created yet.
               Build reports for the metrics and attribution views you care about.
             </p>
@@ -536,30 +541,30 @@ export default function Dashboard() {
           </div>
 
           <div>
-            <p className="text-xs text-st-gray mb-3">Or start with a template</p>
+            <p className="text-xs text-st-gray dark:text-gray-400 mb-3">Or start with a template</p>
             <div className="flex items-center justify-center gap-3">
               <button
                 onClick={() => createStarterReport('sources')}
-                className="px-5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 flex items-center gap-2"
+                className="px-5 py-2.5 bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#333838] rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-[#252929] hover:border-gray-300 flex items-center gap-2"
               >
                 <FileText className="w-4 h-4 text-st-gray" /> Sources
               </button>
               <button
                 onClick={() => createStarterReport('totals')}
-                className="px-5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 flex items-center gap-2"
+                className="px-5 py-2.5 bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#333838] rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-[#252929] hover:border-gray-300 flex items-center gap-2"
               >
                 <BarChart3 className="w-4 h-4 text-st-gray" /> Totals
               </button>
               <button
                 onClick={() => createStarterReport('trend')}
-                className="px-5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 flex items-center gap-2"
+                className="px-5 py-2.5 bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#333838] rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-[#252929] hover:border-gray-300 flex items-center gap-2"
               >
                 <TrendingUp className="w-4 h-4 text-st-gray" /> Conversion Trend
               </button>
             </div>
           </div>
 
-          <p className="text-xs text-st-gray max-w-sm mx-auto">
+          <p className="text-xs text-st-gray dark:text-gray-400 max-w-sm mx-auto">
             Templates use live attribution data. Build reports in the Report Builder for more metric and filter options.
           </p>
         </div>
@@ -571,8 +576,8 @@ export default function Dashboard() {
               {alerts.slice(0, 2).map((a, i) => (
                 <div key={i} className={`flex items-start gap-3 rounded-xl px-4 py-3 text-sm ${
                   a.severity === 'high'
-                    ? 'bg-red-50 border border-red-200 text-red-800'
-                    : 'bg-amber-50 border border-amber-200 text-amber-800'
+                    ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 text-red-800'
+                    : 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 text-amber-800'
                 }`}>
                   <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                   <div>
@@ -615,7 +620,7 @@ export default function Dashboard() {
             <DashboardCard title="Your Reports"
               subtitle="Saved report configurations — data fetched live"
               action={
-                <button onClick={() => navigate('/report-builder')} className="text-xs text-st-black hover:text-gray-700 font-medium flex items-center gap-1">
+                <button onClick={() => navigate('/report-builder')} className="text-xs text-st-black dark:text-white hover:text-gray-700 font-medium flex items-center gap-1">
                   <Plus className="w-3 h-3" /> New Report
                 </button>
               }
@@ -644,10 +649,10 @@ export default function Dashboard() {
                         }))
                         navigate(`/report-builder?edit=${report.id}`)
                       }}
-                      className="bg-gray-50 rounded-lg p-3 text-left hover:bg-gray-100 transition-colors border border-gray-100 hover:border-gray-300"
+                      className="bg-gray-50 dark:bg-[#111414] rounded-lg p-3 text-left hover:bg-gray-100 dark:hover:bg-[#2A2E2E] transition-colors border border-gray-100 dark:border-[#2A2E2E] hover:border-gray-300"
                     >
-                      <p className="text-xs font-medium text-st-black truncate">{report.name}</p>
-                      <p className="text-lg font-bold text-st-black mt-0.5">
+                      <p className="text-xs font-medium text-st-black dark:text-white truncate">{report.name}</p>
+                      <p className="text-lg font-bold text-st-black dark:text-white mt-0.5">
                         {metricDef.format(total)}
                       </p>
                       <p className="text-xs text-st-gray">{metricDef.label} total</p>
@@ -663,13 +668,13 @@ export default function Dashboard() {
                             const barW = maxVal > 0 ? (val / maxVal) * 100 : 0
                             return (
                               <div key={i} className="flex items-center gap-1.5">
-                                <span className="text-xs text-st-gray w-16 truncate flex-shrink-0">
+                                <span className="text-xs text-st-gray dark:text-gray-400 w-16 truncate flex-shrink-0">
                                   {r.dim_value || '—'}
                                 </span>
                                 <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
                                   <div className="h-full bg-st-black rounded-full transition-all" style={{ width: `${barW}%` }} />
                                 </div>
-                                <span className="text-xs text-gray-600 w-12 text-right flex-shrink-0">
+                                <span className="text-xs text-gray-600 dark:text-gray-300 w-12 text-right flex-shrink-0">
                                   {metricDef.format(val)}
                                 </span>
                               </div>
@@ -681,7 +686,7 @@ export default function Dashboard() {
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400" />
                         </div>
                       ) : (
-                        <p className="text-xs text-st-gray mt-2">No data for this period</p>
+                        <p className="text-xs text-st-gray dark:text-gray-400 mt-2">No data for this period</p>
                       )}
                     </button>
                   )
@@ -694,14 +699,14 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <DashboardCard title="Recent Leads" subtitle="Latest attributed conversions by source"
               action={!previewMode && (
-                <button onClick={() => navigate('/leads')} className="text-xs text-st-black hover:text-gray-700 font-medium flex items-center gap-1">
+                <button onClick={() => navigate('/leads')} className="text-xs text-st-black dark:text-white hover:text-gray-700 font-medium flex items-center gap-1">
                   View all <ArrowRight className="w-3 h-3" />
                 </button>
               )}
               className="lg:col-span-2"
             >
               {recentLeadsData.length === 0 ? (
-                <p className="text-sm text-st-gray py-6 text-center">No recent leads yet. Data will appear as conversions flow in.</p>
+                <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">No recent leads yet. Data will appear as conversions flow in.</p>
               ) : (
                 <DashboardTable
                   columns={[
@@ -738,7 +743,7 @@ export default function Dashboard() {
                 ? `AI platforms drive ${aiShareTotal.toFixed(1)}% of revenue — ${aiRevResults.reduce((s,r) => s + (r.ai_leads||0), 0).toLocaleString()} leads this period`
                 : 'Leads, conversions and revenue from AI platforms'}
               action={!previewMode && (
-                <button onClick={() => navigate('/report-builder')} className="text-xs text-st-black hover:text-gray-700 font-medium">
+                <button onClick={() => navigate('/report-builder')} className="text-xs text-st-black dark:text-white hover:text-gray-700 font-medium">
                   Analyze
                 </button>
               )}
@@ -849,7 +854,7 @@ export default function Dashboard() {
             <DashboardCard title="Revenue by Campaign"
               subtitle={topCampaigns.length > 0 ? `Top ${topCampaigns.length} campaigns by revenue` : 'Campaign revenue distribution'}
               action={!previewMode && (
-                <button onClick={() => navigate('/campaigns')} className="text-xs text-st-black hover:text-st-gray font-medium">
+                <button onClick={() => navigate('/campaigns')} className="text-xs text-st-black dark:text-white hover:text-st-gray dark:text-gray-400 font-medium">
                   View all
                 </button>
               )}
@@ -881,7 +886,7 @@ export default function Dashboard() {
             <DashboardCard title="Conversion Events"
               subtitle={businessType === 'ecommerce' ? 'Orders, trials and signups' : businessType === 'saas' ? 'Trials, signups and meetings' : 'Leads, signups and meetings'}
               action={!previewMode && (
-                <button onClick={() => navigate('/settings')} className="text-xs text-st-black hover:text-gray-700 font-medium">
+                <button onClick={() => navigate('/settings')} className="text-xs text-st-black dark:text-white hover:text-gray-700 font-medium">
                   Configure
                 </button>
               )}
@@ -902,9 +907,9 @@ export default function Dashboard() {
                       const typeData = convTypes[key]
                       const hasData = typeData && typeData.count > 0
                       return (
-                        <div key={key} className="bg-gray-50 rounded-lg p-3">
+                        <div key={key} className="bg-gray-50 dark:bg-[#111414] rounded-lg p-3">
                           <p className="text-xs text-st-gray">{label}</p>
-                          <p className="text-lg font-semibold text-st-black mt-0.5">
+                          <p className="text-lg font-semibold text-st-black dark:text-white mt-0.5">
                             {hasData ? typeData.count.toLocaleString() : '—'}
                           </p>
                           <StatusBadge status={hasData ? 'active' : 'pending'} label={hasData ? 'Active' : 'Not tracking'} />
@@ -912,7 +917,7 @@ export default function Dashboard() {
                       )
                     })}
                     {convTypes.untyped && convTypes.untyped.count > 0 && (
-                      <div className="bg-amber-50 rounded-lg p-3 border border-amber-100">
+                      <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 border border-amber-100">
                         <p className="text-xs text-amber-700">Untagged</p>
                         <p className="text-lg font-semibold text-amber-900 mt-0.5">
                           {convTypes.untyped.count.toLocaleString()}
@@ -924,7 +929,7 @@ export default function Dashboard() {
                 )
               })()}
               {Object.values(overview?.conversion_types || {}).every(t => !t || t.count === 0) && (
-                <p className="text-xs text-st-gray mt-3">
+                <p className="text-xs text-st-gray dark:text-gray-400 mt-3">
                   {businessType === 'ecommerce' ? 'Track purchases and checkouts by sending conversion events.' : businessType === 'saas' ? 'Track free trials and signups by sending conversion events.' : 'Track lead form submissions by sending conversion events.'}
                 </p>
               )}
@@ -934,7 +939,7 @@ export default function Dashboard() {
               subtitle="Top pages by attributed revenue"
             >
               {landingResults.length === 0 ? (
-                <p className="text-sm text-st-gray py-6 text-center">Landing page data will appear after your first attributed conversions.</p>
+                <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">Landing page data will appear after your first attributed conversions.</p>
               ) : (
                 <DashboardTable
                   columns={[
@@ -960,13 +965,13 @@ export default function Dashboard() {
                   <button
                     key={m.model}
                     onClick={() => { setExplainModel(m.model); setExplainModalOpen(true) }}
-                    className="bg-white rounded-lg border border-gray-200 p-3 text-center hover:bg-gray-50 transition-colors text-left"
+                    className="bg-white dark:bg-[#1A1D1D] rounded-lg border border-gray-200 dark:border-[#333838] p-3 text-center hover:bg-gray-50 dark:hover:bg-[#252929] transition-colors text-left"
                   >
-                    <p className="text-xs text-st-gray mb-1">{m.label}</p>
+                    <p className="text-xs text-st-gray dark:text-gray-400 mb-1">{m.label}</p>
                     <p className="text-base font-bold text-st-black" style={{ color: COLORS[i % COLORS.length] }}>
                       ${m.total.toFixed(0)}
                     </p>
-                    <div className="mt-2 h-1 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="mt-2 h-1 bg-gray-100 dark:bg-[#252929] rounded-full overflow-hidden">
                       <div className="h-full rounded-full transition-all" style={{
                         width: `${barWidth}%`,
                         backgroundColor: COLORS[i % COLORS.length].replace('0.85)', '1)')
@@ -994,17 +999,17 @@ export default function Dashboard() {
                   const verdict = i === 0 ? { label: 'Scale', color: 'bg-st-lime text-st-black' }
                     : i <= 1 ? { label: 'Scale', color: 'bg-st-lime text-st-black' }
                     : i <= 3 ? { label: 'Watch', color: 'bg-amber-100 text-amber-700' }
-                    : { label: 'Pause', color: 'bg-gray-100 text-st-gray' }
+                    : { label: 'Pause', color: 'bg-gray-100 dark:bg-[#252929] text-st-gray' }
                   return (
                     <div key={i} className="flex items-center gap-3">
-                      <span className="text-xs text-st-gray w-28 truncate shrink-0">{name}</span>
-                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <span className="text-xs text-st-gray dark:text-gray-400 w-28 truncate shrink-0">{name}</span>
+                      <div className="flex-1 h-2 bg-gray-100 dark:bg-[#252929] rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full bg-st-black transition-all"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
-                      <span className="text-xs font-semibold text-st-black w-14 text-right shrink-0">
+                      <span className="text-xs font-semibold text-st-black dark:text-white w-14 text-right shrink-0">
                         ${revenue.toFixed(0)}
                       </span>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${verdict.color}`}>
@@ -1014,7 +1019,7 @@ export default function Dashboard() {
                   )
                 })}
               </div>
-              <p className="text-[10px] text-st-gray mt-3">
+              <p className="text-[10px] text-st-gray dark:text-gray-400 mt-3">
                 Scale = top revenue drivers · Watch = mid-tier · Pause = low return. Add spend data in Campaigns for ROAS-based verdicts.
               </p>
             </DashboardCard>
@@ -1026,18 +1031,18 @@ export default function Dashboard() {
               title="AI Revenue Forecast"
               subtitle="7-day prediction powered by DeepSeek"
               action={
-                <button onClick={() => navigate('/ai-analytics')} className="text-xs text-st-black hover:text-st-gray font-medium flex items-center gap-1">
+                <button onClick={() => navigate('/ai-analytics')} className="text-xs text-st-black dark:text-white hover:text-st-gray dark:text-gray-400 font-medium flex items-center gap-1">
                   Run Forecast <ArrowRight className="w-3 h-3" />
                 </button>
               }
             >
               <div className="flex items-center gap-4 py-2">
-                <div className="w-10 h-10 rounded-xl bg-st-lime/10 flex items-center justify-center flex-shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-st-lime/10 dark:bg-st-lime/5 flex items-center justify-center flex-shrink-0">
                   <Sparkles className="w-5 h-5 text-st-black" />
                 </div>
                 <div>
-                  <p className="text-sm text-st-black font-medium">Predict next 7 days of revenue and leads</p>
-                  <p className="text-xs text-st-gray mt-0.5">DeepSeek analyzes your trend, weekly patterns, and momentum</p>
+                  <p className="text-sm text-st-black dark:text-white font-medium">Predict next 7 days of revenue and leads</p>
+                  <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">DeepSeek analyzes your trend, weekly patterns, and momentum</p>
                 </div>
               </div>
             </DashboardCard>

@@ -89,7 +89,7 @@ export default function AIChat() {
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-st-black">AI Chat</h2>
-          <p className="text-st-gray mt-2">Set up your site in Settings first</p>
+          <p className="text-st-gray dark:text-gray-400 mt-2">Set up your site in Settings first</p>
         </div>
       </div>
     )
@@ -99,12 +99,12 @@ export default function AIChat() {
     <div className="flex flex-col h-full max-w-3xl mx-auto">
       <div className="mb-4">
         <h2 className="text-2xl font-bold text-st-black">AI Chat</h2>
-        <p className="text-sm text-st-gray mt-1">Ask questions about your marketing data</p>
+        <p className="text-sm text-st-gray dark:text-gray-400 mt-1">Ask questions about your marketing data</p>
       </div>
 
       <div className="flex-1 overflow-auto space-y-4 mb-4">
         {messages.length === 0 && (
-          <div className="text-center text-st-gray py-12">
+          <div className="text-center text-st-gray dark:text-gray-400 py-12">
             <p>Ask a question like:</p>
             <p className="text-sm mt-1">"What are my top traffic sources?"</p>
           </div>
@@ -123,19 +123,19 @@ export default function AIChat() {
                 msg.role === 'user'
                   ? 'bg-st-black text-white'
                   : msg.isError
-                    ? 'bg-red-50 text-red-700 border border-red-200'
-                    : 'bg-white border border-gray-200 text-st-black'
+                    ? 'bg-red-50 dark:bg-red-900/20 text-red-700 border border-red-200'
+                    : 'bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#333838] text-st-black'
               }`}>
                 <p className="whitespace-pre-wrap">{msg.content}</p>
               </div>
 
               {msg.results && msg.results.length > 0 && (
                 <div className="mt-2 overflow-x-auto">
-                  <table className="min-w-full text-xs border border-gray-200 rounded-lg overflow-hidden">
+                  <table className="min-w-full text-xs border border-gray-200 dark:border-[#333838] rounded-lg overflow-hidden">
                     <thead>
                       <tr className="bg-gray-50">
                         {msg.results[0].map((_, ci) => (
-                          <th key={ci} className="px-3 py-2 text-left font-medium text-st-gray border-b border-gray-200">
+                          <th key={ci} className="px-3 py-2 text-left font-medium text-st-gray dark:text-gray-400 border-b border-gray-200">
                             Col {ci + 1}
                           </th>
                         ))}
@@ -145,7 +145,7 @@ export default function AIChat() {
                       {msg.results.map((row, ri) => (
                         <tr key={ri} className={ri % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                           {row.map((cell, ci) => (
-                            <td key={ci} className="px-3 py-1.5 text-gray-700 border-b border-gray-100">
+                            <td key={ci} className="px-3 py-1.5 text-gray-700 dark:text-gray-200 border-b border-gray-100">
                               {cell === null ? '-' : String(cell)}
                             </td>
                           ))}
@@ -167,10 +167,10 @@ export default function AIChat() {
 
         {loading && (
           <div className="flex gap-3">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-100 dark:bg-[#252929] flex items-center justify-center">
               <Bot className="w-4 h-4 text-gray-700" />
             </div>
-            <div className="bg-white border border-gray-200 rounded-lg px-4 py-3">
+            <div className="bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#333838] rounded-lg px-4 py-3">
               <div className="flex gap-1.5">
                 <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                 <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -183,7 +183,7 @@ export default function AIChat() {
         <div ref={bottomRef} />
       </div>
 
-      <div className="flex gap-2 border-t border-gray-200 pt-4">
+      <div className="flex gap-2 border-t border-gray-200 dark:border-[#333838] pt-4">
         <input
           type="text"
           value={input}

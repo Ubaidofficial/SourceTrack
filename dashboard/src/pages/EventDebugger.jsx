@@ -39,7 +39,7 @@ function eventBadgeClass(event, isConversion) {
   if (isConversion) return 'bg-green-100 text-green-700'
   if (event === '$pageview') return 'bg-blue-100 text-blue-700'
   if (event === 'install_verified') return 'bg-purple-100 text-purple-700'
-  return 'bg-gray-100 text-gray-700'
+  return 'bg-gray-100 dark:bg-[#252929] text-gray-700'
 }
 
 function normalizeEventName(eventName = '') {
@@ -162,7 +162,7 @@ export default function EventDebugger() {
         )
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-[#252929] text-gray-600">
             <XCircle className="w-3.5 h-3.5" />
             Never seen events
           </span>
@@ -193,19 +193,19 @@ export default function EventDebugger() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-st-black">Event Logger</h2>
-          <p className="text-sm text-st-gray mt-1">Inspect incoming events and verify tracking health</p>
+          <p className="text-sm text-st-gray dark:text-gray-400 mt-1">Inspect incoming events and verify tracking health</p>
         </div>
         <button
           onClick={fetchAll}
           disabled={loading || !site}
-          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-[#1A1D1D] border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] disabled:opacity-50"
         >
           <RefreshCw className={`w-4 h-4 ${loading || refreshing ? 'animate-spin' : ''}`} />
           Refresh
         </button>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+      <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#333838] p-5">
         <div className="flex items-center gap-2 mb-3">
           <Bug className="w-4 h-4 text-gray-700" />
           <h3 className="text-sm font-semibold text-gray-700">Health</h3>
@@ -228,7 +228,7 @@ export default function EventDebugger() {
       </div>
 
       {hints.length > 0 && (
-        <div className="bg-amber-50 rounded-xl border border-amber-200 p-5 space-y-2">
+        <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 p-5 space-y-2">
           <p className="text-sm font-semibold text-amber-800">Suggestions</p>
           {hints.map((h, i) => (
             <p key={i} className="text-sm text-amber-700">
@@ -245,25 +245,25 @@ export default function EventDebugger() {
       )}
 
       {edge && (edge.multiple_domains || edge.ai_without_utm > 0 || edge.utm_without_ai > 0) && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">Edge Cases</h3>
+        <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#333838] p-5">
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">Edge Cases</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {edge.multiple_domains && (
-              <div className="bg-gray-50 rounded-lg p-3">
+              <div className="bg-gray-50 dark:bg-[#111414] rounded-lg p-3">
                 <p className="text-xs text-st-gray">Multiple Domains</p>
                 <p className="text-lg font-semibold text-st-black">{edge.domain_count}</p>
-                <p className="text-xs text-st-gray mt-1 truncate">{edge.domains?.slice(0, 3).join(', ')}</p>
+                <p className="text-xs text-st-gray dark:text-gray-400 mt-1 truncate">{edge.domains?.slice(0, 3).join(', ')}</p>
               </div>
             )}
             {edge.ai_without_utm > 0 && (
-              <div className="bg-purple-50 rounded-lg p-3">
+              <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3">
                 <p className="text-xs text-purple-400">AI w/o UTM</p>
                 <p className="text-lg font-semibold text-purple-700">{edge.ai_without_utm}</p>
                 <p className="text-xs text-purple-500 mt-1">Organic AI visits</p>
               </div>
             )}
             {edge.utm_without_ai > 0 && (
-              <div className="bg-blue-50 rounded-lg p-3">
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
                 <p className="text-xs text-blue-400">UTM w/o AI</p>
                 <p className="text-lg font-semibold text-blue-700">{edge.utm_without_ai}</p>
                 <p className="text-xs text-blue-500 mt-1">Standard campaigns</p>
@@ -274,7 +274,7 @@ export default function EventDebugger() {
       )}
 
       {hygiene && hygiene.issues && hygiene.issues.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#333838] p-5">
           <div className="flex items-center gap-2 mb-3">
             <Shield className="w-4 h-4 text-amber-500" />
             <h3 className="text-sm font-semibold text-gray-700">Data Quality</h3>
@@ -286,10 +286,10 @@ export default function EventDebugger() {
             {hygiene.issues.map((issue, i) => (
               <div key={i} className={`rounded-lg p-3 text-sm ${
                 issue.severity === 'high'
-                  ? 'bg-red-50 border border-red-200 text-red-800'
+                  ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 text-red-800'
                   : issue.severity === 'medium'
-                    ? 'bg-amber-50 border border-amber-200 text-amber-800'
-                    : 'bg-gray-50 border border-gray-200 text-gray-700'
+                    ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 text-amber-800'
+                    : 'bg-gray-50 dark:bg-[#111414] border border-gray-200 dark:border-[#333838] text-gray-700'
               }`}>
                 <p className="font-medium">{issue.message}</p>
                 <p className="text-xs mt-1 opacity-75">{issue.detail}</p>
@@ -299,8 +299,8 @@ export default function EventDebugger() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-5 border-b border-gray-100 space-y-4">
+      <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#333838] overflow-hidden">
+        <div className="p-5 border-b border-gray-100 dark:border-[#2A2E2E] space-y-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Database className="w-4 h-4 text-gray-700" />
@@ -311,7 +311,7 @@ export default function EventDebugger() {
             </div>
             <button
               onClick={clearFilters}
-              className="text-xs text-st-gray hover:text-st-black"
+              className="text-xs text-st-gray dark:text-gray-400 hover:text-st-black"
             >
               Clear filters
             </button>
@@ -336,7 +336,7 @@ export default function EventDebugger() {
             <label className="space-y-1">
               <span className="text-xs text-st-gray">Source</span>
               <div className="relative">
-                <Filter className="w-4 h-4 text-st-gray absolute left-3 top-2.5" />
+                <Filter className="w-4 h-4 text-st-gray dark:text-gray-400 absolute left-3 top-2.5" />
                 <input
                   value={filters.source}
                   onChange={(e) => updateFilter('source', e.target.value)}
@@ -369,7 +369,7 @@ export default function EventDebugger() {
             <label className="space-y-1">
               <span className="text-xs text-st-gray">Search</span>
               <div className="relative">
-                <Search className="w-4 h-4 text-st-gray absolute left-3 top-2.5" />
+                <Search className="w-4 h-4 text-st-gray dark:text-gray-400 absolute left-3 top-2.5" />
                 <input
                   value={filters.search}
                   onChange={(e) => updateFilter('search', e.target.value)}
@@ -382,7 +382,7 @@ export default function EventDebugger() {
         </div>
 
         {error && (
-          <div className="m-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          <div className="m-5 rounded-lg border border-red-200 bg-red-50 dark:bg-red-900/20 p-4 text-sm text-red-700">
             {error}
           </div>
         )}
@@ -396,7 +396,7 @@ export default function EventDebugger() {
         {!loading && !error && events.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-sm text-st-gray">No events match these filters.</p>
-            <p className="text-xs text-st-gray mt-1">Clear filters or send a fresh pageview/conversion event.</p>
+            <p className="text-xs text-st-gray dark:text-gray-400 mt-1">Clear filters or send a fresh pageview/conversion event.</p>
           </div>
         )}
 
@@ -404,22 +404,22 @@ export default function EventDebugger() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Event</th>
-                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Time</th>
-                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Distinct ID</th>
-                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Source</th>
-                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Medium</th>
-                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Campaign</th>
-                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Click IDs</th>
-                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">AI Source</th>
-                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Page</th>
-                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Referrer</th>
-                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Conversion</th>
-                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Value</th>
-                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Ingestion</th>
-                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Device</th>
-                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Country</th>
+                <tr className="border-b border-gray-100 dark:border-[#2A2E2E] bg-gray-50">
+                  <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">Event</th>
+                  <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">Time</th>
+                  <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">Distinct ID</th>
+                  <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">Source</th>
+                  <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">Medium</th>
+                  <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">Campaign</th>
+                  <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">Click IDs</th>
+                  <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">AI Source</th>
+                  <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">Page</th>
+                  <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">Referrer</th>
+                  <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">Conversion</th>
+                  <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">Value</th>
+                  <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">Ingestion</th>
+                  <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">Device</th>
+                  <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">Country</th>
                 </tr>
               </thead>
               <tbody>
@@ -427,33 +427,33 @@ export default function EventDebugger() {
                   <tr
                     key={`${e.timestamp}-${e.event}-${i}`}
                     onClick={() => setSelectedEvent(e)}
-                    className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer"
+                    className="border-b border-gray-50 hover:bg-gray-50 dark:hover:bg-[#252929] cursor-pointer"
                   >
                     <td className="py-2 px-4">
                       <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${eventBadgeClass(e.event, e.is_conversion)}`}>
                         {e.event}
                       </span>
                     </td>
-                    <td className="py-2 px-4 text-st-gray text-xs whitespace-nowrap">
+                    <td className="py-2 px-4 text-st-gray dark:text-gray-400 text-xs whitespace-nowrap">
                       {new Date(e.timestamp).toLocaleString()}
                     </td>
-                    <td className="py-2 px-4 text-st-gray text-xs max-w-[160px] truncate">
+                    <td className="py-2 px-4 text-st-gray dark:text-gray-400 text-xs max-w-[160px] truncate">
                       {e.distinct_id || '—'}
                     </td>
-                    <td className="py-2 px-4 text-gray-600 text-xs">{e.source || '—'}</td>
-                    <td className="py-2 px-4 text-gray-600 text-xs">{e.medium || '—'}</td>
-                    <td className="py-2 px-4 text-gray-600 text-xs max-w-[160px] truncate">{e.campaign || '—'}</td>
-                    <td className="py-2 px-4 text-gray-600 text-xs text-[10px]">
+                    <td className="py-2 px-4 text-gray-600 dark:text-gray-300 text-xs">{e.source || '—'}</td>
+                    <td className="py-2 px-4 text-gray-600 dark:text-gray-300 text-xs">{e.medium || '—'}</td>
+                    <td className="py-2 px-4 text-gray-600 dark:text-gray-300 text-xs max-w-[160px] truncate">{e.campaign || '—'}</td>
+                    <td className="py-2 px-4 text-gray-600 dark:text-gray-300 text-xs text-[10px]">
                       {[e.gclid, e.fbclid, e.msclkid, e.ttclid].filter(Boolean).map(id => id.slice(0, 8)).join(", ") || "—"}
                     </td>
-                    <td className="py-2 px-4 text-gray-600 text-xs">{e.ai_source || '—'}</td>
-                    <td className="py-2 px-4 text-gray-600 text-xs max-w-[200px] truncate">{formatPath(e.page_url)}</td>
-                    <td className="py-2 px-4 text-st-gray text-xs max-w-[150px] truncate">{formatHost(e.referrer)}</td>
-                    <td className="py-2 px-4 text-st-gray text-xs">{e.conversion_type || '—'}</td>
-                    <td className="py-2 px-4 text-st-gray text-xs">{e.conversion_value ?? '—'}</td>
-                    <td className="py-2 px-4 text-st-gray text-xs">{e.ingestion_method || 'pixel'}</td>
-                    <td className="py-2 px-4 text-st-gray text-xs">{e.device_type || '—'}</td>
-                    <td className="py-2 px-4 text-st-gray text-xs">{e.country || '—'}</td>
+                    <td className="py-2 px-4 text-gray-600 dark:text-gray-300 text-xs">{e.ai_source || '—'}</td>
+                    <td className="py-2 px-4 text-gray-600 dark:text-gray-300 text-xs max-w-[200px] truncate">{formatPath(e.page_url)}</td>
+                    <td className="py-2 px-4 text-st-gray dark:text-gray-400 text-xs max-w-[150px] truncate">{formatHost(e.referrer)}</td>
+                    <td className="py-2 px-4 text-st-gray dark:text-gray-400 text-xs">{e.conversion_type || '—'}</td>
+                    <td className="py-2 px-4 text-st-gray dark:text-gray-400 text-xs">{e.conversion_value ?? '—'}</td>
+                    <td className="py-2 px-4 text-st-gray dark:text-gray-400 text-xs">{e.ingestion_method || 'pixel'}</td>
+                    <td className="py-2 px-4 text-st-gray dark:text-gray-400 text-xs">{e.device_type || '—'}</td>
+                    <td className="py-2 px-4 text-st-gray dark:text-gray-400 text-xs">{e.country || '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -465,18 +465,18 @@ export default function EventDebugger() {
       {selectedEvent && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/20" onClick={() => setSelectedEvent(null)}>
           <div
-            className="h-full w-full max-w-xl bg-white shadow-xl overflow-y-auto"
+            className="h-full w-full max-w-xl bg-white dark:bg-[#1A1D1D] shadow-xl overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-5 flex items-start justify-between">
+            <div className="sticky top-0 bg-white dark:bg-[#1A1D1D] border-b border-gray-200 dark:border-[#333838] p-5 flex items-start justify-between">
               <div>
                 <p className="text-xs text-st-gray">Event details</p>
                 <h3 className="text-lg font-semibold text-st-black">{selectedEvent.event}</h3>
-                <p className="text-xs text-st-gray mt-1">{new Date(selectedEvent.timestamp).toLocaleString()}</p>
+                <p className="text-xs text-st-gray dark:text-gray-400 mt-1">{new Date(selectedEvent.timestamp).toLocaleString()}</p>
               </div>
               <button
                 onClick={() => setSelectedEvent(null)}
-                className="p-2 rounded-lg hover:bg-gray-100 text-st-gray"
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2A2E2E] text-st-gray"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -506,7 +506,7 @@ export default function EventDebugger() {
                   ['Device', selectedEvent.device_type],
                   ['Country', selectedEvent.country]
                 ].map(([label, value]) => (
-                  <div key={label} className="rounded-lg bg-gray-50 p-3">
+                  <div key={label} className="rounded-lg bg-gray-50 dark:bg-[#111414] p-3">
                     <p className="text-xs text-st-gray">{label}</p>
                     <p className="mt-1 text-gray-800 break-words">{value ?? '—'}</p>
                   </div>
@@ -518,7 +518,7 @@ export default function EventDebugger() {
                   <p className="text-sm font-semibold text-gray-700">Raw properties</p>
                   <button
                     onClick={() => navigator.clipboard.writeText(JSON.stringify(selectedEvent.properties || {}, null, 2))}
-                    className="text-xs text-st-gray hover:text-st-black"
+                    className="text-xs text-st-gray dark:text-gray-400 hover:text-st-black"
                   >
                     Copy JSON
                   </button>

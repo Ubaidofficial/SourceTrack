@@ -2,10 +2,10 @@
   "$schema": "https://railway.com/railway.schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "npm install && npm run build"
+    "buildCommand": "cd /app/dashboard && npm install && npm run build"
   },
   "deploy": {
-    "startCommand": "npx serve -s dist -l $PORT",
+    "startCommand": "cd /app/dashboard && npx serve -s dist -l $PORT",
     "healthcheckPath": "/",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10

@@ -62,18 +62,18 @@ export default function Login() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-indigo-600">SourceTrack</h1>
-          <p className="text-st-gray mt-2">Sign in to your account</p>
+          <p className="text-st-gray dark:text-gray-400 mt-2">Sign in to your account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white shadow rounded-lg p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-[#1A1D1D] shadow rounded-lg p-6 space-y-4">
           {error && (
-            <div className="bg-red-50 text-red-600 text-sm p-3 rounded">{error}</div>
+            <div className="bg-red-50 dark:bg-red-900/20 text-red-600 text-sm p-3 rounded">{error}</div>
           )}
 
           <button
             type="button"
             onClick={handleGoogleSignIn}
-            className="w-full py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2"
+            className="w-full py-2 bg-white dark:bg-[#1A1D1D] border border-gray-300 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-[#252929] flex items-center justify-center gap-2"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
@@ -86,11 +86,11 @@ export default function Login() {
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
-            <div className="relative flex justify-center text-xs"><span className="bg-white px-2 text-st-gray">or</span></div>
+            <div className="relative flex justify-center text-xs"><span className="bg-white dark:bg-[#1A1D1D] px-2 text-st-gray">or</span></div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Email</label>
             <input
               type="email"
               required
@@ -101,7 +101,7 @@ export default function Login() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Password</label>
             <input
               type="password"
               required
@@ -120,7 +120,7 @@ export default function Login() {
           </button>
 
           <p className="text-center text-sm text-st-gray">
-            Don't have an account? <Link to="/signup" className="text-st-black hover:underline">Sign up</Link>
+            Don't have an account? <Link to="/signup" className="text-st-black dark:text-white hover:underline">Sign up</Link>
           </p>
         </form>
       </div>

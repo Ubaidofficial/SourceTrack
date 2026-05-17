@@ -59,13 +59,13 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto">
+      <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2">
             <HelpCircle className="w-5 h-5 text-st-gray" />
             <h3 className="text-base font-semibold text-st-black">Attribution Explanation</h3>
           </div>
-          <button onClick={onClose} className="p-1.5 text-st-gray hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+          <button onClick={onClose} className="p-1.5 text-st-gray dark:text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-[#2A2E2E] rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -78,19 +78,19 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
           )}
 
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-sm text-red-700">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-lg p-4 text-sm text-red-700">
               {error}
             </div>
           )}
 
           {!loading && !error && isGeneric && (
             <div className="space-y-5">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 rounded-lg p-4">
                 <p className="text-sm font-medium text-blue-900 mb-1">{modelLabels[model] || model}</p>
                 <p className="text-sm text-blue-700">This is a generic model explanation. Select a specific conversion from the journey or leads view to see the full attribution breakdown for an individual visitor.</p>
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 space-y-2">
+              <div className="bg-gray-50 dark:bg-[#111414] rounded-lg p-3 text-xs text-gray-600 dark:text-gray-300 space-y-2">
                 <p className="font-medium text-gray-700">How this model works</p>
                 {model === 'first_touch' && (
                   <p>First Touch assigns 100% credit to the first UTM source this visitor ever encountered. The value is stored in a browser cookie at their initial visit and sent with every conversion event. If no UTM was present on the first visit, the source is "direct".</p>
@@ -115,9 +115,9 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
           {!loading && !error && data && (
             <>
               {/* Conversion details */}
-              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+              <div className="bg-gray-50 dark:bg-[#111414] rounded-lg p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-st-gray uppercase tracking-wide">Conversion</span>
+                  <span className="text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wide">Conversion</span>
                   <span className="text-xs text-st-gray">{data.conversion?.ingestion_method || 'server_routed'}</span>
                 </div>
                 <div className="grid grid-cols-3 gap-3 text-sm">
@@ -142,7 +142,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
               </div>
 
               {/* Explanation card */}
-              <div className={`rounded-lg p-4 border ${data.fallback ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'}`}>
+              <div className={`rounded-lg p-4 border ${data.fallback ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200' : 'bg-green-50 dark:bg-green-900/20 border-green-200'}`}>
                 <div className="flex items-start gap-3">
                   {data.fallback ? (
                     <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
@@ -161,18 +161,18 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
 
               {/* Journey summary */}
               <div className="grid grid-cols-3 gap-3">
-                <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-                  <Route className="w-4 h-4 text-st-gray mx-auto mb-1" />
+                <div className="bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#333838] rounded-lg p-3 text-center">
+                  <Route className="w-4 h-4 text-st-gray dark:text-gray-400 mx-auto mb-1" />
                   <p className="text-lg font-semibold text-st-black">{data.journey_summary?.touchpoint_count || 0}</p>
                   <p className="text-xs text-st-gray">Touchpoints</p>
                 </div>
-                <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-                  <Clock className="w-4 h-4 text-st-gray mx-auto mb-1" />
+                <div className="bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#333838] rounded-lg p-3 text-center">
+                  <Clock className="w-4 h-4 text-st-gray dark:text-gray-400 mx-auto mb-1" />
                   <p className="text-lg font-semibold text-st-black">{data.journey_summary?.journey_duration_days || 0}d</p>
                   <p className="text-xs text-st-gray">Journey Duration</p>
                 </div>
-                <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-                  <MousePointerClick className="w-4 h-4 text-st-gray mx-auto mb-1" />
+                <div className="bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#333838] rounded-lg p-3 text-center">
+                  <MousePointerClick className="w-4 h-4 text-st-gray dark:text-gray-400 mx-auto mb-1" />
                   <p className="text-lg font-semibold text-st-black">{data.journey_summary?.total_events || 0}</p>
                   <p className="text-xs text-st-gray">Total Events</p>
                 </div>
@@ -181,20 +181,20 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
               {/* Session summary */}
               {data.journey_summary?.session_count > 0 && (
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-                    <Layers className="w-4 h-4 text-st-gray mx-auto mb-1" />
+                  <div className="bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#333838] rounded-lg p-3 text-center">
+                    <Layers className="w-4 h-4 text-st-gray dark:text-gray-400 mx-auto mb-1" />
                     <p className="text-lg font-semibold text-st-black">{data.journey_summary?.session_count || 0}</p>
                     <p className="text-xs text-st-gray">Sessions</p>
                   </div>
-                  <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-                    <Clock className="w-4 h-4 text-st-gray mx-auto mb-1" />
+                  <div className="bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#333838] rounded-lg p-3 text-center">
+                    <Clock className="w-4 h-4 text-st-gray dark:text-gray-400 mx-auto mb-1" />
                     <p className="text-lg font-semibold text-st-black">
                       {data.journey_summary?.converting_session_index || '—'}
                     </p>
                     <p className="text-xs text-st-gray">Converting Session</p>
                   </div>
-                  <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-                    <Route className="w-4 h-4 text-st-gray mx-auto mb-1" />
+                  <div className="bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#333838] rounded-lg p-3 text-center">
+                    <Route className="w-4 h-4 text-st-gray dark:text-gray-400 mx-auto mb-1" />
                     <p className="text-lg font-semibold text-st-black">
                       {data.sessions?.find(s => s.contains_conversion)?.pageview_count || 0}
                     </p>
@@ -210,7 +210,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                   className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
                     viewMode === 'events'
                       ? 'bg-st-black text-white border-st-black'
-                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                      : 'bg-white dark:bg-[#1A1D1D] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-[#333838] hover:bg-gray-50'
                   }`}
                 >
                   Event Timeline
@@ -220,7 +220,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                   className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
                     viewMode === 'sessions'
                       ? 'bg-st-black text-white border-st-black'
-                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                      : 'bg-white dark:bg-[#1A1D1D] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-[#333838] hover:bg-gray-50'
                   }`}
                 >
                   Session Timeline
@@ -230,7 +230,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
               {/* Event timeline */}
               {viewMode === 'events' && (
                 <div>
-                  <h4 className="text-sm font-medium text-st-black mb-3">Journey Timeline</h4>
+                  <h4 className="text-sm font-medium text-st-black dark:text-white mb-3">Journey Timeline</h4>
                   <div className="space-y-2">
                     {data.all_touches?.map((touch, i) => {
                       const isAttributed = attributedTouch &&
@@ -243,10 +243,10 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                           key={i}
                           className={`flex items-center gap-3 p-2.5 rounded-lg border text-sm ${
                             isAttributed
-                              ? 'bg-green-50 border-green-200'
+                              ? 'bg-green-50 dark:bg-green-900/20 border-green-200'
                               : isSkipped
-                              ? 'bg-gray-50 border-gray-100 opacity-60'
-                              : 'bg-white border-gray-100'
+                              ? 'bg-gray-50 dark:bg-[#111414] border-gray-100 dark:border-[#2A2E2E] opacity-60'
+                              : 'bg-white dark:bg-[#1A1D1D] border-gray-100'
                           }`}
                         >
                           <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
@@ -262,12 +262,12 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                                 <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">Credit</span>
                               )}
                               {isSkipped && (
-                                <span className="text-xs bg-gray-100 text-st-gray px-1.5 py-0.5 rounded line-through">Skipped</span>
+                                <span className="text-xs bg-gray-100 dark:bg-[#252929] text-st-gray dark:text-gray-400 px-1.5 py-0.5 rounded line-through">Skipped</span>
                               )}
                             </div>
-                            <p className="text-xs text-st-gray truncate">{touch.page_url || '—'}</p>
+                            <p className="text-xs text-st-gray dark:text-gray-400 truncate">{touch.page_url || '—'}</p>
                           </div>
-                          <span className="text-xs text-st-gray whitespace-nowrap">
+                          <span className="text-xs text-st-gray dark:text-gray-400 whitespace-nowrap">
                             {new Date(touch.timestamp).toLocaleDateString()}
                           </span>
                         </div>
@@ -280,15 +280,15 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
               {/* Session timeline */}
               {viewMode === 'sessions' && data.sessions?.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-medium text-st-black mb-3">Session Timeline</h4>
+                  <h4 className="text-sm font-medium text-st-black dark:text-white mb-3">Session Timeline</h4>
                   <div className="space-y-3">
                     {data.sessions.map((sess) => (
                       <div
                         key={sess.session_index}
                         className={`rounded-lg border p-3 text-sm ${
                           sess.contains_conversion
-                            ? 'bg-green-50 border-green-200'
-                            : 'bg-white border-gray-200'
+                            ? 'bg-green-50 dark:bg-green-900/20 border-green-200'
+                            : 'bg-white dark:bg-[#1A1D1D] border-gray-200'
                         }`}
                       >
                         <div className="flex items-center justify-between mb-2">
@@ -303,7 +303,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                             {Math.round((sess.duration_seconds || 0) / 60)}m
                           </span>
                         </div>
-                        <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mb-2">
+                        <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-300 mb-2">
                           <div>
                             <span className="text-st-gray">Entry:</span>{' '}
                             <span className={sess.is_direct_entry ? 'text-st-gray' : 'text-st-black'}>
@@ -324,7 +324,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                           </div>
                         </div>
                         {sess.entry_page && (
-                          <p className="text-xs text-st-gray truncate">{sess.entry_page}</p>
+                          <p className="text-xs text-st-gray dark:text-gray-400 truncate">{sess.entry_page}</p>
                         )}
                       </div>
                     ))}
@@ -333,7 +333,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
               )}
 
               {/* Model logic tooltip */}
-              <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 space-y-1">
+              <div className="bg-gray-50 dark:bg-[#111414] rounded-lg p-3 text-xs text-gray-600 dark:text-gray-300 space-y-1">
                 <p className="font-medium text-gray-700">Why this attribution?</p>
                 {data.model === 'first_touch' && (
                   <p>First Touch assigns 100% credit to the first UTM source this visitor ever encountered. The value is stored in a browser cookie at their initial visit and sent with every conversion event.</p>
@@ -350,7 +350,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                 {data.model === 'ai_platforms' && (
                   <p>AI Platform attribution detects the referrer at conversion time and matches it against known AI platform domains (ChatGPT, Claude, Perplexity, Gemini, Grok, Copilot, DeepSeek).</p>
                 )}
-                <p className="text-st-gray mt-1">Single-touch model: only one touchpoint receives credit.</p>
+                <p className="text-st-gray dark:text-gray-400 mt-1">Single-touch model: only one touchpoint receives credit.</p>
               </div>
             </>
           )}

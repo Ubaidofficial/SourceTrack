@@ -175,7 +175,7 @@ export default function Admin() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-st-black">Super Admin</h2>
-          <p className="text-sm text-st-gray mt-0.5">Internal workspace overview</p>
+          <p className="text-sm text-st-gray dark:text-gray-400 mt-0.5">Internal workspace overview</p>
         </div>
         <StatusBadge status="verified" label="Super Admin" />
       </div>
@@ -197,7 +197,7 @@ export default function Admin() {
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === tab
                 ? 'border-st-black text-st-black'
-                : 'border-transparent text-st-gray hover:text-gray-700'
+                : 'border-transparent text-st-gray dark:text-gray-400 hover:text-gray-700'
             }`}>
             {tab === 'site_inspector' ? 'Site Inspector' : tab === 'feature_status' ? 'Features' : tab === 'qa_notes' ? 'QA Notes' : tab === 'audit_log' ? 'Audit Log' : tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
@@ -207,7 +207,7 @@ export default function Admin() {
       {activeTab === 'companies' && (
         <DashboardCard title="Companies" subtitle={`${totalCompanies} total`}>
           {companies.length === 0 ? (
-            <p className="text-sm text-st-gray py-6 text-center">No companies yet.</p>
+            <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">No companies yet.</p>
           ) : (
             <table className="w-full text-sm">
               <thead>
@@ -221,10 +221,10 @@ export default function Admin() {
               <tbody>
                 {companies.map((c) => (
                   <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="py-2.5 px-3 text-st-black font-medium">{c.name}</td>
+                    <td className="py-2.5 px-3 text-st-black dark:text-white font-medium">{c.name}</td>
                     <td className="py-2.5 px-3 text-right text-gray-600">{c.member_count}</td>
                     <td className="py-2.5 px-3 text-right text-gray-600">{c.site_count}</td>
-                    <td className="py-2.5 px-3 text-right text-st-gray text-xs">
+                    <td className="py-2.5 px-3 text-right text-st-gray dark:text-gray-400 text-xs">
                       {new Date(c.created_at).toLocaleDateString()}
                     </td>
                   </tr>
@@ -238,7 +238,7 @@ export default function Admin() {
       {activeTab === 'users' && (
         <DashboardCard title="Users" subtitle={`${totalUsers} total`}>
           {users.length === 0 ? (
-            <p className="text-sm text-st-gray py-6 text-center">No users yet.</p>
+            <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">No users yet.</p>
           ) : (
             <table className="w-full text-sm">
               <thead>
@@ -257,7 +257,7 @@ export default function Admin() {
                     <td className="py-2.5 px-3">
                       <StatusBadge status={u.role === 'admin' ? 'active' : 'pending'} label={u.role || 'none'} />
                     </td>
-                    <td className="py-2.5 px-3 text-right text-st-gray text-xs">
+                    <td className="py-2.5 px-3 text-right text-st-gray dark:text-gray-400 text-xs">
                       {new Date(u.created_at).toLocaleDateString()}
                     </td>
                   </tr>
@@ -271,7 +271,7 @@ export default function Admin() {
       {activeTab === 'sites' && (
         <DashboardCard title="Sites" subtitle={`${totalSites} total · ${verifiedSites} verified`}>
           {sites.length === 0 ? (
-            <p className="text-sm text-st-gray py-6 text-center">No sites yet.</p>
+            <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">No sites yet.</p>
           ) : (
             <table className="w-full text-sm">
               <thead>
@@ -286,7 +286,7 @@ export default function Admin() {
               <tbody>
                 {sites.map((s) => (
                   <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="py-2.5 px-3 text-st-black truncate max-w-[200px]">{s.domain || s.name}</td>
+                    <td className="py-2.5 px-3 text-st-black dark:text-white truncate max-w-[200px]">{s.domain || s.name}</td>
                     <td className="py-2.5 px-3 text-gray-600">{s.company_name || '—'}</td>
                     <td className="py-2.5 px-3">
                       <StatusBadge
@@ -302,7 +302,7 @@ export default function Admin() {
                     </td>
                     <td className="py-2.5 px-3 text-right">
                       <button onClick={() => handlePreview(s)}
-                        className="text-xs text-st-black hover:text-gray-700 font-medium flex items-center gap-1 ml-auto">
+                        className="text-xs text-st-black dark:text-white hover:text-gray-700 font-medium flex items-center gap-1 ml-auto">
                         <ExternalLink className="w-3 h-3" /> Preview
                       </button>
                     </td>
@@ -344,7 +344,7 @@ export default function Admin() {
             <div className="space-y-4">
               <DashboardCard title="Site Info" subtitle={`${siteDetail.site?.domain || siteDetail.site?.name || 'Unnamed'}`}>
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div><p className="text-xs text-st-gray">Site Key</p><p className="font-mono text-xs text-st-black truncate">{siteDetail.site?.site_key}</p></div>
+                  <div><p className="text-xs text-st-gray">Site Key</p><p className="font-mono text-xs text-st-black dark:text-white truncate">{siteDetail.site?.site_key}</p></div>
                   <div><p className="text-xs text-st-gray">Plan</p><StatusBadge status={siteDetail.site?.plan === 'pro' ? 'active' : siteDetail.site?.plan === 'trial' ? 'pending' : 'error'} label={siteDetail.site?.plan || 'unknown'} /></div>
                   <div><p className="text-xs text-st-gray">Created</p><p className="text-st-black">{siteDetail.site?.created_at ? new Date(siteDetail.site.created_at).toLocaleDateString() : '—'}</p></div>
                   <div><p className="text-xs text-st-gray">Company</p><p className="text-st-black">{siteDetail.site?.company_name || '—'}</p></div>
@@ -411,7 +411,7 @@ export default function Admin() {
             <button
               onClick={handleRecheck}
               disabled={rechecking}
-              className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5 disabled:opacity-50"
+              className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-[#1A1D1D] border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] flex items-center gap-1.5 disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${rechecking ? 'animate-spin' : ''}`} />
               {rechecking ? 'Rechecking...' : 'Recheck All Features'}
@@ -419,7 +419,7 @@ export default function Admin() {
           </div>
 
           {recheckDiffs && recheckDiffs.length > 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 rounded-lg p-3">
               <p className="text-sm font-medium text-amber-800 mb-1">Status changes detected:</p>
               <ul className="space-y-1">
                 {recheckDiffs.map((d, i) => (
@@ -449,7 +449,7 @@ export default function Admin() {
                 <tbody>
                   {featureStatus.features.map((f) => (
                     <tr key={f.name} className="border-b border-gray-50">
-                      <td className="py-2.5 px-3 text-st-black font-medium">{f.name}</td>
+                      <td className="py-2.5 px-3 text-st-black dark:text-white font-medium">{f.name}</td>
                       <td className="py-2.5 px-3">
                         <StatusBadge
                           status={f.status === 'live' ? 'verified' :
@@ -478,7 +478,7 @@ export default function Admin() {
             <p className="text-xs text-st-gray">Editable truthfulness notes — persisted to database</p>
             <button
               onClick={() => { setQaFormMode('create'); setQaFormData({ feature_key: '', note_type: 'watch', note_text: '' }) }}
-              className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5"
+              className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-[#1A1D1D] border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] flex items-center gap-1.5"
             >
               <Plus className="w-3.5 h-3.5" /> Add Note
             </button>
@@ -488,7 +488,7 @@ export default function Admin() {
             <DashboardCard title={qaFormMode === 'edit' ? 'Edit Note' : 'New Note'}>
               <div className="space-y-3">
                 <div>
-                  <label className="block text-xs font-medium text-st-gray mb-1">Feature Key</label>
+                  <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Feature Key</label>
                   <input
                     type="text"
                     value={qaFormData.feature_key}
@@ -498,7 +498,7 @@ export default function Admin() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-st-gray mb-1">Type</label>
+                  <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Type</label>
                   <select
                     value={qaFormData.note_type}
                     onChange={(e) => setQaFormData({ ...qaFormData, note_type: e.target.value })}
@@ -510,7 +510,7 @@ export default function Admin() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-st-gray mb-1">Note</label>
+                  <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Note</label>
                   <textarea
                     value={qaFormData.note_text}
                     onChange={(e) => setQaFormData({ ...qaFormData, note_text: e.target.value })}
@@ -523,7 +523,7 @@ export default function Admin() {
                   <button onClick={handleQaSave} className="px-4 py-2 bg-st-black text-white rounded-lg text-sm hover:bg-gray-800">
                     Save
                   </button>
-                  <button onClick={() => setQaFormMode(null)} className="px-4 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">
+                  <button onClick={() => setQaFormMode(null)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-[#252929] rounded-lg hover:bg-gray-200">
                     Cancel
                   </button>
                 </div>
@@ -538,7 +538,7 @@ export default function Admin() {
           ) : (
             <DashboardCard title="QA Notes" subtitle={`${qaNotes.length} note${qaNotes.length !== 1 ? 's' : ''}`}>
               {qaNotes.length === 0 ? (
-                <p className="text-sm text-st-gray py-6 text-center">No QA notes yet. Add one above.</p>
+                <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">No QA notes yet. Add one above.</p>
               ) : (
                 <table className="w-full text-sm">
                   <thead>
@@ -552,7 +552,7 @@ export default function Admin() {
                   <tbody>
                     {qaNotes.map((n) => (
                       <tr key={n.id} className="border-b border-gray-50 hover:bg-gray-50">
-                        <td className="py-2.5 px-3 text-st-black font-medium">{n.feature_key}</td>
+                        <td className="py-2.5 px-3 text-st-black dark:text-white font-medium">{n.feature_key}</td>
                         <td className="py-2.5 px-3">
                           <StatusBadge
                             status={n.note_type === 'safe_claim' ? 'verified' : n.note_type === 'misleading' ? 'error' : 'warning'}
@@ -564,14 +564,14 @@ export default function Admin() {
                           <div className="flex items-center gap-1 justify-end">
                             <button
                               onClick={() => { setQaFormMode('edit'); setQaFormData({ id: n.id, feature_key: n.feature_key, note_type: n.note_type, note_text: n.note_text }) }}
-                              className="p-1.5 text-st-gray hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                              className="p-1.5 text-st-gray dark:text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-[#2A2E2E] rounded transition-colors"
                               title="Edit"
                             >
                               <Edit3 className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => handleQaDelete(n.id)}
-                              className="p-1.5 text-st-gray hover:text-red-500 hover:bg-red-50 rounded transition-colors"
+                              className="p-1.5 text-st-gray dark:text-gray-400 hover:text-red-500 hover:bg-red-50 dark:bg-red-900/20 rounded transition-colors"
                               title="Delete"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -597,7 +597,7 @@ export default function Admin() {
           ) : (
             <DashboardCard title="Audit Log" subtitle={`${auditLog.length} recent admin actions`}>
               {auditLog.length === 0 ? (
-                <p className="text-sm text-st-gray py-6 text-center">No audit entries yet.</p>
+                <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">No audit entries yet.</p>
               ) : (
                 <table className="w-full text-sm">
                   <thead>
@@ -611,7 +611,7 @@ export default function Admin() {
                   <tbody>
                     {auditLog.map((entry) => (
                       <tr key={entry.id} className="border-b border-gray-50 hover:bg-gray-50">
-                        <td className="py-2.5 px-3 text-st-gray text-xs whitespace-nowrap">
+                        <td className="py-2.5 px-3 text-st-gray dark:text-gray-400 text-xs whitespace-nowrap">
                           {new Date(entry.created_at).toLocaleString()}
                         </td>
                         <td className="py-2.5 px-3 text-st-black">{entry.admin_email || entry.admin_user_id?.slice(0, 8) || '—'}</td>
@@ -621,7 +621,7 @@ export default function Admin() {
                             label={entry.action.replace(/_/g, ' ')}
                           />
                         </td>
-                        <td className="py-2.5 px-3 text-gray-600 text-xs">
+                        <td className="py-2.5 px-3 text-gray-600 dark:text-gray-300 text-xs">
                           {entry.target_type ? `${entry.target_type}: ${entry.target_id || '—'}` : '—'}
                         </td>
                       </tr>

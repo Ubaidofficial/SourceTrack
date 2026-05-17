@@ -16,14 +16,14 @@ const AI_SOURCES = ['ChatGPT', 'Claude', 'Perplexity', 'Gemini', 'Grok', 'Copilo
 function classifySource(source, medium) {
   const s = (source || '').toLowerCase()
   const m = (medium || '').toLowerCase()
-  if (!s || s === 'direct' || s === '(direct)') return { label: 'Direct', color: 'bg-gray-100 text-gray-600', dot: 'bg-gray-400' }
+  if (!s || s === 'direct' || s === '(direct)') return { label: 'Direct', color: 'bg-gray-100 dark:bg-[#252929] text-gray-600', dot: 'bg-gray-400' }
   if (['cpc','ppc','paid','paid_search','paid_social'].includes(m)) return { label: 'Paid', color: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' }
   if (['email','newsletter'].includes(m)) return { label: 'Email', color: 'bg-purple-100 text-purple-700', dot: 'bg-purple-500' }
   if (AI_SOURCES.map(a => a.toLowerCase()).includes(s)) return { label: 'AI Search', color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' }
   if (['google','bing','yahoo','duckduckgo','baidu'].some(se => s.includes(se))) return { label: 'Organic', color: 'bg-green-100 text-green-700', dot: 'bg-green-500' }
   if (['facebook','instagram','linkedin','twitter','x.com','tiktok','reddit'].some(sn => s.includes(sn))) return { label: 'Social', color: 'bg-pink-100 text-pink-700', dot: 'bg-pink-500' }
   if (m === 'referral' || (!m && s)) return { label: 'Referral', color: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500' }
-  return { label: source, color: 'bg-gray-100 text-gray-600', dot: 'bg-gray-400' }
+  return { label: source, color: 'bg-gray-100 dark:bg-[#252929] text-gray-600', dot: 'bg-gray-400' }
 }
 
 export default function Leads() {
@@ -100,13 +100,13 @@ export default function Leads() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-st-black">Leads</h2>
-          <p className="text-sm text-st-gray mt-0.5">Individual visitors who have converted or engaged with your site</p>
+          <p className="text-sm text-st-gray dark:text-gray-400 mt-0.5">Individual visitors who have converted or engaged with your site</p>
         </div>
         <button onClick={() => {
           if (!site) return
           const params = new URLSearchParams({ site_key: site.site_key, model: 'first_touch', date_from: dateFrom, date_to: dateTo, group_by: 'source', metric: 'revenue' })
           window.open(`/api/export/report?${params}`, '_blank')
-        }} className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5">
+        }} className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-[#1A1D1D] border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] flex items-center gap-1.5">
           <Download className="w-4 h-4" /> Export
         </button>
       </div>
@@ -169,8 +169,8 @@ export default function Leads() {
                   const isAI = lead.ai_source && AI_SOURCES.includes(lead.ai_source)
                   const shortId = lead.id ? lead.id.slice(0, 8) : 'unknown'
                   return (
-                    <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                      <td className="py-3 px-3 text-st-black font-mono text-xs">{shortId}...</td>
+                    <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 dark:hover:bg-[#252929] transition-colors">
+                      <td className="py-3 px-3 text-st-black dark:text-white font-mono text-xs">{shortId}...</td>
                       <td className="py-3 px-3">
                         {(() => {
                           const cls = classifySource(lead.source, lead.medium)
@@ -181,7 +181,7 @@ export default function Leads() {
                                 {lead.ai_source || lead.source || 'Direct'}
                               </span>
                               {lead.campaign && lead.campaign !== 'none' && (
-                                <span className="text-[10px] text-st-gray truncate max-w-[120px]">{lead.campaign}</span>
+                                <span className="text-[10px] text-st-gray dark:text-gray-400 truncate max-w-[120px]">{lead.campaign}</span>
                               )}
                             </div>
                           )
@@ -211,17 +211,17 @@ export default function Leads() {
                       <td className="py-3 px-3 text-xs text-st-gray">
                         {lead.last_seen ? new Date(lead.last_seen).toLocaleDateString() : '—'}
                       </td>
-                      <td className="py-3 px-3 text-right text-st-gray text-xs">
+                      <td className="py-3 px-3 text-right text-st-gray dark:text-gray-400 text-xs">
                         {lead.country || '—'}
                       </td>
                       <td className="py-3 px-3">
                         {(() => {
                           const STATUS_STYLES = {
-                            lead:     'bg-gray-100 text-gray-600',
-                            mql:      'bg-blue-50 text-blue-600',
-                            sql:      'bg-purple-50 text-purple-600',
-                            customer: 'bg-green-50 text-green-700',
-                            rejected: 'bg-red-50 text-red-500'
+                            lead:     'bg-gray-100 dark:bg-[#252929] text-gray-600',
+                            mql:      'bg-blue-50 dark:bg-blue-900/20 text-blue-600',
+                            sql:      'bg-purple-50 dark:bg-purple-900/20 text-purple-600',
+                            customer: 'bg-green-50 dark:bg-green-900/20 text-green-700',
+                            rejected: 'bg-red-50 dark:bg-red-900/20 text-red-500'
                           }
                           const cur = statusMap[lead.id] || lead.status || 'lead'
                           return (
@@ -250,14 +250,14 @@ export default function Leads() {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => navigate(`/leads/${encodeURIComponent(lead.id)}`)}
-                            className="text-xs text-gray-600 hover:text-st-black font-medium flex items-center gap-1"
+                            className="text-xs text-gray-600 dark:text-gray-300 hover:text-st-black dark:text-white font-medium flex items-center gap-1"
                           >
                             <User className="w-3 h-3" />
                             View
                           </button>
                           <button
                             onClick={() => setJourneyVisitorId(lead.id || lead.visitor_id || lead.anonymous_id)}
-                            className="text-xs text-st-black hover:text-gray-700 font-medium flex items-center gap-1"
+                            className="text-xs text-st-black dark:text-white hover:text-gray-700 font-medium flex items-center gap-1"
                           >
                             Journey <ArrowRight className="w-3 h-3" />
                           </button>

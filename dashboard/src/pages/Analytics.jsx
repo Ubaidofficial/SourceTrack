@@ -18,11 +18,11 @@ function BarRow({ label, value, max }) {
   const pct = max > 0 ? (value / max) * 100 : 0
   return (
     <div className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
-      <span className="text-sm text-gray-600 w-36 truncate flex-shrink-0">{label}</span>
-      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+      <span className="text-sm text-gray-600 dark:text-gray-300 w-36 truncate flex-shrink-0">{label}</span>
+      <div className="flex-1 h-1.5 bg-gray-100 dark:bg-[#252929] rounded-full overflow-hidden">
         <div className="h-full bg-st-black rounded-full" style={{ width: `${pct}%` }} />
       </div>
-      <span className="text-sm font-medium text-st-black w-10 text-right flex-shrink-0">
+      <span className="text-sm font-medium text-st-black dark:text-white w-10 text-right flex-shrink-0">
         {value.toLocaleString()}
       </span>
     </div>
@@ -81,13 +81,13 @@ export default function Analytics() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-st-black">Analytics</h2>
-          <p className="text-sm text-st-gray mt-0.5">Privacy-friendly, cookieless web analytics</p>
+          <p className="text-sm text-st-gray dark:text-gray-400 mt-0.5">Privacy-friendly, cookieless web analytics</p>
         </div>
         <div className="flex items-center gap-1.5">
           {TIME_RANGES.map(tr => (
             <button key={tr.days} onClick={() => setDays(tr.days)}
               className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                days === tr.days ? 'bg-st-black text-white' : 'text-st-gray hover:bg-gray-100'
+                days === tr.days ? 'bg-st-black text-white' : 'text-st-gray dark:text-gray-400 hover:bg-gray-100'
               }`}>
               {tr.label}
             </button>
@@ -103,12 +103,12 @@ export default function Analytics() {
         <div className="max-w-lg mx-auto py-16 text-center space-y-6">
           <Eye className="w-12 h-12 text-gray-200 mx-auto" />
           <div>
-            <h3 className="text-lg font-semibold text-st-black mb-2">No analytics data yet</h3>
+            <h3 className="text-lg font-semibold text-st-black dark:text-white mb-2">No analytics data yet</h3>
             <p className="text-sm text-st-gray">Add the analytics tracker to your site to start collecting pageview data.</p>
           </div>
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-left">
-            <p className="text-xs font-semibold text-gray-700 mb-2">Add to your site head:</p>
-            <code className="text-xs text-gray-600 break-all">{snippetUrl}</code>
+          <div className="bg-gray-50 dark:bg-[#111414] border border-gray-200 dark:border-[#333838] rounded-lg p-4 text-left">
+            <p className="text-xs font-semibold text-gray-700 dark:text-gray-200 mb-2">Add to your site head:</p>
+            <code className="text-xs text-gray-600 dark:text-gray-300 break-all">{snippetUrl}</code>
           </div>
           <p className="text-xs text-st-gray">Cookieless · No consent banner required · GDPR compliant</p>
         </div>
@@ -143,23 +143,23 @@ export default function Analytics() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <DashboardCard title="Top Pages" subtitle="By pageviews">
               {topPages.length === 0
-                ? <p className="text-sm text-st-gray py-4 text-center">No data</p>
+                ? <p className="text-sm text-st-gray dark:text-gray-400 py-4 text-center">No data</p>
                 : topPages.map((r, i) => <BarRow key={i} label={r.page} value={r.views} max={maxPage} />)
               }
             </DashboardCard>
             <DashboardCard title="Top Sources" subtitle="Traffic origins including AI platforms">
               {topSources.length === 0
-                ? <p className="text-sm text-st-gray py-4 text-center">No data</p>
+                ? <p className="text-sm text-st-gray dark:text-gray-400 py-4 text-center">No data</p>
                 : topSources.map((r, i) => (
                   <div key={i} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
                     <span className={`text-sm w-36 truncate flex-shrink-0 ${r.source.startsWith('AI:') ? 'text-lime-700 font-medium' : 'text-gray-600'}`}>
                       {r.source.startsWith('AI:') ? '✦ ' : ''}{r.source}
                     </span>
-                    <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="flex-1 h-1.5 bg-gray-100 dark:bg-[#252929] rounded-full overflow-hidden">
                       <div className={`h-full rounded-full ${r.source.startsWith('AI:') ? 'bg-lime-500' : 'bg-st-black'}`}
                         style={{ width: `${(r.visits / maxSource) * 100}%` }} />
                     </div>
-                    <span className="text-sm font-medium text-st-black w-10 text-right flex-shrink-0">
+                    <span className="text-sm font-medium text-st-black dark:text-white w-10 text-right flex-shrink-0">
                       {r.visits.toLocaleString()}
                     </span>
                   </div>
@@ -178,7 +178,7 @@ export default function Analytics() {
                 </div>
               ) : aiSources.map((r, i) => (
                 <div key={i} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                  <span className="text-sm text-gray-700 font-medium">{r.source}</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-200 font-medium">{r.source}</span>
                   <span className="text-sm font-semibold text-st-black">{r.visits.toLocaleString()}</span>
                 </div>
               ))}
@@ -196,12 +196,12 @@ export default function Analytics() {
                   const pct = Math.round((val / total) * 100)
                   return (
                     <div key={key} className="flex items-center gap-3">
-                      <Icon className="w-4 h-4 text-st-gray flex-shrink-0" />
-                      <span className="text-sm text-gray-600 w-16">{label}</span>
-                      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <Icon className="w-4 h-4 text-st-gray dark:text-gray-400 flex-shrink-0" />
+                      <span className="text-sm text-gray-600 dark:text-gray-300 w-16">{label}</span>
+                      <div className="flex-1 h-1.5 bg-gray-100 dark:bg-[#252929] rounded-full overflow-hidden">
                         <div className="h-full bg-st-black rounded-full" style={{ width: `${pct}%` }} />
                       </div>
-                      <span className="text-xs text-st-gray w-8 text-right">{pct}%</span>
+                      <span className="text-xs text-st-gray dark:text-gray-400 w-8 text-right">{pct}%</span>
                     </div>
                   )
                 })}
@@ -210,7 +210,7 @@ export default function Analytics() {
 
             <DashboardCard title="Top Countries" subtitle="By visits">
               {topCountries.length === 0
-                ? <p className="text-sm text-st-gray py-4 text-center">No data</p>
+                ? <p className="text-sm text-st-gray dark:text-gray-400 py-4 text-center">No data</p>
                 : topCountries.slice(0, 8).map((r, i) => (
                   <BarRow key={i} label={r.country} value={r.visits} max={maxCountry} />
                 ))
@@ -219,10 +219,10 @@ export default function Analytics() {
           </div>
 
           <DashboardCard title="Analytics Snippet" subtitle="Cookieless · No consent banner · GDPR compliant">
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-center gap-3">
-              <code className="text-xs text-gray-600 flex-1 break-all">{snippetUrl}</code>
+            <div className="bg-gray-50 dark:bg-[#111414] border border-gray-200 dark:border-[#333838] rounded-lg p-3 flex items-center gap-3">
+              <code className="text-xs text-gray-600 dark:text-gray-300 flex-1 break-all">{snippetUrl}</code>
               <button onClick={() => navigator.clipboard.writeText(snippetUrl)}
-                className="text-xs text-st-gray hover:text-st-black px-2 py-1 border border-gray-200 rounded flex-shrink-0">
+                className="text-xs text-st-gray dark:text-gray-400 hover:text-st-black dark:text-white px-2 py-1 border border-gray-200 dark:border-[#333838] rounded flex-shrink-0">
                 Copy
               </button>
             </div>

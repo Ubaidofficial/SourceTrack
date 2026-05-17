@@ -84,13 +84,13 @@ export default function LeadDetail() {
     return (
       <div className="space-y-6">
         <button onClick={() => navigate('/leads')}
-          className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-st-black transition-colors">
+          className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300 hover:text-st-black dark:text-white transition-colors">
           <ArrowLeft className="w-4 h-4" />
           Back to Leads
         </button>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-          <p className="text-st-gray font-medium">Lead not found</p>
-          <p className="text-sm text-st-gray mt-1">
+        <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#333838] p-12 text-center">
+          <p className="text-st-gray dark:text-gray-400 font-medium">Lead not found</p>
+          <p className="text-sm text-st-gray dark:text-gray-400 mt-1">
             The requested lead may have been removed or the ID is invalid.
           </p>
         </div>
@@ -103,7 +103,7 @@ export default function LeadDetail() {
       {/* Back + Header */}
       <div>
         <button onClick={() => navigate('/leads')}
-          className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-st-black transition-colors mb-4">
+          className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-300 hover:text-st-black dark:text-white transition-colors mb-4">
           <ArrowLeft className="w-4 h-4" />
           Back to Leads
         </button>
@@ -111,9 +111,9 @@ export default function LeadDetail() {
         <div className="flex items-start justify-between flex-wrap gap-3">
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-2xl font-bold text-st-black font-mono">{truncateId(lead.id)}</h2>
+              <h2 className="text-2xl font-bold text-st-black dark:text-white font-mono">{truncateId(lead.id)}</h2>
               <button onClick={handleCopyId}
-                className="p-1.5 text-st-gray hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
+                className="p-1.5 text-st-gray dark:text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-[#2A2E2E] rounded transition-colors"
                 title="Copy full ID">
                 {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
               </button>
@@ -121,7 +121,7 @@ export default function LeadDetail() {
                 <StatusBadge status="verified" label={lead.ai_source} />
               )}
             </div>
-            <div className="flex items-center gap-3 mt-2 text-xs text-st-gray flex-wrap">
+            <div className="flex items-center gap-3 mt-2 text-xs text-st-gray dark:text-gray-400 flex-wrap">
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 First seen {lead.first_seen ? new Date(lead.first_seen).toLocaleDateString() : '—'}
@@ -145,16 +145,16 @@ export default function LeadDetail() {
       {/* Source summary pill strip */}
       <div className="flex items-center gap-2 flex-wrap text-sm">
         <span className="text-st-gray">Acquisition:</span>
-        <span className="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">
+        <span className="px-2.5 py-1 bg-gray-100 dark:bg-[#252929] text-gray-700 dark:text-gray-200 rounded-full text-xs font-medium">
           {lead.source || 'direct'}
         </span>
         {lead.medium && lead.medium !== 'none' && (
-          <span className="px-2.5 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
+          <span className="px-2.5 py-1 bg-gray-100 dark:bg-[#252929] text-gray-600 dark:text-gray-300 rounded-full text-xs">
             {lead.medium}
           </span>
         )}
         {lead.campaign && (
-          <span className="px-2.5 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
+          <span className="px-2.5 py-1 bg-gray-100 dark:bg-[#252929] text-gray-600 dark:text-gray-300 rounded-full text-xs">
             {lead.campaign}
           </span>
         )}
@@ -182,20 +182,20 @@ export default function LeadDetail() {
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <p className="text-xs text-st-gray font-medium uppercase tracking-wider mb-0.5">First-Touch Source</p>
+                <p className="text-xs text-st-gray dark:text-gray-400 font-medium uppercase tracking-wider mb-0.5">First-Touch Source</p>
                 <p className="text-sm text-st-black">{lead.first_touch_source || '—'}</p>
               </div>
               <div>
-                <p className="text-xs text-st-gray font-medium uppercase tracking-wider mb-0.5">First-Touch Medium</p>
+                <p className="text-xs text-st-gray dark:text-gray-400 font-medium uppercase tracking-wider mb-0.5">First-Touch Medium</p>
                 <p className="text-sm text-st-black">{lead.first_touch_medium || '—'}</p>
               </div>
               <div>
-                <p className="text-xs text-st-gray font-medium uppercase tracking-wider mb-0.5">First-Touch Campaign</p>
+                <p className="text-xs text-st-gray dark:text-gray-400 font-medium uppercase tracking-wider mb-0.5">First-Touch Campaign</p>
                 <p className="text-sm text-st-black">{lead.campaign || '—'}</p>
               </div>
               <div>
-                <p className="text-xs text-st-gray font-medium uppercase tracking-wider mb-0.5">First Page URL</p>
-                <p className="text-sm text-st-black truncate" title={lead.first_page_url}>
+                <p className="text-xs text-st-gray dark:text-gray-400 font-medium uppercase tracking-wider mb-0.5">First Page URL</p>
+                <p className="text-sm text-st-black dark:text-white truncate" title={lead.first_page_url}>
                   {lead.first_page_url ? (() => {
                     try { return new URL(lead.first_page_url).pathname } catch { return lead.first_page_url }
                   })() : '—'}
@@ -210,27 +210,27 @@ export default function LeadDetail() {
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <p className="text-xs text-st-gray font-medium uppercase tracking-wider mb-0.5">First Seen</p>
+                <p className="text-xs text-st-gray dark:text-gray-400 font-medium uppercase tracking-wider mb-0.5">First Seen</p>
                 <p className="text-sm text-st-black">
                   {lead.first_seen ? new Date(lead.first_seen).toLocaleString() : '—'}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-st-gray font-medium uppercase tracking-wider mb-0.5">Last Seen</p>
+                <p className="text-xs text-st-gray dark:text-gray-400 font-medium uppercase tracking-wider mb-0.5">Last Seen</p>
                 <p className="text-sm text-st-black">
                   {lead.last_seen ? new Date(lead.last_seen).toLocaleString() : '—'}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-st-gray font-medium uppercase tracking-wider mb-0.5">Total Pageviews</p>
+                <p className="text-xs text-st-gray dark:text-gray-400 font-medium uppercase tracking-wider mb-0.5">Total Pageviews</p>
                 <p className="text-sm text-st-black">{(lead.pageviews || 0).toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-xs text-st-gray font-medium uppercase tracking-wider mb-0.5">Total Conversions</p>
+                <p className="text-xs text-st-gray dark:text-gray-400 font-medium uppercase tracking-wider mb-0.5">Total Conversions</p>
                 <p className="text-sm text-st-black">{lead.conversions || 0}</p>
               </div>
               <div className="col-span-2">
-                <p className="text-xs text-st-gray font-medium uppercase tracking-wider mb-0.5">Total Revenue</p>
+                <p className="text-xs text-st-gray dark:text-gray-400 font-medium uppercase tracking-wider mb-0.5">Total Revenue</p>
                 <p className="text-lg font-semibold text-st-black">${(lead.revenue || 0).toFixed(2)}</p>
               </div>
             </div>
@@ -245,11 +245,11 @@ export default function LeadDetail() {
             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-300" />
           </div>
         ) : !recentEvents?.events || recentEvents.events.length === 0 ? (
-          <p className="text-sm text-st-gray py-4 text-center">No events recorded yet for this visitor.</p>
+          <p className="text-sm text-st-gray dark:text-gray-400 py-4 text-center">No events recorded yet for this visitor.</p>
         ) : (
           <div className="space-y-2 max-h-72 overflow-y-auto">
             {recentEvents.events.map((e, i) => (
-              <div key={i} className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <div key={i} className="flex items-start gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] transition-colors">
                 <div className={`p-1.5 rounded-lg flex-shrink-0 ${
                   e.event === '$conversion' ? 'bg-lime-100' :
                   e.event === '$pageview' ? 'bg-gray-100' :
@@ -281,14 +281,14 @@ export default function LeadDetail() {
                       </span>
                     )}
                     {e.is_conversion && e.conversion_value != null && (
-                      <span className="text-xs text-gray-700 font-medium">${Number(e.conversion_value).toFixed(0)}</span>
+                      <span className="text-xs text-gray-700 dark:text-gray-200 font-medium">${Number(e.conversion_value).toFixed(0)}</span>
                     )}
-                    <span className="text-xs text-st-gray ml-auto flex-shrink-0">
+                    <span className="text-xs text-st-gray dark:text-gray-400 ml-auto flex-shrink-0">
                       {new Date(e.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                   {e.page_url && (
-                    <p className="text-xs text-st-gray truncate mt-0.5" title={e.page_url}>
+                    <p className="text-xs text-st-gray dark:text-gray-400 truncate mt-0.5" title={e.page_url}>
                       {(() => { try { return new URL(e.page_url).pathname } catch { return e.page_url } })()}
                     </p>
                   )}
@@ -330,7 +330,7 @@ export default function LeadDetail() {
                 <p className="text-xs text-st-gray">Gemini users span a broad audience — from casual searchers to deep researchers in the Google ecosystem.</p>
               )}
               {(lead.revenue > 0 && lead.conversions > 0) && (
-                <p className="text-xs text-gray-700 mt-1 font-medium">
+                <p className="text-xs text-gray-700 dark:text-gray-200 mt-1 font-medium">
                   Revenue from AI: ${lead.revenue.toFixed(0)} across {lead.conversions} conversion{lead.conversions === 1 ? '' : 's'}.
                 </p>
               )}
@@ -351,7 +351,7 @@ export default function LeadDetail() {
               )}
             </div>
             <div>
-              <p className="text-xs text-st-gray uppercase tracking-wider">Status</p>
+              <p className="text-xs text-st-gray dark:text-gray-400 uppercase tracking-wider">Status</p>
               <p className="text-sm font-medium text-st-black">
                 {lead.id && lead.id.includes('-') ? 'Anonymous' : 'Identified'}
               </p>
@@ -362,7 +362,7 @@ export default function LeadDetail() {
               <Calendar className="w-5 h-5 text-st-gray" />
             </div>
             <div>
-              <p className="text-xs text-st-gray uppercase tracking-wider">Activity</p>
+              <p className="text-xs text-st-gray dark:text-gray-400 uppercase tracking-wider">Activity</p>
               <p className="text-sm font-medium text-st-black">{lead.active_days || 0} active day{(lead.active_days || 0) === 1 ? '' : 's'}</p>
             </div>
           </div>

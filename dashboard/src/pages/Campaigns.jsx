@@ -149,25 +149,25 @@ export default function Campaigns() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-st-black">Campaigns & Attribution</h2>
-          <p className="text-sm text-st-gray mt-0.5">Performance by marketing channel with real-time revenue and conversion data</p>
+          <p className="text-sm text-st-gray dark:text-gray-400 mt-0.5">Performance by marketing channel with real-time revenue and conversion data</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => navigate('/report-builder')}
-            className="px-3 py-1.5 text-sm text-st-black bg-gray-50 rounded-lg hover:bg-gray-100 font-medium">
+            className="px-3 py-1.5 text-sm text-st-black dark:text-white bg-gray-50 dark:bg-[#111414] rounded-lg hover:bg-gray-100 dark:hover:bg-[#2A2E2E] font-medium">
             Advanced Report
           </button>
           <button onClick={() => {
             if (!site) return
             const params = new URLSearchParams({ site_key: site.site_key, model: 'last_touch', date_from: dateFrom, date_to: dateTo, group_by: activeDim, metric: 'revenue' })
             window.open(`/api/export/report?${params}`, '_blank')
-          }} className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5">
+          }} className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-[#1A1D1D] border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] flex items-center gap-1.5">
             <Download className="w-4 h-4" /> Export
           </button>
         </div>
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+      <div className="bg-white dark:bg-[#1A1D1D] rounded-xl border border-gray-200 dark:border-[#333838] shadow-sm p-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex-1 min-w-[200px] relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-st-gray" />
@@ -178,11 +178,11 @@ export default function Campaigns() {
             />
           </div>
 
-          <div className="flex bg-gray-100 rounded-lg p-1">
+          <div className="flex bg-gray-100 dark:bg-[#252929] rounded-lg p-1">
             {DATE_RANGES.map(dr => (
               <button key={dr.label} onClick={() => setDateRange(dr.days)}
                 className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                  dateRange === dr.days ? 'bg-white text-st-black shadow-sm' : 'text-st-gray hover:text-gray-700'
+                  dateRange === dr.days ? 'bg-white dark:bg-[#1A1D1D] text-st-black dark:text-white shadow-sm' : 'text-st-gray dark:text-gray-400 hover:text-gray-700'
                 }`}>
                 {dr.label}
               </button>
@@ -209,7 +209,7 @@ export default function Campaigns() {
         {DIMENSIONS.map(d => (
           <button key={d.key} onClick={() => setActiveDim(d.key)}
             className={`px-3.5 py-1.5 text-sm rounded-lg font-medium transition-colors ${
-              activeDim === d.key ? 'bg-st-black text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              activeDim === d.key ? 'bg-st-black text-white' : 'bg-gray-100 dark:bg-[#252929] text-gray-600 dark:text-gray-300 hover:bg-gray-200'
             }`}>
             {d.label}
           </button>
@@ -251,31 +251,31 @@ export default function Campaigns() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                    <th className="text-left py-3 px-4 text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wider">
                       {DIMENSIONS.find(d => d.key === activeDim)?.label || 'Name'}
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wider">
                       Revenue
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wider">
                       Conversions
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wider">
                       Avg Value
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wider">
                       Trend
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wider">
                       Spend ✏️
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wider">
                       CPL
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wider">
                       ROAS
                     </th>
                   </tr>
@@ -283,9 +283,9 @@ export default function Campaigns() {
                 <tbody className="divide-y divide-gray-100">
                   {rows.map((r, i) => {
                     return (
-                      <tr key={i} className="hover:bg-gray-50 transition-colors">
+                      <tr key={i} className="hover:bg-gray-50 dark:hover:bg-[#252929] transition-colors">
                         <td className="py-3 px-4">
-                          <p className="text-st-black font-medium">{r.name || 'unknown'}</p>
+                          <p className="text-st-black dark:text-white font-medium">{r.name || 'unknown'}</p>
                         </td>
                         <td className="py-3 px-4 text-right">
                           <StatusBadge status={r.status} label={statusLabel(r.status)} />
@@ -317,7 +317,7 @@ export default function Campaigns() {
                           ) : (
                             <div className="flex items-center justify-end gap-1 group">
                               <span className="text-gray-600">{spendMap[r.name] ? `$${Number(spendMap[r.name]).toFixed(0)}` : '—'}</span>
-                              <button onClick={() => { setEditingSpend(r.name); setSpendInput(spendMap[r.name] || '') }} className="opacity-0 group-hover:opacity-100 text-st-gray hover:text-gray-600">
+                              <button onClick={() => { setEditingSpend(r.name); setSpendInput(spendMap[r.name] || '') }} className="opacity-0 group-hover:opacity-100 text-st-gray dark:text-gray-400 hover:text-gray-600">
                                 <Pencil className="w-3 h-3" />
                               </button>
                             </div>

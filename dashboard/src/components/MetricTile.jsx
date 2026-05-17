@@ -15,14 +15,14 @@ const MetricTile = ({ label, value, format = 'number', isEmpty = false, trend = 
   const trendPositive = trend != null && trend > 0
   const trendNegative = trend != null && trend < 0
   return (
-    <div className="metric-tile bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex flex-col gap-1">
-      <p className="text-xs font-medium text-st-gray uppercase tracking-wide">{label}</p>
+    <div className="metric-tile bg-white dark:bg-[#1A1D1D] rounded-xl p-5 shadow-sm border border-gray-100 dark:border-[#2A2E2E] flex flex-col gap-1">
+      <p className="text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wide">{label}</p>
       {displayValue != null ? (
-        <p className="text-2xl font-semibold text-st-black tabular-nums">{displayValue}</p>
+        <p className="text-2xl font-semibold text-st-black dark:text-white tabular-nums">{displayValue}</p>
       ) : (
         <p className="text-2xl font-semibold text-gray-300">—</p>
       )}
-      {isEmptyState && <p className="text-xs text-st-gray italic mt-0.5">Not yet tracked</p>}
+      {isEmptyState && <p className="text-xs text-st-gray dark:text-gray-400 italic mt-0.5">Not yet tracked</p>}
       {!isEmptyState && trend != null && (
         <p className={`text-xs font-medium mt-0.5 ${trendPositive ? 'text-green-600' : trendNegative ? 'text-red-500' : 'text-st-gray'}`}>
           {trendPositive ? '▲' : trendNegative ? '▼' : '—'} {Math.abs(trend).toFixed(1)}% vs last period

@@ -16,7 +16,7 @@ const AI_COLORS = {
   'Claude':     'text-orange-600 bg-orange-50',
   'Perplexity': 'text-purple-600 bg-purple-50',
   'Gemini':     'text-blue-600 bg-blue-50',
-  'Grok':       'text-gray-600 bg-gray-100',
+  'Grok':       'text-gray-600 dark:text-gray-300 bg-gray-100',
   'Copilot':    'text-sky-600 bg-sky-50',
   'DeepSeek':   'text-cyan-600 bg-cyan-50',
 }
@@ -67,19 +67,19 @@ export default function JourneyModal({ visitorId, siteKey, onClose, onQualified 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+        className="bg-white dark:bg-[#1A1D1D] rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* ── Header ── */}
-        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-[#2A2E2E] flex items-center justify-between flex-shrink-0">
           <div>
             <h2 className="text-base font-bold text-st-black">Visitor Journey</h2>
-            <p className="text-xs text-st-gray font-mono mt-0.5">{shortId}</p>
+            <p className="text-xs text-st-gray dark:text-gray-400 font-mono mt-0.5">{shortId}</p>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handleExport}
-              className="px-3 py-1.5 text-xs text-st-gray border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center gap-1"
+              className="px-3 py-1.5 text-xs text-st-gray dark:text-gray-400 border border-gray-200 dark:border-[#333838] rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] flex items-center gap-1"
             >
               <Download className="w-3.5 h-3.5" /> Export
             </button>
@@ -91,7 +91,7 @@ export default function JourneyModal({ visitorId, siteKey, onClose, onQualified 
                 Mark Qualified
               </button>
             )}
-            <button onClick={onClose} className="p-1.5 text-st-gray hover:text-st-black rounded-lg hover:bg-gray-100">
+            <button onClick={onClose} className="p-1.5 text-st-gray dark:text-gray-400 hover:text-st-black dark:text-white rounded-lg hover:bg-gray-100">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -109,33 +109,33 @@ export default function JourneyModal({ visitorId, siteKey, onClose, onQualified 
             <div className="grid grid-cols-1 lg:grid-cols-5 h-full">
 
               {/* ── Left Panel — lime tint ── */}
-              <div className="lg:col-span-2 bg-st-lime/10 p-6 space-y-5 border-r border-gray-100">
+              <div className="lg:col-span-2 bg-st-lime/10 dark:bg-st-lime/5 p-6 space-y-5 border-r border-gray-100">
 
                 {/* KPI row */}
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-white rounded-xl p-3 text-center shadow-sm">
+                  <div className="bg-white dark:bg-[#1A1D1D] rounded-xl p-3 text-center shadow-sm">
                     <p className="text-xl font-bold text-st-black">{summary.touchpoints}</p>
-                    <p className="text-[10px] text-st-gray uppercase tracking-wide mt-0.5">Touchpoints</p>
+                    <p className="text-[10px] text-st-gray dark:text-gray-400 uppercase tracking-wide mt-0.5">Touchpoints</p>
                   </div>
-                  <div className="bg-white rounded-xl p-3 text-center shadow-sm">
+                  <div className="bg-white dark:bg-[#1A1D1D] rounded-xl p-3 text-center shadow-sm">
                     <p className="text-xl font-bold text-st-black">
                       {summary.conversionValue > 0 ? `$${summary.conversionValue.toFixed(0)}` : '—'}
                     </p>
-                    <p className="text-[10px] text-st-gray uppercase tracking-wide mt-0.5">Value</p>
+                    <p className="text-[10px] text-st-gray dark:text-gray-400 uppercase tracking-wide mt-0.5">Value</p>
                   </div>
-                  <div className="bg-white rounded-xl p-3 text-center shadow-sm">
-                    <p className="text-sm font-bold text-st-black truncate">{summary.journeyDuration}</p>
-                    <p className="text-[10px] text-st-gray uppercase tracking-wide mt-0.5">Duration</p>
+                  <div className="bg-white dark:bg-[#1A1D1D] rounded-xl p-3 text-center shadow-sm">
+                    <p className="text-sm font-bold text-st-black dark:text-white truncate">{summary.journeyDuration}</p>
+                    <p className="text-[10px] text-st-gray dark:text-gray-400 uppercase tracking-wide mt-0.5">Duration</p>
                   </div>
-                  <div className="bg-white rounded-xl p-3 text-center shadow-sm">
-                    <p className="text-sm font-bold text-st-black truncate">{summary.device}</p>
-                    <p className="text-[10px] text-st-gray uppercase tracking-wide mt-0.5">Device</p>
+                  <div className="bg-white dark:bg-[#1A1D1D] rounded-xl p-3 text-center shadow-sm">
+                    <p className="text-sm font-bold text-st-black dark:text-white truncate">{summary.device}</p>
+                    <p className="text-[10px] text-st-gray dark:text-gray-400 uppercase tracking-wide mt-0.5">Device</p>
                   </div>
                 </div>
 
                 {/* Attribution path */}
-                <div className="bg-white rounded-xl p-4 shadow-sm space-y-2">
-                  <p className="text-xs font-semibold text-st-black mb-2">Attribution</p>
+                <div className="bg-white dark:bg-[#1A1D1D] rounded-xl p-4 shadow-sm space-y-2">
+                  <p className="text-xs font-semibold text-st-black dark:text-white mb-2">Attribution</p>
                   <SummaryField label="First Touch"    value={summary.firstTouch} />
                   <SummaryField label="Last Page"      value={summary.lastLocation} />
                   <SummaryField label="Conversion"     value={summary.currentEventType !== '—' ? summary.currentEventType : null} />
@@ -151,12 +151,12 @@ export default function JourneyModal({ visitorId, siteKey, onClose, onQualified 
 
                 {/* Path preview */}
                 {summary.pathPreview.length > 1 && (
-                  <div className="bg-white rounded-xl p-4 shadow-sm">
-                    <p className="text-xs font-semibold text-st-black mb-2">Page Path</p>
+                  <div className="bg-white dark:bg-[#1A1D1D] rounded-xl p-4 shadow-sm">
+                    <p className="text-xs font-semibold text-st-black dark:text-white mb-2">Page Path</p>
                     <div className="flex flex-wrap items-center gap-1">
                       {summary.pathPreview.map((p, i) => (
                         <span key={i} className="flex items-center gap-1">
-                          <span className="text-[10px] bg-gray-100 text-st-gray px-1.5 py-0.5 rounded font-mono truncate max-w-[80px]">{p}</span>
+                          <span className="text-[10px] bg-gray-100 dark:bg-[#252929] text-st-gray dark:text-gray-400 px-1.5 py-0.5 rounded font-mono truncate max-w-[80px]">{p}</span>
                           {i < summary.pathPreview.length - 1 && <ArrowRight className="w-2.5 h-2.5 text-gray-300 flex-shrink-0" />}
                         </span>
                       ))}
@@ -180,7 +180,7 @@ export default function JourneyModal({ visitorId, siteKey, onClose, onQualified 
                       className={`text-xs px-3 py-1 rounded-full font-medium transition-colors ${
                         filter === f.key
                           ? 'bg-st-black text-white'
-                          : 'bg-gray-100 text-st-gray hover:bg-gray-200'
+                          : 'bg-gray-100 dark:bg-[#252929] text-st-gray dark:text-gray-400 hover:bg-gray-200'
                       }`}
                     >
                       {f.label}
@@ -190,7 +190,7 @@ export default function JourneyModal({ visitorId, siteKey, onClose, onQualified 
 
                 {/* Timeline */}
                 {events.length === 0 ? (
-                  <p className="text-sm text-st-gray py-8 text-center">No events match this filter.</p>
+                  <p className="text-sm text-st-gray dark:text-gray-400 py-8 text-center">No events match this filter.</p>
                 ) : (
                   <div className="space-y-2 overflow-y-auto flex-1">
                     {events.map((e, i) => {
@@ -207,8 +207,8 @@ export default function JourneyModal({ visitorId, siteKey, onClose, onQualified 
                           key={i}
                           className={`rounded-xl border transition-all ${
                             isConversion
-                              ? 'bg-st-lime/10 border-st-lime/40'
-                              : 'bg-white border-gray-100 hover:border-gray-200'
+                              ? 'bg-st-lime/10 dark:bg-st-lime/5 border-st-lime/40'
+                              : 'bg-white dark:bg-[#1A1D1D] border-gray-100 dark:border-[#2A2E2E] hover:border-gray-200'
                           }`}
                         >
                           <div
@@ -229,7 +229,7 @@ export default function JourneyModal({ visitorId, siteKey, onClose, onQualified 
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
-                                  isConversion ? 'bg-st-lime text-st-black' : 'bg-gray-100 text-gray-600'
+                                  isConversion ? 'bg-st-lime text-st-black' : 'bg-gray-100 dark:bg-[#252929] text-gray-600'
                                 }`}>
                                   {label}
                                 </span>
@@ -245,7 +245,7 @@ export default function JourneyModal({ visitorId, siteKey, onClose, onQualified 
                                 )}
                               </div>
                               {e.page_url && (
-                                <p className="text-xs text-st-gray mt-0.5 truncate">
+                                <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5 truncate">
                                   {(() => { try { return new URL(e.page_url).pathname } catch { return e.page_url } })()}
                                 </p>
                               )}
@@ -254,14 +254,14 @@ export default function JourneyModal({ visitorId, siteKey, onClose, onQualified 
                               </p>
                             </div>
 
-                            <button className="flex-shrink-0 text-st-gray mt-1">
+                            <button className="flex-shrink-0 text-st-gray dark:text-gray-400 mt-1">
                               {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                             </button>
                           </div>
 
                           {/* Expanded detail */}
                           {isExpanded && (
-                            <div className="px-3 pb-3 pt-0 ml-10 text-xs text-st-gray space-y-1 border-t border-gray-100">
+                            <div className="px-3 pb-3 pt-0 ml-10 text-xs text-st-gray dark:text-gray-400 space-y-1 border-t border-gray-100">
                               {e.utm_source && (
                                 <p>UTM: {[e.utm_source, e.utm_medium, e.utm_campaign].filter(Boolean).join(' / ')}</p>
                               )}
@@ -293,7 +293,7 @@ function SummaryField({ label, value }) {
   return (
     <div className="flex items-center justify-between">
       <p className="text-xs text-st-gray">{label}</p>
-      <p className="text-xs font-medium text-st-black truncate max-w-[120px]">{value}</p>
+      <p className="text-xs font-medium text-st-black dark:text-white truncate max-w-[120px]">{value}</p>
     </div>
   )
 }
