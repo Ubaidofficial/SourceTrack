@@ -2327,3 +2327,13 @@ analytics.js (pageview collector) — ZERO cookies. Clean.
 - dashboard/src/pages/AIAnalytics.jsx — AnomalyCard component: on-demand trigger, AI summary in amber callout, anomaly list with type icons (📈📉✨⚠️), WoW channel table (8 rows), threshold note. VerdictCard component: calls /api/attribution/verdicts, SCALE🚀/PAUSE⏸/KILL🛑 verdict rows with summary count pills, reason text, signal label.
 
 **Build:** ✅ passing
+
+## Session 97 — T5.2 + T5.3 + T5.8
+
+**Files modified:**
+- dashboard/src/pages/Dashboard.jsx:
+  - T5.2: Conversion Events card now business-type aware — ecommerce shows purchase first, SaaS shows trial first, leadgen shows lead first. Subtitle and empty state text also change by type.
+  - T5.3: "Orders/Leads by Channel" horizontal bar chart (top 8 channels by conversion volume). Title changes by business type (Orders/Signups/Leads). First bar black, second lime, rest gray.
+  - T5.8: Alerts moved from bottom DashboardCard to inline banners at top of page (before KPI strip). Red for high severity, amber for normal. Max 2 shown. AlertTriangle icon added.
+
+**Build:** ✅ passing

@@ -130,7 +130,7 @@ export default function AIAnalytics() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-st-black">AI Analytics</h2>
-        <p className="text-sm text-st-gray mt-1">Performance from AI platforms — ChatGPT, Claude, Perplexity, Gemini, and more</p>
+        <p className="text-sm text-st-gray dark:text-gray-400 mt-1">Performance from AI platforms — ChatGPT, Claude, Perplexity, Gemini, and more</p>
       </div>
 
       {isLoading ? (
@@ -138,21 +138,21 @@ export default function AIAnalytics() {
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black" />
         </div>
       ) : !hasData ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+        <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#333838] p-12 text-center">
           <Sparkles className="w-12 h-12 text-lime-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-st-black mb-2">No AI traffic detected yet</h3>
-          <p className="text-sm text-st-gray max-w-md mx-auto mb-6">
+          <h3 className="text-lg font-semibold text-st-black dark:text-white mb-2">No AI traffic detected yet</h3>
+          <p className="text-sm text-st-gray dark:text-gray-400 max-w-md mx-auto mb-6">
             AI Analytics shows you which AI platforms (ChatGPT, Claude, Perplexity, etc.) send visitors to your site — and which of those visitors convert.
           </p>
-          <div className="space-y-2 text-xs text-st-gray text-left max-w-sm mx-auto">
+          <div className="space-y-2 text-xs text-st-gray dark:text-gray-400 text-left max-w-sm mx-auto">
             <p className="font-medium text-gray-700">How AI tracking works:</p>
             <ul className="list-disc list-inside space-y-1">
               <li>When a visitor clicks a link in ChatGPT, Claude, or another AI tool, the referrer header is detected</li>
-              <li>The AI platform name is stored as <code className="bg-gray-100 px-1 rounded text-xs">ai_source</code> on every event</li>
+              <li>The AI platform name is stored as <code className="bg-gray-100 dark:bg-[#252929] px-1 rounded text-xs">ai_source</code> on every event</li>
               <li>Conversions from AI-sourced traffic are attributed to the specific platform</li>
               <li>This page shows AI revenue, conversions, conversion rates, and trends</li>
             </ul>
-            <p className="text-st-gray mt-3">If your site gets AI traffic but nothing appears here, check the Event Logger for pageview events with ai_source values.</p>
+            <p className="text-st-gray dark:text-gray-400 mt-3">If your site gets AI traffic but nothing appears here, check the Event Logger for pageview events with ai_source values.</p>
           </div>
           <button onClick={() => window.location.href = '/snippet'}
             className="mt-6 px-4 py-2 bg-st-black text-white rounded-lg text-sm font-medium hover:bg-gray-800">
@@ -177,12 +177,12 @@ export default function AIAnalytics() {
           {insights.length > 0 && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               {insights.map((insight, i) => (
-                <div key={i} className={`rounded-xl border shadow-sm p-5 ${insight.positive ? 'bg-lime-50 border-lime-200' : 'bg-amber-50 border-amber-200'}`}>
+                <div key={i} className={`rounded-xl border shadow-sm p-5 ${insight.positive ? 'bg-lime-50 border-lime-200' : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200'}`}>
                   <div className="flex items-center gap-2 mb-2">
                     <Sparkles className="w-4 h-4 text-lime-700" />
                     <p className="text-sm font-semibold text-st-black">{insight.title}</p>
                   </div>
-                  <p className="text-xs text-gray-600 leading-relaxed">{insight.desc}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">{insight.desc}</p>
                 </div>
               ))}
             </div>
@@ -196,7 +196,7 @@ export default function AIAnalytics() {
               { label: 'AI Conv Rate', value: `${kpis.ai_conversion_rate.toFixed(2)}%`, color: 'text-lime-700' },
               { label: 'Non-AI Conv Rate', value: `${kpis.non_ai_conversion_rate.toFixed(2)}%`, color: 'text-gray-600' }
             ].map(item => (
-              <div key={item.label} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+              <div key={item.label} className="bg-white dark:bg-[#1A1D1D] rounded-xl border border-gray-200 dark:border-[#333838] shadow-sm p-4">
                 <p className="text-xs text-st-gray">{item.label}</p>
                 <p className={`text-xl font-bold ${item.color} mt-0.5`}>{item.value}</p>
               </div>
@@ -205,8 +205,8 @@ export default function AIAnalytics() {
 
           {/* AOV Comparison + AI Revenue Share Info */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-              <h3 className="text-sm font-semibold text-st-black mb-2">AI vs Non-AI Average Order Value</h3>
+            <div className="bg-white dark:bg-[#1A1D1D] rounded-xl border border-gray-200 dark:border-[#333838] shadow-sm p-6">
+              <h3 className="text-sm font-semibold text-st-black dark:text-white mb-2">AI vs Non-AI Average Order Value</h3>
               <div className="flex items-end gap-8">
                 <div>
                   <p className="text-xs text-st-gray">AI</p>
@@ -223,23 +223,23 @@ export default function AIAnalytics() {
                   </div>
                 )}
               </div>
-              <p className="text-xs text-st-gray mt-3">
+              <p className="text-xs text-st-gray dark:text-gray-400 mt-3">
                 AI-sourced buyers spend {aovDelta?.up ? 'more' : 'less'} than other channels on average.
                 Compare with Report Builder for deeper segmentation.
               </p>
             </div>
 
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-              <h3 className="text-sm font-semibold text-st-black mb-2">About AI Source Tracking</h3>
-              <p className="text-xs text-gray-600 leading-relaxed">
+            <div className="bg-white dark:bg-[#1A1D1D] rounded-xl border border-gray-200 dark:border-[#333838] shadow-sm p-6">
+              <h3 className="text-sm font-semibold text-st-black dark:text-white mb-2">About AI Source Tracking</h3>
+              <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
                 SourceTrack detects AI platform traffic by inspecting the HTTP referrer header when a visitor arrives from an AI chat tool.
                 Supported platforms: ChatGPT, Claude, Perplexity, Gemini, Grok, Copilot, DeepSeek, and others.
               </p>
-              <p className="text-xs text-gray-600 leading-relaxed mt-2">
+              <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed mt-2">
                 AI revenue is calculated from conversions where the visitor's session originated from an AI platform.
                 AI conversion rate = AI conversions / AI-sourced sessions.
               </p>
-              <p className="text-xs text-st-gray mt-3">
+              <p className="text-xs text-st-gray dark:text-gray-400 mt-3">
                 These metrics and insights use real detection data and simple rule-based comparisons only — no AI prediction, scoring, or synthetic metrics.
               </p>
             </div>
@@ -251,7 +251,7 @@ export default function AIAnalytics() {
               subtitle="By attributed revenue"
             >
               {platforms.length === 0 ? (
-                <p className="text-sm text-st-gray py-6 text-center">No platform data yet.</p>
+                <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">No platform data yet.</p>
               ) : (
                 <div className="h-64">
                   <Bar data={platformChartData} options={chartOpts('$')} />
@@ -268,7 +268,7 @@ export default function AIAnalytics() {
                 <tbody>
                   {platforms.map((p, i) => (
                     <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
-                      <td className="py-2 px-3 text-st-black font-medium flex items-center gap-2">
+                      <td className="py-2 px-3 text-st-black dark:text-white font-medium flex items-center gap-2">
                         {p.platform}
                         <StatusBadge status="verified" label="AI" />
                       </td>
@@ -290,7 +290,7 @@ export default function AIAnalytics() {
                   <Line data={trendChartData} options={chartOpts('$')} />
                 </div>
               )}
-              <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+              <div className="mt-3 p-3 bg-gray-50 dark:bg-[#111414] rounded-lg">
                 <p className="text-xs text-gray-600">
                   <span className="font-semibold">{kpis.ai_revenue_share.toFixed(1)}%</span> of your revenue comes from AI platforms.
                   {kpis.ai_revenue_share > 20
@@ -319,7 +319,7 @@ export default function AIAnalytics() {
               <tbody>
                 {platforms.map((p, i) => (
                   <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="py-2.5 px-3 text-st-black font-medium">{p.platform}</td>
+                    <td className="py-2.5 px-3 text-st-black dark:text-white font-medium">{p.platform}</td>
                     <td className="py-2.5 px-3 text-right text-st-black">${(p.revenue || 0).toFixed(0)}</td>
                     <td className="py-2.5 px-3 text-right text-gray-600">{p.conversions.toLocaleString()}</td>
                     <td className="py-2.5 px-3 text-right text-st-gray">
@@ -425,32 +425,32 @@ function ForecastCard({ siteKey }) {
     ? { label: '↑ Upward trend', cls: 'bg-green-100 text-green-700' }
     : forecast?.trend === 'down'
     ? { label: '↓ Downward trend', cls: 'bg-red-100 text-red-700' }
-    : { label: '→ Flat trend', cls: 'bg-gray-100 text-st-gray' }
+    : { label: '→ Flat trend', cls: 'bg-gray-100 dark:bg-[#252929] text-st-gray' }
 
   const confidenceBadge = {
     high:   'bg-green-100 text-green-700',
     medium: 'bg-amber-100 text-amber-700',
     low:    'bg-red-100 text-red-700'
-  }[forecast?.confidence_overall] || 'bg-gray-100 text-st-gray'
+  }[forecast?.confidence_overall] || 'bg-gray-100 dark:bg-[#252929] text-st-gray'
 
   return (
     <DashboardCard
       title="AI Revenue Forecast"
       subtitle="7-day prediction powered by DeepSeek — based on your last 30 days of data"
       action={fetched && !loading && (
-        <button onClick={runForecast} className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black">
+        <button onClick={runForecast} className="flex items-center gap-1 text-xs text-st-gray dark:text-gray-400 hover:text-st-black">
           <RefreshCw className="w-3 h-3" /> Refresh
         </button>
       )}
     >
       {!fetched ? (
         <div className="flex flex-col items-center justify-center py-10 gap-4">
-          <div className="w-12 h-12 rounded-full bg-st-lime/10 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-full bg-st-lime/10 dark:bg-st-lime/5 flex items-center justify-center">
             <Zap className="w-6 h-6 text-st-black" />
           </div>
           <div className="text-center">
             <p className="text-sm font-semibold text-st-black">Generate 7-Day Forecast</p>
-            <p className="text-xs text-st-gray mt-1">DeepSeek analyzes your revenue trend and predicts the next 7 days</p>
+            <p className="text-xs text-st-gray dark:text-gray-400 mt-1">DeepSeek analyzes your revenue trend and predicts the next 7 days</p>
           </div>
           <button
             onClick={runForecast}
@@ -467,12 +467,12 @@ function ForecastCard({ siteKey }) {
       ) : error ? (
         <div className="py-6 text-center">
           <p className="text-sm text-red-500">{error}</p>
-          <button onClick={runForecast} className="mt-3 text-xs text-st-black underline">Try again</button>
+          <button onClick={runForecast} className="mt-3 text-xs text-st-black dark:text-white underline">Try again</button>
         </div>
       ) : insufficient ? (
         <div className="py-6 text-center">
           <p className="text-sm text-st-gray">Need at least 14 days of data for a forecast.</p>
-          <p className="text-xs text-st-gray mt-1">{forecast.days_available || 0} days available so far.</p>
+          <p className="text-xs text-st-gray dark:text-gray-400 mt-1">{forecast.days_available || 0} days available so far.</p>
         </div>
       ) : hasForecast ? (
         <div className="space-y-4">
@@ -484,7 +484,7 @@ function ForecastCard({ siteKey }) {
             </span>
           </div>
           {forecast.summary && (
-            <p className="text-sm text-st-gray italic">"{forecast.summary}"</p>
+            <p className="text-sm text-st-gray dark:text-gray-400 italic">"{forecast.summary}"</p>
           )}
 
           {/* Chart */}
@@ -497,16 +497,16 @@ function ForecastCard({ siteKey }) {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-gray-100">
-                  <th className="py-2 text-left text-st-gray font-medium">Date</th>
-                  <th className="py-2 text-right text-st-gray font-medium">Revenue</th>
-                  <th className="py-2 text-right text-st-gray font-medium">Leads</th>
-                  <th className="py-2 text-right text-st-gray font-medium">Confidence</th>
+                  <th className="py-2 text-left text-st-gray dark:text-gray-400 font-medium">Date</th>
+                  <th className="py-2 text-right text-st-gray dark:text-gray-400 font-medium">Revenue</th>
+                  <th className="py-2 text-right text-st-gray dark:text-gray-400 font-medium">Leads</th>
+                  <th className="py-2 text-right text-st-gray dark:text-gray-400 font-medium">Confidence</th>
                 </tr>
               </thead>
               <tbody>
                 {forecast.forecast.map((row, i) => (
                   <tr key={i} className="border-b border-gray-50">
-                    <td className="py-2 text-st-black font-mono">{row.date}</td>
+                    <td className="py-2 text-st-black dark:text-white font-mono">{row.date}</td>
                     <td className="py-2 text-right font-semibold text-st-black">${(row.revenue || 0).toFixed(0)}</td>
                     <td className="py-2 text-right text-st-gray">{row.leads || 0}</td>
                     <td className="py-2 text-right">
@@ -573,19 +573,19 @@ function AnomalyCard({ siteKey }) {
       title="Weekly Anomaly Detection"
       subtitle="AI spots unusual changes in your channels — week over week"
       action={fetched && !loading && (
-        <button onClick={run} className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black">
+        <button onClick={run} className="flex items-center gap-1 text-xs text-st-gray dark:text-gray-400 hover:text-st-black">
           <RefreshCw className="w-3 h-3" /> Refresh
         </button>
       )}
     >
       {!fetched ? (
         <div className="flex flex-col items-center justify-center py-10 gap-4">
-          <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
             <Activity className="w-6 h-6 text-amber-600" />
           </div>
           <div className="text-center">
             <p className="text-sm font-semibold text-st-black">Detect This Week's Anomalies</p>
-            <p className="text-xs text-st-gray mt-1">DeepSeek compares this week vs last week across all channels</p>
+            <p className="text-xs text-st-gray dark:text-gray-400 mt-1">DeepSeek compares this week vs last week across all channels</p>
           </div>
           <button onClick={run} className="px-5 py-2.5 bg-st-black text-white text-sm font-semibold rounded-lg hover:bg-st-black/90">
             Run Detection
@@ -599,7 +599,7 @@ function AnomalyCard({ siteKey }) {
       ) : error ? (
         <div className="py-6 text-center">
           <p className="text-sm text-red-500">{error}</p>
-          <button onClick={run} className="mt-3 text-xs text-st-black underline">Try again</button>
+          <button onClick={run} className="mt-3 text-xs text-st-black dark:text-white underline">Try again</button>
         </div>
       ) : !d?.has_enough_data ? (
         <div className="py-6 text-center">
@@ -609,7 +609,7 @@ function AnomalyCard({ siteKey }) {
         <div className="space-y-4">
           {/* AI summary */}
           {d.summary && (
-            <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-xl border border-amber-100">
+            <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-100">
               <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
               <p className="text-sm text-amber-800 italic">"{d.summary}"</p>
             </div>
@@ -618,9 +618,9 @@ function AnomalyCard({ siteKey }) {
           {/* Anomalies list */}
           {anomalies.length > 0 ? (
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-st-gray uppercase tracking-wide">{anomalies.length} anomaly{anomalies.length > 1 ? 'ies' : ''} detected</p>
+              <p className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wide">{anomalies.length} anomaly{anomalies.length > 1 ? 'ies' : ''} detected</p>
               {anomalies.map((a, i) => (
-                <div key={i} className="flex items-start gap-3 p-3 bg-white border border-gray-100 rounded-xl">
+                <div key={i} className="flex items-start gap-3 p-3 bg-white dark:bg-[#1A1D1D] border border-gray-100 dark:border-[#2A2E2E] rounded-xl">
                   <span className="text-lg flex-shrink-0">{typeIcon(a.type)}</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -629,7 +629,7 @@ function AnomalyCard({ siteKey }) {
                         {a.delta_pct >= 0 ? '+' : ''}{(a.delta_pct || 0).toFixed(0)}% {a.metric}
                       </span>
                     </div>
-                    <p className="text-xs text-st-gray mt-0.5">{a.explanation}</p>
+                    <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">{a.explanation}</p>
                   </div>
                 </div>
               ))}
@@ -646,17 +646,17 @@ function AnomalyCard({ siteKey }) {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-gray-100">
-                    <th className="py-2 text-left text-st-gray font-medium">Channel</th>
-                    <th className="py-2 text-right text-st-gray font-medium">This week</th>
-                    <th className="py-2 text-right text-st-gray font-medium">Last week</th>
-                    <th className="py-2 text-right text-st-gray font-medium">Δ Revenue</th>
-                    <th className="py-2 text-right text-st-gray font-medium">Δ Leads</th>
+                    <th className="py-2 text-left text-st-gray dark:text-gray-400 font-medium">Channel</th>
+                    <th className="py-2 text-right text-st-gray dark:text-gray-400 font-medium">This week</th>
+                    <th className="py-2 text-right text-st-gray dark:text-gray-400 font-medium">Last week</th>
+                    <th className="py-2 text-right text-st-gray dark:text-gray-400 font-medium">Δ Revenue</th>
+                    <th className="py-2 text-right text-st-gray dark:text-gray-400 font-medium">Δ Leads</th>
                   </tr>
                 </thead>
                 <tbody>
                   {channels.slice(0, 8).map((ch, i) => (
                     <tr key={i} className="border-b border-gray-50">
-                      <td className="py-2 text-st-black font-medium truncate max-w-[120px]">{ch.channel}</td>
+                      <td className="py-2 text-st-black dark:text-white font-medium truncate max-w-[120px]">{ch.channel}</td>
                       <td className="py-2 text-right text-st-black">${(ch.this_week_revenue || 0).toFixed(0)}</td>
                       <td className="py-2 text-right text-st-gray">${(ch.last_week_revenue || 0).toFixed(0)}</td>
                       <td className={`py-2 text-right font-semibold ${deltaColor(ch.rev_delta_pct)}`}>{deltaLabel(ch.rev_delta_pct)}</td>
@@ -712,19 +712,19 @@ function VerdictCard({ siteKey }) {
       title="AI Channel Verdicts"
       subtitle="DeepSeek reviews your top campaigns and recommends Scale, Pause, or Kill"
       action={fetched && !loading && (
-        <button onClick={run} className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black">
+        <button onClick={run} className="flex items-center gap-1 text-xs text-st-gray dark:text-gray-400 hover:text-st-black">
           <RefreshCw className="w-3 h-3" /> Refresh
         </button>
       )}
     >
       {!fetched ? (
         <div className="flex flex-col items-center justify-center py-10 gap-4">
-          <div className="w-12 h-12 rounded-full bg-st-lime/10 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-full bg-st-lime/10 dark:bg-st-lime/5 flex items-center justify-center">
             <Zap className="w-6 h-6 text-st-black" />
           </div>
           <div className="text-center">
             <p className="text-sm font-semibold text-st-black">Get Campaign Verdicts</p>
-            <p className="text-xs text-st-gray mt-1">DeepSeek scores your last 30 days by revenue, conversions, and trends</p>
+            <p className="text-xs text-st-gray dark:text-gray-400 mt-1">DeepSeek scores your last 30 days by revenue, conversions, and trends</p>
           </div>
           <button onClick={run} className="px-5 py-2.5 bg-st-black text-white text-sm font-semibold rounded-lg hover:bg-st-black/90">
             Run Analysis
@@ -738,7 +738,7 @@ function VerdictCard({ siteKey }) {
       ) : error ? (
         <div className="py-6 text-center">
           <p className="text-sm text-red-500">{error}</p>
-          <button onClick={run} className="mt-3 text-xs text-st-black underline">Try again</button>
+          <button onClick={run} className="mt-3 text-xs text-st-black dark:text-white underline">Try again</button>
         </div>
       ) : !verdicts?.length ? (
         <div className="py-6 text-center">
@@ -765,17 +765,17 @@ function VerdictCard({ siteKey }) {
             {verdicts.map((v, i) => {
               const s = VERDICT_STYLES[v.verdict] || VERDICT_STYLES.PAUSE
               return (
-                <div key={i} className="flex items-start gap-3 p-3 bg-white border border-gray-100 rounded-xl">
+                <div key={i} className="flex items-start gap-3 p-3 bg-white dark:bg-[#1A1D1D] border border-gray-100 dark:border-[#2A2E2E] rounded-xl">
                   <span className="text-lg flex-shrink-0">{s.icon}</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-semibold text-st-black truncate max-w-[160px]">{v.campaign}</span>
+                      <span className="text-sm font-semibold text-st-black dark:text-white truncate max-w-[160px]">{v.campaign}</span>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${s.bg} ${s.text}`}>{v.verdict}</span>
                     </div>
-                    {v.reason && <p className="text-xs text-st-gray mt-0.5">{v.reason}</p>}
+                    {v.reason && <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">{v.reason}</p>}
                   </div>
                   {v.signal && (
-                    <span className="text-[10px] text-st-gray flex-shrink-0 mt-0.5">{v.signal}</span>
+                    <span className="text-[10px] text-st-gray dark:text-gray-400 flex-shrink-0 mt-0.5">{v.signal}</span>
                   )}
                 </div>
               )

@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { fetchApi } from '../lib/api'
 import { format, subDays } from 'date-fns'
 import { useAuth } from '../contexts/AuthContext'
-import { Line, Doughnut } from 'react-chartjs-2'
+import { Line, Doughnut, Bar } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -21,7 +21,7 @@ import {
 import {
   DollarSign, Users, Bot, TrendingUp,
   ArrowRight, Download, ExternalLink, Sparkles, Bookmark,
-  FileText, BarChart3, Plus
+  FileText, BarChart3, Plus, AlertTriangle
 } from 'lucide-react'
 import MetricTile from '../components/MetricTile'
 import DashboardCard from '../components/DashboardCard'
@@ -364,6 +364,30 @@ export default function Dashboard() {
     }]
   }
 
+  // T5.3 — Orders/Leads by Channels bar chart
+  const channelBarData = {
+    labels: activeResults.slice(0, 8).map(r => r.dim_value || r.source || 'Unknown'),
+    datasets: [
+      {
+        label: businessType === 'ecommerce' ? 'Orders' : 'Leads',
+        data: activeResults.slice(0, 8).map(r => r.conversions || 0),
+        backgroundColor: activeResults.slice(0, 8).map((_, i) =>
+          i === 0 ? 'rgba(17,24,39,0.85)' : i === 1 ? 'rgba(204,240,63,0.85)' : 'rgba(107,114,128,0.6)'
+        ),
+        borderRadius: 6,
+        borderSkipped: false
+      }
+    ]
+  }
+  const channelBarOpts = {
+    responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { maxTicksLimit: 5 } },
+      y: { grid: { display: false }, ticks: { font: { size: 12 } } }
+    }
+  }
+
   // T5.5 — Leads by Campaign donut
   const topCampaigns = campaignResults.slice(0, 6)
   const donutColors = [
@@ -541,6 +565,28 @@ export default function Dashboard() {
         </div>
       ) : (
         <>
+          {/* T5.8 — Alert banner at top */}
+          {alerts.length > 0 && (
+            <div className="space-y-2">
+              {alerts.slice(0, 2).map((a, i) => (
+                <div key={i} className={`flex items-start gap-3 rounded-xl px-4 py-3 text-sm ${
+                  a.severity === 'high'
+                    ? 'bg-red-50 border border-red-200 text-red-800'
+                    : 'bg-amber-50 border border-amber-200 text-amber-800'
+                }`}>
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold">{a.metric}: </span>
+                    <span>{a.message}</span>
+                    {a.suggested_action && (
+                      <p className="text-xs mt-0.5 opacity-75">{a.suggested_action}</p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* KPI Strip — T2.1: business-type aware with deltas */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             {kpiConfig.map((metric) => {
@@ -818,43 +864,68 @@ export default function Dashboard() {
             </DashboardCard>
           </div>
 
+          {/* T5.3 — Orders/Leads by Channels bar chart */}
+          {activeResults.length > 0 && (
+            <DashboardCard
+              title={businessType === 'ecommerce' ? 'Orders by Channel' : businessType === 'saas' ? 'Signups by Channel' : 'Leads by Channel'}
+              subtitle="Top 8 channels by conversion volume"
+            >
+              <div className="h-56">
+                <Bar data={channelBarData} options={channelBarOpts} />
+              </div>
+            </DashboardCard>
+          )}
+
           {/* Row 3: Conversion Events + Landing Pages */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <DashboardCard title="Conversion Events"
-              subtitle="Tracked conversion types across your site"
+              subtitle={businessType === 'ecommerce' ? 'Orders, trials and signups' : businessType === 'saas' ? 'Trials, signups and meetings' : 'Leads, signups and meetings'}
               action={!previewMode && (
                 <button onClick={() => navigate('/settings')} className="text-xs text-st-black hover:text-gray-700 font-medium">
                   Configure
                 </button>
               )}
             >
-              <div className="grid grid-cols-2 gap-3">
-                {Object.entries(CONVERSION_LABELS).map(([key, label]) => {
-                  const typeData = overview?.conversion_types?.[key]
-                  const hasData = typeData && typeData.count > 0
-                  return (
-                    <div key={key} className="bg-gray-50 rounded-lg p-3">
-                      <p className="text-xs text-st-gray">{label}</p>
-                      <p className="text-lg font-semibold text-st-black mt-0.5">
-                        {hasData ? typeData.count.toLocaleString() : '—'}
-                      </p>
-                      <StatusBadge status={hasData ? 'active' : 'pending'} label={hasData ? 'Active' : 'Not tracking'} />
-                    </div>
-                  )
-                })}
-                {overview?.conversion_types?.untyped && overview.conversion_types.untyped.count > 0 && (
-                  <div className="bg-amber-50 rounded-lg p-3 border border-amber-100">
-                    <p className="text-xs text-amber-700">Untagged</p>
-                    <p className="text-lg font-semibold text-amber-900 mt-0.5">
-                      {overview.conversion_types.untyped.count.toLocaleString()}
-                    </p>
-                    <StatusBadge status="warning" label="Needs type" />
+              {(() => {
+                // Priority events by business type
+                const priorityKeys = businessType === 'ecommerce'
+                  ? ['purchase', 'trial', 'signup', 'lead', 'meeting', 'booking']
+                  : businessType === 'saas'
+                  ? ['trial', 'signup', 'meeting', 'lead', 'purchase', 'booking']
+                  : ['lead', 'meeting', 'signup', 'trial', 'purchase', 'booking']
+                const convTypes = overview?.conversion_types || {}
+                const sorted = priorityKeys.filter(k => CONVERSION_LABELS[k])
+                return (
+                  <div className="grid grid-cols-2 gap-3">
+                    {sorted.map((key) => {
+                      const label = CONVERSION_LABELS[key]
+                      const typeData = convTypes[key]
+                      const hasData = typeData && typeData.count > 0
+                      return (
+                        <div key={key} className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-xs text-st-gray">{label}</p>
+                          <p className="text-lg font-semibold text-st-black mt-0.5">
+                            {hasData ? typeData.count.toLocaleString() : '—'}
+                          </p>
+                          <StatusBadge status={hasData ? 'active' : 'pending'} label={hasData ? 'Active' : 'Not tracking'} />
+                        </div>
+                      )
+                    })}
+                    {convTypes.untyped && convTypes.untyped.count > 0 && (
+                      <div className="bg-amber-50 rounded-lg p-3 border border-amber-100">
+                        <p className="text-xs text-amber-700">Untagged</p>
+                        <p className="text-lg font-semibold text-amber-900 mt-0.5">
+                          {convTypes.untyped.count.toLocaleString()}
+                        </p>
+                        <StatusBadge status="warning" label="Needs type" />
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                )
+              })()}
               {Object.values(overview?.conversion_types || {}).every(t => !t || t.count === 0) && (
                 <p className="text-xs text-st-gray mt-3">
-                  When conversions specify a type (e.g., lead, purchase), counts appear here. Previous conversions without a type are counted as untagged.
+                  {businessType === 'ecommerce' ? 'Track purchases and checkouts by sending conversion events.' : businessType === 'saas' ? 'Track free trials and signups by sending conversion events.' : 'Track lead form submissions by sending conversion events.'}
                 </p>
               )}
             </DashboardCard>
@@ -972,24 +1043,7 @@ export default function Dashboard() {
             </DashboardCard>
           )}
 
-          {alerts.length > 0 && (
-            <DashboardCard title={`${alerts.length} Alert${alerts.length > 1 ? 's' : ''}`} subtitle="Issues requiring attention">
-              <div className="space-y-2">
-                {alerts.slice(0, 3).map(a => (
-                  <div key={a.id} className={`rounded-lg p-3 text-sm ${
-                    a.severity === 'high' ? 'bg-red-50 border border-red-200 text-red-800' :
-                    'bg-amber-50 border border-amber-200 text-amber-800'
-                  }`}>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{a.metric}:</span>
-                      <span>{a.message}</span>
-                    </div>
-                    <p className="text-xs mt-1 opacity-75">{a.suggested_action}</p>
-                  </div>
-                ))}
-              </div>
-            </DashboardCard>
-          )}
+
         </>
       )}
 
