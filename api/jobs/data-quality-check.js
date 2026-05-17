@@ -3,14 +3,14 @@ import { createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
 import { queryHogQL } from '../lib/posthog.js'
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { realtime: { transport: WebSocket } })
+function getSupabase() { return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { global: { fetch }, realtime: { transport: WebSocket } }) }
 
 async function run() {
   console.log('[data-quality-check] Starting...')
   const issues = []
 
   // 1. Check for sites with no events in last 48h
-  const { data: sites } = await supabase.from('sites').select('id, domain, site_key')
+  const { data: sites } = await getSupabase().from('sites').select('id, domain, site_key')
   for (const site of sites || []) {
     const sql = `
       SELECT count() AS cnt FROM events
@@ -23,14 +23,14 @@ async function run() {
   }
 
   // 2. Check for attributed_conversions with null first_touch_source
-  const { count: nullCount } = await supabase
+  const { count: nullCount } = await getSupabase()
     .from('attributed_conversions')
     .select('*', { count: 'exact', head: true })
     .is('first_touch_source', null)
   if (nullCount > 0) issues.push(`${nullCount} attributed_conversions with null first_touch_source`)
 
   // Log to job_runs
-  await supabase.from('job_runs').insert({
+  await getSupabase().from('job_runs').insert({
     job_name: 'data-quality-check',
     status: issues.length === 0 ? 'success' : 'warning',
     details: issues.length === 0 ? 'All checks passed' : issues.join(' | '),

@@ -5,7 +5,7 @@ import OpenAI from 'openai'
 import dotenv from 'dotenv'
 dotenv.config()
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { realtime: { transport: WebSocket } })
+function getSupabase() { return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { global: { fetch }, realtime: { transport: WebSocket } }) }
 const deepseek = new OpenAI({
   baseURL: 'https://api.deepseek.com',
   apiKey: process.env.DEEPSEEK_API_KEY
@@ -48,16 +48,16 @@ async function collectSnapshot() {
   // Supabase check
   try {
     const t = Date.now()
-    await supabase.from('sites').select('id').limit(1)
-    snap.supabase.ms = Date.now() - t
-    snap.supabase.status = snap.supabase.ms > 2000 ? 'slow' : 'ok'
+    await getSupabase().from('sites').select('id').limit(1)
+    snap.getSupabase().ms = Date.now() - t
+    snap.getSupabase().status = snap.getSupabase().ms > 2000 ? 'slow' : 'ok'
   } catch (e) {
-    snap.supabase.status = 'error'
+    snap.getSupabase().status = 'error'
     snap.errors.push(`Supabase: ${e.message}`)
   }
 
   // Batch job check
-  const { data: run } = await supabase
+  const { data: run } = await getSupabase()
     .from('job_runs')
     .select('ran_at, status, conversions_processed, error_message')
     .eq('job_name', 'nightly-attribution')

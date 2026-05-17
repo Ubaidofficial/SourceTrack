@@ -4,7 +4,7 @@ import { getFlexibleReport, getAttribution } from '../lib/attribution-engine.js'
 import { queryHogQL } from '../lib/posthog.js'
 import { createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
-const supabaseAdmin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { global: { fetch }, realtime: { transport: WebSocket } })
+function getSupabaseAdmin() { return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { global: { fetch }, realtime: { transport: WebSocket } }) }
 
 const router = Router()
 
@@ -151,8 +151,8 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     try { const br = await queryHogQL(bounceRateSql, 'bounce_rate'); bounceRate = br?.[0]?.[0] ? parseFloat(Number(br[0][0]).toFixed(1)) : null } catch(_e) {}
     const totalLeads = leadsResults.reduce((sum, r) => sum + (r.leads || 0), 0)
     // SQL% — qualified leads / total leads from attributed_conversions
-    const { count: sqlCount } = await supabaseAdmin.from('attributed_conversions').select('*', { count: 'exact', head: true }).eq('site_id', req.site.id).eq('status', 'sql').gte('conversion_date', dateFrom).lte('conversion_date', dateTo)
-    const { count: totalLeadCount } = await supabaseAdmin.from('attributed_conversions').select('*', { count: 'exact', head: true }).eq('site_id', req.site.id).gte('conversion_date', dateFrom).lte('conversion_date', dateTo)
+    const { count: sqlCount } = await getSupabaseAdmin().from('attributed_conversions').select('*', { count: 'exact', head: true }).eq('site_id', req.site.id).eq('status', 'sql').gte('conversion_date', dateFrom).lte('conversion_date', dateTo)
+    const { count: totalLeadCount } = await getSupabaseAdmin().from('attributed_conversions').select('*', { count: 'exact', head: true }).eq('site_id', req.site.id).gte('conversion_date', dateFrom).lte('conversion_date', dateTo)
     const sqlPercent = totalLeadCount > 0 ? parseFloat(((sqlCount || 0) / totalLeadCount * 100).toFixed(1)) : 0
     const convRate = totalSessions > 0 ? (totalConversions / totalSessions) * 100 : 0
     const avgValue = totalConversions > 0 ? totalRevenue / totalConversions : 0

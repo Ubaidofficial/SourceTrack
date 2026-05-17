@@ -112,11 +112,13 @@ if (!process.env.POSTHOG_PROJECT_ID) {
   process.exit(1)
 }
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
-  { realtime: { transport: WebSocket } }
-)
+function getSupabase() {
+  return createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_KEY,
+    { realtime: { transport: WebSocket } }
+  )
+}
 
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
   .split(',')
