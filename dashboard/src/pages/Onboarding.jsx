@@ -643,7 +643,7 @@ export default function Onboarding() {
         <h1 className="text-xl font-bold text-st-black">SourceTrack</h1>
         <button
           onClick={() => setVideoModalOpen(true)}
-          className="px-4 py-2 text-sm text-st-gray dark:text-gray-400 border border-gray-200 dark:border-[#333838] rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] dark:bg-[#111414] hover:text-st-black dark:text-white transition-colors flex items-center gap-2"
+          className="px-4 py-2 text-sm text-st-gray dark:text-gray-400 border border-gray-200 dark:border-[#333838] rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] hover:text-st-black dark:text-white transition-colors flex items-center gap-2"
         >
           <Play className="w-4 h-4" /> Watch Video
         </button>

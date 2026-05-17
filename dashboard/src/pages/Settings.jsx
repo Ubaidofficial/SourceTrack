@@ -219,7 +219,7 @@ export default function Settings() {
             <button
               onClick={handlePortal}
               disabled={loadingPortal}
-              className="text-xs text-st-black dark:text-white border border-gray-200 dark:border-[#333838] px-3 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] dark:bg-[#111414] disabled:opacity-50"
+              className="text-xs text-st-black dark:text-white border border-gray-200 dark:border-[#333838] px-3 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] disabled:opacity-50"
             >
               {loadingPortal ? 'Loading…' : 'Manage Subscription'}
             </button>

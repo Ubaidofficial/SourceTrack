@@ -79,7 +79,7 @@ export default function JourneyModal({ visitorId, siteKey, onClose, onQualified 
           <div className="flex items-center gap-2">
             <button
               onClick={handleExport}
-              className="px-3 py-1.5 text-xs text-st-gray dark:text-gray-400 border border-gray-200 dark:border-[#333838] rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] dark:bg-[#111414] flex items-center gap-1"
+              className="px-3 py-1.5 text-xs text-st-gray dark:text-gray-400 border border-gray-200 dark:border-[#333838] rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] flex items-center gap-1"
             >
               <Download className="w-3.5 h-3.5" /> Export
             </button>

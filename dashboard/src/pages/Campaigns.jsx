@@ -153,14 +153,14 @@ export default function Campaigns() {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => navigate('/report-builder')}
-            className="px-3 py-1.5 text-sm text-st-black dark:text-white bg-gray-50 dark:bg-[#111414] rounded-lg hover:bg-gray-100 dark:hover:bg-[#2A2E2E] dark:bg-[#252929] font-medium">
+            className="px-3 py-1.5 text-sm text-st-black dark:text-white bg-gray-50 dark:bg-[#111414] rounded-lg hover:bg-gray-100 dark:hover:bg-[#2A2E2E] font-medium">
             Advanced Report
           </button>
           <button onClick={() => {
             if (!site) return
             const params = new URLSearchParams({ site_key: site.site_key, model: 'last_touch', date_from: dateFrom, date_to: dateTo, group_by: activeDim, metric: 'revenue' })
             window.open(`/api/export/report?${params}`, '_blank')
-          }} className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-[#1A1D1D] border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] dark:bg-[#111414] flex items-center gap-1.5">
+          }} className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-[#1A1D1D] border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] flex items-center gap-1.5">
             <Download className="w-4 h-4" /> Export
           </button>
         </div>
@@ -283,7 +283,7 @@ export default function Campaigns() {
                 <tbody className="divide-y divide-gray-100">
                   {rows.map((r, i) => {
                     return (
-                      <tr key={i} className="hover:bg-gray-50 dark:hover:bg-[#252929] dark:bg-[#111414] transition-colors">
+                      <tr key={i} className="hover:bg-gray-50 dark:hover:bg-[#252929] transition-colors">
                         <td className="py-3 px-4">
                           <p className="text-st-black dark:text-white font-medium">{r.name || 'unknown'}</p>
                         </td>

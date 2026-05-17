@@ -106,7 +106,7 @@ export default function Leads() {
           if (!site) return
           const params = new URLSearchParams({ site_key: site.site_key, model: 'first_touch', date_from: dateFrom, date_to: dateTo, group_by: 'source', metric: 'revenue' })
           window.open(`/api/export/report?${params}`, '_blank')
-        }} className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-[#1A1D1D] border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] dark:bg-[#111414] flex items-center gap-1.5">
+        }} className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-[#1A1D1D] border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] flex items-center gap-1.5">
           <Download className="w-4 h-4" /> Export
         </button>
       </div>
@@ -180,7 +180,7 @@ export default function Leads() {
                   const isAI = lead.ai_source && AI_SOURCES.includes(lead.ai_source)
                   const shortId = lead.id ? lead.id.slice(0, 8) : 'unknown'
                   return (
-                    <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 dark:hover:bg-[#252929] dark:bg-[#111414] transition-colors">
+                    <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 dark:hover:bg-[#252929] transition-colors">
                       <td className="py-3 px-3 text-st-black dark:text-white font-mono text-xs">{shortId}...</td>
                       <td className="py-3 px-3">
                         {(() => {
@@ -268,7 +268,7 @@ export default function Leads() {
                           </button>
                           <button
                             onClick={() => setJourneyVisitorId(lead.id || lead.visitor_id || lead.anonymous_id)}
-                            className="text-xs text-st-black dark:text-white hover:text-gray-700 dark:text-gray-200 font-medium flex items-center gap-1"
+                            className="text-xs text-st-black dark:text-white hover:text-gray-700 font-medium flex items-center gap-1"
                           >
                             Journey <ArrowRight className="w-3 h-3" />
                           </button>
