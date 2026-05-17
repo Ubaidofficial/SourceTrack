@@ -3,41 +3,75 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchApi } from '../lib/api'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import { Monitor, Smartphone, Tablet, Sparkles, TrendingUp, Users, Eye, Clock, Radio, LogIn, LogOut, ExternalLink, Zap, RefreshCw, UserCheck, UserPlus } from 'lucide-react'
-import MetricTile from '../components/MetricTile'
-import DashboardCard from '../components/DashboardCard'
+import { Eye, RefreshCw, ExternalLink, Zap, Sparkles, Copy, Check } from 'lucide-react'
 
-const TIME_RANGES = [
-  { label: '24h', days: 1 },
-  { label: '7 days', days: 7 },
-  { label: '30 days', days: 30 },
-  { label: '90 days', days: 90 },
-]
+function fmtDuration(s) {
+  if (!s) return '0s'
+  if (s < 60) return `${Math.round(s)}s`
+  return `${Math.floor(s / 60)}m ${Math.round(s % 60)}s`
+}
 
-function BarRow({ label, value, max }) {
-  const pct = max > 0 ? (value / max) * 100 : 0
+function stripOrigin(url = '') {
+  return url.replace(/^https?:\/\/[^/]+/, '') || '/'
+}
+
+// Single tabbed panel used for both columns
+function TabPanel({ tabs, activeTab, onTab, children }) {
   return (
-    <div className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
-      <span className="text-sm text-gray-600 w-36 truncate flex-shrink-0">{label}</span>
-      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-        <div className="h-full bg-st-black rounded-full" style={{ width: `${pct}%` }} />
+    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col">
+      <div className="flex border-b border-gray-100 overflow-x-auto flex-shrink-0">
+        {tabs.map(t => (
+          <button key={t.key} onClick={() => onTab(t.key)}
+            className={`px-4 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 -mb-px transition-colors ${
+              activeTab === t.key
+                ? 'border-st-black text-st-black'
+                : 'border-transparent text-st-gray hover:text-st-black'
+            }`}>
+            {t.label}
+          </button>
+        ))}
       </div>
-      <span className="text-sm font-medium text-st-black w-10 text-right flex-shrink-0">
-        {value.toLocaleString()}
-      </span>
+      <div className="flex-1 overflow-y-auto" style={{ maxHeight: 340 }}>
+        {children}
+      </div>
     </div>
   )
 }
 
-function fmtDuration(seconds) {
-  if (!seconds) return '0s'
-  if (seconds < 60) return `${seconds}s`
-  return `${Math.floor(seconds / 60)}m ${seconds % 60}s`
+function DataRow({ label, value, max, pct, isAI, onClick, active }) {
+  const barPct = max > 0 ? Math.round((value / max) * 100) : 0
+  return (
+    <div
+      onClick={onClick}
+      className={`flex items-center gap-3 px-4 py-2 border-b border-gray-50 last:border-0 cursor-pointer transition-colors ${
+        active ? 'bg-lime-50' : 'hover:bg-gray-50'
+      }`}
+    >
+      {isAI && <span className="w-1.5 h-1.5 rounded-full bg-purple-500 flex-shrink-0" />}
+      <span className={`text-xs flex-1 truncate ${isAI ? 'text-purple-700 font-medium' : 'text-gray-700'}`}>
+        {isAI ? '✦ ' : ''}{label}
+      </span>
+      <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden flex-shrink-0">
+        <div className={`h-full rounded-full ${isAI ? 'bg-purple-400' : 'bg-st-black'}`}
+          style={{ width: `${barPct}%` }} />
+      </div>
+      <span className="text-xs font-semibold text-st-black w-10 text-right flex-shrink-0">
+        {value?.toLocaleString?.() ?? value}
+      </span>
+      {pct != null && (
+        <span className="text-[10px] text-st-gray w-8 text-right flex-shrink-0">{pct}%</span>
+      )}
+    </div>
+  )
 }
 
 export default function Analytics() {
   const { user } = useAuth()
   const [days, setDays] = useState(30)
+  const [leftTab, setLeftTab]   = useState('pages')
+  const [rightTab, setRightTab] = useState('sources')
+  const [filter, setFilter]     = useState(null) // { type, value }
+  const [copied, setCopied]     = useState(false)
 
   const { data: site } = useQuery({
     queryKey: ['site', user?.id],
@@ -58,20 +92,6 @@ export default function Analytics() {
     queryFn: () => fetchApi(`/analytics/summary?site_key=${site.site_key}&days=${days}`),
     enabled: !!site?.site_key
   })
-
-  const d = summary?.data
-  const kpis = d?.kpis || {}
-  const newVisitors       = kpis.new_visitors ?? 0
-  const returningVisitors = kpis.returning_visitors ?? 0
-  const totalVisitors     = (newVisitors + returningVisitors) || 1
-  const newPct            = Math.round(newVisitors / totalVisitors * 100)
-  const returningPct      = Math.round(returningVisitors / totalVisitors * 100)
-  const topPages = d?.top_pages || []
-  const topSources = d?.top_sources || []
-  const aiSources = d?.ai_sources || []
-  const devices = d?.devices || {}
-  const topCountries = d?.top_countries || []
-  const trend = d?.trend || []
 
   const { data: liveData, refetch: refetchLive } = useQuery({
     queryKey: ['analytics-live', site?.site_key],
@@ -98,47 +118,124 @@ export default function Analytics() {
     enabled: !!site?.site_key
   })
 
-  const liveCount = liveData?.live_visitors ?? 0
-  const entryPages = entryExitData?.data?.entry_pages || []
-  const exitPages = entryExitData?.data?.exit_pages || []
-  const outboundLinks = outboundData?.data || []
+  const d            = summary?.data
+  const kpis         = d?.kpis || {}
+  const topPages     = d?.top_pages || []
+  const topSources   = d?.top_sources || []
+  const aiSources    = d?.ai_sources || []
+  const devices      = d?.devices || {}
+  const topCountries = d?.top_countries || []
+  const trend        = d?.trend || []
+  const liveCount    = liveData?.live_visitors ?? 0
+  const entryPages   = entryExitData?.data?.entry_pages || []
+  const exitPages    = entryExitData?.data?.exit_pages || []
+  const outboundLinks= outboundData?.data || []
   const customEvents = customEventsData?.data?.events || []
   const recentEvents = customEventsData?.data?.recent || []
 
-  const maxPage = Math.max(...topPages.map(r => r.views), 1)
-  const maxSource = Math.max(...topSources.map(r => r.visits), 1)
+  const newVisitors       = kpis.new_visitors ?? 0
+  const returningVisitors = kpis.returning_visitors ?? 0
+  const totalVis          = (newVisitors + returningVisitors) || 1
+  const newPct            = Math.round(newVisitors / totalVis * 100)
+
+  const maxPage    = Math.max(...topPages.map(r => r.views), 1)
+  const maxSource  = Math.max(...topSources.map(r => r.visits), 1)
+  const maxAI      = Math.max(...aiSources.map(r => r.visits), 1)
   const maxCountry = Math.max(...topCountries.map(r => r.visits), 1)
+  const maxDevice  = Math.max(...Object.values(devices), 1)
+  const maxEntry   = Math.max(...entryPages.map(r => r.count), 1)
+  const maxExit    = Math.max(...exitPages.map(r => r.count), 1)
+  const maxEvent   = Math.max(...customEvents.map(r => r.count), 1)
+  const maxOutbound= Math.max(...outboundLinks.map(r => r.count), 1)
+  const trendMax   = Math.max(...trend.map(t => t.views), 1)
 
   const snippetUrl = site
     ? `<script defer src="${window.location.origin}/analytics.js" data-site-key="${site.site_key}"></script>`
     : ''
 
+  function toggleFilter(type, value) {
+    if (filter?.type === type && filter?.value === value) setFilter(null)
+    else setFilter({ type, value })
+  }
+  function isActive(type, value) {
+    return filter?.type === type && filter?.value === value
+  }
+
+  function copySnippet() {
+    navigator.clipboard.writeText(snippetUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const KPI_ITEMS = [
+    { label: 'Pageviews',      value: kpis.pageviews?.toLocaleString()          ?? '—' },
+    { label: 'Visitors',       value: kpis.unique_visitors?.toLocaleString()    ?? '—' },
+    { label: 'Bounce rate',    value: kpis.bounce_rate != null ? `${kpis.bounce_rate.toFixed(1)}%` : '—' },
+    { label: 'Duration',       value: fmtDuration(kpis.avg_duration_seconds) },
+    { label: 'New visitors',   value: newVisitors > 0 ? `${newPct}%` : '—',
+      sub: newVisitors > 0 ? `${newVisitors.toLocaleString()} new · ${returningVisitors.toLocaleString()} returning` : null },
+  ]
+
+  const LEFT_TABS = [
+    { key: 'pages',  label: 'Pages' },
+    { key: 'entry',  label: 'Entry' },
+    { key: 'exit',   label: 'Exit' },
+    { key: 'events', label: 'Events' },
+  ]
+
+  const RIGHT_TABS = [
+    { key: 'sources',   label: 'Sources' },
+    { key: 'ai',        label: '✦ AI Traffic' },
+    { key: 'countries', label: 'Countries' },
+    { key: 'devices',   label: 'Devices' },
+  ]
+
+  if (!site) return null
+
   return (
-    <div className="st-container space-y-6">
+    <div className="st-container space-y-4">
+
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-st-black">Analytics</h2>
-          <p className="text-sm text-st-gray mt-0.5">Privacy-friendly, cookieless web analytics</p>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg">
-            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${liveCount > 0 ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`} />
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-bold text-st-black">Analytics</h2>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-full">
+            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${liveCount > 0 ? 'bg-green-500 animate-pulse' : 'bg-gray-300'}`} />
             <span className="text-xs font-medium text-st-black">{liveCount}</span>
-            <span className="text-xs text-st-gray">live now</span>
-            <button onClick={() => refetchLive()} className="ml-1 text-st-gray hover:text-st-black">
+            <span className="text-xs text-st-gray">live</span>
+            <button onClick={() => refetchLive()} className="text-st-gray hover:text-st-black ml-0.5">
               <RefreshCw className="w-3 h-3" />
             </button>
           </div>
-          {TIME_RANGES.map(tr => (
-            <button key={tr.days} onClick={() => setDays(tr.days)}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                days === tr.days ? 'bg-st-black text-white' : 'text-st-gray hover:bg-gray-100'
+          <div className="hidden sm:flex gap-1.5">
+            {['Cookieless','No consent','GDPR'].map(b => (
+              <span key={b} className="text-[10px] text-st-gray border border-gray-200 rounded-full px-2 py-0.5">{b}</span>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          {[{l:'24h',d:1},{l:'7d',d:7},{l:'30d',d:30},{l:'90d',d:90}].map(t => (
+            <button key={t.d} onClick={() => setDays(t.d)}
+              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                days === t.d ? 'bg-white text-st-black shadow-sm' : 'text-st-gray hover:text-st-black'
               }`}>
-              {tr.label}
+              {t.l}
             </button>
           ))}
         </div>
       </div>
+
+      {/* Active filter pill */}
+      {filter && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-st-gray">Filtered by:</span>
+          <span className="flex items-center gap-1.5 px-2.5 py-1 bg-st-black text-white rounded-full text-xs font-medium">
+            {filter.type}: {filter.value}
+            <button onClick={() => setFilter(null)} className="opacity-70 hover:opacity-100 text-sm leading-none">×</button>
+          </span>
+          <span className="text-xs text-st-gray">Click again to remove</span>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
@@ -149,270 +246,196 @@ export default function Analytics() {
           <Eye className="w-12 h-12 text-gray-200 mx-auto" />
           <div>
             <h3 className="text-lg font-semibold text-st-black mb-2">No analytics data yet</h3>
-            <p className="text-sm text-st-gray">Add the analytics tracker to your site to start collecting pageview data.</p>
+            <p className="text-sm text-st-gray">Add the tracking script to your site to start collecting data.</p>
           </div>
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-left">
-            <p className="text-xs font-semibold text-gray-700 mb-2">Add to your site head:</p>
-            <code className="text-xs text-gray-600 break-all">{snippetUrl}</code>
+          <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-left">
+            <p className="text-xs font-semibold text-gray-700 mb-2">Add to your site &lt;head&gt;:</p>
+            <div className="flex items-center gap-2">
+              <code className="text-xs text-gray-600 flex-1 break-all">{snippetUrl}</code>
+              <button onClick={copySnippet} className="flex-shrink-0 p-1.5 text-st-gray hover:text-st-black border border-gray-200 rounded-lg">
+                {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+              </button>
+            </div>
           </div>
-          <p className="text-xs text-st-gray">Cookieless · No consent banner required · GDPR compliant</p>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <MetricTile label="Pageviews" value={kpis.pageviews} format="number" />
-            <MetricTile label="Unique Visitors" value={kpis.unique_visitors} format="number" />
-            <MetricTile label="Bounce Rate" value={kpis.bounce_rate} format="percent" />
-            <MetricTile label="Avg Duration" value={fmtDuration(kpis.avg_duration_seconds)} format="text" />
-          </div>
-
-          {/* New vs Returning visitors */}
-          {(newVisitors > 0 || returningVisitors > 0) && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <DashboardCard title="New vs Returning" subtitle="Visitor breakdown this period">
-                <div className="space-y-4 pt-2">
-                  <div className="flex items-center gap-3">
-                    <UserPlus className="w-4 h-4 text-st-gray flex-shrink-0" />
-                    <span className="text-sm text-gray-600 w-20">New</span>
-                    <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-st-black rounded-full" style={{ width: `${newPct}%` }} />
-                    </div>
-                    <span className="text-sm font-semibold text-st-black w-10 text-right">{newPct}%</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <UserCheck className="w-4 h-4 text-st-gray flex-shrink-0" />
-                    <span className="text-sm text-gray-600 w-20">Returning</span>
-                    <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-st-lime rounded-full" style={{ width: `${returningPct}%` }} />
-                    </div>
-                    <span className="text-sm font-semibold text-st-black w-10 text-right">{returningPct}%</span>
-                  </div>
-                  <div className="pt-2 border-t border-gray-100 flex justify-between text-xs text-st-gray">
-                    <span>{newVisitors.toLocaleString()} new</span>
-                    <span>{returningVisitors.toLocaleString()} returning</span>
-                  </div>
-                </div>
-              </DashboardCard>
-
-              <div className="lg:col-span-2">
-                {trend.length > 0 && (
-                  <DashboardCard title="Pageviews Over Time" subtitle={`Last ${days} days`}>
-                    <div className="h-24 flex items-end gap-1 pt-2">
-                      {(() => {
-                        const max = Math.max(...trend.map(d => d.views), 1)
-                        return trend.map((d, i) => (
-                          <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                            <div className="w-full bg-st-black rounded-sm" style={{ height: `${(d.views / max) * 100}%`, minHeight: 2 }} />
-                            {trend.length <= 14 && <span className="text-[9px] text-st-gray">{d.date.slice(5)}</span>}
-                          </div>
-                        ))
-                      })()}
-                    </div>
-                  </DashboardCard>
-                )}
-              </div>
-            </div>
-          )}
-
-          {trend.length > 0 && !(newVisitors > 0 || returningVisitors > 0) && (
-            <DashboardCard title="Pageviews Over Time" subtitle={`Last ${days} days`}>
-              <div className="h-24 flex items-end gap-1 pt-2">
-                {(() => {
-                  const max = Math.max(...trend.map(d => d.views), 1)
-                  return trend.map((d, i) => (
-                    <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                      <div className="w-full bg-st-black rounded-sm"
-                        style={{ height: `${(d.views / max) * 100}%`, minHeight: 2 }} />
-                      {trend.length <= 14 && (
-                        <span className="text-[9px] text-st-gray">{d.date.slice(5)}</span>
-                      )}
-                    </div>
-                  ))
-                })()}
-              </div>
-            </DashboardCard>
-          )}
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <DashboardCard title="Top Pages" subtitle="By pageviews">
-              {topPages.length === 0
-                ? <p className="text-sm text-st-gray py-4 text-center">No data</p>
-                : topPages.map((r, i) => <BarRow key={i} label={r.page} value={r.views} max={maxPage} />)
-              }
-            </DashboardCard>
-            <DashboardCard title="Top Sources" subtitle="Traffic origins including AI platforms">
-              {topSources.length === 0
-                ? <p className="text-sm text-st-gray py-4 text-center">No data</p>
-                : topSources.map((r, i) => (
-                  <div key={i} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
-                    <span className={`text-sm w-36 truncate flex-shrink-0 ${r.source.startsWith('AI:') ? 'text-lime-700 font-medium' : 'text-gray-600'}`}>
-                      {r.source.startsWith('AI:') ? '✦ ' : ''}{r.source}
-                    </span>
-                    <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                      <div className={`h-full rounded-full ${r.source.startsWith('AI:') ? 'bg-lime-500' : 'bg-st-black'}`}
-                        style={{ width: `${(r.visits / maxSource) * 100}%` }} />
-                    </div>
-                    <span className="text-sm font-medium text-st-black w-10 text-right flex-shrink-0">
-                      {r.visits.toLocaleString()}
-                    </span>
-                  </div>
-                ))
-              }
-            </DashboardCard>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <DashboardCard title="AI Traffic" subtitle="Visits from AI platforms"
-              action={<Sparkles className="w-4 h-4 text-lime-500" />}>
-              {aiSources.length === 0 ? (
-                <div className="py-6 text-center">
-                  <Sparkles className="w-8 h-8 text-gray-200 mx-auto mb-2" />
-                  <p className="text-xs text-st-gray">No AI traffic yet</p>
-                </div>
-              ) : aiSources.map((r, i) => (
-                <div key={i} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                  <span className="text-sm text-gray-700 font-medium">{r.source}</span>
-                  <span className="text-sm font-semibold text-st-black">{r.visits.toLocaleString()}</span>
+          {/* KPI bar */}
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div className="grid grid-cols-5 divide-x divide-gray-100">
+              {KPI_ITEMS.map((k, i) => (
+                <div key={i} className="px-4 py-3">
+                  <p className="text-[11px] text-st-gray font-medium mb-1">{k.label}</p>
+                  <p className="text-xl font-semibold text-st-black">{k.value}</p>
+                  {k.sub && <p className="text-[10px] text-st-gray mt-0.5">{k.sub}</p>}
                 </div>
               ))}
-            </DashboardCard>
-
-            <DashboardCard title="Devices" subtitle="Visitor device breakdown">
-              <div className="space-y-3 pt-2">
-                {[
-                  { key: 'desktop', label: 'Desktop', icon: Monitor },
-                  { key: 'mobile', label: 'Mobile', icon: Smartphone },
-                  { key: 'tablet', label: 'Tablet', icon: Tablet }
-                ].map(({ key, label, icon: Icon }) => {
-                  const val = devices[key] || 0
-                  const total = Object.values(devices).reduce((a, b) => a + b, 0) || 1
-                  const pct = Math.round((val / total) * 100)
-                  return (
-                    <div key={key} className="flex items-center gap-3">
-                      <Icon className="w-4 h-4 text-st-gray flex-shrink-0" />
-                      <span className="text-sm text-gray-600 w-16">{label}</span>
-                      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-st-black rounded-full" style={{ width: `${pct}%` }} />
-                      </div>
-                      <span className="text-xs text-st-gray w-8 text-right">{pct}%</span>
-                    </div>
-                  )
-                })}
+            </div>
+            {/* Trend bars */}
+            {trend.length > 0 && (
+              <div className="px-4 pb-3 pt-1 border-t border-gray-50">
+                <div className="flex items-end gap-px h-10">
+                  {trend.map((t, i) => (
+                    <div key={i} className="flex-1 bg-st-black rounded-sm opacity-20 hover:opacity-60 transition-opacity"
+                      style={{ height: `${Math.max(4, (t.views / trendMax) * 100)}%` }}
+                      title={`${t.date}: ${t.views?.toLocaleString()} views`} />
+                  ))}
+                </div>
               </div>
-            </DashboardCard>
-
-            <DashboardCard title="Top Countries" subtitle="By visits">
-              {topCountries.length === 0
-                ? <p className="text-sm text-st-gray py-4 text-center">No data</p>
-                : topCountries.slice(0, 8).map((r, i) => (
-                  <BarRow key={i} label={r.country} value={r.visits} max={maxCountry} />
-                ))
-              }
-            </DashboardCard>
+            )}
           </div>
 
-          {/* Entry / Exit Pages */}
-          {(entryPages.length > 0 || exitPages.length > 0) && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <DashboardCard title="Entry Pages" subtitle="Where visitors start their session"
-                action={<LogIn className="w-4 h-4 text-st-gray" />}>
-                {entryPages.length === 0
-                  ? <p className="text-sm text-st-gray py-4 text-center">No data</p>
-                  : entryPages.map((r, i) => (
-                    <div key={i} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
-                      <span className="text-sm text-gray-600 flex-1 truncate">{r.page.replace(/^https?:\/\/[^/]+/, '') || '/'}</span>
-                      <span className="text-xs text-st-gray">{r.pct}%</span>
-                      <span className="text-sm font-medium text-st-black w-10 text-right">{r.count.toLocaleString()}</span>
-                    </div>
-                  ))
-                }
-              </DashboardCard>
-              <DashboardCard title="Exit Pages" subtitle="Where visitors leave"
-                action={<LogOut className="w-4 h-4 text-st-gray" />}>
-                {exitPages.length === 0
-                  ? <p className="text-sm text-st-gray py-4 text-center">No data</p>
-                  : exitPages.map((r, i) => (
-                    <div key={i} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
-                      <span className="text-sm text-gray-600 flex-1 truncate">{r.page.replace(/^https?:\/\/[^/]+/, '') || '/'}</span>
-                      <span className="text-xs text-st-gray">{r.pct}%</span>
-                      <span className="text-sm font-medium text-st-black w-10 text-right">{r.count.toLocaleString()}</span>
-                    </div>
-                  ))
-                }
-              </DashboardCard>
-            </div>
-          )}
-
-          {/* Outbound Clicks + Custom Events */}
+          {/* Two-column panels */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <DashboardCard title="Outbound Clicks" subtitle="External links your visitors click"
-              action={<ExternalLink className="w-4 h-4 text-st-gray" />}>
+
+            {/* Left: Pages / Entry / Exit / Events */}
+            <TabPanel tabs={LEFT_TABS} activeTab={leftTab} onTab={setLeftTab}>
+              {leftTab === 'pages' && (
+                topPages.length === 0
+                  ? <p className="text-xs text-st-gray py-8 text-center">No page data yet</p>
+                  : topPages.map((r, i) => (
+                    <DataRow key={i} label={stripOrigin(r.page)} value={r.views} max={maxPage}
+                      pct={Math.round(r.views / kpis.pageviews * 100)}
+                      onClick={() => toggleFilter('Page', stripOrigin(r.page))}
+                      active={isActive('Page', stripOrigin(r.page))} />
+                  ))
+              )}
+              {leftTab === 'entry' && (
+                entryPages.length === 0
+                  ? <p className="text-xs text-st-gray py-8 text-center">No entry data yet</p>
+                  : entryPages.map((r, i) => (
+                    <DataRow key={i} label={stripOrigin(r.page)} value={r.count} max={maxEntry} pct={r.pct}
+                      onClick={() => toggleFilter('Entry', stripOrigin(r.page))}
+                      active={isActive('Entry', stripOrigin(r.page))} />
+                  ))
+              )}
+              {leftTab === 'exit' && (
+                exitPages.length === 0
+                  ? <p className="text-xs text-st-gray py-8 text-center">No exit data yet</p>
+                  : exitPages.map((r, i) => (
+                    <DataRow key={i} label={stripOrigin(r.page)} value={r.count} max={maxExit} pct={r.pct}
+                      onClick={() => toggleFilter('Exit', stripOrigin(r.page))}
+                      active={isActive('Exit', stripOrigin(r.page))} />
+                  ))
+              )}
+              {leftTab === 'events' && (
+                customEvents.length === 0 ? (
+                  <div className="py-8 text-center space-y-3 px-4">
+                    <Zap className="w-6 h-6 text-gray-200 mx-auto" />
+                    <p className="text-xs text-st-gray">No custom events yet</p>
+                    <div className="bg-gray-50 border border-gray-100 rounded-lg p-3 text-left">
+                      <code className="text-[11px] text-gray-500">sourcetrack.track('signup', {'{ plan: "pro" }'})</code>
+                    </div>
+                  </div>
+                ) : customEvents.map((e, i) => (
+                  <DataRow key={i} label={e.name} value={e.count} max={maxEvent}
+                    onClick={() => toggleFilter('Event', e.name)}
+                    active={isActive('Event', e.name)} />
+                ))
+              )}
+            </TabPanel>
+
+            {/* Right: Sources / AI / Countries / Devices */}
+            <TabPanel tabs={RIGHT_TABS} activeTab={rightTab} onTab={setRightTab}>
+              {rightTab === 'sources' && (
+                topSources.length === 0
+                  ? <p className="text-xs text-st-gray py-8 text-center">No source data yet</p>
+                  : topSources.map((r, i) => {
+                    const isAI = r.source?.startsWith('AI:')
+                    const label = isAI ? r.source.replace('AI:', '').trim() : r.source
+                    return (
+                      <DataRow key={i} label={label} value={r.visits} max={maxSource}
+                        pct={Math.round(r.visits / kpis.unique_visitors * 100)}
+                        isAI={isAI}
+                        onClick={() => toggleFilter('Source', label)}
+                        active={isActive('Source', label)} />
+                    )
+                  })
+              )}
+              {rightTab === 'ai' && (
+                aiSources.length === 0 ? (
+                  <div className="py-8 text-center space-y-2">
+                    <Sparkles className="w-6 h-6 text-gray-200 mx-auto" />
+                    <p className="text-xs text-st-gray">No AI traffic detected yet</p>
+                    <p className="text-[11px] text-st-gray px-6">When visitors arrive from ChatGPT, Claude, Perplexity or other AI platforms, they'll appear here.</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="px-4 py-2 bg-purple-50 border-b border-purple-100">
+                      <p className="text-[11px] text-purple-700 font-medium">
+                        ✦ AI search drove {Math.round(aiSources.reduce((s,r)=>s+r.visits,0) / (kpis.unique_visitors||1) * 100)}% of all traffic
+                      </p>
+                    </div>
+                    {aiSources.map((r, i) => (
+                      <DataRow key={i} label={r.source} value={r.visits} max={maxAI} isAI
+                        onClick={() => toggleFilter('AI Source', r.source)}
+                        active={isActive('AI Source', r.source)} />
+                    ))}
+                  </>
+                )
+              )}
+              {rightTab === 'countries' && (
+                topCountries.length === 0
+                  ? <p className="text-xs text-st-gray py-8 text-center">No country data yet</p>
+                  : topCountries.map((r, i) => (
+                    <DataRow key={i} label={r.country || 'Unknown'} value={r.visits} max={maxCountry}
+                      pct={Math.round(r.visits / (kpis.unique_visitors||1) * 100)}
+                      onClick={() => toggleFilter('Country', r.country)}
+                      active={isActive('Country', r.country)} />
+                  ))
+              )}
+              {rightTab === 'devices' && (
+                Object.keys(devices).length === 0
+                  ? <p className="text-xs text-st-gray py-8 text-center">No device data yet</p>
+                  : Object.entries(devices).sort((a,b)=>b[1]-a[1]).map(([key, val], i) => (
+                    <DataRow key={i} label={key.charAt(0).toUpperCase() + key.slice(1)} value={val} max={maxDevice}
+                      pct={Math.round(val / Object.values(devices).reduce((s,v)=>s+v,0) * 100)}
+                      onClick={() => toggleFilter('Device', key)}
+                      active={isActive('Device', key)} />
+                  ))
+              )}
+            </TabPanel>
+          </div>
+
+          {/* Bottom: Outbound + Snippet */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-gray-100 flex items-center gap-2">
+                <ExternalLink className="w-3.5 h-3.5 text-st-gray" />
+                <span className="text-xs font-medium text-st-black">Outbound Clicks</span>
+              </div>
               {outboundLinks.length === 0 ? (
-                <div className="py-6 text-center space-y-2">
-                  <ExternalLink className="w-7 h-7 text-gray-200 mx-auto" />
-                  <p className="text-xs text-st-gray">Outbound clicks tracked automatically — no setup needed</p>
+                <div className="py-6 text-center px-4">
+                  <p className="text-xs text-st-gray">Tracked automatically — no setup needed</p>
                 </div>
               ) : outboundLinks.map((r, i) => {
                 let label = r.destination
-                try { label = new URL(r.destination).hostname } catch (_e) {}
-                return (
-                  <div key={i} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
-                    <ExternalLink className="w-3.5 h-3.5 text-st-gray flex-shrink-0" />
-                    <span className="text-sm text-gray-600 flex-1 truncate">{label}</span>
-                    <span className="text-sm font-medium text-st-black">{r.count.toLocaleString()}</span>
-                  </div>
-                )
+                try { label = new URL(r.destination).hostname } catch (_) {}
+                return <DataRow key={i} label={label} value={r.count} max={maxOutbound} />
               })}
-            </DashboardCard>
-
-            <DashboardCard title="Custom Events" subtitle="Track anything with sourcetrack.track()"
-              action={<Zap className="w-4 h-4 text-st-gray" />}>
-              {customEvents.length === 0 ? (
-                <div className="py-4 space-y-3 text-center">
-                  <Zap className="w-7 h-7 text-gray-200 mx-auto" />
-                  <p className="text-xs text-st-gray">No custom events yet</p>
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-left">
-                    <p className="text-xs font-medium text-gray-700 mb-1">Track custom events:</p>
-                    <code className="text-xs text-gray-500">sourcetrack.track('signup', {'{ plan: "pro" }'})</code>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  {customEvents.map((e, i) => (
-                    <div key={i} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                      <div className="flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-st-black flex-shrink-0" />
-                        <span className="text-sm font-medium text-st-black">{e.name}</span>
-                      </div>
-                      <span className="text-sm text-st-gray">{e.count.toLocaleString()}</span>
-                    </div>
-                  ))}
-                  {recentEvents.length > 0 && (
-                    <div className="mt-3 pt-3 border-t border-gray-100">
-                      <p className="text-xs font-medium text-st-gray mb-2">Recent</p>
-                      {recentEvents.slice(0, 5).map((e, i) => (
-                        <div key={i} className="flex items-center gap-2 py-1 text-xs text-st-gray">
-                          <span className="font-medium text-st-black">{e.name}</span>
-                          <span className="truncate flex-1">{e.url?.replace(/^https?:\/\/[^/]+/, '') || ''}</span>
-                          <span className="flex-shrink-0">{new Date(e.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </DashboardCard>
-          </div>
-
-          <DashboardCard title="Analytics Snippet" subtitle="Cookieless · No consent banner · GDPR compliant">
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-center gap-3">
-              <code className="text-xs text-gray-600 flex-1 break-all">{snippetUrl}</code>
-              <button onClick={() => navigator.clipboard.writeText(snippetUrl)}
-                className="text-xs text-st-gray hover:text-st-black px-2 py-1 border border-gray-200 rounded flex-shrink-0">
-                Copy
-              </button>
             </div>
-          </DashboardCard>
+
+            <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-st-black">Tracking snippet</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-st-gray">Cookieless · No consent · GDPR</span>
+                </div>
+              </div>
+              <div className="px-4 py-3 flex items-center gap-2">
+                <code className="text-[11px] text-gray-500 flex-1 truncate bg-gray-50 px-2 py-1.5 rounded-lg border border-gray-100">
+                  {snippetUrl}
+                </code>
+                <button onClick={copySnippet}
+                  className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-st-black text-white text-xs font-medium rounded-lg hover:bg-st-black/90">
+                  {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
+              </div>
+            </div>
+          </div>
         </>
       )}
     </div>
