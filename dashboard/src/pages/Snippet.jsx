@@ -14,12 +14,12 @@ function AccordionSection({ title, icon: Icon, when, children }) {
         onClick={() => setOpen(!open)}
         className="w-full p-5 flex items-center gap-3 text-left hover:bg-gray-50 transition-colors rounded-xl"
       >
-        <Icon className="w-5 h-5 text-gray-500 flex-shrink-0" />
+        <Icon className="w-5 h-5 text-st-gray flex-shrink-0" />
         <div className="flex-1 min-w-0">
-          <span className="text-sm font-semibold text-gray-900">{title}</span>
-          {when && <p className="text-xs text-gray-400 mt-0.5">{when}</p>}
+          <span className="text-sm font-semibold text-st-black">{title}</span>
+          {when && <p className="text-xs text-st-gray mt-0.5">{when}</p>}
         </div>
-        {open ? <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" /> : <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+        {open ? <ChevronDown className="w-4 h-4 text-st-gray flex-shrink-0" /> : <ChevronRight className="w-4 h-4 text-st-gray flex-shrink-0" />}
       </button>
       {open && (
         <div className="px-5 pb-5 pt-0 border-t border-gray-100">
@@ -128,7 +128,7 @@ export default function Snippet() {
     ? 'text-green-500'
     : status?.status === 'not_installed'
       ? 'text-amber-500'
-      : 'text-gray-400'
+      : 'text-st-gray'
 
   const statusLabel = status?.status === 'verified'
     ? 'Receiving data'
@@ -139,8 +139,8 @@ export default function Snippet() {
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Install</h2>
-        <p className="text-sm text-gray-500 mt-1">Add the SourceTrack Pixel to your website</p>
+        <h2 className="text-2xl font-bold text-st-black">Install</h2>
+        <p className="text-sm text-st-gray mt-1">Add the SourceTrack Pixel to your website</p>
       </div>
 
       {/* Status — compact inline */}
@@ -149,12 +149,12 @@ export default function Snippet() {
           <Circle className={`w-2.5 h-2.5 fill-current ${statusColor}`} />
           <span className={`text-sm font-medium ${statusColor}`}>{statusLabel}</span>
           {status?.status === 'verified' && status?.domain && (
-            <span className="text-xs text-gray-400 ml-auto truncate">{status.domain}</span>
+            <span className="text-xs text-st-gray ml-auto truncate">{status.domain}</span>
           )}
           <button
             onClick={checkStatus}
             disabled={statusLoading}
-            className="ml-auto flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 disabled:opacity-50"
+            className="ml-auto flex items-center gap-1 text-xs text-st-gray hover:text-gray-600 disabled:opacity-50"
           >
             <RefreshCw className={`w-3 h-3 ${statusLoading ? 'animate-spin' : ''}`} />
             Refresh
@@ -166,7 +166,7 @@ export default function Snippet() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
         <div className="flex items-center gap-2">
           <Code className="w-5 h-5 text-gray-700" />
-          <h3 className="font-semibold text-gray-900">SourceTrack Pixel</h3>
+          <h3 className="font-semibold text-st-black">SourceTrack Pixel</h3>
         </div>
 
         <p className="text-sm text-gray-600">
@@ -176,7 +176,7 @@ export default function Snippet() {
 
         {/* Toggle Controls */}
         <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Pixel Options</p>
+          <p className="text-xs font-medium text-st-gray uppercase tracking-wider">Pixel Options</p>
 
           <div className="space-y-2">
             {/* Auto-identify toggle */}
@@ -187,12 +187,12 @@ export default function Snippet() {
                   className="flex items-center gap-2 text-left group"
                 >
                   {autoIdentify
-                    ? <ToggleRight className="w-5 h-5 text-gray-900 flex-shrink-0" />
-                    : <ToggleLeft className="w-5 h-5 text-gray-300 group-hover:text-gray-400 flex-shrink-0" />
+                    ? <ToggleRight className="w-5 h-5 text-st-black flex-shrink-0" />
+                    : <ToggleLeft className="w-5 h-5 text-gray-300 group-hover:text-st-gray flex-shrink-0" />
                   }
                   <span className="text-sm font-medium text-gray-700">Auto-identify logged-in users</span>
                 </button>
-                <p className="text-xs text-gray-400 mt-0.5 ml-7">
+                <p className="text-xs text-st-gray mt-0.5 ml-7">
                   Reads a user ID from a meta tag on your page after login. No custom JavaScript needed.
                 </p>
               </div>
@@ -208,7 +208,7 @@ export default function Snippet() {
                   placeholder="[data-trackiq-user-id]"
                   className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg font-mono outline-none focus:ring-2 focus:ring-gray-900"
                 />
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-st-gray">
                   Add <code className="bg-gray-100 px-1 rounded text-xs">&lt;meta data-trackiq-user-id="usr_abc123" /&gt;</code> to your logged-in page template.
                 </p>
               </div>
@@ -223,7 +223,7 @@ export default function Snippet() {
         </ol>
 
         {site && (
-          <div className="bg-gray-900 rounded-lg p-4 relative">
+          <div className="bg-st-black rounded-lg p-4 relative">
             <pre className="text-green-400 text-xs overflow-x-auto whitespace-pre-wrap pr-12">{snippet}</pre>
             <button
               onClick={handleCopy}
@@ -235,7 +235,7 @@ export default function Snippet() {
         )}
 
         {!site && (
-          <p className="text-sm text-gray-400">Complete onboarding or create a site in Settings to get your pixel.</p>
+          <p className="text-sm text-st-gray">Complete onboarding or create a site in Settings to get your pixel.</p>
         )}
 
         {/* What you get immediately */}
@@ -248,7 +248,7 @@ export default function Snippet() {
             <li>AI platform traffic — ChatGPT, Claude, Perplexity, and others</li>
             <li>Visitor country and device type</li>
           </ul>
-          <p className="text-gray-400 mt-1">
+          <p className="text-st-gray mt-1">
             Conversions require an additional <code className="bg-gray-200 px-1 rounded text-xs">trackiq.conversion()</code> call — see JavaScript API below.
           </p>
         </div>
@@ -256,15 +256,15 @@ export default function Snippet() {
 
       {/* Verify Install */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
-        <h3 className="font-semibold text-gray-900">Verify Installation</h3>
-        <p className="text-sm text-gray-500">
+        <h3 className="font-semibold text-st-black">Verify Installation</h3>
+        <p className="text-sm text-st-gray">
           After pasting the pixel, click below to confirm events are being received.
         </p>
 
         <button
           onClick={handleTest}
           disabled={testLoading || !site}
-          className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 flex items-center gap-2"
+          className="px-4 py-2 bg-st-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 flex items-center gap-2"
         >
           {testLoading ? (
             <>
@@ -305,8 +305,8 @@ export default function Snippet() {
 
       {/* Advanced Setup */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Advanced Setup</h3>
-        <p className="text-xs text-gray-400 -mt-2 mb-3">Optional — expand a section only if you need it</p>
+        <h3 className="text-sm font-semibold text-st-gray uppercase tracking-wider mb-3">Advanced Setup</h3>
+        <p className="text-xs text-st-gray -mt-2 mb-3">Optional — expand a section only if you need it</p>
 
         <div className="space-y-3">
           <AccordionSection
@@ -322,7 +322,7 @@ export default function Snippet() {
               <div>
                 <p className="font-medium text-gray-700">Identify user</p>
                 <code className="block bg-gray-100 px-3 py-1.5 rounded text-xs mt-1">{'window.trackiq.identify({ user_id: "usr_abc123" })'}</code>
-                <p className="text-xs text-gray-400 mt-1">Call after login/signup to link browsing history to a known user</p>
+                <p className="text-xs text-st-gray mt-1">Call after login/signup to link browsing history to a known user</p>
               </div>
               <div>
                 <p className="font-medium text-gray-700">Track custom event</p>
@@ -331,7 +331,7 @@ export default function Snippet() {
               <div>
                 <p className="font-medium text-gray-700">Track conversion</p>
                 <code className="block bg-gray-100 px-3 py-1.5 rounded text-xs mt-1">{'window.trackiq.conversion(29.99, { product: "starter" })'}</code>
-                <p className="text-xs text-gray-400 mt-1">
+                <p className="text-xs text-st-gray mt-1">
                   Conversions appear in attribution reports and dashboard. Use <code className="bg-gray-100 px-1 rounded text-xs">conversion_type</code> to subtype (e.g. purchase, lead, trial).
                 </p>
               </div>
@@ -358,7 +358,7 @@ export default function Snippet() {
 
             <div>
               <p className="text-sm font-medium text-gray-700">Explicit API call</p>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-xs text-st-gray mt-0.5">
                 Call <code className="bg-gray-100 px-1 rounded text-xs">window.trackiq.identify()</code> immediately after login/signup.
               </p>
               <code className="block bg-gray-100 px-3 py-1.5 rounded text-xs mt-1.5">
@@ -368,20 +368,20 @@ export default function Snippet() {
 
             <div>
               <p className="text-sm font-medium text-gray-700">Auto-detection (no custom JS)</p>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-xs text-st-gray mt-0.5">
                 Add a hidden meta tag to your logged-in pages. The pixel reads it automatically — no code changes beyond the meta tag.
               </p>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-st-gray mt-1">
                 Add this to your logged-in page template (render your actual user ID):
               </p>
               <code className="block bg-gray-100 px-3 py-1.5 rounded text-xs mt-1.5">
                 {'<meta data-trackiq-user-id="usr_abc123" />'}
               </code>
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-st-gray mt-2">
                 Then add <code className="bg-gray-100 px-1 rounded text-xs">data-user-id-selector</code> to your pixel script:
               </p>
               {site && (
-                <div className="bg-gray-900 rounded-lg p-4 relative mt-1.5">
+                <div className="bg-st-black rounded-lg p-4 relative mt-1.5">
                   <pre className="text-green-400 text-xs overflow-x-auto whitespace-pre-wrap">
                     {`<script async src="${apiUrl}/tracker/loader.min.js" data-site-key="${site.site_key}" data-user-id-selector="[data-trackiq-user-id]"></script>`}
                   </pre>
@@ -397,7 +397,7 @@ export default function Snippet() {
                   </button>
                 </div>
               )}
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-st-gray mt-1">
                 This is an alternative configuration of the same pixel — not a different script.
               </p>
             </div>
@@ -425,7 +425,7 @@ export default function Snippet() {
             <div className="space-y-3">
               <div>
                 <p className="text-sm font-medium text-gray-700">Decorate outgoing links</p>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-xs text-st-gray mt-0.5">
                   Call <code className="bg-gray-100 px-1 rounded text-xs">getCrossDomainUrl()</code> on URLs pointing to another tracked domain.
                 </p>
                 <code className="block bg-gray-100 px-3 py-1.5 rounded text-xs mt-1.5 whitespace-pre-wrap">
@@ -435,7 +435,7 @@ export default function Snippet() {
 
               <div>
                 <p className="text-sm font-medium text-gray-700">Form-based handoff</p>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-xs text-st-gray mt-0.5">
                   Add a hidden field for cross-domain form submissions:
                 </p>
                 <code className="block bg-gray-100 px-3 py-1.5 rounded text-xs mt-1.5">
@@ -518,7 +518,7 @@ export default function Snippet() {
 
             <div>
               <p className="text-sm font-medium text-gray-700">Zapier / n8n example</p>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-xs text-st-gray mt-0.5">
                 POST to <code className="bg-gray-100 px-1 rounded text-xs">/api/identify</code> when a new contact is created in your CRM.
               </p>
               <code className="block bg-gray-100 px-3 py-1.5 rounded text-xs mt-1.5 whitespace-pre-wrap">
@@ -528,7 +528,7 @@ export default function Snippet() {
 
             <div>
               <p className="text-sm font-medium text-gray-700">Capturing the anonymous ID</p>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-xs text-st-gray mt-0.5">
                 Use hidden fields in your forms. The pixel populates them automatically.
               </p>
               <code className="block bg-gray-100 px-3 py-1.5 rounded text-xs mt-1.5">
@@ -558,7 +558,7 @@ export default function Snippet() {
 
             <div>
               <p className="text-sm font-medium text-gray-700">Configuration</p>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-xs text-st-gray mt-0.5">
                 Set the <code className="bg-gray-100 px-1 rounded text-xs">WEBHOOK_URL</code> environment variable on your backend deployment.
                 If unset, no webhooks are sent.
               </p>

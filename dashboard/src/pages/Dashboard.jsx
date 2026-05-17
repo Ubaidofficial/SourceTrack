@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { fetchApi } from '../lib/api'
 import { format, subDays } from 'date-fns'
 import { useAuth } from '../contexts/AuthContext'
-import { Line } from 'react-chartjs-2'
+import { Line, Doughnut } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -13,6 +13,7 @@ import {
   BarElement,
   PointElement,
   LineElement,
+  ArcElement,
   Title,
   Tooltip,
   Legend
@@ -31,7 +32,7 @@ import StatusBadge from '../components/StatusBadge'
 import SupportModeBanner from '../components/SupportModeBanner'
 import ConversionExplanationModal from '../components/ConversionExplanationModal'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend)
+ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend)
 
 const MODELS = [
   { key: 'first_touch', label: 'First Touch' },
@@ -41,7 +42,19 @@ const MODELS = [
   { key: 'ai_platforms', label: 'AI Platforms' }
 ]
 
-const AI_SOURCES = ['ChatGPT', 'Claude', 'Perplexity', 'Gemini', 'Grok', 'Copilot', 'DeepSeek', 'You.com AI', 'Phind', 'Kagi']
+const AI_SOURCES = ['ChatGPT', 'Claude', 'Perplexity', 'Gemini', 'Grok', 'Copilot', 'DeepSeek', 'You.com AI', 'Phind', 'Kagi'] // matches ai-platform.js AI_HOST_MAP (11 platforms)
+
+// Platform accent colors for AI source table badges
+const AI_PLATFORM_COLORS = {
+  'ChatGPT':    { bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+  'Claude':     { bg: 'bg-orange-100',  text: 'text-orange-700',  dot: 'bg-orange-500' },
+  'Perplexity': { bg: 'bg-purple-100',  text: 'text-purple-700',  dot: 'bg-purple-500' },
+  'Gemini':     { bg: 'bg-blue-100',    text: 'text-blue-700',    dot: 'bg-blue-500' },
+  'Grok':       { bg: 'bg-gray-100',    text: 'text-gray-700',    dot: 'bg-gray-500' },
+  'Copilot':    { bg: 'bg-sky-100',     text: 'text-sky-700',     dot: 'bg-sky-500' },
+  'DeepSeek':   { bg: 'bg-cyan-100',    text: 'text-cyan-700',    dot: 'bg-cyan-500' },
+}
+const getAIPlatformColor = (name) => AI_PLATFORM_COLORS[name] || { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' }
 const CONVERSION_LABELS = {
   purchase: 'Purchase', trial: 'Free Trial', lead: 'Lead Form',
   signup: 'Sign Up', meeting: 'Meeting', booking: 'Booking'
@@ -99,7 +112,6 @@ function getRollingDateRange(days) {
   }
 }
 
-
 // ─── T3.4: KPI Config by business_type ─────────────────────────────────────
 const getKpiConfig = (businessType) => {
   switch (businessType) {
@@ -139,11 +151,28 @@ const computeMrrEstimate = (d) => {
   return days < 3 ? null : (d.revenue / days) * 30
 }
 const computeAov = (d) => (!d?.revenue || !d?.orders || d.orders === 0) ? null : d.revenue / d.orders
-const enrichKpis = (kpis, businessType) => ({
-  ...kpis,
-  mrr_estimate: kpis.mrr_estimate ?? (businessType === 'saas' ? computeMrrEstimate(kpis) : null),
-  aov: kpis.aov ?? (businessType === 'ecommerce' ? computeAov(kpis) : null),
-})
+const enrichKpis = (kpis, businessType) => {
+  const mrrNow  = kpis.mrr_estimate  ?? (businessType === 'saas'      ? computeMrrEstimate(kpis) : null)
+  const aovNow  = kpis.aov           ?? (businessType === 'ecommerce' ? computeAov(kpis)         : null)
+  // Previous-period MRR estimate — same formula applied to prev revenue
+  const mrrPrev = kpis.mrr_estimate_prev ?? (businessType === 'saas' && kpis.revenue_prev
+    ? (kpis.revenue_prev / (new Date().getDate() || 30)) * 30
+    : null)
+  return {
+    ...kpis,
+    // Computed metrics
+    mrr_estimate:      mrrNow,
+    mrr_estimate_prev: mrrPrev,
+    aov:               aovNow,
+    // Expose _prev keys for every KPI the strip might display
+    revenue_prev:      kpis.revenue_prev      ?? null,
+    leads_prev:        kpis.leads_prev        ?? null,
+    ai_revenue_prev:   kpis.ai_revenue_prev   ?? null,
+    conversions_prev:  kpis.conversions_prev  ?? null,
+    sessions_prev:     kpis.sessions_prev     ?? null,
+    total_leads_prev:  kpis.leads_prev        ?? null,  // leadgen alias
+  }
+}
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
@@ -154,7 +183,6 @@ export default function Dashboard() {
   const [previewMode, setPreviewMode] = useState(false)
   const [explainModalOpen, setExplainModalOpen] = useState(false)
   const [explainModel, setExplainModel] = useState(null)
-  const [ltvModel, setLtvModel] = useState('first_touch')
   const [previewSiteName, setPreviewSiteName] = useState('')
   const [previewSiteDomain, setPreviewSiteDomain] = useState('')
 
@@ -255,44 +283,7 @@ export default function Dashboard() {
     })
   })
 
-  // LTV comparison: fetch LTV revenue for all single-touch models
-  const ltvQueries = useQueries({
-    queries: MODELS.filter(m => m.key !== 'ai_platforms').map((m) => ({
-      queryKey: ['ltv-model', m.key, site?.site_key, timeRange],
-      queryFn: async () => {
-        if (!site?.site_key) return null
-        const from = format(subDays(new Date(), timeRange), 'yyyy-MM-dd')
-        const to = format(new Date(), 'yyyy-MM-dd')
-        const params = new URLSearchParams({
-          site_key: site.site_key,
-          model: m.key,
-          date_from: from,
-          date_to: to,
-          group_by: 'source',
-          metric: 'ltv_revenue'
-        })
-        return fetchApi(`/attribution?${params}`)
-      },
-      enabled: !!site?.site_key
-    }))
-  })
 
-  // Session analytics query
-  const { data: sessionOverview, isLoading: sessionsLoading } = useQuery({
-    queryKey: ['sessions-overview', site?.site_key, timeRange],
-    queryFn: async () => {
-      if (!site?.site_key) return null
-      const from = format(subDays(new Date(), timeRange), 'yyyy-MM-dd')
-      const to = format(new Date(), 'yyyy-MM-dd')
-      const params = new URLSearchParams({
-        site_key: site.site_key,
-        date_from: from,
-
-      })
-      return fetchApi(`/sessions/overview?${params}`)
-    },
-    enabled: !!site?.site_key
-  })
 
   const { data: liveData } = useQuery({
     queryKey: ['live-visitors', site?.site_key],
@@ -355,6 +346,45 @@ export default function Dashboard() {
       borderColor: 'rgba(17, 24, 39, 1)', backgroundColor: 'rgba(17, 24, 39, 0.08)',
       fill: true, tension: 0.3, pointRadius: 2
     }]
+  }
+
+  // T5.4 — Leads over time (channel states)
+  const channelTrendResults = overview?.channel_trend || []
+  const channelTrendData = {
+    labels: channelTrendResults.map(r => r.dim_value || ''),
+    datasets: [{
+      label: 'Leads',
+      data: channelTrendResults.map(r => r.leads || 0),
+      borderColor: 'rgba(17,24,39,0.85)',
+      backgroundColor: 'rgba(17,24,39,0.08)',
+      borderWidth: 2,
+      pointRadius: 3,
+      tension: 0.3,
+      fill: true
+    }]
+  }
+
+  // T5.5 — Leads by Campaign donut
+  const topCampaigns = campaignResults.slice(0, 6)
+  const donutColors = [
+    'rgba(17,24,39,0.85)', 'rgba(215,245,80,0.9)', 'rgba(107,114,128,0.8)',
+    'rgba(55,65,81,0.8)', 'rgba(180,195,60,0.8)', 'rgba(209,213,219,0.9)'
+  ]
+  const campaignDonutData = {
+    labels: topCampaigns.map(r => r.dim_value || 'unknown'),
+    datasets: [{
+      data: topCampaigns.map(r => r.revenue || 0),
+      backgroundColor: donutColors,
+      borderWidth: 0,
+      hoverOffset: 4
+    }]
+  }
+  const donutOpts = {
+    responsive: true, maintainAspectRatio: false, cutout: '68%',
+    plugins: {
+      legend: { position: 'right', labels: { boxWidth: 10, padding: 12, font: { size: 11 } } },
+      tooltip: { callbacks: { label: (ctx) => ` $${(ctx.raw || 0).toFixed(0)}` } }
+    }
   }
 
   const chartOpts = (prefix = '$') => ({
@@ -430,8 +460,8 @@ export default function Dashboard() {
       {/* Header Toolbar */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Performance Overview</h2>
-          {site && <p className="text-sm text-gray-500 mt-0.5">{site.domain || site.name}</p>}
+          <h2 className="text-2xl font-bold text-st-black">Performance Overview</h2>
+          {site && <p className="text-sm text-st-gray mt-0.5">{site.domain || site.name}</p>}
         </div>
         {!previewMode && (
           <div className="flex items-center gap-3">
@@ -458,15 +488,15 @@ export default function Dashboard() {
 
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black" />
         </div>
       ) : isEmpty ? (
         /* Empty state — no saved reports */
         <div className="max-w-2xl mx-auto py-12 text-center space-y-8">
           <div>
             <BarChart3 className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">No reports yet</h3>
-            <p className="text-sm text-gray-500 max-w-md mx-auto">
+            <h3 className="text-xl font-semibold text-st-black mb-2">No reports yet</h3>
+            <p className="text-sm text-st-gray max-w-md mx-auto">
               Your dashboard is empty because no reports have been created yet.
               Build reports for the metrics and attribution views you care about.
             </p>
@@ -482,40 +512,45 @@ export default function Dashboard() {
           </div>
 
           <div>
-            <p className="text-xs text-gray-400 mb-3">Or start with a template</p>
+            <p className="text-xs text-st-gray mb-3">Or start with a template</p>
             <div className="flex items-center justify-center gap-3">
               <button
                 onClick={() => createStarterReport('sources')}
                 className="px-5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 flex items-center gap-2"
               >
-                <FileText className="w-4 h-4 text-gray-400" /> Sources
+                <FileText className="w-4 h-4 text-st-gray" /> Sources
               </button>
               <button
                 onClick={() => createStarterReport('totals')}
                 className="px-5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 flex items-center gap-2"
               >
-                <BarChart3 className="w-4 h-4 text-gray-400" /> Totals
+                <BarChart3 className="w-4 h-4 text-st-gray" /> Totals
               </button>
               <button
                 onClick={() => createStarterReport('trend')}
                 className="px-5 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 flex items-center gap-2"
               >
-                <TrendingUp className="w-4 h-4 text-gray-400" /> Conversion Trend
+                <TrendingUp className="w-4 h-4 text-st-gray" /> Conversion Trend
               </button>
             </div>
           </div>
 
-          <p className="text-xs text-gray-400 max-w-sm mx-auto">
+          <p className="text-xs text-st-gray max-w-sm mx-auto">
             Templates use live attribution data. Build reports in the Report Builder for more metric and filter options.
           </p>
         </div>
       ) : (
         <>
-          {/* KPI Strip — T3.4: business-type aware */}
+          {/* KPI Strip — T2.1: business-type aware with deltas */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             {kpiConfig.map((metric) => {
-              const rawValue = enrichedKpis?.[metric.key] ?? null
-              const isEmpty  = metric.emptyState === true && rawValue == null
+              const rawValue  = enrichedKpis?.[metric.key] ?? null
+              const prevValue = enrichedKpis?.[metric.key + '_prev'] ?? null
+              const isEmpty   = metric.emptyState === true && rawValue == null
+              // Compute delta % vs previous period when both values exist
+              const delta = (!isEmpty && rawValue != null && prevValue != null && prevValue !== 0)
+                ? ((rawValue - prevValue) / Math.abs(prevValue)) * 100
+                : null
               return (
                 <MetricTile
                   key={metric.key}
@@ -523,6 +558,7 @@ export default function Dashboard() {
                   value={rawValue}
                   format={metric.format}
                   isEmpty={isEmpty}
+                  trend={delta}
                 />
               )
             })}
@@ -533,7 +569,7 @@ export default function Dashboard() {
             <DashboardCard title="Your Reports"
               subtitle="Saved report configurations — data fetched live"
               action={
-                <button onClick={() => navigate('/report-builder')} className="text-xs text-gray-900 hover:text-gray-700 font-medium flex items-center gap-1">
+                <button onClick={() => navigate('/report-builder')} className="text-xs text-st-black hover:text-gray-700 font-medium flex items-center gap-1">
                   <Plus className="w-3 h-3" /> New Report
                 </button>
               }
@@ -564,11 +600,11 @@ export default function Dashboard() {
                       }}
                       className="bg-gray-50 rounded-lg p-3 text-left hover:bg-gray-100 transition-colors border border-gray-100 hover:border-gray-300"
                     >
-                      <p className="text-xs font-medium text-gray-900 truncate">{report.name}</p>
-                      <p className="text-lg font-bold text-gray-900 mt-0.5">
+                      <p className="text-xs font-medium text-st-black truncate">{report.name}</p>
+                      <p className="text-lg font-bold text-st-black mt-0.5">
                         {metricDef.format(total)}
                       </p>
-                      <p className="text-xs text-gray-400">{metricDef.label} total</p>
+                      <p className="text-xs text-st-gray">{metricDef.label} total</p>
                       {cfg.isRolling && (
                         <p className="text-xs text-lime-700 mt-0.5">Rolling — last {cfg.rollingDays || 30} days</p>
                       )}
@@ -581,11 +617,11 @@ export default function Dashboard() {
                             const barW = maxVal > 0 ? (val / maxVal) * 100 : 0
                             return (
                               <div key={i} className="flex items-center gap-1.5">
-                                <span className="text-xs text-gray-500 w-16 truncate flex-shrink-0">
+                                <span className="text-xs text-st-gray w-16 truncate flex-shrink-0">
                                   {r.dim_value || '—'}
                                 </span>
                                 <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                  <div className="h-full bg-gray-900 rounded-full transition-all" style={{ width: `${barW}%` }} />
+                                  <div className="h-full bg-st-black rounded-full transition-all" style={{ width: `${barW}%` }} />
                                 </div>
                                 <span className="text-xs text-gray-600 w-12 text-right flex-shrink-0">
                                   {metricDef.format(val)}
@@ -599,7 +635,7 @@ export default function Dashboard() {
                           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400" />
                         </div>
                       ) : (
-                        <p className="text-xs text-gray-400 mt-2">No data for this period</p>
+                        <p className="text-xs text-st-gray mt-2">No data for this period</p>
                       )}
                     </button>
                   )
@@ -612,14 +648,14 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <DashboardCard title="Recent Leads" subtitle="Latest attributed conversions by source"
               action={!previewMode && (
-                <button onClick={() => navigate('/leads')} className="text-xs text-gray-900 hover:text-gray-700 font-medium flex items-center gap-1">
+                <button onClick={() => navigate('/leads')} className="text-xs text-st-black hover:text-gray-700 font-medium flex items-center gap-1">
                   View all <ArrowRight className="w-3 h-3" />
                 </button>
               )}
               className="lg:col-span-2"
             >
               {recentLeadsData.length === 0 ? (
-                <p className="text-sm text-gray-400 py-6 text-center">No recent leads yet. Data will appear as conversions flow in.</p>
+                <p className="text-sm text-st-gray py-6 text-center">No recent leads yet. Data will appear as conversions flow in.</p>
               ) : (
                 <DashboardTable
                   columns={[
@@ -630,7 +666,7 @@ export default function Dashboard() {
                       </span>
                     )},
                     { key: 'conversions', label: 'Conversions', render: (r) => r.conversions, cellClassName: 'text-right text-gray-600' },
-                    { key: 'revenue', label: 'Revenue', render: (r) => `$${r.revenue.toFixed(0)}`, cellClassName: 'text-right font-medium text-gray-900' },
+                    { key: 'revenue', label: 'Revenue', render: (r) => `$${r.revenue.toFixed(0)}`, cellClassName: 'text-right font-medium text-st-black' },
                     { key: 'status', label: 'Status', render: () => <StatusBadge status="active" label="Active" />, cellClassName: 'text-right' }
                   ]}
                   rows={recentLeadsData}
@@ -651,12 +687,12 @@ export default function Dashboard() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <DashboardCard title="AI Sources Performance"
+            <DashboardCard title="Leads From AI Search"
               subtitle={aiRevResults.length > 0
-                ? `AI platforms drive ${aiShareTotal.toFixed(1)}% of your total revenue`
-                : 'Revenue and conversions from AI platforms'}
+                ? `AI platforms drive ${aiShareTotal.toFixed(1)}% of revenue — ${aiRevResults.reduce((s,r) => s + (r.ai_leads||0), 0).toLocaleString()} leads this period`
+                : 'Leads, conversions and revenue from AI platforms'}
               action={!previewMode && (
-                <button onClick={() => navigate('/report-builder')} className="text-xs text-gray-900 hover:text-gray-700 font-medium">
+                <button onClick={() => navigate('/report-builder')} className="text-xs text-st-black hover:text-gray-700 font-medium">
                   Analyze
                 </button>
               )}
@@ -682,11 +718,21 @@ export default function Dashboard() {
                   )}
                   <DashboardTable
                     columns={[
-                      { key: 'aiSource', label: 'AI Source', render: (r) => <span className="font-medium">{r.dim_value || 'unknown'}</span> },
-                      { key: 'aiRevenue', label: 'Revenue', render: (r) => `$${(r.ai_revenue || 0).toFixed(0)}`, cellClassName: 'text-right text-gray-900' },
-                      { key: 'aiConversions', label: 'Conversions', render: (r) => (r.ai_conversions || 0).toLocaleString(), cellClassName: 'text-right text-gray-600' }
+                      { key: 'aiSource', label: 'AI Platform', render: (r) => {
+                        const name = r.dim_value || 'Unknown'
+                        const c = getAIPlatformColor(name)
+                        return (
+                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold ${c.bg} ${c.text}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
+                            {name}
+                          </span>
+                        )
+                      }},
+                      { key: 'aiLeads', label: 'Leads', render: (r) => (r.ai_leads || 0).toLocaleString(), cellClassName: 'text-right font-medium text-st-black' },
+                      { key: 'aiConversions', label: 'Conv.', render: (r) => (r.ai_conversions || 0).toLocaleString(), cellClassName: 'text-right text-st-gray' },
+                      { key: 'aiRevenue', label: 'Revenue', render: (r) => `$${(r.ai_revenue || 0).toFixed(0)}`, cellClassName: 'text-right font-semibold text-st-black' },
                     ]}
-                    rows={aiRevResults.slice(0, 5)}
+                    rows={aiRevResults}
                   />
                 </>
               )}
@@ -703,7 +749,6 @@ export default function Dashboard() {
                 </div>
               )}
             </DashboardCard>
-
 
           </div>
 
@@ -725,16 +770,16 @@ export default function Dashboard() {
                 <div className="flex-1">
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <p className="text-xs text-gray-500">AI Revenue</p>
-                      <p className="text-lg font-semibold text-gray-900">${totalAIRevenue.toFixed(0)}</p>
+                      <p className="text-xs text-st-gray">AI Revenue</p>
+                      <p className="text-lg font-semibold text-st-black">${totalAIRevenue.toFixed(0)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">AI Share</p>
-                      <p className="text-lg font-semibold text-gray-900">{aiShareTotal.toFixed(1)}%</p>
+                      <p className="text-xs text-st-gray">AI Share</p>
+                      <p className="text-lg font-semibold text-st-black">{aiShareTotal.toFixed(1)}%</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Platforms</p>
-                      <p className="text-lg font-semibold text-gray-900">{aiRevResults.length}</p>
+                      <p className="text-xs text-st-gray">Platforms</p>
+                      <p className="text-lg font-semibold text-st-black">{aiRevResults.length}</p>
                     </div>
                   </div>
                 </div>
@@ -742,12 +787,43 @@ export default function Dashboard() {
             </DashboardCard>
           )}
 
+          {/* T5.4 — Leads Over Time (Channel States) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <DashboardCard title="Leads Over Time" subtitle={`Daily lead trend — last ${timeRange} days`}>
+              {channelTrendResults.length === 0 ? (
+                <EmptyState icon={TrendingUp} title="No lead data yet" description="Lead trend will appear as conversions flow in." />
+              ) : (
+                <div className="h-48">
+                  <Line data={channelTrendData} options={chartOpts('')} />
+                </div>
+              )}
+            </DashboardCard>
+
+            {/* T5.5 — Leads by Campaign donut */}
+            <DashboardCard title="Revenue by Campaign"
+              subtitle={topCampaigns.length > 0 ? `Top ${topCampaigns.length} campaigns by revenue` : 'Campaign revenue distribution'}
+              action={!previewMode && (
+                <button onClick={() => navigate('/campaigns')} className="text-xs text-st-black hover:text-st-gray font-medium">
+                  View all
+                </button>
+              )}
+            >
+              {topCampaigns.length === 0 ? (
+                <EmptyState icon={BarChart3} title="No campaign data yet" description="Tag your URLs with UTM campaign parameters to see distribution here." />
+              ) : (
+                <div className="h-48">
+                  <Doughnut data={campaignDonutData} options={donutOpts} />
+                </div>
+              )}
+            </DashboardCard>
+          </div>
+
           {/* Row 3: Conversion Events + Landing Pages */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <DashboardCard title="Conversion Events"
               subtitle="Tracked conversion types across your site"
               action={!previewMode && (
-                <button onClick={() => navigate('/settings')} className="text-xs text-gray-900 hover:text-gray-700 font-medium">
+                <button onClick={() => navigate('/settings')} className="text-xs text-st-black hover:text-gray-700 font-medium">
                   Configure
                 </button>
               )}
@@ -758,8 +834,8 @@ export default function Dashboard() {
                   const hasData = typeData && typeData.count > 0
                   return (
                     <div key={key} className="bg-gray-50 rounded-lg p-3">
-                      <p className="text-xs text-gray-500">{label}</p>
-                      <p className="text-lg font-semibold text-gray-900 mt-0.5">
+                      <p className="text-xs text-st-gray">{label}</p>
+                      <p className="text-lg font-semibold text-st-black mt-0.5">
                         {hasData ? typeData.count.toLocaleString() : '—'}
                       </p>
                       <StatusBadge status={hasData ? 'active' : 'pending'} label={hasData ? 'Active' : 'Not tracking'} />
@@ -777,7 +853,7 @@ export default function Dashboard() {
                 )}
               </div>
               {Object.values(overview?.conversion_types || {}).every(t => !t || t.count === 0) && (
-                <p className="text-xs text-gray-400 mt-3">
+                <p className="text-xs text-st-gray mt-3">
                   When conversions specify a type (e.g., lead, purchase), counts appear here. Previous conversions without a type are counted as untagged.
                 </p>
               )}
@@ -787,103 +863,17 @@ export default function Dashboard() {
               subtitle="Top pages by attributed revenue"
             >
               {landingResults.length === 0 ? (
-                <p className="text-sm text-gray-400 py-6 text-center">Landing page data will appear after your first attributed conversions.</p>
+                <p className="text-sm text-st-gray py-6 text-center">Landing page data will appear after your first attributed conversions.</p>
               ) : (
                 <DashboardTable
                   columns={[
                     { key: 'page', label: 'Page', render: (r) => <span className="text-xs truncate max-w-[200px] block">{r.dim_value || 'unknown'}</span> },
-                    { key: 'revenue', label: 'Revenue', render: (r) => `$${(r.revenue || 0).toFixed(0)}`, cellClassName: 'text-right font-medium text-gray-900' }
+                    { key: 'revenue', label: 'Revenue', render: (r) => `$${(r.revenue || 0).toFixed(0)}`, cellClassName: 'text-right font-medium text-st-black' }
                   ]}
                   rows={landingResults.slice(0, 5)}
                   emptyMessage="Landing page data will appear after your first attributed conversions."
                 />
               )}
-            </DashboardCard>
-          </div>
-
-          {/* Row 3.5: Pipeline Stages */}
-          <DashboardCard title="Pipeline Stages"
-            subtitle={`CRM stages from offline conversions — ${Object.values(overview?.pipeline_stages || {}).reduce((s, t) => s + (t.count || 0), 0)} total in period`}
-            action={
-              <span className="text-xs text-gray-400">API-driven</span>
-            }
-          >
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {Object.entries(STAGE_LABELS).map(([key, label]) => {
-                const stageData = overview?.pipeline_stages?.[key]
-                const hasData = stageData && stageData.count > 0
-                return (
-                  <div key={key} className={`rounded-lg p-3 ${hasData ? 'bg-gray-50' : 'bg-gray-50/50'}`}>
-                    <p className="text-xs text-gray-500">{label}</p>
-                    <p className="text-lg font-semibold text-gray-900 mt-0.5">
-                      {hasData ? stageData.count.toLocaleString() : '—'}
-                    </p>
-                    {hasData && stageData.revenue > 0 && (
-                      <p className="text-xs text-gray-400 mt-0.5">${stageData.revenue.toFixed(0)}</p>
-                    )}
-                    <StatusBadge status={hasData ? 'active' : 'pending'} label={hasData ? 'Active' : 'No data'} />
-                  </div>
-                )
-              })}
-            </div>
-            {Object.values(overview?.pipeline_stages || {}).every(t => !t || t.count === 0) && (
-              <p className="text-xs text-gray-400 mt-3">
-                Send offline conversions with stage-type conversion_type values (lead_created, qualified, opportunity, closed_won) via POST /api/conversion/offline. Only offline conversions with known stage types are counted.
-              </p>
-            )}
-          </DashboardCard>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-
-            <DashboardCard title="Tracking Health"
-              subtitle="Install status and data quality"
-              action={!previewMode && (
-                <button onClick={() => navigate('/integrations')} className="text-xs text-gray-900 hover:text-gray-700 font-medium flex items-center gap-1">
-                  Details <ExternalLink className="w-3 h-3" />
-                </button>
-              )}
-            >
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Install Status</span>
-                  <StatusBadge
-                    status={installData?.status === 'verified' ? 'verified' : 'pending'}
-                    label={installData?.status === 'verified' ? 'Verified' : 'Pending'}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Last Event</span>
-                  <span className="text-sm text-gray-900">{installData?.last_event || '—'}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Domain</span>
-                  <span className="text-sm text-gray-900">{installData?.domain || '—'}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Data Alerts</span>
-                  {alerts.length > 0 ? (
-                    <StatusBadge status="warning" label={`${alerts.length} issue${alerts.length > 1 ? 's' : ''}`} />
-                  ) : (
-                    <StatusBadge status="success" label="No issues" />
-                  )}
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Health</span>
-                  <StatusBadge
-                    status={overview?.health?.status === 'healthy' ? 'success' : overview?.health?.status === 'silent_24h' ? 'warning' : 'pending'}
-                    label={overview?.health?.status === 'healthy' ? 'Healthy' : overview?.health?.status === 'silent_24h' ? 'Silent >24h' : 'No data'}
-                  />
-                </div>
-                {(!installData || installData?.status !== 'verified') && !previewMode && (
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <button onClick={() => navigate('/snippet')}
-                      className="w-full py-2 text-sm text-gray-900 bg-gray-50 rounded-lg hover:bg-gray-100 font-medium">
-                      Complete Installation
-                    </button>
-                  </div>
-                )}
-              </div>
             </DashboardCard>
           </div>
 
@@ -901,8 +891,8 @@ export default function Dashboard() {
                     onClick={() => { setExplainModel(m.model); setExplainModalOpen(true) }}
                     className="bg-white rounded-lg border border-gray-200 p-3 text-center hover:bg-gray-50 transition-colors text-left"
                   >
-                    <p className="text-xs text-gray-500 mb-1">{m.label}</p>
-                    <p className="text-base font-bold text-gray-900" style={{ color: COLORS[i % COLORS.length] }}>
+                    <p className="text-xs text-st-gray mb-1">{m.label}</p>
+                    <p className="text-base font-bold text-st-black" style={{ color: COLORS[i % COLORS.length] }}>
                       ${m.total.toFixed(0)}
                     </p>
                     <div className="mt-2 h-1 bg-gray-100 rounded-full overflow-hidden">
@@ -915,140 +905,6 @@ export default function Dashboard() {
                 )
               })}
             </div>
-          </DashboardCard>
-
-          {/* Row 5b: LTV Comparison */}
-          <DashboardCard
-            title="LTV by Model"
-            subtitle="Lifetime value comparison across attribution models. LTV varies by model due to different attribution rules."
-            action={(
-              <select
-                value={ltvModel}
-                onChange={(e) => setLtvModel(e.target.value)}
-                className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
-              >
-                {MODELS.filter(m => m.key !== 'ai_platforms').map(m => (
-                  <option key={m.key} value={m.key}>{m.label}</option>
-                ))}
-              </select>
-            )}
-          >
-            {/* Model totals */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-              {MODELS.filter(m => m.key !== 'ai_platforms').map((m, i) => {
-                const q = ltvQueries[i]
-                const results = q?.data?.results || []
-                const total = results.reduce((s, r) => s + (r.ltv_revenue || 0), 0)
-                const isSelected = ltvModel === m.key
-                return (
-                  <button
-                    key={m.key}
-                    onClick={() => setLtvModel(m.key)}
-                    className={`text-left rounded-lg border p-3 transition-colors ${
-                      isSelected ? 'border-gray-900 bg-gray-50' : 'border-gray-200 bg-white hover:bg-gray-50'
-                    }`}
-                  >
-                    <p className="text-xs text-gray-500 mb-1">{m.label}</p>
-                    <p className="text-sm font-bold text-gray-900">${total.toFixed(0)}</p>
-                    {q.isLoading && <p className="text-[10px] text-gray-400 mt-1">Loading…</p>}
-                  </button>
-                )
-              })}
-            </div>
-
-            {/* Selected model breakdown */}
-            {(() => {
-              const selectedIdx = MODELS.filter(m => m.key !== 'ai_platforms').findIndex(m => m.key === ltvModel)
-              const q = ltvQueries[selectedIdx]
-              const results = (q?.data?.results || []).slice(0, 5)
-              const maxVal = Math.max(...results.map(r => r.ltv_revenue || 0), 1)
-              if (q?.isLoading) {
-                return <div className="text-xs text-gray-400 py-4 text-center">Loading LTV breakdown…</div>
-              }
-              if (results.length === 0) {
-                return <div className="text-xs text-gray-400 py-4 text-center">No LTV data for this model</div>
-              }
-              return (
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-gray-500 mb-2">Top sources by LTV — {MODELS.find(m => m.key === ltvModel)?.label}</p>
-                  {results.map((r, i) => {
-                    const val = r.ltv_revenue || 0
-                    const pct = maxVal > 0 ? (val / maxVal) * 100 : 0
-                    return (
-                      <div key={r.dim_value || i} className="flex items-center gap-3">
-                        <span className="text-xs text-gray-600 w-24 truncate">{r.dim_value || 'unknown'}</span>
-                        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full bg-gray-900 transition-all" style={{ width: `${pct}%` }} />
-                        </div>
-                        <span className="text-xs font-medium text-gray-900 w-16 text-right">${val.toFixed(0)}</span>
-                      </div>
-                    )
-                  })}
-                </div>
-              )
-            })()}
-          </DashboardCard>
-
-          {/* Row 5c: Session Analytics */}
-          <DashboardCard
-            title="Session Analytics"
-            subtitle="Sessions derived from pageview events using 30-minute inactivity rule."
-          >
-            {sessionsLoading ? (
-              <div className="py-8 text-center">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto" />
-              </div>
-            ) : !sessionOverview?.data ? (
-              <div className="py-8 text-center text-sm text-gray-400">No session data available</div>
-            ) : (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-500 mb-1">Total Sessions</p>
-                    <p className="text-lg font-bold text-gray-900">{(sessionOverview.data.total_sessions || 0).toLocaleString()}</p>
-                  </div>
-                  <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-500 mb-1">Avg Duration</p>
-                    <p className="text-lg font-bold text-gray-900">
-                      {Math.round((sessionOverview.data.avg_duration_seconds || 0) / 60)}m
-                    </p>
-                  </div>
-                  <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-500 mb-1">Pages / Session</p>
-                    <p className="text-lg font-bold text-gray-900">{sessionOverview.data.avg_pageviews_per_session || 0}</p>
-                  </div>
-                  <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-                    <p className="text-xs text-gray-500 mb-1">Conv. Sessions</p>
-                    <p className="text-lg font-bold text-gray-900">{(sessionOverview.data.conversion_sessions || 0).toLocaleString()}</p>
-                  </div>
-                </div>
-
-                {sessionOverview.data.time_series?.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-gray-500 mb-2">Sessions over time</p>
-                    <div className="h-24 flex items-end gap-1">
-                      {(() => {
-                        const series = sessionOverview.data.time_series
-                        const max = Math.max(...series.map(d => d.sessions), 1)
-                        return series.slice(-14).map((d, i) => (
-                          <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                            <div
-                              className="w-full bg-gray-900 rounded-sm"
-                              style={{ height: `${(d.sessions / max) * 100}%`, minHeight: 2 }}
-                            />
-                            <span className="text-[9px] text-gray-400">{d.date.slice(5)}</span>
-                          </div>
-                        ))
-                      })()}
-                    </div>
-                  </div>
-                )}
-
-                <p className="text-[10px] text-gray-400">
-                  Derived on read from pageview events. 30-minute inactivity threshold. Not materialized.
-                </p>
-              </div>
-            )}
           </DashboardCard>
 
           {alerts.length > 0 && (

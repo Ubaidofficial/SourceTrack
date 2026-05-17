@@ -93,6 +93,7 @@ Do not claim features are implemented unless verified in code and QA.
 | GTM + Standard install paths | ✅ | Sessions 85.1–85.2 | Both paths implemented + st colors |
 | Conversion configuration | ✅ | Sessions 85.1–85.2 | Implemented + st colors |
 | Script verification | ✅ | Session 85.1 audit | Verified; polls /api/install/status; logs errors |
+| Onboarding 5-step wizard (Figma-aligned visual) | ✅ | S97 T1.1 | Visual matches spec: stepper labels, lime selected states, card polish |
 
 ## Leads & Journey
 
@@ -204,3 +205,12 @@ Legend: ✅ = implemented and verified, ⚠️ = partially implemented, ❌ = mi
 | Mark as Qualified wired | ✅ | Calls PATCH API |
 | GTM default → Standard | ✅ | useState('standard') |
 | Journey modal overlay | ✅ | LeadDetail uses modal not navigate() |
+
+## Deferred / Post-Launch Queue
+
+| Task | Priority | Reason deferred | Session added |
+|---|---|---|---|
+| Dark mode (T0.2) — tailwind darkMode:class, CSS vars, sun/moon toggle | Low | Nice-to-have, not on launch path | S97 |
+| Onboarding 5-step wizard (Figma-aligned visual) | ✅ | S97 T1.1 | Step labels, lime selected states, shadow-md card, active underline |
+
+| Tier 3 Billing (T3.1-T3.5) | ⏸ Deferred | Needs STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET env vars in Railway before any T3 work | S97 |

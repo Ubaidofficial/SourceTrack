@@ -162,13 +162,13 @@ export default function Settings() {
   }
 
   const planLabel = site?.plan === 'pro' ? 'Pro' : site?.plan === 'inactive' ? 'Inactive' : 'Trial'
-  const planColor = site?.plan === 'pro' ? 'text-gray-900' : site?.plan === 'inactive' ? 'text-red-600' : 'text-amber-600'
+  const planColor = site?.plan === 'pro' ? 'text-st-black' : site?.plan === 'inactive' ? 'text-red-600' : 'text-amber-600'
 
   return (
     <div className="space-y-6 max-w-lg">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
-        <p className="text-sm text-gray-500 mt-1">{user?.email}</p>
+        <h2 className="text-2xl font-bold text-st-black">Settings</h2>
+        <p className="text-sm text-st-gray mt-1">{user?.email}</p>
       </div>
 
       {message && (
@@ -186,7 +186,7 @@ export default function Settings() {
           <Globe className="w-5 h-5 text-gray-700" />
           <h3 className="text-sm font-semibold text-gray-700">Public Dashboard</h3>
         </div>
-        <p className="text-xs text-gray-400">Share a read-only view of your analytics with anyone — no login required.</p>
+        <p className="text-xs text-st-gray">Share a read-only view of your analytics with anyone — no login required.</p>
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-600">{shareEnabled ? 'Sharing enabled' : 'Sharing disabled'}</span>
           <button onClick={handleShareToggle} disabled={shareLoading} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${shareEnabled ? 'bg-blue-600' : 'bg-gray-200'}`}>
@@ -195,13 +195,13 @@ export default function Settings() {
         </div>
         {shareEnabled && shareToken && (
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-center gap-2">
-            <Link2 className="w-4 h-4 text-gray-400 shrink-0" />
-            <span className="text-xs text-gray-500 truncate flex-1">{`${window.location.origin}/public/${shareToken}`}</span>
+            <Link2 className="w-4 h-4 text-st-gray shrink-0" />
+            <span className="text-xs text-st-gray truncate flex-1">{`${window.location.origin}/public/${shareToken}`}</span>
             <button onClick={handleShareCopy} className="p-1 hover:bg-gray-200 rounded transition-colors">
-              {shareCopied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 text-gray-500" />}
+              {shareCopied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 text-st-gray" />}
             </button>
             <a href={`${window.location.origin}/public/${shareToken}`} target="_blank" rel="noopener noreferrer" className="p-1 hover:bg-gray-200 rounded transition-colors">
-              <ExternalLink className="w-4 h-4 text-gray-500" />
+              <ExternalLink className="w-4 h-4 text-st-gray" />
             </a>
           </div>
         )}
@@ -228,7 +228,7 @@ function TrialDays({ created_at }) {
   if (daysLeft === null) return null
 
   return (
-    <p className="text-xs text-gray-400">
+    <p className="text-xs text-st-gray">
       {daysLeft > 0 ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} left in trial` : 'Trial expired'}
     </p>
   )

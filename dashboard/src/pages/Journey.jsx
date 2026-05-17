@@ -110,8 +110,8 @@ export default function Journey() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Visitor Journey</h2>
-        <p className="text-sm text-gray-500 mt-1">Search for a visitor to see their full journey</p>
+        <h2 className="text-2xl font-bold text-st-black">Visitor Journey</h2>
+        <p className="text-sm text-st-gray mt-1">Search for a visitor to see their full journey</p>
       </div>
 
       {/* Search */}
@@ -121,7 +121,7 @@ export default function Journey() {
       >
         <div className="flex gap-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-st-gray" />
             <input
               type="text"
               value={visitorId}
@@ -133,7 +133,7 @@ export default function Journey() {
           <button
             type="submit"
             disabled={!visitorId.trim()}
-            className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
+            className="px-4 py-2 bg-st-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
           >
             Search
           </button>
@@ -143,7 +143,7 @@ export default function Journey() {
       {/* Loading */}
       {isLoading && (
         <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black" />
         </div>
       )}
 
@@ -152,7 +152,7 @@ export default function Journey() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="mb-4">
             <h3 className="text-sm font-semibold text-gray-700">Visitor: {data.visitor_id}</h3>
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-st-gray mt-1">
               {filteredEvents.length} of {data.event_count} events
               {filter !== 'all' ? ` (filtered)` : ''}
             </p>
@@ -161,14 +161,14 @@ export default function Journey() {
           {/* Filter toggles */}
           {events.length > 0 && (
             <div className="flex items-center gap-2 mb-4 pb-4 border-b border-gray-100">
-              <Filter className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <Filter className="w-4 h-4 text-st-gray flex-shrink-0" />
               {FILTERS.map(f => (
                 <button
                   key={f.key}
                   onClick={() => setFilter(f.key)}
                   className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
                     filter === f.key
-                      ? 'bg-gray-900 text-white'
+                      ? 'bg-st-black text-white'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
@@ -182,8 +182,8 @@ export default function Journey() {
           {pathSummary && pathSummary.segments.length >= 2 && (
             <div className="mb-4 pb-4 border-b border-gray-100">
               <div className="flex items-center gap-1.5 mb-2">
-                <GitBranch className="w-3.5 h-3.5 text-gray-400" />
-                <span className="text-xs text-gray-400 font-medium uppercase tracking-wider">
+                <GitBranch className="w-3.5 h-3.5 text-st-gray" />
+                <span className="text-xs text-st-gray font-medium uppercase tracking-wider">
                   Pre-conversion path summary
                 </span>
               </div>
@@ -203,16 +203,16 @@ export default function Journey() {
                   </span>
                 ))}
               </div>
-              <p className="text-xs text-gray-400 mt-1.5">
+              <p className="text-xs text-st-gray mt-1.5">
                 Consecutive duplicate pages merged. Based on ordered event data only — not full path analytics.
               </p>
             </div>
           )}
 
           {events.length === 0 ? (
-            <p className="text-sm text-gray-400">No events found for this visitor.</p>
+            <p className="text-sm text-st-gray">No events found for this visitor.</p>
           ) : filteredEvents.length === 0 ? (
-            <p className="text-sm text-gray-400 py-4 text-center">
+            <p className="text-sm text-st-gray py-4 text-center">
               No {filter === 'conversions' ? 'conversion' : filter === 'ai' ? 'AI-referred' : ''} events found for this visitor.
             </p>
           ) : (
@@ -240,7 +240,7 @@ export default function Journey() {
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+                      <div className="flex items-center gap-3 mt-1 text-xs text-st-gray">
                         <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3" />
                           {new Date(e.timestamp).toLocaleString()}
@@ -253,10 +253,10 @@ export default function Journey() {
                         )}
                       </div>
                       {e.page_url && (
-                        <p className="text-xs text-gray-500 mt-1 truncate max-w-md">{e.page_url}</p>
+                        <p className="text-xs text-st-gray mt-1 truncate max-w-md">{e.page_url}</p>
                       )}
                       {e.utm_source && (
-                        <p className="text-xs text-gray-400 mt-0.5">
+                        <p className="text-xs text-st-gray mt-0.5">
                           {[e.utm_source, e.utm_medium, e.utm_campaign].filter(Boolean).join(' / ')}
                         </p>
                       )}

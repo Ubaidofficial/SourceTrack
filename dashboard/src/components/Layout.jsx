@@ -12,12 +12,12 @@ const navItems = [
   { to: '/campaigns', label: 'Campaigns', icon: BarChart3 },
   { to: '/report-builder', label: 'Reports', icon: FileBarChart },
   { to: '/journey', label: 'Journeys', icon: Route },
-  { to: '/ai-chat', label: 'AI Chat', icon: Bot },
-  { to: '/ai-analytics', label: 'AI Analytics', icon: TrendingUp },
   { to: '/analytics', label: 'Analytics', icon: Activity },
+  { to: '/ai-analytics', label: 'AI Analytics', icon: TrendingUp },
+  { to: '/ai-chat', label: 'AI Chat', icon: Bot },
   { to: '/integrations', label: 'Integrations', icon: Plug },
   { to: '/snippet', label: 'Install', icon: Code },
-  { to: '/debugger', label: 'Event Logger', icon: Bug },
+  { to: '/debugger', label: 'Live Events', icon: Bug },
   { to: '/settings', label: 'Settings', icon: Settings }
 ]
 
@@ -32,7 +32,7 @@ const PAGE_TITLES = {
   '/analytics': 'Analytics',
   '/integrations': 'Integrations',
   '/snippet': 'Install Tracking',
-  '/debugger': 'Event Logger',
+  '/debugger': 'Live Events',
   '/settings': 'Settings',
   '/admin': 'Super Admin'
 }
@@ -70,11 +70,11 @@ export default function Layout({ children }) {
       `}>
         <div className="flex items-center justify-between h-14 px-4 border-b border-gray-200">
           <div className="flex items-center gap-2">
-            <Bot className="w-6 h-6 text-gray-900" />
-            <h1 className="text-lg font-bold text-gray-900">SourceTrack</h1>
+            <Bot className="w-6 h-6 text-st-black" />
+            <h1 className="text-lg font-bold text-st-black">SourceTrack</h1>
           </div>
           <button className="lg:hidden" onClick={() => setSidebarOpen(false)}>
-            <X className="w-5 h-5 text-gray-400" />
+            <X className="w-5 h-5 text-st-gray" />
           </button>
         </div>
 
@@ -88,7 +88,7 @@ export default function Layout({ children }) {
                 `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isActive
                     ? 'bg-st-lime/10 text-st-black'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-st-black'
                 }`
               }
             >
@@ -104,7 +104,7 @@ export default function Layout({ children }) {
                 `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isActive
                     ? 'bg-st-lime/20 text-st-black'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-st-black'
                 }`
               }
             >
@@ -115,7 +115,7 @@ export default function Layout({ children }) {
         </nav>
 
         <div className="p-3 border-t border-gray-200">
-          <div className="text-xs text-gray-500 mb-1 truncate">{user?.email}</div>
+          <div className="text-xs text-st-gray mb-1 truncate">{user?.email}</div>
           <button
             onClick={handleSignOut}
             className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-600 rounded-lg hover:bg-gray-100"
@@ -136,7 +136,7 @@ export default function Layout({ children }) {
             </button>
             {pageTitle && (
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold text-gray-900">{pageTitle}</h2>
+                <h2 className="text-sm font-semibold text-st-black">{pageTitle}</h2>
                 {location.pathname === '/dashboard' && (
                   <span className="px-2 py-0.5 text-xs font-medium bg-st-lime/20 text-st-black rounded-full">Live</span>
                 )}
@@ -144,7 +144,7 @@ export default function Layout({ children }) {
             )}
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-gray-400 hidden sm:block"></span>
+            <span className="text-xs text-st-gray hidden sm:block"></span>
           </div>
         </header>
 

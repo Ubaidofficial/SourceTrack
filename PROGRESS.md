@@ -2105,3 +2105,22 @@ Next:
 
 Next:
 - Session 78: UTM/ref/source/via end-to-end verification.
+
+## Session 97 — T1.1 Onboarding Visual Redesign
+
+**Files modified:**
+- dashboard/src/components/OnboardingProgress.jsx — step labels below circles, bold underline on active step, lime connectors
+- dashboard/src/components/OnboardingCard.jsx — removed icon from header, shadow-md card, softer border, cleaner Go Back
+- dashboard/src/pages/Onboarding.jsx — outer return shell only (header, centering, Step X label)
+
+**Completed:**
+- Progress stepper matches Figma spec: completed=lime+checkmark, active=black+underline+label, future=gray
+- Card visual upgraded: larger title, no icon clutter, shadow-md, cleaner layout
+- All business logic, API calls, state variables, and step flow unchanged
+- Build: passes
+
+**NOT changed:**
+- No function signatures modified
+- No state variables renamed
+- No API calls touched
+- No step order or flow logic changed

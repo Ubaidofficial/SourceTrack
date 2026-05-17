@@ -1,0 +1,19 @@
+diff a/PROGRESS.md b/PROGRESS.md	(rejected hunks)
+@@ -2212,3 +2212,17 @@ analytics.js (pageview collector) — ZERO cookies. Clean.
+ **Verdict:** tracker.js is cookie-based by design (required for cross-session attribution). This is correct, expected, and documented in SYSTEM.md and ATTRIBUTION.md. No change needed. Cookieless mode available for privacy-first deployments.
+ 
+ **Tier 2 complete:** T2.1 ✅ T2.2 ✅ T2.3 ✅ T2.4 ✅ T2.5 ✅
++
++## Session 97 — T5.4 + T5.5 + T6.3
++
++**Files modified:**
++- api/routes/dashboard.js — added channelTrendResults query (leads by date), exposed as channel_trend in response
++- dashboard/src/pages/Dashboard.jsx — Doughnut + ArcElement registered; channelTrendData + campaignDonutData computed; two new cards inserted: "Leads Over Time" (line chart) + "Revenue by Campaign" (donut with legend)
++- dashboard/src/components/JourneyModal.jsx — full redesign:
++  - Left panel: st-lime/10 tint, 4-KPI grid (touchpoints, value, duration, device), attribution card, page path preview with ArrowRight separators
++  - Right panel: 3 filter pills (All / Conversions / AI Touches with live counts), timeline with lime-highlighted conversion events (Zap icon), AI platform color badges, expandable detail rows
++  - Header: X close button, cleaner layout, removed disabled CRM button
++  - computeSummary: added aiSource + pathPreview fields
++  - AI_COLORS map for platform-specific badge colors
++
++**Build:** ✅ passing

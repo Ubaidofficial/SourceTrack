@@ -56,7 +56,7 @@ export default function Signup() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-indigo-600">SourceTrack</h1>
-          <p className="text-gray-500 mt-2">Create your account</p>
+          <p className="text-st-gray mt-2">Create your account</p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white shadow rounded-lg p-6 space-y-4">
@@ -83,7 +83,7 @@ export default function Signup() {
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
-            <div className="relative flex justify-center text-xs"><span className="bg-white px-2 text-gray-400">or</span></div>
+            <div className="relative flex justify-center text-xs"><span className="bg-white px-2 text-st-gray">or</span></div>
           </div>
 
           <div>
@@ -93,7 +93,7 @@ export default function Signup() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 focus:border-st-black outline-none"
             />
           </div>
 
@@ -105,20 +105,20 @@ export default function Signup() {
               minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900 outline-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 focus:border-st-black outline-none"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
+            className="w-full py-2 bg-st-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
           >
             {loading ? 'Creating account...' : 'Create account'}
           </button>
 
-          <p className="text-center text-sm text-gray-500">
-            Already have an account? <Link to="/login" className="text-gray-900 hover:underline">Sign in</Link>
+          <p className="text-center text-sm text-st-gray">
+            Already have an account? <Link to="/login" className="text-st-black hover:underline">Sign in</Link>
           </p>
         </form>
       </div>

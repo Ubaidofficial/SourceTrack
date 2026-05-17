@@ -129,22 +129,22 @@ export default function AIAnalytics() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">AI Analytics</h2>
-        <p className="text-sm text-gray-500 mt-1">Performance from AI platforms — ChatGPT, Claude, Perplexity, Gemini, and more</p>
+        <h2 className="text-2xl font-bold text-st-black">AI Analytics</h2>
+        <p className="text-sm text-st-gray mt-1">Performance from AI platforms — ChatGPT, Claude, Perplexity, Gemini, and more</p>
       </div>
 
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black" />
         </div>
       ) : !hasData ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
           <Sparkles className="w-12 h-12 text-lime-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No AI traffic detected yet</h3>
-          <p className="text-sm text-gray-500 max-w-md mx-auto mb-6">
+          <h3 className="text-lg font-semibold text-st-black mb-2">No AI traffic detected yet</h3>
+          <p className="text-sm text-st-gray max-w-md mx-auto mb-6">
             AI Analytics shows you which AI platforms (ChatGPT, Claude, Perplexity, etc.) send visitors to your site — and which of those visitors convert.
           </p>
-          <div className="space-y-2 text-xs text-gray-500 text-left max-w-sm mx-auto">
+          <div className="space-y-2 text-xs text-st-gray text-left max-w-sm mx-auto">
             <p className="font-medium text-gray-700">How AI tracking works:</p>
             <ul className="list-disc list-inside space-y-1">
               <li>When a visitor clicks a link in ChatGPT, Claude, or another AI tool, the referrer header is detected</li>
@@ -152,10 +152,10 @@ export default function AIAnalytics() {
               <li>Conversions from AI-sourced traffic are attributed to the specific platform</li>
               <li>This page shows AI revenue, conversions, conversion rates, and trends</li>
             </ul>
-            <p className="text-gray-400 mt-3">If your site gets AI traffic but nothing appears here, check the Event Logger for pageview events with ai_source values.</p>
+            <p className="text-st-gray mt-3">If your site gets AI traffic but nothing appears here, check the Event Logger for pageview events with ai_source values.</p>
           </div>
           <button onClick={() => window.location.href = '/snippet'}
-            className="mt-6 px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800">
+            className="mt-6 px-4 py-2 bg-st-black text-white rounded-lg text-sm font-medium hover:bg-gray-800">
             Set up tracking
           </button>
         </div>
@@ -180,7 +180,7 @@ export default function AIAnalytics() {
                 <div key={i} className={`rounded-xl border shadow-sm p-5 ${insight.positive ? 'bg-lime-50 border-lime-200' : 'bg-amber-50 border-amber-200'}`}>
                   <div className="flex items-center gap-2 mb-2">
                     <Sparkles className="w-4 h-4 text-lime-700" />
-                    <p className="text-sm font-semibold text-gray-900">{insight.title}</p>
+                    <p className="text-sm font-semibold text-st-black">{insight.title}</p>
                   </div>
                   <p className="text-xs text-gray-600 leading-relaxed">{insight.desc}</p>
                 </div>
@@ -197,7 +197,7 @@ export default function AIAnalytics() {
               { label: 'Non-AI Conv Rate', value: `${kpis.non_ai_conversion_rate.toFixed(2)}%`, color: 'text-gray-600' }
             ].map(item => (
               <div key={item.label} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                <p className="text-xs text-gray-500">{item.label}</p>
+                <p className="text-xs text-st-gray">{item.label}</p>
                 <p className={`text-xl font-bold ${item.color} mt-0.5`}>{item.value}</p>
               </div>
             ))}
@@ -206,14 +206,14 @@ export default function AIAnalytics() {
           {/* AOV Comparison + AI Revenue Share Info */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-              <h3 className="text-sm font-semibold text-gray-900 mb-2">AI vs Non-AI Average Order Value</h3>
+              <h3 className="text-sm font-semibold text-st-black mb-2">AI vs Non-AI Average Order Value</h3>
               <div className="flex items-end gap-8">
                 <div>
-                  <p className="text-xs text-gray-400">AI</p>
+                  <p className="text-xs text-st-gray">AI</p>
                   <p className="text-2xl font-bold text-lime-700">${kpis.ai_aov.toFixed(2)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-400">Non-AI</p>
+                  <p className="text-xs text-st-gray">Non-AI</p>
                   <p className="text-2xl font-bold text-gray-600">${kpis.non_ai_aov.toFixed(2)}</p>
                 </div>
                 {aovDelta && (
@@ -223,14 +223,14 @@ export default function AIAnalytics() {
                   </div>
                 )}
               </div>
-              <p className="text-xs text-gray-400 mt-3">
+              <p className="text-xs text-st-gray mt-3">
                 AI-sourced buyers spend {aovDelta?.up ? 'more' : 'less'} than other channels on average.
                 Compare with Report Builder for deeper segmentation.
               </p>
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-              <h3 className="text-sm font-semibold text-gray-900 mb-2">About AI Source Tracking</h3>
+              <h3 className="text-sm font-semibold text-st-black mb-2">About AI Source Tracking</h3>
               <p className="text-xs text-gray-600 leading-relaxed">
                 SourceTrack detects AI platform traffic by inspecting the HTTP referrer header when a visitor arrives from an AI chat tool.
                 Supported platforms: ChatGPT, Claude, Perplexity, Gemini, Grok, Copilot, DeepSeek, and others.
@@ -239,7 +239,7 @@ export default function AIAnalytics() {
                 AI revenue is calculated from conversions where the visitor's session originated from an AI platform.
                 AI conversion rate = AI conversions / AI-sourced sessions.
               </p>
-              <p className="text-xs text-gray-400 mt-3">
+              <p className="text-xs text-st-gray mt-3">
                 These metrics and insights use real detection data and simple rule-based comparisons only — no AI prediction, scoring, or synthetic metrics.
               </p>
             </div>
@@ -251,7 +251,7 @@ export default function AIAnalytics() {
               subtitle="By attributed revenue"
             >
               {platforms.length === 0 ? (
-                <p className="text-sm text-gray-400 py-6 text-center">No platform data yet.</p>
+                <p className="text-sm text-st-gray py-6 text-center">No platform data yet.</p>
               ) : (
                 <div className="h-64">
                   <Bar data={platformChartData} options={chartOpts('$')} />
@@ -260,19 +260,19 @@ export default function AIAnalytics() {
               <table className="w-full text-sm mt-4">
                 <thead>
                   <tr className="border-b border-gray-100">
-                    <th className="text-left py-2 px-3 text-xs font-medium text-gray-500">Platform</th>
-                    <th className="text-right py-2 px-3 text-xs font-medium text-gray-500">Revenue</th>
-                    <th className="text-right py-2 px-3 text-xs font-medium text-gray-500">Conversions</th>
+                    <th className="text-left py-2 px-3 text-xs font-medium text-st-gray">Platform</th>
+                    <th className="text-right py-2 px-3 text-xs font-medium text-st-gray">Revenue</th>
+                    <th className="text-right py-2 px-3 text-xs font-medium text-st-gray">Conversions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {platforms.map((p, i) => (
                     <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
-                      <td className="py-2 px-3 text-gray-900 font-medium flex items-center gap-2">
+                      <td className="py-2 px-3 text-st-black font-medium flex items-center gap-2">
                         {p.platform}
                         <StatusBadge status="verified" label="AI" />
                       </td>
-                      <td className="py-2 px-3 text-right text-gray-900">${(p.revenue || 0).toFixed(0)}</td>
+                      <td className="py-2 px-3 text-right text-st-black">${(p.revenue || 0).toFixed(0)}</td>
                       <td className="py-2 px-3 text-right text-gray-600">{p.conversions.toLocaleString()}</td>
                     </tr>
                   ))}
@@ -284,7 +284,7 @@ export default function AIAnalytics() {
               subtitle="Daily AI-attributed revenue"
             >
               {trend.length === 0 ? (
-                <div className="h-64 flex items-center justify-center text-sm text-gray-400">No trend data yet</div>
+                <div className="h-64 flex items-center justify-center text-sm text-st-gray">No trend data yet</div>
               ) : (
                 <div className="h-64">
                   <Line data={trendChartData} options={chartOpts('$')} />
@@ -310,19 +310,19 @@ export default function AIAnalytics() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100">
-                  <th className="text-left py-2.5 px-3 text-xs font-medium text-gray-500">Platform</th>
-                  <th className="text-right py-2.5 px-3 text-xs font-medium text-gray-500">Revenue</th>
-                  <th className="text-right py-2.5 px-3 text-xs font-medium text-gray-500">Conversions</th>
-                  <th className="text-right py-2.5 px-3 text-xs font-medium text-gray-500">Share</th>
+                  <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Platform</th>
+                  <th className="text-right py-2.5 px-3 text-xs font-medium text-st-gray">Revenue</th>
+                  <th className="text-right py-2.5 px-3 text-xs font-medium text-st-gray">Conversions</th>
+                  <th className="text-right py-2.5 px-3 text-xs font-medium text-st-gray">Share</th>
                 </tr>
               </thead>
               <tbody>
                 {platforms.map((p, i) => (
                   <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="py-2.5 px-3 text-gray-900 font-medium">{p.platform}</td>
-                    <td className="py-2.5 px-3 text-right text-gray-900">${(p.revenue || 0).toFixed(0)}</td>
+                    <td className="py-2.5 px-3 text-st-black font-medium">{p.platform}</td>
+                    <td className="py-2.5 px-3 text-right text-st-black">${(p.revenue || 0).toFixed(0)}</td>
                     <td className="py-2.5 px-3 text-right text-gray-600">{p.conversions.toLocaleString()}</td>
-                    <td className="py-2.5 px-3 text-right text-gray-500">
+                    <td className="py-2.5 px-3 text-right text-st-gray">
                       {kpis.ai_revenue > 0 ? `${((p.revenue / kpis.ai_revenue) * 100).toFixed(1)}%` : '—'}
                     </td>
                   </tr>

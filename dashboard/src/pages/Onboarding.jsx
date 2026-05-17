@@ -388,7 +388,7 @@ export default function Onboarding() {
                   >
                     <Icon className="w-8 h-8 text-gray-700" />
                     <div>
-                      <p className="font-semibold text-gray-900">{bt.label}</p>
+                      <p className="font-semibold text-st-black">{bt.label}</p>
                       <p className="text-xs text-st-gray">{bt.desc}</p>
                     </div>
                     {selected && <Check className="w-5 h-5 text-st-lime ml-auto" />}
@@ -422,13 +422,13 @@ export default function Onboarding() {
                         ? 'border-st-lime bg-st-lime/10'
                         : m.advanced
                           ? 'border-gray-200 hover:border-gray-300 opacity-90'
-                          : 'border-gray-900/20 hover:border-gray-300 bg-gray-50'
+                          : 'border-st-black/20 hover:border-gray-300 bg-gray-50'
                     }`}
                   >
                     <Icon className="w-8 h-8 text-gray-700" />
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <p className="font-semibold text-gray-900">{m.label}</p>
+                        <p className="font-semibold text-st-black">{m.label}</p>
                         {m.recommended && <span className="text-[10px] font-semibold bg-lime-100 text-lime-800 px-1.5 py-0.5 rounded-full">Recommended</span>}
                       </div>
                       <p className="text-xs text-st-gray">{m.desc}</p>
@@ -479,7 +479,7 @@ export default function Onboarding() {
                       {selected && <Check className="w-3 h-3 text-white" />}
                     </div>
                     <div>
-                      <p className="font-semibold text-sm text-gray-900">{conv.label}</p>
+                      <p className="font-semibold text-sm text-st-black">{conv.label}</p>
                       <p className="text-xs text-st-gray">{conv.desc}</p>
                     </div>
                   </button>
@@ -522,7 +522,7 @@ export default function Onboarding() {
 
             {verificationState === 'checking' && (
               <div className="text-center py-6">
-                <RefreshCw className="w-8 h-8 animate-spin text-gray-400 mx-auto mb-3" />
+                <RefreshCw className="w-8 h-8 animate-spin text-st-gray mx-auto mb-3" />
                 <p className="text-sm text-gray-600">Checking installation...</p>
                 <p className="text-xs text-st-gray mt-1">This may take up to 30 seconds</p>
               </div>
@@ -533,7 +533,7 @@ export default function Onboarding() {
                 <div className="w-12 h-12 rounded-full bg-st-lime/10 flex items-center justify-center mx-auto mb-3">
                   <Check className="w-6 h-6 text-st-lime" />
                 </div>
-                <p className="text-lg font-semibold text-gray-900">Great! Script Verified Successfully</p>
+                <p className="text-lg font-semibold text-st-black">Great! Script Verified Successfully</p>
                 <button
                   onClick={() => { seedReportsForBusiness(businessType, siteKey); navigate('/dashboard', { replace: true, state: { toast: 'Setup complete! Your dashboard is ready.' } }) }}
                   className="mt-4 px-6 py-3 bg-st-black text-white rounded-lg text-sm font-semibold hover:bg-st-black/90 flex items-center gap-2 mx-auto"
@@ -548,14 +548,14 @@ export default function Onboarding() {
                 <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-3">
                   <X className="w-6 h-6 text-red-500" />
                 </div>
-                <p className="text-lg font-semibold text-gray-900">Script not detected yet</p>
+                <p className="text-lg font-semibold text-st-black">Script not detected yet</p>
                 {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
                 <ul className="text-sm text-st-gray mt-3 space-y-1">
                   <li>Make sure the script is published on your live site</li>
                   <li>It may take 1-2 minutes for the first event to appear</li>
                 </ul>
                 <div className="flex items-center justify-center gap-3 mt-4">
-                  <a href="/debugger" className="text-sm text-gray-900 hover:underline">Open Event Logger</a>
+                  <a href="/debugger" className="text-sm text-st-black hover:underline">Open Event Logger</a>
                   <button
                     onClick={handleVerify}
                     className="px-4 py-2 bg-st-black text-white rounded-lg text-sm font-semibold hover:bg-st-black/90 flex items-center gap-2"
@@ -613,7 +613,7 @@ export default function Onboarding() {
           </>
         )}
 
-        <div className="bg-gray-900 rounded-lg p-4 relative">
+        <div className="bg-st-black rounded-lg p-4 relative">
           <pre className="text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all">{snippet || 'Loading script...'}</pre>
           <button
             onClick={handleCopySnippet}
@@ -638,19 +638,21 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] flex flex-col">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white">
-        <h1 className="text-xl font-bold text-st-black">SourceTrack</h1>
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white">
+        <h1 className="text-xl font-bold text-st-black tracking-tight">SourceTrack</h1>
         <button
           onClick={() => setVideoModalOpen(true)}
-          className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+          className="px-4 py-2 text-sm text-st-gray border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-st-black transition-colors flex items-center gap-2"
         >
           <Play className="w-4 h-4" /> Watch Video
         </button>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center px-4 py-8">
-        <p className="text-xs text-st-gray uppercase tracking-wider mb-1">Step {step} of 6</p>
-        <p className="text-lg font-semibold text-gray-900 mb-6">{STEP_TITLES[step]}</p>
+      <div className="flex-1 flex flex-col items-center justify-center px-4 py-10">
+        <span className="inline-block px-3 py-1 rounded-full bg-gray-100 text-xs text-st-gray font-medium uppercase tracking-wider mb-3">
+          Step {step} of 6
+        </span>
+        <p className="text-lg font-semibold text-st-black mb-6">{STEP_TITLES[step]}</p>
         <OnboardingProgress currentStep={step} />
         {renderStepContent()}
       </div>
@@ -659,9 +661,9 @@ export default function Onboarding() {
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center" onClick={() => setVideoModalOpen(false)}>
           <div className="bg-white rounded-xl p-8 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Watch Video</h3>
+              <h3 className="text-lg font-semibold text-st-black">Watch Video</h3>
               <button onClick={() => setVideoModalOpen(false)}>
-                <X className="w-5 h-5 text-gray-400" />
+                <X className="w-5 h-5 text-st-gray" />
               </button>
             </div>
             <div className="bg-gray-100 rounded-lg h-48 flex items-center justify-center">

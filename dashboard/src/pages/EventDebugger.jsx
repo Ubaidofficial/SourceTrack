@@ -192,8 +192,8 @@ export default function EventDebugger() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Event Logger</h2>
-          <p className="text-sm text-gray-500 mt-1">Inspect incoming events and verify tracking health</p>
+          <h2 className="text-2xl font-bold text-st-black">Event Logger</h2>
+          <p className="text-sm text-st-gray mt-1">Inspect incoming events and verify tracking health</p>
         </div>
         <button
           onClick={fetchAll}
@@ -214,13 +214,13 @@ export default function EventDebugger() {
         <div className="flex flex-wrap items-center gap-4">
           {statusChip()}
           {health?.count_day != null && (
-            <span className="text-sm text-gray-500">{health.count_day} events in 24h</span>
+            <span className="text-sm text-st-gray">{health.count_day} events in 24h</span>
           )}
           {health?.count_hour != null && (
-            <span className="text-sm text-gray-400">{health.count_hour} in last hour</span>
+            <span className="text-sm text-st-gray">{health.count_hour} in last hour</span>
           )}
           {health?.last_event && (
-            <span className="text-sm text-gray-400">
+            <span className="text-sm text-st-gray">
               Last: {new Date(health.last_event).toLocaleString()}
             </span>
           )}
@@ -250,9 +250,9 @@ export default function EventDebugger() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {edge.multiple_domains && (
               <div className="bg-gray-50 rounded-lg p-3">
-                <p className="text-xs text-gray-400">Multiple Domains</p>
-                <p className="text-lg font-semibold text-gray-900">{edge.domain_count}</p>
-                <p className="text-xs text-gray-500 mt-1 truncate">{edge.domains?.slice(0, 3).join(', ')}</p>
+                <p className="text-xs text-st-gray">Multiple Domains</p>
+                <p className="text-lg font-semibold text-st-black">{edge.domain_count}</p>
+                <p className="text-xs text-st-gray mt-1 truncate">{edge.domains?.slice(0, 3).join(', ')}</p>
               </div>
             )}
             {edge.ai_without_utm > 0 && (
@@ -306,12 +306,12 @@ export default function EventDebugger() {
               <Database className="w-4 h-4 text-gray-700" />
               <h3 className="text-sm font-semibold text-gray-700">Latest Events</h3>
               {!loading && (
-                <span className="text-xs text-gray-400">{events.length} shown</span>
+                <span className="text-xs text-st-gray">{events.length} shown</span>
               )}
             </div>
             <button
               onClick={clearFilters}
-              className="text-xs text-gray-500 hover:text-gray-900"
+              className="text-xs text-st-gray hover:text-st-black"
             >
               Clear filters
             </button>
@@ -319,7 +319,7 @@ export default function EventDebugger() {
 
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
             <label className="space-y-1">
-              <span className="text-xs text-gray-500">Event type</span>
+              <span className="text-xs text-st-gray">Event type</span>
               <select
                 value={filters.event_type}
                 onChange={(e) => updateFilter('event_type', e.target.value)}
@@ -334,9 +334,9 @@ export default function EventDebugger() {
             </label>
 
             <label className="space-y-1">
-              <span className="text-xs text-gray-500">Source</span>
+              <span className="text-xs text-st-gray">Source</span>
               <div className="relative">
-                <Filter className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+                <Filter className="w-4 h-4 text-st-gray absolute left-3 top-2.5" />
                 <input
                   value={filters.source}
                   onChange={(e) => updateFilter('source', e.target.value)}
@@ -347,7 +347,7 @@ export default function EventDebugger() {
             </label>
 
             <label className="space-y-1">
-              <span className="text-xs text-gray-500">From</span>
+              <span className="text-xs text-st-gray">From</span>
               <input
                 type="date"
                 value={filters.date_from}
@@ -357,7 +357,7 @@ export default function EventDebugger() {
             </label>
 
             <label className="space-y-1">
-              <span className="text-xs text-gray-500">To</span>
+              <span className="text-xs text-st-gray">To</span>
               <input
                 type="date"
                 value={filters.date_to}
@@ -367,9 +367,9 @@ export default function EventDebugger() {
             </label>
 
             <label className="space-y-1">
-              <span className="text-xs text-gray-500">Search</span>
+              <span className="text-xs text-st-gray">Search</span>
               <div className="relative">
-                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+                <Search className="w-4 h-4 text-st-gray absolute left-3 top-2.5" />
                 <input
                   value={filters.search}
                   onChange={(e) => updateFilter('search', e.target.value)}
@@ -389,14 +389,14 @@ export default function EventDebugger() {
 
         {loading && events.length === 0 && (
           <div className="flex items-center justify-center py-12">
-            <RefreshCw className="w-6 h-6 animate-spin text-gray-400" />
+            <RefreshCw className="w-6 h-6 animate-spin text-st-gray" />
           </div>
         )}
 
         {!loading && !error && events.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-sm text-gray-500">No events match these filters.</p>
-            <p className="text-xs text-gray-400 mt-1">Clear filters or send a fresh pageview/conversion event.</p>
+            <p className="text-sm text-st-gray">No events match these filters.</p>
+            <p className="text-xs text-st-gray mt-1">Clear filters or send a fresh pageview/conversion event.</p>
           </div>
         )}
 
@@ -405,21 +405,21 @@ export default function EventDebugger() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Event</th>
-                  <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Time</th>
-                  <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Distinct ID</th>
-                  <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Source</th>
-                  <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Medium</th>
-                  <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Campaign</th>
-                  <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Click IDs</th>
-                  <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">AI Source</th>
-                  <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Page</th>
-                  <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Referrer</th>
-                  <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Conversion</th>
-                  <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Value</th>
-                  <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Ingestion</th>
-                  <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Device</th>
-                  <th className="text-left py-2 px-4 text-gray-500 font-medium text-xs">Country</th>
+                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Event</th>
+                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Time</th>
+                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Distinct ID</th>
+                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Source</th>
+                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Medium</th>
+                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Campaign</th>
+                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Click IDs</th>
+                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">AI Source</th>
+                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Page</th>
+                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Referrer</th>
+                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Conversion</th>
+                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Value</th>
+                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Ingestion</th>
+                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Device</th>
+                  <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Country</th>
                 </tr>
               </thead>
               <tbody>
@@ -434,10 +434,10 @@ export default function EventDebugger() {
                         {e.event}
                       </span>
                     </td>
-                    <td className="py-2 px-4 text-gray-500 text-xs whitespace-nowrap">
+                    <td className="py-2 px-4 text-st-gray text-xs whitespace-nowrap">
                       {new Date(e.timestamp).toLocaleString()}
                     </td>
-                    <td className="py-2 px-4 text-gray-500 text-xs max-w-[160px] truncate">
+                    <td className="py-2 px-4 text-st-gray text-xs max-w-[160px] truncate">
                       {e.distinct_id || '—'}
                     </td>
                     <td className="py-2 px-4 text-gray-600 text-xs">{e.source || '—'}</td>
@@ -448,12 +448,12 @@ export default function EventDebugger() {
                     </td>
                     <td className="py-2 px-4 text-gray-600 text-xs">{e.ai_source || '—'}</td>
                     <td className="py-2 px-4 text-gray-600 text-xs max-w-[200px] truncate">{formatPath(e.page_url)}</td>
-                    <td className="py-2 px-4 text-gray-500 text-xs max-w-[150px] truncate">{formatHost(e.referrer)}</td>
-                    <td className="py-2 px-4 text-gray-500 text-xs">{e.conversion_type || '—'}</td>
-                    <td className="py-2 px-4 text-gray-500 text-xs">{e.conversion_value ?? '—'}</td>
-                    <td className="py-2 px-4 text-gray-500 text-xs">{e.ingestion_method || 'pixel'}</td>
-                    <td className="py-2 px-4 text-gray-500 text-xs">{e.device_type || '—'}</td>
-                    <td className="py-2 px-4 text-gray-500 text-xs">{e.country || '—'}</td>
+                    <td className="py-2 px-4 text-st-gray text-xs max-w-[150px] truncate">{formatHost(e.referrer)}</td>
+                    <td className="py-2 px-4 text-st-gray text-xs">{e.conversion_type || '—'}</td>
+                    <td className="py-2 px-4 text-st-gray text-xs">{e.conversion_value ?? '—'}</td>
+                    <td className="py-2 px-4 text-st-gray text-xs">{e.ingestion_method || 'pixel'}</td>
+                    <td className="py-2 px-4 text-st-gray text-xs">{e.device_type || '—'}</td>
+                    <td className="py-2 px-4 text-st-gray text-xs">{e.country || '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -470,13 +470,13 @@ export default function EventDebugger() {
           >
             <div className="sticky top-0 bg-white border-b border-gray-200 p-5 flex items-start justify-between">
               <div>
-                <p className="text-xs text-gray-400">Event details</p>
-                <h3 className="text-lg font-semibold text-gray-900">{selectedEvent.event}</h3>
-                <p className="text-xs text-gray-500 mt-1">{new Date(selectedEvent.timestamp).toLocaleString()}</p>
+                <p className="text-xs text-st-gray">Event details</p>
+                <h3 className="text-lg font-semibold text-st-black">{selectedEvent.event}</h3>
+                <p className="text-xs text-st-gray mt-1">{new Date(selectedEvent.timestamp).toLocaleString()}</p>
               </div>
               <button
                 onClick={() => setSelectedEvent(null)}
-                className="p-2 rounded-lg hover:bg-gray-100 text-gray-500"
+                className="p-2 rounded-lg hover:bg-gray-100 text-st-gray"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -507,7 +507,7 @@ export default function EventDebugger() {
                   ['Country', selectedEvent.country]
                 ].map(([label, value]) => (
                   <div key={label} className="rounded-lg bg-gray-50 p-3">
-                    <p className="text-xs text-gray-400">{label}</p>
+                    <p className="text-xs text-st-gray">{label}</p>
                     <p className="mt-1 text-gray-800 break-words">{value ?? '—'}</p>
                   </div>
                 ))}
@@ -518,7 +518,7 @@ export default function EventDebugger() {
                   <p className="text-sm font-semibold text-gray-700">Raw properties</p>
                   <button
                     onClick={() => navigator.clipboard.writeText(JSON.stringify(selectedEvent.properties || {}, null, 2))}
-                    className="text-xs text-gray-500 hover:text-gray-900"
+                    className="text-xs text-st-gray hover:text-st-black"
                   >
                     Copy JSON
                   </button>

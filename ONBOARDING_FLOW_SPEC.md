@@ -1,5 +1,6 @@
 # Onboarding Flow Spec — Figma
 
+Implementation status: ✅ Visually implemented S97 T1.1 — logic complete since S17/S24, visual aligned S97
 Status: design-confirmed from screenshots. Implementation must be verified in code.
 
 ## Flow

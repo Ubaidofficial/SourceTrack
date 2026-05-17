@@ -78,8 +78,8 @@ export default function Integrations() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Integrations</h2>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h2 className="text-2xl font-bold text-st-black">Integrations</h2>
+          <p className="text-sm text-st-gray mt-0.5">
             Tracking setup, verification, and data health
           </p>
         </div>
@@ -112,7 +112,7 @@ export default function Integrations() {
         <DashboardCard title="Installation"
           subtitle="Tracking script and site verification"
           action={
-            <button onClick={() => navigate('/snippet')} className="text-xs text-gray-900 hover:text-gray-700 font-medium flex items-center gap-1">
+            <button onClick={() => navigate('/snippet')} className="text-xs text-st-black hover:text-gray-700 font-medium flex items-center gap-1">
               Full setup <ExternalLink className="w-3 h-3" />
             </button>
           }
@@ -121,8 +121,8 @@ export default function Integrations() {
           <div className="space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-gray-100">
               <div>
-                <p className="text-sm font-medium text-gray-900">{site?.domain || 'No site configured'}</p>
-                {site?.name && <p className="text-xs text-gray-400 mt-0.5">{site.name}</p>}
+                <p className="text-sm font-medium text-st-black">{site?.domain || 'No site configured'}</p>
+                {site?.name && <p className="text-xs text-st-gray mt-0.5">{site.name}</p>}
               </div>
               <StatusBadge
                 status={isVerified ? 'verified' : 'pending'}
@@ -132,20 +132,20 @@ export default function Integrations() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-xs text-gray-400 font-medium uppercase tracking-wider mb-1">Last Event</p>
-                <p className="text-sm text-gray-900">
+                <p className="text-xs text-st-gray font-medium uppercase tracking-wider mb-1">Last Event</p>
+                <p className="text-sm text-st-black">
                   {installData?.last_event ? new Date(installData.last_event).toLocaleString() : '—'}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-gray-400 font-medium uppercase tracking-wider mb-1">Event Type</p>
-                <p className="text-sm text-gray-900">{installData?.last_event_type || '—'}</p>
+                <p className="text-xs text-st-gray font-medium uppercase tracking-wider mb-1">Event Type</p>
+                <p className="text-sm text-st-black">{installData?.last_event_type || '—'}</p>
               </div>
             </div>
 
-            <div className="bg-gray-900 rounded-lg p-4">
+            <div className="bg-st-black rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-gray-400 font-medium">Tracking Script</span>
+                <span className="text-xs text-st-gray font-medium">Tracking Script</span>
                 <button onClick={handleCopy}
                   className="px-2.5 py-1 bg-gray-700 text-white text-xs rounded-md hover:bg-gray-600 flex items-center gap-1.5 transition-colors">
                   {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
@@ -177,15 +177,15 @@ export default function Integrations() {
               <div className="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-3">
                 <ShieldCheck className="w-7 h-7 text-green-600" />
               </div>
-              <p className="text-sm font-semibold text-gray-900">All Systems Healthy</p>
-              <p className="text-xs text-gray-500 mt-1">No issues detected with your tracking setup.</p>
-              <p className="text-xs text-gray-400 mt-2">
+              <p className="text-sm font-semibold text-st-black">All Systems Healthy</p>
+              <p className="text-xs text-st-gray mt-1">No issues detected with your tracking setup.</p>
+              <p className="text-xs text-st-gray mt-2">
                 {installData?.status === 'verified' ? `${installData?.last_event_type || 'Events'} flowing normally` : 'Complete installation to begin monitoring'}
               </p>
             </div>
           ) : (
             <div className="space-y-3">
-              <p className="text-xs text-gray-400 font-medium uppercase tracking-wider">
+              <p className="text-xs text-st-gray font-medium uppercase tracking-wider">
                 {issueCount} issue{issueCount > 1 ? 's' : ''} detected
               </p>
               {alerts.map(a => (
@@ -194,7 +194,7 @@ export default function Integrations() {
                 }`}>
                   <div className="flex items-center gap-2">
                     <StatusBadge status={a.severity === 'high' ? 'error' : 'warning'} label={a.severity} />
-                    <span className="font-medium text-gray-900">{a.metric}</span>
+                    <span className="font-medium text-st-black">{a.metric}</span>
                   </div>
                   <p className="mt-1.5 text-xs text-gray-600">{a.message}</p>
                 </div>
@@ -203,7 +203,7 @@ export default function Integrations() {
                 <div key={h.type} className="rounded-lg p-3 text-sm bg-amber-50 border border-amber-200">
                   <div className="flex items-center gap-2">
                     <StatusBadge status="warning" label="Hygiene" />
-                    <span className="font-medium text-gray-900">{h.type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</span>
+                    <span className="font-medium text-st-black">{h.type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</span>
                   </div>
                   <p className="mt-1.5 text-xs text-gray-600">{h.message}</p>
                 </div>
@@ -225,19 +225,19 @@ export default function Integrations() {
                 className="border border-gray-200 rounded-lg p-4 bg-gray-50 opacity-70 cursor-not-allowed select-none">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 bg-white rounded-lg border border-gray-200">
-                    <Icon className="w-5 h-5 text-gray-400" />
+                    <Icon className="w-5 h-5 text-st-gray" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-500">{int.label}</p>
-                    <p className="text-xs text-gray-400">Coming soon</p>
+                    <p className="text-sm font-medium text-st-gray">{int.label}</p>
+                    <p className="text-xs text-st-gray">Coming soon</p>
                   </div>
                 </div>
-                <p className="text-xs text-gray-400">{int.desc}</p>
+                <p className="text-xs text-st-gray">{int.desc}</p>
               </div>
             )
           })}
         </div>
-        <p className="text-xs text-gray-400 mt-4 text-center">
+        <p className="text-xs text-st-gray mt-4 text-center">
           Backend consolidation for integrations is planned in a later session.
         </p>
       </DashboardCard>
@@ -251,14 +251,14 @@ export default function Integrations() {
             <Code className="w-6 h-6 text-gray-700" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-900">JavaScript Snippet</p>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-sm font-semibold text-st-black">JavaScript Snippet</p>
+            <p className="text-xs text-st-gray mt-1">
               A single &lt;script&gt; tag added to your site's &lt;head&gt; section.
               Tracks pageviews, UTM parameters, AI referrals, and conversions automatically.
             </p>
             <div className="flex items-center gap-3 mt-2">
               <StatusBadge status={isVerified ? 'active' : 'pending'} label={isVerified ? 'Active' : 'Not Detected'} />
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-st-gray">
                 {installData?.domain || '—'}
               </span>
             </div>

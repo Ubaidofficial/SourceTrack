@@ -79,7 +79,7 @@ export default function AIChat() {
   if (siteLoading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+        <Loader2 className="w-6 h-6 animate-spin text-st-gray" />
       </div>
     )
   }
@@ -88,8 +88,8 @@ export default function AIChat() {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900">AI Chat</h2>
-          <p className="text-gray-500 mt-2">Set up your site in Settings first</p>
+          <h2 className="text-2xl font-bold text-st-black">AI Chat</h2>
+          <p className="text-st-gray mt-2">Set up your site in Settings first</p>
         </div>
       </div>
     )
@@ -98,13 +98,13 @@ export default function AIChat() {
   return (
     <div className="flex flex-col h-full max-w-3xl mx-auto">
       <div className="mb-4">
-        <h2 className="text-2xl font-bold text-gray-900">AI Chat</h2>
-        <p className="text-sm text-gray-500 mt-1">Ask questions about your marketing data</p>
+        <h2 className="text-2xl font-bold text-st-black">AI Chat</h2>
+        <p className="text-sm text-st-gray mt-1">Ask questions about your marketing data</p>
       </div>
 
       <div className="flex-1 overflow-auto space-y-4 mb-4">
         {messages.length === 0 && (
-          <div className="text-center text-gray-400 py-12">
+          <div className="text-center text-st-gray py-12">
             <p>Ask a question like:</p>
             <p className="text-sm mt-1">"What are my top traffic sources?"</p>
           </div>
@@ -121,10 +121,10 @@ export default function AIChat() {
             <div className={`max-w-[80%] ${msg.role === 'user' ? 'order-1' : ''}`}>
               <div className={`rounded-lg px-4 py-2 text-sm ${
                 msg.role === 'user'
-                  ? 'bg-gray-900 text-white'
+                  ? 'bg-st-black text-white'
                   : msg.isError
                     ? 'bg-red-50 text-red-700 border border-red-200'
-                    : 'bg-white border border-gray-200 text-gray-900'
+                    : 'bg-white border border-gray-200 text-st-black'
               }`}>
                 <p className="whitespace-pre-wrap">{msg.content}</p>
               </div>
@@ -135,7 +135,7 @@ export default function AIChat() {
                     <thead>
                       <tr className="bg-gray-50">
                         {msg.results[0].map((_, ci) => (
-                          <th key={ci} className="px-3 py-2 text-left font-medium text-gray-500 border-b border-gray-200">
+                          <th key={ci} className="px-3 py-2 text-left font-medium text-st-gray border-b border-gray-200">
                             Col {ci + 1}
                           </th>
                         ))}
@@ -197,7 +197,7 @@ export default function AIChat() {
         <button
           onClick={handleSend}
           disabled={loading || !input.trim()}
-          className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 flex items-center gap-2"
+          className="px-4 py-2 bg-st-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 flex items-center gap-2"
         >
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
         </button>

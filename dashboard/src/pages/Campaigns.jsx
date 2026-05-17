@@ -148,12 +148,12 @@ export default function Campaigns() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Campaigns & Attribution</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Performance by marketing channel with real-time revenue and conversion data</p>
+          <h2 className="text-2xl font-bold text-st-black">Campaigns & Attribution</h2>
+          <p className="text-sm text-st-gray mt-0.5">Performance by marketing channel with real-time revenue and conversion data</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => navigate('/report-builder')}
-            className="px-3 py-1.5 text-sm text-gray-900 bg-gray-50 rounded-lg hover:bg-gray-100 font-medium">
+            className="px-3 py-1.5 text-sm text-st-black bg-gray-50 rounded-lg hover:bg-gray-100 font-medium">
             Advanced Report
           </button>
           <button onClick={() => {
@@ -170,7 +170,7 @@ export default function Campaigns() {
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex-1 min-w-[200px] relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-st-gray" />
             <input
               type="text" value={search} onChange={e => setSearch(e.target.value)}
               placeholder={`Filter by ${DIMENSIONS.find(d => d.key === activeDim)?.label?.toLowerCase() || 'name'}...`}
@@ -182,7 +182,7 @@ export default function Campaigns() {
             {DATE_RANGES.map(dr => (
               <button key={dr.label} onClick={() => setDateRange(dr.days)}
                 className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                  dateRange === dr.days ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                  dateRange === dr.days ? 'bg-white text-st-black shadow-sm' : 'text-st-gray hover:text-gray-700'
                 }`}>
                 {dr.label}
               </button>
@@ -197,7 +197,7 @@ export default function Campaigns() {
             <option value="none">No Activity</option>
           </select>
 
-          <div className="flex items-center gap-1.5 text-xs text-gray-400">
+          <div className="flex items-center gap-1.5 text-xs text-st-gray">
             <Filter className="w-3.5 h-3.5" />
             <span>{rows.length} results</span>
           </div>
@@ -209,7 +209,7 @@ export default function Campaigns() {
         {DIMENSIONS.map(d => (
           <button key={d.key} onClick={() => setActiveDim(d.key)}
             className={`px-3.5 py-1.5 text-sm rounded-lg font-medium transition-colors ${
-              activeDim === d.key ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              activeDim === d.key ? 'bg-st-black text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}>
             {d.label}
           </button>
@@ -238,10 +238,10 @@ export default function Campaigns() {
         >
           {isLoading ? (
             <div className="py-12 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto" />
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black mx-auto" />
             </div>
           ) : rows.length === 0 ? (
-            <div className="py-12 text-center text-sm text-gray-400">
+            <div className="py-12 text-center text-sm text-st-gray">
               {search || statusFilter !== 'all'
                 ? 'No results match your filters.'
                 : 'No attribution data yet. UTM-tagged traffic will appear here after conversions.'}
@@ -251,28 +251,28 @@ export default function Campaigns() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="text-left py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
                       {DIMENSIONS.find(d => d.key === activeDim)?.label || 'Name'}
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
                       Revenue
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
                       Conversions
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
                       Avg Value
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
                       Trend
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
                       Spend ✏️
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
                       ROAS
                     </th>
                   </tr>
@@ -282,18 +282,18 @@ export default function Campaigns() {
                     return (
                       <tr key={i} className="hover:bg-gray-50 transition-colors">
                         <td className="py-3 px-4">
-                          <p className="text-gray-900 font-medium">{r.name || 'unknown'}</p>
+                          <p className="text-st-black font-medium">{r.name || 'unknown'}</p>
                         </td>
                         <td className="py-3 px-4 text-right">
                           <StatusBadge status={r.status} label={statusLabel(r.status)} />
                         </td>
-                        <td className="py-3 px-4 text-right font-semibold text-gray-900">
+                        <td className="py-3 px-4 text-right font-semibold text-st-black">
                           ${(r.revenue || 0).toFixed(0)}
                         </td>
                         <td className="py-3 px-4 text-right text-gray-600">
                           {r.conversions || 0}
                         </td>
-                        <td className="py-3 px-4 text-right text-gray-500">
+                        <td className="py-3 px-4 text-right text-st-gray">
                           ${(r.avg_value || 0).toFixed(2)}
                         </td>
                         <td className="py-3 px-4 text-right">
@@ -314,7 +314,7 @@ export default function Campaigns() {
                           ) : (
                             <div className="flex items-center justify-end gap-1 group">
                               <span className="text-gray-600">{spendMap[r.name] ? `$${Number(spendMap[r.name]).toFixed(0)}` : '—'}</span>
-                              <button onClick={() => { setEditingSpend(r.name); setSpendInput(spendMap[r.name] || '') }} className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600">
+                              <button onClick={() => { setEditingSpend(r.name); setSpendInput(spendMap[r.name] || '') }} className="opacity-0 group-hover:opacity-100 text-st-gray hover:text-gray-600">
                                 <Pencil className="w-3 h-3" />
                               </button>
                             </div>
@@ -334,7 +334,7 @@ export default function Campaigns() {
                               <span className="text-xs font-medium">{Math.abs(r.trend).toFixed(0)}%</span>
                             </div>
                           ) : (
-                            <div className="flex items-center justify-end gap-1 text-gray-400">
+                            <div className="flex items-center justify-end gap-1 text-st-gray">
                               <Eye className="w-3.5 h-3.5" />
                               <span className="text-xs">—</span>
                             </div>
@@ -352,10 +352,10 @@ export default function Campaigns() {
         <DashboardCard title="Revenue Breakdown" subtitle="Top 10 by revenue">
           {isLoading ? (
             <div className="h-64 flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black" />
             </div>
           ) : rows.length === 0 ? (
-            <div className="h-64 flex items-center justify-center text-sm text-gray-400">
+            <div className="h-64 flex items-center justify-center text-sm text-st-gray">
               No data to display
             </div>
           ) : (

@@ -83,8 +83,8 @@ export default function Leads() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Leads</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Individual visitors who have converted or engaged with your site</p>
+          <h2 className="text-2xl font-bold text-st-black">Leads</h2>
+          <p className="text-sm text-st-gray mt-0.5">Individual visitors who have converted or engaged with your site</p>
         </div>
         <button onClick={() => {
           if (!site) return
@@ -103,7 +103,7 @@ export default function Leads() {
 
       <div className="flex items-center gap-3">
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-st-gray" />
           <input
             type="text" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search by visitor ID, source, or campaign..."
@@ -126,10 +126,10 @@ export default function Leads() {
       <DashboardCard title="All Leads" subtitle={`${totalLeads} visitors`}>
         {isLoading ? (
           <div className="py-12 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto" />
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black mx-auto" />
           </div>
         ) : leads.length === 0 ? (
-          <div className="py-12 text-center text-sm text-gray-400">
+          <div className="py-12 text-center text-sm text-st-gray">
             {search || filterAI !== 'all' ? 'No leads match your filters.' : 'No leads yet. Visitors will appear here after they engage with your site.'}
           </div>
         ) : (
@@ -137,15 +137,15 @@ export default function Leads() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100">
-                  <th className="text-left py-3 px-3 text-xs font-medium text-gray-500">Visitor</th>
-                  <th className="text-left py-3 px-3 text-xs font-medium text-gray-500">Source</th>
-                  <th className="text-left py-3 px-3 text-xs font-medium text-gray-500">Event Type</th>
-                  <th className="text-right py-3 px-3 text-xs font-medium text-gray-500">Conversions</th>
-                  <th className="text-right py-3 px-3 text-xs font-medium text-gray-500">Revenue</th>
-                  <th className="text-left py-3 px-3 text-xs font-medium text-gray-500">Last seen</th>
-                  <th className="text-left py-3 px-3 text-xs font-medium text-gray-500">Status</th>
-                  <th className="text-right py-3 px-3 text-xs font-medium text-gray-500">Country</th>
-                  <th className="text-right py-3 px-3 text-xs font-medium text-gray-500"></th>
+                  <th className="text-left py-3 px-3 text-xs font-medium text-st-gray">Visitor</th>
+                  <th className="text-left py-3 px-3 text-xs font-medium text-st-gray">Source</th>
+                  <th className="text-left py-3 px-3 text-xs font-medium text-st-gray">Event Type</th>
+                  <th className="text-right py-3 px-3 text-xs font-medium text-st-gray">Conversions</th>
+                  <th className="text-right py-3 px-3 text-xs font-medium text-st-gray">Revenue</th>
+                  <th className="text-left py-3 px-3 text-xs font-medium text-st-gray">Last seen</th>
+                  <th className="text-left py-3 px-3 text-xs font-medium text-st-gray">Status</th>
+                  <th className="text-right py-3 px-3 text-xs font-medium text-st-gray">Country</th>
+                  <th className="text-right py-3 px-3 text-xs font-medium text-st-gray"></th>
                 </tr>
               </thead>
               <tbody>
@@ -154,14 +154,14 @@ export default function Leads() {
                   const shortId = lead.id ? lead.id.slice(0, 8) : 'unknown'
                   return (
                     <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                      <td className="py-3 px-3 text-gray-900 font-mono text-xs">{shortId}...</td>
+                      <td className="py-3 px-3 text-st-black font-mono text-xs">{shortId}...</td>
                       <td className="py-3 px-3">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-gray-900">{lead.source || 'direct'}</span>
+                          <span className="text-st-black">{lead.source || 'direct'}</span>
                           {isAI && <StatusBadge status="verified" label="AI" />}
                         </div>
                         {lead.medium && lead.medium !== 'none' && (
-                          <span className="text-xs text-gray-400">{lead.medium}</span>
+                          <span className="text-xs text-st-gray">{lead.medium}</span>
                         )}
                       </td>
                       <td className="py-3 px-3">
@@ -178,17 +178,17 @@ export default function Leads() {
                             </span>
                           )
                         })() : (
-                          <span className="text-xs text-gray-400">—</span>
+                          <span className="text-xs text-st-gray">—</span>
                         )}
                       </td>
                       <td className="py-3 px-3 text-right text-gray-600">{lead.conversions}</td>
-                      <td className="py-3 px-3 text-right font-medium text-gray-900">
+                      <td className="py-3 px-3 text-right font-medium text-st-black">
                         ${lead.revenue.toFixed(0)}
                       </td>
-                      <td className="py-3 px-3 text-xs text-gray-500">
+                      <td className="py-3 px-3 text-xs text-st-gray">
                         {lead.last_seen ? new Date(lead.last_seen).toLocaleDateString() : '—'}
                       </td>
-                      <td className="py-3 px-3 text-right text-gray-500 text-xs">
+                      <td className="py-3 px-3 text-right text-st-gray text-xs">
                         {lead.country || '—'}
                       </td>
                       <td className="py-3 px-3">
@@ -227,14 +227,14 @@ export default function Leads() {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => navigate(`/leads/${encodeURIComponent(lead.id)}`)}
-                            className="text-xs text-gray-600 hover:text-gray-900 font-medium flex items-center gap-1"
+                            className="text-xs text-gray-600 hover:text-st-black font-medium flex items-center gap-1"
                           >
                             <User className="w-3 h-3" />
                             View
                           </button>
                           <button
                             onClick={() => setJourneyVisitorId(lead.id || lead.visitor_id || lead.anonymous_id)}
-                            className="text-xs text-gray-900 hover:text-gray-700 font-medium flex items-center gap-1"
+                            className="text-xs text-st-black hover:text-gray-700 font-medium flex items-center gap-1"
                           >
                             Journey <ArrowRight className="w-3 h-3" />
                           </button>

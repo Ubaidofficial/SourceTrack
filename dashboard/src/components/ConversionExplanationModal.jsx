@@ -62,10 +62,10 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
       <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[85vh] overflow-y-auto">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2">
-            <HelpCircle className="w-5 h-5 text-gray-500" />
-            <h3 className="text-base font-semibold text-gray-900">Attribution Explanation</h3>
+            <HelpCircle className="w-5 h-5 text-st-gray" />
+            <h3 className="text-base font-semibold text-st-black">Attribution Explanation</h3>
           </div>
-          <button onClick={onClose} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+          <button onClick={onClose} className="p-1.5 text-st-gray hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -73,7 +73,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
         <div className="p-5 space-y-5">
           {loading && (
             <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black" />
             </div>
           )}
 
@@ -107,7 +107,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                 {model === 'ai_platforms' && (
                   <p>AI Platform attribution detects the referrer at conversion time and matches it against known AI platform domains (ChatGPT, Claude, Perplexity, Gemini, Grok, Copilot, DeepSeek). Only conversions with a detected AI referrer receive credit.</p>
                 )}
-                <p className="text-gray-400">Single-touch model: only one touchpoint receives 100% credit.</p>
+                <p className="text-st-gray">Single-touch model: only one touchpoint receives 100% credit.</p>
               </div>
             </div>
           )}
@@ -117,24 +117,24 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
               {/* Conversion details */}
               <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Conversion</span>
-                  <span className="text-xs text-gray-400">{data.conversion?.ingestion_method || 'server_routed'}</span>
+                  <span className="text-xs font-medium text-st-gray uppercase tracking-wide">Conversion</span>
+                  <span className="text-xs text-st-gray">{data.conversion?.ingestion_method || 'server_routed'}</span>
                 </div>
                 <div className="grid grid-cols-3 gap-3 text-sm">
                   <div>
-                    <p className="text-xs text-gray-500">Value</p>
-                    <p className="font-medium text-gray-900">${(data.conversion?.value || 0).toLocaleString()}</p>
+                    <p className="text-xs text-st-gray">Value</p>
+                    <p className="font-medium text-st-black">${(data.conversion?.value || 0).toLocaleString()}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500">Date</p>
-                    <p className="font-medium text-gray-900">{data.conversion?.timestamp ? new Date(data.conversion.timestamp).toLocaleString() : '—'}</p>
+                    <p className="text-xs text-st-gray">Date</p>
+                    <p className="font-medium text-st-black">{data.conversion?.timestamp ? new Date(data.conversion.timestamp).toLocaleString() : '—'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500">Attributed To</p>
-                    <p className="font-medium text-gray-900">
+                    <p className="text-xs text-st-gray">Attributed To</p>
+                    <p className="font-medium text-st-black">
                       {data.attributed_to?.source || 'direct'}
                       {data.attributed_to?.medium && data.attributed_to.medium !== 'none' && (
-                        <span className="text-gray-500"> / {data.attributed_to.medium}</span>
+                        <span className="text-st-gray"> / {data.attributed_to.medium}</span>
                       )}
                     </p>
                   </div>
@@ -150,7 +150,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                     <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
                   )}
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-900">
+                    <p className="text-sm font-medium text-st-black">
                       {modelLabels[data.model] || data.model}
                       {data.fallback && <span className="text-amber-700 ml-1">(fallback)</span>}
                     </p>
@@ -162,19 +162,19 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
               {/* Journey summary */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-                  <Route className="w-4 h-4 text-gray-400 mx-auto mb-1" />
-                  <p className="text-lg font-semibold text-gray-900">{data.journey_summary?.touchpoint_count || 0}</p>
-                  <p className="text-xs text-gray-500">Touchpoints</p>
+                  <Route className="w-4 h-4 text-st-gray mx-auto mb-1" />
+                  <p className="text-lg font-semibold text-st-black">{data.journey_summary?.touchpoint_count || 0}</p>
+                  <p className="text-xs text-st-gray">Touchpoints</p>
                 </div>
                 <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-                  <Clock className="w-4 h-4 text-gray-400 mx-auto mb-1" />
-                  <p className="text-lg font-semibold text-gray-900">{data.journey_summary?.journey_duration_days || 0}d</p>
-                  <p className="text-xs text-gray-500">Journey Duration</p>
+                  <Clock className="w-4 h-4 text-st-gray mx-auto mb-1" />
+                  <p className="text-lg font-semibold text-st-black">{data.journey_summary?.journey_duration_days || 0}d</p>
+                  <p className="text-xs text-st-gray">Journey Duration</p>
                 </div>
                 <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-                  <MousePointerClick className="w-4 h-4 text-gray-400 mx-auto mb-1" />
-                  <p className="text-lg font-semibold text-gray-900">{data.journey_summary?.total_events || 0}</p>
-                  <p className="text-xs text-gray-500">Total Events</p>
+                  <MousePointerClick className="w-4 h-4 text-st-gray mx-auto mb-1" />
+                  <p className="text-lg font-semibold text-st-black">{data.journey_summary?.total_events || 0}</p>
+                  <p className="text-xs text-st-gray">Total Events</p>
                 </div>
               </div>
 
@@ -182,23 +182,23 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
               {data.journey_summary?.session_count > 0 && (
                 <div className="grid grid-cols-3 gap-3">
                   <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-                    <Layers className="w-4 h-4 text-gray-400 mx-auto mb-1" />
-                    <p className="text-lg font-semibold text-gray-900">{data.journey_summary?.session_count || 0}</p>
-                    <p className="text-xs text-gray-500">Sessions</p>
+                    <Layers className="w-4 h-4 text-st-gray mx-auto mb-1" />
+                    <p className="text-lg font-semibold text-st-black">{data.journey_summary?.session_count || 0}</p>
+                    <p className="text-xs text-st-gray">Sessions</p>
                   </div>
                   <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-                    <Clock className="w-4 h-4 text-gray-400 mx-auto mb-1" />
-                    <p className="text-lg font-semibold text-gray-900">
+                    <Clock className="w-4 h-4 text-st-gray mx-auto mb-1" />
+                    <p className="text-lg font-semibold text-st-black">
                       {data.journey_summary?.converting_session_index || '—'}
                     </p>
-                    <p className="text-xs text-gray-500">Converting Session</p>
+                    <p className="text-xs text-st-gray">Converting Session</p>
                   </div>
                   <div className="bg-white border border-gray-200 rounded-lg p-3 text-center">
-                    <Route className="w-4 h-4 text-gray-400 mx-auto mb-1" />
-                    <p className="text-lg font-semibold text-gray-900">
+                    <Route className="w-4 h-4 text-st-gray mx-auto mb-1" />
+                    <p className="text-lg font-semibold text-st-black">
                       {data.sessions?.find(s => s.contains_conversion)?.pageview_count || 0}
                     </p>
-                    <p className="text-xs text-gray-500">Pages in Conv. Session</p>
+                    <p className="text-xs text-st-gray">Pages in Conv. Session</p>
                   </div>
                 </div>
               )}
@@ -209,7 +209,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                   onClick={() => setViewMode('events')}
                   className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
                     viewMode === 'events'
-                      ? 'bg-gray-900 text-white border-gray-900'
+                      ? 'bg-st-black text-white border-st-black'
                       : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                   }`}
                 >
@@ -219,7 +219,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                   onClick={() => setViewMode('sessions')}
                   className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
                     viewMode === 'sessions'
-                      ? 'bg-gray-900 text-white border-gray-900'
+                      ? 'bg-st-black text-white border-st-black'
                       : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
                   }`}
                 >
@@ -230,7 +230,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
               {/* Event timeline */}
               {viewMode === 'events' && (
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">Journey Timeline</h4>
+                  <h4 className="text-sm font-medium text-st-black mb-3">Journey Timeline</h4>
                   <div className="space-y-2">
                     {data.all_touches?.map((touch, i) => {
                       const isAttributed = attributedTouch &&
@@ -254,20 +254,20 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                           }`} />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-gray-900">{touch.source || 'direct'}</span>
+                              <span className="font-medium text-st-black">{touch.source || 'direct'}</span>
                               {touch.medium && touch.medium !== 'none' && (
-                                <span className="text-xs text-gray-500">/ {touch.medium}</span>
+                                <span className="text-xs text-st-gray">/ {touch.medium}</span>
                               )}
                               {isAttributed && (
                                 <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">Credit</span>
                               )}
                               {isSkipped && (
-                                <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded line-through">Skipped</span>
+                                <span className="text-xs bg-gray-100 text-st-gray px-1.5 py-0.5 rounded line-through">Skipped</span>
                               )}
                             </div>
-                            <p className="text-xs text-gray-500 truncate">{touch.page_url || '—'}</p>
+                            <p className="text-xs text-st-gray truncate">{touch.page_url || '—'}</p>
                           </div>
-                          <span className="text-xs text-gray-400 whitespace-nowrap">
+                          <span className="text-xs text-st-gray whitespace-nowrap">
                             {new Date(touch.timestamp).toLocaleDateString()}
                           </span>
                         </div>
@@ -280,7 +280,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
               {/* Session timeline */}
               {viewMode === 'sessions' && data.sessions?.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">Session Timeline</h4>
+                  <h4 className="text-sm font-medium text-st-black mb-3">Session Timeline</h4>
                   <div className="space-y-3">
                     {data.sessions.map((sess) => (
                       <div
@@ -293,38 +293,38 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <Layers className="w-3.5 h-3.5 text-gray-500" />
-                            <span className="font-medium text-gray-900">Session {sess.session_index}</span>
+                            <Layers className="w-3.5 h-3.5 text-st-gray" />
+                            <span className="font-medium text-st-black">Session {sess.session_index}</span>
                             {sess.contains_conversion && (
                               <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">Conversion</span>
                             )}
                           </div>
-                          <span className="text-xs text-gray-400">
+                          <span className="text-xs text-st-gray">
                             {Math.round((sess.duration_seconds || 0) / 60)}m
                           </span>
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mb-2">
                           <div>
-                            <span className="text-gray-400">Entry:</span>{' '}
-                            <span className={sess.is_direct_entry ? 'text-gray-500' : 'text-gray-900'}>
+                            <span className="text-st-gray">Entry:</span>{' '}
+                            <span className={sess.is_direct_entry ? 'text-st-gray' : 'text-st-black'}>
                               {sess.entry_source || 'direct'}
                             </span>
                           </div>
                           <div>
-                            <span className="text-gray-400">Pages:</span>{' '}
+                            <span className="text-st-gray">Pages:</span>{' '}
                             {sess.pageview_count || 0}
                           </div>
                           <div>
-                            <span className="text-gray-400">Start:</span>{' '}
+                            <span className="text-st-gray">Start:</span>{' '}
                             {new Date(sess.started_at).toLocaleDateString()}
                           </div>
                           <div>
-                            <span className="text-gray-400">Events:</span>{' '}
+                            <span className="text-st-gray">Events:</span>{' '}
                             {sess.event_count || 0}
                           </div>
                         </div>
                         {sess.entry_page && (
-                          <p className="text-xs text-gray-500 truncate">{sess.entry_page}</p>
+                          <p className="text-xs text-st-gray truncate">{sess.entry_page}</p>
                         )}
                       </div>
                     ))}
@@ -350,7 +350,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                 {data.model === 'ai_platforms' && (
                   <p>AI Platform attribution detects the referrer at conversion time and matches it against known AI platform domains (ChatGPT, Claude, Perplexity, Gemini, Grok, Copilot, DeepSeek).</p>
                 )}
-                <p className="text-gray-400 mt-1">Single-touch model: only one touchpoint receives credit.</p>
+                <p className="text-st-gray mt-1">Single-touch model: only one touchpoint receives credit.</p>
               </div>
             </>
           )}

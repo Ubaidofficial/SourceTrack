@@ -1,18 +1,33 @@
 import { useState, useEffect } from 'react'
 import { getJourney } from '../lib/api'
-import { Clock, Globe, MousePointerClick, User, Bot, MapPin, Download, ArrowLeft, ChevronDown, ChevronRight, GitBranch } from 'lucide-react'
+import {
+  Clock, Globe, MousePointerClick, User, Bot, MapPin,
+  Download, X, ChevronDown, ChevronRight, Zap, ArrowRight
+} from 'lucide-react'
 
 const EVENT_ICONS = {
-  '$pageview': Globe,
+  '$pageview':   Globe,
   '$conversion': MousePointerClick,
-  '$identify': User
+  '$identify':   User
 }
 
+const AI_COLORS = {
+  'ChatGPT':    'text-emerald-600 bg-emerald-50',
+  'Claude':     'text-orange-600 bg-orange-50',
+  'Perplexity': 'text-purple-600 bg-purple-50',
+  'Gemini':     'text-blue-600 bg-blue-50',
+  'Grok':       'text-gray-600 bg-gray-100',
+  'Copilot':    'text-sky-600 bg-sky-50',
+  'DeepSeek':   'text-cyan-600 bg-cyan-50',
+}
+const getAIColor = (src) => AI_COLORS[src] || 'text-purple-600 bg-purple-50'
+
 export default function JourneyModal({ visitorId, siteKey, onClose, onQualified }) {
-  const [data, setData] = useState(null)
+  const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState({})
-  const [error, setError] = useState(null)
+  const [error, setError]     = useState(null)
+  const [filter, setFilter]   = useState('all') // all | conversions | ai
 
   useEffect(() => {
     if (!visitorId || !siteKey) return
@@ -24,8 +39,14 @@ export default function JourneyModal({ visitorId, siteKey, onClose, onQualified 
       .finally(() => setLoading(false))
   }, [visitorId, siteKey])
 
-  const events = data?.events || []
-  const summary = computeSummary(events)
+  const allEvents = data?.events || []
+  const events = filter === 'conversions'
+    ? allEvents.filter(e => e.event === '$conversion')
+    : filter === 'ai'
+    ? allEvents.filter(e => e.ai_source)
+    : allEvents
+
+  const summary = computeSummary(allEvents)
 
   function toggleExpand(i) {
     setExpanded(prev => ({ ...prev, [i]: !prev[i] }))
@@ -33,115 +54,226 @@ export default function JourneyModal({ visitorId, siteKey, onClose, onQualified 
 
   function handleExport() {
     const blob = new Blob([JSON.stringify(data || {}, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
     a.href = url
     a.download = `journey-${visitorId}.json`
     a.click()
     URL.revokeObjectURL(url)
   }
 
+  const shortId = visitorId ? visitorId.slice(0, 8) + '…' : '—'
+
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col" onClick={e => e.stopPropagation()}>
-        {/* Header */}
+      <div
+        className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* ── Header ── */}
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <button onClick={onClose} className="text-sm text-gray-500 hover:text-gray-900 flex items-center gap-1">
-              <ArrowLeft className="w-4 h-4" /> Back to leads
-            </button>
-            <h2 className="text-lg font-semibold text-gray-900">Visitor Journey</h2>
+          <div>
+            <h2 className="text-base font-bold text-st-black">Visitor Journey</h2>
+            <p className="text-xs text-st-gray font-mono mt-0.5">{shortId}</p>
           </div>
           <div className="flex items-center gap-2">
-            <button disabled className="px-3 py-1.5 text-xs text-gray-400 bg-gray-100 rounded-lg cursor-not-allowed">
-              Sync To CRM
-            </button>
-            <button onClick={handleExport} className="px-3 py-1.5 text-xs text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
-              <Download className="w-3.5 h-3.5 inline mr-1" /> Export
-            </button>
             <button
-              onClick={onQualified || (() => {})}
-              disabled={!onQualified}
-              className={`px-3 py-1.5 text-xs rounded-lg font-medium ${onQualified ? 'bg-st-black text-white hover:bg-st-black/90' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+              onClick={handleExport}
+              className="px-3 py-1.5 text-xs text-st-gray border border-gray-200 rounded-lg hover:bg-gray-50 flex items-center gap-1"
             >
-              Mark as Qualified
+              <Download className="w-3.5 h-3.5" /> Export
+            </button>
+            {onQualified && (
+              <button
+                onClick={onQualified}
+                className="px-3 py-1.5 text-xs bg-st-black text-white rounded-lg font-medium hover:bg-st-black/90"
+              >
+                Mark Qualified
+              </button>
+            )}
+            <button onClick={onClose} className="p-1.5 text-st-gray hover:text-st-black rounded-lg hover:bg-gray-100">
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Body */}
+        {/* ── Body ── */}
         <div className="flex-1 overflow-y-auto">
           {loading ? (
             <div className="flex items-center justify-center py-20">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black" />
             </div>
           ) : error ? (
-            <div className="py-20 text-center text-sm text-gray-400">{error}</div>
+            <div className="py-20 text-center text-sm text-st-gray">{error}</div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-5">
-              {/* Summary Panel */}
-              <div className="lg:col-span-2 bg-st-lime/15 p-6 space-y-4 border-r border-gray-100">
-                <h3 className="text-sm font-semibold text-gray-700">Summary</h3>
-                <div className="space-y-3">
-                  <SummaryField label="Last Location" value={summary.lastLocation} />
-                  <SummaryField label="Conversion Value" value={summary.conversionValue > 0 ? `$${summary.conversionValue.toFixed(2)}` : '—'} />
-                  <SummaryField label="Device" value={summary.device} />
-                  <SummaryField label="Touchpoints" value={String(summary.touchpoints)} />
-                  <SummaryField label="Duration" value={summary.journeyDuration} />
-                  <SummaryField label="First Touch" value={summary.firstTouch} />
-                  <SummaryField label="Event Type" value={summary.currentEventType} />
+            <div className="grid grid-cols-1 lg:grid-cols-5 h-full">
+
+              {/* ── Left Panel — lime tint ── */}
+              <div className="lg:col-span-2 bg-st-lime/10 p-6 space-y-5 border-r border-gray-100">
+
+                {/* KPI row */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white rounded-xl p-3 text-center shadow-sm">
+                    <p className="text-xl font-bold text-st-black">{summary.touchpoints}</p>
+                    <p className="text-[10px] text-st-gray uppercase tracking-wide mt-0.5">Touchpoints</p>
+                  </div>
+                  <div className="bg-white rounded-xl p-3 text-center shadow-sm">
+                    <p className="text-xl font-bold text-st-black">
+                      {summary.conversionValue > 0 ? `$${summary.conversionValue.toFixed(0)}` : '—'}
+                    </p>
+                    <p className="text-[10px] text-st-gray uppercase tracking-wide mt-0.5">Value</p>
+                  </div>
+                  <div className="bg-white rounded-xl p-3 text-center shadow-sm">
+                    <p className="text-sm font-bold text-st-black truncate">{summary.journeyDuration}</p>
+                    <p className="text-[10px] text-st-gray uppercase tracking-wide mt-0.5">Duration</p>
+                  </div>
+                  <div className="bg-white rounded-xl p-3 text-center shadow-sm">
+                    <p className="text-sm font-bold text-st-black truncate">{summary.device}</p>
+                    <p className="text-[10px] text-st-gray uppercase tracking-wide mt-0.5">Device</p>
+                  </div>
                 </div>
+
+                {/* Attribution path */}
+                <div className="bg-white rounded-xl p-4 shadow-sm space-y-2">
+                  <p className="text-xs font-semibold text-st-black mb-2">Attribution</p>
+                  <SummaryField label="First Touch"    value={summary.firstTouch} />
+                  <SummaryField label="Last Page"      value={summary.lastLocation} />
+                  <SummaryField label="Conversion"     value={summary.currentEventType !== '—' ? summary.currentEventType : null} />
+                  {summary.aiSource && (
+                    <div className="flex items-center gap-1.5 pt-1">
+                      <Bot className="w-3.5 h-3.5 text-purple-500" />
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${getAIColor(summary.aiSource)}`}>
+                        {summary.aiSource}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Path preview */}
+                {summary.pathPreview.length > 1 && (
+                  <div className="bg-white rounded-xl p-4 shadow-sm">
+                    <p className="text-xs font-semibold text-st-black mb-2">Page Path</p>
+                    <div className="flex flex-wrap items-center gap-1">
+                      {summary.pathPreview.map((p, i) => (
+                        <span key={i} className="flex items-center gap-1">
+                          <span className="text-[10px] bg-gray-100 text-st-gray px-1.5 py-0.5 rounded font-mono truncate max-w-[80px]">{p}</span>
+                          {i < summary.pathPreview.length - 1 && <ArrowRight className="w-2.5 h-2.5 text-gray-300 flex-shrink-0" />}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Timeline Panel */}
-              <div className="lg:col-span-3 p-6">
-                <h3 className="text-sm font-semibold text-gray-700 mb-4">All Activity</h3>
+              {/* ── Right Panel — Timeline ── */}
+              <div className="lg:col-span-3 p-6 flex flex-col">
+                {/* Filter pills */}
+                <div className="flex items-center gap-2 mb-4 flex-shrink-0">
+                  {[
+                    { key: 'all', label: `All (${allEvents.length})` },
+                    { key: 'conversions', label: `Conversions (${allEvents.filter(e => e.event === '$conversion').length})` },
+                    { key: 'ai', label: `AI Touches (${allEvents.filter(e => e.ai_source).length})` }
+                  ].map(f => (
+                    <button
+                      key={f.key}
+                      onClick={() => setFilter(f.key)}
+                      className={`text-xs px-3 py-1 rounded-full font-medium transition-colors ${
+                        filter === f.key
+                          ? 'bg-st-black text-white'
+                          : 'bg-gray-100 text-st-gray hover:bg-gray-200'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Timeline */}
                 {events.length === 0 ? (
-                  <p className="text-sm text-gray-400">No events found.</p>
+                  <p className="text-sm text-st-gray py-8 text-center">No events match this filter.</p>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2 overflow-y-auto flex-1">
                     {events.map((e, i) => {
                       const Icon = EVENT_ICONS[e.event] || Clock
-                      const label = e.event === '$pageview' ? 'Pageview' : e.event === '$conversion' ? 'Conversion' : e.event === '$identify' ? 'Identify' : e.event
                       const isConversion = e.event === '$conversion'
-                      const isExpanded = expanded[i]
+                      const isExpanded   = expanded[i]
+                      const label = isConversion ? 'Conversion'
+                        : e.event === '$pageview' ? 'Pageview'
+                        : e.event === '$identify' ? 'Identify'
+                        : e.event
 
                       return (
-                        <div key={i} className={`rounded-lg border p-3 ${isConversion ? 'bg-green-50 border-green-200' : 'bg-white border-gray-100'}`}>
-                          <div className="flex items-start gap-3 cursor-pointer" onClick={() => toggleExpand(i)}>
-                            <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${isConversion ? 'bg-green-200' : 'bg-gray-100'}`}>
-                              <Icon className={`w-3.5 h-3.5 ${isConversion ? 'text-green-700' : 'text-gray-600'}`} />
+                        <div
+                          key={i}
+                          className={`rounded-xl border transition-all ${
+                            isConversion
+                              ? 'bg-st-lime/10 border-st-lime/40'
+                              : 'bg-white border-gray-100 hover:border-gray-200'
+                          }`}
+                        >
+                          <div
+                            className="flex items-start gap-3 p-3 cursor-pointer"
+                            onClick={() => toggleExpand(i)}
+                          >
+                            {/* Icon */}
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                              isConversion ? 'bg-st-lime' : 'bg-gray-100'
+                            }`}>
+                              {isConversion
+                                ? <Zap className="w-3.5 h-3.5 text-st-black" />
+                                : <Icon className="w-3.5 h-3.5 text-gray-500" />
+                              }
                             </div>
+
+                            {/* Content */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${isConversion ? 'bg-green-200 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+                                <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
+                                  isConversion ? 'bg-st-lime text-st-black' : 'bg-gray-100 text-gray-600'
+                                }`}>
                                   {label}
                                 </span>
                                 {e.ai_source && (
-                                  <span className="flex items-center gap-1 text-xs text-purple-600">
-                                    <Bot className="w-3 h-3" /> {e.ai_source}
+                                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1 ${getAIColor(e.ai_source)}`}>
+                                    <Bot className="w-2.5 h-2.5" /> {e.ai_source}
                                   </span>
                                 )}
-                                <span className="text-xs text-gray-400 flex items-center gap-1">
-                                  <Clock className="w-3 h-3" />
-                                  {e.timestamp ? new Date(e.timestamp).toLocaleString() : '—'}
-                                </span>
+                                {e.conversion_value > 0 && (
+                                  <span className="text-xs font-semibold text-st-black">
+                                    ${Number(e.conversion_value).toFixed(0)}
+                                  </span>
+                                )}
                               </div>
-                              {e.page_url && <p className="text-xs text-gray-500 mt-1 truncate">{e.page_url}</p>}
-                              {isExpanded && (
-                                <div className="mt-2 pt-2 border-t border-gray-100 space-y-1 text-xs text-gray-500">
-                                  {e.utm_source && <p>UTM: {[e.utm_source, e.utm_medium, e.utm_campaign].filter(Boolean).join(' / ') || '—'}</p>}
-                                  {e.referrer && <p>Referrer: {e.referrer}</p>}
-                                  {e.country && <p className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {e.country}</p>}
-                                  {e.device_type && <p>Device: {e.device_type}</p>}
-                                  {e.conversion_value != null && <p className="font-medium text-green-700">${Number(e.conversion_value).toFixed(2)}</p>}
-                                </div>
+                              {e.page_url && (
+                                <p className="text-xs text-st-gray mt-0.5 truncate">
+                                  {(() => { try { return new URL(e.page_url).pathname } catch { return e.page_url } })()}
+                                </p>
                               )}
+                              <p className="text-[10px] text-gray-400 mt-0.5">
+                                {e.timestamp ? new Date(e.timestamp).toLocaleString() : '—'}
+                              </p>
                             </div>
-                            <button className="flex-shrink-0 text-gray-400 hover:text-gray-600 mt-1">
-                              {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+
+                            <button className="flex-shrink-0 text-st-gray mt-1">
+                              {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                             </button>
                           </div>
+
+                          {/* Expanded detail */}
+                          {isExpanded && (
+                            <div className="px-3 pb-3 pt-0 ml-10 text-xs text-st-gray space-y-1 border-t border-gray-100">
+                              {e.utm_source && (
+                                <p>UTM: {[e.utm_source, e.utm_medium, e.utm_campaign].filter(Boolean).join(' / ')}</p>
+                              )}
+                              {e.referrer && <p>Ref: {e.referrer}</p>}
+                              {e.country && (
+                                <p className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" /> {e.country}
+                                </p>
+                              )}
+                              {e.device_type && <p>Device: {e.device_type}</p>}
+                            </div>
+                          )}
                         </div>
                       )
                     })}
@@ -157,52 +289,62 @@ export default function JourneyModal({ visitorId, siteKey, onClose, onQualified 
 }
 
 function SummaryField({ label, value }) {
+  if (!value) return null
   return (
-    <div>
-      <p className="text-xs text-gray-400">{label}</p>
-      <p className="text-sm font-medium text-gray-900">{value || '—'}</p>
+    <div className="flex items-center justify-between">
+      <p className="text-xs text-st-gray">{label}</p>
+      <p className="text-xs font-medium text-st-black truncate max-w-[120px]">{value}</p>
     </div>
   )
 }
 
 function computeSummary(events) {
-  if (!events || events.length === 0) return {
-    lastLocation: 'Unknown',
-    conversionValue: 0,
-    device: 'Unknown',
-    touchpoints: 0,
-    journeyDuration: '—',
-    firstTouch: 'Direct',
-    currentEventType: '—'
+  const empty = {
+    lastLocation: 'Unknown', conversionValue: 0, device: 'Unknown',
+    touchpoints: 0, journeyDuration: '—', firstTouch: 'Direct',
+    currentEventType: '—', aiSource: null, pathPreview: []
   }
+  if (!events?.length) return empty
 
-  const pageviews = events.filter(e => e.event === '$pageview')
+  const pageviews   = events.filter(e => e.event === '$pageview')
   const conversions = events.filter(e => e.event === '$conversion')
-  const lastEvent = events[events.length - 1]
-  const firstEvent = events[0]
+  const lastEvent   = events[events.length - 1]
+  const firstEvent  = events[0]
 
-  let lastLocation = 'Unknown'
+  let lastLocation = '—'
   if (lastEvent?.page_url) {
     try { lastLocation = new URL(lastEvent.page_url).pathname } catch { lastLocation = lastEvent.page_url }
   }
 
   const conversionValue = conversions.reduce((s, e) => s + (Number(e.conversion_value) || 0), 0)
   const device = events.find(e => e.device_type)?.device_type || 'Unknown'
-  const touchpoints = pageviews.length
 
-  let journeyDuration = '—'
+  let journeyDuration = '<1 day'
   if (events.length >= 2) {
     try {
-      const first = new Date(events[0].timestamp)
-      const last = new Date(lastEvent.timestamp)
-      const days = Math.ceil((last - first) / (1000 * 60 * 60 * 24))
-      journeyDuration = days === 0 ? '<1 day' : `${days} day${days > 1 ? 's' : ''}`
+      const diff = new Date(lastEvent.timestamp) - new Date(firstEvent.timestamp)
+      const days = Math.ceil(diff / 86400000)
+      journeyDuration = days === 0 ? '<1 day' : `${days}d`
     } catch { /* ignore */ }
   }
 
   const firstTouch = firstEvent?.first_touch_source || firstEvent?.utm_source || firstEvent?.source || 'Direct'
-  const lastConversion = conversions[conversions.length - 1]
-  const currentEventType = lastConversion?.conversion_type || '—'
+  const currentEventType = conversions[conversions.length - 1]?.conversion_type || '—'
+  const aiSource = events.find(e => e.ai_source)?.ai_source || null
 
-  return { lastLocation, conversionValue, device, touchpoints, journeyDuration, firstTouch, currentEventType }
+  // Path preview — first 5 unique consecutive pages
+  const pathPreview = []
+  for (const e of pageviews) {
+    try {
+      const p = new URL(e.page_url).pathname
+      if (pathPreview[pathPreview.length - 1] !== p) pathPreview.push(p)
+      if (pathPreview.length >= 5) break
+    } catch { /* skip */ }
+  }
+
+  return {
+    lastLocation, conversionValue, device,
+    touchpoints: pageviews.length, journeyDuration,
+    firstTouch, currentEventType, aiSource, pathPreview
+  }
 }

@@ -9,15 +9,21 @@ import geoip from 'geoip-lite'
 const router = express.Router()
 function getSupabase() { return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { global: { fetch }, realtime: { transport: WebSocket } }) }
 
+// Known bot/crawler UA patterns — silent drop (return 200 so bots don't retry)
+const BOT_UA_PATTERN = /bot|crawl|spider|slurp|mediapartners|adsbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot|discordbot|applebot|bingpreview|googleweblight|lighthouse|pagespeed|headlesschrome|phantomjs|selenium|puppeteer|playwright|wget|curl\/|python-requests|axios\/|go-http|java\/|ruby\/|php\//i
+
 router.post('/collect', async (req, res) => {
   try {
     const { site_key, url, referrer, utm_source, utm_medium, utm_campaign, device, browser, session_id, duration_seconds } = req.body
     if (!site_key || !url) return res.status(400).json({ error: 'site_key and url required' })
+
+    // Bot filter — silent drop, 200 so crawlers don't retry
+    const ua = req.headers['user-agent'] || ''
+    if (!ua || BOT_UA_PATTERN.test(ua)) return res.json({ ok: true })
     const supabase = getSupabase()
     const { data: site } = await supabase.from('sites').select('id').eq('site_key', site_key).single()
     if (!site) return res.status(404).json({ error: 'Site not found' })
     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || ''
-    const ua = req.headers['user-agent'] || ''
     const parser = new UAParser(ua)
     let country = null
     if (ip) { const geo = geoip.lookup(ip); country = geo?.country || null }

@@ -28,12 +28,16 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       leadsResults,
       prevRevenueResults,
       prevLeadsResults,
+      prevConvResults,
+      prevAIRevResults,
       aiRevResults,
       aiConvResults,
+      aiLeadsResults,
       aiTrendResults,
       landingResults,
       campaignResults,
       timeResults,
+      channelTrendResults,
       modelFirstTouch,
       modelLastTouch,
       modelFTND,
@@ -51,12 +55,16 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       getFlexibleReport(posthogSiteId, 'first_touch', dateFrom, dateTo, 'source', 'leads', {}),
       getFlexibleReport(posthogSiteId, 'first_touch', prevDateFrom, prevDateTo, 'source', 'revenue', {}),
       getFlexibleReport(posthogSiteId, 'first_touch', prevDateFrom, prevDateTo, 'source', 'leads', {}),
+      getFlexibleReport(posthogSiteId, 'first_touch', prevDateFrom, prevDateTo, 'source', 'conversions', {}),
+      getFlexibleReport(posthogSiteId, 'ai_platforms', prevDateFrom, prevDateTo, 'ai_source', 'ai_revenue', { has_ai_source: 'true' }),
       getFlexibleReport(posthogSiteId, 'ai_platforms', dateFrom, dateTo, 'ai_source', 'ai_revenue', { has_ai_source: 'true' }),
       getFlexibleReport(posthogSiteId, 'ai_platforms', dateFrom, dateTo, 'ai_source', 'ai_conversions', { has_ai_source: 'true' }),
+      getFlexibleReport(posthogSiteId, 'ai_platforms', dateFrom, dateTo, 'ai_source', 'leads', { has_ai_source: 'true' }),
       getFlexibleReport(posthogSiteId, 'ai_platforms', dateFrom, dateTo, 'date', 'ai_revenue', { has_ai_source: 'true' }),
       getFlexibleReport(posthogSiteId, 'first_touch', dateFrom, dateTo, 'landing_page', 'revenue', {}),
       getFlexibleReport(posthogSiteId, 'last_touch', dateFrom, dateTo, 'campaign', 'revenue', {}),
       getFlexibleReport(posthogSiteId, 'first_touch', dateFrom, dateTo, 'date', 'revenue', {}),
+      getFlexibleReport(posthogSiteId, 'first_touch', dateFrom, dateTo, 'date', 'leads', {}),
       getAttribution(posthogSiteId, 'first_touch', dateFrom, dateTo),
       getAttribution(posthogSiteId, 'last_touch', dateFrom, dateTo),
       getAttribution(posthogSiteId, 'first_touch_non_direct', dateFrom, dateTo),
@@ -126,6 +134,14 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     for (const r of aiRevResults) {
       r.ai_conversions = aiConvByDim[r.dim_value] || 0
     }
+    // Merge AI leads per platform
+    const aiLeadsByDim = {}
+    for (const r of aiLeadsResults) {
+      aiLeadsByDim[r.dim_value] = r.leads
+    }
+    for (const r of aiRevResults) {
+      r.ai_leads = aiLeadsByDim[r.dim_value] || 0
+    }
 
     const totalRevenue = revenueResults.reduce((sum, r) => sum + (r.revenue || 0), 0)
     const totalConversions = revenueResults.reduce((sum, r) => sum + (r.conversions || 0), 0)
@@ -141,8 +157,10 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     const convRate = totalSessions > 0 ? (totalConversions / totalSessions) * 100 : 0
     const avgValue = totalConversions > 0 ? totalRevenue / totalConversions : 0
 
-    const prevRevenue = prevRevenueResults.reduce((sum, r) => sum + (r.revenue || 0), 0)
-    const prevLeads = prevLeadsResults.reduce((sum, r) => sum + (r.leads || 0), 0)
+    const prevRevenue      = prevRevenueResults.reduce((sum, r) => sum + (r.revenue || 0), 0)
+    const prevLeads        = prevLeadsResults.reduce((sum, r) => sum + (r.leads || 0), 0)
+    const prevConversions  = prevConvResults.reduce((sum, r) => sum + (r.conversions || 0), 0)
+    const prevAIRevenue    = prevAIRevResults.reduce((sum, r) => sum + (r.ai_revenue || 0), 0)
 
     const totalAIRevenue = aiRevResults.reduce((sum, r) => sum + (r.ai_revenue || 0), 0)
     const aiShareTotal = totalRevenue > 0 ? (totalAIRevenue / totalRevenue) * 100 : 0
@@ -200,12 +218,14 @@ router.get('/overview', validateSiteKey, async (req, res) => {
           revenue: totalRevenue,
           revenue_prev: prevRevenue,
           conversions: totalConversions,
+          conversions_prev: prevConversions,
           sessions: totalSessions,
           bounce_rate: bounceRate,
           leads: totalLeads,
           sql_percent: sqlPercent,
           leads_prev: prevLeads,
           ai_revenue: totalAIRevenue,
+          ai_revenue_prev: prevAIRevenue,
           ai_revenue_share: aiShareTotal,
           conversion_rate: convRate,
           avg_value: avgValue
@@ -216,6 +236,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
         sources: revenueResults.slice(0, 10),
         landing_pages: landingResults.slice(0, 5),
         campaigns: campaignResults.slice(0, 5),
+        channel_trend: channelTrendResults,
         revenue_trend: timeResults,
         install: installData,
         health: { status: healthStatus, count_day: countDay, count_hour: countHour },

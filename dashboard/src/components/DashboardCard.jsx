@@ -18,14 +18,14 @@ export default function DashboardCard({ title, subtitle, action, menuItems, chil
       {(title || action || menuItems) && (
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <div>
-            {title && <h3 className="text-sm font-semibold text-gray-900">{title}</h3>}
-            {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
+            {title && <h3 className="text-sm font-semibold text-st-black">{title}</h3>}
+            {subtitle && <p className="text-xs text-st-gray mt-0.5">{subtitle}</p>}
           </div>
           <div className="flex items-center gap-2">
             {action}
             {menuItems && menuItems.length > 0 && (
               <div className="relative" ref={menuRef}>
-                <button onClick={() => setMenuOpen(!menuOpen)} className="p-1 text-gray-400 hover:text-gray-600 rounded">
+                <button onClick={() => setMenuOpen(!menuOpen)} className="p-1 text-st-gray hover:text-gray-600 rounded">
                   <MoreHorizontal className="w-4 h-4" />
                 </button>
                 {menuOpen && (

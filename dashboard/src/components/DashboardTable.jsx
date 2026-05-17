@@ -5,7 +5,7 @@ export default function DashboardTable({ columns = [], rows = [], onRowClick, em
         <thead>
           <tr className="border-b border-gray-100 bg-gray-50">
             {columns.map((col, i) => (
-              <th key={i} className={`text-left py-2 px-4 text-gray-500 font-medium text-xs ${col.className || ''}`}>
+              <th key={i} className={`text-left py-2 px-4 text-st-gray font-medium text-xs ${col.className || ''}`}>
                 {col.label}
               </th>
             ))}
@@ -14,7 +14,7 @@ export default function DashboardTable({ columns = [], rows = [], onRowClick, em
         <tbody>
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className="py-8 text-center text-sm text-gray-400">
+              <td colSpan={columns.length} className="py-8 text-center text-sm text-st-gray">
                 {emptyMessage}
               </td>
             </tr>
