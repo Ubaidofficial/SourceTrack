@@ -186,15 +186,15 @@ export default function Settings() {
     <div className="space-y-8 max-w-2xl">
       <div>
         <h2 className="text-2xl font-bold text-st-black">Settings</h2>
-        <p className="text-sm text-st-gray dark:text-gray-400 mt-1">{user?.email}</p>
+        <p className="text-sm text-st-gray mt-1">{user?.email}</p>
       </div>
 
       {/* Status message */}
       {message && (
         <div className={`rounded-lg px-4 py-3 text-sm ${
           message.includes('Error') || message.includes('Failed')
-            ? 'bg-red-50 dark:bg-red-900/20 text-red-700 border border-red-200'
-            : 'bg-green-50 dark:bg-green-900/20 text-green-700 border border-green-200'
+            ? 'bg-red-50 text-red-700 border border-red-200'
+            : 'bg-green-50 text-green-700 border border-green-200'
         }`}>
           {message}
         </div>
@@ -205,7 +205,7 @@ export default function Settings() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 className="text-base font-bold text-st-black">Plan & Billing</h3>
-            <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">
+            <p className="text-xs text-st-gray mt-0.5">
               {isTrial && daysLeft !== null
                 ? daysLeft > 0
                   ? `Free trial — ${daysLeft} day${daysLeft === 1 ? '' : 's'} remaining`
@@ -219,7 +219,7 @@ export default function Settings() {
             <button
               onClick={handlePortal}
               disabled={loadingPortal}
-              className="text-xs text-st-black dark:text-white border border-gray-200 dark:border-[#333838] px-3 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] disabled:opacity-50"
+              className="text-xs text-st-black border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-gray-50 disabled:opacity-50"
             >
               {loadingPortal ? 'Loading…' : 'Manage Subscription'}
             </button>
@@ -238,11 +238,11 @@ export default function Settings() {
                   className={`relative rounded-2xl border-2 p-5 flex flex-col gap-4 transition-all ${
                     p.highlight
                       ? 'border-st-black bg-st-black text-white'
-                      : 'border-gray-200 dark:border-[#333838] bg-white'
+                      : 'border-gray-200 bg-white'
                   }`}
                 >
                   {p.highlight && (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-st-lime text-st-black dark:text-white text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wide">
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-st-lime text-st-black text-[10px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wide">
                       Most Popular
                     </span>
                   )}
@@ -281,7 +281,7 @@ export default function Settings() {
                     disabled={!!loadingCheckout}
                     className={`w-full py-2.5 rounded-xl text-sm font-bold transition-all disabled:opacity-50 ${
                       p.highlight
-                        ? 'bg-st-lime text-st-black dark:text-white hover:bg-st-lime/90'
+                        ? 'bg-st-lime text-st-black hover:bg-st-lime/90'
                         : 'bg-st-black text-white hover:bg-st-black/90'
                     }`}
                   >
@@ -295,7 +295,7 @@ export default function Settings() {
 
         {/* Already on Pro */}
         {isPro && (
-          <div className="bg-st-lime/10 dark:bg-st-lime/5 border border-st-lime/30 rounded-xl p-4 flex items-center gap-3">
+          <div className="bg-st-lime/10 border border-st-lime/30 rounded-xl p-4 flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-st-lime flex items-center justify-center flex-shrink-0">
               <Check className="w-4 h-4 text-st-black" />
             </div>
@@ -308,33 +308,33 @@ export default function Settings() {
 
         {/* Inactive */}
         {isInactive && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-xl p-4 text-sm text-red-700">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700">
             Your subscription is inactive. Reactivate below to restore access.
           </div>
         )}
       </section>
 
       {/* ── Site Settings ──────────────────────────────────────────────── */}
-      <section className="bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#333838] rounded-xl p-6 space-y-4">
+      <section className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
         <h3 className="text-sm font-bold text-st-black">Site Settings</h3>
         <form onSubmit={handleSave} className="space-y-3">
           <div>
-            <label className="block text-xs text-st-gray dark:text-gray-400 mb-1">Site Name</label>
+            <label className="block text-xs text-st-gray mb-1">Site Name</label>
             <input
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 dark:border-[#333838] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20"
               placeholder="My Website"
             />
           </div>
           <div>
-            <label className="block text-xs text-st-gray dark:text-gray-400 mb-1">Domain</label>
+            <label className="block text-xs text-st-gray mb-1">Domain</label>
             <input
               type="text"
               value={domain}
               onChange={e => setDomain(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 dark:border-[#333838] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20"
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20"
               placeholder="yoursite.com"
             />
           </div>
@@ -349,7 +349,7 @@ export default function Settings() {
       </section>
 
       {/* ── Public Dashboard ───────────────────────────────────────────── */}
-      <section className="bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#333838] rounded-xl p-6 space-y-4">
+      <section className="bg-white border border-gray-200 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-2">
           <Globe className="w-4 h-4 text-st-gray" />
           <h3 className="text-sm font-bold text-st-black">Public Dashboard</h3>
@@ -364,15 +364,15 @@ export default function Settings() {
               shareEnabled ? 'bg-st-black' : 'bg-gray-200'
             }`}
           >
-            <span className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-[#1A1D1D] shadow transition-transform ${
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
               shareEnabled ? 'translate-x-6' : 'translate-x-1'
             }`} />
           </button>
         </div>
         {shareEnabled && shareToken && (
-          <div className="bg-gray-50 dark:bg-[#111414] border border-gray-200 dark:border-[#333838] rounded-lg p-3 flex items-center gap-2">
-            <Link2 className="w-4 h-4 text-st-gray dark:text-gray-400 shrink-0" />
-            <span className="text-xs text-st-gray dark:text-gray-400 truncate flex-1">
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 flex items-center gap-2">
+            <Link2 className="w-4 h-4 text-st-gray shrink-0" />
+            <span className="text-xs text-st-gray truncate flex-1">
               {`${window.location.origin}/public/${shareToken}`}
             </span>
             <button onClick={handleShareCopy} className="p-1 hover:bg-gray-200 rounded">

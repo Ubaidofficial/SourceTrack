@@ -2,23 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --bg-page: #F9FAFB;
-    --bg-card: #FFFFFF;
-    --bg-subtle: #F3F4F6;
-  }
-  .dark {
-    --bg-page: #111414;
-    --bg-card: #1A1D1D;
-    --bg-subtle: #252929;
-    color-scheme: dark;
-  }
-  *, *::before, *::after {
-    transition: background-color 0.15s ease, border-color 0.15s ease;
-  }
-}
-
 @layer components {
   .st-container {
     @apply max-w-[1320px] mx-auto px-6;

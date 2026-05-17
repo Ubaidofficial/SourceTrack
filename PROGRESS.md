@@ -2337,3 +2337,12 @@ analytics.js (pageview collector) — ZERO cookies. Clean.
   - T5.8: Alerts moved from bottom DashboardCard to inline banners at top of page (before KPI strip). Red for high severity, amber for normal. Max 2 shown. AlertTriangle icon added.
 
 **Build:** ✅ passing
+
+## Session 97 — T0.2 Dark Mode
+
+**Files modified:** tailwind.config.js, index.css, Layout.jsx + 11 JSX files
+**What changed:** darkMode:'class' in Tailwind config, CSS vars for bg-page/bg-card/bg-subtle,
+sun/moon toggle in header with localStorage + prefers-color-scheme detection,
+dark: variants on bg-white/bg-gray/border-gray/text-st-black/text-st-gray across 13 files.
+Chart.js grid and tick colors updated for dark mode.
+**Build:** ✅ passing
