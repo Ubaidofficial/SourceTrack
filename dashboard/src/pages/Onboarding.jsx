@@ -348,7 +348,7 @@ export default function Onboarding() {
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
                 placeholder="ex: google.com"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-black"
+                className="w-full px-4 py-3 bg-white text-st-black placeholder:text-st-gray border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-black focus:border-black"
               />
               <p className="text-xs text-st-gray dark:text-gray-400 mt-1">We'll use this URL to personalize your set up process</p>
               {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
@@ -637,7 +637,7 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] flex flex-col">
+    <div className="min-h-screen bg-[#F9FAFB] text-st-black flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-[#2A2E2E] bg-white">
         <h1 className="text-xl font-bold text-st-black">SourceTrack</h1>

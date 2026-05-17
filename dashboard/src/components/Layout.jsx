@@ -51,9 +51,16 @@ export default function Layout({ children }) {
   })
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', dark)
+    const root = document.documentElement
+
+    if (location.pathname === '/onboarding') {
+      root.classList.remove('dark')
+      return
+    }
+
+    root.classList.toggle('dark', dark)
     localStorage.setItem('st-dark', String(dark))
-  }, [dark])
+  }, [dark, location.pathname])
 
   useEffect(() => {
     if (!user) return
