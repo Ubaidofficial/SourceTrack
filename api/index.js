@@ -203,7 +203,7 @@ app.use('/api/track', trackLimit)
 
 // 6. Routes
 app.post('/api/track', validateSiteKey, checkTierLimit, detectAIPlatform, track)
-app.post('/api/collect', (req, res, next) => {
+app.post('/api/collect', trackLimit, (req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*')
     res.setHeader('Access-Control-Allow-Credentials', 'true')
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
