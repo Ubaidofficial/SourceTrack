@@ -89,7 +89,26 @@ router.get('/summary', requireUserAuth, validateSiteKey, async (req, res) => {
     const dayCounts = {}
     pv.forEach(r => { const day = r.timestamp?.slice(0, 10); if (day) dayCounts[day] = (dayCounts[day] || 0) + 1 })
     const trend = Object.entries(dayCounts).sort((a, b) => a[0].localeCompare(b[0])).slice(-14).map(([date, views]) => ({ date, views }))
-    res.json({ success: true, data: { period: { days, from: from.slice(0, 10), to: new Date().toISOString().slice(0, 10) }, kpis: { pageviews: pv.length, unique_visitors: uniqueSessions, bounce_rate: bounceRate, avg_duration_seconds: avgDuration }, top_pages: topPages, top_sources: topSources, ai_sources: aiSources, devices: deviceCounts, top_countries: topCountries, trend } })
+
+    // New vs returning visitors
+    // A visitor is "new" if their session_id appears for the first time in this period
+    // We detect this by checking if the session's first pageview is within the period
+    const sessionFirstSeen = {}
+    pv.forEach(r => {
+      if (!r.session_id) return
+      const ts = new Date(r.timestamp).getTime()
+      if (!sessionFirstSeen[r.session_id] || ts < sessionFirstSeen[r.session_id]) {
+        sessionFirstSeen[r.session_id] = ts
+      }
+    })
+    const fromMs = new Date(from).getTime()
+    let newVisitors = 0, returningVisitors = 0
+    Object.values(sessionFirstSeen).forEach(firstTs => {
+      if (firstTs >= fromMs) newVisitors++
+      else returningVisitors++
+    })
+
+            res.json({ success: true, data: { period: { days, from: from.slice(0, 10), to: new Date().toISOString().slice(0, 10) }, kpis: { pageviews: pv.length, unique_visitors: uniqueSessions, new_visitors: newVisitors, returning_visitors: returningVisitors, bounce_rate: bounceRate, avg_duration_seconds: avgDuration }, top_pages: topPages, top_sources: topSources, ai_sources: aiSources, devices: deviceCounts, top_countries: topCountries, trend } })
   } catch (err) { console.error('[analytics/summary]', err.message); res.status(500).json({ error: 'Summary failed' }) }
 })
 

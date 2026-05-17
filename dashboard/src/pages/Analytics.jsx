@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { fetchApi } from '../lib/api'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import { Monitor, Smartphone, Tablet, Sparkles, TrendingUp, Users, Eye, Clock, Radio, LogIn, LogOut, ExternalLink, Zap, RefreshCw } from 'lucide-react'
+import { Monitor, Smartphone, Tablet, Sparkles, TrendingUp, Users, Eye, Clock, Radio, LogIn, LogOut, ExternalLink, Zap, RefreshCw, UserCheck, UserPlus } from 'lucide-react'
 import MetricTile from '../components/MetricTile'
 import DashboardCard from '../components/DashboardCard'
 
@@ -61,6 +61,11 @@ export default function Analytics() {
 
   const d = summary?.data
   const kpis = d?.kpis || {}
+  const newVisitors       = kpis.new_visitors ?? 0
+  const returningVisitors = kpis.returning_visitors ?? 0
+  const totalVisitors     = (newVisitors + returningVisitors) || 1
+  const newPct            = Math.round(newVisitors / totalVisitors * 100)
+  const returningPct      = Math.round(returningVisitors / totalVisitors * 100)
   const topPages = d?.top_pages || []
   const topSources = d?.top_sources || []
   const aiSources = d?.ai_sources || []
@@ -161,7 +166,55 @@ export default function Analytics() {
             <MetricTile label="Avg Duration" value={fmtDuration(kpis.avg_duration_seconds)} format="text" />
           </div>
 
-          {trend.length > 0 && (
+          {/* New vs Returning visitors */}
+          {(newVisitors > 0 || returningVisitors > 0) && (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <DashboardCard title="New vs Returning" subtitle="Visitor breakdown this period">
+                <div className="space-y-4 pt-2">
+                  <div className="flex items-center gap-3">
+                    <UserPlus className="w-4 h-4 text-st-gray flex-shrink-0" />
+                    <span className="text-sm text-gray-600 w-20">New</span>
+                    <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-st-black rounded-full" style={{ width: `${newPct}%` }} />
+                    </div>
+                    <span className="text-sm font-semibold text-st-black w-10 text-right">{newPct}%</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <UserCheck className="w-4 h-4 text-st-gray flex-shrink-0" />
+                    <span className="text-sm text-gray-600 w-20">Returning</span>
+                    <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-st-lime rounded-full" style={{ width: `${returningPct}%` }} />
+                    </div>
+                    <span className="text-sm font-semibold text-st-black w-10 text-right">{returningPct}%</span>
+                  </div>
+                  <div className="pt-2 border-t border-gray-100 flex justify-between text-xs text-st-gray">
+                    <span>{newVisitors.toLocaleString()} new</span>
+                    <span>{returningVisitors.toLocaleString()} returning</span>
+                  </div>
+                </div>
+              </DashboardCard>
+
+              <div className="lg:col-span-2">
+                {trend.length > 0 && (
+                  <DashboardCard title="Pageviews Over Time" subtitle={`Last ${days} days`}>
+                    <div className="h-24 flex items-end gap-1 pt-2">
+                      {(() => {
+                        const max = Math.max(...trend.map(d => d.views), 1)
+                        return trend.map((d, i) => (
+                          <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                            <div className="w-full bg-st-black rounded-sm" style={{ height: `${(d.views / max) * 100}%`, minHeight: 2 }} />
+                            {trend.length <= 14 && <span className="text-[9px] text-st-gray">{d.date.slice(5)}</span>}
+                          </div>
+                        ))
+                      })()}
+                    </div>
+                  </DashboardCard>
+                )}
+              </div>
+            </div>
+          )}
+
+          {trend.length > 0 && !(newVisitors > 0 || returningVisitors > 0) && (
             <DashboardCard title="Pageviews Over Time" subtitle={`Last ${days} days`}>
               <div className="h-24 flex items-end gap-1 pt-2">
                 {(() => {
