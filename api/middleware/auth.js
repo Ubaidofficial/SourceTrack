@@ -1,11 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
-  { realtime: { transport: WebSocket } }
-)
+function getSupabase() {
+  return createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_KEY,
+    { realtime: { transport: WebSocket } }
+  )
+}
 
 const TRIAL_DAYS = 14
 
@@ -17,6 +19,7 @@ export async function validateSiteKey(req, res, next) {
       return res.status(401).json({ success: false, data: null, error: 'Missing site_key' })
     }
 
+    const supabase = getSupabase()
     const { data, error } = await supabase
       .from('sites')
       .select('id, plan, created_at, company_id, owner_id, business_type')
