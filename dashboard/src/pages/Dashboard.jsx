@@ -907,6 +907,71 @@ export default function Dashboard() {
             </div>
           </DashboardCard>
 
+          {/* T5.1 — Revenue/Leads Payback Analysis */}
+          {activeResults.length > 0 && (
+            <DashboardCard title="Channel Payback Analysis"
+              subtitle="Which channels to scale, pause, or cut — based on revenue vs conversions"
+            >
+              <div className="space-y-2">
+                {activeResults.slice(0, 6).map((r, i) => {
+                  const revenue = r.revenue || 0
+                  const convs   = r.conversions || 0
+                  const name    = r.dim_value || r.source || 'Unknown'
+                  const maxRev  = activeResults[0]?.revenue || 1
+                  const pct     = Math.round((revenue / maxRev) * 100)
+                  // Simple verdict: top 2 = Scale, middle = Watch, bottom = Pause
+                  const verdict = i === 0 ? { label: 'Scale', color: 'bg-st-lime text-st-black' }
+                    : i <= 1 ? { label: 'Scale', color: 'bg-st-lime text-st-black' }
+                    : i <= 3 ? { label: 'Watch', color: 'bg-amber-100 text-amber-700' }
+                    : { label: 'Pause', color: 'bg-gray-100 text-st-gray' }
+                  return (
+                    <div key={i} className="flex items-center gap-3">
+                      <span className="text-xs text-st-gray w-28 truncate shrink-0">{name}</span>
+                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-st-black transition-all"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <span className="text-xs font-semibold text-st-black w-14 text-right shrink-0">
+                        ${revenue.toFixed(0)}
+                      </span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${verdict.color}`}>
+                        {verdict.label}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="text-[10px] text-st-gray mt-3">
+                Scale = top revenue drivers · Watch = mid-tier · Pause = low return. Add spend data in Campaigns for ROAS-based verdicts.
+              </p>
+            </DashboardCard>
+          )}
+
+          {/* T7.5 — AI Forecast teaser card */}
+          {!previewMode && (
+            <DashboardCard
+              title="AI Revenue Forecast"
+              subtitle="7-day prediction powered by DeepSeek"
+              action={
+                <button onClick={() => navigate('/ai-analytics')} className="text-xs text-st-black hover:text-st-gray font-medium flex items-center gap-1">
+                  Run Forecast <ArrowRight className="w-3 h-3" />
+                </button>
+              }
+            >
+              <div className="flex items-center gap-4 py-2">
+                <div className="w-10 h-10 rounded-xl bg-st-lime/10 flex items-center justify-center flex-shrink-0">
+                  <Sparkles className="w-5 h-5 text-st-black" />
+                </div>
+                <div>
+                  <p className="text-sm text-st-black font-medium">Predict next 7 days of revenue and leads</p>
+                  <p className="text-xs text-st-gray mt-0.5">DeepSeek analyzes your trend, weekly patterns, and momentum</p>
+                </div>
+              </div>
+            </DashboardCard>
+          )}
+
           {alerts.length > 0 && (
             <DashboardCard title={`${alerts.length} Alert${alerts.length > 1 ? 's' : ''}`} subtitle="Issues requiring attention">
               <div className="space-y-2">

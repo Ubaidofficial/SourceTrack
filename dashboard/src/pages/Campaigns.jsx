@@ -218,16 +218,16 @@ export default function Campaigns() {
 
       {/* KPI Tiles */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <MetricTile label="Total Revenue" value={`$${(kpis?.total_revenue || 0).toFixed(0)}`}
-          iconBg="bg-green-100" iconColor="text-green-600" />
-        <MetricTile label="Conversions" value={(kpis?.total_conversions || 0).toLocaleString()}
-          iconBg="bg-blue-100" iconColor="text-blue-600" />
-        <MetricTile label="Active Channels" value={(kpis?.active_channels || 0).toLocaleString()}
-          iconBg="bg-lime-100" iconColor="text-lime-700" />
-        <MetricTile label="Avg Value" value={`$${(kpis?.avg_value || 0).toFixed(2)}`}
-          iconBg="bg-purple-100" iconColor="text-purple-600" />
-        <MetricTile label="Date Range" value={`${dateRange} days`}
-          iconBg="bg-gray-100" iconColor="text-gray-600" />
+        <MetricTile label="Total Revenue" value={`$${(kpis?.total_revenue || 0).toFixed(0)}`} />
+        <MetricTile label="Conversions"   value={(kpis?.total_conversions || 0).toLocaleString()} />
+        <MetricTile label="Avg Value"     value={`$${(kpis?.avg_value || 0).toFixed(2)}`} />
+        <MetricTile label="Active Channels" value={(kpis?.active_channels || 0).toLocaleString()} />
+        {(() => {
+          const totalSpend = Object.values(spendMap).reduce((s, v) => s + (Number(v) || 0), 0)
+          const totalRev   = kpis?.total_revenue || 0
+          const roas = totalSpend > 0 ? (totalRev / totalSpend).toFixed(2) + 'x' : '—'
+          return <MetricTile label="Blended ROAS" value={roas} isEmpty={totalSpend === 0} />
+        })()}
       </div>
 
       {/* Campaign Table + Chart */}
@@ -271,6 +271,9 @@ export default function Campaigns() {
                     </th>
                     <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
                       Spend ✏️
+                    </th>
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                      CPL
                     </th>
                     <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
                       ROAS
@@ -319,6 +322,11 @@ export default function Campaigns() {
                               </button>
                             </div>
                           )}
+                        </td>
+                        <td className="py-3 px-4 text-right text-gray-600">
+                          {spendMap[r.name] && spendMap[r.name] > 0 && r.conversions > 0
+                            ? <span className="text-xs font-medium">${(spendMap[r.name] / r.conversions).toFixed(0)}</span>
+                            : <span className="text-gray-300">—</span>}
                         </td>
                         <td className="py-3 px-4 text-right text-gray-600">
                           {spendMap[r.name] && spendMap[r.name] > 0

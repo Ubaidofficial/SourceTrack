@@ -2106,21 +2106,224 @@ Next:
 Next:
 - Session 78: UTM/ref/source/via end-to-end verification.
 
-## Session 97 — T1.1 Onboarding Visual Redesign
+## Session 97 — Tier 0 Cleanup + T1.1 Onboarding Visual Redesign
 
 **Files modified:**
-- dashboard/src/components/OnboardingProgress.jsx — step labels below circles, bold underline on active step, lime connectors
-- dashboard/src/components/OnboardingCard.jsx — removed icon from header, shadow-md card, softer border, cleaner Go Back
-- dashboard/src/pages/Onboarding.jsx — outer return shell only (header, centering, Step X label)
+- dashboard/src/components/OnboardingProgress.jsx — step labels below circles (Domain/Business/Install/Configure/Conversions/Verify), bold underline on active step, lime connector lines for completed steps, lime label color for completed steps
+- dashboard/src/components/OnboardingCard.jsx — removed icon from header, rounded-2xl shadow-md, border-gray-100, max-width 560px, title 22px font-bold, Go Back with hover:text-st-black transition
+- dashboard/src/pages/Onboarding.jsx — outer return shell only: border-gray-100 header, Watch Video uses text-st-gray + hover transition, Step X of 6 is a rounded pill badge, title bumped to text-xl font-bold, py-10 vertical padding
+- dashboard/src/App.jsx — removed DesignSystem import and route
+- dashboard/src/components/Layout.jsx — Event Logger → Live Events, nav reordered (Analytics before AI Analytics)
 
-**Completed:**
-- Progress stepper matches Figma spec: completed=lime+checkmark, active=black+underline+label, future=gray
-- Card visual upgraded: larger title, no icon clutter, shadow-md, cleaner layout
-- All business logic, API calls, state variables, and step flow unchanged
-- Build: passes
+**Also completed (Tier 0):**
+- T0.1: Brand color tokens applied sitewide (text-gray-900→text-st-black, text-gray-500/400→text-st-gray, bg-gray-900→bg-st-black) across 30 JSX files — 675 brand token usages
+- T0.4: 17 .bak files deleted across api/, dashboard/src/, tracker/
+- T0.5: DesignSystem.jsx page, route, and import removed
+- T0.3 partial: EventDebugger nav label → Live Events, nav reordered
 
 **NOT changed:**
 - No function signatures modified
 - No state variables renamed
 - No API calls touched
 - No step order or flow logic changed
+- All verification polling, domain registration, business type persistence unchanged
+
+**Build:** ✅ 2001 modules, passing
+
+## Session 97 — T2.1 KPI Bar with Real Deltas
+
+**Files modified:**
+- api/routes/dashboard.js — added prevConversions + prevAIRevenue to Promise.all (2 new parallel queries), computed totals, added conversions_prev + ai_revenue_prev to kpis response object
+- dashboard/src/pages/Dashboard.jsx — KPI strip now computes delta % from _prev keys and passes trend prop to MetricTile; enrichKpis expanded to expose all _prev keys including mrr_estimate_prev, total_leads_prev alias
+- dashboard/src/components/MetricTile.jsx — already supported trend prop (no changes needed)
+
+**What works now:**
+- Revenue tile: shows ▲/▼ % vs previous period
+- Leads tile: shows ▲/▼ % vs previous period
+- AI Revenue tile: shows ▲/▼ % vs previous period
+- Conversions tile: shows ▲/▼ % vs previous period
+- MRR estimate (SaaS): delta computed from prev revenue
+- emptyState tiles (Best CAC, ROAS, etc.): no delta shown (correct — no data yet)
+- All deltas computed client-side from _prev values returned by API
+
+**Build:** ✅ 2001 modules, passing
+
+## Session 97 — T2.2 AI Search Attribution Table
+
+**Files modified:**
+- api/routes/dashboard.js — added aiLeads query (ai_platforms model, ai_source group, leads metric) to Promise.all; merges ai_leads per platform into aiRevResults rows
+- dashboard/src/pages/Dashboard.jsx — AI_PLATFORM_COLORS map (11 platforms, accent colors); table updated: platform pill badges with colored dots, Leads column added as primary metric, rows uncapped (was slice(0,5)); card title → "Leads From AI Search"; subtitle shows lead count
+
+**What works now:**
+- Each AI platform row shows: colored pill badge + leads + conversions + revenue
+- Lead count is the primary metric (SourceTrack differentiator vs competitors)
+- All detected platforms shown (not capped at 5)
+- Card subtitle: "X leads this period" dynamically computed
+- Platform colors: ChatGPT=emerald, Claude=orange, Perplexity=purple, Gemini=blue, Copilot=sky, DeepSeek=cyan
+
+**Build:** ✅ 2001 modules, passing
+
+## Session 97 — T2.3 Bot Filtering
+
+**Files modified:**
+- api/routes/analytics.js — added BOT_UA_PATTERN regex (30 patterns: crawlers, headless browsers, scrapers, automation tools, common HTTP libs); silent drop at top of /collect handler (returns 200 so bots don't retry); empty UA also dropped
+
+**Patterns blocked:**
+- Search crawlers: bot, crawl, spider, slurp, mediapartners, adsbot, applebot, bingpreview, googleweblight
+- Social previews: facebookexternalhit, twitterbot, linkedinbot, whatsapp, telegrambot, discordbot
+- Headless/automation: headlesschrome, phantomjs, selenium, puppeteer, playwright, lighthouse, pagespeed
+- HTTP clients: wget, curl, python-requests, axios, go-http, java, ruby, php
+
+**Design decisions:**
+- Silent drop (200 OK) — bots don't retry on error responses
+- Server-side only — tracker.js unchanged (runs in real browsers)
+- No logging of dropped bots (noise reduction)
+
+**Build:** ✅ passing
+
+## Session 97 — T2.4 Dashboard Cleanup
+
+**Files modified:**
+- dashboard/src/pages/Dashboard.jsx — removed 220 lines across 3 sections:
+  - Pipeline Stages card (CRM stage counts — API-only feature, not relevant pre-launch)
+  - LTV by Model card (4-model LTV comparison — power user feature, post-launch)
+  - Session Analytics card (derived-on-read sessions — data quality concerns pre-launch)
+  - Removed dead state: ltvModel, ltvQueries useQueries block, sessionOverview useQuery
+  - Bundle size: 1109kb → 1101kb (8kb saved)
+
+**Build:** ✅ passing
+
+## Session 97 — T2.5 Cookieless Verify (Audit Only)
+
+**Files modified:** none
+
+**Audit findings:**
+
+tracker.js — uses cookies intentionally:
+- `__ti_id_{siteKey}` — anonymous visitor ID (first-party, 1yr)
+- `__ti_ft_{siteKey}` — first-touch attribution data
+- `__ti_lt_{siteKey}` — last-touch attribution data
+- `__ti_id_{siteKey}_seen` — first visit flag
+- All also backed up to localStorage + sessionStorage (Session 49)
+- Cookieless mode EXISTS via `config.cookieless=true` — uses sessionStorage only
+
+analytics.js (pageview collector) — ZERO cookies. Clean.
+
+**Verdict:** tracker.js is cookie-based by design (required for cross-session attribution). This is correct, expected, and documented in SYSTEM.md and ATTRIBUTION.md. No change needed. Cookieless mode available for privacy-first deployments.
+
+**Tier 2 complete:** T2.1 ✅ T2.2 ✅ T2.3 ✅ T2.4 ✅ T2.5 ✅
+
+## Session 97 — T5.4 + T5.5 + T6.3
+
+**Files modified:**
+- api/routes/dashboard.js — added channelTrendResults query (leads by date), exposed as channel_trend in response
+- dashboard/src/pages/Dashboard.jsx — Doughnut + ArcElement registered; channelTrendData + campaignDonutData computed; two new cards inserted: "Leads Over Time" (line chart) + "Revenue by Campaign" (donut with legend)
+- dashboard/src/components/JourneyModal.jsx — full redesign:
+  - Left panel: st-lime/10 tint, 4-KPI grid (touchpoints, value, duration, device), attribution card, page path preview with ArrowRight separators
+  - Right panel: 3 filter pills (All / Conversions / AI Touches with live counts), timeline with lime-highlighted conversion events (Zap icon), AI platform color badges, expandable detail rows
+  - Header: X close button, cleaner layout, removed disabled CRM button
+  - computeSummary: added aiSource + pathPreview fields
+  - AI_COLORS map for platform-specific badge colors
+
+**Build:** ✅ passing
+
+## Session 97 — T7.1 + T7.5 AI Forecast
+
+**Files modified:**
+- api/routes/ai-analytics.js — GET /api/ai-analytics/forecast: fetches 90 days daily revenue+leads, sends last 30 to DeepSeek, returns 7-day forecast with per-day confidence + overall trend + summary. Guards: <14 days = insufficient_data, invalid JSON = 502
+- dashboard/src/pages/AIAnalytics.jsx — ForecastCard component: on-demand (button to trigger, not auto-fetch), loading spinner, solid historical line + dashed lime forecast line on same chart, 7-day table with confidence badges, trend + confidence pills, disclaimer footer
+- dashboard/src/pages/Dashboard.jsx — T7.5 teaser card: Sparkles icon, description, "Run Forecast" link to AI Analytics
+
+**Design decisions:**
+- On-demand (not auto-fetch) — DeepSeek call costs tokens, user triggers it
+- Dashed lime line for forecast, solid black for historical, connected at boundary
+- Insufficient data guard (14 days minimum) with honest message
+- Disclaimer: "Not financial advice" + generation timestamp
+
+**Build:** ✅ passing
+
+## Session 97 — T3.2 + T3.4 Billing UI + Trial Banner
+
+**Files modified:**
+- dashboard/src/pages/Settings.jsx — full rewrite: 3 pricing cards ($29 Starter / $99 Pro / $149 Agency) with features list, Most Popular badge on Pro, lime CTA button on Pro card, handles loading state per plan, isPro shows green checkmark card instead, isInactive shows warning; site settings form preserved; public dashboard section preserved; TrialDays component removed (logic inlined)
+- dashboard/src/components/Layout.jsx — trial banner in header: fetches plan+created_at from Supabase on mount; >3 days = amber pill, ≤3 days = red pulsing pill, expired = red solid pill; "Upgrade" button navigates to /settings; banner only shows for trial plan users; AlertTriangle icon
+- dashboard/src/lib/api.js — createCheckout now accepts planKey param, passes plan_key in body
+
+**Design:**
+- Pro card: dark bg-st-black with white text, lime CTA, lime checkmarks — stands out
+- Trial banner: non-intrusive pill in header right, escalates urgency as days decrease
+- animate-pulse on ≤3 days left for urgency
+- Banner hidden for paid/inactive users (only trial)
+
+**Build:** ✅ passing
+
+## Session 97 — T3.3 Tier Enforcement Middleware
+
+**Files created:**
+- api/middleware/tier-check.js — checkTierLimit middleware:
+  - Counts unique session_ids from pageviews table for current calendar month
+  - NodeCache 5-min TTL (avoids Supabase query on every pageview)
+  - Plan limits: trial=50, starter=50, pro=200, agency=500
+  - 402 response with current_plan, limit, current_count, upgrade_url, message
+  - Fails OPEN on error (never blocks tracking due to counting bug)
+  - bustTierCache() helper exported for post-conversion cache invalidation
+  - Cache key: leads:{siteId}:{YYYY-MM} — auto-resets each month
+
+**Files modified:**
+- api/index.js — checkTierLimit wired into:
+  - POST /api/track (pageview tracking)
+  - POST /api/collect (analytics pageview collector)
+  - POST /api/conversion (conversion events)
+  - Runs AFTER validateSiteKey (req.site must exist), BEFORE detectAIPlatform
+
+**Design decisions:**
+- Counts unique sessions (not raw pageviews) — more accurate "leads" proxy
+- 5-min cache: acceptable lag, avoids DB hammering
+- Fails open: tracking always works if counting breaks
+- /api/identify and /api/conversion/offline NOT limited (identity + offline don't consume lead quota)
+
+**Build:** ✅ passing
+
+## Session 97 — T6.1 + T5.1 + T6.2 + T6.4
+
+**Files modified:**
+
+### T6.1 — Leads page source badges + filter
+- dashboard/src/pages/Leads.jsx:
+  - classifySource() function: maps source+medium → Direct/Paid/Organic/AI Search/Social/Email/Referral with colors
+  - Source cell: colored pill badge with dot, shows ai_source or source, campaign sub-label
+  - New filterSource dropdown: All/Organic/Paid/AI Search/Social/Email/Direct/Referral
+  - filterSource wired into query params and queryKey
+
+### T5.1 — Revenue Payback Analysis card
+- dashboard/src/pages/Dashboard.jsx:
+  - Horizontal bar chart per top channel, bars proportional to max revenue
+  - Scale/Watch/Pause verdicts: top 2 = Scale (lime), mid = Watch (amber), bottom = Pause (gray)
+  - Footer note: "Add spend data in Campaigns for ROAS-based verdicts"
+  - Only shown when activeResults.length > 0
+
+### T6.2 — Campaigns ROAS/CPL improvements
+- dashboard/src/pages/Campaigns.jsx:
+  - Blended ROAS KPI tile: totalRevenue / totalSpend across all spend entries (shows — when no spend)
+  - CPL column added: spend / conversions per row
+  - KPI tiles cleaned up (removed redundant Date Range tile)
+
+### T6.4 — AI Chat global slide-in panel
+- dashboard/src/components/Layout.jsx:
+  - Fixed bottom-right bubble (52px, bg-st-black): opens/closes panel
+  - 400px wide × 70vh slide-in panel from bottom-right, rounded-tl-2xl
+  - AIChatPanel inline component: loads site_key, message history, bounce-dot loading indicator
+  - Messages: user = black bubble right, assistant = gray bubble left
+  - Enter to send, disabled when no siteKey or loading
+  - AI Chat removed from sidebar nav (bubble replaces it)
+  - Hidden on /onboarding route
+
+**Build:** ✅ passing
+
+## Session 97 — T7.2 + T7.4 AI Anomaly Detection + Verdicts
+
+**Files modified:**
+- api/routes/ai-analytics.js — GET /api/ai-analytics/anomalies: fetches this week + last week revenue+leads per channel (6 parallel queries), computes WoW delta per channel, calls DeepSeek for anomaly explanations (>20% threshold, max 5 anomalies). Guards: needs 2+ channels with 2 weeks of data. Fails gracefully without AI if insufficient data.
+- dashboard/src/pages/AIAnalytics.jsx — AnomalyCard component: on-demand trigger, AI summary in amber callout, anomaly list with type icons (📈📉✨⚠️), WoW channel table (8 rows), threshold note. VerdictCard component: calls /api/attribution/verdicts, SCALE🚀/PAUSE⏸/KILL🛑 verdict rows with summary count pills, reason text, signal label.
+
+**Build:** ✅ passing

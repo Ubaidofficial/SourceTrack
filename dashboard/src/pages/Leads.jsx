@@ -12,6 +12,20 @@ import StatusBadge from '../components/StatusBadge'
 
 const AI_SOURCES = ['ChatGPT', 'Claude', 'Perplexity', 'Gemini', 'Grok', 'Copilot', 'DeepSeek', 'You.com AI', 'Phind', 'Kagi']
 
+// Source channel classification + badge colors
+function classifySource(source, medium) {
+  const s = (source || '').toLowerCase()
+  const m = (medium || '').toLowerCase()
+  if (!s || s === 'direct' || s === '(direct)') return { label: 'Direct', color: 'bg-gray-100 text-gray-600', dot: 'bg-gray-400' }
+  if (['cpc','ppc','paid','paid_search','paid_social'].includes(m)) return { label: 'Paid', color: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' }
+  if (['email','newsletter'].includes(m)) return { label: 'Email', color: 'bg-purple-100 text-purple-700', dot: 'bg-purple-500' }
+  if (AI_SOURCES.map(a => a.toLowerCase()).includes(s)) return { label: 'AI Search', color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' }
+  if (['google','bing','yahoo','duckduckgo','baidu'].some(se => s.includes(se))) return { label: 'Organic', color: 'bg-green-100 text-green-700', dot: 'bg-green-500' }
+  if (['facebook','instagram','linkedin','twitter','x.com','tiktok','reddit'].some(sn => s.includes(sn))) return { label: 'Social', color: 'bg-pink-100 text-pink-700', dot: 'bg-pink-500' }
+  if (m === 'referral' || (!m && s)) return { label: 'Referral', color: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500' }
+  return { label: source, color: 'bg-gray-100 text-gray-600', dot: 'bg-gray-400' }
+}
+
 export default function Leads() {
   const { user } = useAuth()
   const [statusMap, setStatusMap] = useState({})
@@ -57,7 +71,7 @@ export default function Leads() {
   }, [search])
 
   const { data: leadsData, isLoading } = useQuery({
-    queryKey: ['leads-page', site?.site_key, debouncedSearch, filterAI, attributionModel, dateFrom, dateTo],
+    queryKey: ['leads-page', site?.site_key, debouncedSearch, filterAI, filterSource, attributionModel, dateFrom, dateTo],
     queryFn: async () => {
       if (!site?.site_key) return null
       const params = new URLSearchParams({
@@ -69,6 +83,7 @@ export default function Leads() {
       })
       if (debouncedSearch) params.set('search', debouncedSearch)
       if (filterAI !== 'all') params.set('ai', filterAI)
+      if (filterSource !== 'all') params.set('source_type', filterSource)
       return fetchApi(`/leads?${params}`)
     },
     enabled: !!site?.site_key
@@ -156,13 +171,20 @@ export default function Leads() {
                     <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                       <td className="py-3 px-3 text-st-black font-mono text-xs">{shortId}...</td>
                       <td className="py-3 px-3">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-st-black">{lead.source || 'direct'}</span>
-                          {isAI && <StatusBadge status="verified" label="AI" />}
-                        </div>
-                        {lead.medium && lead.medium !== 'none' && (
-                          <span className="text-xs text-st-gray">{lead.medium}</span>
-                        )}
+                        {(() => {
+                          const cls = classifySource(lead.source, lead.medium)
+                          return (
+                            <div className="flex flex-col gap-0.5">
+                              <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full w-fit ${cls.color}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${cls.dot}`} />
+                                {lead.ai_source || lead.source || 'Direct'}
+                              </span>
+                              {lead.campaign && lead.campaign !== 'none' && (
+                                <span className="text-[10px] text-st-gray truncate max-w-[120px]">{lead.campaign}</span>
+                              )}
+                            </div>
+                          )
+                        })()}
                       </td>
                       <td className="py-3 px-3">
                         {lead.last_conversion_type ? (() => {

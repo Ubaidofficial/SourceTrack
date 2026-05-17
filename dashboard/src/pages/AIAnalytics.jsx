@@ -9,7 +9,7 @@ import {
   CategoryScale, LinearScale, BarElement,
   PointElement, LineElement, Title, Tooltip, Legend
 } from 'chart.js'
-import { Bot, DollarSign, TrendingUp, BarChart3, Sparkles, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { Bot, DollarSign, TrendingUp, BarChart3, Sparkles, ArrowUpRight, ArrowDownRight, Zap, RefreshCw, AlertTriangle, TrendingDown, Activity } from 'lucide-react'
 import MetricTile from '../components/MetricTile'
 import DashboardCard from '../components/DashboardCard'
 import StatusBadge from '../components/StatusBadge'
@@ -330,8 +330,463 @@ export default function AIAnalytics() {
               </tbody>
             </table>
           </DashboardCard>
+
+          {/* T7.2 — Anomaly Detection */}
+          <AnomalyCard siteKey={site?.site_key} />
+
+          {/* T7.4 — AI Channel Verdicts */}
+          <VerdictCard siteKey={site?.site_key} />
+
+          {/* T7.1 — AI 7-Day Revenue Forecast */}
+          <ForecastCard siteKey={site?.site_key} />
         </>
       )}
     </div>
+  )
+}
+
+// ── Forecast Card Component ────────────────────────────────────────────────
+function ForecastCard({ siteKey }) {
+  const [loading, setLoading] = useState(false)
+  const [data, setData]       = useState(null)
+  const [error, setError]     = useState(null)
+  const [fetched, setFetched] = useState(false)
+
+  async function runForecast() {
+    if (!siteKey) return
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await fetchApi(`/ai-analytics/forecast?site_key=${siteKey}`)
+      setData(result)
+    } catch (err) {
+      setError(err.message || 'Forecast failed')
+    } finally {
+      setLoading(false)
+      setFetched(true)
+    }
+  }
+
+  const forecast = data?.data
+  const hasForecast = Array.isArray(forecast?.forecast) && forecast.forecast.length > 0
+  const insufficient = forecast?.reason === 'insufficient_data'
+
+  // Build combined chart data when forecast available
+  const chartData = hasForecast ? (() => {
+    const hist = forecast.historical || []
+    const fcast = forecast.forecast || []
+    const allDates = [...hist.map(r => r.date), ...fcast.map(r => r.date)]
+    const histRevenue = [...hist.map(r => r.revenue), ...fcast.map(() => null)]
+    const fcastRevenue = [...hist.map(() => null), ...fcast.map(r => r.revenue)]
+    // Connect at boundary
+    if (hist.length > 0) fcastRevenue[hist.length - 1] = hist[hist.length - 1].revenue
+    return {
+      labels: allDates,
+      datasets: [
+        {
+          label: 'Historical',
+          data: histRevenue,
+          borderColor: 'rgba(17,24,39,0.85)',
+          borderWidth: 2,
+          pointRadius: 2,
+          tension: 0.3,
+          fill: false,
+          spanGaps: false
+        },
+        {
+          label: '7-Day Forecast',
+          data: fcastRevenue,
+          borderColor: 'rgba(180,195,60,0.9)',
+          borderWidth: 2,
+          borderDash: [6, 4],
+          pointRadius: 3,
+          pointBackgroundColor: 'rgba(180,195,60,0.9)',
+          tension: 0.3,
+          fill: false,
+          spanGaps: false
+        }
+      ]
+    }
+  })() : null
+
+  const chartOpts = {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+      tooltip: { callbacks: { label: (ctx) => ` $${(ctx.raw || 0).toFixed(0)}` } }
+    },
+    scales: {
+      y: { beginAtZero: true, ticks: { callback: v => `$${v}`, maxTicksLimit: 5 }, grid: { color: '#f3f4f6' } },
+      x: { ticks: { maxTicksLimit: 10 }, grid: { display: false } }
+    }
+  }
+
+  const trendBadge = forecast?.trend === 'up'
+    ? { label: '↑ Upward trend', cls: 'bg-green-100 text-green-700' }
+    : forecast?.trend === 'down'
+    ? { label: '↓ Downward trend', cls: 'bg-red-100 text-red-700' }
+    : { label: '→ Flat trend', cls: 'bg-gray-100 text-st-gray' }
+
+  const confidenceBadge = {
+    high:   'bg-green-100 text-green-700',
+    medium: 'bg-amber-100 text-amber-700',
+    low:    'bg-red-100 text-red-700'
+  }[forecast?.confidence_overall] || 'bg-gray-100 text-st-gray'
+
+  return (
+    <DashboardCard
+      title="AI Revenue Forecast"
+      subtitle="7-day prediction powered by DeepSeek — based on your last 30 days of data"
+      action={fetched && !loading && (
+        <button onClick={runForecast} className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black">
+          <RefreshCw className="w-3 h-3" /> Refresh
+        </button>
+      )}
+    >
+      {!fetched ? (
+        <div className="flex flex-col items-center justify-center py-10 gap-4">
+          <div className="w-12 h-12 rounded-full bg-st-lime/10 flex items-center justify-center">
+            <Zap className="w-6 h-6 text-st-black" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-semibold text-st-black">Generate 7-Day Forecast</p>
+            <p className="text-xs text-st-gray mt-1">DeepSeek analyzes your revenue trend and predicts the next 7 days</p>
+          </div>
+          <button
+            onClick={runForecast}
+            className="px-5 py-2.5 bg-st-black text-white text-sm font-semibold rounded-lg hover:bg-st-black/90"
+          >
+            Run Forecast
+          </button>
+        </div>
+      ) : loading ? (
+        <div className="flex flex-col items-center justify-center py-10 gap-3">
+          <RefreshCw className="w-6 h-6 animate-spin text-st-gray" />
+          <p className="text-sm text-st-gray">DeepSeek is analyzing your data…</p>
+        </div>
+      ) : error ? (
+        <div className="py-6 text-center">
+          <p className="text-sm text-red-500">{error}</p>
+          <button onClick={runForecast} className="mt-3 text-xs text-st-black underline">Try again</button>
+        </div>
+      ) : insufficient ? (
+        <div className="py-6 text-center">
+          <p className="text-sm text-st-gray">Need at least 14 days of data for a forecast.</p>
+          <p className="text-xs text-st-gray mt-1">{forecast.days_available || 0} days available so far.</p>
+        </div>
+      ) : hasForecast ? (
+        <div className="space-y-4">
+          {/* Summary + badges */}
+          <div className="flex items-start gap-3 flex-wrap">
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${trendBadge.cls}`}>{trendBadge.label}</span>
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${confidenceBadge}`}>
+              {forecast.confidence_overall} confidence
+            </span>
+          </div>
+          {forecast.summary && (
+            <p className="text-sm text-st-gray italic">"{forecast.summary}"</p>
+          )}
+
+          {/* Chart */}
+          <div className="h-56">
+            <Line data={chartData} options={chartOpts} />
+          </div>
+
+          {/* 7-day table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="py-2 text-left text-st-gray font-medium">Date</th>
+                  <th className="py-2 text-right text-st-gray font-medium">Revenue</th>
+                  <th className="py-2 text-right text-st-gray font-medium">Leads</th>
+                  <th className="py-2 text-right text-st-gray font-medium">Confidence</th>
+                </tr>
+              </thead>
+              <tbody>
+                {forecast.forecast.map((row, i) => (
+                  <tr key={i} className="border-b border-gray-50">
+                    <td className="py-2 text-st-black font-mono">{row.date}</td>
+                    <td className="py-2 text-right font-semibold text-st-black">${(row.revenue || 0).toFixed(0)}</td>
+                    <td className="py-2 text-right text-st-gray">{row.leads || 0}</td>
+                    <td className="py-2 text-right">
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                        row.confidence === 'high' ? 'bg-green-100 text-green-700'
+                        : row.confidence === 'low' ? 'bg-red-100 text-red-700'
+                        : 'bg-amber-100 text-amber-700'
+                      }`}>{row.confidence}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-[10px] text-st-gray">
+            Generated {forecast.generated_at ? new Date(forecast.generated_at).toLocaleString() : '—'} · Rule-based DeepSeek prediction · Not financial advice
+          </p>
+        </div>
+      ) : null}
+    </DashboardCard>
+  )
+}
+
+// ── T7.2 Anomaly Detection Card ────────────────────────────────────────────
+function AnomalyCard({ siteKey }) {
+  const [loading, setLoading] = useState(false)
+  const [data, setData]       = useState(null)
+  const [error, setError]     = useState(null)
+  const [fetched, setFetched] = useState(false)
+
+  async function run() {
+    if (!siteKey) return
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await fetchApi(`/ai-analytics/anomalies?site_key=${siteKey}`)
+      setData(result)
+    } catch (err) {
+      setError(err.message || 'Detection failed')
+    } finally {
+      setLoading(false)
+      setFetched(true)
+    }
+  }
+
+  const d         = data?.data
+  const anomalies = d?.anomalies || []
+  const channels  = d?.channels  || []
+
+  const deltaColor = (pct) => pct === null ? 'text-st-gray'
+    : pct >= 20  ? 'text-green-600'
+    : pct <= -20 ? 'text-red-500'
+    : 'text-st-gray'
+
+  const deltaLabel = (pct) => pct === null ? '—'
+    : `${pct >= 0 ? '+' : ''}${pct.toFixed(0)}%`
+
+  const typeIcon = (type) => ({
+    spike: '📈', drop: '📉', new: '✨', lost: '⚠️'
+  }[type] || '•')
+
+  return (
+    <DashboardCard
+      title="Weekly Anomaly Detection"
+      subtitle="AI spots unusual changes in your channels — week over week"
+      action={fetched && !loading && (
+        <button onClick={run} className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black">
+          <RefreshCw className="w-3 h-3" /> Refresh
+        </button>
+      )}
+    >
+      {!fetched ? (
+        <div className="flex flex-col items-center justify-center py-10 gap-4">
+          <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center">
+            <Activity className="w-6 h-6 text-amber-600" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-semibold text-st-black">Detect This Week's Anomalies</p>
+            <p className="text-xs text-st-gray mt-1">DeepSeek compares this week vs last week across all channels</p>
+          </div>
+          <button onClick={run} className="px-5 py-2.5 bg-st-black text-white text-sm font-semibold rounded-lg hover:bg-st-black/90">
+            Run Detection
+          </button>
+        </div>
+      ) : loading ? (
+        <div className="flex flex-col items-center justify-center py-10 gap-3">
+          <RefreshCw className="w-6 h-6 animate-spin text-st-gray" />
+          <p className="text-sm text-st-gray">Analyzing week-over-week changes…</p>
+        </div>
+      ) : error ? (
+        <div className="py-6 text-center">
+          <p className="text-sm text-red-500">{error}</p>
+          <button onClick={run} className="mt-3 text-xs text-st-black underline">Try again</button>
+        </div>
+      ) : !d?.has_enough_data ? (
+        <div className="py-6 text-center">
+          <p className="text-sm text-st-gray">Need at least 2 weeks of data across 2+ channels for anomaly detection.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {/* AI summary */}
+          {d.summary && (
+            <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-xl border border-amber-100">
+              <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-800 italic">"{d.summary}"</p>
+            </div>
+          )}
+
+          {/* Anomalies list */}
+          {anomalies.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold text-st-gray uppercase tracking-wide">{anomalies.length} anomaly{anomalies.length > 1 ? 'ies' : ''} detected</p>
+              {anomalies.map((a, i) => (
+                <div key={i} className="flex items-start gap-3 p-3 bg-white border border-gray-100 rounded-xl">
+                  <span className="text-lg flex-shrink-0">{typeIcon(a.type)}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold text-st-black">{a.channel}</span>
+                      <span className={`text-xs font-bold ${a.delta_pct >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                        {a.delta_pct >= 0 ? '+' : ''}{(a.delta_pct || 0).toFixed(0)}% {a.metric}
+                      </span>
+                    </div>
+                    <p className="text-xs text-st-gray mt-0.5">{a.explanation}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-4 text-center">
+              <p className="text-sm text-st-gray">✓ No significant anomalies this week (all channels within 20% of last week)</p>
+            </div>
+          )}
+
+          {/* Channel WoW table */}
+          {channels.length > 0 && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="py-2 text-left text-st-gray font-medium">Channel</th>
+                    <th className="py-2 text-right text-st-gray font-medium">This week</th>
+                    <th className="py-2 text-right text-st-gray font-medium">Last week</th>
+                    <th className="py-2 text-right text-st-gray font-medium">Δ Revenue</th>
+                    <th className="py-2 text-right text-st-gray font-medium">Δ Leads</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {channels.slice(0, 8).map((ch, i) => (
+                    <tr key={i} className="border-b border-gray-50">
+                      <td className="py-2 text-st-black font-medium truncate max-w-[120px]">{ch.channel}</td>
+                      <td className="py-2 text-right text-st-black">${(ch.this_week_revenue || 0).toFixed(0)}</td>
+                      <td className="py-2 text-right text-st-gray">${(ch.last_week_revenue || 0).toFixed(0)}</td>
+                      <td className={`py-2 text-right font-semibold ${deltaColor(ch.rev_delta_pct)}`}>{deltaLabel(ch.rev_delta_pct)}</td>
+                      <td className={`py-2 text-right ${deltaColor(ch.lead_delta_pct)}`}>{deltaLabel(ch.lead_delta_pct)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <p className="text-[10px] text-st-gray">
+            Generated {d.generated_at ? new Date(d.generated_at).toLocaleString() : '—'} · Anomaly threshold: ±20% week-over-week
+          </p>
+        </div>
+      )}
+    </DashboardCard>
+  )
+}
+
+// ── T7.4 AI Channel Verdicts Card ──────────────────────────────────────────
+function VerdictCard({ siteKey }) {
+  const [loading, setLoading] = useState(false)
+  const [verdicts, setVerdicts] = useState(null)
+  const [error, setError]      = useState(null)
+  const [fetched, setFetched]  = useState(false)
+
+  async function run() {
+    if (!siteKey) return
+    setLoading(true)
+    setError(null)
+    try {
+      const today    = new Date().toISOString().slice(0, 10)
+      const thirtyAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
+      const result = await fetchApi(`/api/attribution/verdicts?site_key=${siteKey}&date_from=${thirtyAgo}&date_to=${today}`)
+      setVerdicts(result?.data || [])
+    } catch (err) {
+      setError(err.message || 'Verdicts failed')
+    } finally {
+      setLoading(false)
+      setFetched(true)
+    }
+  }
+
+  const VERDICT_STYLES = {
+    SCALE: { bg: 'bg-st-lime',    text: 'text-st-black', icon: '🚀' },
+    PAUSE: { bg: 'bg-amber-100',  text: 'text-amber-800', icon: '⏸' },
+    KILL:  { bg: 'bg-red-100',    text: 'text-red-700',   icon: '🛑' },
+  }
+
+  return (
+    <DashboardCard
+      title="AI Channel Verdicts"
+      subtitle="DeepSeek reviews your top campaigns and recommends Scale, Pause, or Kill"
+      action={fetched && !loading && (
+        <button onClick={run} className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black">
+          <RefreshCw className="w-3 h-3" /> Refresh
+        </button>
+      )}
+    >
+      {!fetched ? (
+        <div className="flex flex-col items-center justify-center py-10 gap-4">
+          <div className="w-12 h-12 rounded-full bg-st-lime/10 flex items-center justify-center">
+            <Zap className="w-6 h-6 text-st-black" />
+          </div>
+          <div className="text-center">
+            <p className="text-sm font-semibold text-st-black">Get Campaign Verdicts</p>
+            <p className="text-xs text-st-gray mt-1">DeepSeek scores your last 30 days by revenue, conversions, and trends</p>
+          </div>
+          <button onClick={run} className="px-5 py-2.5 bg-st-black text-white text-sm font-semibold rounded-lg hover:bg-st-black/90">
+            Run Analysis
+          </button>
+        </div>
+      ) : loading ? (
+        <div className="flex flex-col items-center justify-center py-10 gap-3">
+          <RefreshCw className="w-6 h-6 animate-spin text-st-gray" />
+          <p className="text-sm text-st-gray">DeepSeek is reviewing your campaigns…</p>
+        </div>
+      ) : error ? (
+        <div className="py-6 text-center">
+          <p className="text-sm text-red-500">{error}</p>
+          <button onClick={run} className="mt-3 text-xs text-st-black underline">Try again</button>
+        </div>
+      ) : !verdicts?.length ? (
+        <div className="py-6 text-center">
+          <p className="text-sm text-st-gray">No campaign data yet. UTM-tagged traffic will appear here after conversions.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {/* Summary counts */}
+          <div className="flex gap-3">
+            {['SCALE','PAUSE','KILL'].map(v => {
+              const count = verdicts.filter(x => x.verdict === v).length
+              const s = VERDICT_STYLES[v]
+              return (
+                <div key={v} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full ${s.bg}`}>
+                  <span className="text-sm">{s.icon}</span>
+                  <span className={`text-xs font-bold ${s.text}`}>{count} {v}</span>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Verdict rows */}
+          <div className="space-y-2">
+            {verdicts.map((v, i) => {
+              const s = VERDICT_STYLES[v.verdict] || VERDICT_STYLES.PAUSE
+              return (
+                <div key={i} className="flex items-start gap-3 p-3 bg-white border border-gray-100 rounded-xl">
+                  <span className="text-lg flex-shrink-0">{s.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold text-st-black truncate max-w-[160px]">{v.campaign}</span>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${s.bg} ${s.text}`}>{v.verdict}</span>
+                    </div>
+                    {v.reason && <p className="text-xs text-st-gray mt-0.5">{v.reason}</p>}
+                  </div>
+                  {v.signal && (
+                    <span className="text-[10px] text-st-gray flex-shrink-0 mt-0.5">{v.signal}</span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          <p className="text-[10px] text-st-gray">
+            Based on last 30 days · SCALE = strong revenue+conversions · PAUSE = low return · KILL = zero activity
+          </p>
+        </div>
+      )}
+    </DashboardCard>
   )
 }

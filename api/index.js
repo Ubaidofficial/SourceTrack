@@ -10,6 +10,7 @@ import { defaultLimit, trackLimit } from './middleware/rate-limit.js'
 import { validateSiteKey } from './middleware/auth.js'
 import { requireSiteMembership } from './middleware/auth.js'
 import { detectAIPlatform } from './middleware/ai-platform.js'
+import { checkTierLimit } from './middleware/tier-check.js'
 import { track } from './routes/track.js'
 import { identify } from './routes/identify.js'
 import { conversion } from './routes/conversion.js'
@@ -207,7 +208,7 @@ app.use(defaultLimit)
 app.use('/api/track', trackLimit)
 
 // 6. Routes
-app.post('/api/track', validateSiteKey, detectAIPlatform, track)
+app.post('/api/track', validateSiteKey, checkTierLimit, detectAIPlatform, track)
 app.post('/api/collect', (req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*')
     res.setHeader('Access-Control-Allow-Credentials', 'true')
@@ -215,7 +216,7 @@ app.post('/api/collect', (req, res, next) => {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
     next()
-  }, validateSiteKey, detectAIPlatform, track)
+  }, validateSiteKey, checkTierLimit, detectAIPlatform, track)
 app.options('/api/collect', (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*')
     res.setHeader('Access-Control-Allow-Credentials', 'true')
@@ -225,7 +226,7 @@ app.options('/api/collect', (req, res) => {
     return res.status(200).send('OK')
   })
 app.post('/api/identify', validateSiteKey, identify)
-app.post('/api/conversion', validateSiteKey, detectAIPlatform, conversion)
+app.post('/api/conversion', validateSiteKey, checkTierLimit, detectAIPlatform, conversion)
 app.post('/api/conversion/offline', validateSiteKey, conversionOffline)
 app.get('/api/attribution', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, attribution)
 app.get('/api/attribution/explain', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, attributionExplain)

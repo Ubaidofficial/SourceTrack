@@ -93,7 +93,6 @@ Do not claim features are implemented unless verified in code and QA.
 | GTM + Standard install paths | ✅ | Sessions 85.1–85.2 | Both paths implemented + st colors |
 | Conversion configuration | ✅ | Sessions 85.1–85.2 | Implemented + st colors |
 | Script verification | ✅ | Session 85.1 audit | Verified; polls /api/install/status; logs errors |
-| Onboarding 5-step wizard (Figma-aligned visual) | ✅ | S97 T1.1 | Visual matches spec: stepper labels, lime selected states, card polish |
 
 ## Leads & Journey
 

@@ -638,8 +638,9 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] flex flex-col">
+      {/* Header */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-white">
-        <h1 className="text-xl font-bold text-st-black tracking-tight">SourceTrack</h1>
+        <h1 className="text-xl font-bold text-st-black">SourceTrack</h1>
         <button
           onClick={() => setVideoModalOpen(true)}
           className="px-4 py-2 text-sm text-st-gray border border-gray-200 rounded-lg hover:bg-gray-50 hover:text-st-black transition-colors flex items-center gap-2"
@@ -648,11 +649,12 @@ export default function Onboarding() {
         </button>
       </div>
 
+      {/* Body */}
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-10">
-        <span className="inline-block px-3 py-1 rounded-full bg-gray-100 text-xs text-st-gray font-medium uppercase tracking-wider mb-3">
+        <span className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-xs font-medium text-st-gray mb-3">
           Step {step} of 6
         </span>
-        <p className="text-lg font-semibold text-st-black mb-6">{STEP_TITLES[step]}</p>
+        <p className="text-xl font-bold text-st-black mb-8">{STEP_TITLES[step]}</p>
         <OnboardingProgress currentStep={step} />
         {renderStepContent()}
       </div>

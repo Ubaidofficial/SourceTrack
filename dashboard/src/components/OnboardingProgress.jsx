@@ -1,51 +1,52 @@
 const STEP_LABELS = [
-  'Connect Domain',
-  'Business Type',
-  'Install Script',
-  'Instructions',
+  'Domain',
+  'Business',
+  'Install',
+  'Configure',
   'Conversions',
   'Verify'
 ]
 
 export default function OnboardingProgress({ currentStep, totalSteps = 6 }) {
   return (
-    <div className="flex items-start justify-center mb-8">
+    <div className="flex items-center justify-center mb-10">
       {Array.from({ length: totalSteps }, (_, i) => {
         const stepNum = i + 1
         const isCompleted = stepNum < currentStep
         const isCurrent = stepNum === currentStep
 
         return (
-          <div key={stepNum} className="flex items-start">
-            <div className="flex flex-col items-center">
+          <div key={stepNum} className="flex items-center">
+            {/* Step circle + label */}
+            <div className="flex flex-col items-center gap-1.5">
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${
                   isCompleted
-                    ? 'bg-st-lime text-black'
+                    ? 'bg-st-lime text-st-black'
                     : isCurrent
                     ? 'bg-st-black text-white'
-                    : 'bg-[#E5E7EB] text-st-gray'
+                    : 'bg-gray-200 text-st-gray'
                 }`}
               >
                 {isCompleted ? '✓' : stepNum}
               </div>
-              {isCurrent && (
-                <div className="w-6 h-0.5 bg-st-black rounded-full mt-1" />
-              )}
-              <span
-                className={`text-[11px] mt-1.5 whitespace-nowrap ${
-                  isCurrent ? 'text-st-black font-semibold' : 'text-st-gray'
-                }`}
-              >
-                {STEP_LABELS[i] || `Step ${stepNum}`}
+
+              {/* Active underline */}
+              <div className={`w-8 h-0.5 rounded-full ${isCurrent ? 'bg-st-black' : 'bg-transparent'}`} />
+
+              {/* Step label */}
+              <span className={`text-[10px] font-medium whitespace-nowrap ${
+                isCurrent ? 'text-st-black' : isCompleted ? 'text-st-lime' : 'text-st-gray'
+              }`}>
+                {STEP_LABELS[i]}
               </span>
             </div>
+
+            {/* Connector */}
             {stepNum < totalSteps && (
-              <div
-                className={`w-6 sm:w-10 md:w-12 h-0.5 mt-4 ${
-                  stepNum < currentStep ? 'bg-st-lime' : 'bg-[#E5E7EB]'
-                }`}
-              />
+              <div className={`w-10 h-0.5 mb-5 mx-1 ${
+                stepNum < currentStep ? 'bg-st-lime' : 'bg-gray-200'
+              }`} />
             )}
           </div>
         )
