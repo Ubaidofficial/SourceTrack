@@ -5,12 +5,12 @@ import { requireUserAuth } from '../middleware/user-auth.js'
 import { validateSiteKey } from '../middleware/auth.js'
 
 const router = express.Router()
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { global: { fetch }, realtime: { transport: WebSocket } })
+function getSupabase() { return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { global: { fetch }, realtime: { transport: WebSocket } }) }
 
 router.get('/', requireUserAuth, validateSiteKey, async (req, res) => {
   try {
     const { date_from, date_to } = req.query
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('campaign_costs')
       .select('*')
       .eq('site_id', req.site.id)
@@ -30,7 +30,7 @@ router.post('/', requireUserAuth, validateSiteKey, async (req, res) => {
     if (!campaign_name || spend === undefined || !period_start || !period_end) {
       return res.status(400).json({ success: false, error: 'campaign_name, spend, period_start, period_end required' })
     }
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('campaign_costs')
       .upsert({
         site_id: req.site.id,

@@ -7,14 +7,16 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2024-06-20'
 })
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
-  { realtime: { transport: WebSocket } }
-)
+function getSupabase() {
+  return createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_KEY,
+    { global: { fetch }, realtime: { transport: WebSocket } }
+  )
+}
 
 async function getSiteBySiteKey(siteKey) {
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('sites')
     .select('id, owner_id, plan, stripe_customer_id')
     .eq('site_key', siteKey)
@@ -47,7 +49,7 @@ export async function billingWebhookHandler(req, res) {
 
       if (siteId && customerId) {
         const updateData = { plan: 'pro', stripe_customer_id: customerId }
-        await supabase.from('sites').update(updateData).eq('id', siteId)
+        await getSupabase().from('sites').update(updateData).eq('id', siteId)
       }
     }
 

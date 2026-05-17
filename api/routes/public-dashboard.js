@@ -4,7 +4,7 @@ import WebSocket from 'ws'
 import { getPreAggregatedAttribution } from '../lib/attribution-engine.js'
 
 const router = express.Router()
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { global: { fetch }, realtime: { transport: WebSocket } })
+function getSupabase() { return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { global: { fetch }, realtime: { transport: WebSocket } }) }
 
 // GET /api/public/:token — no auth, returns dashboard data for public share
 router.get('/:token', async (req, res) => {
@@ -12,7 +12,7 @@ router.get('/:token', async (req, res) => {
     const { token } = req.params
     if (!token || token.length < 10) return res.status(404).json({ error: 'Not found' })
 
-    const { data: site } = await supabase
+    const { data: site } = await getSupabase()
       .from('sites')
       .select('id, site_key, public_share_enabled, public_share_token')
       .eq('public_share_token', token)
@@ -59,7 +59,7 @@ router.patch('/settings', async (req, res) => {
     const { site_id, enabled } = req.body
     if (!site_id) return res.status(400).json({ error: 'site_id required' })
 
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('sites')
       .update({ public_share_enabled: !!enabled })
       .eq('id', site_id)

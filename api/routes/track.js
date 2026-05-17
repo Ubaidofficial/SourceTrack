@@ -5,8 +5,7 @@ import { ph } from '../lib/posthog.js'
 import { createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
 import { sendMetaCAPI, sendGoogleConversion, sendMicrosoftConversion, sendLinkedInConversion } from '../lib/conversion-sync.js'
-import { createClient as _sbClient } from '@supabase/supabase-js'
-const _convSupabase = _sbClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { realtime: { transport: WebSocket } })
+function getConvSupabase() { return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { realtime: { transport: WebSocket } }) }
 
 function enrich(req) {
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || ''
@@ -73,7 +72,7 @@ export async function track(req, res) {
 
     // Conversion sync to ad platforms
     if (req.body.event === '$conversion' || req.body.event_type === 'conversion') {
-      const { data: convSite } = await _convSupabase
+      const { data: convSite } = await getConvSupabase()
         .from('sites')
         .select('meta_pixel_id, meta_capi_token, google_ads_customer_id, google_ads_conversion_action_id, google_ads_developer_token, microsoft_tag_id, microsoft_capi_token, linkedin_partner_id, linkedin_capi_token')
         .eq('site_key', req.body.site_key)

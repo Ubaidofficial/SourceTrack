@@ -9,11 +9,13 @@ import { fileURLToPath } from 'url'
 const router = Router()
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
-  { realtime: { transport: WebSocket } }
-)
+function getSupabase() {
+  return createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_KEY,
+    { global: { fetch }, realtime: { transport: WebSocket } }
+  )
+}
 
 // All admin routes require super_admin role
 router.use(requireRole('super_admin'))
@@ -29,7 +31,7 @@ async function auditLog(action, targetType = null, targetId = null, metadata = {
 function makeAuditLogger(req) {
   return async (action, targetType = null, targetId = null, metadata = {}) => {
     try {
-      await supabase.from('admin_audit_log').insert({
+      await getSupabase().from('admin_audit_log').insert({
         admin_user_id: req.user?.id || null,
         action,
         target_type: targetType,
@@ -43,7 +45,7 @@ function makeAuditLogger(req) {
 // GET /api/admin/companies — list all companies with member counts
 router.get('/companies', async (_req, res) => {
   try {
-    const { data: companies, error } = await supabase
+    const { data: companies, error } = await getSupabase()
       .from('companies')
       .select('*')
       .order('created_at', { ascending: false })
@@ -74,7 +76,7 @@ router.get('/companies', async (_req, res) => {
 // GET /api/admin/users — list all customer users with workspace info
 router.get('/users', async (_req, res) => {
   try {
-    const { data: members, error } = await supabase
+    const { data: members, error } = await getSupabase()
       .from('company_members')
       .select('id, company_id, user_id, role, created_at, companies (name)')
 
@@ -83,7 +85,7 @@ router.get('/users', async (_req, res) => {
     // Fetch user emails from auth
     const enriched = await Promise.all((members || []).map(async (m) => {
       try {
-        const { data: { user } } = await supabase.auth.admin.getUserById(m.user_id)
+        const { data: { user } } = await getSupabase().auth.admin.getUserById(m.user_id)
         return {
           ...m,
           email: user?.email || m.user_id,
@@ -104,7 +106,7 @@ router.get('/users', async (_req, res) => {
 // GET /api/admin/sites — list all sites with company and owner info
 router.get('/sites', async (_req, res) => {
   try {
-    const { data: sites, error } = await supabase
+    const { data: sites, error } = await getSupabase()
       .from('sites')
       .select('id, site_key, name, domain, plan, created_at, onboarding_completed, company_id, owner_id, companies (name)')
       .order('created_at', { ascending: false })
@@ -113,7 +115,7 @@ router.get('/sites', async (_req, res) => {
 
     const enriched = await Promise.all((sites || []).map(async (s) => {
       try {
-        const { data: { user } } = await supabase.auth.admin.getUserById(s.owner_id)
+        const { data: { user } } = await getSupabase().auth.admin.getUserById(s.owner_id)
         return {
           ...s,
           owner_email: user?.email || s.owner_id,
@@ -142,7 +144,7 @@ router.post('/preview', async (req, res) => {
       return res.status(400).json({ success: false, data: null, error: 'site_id is required' })
     }
 
-    const { data: site, error } = await supabase
+    const { data: site, error } = await getSupabase()
       .from('sites')
       .select('id, site_key, name, domain, company_id, onboarding_completed, onboarding_state')
       .eq('id', site_id)
@@ -227,7 +229,7 @@ router.get('/preview/:siteKey', async (req, res) => {
     }
 
     // Look up site metadata
-    const { data: site, error: siteErr } = await supabase
+    const { data: site, error: siteErr } = await getSupabase()
       .from('sites')
       .select('id, site_key, name, domain, plan, created_at, onboarding_completed, onboarding_state')
       .eq('site_key', siteKey)
@@ -341,7 +343,7 @@ router.get('/site-detail', async (req, res) => {
       return res.status(400).json({ success: false, data: null, error: 'site_key is required' })
     }
 
-    const { data: site, error } = await supabase
+    const { data: site, error } = await getSupabase()
       .from('sites')
       .select('id, site_key, name, domain, plan, created_at, onboarding_completed, onboarding_state, company_id, owner_id, companies(name)')
       .eq('site_key', siteKey)
@@ -354,7 +356,7 @@ router.get('/site-detail', async (req, res) => {
     // Get owner email
     let ownerEmail = null
     try {
-      const { data: { user } } = await supabase.auth.admin.getUserById(site.owner_id)
+      const { data: { user } } = await getSupabase().auth.admin.getUserById(site.owner_id)
       ownerEmail = user?.email || null
     } catch { /* non-critical */ }
 
@@ -552,7 +554,7 @@ router.post('/feature-status/recheck', async (req, res) => {
 // GET /api/admin/audit-log — recent admin actions (last 100)
 router.get('/audit-log', async (req, res) => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('admin_audit_log')
       .select('*')
       .order('created_at', { ascending: false })
@@ -564,7 +566,7 @@ router.get('/audit-log', async (req, res) => {
       let adminEmail = null
       if (entry.admin_user_id) {
         try {
-          const { data: { user } } = await supabase.auth.admin.getUserById(entry.admin_user_id)
+          const { data: { user } } = await getSupabase().auth.admin.getUserById(entry.admin_user_id)
           adminEmail = user?.email || null
         } catch { /* */ }
       }
@@ -581,7 +583,7 @@ router.get('/audit-log', async (req, res) => {
 // GET /api/admin/qa-notes — list all QA notes
 router.get('/qa-notes', async (_req, res) => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('qa_notes')
       .select('*')
       .order('feature_key', { ascending: true })
@@ -606,7 +608,7 @@ router.post('/qa-notes', async (req, res) => {
       return res.status(400).json({ success: false, data: null, error: 'note_type must be safe_claim, watch, or misleading' })
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('qa_notes')
       .insert({
         feature_key: feature_key.trim(),
@@ -636,7 +638,7 @@ router.put('/qa-notes/:id', async (req, res) => {
     if (note_text !== undefined) updates.note_text = note_text.trim()
     if (note_type && ['safe_claim', 'watch', 'misleading'].includes(note_type)) updates.note_type = note_type
 
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('qa_notes')
       .update(updates)
       .eq('id', id)

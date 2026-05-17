@@ -1,11 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
-  { realtime: { transport: WebSocket } }
-)
+function getSupabase() {
+  return createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_KEY,
+    { global: { fetch }, realtime: { transport: WebSocket } }
+  )
+}
 
 // requireUserAuth — validates Supabase JWT and extracts user + role + company.
 // Sets req.user = { id, email, role, company_id }
@@ -22,7 +24,7 @@ export async function requireUserAuth(req, res, next) {
 
     const token = authHeader.split(' ')[1]
 
-    const { data: { user }, error: authErr } = await supabase.auth.getUser(token)
+    const { data: { user }, error: authErr } = await getSupabase().auth.getUser(token)
     if (authErr || !user) {
       return res.status(401).json({ success: false, data: null, error: 'Invalid or expired token' })
     }
@@ -35,7 +37,7 @@ export async function requireUserAuth(req, res, next) {
     }
 
     // Look up workspace membership
-    const { data: member } = await supabase
+    const { data: member } = await getSupabase()
       .from('company_members')
       .select('role, company_id')
       .eq('user_id', user.id)

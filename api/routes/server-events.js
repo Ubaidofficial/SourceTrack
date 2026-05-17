@@ -8,11 +8,13 @@ import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
 
 const router = Router()
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
-  { realtime: { transport: WebSocket } }
-)
+function getSupabase() {
+  return createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_KEY,
+    { global: { fetch }, realtime: { transport: WebSocket } }
+  )
+}
 
 router.post('/event', async (req, res) => {
   try {
@@ -24,7 +26,7 @@ router.post('/event', async (req, res) => {
     const rawKey = authHeader.split(' ')[1]
     const keyHash = createHash('sha256').update(rawKey).digest('hex')
 
-    const { data: apiKey, error: keyErr } = await supabase
+    const { data: apiKey, error: keyErr } = await getSupabase()
       .from('api_keys')
       .select('id, site_id')
       .eq('key_hash', keyHash)

@@ -6,11 +6,13 @@ import { queryHogQL } from '../lib/posthog.js'
 
 const router = Router()
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
-  { realtime: { transport: WebSocket } }
-)
+function getSupabase() {
+  return createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_KEY,
+    { global: { fetch }, realtime: { transport: WebSocket } }
+  )
+}
 
 function esc(str) {
   return str.replace(/'/g, "''")
@@ -23,7 +25,7 @@ router.get('/snippet', async (req, res) => {
       return res.status(400).json({ success: false, data: null, error: 'site_id is required' })
     }
 
-    const { data: site, error } = await supabase
+    const { data: site, error } = await getSupabase()
       .from('sites')
       .select('site_key, company_id, owner_id')
       .eq('id', siteId)

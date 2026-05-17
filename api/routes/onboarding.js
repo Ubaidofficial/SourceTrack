@@ -9,11 +9,13 @@ function esc(str) {
   return str.replace(/'/g, "''")
 }
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
-  { realtime: { transport: WebSocket } }
-)
+function getSupabase() {
+  return createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_KEY,
+    { global: { fetch }, realtime: { transport: WebSocket } }
+  )
+}
 
 const MAX_STEP = 6
 const VALID_BUSINESS_TYPES = ['ecommerce', 'saas', 'leadgen']
@@ -67,7 +69,7 @@ router.get('/status', async (req, res) => {
       return res.status(400).json({ success: false, data: null, error: 'site_id is required' })
     }
 
-    const { data: site, error } = await supabase
+    const { data: site, error } = await getSupabase()
       .from('sites')
       .select('id, site_key, onboarding_completed, onboarding_state, company_id, owner_id')
       .eq('id', siteId)
@@ -128,7 +130,7 @@ router.post('/update', async (req, res) => {
       return res.status(400).json({ success: false, data: null, error: `step must be an integer between 1 and ${MAX_STEP}` })
     }
 
-    const { data: site, error: fetchErr } = await supabase
+    const { data: site, error: fetchErr } = await getSupabase()
       .from('sites')
       .select('id, onboarding_state, onboarding_completed, company_id, owner_id')
       .eq('id', site_id)
@@ -221,7 +223,7 @@ router.post('/complete', async (req, res) => {
       return res.status(400).json({ success: false, data: null, error: 'site_id is required' })
     }
 
-    const { data: site, error: fetchErr } = await supabase
+    const { data: site, error: fetchErr } = await getSupabase()
       .from('sites')
       .select('id, site_key, onboarding_state, onboarding_completed')
       .eq('id', site_id)

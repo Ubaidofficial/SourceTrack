@@ -4,11 +4,13 @@ import WebSocket from 'ws'
 
 const router = Router()
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
-  { realtime: { transport: WebSocket } }
-)
+function getSupabase() {
+  return createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_KEY,
+    { global: { fetch }, realtime: { transport: WebSocket } }
+  )
+}
 
 // POST /api/reports/saved — save a new report config
 // Body: { name, config } — config is a JSON object with report parameters
@@ -24,7 +26,7 @@ router.post('/saved', async (req, res) => {
       return res.status(400).json({ success: false, data: null, error: 'Report config is required' })
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('saved_reports')
       .insert({
         user_id: req.user.id,
@@ -54,7 +56,7 @@ router.post('/saved', async (req, res) => {
 // Auth: requireUserAuth + validateSiteKey + requireSiteMembership applied at parent mount
 router.get('/saved', async (req, res) => {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('saved_reports')
       .select('*')
       .eq('user_id', req.user.id)
@@ -88,7 +90,7 @@ router.put('/saved/:id', async (req, res) => {
       return res.status(400).json({ success: false, data: null, error: 'Report config is required' })
     }
 
-    const { data: existing, error: fetchErr } = await supabase
+    const { data: existing, error: fetchErr } = await getSupabase()
       .from('saved_reports')
       .select('id, user_id, site_id')
       .eq('id', id)
@@ -103,7 +105,7 @@ router.put('/saved/:id', async (req, res) => {
       return res.status(403).json({ success: false, data: null, error: 'You do not own this report' })
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('saved_reports')
       .update({
         name: name.trim(),
@@ -134,7 +136,7 @@ router.delete('/saved/:id', async (req, res) => {
       return res.status(400).json({ success: false, data: null, error: 'Report ID is required' })
     }
 
-    const { data: existing, error: fetchErr } = await supabase
+    const { data: existing, error: fetchErr } = await getSupabase()
       .from('saved_reports')
       .select('id, user_id, site_id')
       .eq('id', id)

@@ -5,11 +5,13 @@ import { validateSiteKey } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
 
 const router = Router()
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY,
-  { realtime: { transport: WebSocket } }
-)
+function getSupabase() {
+  return createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_KEY,
+    { global: { fetch }, realtime: { transport: WebSocket } }
+  )
+}
 
 function esc(str) {
   return str.replace(/'/g, "''")
@@ -189,7 +191,7 @@ router.patch('/:leadId/qualify', validateSiteKey, async (req, res) => {
     }
     const newStatus = VALID.includes(status) ? status : (req.body.qualified !== false ? 'sql' : 'rejected')
 
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('lead_qualifications')
       .upsert({
         site_id: req.site.id,

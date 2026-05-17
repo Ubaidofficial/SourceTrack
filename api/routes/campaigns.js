@@ -2,7 +2,7 @@ import express from 'express'
 import { getFlexibleReport } from '../lib/attribution-engine.js'
 import { createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { global: { fetch }, realtime: { transport: WebSocket } })
+function getSupabase() { return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { global: { fetch }, realtime: { transport: WebSocket } }) }
 
 const ALLOWED_DIMS = new Set(['source', 'medium', 'campaign', 'ai_source'])
 const MAX_DAYS = 365
@@ -40,7 +40,7 @@ async function overview(req, res) {
       getFlexibleReport(posthogSiteId, 'last_touch', dateFrom, dateTo, dimension, 'revenue', {}),
       getFlexibleReport(posthogSiteId, 'last_touch', dateFrom, dateTo, dimension, 'conversions', {}),
       getFlexibleReport(posthogSiteId, 'last_touch', prevDateFrom, prevDateTo, dimension, 'revenue', {}),
-      supabase.from('campaign_costs').select('campaign_name, spend').eq('site_id', req.site.id).gte('period_start', dateFrom).lte('period_end', dateTo)
+      getSupabase().from('campaign_costs').select('campaign_name, spend').eq('site_id', req.site.id).gte('period_start', dateFrom).lte('period_end', dateTo)
     ])
 
     const conversionsMap = {}
