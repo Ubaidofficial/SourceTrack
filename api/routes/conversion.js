@@ -3,7 +3,7 @@ import geoip from 'geoip-lite'
 import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
 import { dispatchWebhook } from '../lib/webhook.js'
-import { sendMetaCAPI, sendGoogleConversion, sendMicrosoftConversion, sendLinkedInConversion } from '../lib/conversion-sync.js'
+import { sendMetaCAPI, sendGoogleConversion, sendMicrosoftConversion, sendLinkedInConversion, sendTikTokConversion } from '../lib/conversion-sync.js'
 import { createClient as _capiClient } from '@supabase/supabase-js'
 import _ws from 'ws'
 
@@ -124,7 +124,7 @@ export async function conversion(req, res) {
     try {
       getCapiSupabase()
         .from('sites')
-        .select('meta_pixel_id,meta_capi_token,google_ads_customer_id,google_ads_conversion_action_id,google_ads_developer_token,microsoft_tag_id,microsoft_capi_token,linkedin_partner_id,linkedin_capi_token')
+        .select('meta_pixel_id,meta_capi_token,google_ads_customer_id,google_ads_conversion_action_id,google_ads_developer_token,microsoft_tag_id,microsoft_capi_token,linkedin_partner_id,linkedin_capi_token,tiktok_pixel_id,tiktok_access_token')
         .eq('id', req.site.id)
         .single()
         .then(({ data: capiSite }) => {
@@ -133,7 +133,8 @@ export async function conversion(req, res) {
             sendMetaCAPI(capiSite, { ...props, ip_address: req.ip }),
             sendGoogleConversion(capiSite, props),
             sendMicrosoftConversion(capiSite, props),
-            sendLinkedInConversion(capiSite, props)
+            sendLinkedInConversion(capiSite, props),
+            sendTikTokConversion(capiSite, { ...props, ip_address: req.ip })
           ]).then(results => results.forEach((r, i) => {
             if (r.status === 'rejected') console.error(`[CAPI ${i}]`, r.reason?.message)
           }))

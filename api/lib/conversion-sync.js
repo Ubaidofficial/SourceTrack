@@ -85,3 +85,46 @@ export async function sendLinkedInConversion(site, evt) {
   if (!r.ok) console.error('[LinkedIn CAPI] HTTP', r.status)
   return r.ok
 }
+
+export async function sendTikTokConversion(site, eventData) {
+  if (!site?.tiktok_pixel_id || !site?.tiktok_access_token) return
+  try {
+    const payload = {
+      pixel_code: site.tiktok_pixel_id,
+      event: 'CompletePayment',
+      event_time: Math.floor(Date.now() / 1000),
+      context: {
+        user: {
+          ttclid: eventData.ttclid || undefined,
+          ip: eventData.ip_address
+            ? createHash('sha256').update(eventData.ip_address).digest('hex')
+            : undefined
+        },
+        page: { url: eventData.page_url || undefined }
+      },
+      properties: {
+        currency: 'USD',
+        value: Number(eventData.conversion_value) || 0,
+        order_id: eventData.order_id || undefined,
+        content_type: eventData.conversion_type || 'product'
+      }
+    }
+    const res = await fetch('https://business-api.tiktok.com/open_api/v1.3/event/track/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Token': site.tiktok_access_token
+      },
+      body: JSON.stringify({
+        pixel_code: site.tiktok_pixel_id,
+        batch: [payload]
+      })
+    })
+    if (!res.ok) {
+      const err = await res.text()
+      console.error('[TikTokCAPI]', err)
+    }
+  } catch (e) {
+    console.error('[TikTokCAPI]', e.message)
+  }
+}
