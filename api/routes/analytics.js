@@ -22,6 +22,10 @@ router.post('/collect', async (req, res) => {
     if (!ua || BOT_UA_PATTERN.test(ua)) return res.json({ ok: true })
 
 
+    const supabase = getSupabase()
+    const { data: site } = await supabase.from('sites').select('id').eq('site_key', site_key).single()
+    if (!site) return res.status(404).json({ error: 'Site not found' })
+
     // Handle outbound clicks and custom events
     if (event_type === 'outbound_click' || event_type === 'custom') {
       await supabase.from('custom_events').insert({
@@ -31,8 +35,7 @@ router.post('/collect', async (req, res) => {
       })
       return res.json({ ok: true })
     }
-    const { data: site } = await supabase.from('sites').select('id').eq('site_key', site_key).single()
-    if (!site) return res.status(404).json({ error: 'Site not found' })
+
     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || ''
     const parser = new UAParser(ua)
     let country = null
