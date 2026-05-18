@@ -62,6 +62,8 @@ None in this session (all backend SQL handled via application code + existing ta
 - 6a6dce8: feat: add revenue per visitor metric
 - 9d4941f: feat: add UTM builder to settings
 - 5f4fbde: feat: weekly/monthly email reports via Resend
+- 6a7e69a: feat: add TikTok CAPI conversion sync
+- e402e85: docs: add implementation status log
 
 ## Still Requires Manual Action
 - Set STRIPE_SECRET_KEY in Railway
@@ -76,3 +78,11 @@ None in this session (all backend SQL handled via application code + existing ta
 - Visitor-based pricing migration
 - Super admin panel (after customer 5)
 - CAPI enrichment verification with real ad accounts (after customer 20)
+
+## Feature 1: TikTok CAPI
+Status: COMPLETE
+File: api/lib/conversion-sync.js — sendTikTokConversion added
+File: api/routes/conversion.js — wired into CAPI sync block
+SQL: tiktok_pixel_id, tiktok_access_token columns added to sites table
+Note: Requires customer to add TikTok Pixel ID and Access Token in Integrations page
+Commit: 6a7e69a
