@@ -120,28 +120,28 @@ const getKpiConfig = (businessType) => {
       { key: 'mrr_estimate',  label: 'MRR (est.)',    format: 'currency', emptyState: true },
       { key: 'ai_revenue',    label: 'AI Revenue',    format: 'currency' },
       { key: 'trial_to_paid', label: 'Trial → Paid', format: 'percent',  emptyState: true },
-      { key: 'best_cac',      label: 'Best CAC',      format: 'currency', emptyState: true },
+      { key: 'best_rpv',      label: 'Best Channel RPV', format: 'currency' },
     ]
     case 'ecommerce': return [
       { key: 'revenue',    label: 'Total Revenue', format: 'currency' },
       { key: 'aov',        label: 'AOV',           format: 'currency', emptyState: true },
       { key: 'orders',     label: 'Orders',        format: 'number' },
       { key: 'ai_roas',    label: 'AI ROAS',       format: 'number' },
-      { key: 'best_roas',  label: 'Best ROAS',     format: 'number',   emptyState: true },
+      { key: 'best_rpv',   label: 'Best Channel RPV', format: 'currency' },
     ]
     case 'leadgen': return [
       { key: 'total_leads', label: 'Total Leads', format: 'number' },
       { key: 'lead_growth', label: 'Lead Growth', format: 'percent' },
       { key: 'ai_leads',    label: 'AI Leads',    format: 'number' },
       { key: 'sql_percent', label: 'SQL %',       format: 'percent',  emptyState: true },
-      { key: 'best_cpl',    label: 'Best CPL',    format: 'currency', emptyState: true },
+      { key: 'best_rpv',    label: 'Best Channel RPV', format: 'currency' },
     ]
     default: return [
       { key: 'revenue',     label: 'Revenue',     format: 'currency' },
       { key: 'top_channel', label: 'Top Channel', format: 'text' },
       { key: 'conversion',  label: 'Conversion',  format: 'percent' },
       { key: 'cpc',         label: 'CPC',         format: 'currency' },
-      { key: 'roas',        label: 'ROAS / ROI',  format: 'number',   emptyState: true },
+      { key: 'best_rpv',    label: 'Best Channel RPV', format: 'currency' },
     ]
   }
 }
@@ -171,6 +171,8 @@ const enrichKpis = (kpis, businessType) => {
     conversions_prev:  kpis.conversions_prev  ?? null,
     sessions_prev:     kpis.sessions_prev     ?? null,
     total_leads_prev:  kpis.leads_prev        ?? null,  // leadgen alias
+    best_rpv_channel:  kpis.best_rpv_channel   ?? '—',
+    best_rpv:          kpis.best_rpv           ?? null,
   }
 }
 // ─────────────────────────────────────────────────────────────────────────────
@@ -428,7 +430,8 @@ export default function Dashboard() {
   const recentLeadsData = activeResults.slice(0, 10).map(r => ({
     source: r.dim_value || r.source || 'unknown',
     conversions: r.conversions || 0,
-    revenue: r.revenue || 0
+    revenue: r.revenue || 0,
+    rpv: r.rpv || 0
   }))
 
   const handleExport = () => {
@@ -595,6 +598,21 @@ export default function Dashboard() {
           {/* KPI Strip — T2.1: business-type aware with deltas */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             {kpiConfig.map((metric) => {
+              if (metric.key === 'best_rpv') {
+                const channel = enrichedKpis?.best_rpv_channel || '—'
+                const rpvValue = enrichedKpis?.best_rpv ?? null
+                return (
+                  <div key="best_rpv" className="metric-tile bg-white dark:bg-[#1A1D1D] rounded-xl p-5 shadow-sm border border-gray-100 dark:border-[#2A2E2E] flex flex-col gap-1">
+                    <p className="text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wide">Best Channel RPV</p>
+                    <p className="text-2xl font-semibold text-st-black dark:text-white tabular-nums truncate">{channel}</p>
+                    {rpvValue != null && (
+                      <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">
+                        ${rpvValue.toFixed(2)} per visitor
+                      </p>
+                    )}
+                  </div>
+                )
+              }
               const rawValue  = enrichedKpis?.[metric.key] ?? null
               const prevValue = enrichedKpis?.[metric.key + '_prev'] ?? null
               const isEmpty   = metric.emptyState === true && rawValue == null
@@ -718,6 +736,7 @@ export default function Dashboard() {
                     )},
                     { key: 'conversions', label: 'Conversions', render: (r) => r.conversions, cellClassName: 'text-right text-gray-600' },
                     { key: 'revenue', label: 'Revenue', render: (r) => `$${r.revenue.toFixed(0)}`, cellClassName: 'text-right font-medium text-st-black' },
+                    { key: 'rpv', label: 'Rev/Visitor', render: (r) => `$${r.rpv.toFixed(2)}`, cellClassName: 'text-right text-st-gray' },
                     { key: 'status', label: 'Status', render: () => <StatusBadge status="active" label="Active" />, cellClassName: 'text-right' }
                   ]}
                   rows={recentLeadsData}

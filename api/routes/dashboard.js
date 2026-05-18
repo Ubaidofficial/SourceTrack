@@ -127,6 +127,16 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     for (const r of revenueResults) {
       r.conversions = convByDim[r.dim_value] || 0
     }
+    // Merge session counts for RPV calculation
+    const sessByDim = {}
+    for (const r of sessionsResults) {
+      sessByDim[r.dim_value] = r.sessions
+    }
+    for (const r of revenueResults) {
+      const sessions = sessByDim[r.dim_value] || 0
+      r.sessions = sessions
+      r.rpv = sessions > 0 ? parseFloat((r.revenue / sessions).toFixed(2)) : 0
+    }
     const aiConvByDim = {}
     for (const r of aiConvResults) {
       aiConvByDim[r.dim_value] = r.ai_conversions
@@ -156,6 +166,9 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     const sqlPercent = totalLeadCount > 0 ? parseFloat(((sqlCount || 0) / totalLeadCount * 100).toFixed(1)) : 0
     const convRate = totalSessions > 0 ? (totalConversions / totalSessions) * 100 : 0
     const avgValue = totalConversions > 0 ? totalRevenue / totalConversions : 0
+    const bestRPV = revenueResults.length > 0
+      ? revenueResults.reduce((best, r) => (r.rpv || 0) > (best.rpv || 0) ? r : best, { rpv: 0, dim_value: '—' })
+      : { rpv: 0, dim_value: '—' }
 
     const prevRevenue      = prevRevenueResults.reduce((sum, r) => sum + (r.revenue || 0), 0)
     const prevLeads        = prevLeadsResults.reduce((sum, r) => sum + (r.leads || 0), 0)
@@ -228,7 +241,9 @@ router.get('/overview', validateSiteKey, async (req, res) => {
           ai_revenue_prev: prevAIRevenue,
           ai_revenue_share: aiShareTotal,
           conversion_rate: convRate,
-          avg_value: avgValue
+          avg_value: avgValue,
+          best_rpv_channel: bestRPV.dim_value,
+          best_rpv: bestRPV.rpv
         },
         models: modelRevenues,
         ai_sources: aiRevResults.slice(0, 5),
