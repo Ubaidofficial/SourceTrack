@@ -1,5 +1,3 @@
-import { createClient } from '@supabase/supabase-js'
-import WebSocket from 'ws'
 // TODO: Add attribution window support
 // - Add columns: first_touch_source_7d, first_touch_source_30d, etc.
 // - Modify touchpoints query to calculate for each window
