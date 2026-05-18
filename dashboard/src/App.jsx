@@ -64,6 +64,7 @@ export default function App() {
             <Route path="/integrations" element={<ProtectedRoute><Integrations /></ProtectedRoute>} />
             <Route path="/report-builder" element={<ProtectedRoute><ReportBuilder /></ProtectedRoute>} />
             <Route path="/journey" element={<ProtectedRoute><Journey /></ProtectedRoute>} />
+            <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
             <Route path="/ai-chat" element={<ProtectedRoute><AIChat /></ProtectedRoute>} />
             <Route path="/ai-analytics" element={<ProtectedRoute><AIAnalytics /></ProtectedRoute>} />
             <Route path="/snippet" element={<ProtectedRoute><Snippet /></ProtectedRoute>} />
