@@ -180,6 +180,20 @@ async function processSite(site) {
   return { processed, failed }
 }
 
+function calculateConfidence(touchpoints, channel) {
+  let score = 30
+  if (touchpoints.length > 0) score += 20
+  const ft = touchpoints[0]
+  if (ft?.utm_source)  score += 15
+  if (ft?.utm_medium)  score += 5
+  if (ft?.utm_campaign) score += 5
+  if (ft?.gclid || ft?.fbclid || ft?.msclkid || ft?.ttclid) score += 20
+  if (ft?.ai_source)   score += 10
+  if (touchpoints.length >= 3) score += 5
+  if (channel === 'Direct') score -= 15
+  return Math.min(100, Math.max(0, score))
+}
+
 async function processConversion(site, conversion) {
   const convValue = parseFloat(conversion.conversion_value || 0)
   
@@ -284,6 +298,13 @@ async function processConversion(site, conversion) {
       gclid: touchpoints[0]?.gclid,
       fbclid: touchpoints[0]?.fbclid
     }),
+    attribution_confidence: confidence,
+    confidence_signals: JSON.stringify({
+      has_utm:       !!(touchpoints[0]?.utm_source),
+      has_click_id:  !!(touchpoints[0]?.gclid || touchpoints[0]?.fbclid),
+      has_ai_source: !!(touchpoints[0]?.ai_source),
+      touchpoint_count: touchpoints.length
+    }),
     channel_30d: (() => {
       const tp30 = touchpoints.filter(tp => new Date(tp.timestamp) >= new Date(new Date(conversion.timestamp) - 30 * 86400000))
       const first30 = tp30[0]
@@ -299,6 +320,8 @@ async function processConversion(site, conversion) {
     })()
   }
   
+  const confidence = calculateConfidence(touchpoints, record.first_touch_channel || record.channel)
+
   const { error } = await supabase
     .from('attributed_conversions')
     .upsert(record, { onConflict: 'site_id,conversion_event_id' })
