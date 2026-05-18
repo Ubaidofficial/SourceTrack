@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { getBillingPortal } from '../lib/api'
-import { Copy, Check, ExternalLink, Globe, Link2, CreditCard } from 'lucide-react'
+import { Copy, Check, ExternalLink, Globe, Link2, CreditCard, Link } from 'lucide-react'
+import UTMBuilder from '../components/UTMBuilder'
 
 export default function Settings() {
   const { user } = useAuth()
@@ -240,6 +241,16 @@ export default function Settings() {
             </a>
           </div>
         )}
+      </section>
+
+      {/* ── UTM Builder ────────────────────────────────────────────────── */}
+      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <Link className="w-4 h-4 text-st-gray dark:text-gray-400" />
+          <h3 className="text-sm font-bold text-st-black dark:text-white">UTM Builder</h3>
+        </div>
+        <p className="text-xs text-st-gray dark:text-gray-400">Generate tagged URLs for accurate campaign tracking. All parameters are lowercased automatically.</p>
+        <UTMBuilder />
       </section>
     </div>
   )
