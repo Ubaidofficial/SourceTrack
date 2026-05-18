@@ -108,6 +108,12 @@ export async function conversion(req, res) {
       if (fn.length > 0) props.form_name = fn
     }
 
+    const orderId = req.body.order_id || req.body.orderId || null
+    const externalEventId = orderId
+      ? `${req.site.id}:${orderId}:${props.conversion_type || 'conversion'}`
+      : null
+    props.external_event_id = externalEventId
+
     ph.capture({
       distinctId: req.body.anonymous_id || uuidv4(),
       event: '$conversion',
