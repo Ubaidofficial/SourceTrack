@@ -15,10 +15,10 @@ function getSupabase() {
 
 // Monthly lead limits per plan (unique sessions counted from pageviews table)
 const PLAN_LIMITS = {
-  trial:   50,   // same as Starter during trial
-  starter: 50,
-  pro:     200,
-  agency:  500
+  trial:   200,   // same as Starter during trial
+  starter: 1000,
+  pro:     4000,
+  agency:  10000
 }
 
 // Returns start of current calendar month as ISO string
