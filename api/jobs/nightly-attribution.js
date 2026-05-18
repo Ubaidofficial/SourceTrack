@@ -258,6 +258,23 @@ async function processConversion(site, conversion) {
     touchpoint_count: touchpoints.length,
     
     processing_version: '1.0',
+    first_touch_channel: channelFromEvent({
+      utm_source: touchpoints[0]?.utm_source,
+      utm_medium: touchpoints[0]?.utm_medium,
+      referrer: touchpoints[0]?.referrer,
+      ai_source: touchpoints[0]?.ai_source,
+      derived_source: touchpoints[0]?.derived_source,
+      gclid: touchpoints[0]?.gclid,
+      fbclid: touchpoints[0]?.fbclid
+    }),
+    last_touch_channel: channelFromEvent({
+      utm_source: touchpoints[touchpoints.length - 1]?.utm_source,
+      utm_medium: touchpoints[touchpoints.length - 1]?.utm_medium,
+      referrer:   touchpoints[touchpoints.length - 1]?.referrer,
+      ai_source:  touchpoints[touchpoints.length - 1]?.ai_source,
+      gclid:      touchpoints[touchpoints.length - 1]?.gclid,
+      fbclid:     touchpoints[touchpoints.length - 1]?.fbclid,
+    }),
     channel: channelFromEvent({
       utm_source: touchpoints[0]?.utm_source,
       utm_medium: touchpoints[0]?.utm_medium,
