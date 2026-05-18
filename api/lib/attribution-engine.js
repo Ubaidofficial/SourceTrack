@@ -53,16 +53,29 @@ async function lastTouchAttribution(siteId, dateFrom, dateTo) {
 
   const sql = `
     SELECT
-      COALESCE(NULLIF(properties.utm_source, ''), 'direct') AS source,
-      COALESCE(NULLIF(properties.utm_medium, ''), 'none') AS medium,
-      properties.utm_campaign AS campaign,
-      count() AS conversions,
-      SUM(toFloatOrZero(toString(properties.conversion_value))) AS revenue
-    FROM events
-    WHERE properties.site_id = '${esc(siteId)}'
-      AND event = '$conversion'
-      AND timestamp >= toDateTime('${fromDate}')
-      AND timestamp <= toDateTime('${toDate}')
+      COALESCE(NULLIF(lt.utm_source, ''), 'direct') AS source,
+      COALESCE(NULLIF(lt.utm_medium, ''), 'none')   AS medium,
+      COALESCE(lt.utm_campaign, '')                  AS campaign,
+      count()                                         AS conversions,
+      SUM(toFloatOrZero(toString(e.properties.conversion_value))) AS revenue
+    FROM events e
+    LEFT JOIN (
+      SELECT
+        distinct_id,
+        argMax(properties.utm_source,   timestamp) AS utm_source,
+        argMax(properties.utm_medium,   timestamp) AS utm_medium,
+        argMax(properties.utm_campaign, timestamp) AS utm_campaign
+      FROM events
+      WHERE properties.site_id = '${esc(siteId)}'
+        AND event = '$pageview'
+        AND timestamp >= toDateTime('${fromDate}')
+        AND timestamp <= toDateTime('${toDate}')
+      GROUP BY distinct_id
+    ) lt ON e.distinct_id = lt.distinct_id
+    WHERE e.properties.site_id = '${esc(siteId)}'
+      AND e.event = '$conversion'
+      AND e.timestamp >= toDateTime('${fromDate}')
+      AND e.timestamp <= toDateTime('${toDate}')
     GROUP BY source, medium, campaign
     ORDER BY revenue DESC
     LIMIT 50000
