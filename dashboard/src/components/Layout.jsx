@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
 import { supabase } from '../lib/supabase'
 
 const navItems = [
@@ -39,28 +40,12 @@ const PAGE_TITLES = {
 
 export default function Layout({ children }) {
   const { signOut, user, role } = useAuth()
+  const { theme, toggleTheme } = useTheme()
   const navigate = useNavigate()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [aiChatOpen, setAiChatOpen]   = useState(false)
   const [trialInfo, setTrialInfo]     = useState(null)
-  const [dark, setDark] = useState(() => {
-    if (typeof window === 'undefined') return false
-    return localStorage.getItem('st-dark') === 'true' ||
-      (!localStorage.getItem('st-dark') && window.matchMedia('(prefers-color-scheme: dark)').matches)
-  })
-
-  useEffect(() => {
-    const root = document.documentElement
-
-    if (location.pathname === '/onboarding') {
-      root.classList.remove('dark')
-      return
-    }
-
-    root.classList.toggle('dark', dark)
-    localStorage.setItem('st-dark', String(dark))
-  }, [dark, location.pathname])
 
   useEffect(() => {
     if (!user) return
@@ -97,7 +82,7 @@ export default function Layout({ children }) {
 
   return (
     <>
-    <div className="flex h-screen bg-[#F9FAFB]">
+    <div className="flex h-screen bg-gray-50 dark:bg-st-black">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />
@@ -105,18 +90,18 @@ export default function Layout({ children }) {
 
       {/* Sidebar */}
       <aside className={`
-        fixed lg:static inset-y-0 left-0 z-50 w-60 bg-white dark:bg-[#1A1D1D] border-r border-gray-200 dark:border-[#333838] flex flex-col
+        fixed lg:static inset-y-0 left-0 z-50 w-60 bg-white dark:bg-[#1A1C1C] border-r border-gray-200 dark:border-gray-800 flex flex-col
         transform transition-transform duration-200 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
         lg:translate-x-0
       `}>
-        <div className="flex items-center justify-between h-14 px-4 border-b border-gray-200">
+        <div className="flex items-center justify-between h-14 px-4 border-b border-gray-200 dark:border-gray-800">
           <div className="flex items-center gap-2">
-            <Bot className="w-6 h-6 text-st-black" />
-            <h1 className="text-lg font-bold text-st-black">SourceTrack</h1>
+            <Bot className="w-6 h-6 text-st-black dark:text-white" />
+            <h1 className="text-lg font-bold text-st-black dark:text-white">SourceTrack</h1>
           </div>
           <button className="lg:hidden" onClick={() => setSidebarOpen(false)}>
-            <X className="w-5 h-5 text-st-gray" />
+            <X className="w-5 h-5 text-st-gray dark:text-gray-400" />
           </button>
         </div>
 
@@ -129,8 +114,8 @@ export default function Layout({ children }) {
               className={({ isActive }) =>
                 `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-st-lime/10 dark:bg-st-lime/5 text-st-black'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#252929] hover:text-st-black dark:hover:text-white'
+                    ? 'bg-st-lime text-st-black'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-st-black dark:hover:text-white'
                 }`
               }
             >
@@ -145,8 +130,8 @@ export default function Layout({ children }) {
               className={({ isActive }) =>
                 `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-st-lime/20 dark:bg-st-lime/5 text-st-black'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#252929] hover:text-st-black dark:hover:text-white'
+                    ? 'bg-st-lime text-st-black'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-st-black dark:hover:text-white'
                 }`
               }
             >
@@ -156,11 +141,11 @@ export default function Layout({ children }) {
           )}
         </nav>
 
-        <div className="p-3 border-t border-gray-200">
+        <div className="p-3 border-t border-gray-200 dark:border-gray-800">
           <div className="text-xs text-st-gray dark:text-gray-400 mb-1 truncate">{user?.email}</div>
           <button
             onClick={handleSignOut}
-            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-100"
+            className="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
           >
             <LogOut className="w-4 h-4" />
             Sign out
@@ -171,36 +156,42 @@ export default function Layout({ children }) {
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top header bar */}
-        <header className="h-14 flex items-center justify-between px-6 bg-white dark:bg-[#1A1D1D] border-b border-gray-200 dark:border-[#333838] flex-shrink-0">
+        <header className="h-14 flex items-center justify-between px-6 bg-white dark:bg-[#1A1C1C] border-b border-gray-200 dark:border-gray-800 flex-shrink-0">
           <div className="flex items-center gap-3">
             <button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
-              <Menu className="w-5 h-5 text-gray-600" />
+              <Menu className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             </button>
             {pageTitle && (
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold text-st-black">{pageTitle}</h2>
+                <h2 className="text-sm font-semibold text-st-black dark:text-white">{pageTitle}</h2>
                 {location.pathname === '/dashboard' && (
-                  <span className="px-2 py-0.5 text-xs font-medium bg-st-lime/20 dark:bg-st-lime/5 text-st-black dark:text-white rounded-full">Live</span>
+                  <span className="px-2 py-0.5 text-xs font-medium bg-st-lime/20 text-st-black rounded-full">Live</span>
                 )}
               </div>
             )}
           </div>
           <div className="flex items-center gap-3">
+            {/* Theme Toggle */}
             <button
-              onClick={() => setDark(d => !d)}
-              className="p-2 rounded-lg text-st-gray dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#252929] transition-colors"
-              aria-label="Toggle dark mode"
+              onClick={toggleTheme}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              aria-label="Toggle theme"
             >
-              {dark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              {theme === 'dark' ? (
+                <Sun className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              ) : (
+                <Moon className="w-4 h-4 text-gray-600" />
+              )}
             </button>
+            
             {trialInfo !== null && (
               trialInfo.daysLeft > 3 ? (
-                <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 px-2.5 py-1 rounded-full">
+                <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
                   <AlertTriangle className="w-3 h-3" />
                   {trialInfo.daysLeft} day{trialInfo.daysLeft === 1 ? '' : 's'} left in trial
                 </span>
               ) : trialInfo.daysLeft > 0 ? (
-                <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 bg-red-50 dark:bg-red-900/20 border border-red-200 px-2.5 py-1 rounded-full animate-pulse">
+                <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 px-2.5 py-1 rounded-full animate-pulse">
                   <AlertTriangle className="w-3 h-3" />
                   {trialInfo.daysLeft} day{trialInfo.daysLeft === 1 ? '' : 's'} left — upgrade now
                 </span>
@@ -214,7 +205,7 @@ export default function Layout({ children }) {
             {trialInfo !== null && (
               <button
                 onClick={() => navigate('/settings')}
-                className="hidden sm:block text-xs font-semibold bg-st-black text-white px-3 py-1.5 rounded-lg hover:bg-st-black/90 transition-colors"
+                className="hidden sm:block text-xs font-semibold bg-st-black dark:bg-white text-white dark:text-st-black px-3 py-1.5 rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 transition-colors"
               >
                 Upgrade
               </button>
@@ -227,7 +218,7 @@ export default function Layout({ children }) {
         </main>
       </div>
 
-      {/* ── AI Chat Bubble + Slide-in Panel ─────────────────────────── */}
+      {/* AI Chat Bubble + Slide-in Panel */}
       {location.pathname !== '/onboarding' && (
         <>
           {/* Bubble button */}
@@ -246,15 +237,15 @@ export default function Layout({ children }) {
           </button>
 
           {/* Slide-in panel */}
-          <div className={`fixed bottom-0 right-0 z-40 flex flex-col bg-white dark:bg-[#1A1D1D] border-l border-t border-gray-200 dark:border-[#333838] shadow-2xl rounded-tl-2xl transition-all duration-300 ease-in-out ${
+          <div className={`fixed bottom-0 right-0 z-40 flex flex-col bg-white dark:bg-[#1A1C1C] border-l border-t border-gray-200 dark:border-gray-800 shadow-2xl rounded-tl-2xl transition-all duration-300 ease-in-out ${
             aiChatOpen ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
           }`} style={{ width: 400, height: '70vh', maxHeight: 600 }}>
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-[#2A2E2E] flex-shrink-0">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex-shrink-0">
               <div className="flex items-center gap-2">
-                <Bot className="w-4 h-4 text-st-black" />
-                <span className="text-sm font-semibold text-st-black">AI Analytics Chat</span>
+                <Bot className="w-4 h-4 text-st-black dark:text-white" />
+                <span className="text-sm font-semibold text-st-black dark:text-white">AI Analytics Chat</span>
               </div>
-              <button onClick={() => setAiChatOpen(false)} className="p-1 text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white dark:text-white rounded">
+              <button onClick={() => setAiChatOpen(false)} className="p-1 text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white rounded">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -267,7 +258,7 @@ export default function Layout({ children }) {
   )
 }
 
-// ── Inline AI Chat Panel ───────────────────────────────────────────────────
+// Inline AI Chat Panel
 import { useRef } from 'react'
 import { fetchApi } from '../lib/api'
 
@@ -328,8 +319,8 @@ function AIChatPanel() {
           <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${
               m.role === 'user'
-                ? 'bg-st-black text-white rounded-br-sm'
-                : 'bg-gray-100 dark:bg-[#252929] text-st-black dark:text-white rounded-bl-sm'
+                ? 'bg-st-black dark:bg-white text-white dark:text-st-black rounded-br-sm'
+                : 'bg-gray-100 dark:bg-gray-800 text-st-black dark:text-white rounded-bl-sm'
             }`}>
               {m.content}
             </div>
@@ -337,11 +328,11 @@ function AIChatPanel() {
         ))}
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-gray-100 dark:bg-[#252929] rounded-2xl rounded-bl-sm px-3 py-2">
+            <div className="bg-gray-100 dark:bg-gray-800 rounded-2xl rounded-bl-sm px-3 py-2">
               <div className="flex gap-1">
-                <span className="w-1.5 h-1.5 bg-st-gray rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-1.5 h-1.5 bg-st-gray rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-1.5 h-1.5 bg-st-gray rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <span className="w-1.5 h-1.5 bg-st-gray dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-1.5 h-1.5 bg-st-gray dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-1.5 h-1.5 bg-st-gray dark:bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
             </div>
           </div>
@@ -350,7 +341,7 @@ function AIChatPanel() {
       </div>
 
       {/* Input */}
-      <div className="px-3 py-3 border-t border-gray-100 dark:border-[#2A2E2E] flex-shrink-0">
+      <div className="px-3 py-3 border-t border-gray-100 dark:border-gray-800 flex-shrink-0">
         <div className="flex gap-2">
           <input
             type="text"
@@ -359,12 +350,12 @@ function AIChatPanel() {
             onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
             placeholder={siteKey ? 'Ask about your data…' : 'Loading…'}
             disabled={!siteKey || loading}
-            className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-[#333838] rounded-xl focus:outline-none focus:ring-2 focus:ring-st-black/20 disabled:opacity-50"
+            className="flex-1 px-3 py-2 text-sm border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-50"
           />
           <button
             onClick={handleSend}
             disabled={!input.trim() || loading || !siteKey}
-            className="p-2 bg-st-black text-white rounded-xl hover:bg-st-black/90 disabled:opacity-40 flex-shrink-0"
+            className="p-2 bg-st-black dark:bg-white text-white dark:text-st-black rounded-xl hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-40 flex-shrink-0"
           >
             <Send className="w-4 h-4" />
           </button>
