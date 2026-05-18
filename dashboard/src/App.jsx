@@ -12,6 +12,7 @@ import AIChat from './pages/AIChat'
 import AIAnalytics from './pages/AIAnalytics'
 import Snippet from './pages/Snippet'
 import Settings from './pages/Settings'
+import Billing from './pages/Billing'
 import Onboarding from './pages/Onboarding'
 import EventDebugger from './pages/EventDebugger'
 import Leads from './pages/Leads'
@@ -70,6 +71,7 @@ export default function App() {
             <Route path="/snippet" element={<ProtectedRoute><Snippet /></ProtectedRoute>} />
             <Route path="/debugger" element={<ProtectedRoute><EventDebugger /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
             <Route path="/admin" element={<AdminRoute><Layout><Admin /></Layout></AdminRoute>} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />

@@ -2,7 +2,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, FileBarChart, Route, MessageSquare, Code, Bug, Settings,
   Users, BarChart3, Plug, LogOut, Menu, X, Bot, Shield, TrendingUp, Activity,
-  AlertTriangle, Send, Sun, Moon
+  AlertTriangle, Send, Sun, Moon, CreditCard
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
@@ -20,7 +20,8 @@ const navItems = [
   { to: '/integrations', label: 'Integrations', icon: Plug },
   { to: '/snippet', label: 'Install', icon: Code },
   { to: '/debugger', label: 'Live Events', icon: Bug },
-  { to: '/settings', label: 'Settings', icon: Settings }
+  { to: '/settings', label: 'Settings', icon: Settings },
+  { to: '/billing', label: 'Billing', icon: CreditCard }
 ]
 
 const PAGE_TITLES = {
