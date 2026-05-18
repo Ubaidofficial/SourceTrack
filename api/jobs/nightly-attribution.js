@@ -195,7 +195,11 @@ async function processConversion(site, conversion) {
       properties.utm_medium,
       properties.utm_campaign,
       properties.referrer,
-      properties.ai_source
+      properties.ai_source,
+      properties.gclid,
+      properties.gbraid,
+      properties.fbclid,
+      properties.msclkid
     FROM events
     WHERE event = '$pageview'
       AND distinct_id = '${conversion.distinct_id}'
@@ -222,6 +226,10 @@ async function processConversion(site, conversion) {
     utm_campaign: row[3] || null,
     referrer: row[4] || null,
     ai_source: row[5] || null,
+    gclid:    row[6]  || null,
+    gbraid:   row[7]  || null,
+    fbclid:   row[8]  || null,
+    msclkid:  row[9]  || null,
     derived_source: row[1] || row[5] || (row[4] ? (() => { try { return new URL(row[4]).hostname.replace('www.', '') } catch (_e) { return null } })() : null) || 'direct'
   }))
   
@@ -256,8 +264,8 @@ async function processConversion(site, conversion) {
       referrer: touchpoints[0]?.referrer,
       ai_source: touchpoints[0]?.ai_source,
       derived_source: touchpoints[0]?.derived_source,
-      gclid: touchpoints[0]?.utm_source === 'google' ? true : null,
-      fbclid: touchpoints[0]?.utm_source === 'facebook' ? true : null
+      gclid: touchpoints[0]?.gclid,
+      fbclid: touchpoints[0]?.fbclid
     }),
     channel_30d: (() => {
       const tp30 = touchpoints.filter(tp => new Date(tp.timestamp) >= new Date(new Date(conversion.timestamp) - 30 * 86400000))
@@ -267,7 +275,9 @@ async function processConversion(site, conversion) {
         utm_medium: first30.utm_medium,
         referrer: first30.referrer,
         ai_source: first30.ai_source,
-        derived_source: first30.derived_source
+        derived_source: first30.derived_source,
+        gclid: first30.gclid,
+        fbclid: first30.fbclid
       }) : null
     })()
   }
