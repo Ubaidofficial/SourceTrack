@@ -94,11 +94,18 @@ async function collectSnapshot() {
 
     // 8. DeepSeek API
     check('deepseek', async () => {
-      const res = await deepseek.chat.completions.create({
-        model: 'deepseek-chat', max_tokens: 5,
-        messages: [{ role: 'user', content: 'ping' }]
-      })
-      return { model: res.model }
+      try {
+        const res = await deepseek.chat.completions.create({
+          model: 'deepseek-chat', max_tokens: 5,
+          messages: [{ role: 'user', content: 'ping' }]
+        })
+        return { model: res.model }
+      } catch (e) {
+        if (e.status === 402 || (e.message && e.message.includes('balance'))) {
+          return { warning: 'Insufficient balance — top up at platform.deepseek.com' }
+        }
+        throw e
+      }
     }),
 
     // 9. Env vars present
