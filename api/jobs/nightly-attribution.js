@@ -61,7 +61,7 @@ async function _writeJobRun({ status, conversions_processed, error_message, dura
 let _processed = 0
 const _t0 = Date.now()
 
-const supabase = createClient(
+const supabase = _createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
 )
