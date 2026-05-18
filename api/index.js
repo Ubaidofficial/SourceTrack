@@ -73,30 +73,6 @@ app.use((req, res, next) => {
 
   next();
 });
-// Session 70 global pixel CORS fix
-app.use((req, res, next) => {
-  if (
-    req.path === '/api/collect' ||
-    req.path === '/api/conversion' ||
-    req.path === '/api/identify' ||
-    req.path.includes('/track') ||
-    req.path.includes('/pageview') ||
-    req.path.includes('/tracking') ||
-    req.path.includes('/tracker')
-  ) {
-    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-  }
-
-  if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
-  }
-
-  next();
-});
 const PORT = process.env.PORT || 3000
 
 // Warn if PostHog vars missing but don't crash — Railway injects these at runtime
@@ -270,47 +246,9 @@ app.use((err, req, res, next) => {
 
 
 
-// Session 70 root /track alias
-// Tracker currently posts to /track, but backend routes are under /api.
-app.post('/track', express.json({ limit: '100kb' }), async (req, res) => {
-  try {
-    const fetch = global.fetch || (await import('node-fetch')).default;
-
-    const response = await fetch('http://localhost:' + (process.env.PORT || 3000) + '/api/track', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Origin': req.headers.origin || ''
-      },
-      body: JSON.stringify(req.body || {})
-    });
-
-    const text = await response.text();
-    res.status(response.status);
-
-    response.headers.forEach((value, key) => {
-      if (!['content-encoding', 'content-length', 'transfer-encoding'].includes(key.toLowerCase())) {
-        res.setHeader(key, value);
-      }
-    });
-
-    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-
-    try {
-      return res.json(JSON.parse(text));
-    } catch {
-      return res.send(text);
-    }
-  } catch (err) {
-    console.error('Root /track alias failed:', err);
-    return res.status(500).json({
-      success: false,
-      error: 'Track alias failed'
-    });
-  }
-});
+// Root /track alias — same handler as /api/track, no loopback
+app.post('/track', express.json({ limit: '100kb' }),
+  validateSiteKey, checkTierLimit, detectAIPlatform, track)
 
 
 
