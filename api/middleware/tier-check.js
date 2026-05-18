@@ -29,34 +29,18 @@ function monthStart() {
 
 // Count unique sessions this month for the site
 async function getMonthlyLeadCount(siteId) {
-  const cacheKey = `leads:${siteId}:${new Date().toISOString().slice(0, 7)}` // e.g. leads:123:2026-05
+  const cacheKey = `leads:${siteId}:${new Date().toISOString().slice(0, 7)}`
   const cached = countCache.get(cacheKey)
   if (cached !== undefined) return cached
-
   const supabase = getSupabase()
-  const { count, error } = await supabase
-    .from('pageviews')
-    .select('session_id', { count: 'exact', head: false })
-    .eq('site_id', siteId)
-    .gte('timestamp', monthStart())
-    .not('session_id', 'is', null)
-
-  // Count distinct sessions — Supabase returns all rows so we do a rough count
-  // For accuracy we use the count of distinct session_ids via a raw approach
-  if (error) return 0
-
-  // Since Supabase .select with count doesn't deduplicate, fetch session_ids and count unique
-  const { data: sessions } = await supabase
-    .from('pageviews')
-    .select('session_id')
-    .eq('site_id', siteId)
-    .gte('timestamp', monthStart())
-    .not('session_id', 'is', null)
-    .limit(10000)
-
-  const uniqueCount = new Set((sessions || []).map(r => r.session_id)).size
-  countCache.set(cacheKey, uniqueCount)
-  return uniqueCount
+  const { data, error } = await supabase
+    .rpc('count_monthly_sessions', {
+      p_site_id: siteId,
+      p_month_start: monthStart()
+    })
+  const count = error ? 0 : (data ?? 0)
+  countCache.set(cacheKey, count)
+  return count
 }
 
 // Middleware — call AFTER validateSiteKey (req.site must exist)
