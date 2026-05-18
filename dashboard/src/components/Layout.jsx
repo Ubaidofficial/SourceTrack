@@ -21,7 +21,8 @@ const navItems = [
   { to: '/snippet', label: 'Install', icon: Code },
   { to: '/debugger', label: 'Live Events', icon: Bug },
   { to: '/settings', label: 'Settings', icon: Settings },
-  { to: '/billing', label: 'Billing', icon: CreditCard }
+  { to: '/billing', label: 'Billing', icon: CreditCard },
+  { to: '/data-quality', label: 'Data Quality', icon: Shield }
 ]
 
 const PAGE_TITLES = {

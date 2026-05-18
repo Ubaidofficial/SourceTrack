@@ -13,6 +13,7 @@ import AIAnalytics from './pages/AIAnalytics'
 import Snippet from './pages/Snippet'
 import Settings from './pages/Settings'
 import Billing from './pages/Billing'
+import DataQuality from './pages/DataQuality'
 import Onboarding from './pages/Onboarding'
 import EventDebugger from './pages/EventDebugger'
 import Leads from './pages/Leads'
@@ -72,6 +73,7 @@ export default function App() {
             <Route path="/debugger" element={<ProtectedRoute><EventDebugger /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
+            <Route path="/data-quality" element={<ProtectedRoute><DataQuality /></ProtectedRoute>} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
             <Route path="/admin" element={<AdminRoute><Layout><Admin /></Layout></AdminRoute>} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
