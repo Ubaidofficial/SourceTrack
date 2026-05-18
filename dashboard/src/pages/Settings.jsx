@@ -228,7 +228,8 @@ export default function Settings() {
             </button>
             
               href={`${window.location.origin}/public/${shareToken}`}
-              target="_blank" rel="noopener noreferrer"
+              target="_blank"
+              rel="noopener noreferrer"
               className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
             >
               <ExternalLink className="w-4 h-4 text-st-gray dark:text-gray-400" />
