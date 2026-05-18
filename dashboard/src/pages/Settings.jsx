@@ -7,15 +7,15 @@ import { Copy, Check, ExternalLink, Globe, Link2, CreditCard } from 'lucide-reac
 export default function Settings() {
   const { user } = useAuth()
 
-  const [site, setSite]                 = useState(null)
-  const [name, setName]                 = useState('')
-  const [domain, setDomain]             = useState('')
-  const [saving, setSaving]             = useState(false)
+  const [site, setSite] = useState(null)
+  const [name, setName] = useState('')
+  const [domain, setDomain] = useState('')
+  const [saving, setSaving] = useState(false)
   const [shareEnabled, setShareEnabled] = useState(false)
-  const [shareToken, setShareToken]     = useState(null)
+  const [shareToken, setShareToken] = useState(null)
   const [shareLoading, setShareLoading] = useState(false)
-  const [shareCopied, setShareCopied]   = useState(false)
-  const [message, setMessage]           = useState('')
+  const [shareCopied, setShareCopied] = useState(false)
+  const [message, setMessage] = useState('')
   const [loadingPortal, setLoadingPortal] = useState(false)
 
   useEffect(() => { loadSite() }, [user])
