@@ -12,6 +12,7 @@ import AIChat from './pages/AIChat'
 import AIAnalytics from './pages/AIAnalytics'
 import Snippet from './pages/Snippet'
 import Settings from './pages/Settings'
+import ShareDashboard from './pages/ShareDashboard'
 import Billing from './pages/Billing'
 import DataQuality from './pages/DataQuality'
 import Onboarding from './pages/Onboarding'
@@ -76,6 +77,7 @@ export default function App() {
             <Route path="/data-quality" element={<ProtectedRoute><DataQuality /></ProtectedRoute>} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
             <Route path="/admin" element={<AdminRoute><Layout><Admin /></Layout></AdminRoute>} />
+            <Route path="/share/:token" element={<ShareDashboard />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </BrowserRouter>
