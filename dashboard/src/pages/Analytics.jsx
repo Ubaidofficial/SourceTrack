@@ -4,6 +4,7 @@ import { fetchApi } from '../lib/api'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { Eye, RefreshCw, ExternalLink, Zap, Sparkles, Copy, Check } from 'lucide-react'
+import { formatPercent } from '../utils/numbers'
 
 function fmtDuration(s) {
   if (!s) return '0s'
@@ -170,7 +171,7 @@ export default function Analytics() {
   const KPI_ITEMS = [
     { label: 'Pageviews',      value: kpis.pageviews?.toLocaleString()          ?? '—' },
     { label: 'Visitors',       value: kpis.unique_visitors?.toLocaleString()    ?? '—' },
-    { label: 'Bounce rate',    value: kpis.bounce_rate != null ? `${kpis.bounce_rate.toFixed(1)}%` : '—' },
+    { label: 'Bounce rate',    value: kpis.bounce_rate != null ? formatPercent(kpis.bounce_rate, 1) : '—' },
     { label: 'Duration',       value: fmtDuration(kpis.avg_duration_seconds) },
     { label: 'New visitors',   value: newVisitors > 0 ? `${newPct}%` : '—',
       sub: newVisitors > 0 ? `${newVisitors.toLocaleString()} new · ${returningVisitors.toLocaleString()} returning` : null },

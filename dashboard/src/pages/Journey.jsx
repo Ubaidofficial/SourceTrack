@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { getJourney } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 import { Search, Globe, Bot, MousePointerClick, Clock, MapPin, Filter, ArrowRight, GitBranch } from 'lucide-react'
+import { formatCurrencyDecimal } from '../utils/numbers'
 
 const FILTERS = [
   { key: 'all', label: 'All Events' },
@@ -111,13 +112,13 @@ export default function Journey() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-st-black">Visitor Journey</h2>
-        <p className="text-sm text-st-gray dark:text-gray-400 mt-1">Search for a visitor to see their full journey</p>
+        <p className="text-sm text-st-gray mt-1">Search for a visitor to see their full journey</p>
       </div>
 
       {/* Search */}
       <form
         onSubmit={(e) => { e.preventDefault(); setSearchId(visitorId.trim()) }}
-        className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#333838] p-4"
+        className="bg-white rounded-xl shadow-sm border border-gray-200 p-4"
       >
         <div className="flex gap-3">
           <div className="flex-1 relative">
@@ -149,10 +150,10 @@ export default function Journey() {
 
       {/* Results */}
       {data && !isLoading && (
-        <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#333838] p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="mb-4">
             <h3 className="text-sm font-semibold text-gray-700">Visitor: {data.visitor_id}</h3>
-            <p className="text-xs text-st-gray dark:text-gray-400 mt-1">
+            <p className="text-xs text-st-gray mt-1">
               {filteredEvents.length} of {data.event_count} events
               {filter !== 'all' ? ` (filtered)` : ''}
             </p>
@@ -161,7 +162,7 @@ export default function Journey() {
           {/* Filter toggles */}
           {events.length > 0 && (
             <div className="flex items-center gap-2 mb-4 pb-4 border-b border-gray-100">
-              <Filter className="w-4 h-4 text-st-gray dark:text-gray-400 flex-shrink-0" />
+              <Filter className="w-4 h-4 text-st-gray flex-shrink-0" />
               {FILTERS.map(f => (
                 <button
                   key={f.key}
@@ -169,7 +170,7 @@ export default function Journey() {
                   className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${
                     filter === f.key
                       ? 'bg-st-black text-white'
-                      : 'bg-gray-100 dark:bg-[#252929] text-gray-600 dark:text-gray-300 hover:bg-gray-200'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
                   {f.label}
@@ -183,7 +184,7 @@ export default function Journey() {
             <div className="mb-4 pb-4 border-b border-gray-100">
               <div className="flex items-center gap-1.5 mb-2">
                 <GitBranch className="w-3.5 h-3.5 text-st-gray" />
-                <span className="text-xs text-st-gray dark:text-gray-400 font-medium uppercase tracking-wider">
+                <span className="text-xs text-st-gray font-medium uppercase tracking-wider">
                   Pre-conversion path summary
                 </span>
               </div>
@@ -193,7 +194,7 @@ export default function Journey() {
                     <span className={`px-2 py-1 rounded font-medium ${
                       idx === pathSummary.segments.length - 1 && pathSummary.hasConversion
                         ? 'bg-lime-100 text-lime-800'
-                        : 'bg-gray-100 dark:bg-[#252929] text-gray-700'
+                        : 'bg-gray-100 text-gray-700'
                     }`}>
                       {seg}
                     </span>
@@ -203,7 +204,7 @@ export default function Journey() {
                   </span>
                 ))}
               </div>
-              <p className="text-xs text-st-gray dark:text-gray-400 mt-1.5">
+              <p className="text-xs text-st-gray mt-1.5">
                 Consecutive duplicate pages merged. Based on ordered event data only — not full path analytics.
               </p>
             </div>
@@ -212,11 +213,11 @@ export default function Journey() {
           {events.length === 0 ? (
             <p className="text-sm text-st-gray">No events found for this visitor.</p>
           ) : filteredEvents.length === 0 ? (
-            <p className="text-sm text-st-gray dark:text-gray-400 py-4 text-center">
+            <p className="text-sm text-st-gray py-4 text-center">
               No {filter === 'conversions' ? 'conversion' : filter === 'ai' ? 'AI-referred' : ''} events found for this visitor.
             </p>
           ) : (
-            <div className="relative pl-6 border-l-2 border-gray-200 dark:border-[#333838] space-y-5">
+            <div className="relative pl-6 border-l-2 border-gray-200 space-y-5">
               {filteredEvents.map((e, i) => {
                 const Icon = eventIcons[e.event] || Clock
                 return (
@@ -229,7 +230,7 @@ export default function Journey() {
                     <div className="pb-4">
                       <div className="flex items-center gap-2">
                         <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
-                          e.is_conversion ? 'bg-green-100 text-green-700' : 'bg-gray-100 dark:bg-[#252929] text-gray-600'
+                          e.is_conversion ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
                         }`}>
                           {e.event}
                         </span>
@@ -253,15 +254,15 @@ export default function Journey() {
                         )}
                       </div>
                       {e.page_url && (
-                        <p className="text-xs text-st-gray dark:text-gray-400 mt-1 truncate max-w-md">{e.page_url}</p>
+                        <p className="text-xs text-st-gray mt-1 truncate max-w-md">{e.page_url}</p>
                       )}
                       {e.utm_source && (
-                        <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">
+                        <p className="text-xs text-st-gray mt-0.5">
                           {[e.utm_source, e.utm_medium, e.utm_campaign].filter(Boolean).join(' / ')}
                         </p>
                       )}
                       {e.conversion_value != null && (
-                        <p className="text-xs font-medium text-green-600 mt-0.5">${Number(e.conversion_value).toFixed(2)}</p>
+                        <p className="text-xs font-medium text-green-600 mt-0.5">{formatCurrencyDecimal(e.conversion_value)}</p>
                       )}
                     </div>
                   </div>

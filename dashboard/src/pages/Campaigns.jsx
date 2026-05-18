@@ -9,6 +9,7 @@ import { Search, Download, TrendingUp, TrendingDown, Filter, Eye, Pencil, Check 
 import DashboardCard from '../components/DashboardCard'
 import MetricTile from '../components/MetricTile'
 import StatusBadge from '../components/StatusBadge'
+import { safeNumber, formatCurrency, formatCurrencyDecimal, formatNumber, formatMultiplier } from '../utils/numbers'
 import { Bar } from 'react-chartjs-2'
 import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend
@@ -149,25 +150,25 @@ export default function Campaigns() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-st-black">Campaigns & Attribution</h2>
-          <p className="text-sm text-st-gray dark:text-gray-400 mt-0.5">Performance by marketing channel with real-time revenue and conversion data</p>
+          <p className="text-sm text-st-gray mt-0.5">Performance by marketing channel with real-time revenue and conversion data</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => navigate('/report-builder')}
-            className="px-3 py-1.5 text-sm text-st-black dark:text-white bg-gray-50 dark:bg-[#111414] rounded-lg hover:bg-gray-100 dark:hover:bg-[#2A2E2E] font-medium">
+            className="px-3 py-1.5 text-sm text-st-black bg-gray-50 rounded-lg hover:bg-gray-100 font-medium">
             Advanced Report
           </button>
           <button onClick={() => {
             if (!site) return
             const params = new URLSearchParams({ site_key: site.site_key, model: 'last_touch', date_from: dateFrom, date_to: dateTo, group_by: activeDim, metric: 'revenue' })
             window.open(`/api/export/report?${params}`, '_blank')
-          }} className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-[#1A1D1D] border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] flex items-center gap-1.5">
+          }} className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5">
             <Download className="w-4 h-4" /> Export
           </button>
         </div>
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white dark:bg-[#1A1D1D] rounded-xl border border-gray-200 dark:border-[#333838] shadow-sm p-4">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex-1 min-w-[200px] relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-st-gray" />
@@ -178,11 +179,11 @@ export default function Campaigns() {
             />
           </div>
 
-          <div className="flex bg-gray-100 dark:bg-[#252929] rounded-lg p-1">
+          <div className="flex bg-gray-100 rounded-lg p-1">
             {DATE_RANGES.map(dr => (
               <button key={dr.label} onClick={() => setDateRange(dr.days)}
                 className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                  dateRange === dr.days ? 'bg-white dark:bg-[#1A1D1D] text-st-black dark:text-white shadow-sm' : 'text-st-gray dark:text-gray-400 hover:text-gray-700'
+                  dateRange === dr.days ? 'bg-white text-st-black shadow-sm' : 'text-st-gray hover:text-gray-700'
                 }`}>
                 {dr.label}
               </button>
@@ -209,7 +210,7 @@ export default function Campaigns() {
         {DIMENSIONS.map(d => (
           <button key={d.key} onClick={() => setActiveDim(d.key)}
             className={`px-3.5 py-1.5 text-sm rounded-lg font-medium transition-colors ${
-              activeDim === d.key ? 'bg-st-black text-white' : 'bg-gray-100 dark:bg-[#252929] text-gray-600 dark:text-gray-300 hover:bg-gray-200'
+              activeDim === d.key ? 'bg-st-black text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}>
             {d.label}
           </button>
@@ -218,14 +219,14 @@ export default function Campaigns() {
 
       {/* KPI Tiles */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <MetricTile label="Total Revenue" value={`$${(kpis?.total_revenue || 0).toFixed(0)}`} />
-        <MetricTile label="Conversions"   value={(kpis?.total_conversions || 0).toLocaleString()} />
-        <MetricTile label="Avg Value"     value={`$${(kpis?.avg_value || 0).toFixed(2)}`} />
-        <MetricTile label="Active Channels" value={(kpis?.active_channels || 0).toLocaleString()} />
+        <MetricTile label="Total Revenue" value={formatCurrency(kpis?.total_revenue)} />
+        <MetricTile label="Conversions"   value={formatNumber(kpis?.total_conversions)} />
+        <MetricTile label="Avg Value"     value={formatCurrencyDecimal(kpis?.avg_value)} />
+        <MetricTile label="Active Channels" value={formatNumber(kpis?.active_channels)} />
         {(() => {
           const totalSpend = Object.values(spendMap).reduce((s, v) => s + (Number(v) || 0), 0)
-          const totalRev   = kpis?.total_revenue || 0
-          const roas = totalSpend > 0 ? (totalRev / totalSpend).toFixed(2) + 'x' : '—'
+          const totalRev   = safeNumber(kpis?.total_revenue, 0)
+          const roas = totalSpend > 0 ? formatMultiplier(totalRev / totalSpend) : '—'
           return <MetricTile label="Blended ROAS" value={roas} isEmpty={totalSpend === 0} />
         })()}
       </div>
@@ -251,31 +252,31 @@ export default function Campaigns() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wider">
+                    <th className="text-left py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
                       {DIMENSIONS.find(d => d.key === activeDim)?.label || 'Name'}
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
                       Revenue
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
                       Conversions
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
                       Avg Value
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
                       Trend
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
                       Spend ✏️
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
                       CPL
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
                       ROAS
                     </th>
                   </tr>
@@ -283,21 +284,21 @@ export default function Campaigns() {
                 <tbody className="divide-y divide-gray-100">
                   {rows.map((r, i) => {
                     return (
-                      <tr key={i} className="hover:bg-gray-50 dark:hover:bg-[#252929] transition-colors">
+                      <tr key={i} className="hover:bg-gray-50 transition-colors">
                         <td className="py-3 px-4">
-                          <p className="text-st-black dark:text-white font-medium">{r.name || 'unknown'}</p>
+                          <p className="text-st-black font-medium">{r.name || 'unknown'}</p>
                         </td>
                         <td className="py-3 px-4 text-right">
                           <StatusBadge status={r.status} label={statusLabel(r.status)} />
                         </td>
                         <td className="py-3 px-4 text-right font-semibold text-st-black">
-                          ${(r.revenue || 0).toFixed(0)}
+                          {formatCurrency(r.revenue)}
                         </td>
                         <td className="py-3 px-4 text-right text-gray-600">
-                          {r.conversions || 0}
+                          {safeNumber(r.conversions, 0)}
                         </td>
                         <td className="py-3 px-4 text-right text-st-gray">
-                          ${(r.avg_value || 0).toFixed(2)}
+                          {formatCurrencyDecimal(r.avg_value)}
                         </td>
                         <td className="py-3 px-4 text-right">
                           {editingSpend === r.name ? (
@@ -316,8 +317,8 @@ export default function Campaigns() {
                             </div>
                           ) : (
                             <div className="flex items-center justify-end gap-1 group">
-                              <span className="text-gray-600">{spendMap[r.name] ? `$${Number(spendMap[r.name]).toFixed(0)}` : '—'}</span>
-                              <button onClick={() => { setEditingSpend(r.name); setSpendInput(spendMap[r.name] || '') }} className="opacity-0 group-hover:opacity-100 text-st-gray dark:text-gray-400 hover:text-gray-600">
+                              <span className="text-gray-600">{spendMap[r.name] ? formatCurrency(spendMap[r.name]) : '—'}</span>
+                              <button onClick={() => { setEditingSpend(r.name); setSpendInput(spendMap[r.name] || '') }} className="opacity-0 group-hover:opacity-100 text-st-gray hover:text-gray-600">
                                 <Pencil className="w-3 h-3" />
                               </button>
                             </div>
@@ -325,12 +326,12 @@ export default function Campaigns() {
                         </td>
                         <td className="py-3 px-4 text-right text-gray-600">
                           {spendMap[r.name] && spendMap[r.name] > 0 && r.conversions > 0
-                            ? <span className="text-xs font-medium">${(spendMap[r.name] / r.conversions).toFixed(0)}</span>
+                            ? <span className="text-xs font-medium">{formatCurrency(spendMap[r.name] / safeNumber(r.conversions, 1))}</span>
                             : <span className="text-gray-300">—</span>}
                         </td>
                         <td className="py-3 px-4 text-right text-gray-600">
                           {spendMap[r.name] && spendMap[r.name] > 0
-                            ? <span className={Number(r.revenue || 0) / spendMap[r.name] >= 1 ? 'text-green-600 font-medium' : 'text-red-500'}>{(Number(r.revenue || 0) / spendMap[r.name]).toFixed(2)}x</span>
+                            ? <span className={safeNumber(r.revenue, 0) / spendMap[r.name] >= 1 ? 'text-green-600 font-medium' : 'text-red-500'}>{formatMultiplier(safeNumber(r.revenue, 0) / spendMap[r.name])}</span>
                             : <span className="text-gray-300">—</span>}
                         </td>
                         <td className="py-3 px-4 text-right">
