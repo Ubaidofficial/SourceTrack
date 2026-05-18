@@ -238,6 +238,7 @@ app.use('/api/dashboard', requireUserAuth, validateSiteKey, requireSiteMembershi
 app.use('/api/ai-analytics', requireUserAuth, validateSiteKey, requireSiteMembership, aiAnalyticsRouter)
 app.use('/api/leads', requireUserAuth, validateSiteKey, requireSiteMembership, leadsRouter)
 app.use('/api/campaigns', requireUserAuth, validateSiteKey, requireSiteMembership, campaignsRouter)
+app.use('/api/saved-reports', requireUserAuth, validateSiteKey, requireSiteMembership, savedReportsRouter)
 app.use('/api/integrations', requireUserAuth, validateSiteKey, requireSiteMembership, integrationsRouter)
 app.use('/api/campaign-costs', requireUserAuth, validateSiteKey, campaignCostsRouter)
 app.use('/api/public', publicDashboardRouter)
