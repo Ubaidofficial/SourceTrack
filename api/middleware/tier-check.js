@@ -47,6 +47,22 @@ async function getMonthlyLeadCount(siteId) {
 export async function checkTierLimit(req, res, next) {
   try {
     const plan  = req.site?.plan || 'trial'
+    // Block expired trials regardless of usage
+    if (plan === 'trial' && req.site?.trial_ends_at) {
+      const expired = new Date(req.site.trial_ends_at) < new Date()
+      if (expired) {
+        return res.status(402).json({
+          success: false,
+          error: 'Trial expired',
+          data: {
+            current_plan: 'trial',
+            trial_ends_at: req.site.trial_ends_at,
+            upgrade_url: '/billing',
+            message: 'Your 14-day trial has ended. Upgrade to continue tracking.'
+          }
+        })
+      }
+    }
     const limit = PLAN_LIMITS[plan] ?? PLAN_LIMITS.trial
 
     // No limit for unknown plans — fail open (don't block tracking if misconfigured)

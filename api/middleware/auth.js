@@ -22,7 +22,7 @@ export async function validateSiteKey(req, res, next) {
     const supabase = getSupabase()
     const { data, error } = await supabase
       .from('sites')
-      .select('id, plan, created_at, company_id, owner_id, business_type')
+      .select('id, plan, created_at, company_id, owner_id, business_type, trial_ends_at')
       .eq('site_key', siteKey)
       .single()
 
