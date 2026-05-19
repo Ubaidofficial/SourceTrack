@@ -63,7 +63,7 @@ export default function Integrations() {
   const issueCount = safeNumber(alerts.length, 0) + safeNumber(hygieneData?.total_issues, 0)
 
   const snippet = site?.site_key
-    ? `<script async src="${window.location.origin}/tracker/loader.min.js" data-site-key="${site.site_key}"></script>`
+    ? `<script async src="${window.location.origin}/tracker/tracker.min.js" data-site-key="${site.site_key}"></script>`
     : ''
 
   const handleCopy = () => {

@@ -87,8 +87,8 @@ async function collectSnapshot() {
     // 7. Recent conversions
     check('conversions', async () => {
       const since = new Date(Date.now() - 24 * 3_600_000).toISOString()
-      const { count } = await getSupabase().from('conversions')
-        .select('*', { count: 'exact', head: true }).gte('created_at', since)
+      const { count } = await getSupabase().from('attributed_conversions')
+        .select('*', { count: 'exact', head: true }).gte('conversion_date', since)
       return { conversions_24h: count ?? 0 }
     }),
 

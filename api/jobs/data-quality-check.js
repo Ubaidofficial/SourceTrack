@@ -52,10 +52,10 @@ async function run() {
         .eq('site_id', site.id)
         .gte('conversion_date', ms.split('T')[0])
       const { count: convCount } = await supabase
-        .from('conversions')
+        .from('attributed_conversions')
         .select('*', { count: 'exact', head: true })
         .eq('site_id', site.id)
-        .gte('created_at', ms)
+        .gte('conversion_date', ms.split('T')[0])
 
       const aCount = attrCount ?? 0
       const cCount = convCount ?? 0
@@ -200,12 +200,12 @@ async function run() {
     // ── CHECK 8: duplicate_conversion_rate ─────────────────────────────
     try {
       const { count: totalDedup } = await supabase
-        .from('conversions')
+        .from('attributed_conversions')
         .select('*', { count: 'exact', head: true })
         .eq('site_id', site.id)
         .not('external_event_id', 'is', null)
       const { count: dupCount } = await supabase
-        .from('conversions')
+        .from('attributed_conversions')
         .select('*', { count: 'exact', head: true })
         .eq('site_id', site.id)
         .gt('dedup_count', 0)
