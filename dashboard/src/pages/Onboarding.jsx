@@ -266,7 +266,7 @@ export default function Onboarding() {
         if (data?.snippet) setSnippet(data.snippet)
       } catch {
         const apiUrl = import.meta.env.VITE_API_URL || window.location.origin
-        setSnippet(`<script async src="${apiUrl}/tracker/loader.min.js" data-site-key="${siteKey}"></script>`)
+        setSnippet(`<script async src="${apiUrl}/tracker/tracker.min.js" data-site-key="${siteKey}"></script>`)
       }
     }
     await saveOnboardingState(4, { install_method: method })
