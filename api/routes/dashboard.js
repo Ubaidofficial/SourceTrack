@@ -1,15 +1,24 @@
 import { Router } from 'express'
 import { validateSiteKey } from '../middleware/auth.js'
-import { getFlexibleReport, getAttribution } from '../lib/attribution-engine.js'
 import { queryHogQL } from '../lib/posthog.js'
 import { createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
-function getSupabaseAdmin() { return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { global: { fetch }, realtime: { transport: WebSocket } }) }
+
+function getSupabaseAdmin() {
+  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { global: { fetch }, realtime: { transport: WebSocket } })
+}
 
 const router = Router()
 
 function esc(str) {
   return str.replace(/'/g, "''")
+}
+
+const AI_SOURCE_PATTERNS = ['chatgpt', 'claude', 'perplexity', 'gemini', 'grok', 'copilot', 'deepseek', 'meta ai', 'you.com', 'bing ai', 'bard', 'mistral']
+function isAISource(source) {
+  if (!source) return false
+  const s = source.toLowerCase()
+  return AI_SOURCE_PATTERNS.some(p => s.includes(p))
 }
 
 router.get('/overview', validateSiteKey, async (req, res) => {
@@ -21,55 +30,28 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     const prevDateFrom = new Date(Date.now() - days * 2 * 86400000).toISOString().slice(0, 10)
     const prevDateTo = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
 
+    const supabase = getSupabaseAdmin()
+
+    // 2 Supabase + 3 PostHog in parallel; bounce_rate runs after (separate await)
     const [
-      revenueResults,
-      sourceConvResults,
-      sessionsResults,
-      leadsResults,
-      prevRevenueResults,
-      prevLeadsResults,
-      prevConvResults,
-      prevAIRevResults,
-      aiRevResults,
-      aiConvResults,
-      aiLeadsResults,
-      aiTrendResults,
-      landingResults,
-      campaignResults,
-      timeResults,
-      channelTrendResults,
-      modelFirstTouch,
-      modelLastTouch,
-      modelFTND,
-      modelLTND,
-      modelAI,
+      { data: acRows },
+      { data: acRowsPrior },
       installRows,
       alertRows,
-      convTypeRows,
       stageRows
     ] = await Promise.all([
-      getFlexibleReport(posthogSiteId, 'first_touch', dateFrom, dateTo, 'source', 'revenue', {}),
-      // Option 1: query conversions separately alongside revenue so frontend tables show real counts
-      getFlexibleReport(posthogSiteId, 'first_touch', dateFrom, dateTo, 'source', 'conversions', {}),
-      getFlexibleReport(posthogSiteId, 'first_touch', dateFrom, dateTo, 'source', 'sessions', {}),
-      getFlexibleReport(posthogSiteId, 'first_touch', dateFrom, dateTo, 'source', 'leads', {}),
-      getFlexibleReport(posthogSiteId, 'first_touch', prevDateFrom, prevDateTo, 'source', 'revenue', {}),
-      getFlexibleReport(posthogSiteId, 'first_touch', prevDateFrom, prevDateTo, 'source', 'leads', {}),
-      getFlexibleReport(posthogSiteId, 'first_touch', prevDateFrom, prevDateTo, 'source', 'conversions', {}),
-      getFlexibleReport(posthogSiteId, 'ai_platforms', prevDateFrom, prevDateTo, 'ai_source', 'ai_revenue', { has_ai_source: 'true' }),
-      getFlexibleReport(posthogSiteId, 'ai_platforms', dateFrom, dateTo, 'ai_source', 'ai_revenue', { has_ai_source: 'true' }),
-      getFlexibleReport(posthogSiteId, 'ai_platforms', dateFrom, dateTo, 'ai_source', 'ai_conversions', { has_ai_source: 'true' }),
-      getFlexibleReport(posthogSiteId, 'ai_platforms', dateFrom, dateTo, 'ai_source', 'leads', { has_ai_source: 'true' }),
-      getFlexibleReport(posthogSiteId, 'ai_platforms', dateFrom, dateTo, 'date', 'ai_revenue', { has_ai_source: 'true' }),
-      getFlexibleReport(posthogSiteId, 'first_touch', dateFrom, dateTo, 'landing_page', 'revenue', {}),
-      getFlexibleReport(posthogSiteId, 'last_touch', dateFrom, dateTo, 'campaign', 'revenue', {}),
-      getFlexibleReport(posthogSiteId, 'first_touch', dateFrom, dateTo, 'date', 'revenue', {}),
-      getFlexibleReport(posthogSiteId, 'first_touch', dateFrom, dateTo, 'date', 'leads', {}),
-      getAttribution(posthogSiteId, 'first_touch', dateFrom, dateTo),
-      getAttribution(posthogSiteId, 'last_touch', dateFrom, dateTo),
-      getAttribution(posthogSiteId, 'first_touch_non_direct', dateFrom, dateTo),
-      getAttribution(posthogSiteId, 'last_touch_non_direct', dateFrom, dateTo),
-      getAttribution(posthogSiteId, 'ai_platforms', dateFrom, dateTo),
+      supabase
+        .from('attributed_conversions')
+        .select('first_touch_source, first_touch_channel, last_touch_channel, first_touch_campaign, conversion_value, conversion_type, conversion_date, status, touchpoint_count')
+        .eq('site_id', req.site.id)
+        .gte('conversion_date', dateFrom)
+        .lte('conversion_date', dateTo),
+      supabase
+        .from('attributed_conversions')
+        .select('first_touch_source, first_touch_channel, last_touch_channel, conversion_value, conversion_type, status')
+        .eq('site_id', req.site.id)
+        .gte('conversion_date', prevDateFrom)
+        .lte('conversion_date', prevDateTo),
       queryHogQL(`
         SELECT event, timestamp, properties.page_url AS page_url
         FROM events
@@ -90,19 +72,6 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       `, 'dash_alerts'),
       queryHogQL(`
         SELECT
-          COALESCE(properties.conversion_type, 'untyped') AS conv_type,
-          count() AS count,
-          SUM(toFloatOrZero(toString(properties.conversion_value))) AS revenue
-        FROM events
-        WHERE properties.site_id = '${esc(posthogSiteId)}'
-          AND event = '$conversion'
-          AND timestamp >= toDateTime('${dateFrom} 00:00:00')
-          AND timestamp <= toDateTime('${dateTo} 23:59:59')
-        GROUP BY conv_type
-        ORDER BY count DESC
-      `, 'dash_conv_types'),
-      queryHogQL(`
-        SELECT
           properties.conversion_type AS stage,
           count() AS count,
           SUM(toFloatOrZero(toString(properties.conversion_value))) AS revenue
@@ -118,74 +87,132 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       `, 'dash_stages')
     ])
 
-    // Merge conversion counts into revenue rows so frontend tables show real values.
-    // Option 1: query conversions separately and join by dim_value.
-    const convByDim = {}
-    for (const r of sourceConvResults) {
-      convByDim[r.dim_value] = r.conversions
-    }
-    for (const r of revenueResults) {
-      r.conversions = convByDim[r.dim_value] || 0
-    }
-    // Merge session counts for RPV calculation
-    const sessByDim = {}
-    for (const r of sessionsResults) {
-      sessByDim[r.dim_value] = r.sessions
-    }
-    for (const r of revenueResults) {
-      const sessions = sessByDim[r.dim_value] || 0
-      r.sessions = sessions
-      r.rpv = sessions > 0 ? parseFloat((r.revenue / sessions).toFixed(2)) : 0
-    }
-    const aiConvByDim = {}
-    for (const r of aiConvResults) {
-      aiConvByDim[r.dim_value] = r.ai_conversions
-    }
-    for (const r of aiRevResults) {
-      r.ai_conversions = aiConvByDim[r.dim_value] || 0
-    }
-    // Merge AI leads per platform
-    const aiLeadsByDim = {}
-    for (const r of aiLeadsResults) {
-      aiLeadsByDim[r.dim_value] = r.leads
-    }
-    for (const r of aiRevResults) {
-      r.ai_leads = aiLeadsByDim[r.dim_value] || 0
+    const rows = acRows || []
+    const priorRows = acRowsPrior || []
+
+    // ── Aggregate current period from Supabase rows ────────────────────────
+    const sourceMap = {}
+    const campaignMap = {}
+    const revTrendMap = {}
+    const channelTrendMap = {}
+    const aiSourceMap = {}
+    const aiTrendMap = {}
+    const convTypeMap = {}
+
+    let totalRevenue = 0
+    let totalConversions = 0
+    let totalAIRevenue = 0
+    let sqlCount = 0
+    let ftNonDirectRevenue = 0
+    let ltNonDirectRevenue = 0
+
+    for (const r of rows) {
+      const val = Number(r.conversion_value) || 0
+      const date = r.conversion_date?.slice(0, 10) || ''
+      const source = r.first_touch_source || 'Direct'
+      const campaign = r.first_touch_campaign || null
+      const ftChannel = r.first_touch_channel || 'Direct'
+      const ltChannel = r.last_touch_channel || 'Direct'
+      const ai = isAISource(r.first_touch_source)
+
+      totalRevenue += val
+      totalConversions++
+      if (r.status === 'sql') sqlCount++
+      if (ftChannel !== 'Direct') ftNonDirectRevenue += val
+      if (ltChannel !== 'Direct') ltNonDirectRevenue += val
+
+      // source breakdown
+      if (!sourceMap[source]) sourceMap[source] = { dim_value: source, revenue: 0, conversions: 0, sessions: 0, rpv: 0 }
+      sourceMap[source].revenue += val
+      sourceMap[source].conversions++
+
+      // campaign breakdown
+      if (campaign) {
+        if (!campaignMap[campaign]) campaignMap[campaign] = { dim_value: campaign, revenue: 0, conversions: 0 }
+        campaignMap[campaign].revenue += val
+        campaignMap[campaign].conversions++
+      }
+
+      // revenue trend by date
+      if (date) {
+        if (!revTrendMap[date]) revTrendMap[date] = { dim_value: date, revenue: 0 }
+        revTrendMap[date].revenue += val
+      }
+
+      // channel/leads trend by date
+      if (date) {
+        if (!channelTrendMap[date]) channelTrendMap[date] = { dim_value: date, leads: 0 }
+        channelTrendMap[date].leads++
+      }
+
+      // AI source breakdown
+      if (ai) {
+        totalAIRevenue += val
+        const aiSrc = r.first_touch_source
+        if (!aiSourceMap[aiSrc]) aiSourceMap[aiSrc] = { dim_value: aiSrc, ai_revenue: 0, ai_conversions: 0, ai_leads: 0 }
+        aiSourceMap[aiSrc].ai_revenue += val
+        aiSourceMap[aiSrc].ai_conversions++
+        aiSourceMap[aiSrc].ai_leads++
+        if (date) {
+          if (!aiTrendMap[date]) aiTrendMap[date] = { dim_value: date, ai_revenue: 0 }
+          aiTrendMap[date].ai_revenue += val
+        }
+      }
+
+      // conversion types
+      const ct = r.conversion_type || 'untyped'
+      if (!convTypeMap[ct]) convTypeMap[ct] = { count: 0, revenue: 0 }
+      convTypeMap[ct].count++
+      convTypeMap[ct].revenue += val
     }
 
-    const totalRevenue = revenueResults.reduce((sum, r) => sum + (r.revenue || 0), 0)
-    const totalConversions = revenueResults.reduce((sum, r) => sum + (r.conversions || 0), 0)
-    const totalSessions = sessionsResults.reduce((sum, r) => sum + (r.sessions || 0), 0)
-    const bounceRateSql = `SELECT countIf(pv_count = 1) * 100.0 / count() FROM (SELECT distinct_id, count() AS pv_count FROM events WHERE event = '$pageview' AND properties.site_id = '${posthogSiteId}' AND timestamp >= toDateTime('${dateFrom}') AND timestamp <= toDateTime('${dateTo} 23:59:59') GROUP BY distinct_id)`
-    let bounceRate = null
-    try { const br = await queryHogQL(bounceRateSql, 'bounce_rate'); bounceRate = br?.[0]?.[0] ? parseFloat(Number(br[0][0]).toFixed(1)) : null } catch(_e) {}
-    const totalLeads = leadsResults.reduce((sum, r) => sum + (r.leads || 0), 0)
-    // SQL% — qualified leads / total leads from attributed_conversions
-    const { count: sqlCount } = await getSupabaseAdmin().from('attributed_conversions').select('*', { count: 'exact', head: true }).eq('site_id', req.site.id).eq('status', 'sql').gte('conversion_date', dateFrom).lte('conversion_date', dateTo)
-    const { count: totalLeadCount } = await getSupabaseAdmin().from('attributed_conversions').select('*', { count: 'exact', head: true }).eq('site_id', req.site.id).gte('conversion_date', dateFrom).lte('conversion_date', dateTo)
-    const sqlPercent = totalLeadCount > 0 ? parseFloat(((sqlCount || 0) / totalLeadCount * 100).toFixed(1)) : 0
-    const convRate = totalSessions > 0 ? (totalConversions / totalSessions) * 100 : 0
-    const avgValue = totalConversions > 0 ? totalRevenue / totalConversions : 0
-    const bestRPV = revenueResults.length > 0
-      ? revenueResults.reduce((best, r) => (r.rpv || 0) > (best.rpv || 0) ? r : best, { rpv: 0, dim_value: '—' })
+    // ── Attribution model totals ────────────────────────────────────────────
+    // Total revenue is the same across first/last touch — models differ in distribution
+    // Non-direct models exclude conversions whose touch was Direct or null
+    const modelRevenues = {
+      first_touch: totalRevenue,
+      last_touch: totalRevenue,
+      first_touch_non_direct: ftNonDirectRevenue,
+      last_touch_non_direct: ltNonDirectRevenue,
+      ai_platforms: totalAIRevenue
+    }
+
+    // ── Build sorted result arrays ──────────────────────────────────────────
+    const sources = Object.values(sourceMap)
+      .map(s => ({ ...s, rpv: s.conversions > 0 ? parseFloat((s.revenue / s.conversions).toFixed(2)) : 0 }))
+      .sort((a, b) => b.revenue - a.revenue)
+
+    const campaigns = Object.values(campaignMap).sort((a, b) => b.revenue - a.revenue)
+    const revenueTrend = Object.values(revTrendMap).sort((a, b) => a.dim_value.localeCompare(b.dim_value))
+    const channelTrend = Object.values(channelTrendMap).sort((a, b) => a.dim_value.localeCompare(b.dim_value))
+    const aiSources = Object.values(aiSourceMap).sort((a, b) => b.ai_revenue - a.ai_revenue)
+    const aiTrend = Object.values(aiTrendMap).sort((a, b) => a.dim_value.localeCompare(b.dim_value))
+
+    // ── Aggregate prior period ──────────────────────────────────────────────
+    let prevRevenue = 0, prevLeads = 0, prevConversions = 0, prevAIRevenue = 0
+    for (const r of priorRows) {
+      const val = Number(r.conversion_value) || 0
+      prevRevenue += val
+      prevConversions++
+      prevLeads++
+      if (isAISource(r.first_touch_source)) prevAIRevenue += val
+    }
+
+    // ── KPIs ────────────────────────────────────────────────────────────────
+    const totalLeads = totalConversions
+    const sqlPercent = totalConversions > 0 ? parseFloat((sqlCount / totalConversions * 100).toFixed(1)) : 0
+    const avgValue = totalConversions > 0 ? parseFloat((totalRevenue / totalConversions).toFixed(2)) : 0
+    const aiShareTotal = totalRevenue > 0 ? parseFloat(((totalAIRevenue / totalRevenue) * 100).toFixed(2)) : 0
+    const bestRPV = sources.length > 0
+      ? sources.reduce((best, r) => (r.rpv || 0) > (best.rpv || 0) ? r : best, { rpv: 0, dim_value: '—' })
       : { rpv: 0, dim_value: '—' }
 
-    const prevRevenue      = prevRevenueResults.reduce((sum, r) => sum + (r.revenue || 0), 0)
-    const prevLeads        = prevLeadsResults.reduce((sum, r) => sum + (r.leads || 0), 0)
-    const prevConversions  = prevConvResults.reduce((sum, r) => sum + (r.conversions || 0), 0)
-    const prevAIRevenue    = prevAIRevResults.reduce((sum, r) => sum + (r.ai_revenue || 0), 0)
+    // ── Bounce rate (PostHog — single call after parallel block) ───────────
+    const bounceRateSql = `SELECT countIf(pv_count = 1) * 100.0 / count() FROM (SELECT distinct_id, count() AS pv_count FROM events WHERE event = '$pageview' AND properties.site_id = '${posthogSiteId}' AND timestamp >= toDateTime('${dateFrom}') AND timestamp <= toDateTime('${dateTo} 23:59:59') GROUP BY distinct_id)`
+    let bounceRate = null
+    try { const br = await queryHogQL(bounceRateSql, 'bounce_rate'); bounceRate = br?.[0]?.[0] ? parseFloat(Number(br[0][0]).toFixed(1)) : null } catch (_e) {}
 
-    const totalAIRevenue = aiRevResults.reduce((sum, r) => sum + (r.ai_revenue || 0), 0)
-    const aiShareTotal = totalRevenue > 0 ? (totalAIRevenue / totalRevenue) * 100 : 0
-
-    const modelRevenues = {
-      first_touch: modelFirstTouch.reduce((s, r) => s + (r.revenue || 0), 0),
-      last_touch: modelLastTouch.reduce((s, r) => s + (r.revenue || 0), 0),
-      first_touch_non_direct: modelFTND.reduce((s, r) => s + (r.revenue || 0), 0),
-      last_touch_non_direct: modelLTND.reduce((s, r) => s + (r.revenue || 0), 0),
-      ai_platforms: modelAI.reduce((s, r) => s + (r.revenue || 0), 0)
-    }
-
+    // ── Install status ──────────────────────────────────────────────────────
     let installData = null
     if (installRows?.length > 0) {
       const [event, timestamp, pageUrl] = installRows[0]
@@ -196,10 +223,11 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       installData = { status: 'not_installed', last_event: null, domain: null }
     }
 
+    // ── Tracker health ──────────────────────────────────────────────────────
     let healthStatus = 'never_seen'
     let countDay = 0, countHour = 0
     if (alertRows?.length > 0) {
-      const [thisWeek, lastWeek, cd, ch, lastEvt] = alertRows[0]
+      const [_thisWeek, _lastWeek, cd, ch, lastEvt] = alertRows[0]
       countDay = Number(cd) || 0
       countHour = Number(ch) || 0
       if (cd > 0) healthStatus = 'healthy'
@@ -211,11 +239,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       alerts.push({ id: 'silent', metric: 'Tracking', message: 'No events in the last 24 hours', severity: 'high', suggested_action: 'Check your snippet is still live on your site.' })
     }
 
-    const conversionTypes = {}
-    for (const [convType, count, revenue] of (convTypeRows || [])) {
-      conversionTypes[convType] = { count: Number(count) || 0, revenue: Number(revenue) || 0 }
-    }
-
+    // ── Pipeline stages (offline CRM — from PostHog) ────────────────────────
     const pipelineStages = {}
     for (const [stage, count, revenue] of (stageRows || [])) {
       pipelineStages[stage] = { count: Number(count) || 0, revenue: Number(revenue) || 0 }
@@ -232,7 +256,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
           revenue_prev: prevRevenue,
           conversions: totalConversions,
           conversions_prev: prevConversions,
-          sessions: totalSessions,
+          sessions: 0,
           bounce_rate: bounceRate,
           leads: totalLeads,
           sql_percent: sqlPercent,
@@ -240,23 +264,23 @@ router.get('/overview', validateSiteKey, async (req, res) => {
           ai_revenue: totalAIRevenue,
           ai_revenue_prev: prevAIRevenue,
           ai_revenue_share: aiShareTotal,
-          conversion_rate: convRate,
+          conversion_rate: 0,
           avg_value: avgValue,
           best_rpv_channel: bestRPV.dim_value,
           best_rpv: bestRPV.rpv
         },
         models: modelRevenues,
-        ai_sources: aiRevResults.slice(0, 5),
-        ai_trend: aiTrendResults,
-        sources: revenueResults.slice(0, 10),
-        landing_pages: landingResults.slice(0, 5),
-        campaigns: campaignResults.slice(0, 5),
-        channel_trend: channelTrendResults,
-        revenue_trend: timeResults,
+        ai_sources: aiSources.slice(0, 5),
+        ai_trend: aiTrend,
+        sources: sources.slice(0, 10),
+        landing_pages: [],
+        campaigns: campaigns.slice(0, 5),
+        channel_trend: channelTrend,
+        revenue_trend: revenueTrend,
         install: installData,
         health: { status: healthStatus, count_day: countDay, count_hour: countHour },
         alerts,
-        conversion_types: conversionTypes,
+        conversion_types: convTypeMap,
         pipeline_stages: pipelineStages
       },
       error: null

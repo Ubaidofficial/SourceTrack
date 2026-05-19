@@ -216,7 +216,7 @@ export default function Integrations() {
 
       {/* Available Integrations (Future) */}
       <DashboardCard title="Available Integrations"
-        subtitle="Connect your marketing stack — coming in future sessions"
+        subtitle="Connect your marketing stack — coming soon"
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {FUTURE_INTEGRATIONS.map(int => {

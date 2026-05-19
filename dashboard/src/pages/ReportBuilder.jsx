@@ -574,12 +574,12 @@ export default function ReportBuilder() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-st-black">Report Builder</h2>
-          <p className="text-sm text-st-gray mt-1">Build attribution reports with a guided workflow</p>
+          <p className="text-sm text-st-gray dark:text-gray-400 mt-1">Build attribution reports with a guided workflow</p>
         </div>
         <div className="flex items-center gap-2">
           {canPreview && (
             <button onClick={handleExportCSV}
-              className="px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1">
+              className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-[#1A1D1D] border border-gray-300 dark:border-[#2A2E2E] rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] flex items-center gap-1">
               <Download className="w-4 h-4" />
               Export
             </button>
@@ -591,35 +591,35 @@ export default function ReportBuilder() {
         {/* Left: Guided controls */}
         <div className="space-y-3">
           {/* Presets */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <h3 className="text-xs font-semibold text-st-gray uppercase tracking-wider mb-3">Quick Start</h3>
+          <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-4">
+            <h3 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-3">Quick Start</h3>
             <div className="grid grid-cols-1 gap-1.5">
               {PRESETS.map((p) => (
                 <button key={p.name} onClick={() => applyPreset(p)}
-                  className="w-full text-left px-3 py-2.5 text-sm bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors border border-gray-100 hover:border-gray-200">
-                  <span className="text-gray-700 font-medium">{p.name}</span>
-                  {p.desc && <span className="block text-xs text-st-gray mt-0.5">{p.desc}</span>}
+                  className="w-full text-left px-3 py-2.5 text-sm bg-gray-50 dark:bg-[#242829] hover:bg-gray-100 dark:hover:bg-[#2A2E2E] rounded-lg transition-colors border border-gray-100 dark:border-[#2A2E2E] hover:border-gray-200">
+                  <span className="text-gray-700 dark:text-gray-300 font-medium">{p.name}</span>
+                  {p.desc && <span className="block text-xs text-st-gray dark:text-gray-400 mt-0.5">{p.desc}</span>}
                 </button>
               ))}
             </div>
           </div>
 
           {/* Step 1: Name */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-4">
             <div className="flex items-center gap-2 mb-3">
               <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">1</span>
-              <h3 className="text-xs font-semibold text-st-gray uppercase tracking-wider">Report Name</h3>
+              <h3 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Report Name</h3>
             </div>
             <input type="text" value={reportName} onChange={(e) => setReportName(e.target.value)}
               placeholder="e.g. Weekly Revenue by Source" maxLength={60}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
+              className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white" />
           </div>
 
           {/* Step 2: Date Range */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-4">
             <div className="flex items-center gap-2 mb-3">
               <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">2</span>
-              <h3 className="text-xs font-semibold text-st-gray uppercase tracking-wider">Date Range</h3>
+              <h3 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Date Range</h3>
             </div>
 
             <div className="flex items-center gap-2 mb-3">
@@ -627,7 +627,7 @@ export default function ReportBuilder() {
                 type="button"
                 onClick={() => setIsRolling(true)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${
-                  isRolling ? 'bg-st-black text-white border-st-black' : 'bg-white text-gray-600 border-gray-200'
+                  isRolling ? 'bg-st-black text-white border-st-black' : 'bg-white dark:bg-[#242829] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-[#2A2E2E]'
                 }`}
               >
                 Rolling
@@ -636,7 +636,7 @@ export default function ReportBuilder() {
                 type="button"
                 onClick={() => setIsRolling(false)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${
-                  !isRolling ? 'bg-st-black text-white border-st-black' : 'bg-white text-gray-600 border-gray-200'
+                  !isRolling ? 'bg-st-black text-white border-st-black' : 'bg-white dark:bg-[#242829] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-[#2A2E2E]'
                 }`}
               >
                 Fixed
@@ -645,11 +645,11 @@ export default function ReportBuilder() {
 
             {isRolling ? (
               <div>
-                <label className="block text-xs font-medium text-st-gray mb-1">Rolling window</label>
+                <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Rolling window</label>
                 <select
                   value={rollingDays}
                   onChange={e => setRollingDays(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white"
                 >
                   <option value={7}>Last 7 days</option>
                   <option value={14}>Last 14 days</option>
@@ -657,7 +657,7 @@ export default function ReportBuilder() {
                   <option value={60}>Last 60 days</option>
                   <option value={90}>Last 90 days</option>
                 </select>
-                <p className="mt-1 text-xs text-st-gray">This report will update automatically based on the current date.</p>
+                <p className="mt-1 text-xs text-st-gray dark:text-gray-400">This report will update automatically based on the current date.</p>
               </div>
             ) : (
               <>
@@ -665,7 +665,7 @@ export default function ReportBuilder() {
                   {DATE_PRESETS.map((p) => (
                     <button key={p.label} onClick={() => handleDatePreset(p)}
                       className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
-                        datePreset === p.days ? 'bg-lime-100 text-lime-800 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        datePreset === p.days ? 'bg-lime-100 text-lime-800 font-medium' : 'bg-gray-100 dark:bg-[#242829] text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#2A2E2E]'
                       }`}>
                       {p.label}
                     </button>
@@ -674,21 +674,21 @@ export default function ReportBuilder() {
                 {datePreset === 0 && (
                   <div className="grid grid-cols-2 gap-2">
                     <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                      className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
+                      className="w-full px-2 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white" />
                     <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                      className="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
+                      className="w-full px-2 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white" />
                   </div>
                 )}
               </>
             )}
             {(groupBy === 'date' || groupBy2 === 'date') && (
               <div className="mt-2">
-                <label className="block text-xs font-medium text-st-gray mb-1">Granularity</label>
+                <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Granularity</label>
                 <div className="flex flex-wrap gap-1.5">
                   {GRANULARITY.map(g => (
                     <button key={g.key} onClick={() => setGranularity(g.key)}
                       className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
-                        granularity === g.key ? 'bg-lime-100 text-lime-800 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        granularity === g.key ? 'bg-lime-100 text-lime-800 font-medium' : 'bg-gray-100 dark:bg-[#242829] text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#2A2E2E]'
                       }`}>
                       {g.label}
                     </button>
@@ -699,10 +699,10 @@ export default function ReportBuilder() {
           </div>
 
           {/* Step 3: Metric */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-4">
             <div className="flex items-center gap-2 mb-3">
               <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">3</span>
-              <h3 className="text-xs font-semibold text-st-gray uppercase tracking-wider">Metric</h3>
+              <h3 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Metric</h3>
             </div>
             {/* Selected metric pills */}
             {selectedMetrics.length > 0 && (
@@ -721,30 +721,30 @@ export default function ReportBuilder() {
               </div>
             )}
             <div className="relative">
-              <div className="flex items-center px-3 py-2 border border-gray-300 rounded-lg text-sm cursor-pointer hover:border-gray-400"
+              <div className="flex items-center px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm cursor-pointer hover:border-gray-400 dark:bg-[#242829]"
                 onClick={() => setShowMetricDropdown(!showMetricDropdown)}>
-                <span className="flex-1 text-st-gray text-xs">
+                <span className="flex-1 text-st-gray dark:text-gray-400 text-xs">
                   {selectedMetrics.length === 0 ? 'Select metrics...' : `+ Add metric (${selectedMetrics.length} selected)`}
                 </span>
-                <ChevronDown className="w-4 h-4 text-st-gray" />
+                <ChevronDown className="w-4 h-4 text-st-gray dark:text-gray-400" />
               </div>
               {showMetricDropdown && (
-                <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-72 overflow-auto">
-                  <div className="p-2 border-b border-gray-100 sticky top-0 bg-white">
-                    <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 rounded">
-                      <Search className="w-3.5 h-3.5 text-st-gray" />
+                <div className="absolute z-10 mt-1 w-full bg-white dark:bg-[#242829] border border-gray-200 dark:border-[#2A2E2E] rounded-lg shadow-lg max-h-72 overflow-auto">
+                  <div className="p-2 border-b border-gray-100 dark:border-[#2A2E2E] sticky top-0 bg-white dark:bg-[#242829]">
+                    <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 dark:bg-[#1A1D1D] rounded">
+                      <Search className="w-3.5 h-3.5 text-st-gray dark:text-gray-400" />
                       <input type="text" value={metricSearch} onChange={(e) => setMetricSearch(e.target.value)}
                         placeholder="Search metrics..." onClick={(e) => e.stopPropagation()}
                         className="flex-1 bg-transparent text-sm outline-none" />
                     </div>
-                    <p className="text-[10px] text-st-gray mt-1 px-1">Click to add/remove. Up to 4 metrics.</p>
+                    <p className="text-[10px] text-st-gray dark:text-gray-400 mt-1 px-1">Click to add/remove. Up to 4 metrics.</p>
                   </div>
                   {['Core', 'Conversion', 'AI', 'LTV', 'Session'].map(group => {
                     const groupMetrics = filteredMetrics.filter(m => m.group === group)
                     if (groupMetrics.length === 0) return null
                     return (
                       <div key={group}>
-                        <div className="px-3 py-1.5 text-xs font-semibold text-st-gray uppercase bg-gray-50">{group}</div>
+                        <div className="px-3 py-1.5 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase bg-gray-50 dark:bg-[#252929]">{group}</div>
                         {groupMetrics.map((m) => {
                           const isSelected = selectedMetrics.includes(m.key)
                           return (
@@ -753,15 +753,15 @@ export default function ReportBuilder() {
                                 if (selectedMetrics.length < 4 || isSelected) toggleMetric(m.key)
                                 if (selectedMetrics.length === 1 && !isSelected) setShowMetricDropdown(false)
                               }}
-                              className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 transition-colors flex items-center gap-2 ${
-                                isSelected ? 'bg-lime-50 text-lime-800 font-medium' : 'text-gray-700'
+                              className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-[#252929] transition-colors flex items-center gap-2 ${
+                                isSelected ? 'bg-lime-50 text-lime-800 font-medium' : 'text-gray-700 dark:text-gray-300'
                               }`}>
                               <span className={`w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center text-[10px] ${isSelected ? 'bg-lime-500 border-lime-500 text-white' : 'border-gray-300'}`}>
                                 {isSelected ? '✓' : ''}
                               </span>
                               <div>
                                 <div>{m.label}</div>
-                                {m.desc && <div className="text-xs text-st-gray font-normal">{m.desc.slice(0, 60)}{m.desc.length > 60 ? '…' : ''}</div>}
+                                {m.desc && <div className="text-xs text-st-gray dark:text-gray-400 font-normal">{m.desc.slice(0, 60)}{m.desc.length > 60 ? '…' : ''}</div>}
                               </div>
                             </button>
                           )
@@ -775,16 +775,16 @@ export default function ReportBuilder() {
           </div>
 
           {/* Step 4: Group By */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-4">
             <div className="flex items-center gap-2 mb-3">
               <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">4</span>
-              <h3 className="text-xs font-semibold text-st-gray uppercase tracking-wider">Group By</h3>
+              <h3 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Group By</h3>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {DIMENSIONS.map((d) => (
                 <button key={d.key} onClick={() => setGroupBy(d.key)}
                   className={`px-2.5 py-1.5 text-xs rounded-full transition-colors ${
-                    groupBy === d.key ? 'bg-lime-100 text-lime-800 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    groupBy === d.key ? 'bg-lime-100 text-lime-800 font-medium' : 'bg-gray-100 dark:bg-[#242829] text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#2A2E2E]'
                   }`}>
                   {d.label}
                 </button>
@@ -796,17 +796,17 @@ export default function ReportBuilder() {
                 + Add another Group By
               </button>
             ) : (
-              <div className="mt-2 pt-2 border-t border-gray-100">
+              <div className="mt-2 pt-2 border-t border-gray-100 dark:border-[#2A2E2E]">
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-medium text-st-gray">Group By 2</label>
+                  <label className="text-xs font-medium text-st-gray dark:text-gray-400">Group By 2</label>
                   <button onClick={() => { setShowGroupBy2(false); setGroupBy2(null) }}
-                    className="text-xs text-st-gray hover:text-red-500">&times; Remove</button>
+                    className="text-xs text-st-gray dark:text-gray-400 hover:text-red-500">&times; Remove</button>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {DIMENSIONS.filter(d => d.key !== groupBy || d.key === 'date').map((d) => (
                     <button key={d.key} onClick={() => setGroupBy2(d.key)}
                       className={`px-2.5 py-1.5 text-xs rounded-full transition-colors ${
-                        groupBy2 === d.key ? 'bg-lime-100 text-lime-800 font-medium' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        groupBy2 === d.key ? 'bg-lime-100 text-lime-800 font-medium' : 'bg-gray-100 dark:bg-[#242829] text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#2A2E2E]'
                       }`}>
                       {d.label}
                     </button>
@@ -817,20 +817,20 @@ export default function ReportBuilder() {
           </div>
 
           {/* Step 5: Model */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-4">
             <div className="flex items-center gap-2 mb-3">
               <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">5</span>
-              <h3 className="text-xs font-semibold text-st-gray uppercase tracking-wider">Attribution</h3>
+              <h3 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Attribution</h3>
             </div>
             <select value={model} onChange={(e) => setModel(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
+              className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white">
               {MODELS.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
             </select>
-            <p className="text-xs text-st-gray mt-1">How credit is assigned to each touchpoint in the customer journey.</p>
+            <p className="text-xs text-st-gray dark:text-gray-400 mt-1">How credit is assigned to each touchpoint in the customer journey.</p>
             <div className="mt-2">
-              <label className="block text-xs font-medium text-st-gray mb-1">Attribution Window</label>
+              <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Attribution Window</label>
               <select value={attributionWindow || ''} onChange={(e) => setAttributionWindow(e.target.value || null)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
+                className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white">
                 <option value="">No lookback (date range only)</option>
                 <option value="1">1 day</option>
                 <option value="7">7 days</option>
@@ -839,17 +839,17 @@ export default function ReportBuilder() {
                 <option value="60">60 days</option>
                 <option value="90">90 days</option>
               </select>
-              <p className="text-xs text-st-gray mt-1">How far back from conversion to look for touchpoints. &quot;No lookback&quot; uses only the selected date range.</p>
+              <p className="text-xs text-st-gray dark:text-gray-400 mt-1">How far back from conversion to look for touchpoints. &quot;No lookback&quot; uses only the selected date range.</p>
             </div>
             <div className="mt-2">
-              <label className="block text-xs font-medium text-st-gray mb-1">Attribute By</label>
+              <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Attribute By</label>
               <select value={attributeBy} onChange={(e) => setAttributeBy(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
+                className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white">
                 <option value="conversion_date">Conversion Date</option>
                 <option value="first_seen_date">First Seen Date</option>
                 <option value="original_source_date">Original Source Date</option>
               </select>
-              <p className="text-xs text-st-gray mt-1">
+              <p className="text-xs text-st-gray dark:text-gray-400 mt-1">
                 {attributeBy === 'conversion_date' && 'Group conversions by the date they occurred.'}
                 {attributeBy === 'first_seen_date' && 'Group conversions by the date each visitor was first seen.'}
                 {attributeBy === 'original_source_date' && 'Group conversions by the date of the first UTM-tagged touchpoint. Visitors without UTM source data are excluded.'}
@@ -858,31 +858,31 @@ export default function ReportBuilder() {
           </div>
 
           {/* Step 6: Chart Type */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-4">
             <div className="flex items-center gap-2 mb-3">
               <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">6</span>
-              <h3 className="text-xs font-semibold text-st-gray uppercase tracking-wider">Chart</h3>
+              <h3 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Chart</h3>
             </div>
             <select value={chartType} onChange={(e) => setChartType(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
+              className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white">
               {CHART_TYPES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
             </select>
           </div>
 
           {/* Step 7: Filters (collapsible) */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-4">
             <button onClick={() => setShowFilters(!showFilters)}
               className="flex items-center justify-between w-full text-left">
               <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-gray-100 text-st-gray text-xs flex items-center justify-center font-bold">7</span>
-                <h3 className="text-xs font-semibold text-st-gray uppercase tracking-wider">Filters</h3>
+                <span className="w-5 h-5 rounded-full bg-gray-100 dark:bg-[#2A2E2E] text-st-gray dark:text-gray-400 dark:text-gray-300 text-xs flex items-center justify-center font-bold">7</span>
+                <h3 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Filters</h3>
                 {filterCount > 0 ? (
                   <span className="px-1.5 py-0.5 text-xs bg-lime-100 text-lime-800 rounded-full">{filterCount} active</span>
                 ) : (
-                  <span className="text-xs text-st-gray">None</span>
+                  <span className="text-xs text-st-gray dark:text-gray-400">None</span>
                 )}
               </div>
-              <span className="text-xs text-st-gray">{showFilters ? 'Hide' : 'Show'}</span>
+              <span className="text-xs text-st-gray dark:text-gray-400">{showFilters ? 'Hide' : 'Show'}</span>
             </button>
 
             {/* Active filter pills */}
@@ -898,15 +898,15 @@ export default function ReportBuilder() {
             )}
 
             {showFilters && (
-              <div className="space-y-2 mt-3 pt-3 border-t border-gray-100">
-                <div className="bg-gray-50 rounded-lg p-3 text-xs text-st-gray space-y-1">
+              <div className="space-y-2 mt-3 pt-3 border-t border-gray-100 dark:border-[#2A2E2E]">
+                <div className="bg-gray-50 dark:bg-[#242829] rounded-lg p-3 text-xs text-st-gray dark:text-gray-400 space-y-1">
                   <p>UTMs are captured automatically by the pixel.</p>
                   <p>Filters only narrow this report; they are not required for tracking.</p>
                 </div>
                 {/* Grouped Source Picker */}
                 <div>
-                  <label className="block text-xs font-medium text-st-gray mb-1.5">Sources</label>
-                  <p className="text-[10px] text-st-gray mb-2">Select a channel or specific source. Leave blank for all.</p>
+                  <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1.5">Sources</label>
+                  <p className="text-[10px] text-st-gray dark:text-gray-400 mb-2">Select a channel or specific source. Leave blank for all.</p>
                   {[
                     { group: 'Organic Search', channel: 'Organic Search', icon: '🔍', sources: [
                       { label: 'Google Organic', src: 'google', icon: 'G' },
@@ -953,7 +953,7 @@ export default function ReportBuilder() {
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => { applyFilter('channel', channel); applyFilter('source', undefined); if (channel === 'AI Search') applyFilter('has_ai_source', 'true'); else applyFilter('has_ai_source', undefined) }}
-                            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg flex-1 text-left transition-colors ${isChannelActive ? 'bg-lime-100 text-lime-800 font-semibold' : 'bg-gray-50 text-gray-700 hover:bg-gray-100'}`}
+                            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg flex-1 text-left transition-colors ${isChannelActive ? 'bg-lime-100 text-lime-800 font-semibold' : 'bg-gray-50 dark:bg-[#242829] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2A2E2E]'}`}
                           >
                             <span className="text-[11px]">{icon}</span>
                             <span className="font-medium">{group}</span>
@@ -969,9 +969,9 @@ export default function ReportBuilder() {
                               return (
                                 <button key={label}
                                   onClick={() => { applyFilter('channel', channel); applyFilter('source', src); if (channel === 'AI Search') applyFilter('has_ai_source', 'true'); else applyFilter('has_ai_source', undefined) }}
-                                  className={`flex items-center gap-2 w-full px-2 py-1 text-xs rounded transition-colors ${isActive ? 'bg-lime-50 text-lime-800 font-medium' : 'text-st-gray hover:bg-gray-50 hover:text-gray-800'}`}
+                                  className={`flex items-center gap-2 w-full px-2 py-1 text-xs rounded transition-colors ${isActive ? 'bg-lime-50 text-lime-800 font-medium' : 'text-st-gray dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#252929] hover:text-gray-800 dark:hover:text-gray-200'}`}
                                 >
-                                  <span className="w-4 h-4 rounded text-[9px] bg-gray-200 flex items-center justify-center flex-shrink-0 font-bold">{si}</span>
+                                  <span className="w-4 h-4 rounded text-[9px] bg-gray-200 dark:bg-[#2A2E2E] flex items-center justify-center flex-shrink-0 font-bold">{si}</span>
                                   {label}
                                 </button>
                               )
@@ -987,39 +987,39 @@ export default function ReportBuilder() {
                   )}
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-st-gray mb-1">Medium</label>
+                  <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Medium</label>
                   <input type="text" value={filters.medium || ''} onChange={(e) => applyFilter('medium', e.target.value || undefined)}
-                    placeholder="e.g. cpc" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
+                    placeholder="e.g. cpc" className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-st-gray mb-1">Campaign</label>
+                  <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Campaign</label>
                   <input type="text" value={filters.campaign || ''} onChange={(e) => applyFilter('campaign', e.target.value || undefined)}
-                    placeholder="e.g. summer_sale" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
+                    placeholder="e.g. summer_sale" className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-st-gray mb-1">Country</label>
+                  <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Country</label>
                   <input type="text" value={filters.country || ''} onChange={(e) => applyFilter('country', e.target.value || undefined)}
-                    placeholder="e.g. US" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
+                    placeholder="e.g. US" className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white" />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-st-gray mb-1">Device</label>
+                  <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Device</label>
                   <select value={filters.device_type || ''} onChange={(e) => applyFilter('device_type', e.target.value || undefined)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white">
                     <option value="">Any</option><option value="desktop">Desktop</option><option value="mobile">Mobile</option><option value="tablet">Tablet</option>
                   </select>
                 </div>
 
-                <div className="pt-2 border-t border-gray-100">
-                  <p className="text-xs font-medium text-st-gray uppercase mb-2">Advanced</p>
+                <div className="pt-2 border-t border-gray-100 dark:border-[#2A2E2E]">
+                  <p className="text-xs font-medium text-st-gray dark:text-gray-400 uppercase mb-2">Advanced</p>
                   <div>
-                    <label className="block text-xs font-medium text-st-gray mb-1">Conversion Type</label>
+                    <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Conversion Type</label>
                     <input type="text" value={filters.conversion_type || ''} onChange={(e) => applyFilter('conversion_type', e.target.value || undefined)}
-                      placeholder="e.g. lead_created, purchase" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
+                      placeholder="e.g. lead_created, purchase" className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-st-gray mb-1">AI Source</label>
+                    <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">AI Source</label>
                     <select value={filters.ai_source || ''} onChange={(e) => applyFilter('ai_source', e.target.value || undefined)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white">
                       <option value="">Any</option>
                       <option value="ChatGPT">ChatGPT</option><option value="Claude">Claude</option>
                       <option value="Perplexity">Perplexity</option><option value="Gemini">Gemini</option>
@@ -1030,31 +1030,31 @@ export default function ReportBuilder() {
                     </select>
                   </div>
                   <div className="mt-2">
-                    <label className="block text-xs font-medium text-st-gray mb-1">Has AI Source</label>
+                    <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Has AI Source</label>
                     <select value={filters.has_ai_source || ''} onChange={(e) => applyFilter('has_ai_source', e.target.value || undefined)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white">
                       <option value="">Any</option>
                       <option value="true">Yes</option>
                       <option value="false">No</option>
                     </select>
-                    <p className="text-xs text-st-gray mt-1">Show only traffic from or excluding AI platforms (ChatGPT, Claude, etc.).</p>
+                    <p className="text-xs text-st-gray dark:text-gray-400 mt-1">Show only traffic from or excluding AI platforms (ChatGPT, Claude, etc.).</p>
                   </div>
                   <div className="mt-2">
-                    <label className="block text-xs font-medium text-st-gray mb-1">Min Conversions</label>
+                    <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Min Conversions</label>
                     <input type="number" value={filters.min_conversions || ''} onChange={(e) => applyFilter('min_conversions', e.target.value || undefined)}
-                      placeholder="e.g. 10" min="0" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
+                      placeholder="e.g. 10" min="0" className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white" />
                   </div>
                   <div className="mt-2">
-                    <label className="block text-xs font-medium text-st-gray mb-1">Customer Type</label>
+                    <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Customer Type</label>
                     <select value={filters.customer_type || ''} onChange={(e) => applyFilter('customer_type', e.target.value || undefined)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white">
                       <option value="">All Customers</option>
                       <option value="new">New Customers Only</option>
                       <option value="returning">Returning Customers Only</option>
                     </select>
-                    <p className="text-xs text-st-gray mt-1">Segment conversions by first-time vs repeat customers.</p>
+                    <p className="text-xs text-st-gray dark:text-gray-400 mt-1">Segment conversions by first-time vs repeat customers.</p>
                   </div>
-                  <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer mt-2">
+                  <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer mt-2">
                     <input type="checkbox" checked={filters.is_conversion === 'true'}
                       onChange={(e) => applyFilter('is_conversion', e.target.checked ? 'true' : undefined)}
                       className="rounded border-gray-300 text-st-black focus:ring-gray-900" />
@@ -1072,24 +1072,24 @@ export default function ReportBuilder() {
           </div>
 
           {/* Save */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+          <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">✓</span>
-                <h3 className="text-xs font-semibold text-st-gray uppercase tracking-wider">Save Report</h3>
+                <h3 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Save Report</h3>
               </div>
               <button onClick={resetReport}
-                className="text-xs text-st-gray hover:text-st-black">
+                className="text-xs text-st-gray dark:text-gray-400 hover:text-st-black">
                 New report
               </button>
             </div>
             {editingId && (
-              <p className="text-xs text-st-gray mb-2">Editing saved report</p>
+              <p className="text-xs text-st-gray dark:text-gray-400 mb-2">Editing saved report</p>
             )}
             <div className="space-y-2">
               <input type="text" value={reportName} onChange={(e) => setReportName(e.target.value)}
                 placeholder="Report name..." maxLength={60}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900" />
+                className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white" />
               <div className="flex gap-2">
                 <button onClick={handleSave}
                   className="flex-1 px-3 py-2 bg-st-black text-white rounded-lg text-sm hover:bg-gray-800 flex items-center justify-center gap-1">
@@ -1098,7 +1098,7 @@ export default function ReportBuilder() {
                 </button>
                 {editingId && (
                   <button onClick={resetReport}
-                    className="px-3 py-2 text-sm text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200">
+                    className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-[#242829] rounded-lg hover:bg-gray-200 dark:hover:bg-[#2A2E2E]">
                     Cancel
                   </button>
                 )}
@@ -1117,21 +1117,21 @@ export default function ReportBuilder() {
 
           {/* Saved Reports */}
           {savedReports.length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-              <h3 className="text-xs font-semibold text-st-gray uppercase tracking-wider mb-3">Saved Reports</h3>
+            <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-4">
+              <h3 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-3">Saved Reports</h3>
               <div className="space-y-2">
                 {savedReports.map((r) => {
                   const meta = getSavedReportMeta(r)
                   return (
-                    <div key={r.id} className="rounded-lg border border-gray-100 p-3 hover:bg-gray-50 transition-colors">
+                    <div key={r.id} className="rounded-lg border border-gray-100 dark:border-[#2A2E2E] p-3 hover:bg-gray-50 dark:hover:bg-[#252929] transition-colors">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-st-black truncate">{r.name}</p>
                           <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
-                            <span className="text-xs text-st-gray">{meta.metricLabel}</span>
-                            <span className="text-xs text-st-gray">{meta.groupLabel}</span>
-                            <span className="text-xs text-st-gray">{meta.modelLabel}</span>
-                            <span className="text-xs text-st-gray">{meta.dateLabel}</span>
+                            <span className="text-xs text-st-gray dark:text-gray-400">{meta.metricLabel}</span>
+                            <span className="text-xs text-st-gray dark:text-gray-400">{meta.groupLabel}</span>
+                            <span className="text-xs text-st-gray dark:text-gray-400">{meta.modelLabel}</span>
+                            <span className="text-xs text-st-gray dark:text-gray-400">{meta.dateLabel}</span>
                             {meta.filterCount > 0 && (
                               <span className="text-xs text-lime-700 bg-lime-50 px-1.5 py-0.5 rounded">
                                 {meta.filterCount} filter{meta.filterCount > 1 ? 's' : ''}
@@ -1141,11 +1141,11 @@ export default function ReportBuilder() {
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
                           <button onClick={() => handleLoad(r)}
-                            className="px-2 py-1 text-xs text-gray-700 bg-gray-100 hover:bg-gray-200 rounded transition-colors">
+                            className="px-2 py-1 text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-[#242829] hover:bg-gray-200 dark:hover:bg-[#2A2E2E] rounded transition-colors">
                             Load
                           </button>
                           <button onClick={() => handleDuplicate(r)}
-                            className="px-2 py-1 text-xs text-st-gray hover:text-gray-700 hover:bg-gray-100 rounded transition-colors">
+                            className="px-2 py-1 text-xs text-st-gray dark:text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-[#242829] rounded transition-colors">
                             Duplicate
                           </button>
                           <button onClick={() => handleDelete(r.id)}
@@ -1165,10 +1165,10 @@ export default function ReportBuilder() {
         {/* Right: Live Preview */}
         <div className="lg:col-span-2 space-y-4">
           {!canPreview ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-12 text-center">
               <ArrowRight className="w-10 h-10 text-gray-300 mx-auto mb-4" />
-              <p className="text-st-gray font-medium">Build your report</p>
-              <p className="text-sm text-st-gray mt-1">
+              <p className="text-st-gray dark:text-gray-400 font-medium">Build your report</p>
+              <p className="text-sm text-st-gray dark:text-gray-400 mt-1">
                 Select a metric, group-by dimension, and date range to see results.
               </p>
             </div>
@@ -1182,25 +1182,25 @@ export default function ReportBuilder() {
               )}
 
               {/* Summary */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+              <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-st-gray">Total {metricLabel}</p>
+                    <p className="text-xs text-st-gray dark:text-gray-400">Total {metricLabel}</p>
                     <p className="text-2xl font-bold text-st-black">{metricFormat(total)}</p>
                   </div>
-                  {isLoading && <RefreshCw className="w-5 h-5 animate-spin text-st-gray" />}
+                  {isLoading && <RefreshCw className="w-5 h-5 animate-spin text-st-gray dark:text-gray-400" />}
                 </div>
               </div>
 
               {/* Chart */}
               {(chartType === 'bar' || chartType === 'line' || chartType === 'area' || chartType === 'pie') && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-6">
                   {isLoading ? (
                     <div className="h-72 flex items-center justify-center">
-                      <RefreshCw className="w-6 h-6 animate-spin text-st-gray" />
+                      <RefreshCw className="w-6 h-6 animate-spin text-st-gray dark:text-gray-400" />
                     </div>
                   ) : results.length === 0 ? (
-                    <div className="h-72 flex items-center justify-center text-st-gray text-sm">
+                    <div className="h-72 flex items-center justify-center text-st-gray dark:text-gray-400 text-sm">
                       No data for this selection. Try a different date range or dimension.
                     </div>
                   ) : (
@@ -1216,13 +1216,13 @@ export default function ReportBuilder() {
 
               {/* KPI */}
               {chartType === 'kpi' && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-6">
                   {isLoading ? (
                     <div className="flex items-center justify-center py-12">
-                      <RefreshCw className="w-6 h-6 animate-spin text-st-gray" />
+                      <RefreshCw className="w-6 h-6 animate-spin text-st-gray dark:text-gray-400" />
                     </div>
                   ) : results.length === 0 ? (
-                    <div className="py-12 text-center text-st-gray text-sm">No KPI data yet</div>
+                    <div className="py-12 text-center text-st-gray dark:text-gray-400 text-sm">No KPI data yet</div>
                   ) : (() => {
                     const currentVal = getKpiValue(results, metric)
                     const priorRows = priorReportData?.results
@@ -1230,7 +1230,7 @@ export default function ReportBuilder() {
                     const delta = formatKpiDelta(currentVal, priorVal)
                     return (
                       <div>
-                        <p className="text-sm text-st-gray">{metricLabel}</p>
+                        <p className="text-sm text-st-gray dark:text-gray-400">{metricLabel}</p>
                         <div className="mt-2 text-4xl font-semibold text-st-black">{formatKpiValue(currentVal, metric)}</div>
                         <div className="mt-3 text-sm">
                           {delta ? (
@@ -1238,9 +1238,9 @@ export default function ReportBuilder() {
                               {delta.label}
                             </span>
                           ) : (
-                            <span className="text-st-gray">No prior comparison</span>
+                            <span className="text-st-gray dark:text-gray-400">No prior comparison</span>
                           )}
-                          <span className="text-st-gray ml-2">vs previous period</span>
+                          <span className="text-st-gray dark:text-gray-400 ml-2">vs previous period</span>
                         </div>
                       </div>
                     )
@@ -1249,23 +1249,23 @@ export default function ReportBuilder() {
               )}
 
               {/* Table */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-gray-700">Data</h3>
+              <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] overflow-hidden">
+                <div className="p-4 border-b border-gray-100 dark:border-[#2A2E2E] flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Data</h3>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setShowCompare(c => !c)}
                       className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
                         showCompare
                           ? 'bg-st-black text-white border-st-black'
-                          : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                          : 'bg-white dark:bg-[#242829] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-[#2A2E2E] hover:bg-gray-50 dark:hover:bg-[#252929]'
                       }`}
                     >
                       Compare period
                     </button>
                     <button
                       onClick={handleExportCSV}
-                      className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border bg-white text-gray-600 border-gray-200 hover:bg-gray-50 transition-colors"
+                      className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border bg-white dark:bg-[#242829] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-[#2A2E2E] hover:bg-gray-50 dark:hover:bg-[#252929] transition-colors"
                     >
                       ↓ CSV
                     </button>
@@ -1274,7 +1274,7 @@ export default function ReportBuilder() {
                     className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
                       showExplanation
                         ? 'bg-st-black text-white border-st-black'
-                        : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                        : 'bg-white dark:bg-[#242829] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-[#2A2E2E] hover:bg-gray-50 dark:hover:bg-[#252929]'
                     }`}
                   >
                     <HelpCircle className="w-3.5 h-3.5" />
@@ -1284,36 +1284,36 @@ export default function ReportBuilder() {
                 </div>
                 {isLoading ? (
                   <div className="p-8 text-center">
-                    <RefreshCw className="w-5 h-5 animate-spin text-st-gray mx-auto" />
+                    <RefreshCw className="w-5 h-5 animate-spin text-st-gray dark:text-gray-400 mx-auto" />
                   </div>
                 ) : results.length === 0 ? (
-                  <div className="p-8 text-center text-sm text-st-gray">No data yet</div>
+                  <div className="p-8 text-center text-sm text-st-gray dark:text-gray-400">No data yet</div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-gray-100 bg-gray-50">
-                          <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">
+                        <tr className="border-b border-gray-100 dark:border-[#2A2E2E] bg-gray-50 dark:bg-[#242829]">
+                          <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">
                             {DIMENSIONS.find(d => d.key === groupBy)?.label || 'Dimension'}
                           </th>
-                          {groupBy2 && <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">
+                          {groupBy2 && <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">
                             {DIMENSIONS.find(d => d.key === groupBy2)?.label || 'Dimension 2'}
                           </th>}
                           {selectedMetrics.map(mk => (
-                            <th key={mk} className="text-right py-2 px-4 text-st-gray font-medium text-xs">
+                            <th key={mk} className="text-right py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">
                               {METRICS.find(m => m.key === mk)?.label || mk}
                             </th>
                           ))}
                           {selectedMetrics.map(mk => (
-                            <th key={mk + '_chg'} className="text-right py-2 px-4 text-st-gray font-medium text-xs">
+                            <th key={mk + '_chg'} className="text-right py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">
                               vs prior
                             </th>
                           ))}
-                          {showExplanation && <th className="text-left py-2 px-4 text-st-gray font-medium text-xs">Why</th>}
+                          {showExplanation && <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">Why</th>}
                         </tr>
                         {/* Summary row */}
-                        <tr className="border-b border-gray-200 bg-gray-100">
-                          <td className="py-2 px-4 text-xs font-semibold text-gray-700">Summary</td>
+                        <tr className="border-b border-gray-200 dark:border-[#2A2E2E] bg-gray-100 dark:bg-[#252929]">
+                          <td className="py-2 px-4 text-xs font-semibold text-gray-700 dark:text-gray-300">Summary</td>
                           {groupBy2 && <td />}
                           {selectedMetrics.map(mk => {
                             const mDef = METRICS.find(m => m.key === mk)
@@ -1345,9 +1345,9 @@ export default function ReportBuilder() {
                           const priorRows = priorReportData?.results || []
                           const priorRow = priorRows.find(p => p.dim_value === r.dim_value)
                           return (
-                            <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
+                            <tr key={i} className="border-b border-gray-50 dark:border-[#2A2E2E] hover:bg-gray-50 dark:hover:bg-[#252929]">
                               <td className="py-2 px-4 text-st-black font-medium">{r.dim_value || '—'}</td>
-                              {groupBy2 && <td className="py-2 px-4 text-gray-600">{r.dim_value2}</td>}
+                              {groupBy2 && <td className="py-2 px-4 text-gray-600 dark:text-gray-400">{r.dim_value2}</td>}
                               {selectedMetrics.map(mk => {
                                 const mDef = METRICS.find(m => m.key === mk)
                                 const fmt = mDef?.format || (v => String(v))
@@ -1371,7 +1371,7 @@ export default function ReportBuilder() {
                               {showExplanation && (
                                 <td className="py-2 px-4">
                                   <button onClick={() => setExplainModalOpen(true)}
-                                    className="text-xs text-st-gray hover:text-st-black flex items-center gap-1">
+                                    className="text-xs text-st-gray dark:text-gray-400 hover:text-st-black flex items-center gap-1">
                                     <HelpCircle className="w-3 h-3" />
                                     {model === 'first_touch' && 'First visit UTM'}
                                     {model === 'last_touch' && 'Conversion page UTM'}

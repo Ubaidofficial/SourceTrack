@@ -195,7 +195,7 @@ export default function Analytics() {
   const trendMax   = Math.max(...trend.map(t => t.views), 1)
 
   const snippetUrl = site
-    ? `<script defer src="${window.location.origin}/analytics.js" data-site-key="${site.site_key}"></script>`
+    ? `<script async src="${window.location.origin}/tracker/tracker.min.js" data-site-key="${site.site_key}"></script>`
     : ''
 
   function toggleFilter(type, value) {

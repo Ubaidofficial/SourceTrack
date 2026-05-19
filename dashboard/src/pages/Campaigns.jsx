@@ -340,7 +340,7 @@ export default function Campaigns() {
                               r.trend >= 0 ? 'text-green-600' : 'text-red-500'
                             }`}>
                               {r.trend >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                              <span className="text-xs font-medium">{Math.abs(r.trend).toFixed(0)}%</span>
+                              <span className="text-xs font-medium">{safeNumber(Math.abs(safeNumber(r.trend, 0)), 0).toFixed(0)}%</span>
                             </div>
                           ) : (
                             <div className="flex items-center justify-end gap-1 text-st-gray">
