@@ -32,7 +32,8 @@ const MODELS = [
   { key: 'first_touch_non_direct', label: 'First Touch (Non-Direct)' },
   { key: 'last_touch_non_direct', label: 'Last Touch (Non-Direct)' },
   { key: 'ai_platforms', label: 'AI Platforms' },
-  { key: 'linear', label: 'Linear' }
+  { key: 'linear', label: 'Linear' },
+  { key: 'u_shaped', label: 'U-Shaped (40/20/40)' }
 ]
 
 const DIMENSIONS = [

@@ -269,6 +269,7 @@ async function processConversion(site, conversion) {
     last_touch_timestamp: attribution.last_touch?.timestamp || null,
     
     linear_attribution: attribution.linear,
+    u_shaped_attribution: attribution.u_shaped ? JSON.stringify(attribution.u_shaped) : null,
     touchpoint_count: touchpoints.length,
     
     processing_version: '1.0',
@@ -336,7 +337,8 @@ function calculateAttribution(touchpoints, conversionValue) {
     return {
       first_touch: null,
       last_touch: null,
-      linear: []
+      linear: [],
+      u_shaped: []
     }
   }
   
@@ -368,7 +370,25 @@ function calculateAttribution(touchpoints, conversionValue) {
       campaign: lastTouchpoint.utm_campaign || null,
       timestamp: lastTouchpoint.timestamp
     },
-    linear: linear
+    linear: linear,
+    u_shaped: (() => {
+      if (touchpoints.length === 1) {
+        return [{ source: firstTouchpoint.utm_source || null, medium: firstTouchpoint.utm_medium || null, campaign: firstTouchpoint.utm_campaign || null, timestamp: firstTouchpoint.timestamp, fraction: 1.0, attributed_value: parseFloat(conversionValue.toFixed(2)) }]
+      } else if (touchpoints.length === 2) {
+        return [
+          { source: firstTouchpoint.utm_source || null, medium: firstTouchpoint.utm_medium || null, campaign: firstTouchpoint.utm_campaign || null, timestamp: firstTouchpoint.timestamp, fraction: 0.5, attributed_value: parseFloat((conversionValue * 0.5).toFixed(2)) },
+          { source: lastTouchpoint.utm_source || null, medium: lastTouchpoint.utm_medium || null, campaign: lastTouchpoint.utm_campaign || null, timestamp: lastTouchpoint.timestamp, fraction: 0.5, attributed_value: parseFloat((conversionValue * 0.5).toFixed(2)) }
+        ]
+      }
+      const middleCount = touchpoints.length - 2
+      const middleFraction = middleCount > 0 ? parseFloat((0.2 / middleCount).toFixed(4)) : 0
+      const middleValue = middleCount > 0 ? parseFloat((conversionValue * 0.2 / middleCount).toFixed(2)) : 0
+      return touchpoints.map((tp, i) => {
+        if (i === 0) return { source: tp.utm_source || null, medium: tp.utm_medium || null, campaign: tp.utm_campaign || null, timestamp: tp.timestamp, fraction: 0.4, attributed_value: parseFloat((conversionValue * 0.4).toFixed(2)) }
+        if (i === touchpoints.length - 1) return { source: tp.utm_source || null, medium: tp.utm_medium || null, campaign: tp.utm_campaign || null, timestamp: tp.timestamp, fraction: 0.4, attributed_value: parseFloat((conversionValue * 0.4).toFixed(2)) }
+        return { source: tp.utm_source || null, medium: tp.utm_medium || null, campaign: tp.utm_campaign || null, timestamp: tp.timestamp, fraction: middleFraction, attributed_value: middleValue }
+      })
+    })()
   }
 }
 
