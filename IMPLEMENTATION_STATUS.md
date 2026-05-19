@@ -65,6 +65,7 @@ None in this session (all backend SQL handled via application code + existing ta
 - 6a7e69a: feat: add TikTok CAPI conversion sync
 - aad61e3: feat: add area chart and linear attribution model to report builder
 - 8d78ec8: feat: add U-Shaped attribution model
+- 428676c: feat: add funnel visualization to analytics
 - e402e85: docs: add implementation status log
 
 ## Still Requires Manual Action
@@ -103,3 +104,10 @@ Files: nightly-attribution.js (calculation), attribution-engine.js (query),
 SQL: u_shaped_attribution JSONB column added to attributed_conversions
 Model key: 'u_shaped' — weights: 40% first, 20% middle, 40% last
 Commit: 8d78ec8
+
+## Feature 4: Funnel Visualization
+Status: COMPLETE
+Backend: GET /api/analytics/funnel — aggregate step-completion counts, zero PII
+Frontend: FunnelChart.jsx component, integrated in Analytics.jsx
+Privacy: session_id and url only, no user data
+Commit: 428676c
