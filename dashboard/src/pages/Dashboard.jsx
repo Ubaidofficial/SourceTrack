@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useQuery, useQueries } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -21,7 +21,8 @@ import {
 import {
   DollarSign, Users, Bot, TrendingUp,
   ArrowRight, Download, ExternalLink, Sparkles, Bookmark,
-  FileText, BarChart3, Plus, AlertTriangle
+  FileText, BarChart3, Plus, AlertTriangle, RefreshCw,
+  MessageSquare, Zap, TrendingDown, Info
 } from 'lucide-react'
 import MetricTile from '../components/MetricTile'
 import DashboardCard from '../components/DashboardCard'
@@ -181,6 +182,54 @@ const enrichKpis = (kpis, businessType) => {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+function useFreshnessLabel(ts) {
+  const [label, setLabel] = useState('just now')
+  useEffect(() => {
+    const tick = () => {
+      const secs = Math.floor((Date.now() - ts.getTime()) / 1000)
+      if (secs < 10) setLabel('just now')
+      else if (secs < 60) setLabel(`${secs}s ago`)
+      else setLabel(`${Math.floor(secs / 60)}m ago`)
+    }
+    tick()
+    const id = setInterval(tick, 5000)
+    return () => clearInterval(id)
+  }, [ts])
+  return label
+}
+
+function buildDerivedInsights(kpis, aiShareTotal, aiRevResults, activeResults, businessType) {
+  const insights = []
+  if (aiShareTotal > 20) {
+    insights.push({
+      type: 'opportunity', priority: 'opportunity',
+      title: 'AI is a major channel',
+      desc: `${aiShareTotal.toFixed(1)}% of revenue comes from AI platforms. Consider creating AI-optimised landing pages to capture more of this traffic.`
+    })
+  } else if (aiShareTotal > 5) {
+    insights.push({
+      type: 'opportunity', priority: 'opportunity',
+      title: 'AI traffic growing',
+      desc: `${aiShareTotal.toFixed(1)}% AI revenue share. Trending up — monitor ChatGPT and Perplexity as acquisition channels.`
+    })
+  }
+  if (kpis.conversion_rate != null && kpis.conversion_rate > 0 && kpis.conversion_rate < 1) {
+    insights.push({
+      type: 'info', priority: 'info',
+      title: 'Low conversion rate',
+      desc: `${kpis.conversion_rate.toFixed(2)}% conversion rate detected. Review your landing pages and CTA copy.`
+    })
+  }
+  if (activeResults.length > 0 && !activeResults.some(r => r.cac != null)) {
+    insights.push({
+      type: 'info', priority: 'info',
+      title: 'Add spend data for ROAS',
+      desc: 'No ad spend data found. Add campaign costs in the Campaigns page to unlock CAC and payback analysis.'
+    })
+  }
+  return insights
+}
+
 export default function Dashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -191,6 +240,9 @@ export default function Dashboard() {
   const [explainModel, setExplainModel] = useState(null)
   const [previewSiteName, setPreviewSiteName] = useState('')
   const [previewSiteDomain, setPreviewSiteDomain] = useState('')
+  const [lastRefresh, setLastRefresh] = useState(new Date())
+  const [aiQuery, setAiQuery] = useState('')
+  const freshnessLabel = useFreshnessLabel(lastRefresh)
 
   useEffect(() => {
     // Check for support-mode preview context
@@ -321,6 +373,18 @@ export default function Dashboard() {
     return withSpend.reduce((s, r) => s + r.cac, 0) / withSpend.length
   })()
 
+  // Update freshness timestamp whenever new overview data arrives
+  useEffect(() => {
+    if (overview) setLastRefresh(new Date())
+  }, [overview])
+
+  const handleAiQuery = (e) => {
+    e?.preventDefault()
+    if (!aiQuery.trim()) return
+    navigate(`/ai-chat?q=${encodeURIComponent(aiQuery.trim())}`)
+    setAiQuery('')
+  }
+
   const kpis = overview?.kpis || {}
   const businessType = overview?.business_type || site?.business_type || 'saas'
   const kpiConfig    = getKpiConfig(businessType)
@@ -348,6 +412,11 @@ export default function Dashboard() {
   const timeResults = overview?.revenue_trend || []
   const installData = overview?.install
   const alerts = overview?.alerts || []
+  const derivedInsights = buildDerivedInsights(kpis, aiShareTotal, aiRevResults, activeResults, businessType)
+  const allInsights = [
+    ...alerts.map(a => ({ ...a, type: 'alert' })),
+    ...derivedInsights
+  ]
 
   const models = overview?.models || {}
   const modelRevenues = MODELS.map(m => ({
@@ -532,6 +601,10 @@ export default function Dashboard() {
               </span>
               {liveCount} live now
             </div>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] text-st-gray text-xs">
+              <RefreshCw className="w-3 h-3" />
+              Updated {freshnessLabel}
+            </div>
             <button onClick={() => navigate('/report-builder')}
               className="px-3 py-1.5 text-sm text-white bg-st-black rounded-lg hover:bg-st-black/90 flex items-center gap-1.5">
               <Plus className="w-3.5 h-3.5" /> Create Report
@@ -601,25 +674,79 @@ export default function Dashboard() {
         </div>
       ) : (
         <>
-          {/* T5.8 — Alert banner at top */}
-          {alerts.length > 0 && (
-            <div className="space-y-2">
-              {alerts.slice(0, 2).map((a, i) => (
-                <div key={i} className={`flex items-start gap-3 rounded-xl px-4 py-3 text-sm ${
-                  a.severity === 'high'
-                    ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 text-red-800'
-                    : 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 text-amber-800'
-                }`}>
-                  <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-semibold">{a.metric}: </span>
-                    <span>{a.message}</span>
-                    {a.suggested_action && (
-                      <p className="text-xs mt-0.5 opacity-75">{a.suggested_action}</p>
-                    )}
-                  </div>
-                </div>
-              ))}
+          {/* ── AI Quick-Query Bar ──────────────────────────────────────── */}
+          {!previewMode && (
+            <div className="flex items-center gap-3 bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] rounded-xl px-4 py-2.5 shadow-sm">
+              <Sparkles className="w-4 h-4 text-st-gray shrink-0" />
+              <form onSubmit={handleAiQuery} className="flex-1 flex items-center gap-2 min-w-0">
+                <input
+                  value={aiQuery}
+                  onChange={e => setAiQuery(e.target.value)}
+                  placeholder='Ask about your data… e.g. "What is driving most revenue this week?"'
+                  className="flex-1 text-sm bg-transparent outline-none text-st-black dark:text-white placeholder:text-gray-400 min-w-0"
+                />
+                {aiQuery && (
+                  <button type="submit"
+                    className="shrink-0 px-3 py-1 bg-st-black dark:bg-white text-white dark:text-st-black text-xs rounded-lg font-semibold hover:bg-st-black/90 transition-colors">
+                    Ask →
+                  </button>
+                )}
+              </form>
+              <div className="hidden sm:flex items-center gap-1.5 shrink-0">
+                {['Best channel', 'AI traffic trend', 'What to scale?'].map(q => (
+                  <button key={q}
+                    onClick={() => navigate(`/ai-chat?q=${encodeURIComponent(q)}`)}
+                    className="text-xs px-2.5 py-1 rounded-full bg-gray-100 dark:bg-[#252929] text-st-gray hover:bg-gray-200 dark:hover:bg-[#333838] transition-colors whitespace-nowrap">
+                    {q}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Priority Insights Board ─────────────────────────────────── */}
+          {allInsights.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Zap className="w-3 h-3" /> Insights & Alerts
+                </p>
+                <span className="text-xs text-st-gray">{allInsights.length} item{allInsights.length > 1 ? 's' : ''}</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {allInsights.slice(0, 6).map((insight, i) => {
+                  const priority = insight.severity || insight.priority || 'info'
+                  const isHigh = priority === 'high'
+                  const isMed  = priority === 'medium'
+                  const isOpp  = insight.type === 'opportunity'
+                  const bg   = isHigh ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                               : isMed ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+                               : isOpp ? 'bg-lime-50 dark:bg-lime-900/20 border-lime-200 dark:border-lime-800'
+                               : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+                  const dot  = isHigh ? 'bg-red-500' : isMed ? 'bg-amber-500' : isOpp ? 'bg-lime-500' : 'bg-blue-500'
+                  const tag  = isHigh ? 'bg-red-100 text-red-700' : isMed ? 'bg-amber-100 text-amber-700' : isOpp ? 'bg-lime-100 text-lime-700 dark:bg-lime-900/40 dark:text-lime-400' : 'bg-blue-100 text-blue-700'
+                  const tagLabel = isHigh ? 'HIGH' : isMed ? 'MED' : isOpp ? 'OPPORTUNITY' : 'INFO'
+                  const title = insight.metric || insight.title || 'Alert'
+                  const desc  = insight.message || insight.desc || ''
+                  return (
+                    <div key={i} className={`rounded-xl px-4 py-3 border flex items-start gap-3 ${bg}`}>
+                      <div className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${dot}`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${tag}`}>
+                            {tagLabel}
+                          </span>
+                          <span className="text-xs font-semibold text-st-black dark:text-white truncate">{title}</span>
+                        </div>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{desc}</p>
+                        {insight.suggested_action && (
+                          <p className="text-[10px] text-st-gray dark:text-gray-500 mt-1">{insight.suggested_action}</p>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           )}
 
