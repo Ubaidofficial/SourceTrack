@@ -53,12 +53,12 @@ router.get('/companies', async (_req, res) => {
     if (error) throw error
 
     const result = await Promise.all((companies || []).map(async (c) => {
-      const { count: memberCount } = await supabase
+      const { count: memberCount } = await getSupabase()
         .from('company_members')
         .select('*', { count: 'exact', head: true })
         .eq('company_id', c.id)
 
-      const { count: siteCount } = await supabase
+      const { count: siteCount } = await getSupabase()
         .from('sites')
         .select('*', { count: 'exact', head: true })
         .eq('company_id', c.id)
@@ -177,7 +177,7 @@ router.post('/preview', async (req, res) => {
     } catch { installInfo = { status: 'error' } }
 
     // Get saved report count
-    const { count: reportCount } = await supabase
+    const { count: reportCount } = await getSupabase()
       .from('saved_reports')
       .select('*', { count: 'exact', head: true })
       .eq('site_id', site.id)
@@ -444,7 +444,7 @@ router.get('/feature-status', async (req, res) => {
         { name: 'deduplication', status: 'not_implemented', notes: 'ATTRIBUTION.md Part 10 rules defined but no enforcement in code.', verification_method: 'code-audit' },
         { name: 'widgetized dashboard', status: 'dormant', notes: 'Code was built in Session 2 but replaced by fixed card grid in Session 31. Add-to-Dashboard button disabled. Dashboard.jsx has zero widget rendering.', verification_method: 'code-audit' },
         { name: 'multi-dashboard', status: 'dormant', notes: 'Session 2 implementation replaced. Current Dashboard is a single Performance Overview page. No dashboard CRUD, selector, or switching.', verification_method: 'code-audit' },
-        { name: 'linear attribution', status: 'dormant', notes: 'Engine function exists but removed from ALLOWED_MODELS in Session 53. Implementation uses FIRST_VALUE — not true multi-touch linear.', verification_method: 'code-audit' },
+        { name: 'linear attribution', status: 'live', notes: 'Pre-aggregated linear model live via getLinearAttribution. Reads linear_attribution JSONB from attributed_conversions.', verification_method: 'code-audit' },
         { name: 'saved reports', status: 'partial', notes: 'localStorage-only. No backend persistence. No cross-device sync.', verification_method: 'code-audit' },
         { name: 'period-over-period comparison', status: 'partial', notes: 'Dashboard KPI cards have delta comparisons via overview API *_prev fields. Report Builder has no compare feature.', verification_method: 'code-audit' }
       ]
@@ -502,7 +502,7 @@ router.post('/feature-status/recheck', async (req, res) => {
     { name: 'deduplication', status: 'not_implemented', notes: 'Probed: ATTRIBUTION.md rules defined but no code enforcement', verification_method: 'server-probe' },
     { name: 'widgetized dashboard', status: 'dormant', notes: 'Probed: no widget rendering in Dashboard.jsx', verification_method: 'server-probe' },
     { name: 'multi-dashboard', status: 'dormant', notes: 'Probed: single Performance Overview page only', verification_method: 'server-probe' },
-    { name: 'linear attribution', status: 'dormant', notes: 'Probed: linear removed from ALLOWED_MODELS in Session 53', verification_method: 'server-probe' },
+    { name: 'linear attribution', status: probes.attribution_route ? 'live' : 'dormant', notes: 'Probed: attribution route exists — linear model re-enabled via getLinearAttribution', verification_method: 'server-probe' },
     { name: 'saved reports', status: probes.saved_reports_route ? 'live' : 'partial', notes: `Probed: saved-reports route ${probes.saved_reports_route ? 'exists — backend persisted' : 'not found — localStorage only'}`, verification_method: 'server-probe' },
     { name: 'period-over-period comparison', status: probes.dashboard_route ? 'partial' : 'not_implemented', notes: 'Probed: dashboard KPI deltas exist, Report Builder lacks compare', verification_method: 'server-probe' }
   ]
@@ -524,7 +524,7 @@ router.post('/feature-status/recheck', async (req, res) => {
     { name: 'deduplication', status: 'not_implemented' },
     { name: 'widgetized dashboard', status: 'dormant' },
     { name: 'multi-dashboard', status: 'dormant' },
-    { name: 'linear attribution', status: 'dormant' },
+    { name: 'linear attribution', status: 'live' },
     { name: 'saved reports', status: 'partial' },
     { name: 'period-over-period comparison', status: 'partial' }
   ]
@@ -659,7 +659,7 @@ router.put('/qa-notes/:id', async (req, res) => {
 router.delete('/qa-notes/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const { error } = await supabase
+    const { error } = await getSupabase()
       .from('qa_notes')
       .delete()
       .eq('id', id)

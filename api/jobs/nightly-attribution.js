@@ -248,7 +248,42 @@ async function processConversion(site, conversion) {
   }))
   
   const attribution = calculateAttribution(touchpoints, convValue)
-  
+
+  const firstTp = touchpoints[0] || {}
+  const lastTp  = touchpoints[touchpoints.length - 1] || {}
+
+  const firstTouchChannel = channelFromEvent({
+    utm_source:     firstTp.utm_source,
+    utm_medium:     firstTp.utm_medium,
+    referrer:       firstTp.referrer,
+    ai_source:      firstTp.ai_source,
+    derived_source: firstTp.derived_source,
+    gclid:          firstTp.gclid,
+    fbclid:         firstTp.fbclid
+  })
+  const lastTouchChannel = channelFromEvent({
+    utm_source: lastTp.utm_source,
+    utm_medium: lastTp.utm_medium,
+    referrer:   lastTp.referrer,
+    ai_source:  lastTp.ai_source,
+    gclid:      lastTp.gclid,
+    fbclid:     lastTp.fbclid
+  })
+
+  const confidence = calculateConfidence(touchpoints, firstTouchChannel)
+
+  const tp30 = touchpoints.filter(tp => new Date(tp.timestamp) >= new Date(new Date(conversion.timestamp) - 30 * 86400000))
+  const first30 = tp30[0]
+  const channel30d = first30 ? channelFromEvent({
+    utm_source:     first30.utm_source,
+    utm_medium:     first30.utm_medium,
+    referrer:       first30.referrer,
+    ai_source:      first30.ai_source,
+    derived_source: first30.derived_source,
+    gclid:          first30.gclid,
+    fbclid:         first30.fbclid
+  }) : null
+
   const record = {
     site_id: site.id,
     conversion_event_id: conversion.uuid,
@@ -257,71 +292,34 @@ async function processConversion(site, conversion) {
     conversion_timestamp: conversion.timestamp,
     conversion_type: conversion.conversion_type || null,
     conversion_value: convValue,
-    
+
     first_touch_source: attribution.first_touch?.source || attribution.first_touch?.derived_source || null,
     first_touch_medium: attribution.first_touch?.medium || null,
     first_touch_campaign: attribution.first_touch?.campaign || null,
     first_touch_timestamp: attribution.first_touch?.timestamp || null,
-    
+
     last_touch_source: attribution.last_touch?.source || attribution.last_touch?.derived_source || null,
     last_touch_medium: attribution.last_touch?.medium || null,
     last_touch_campaign: attribution.last_touch?.campaign || null,
     last_touch_timestamp: attribution.last_touch?.timestamp || null,
-    
+
     linear_attribution: attribution.linear,
     u_shaped_attribution: attribution.u_shaped ? JSON.stringify(attribution.u_shaped) : null,
     touchpoint_count: touchpoints.length,
-    
+
     processing_version: '1.0',
-    first_touch_channel: channelFromEvent({
-      utm_source: touchpoints[0]?.utm_source,
-      utm_medium: touchpoints[0]?.utm_medium,
-      referrer: touchpoints[0]?.referrer,
-      ai_source: touchpoints[0]?.ai_source,
-      derived_source: touchpoints[0]?.derived_source,
-      gclid: touchpoints[0]?.gclid,
-      fbclid: touchpoints[0]?.fbclid
-    }),
-    last_touch_channel: channelFromEvent({
-      utm_source: touchpoints[touchpoints.length - 1]?.utm_source,
-      utm_medium: touchpoints[touchpoints.length - 1]?.utm_medium,
-      referrer:   touchpoints[touchpoints.length - 1]?.referrer,
-      ai_source:  touchpoints[touchpoints.length - 1]?.ai_source,
-      gclid:      touchpoints[touchpoints.length - 1]?.gclid,
-      fbclid:     touchpoints[touchpoints.length - 1]?.fbclid,
-    }),
-    channel: channelFromEvent({
-      utm_source: touchpoints[0]?.utm_source,
-      utm_medium: touchpoints[0]?.utm_medium,
-      referrer: touchpoints[0]?.referrer,
-      ai_source: touchpoints[0]?.ai_source,
-      derived_source: touchpoints[0]?.derived_source,
-      gclid: touchpoints[0]?.gclid,
-      fbclid: touchpoints[0]?.fbclid
-    }),
+    first_touch_channel: firstTouchChannel,
+    last_touch_channel:  lastTouchChannel,
+    channel:             firstTouchChannel,
     attribution_confidence: confidence,
     confidence_signals: JSON.stringify({
-      has_utm:       !!(touchpoints[0]?.utm_source),
-      has_click_id:  !!(touchpoints[0]?.gclid || touchpoints[0]?.fbclid),
-      has_ai_source: !!(touchpoints[0]?.ai_source),
+      has_utm:          !!(firstTp.utm_source),
+      has_click_id:     !!(firstTp.gclid || firstTp.fbclid),
+      has_ai_source:    !!(firstTp.ai_source),
       touchpoint_count: touchpoints.length
     }),
-    channel_30d: (() => {
-      const tp30 = touchpoints.filter(tp => new Date(tp.timestamp) >= new Date(new Date(conversion.timestamp) - 30 * 86400000))
-      const first30 = tp30[0]
-      return first30 ? channelFromEvent({
-        utm_source: first30.utm_source,
-        utm_medium: first30.utm_medium,
-        referrer: first30.referrer,
-        ai_source: first30.ai_source,
-        derived_source: first30.derived_source,
-        gclid: first30.gclid,
-        fbclid: first30.fbclid
-      }) : null
-    })()
+    channel_30d: channel30d
   }
-  
-  const confidence = calculateConfidence(touchpoints, record.first_touch_channel || record.channel)
 
   const { error } = await supabase
     .from('attributed_conversions')

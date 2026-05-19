@@ -50,7 +50,7 @@ router.post('/', requireUserAuth, validateSiteKey, async (req, res) => {
 
 router.delete('/:id', requireUserAuth, validateSiteKey, async (req, res) => {
   try {
-    const { error } = await supabase
+    const { error } = await getSupabase()
       .from('campaign_costs')
       .delete()
       .eq('id', req.params.id)

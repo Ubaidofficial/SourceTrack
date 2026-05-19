@@ -58,7 +58,7 @@ export async function billingWebhookHandler(req, res) {
       const customerId = subscription.customer
 
       if (customerId) {
-        await supabase
+        await getSupabase()
           .from('sites')
           .update({ plan: 'inactive' })
           .eq('stripe_customer_id', customerId)
@@ -101,8 +101,7 @@ router.post('/create-checkout', async (req, res) => {
       success_url: successUrl,
       cancel_url: cancelUrl,
       client_reference_id: site.id,
-      customer: site.stripe_customer_id || undefined,
-      customer_email: site.stripe_customer_id ? undefined : undefined
+      customer: site.stripe_customer_id || undefined
     })
 
     return res.status(200).json({

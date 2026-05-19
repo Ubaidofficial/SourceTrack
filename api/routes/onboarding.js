@@ -195,7 +195,7 @@ router.post('/update', async (req, res) => {
       delete merged.selected_conversions
     }
 
-    const { error: updateErr } = await supabase
+    const { error: updateErr } = await getSupabase()
       .from('sites')
       .update({ onboarding_state: merged, ...(merged.business_type ? { business_type: merged.business_type } : {}) })
       .eq('id', site_id)
@@ -298,7 +298,7 @@ router.post('/complete', async (req, res) => {
 
     const merged = { ...currentState, current_step: MAX_STEP }
 
-    const { error: updateErr } = await supabase
+    const { error: updateErr } = await getSupabase()
       .from('sites')
       .update({ onboarding_completed: true, onboarding_state: merged })
       .eq('id', site_id)

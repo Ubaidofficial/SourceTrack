@@ -206,7 +206,7 @@ router.patch('/:leadId/qualify', validateSiteKey, async (req, res) => {
 
     if (error) throw error
 
-    await supabase
+    await getSupabase()
       .from('attributed_conversions')
       .update({ status: newStatus, qualified_at: new Date().toISOString(), qualified_by: req.user?.id || null })
       .eq('site_id', req.site.id)

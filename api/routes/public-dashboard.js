@@ -2,6 +2,7 @@ import express from 'express'
 import { createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
 import { getPreAggregatedAttribution } from '../lib/attribution-engine.js'
+import { requireUserAuth } from '../middleware/user-auth.js'
 
 const router = express.Router()
 function getSupabase() { return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { global: { fetch }, realtime: { transport: WebSocket } }) }
@@ -53,11 +54,27 @@ router.get('/:token', async (req, res) => {
   }
 })
 
-// PATCH /api/public/settings — toggle public sharing (auth required via requireUserAuth in index.js)
-router.patch('/settings', async (req, res) => {
+// PATCH /api/public/settings — toggle public sharing (auth required)
+router.patch('/settings', requireUserAuth, async (req, res) => {
   try {
     const { site_id, enabled } = req.body
     if (!site_id) return res.status(400).json({ error: 'site_id required' })
+
+    // Verify requester owns or belongs to the site's company
+    const { data: site } = await getSupabase()
+      .from('sites')
+      .select('id, company_id, owner_id')
+      .eq('id', site_id)
+      .single()
+
+    if (!site) return res.status(404).json({ error: 'Site not found' })
+
+    const isSuperAdmin = req.user?.role === 'super_admin'
+    const isOwner = site.owner_id === req.user?.id
+    const isMember = site.company_id && site.company_id === req.user?.company_id
+    if (!isSuperAdmin && !isOwner && !isMember) {
+      return res.status(403).json({ error: 'Access denied' })
+    }
 
     const { data, error } = await getSupabase()
       .from('sites')

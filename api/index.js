@@ -118,7 +118,7 @@ async function isAllowedOrigin(origin) {
   if (cached !== undefined) return cached
 
   try {
-    const { data } = await supabase
+    const { data } = await getSupabase()
       .from('sites')
       .select('domain')
       .eq('domain', hostname)

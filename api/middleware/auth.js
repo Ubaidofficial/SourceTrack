@@ -35,14 +35,15 @@ export async function validateSiteKey(req, res, next) {
     }
 
     if (data.plan === 'trial') {
-      const createdAt = new Date(data.created_at)
-      const trialEnd = new Date(createdAt.getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000)
+      const trialEnd = data.trial_ends_at
+        ? new Date(data.trial_ends_at)
+        : new Date(new Date(data.created_at).getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000)
       if (new Date() > trialEnd) {
         return res.status(402).json({ success: false, data: null, error: 'Trial expired' })
       }
     }
 
-    req.site = { id: data.id, plan: data.plan, company_id: data.company_id, owner_id: data.owner_id }
+    req.site = { id: data.id, plan: data.plan, company_id: data.company_id, owner_id: data.owner_id, trial_ends_at: data.trial_ends_at || null }
     next()
   } catch (_err) {
     res.status(500).json({ success: false, data: null, error: 'Auth error' })

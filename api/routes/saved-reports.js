@@ -149,7 +149,7 @@ router.delete('/saved/:id', async (req, res) => {
       return res.status(404).json({ success: false, data: null, error: 'Report not found' })
     }
 
-    const { error } = await supabase
+    const { error } = await getSupabase()
       .from('saved_reports')
       .delete()
       .eq('id', id)

@@ -71,7 +71,7 @@ router.post('/event', async (req, res) => {
       }
     })
 
-    await supabase
+    await getSupabase()
       .from('api_keys')
       .update({ last_used_at: new Date().toISOString() })
       .eq('id', apiKey.id)

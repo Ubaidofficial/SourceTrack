@@ -1488,11 +1488,16 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
   `
 
     const ltvRows = await queryHogQL(ltvSql, 'flexible_report_ltv')
-    const ltvResults = ltvRows.map(([dimValue, dimValue2, metricValue]) => ({
-      dim_value: dimValue || 'unknown',
-      ...(ltvDim2Expr ? { dim_value2: dimValue2 || 'unknown' } : {}),
-      ltv_revenue: Number(metricValue) || 0
-    }))
+    const ltvResults = ltvRows.map((row) => {
+      const dimValue = row[0]
+      const dimValue2 = ltvDim2Expr ? row[1] : null
+      const metricValue = ltvDim2Expr ? row[2] : row[1]
+      return {
+        dim_value: dimValue || 'unknown',
+        ...(ltvDim2Expr ? { dim_value2: dimValue2 || 'unknown' } : {}),
+        ltv_revenue: Number(metricValue) || 0
+      }
+    })
 
     const ltvTruncated = ltvRows.length >= 50000
 
@@ -1639,8 +1644,8 @@ export async function getPreAggregatedAttribution({
     selectField = campaignField
     groupField = campaignField
   } else if (groupBy === 'channel') {
-    selectField = 'channel'
-    groupField = 'channel'
+    selectField = model === 'last_touch' ? 'last_touch_channel' : 'first_touch_channel'
+    groupField  = model === 'last_touch' ? 'last_touch_channel' : 'first_touch_channel'
   } else {
     selectField = sourceField
     groupField = sourceField
