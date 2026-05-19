@@ -25,6 +25,7 @@ import Admin from './pages/Admin'
 import Analytics from './pages/Analytics'
 import AdminRoute from './components/AdminRoute'
 import Docs from './pages/Docs'
+import Landing from './pages/Landing'
 
 const queryClient = new QueryClient()
 
@@ -81,7 +82,9 @@ export default function App() {
             <Route path="/share/:token" element={<ShareDashboard />} />
             {/* Public docs — no auth required */}
             <Route path="/docs" element={<Docs />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            {/* Public landing page — accessible to everyone */}
+            <Route path="/" element={<Landing />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>
