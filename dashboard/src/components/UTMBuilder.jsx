@@ -113,7 +113,7 @@ export default function UTMBuilder() {
             value={term}
             onChange={e => setTerm(e.target.value)}
             onBlur={onBlurLower(setTerm)}
-            placeholder="running+shoes"
+            placeholder="running shoes"
             className={inputClass}
           />
         </div>

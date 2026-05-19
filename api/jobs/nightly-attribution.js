@@ -311,8 +311,10 @@ async function processConversion(site, conversion) {
     last_touch_campaign: attribution.last_touch?.campaign || null,
     last_touch_timestamp: attribution.last_touch?.timestamp || null,
 
-    linear_attribution: attribution.linear,
-    u_shaped_attribution: attribution.u_shaped?.length ? attribution.u_shaped : null,
+    linear_attribution:     attribution.linear,
+    u_shaped_attribution:   attribution.u_shaped?.length    ? attribution.u_shaped    : null,
+    time_decay_attribution: attribution.time_decay?.length  ? attribution.time_decay  : null,
+    w_shaped_attribution:   attribution.w_shaped?.length    ? attribution.w_shaped    : null,
     touchpoint_count: touchpoints.length,
 
     processing_version: '1.0',
@@ -344,30 +346,113 @@ function calculateAttribution(touchpoints, conversionValue) {
       first_touch: null,
       last_touch: null,
       linear: [],
-      u_shaped: []
+      u_shaped: [],
+      time_decay: [],
+      w_shaped: []
     }
   }
-  
+
   const firstTouchpoint = touchpoints[0]
   const lastTouchpoint = touchpoints[touchpoints.length - 1]
-  
-  const fraction = 1.0 / touchpoints.length
-  const linearValue = conversionValue * fraction
-  
-  const linear = touchpoints.map(tp => ({
+
+  const tpCh = (tp) => channelFromEvent({
+    utm_source: tp.utm_source, utm_medium: tp.utm_medium,
+    ai_source: tp.ai_source, gclid: tp.gclid,
+    fbclid: tp.fbclid, msclkid: tp.msclkid, referrer: tp.referrer
+  })
+  const tpBase = (tp) => ({
     source: tp.utm_source || null,
     medium: tp.utm_medium || null,
     campaign: tp.utm_campaign || null,
-    channel: channelFromEvent({
-      utm_source: tp.utm_source, utm_medium: tp.utm_medium,
-      ai_source: tp.ai_source, gclid: tp.gclid,
-      fbclid: tp.fbclid, msclkid: tp.msclkid, referrer: tp.referrer
-    }),
-    timestamp: tp.timestamp,
+    channel: tpCh(tp),
+    timestamp: tp.timestamp
+  })
+
+  // ── Linear ──────────────────────────────────────────────────────────────────
+  const fraction = 1.0 / touchpoints.length
+  const linearValue = conversionValue * fraction
+  const linear = touchpoints.map(tp => ({
+    ...tpBase(tp),
     fraction: parseFloat(fraction.toFixed(4)),
     attributed_value: parseFloat(linearValue.toFixed(2))
   }))
-  
+
+  // ── U-Shaped (40/20/40) ──────────────────────────────────────────────────────
+  const u_shaped = (() => {
+    if (touchpoints.length === 1) {
+      return [{ ...tpBase(firstTouchpoint), fraction: 1.0, attributed_value: parseFloat(conversionValue.toFixed(2)) }]
+    }
+    if (touchpoints.length === 2) {
+      return [
+        { ...tpBase(firstTouchpoint), fraction: 0.5, attributed_value: parseFloat((conversionValue * 0.5).toFixed(2)) },
+        { ...tpBase(lastTouchpoint),  fraction: 0.5, attributed_value: parseFloat((conversionValue * 0.5).toFixed(2)) }
+      ]
+    }
+    const middleCount = touchpoints.length - 2
+    const middleFraction = parseFloat((0.2 / middleCount).toFixed(4))
+    const middleValue = parseFloat((conversionValue * 0.2 / middleCount).toFixed(2))
+    return touchpoints.map((tp, i) => {
+      if (i === 0) return { ...tpBase(tp), fraction: 0.4, attributed_value: parseFloat((conversionValue * 0.4).toFixed(2)) }
+      if (i === touchpoints.length - 1) return { ...tpBase(tp), fraction: 0.4, attributed_value: parseFloat((conversionValue * 0.4).toFixed(2)) }
+      return { ...tpBase(tp), fraction: middleFraction, attributed_value: middleValue }
+    })
+  })()
+
+  // ── Time Decay (7-day half-life) ─────────────────────────────────────────────
+  // Gives progressively more credit to touchpoints closer to the conversion.
+  const time_decay = (() => {
+    const conversionTime = new Date(lastTouchpoint.timestamp).getTime()
+    const halfLifeDays = 7
+    const halfLifeMs = halfLifeDays * 24 * 60 * 60 * 1000
+    const rawWeights = touchpoints.map(tp => {
+      const tpTime = new Date(tp.timestamp).getTime()
+      const daysBack = Math.max(0, (conversionTime - tpTime) / halfLifeMs)
+      return Math.pow(0.5, daysBack) // 0.5^(days/halfLife)
+    })
+    const totalWeight = rawWeights.reduce((s, w) => s + w, 0) || 1
+    return touchpoints.map((tp, i) => {
+      const frac = parseFloat((rawWeights[i] / totalWeight).toFixed(4))
+      return {
+        ...tpBase(tp),
+        fraction: frac,
+        attributed_value: parseFloat((conversionValue * frac).toFixed(2))
+      }
+    })
+  })()
+
+  // ── W-Shaped (30/30/30/10) ───────────────────────────────────────────────────
+  // 30% first touch, 30% lead creation (middle), 30% last touch, 10% spread across rest.
+  const w_shaped = (() => {
+    if (touchpoints.length === 1) {
+      return [{ ...tpBase(firstTouchpoint), fraction: 1.0, attributed_value: parseFloat(conversionValue.toFixed(2)) }]
+    }
+    if (touchpoints.length === 2) {
+      return [
+        { ...tpBase(firstTouchpoint), fraction: 0.5, attributed_value: parseFloat((conversionValue * 0.5).toFixed(2)) },
+        { ...tpBase(lastTouchpoint),  fraction: 0.5, attributed_value: parseFloat((conversionValue * 0.5).toFixed(2)) }
+      ]
+    }
+    if (touchpoints.length === 3) {
+      return touchpoints.map((tp, i) => ({
+        ...tpBase(tp),
+        fraction: 0.333,
+        attributed_value: parseFloat((conversionValue / 3).toFixed(2))
+      }))
+    }
+    // 4+ touchpoints: anchor 30% to first, middle, and last; 10% spread across the rest
+    const middleIdx = Math.floor((touchpoints.length - 1) / 2)
+    const anchorIndices = new Set([0, middleIdx, touchpoints.length - 1])
+    const otherCount = touchpoints.length - anchorIndices.size
+    const otherFrac = otherCount > 0 ? parseFloat((0.1 / otherCount).toFixed(4)) : 0
+    const otherValue = otherCount > 0 ? parseFloat((conversionValue * 0.1 / otherCount).toFixed(2)) : 0
+    return touchpoints.map((tp, i) => {
+      if (anchorIndices.has(i)) {
+        return { ...tpBase(tp), fraction: 0.3, attributed_value: parseFloat((conversionValue * 0.3).toFixed(2)) }
+      }
+      return { ...tpBase(tp), fraction: otherFrac, attributed_value: otherValue }
+    })
+  })()
+
   return {
     first_touch: {
       source: firstTouchpoint.utm_source || null,
@@ -381,30 +466,10 @@ function calculateAttribution(touchpoints, conversionValue) {
       campaign: lastTouchpoint.utm_campaign || null,
       timestamp: lastTouchpoint.timestamp
     },
-    linear: linear,
-    u_shaped: (() => {
-      const tpCh = (tp) => channelFromEvent({
-        utm_source: tp.utm_source, utm_medium: tp.utm_medium,
-        ai_source: tp.ai_source, gclid: tp.gclid,
-        fbclid: tp.fbclid, msclkid: tp.msclkid, referrer: tp.referrer
-      })
-      if (touchpoints.length === 1) {
-        return [{ source: firstTouchpoint.utm_source || null, medium: firstTouchpoint.utm_medium || null, campaign: firstTouchpoint.utm_campaign || null, channel: tpCh(firstTouchpoint), timestamp: firstTouchpoint.timestamp, fraction: 1.0, attributed_value: parseFloat(conversionValue.toFixed(2)) }]
-      } else if (touchpoints.length === 2) {
-        return [
-          { source: firstTouchpoint.utm_source || null, medium: firstTouchpoint.utm_medium || null, campaign: firstTouchpoint.utm_campaign || null, channel: tpCh(firstTouchpoint), timestamp: firstTouchpoint.timestamp, fraction: 0.5, attributed_value: parseFloat((conversionValue * 0.5).toFixed(2)) },
-          { source: lastTouchpoint.utm_source || null, medium: lastTouchpoint.utm_medium || null, campaign: lastTouchpoint.utm_campaign || null, channel: tpCh(lastTouchpoint), timestamp: lastTouchpoint.timestamp, fraction: 0.5, attributed_value: parseFloat((conversionValue * 0.5).toFixed(2)) }
-        ]
-      }
-      const middleCount = touchpoints.length - 2
-      const middleFraction = middleCount > 0 ? parseFloat((0.2 / middleCount).toFixed(4)) : 0
-      const middleValue = middleCount > 0 ? parseFloat((conversionValue * 0.2 / middleCount).toFixed(2)) : 0
-      return touchpoints.map((tp, i) => {
-        if (i === 0) return { source: tp.utm_source || null, medium: tp.utm_medium || null, campaign: tp.utm_campaign || null, channel: tpCh(tp), timestamp: tp.timestamp, fraction: 0.4, attributed_value: parseFloat((conversionValue * 0.4).toFixed(2)) }
-        if (i === touchpoints.length - 1) return { source: tp.utm_source || null, medium: tp.utm_medium || null, campaign: tp.utm_campaign || null, channel: tpCh(tp), timestamp: tp.timestamp, fraction: 0.4, attributed_value: parseFloat((conversionValue * 0.4).toFixed(2)) }
-        return { source: tp.utm_source || null, medium: tp.utm_medium || null, campaign: tp.utm_campaign || null, channel: tpCh(tp), timestamp: tp.timestamp, fraction: middleFraction, attributed_value: middleValue }
-      })
-    })()
+    linear,
+    u_shaped,
+    time_decay,
+    w_shaped
   }
 }
 

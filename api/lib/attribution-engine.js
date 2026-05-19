@@ -1776,6 +1776,102 @@ export async function getUShapedAttribution({
   return results.sort((a, b) => b[metric] - a[metric])
 }
 
+// Get Time Decay attribution from pre-aggregated data (7-day half-life)
+export async function getTimeDecayAttribution({
+  siteId,
+  dateFrom,
+  dateTo,
+  groupBy = 'source',
+  metric = 'revenue'
+}) {
+  const { createClient } = await import('@supabase/supabase-js')
+  const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_KEY
+  )
+
+  const { data, error } = await supabase
+    .from('attributed_conversions')
+    .select('time_decay_attribution')
+    .eq('site_id', siteId)
+    .gte('conversion_date', dateFrom)
+    .lte('conversion_date', dateTo)
+    .not('time_decay_attribution', 'is', null)
+
+  if (error) throw new Error(`Supabase query failed: ${error.message}`)
+
+  const aggregated = {}
+  for (const row of data || []) {
+    let tdData = row.time_decay_attribution || []
+    if (typeof tdData === 'string') {
+      try { tdData = JSON.parse(tdData) } catch { tdData = [] }
+    }
+    if (!Array.isArray(tdData)) tdData = []
+    for (const touch of tdData) {
+      const dimValue = touch[groupBy] || touch.source || 'direct'
+      if (!aggregated[dimValue]) aggregated[dimValue] = { revenue: 0, conversions: 0 }
+      aggregated[dimValue].revenue += parseFloat(touch.attributed_value || 0)
+      aggregated[dimValue].conversions += 1
+    }
+  }
+
+  const results = Object.entries(aggregated).map(([dim_value, stats]) => ({
+    dim_value,
+    revenue: parseFloat(stats.revenue.toFixed(2)),
+    conversions: stats.conversions
+  }))
+
+  return results.sort((a, b) => b[metric] - a[metric])
+}
+
+// Get W-Shaped attribution (30/30/30/10) from pre-aggregated data
+export async function getWShapedAttribution({
+  siteId,
+  dateFrom,
+  dateTo,
+  groupBy = 'source',
+  metric = 'revenue'
+}) {
+  const { createClient } = await import('@supabase/supabase-js')
+  const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_KEY
+  )
+
+  const { data, error } = await supabase
+    .from('attributed_conversions')
+    .select('w_shaped_attribution')
+    .eq('site_id', siteId)
+    .gte('conversion_date', dateFrom)
+    .lte('conversion_date', dateTo)
+    .not('w_shaped_attribution', 'is', null)
+
+  if (error) throw new Error(`Supabase query failed: ${error.message}`)
+
+  const aggregated = {}
+  for (const row of data || []) {
+    let wsData = row.w_shaped_attribution || []
+    if (typeof wsData === 'string') {
+      try { wsData = JSON.parse(wsData) } catch { wsData = [] }
+    }
+    if (!Array.isArray(wsData)) wsData = []
+    for (const touch of wsData) {
+      const dimValue = touch[groupBy] || touch.source || 'direct'
+      if (!aggregated[dimValue]) aggregated[dimValue] = { revenue: 0, conversions: 0 }
+      aggregated[dimValue].revenue += parseFloat(touch.attributed_value || 0)
+      aggregated[dimValue].conversions += 1
+    }
+  }
+
+  const results = Object.entries(aggregated).map(([dim_value, stats]) => ({
+    dim_value,
+    revenue: parseFloat(stats.revenue.toFixed(2)),
+    conversions: stats.conversions
+  }))
+
+  return results.sort((a, b) => b[metric] - a[metric])
+}
+
 // Get linear attribution from pre-aggregated data
 export async function getLinearAttribution({
   siteId,

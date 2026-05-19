@@ -11,7 +11,6 @@ import {
   ExternalLink,
   Shield,
   Search,
-  Filter,
   X,
   Database
 } from 'lucide-react'
@@ -192,7 +191,7 @@ export default function EventDebugger() {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-st-black">Event Logger</h2>
+          <h2 className="text-2xl font-bold text-st-black">Live Events</h2>
           <p className="text-sm text-st-gray dark:text-gray-400 mt-1">Inspect incoming events and verify tracking health</p>
         </div>
         <button
@@ -212,7 +211,15 @@ export default function EventDebugger() {
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
-          {statusChip()}
+          {loading ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-[#252929] text-gray-500">
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Checking health…
+            </span>
+          ) : !health ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 dark:bg-[#252929] text-gray-500">
+              <XCircle className="w-3.5 h-3.5" /> No health data — install the tracker to begin monitoring
+            </span>
+          ) : statusChip()}
           {health?.count_day != null && (
             <span className="text-sm text-st-gray">{health.count_day} events in 24h</span>
           )}
@@ -335,15 +342,12 @@ export default function EventDebugger() {
 
             <label className="space-y-1">
               <span className="text-xs text-st-gray">Source</span>
-              <div className="relative">
-                <Filter className="w-4 h-4 text-st-gray dark:text-gray-400 absolute left-3 top-2.5" />
-                <input
-                  value={filters.source}
-                  onChange={(e) => updateFilter('source', e.target.value)}
-                  placeholder="google, chatgpt..."
-                  className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg"
-                />
-              </div>
+              <input
+                value={filters.source}
+                onChange={(e) => updateFilter('source', e.target.value)}
+                placeholder="google, chatgpt..."
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+              />
             </label>
 
             <label className="space-y-1">

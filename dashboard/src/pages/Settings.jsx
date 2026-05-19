@@ -229,35 +229,24 @@ export default function Settings() {
       )}
 
       {/* ── Plan & Billing ─────────────────────────────────────────────── */}
-      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
-        <div className="flex items-center gap-2">
-          <CreditCard className="w-4 h-4 text-st-gray dark:text-gray-400" />
-          <h3 className="text-sm font-bold text-st-black dark:text-white">Plan & Billing</h3>
-        </div>
-        
-        <div className="space-y-3">
-          <div>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Current Plan: <span className="font-semibold text-st-black dark:text-white capitalize">{plan}</span>
-            </p>
-            {isTrial && daysLeft !== null && (
-              <p className="text-xs text-st-gray dark:text-gray-500 mt-1">
-                {daysLeft > 0
-                  ? `${daysLeft} day${daysLeft === 1 ? '' : 's'} remaining in trial`
-                  : 'Trial expired'}
+      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <CreditCard className="w-4 h-4 text-st-gray dark:text-gray-400" />
+            <div>
+              <p className="text-sm font-bold text-st-black dark:text-white">
+                Plan: <span className="capitalize">{plan}</span>
+                {isTrial && daysLeft !== null && (
+                  <span className={`ml-2 text-xs font-medium ${daysLeft <= 3 ? 'text-red-500' : 'text-amber-500'}`}>
+                    ({daysLeft > 0 ? `${daysLeft}d left` : 'expired'})
+                  </span>
+                )}
               </p>
-            )}
+            </div>
           </div>
-
-          {isPro && (
-            <button
-              onClick={handlePortal}
-              disabled={loadingPortal}
-              className="text-sm text-st-black dark:text-white border border-gray-200 dark:border-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors"
-            >
-              {loadingPortal ? 'Loading…' : 'Manage Subscription'}
-            </button>
-          )}
+          <a href="/billing" className="text-xs text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white underline">
+            Manage billing →
+          </a>
         </div>
       </section>
 
@@ -349,7 +338,7 @@ export default function Settings() {
         </p>
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-600 dark:text-gray-400">
-            {cookielessMode ? 'Cookieless mode on — use tracker.cookieless.js' : 'Standard mode — uses localStorage'}
+            {cookielessMode ? 'Cookieless mode — no browser storage, GDPR-safe' : 'Standard mode — visitor IDs stored in localStorage'}
           </span>
           <button
             onClick={handleCookielessToggle}

@@ -35,11 +35,15 @@ import ConversionExplanationModal from '../components/ConversionExplanationModal
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend)
 
 const MODELS = [
-  { key: 'first_touch', label: 'First Touch' },
-  { key: 'last_touch', label: 'Last Touch' },
+  { key: 'first_touch',            label: 'First Touch' },
+  { key: 'last_touch',             label: 'Last Touch' },
   { key: 'first_touch_non_direct', label: 'First Touch (Non-Direct)' },
-  { key: 'last_touch_non_direct', label: 'Last Touch (Non-Direct)' },
-  { key: 'ai_platforms', label: 'AI Platforms' }
+  { key: 'last_touch_non_direct',  label: 'Last Touch (Non-Direct)' },
+  { key: 'linear',                 label: 'Linear' },
+  { key: 'time_decay',             label: 'Time Decay' },
+  { key: 'u_shaped',               label: 'U-Shaped' },
+  { key: 'w_shaped',               label: 'W-Shaped' },
+  { key: 'ai_platforms',           label: 'AI Platforms' },
 ]
 
 const AI_SOURCES = ['ChatGPT', 'Claude', 'Perplexity', 'Gemini', 'Grok', 'Copilot', 'DeepSeek', 'You.com AI', 'Phind', 'Kagi'] // matches ai-platform.js AI_HOST_MAP (11 platforms)

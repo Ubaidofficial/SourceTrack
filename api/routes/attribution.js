@@ -1,6 +1,6 @@
-import { getAttribution, getFlexibleReport, getAttributionExplanation, getPreAggregatedAttribution, getLinearAttribution, getUShapedAttribution } from '../lib/attribution-engine.js'
+import { getAttribution, getFlexibleReport, getAttributionExplanation, getPreAggregatedAttribution, getLinearAttribution, getUShapedAttribution, getTimeDecayAttribution, getWShapedAttribution } from '../lib/attribution-engine.js'
 
-const ALLOWED_MODELS = new Set(['first_touch', 'last_touch', 'first_touch_non_direct', 'last_touch_non_direct', 'ai_platforms', 'linear', 'u_shaped'])
+const ALLOWED_MODELS = new Set(['first_touch', 'last_touch', 'first_touch_non_direct', 'last_touch_non_direct', 'ai_platforms', 'linear', 'u_shaped', 'time_decay', 'w_shaped'])
 const ALLOWED_GROUPS = new Set(['channel', 'source', 'medium', 'campaign', 'ai_source', 'landing_page', 'country', 'device', 'conversion_type', 'date'])
 const ALLOWED_METRICS = new Set([
   'revenue', 'conversions', 'sessions', 'leads', 'conversion_rate',
@@ -155,6 +155,34 @@ export async function attribution(req, res) {
           return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results } })
         } catch (error) {
           console.error("U-shaped attribution failed:", error)
+        }
+      }
+      if (model === "time_decay") {
+        try {
+          const results = await getTimeDecayAttribution({
+            siteId: req.site.id,
+            dateFrom: date_from,
+            dateTo: date_to,
+            groupBy: group_by,
+            metric
+          })
+          return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results } })
+        } catch (error) {
+          console.error("Time decay attribution failed:", error)
+        }
+      }
+      if (model === "w_shaped") {
+        try {
+          const results = await getWShapedAttribution({
+            siteId: req.site.id,
+            dateFrom: date_from,
+            dateTo: date_to,
+            groupBy: group_by,
+            metric
+          })
+          return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results } })
+        } catch (error) {
+          console.error("W-shaped attribution failed:", error)
         }
       }
 

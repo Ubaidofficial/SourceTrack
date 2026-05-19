@@ -86,25 +86,20 @@ export default function Integrations() {
         </div>
         <button onClick={() => navigate('/debugger')}
           className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5">
-          <Bug className="w-4 h-4" /> Event Logger
+          <Bug className="w-4 h-4" /> Live Events
         </button>
       </div>
 
       {/* Status Overview */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricTile label="Install Status"
-          value={isVerified ? 'Verified' : 'Pending'}
-          icon={isVerified ? ShieldCheck : AlertTriangle}
-          iconBg={isVerified ? 'bg-green-100' : 'bg-amber-100'}
-          iconColor={isVerified ? 'text-green-600' : 'text-amber-600'} />
-        <MetricTile label="Site" value={site?.domain || '—'}
-          icon={Globe} iconBg="bg-blue-100" iconColor="text-blue-600" />
-        <MetricTile label="Active Alerts" value={formatNumber(alerts.length)}
-          icon={AlertTriangle} iconBg={alerts.length > 0 ? 'bg-red-100' : 'bg-green-100'}
-          iconColor={alerts.length > 0 ? 'text-red-600' : 'text-green-600'} />
-        <MetricTile label="Hygiene" value={safeNumber(hygieneData?.total_issues, 0) > 0 ? 'Needs Review' : 'Clean'}
-          icon={ShieldCheck} iconBg={safeNumber(hygieneData?.total_issues, 0) > 0 ? 'bg-amber-100' : 'bg-green-100'}
-          iconColor={safeNumber(hygieneData?.total_issues, 0) > 0 ? 'text-amber-600' : 'text-green-600'} />
+        <MetricTile label="Install Status" format="text"
+          value={isVerified ? 'Verified' : 'Pending'} />
+        <MetricTile label="Site" format="text"
+          value={site?.domain || '—'} />
+        <MetricTile label="Active Alerts"
+          value={alerts.length} />
+        <MetricTile label="Hygiene" format="text"
+          value={safeNumber(hygieneData?.total_issues, 0) > 0 ? 'Needs Review' : 'Clean'} />
       </div>
 
       {/* Main Content */}
@@ -215,31 +210,19 @@ export default function Integrations() {
       </div>
 
       {/* Available Integrations (Future) */}
-      <DashboardCard title="Available Integrations"
-        subtitle="Connect your marketing stack — coming soon"
+      <DashboardCard title="Coming Soon"
+        subtitle="More integrations on the way"
       >
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {FUTURE_INTEGRATIONS.map(int => {
-            const Icon = int.icon
-            return (
-              <div key={int.key}
-                className="border border-gray-200 rounded-lg p-4 bg-gray-50 opacity-70 cursor-not-allowed select-none">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-white rounded-lg border border-gray-200">
-                    <Icon className="w-5 h-5 text-st-gray" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-st-gray">{int.label}</p>
-                    <p className="text-xs text-st-gray">Coming soon</p>
-                  </div>
-                </div>
-                <p className="text-xs text-st-gray">{int.desc}</p>
-              </div>
-            )
-          })}
+        <div className="flex flex-wrap gap-2">
+          {FUTURE_INTEGRATIONS.map(int => (
+            <span key={int.key}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-[#252929] text-st-gray dark:text-gray-400 border border-gray-200 dark:border-[#2A2E2E]">
+              {int.label}
+            </span>
+          ))}
         </div>
-        <p className="text-xs text-st-gray mt-4 text-center">
-          Backend consolidation for integrations is planned in a later session.
+        <p className="text-xs text-st-gray dark:text-gray-500 mt-3">
+          Want a specific integration? <a href="mailto:support@sourcetrack.ai" className="underline hover:text-st-black dark:hover:text-white">Let us know →</a>
         </p>
       </DashboardCard>
 

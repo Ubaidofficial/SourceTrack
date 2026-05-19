@@ -1,23 +1,16 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import { CreditCard, Check, ArrowRight } from 'lucide-react'
+import { CreditCard, ExternalLink } from 'lucide-react'
 
 const PLAN_LIMITS = { trial: 200, starter: 1000, pro: 4000, agency: 10000 }
-const PRICES = { starter: '$29', pro: '$99', agency: '$149' }
-
-const FAQ = [
-  { q: 'Can I cancel anytime?', a: 'Yes, cancel from your billing portal.' },
-  { q: 'What counts as a lead?', a: 'Each unique visitor session tracked per month.' },
-  { q: 'Do you offer refunds?', a: 'Yes, within 7 days of any charge.' }
-]
 
 export default function Billing() {
   const { user } = useAuth()
   const [site, setSite] = useState(null)
   const [usage, setUsage] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [checkouting, setCheckouting] = useState(null)
+  const [portalLoading, setPortalLoading] = useState(false)
 
   useEffect(() => { loadData() }, [user])
 
@@ -53,21 +46,18 @@ export default function Billing() {
     }
   }
 
-  async function handleCheckout(plan) {
-    setCheckouting(plan)
+  async function handlePortal() {
+    setPortalLoading(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      const res = await fetch('/api/billing/create-checkout', {
+      const res = await fetch('/api/billing/portal', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token || ''}`
         },
         body: JSON.stringify({
-          plan,
-          site_key: site.site_key,
-          successUrl: `${window.location.origin}/billing?success=true`,
-          cancelUrl: `${window.location.origin}/billing?canceled=true`
+          returnUrl: `${window.location.origin}/billing`
         })
       })
       const json = await res.json()
@@ -77,7 +67,7 @@ export default function Billing() {
     } catch (_e) {
       /* silent */
     } finally {
-      setCheckouting(null)
+      setPortalLoading(false)
     }
   }
 
@@ -93,12 +83,6 @@ export default function Billing() {
     const diff = Math.ceil((end - new Date()) / 86400000)
     return Math.max(0, diff)
   })()
-
-  const cards = [
-    { plan: 'starter', price: '$29', leads: '1,000', label: 'Get Started' },
-    { plan: 'pro', price: '$99', leads: '4,000', label: 'Upgrade', badge: 'Most Popular' },
-    { plan: 'agency', price: '$149', leads: '10,000', label: 'Scale Up' }
-  ]
 
   if (loading) {
     return (
@@ -124,7 +108,7 @@ export default function Billing() {
 
         <div className="flex items-baseline gap-2">
           <span className="text-xl font-bold text-st-black dark:text-white capitalize">{plan}</span>
-          {!isTrial && <span className="text-sm text-st-gray dark:text-gray-400">{PRICES[plan] || '$29'}/mo</span>}
+          {!isTrial && <span className="text-sm text-st-gray dark:text-gray-400 capitalize">{plan} plan</span>}
         </div>
 
         {isTrial && daysLeft !== null && (
@@ -147,72 +131,20 @@ export default function Billing() {
         </div>
       </section>
 
-      {/* ── Pricing Cards ─────────────────────────────────────────────── */}
-      <section className="space-y-4">
-        <h3 className="text-sm font-bold text-st-black dark:text-white">Available Plans</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {cards.map(({ plan: cardPlan, price, leads, label, badge }) => {
-            const isCurrent = plan === cardPlan
-            return (
-              <div
-                key={cardPlan}
-                className={`relative bg-white dark:bg-[#1A1C1C] border-2 rounded-xl p-5 flex flex-col gap-3 ${
-                  isCurrent
-                    ? 'border-green-500 dark:border-green-400 shadow-md'
-                    : 'border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700'
-                }`}
-              >
-                {badge && (
-                  <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-st-black dark:bg-white text-white dark:text-st-black text-[10px] font-bold rounded-full">
-                    {badge}
-                  </span>
-                )}
-
-                <h4 className="text-sm font-bold text-st-black dark:text-white capitalize mt-1">{cardPlan}</h4>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-bold text-st-black dark:text-white">{price}</span>
-                  <span className="text-xs text-st-gray dark:text-gray-400">/mo</span>
-                </div>
-                <p className="text-xs text-st-gray dark:text-gray-400">{leads} leads/mo</p>
-
-                <button
-                  onClick={() => handleCheckout(cardPlan)}
-                  disabled={checkouting === cardPlan || isCurrent}
-                  className={`mt-auto flex items-center justify-center gap-1.5 w-full py-2 px-3 text-sm font-semibold rounded-lg transition-colors ${
-                    isCurrent
-                      ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 cursor-default'
-                      : 'bg-st-black dark:bg-white text-white dark:text-st-black hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50'
-                  }`}
-                >
-                  {isCurrent ? (
-                    <>
-                      <Check className="w-3.5 h-3.5" /> Current Plan
-                    </>
-                  ) : checkouting === cardPlan ? (
-                    'Redirecting…'
-                  ) : (
-                    <>
-                      {label} <ArrowRight className="w-3.5 h-3.5" />
-                    </>
-                  )}
-                </button>
-              </div>
-            )
-          })}
-        </div>
-      </section>
-
-      {/* ── FAQ ───────────────────────────────────────────────────────── */}
-      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
-        <h3 className="text-sm font-bold text-st-black dark:text-white">FAQ</h3>
-        <div className="space-y-3">
-          {FAQ.map(({ q, a }) => (
-            <div key={q}>
-              <p className="text-sm font-medium text-st-black dark:text-white">{q}</p>
-              <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">{a}</p>
-            </div>
-          ))}
-        </div>
+      {/* ── Manage Subscription ───────────────────────────────────────── */}
+      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6">
+        <h3 className="text-sm font-bold text-st-black dark:text-white mb-1">Manage Subscription</h3>
+        <p className="text-xs text-st-gray dark:text-gray-400 mb-4">
+          Upgrade, downgrade, update payment details, or cancel — all from your billing portal.
+        </p>
+        <button
+          onClick={handlePortal}
+          disabled={portalLoading}
+          className="flex items-center gap-2 px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors"
+        >
+          <ExternalLink className="w-4 h-4" />
+          {portalLoading ? 'Opening portal…' : 'Open Billing Portal'}
+        </button>
       </section>
     </div>
   )

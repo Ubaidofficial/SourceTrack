@@ -246,7 +246,7 @@ export default function Layout({ children }) {
             )}
             {trialInfo !== null && (
               <button
-                onClick={() => navigate('/settings')}
+                onClick={() => navigate('/billing')}
                 className="hidden sm:block text-xs font-semibold bg-st-black dark:bg-white text-white dark:text-st-black px-3 py-1.5 rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 transition-colors"
               >
                 Upgrade

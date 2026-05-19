@@ -27,13 +27,15 @@ import ConversionExplanationModal from '../components/ConversionExplanationModal
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend)
 
 const MODELS = [
-  { key: 'first_touch', label: 'First Touch' },
-  { key: 'last_touch', label: 'Last Touch' },
+  { key: 'first_touch',          label: 'First Touch' },
+  { key: 'last_touch',           label: 'Last Touch' },
   { key: 'first_touch_non_direct', label: 'First Touch (Non-Direct)' },
-  { key: 'last_touch_non_direct', label: 'Last Touch (Non-Direct)' },
-  { key: 'ai_platforms', label: 'AI Platforms' },
-  { key: 'linear', label: 'Linear' },
-  { key: 'u_shaped', label: 'U-Shaped (40/20/40)' }
+  { key: 'last_touch_non_direct',  label: 'Last Touch (Non-Direct)' },
+  { key: 'linear',               label: 'Linear' },
+  { key: 'time_decay',           label: 'Time Decay (7-day half-life)' },
+  { key: 'u_shaped',             label: 'U-Shaped (40/20/40)' },
+  { key: 'w_shaped',             label: 'W-Shaped (30/30/30/10)' },
+  { key: 'ai_platforms',         label: 'AI Platforms' },
 ]
 
 const DIMENSIONS = [
@@ -286,16 +288,16 @@ export default function ReportBuilder() {
   const { data: priorRes } = useQuery({
     queryKey: ['report-prior', site?.site_key, model, groupBy, metric, effectiveDateFrom, effectiveDateTo, filterKey, groupBy2, granularity, attributionWindow, attributeBy],
     queryFn: () => getFlexibleReport(site?.site_key, model, priorPeriod.date_from, priorPeriod.date_to, groupBy, metric, filters, groupBy2, granularity, attributionWindow, attributeBy),
-    enabled: !!site && !!priorPeriod
+    enabled: !!site && !!priorPeriod && showCompare
   })
 
   useEffect(() => {
-    if (chartType !== 'kpi') {
+    if (!showCompare) {
       setPriorReportData(null)
     } else if (priorRes) {
       setPriorReportData(priorRes)
     }
-  }, [chartType, priorRes])
+  }, [showCompare, priorRes])
 
   const results = data?.results || []
   const metricDef = METRICS.find(m => m.key === metric)
@@ -1188,7 +1190,11 @@ export default function ReportBuilder() {
                     <p className="text-xs text-st-gray dark:text-gray-400">Total {metricLabel}</p>
                     <p className="text-2xl font-bold text-st-black">{metricFormat(total)}</p>
                   </div>
-                  {isLoading && <RefreshCw className="w-5 h-5 animate-spin text-st-gray dark:text-gray-400" />}
+                  {isLoading && (
+                    <span className="flex items-center gap-1.5 text-xs text-st-gray dark:text-gray-400">
+                      <RefreshCw className="w-4 h-4 animate-spin" /> Loading…
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -1196,8 +1202,9 @@ export default function ReportBuilder() {
               {(chartType === 'bar' || chartType === 'line' || chartType === 'area' || chartType === 'pie') && (
                 <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-6">
                   {isLoading ? (
-                    <div className="h-72 flex items-center justify-center">
+                    <div className="h-72 flex flex-col items-center justify-center gap-2">
                       <RefreshCw className="w-6 h-6 animate-spin text-st-gray dark:text-gray-400" />
+                      <p className="text-xs text-st-gray dark:text-gray-400">Loading report…</p>
                     </div>
                   ) : results.length === 0 ? (
                     <div className="h-72 flex items-center justify-center text-st-gray dark:text-gray-400 text-sm">
@@ -1218,8 +1225,9 @@ export default function ReportBuilder() {
               {chartType === 'kpi' && (
                 <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-6">
                   {isLoading ? (
-                    <div className="flex items-center justify-center py-12">
+                    <div className="flex flex-col items-center justify-center py-12 gap-2">
                       <RefreshCw className="w-6 h-6 animate-spin text-st-gray dark:text-gray-400" />
+                      <p className="text-xs text-st-gray dark:text-gray-400">Loading report…</p>
                     </div>
                   ) : results.length === 0 ? (
                     <div className="py-12 text-center text-st-gray dark:text-gray-400 text-sm">No KPI data yet</div>
@@ -1283,8 +1291,9 @@ export default function ReportBuilder() {
                   </div>
                 </div>
                 {isLoading ? (
-                  <div className="p-8 text-center">
+                  <div className="p-8 text-center space-y-2">
                     <RefreshCw className="w-5 h-5 animate-spin text-st-gray dark:text-gray-400 mx-auto" />
+                    <p className="text-xs text-st-gray dark:text-gray-400">Loading report…</p>
                   </div>
                 ) : results.length === 0 ? (
                   <div className="p-8 text-center text-sm text-st-gray dark:text-gray-400">No data yet</div>
