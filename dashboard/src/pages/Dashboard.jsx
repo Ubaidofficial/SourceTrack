@@ -299,6 +299,24 @@ export default function Dashboard() {
   })
   const liveCount = liveData?.live_visitors ?? 0
 
+  const { data: cacData } = useQuery({
+    queryKey: ['dashboard-cac', site?.site_key, overview?.date_from, overview?.date_to],
+    queryFn: async () => {
+      if (!site?.site_key) return []
+      const params = new URLSearchParams({ site_key: site.site_key })
+      if (overview?.date_from) params.set('date_from', overview.date_from)
+      if (overview?.date_to) params.set('date_to', overview.date_to)
+      return fetchApi(`/dashboard/cac?${params}`)
+    },
+    enabled: !!site?.site_key && !!overview
+  })
+  const cacResults = cacData?.data || []
+  const avgCAC = (() => {
+    const withSpend = cacResults.filter(r => r.cac != null)
+    if (withSpend.length === 0) return null
+    return withSpend.reduce((s, r) => s + r.cac, 0) / withSpend.length
+  })()
+
   const kpis = overview?.kpis || {}
   const businessType = overview?.business_type || site?.business_type || 'saas'
   const kpiConfig    = getKpiConfig(businessType)
@@ -427,12 +445,18 @@ export default function Dashboard() {
     }
   }
 
-  const recentLeadsData = activeResults.slice(0, 10).map(r => ({
-    source: r.dim_value || r.source || 'unknown',
-    conversions: r.conversions || 0,
-    revenue: r.revenue || 0,
-    rpv: r.rpv || 0
-  }))
+  const recentLeadsData = activeResults.slice(0, 10).map(r => {
+    const source = (r.dim_value || r.source || 'unknown').toLowerCase()
+    const cacRow = cacResults.find(c => c.channel === source)
+    return {
+      source: r.dim_value || r.source || 'unknown',
+      conversions: r.conversions || 0,
+      revenue: r.revenue || 0,
+      rpv: r.rpv || 0,
+      cac: cacRow?.cac ?? null,
+      payback_months: cacRow?.payback_months ?? null
+    }
+  })
 
   const handleExport = () => {
     if (!site) return
@@ -596,7 +620,7 @@ export default function Dashboard() {
           )}
 
           {/* KPI Strip — T2.1: business-type aware with deltas */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
             {kpiConfig.map((metric) => {
               if (metric.key === 'best_rpv') {
                 const channel = enrichedKpis?.best_rpv_channel || '—'
@@ -631,6 +655,21 @@ export default function Dashboard() {
                 />
               )
             })}
+            {/* Avg CAC KPI tile */}
+            <div className="metric-tile bg-white dark:bg-[#1A1D1D] rounded-xl p-5 shadow-sm border border-gray-100 dark:border-[#2A2E2E] flex flex-col gap-1">
+              <p className="text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wide">Avg CAC</p>
+              {avgCAC != null ? (
+                <>
+                  <p className="text-2xl font-semibold text-st-black dark:text-white tabular-nums">${avgCAC.toFixed(2)}</p>
+                  <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">cost per new customer</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-2xl font-semibold text-st-gray dark:text-gray-400">Add spend data</p>
+                  <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">cost per new customer</p>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Saved Reports — shown first, above the analytics wall */}
@@ -737,11 +776,14 @@ export default function Dashboard() {
                     { key: 'conversions', label: 'Conversions', render: (r) => r.conversions, cellClassName: 'text-right text-gray-600' },
                     { key: 'revenue', label: 'Revenue', render: (r) => `$${r.revenue.toFixed(0)}`, cellClassName: 'text-right font-medium text-st-black' },
                     { key: 'rpv', label: 'Rev/Visitor', render: (r) => `$${r.rpv.toFixed(2)}`, cellClassName: 'text-right text-st-gray' },
+                    { key: 'cac', label: 'CAC', render: (r) => r.cac != null ? `$${r.cac.toFixed(2)}` : 'No spend data', cellClassName: 'text-right text-gray-600' },
+                    { key: 'payback', label: 'Payback', render: (r) => r.payback_months != null ? `${r.payback_months.toFixed(1)} mo` : '—', cellClassName: 'text-right text-st-gray' },
                     { key: 'status', label: 'Status', render: () => <StatusBadge status="active" label="Active" />, cellClassName: 'text-right' }
                   ]}
                   rows={recentLeadsData}
                   emptyMessage="No recent leads yet. Data will appear as conversions flow in."
                 />
+                <p className="text-[10px] text-st-gray dark:text-gray-400 mt-2 text-right">CAC calculated from campaign spend data. Add spend in Campaigns page.</p>
               )}
             </DashboardCard>
 

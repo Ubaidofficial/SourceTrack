@@ -268,6 +268,88 @@ router.get('/overview', validateSiteKey, async (req, res) => {
 })
 
 
+router.get('/cac', validateSiteKey, async (req, res) => {
+  try {
+    const { date_from, date_to } = req.query
+    const siteId = req.site.id
+    const dateFrom = date_from || new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
+    const dateTo = date_to || new Date().toISOString().slice(0, 10)
+
+    const supabase = getSupabaseAdmin()
+
+    const [{ data: spendData, error: spendErr }, { data: convData, error: convErr }] = await Promise.all([
+      supabase
+        .from('campaign_costs')
+        .select('campaign_name, spend')
+        .eq('site_id', siteId)
+        .gte('period_start', dateFrom)
+        .lte('period_end', dateTo),
+      supabase
+        .from('attributed_conversions')
+        .select('first_touch_channel, conversion_value')
+        .eq('site_id', siteId)
+        .gte('conversion_date', dateFrom)
+        .lte('conversion_date', dateTo)
+    ])
+
+    if (spendErr) throw spendErr
+    if (convErr) throw convErr
+
+    // Aggregate spend by campaign_name (treated as channel)
+    const spendByChannel = {}
+    for (const row of (spendData || [])) {
+      const ch = (row.campaign_name || '').trim().toLowerCase()
+      if (!ch) continue
+      spendByChannel[ch] = (spendByChannel[ch] || 0) + parseFloat(row.spend || 0)
+    }
+
+    // Aggregate conversions by first_touch_channel
+    const convByChannel = {}
+    for (const row of (convData || [])) {
+      const ch = (row.first_touch_channel || '').trim().toLowerCase()
+      if (!ch) continue
+      if (!convByChannel[ch]) convByChannel[ch] = { conversions: 0, totalValue: 0 }
+      convByChannel[ch].conversions++
+      convByChannel[ch].totalValue += parseFloat(row.conversion_value || 0)
+    }
+
+    // Join and calculate CAC / payback
+    const results = []
+    const allChannels = new Set([...Object.keys(spendByChannel), ...Object.keys(convByChannel)])
+
+    for (const ch of allChannels) {
+      const totalSpend = spendByChannel[ch] || null
+      const conv = convByChannel[ch] || { conversions: 0, totalValue: 0 }
+      const conversions = conv.conversions
+      const avgValue = conversions > 0 ? conv.totalValue / conversions : 0
+
+      const cac = (totalSpend != null && conversions > 0) ? totalSpend / conversions : null
+      const paybackMonths = (cac != null && avgValue > 0) ? cac / avgValue : null
+
+      results.push({
+        channel: ch,
+        total_spend: totalSpend != null ? parseFloat(totalSpend.toFixed(2)) : null,
+        conversions,
+        avg_value: parseFloat(avgValue.toFixed(2)),
+        cac: cac != null ? parseFloat(cac.toFixed(2)) : null,
+        payback_months: paybackMonths != null ? parseFloat(paybackMonths.toFixed(1)) : null
+      })
+    }
+
+    results.sort((a, b) => {
+      if (a.cac == null && b.cac == null) return 0
+      if (a.cac == null) return 1
+      if (b.cac == null) return -1
+      return a.cac - b.cac
+    })
+
+    return res.status(200).json({ success: true, data: results, error: null })
+  } catch (_err) {
+    console.error(_err)
+    return res.status(500).json({ success: false, data: null, error: 'CAC calculation failed' })
+  }
+})
+
 router.get('/live', validateSiteKey, async (req, res) => {
   try {
     const posthogSiteId = String(req.site.id)
