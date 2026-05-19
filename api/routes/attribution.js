@@ -161,7 +161,15 @@ export async function attribution(req, res) {
         req.query.attribute_by || 'conversion_date'
       )
 
-      const results = reportResult?.results ?? reportResult
+      const rawResults = reportResult?.results ?? reportResult
+      const results = Array.isArray(rawResults)
+        ? rawResults.map(r => ({
+            ...r,
+            rpv: (r.sessions || r.conversions) > 0
+              ? parseFloat(((r.revenue || 0) / (r.sessions || r.conversions || 1)).toFixed(2))
+              : 0
+          }))
+        : rawResults
       const truncated = reportResult?.truncated ?? false
 
       return res.status(200).json({
