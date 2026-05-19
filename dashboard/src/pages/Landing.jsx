@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 const NAV_LINKS = [
   { label: 'Features', href: '#features' },
@@ -103,6 +103,335 @@ const WHO_ITS_FOR = [
     desc: 'Enable cookieless mode and track conversions without storing any personal data in the browser.',
   },
 ]
+
+// ── SVG Sparkline ─────────────────────────────────────────────────────────────
+function Sparkline({ data, color = '#D7F550' }) {
+  const h = 44, w = 300
+  const max = Math.max(...data), min = Math.min(...data)
+  const r = max - min || 1
+  const pts = data.map((v, i) => [
+    (i / (data.length - 1)) * w,
+    h - 6 - ((v - min) / r) * (h - 12)
+  ])
+  const line = pts.map(([x, y], i) => `${i === 0 ? 'M' : 'L'} ${x.toFixed(1)} ${y.toFixed(1)}`).join(' ')
+  const fill = `${line} L ${w} ${h} L 0 ${h} Z`
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ height: h }} preserveAspectRatio="none">
+      <defs>
+        <linearGradient id={`sg-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={fill} fill={`url(#sg-${color.replace('#', '')})`} />
+      <path d={line} fill="none" stroke={color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={pts[pts.length - 1][0].toFixed(1)} cy={pts[pts.length - 1][1].toFixed(1)} r="3" fill={color} />
+    </svg>
+  )
+}
+
+// ── Count-up hook ─────────────────────────────────────────────────────────────
+function useCountUp(target, duration = 900, trigger = 0) {
+  const [val, setVal] = useState(0)
+  const raf = useRef(null)
+  useEffect(() => {
+    let start = null
+    const animate = (ts) => {
+      if (!start) start = ts
+      const p = Math.min((ts - start) / duration, 1)
+      const e = 1 - Math.pow(1 - p, 3)
+      setVal(Math.round(target * e))
+      if (p < 1) raf.current = requestAnimationFrame(animate)
+    }
+    cancelAnimationFrame(raf.current)
+    raf.current = requestAnimationFrame(animate)
+    return () => cancelAnimationFrame(raf.current)
+  }, [target, trigger])
+  return val
+}
+
+// ── Demo data ─────────────────────────────────────────────────────────────────
+const REV_SPARK  = [28400, 31200, 29800, 36500, 41200, 44800, 48320]
+const AI_SPARK   = [3200, 4100, 3800, 5600, 7200, 8400, 9140]
+
+const JOURNEY_STEPS = [
+  { channel: 'ChatGPT', icon: '🤖', day: 'Day 1', type: 'AI Referral', border: 'border-emerald-500/40', bg: 'bg-emerald-500/10', text: 'text-emerald-300' },
+  { channel: 'Google Ads', icon: '🔍', day: 'Day 3', type: 'Paid Search', border: 'border-blue-500/40', bg: 'bg-blue-500/10', text: 'text-blue-300' },
+  { channel: 'Email', icon: '✉️', day: 'Day 6', type: 'Newsletter', border: 'border-purple-500/40', bg: 'bg-purple-500/10', text: 'text-purple-300' },
+  { channel: 'Purchase', icon: '★', day: 'Day 7', type: '$249', border: 'border-st-lime/40', bg: 'bg-st-lime/10', text: 'text-st-lime' },
+]
+
+const LIVE_SEED = [
+  { type: 'conversion', source: 'google / cpc', value: '$249', ago: '2s' },
+  { type: 'pageview', source: 'chatgpt.com', value: null, ago: '9s' },
+  { type: 'conversion', source: 'perplexity.ai', value: '$99', ago: '21s' },
+  { type: 'pageview', source: 'organic / seo', value: null, ago: '35s' },
+  { type: 'conversion', source: 'email / newsletter', value: '$149', ago: '48s' },
+]
+
+const NEW_LIVE = [
+  { type: 'pageview', source: 'chatgpt.com', value: null },
+  { type: 'conversion', source: 'google / cpc', value: '$199' },
+  { type: 'pageview', source: 'claude.ai', value: null },
+  { type: 'conversion', source: 'perplexity.ai', value: '$299' },
+  { type: 'pageview', source: 'organic / seo', value: null },
+  { type: 'conversion', source: 'meta / paid', value: '$149' },
+]
+
+// ── Interactive dashboard widget ──────────────────────────────────────────────
+function LiveDashboard() {
+  const [tab, setTab] = useState(0)
+  const [tick, setTick] = useState(0)
+  const [bars, setBars] = useState(true)
+  const [liveEvents, setLiveEvents] = useState(LIVE_SEED)
+  const liveRef = useRef(0)
+  const TABS = ['Attribution', 'AI Platforms', 'Journey', 'Live Events']
+
+  // Auto-cycle every 5 s
+  useEffect(() => {
+    const id = setInterval(() => {
+      setTab(t => (t + 1) % TABS.length)
+      setTick(k => k + 1)
+    }, 5000)
+    return () => clearInterval(id)
+  }, [])
+
+  // Animate bars after tab switch
+  useEffect(() => {
+    setBars(false)
+    const t = setTimeout(() => setBars(true), 120)
+    return () => clearTimeout(t)
+  }, [tab])
+
+  // Simulate live events only when that tab is active
+  useEffect(() => {
+    if (tab !== 3) return
+    const id = setInterval(() => {
+      const ev = NEW_LIVE[liveRef.current % NEW_LIVE.length]
+      liveRef.current++
+      setLiveEvents(prev => [{ ...ev, ago: 'now' }, ...prev.slice(0, 5)])
+    }, 1800)
+    return () => clearInterval(id)
+  }, [tab])
+
+  const rev   = useCountUp(48320, 900, tick)
+  const conv  = useCountUp(1284,  900, tick)
+  const aiRev = useCountUp(9140,  900, tick)
+  const aiLd  = useCountUp(284,   900, tick)
+
+  return (
+    <div className="relative rounded-2xl border border-white/10 bg-[#0F1212] overflow-hidden shadow-2xl">
+      {/* CSS keyframes injected inline */}
+      <style>{`
+        @keyframes dash-progress { from { width: 0% } to { width: 100% } }
+        @keyframes fade-in-up { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: translateY(0) } }
+        .dash-anim { animation: fade-in-up 0.25s ease-out both; }
+        .progress-bar { animation: dash-progress 5s linear forwards; }
+      `}</style>
+
+      {/* Browser chrome */}
+      <div className="flex items-center gap-1.5 px-4 py-3 border-b border-white/5 bg-[#0C0E0E]">
+        <div className="w-2.5 h-2.5 rounded-full bg-red-500/50" />
+        <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/50" />
+        <div className="w-2.5 h-2.5 rounded-full bg-green-500/50" />
+        <div className="ml-3 flex-1 max-w-xs bg-white/5 rounded-md h-5 flex items-center px-2">
+          <span className="text-[10px] text-white/30">app.sourcetrack.ai/dashboard</span>
+        </div>
+        <div className="flex items-center gap-1.5 ml-auto">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+          <span className="text-[10px] text-white/40">3 live now</span>
+        </div>
+      </div>
+
+      {/* Tab bar */}
+      <div className="flex items-center px-4 pt-3 border-b border-white/5 gap-0.5">
+        {TABS.map((t, i) => (
+          <button key={t} onClick={() => { setTab(i); setTick(k => k + 1) }}
+            className={`px-3 py-1.5 text-xs font-medium rounded-t-md transition-all ${
+              tab === i ? 'bg-[#1A1D1D] text-white border border-b-transparent border-white/10' : 'text-white/40 hover:text-white/70'
+            }`}>
+            {t}
+          </button>
+        ))}
+        <div className="ml-auto mb-1 w-16 h-1 bg-white/5 rounded-full overflow-hidden">
+          <div key={tick} className="h-full bg-st-lime/60 rounded-full progress-bar" />
+        </div>
+      </div>
+
+      {/* Panel body */}
+      <div className="p-4" style={{ minHeight: 340 }}>
+
+        {/* ── Tab 0 — Attribution ── */}
+        {tab === 0 && (
+          <div className="space-y-3 dash-anim">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                { label: 'Revenue',     val: `$${rev.toLocaleString()}`,  delta: '+24%' },
+                { label: 'Conversions', val: conv.toLocaleString(),        delta: '+18%' },
+                { label: 'AI Revenue',  val: `$${aiRev.toLocaleString()}`, delta: '+61%' },
+                { label: 'Sessions',    val: '24,830',                     delta: '+8%' },
+              ].map(k => (
+                <div key={k.label} className="bg-[#1A1D1D] rounded-xl p-3 border border-white/5">
+                  <p className="text-[9px] text-white/40 uppercase tracking-wider">{k.label}</p>
+                  <p className="text-base font-bold text-white mt-0.5 tabular-nums">{k.val}</p>
+                  <p className="text-[9px] text-st-lime">▲ {k.delta}</p>
+                </div>
+              ))}
+            </div>
+            <div className="bg-[#1A1D1D] rounded-xl border border-white/5 px-3 pt-2 pb-1">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[9px] text-white/40 uppercase tracking-wider">Revenue — last 7 days</span>
+                <span className="text-[9px] text-st-lime">Last Touch</span>
+              </div>
+              <Sparkline data={REV_SPARK} />
+            </div>
+            <div className="bg-[#1A1D1D] rounded-xl border border-white/5 overflow-hidden">
+              <div className="px-3 py-2 border-b border-white/5">
+                <span className="text-[9px] text-white/40 font-semibold uppercase tracking-wider">Top Attribution Sources</span>
+              </div>
+              {[
+                { source: 'google / cpc',   rev: '$18,400', bar: 100, color: 'bg-blue-500' },
+                { source: 'chatgpt.com',    rev: '$6,890',  bar: 37,  color: 'bg-st-lime' },
+                { source: 'organic / seo',  rev: '$5,210',  bar: 28,  color: 'bg-purple-500' },
+                { source: 'perplexity.ai',  rev: '$2,250',  bar: 12,  color: 'bg-orange-500' },
+              ].map(row => (
+                <div key={row.source} className="flex items-center gap-3 px-3 py-2 border-b border-white/5 last:border-0">
+                  <p className="text-xs text-white/70 w-24 shrink-0 truncate">{row.source}</p>
+                  <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                    <div className={`h-full ${row.color} rounded-full transition-all duration-700`}
+                      style={{ width: bars ? `${row.bar}%` : '0%' }} />
+                  </div>
+                  <p className="text-xs font-semibold text-white w-14 text-right shrink-0">{row.rev}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Tab 1 — AI Platforms ── */}
+        {tab === 1 && (
+          <div className="space-y-3 dash-anim">
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: 'AI Revenue', val: `$${aiRev.toLocaleString()}`, sub: '+61% MoM', accent: true },
+                { label: 'AI Leads',   val: aiLd.toLocaleString(),         sub: '+44% MoM', accent: false },
+                { label: 'AI Share',   val: '18.9%',                       sub: 'of total revenue', accent: false },
+                { label: 'Platforms',  val: '8 active',                    sub: 'this period', accent: false },
+              ].map(k => (
+                <div key={k.label} className={`rounded-xl p-3 border ${k.accent ? 'bg-st-lime/5 border-st-lime/20' : 'bg-[#1A1D1D] border-white/5'}`}>
+                  <p className="text-[9px] text-white/40 uppercase tracking-wider">{k.label}</p>
+                  <p className={`text-base font-bold mt-0.5 tabular-nums ${k.accent ? 'text-st-lime' : 'text-white'}`}>{k.val}</p>
+                  <p className="text-[9px] text-white/30">{k.sub}</p>
+                </div>
+              ))}
+            </div>
+            <div className="bg-[#1A1D1D] rounded-xl border border-white/5 overflow-hidden">
+              <div className="px-3 py-2 border-b border-white/5">
+                <span className="text-[9px] text-white/40 font-semibold uppercase tracking-wider">Platform Breakdown</span>
+              </div>
+              {[
+                { name: 'ChatGPT',    rev: '$6,890', share: 75, leads: 186, dot: 'bg-emerald-400' },
+                { name: 'Perplexity', rev: '$1,240', share: 14, leads: 44,  dot: 'bg-purple-400' },
+                { name: 'Claude',     rev: '$580',   share: 6,  leads: 31,  dot: 'bg-orange-400' },
+                { name: 'Gemini',     rev: '$430',   share: 5,  leads: 23,  dot: 'bg-blue-400' },
+              ].map(p => (
+                <div key={p.name} className="flex items-center gap-3 px-3 py-2.5 border-b border-white/5 last:border-0">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${p.dot}`} />
+                  <p className="text-xs text-white/80 font-medium w-20 shrink-0">{p.name}</p>
+                  <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-full bg-st-lime rounded-full transition-all duration-700"
+                      style={{ width: bars ? `${p.share}%` : '0%' }} />
+                  </div>
+                  <p className="text-xs font-semibold text-white w-14 text-right shrink-0">{p.rev}</p>
+                </div>
+              ))}
+            </div>
+            <div className="bg-[#1A1D1D] rounded-xl border border-white/5 px-3 pt-2 pb-1">
+              <p className="text-[9px] text-white/40 mb-1">AI revenue trend — 7 days</p>
+              <Sparkline data={AI_SPARK} color="#34d399" />
+            </div>
+          </div>
+        )}
+
+        {/* ── Tab 2 — Journey ── */}
+        {tab === 2 && (
+          <div className="space-y-3 dash-anim">
+            <p className="text-[10px] text-white/30 text-center">Sample customer journey — 7 days · U-Shaped attribution</p>
+            <div className="flex items-stretch gap-2">
+              {JOURNEY_STEPS.map((step, i) => (
+                <div key={step.channel} className="flex-1 flex flex-col gap-1">
+                  <div className={`rounded-xl border p-2.5 text-center flex-1 flex flex-col items-center justify-center ${step.border} ${step.bg}`}>
+                    <span className="text-2xl">{step.icon}</span>
+                    <p className={`text-[10px] font-bold mt-1 ${step.text}`}>{step.channel}</p>
+                    <p className="text-[9px] text-white/40 mt-0.5">{step.type}</p>
+                  </div>
+                  <p className="text-[9px] text-white/25 text-center">{step.day}</p>
+                </div>
+              ))}
+            </div>
+            <div className="flex items-center gap-1 px-6">
+              {[0, 1, 2].map(i => (
+                <div key={i} className="flex-1 flex items-center">
+                  <div className="flex-1 h-px bg-white/10" />
+                  <span className="text-[9px] text-white/20 px-0.5">→</span>
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: 'Time to Convert', val: '7 days' },
+                { label: 'Touchpoints',     val: '3 sources' },
+                { label: 'Order Value',      val: '$249' },
+              ].map(s => (
+                <div key={s.label} className="bg-[#1A1D1D] rounded-xl p-3 border border-white/5 text-center">
+                  <p className="text-[9px] text-white/30 uppercase tracking-wider">{s.label}</p>
+                  <p className="text-sm font-bold text-white mt-0.5">{s.val}</p>
+                </div>
+              ))}
+            </div>
+            <div className="bg-[#1A1D1D] rounded-xl border border-white/5 px-3 py-2.5">
+              <p className="text-[10px] text-white/50 leading-relaxed">
+                <span className="text-st-lime font-semibold">ChatGPT (first)</span> gets 40% ·{' '}
+                <span className="text-white/40">Google 20%</span> ·{' '}
+                <span className="text-white/40">Email 10%</span> ·{' '}
+                <span className="text-blue-400 font-semibold">Purchase (last) 30%</span>
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* ── Tab 3 — Live Events ── */}
+        {tab === 3 && (
+          <div className="space-y-2 dash-anim">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <p className="text-[10px] text-white/50">Live event stream · updating in real time</p>
+            </div>
+            {liveEvents.slice(0, 6).map((ev, i) => (
+              <div key={i} className={`flex items-center gap-3 rounded-lg px-3 py-2 border transition-all duration-300 ${
+                i === 0 && ev.ago === 'now' ? 'bg-white/5 border-white/15' : 'bg-[#1A1D1D] border-white/5'
+              }`}>
+                <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded shrink-0 ${
+                  ev.type === 'conversion' ? 'bg-st-lime/20 text-st-lime' : 'bg-white/10 text-white/50'
+                }`}>
+                  {ev.type === 'conversion' ? 'CONV' : 'VIEW'}
+                </span>
+                <span className="text-xs text-white/70 flex-1 truncate">{ev.source}</span>
+                {ev.value && <span className="text-xs font-bold text-st-lime shrink-0">{ev.value}</span>}
+                <span className="text-[9px] text-white/30 w-8 text-right shrink-0">{ev.ago}</span>
+              </div>
+            ))}
+            <div className="pt-2 border-t border-white/5 flex items-center justify-between">
+              <p className="text-[9px] text-white/20">powered by tracker.min.js · 1.7 KB</p>
+              <p className="text-[9px] text-st-lime">● tracking</p>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  )
+}
 
 function useScrolled() {
   const [scrolled, setScrolled] = useState(false)
@@ -214,65 +543,9 @@ export default function Landing() {
           <p className="text-xs text-white/30 mt-4">No credit card required · GDPR-compliant · Cancel anytime</p>
         </div>
 
-        {/* Hero visual — attribution flow */}
+        {/* Hero visual — interactive live dashboard */}
         <div className="max-w-4xl mx-auto mt-16">
-          <div className="relative rounded-2xl border border-white/10 bg-[#111414] overflow-hidden">
-            {/* Fake browser chrome */}
-            <div className="flex items-center gap-1.5 px-4 py-3 border-b border-white/5 bg-[#0F1212]">
-              <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
-              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
-              <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
-              <div className="ml-3 flex-1 max-w-xs mx-auto bg-white/5 rounded-md h-5 flex items-center px-2">
-                <span className="text-[10px] text-white/30">app.sourcetrack.ai/dashboard</span>
-              </div>
-            </div>
-            {/* Dashboard preview */}
-            <div className="p-6">
-              {/* KPI row */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-                {[
-                  { label: 'Revenue', value: '$48,320', delta: '+24%' },
-                  { label: 'Conversions', value: '1,284', delta: '+18%' },
-                  { label: 'AI Revenue', value: '$9,140', delta: '+61%' },
-                  { label: 'Leads', value: '8,903', delta: '+12%' },
-                ].map(k => (
-                  <div key={k.label} className="bg-[#1A1D1D] rounded-xl p-4 border border-white/5">
-                    <p className="text-xs text-white/40 uppercase tracking-wider mb-1">{k.label}</p>
-                    <p className="text-xl font-bold text-white">{k.value}</p>
-                    <p className="text-xs text-st-lime mt-1">▲ {k.delta}</p>
-                  </div>
-                ))}
-              </div>
-              {/* Attribution table */}
-              <div className="bg-[#1A1D1D] rounded-xl border border-white/5 overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
-                  <span className="text-xs font-semibold text-white/60 uppercase tracking-wider">Top Sources</span>
-                  <span className="text-xs text-white/30 bg-white/5 px-2 py-0.5 rounded">Last Touch</span>
-                </div>
-                <div className="divide-y divide-white/5">
-                  {[
-                    { source: 'google / cpc', revenue: '$18,400', conv: 412, bar: 82, color: 'bg-blue-500' },
-                    { source: 'chatgpt.com', revenue: '$6,890', conv: 156, bar: 31, color: 'bg-st-lime' },
-                    { source: 'organic / seo', revenue: '$5,210', conv: 118, bar: 23, color: 'bg-purple-500' },
-                    { source: 'perplexity.ai', revenue: '$2,250', conv: 51, bar: 10, color: 'bg-orange-500' },
-                  ].map(row => (
-                    <div key={row.source} className="flex items-center gap-4 px-4 py-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-white/80 font-medium truncate">{row.source}</p>
-                        <div className="mt-1.5 h-1.5 bg-white/5 rounded-full overflow-hidden">
-                          <div className={`h-full ${row.color} rounded-full`} style={{ width: `${row.bar}%` }} />
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-sm font-semibold text-white">{row.revenue}</p>
-                        <p className="text-xs text-white/30">{row.conv} conv.</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
+          <LiveDashboard />
         </div>
       </section>
 
