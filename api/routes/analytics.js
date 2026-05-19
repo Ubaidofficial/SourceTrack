@@ -176,4 +176,73 @@ router.get('/custom-events', requireUserAuth, validateSiteKey, async (req, res) 
   } catch (err) { res.status(500).json({ success: false, error: err.message }) }
 })
 
+router.get('/funnel', requireUserAuth, validateSiteKey, async (req, res) => {
+  try {
+    const siteId = String(req.site.id)
+    const stepsRaw = req.query.steps || ''
+    const days = Math.min(parseInt(req.query.days) || 30, 90)
+    const from = new Date(Date.now() - days * 86400000).toISOString()
+
+    const steps = stepsRaw.split(',').map(s => s.trim()).filter(Boolean).slice(0, 8)
+    if (steps.length < 2) {
+      return res.status(400).json({ success: false, error: 'At least 2 comma-separated step keywords required' })
+    }
+
+    const supabase = getSupabase()
+    const result = []
+    let prevIds = null
+
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i]
+      const likePattern = `%${step}%`
+
+      if (i === 0) {
+        const { data: rows } = await supabase
+          .from('pageviews')
+          .select('session_id')
+          .eq('site_id', siteId)
+          .like('url', likePattern)
+          .gte('timestamp', from)
+          .not('session_id', 'is', null)
+
+        prevIds = [...new Set((rows || []).map(r => r.session_id))]
+        result.push({ step, visitors: prevIds.length, dropoff_rate: 0 })
+      } else {
+        if (prevIds.length === 0) {
+          result.push({ step, visitors: 0, dropoff_rate: 100 })
+          prevIds = []
+          continue
+        }
+        // Query in batches to avoid large IN clauses
+        const nextIds = []
+        const batchSize = 300
+        for (let j = 0; j < prevIds.length; j += batchSize) {
+          const batch = prevIds.slice(j, j + batchSize)
+          const { data: rows } = await supabase
+            .from('pageviews')
+            .select('session_id')
+            .eq('site_id', siteId)
+            .like('url', likePattern)
+            .in('session_id', batch)
+            .gte('timestamp', from)
+          for (const r of (rows || [])) {
+            if (r.session_id) nextIds.push(r.session_id)
+          }
+        }
+        const uniqueNext = [...new Set(nextIds)]
+        const dropoff = prevIds.length > 0
+          ? parseFloat(((1 - uniqueNext.length / prevIds.length) * 100).toFixed(1))
+          : 100
+        result.push({ step, visitors: uniqueNext.length, dropoff_rate: dropoff })
+        prevIds = uniqueNext
+      }
+    }
+
+    res.json({ success: true, data: result })
+  } catch (err) {
+    console.error('[analytics/funnel]', err.message)
+    res.status(500).json({ success: false, error: 'Funnel analysis failed' })
+  }
+})
+
 export default router

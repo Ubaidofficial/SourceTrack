@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchApi } from '../lib/api'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import { Eye, RefreshCw, ExternalLink, Zap, Sparkles, Copy, Check } from 'lucide-react'
+import { Eye, RefreshCw, ExternalLink, Zap, Sparkles, Copy, Check, TrendingDown } from 'lucide-react'
 import { formatPercent } from '../utils/numbers'
+import FunnelChart from '../components/FunnelChart'
 
 function fmtDuration(s) {
   if (!s) return '0s'
@@ -73,6 +75,8 @@ export default function Analytics() {
   const [rightTab, setRightTab] = useState('sources')
   const [filter, setFilter]     = useState(null) // { type, value }
   const [copied, setCopied]     = useState(false)
+  const [funnelInput, setFunnelInput] = useState('')
+  const [funnelSteps, setFunnelSteps] = useState([])
 
   const { data: site } = useQuery({
     queryKey: ['site', user?.id],
@@ -117,6 +121,21 @@ export default function Analytics() {
     queryKey: ['analytics-custom', site?.site_key, days],
     queryFn: () => fetchApi(`/analytics/custom-events?site_key=${site.site_key}&days=${days}`),
     enabled: !!site?.site_key
+  })
+
+  const { data: funnelData } = useQuery({
+    queryKey: ['funnel', site?.site_key, funnelSteps, days],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        site_key: site.site_key,
+        steps: funnelSteps.join(','),
+        days: String(days)
+      })
+      const res = await fetch(`/api/analytics/funnel?${params}`)
+      const json = await res.json()
+      return json?.data || []
+    },
+    enabled: !!site?.site_key && funnelSteps.length > 0
   })
 
   const d            = summary?.data
@@ -435,6 +454,46 @@ export default function Analytics() {
                   {copied ? 'Copied!' : 'Copy'}
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* Funnel */}
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-gray-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <TrendingDown className="w-3.5 h-3.5 text-st-gray" />
+                <span className="text-xs font-medium text-st-black">Funnel Analysis</span>
+              </div>
+              <span className="text-[10px] text-st-gray">Privacy-safe · aggregate only</span>
+            </div>
+            <div className="p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={funnelInput}
+                  onChange={e => setFunnelInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && funnelInput.trim() && setFunnelSteps(funnelInput.split(',').map(s => s.trim()).filter(Boolean).slice(0, 8))}
+                  placeholder="pricing, signup, dashboard"
+                  className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-st-black/20"
+                />
+                <button
+                  onClick={() => funnelInput.trim() && setFunnelSteps(funnelInput.split(',').map(s => s.trim()).filter(Boolean).slice(0, 8))}
+                  disabled={!funnelInput.trim()}
+                  className="px-3 py-2 bg-st-black text-white text-xs font-medium rounded-lg hover:bg-st-black/90 disabled:opacity-40"
+                >
+                  Build Funnel
+                </button>
+                {funnelSteps.length > 0 && (
+                  <button
+                    onClick={() => { setFunnelInput(''); setFunnelSteps([]) }}
+                    className="px-3 py-2 text-xs text-st-gray border border-gray-200 rounded-lg hover:bg-gray-50"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <p className="text-[10px] text-st-gray">Enter URL path keywords, comma separated · Add up to 8 steps</p>
+              <FunnelChart steps={funnelData} />
             </div>
           </div>
         </>
