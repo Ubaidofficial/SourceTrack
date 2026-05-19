@@ -1,0 +1,810 @@
+import { useState, useEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
+import { Copy, Check, ChevronRight, ExternalLink, Menu, X } from 'lucide-react'
+
+// ─── Code block with copy button ─────────────────────────────────────────────
+function Code({ children, lang = 'js' }) {
+  const [copied, setCopied] = useState(false)
+  function copy() {
+    navigator.clipboard.writeText(children.trim())
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+  return (
+    <div className="relative group my-4">
+      <div className="flex items-center justify-between bg-[#0d1117] rounded-t-lg px-4 py-2 border border-[#30363d] border-b-0">
+        <span className="text-[11px] text-gray-500 font-mono uppercase tracking-wide">{lang}</span>
+        <button onClick={copy} className="flex items-center gap-1 text-[11px] text-gray-500 hover:text-gray-300 transition-colors">
+          {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+      <pre className="bg-[#0d1117] border border-[#30363d] rounded-b-lg px-4 py-4 overflow-x-auto text-sm text-gray-300 font-mono leading-relaxed">
+        <code>{children.trim()}</code>
+      </pre>
+    </div>
+  )
+}
+
+// ─── Inline code ──────────────────────────────────────────────────────────────
+function IC({ children }) {
+  return (
+    <code className="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 px-1.5 py-0.5 rounded text-[13px] font-mono">
+      {children}
+    </code>
+  )
+}
+
+// ─── Method badge ─────────────────────────────────────────────────────────────
+const METHOD_COLORS = {
+  GET:    'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400',
+  POST:   'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400',
+  PUT:    'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400',
+  DELETE: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400',
+}
+
+function Method({ verb }) {
+  return (
+    <span className={`inline-block text-[11px] font-bold font-mono px-2 py-0.5 rounded ${METHOD_COLORS[verb] || ''}`}>
+      {verb}
+    </span>
+  )
+}
+
+// ─── Endpoint header ──────────────────────────────────────────────────────────
+function Endpoint({ method, path, description }) {
+  return (
+    <div className="flex flex-wrap items-center gap-3 bg-gray-50 dark:bg-[#1a1d1d] border border-gray-200 dark:border-[#2a2e2e] rounded-lg px-4 py-3 my-4">
+      <Method verb={method} />
+      <code className="text-sm font-mono text-gray-800 dark:text-gray-200 font-semibold">{path}</code>
+      {description && <span className="text-xs text-gray-500 dark:text-gray-400 ml-auto">{description}</span>}
+    </div>
+  )
+}
+
+// ─── Parameter table ──────────────────────────────────────────────────────────
+function ParamTable({ params }) {
+  return (
+    <div className="overflow-x-auto my-4">
+      <table className="w-full text-sm border-collapse">
+        <thead>
+          <tr className="border-b border-gray-200 dark:border-gray-700">
+            <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 py-2 pr-4 w-40">Parameter</th>
+            <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 py-2 pr-4 w-24">Type</th>
+            <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 py-2 pr-4 w-20">Required</th>
+            <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 py-2">Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          {params.map((p, i) => (
+            <tr key={i} className="border-b border-gray-100 dark:border-gray-800 last:border-0">
+              <td className="py-2 pr-4 font-mono text-[13px] text-gray-800 dark:text-gray-200 align-top">{p.name}</td>
+              <td className="py-2 pr-4 text-[13px] text-indigo-600 dark:text-indigo-400 font-mono align-top">{p.type}</td>
+              <td className="py-2 pr-4 align-top">
+                {p.required
+                  ? <span className="text-[11px] font-semibold text-red-600 dark:text-red-400">required</span>
+                  : <span className="text-[11px] text-gray-400">optional</span>}
+              </td>
+              <td className="py-2 text-[13px] text-gray-600 dark:text-gray-400 align-top">{p.desc}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// ─── Nav items ─────────────────────────────────────────────────────────────────
+const NAV = [
+  { id: 'overview',         label: 'Overview' },
+  { id: 'quickstart',       label: 'Quick Start' },
+  { id: 'tracker',          label: 'Tracker Script',    indent: true },
+  { id: 'cookieless',       label: 'Cookieless Mode',   indent: true },
+  { id: 'track',            label: 'POST /api/track' },
+  { id: 'conversion',       label: 'POST /api/conversion' },
+  { id: 'identify',         label: 'POST /api/identify' },
+  { id: 'attribution',      label: 'GET /api/attribution' },
+  { id: 'tracker-id',       label: 'GET /api/tracker/id' },
+  { id: 'gdpr',             label: 'GDPR Endpoints' },
+  { id: 'auth',             label: 'Authentication' },
+  { id: 'errors',           label: 'Error Handling' },
+  { id: 'changelog',        label: 'Changelog' },
+]
+
+// ─── Section wrapper ──────────────────────────────────────────────────────────
+function Section({ id, title, children }) {
+  return (
+    <section id={id} className="scroll-mt-24 py-10 border-b border-gray-100 dark:border-gray-800 last:border-0">
+      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">{title}</h2>
+      <div className="w-8 h-0.5 bg-black dark:bg-white mb-6" />
+      <div className="space-y-4 text-gray-700 dark:text-gray-300 leading-relaxed text-[15px]">
+        {children}
+      </div>
+    </section>
+  )
+}
+
+function H3({ children }) {
+  return <h3 className="text-base font-bold text-gray-900 dark:text-white mt-8 mb-2">{children}</h3>
+}
+
+function Note({ children }) {
+  return (
+    <div className="flex gap-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/40 rounded-lg px-4 py-3 text-sm text-blue-800 dark:text-blue-300 my-4">
+      <span className="text-base leading-none mt-0.5">ℹ</span>
+      <div>{children}</div>
+    </div>
+  )
+}
+
+function Warn({ children }) {
+  return (
+    <div className="flex gap-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/40 rounded-lg px-4 py-3 text-sm text-amber-800 dark:text-amber-300 my-4">
+      <span className="text-base leading-none mt-0.5">⚠</span>
+      <div>{children}</div>
+    </div>
+  )
+}
+
+// ─── Main Docs Page ───────────────────────────────────────────────────────────
+export default function Docs() {
+  const [activeSection, setActiveSection] = useState('overview')
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const observerRef = useRef(null)
+
+  // Intersection observer to highlight active nav section
+  useEffect(() => {
+    const sections = NAV.map(n => document.getElementById(n.id)).filter(Boolean)
+    observerRef.current = new IntersectionObserver(
+      entries => {
+        const visible = entries.filter(e => e.isIntersecting)
+        if (visible.length) setActiveSection(visible[0].target.id)
+      },
+      { rootMargin: '-20% 0px -70% 0px', threshold: 0 }
+    )
+    sections.forEach(s => observerRef.current.observe(s))
+    return () => observerRef.current?.disconnect()
+  }, [])
+
+  function scrollTo(id) {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    setMobileNavOpen(false)
+  }
+
+  const NavLinks = () => (
+    <nav className="space-y-0.5">
+      {NAV.map(item => (
+        <button
+          key={item.id}
+          onClick={() => scrollTo(item.id)}
+          className={`w-full text-left px-3 py-1.5 rounded-lg text-[13px] transition-colors ${
+            item.indent ? 'pl-6' : ''
+          } ${
+            activeSection === item.id
+              ? 'bg-black text-white dark:bg-white dark:text-black font-semibold'
+              : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800'
+          }`}
+        >
+          {item.label}
+        </button>
+      ))}
+    </nav>
+  )
+
+  return (
+    <div className="min-h-screen bg-white dark:bg-[#111414] text-gray-900 dark:text-white">
+      {/* ── Top Bar ─────────────────────────────────────────────────────── */}
+      <header className="sticky top-0 z-50 bg-white/90 dark:bg-[#111414]/90 backdrop-blur border-b border-gray-200 dark:border-gray-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Link to="/dashboard" className="font-bold text-base tracking-tight text-gray-900 dark:text-white">
+              SourceTrack
+            </Link>
+            <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
+            <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">API Docs</span>
+          </div>
+          <div className="hidden sm:flex items-center gap-4">
+            <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2.5 py-1 rounded-full font-mono">
+              v1.0
+            </span>
+            <a
+              href="https://sourcetrack.ai"
+              target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors"
+            >
+              sourcetrack.ai <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+          {/* Mobile nav toggle */}
+          <button
+            onClick={() => setMobileNavOpen(v => !v)}
+            className="sm:hidden p-1 rounded text-gray-500"
+          >
+            {mobileNavOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
+      </header>
+
+      {/* Mobile nav drawer */}
+      {mobileNavOpen && (
+        <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setMobileNavOpen(false)}>
+          <div
+            className="absolute left-0 top-14 bottom-0 w-64 bg-white dark:bg-[#111414] border-r border-gray-200 dark:border-gray-800 p-4 overflow-y-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            <NavLinks />
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-7xl mx-auto flex">
+        {/* ── Sidebar ──────────────────────────────────────────────────── */}
+        <aside className="hidden sm:block w-56 shrink-0 sticky top-14 self-start h-[calc(100vh-3.5rem)] overflow-y-auto py-8 pr-6">
+          <NavLinks />
+        </aside>
+
+        {/* ── Content ──────────────────────────────────────────────────── */}
+        <main className="flex-1 min-w-0 px-4 sm:px-8 py-8 max-w-3xl">
+
+          {/* ── Overview ────────────────────────────────────────────────── */}
+          <Section id="overview" title="Overview">
+            <p>
+              SourceTrack is a privacy-friendly, multi-touch attribution platform. These docs cover the
+              tracking endpoints you can call from your website or server, the attribution query API, and
+              the GDPR compliance endpoints.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+              {[
+                { label: 'Base URL', value: 'https://api.sourcetrack.ai' },
+                { label: 'Response format', value: 'JSON — always { success, data, error }' },
+                { label: 'Authentication', value: 'Bearer token (user API routes) or site_key (tracking)' },
+                { label: 'Rate limits', value: '1 000 req/min (tracking), 60 req/min (analytics)' },
+              ].map(({ label, value }) => (
+                <div key={label} className="bg-gray-50 dark:bg-[#1a1d1d] border border-gray-200 dark:border-[#2a2e2e] rounded-lg p-3">
+                  <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1">{label}</p>
+                  <p className="text-[13px] text-gray-800 dark:text-gray-200 font-mono">{value}</p>
+                </div>
+              ))}
+            </div>
+          </Section>
+
+          {/* ── Quick Start ──────────────────────────────────────────────── */}
+          <Section id="quickstart" title="Quick Start">
+            <p>
+              Add the SourceTrack snippet to the <IC>&lt;head&gt;</IC> of every page. Replace{' '}
+              <IC>YOUR_SITE_KEY</IC> with the key from your <Link to="/settings" className="text-blue-600 dark:text-blue-400 hover:underline">Settings</Link> page.
+            </p>
+            <Code lang="html">{`<!-- Standard tracker (uses localStorage) -->
+<script async src="https://api.sourcetrack.ai/tracker/tracker.min.js"
+        data-site-key="YOUR_SITE_KEY"></script>`}</Code>
+            <p>That's it. Pageviews are tracked automatically on every navigation, including SPA route changes.</p>
+
+            <H3>Record a conversion</H3>
+            <Code lang="js">{`// Call this on your order confirmation / thank-you page
+window.sourcetrack.conversion({
+  value: 99.00,          // revenue attributed to this conversion
+  type:  'purchase',     // any string label
+  order_id: 'ORD-1234'  // optional, used for deduplication
+})`}</Code>
+
+            <H3>Identify a user</H3>
+            <Code lang="js">{`// Call after login / sign-up to attach an email to the visitor
+window.sourcetrack.identify({
+  email: 'jane@example.com',
+  name:  'Jane Doe'
+})`}</Code>
+
+            <H3>Custom event</H3>
+            <Code lang="js">{`window.sourcetrack.track('button_clicked', { button: 'hero_cta' })`}</Code>
+          </Section>
+
+          {/* ── Tracker Script ───────────────────────────────────────────── */}
+          <Section id="tracker" title="Tracker Script">
+            <p>
+              The tracker is a lightweight (~4 KB gzip) IIFE script. It does not use third-party cookies.
+              By default it stores three values in <IC>localStorage</IC>:
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse my-2">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left text-xs font-semibold text-gray-500 py-2 pr-4">Key</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 py-2 pr-4">Storage</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 py-2">Purpose</th>
+                  </tr>
+                </thead>
+                <tbody className="text-[13px]">
+                  {[
+                    ['st_aid', 'localStorage', 'Anonymous visitor ID — stable across sessions, persists until cleared'],
+                    ['st_ft_src / med / cmp / ts', 'localStorage', 'First-touch UTM attribution — written once on first visit, never overwritten'],
+                    ['st_sid', 'sessionStorage', 'Session ID — new per browser tab'],
+                  ].map(([k, s, d]) => (
+                    <tr key={k} className="border-b border-gray-100 dark:border-gray-800 last:border-0">
+                      <td className="py-2 pr-4 font-mono text-gray-800 dark:text-gray-200">{k}</td>
+                      <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">{s}</td>
+                      <td className="py-2 text-gray-600 dark:text-gray-400">{d}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <Note>
+              Under GDPR/ePrivacy, <IC>localStorage</IC> counts as tracking storage and typically requires a
+              consent banner. Use <strong>Cookieless Mode</strong> (below) if you want to track without any
+              consent mechanism.
+            </Note>
+
+            <H3>Public API</H3>
+            <ParamTable params={[
+              { name: 'window.sourcetrack.conversion(opts)', type: 'function', required: false, desc: 'Record a conversion. opts: { value, type, order_id }' },
+              { name: 'window.sourcetrack.identify(traits)', type: 'function', required: false, desc: 'Attach identity traits to the current visitor. traits: { email, name, ...custom }' },
+              { name: 'window.sourcetrack.track(event, props)', type: 'function', required: false, desc: 'Send any custom event with optional properties object.' },
+            ]} />
+          </Section>
+
+          {/* ── Cookieless Mode ──────────────────────────────────────────── */}
+          <Section id="cookieless" title="Cookieless Mode">
+            <p>
+              Enable <strong>Cookieless Mode</strong> in Settings → Cookieless Tracking. The tracker will
+              switch to <IC>tracker.cookieless.js</IC>, which stores <em>nothing</em> in the browser.
+            </p>
+            <Code lang="html">{`<!-- Cookieless tracker — no localStorage, no cookies -->
+<script async src="https://api.sourcetrack.ai/tracker/tracker.cookieless.js"
+        data-site-key="YOUR_SITE_KEY"></script>`}</Code>
+
+            <p>
+              On load, the tracker fetches a server-derived visitor ID from{' '}
+              <IC>GET /api/tracker/id</IC>. The ID is a SHA-256 hash of:
+            </p>
+            <Code lang="text">{`SHA-256( HMAC(daily_salt, UTC-date) : site_key : SHA-256(IP) : SHA-256(UserAgent) )`}</Code>
+            <p>
+              The raw IP address is <strong>never logged or stored</strong>. The visitor ID rotates every
+              24 h (UTC midnight). The session ID rotates every 1 h.
+            </p>
+            <Note>
+              Because there is no persistent storage, first-touch attribution is scoped to the current
+              session. Multi-session first-touch tracking requires the standard tracker.
+            </Note>
+
+            <H3>Compliance table</H3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse my-2">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left text-xs font-semibold text-gray-500 py-2 pr-6">Regulation</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 py-2 pr-6">Standard tracker</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 py-2">Cookieless tracker</th>
+                  </tr>
+                </thead>
+                <tbody className="text-[13px]">
+                  {[
+                    ['GDPR (EU)', 'Needs consent banner', '✅ No consent required'],
+                    ['ePrivacy / PECR', 'Needs consent banner', '✅ No consent required'],
+                    ['CCPA (US)', '✅ OK (no personal data sold)', '✅ OK'],
+                    ['First-touch attribution', '✅ Persistent across sessions', '⚡ Session-scoped only'],
+                  ].map(([r, s, c]) => (
+                    <tr key={r} className="border-b border-gray-100 dark:border-gray-800 last:border-0">
+                      <td className="py-2 pr-6 font-semibold text-gray-800 dark:text-gray-200">{r}</td>
+                      <td className="py-2 pr-6 text-gray-500 dark:text-gray-400">{s}</td>
+                      <td className="py-2 text-gray-600 dark:text-gray-300">{c}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Section>
+
+          {/* ── POST /api/track ──────────────────────────────────────────── */}
+          <Section id="track" title="Track Pageview / Event">
+            <Endpoint method="POST" path="/api/track" description="No auth — validated by site_key" />
+            <p>
+              The tracker calls this automatically for every pageview. You can also call it directly from
+              your server for server-side event ingestion.
+            </p>
+
+            <H3>Request body</H3>
+            <ParamTable params={[
+              { name: 'site_key', type: 'string', required: true, desc: 'Your site key from the Settings page.' },
+              { name: 'event', type: 'string', required: false, desc: 'Event name. Defaults to $pageview.' },
+              { name: 'anonymous_id', type: 'string', required: false, desc: 'Visitor UUID. Auto-generated if omitted.' },
+              { name: 'session_id', type: 'string', required: false, desc: 'Session UUID.' },
+              { name: 'page_url', type: 'string', required: false, desc: 'Full URL of the page.' },
+              { name: 'referrer', type: 'string', required: false, desc: 'HTTP referrer.' },
+              { name: 'utm_source', type: 'string', required: false, desc: 'UTM source. Lowercased automatically.' },
+              { name: 'utm_medium', type: 'string', required: false, desc: 'UTM medium.' },
+              { name: 'utm_campaign', type: 'string', required: false, desc: 'UTM campaign.' },
+              { name: 'utm_content', type: 'string', required: false, desc: 'UTM content.' },
+              { name: 'utm_term', type: 'string', required: false, desc: 'UTM term.' },
+              { name: 'gclid / fbclid / msclkid / ttclid', type: 'string', required: false, desc: 'Click IDs for paid channel detection.' },
+              { name: 'first_touch_source', type: 'string', required: false, desc: 'Pass the stored first-touch source for attribution.' },
+              { name: 'first_touch_medium', type: 'string', required: false, desc: 'Pass the stored first-touch medium.' },
+              { name: 'first_touch_campaign', type: 'string', required: false, desc: 'Pass the stored first-touch campaign.' },
+            ]} />
+
+            <H3>Example</H3>
+            <Code lang="bash">{`curl -X POST https://api.sourcetrack.ai/api/track \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "site_key":     "sk_live_abc123",
+    "event":        "$pageview",
+    "anonymous_id": "550e8400-e29b-41d4-a716-446655440000",
+    "page_url":     "https://yoursite.com/pricing",
+    "referrer":     "https://google.com",
+    "utm_source":   "google",
+    "utm_medium":   "cpc",
+    "utm_campaign": "brand-search"
+  }'`}</Code>
+
+            <H3>Response</H3>
+            <Code lang="json">{`{ "success": true, "data": { "received": true }, "error": null }`}</Code>
+          </Section>
+
+          {/* ── POST /api/conversion ─────────────────────────────────────── */}
+          <Section id="conversion" title="Track Conversion">
+            <Endpoint method="POST" path="/api/conversion" description="No auth — validated by site_key" />
+            <p>
+              Record a revenue-generating conversion event. This is what powers the attribution models.
+              Call it on your order confirmation page, after a lead form submit, or from your server.
+            </p>
+
+            <H3>Request body</H3>
+            <ParamTable params={[
+              { name: 'site_key', type: 'string', required: true, desc: 'Your site key.' },
+              { name: 'anonymous_id', type: 'string', required: true, desc: 'Visitor UUID — must match the ID used in pageview calls so touchpoints can be stitched.' },
+              { name: 'conversion_value', type: 'number', required: false, desc: 'Revenue amount (e.g. 99.00). Defaults to 0.' },
+              { name: 'conversion_type', type: 'string', required: false, desc: 'Conversion label (e.g. "purchase", "lead", "trial"). Defaults to "conversion".' },
+              { name: 'order_id', type: 'string', required: false, desc: 'Idempotency key — duplicate order_ids for the same site are discarded.' },
+              { name: 'page_url', type: 'string', required: false, desc: 'Page where the conversion happened.' },
+              { name: 'utm_source / utm_medium / utm_campaign', type: 'string', required: false, desc: 'Last-touch UTM signals (current page).' },
+              { name: 'first_touch_source / first_touch_medium / first_touch_campaign', type: 'string', required: false, desc: 'First-touch signals stored on the client. Critical for first-touch attribution models.' },
+              { name: 'gclid / fbclid / msclkid / ttclid', type: 'string', required: false, desc: 'Click IDs for last-touch ad channel detection.' },
+            ]} />
+
+            <H3>Server-side example (Node.js)</H3>
+            <Code lang="js">{`// Call from your webhook / order fulfilment service
+await fetch('https://api.sourcetrack.ai/api/conversion', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    site_key:         'sk_live_abc123',
+    anonymous_id:     req.body.anonymous_id,   // pass through from client
+    conversion_value: 199.00,
+    conversion_type:  'purchase',
+    order_id:         'ORD-9876',
+    first_touch_source:   req.body.first_touch_source,
+    first_touch_medium:   req.body.first_touch_medium,
+    first_touch_campaign: req.body.first_touch_campaign,
+  })
+})`}</Code>
+
+            <H3>Offline conversion (delayed import)</H3>
+            <Endpoint method="POST" path="/api/conversion/offline" description="No auth — validated by site_key" />
+            <p>
+              Same schema as <IC>/api/conversion</IC>. Use this endpoint when you are importing historical
+              conversions or sending them after a delay (e.g. CRM sync). Duplicate order IDs are silently
+              ignored.
+            </p>
+
+            <H3>Response</H3>
+            <Code lang="json">{`{ "success": true, "data": { "received": true }, "error": null }`}</Code>
+          </Section>
+
+          {/* ── POST /api/identify ───────────────────────────────────────── */}
+          <Section id="identify" title="Identify Visitor">
+            <Endpoint method="POST" path="/api/identify" description="No auth — validated by site_key" />
+            <p>
+              Attach identity traits to an anonymous visitor. Call this after sign-up or login. The
+              anonymous ID is aliased to the user ID in PostHog, so events before and after login are
+              stitched together.
+            </p>
+
+            <H3>Request body</H3>
+            <ParamTable params={[
+              { name: 'site_key', type: 'string', required: true, desc: 'Your site key.' },
+              { name: 'anonymous_id', type: 'string', required: true, desc: 'The visitor\'s current anonymous_id from the tracker.' },
+              { name: 'user_id', type: 'string', required: false, desc: 'Your internal user ID. If provided, the anonymous_id is aliased to it.' },
+              { name: 'email', type: 'string', required: false, desc: 'User email.' },
+              { name: 'name', type: 'string', required: false, desc: 'Display name.' },
+              { name: 'traits', type: 'object', required: false, desc: 'Any additional key/value properties to attach to the person profile.' },
+              { name: 'source_system', type: 'string', required: false, desc: 'e.g. "shopify", "stripe", "hubspot" — source of the identification.' },
+              { name: 'external_id', type: 'string', required: false, desc: 'ID in an external system (CRM, payment processor).' },
+              { name: 'contact_email', type: 'string', required: false, desc: 'Contact email (separate from login email, e.g. for B2B).' },
+            ]} />
+
+            <H3>Example</H3>
+            <Code lang="js">{`window.sourcetrack.identify({
+  email:        'jane@acme.com',
+  name:         'Jane Doe',
+  traits: {
+    plan:       'pro',
+    company:    'Acme Inc'
+  }
+})`}</Code>
+
+            <H3>Response</H3>
+            <Code lang="json">{`{ "success": true, "data": { "received": true }, "error": null }`}</Code>
+          </Section>
+
+          {/* ── GET /api/attribution ─────────────────────────────────────── */}
+          <Section id="attribution" title="Attribution Data">
+            <Endpoint method="GET" path="/api/attribution" description="Requires Bearer token + site_key" />
+            <p>
+              Query multi-touch attribution data across 7 models. Powers the Dashboard and Report Builder.
+              Results are pre-aggregated nightly from the full touchpoint graph.
+            </p>
+
+            <H3>Query parameters</H3>
+            <ParamTable params={[
+              { name: 'site_key', type: 'string', required: true, desc: 'Your site key.' },
+              { name: 'model', type: 'string', required: true, desc: 'Attribution model: first_touch · last_touch · first_touch_non_direct · last_touch_non_direct · ai_platforms · linear · u_shaped' },
+              { name: 'date_from', type: 'string', required: true, desc: 'ISO 8601 date (YYYY-MM-DD). Start of range (inclusive).' },
+              { name: 'date_to', type: 'string', required: true, desc: 'ISO 8601 date (YYYY-MM-DD). End of range (inclusive).' },
+              { name: 'group_by', type: 'string', required: false, desc: 'Dimension to break down by: channel · source · medium · campaign · ai_source · landing_page · country · device · conversion_type · date' },
+              { name: 'metric', type: 'string', required: false, desc: 'Metric to aggregate: revenue · conversions · conversion_rate · avg_conversion_value · ai_conversions · ai_revenue · ltv_revenue · days_to_convert · touchpoints_per_conversion' },
+              { name: 'group_by2', type: 'string', required: false, desc: 'Optional second dimension for a 2D breakdown.' },
+              { name: 'time_granularity', type: 'string', required: false, desc: 'When group_by=date: day · week · month · quarter · year' },
+              { name: 'attribution_window', type: 'string', required: false, desc: 'Filter conversions to those that occurred within N days of first touch: 1 · 7 · 14 · 30 · 60 · 90 · ltv' },
+              { name: 'attribute_by', type: 'string', required: false, desc: 'Which date to use: conversion_date (default) · first_seen_date · original_source_date' },
+              { name: 'filter_channel', type: 'string', required: false, desc: 'Filter to a specific channel (e.g. "Organic Search").' },
+              { name: 'filter_source', type: 'string', required: false, desc: 'Filter to a specific source (e.g. "google").' },
+              { name: 'filter_campaign', type: 'string', required: false, desc: 'Filter to a campaign name.' },
+              { name: 'filter_country', type: 'string', required: false, desc: 'ISO 3166 country code.' },
+              { name: 'filter_device_type', type: 'string', required: false, desc: '"desktop" | "mobile" | "tablet"' },
+              { name: 'filter_customer_type', type: 'string', required: false, desc: '"new" | "returning"' },
+            ]} />
+
+            <H3>Attribution models</H3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse my-2">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left text-xs font-semibold text-gray-500 py-2 pr-6 w-48">Model</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 py-2">Credit distribution</th>
+                  </tr>
+                </thead>
+                <tbody className="text-[13px]">
+                  {[
+                    ['first_touch', '100% to the first touchpoint'],
+                    ['last_touch', '100% to the last touchpoint before conversion'],
+                    ['first_touch_non_direct', '100% to the first non-direct touchpoint (ignores "direct/none")'],
+                    ['last_touch_non_direct', '100% to the last non-direct touchpoint before conversion'],
+                    ['ai_platforms', 'Isolates traffic from AI assistants (ChatGPT, Claude, Perplexity, etc.)'],
+                    ['linear', 'Equally distributed across all touchpoints in the path'],
+                    ['u_shaped', '40% first touch, 40% last touch, 20% split equally across middle'],
+                  ].map(([m, d]) => (
+                    <tr key={m} className="border-b border-gray-100 dark:border-gray-800 last:border-0">
+                      <td className="py-2 pr-6 font-mono text-gray-800 dark:text-gray-200 align-top">{m}</td>
+                      <td className="py-2 text-gray-600 dark:text-gray-400">{d}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <H3>Example — channel revenue under first_touch</H3>
+            <Code lang="bash">{`curl "https://api.sourcetrack.ai/api/attribution?site_key=sk_live_abc123&model=first_touch&date_from=2026-04-01&date_to=2026-04-30&group_by=channel&metric=revenue" \\
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"`}</Code>
+
+            <H3>Response</H3>
+            <Code lang="json">{`{
+  "success": true,
+  "data": {
+    "model": "first_touch",
+    "date_from": "2026-04-01",
+    "date_to": "2026-04-30",
+    "group_by": "channel",
+    "metric": "revenue",
+    "results": [
+      { "dimension": "Organic Search", "value": 12400.00 },
+      { "dimension": "Paid Search",    "value":  8750.50 },
+      { "dimension": "AI Search",      "value":  3200.00 },
+      { "dimension": "Direct",         "value":  2100.00 }
+    ]
+  },
+  "error": null
+}`}</Code>
+
+            <H3>Attribution Explain endpoint</H3>
+            <Endpoint method="GET" path="/api/attribution/explain" description="Requires Bearer token + site_key" />
+            <p>
+              Returns per-conversion explanations — the full touchpoint path and how credit was distributed.
+              Same query parameters as <IC>/api/attribution</IC>.
+            </p>
+          </Section>
+
+          {/* ── GET /api/tracker/id ──────────────────────────────────────── */}
+          <Section id="tracker-id" title="Cookieless Visitor ID">
+            <Endpoint method="GET" path="/api/tracker/id?site_key=xxx" description="Public — called by tracker.cookieless.js" />
+            <p>
+              Returns a server-derived <IC>visitor_id</IC> and <IC>session_id</IC> without setting any
+              cookies. Called automatically by <IC>tracker.cookieless.js</IC> — you don't normally need
+              to call this yourself.
+            </p>
+
+            <H3>Query parameters</H3>
+            <ParamTable params={[
+              { name: 'site_key', type: 'string', required: true, desc: 'Your site key.' },
+            ]} />
+
+            <H3>Response</H3>
+            <Code lang="json">{`{
+  "visitor_id": "065968f48865120c6980818edf0a1303ae9a2d94c6e4ae1840df05ec3d606594",
+  "session_id":  "6c09c032d9aef254b79fd0776c6aea8197d996561bc58d209fb2b3e101177c7c"
+}`}</Code>
+            <Note>
+              <IC>visitor_id</IC> rotates at UTC midnight. <IC>session_id</IC> rotates every hour.
+              Response headers include <IC>Cache-Control: no-store</IC> — do not cache this endpoint.
+            </Note>
+          </Section>
+
+          {/* ── GDPR Endpoints ───────────────────────────────────────────── */}
+          <Section id="gdpr" title="GDPR Endpoints">
+            <p>
+              All GDPR endpoints require a valid Bearer token. They are designed to fulfil Article 17
+              (right to erasure) and Article 5(1)(e) (storage limitation) obligations under GDPR.
+            </p>
+
+            <H3>Erase visitor data</H3>
+            <Endpoint method="DELETE" path="/api/gdpr/visitor" description="Requires Bearer token" />
+            <p>
+              Permanently deletes all <IC>attributed_conversions</IC> records for a visitor and submits a
+              person-deletion request to PostHog. Irreversible.
+            </p>
+            <ParamTable params={[
+              { name: 'site_key', type: 'string', required: true, desc: 'Your site key.' },
+              { name: 'anonymous_id', type: 'string', required: true, desc: 'The visitor\'s anonymous_id to erase.' },
+            ]} />
+            <Code lang="bash">{`curl -X DELETE https://api.sourcetrack.ai/api/gdpr/visitor \\
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "site_key": "sk_live_abc123", "anonymous_id": "550e8400-e29b-41d4-a716-446655440000" }'`}</Code>
+            <Code lang="json">{`{
+  "success": true,
+  "message": "Visitor data for anonymous_id \"550e8400...\" has been erased."
+}`}</Code>
+
+            <H3>Set data retention policy</H3>
+            <Endpoint method="PUT" path="/api/gdpr/retention" description="Requires Bearer token" />
+            <p>
+              Set an automatic purge window. Attribution records older than <IC>retention_days</IC> are
+              deleted every night.
+            </p>
+            <ParamTable params={[
+              { name: 'site_key', type: 'string', required: true, desc: 'Your site key.' },
+              { name: 'retention_days', type: 'number', required: true, desc: 'Days to retain data: 30 | 60 | 90 | 180 | 365 | 0 (keep forever).' },
+            ]} />
+            <Code lang="bash">{`curl -X PUT https://api.sourcetrack.ai/api/gdpr/retention \\
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "site_key": "sk_live_abc123", "retention_days": 90 }'`}</Code>
+
+            <H3>Delete account</H3>
+            <Endpoint method="DELETE" path="/api/gdpr/account" description="Requires Bearer token" />
+            <p>
+              Permanently purges all sites, attribution data, and the authenticated user's account from
+              Supabase auth. This is irreversible and takes effect immediately.
+            </p>
+            <Warn>
+              There is no undo. The user will be signed out and the account destroyed. Ensure you have a
+              confirmation UI (e.g. type "DELETE") before calling this endpoint.
+            </Warn>
+            <Code lang="bash">{`curl -X DELETE https://api.sourcetrack.ai/api/gdpr/account \\
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"`}</Code>
+          </Section>
+
+          {/* ── Authentication ───────────────────────────────────────────── */}
+          <Section id="auth" title="Authentication">
+            <p>There are two authentication mechanisms depending on the endpoint category:</p>
+
+            <H3>Site key (tracking endpoints)</H3>
+            <p>
+              Tracking endpoints (<IC>/api/track</IC>, <IC>/api/conversion</IC>, <IC>/api/identify</IC>)
+              accept a <IC>site_key</IC> in the request body. Your site key is shown in{' '}
+              <Link to="/settings" className="text-blue-600 dark:text-blue-400 hover:underline">Settings</Link>.
+              It is safe to embed in front-end code.
+            </p>
+            <Code lang="json">{`// In the request body:
+{ "site_key": "sk_live_abc123", ... }`}</Code>
+
+            <H3>Bearer token (analytics &amp; GDPR endpoints)</H3>
+            <p>
+              Analytics and GDPR endpoints require a user access token obtained from Supabase Auth.
+              In a browser context, the SourceTrack dashboard handles this automatically. For server-to-server
+              calls, exchange your credentials for a token first:
+            </p>
+            <Code lang="js">{`import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+const { data: { session } } = await supabase.auth.signInWithPassword({
+  email: 'you@example.com', password: 'your-password'
+})
+
+const token = session.access_token
+
+// Then use it:
+fetch('/api/attribution?site_key=...&model=first_touch&...', {
+  headers: { Authorization: \`Bearer \${token}\` }
+})`}</Code>
+          </Section>
+
+          {/* ── Errors ───────────────────────────────────────────────────── */}
+          <Section id="errors" title="Error Handling">
+            <p>
+              All responses follow the same envelope regardless of success or failure:
+            </p>
+            <Code lang="json">{`// Success
+{ "success": true,  "data": { ... }, "error": null }
+
+// Failure
+{ "success": false, "data": null,   "error": "Human-readable message" }`}</Code>
+
+            <H3>HTTP status codes</H3>
+            <ParamTable params={[
+              { name: '200', type: '', required: false, desc: 'Request succeeded.' },
+              { name: '400', type: '', required: false, desc: 'Bad request — missing or invalid parameter. Check the error field.' },
+              { name: '401', type: '', required: false, desc: 'Missing or expired Bearer token.' },
+              { name: '403', type: '', required: false, desc: 'Valid token but you do not own (or are not a member of) the requested site.' },
+              { name: '429', type: '', required: false, desc: 'Rate limit exceeded. Back off and retry.' },
+              { name: '500', type: '', required: false, desc: 'Internal server error. These are logged — contact support if they persist.' },
+            ]} />
+          </Section>
+
+          {/* ── Changelog ───────────────────────────────────────────────── */}
+          <Section id="changelog" title="Changelog">
+            {[
+              {
+                date: '2026-05-19',
+                items: [
+                  'Added cookieless tracker variant (tracker.cookieless.js) — zero browser storage, server-derived daily-rotating ID',
+                  'Added GET /api/tracker/id — server-side visitor ID endpoint',
+                  'Added GDPR endpoints: DELETE /api/gdpr/visitor, DELETE /api/gdpr/account, PUT /api/gdpr/retention',
+                  'Added data_retention_days to sites — nightly auto-purge of old attribution records',
+                  'Fixed linear + u_shaped attribution models — channel field was missing from stored touchpoints',
+                  'Restored sessions KPI in dashboard (extracted from bounce_rate HogQL for free)',
+                ]
+              },
+              {
+                date: '2026-05-16',
+                items: [
+                  'Replaced 25-call PostHog Promise.all with 2 Supabase + 4 PostHog queries in dashboard route',
+                  'Fixed NaN values on Campaigns and Leads pages',
+                  'Added dark mode to Report Builder',
+                  'Fixed tracker snippet URL in Analytics install guide',
+                ]
+              },
+            ].map(({ date, items }) => (
+              <div key={date} className="mb-6">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">{date}</p>
+                <ul className="space-y-1">
+                  {items.map((item, i) => (
+                    <li key={i} className="flex gap-2 text-sm text-gray-600 dark:text-gray-400">
+                      <span className="text-gray-400 mt-0.5 shrink-0">–</span>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </Section>
+
+          {/* Footer */}
+          <div className="py-12 text-center text-sm text-gray-400 dark:text-gray-600">
+            <p>
+              Questions?{' '}
+              <a href="mailto:support@sourcetrack.ai" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white underline underline-offset-2">
+                support@sourcetrack.ai
+              </a>
+              {' · '}
+              <a href="https://sourcetrack.ai" target="_blank" rel="noopener noreferrer" className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white underline underline-offset-2">
+                sourcetrack.ai
+              </a>
+            </p>
+          </div>
+        </main>
+
+        {/* ── Right gutter — blank spacer for balance ─────────────────── */}
+        <div className="hidden xl:block w-40 shrink-0" />
+      </div>
+    </div>
+  )
+}

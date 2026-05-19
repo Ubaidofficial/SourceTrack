@@ -24,6 +24,7 @@ import Integrations from './pages/Integrations'
 import Admin from './pages/Admin'
 import Analytics from './pages/Analytics'
 import AdminRoute from './components/AdminRoute'
+import Docs from './pages/Docs'
 
 const queryClient = new QueryClient()
 
@@ -78,6 +79,8 @@ export default function App() {
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
             <Route path="/admin" element={<AdminRoute><Layout><Admin /></Layout></AdminRoute>} />
             <Route path="/share/:token" element={<ShareDashboard />} />
+            {/* Public docs — no auth required */}
+            <Route path="/docs" element={<Docs />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </BrowserRouter>
