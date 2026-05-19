@@ -63,6 +63,7 @@ None in this session (all backend SQL handled via application code + existing ta
 - 9d4941f: feat: add UTM builder to settings
 - 5f4fbde: feat: weekly/monthly email reports via Resend
 - 6a7e69a: feat: add TikTok CAPI conversion sync
+- aad61e3: feat: add area chart and linear attribution model to report builder
 - e402e85: docs: add implementation status log
 
 ## Still Requires Manual Action
@@ -86,3 +87,10 @@ File: api/routes/conversion.js — wired into CAPI sync block
 SQL: tiktok_pixel_id, tiktok_access_token columns added to sites table
 Note: Requires customer to add TikTok Pixel ID and Access Token in Integrations page
 Commit: 6a7e69a
+
+## Feature 2: Area Chart + Linear Model in ReportBuilder
+Status: COMPLETE
+Added: area chart type (filled line) to CHART_TYPES
+Added: linear attribution model to ATTRIBUTION_MODELS dropdown
+File: dashboard/src/pages/ReportBuilder.jsx
+Commit: aad61e3
