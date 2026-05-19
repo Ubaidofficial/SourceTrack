@@ -108,6 +108,9 @@ export async function attribution(req, res) {
       if (req.query.filter_is_conversion) filters.is_conversion = req.query.filter_is_conversion
       if (req.query.filter_has_ai_source) filters.has_ai_source = req.query.filter_has_ai_source
       if (req.query.filter_min_conversions) filters.min_conversions = req.query.filter_min_conversions
+      if (req.query.filter_customer_type && ['new', 'returning'].includes(req.query.filter_customer_type)) {
+        filters.customer_type = req.query.filter_customer_type
+      }
 
       // Use pre-aggregated data for first_touch, last_touch, and linear
       if (model === "first_touch" || model === "last_touch") {
@@ -118,7 +121,8 @@ export async function attribution(req, res) {
             dateFrom: date_from,
             dateTo: date_to,
             groupBy: group_by,
-            metric
+            metric,
+            filters
           })
           return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results } })
         } catch (error) {

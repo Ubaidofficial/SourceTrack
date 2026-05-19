@@ -1614,7 +1614,8 @@ export async function getPreAggregatedAttribution({
   dateFrom,
   dateTo,
   groupBy = 'source',
-  metric = 'revenue'
+  metric = 'revenue',
+  filters = {}
 }) {
   const { createClient } = await import('@supabase/supabase-js')
   const supabase = createClient(
@@ -1645,19 +1646,65 @@ export async function getPreAggregatedAttribution({
     groupField = sourceField
   }
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('attributed_conversions')
-    .select(`${selectField}, conversion_value`)
+    .select(`${selectField}, conversion_value, distinct_id, conversion_date`)
     .eq('site_id', siteId)
     .gte('conversion_date', dateFrom)
     .lte('conversion_date', dateTo)
     .not(selectField, 'is', null)
 
+  if (filters.customer_type) {
+    query = query.order('conversion_date', { ascending: true })
+  }
+
+  const { data, error } = await query
+
   if (error) throw new Error(`Supabase query failed: ${error.message}`)
+
+  let rows = data || []
+
+  // Apply new/returning customer filter in JS (attributed_conversions is pre-aggregated)
+  if (filters.customer_type && rows.length > 0) {
+    // For each distinct_id, find the earliest conversion_date in this result set
+    const earliest = {}
+    for (const r of rows) {
+      const did = r.distinct_id
+      if (!did) continue
+      if (!earliest[did] || r.conversion_date < earliest[did]) {
+        earliest[did] = r.conversion_date
+      }
+    }
+
+    // Now check against ALL prior conversions for this site_id (not just in range)
+    // Get all distinct_ids that had a conversion BEFORE dateFrom
+    const prevConvIds = new Set()
+    // Query for previously-converting distinct_ids (conversion before our window starts)
+    const { data: prevData, error: prevErr } = await supabase
+      .from('attributed_conversions')
+      .select('distinct_id')
+      .eq('site_id', siteId)
+      .lt('conversion_date', dateFrom)
+
+    if (!prevErr && prevData) {
+      for (const r of prevData) {
+        if (r.distinct_id) prevConvIds.add(r.distinct_id)
+      }
+    }
+
+    rows = rows.filter(r => {
+      const did = r.distinct_id
+      if (!did) return true
+      const isFirstEver = !prevConvIds.has(did) && r.conversion_date === earliest[did]
+      if (filters.customer_type === 'new') return isFirstEver
+      if (filters.customer_type === 'returning') return !isFirstEver
+      return true
+    })
+  }
 
   // Aggregate by dimension
   const aggregated = {}
-  for (const row of data || []) {
+  for (const row of rows) {
     const dimValue = row[selectField] || 'direct'
     if (!aggregated[dimValue]) {
       aggregated[dimValue] = { revenue: 0, conversions: 0 }
