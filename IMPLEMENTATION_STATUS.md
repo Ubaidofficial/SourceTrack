@@ -138,3 +138,47 @@ Frontend: Browser and OS tabs added to Devices section in Analytics.jsx
 Filtering: click-to-filter works for browser and OS dimensions
 Privacy: aggregate counts only, no individual tracking
 Commit: c6070dc
+
+## Feature 8: CAC and Payback Period
+Status: COMPLETE
+Backend: GET /api/dashboard/cac endpoint
+Frontend: CAC and Payback columns in Attribution Table
+Frontend: Avg CAC KPI tile on Dashboard
+Data source: campaign_costs table (ad spend) + attributed_conversions
+Commit: 5d9bdcd
+
+## Feature 9: LTV and Recurring Revenue Documentation
+Status: COMPLETE
+Added: identify() instructions to Snippet.jsx
+Added: Stripe webhook forwarding instructions to Snippet.jsx
+Added: Stripe metadata best practice for first_touch_source
+Critical: Without these steps, LTV is $0 for all SaaS customers
+Commit: 3411182
+
+## Feature 10: New vs Returning Customer Segmentation
+Status: COMPLETE
+Backend: filter_customer_type param in attribution.js + engine filter
+Frontend: Customer Type filter in ReportBuilder
+Presets: "New Customer Revenue" and "Returning Customer Revenue" added
+Privacy: uses only distinct_id (anonymous), no PII
+Commit: 962803c
+
+## Feature Build Session Summary
+Date: 2026-05-19
+Features completed: Feature 8 (CAC and Payback Period), Feature 9 (LTV and Recurring Revenue Documentation), Feature 10 (New vs Returning Customer Segmentation)
+Features pending: st_click_id first-party cookie persistence, drag-and-drop dashboard widgets, Stripe native MRR dashboard, CRM webhook integration
+Total commits this session: 3
+
+## Current Feature Completeness vs Competitors
+Cometly Academy coverage: ~75% (was 60%)
+Analytics vs Plausible: ~85% (was 70%)
+RedTrack tracking accuracy: TikTok CAPI added, st_click_id still pending
+UserMaven: Funnel visualization added
+Datafast: Revenue Per Visitor added
+
+## Remaining Post-Launch Work
+- st_click_id first-party cookie persistence (CNAME setup)
+- Drag-and-drop dashboard widgets (react-grid-layout)
+- Stripe native MRR dashboard
+- CRM webhook integration (HubSpot/HighLevel)
+- Visitor-based pricing migration
