@@ -191,10 +191,7 @@ async function lastTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
   }))
 }
 
-// NOT CURRENTLY WIRED: linear model is removed from ALLOWED_MODELS in api/routes/attribution.js.
-// This implementation uses FIRST_VALUE(conversion_value) per user — not true multi-touch linear
-// as defined by ATTRIBUTION.md Part 2 ("equal credit distributed across all touchpoints").
-// Kept for reference; re‑enable only after implementing per-touchpoint credit distribution.
+// Legacy PostHog-based linear (unused — real linear uses pre-aggregated getLinearAttribution below)
 async function linearAttribution(siteId, dateFrom, dateTo) {
   const fromDate = toHogDate(dateFrom)
   const toDate = toHogDate(dateTo) + " 23:59:59"
@@ -1754,9 +1751,14 @@ export async function getUShapedAttribution({
 
   const aggregated = {}
   for (const row of data || []) {
-    const uShapedData = row.u_shaped_attribution || []
+    // Safety: legacy rows may have been stored as JSON string instead of JSONB array
+    let uShapedData = row.u_shaped_attribution || []
+    if (typeof uShapedData === 'string') {
+      try { uShapedData = JSON.parse(uShapedData) } catch { uShapedData = [] }
+    }
+    if (!Array.isArray(uShapedData)) uShapedData = []
     for (const touch of uShapedData) {
-      const dimValue = touch[groupBy] || 'direct'
+      const dimValue = touch[groupBy] || touch.source || 'direct'
       if (!aggregated[dimValue]) {
         aggregated[dimValue] = { revenue: 0, conversions: 0 }
       }
@@ -1800,9 +1802,14 @@ export async function getLinearAttribution({
 
   const aggregated = {}
   for (const row of data || []) {
-    const linearData = row.linear_attribution || []
+    let linearData = row.linear_attribution || []
+    if (typeof linearData === 'string') {
+      try { linearData = JSON.parse(linearData) } catch { linearData = [] }
+    }
+    if (!Array.isArray(linearData)) linearData = []
     for (const touch of linearData) {
-      const dimValue = touch[groupBy] || 'direct'
+      // groupBy 'channel' uses stored channel field; others fall back to source
+      const dimValue = touch[groupBy] || touch.source || 'direct'
       if (!aggregated[dimValue]) {
         aggregated[dimValue] = { revenue: 0, conversions: 0 }
       }

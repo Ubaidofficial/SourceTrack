@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { getBillingPortal } from '../lib/api'
-import { Copy, Check, ExternalLink, Globe, Link2, CreditCard, Link } from 'lucide-react'
+import { Copy, Check, ExternalLink, Globe, Link2, CreditCard, Link, ShieldCheck } from 'lucide-react'
 import UTMBuilder from '../components/UTMBuilder'
 
 export default function Settings() {
@@ -12,12 +12,14 @@ export default function Settings() {
   const [name, setName]                 = useState('')
   const [domain, setDomain]             = useState('')
   const [saving, setSaving]             = useState(false)
-  const [shareEnabled, setShareEnabled] = useState(false)
-  const [shareToken, setShareToken]     = useState(null)
-  const [shareLoading, setShareLoading] = useState(false)
-  const [shareCopied, setShareCopied]   = useState(false)
-  const [message, setMessage]           = useState('')
-  const [loadingPortal, setLoadingPortal] = useState(false)
+  const [shareEnabled, setShareEnabled]         = useState(false)
+  const [shareToken, setShareToken]             = useState(null)
+  const [shareLoading, setShareLoading]         = useState(false)
+  const [shareCopied, setShareCopied]           = useState(false)
+  const [cookielessMode, setCookielessMode]     = useState(false)
+  const [cookielessLoading, setCookielessLoading] = useState(false)
+  const [message, setMessage]                   = useState('')
+  const [loadingPortal, setLoadingPortal]       = useState(false)
 
   useEffect(() => { loadSite() }, [user])
 
@@ -37,6 +39,7 @@ export default function Settings() {
     if (data) {
       setShareEnabled(!!data.public_share_enabled)
       setShareToken(data.public_share_token || null)
+      setCookielessMode(!!data.cookieless_mode)
       setName(data.name || '')
       setDomain(data.domain || '')
     }
@@ -103,6 +106,26 @@ export default function Settings() {
     navigator.clipboard.writeText(`${window.location.origin}/public/${shareToken}`)
     setShareCopied(true)
     setTimeout(() => setShareCopied(false), 2000)
+  }
+
+  const handleCookielessToggle = async () => {
+    if (!site) return
+    setCookielessLoading(true)
+    try {
+      const newMode = !cookielessMode
+      const { error } = await supabase
+        .from('sites')
+        .update({ cookieless_mode: newMode })
+        .eq('id', site.id)
+      if (error) throw error
+      setCookielessMode(newMode)
+      setMessage(newMode ? 'Cookieless mode enabled.' : 'Cookieless mode disabled.')
+      setTimeout(() => setMessage(''), 3000)
+    } catch (_err) {
+      setMessage('Error updating tracking mode')
+    } finally {
+      setCookielessLoading(false)
+    }
   }
 
   const plan = site?.plan || 'trial'
@@ -239,6 +262,43 @@ export default function Settings() {
             >
               <ExternalLink className="w-4 h-4 text-st-gray dark:text-gray-400" />
             </a>
+          </div>
+        )}
+      </section>
+
+      {/* ── Cookieless Tracking ───────────────────────────────────────── */}
+      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-st-gray dark:text-gray-400" />
+          <h3 className="text-sm font-bold text-st-black dark:text-white">Cookieless Tracking</h3>
+        </div>
+        <p className="text-xs text-st-gray dark:text-gray-400">
+          When enabled, the tracker uses a server-derived daily-rotating hash instead of localStorage or cookies.
+          No personal data is stored in the browser — fully compliant with GDPR, ePrivacy, and PECR without a consent banner.
+          Note: first-touch attribution is limited to the current session in cookieless mode.
+        </p>
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-gray-600 dark:text-gray-400">
+            {cookielessMode ? 'Cookieless mode on — use tracker.cookieless.js' : 'Standard mode — uses localStorage'}
+          </span>
+          <button
+            onClick={handleCookielessToggle}
+            disabled={cookielessLoading}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${
+              cookielessMode ? 'bg-st-black dark:bg-white' : 'bg-gray-200 dark:bg-gray-700'
+            }`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-st-black shadow transition-transform ${
+              cookielessMode ? 'translate-x-6' : 'translate-x-1'
+            }`} />
+          </button>
+        </div>
+        {cookielessMode && (
+          <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-1">
+            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Use this snippet instead:</p>
+            <code className="block text-xs text-gray-600 dark:text-gray-400 break-all">
+              {`<script async src="${typeof window !== 'undefined' ? window.location.origin : ''}/tracker/tracker.cookieless.js" data-site-key="${site?.site_key || 'YOUR_SITE_KEY'}"></script>`}
+            </code>
           </div>
         )}
       </section>

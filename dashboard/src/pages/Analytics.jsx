@@ -82,7 +82,7 @@ export default function Analytics() {
     queryFn: async () => {
       const { data: member } = await supabase
         .from('company_members').select('company_id').eq('user_id', user.id).maybeSingle()
-      const query = supabase.from('sites').select('site_key, name, domain').limit(1)
+      const query = supabase.from('sites').select('site_key, name, domain, cookieless_mode').limit(1)
       if (member?.company_id) query.eq('company_id', member.company_id)
       else query.eq('owner_id', user.id)
       const { data } = await query.maybeSingle()
@@ -194,8 +194,9 @@ export default function Analytics() {
   const maxOS      = Math.max(...osList.map(r => r.visitors), 1)
   const trendMax   = Math.max(...trend.map(t => t.views), 1)
 
+  const trackerFile = site?.cookieless_mode ? 'tracker.cookieless.js' : 'tracker.min.js'
   const snippetUrl = site
-    ? `<script async src="${window.location.origin}/tracker/tracker.min.js" data-site-key="${site.site_key}"></script>`
+    ? `<script async src="${window.location.origin}/tracker/${trackerFile}" data-site-key="${site.site_key}"></script>`
     : ''
 
   function toggleFilter(type, value) {

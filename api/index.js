@@ -43,6 +43,7 @@ import liveRouter from './routes/live.js'
 import analyticsRouter from './routes/analytics.js'
 import proxyRouter from './routes/proxy.js'
 import webhookIncomingRouter from './routes/webhook-incoming.js'
+import { trackerIdRouter } from './routes/tracker-id.js'
 
 const app = express()
 
@@ -228,6 +229,9 @@ app.use("/sp", proxyRouter)
 app.use("/api/webhooks/incoming", webhookIncomingRouter)
 app.get('/api/sessions/overview', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, sessionsOverview)
 app.get('/api/sessions', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, visitorSessions)
+
+// Cookieless tracker identity endpoint (public — called from customer sites)
+app.use('/api/tracker/id', trackerIdRouter)
 
 // 7. Health check
 app.get('/health', (_req, res) => {

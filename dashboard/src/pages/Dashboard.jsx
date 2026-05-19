@@ -775,7 +775,7 @@ export default function Dashboard() {
                     )},
                     { key: 'conversions', label: 'Conversions', render: (r) => r.conversions, cellClassName: 'text-right text-gray-600' },
                     { key: 'revenue', label: 'Revenue', render: (r) => `$${r.revenue.toFixed(0)}`, cellClassName: 'text-right font-medium text-st-black' },
-                    { key: 'rpv', label: 'Rev/Visitor', render: (r) => `$${r.rpv.toFixed(2)}`, cellClassName: 'text-right text-st-gray' },
+                    { key: 'rpv', label: 'Rev/Conv', render: (r) => `$${(r.rpv || 0).toFixed(2)}`, cellClassName: 'text-right text-st-gray' },
                     { key: 'cac', label: 'CAC', render: (r) => r.cac != null ? `$${r.cac.toFixed(2)}` : 'No spend data', cellClassName: 'text-right text-gray-600' },
                     { key: 'payback', label: 'Payback', render: (r) => r.payback_months != null ? `${r.payback_months.toFixed(1)} mo` : '—', cellClassName: 'text-right text-st-gray' },
                     { key: 'status', label: 'Status', render: () => <StatusBadge status="active" label="Active" />, cellClassName: 'text-right' }

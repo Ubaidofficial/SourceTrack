@@ -167,14 +167,16 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     }
 
     // ── Attribution model totals ────────────────────────────────────────────
-    // Total revenue is the same across first/last touch — models differ in distribution
-    // Non-direct models exclude conversions whose touch was Direct or null
+    // first/last/linear/u_shaped all share the same total (different distribution per source)
+    // Non-direct models exclude conversions whose respective touch was Direct or null
     const modelRevenues = {
       first_touch: totalRevenue,
       last_touch: totalRevenue,
       first_touch_non_direct: ftNonDirectRevenue,
       last_touch_non_direct: ltNonDirectRevenue,
-      ai_platforms: totalAIRevenue
+      ai_platforms: totalAIRevenue,
+      linear: totalRevenue,
+      u_shaped: totalRevenue
     }
 
     // ── Build sorted result arrays ──────────────────────────────────────────
@@ -203,14 +205,22 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     const sqlPercent = totalConversions > 0 ? parseFloat((sqlCount / totalConversions * 100).toFixed(1)) : 0
     const avgValue = totalConversions > 0 ? parseFloat((totalRevenue / totalConversions).toFixed(2)) : 0
     const aiShareTotal = totalRevenue > 0 ? parseFloat(((totalAIRevenue / totalRevenue) * 100).toFixed(2)) : 0
+    // convRate uses totalSessions from PostHog bounce_rate query (populated below)
+    // bestRPV uses revenue/conversions per source (no per-source session data available)
     const bestRPV = sources.length > 0
       ? sources.reduce((best, r) => (r.rpv || 0) > (best.rpv || 0) ? r : best, { rpv: 0, dim_value: '—' })
       : { rpv: 0, dim_value: '—' }
 
-    // ── Bounce rate (PostHog — single call after parallel block) ───────────
-    const bounceRateSql = `SELECT countIf(pv_count = 1) * 100.0 / count() FROM (SELECT distinct_id, count() AS pv_count FROM events WHERE event = '$pageview' AND properties.site_id = '${posthogSiteId}' AND timestamp >= toDateTime('${dateFrom}') AND timestamp <= toDateTime('${dateTo} 23:59:59') GROUP BY distinct_id)`
+    // ── Bounce rate + sessions (single PostHog call — same subquery) ─────────
+    // Returns [bounce_rate_pct, total_unique_visitors] in one round-trip
+    const bounceRateSql = `SELECT countIf(pv_count = 1) * 100.0 / count(), count() AS total_sessions FROM (SELECT distinct_id, count() AS pv_count FROM events WHERE event = '$pageview' AND properties.site_id = '${posthogSiteId}' AND timestamp >= toDateTime('${dateFrom}') AND timestamp <= toDateTime('${dateTo} 23:59:59') GROUP BY distinct_id)`
     let bounceRate = null
-    try { const br = await queryHogQL(bounceRateSql, 'bounce_rate'); bounceRate = br?.[0]?.[0] ? parseFloat(Number(br[0][0]).toFixed(1)) : null } catch (_e) {}
+    let totalSessions = 0
+    try {
+      const br = await queryHogQL(bounceRateSql, 'bounce_rate')
+      bounceRate = br?.[0]?.[0] ? parseFloat(Number(br[0][0]).toFixed(1)) : null
+      totalSessions = Number(br?.[0]?.[1]) || 0
+    } catch (_e) {}
 
     // ── Install status ──────────────────────────────────────────────────────
     let installData = null
@@ -256,7 +266,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
           revenue_prev: prevRevenue,
           conversions: totalConversions,
           conversions_prev: prevConversions,
-          sessions: 0,
+          sessions: totalSessions,
           bounce_rate: bounceRate,
           leads: totalLeads,
           sql_percent: sqlPercent,
@@ -264,7 +274,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
           ai_revenue: totalAIRevenue,
           ai_revenue_prev: prevAIRevenue,
           ai_revenue_share: aiShareTotal,
-          conversion_rate: 0,
+          conversion_rate: totalSessions > 0 ? parseFloat(((totalConversions / totalSessions) * 100).toFixed(2)) : 0,
           avg_value: avgValue,
           best_rpv_channel: bestRPV.dim_value,
           best_rpv: bestRPV.rpv
