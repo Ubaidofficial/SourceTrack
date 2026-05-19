@@ -68,6 +68,7 @@ None in this session (all backend SQL handled via application code + existing ta
 - 428676c: feat: add funnel visualization to analytics
 - 3e12049: feat: add RPV to attribution route response
 - 040d54a: feat: add period comparison to analytics KPI tiles
+- c6070dc: feat: add browser and OS breakdown to analytics
 - e178d92: docs: add RPV to implementation status
 - e402e85: docs: add implementation status log
 
@@ -129,3 +130,11 @@ Added: prior period parallel query in Analytics.jsx
 Added: delta display on all 4 KPI tiles (visitors, pageviews, bounce, duration)
 Pattern: copied from ReportBuilder.jsx priorPeriod pattern
 Commit: 040d54a
+
+## Feature 7: Browser and OS Breakdown
+Status: COMPLETE
+Backend: GET /api/analytics/browsers and /api/analytics/os endpoints
+Frontend: Browser and OS tabs added to Devices section in Analytics.jsx
+Filtering: click-to-filter works for browser and OS dimensions
+Privacy: aggregate counts only, no individual tracking
+Commit: c6070dc
