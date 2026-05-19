@@ -64,6 +64,7 @@ None in this session (all backend SQL handled via application code + existing ta
 - 5f4fbde: feat: weekly/monthly email reports via Resend
 - 6a7e69a: feat: add TikTok CAPI conversion sync
 - aad61e3: feat: add area chart and linear attribution model to report builder
+- 8d78ec8: feat: add U-Shaped attribution model
 - e402e85: docs: add implementation status log
 
 ## Still Requires Manual Action
@@ -94,3 +95,11 @@ Added: area chart type (filled line) to CHART_TYPES
 Added: linear attribution model to ATTRIBUTION_MODELS dropdown
 File: dashboard/src/pages/ReportBuilder.jsx
 Commit: aad61e3
+
+## Feature 3: U-Shaped Attribution Model
+Status: COMPLETE
+Files: nightly-attribution.js (calculation), attribution-engine.js (query),
+       attribution.js (route), ReportBuilder.jsx (dropdown)
+SQL: u_shaped_attribution JSONB column added to attributed_conversions
+Model key: 'u_shaped' — weights: 40% first, 20% middle, 40% last
+Commit: 8d78ec8
