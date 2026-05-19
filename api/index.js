@@ -46,6 +46,7 @@ import proxyRouter from './routes/proxy.js'
 import webhookIncomingRouter from './routes/webhook-incoming.js'
 import { trackerIdRouter } from './routes/tracker-id.js'
 import { gdprRouter } from './routes/gdpr.js'
+import { pixelRouter } from './routes/pixel.js'
 
 const app = express()
 
@@ -56,6 +57,7 @@ app.use((req, res, next) => {
     req.path === '/api/collect' ||
     req.path === '/api/conversion' ||
     req.path === '/api/identify' ||
+    req.path === '/api/pixel' ||
     req.path === '/track' ||
     req.path.includes('/tracking') ||
     req.path.includes('/pageview') ||
@@ -185,6 +187,7 @@ app.use('/api/track', trackLimit)
 
 // 6. Routes
 app.post('/api/track', validateSiteKey, checkTierLimit, detectAIPlatform, track)
+app.get('/api/pixel', trackLimit, pixelRouter)  // 1×1 GIF — email & no-JS tracking
 app.post('/api/collect', trackLimit, (req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*')
     res.setHeader('Access-Control-Allow-Credentials', 'true')

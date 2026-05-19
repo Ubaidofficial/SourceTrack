@@ -6,7 +6,7 @@ import { fetchApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 import {
   Code, Bug, Copy, Check, ShieldCheck, AlertTriangle,
-  ExternalLink, Globe, Tag, ShoppingCart, BarChart3, Plug
+  ExternalLink, Globe, Tag, ShoppingCart, BarChart3, Plug, Mail, Radio
 } from 'lucide-react'
 import DashboardCard from '../components/DashboardCard'
 import StatusBadge from '../components/StatusBadge'
@@ -27,6 +27,7 @@ export default function Integrations() {
   const navigate = useNavigate()
   const [site, setSite] = useState(null)
   const [copied, setCopied] = useState(false)
+  const [copiedPixel, setCopiedPixel] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -72,6 +73,17 @@ export default function Integrations() {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     }
+  }
+
+  const apiBase = window.location.origin.includes('localhost') ? 'https://api.srctk.com' : 'https://api.srctk.com'
+  const pixelBase = site?.site_key ? `${apiBase}/api/pixel?site_key=${site.site_key}` : ''
+  const emailPixelExample = pixelBase ? `${pixelBase}&event=email_open&uid={{USER_ID}}&campaign={{CAMPAIGN_NAME}}` : ''
+  const serverPixelExample = pixelBase ? `${pixelBase}&event=pageview&uid={{USER_ID}}&url={{PAGE_URL}}` : ''
+
+  const handleCopyPixel = (text) => {
+    navigator.clipboard.writeText(text).catch(() => {})
+    setCopiedPixel(true)
+    setTimeout(() => setCopiedPixel(false), 2000)
   }
 
   return (
@@ -208,6 +220,81 @@ export default function Integrations() {
           )}
         </DashboardCard>
       </div>
+
+      {/* Pixel Tracking */}
+      <DashboardCard
+        title="Pixel Tracking"
+        subtitle="Track email opens and server-side events without JavaScript"
+      >
+        <div className="space-y-4">
+          <div className="flex items-start gap-4">
+            <div className="p-3 bg-gray-100 dark:bg-[#252929] rounded-lg shrink-0">
+              <Mail className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-st-black dark:text-white">Email open attribution</p>
+              <p className="text-xs text-st-gray mt-1">
+                Embed a 1×1 transparent GIF in any HTML email. When the recipient opens it, SourceTrack records the event and attributes it to the correct campaign — no JavaScript, no SDK.
+              </p>
+            </div>
+          </div>
+
+          {site?.site_key ? (
+            <div className="space-y-3">
+              {/* Email pixel */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wider">Email img tag</p>
+                  <button onClick={() => handleCopyPixel(emailPixelExample)}
+                    className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black dark:hover:text-white transition-colors">
+                    {copiedPixel ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                    {copiedPixel ? 'Copied' : 'Copy'}
+                  </button>
+                </div>
+                <div className="bg-st-black rounded-lg p-3">
+                  <pre className="text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed select-all">
+                    {`<img src="${emailPixelExample}" width="1" height="1" alt="" />`}
+                  </pre>
+                </div>
+              </div>
+
+              {/* Server-side pixel */}
+              <div>
+                <p className="text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1.5">Server-side HTTP GET (no JS)</p>
+                <div className="bg-st-black rounded-lg p-3">
+                  <pre className="text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed select-all">
+                    {`GET ${serverPixelExample}`}
+                  </pre>
+                </div>
+              </div>
+
+              {/* Param reference */}
+              <div className="bg-gray-50 dark:bg-[#111414] rounded-lg p-3 border border-gray-100 dark:border-[#2A2E2E]">
+                <p className="text-xs font-semibold text-st-black dark:text-white mb-2">Query parameters</p>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                  {[
+                    ['site_key', 'Your site key (required)'],
+                    ['event', 'Event name — e.g. email_open'],
+                    ['uid', 'User ID for attribution stitching'],
+                    ['campaign', 'Campaign name (utm_campaign)'],
+                    ['utm_source', 'Traffic source'],
+                    ['utm_medium', 'Traffic medium'],
+                    ['url', 'Page or email URL'],
+                    ['val', 'Numeric value (for conversions)'],
+                  ].map(([k, v]) => (
+                    <div key={k} className="flex items-start gap-1.5">
+                      <code className="text-[10px] font-mono text-st-black dark:text-white bg-gray-200 dark:bg-[#2A2E2E] px-1 py-0.5 rounded shrink-0">{k}</code>
+                      <span className="text-[10px] text-st-gray dark:text-gray-400">{v}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-st-gray py-2">Site key loading…</p>
+          )}
+        </div>
+      </DashboardCard>
 
       {/* Available Integrations (Future) */}
       <DashboardCard title="Coming Soon"
