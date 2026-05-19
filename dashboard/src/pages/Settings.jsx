@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { getBillingPortal } from '../lib/api'
-import { Copy, Check, ExternalLink, Globe, Link2, CreditCard, Link, ShieldCheck } from 'lucide-react'
+import { Copy, Check, ExternalLink, Globe, Link2, CreditCard, Link, ShieldCheck, Trash2, AlertTriangle } from 'lucide-react'
 import UTMBuilder from '../components/UTMBuilder'
 
 export default function Settings() {
@@ -16,10 +16,16 @@ export default function Settings() {
   const [shareToken, setShareToken]             = useState(null)
   const [shareLoading, setShareLoading]         = useState(false)
   const [shareCopied, setShareCopied]           = useState(false)
-  const [cookielessMode, setCookielessMode]     = useState(false)
-  const [cookielessLoading, setCookielessLoading] = useState(false)
-  const [message, setMessage]                   = useState('')
-  const [loadingPortal, setLoadingPortal]       = useState(false)
+  const [cookielessMode, setCookielessMode]         = useState(false)
+  const [cookielessLoading, setCookielessLoading]   = useState(false)
+  const [retentionDays, setRetentionDays]           = useState(0)
+  const [retentionSaving, setRetentionSaving]       = useState(false)
+  const [visitorId, setVisitorId]                   = useState('')
+  const [visitorDeleting, setVisitorDeleting]       = useState(false)
+  const [deleteAccountConfirm, setDeleteAccountConfirm] = useState('')
+  const [deletingAccount, setDeletingAccount]       = useState(false)
+  const [message, setMessage]                       = useState('')
+  const [loadingPortal, setLoadingPortal]           = useState(false)
 
   useEffect(() => { loadSite() }, [user])
 
@@ -30,7 +36,7 @@ export default function Settings() {
       .eq('user_id', user.id)
       .maybeSingle()
 
-    const query = supabase.from('sites').select('*').limit(1)
+    const query = supabase.from('sites').select('*, cookieless_mode, data_retention_days').limit(1)
     if (member?.company_id) query.eq('company_id', member.company_id)
     else query.eq('owner_id', user.id)
 
@@ -40,6 +46,7 @@ export default function Settings() {
       setShareEnabled(!!data.public_share_enabled)
       setShareToken(data.public_share_token || null)
       setCookielessMode(!!data.cookieless_mode)
+      setRetentionDays(data.data_retention_days || 0)
       setName(data.name || '')
       setDomain(data.domain || '')
     }
@@ -125,6 +132,69 @@ export default function Settings() {
       setMessage('Error updating tracking mode')
     } finally {
       setCookielessLoading(false)
+    }
+  }
+
+  const handleRetentionSave = async () => {
+    if (!site) return
+    setRetentionSaving(true)
+    try {
+      const { data: session } = await supabase.auth.getSession()
+      const token = session?.session?.access_token
+      const res = await fetch('/api/gdpr/retention', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ site_key: site.site_key, retention_days: retentionDays })
+      })
+      const json = await res.json()
+      setMessage(json.message || (json.success ? 'Retention policy saved.' : 'Error saving.'))
+      setTimeout(() => setMessage(''), 4000)
+    } catch (_err) {
+      setMessage('Error saving retention policy')
+    } finally {
+      setRetentionSaving(false)
+    }
+  }
+
+  const handleVisitorDelete = async (e) => {
+    e.preventDefault()
+    if (!site || !visitorId.trim()) return
+    setVisitorDeleting(true)
+    try {
+      const { data: session } = await supabase.auth.getSession()
+      const token = session?.session?.access_token
+      const res = await fetch('/api/gdpr/visitor', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ site_key: site.site_key, anonymous_id: visitorId.trim() })
+      })
+      const json = await res.json()
+      setMessage(json.message || (json.success ? 'Visitor data erased.' : 'Error erasing.'))
+      setVisitorId('')
+      setTimeout(() => setMessage(''), 4000)
+    } catch (_err) {
+      setMessage('Error deleting visitor data')
+    } finally {
+      setVisitorDeleting(false)
+    }
+  }
+
+  const handleAccountDelete = async () => {
+    if (deleteAccountConfirm !== 'DELETE') return
+    setDeletingAccount(true)
+    try {
+      const { data: session } = await supabase.auth.getSession()
+      const token = session?.session?.access_token
+      await fetch('/api/gdpr/account', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      // Force sign out — account no longer exists
+      await supabase.auth.signOut()
+      window.location.href = '/'
+    } catch (_err) {
+      setMessage('Error deleting account. Please contact support.')
+      setDeletingAccount(false)
     }
   }
 
@@ -301,6 +371,98 @@ export default function Settings() {
             </code>
           </div>
         )}
+      </section>
+
+      {/* ── Privacy & Data Retention ──────────────────────────────────── */}
+      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-6">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-st-gray dark:text-gray-400" />
+          <h3 className="text-sm font-bold text-st-black dark:text-white">Privacy &amp; Data</h3>
+        </div>
+
+        {/* Retention policy */}
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-st-black dark:text-white">Data Retention</p>
+          <p className="text-xs text-st-gray dark:text-gray-400">
+            Attribution records older than the selected period are automatically deleted each night.
+            Set to "Keep forever" if you are not subject to a retention obligation.
+          </p>
+          <div className="flex items-center gap-3">
+            <select
+              value={retentionDays}
+              onChange={e => setRetentionDays(Number(e.target.value))}
+              className="px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
+            >
+              <option value={0}>Keep forever</option>
+              <option value={30}>30 days</option>
+              <option value={60}>60 days</option>
+              <option value={90}>90 days</option>
+              <option value={180}>180 days</option>
+              <option value={365}>1 year</option>
+            </select>
+            <button
+              onClick={handleRetentionSave}
+              disabled={retentionSaving}
+              className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors"
+            >
+              {retentionSaving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        </div>
+
+        {/* Visitor data erasure */}
+        <div className="border-t border-gray-100 dark:border-gray-800 pt-4 space-y-2">
+          <p className="text-xs font-semibold text-st-black dark:text-white">Erase Visitor Data (Right to Erasure)</p>
+          <p className="text-xs text-st-gray dark:text-gray-400">
+            Enter a visitor's anonymous ID to permanently delete all attribution records and PostHog events associated with them.
+          </p>
+          <form onSubmit={handleVisitorDelete} className="flex items-center gap-3">
+            <input
+              type="text"
+              value={visitorId}
+              onChange={e => setVisitorId(e.target.value)}
+              placeholder="anonymous_id (e.g. xxxxxxxx-xxxx-4xxx-…)"
+              className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
+            />
+            <button
+              type="submit"
+              disabled={visitorDeleting || !visitorId.trim()}
+              className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              {visitorDeleting ? 'Erasing…' : 'Erase'}
+            </button>
+          </form>
+        </div>
+      </section>
+
+      {/* ── Danger Zone (Account Deletion) ────────────────────────────── */}
+      <section className="bg-white dark:bg-[#1A1C1C] border border-red-200 dark:border-red-900/40 rounded-xl p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-red-500" />
+          <h3 className="text-sm font-bold text-red-600 dark:text-red-400">Danger Zone</h3>
+        </div>
+        <p className="text-xs text-st-gray dark:text-gray-400">
+          Permanently delete your account, all sites, and all attribution data. This action is irreversible.
+          Type <strong>DELETE</strong> to confirm.
+        </p>
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            value={deleteAccountConfirm}
+            onChange={e => setDeleteAccountConfirm(e.target.value)}
+            placeholder='Type DELETE to confirm'
+            className="flex-1 px-3 py-2 border border-red-200 dark:border-red-900/40 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-400/40"
+          />
+          <button
+            onClick={handleAccountDelete}
+            disabled={deletingAccount || deleteAccountConfirm !== 'DELETE'}
+            className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            {deletingAccount ? 'Deleting…' : 'Delete Account'}
+          </button>
+        </div>
       </section>
 
       {/* ── UTM Builder ────────────────────────────────────────────────── */}

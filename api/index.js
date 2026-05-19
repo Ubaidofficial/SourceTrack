@@ -44,6 +44,7 @@ import analyticsRouter from './routes/analytics.js'
 import proxyRouter from './routes/proxy.js'
 import webhookIncomingRouter from './routes/webhook-incoming.js'
 import { trackerIdRouter } from './routes/tracker-id.js'
+import { gdprRouter } from './routes/gdpr.js'
 
 const app = express()
 
@@ -232,6 +233,9 @@ app.get('/api/sessions', requireUserAuth, validateSiteKey, requireSiteMembership
 
 // Cookieless tracker identity endpoint (public — called from customer sites)
 app.use('/api/tracker/id', trackerIdRouter)
+
+// GDPR / privacy endpoints (authenticated)
+app.use('/api/gdpr', requireUserAuth, gdprRouter)
 
 // 7. Health check
 app.get('/health', (_req, res) => {

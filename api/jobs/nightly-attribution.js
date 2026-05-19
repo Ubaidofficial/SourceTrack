@@ -114,8 +114,16 @@ async function main() {
     const duration = ((Date.now() - startTime) / 1000).toFixed(2)
     log(`Completed: ${totalProcessed} conversions processed, ${totalFailed} failed, ${duration}s`)
     _processed = totalProcessed
+
+    // GDPR retention auto-purge (best-effort — never fail the whole job)
+    try {
+      await runRetentionPurge(sites)
+    } catch (purgeErr) {
+      logWarn(`Retention purge failed (non-fatal): ${purgeErr.message}`)
+    }
+
     return
-    
+
   } catch (error) {
     logError('Critical failure', error)
     throw error
@@ -397,6 +405,50 @@ function calculateAttribution(touchpoints, conversionValue) {
         return { source: tp.utm_source || null, medium: tp.utm_medium || null, campaign: tp.utm_campaign || null, channel: tpCh(tp), timestamp: tp.timestamp, fraction: middleFraction, attributed_value: middleValue }
       })
     })()
+  }
+}
+
+// ─── GDPR Retention Auto-Purge ────────────────────────────────────────────────
+// Deletes attributed_conversions older than data_retention_days for each site
+// that has a retention policy set. Runs after attribution processing each night.
+async function runRetentionPurge(sites) {
+  if (!sites?.length) return
+
+  // Re-fetch sites with data_retention_days field
+  const { data: sitesWithRetention, error } = await supabase
+    .from('sites')
+    .select('id, site_key, data_retention_days')
+    .not('data_retention_days', 'is', null)
+    .gt('data_retention_days', 0)
+
+  if (error || !sitesWithRetention?.length) return
+
+  let totalPurged = 0
+  for (const site of sitesWithRetention) {
+    try {
+      const cutoff = new Date()
+      cutoff.setDate(cutoff.getDate() - site.data_retention_days)
+      const cutoffStr = cutoff.toISOString().slice(0, 10)
+
+      const { count, error: delErr } = await supabase
+        .from('attributed_conversions')
+        .delete({ count: 'exact' })
+        .eq('site_id', site.id)
+        .lt('conversion_date', cutoffStr)
+
+      if (delErr) {
+        logWarn(`Retention purge for site ${site.site_key} failed: ${delErr.message}`)
+      } else if (count > 0) {
+        log(`Retention purge: deleted ${count} rows from site ${site.site_key} (>${site.data_retention_days}d old)`)
+        totalPurged += count
+      }
+    } catch (siteErr) {
+      logWarn(`Retention purge site ${site.site_key} threw: ${siteErr.message}`)
+    }
+  }
+
+  if (totalPurged > 0) {
+    log(`Retention purge complete: ${totalPurged} total rows deleted`)
   }
 }
 
