@@ -1,11 +1,20 @@
 import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { v4 as uuidv4 } from 'uuid'
+import NodeCache from 'node-cache'
 import { ph } from '../lib/posthog.js'
 import { dispatchWebhook } from '../lib/webhook.js'
 import { sendMetaCAPI, sendGoogleConversion, sendMicrosoftConversion, sendLinkedInConversion, sendTikTokConversion } from '../lib/conversion-sync.js'
 import { createClient as _capiClient } from '@supabase/supabase-js'
 import _ws from 'ws'
+
+// In-memory dedup cache — 24h TTL. Prevents duplicate conversions when:
+// - Form submits twice (double-click, retry)
+// - Beacon fires twice
+// Keys: external_event_id (site_id:order_id:type) → true
+// Note: restarts lose the cache. For absolute dedup use a DB — this catches
+// the common case (same session, same minute) without a DB round-trip.
+const dedupCache = new NodeCache({ stdTTL: 86400, checkperiod: 3600 })
 
 function getFirstTouchFields(body = {}) {
   const props = body.properties || {};
@@ -96,7 +105,11 @@ export async function conversion(req, res) {
       device_type: enriched.device_type,
       country: enriched.country,
       server_timestamp: enriched.server_timestamp,
-      ingestion_method: 'server_routed'
+      ingestion_method: 'server_routed',
+      // Feature: custom event properties — any object passed as `properties` is merged in
+      ...(req.body.properties && typeof req.body.properties === 'object' && !Array.isArray(req.body.properties)
+        ? { custom_properties: req.body.properties }
+        : {})
     }
 
     if (typeof req.body.conversion_type === 'string') {
@@ -113,6 +126,14 @@ export async function conversion(req, res) {
       ? `${req.site.id}:${orderId}:${props.conversion_type || 'conversion'}`
       : null
     props.external_event_id = externalEventId
+
+    // Deduplication — skip if this exact external_event_id was seen in the last 24h
+    if (externalEventId) {
+      if (dedupCache.get(externalEventId)) {
+        return res.status(200).json({ success: true, data: { received: true, dedup_skipped: true }, error: null })
+      }
+      dedupCache.set(externalEventId, true)
+    }
 
     ph.capture({
       distinctId: req.body.anonymous_id || uuidv4(),
@@ -144,7 +165,8 @@ export async function conversion(req, res) {
     dispatchWebhook('conversion', props)
 
     res.status(200).json({ success: true, data: { received: true }, error: null })
-  } catch (_err) {
+  } catch (err) {
+    console.error('[conversion] ingestion error:', err?.message, { site_id: req.site?.id, type: req.body?.conversion_type })
     res.status(500).json({ success: false, data: null, error: 'Conversion failed' })
   }
 }

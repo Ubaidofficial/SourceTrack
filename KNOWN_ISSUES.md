@@ -173,3 +173,49 @@ Crontab ran this file at 3 AM every night — file didn't exist, silently crashi
 
 ### 7. _st cross-domain system was redundant (FIXED Session 94)
 Two conflicting cross-domain systems existed. _st system built in error — removed. __tq_id/__tq_ft system is the correct one, carries full attribution data.
+
+### 8. Meta CAPI sent wrong event names (FIXED Session 97–98)
+All conversion types were firing as `Purchase`. META_EVENT_MAP with 16 type mappings added to conversion-sync.js.
+
+### 9. Google Ads CAPI always 401 (FIXED Session 97–98)
+Developer token was passed as Bearer token. Fixed: OAuth2 access token read from `google_ads_access_token` site column or `GOOGLE_ADS_ACCESS_TOKEN` env var.
+
+### 10. Nightly attribution models returned silent empty results (FIXED Session 97–98)
+U-shaped / W-shaped / Time Decay / Linear models showed blank charts with no explanation. Fixed: `_notice` field returned when empty; UI amber banner explains nightly job timing.
+
+### 11. Duplicate channelFromEvent — AI domains diverged (FIXED Session 97–98)
+attribution-engine.js had 14 AI domains; nightly job had 8. Canonical `api/lib/channel-classifier.js` created with 21 domains; both consumers import from it.
+
+## New Known Gaps (Session 98–99, not yet fixed)
+
+### SSL Certificate — `NET::ERR_CERT_COMMON_NAME_INVALID` (NOT a code issue)
+Certificate shows `stream.nexus.pizza` instead of `sourcetrack.ai`.
+This is a Railway custom domain SSL provisioning problem.
+
+**Fix (Railway dashboard only):**
+1. Go to Railway → your Dashboard service → Settings → Domains
+2. Remove the `sourcetrack.ai` custom domain entry
+3. Re-add it: add `sourcetrack.ai` and `www.sourcetrack.ai`
+4. Railway will provision a Let's Encrypt cert automatically (takes ~1 min)
+5. Verify DNS CNAME: `sourcetrack.ai CNAME <your-project>.up.railway.app`
+6. If using Cloudflare: set SSL mode to "Full (Strict)" not "Flexible"
+
+**Root cause:** Railway uses SNI to serve the right SSL cert. If the custom domain
+was added before DNS propagated, or the cert wasn't re-issued after a domain
+name change, Railway continues serving its default `*.up.railway.app` cert.
+
+## New Known Gaps (Session 97–98, not yet fixed)
+
+### OG image missing
+`/og-image.png` is referenced in `dashboard/index.html` and `Landing.jsx` but does not exist yet.
+Action: create a 1200×630 image and deploy to `https://sourcetrack.ai/og-image.png`.
+
+### Landing page is CSR — social link previews may not render
+The landing page is a React SPA. Helmet adds meta tags but social crawlers (Slack, iMessage, WhatsApp) don't execute JS. OG preview images and descriptions may not show when sharing the URL.
+Action: evaluate SSR (Next.js/Astro) for the marketing landing page post-launch.
+
+### annotations table migration not applied
+`supabase/migrations/20260519000005_custom_properties_annotations_attribution_window.sql` must be run manually in Supabase SQL editor. Until then:
+- Annotations API returns HTTP 503 (gracefully).
+- `custom_properties` column does not exist on `attributed_conversions`.
+- `attribution_window_days` column does not exist on `sites` (defaults to 30 in code).

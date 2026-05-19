@@ -1,0 +1,27 @@
+User-agent: *
+Allow: /
+Allow: /docs
+Allow: /login
+Allow: /signup
+
+# Disallow authenticated app routes
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /report-builder
+Disallow: /ai-chat
+Disallow: /ai-analytics
+Disallow: /leads
+Disallow: /campaigns
+Disallow: /integrations
+Disallow: /snippet
+Disallow: /journey
+Disallow: /analytics
+Disallow: /billing
+Disallow: /debugger
+Disallow: /admin
+Disallow: /onboarding
+
+# Disallow API routes
+Disallow: /api/
+
+Sitemap: https://sourcetrack.ai/sitemap.xml

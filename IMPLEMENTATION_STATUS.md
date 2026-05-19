@@ -1,5 +1,5 @@
 # SourceTrack Implementation Status
-Last updated: 2026-05-19
+Last updated: 2026-05-20
 
 ## Tasks Completed This Session
 - Task 1: Minify tracker.js → tracker/tracker.min.js — COMPLETE
@@ -182,3 +182,43 @@ Datafast: Revenue Per Visitor added
 - Stripe native MRR dashboard
 - CRM webhook integration (HubSpot/HighLevel)
 - Visitor-based pricing migration
+
+---
+
+## Audit-Driven Fixes — Session 97–98 (2026-05-20)
+
+Competitive audit against RedTrack, Stape.io, UserMaven, Cometly, Datafa.st.
+Full details in CHANGELOG.md and AUDIT_S97.md.
+
+### Bugs Fixed
+- T-7:  Meta CAPI — all conversions sent as Purchase. Fixed with META_EVENT_MAP (16 types).
+- T-8:  Google Ads CAPI — 401 because developer token was used as Bearer. Fixed OAuth2 flow.
+- T-9:  Silent empty results for nightly attribution models. Fixed with _notice field + amber UI banner.
+- T-11: Duplicate channelFromEvent causing AI channel inconsistency. Canonical channel-classifier.js created.
+- T-16: KPI tiles for trial_to_paid and sql_percent always empty. Both now computed and wired.
+- T-22: Duplicate backgroundColor key in ReportBuilder chart dataset. Fixed.
+
+### New Features
+- T-Custom-Props: Custom event properties (key-value JSONB) on track + conversion endpoints.
+- T-Annotations:  Chart annotations (note/deploy/campaign/alert) on Revenue Trend chart.
+- T-Attr-Window:  Per-site attribution window (1/7/14/30/60/90 days) in Settings + nightly job.
+- T-Consent:      Consent gate API (opt-in/opt-out) in tracker.js with localStorage persistence.
+- T-Dedup:        24h event deduplication on external_event_id (order_id + type) for conversions.
+- T-Offline-CAPI: Offline/server-side conversion CAPI now fires Meta + TikTok + Google Ads.
+- T-SiteCache:    5-min NodeCache for validateSiteKey — eliminates Supabase call on every event.
+- T-ErrorLog:     Contextual error logging (site_id + event + err.message) in ingest routes.
+
+### SEO
+- T-17: React Helmet Async installed. Per-route meta + OG + JSON-LD structured data.
+- T-18: sitemap.xml, robots.txt, favicon.svg created in dashboard/public/.
+
+### Requires Manual Action
+- Run migration: supabase/migrations/20260519000005_custom_properties_annotations_attribution_window.sql
+- Create og-image.png at 1200x630 and deploy to https://sourcetrack.ai/og-image.png
+- Submit sitemap to Google Search Console: https://sourcetrack.ai/sitemap.xml
+
+### Pending (not in this release)
+- T-2:  Cookieless tracking mode (in progress)
+- T-4:  GDPR right-to-erasure endpoint
+- T-5:  Public API documentation site
+- T-6:  Stripe in-product revenue attribution

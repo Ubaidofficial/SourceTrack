@@ -22,7 +22,7 @@ import {
   DollarSign, Users, Bot, TrendingUp,
   ArrowRight, Download, ExternalLink, Sparkles, Bookmark,
   FileText, BarChart3, Plus, AlertTriangle, RefreshCw,
-  MessageSquare, Zap, TrendingDown, Info
+  MessageSquare, Zap, TrendingDown, Info, Flag, X, Pencil
 } from 'lucide-react'
 import MetricTile from '../components/MetricTile'
 import DashboardCard from '../components/DashboardCard'
@@ -122,14 +122,15 @@ const getKpiConfig = (businessType) => {
   switch (businessType) {
     case 'saas': return [
       { key: 'revenue',       label: 'Revenue',       format: 'currency' },
-      { key: 'mrr_estimate',  label: 'MRR (est.)',    format: 'currency', emptyState: true },
+      { key: 'mrr_estimate',  label: 'MRR (est.)',    format: 'currency' },
       { key: 'ai_revenue',    label: 'AI Revenue',    format: 'currency' },
-      { key: 'trial_to_paid', label: 'Trial → Paid', format: 'percent',  emptyState: true },
+      { key: 'trial_to_paid', label: 'Trial → Paid',  format: 'percent',
+        emptyHint: "Track trial starts with sourcetrack.track('trial_start') to see conversion rate." },
       { key: 'best_rpv',      label: 'Best Channel RPV', format: 'currency' },
     ]
     case 'ecommerce': return [
       { key: 'revenue',    label: 'Total Revenue', format: 'currency' },
-      { key: 'aov',        label: 'AOV',           format: 'currency', emptyState: true },
+      { key: 'aov',        label: 'AOV',           format: 'currency' },
       { key: 'orders',     label: 'Orders',        format: 'number' },
       { key: 'ai_roas',    label: 'AI ROAS',       format: 'number' },
       { key: 'best_rpv',   label: 'Best Channel RPV', format: 'currency' },
@@ -138,7 +139,8 @@ const getKpiConfig = (businessType) => {
       { key: 'total_leads', label: 'Total Leads', format: 'number' },
       { key: 'lead_growth', label: 'Lead Growth', format: 'percent' },
       { key: 'ai_leads',    label: 'AI Leads',    format: 'number' },
-      { key: 'sql_percent', label: 'SQL %',       format: 'percent',  emptyState: true },
+      { key: 'sql_percent', label: 'SQL %',        format: 'percent',
+        emptyHint: "Send conversion_type='sql' or 'qualified_lead' to see SQL conversion rate." },
       { key: 'best_rpv',    label: 'Best Channel RPV', format: 'currency' },
     ]
     default: return [
@@ -159,25 +161,36 @@ const computeAov = (d) => (!d?.revenue || !d?.orders || d.orders === 0) ? null :
 const enrichKpis = (kpis, businessType) => {
   const mrrNow  = kpis.mrr_estimate  ?? (businessType === 'saas'      ? computeMrrEstimate(kpis) : null)
   const aovNow  = kpis.aov           ?? (businessType === 'ecommerce' ? computeAov(kpis)         : null)
-  // Previous-period MRR estimate — same formula applied to prev revenue
   const mrrPrev = kpis.mrr_estimate_prev ?? (businessType === 'saas' && kpis.revenue_prev
     ? (kpis.revenue_prev / (new Date().getDate() || 30)) * 30
     : null)
+
+  // trial_to_paid: computed from conversion_types map.
+  // Looks for trial/trial_start events vs paid conversions in the same period.
+  // Returns null if no trial data, letting the emptyHint show.
+  const ctMap = kpis.conversion_types || {}
+  const trialCount = (ctMap['trial'] || 0) + (ctMap['trial_start'] || 0)
+  const paidCount  = (ctMap['purchase'] || 0) + (ctMap['subscription'] || 0) + (ctMap['subscribe'] || 0)
+  const trialToPaid = trialCount > 0 ? parseFloat(((paidCount / trialCount) * 100).toFixed(1)) : null
+
+  // sql_percent: already returned by the API dashboard route from attributed_conversions
+  const sqlPct = kpis.sql_percent ?? null
+
   return {
     ...kpis,
-    // Computed metrics
     mrr_estimate:      mrrNow,
     mrr_estimate_prev: mrrPrev,
     aov:               aovNow,
-    // Expose _prev keys for every KPI the strip might display
+    trial_to_paid:     trialToPaid,
+    sql_percent:       sqlPct,
     revenue_prev:      kpis.revenue_prev      ?? null,
     leads_prev:        kpis.leads_prev        ?? null,
     ai_revenue_prev:   kpis.ai_revenue_prev   ?? null,
     conversions_prev:  kpis.conversions_prev  ?? null,
     sessions_prev:     kpis.sessions_prev     ?? null,
-    total_leads_prev:  kpis.leads_prev        ?? null,  // leadgen alias
-    best_rpv_channel:  kpis.best_rpv_channel   ?? '—',
-    best_rpv:          kpis.best_rpv           ?? null,
+    total_leads_prev:  kpis.leads_prev        ?? null,
+    best_rpv_channel:  kpis.best_rpv_channel  ?? '—',
+    best_rpv:          kpis.best_rpv          ?? null,
   }
 }
 // ─────────────────────────────────────────────────────────────────────────────
@@ -372,6 +385,46 @@ export default function Dashboard() {
     if (withSpend.length === 0) return null
     return withSpend.reduce((s, r) => s + r.cac, 0) / withSpend.length
   })()
+
+  // ── Annotations ──────────────────────────────────────────────────────────
+  const [annotationForm, setAnnotationForm] = useState({ open: false, date: format(new Date(), 'yyyy-MM-dd'), note: '', type: 'note' })
+  const [annotationSaving, setAnnotationSaving] = useState(false)
+
+  const dateFrom = format(subDays(new Date(), timeRange), 'yyyy-MM-dd')
+  const dateTo   = format(new Date(), 'yyyy-MM-dd')
+
+  const { data: annotationsData, refetch: refetchAnnotations } = useQuery({
+    queryKey: ['annotations', site?.site_key, dateFrom, dateTo],
+    queryFn: () => fetchApi(`/annotations?site_key=${site.site_key}&date_from=${dateFrom}&date_to=${dateTo}`),
+    enabled: !!site?.site_key && !previewMode,
+    staleTime: 60_000
+  })
+  const annotations = Array.isArray(annotationsData) ? annotationsData : []
+
+  const handleSaveAnnotation = async () => {
+    if (!site?.site_key || !annotationForm.note.trim()) return
+    setAnnotationSaving(true)
+    try {
+      await fetchApi(`/annotations?site_key=${site.site_key}`, {
+        method: 'POST',
+        body: JSON.stringify({ date: annotationForm.date, note: annotationForm.note.trim(), type: annotationForm.type })
+      })
+      setAnnotationForm(f => ({ ...f, open: false, note: '' }))
+      await refetchAnnotations()
+    } catch (_err) {
+      // Table may not exist yet — silently fail rather than crashing the dashboard
+    } finally {
+      setAnnotationSaving(false)
+    }
+  }
+
+  const handleDeleteAnnotation = async (id) => {
+    if (!site?.site_key) return
+    try {
+      await fetchApi(`/annotations/${id}?site_key=${site.site_key}`, { method: 'DELETE' })
+      await refetchAnnotations()
+    } catch (_err) { /* swallow */ }
+  }
 
   // Update freshness timestamp whenever new overview data arrives
   useEffect(() => {
@@ -770,8 +823,8 @@ export default function Dashboard() {
               }
               const rawValue  = enrichedKpis?.[metric.key] ?? null
               const prevValue = enrichedKpis?.[metric.key + '_prev'] ?? null
-              const isEmpty   = metric.emptyState === true && rawValue == null
-              // Compute delta % vs previous period when both values exist
+              // isEmpty: value is null AND there's a hint to show (setup instruction)
+              const isEmpty   = rawValue == null && !!metric.emptyHint
               const delta = (!isEmpty && rawValue != null && prevValue != null && prevValue !== 0)
                 ? ((rawValue - prevValue) / Math.abs(prevValue)) * 100
                 : null
@@ -779,10 +832,9 @@ export default function Dashboard() {
                 <MetricTile
                   key={metric.key}
                   label={metric.label}
-                  value={rawValue}
-                  format={metric.format}
-                  isEmpty={isEmpty}
-                  trend={delta}
+                  value={isEmpty ? metric.emptyHint : rawValue}
+                  format={isEmpty ? 'text' : metric.format}
+                  trend={isEmpty ? null : delta}
                 />
               )
             })}
@@ -917,12 +969,98 @@ export default function Dashboard() {
               )}
             </DashboardCard>
 
-            <DashboardCard title="Revenue Trend" subtitle={`Last ${timeRange} days`}>
+            <DashboardCard
+              title="Revenue Trend"
+              subtitle={`Last ${timeRange} days`}
+              action={!previewMode && (
+                <button
+                  onClick={() => setAnnotationForm(f => ({ ...f, open: !f.open, date: format(new Date(), 'yyyy-MM-dd'), note: '' }))}
+                  className="flex items-center gap-1 text-xs text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white transition-colors"
+                >
+                  <Flag className="w-3 h-3" /> Annotate
+                </button>
+              )}
+            >
               {timeResults.length === 0 ? (
                 <EmptyState icon={TrendingUp} title="No data yet" description="Revenue trend data will appear as conversions flow in." />
               ) : (
                 <div className="h-48">
                   <Line data={revTrendData} options={chartOpts('$')} />
+                </div>
+              )}
+
+              {/* Annotation add form */}
+              {annotationForm.open && !previewMode && (
+                <div className="mt-3 p-3 bg-gray-50 dark:bg-[#111414] rounded-lg border border-gray-200 dark:border-[#2A2E2E] space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="date"
+                      value={annotationForm.date}
+                      onChange={e => setAnnotationForm(f => ({ ...f, date: e.target.value }))}
+                      className="px-2 py-1 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded text-xs focus:outline-none"
+                    />
+                    <select
+                      value={annotationForm.type}
+                      onChange={e => setAnnotationForm(f => ({ ...f, type: e.target.value }))}
+                      className="px-2 py-1 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded text-xs focus:outline-none"
+                    >
+                      <option value="note">Note</option>
+                      <option value="deploy">Deploy</option>
+                      <option value="campaign">Campaign</option>
+                      <option value="alert">Alert</option>
+                    </select>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={annotationForm.note}
+                      onChange={e => setAnnotationForm(f => ({ ...f, note: e.target.value }))}
+                      placeholder="e.g. Launched new landing page"
+                      maxLength={280}
+                      className="flex-1 px-2 py-1 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded text-xs focus:outline-none"
+                      onKeyDown={e => e.key === 'Enter' && handleSaveAnnotation()}
+                    />
+                    <button
+                      onClick={handleSaveAnnotation}
+                      disabled={annotationSaving || !annotationForm.note.trim()}
+                      className="px-3 py-1 bg-st-black dark:bg-white text-white dark:text-st-black text-xs font-semibold rounded hover:opacity-90 disabled:opacity-40 transition-opacity"
+                    >
+                      {annotationSaving ? '…' : 'Add'}
+                    </button>
+                    <button
+                      onClick={() => setAnnotationForm(f => ({ ...f, open: false }))}
+                      className="p-1 text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Existing annotations */}
+              {annotations.length > 0 && (
+                <div className="mt-3 space-y-1.5">
+                  {annotations.map(a => (
+                    <div key={a.id} className="flex items-start gap-2 group">
+                      <span className={`mt-0.5 w-1.5 h-1.5 rounded-full shrink-0 ${
+                        a.type === 'deploy'   ? 'bg-blue-400' :
+                        a.type === 'campaign' ? 'bg-green-400' :
+                        a.type === 'alert'    ? 'bg-red-400'  : 'bg-gray-400'
+                      }`} />
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[10px] font-mono text-st-gray dark:text-gray-500 mr-1.5">{a.date}</span>
+                        <span className="text-xs text-st-black dark:text-white">{a.note}</span>
+                      </div>
+                      {!previewMode && (
+                        <button
+                          onClick={() => handleDeleteAnnotation(a.id)}
+                          className="opacity-0 group-hover:opacity-100 p-0.5 text-st-gray dark:text-gray-400 hover:text-red-500 transition-opacity"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </DashboardCard>

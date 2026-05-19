@@ -82,13 +82,21 @@ export async function attribution(req, res) {
           error: `Invalid time_granularity. Must be one of: ${[...ALLOWED_GRANULARITY].join(', ')}`
         })
       }
-      if (req.query.attribution_window && !ALLOWED_WINDOWS.has(req.query.attribution_window)) {
+      // Resolve attribution window: explicit param > site default > hardcoded default (30)
+      const siteWindowDays = req.site?.attribution_window_days
+      const siteWindowStr = siteWindowDays ? String(siteWindowDays) : '30'
+      const resolvedWindow = req.query.attribution_window || (ALLOWED_WINDOWS.has(siteWindowStr) ? siteWindowStr : '30')
+
+      if (resolvedWindow && !ALLOWED_WINDOWS.has(resolvedWindow)) {
         return res.status(400).json({
           success: false,
           data: null,
           error: `Invalid attribution_window. Must be one of: ${[...ALLOWED_WINDOWS].join(', ')}`
         })
       }
+      // Inject resolved window back so downstream engine functions can use req.query.attribution_window
+      req.query.attribution_window = resolvedWindow
+
       if (req.query.attribute_by && !ALLOWED_ATTRIBUTE_BY.has(req.query.attribute_by)) {
         return res.status(400).json({
           success: false,
@@ -129,6 +137,10 @@ export async function attribution(req, res) {
           console.error("Pre-aggregated attribution failed:", error)
         }
       }
+      // Helper: wrap nightly-dependent models so empty results show a clear notice
+      // instead of silently rendering a blank chart.
+      const NIGHTLY_NOTICE = 'This model is calculated by the nightly attribution job (runs ~2 AM UTC). Results will appear after the first run. If you have recent conversions and still see no data, the job may not be configured — contact support.'
+
       if (model === "linear") {
         try {
           const results = await getLinearAttribution({
@@ -138,9 +150,11 @@ export async function attribution(req, res) {
             groupBy: group_by,
             metric
           })
-          return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results } })
+          const notice = (!results || results.length === 0) ? NIGHTLY_NOTICE : undefined
+          return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results: results || [], ...(notice ? { _notice: notice } : {}) } })
         } catch (error) {
-          console.error("Linear attribution failed:", error)
+          console.error('[attribution] linear failed:', error?.message)
+          return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results: [], _notice: NIGHTLY_NOTICE } })
         }
       }
       if (model === "u_shaped") {
@@ -152,9 +166,11 @@ export async function attribution(req, res) {
             groupBy: group_by,
             metric
           })
-          return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results } })
+          const notice = (!results || results.length === 0) ? NIGHTLY_NOTICE : undefined
+          return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results: results || [], ...(notice ? { _notice: notice } : {}) } })
         } catch (error) {
-          console.error("U-shaped attribution failed:", error)
+          console.error('[attribution] u_shaped failed:', error?.message)
+          return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results: [], _notice: NIGHTLY_NOTICE } })
         }
       }
       if (model === "time_decay") {
@@ -166,9 +182,11 @@ export async function attribution(req, res) {
             groupBy: group_by,
             metric
           })
-          return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results } })
+          const notice = (!results || results.length === 0) ? NIGHTLY_NOTICE : undefined
+          return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results: results || [], ...(notice ? { _notice: notice } : {}) } })
         } catch (error) {
-          console.error("Time decay attribution failed:", error)
+          console.error('[attribution] time_decay failed:', error?.message)
+          return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results: [], _notice: NIGHTLY_NOTICE } })
         }
       }
       if (model === "w_shaped") {
@@ -180,9 +198,11 @@ export async function attribution(req, res) {
             groupBy: group_by,
             metric
           })
-          return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results } })
+          const notice = (!results || results.length === 0) ? NIGHTLY_NOTICE : undefined
+          return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results: results || [], ...(notice ? { _notice: notice } : {}) } })
         } catch (error) {
-          console.error("W-shaped attribution failed:", error)
+          console.error('[attribution] w_shaped failed:', error?.message)
+          return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results: [], _notice: NIGHTLY_NOTICE } })
         }
       }
 

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import { getBillingPortal } from '../lib/api'
-import { Copy, Check, ExternalLink, Globe, Link2, CreditCard, Link, ShieldCheck, Trash2, AlertTriangle } from 'lucide-react'
+import { getBillingPortal, fetchApi } from '../lib/api'
+import { Copy, Check, ExternalLink, Globe, Link2, CreditCard, Link, ShieldCheck, Trash2, AlertTriangle, Clock } from 'lucide-react'
 import UTMBuilder from '../components/UTMBuilder'
 
 export default function Settings() {
@@ -26,6 +26,8 @@ export default function Settings() {
   const [deletingAccount, setDeletingAccount]       = useState(false)
   const [message, setMessage]                       = useState('')
   const [loadingPortal, setLoadingPortal]           = useState(false)
+  const [attrWindow, setAttrWindow]                 = useState(30)
+  const [attrWindowSaving, setAttrWindowSaving]     = useState(false)
 
   useEffect(() => { loadSite() }, [user])
 
@@ -36,7 +38,7 @@ export default function Settings() {
       .eq('user_id', user.id)
       .maybeSingle()
 
-    const query = supabase.from('sites').select('*, cookieless_mode, data_retention_days').limit(1)
+    const query = supabase.from('sites').select('*, cookieless_mode, data_retention_days, attribution_window_days').limit(1)
     if (member?.company_id) query.eq('company_id', member.company_id)
     else query.eq('owner_id', user.id)
 
@@ -47,6 +49,7 @@ export default function Settings() {
       setShareToken(data.public_share_token || null)
       setCookielessMode(!!data.cookieless_mode)
       setRetentionDays(data.data_retention_days || 0)
+      setAttrWindow(data.attribution_window_days || 30)
       setName(data.name || '')
       setDomain(data.domain || '')
     }
@@ -195,6 +198,25 @@ export default function Settings() {
     } catch (_err) {
       setMessage('Error deleting account. Please contact support.')
       setDeletingAccount(false)
+    }
+  }
+
+  const handleAttrWindowSave = async () => {
+    if (!site) return
+    setAttrWindowSaving(true)
+    setMessage('')
+    try {
+      await fetchApi(`/integrations/settings?site_key=${site.site_key}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ attribution_window_days: attrWindow })
+      })
+      setMessage('Attribution window saved.')
+      setTimeout(() => setMessage(''), 4000)
+    } catch (err) {
+      setMessage(err?.message || 'Error saving attribution window')
+      setTimeout(() => setMessage(''), 4000)
+    } finally {
+      setAttrWindowSaving(false)
     }
   }
 
@@ -360,6 +382,42 @@ export default function Settings() {
             </code>
           </div>
         )}
+      </section>
+
+      {/* ── Attribution Window ────────────────────────────────────────── */}
+      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <Clock className="w-4 h-4 text-st-gray dark:text-gray-400" />
+          <h3 className="text-sm font-bold text-st-black dark:text-white">Attribution Window</h3>
+        </div>
+        <p className="text-xs text-st-gray dark:text-gray-400">
+          The maximum number of days between a visitor's first touch and a conversion for it to be attributed.
+          Conversions outside this window are still recorded but won't be linked to earlier touchpoints.
+        </p>
+        <div className="flex items-center gap-3">
+          <select
+            value={attrWindow}
+            onChange={e => setAttrWindow(Number(e.target.value))}
+            className="px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
+          >
+            <option value={1}>1 day</option>
+            <option value={7}>7 days</option>
+            <option value={14}>14 days</option>
+            <option value={30}>30 days (recommended)</option>
+            <option value={60}>60 days</option>
+            <option value={90}>90 days</option>
+          </select>
+          <button
+            onClick={handleAttrWindowSave}
+            disabled={attrWindowSaving}
+            className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors"
+          >
+            {attrWindowSaving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
+        <p className="text-xs text-st-gray dark:text-gray-400">
+          This window applies to all attribution reports unless overridden per-query in the Report Builder.
+        </p>
       </section>
 
       {/* ── Privacy & Data Retention ──────────────────────────────────── */}

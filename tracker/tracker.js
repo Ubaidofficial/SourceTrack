@@ -119,9 +119,46 @@
     if (location.href !== _lastUrl) { _lastUrl = location.href; sendPageview() }
   })
 
+  // ─── Consent management ───────────────────────────────────────────────────
+  // When data-consent-required="true" is on the script tag, all tracking is
+  // held until sourcetrack.consent(true) is called (opt-in mode).
+  // Without that attribute, tracking fires immediately (opt-out model —
+  // backward-compatible with all existing installs).
+  //
+  // Regardless of mode, sourcetrack.optOut() stops all future tracking
+  // and sourcetrack.optIn() resumes it.
+  var CONSENT_KEY = 'st_consent'
+  var CONSENT_REQUIRED = sc && sc.getAttribute('data-consent-required') === 'true'
+  var _queue = []
+  var _consentGiven = null  // null = not yet decided, true/false = explicit decision
+
+  // Check for persisted consent decision
+  try {
+    var stored = localStorage.getItem(CONSENT_KEY)
+    if (stored === 'true')  _consentGiven = true
+    if (stored === 'false') _consentGiven = false
+  } catch (_) {}
+
+  // Override send() to respect consent gate
+  var _rawSend = send
+  function sendGated(ep, data) {
+    if (_consentGiven === false) return  // opted out
+    if (CONSENT_REQUIRED && _consentGiven !== true) {
+      _queue.push([ep, data])  // queue until consent(true)
+      return
+    }
+    _rawSend(ep, data)
+  }
+  send = sendGated
+
+  function _flushQueue() {
+    var q = _queue.splice(0)
+    for (var i = 0; i < q.length; i++) _rawSend(q[i][0], q[i][1])
+  }
+
   // ─── Public API ────────────────────────────────────────────────────────────
   window.sourcetrack = {
-    // sourcetrack.conversion({ value: 99, type: 'purchase', order_id: '123' })
+    // sourcetrack.conversion({ value: 99, type: 'purchase', order_id: '123', properties: { plan: 'pro' } })
     conversion: function (opts) {
       opts = opts || {}
       var p = params(), ref = document.referrer || null
@@ -129,23 +166,57 @@
         { site_key: K, anonymous_id: AID, session_id: SID, page_url: location.href, referrer: ref,
           conversion_value: opts.value || opts.conversion_value || 0,
           conversion_type:  opts.type  || opts.conversion_type  || 'conversion',
-          order_id:         opts.order_id || opts.orderId        || null },
+          order_id:         opts.order_id || opts.orderId        || null,
+          properties:       opts.properties || null },
         utmFields(p),
         getFT(),
         { ai_source: aiSrc(ref, p.utm_source) }
       ))
     },
 
-    // sourcetrack.identify({ email: 'user@example.com', name: 'John' })
-    identify: function (traits) {
-      traits = traits || {}
-      send('/api/identify', { site_key: K, anonymous_id: AID, session_id: SID, email: traits.email || null, name: traits.name || null, traits: traits })
+    // sourcetrack.identify('user-123', { email: 'user@example.com' })  ← recommended
+    // sourcetrack.identify({ email: 'user@example.com' })              ← backward-compat
+    identify: function (userIdOrTraits, traits) {
+      var userId = null
+      if (typeof userIdOrTraits === 'string' && userIdOrTraits.length > 0) {
+        userId = userIdOrTraits
+        traits = traits || {}
+      } else {
+        traits = userIdOrTraits || {}
+      }
+      send('/api/identify', {
+        site_key: K, anonymous_id: AID, session_id: SID,
+        user_id: userId || traits.user_id || traits.userId || traits.id || null,
+        email: traits.email || null, name: traits.name || null, traits: traits
+      })
     },
 
     // sourcetrack.track('button_clicked', { button: 'signup' })
     track: function (event, properties) {
       send('/api/track', { site_key: K, event: event, anonymous_id: AID, session_id: SID, page_url: location.href, properties: properties || {} })
-    }
+    },
+
+    // ── Consent API ───────────────────────────────────────────────────────────
+    // sourcetrack.consent(true)  — grant consent, flush queued events
+    // sourcetrack.consent(false) — deny consent, clear queue, stop tracking
+    consent: function (granted) {
+      _consentGiven = !!granted
+      try { localStorage.setItem(CONSENT_KEY, String(_consentGiven)) } catch (_) {}
+      if (_consentGiven) {
+        _flushQueue()
+      } else {
+        _queue.length = 0  // clear queued events — do not send
+      }
+    },
+
+    // sourcetrack.optOut() — stop all tracking immediately (persisted)
+    optOut: function () { window.sourcetrack.consent(false) },
+
+    // sourcetrack.optIn()  — resume tracking (persisted)
+    optIn:  function () { window.sourcetrack.consent(true) },
+
+    // sourcetrack.hasConsent() — returns true/false/null
+    hasConsent: function () { return _consentGiven }
   }
 
   sendPageview()

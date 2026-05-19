@@ -1,42 +1,14 @@
-// TODO: Add attribution window support
-// - Add columns: first_touch_source_7d, first_touch_source_30d, etc.
-// - Modify touchpoints query to calculate for each window
-// - Update API to read from windowed columns based on attribution_window param
-
 import dotenv from 'dotenv'
 dotenv.config()
 
 import { createClient as _createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
+
+// Shared channel classifier — single source of truth with the live attribution engine
+import { channelFromEvent } from '../lib/channel-classifier.js'
+
 const _supabase = _createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { realtime: { transport: WebSocket } })
 const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL
-
-function channelFromEvent(props = {}) {
-  const medium = String(props.utm_medium || props.medium || '').toLowerCase().trim()
-  const source = String(props.utm_source || props.derived_source || '').toLowerCase().trim()
-  const ref = String(props.referrer || '').toLowerCase()
-  const aiSource = String(props.ai_source || '').trim()
-  const aiDomains = ['chatgpt.com','chat.openai.com','claude.ai','perplexity.ai','gemini.google.com','grok.com','deepseek.com','copilot.microsoft.com']
-  if (aiSource) return 'AI Search'
-  if (aiDomains.some(d => ref.includes(d))) return 'AI Search'
-  if (props.gclid || props.gbraid || props.wbraid || props.msclkid) return 'Paid Search'
-  if (['cpc','ppc','paid','paid_search','sem'].includes(medium)) return 'Paid Search'
-  if (props.fbclid || props.ttclid || props.li_fat_id) return 'Paid Social'
-  if (['paid_social','paidsocial','social_paid'].includes(medium)) return 'Paid Social'
-  if (['email','newsletter','mailing'].includes(medium)) return 'Email'
-  if (['sms','text'].includes(medium)) return 'SMS'
-  const searchEngines = ['google.','bing.','yahoo.','duckduckgo.','ecosia.']
-  if (searchEngines.some(se => ref.includes(se))) return 'Organic Search'
-  if (['google','bing','yahoo','duckduckgo'].includes(source) && !medium) return 'Organic Search'
-  const socialDomains = ['facebook.com','instagram.com','linkedin.com','twitter.com','x.com','tiktok.com','reddit.com','youtube.com']
-  if (socialDomains.some(s => ref.includes(s))) return 'Organic Social'
-  if (['facebook','instagram','linkedin','twitter','x','tiktok','reddit'].includes(source) && !medium) return 'Organic Social'
-  if (['mailchimp','klaviyo','hubspot','sendgrid'].includes(source)) return 'Email'
-  if (ref && ref.length > 5) return 'Referral'
-  if (!source || source === 'direct') return 'Direct'
-  if (source) return 'Other Campaign'
-  return 'Direct'
-}
 
 async function _slackAlert(emoji, heading, detail) {
   if (!SLACK_WEBHOOK_URL) return console.log(`[ALERT] ${emoji} ${heading}: ${detail}`)
@@ -82,7 +54,7 @@ async function main() {
   try {
     const { data: sites, error: sitesError } = await supabase
       .from('sites')
-      .select('id, site_key')
+      .select('id, site_key, attribution_window_days')
     
     if (sitesError) {
       logError('Failed to fetch sites', sitesError)
@@ -204,14 +176,17 @@ function calculateConfidence(touchpoints, channel) {
 
 async function processConversion(site, conversion) {
   const convValue = parseFloat(conversion.conversion_value || 0)
-  
+
   if (convValue < 0 || !conversion.distinct_id) {
     logWarn(`Skipping invalid conversion ${conversion.uuid}`)
     return
   }
-  
+
+  // Per-site attribution window — default 30d if not configured, max 90d
+  const windowDays = Math.min(90, Math.max(1, site.attribution_window_days || 30))
+
   const touchpointsQuery = `
-    SELECT 
+    SELECT
       timestamp,
       properties.utm_source,
       properties.utm_medium,
@@ -226,9 +201,8 @@ async function processConversion(site, conversion) {
     WHERE event = '$pageview'
       AND distinct_id = '${conversion.distinct_id}'
       AND properties.site_id = '${site.id}'
-
       AND timestamp <= toDateTime('${conversion.timestamp}')
-      AND timestamp >= toDateTime('${conversion.timestamp}') - INTERVAL 90 DAY
+      AND timestamp >= toDateTime('${conversion.timestamp}') - INTERVAL ${windowDays} DAY
     ORDER BY timestamp ASC
     LIMIT 500
   `

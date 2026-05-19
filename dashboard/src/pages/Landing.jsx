@@ -1,10 +1,12 @@
 import { Link } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
+import { Helmet } from 'react-helmet-async'
 
 const NAV_LINKS = [
   { label: 'Features', href: '#features' },
   { label: 'How it works', href: '#how-it-works' },
-  { label: 'Privacy', href: '#privacy' },
+  { label: 'Pricing', href: '#pricing' },
+  { label: 'FAQ', href: '#faq' },
   { label: 'Docs', href: '/docs' },
 ]
 
@@ -17,7 +19,7 @@ const FEATURES = [
   {
     icon: '🤖',
     title: 'AI traffic attribution',
-    body: 'Automatically detect visitors arriving from ChatGPT, Claude, Perplexity, Gemini, Grok, Copilot, DeepSeek and 25+ other AI platforms — before your competitors even know AI referrals exist.',
+    body: 'Automatically detect visitors arriving from ChatGPT, Claude, Perplexity, Gemini, Grok, Copilot, DeepSeek and 8 more AI platforms across 22 domains — before your competitors even know AI referrals exist.',
   },
   {
     icon: '🔁',
@@ -53,7 +55,104 @@ const MODELS = [
 const AI_PLATFORMS = [
   'ChatGPT', 'Claude', 'Perplexity', 'Gemini', 'Grok',
   'Copilot', 'DeepSeek', 'Meta AI', 'Mistral', 'Poe',
-  'You.com', 'Phind', 'Kagi',
+  'You.com', 'Phind', 'Kagi', 'Character.AI', 'Pi AI',
+]
+
+const INTEGRATIONS = [
+  { name: 'Meta Ads',       category: 'CAPI', icon: '🟦', desc: 'Server-side conversion sync' },
+  { name: 'Google Ads',     category: 'CAPI', icon: '🔵', desc: 'OAuth2 conversion upload' },
+  { name: 'TikTok Ads',     category: 'CAPI', icon: '⬛', desc: 'Events API integration' },
+  { name: 'LinkedIn Ads',   category: 'CAPI', icon: '🔷', desc: 'Conversion event API' },
+  { name: 'Microsoft Ads',  category: 'CAPI', icon: '🟩', desc: 'UET CAPI integration' },
+  { name: 'Shopify',        category: 'Platform', icon: '🛍️', desc: 'Script tag, 2-minute setup' },
+  { name: 'WooCommerce',    category: 'Platform', icon: '🟣', desc: 'Script tag + order hook' },
+  { name: 'Webflow',        category: 'Platform', icon: '🌐', desc: 'Custom code embed' },
+  { name: 'WordPress',      category: 'Platform', icon: '🔵', desc: 'Header snippet or plugin' },
+  { name: 'Stripe',         category: 'Revenue', icon: '💳', desc: 'Webhook revenue sync' },
+  { name: 'Any website',    category: 'Universal', icon: '✨', desc: 'One script tag, any stack' },
+  { name: 'REST API',       category: 'Universal', icon: '⚡', desc: 'Custom server-side events' },
+]
+
+const PRICING = [
+  {
+    name: 'Trial',
+    price: '$0',
+    period: '14 days',
+    limit: '200 conversions',
+    color: 'border-white/10',
+    cta: 'Start free trial',
+    ctaStyle: 'border border-white/20 text-white hover:border-white/40',
+    features: ['200 conversions/month', 'All attribution models', 'AI platform detection', 'API access', 'No credit card required'],
+    highlight: false,
+  },
+  {
+    name: 'Starter',
+    price: '$49',
+    period: '/month',
+    limit: '1,000 conversions',
+    color: 'border-white/10',
+    cta: 'Get started',
+    ctaStyle: 'border border-white/20 text-white hover:border-white/40',
+    features: ['1,000 conversions/month', 'All 8 attribution models', 'AI traffic attribution', 'Server-side CAPI sync', 'Customer journey maps', 'CSV export'],
+    highlight: false,
+  },
+  {
+    name: 'Pro',
+    price: '$99',
+    period: '/month',
+    limit: '4,000 conversions',
+    color: 'border-st-lime/40',
+    cta: 'Start Pro trial',
+    ctaStyle: 'bg-st-lime text-black font-bold hover:bg-st-lime/90',
+    features: ['4,000 conversions/month', 'Everything in Starter', 'Cookieless tracking mode', 'Data retention controls', 'Nightly attribution jobs', 'Priority support'],
+    highlight: true,
+  },
+  {
+    name: 'Agency',
+    price: '$199',
+    period: '/month',
+    limit: '10,000 conversions',
+    color: 'border-white/10',
+    cta: 'Contact us',
+    ctaStyle: 'border border-white/20 text-white hover:border-white/40',
+    features: ['10,000 conversions/month', 'Everything in Pro', 'Multi-site management', 'White-label reports', 'Dedicated onboarding', 'SLA support'],
+    highlight: false,
+  },
+]
+
+const FAQS = [
+  {
+    q: 'How is SourceTrack different from Google Analytics?',
+    a: 'GA4 shows last-click attribution only and is blind to AI referrals (ChatGPT, Perplexity, etc.). SourceTrack gives you 8 attribution models, server-side CAPI sync to ad platforms, and explicit AI traffic detection — so you can see which touchpoints actually drove revenue, not just the last click before conversion.',
+  },
+  {
+    q: 'Do I need a developer to set it up?',
+    a: 'No. Paste one 1.7 KB script tag into your site\'s <head> and you\'re tracking within minutes. For server-side events (e.g. Stripe purchases), you call a single REST endpoint from your backend. Most customers are live in under 3 minutes.',
+  },
+  {
+    q: 'Does this work with Shopify / WooCommerce / Webflow?',
+    a: 'Yes. The tracker works on any website that can embed JavaScript. For Shopify, paste the snippet in your theme\'s <head> or via Shopify Scripts. For WooCommerce, use the header snippet plugin. Webflow supports custom code embeds natively.',
+  },
+  {
+    q: 'Is SourceTrack GDPR compliant?',
+    a: 'Yes. Enable cookieless mode (one attribute on the script tag) and SourceTrack uses a server-derived SHA-256 visitor ID that rotates daily — no cookies, no localStorage, no consent banner required. You can also call the GDPR deletion API to erase any visitor\'s data on request, and configure data retention windows per site.',
+  },
+  {
+    q: 'What is a "conversion" for billing purposes?',
+    a: 'A conversion is any event you fire via sourcetrack.conversion() — a purchase, sign-up, form submit, trial start, or any custom event. Pageviews and session tracking are unlimited and do not count toward your conversion limit.',
+  },
+  {
+    q: 'Can I track AI referrals from ChatGPT and Perplexity?',
+    a: 'Yes — this is one of SourceTrack\'s core features. We detect visitors arriving from 15 AI platforms (22 domains) by referrer and UTM signals, including ChatGPT, Claude, Perplexity, Gemini, Grok, Copilot, DeepSeek, and more. Their conversions are attributed just like any other channel.',
+  },
+  {
+    q: 'How does server-side CAPI sync work?',
+    a: 'When a conversion is fired, SourceTrack simultaneously sends a server-side event to Meta CAPI, Google Ads, TikTok, LinkedIn, and Microsoft UET (whichever you\'ve configured). This bypasses browser ad-blockers and iOS/Safari restrictions that block pixel-only tracking, giving ad platforms more complete conversion data for smarter bidding.',
+  },
+  {
+    q: 'What attribution models are available?',
+    a: 'Eight models: First Touch, Last Touch, Linear, Time Decay (7-day half-life), U-Shaped (40/20/40), W-Shaped (30/30/30/10), Position Based, and Data Driven. The nightly attribution job pre-computes multi-touch models so dashboards load instantly.',
+  },
 ]
 
 const STEPS = [
@@ -433,6 +532,31 @@ function LiveDashboard() {
   )
 }
 
+// ── FAQ accordion item ────────────────────────────────────────────────────────
+function FAQItem({ q, a }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className={`rounded-2xl border transition-colors ${open ? 'border-white/15 bg-[#111414]' : 'border-white/8 bg-[#111414]'}`}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left"
+      >
+        <span className="text-sm font-semibold text-white leading-snug">{q}</span>
+        <span className={`shrink-0 text-white/40 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </span>
+      </button>
+      {open && (
+        <div className="px-6 pb-5">
+          <p className="text-sm text-white/50 leading-relaxed">{a}</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function useScrolled() {
   const [scrolled, setScrolled] = useState(false)
   useEffect(() => {
@@ -449,6 +573,42 @@ export default function Landing() {
 
   return (
     <div className="bg-[#0C0E0E] text-white min-h-screen font-sans antialiased">
+      <Helmet>
+        <title>SourceTrack — AI-Powered Multi-Touch Attribution</title>
+        <meta name="description" content="SourceTrack gives eCommerce, SaaS, and lead gen teams accurate multi-touch attribution across every channel — including ChatGPT, Perplexity, and 13 more AI platforms. Server-side CAPI sync, 8 attribution models, GDPR-ready cookieless tracking. From $49/mo." />
+        <link rel="canonical" href="https://sourcetrack.ai/" />
+        <meta property="og:title"       content="SourceTrack — AI-Powered Multi-Touch Attribution" />
+        <meta property="og:description" content="Accurate attribution for every channel including ChatGPT and Perplexity. 8 attribution models, server-side tracking, GDPR-ready." />
+        <meta property="og:url"         content="https://sourcetrack.ai/" />
+        <meta property="og:type"        content="website" />
+        <meta property="og:image"       content="https://sourcetrack.ai/og-image.png" />
+        <meta name="twitter:card"       content="summary_large_image" />
+        <meta name="twitter:title"      content="SourceTrack — AI-Powered Attribution" />
+        <meta name="twitter:description" content="Track every conversion source including AI platforms. Multi-touch attribution with server-side tracking." />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": "SourceTrack",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "url": "https://sourcetrack.ai",
+          "description": "Multi-touch attribution platform with server-side CAPI sync, 15 AI platform detection, 8 attribution models, and GDPR cookieless compliance for eCommerce, SaaS, and lead generation businesses.",
+          "offers": [
+            { "@type": "Offer", "name": "Trial", "price": "0", "priceCurrency": "USD", "description": "14-day free trial, 200 conversions" },
+            { "@type": "Offer", "name": "Starter", "price": "49", "priceCurrency": "USD", "priceSpecification": { "@type": "UnitPriceSpecification", "price": "49", "priceCurrency": "USD", "unitText": "MONTH" } },
+            { "@type": "Offer", "name": "Pro", "price": "99", "priceCurrency": "USD", "priceSpecification": { "@type": "UnitPriceSpecification", "price": "99", "priceCurrency": "USD", "unitText": "MONTH" } },
+            { "@type": "Offer", "name": "Agency", "price": "199", "priceCurrency": "USD", "priceSpecification": { "@type": "UnitPriceSpecification", "price": "199", "priceCurrency": "USD", "unitText": "MONTH" } }
+          ],
+          "featureList": [
+            "First Touch, Last Touch, Linear, U-Shaped, W-Shaped, Time Decay attribution",
+            "15 AI platform detection — ChatGPT, Claude, Perplexity, Gemini, Grok, Copilot, DeepSeek",
+            "Server-side CAPI sync — Meta, Google Ads, TikTok, LinkedIn, Microsoft Ads",
+            "GDPR-compliant cookieless mode — no cookies, no localStorage, no consent banner",
+            "1.7 KB tracker script, works on Shopify, WordPress, Webflow, any website",
+            "Data retention controls and GDPR right-to-erasure API"
+          ]
+        })}</script>
+      </Helmet>
 
       {/* ── Nav ──────────────────────────────────────────────────────────── */}
       <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#0C0E0E]/95 backdrop-blur border-b border-white/5' : ''}`}>
@@ -513,7 +673,7 @@ export default function Landing() {
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-st-lime/30 bg-st-lime/5 mb-8">
             <span className="w-1.5 h-1.5 rounded-full bg-st-lime animate-pulse" />
-            <span className="text-xs font-medium text-st-lime">Now tracking AI referrals from 30+ platforms</span>
+            <span className="text-xs font-medium text-st-lime">Now tracking AI referrals from 15 platforms including ChatGPT &amp; Perplexity</span>
           </div>
 
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.05] tracking-tight mb-6">
@@ -554,7 +714,7 @@ export default function Landing() {
         <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-center gap-x-10 gap-y-3 text-white/30 text-sm">
           <span>✓ 1.7 KB tracker script</span>
           <span>✓ 8 attribution models</span>
-          <span>✓ 30+ AI platforms detected</span>
+          <span>✓ 15 AI platforms detected</span>
           <span>✓ GDPR-compliant cookieless mode</span>
           <span>✓ No GTM required</span>
           <span>✓ REST API + webhooks</span>
@@ -599,6 +759,36 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ── Integrations ────────────────────────────────────────────────── */}
+      <section className="py-24 px-6 border-t border-white/5">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-14">
+            <p className="text-xs font-semibold text-st-lime uppercase tracking-widest mb-3">Integrations</p>
+            <h2 className="text-3xl sm:text-4xl font-black mb-4">Plugs into your entire stack</h2>
+            <p className="text-white/40 max-w-xl mx-auto">Server-side CAPI sync to every major ad platform. Works with any website or e-commerce platform — no native connector required.</p>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+            {INTEGRATIONS.map(int => (
+              <div key={int.name} className="rounded-xl border border-white/8 bg-[#111414] p-4 hover:border-white/20 transition-colors">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xl">{int.icon}</span>
+                  <div>
+                    <p className="text-sm font-semibold text-white leading-tight">{int.name}</p>
+                    <span className={`text-[9px] uppercase tracking-wider font-medium px-1.5 py-0.5 rounded ${
+                      int.category === 'CAPI' ? 'bg-st-lime/10 text-st-lime' :
+                      int.category === 'Revenue' ? 'bg-purple-500/15 text-purple-300' :
+                      'bg-white/8 text-white/40'
+                    }`}>{int.category}</span>
+                  </div>
+                </div>
+                <p className="text-xs text-white/35 leading-relaxed">{int.desc}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-xs text-white/25 mt-6">All CAPI integrations bypass ad-blockers and iOS tracking restrictions for more complete conversion data.</p>
+        </div>
+      </section>
+
       {/* ── AI tracking highlight ────────────────────────────────────────── */}
       <section className="py-24 px-6 border-t border-white/5">
         <div className="max-w-6xl mx-auto">
@@ -613,7 +803,7 @@ export default function Landing() {
               </p>
               <ul className="space-y-3">
                 {[
-                  'Detect 30+ AI platforms from referrer and UTM signals',
+                  'Detect 15 AI platforms (22 domains) from referrer and UTM signals',
                   'See AI revenue vs. non-AI revenue side by side',
                   'Track which AI platforms convert best for your product',
                   'No manual UTM tagging needed for organic AI traffic',
@@ -635,7 +825,7 @@ export default function Landing() {
                   </span>
                 ))}
                 <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-st-lime/10 text-st-lime border border-st-lime/20">
-                  + 17 more
+                  + Character.AI, Pi AI
                 </span>
               </div>
               <div className="mt-6 pt-5 border-t border-white/5 space-y-3">
@@ -770,6 +960,62 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ── Pricing ─────────────────────────────────────────────────────── */}
+      <section id="pricing" className="py-24 px-6 border-t border-white/5">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-14">
+            <p className="text-xs font-semibold text-st-lime uppercase tracking-widest mb-3">Pricing</p>
+            <h2 className="text-3xl sm:text-4xl font-black mb-4">Simple conversion-based pricing</h2>
+            <p className="text-white/40 max-w-xl mx-auto">Pay for what you use. Pageviews and sessions are always unlimited. You only pay for conversion events.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {PRICING.map(plan => (
+              <div key={plan.name} className={`rounded-2xl border p-6 flex flex-col ${plan.highlight ? 'bg-st-lime/5 border-st-lime/40' : 'bg-[#111414] border-white/8'}`}>
+                {plan.highlight && (
+                  <div className="mb-3">
+                    <span className="text-[10px] font-bold uppercase tracking-wider bg-st-lime text-black px-2 py-0.5 rounded-full">Most popular</span>
+                  </div>
+                )}
+                <p className={`text-sm font-bold mb-1 ${plan.highlight ? 'text-st-lime' : 'text-white/60'}`}>{plan.name}</p>
+                <div className="flex items-baseline gap-1 mb-1">
+                  <span className="text-3xl font-black text-white">{plan.price}</span>
+                  <span className="text-sm text-white/40">{plan.period}</span>
+                </div>
+                <p className="text-xs text-white/35 mb-5">{plan.limit}</p>
+                <ul className="space-y-2 mb-6 flex-1">
+                  {plan.features.map(f => (
+                    <li key={f} className="flex items-start gap-2 text-xs text-white/55">
+                      <span className={`shrink-0 mt-0.5 ${plan.highlight ? 'text-st-lime' : 'text-white/30'}`}>✓</span>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <Link to="/signup"
+                  className={`w-full text-center text-sm px-4 py-2.5 rounded-xl transition-colors ${plan.ctaStyle}`}>
+                  {plan.cta}
+                </Link>
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-xs text-white/25 mt-8">All plans include a 14-day free trial. No credit card required. Cancel any time.</p>
+        </div>
+      </section>
+
+      {/* ── FAQ ──────────────────────────────────────────────────────────── */}
+      <section id="faq" className="py-24 px-6 border-t border-white/5">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-14">
+            <p className="text-xs font-semibold text-st-lime uppercase tracking-widest mb-3">FAQ</p>
+            <h2 className="text-3xl sm:text-4xl font-black mb-4">Common questions</h2>
+          </div>
+          <div className="space-y-4">
+            {FAQS.map((item, i) => (
+              <FAQItem key={i} q={item.q} a={item.a} />
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── Final CTA ────────────────────────────────────────────────────── */}
       <section className="py-24 px-6 border-t border-white/5">
         <div className="max-w-2xl mx-auto text-center">
@@ -805,7 +1051,9 @@ export default function Landing() {
             <span className="text-sm font-semibold text-white/70">SourceTrack</span>
           </div>
           <div className="flex items-center gap-6 text-xs text-white/30">
+            <a href="#pricing" className="hover:text-white transition-colors">Pricing</a>
             <Link to="/docs" className="hover:text-white transition-colors">API Docs</Link>
+            <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
             <a href="mailto:support@sourcetrack.ai" className="hover:text-white transition-colors">Support</a>
             <span>© {new Date().getFullYear()} SourceTrack</span>
           </div>

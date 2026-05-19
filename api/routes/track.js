@@ -62,12 +62,17 @@ export async function track(req, res) {
         device_type: enriched.device_type,
         country: enriched.country,
         server_timestamp: enriched.server_timestamp,
-        ingestion_method: 'server_routed'
+        ingestion_method: 'server_routed',
+        // Feature: custom event properties — any object passed as `properties` is spread
+        ...(req.body.properties && typeof req.body.properties === 'object' && !Array.isArray(req.body.properties)
+          ? { custom_properties: req.body.properties }
+          : {})
       }
     })
 
     res.status(200).json({ success: true, data: { received: true }, error: null })
-  } catch (_err) {
+  } catch (err) {
+    console.error('[track] ingestion error:', err?.message, { site_id: req.site?.id, event: req.body?.event })
     res.status(500).json({ success: false, data: null, error: 'Track failed' })
   }
 }

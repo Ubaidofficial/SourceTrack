@@ -300,6 +300,7 @@ export default function ReportBuilder() {
   }, [showCompare, priorRes])
 
   const results = data?.results || []
+  const nightlyNotice = data?._notice || null   // shown when nightly-computed model has no data yet
   const metricDef = METRICS.find(m => m.key === metric)
   const metricLabel = metricDef?.label || 'Value'
   const metricFormat = metricDef?.format || ((v) => String(v))
@@ -508,12 +509,11 @@ export default function ReportBuilder() {
           return {
             label: mDef?.label || mk,
             data: results.slice(0, 15).map(r => r[mk] ?? 0),
-            backgroundColor: MULTI_COLORS[mi % MULTI_COLORS.length],
+            backgroundColor: chartType === 'area' ? MULTI_COLORS[mi % MULTI_COLORS.length].replace('0.85)', '0.15)') : MULTI_COLORS[mi % MULTI_COLORS.length],
             borderColor: chartType === 'line' || chartType === 'area' ? MULTI_COLORS[mi % MULTI_COLORS.length] : undefined,
             borderRadius: chartType === 'bar' ? 4 : 0,
             tension: 0.3,
             fill: chartType === 'area',
-            backgroundColor: chartType === 'area' ? MULTI_COLORS[mi % MULTI_COLORS.length].replace('0.85)', '0.15)') : MULTI_COLORS[mi % MULTI_COLORS.length],
             stack: chartType === 'bar' ? 'stack0' : undefined,
           }
         })
@@ -1201,6 +1201,13 @@ export default function ReportBuilder() {
               {/* Chart */}
               {(chartType === 'bar' || chartType === 'line' || chartType === 'area' || chartType === 'pie') && (
                 <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-6">
+                  {/* Nightly model notice — shown when pre-aggregated model has no data yet */}
+                  {nightlyNotice && results.length === 0 && !isLoading && (
+                    <div className="mb-3 flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-2.5">
+                      <span className="text-amber-500 mt-0.5">⏳</span>
+                      <p className="text-xs text-amber-800 dark:text-amber-300">{nightlyNotice}</p>
+                    </div>
+                  )}
                   {isLoading ? (
                     <div className="h-72 flex flex-col items-center justify-center gap-2">
                       <RefreshCw className="w-6 h-6 animate-spin text-st-gray dark:text-gray-400" />
@@ -1208,7 +1215,7 @@ export default function ReportBuilder() {
                     </div>
                   ) : results.length === 0 ? (
                     <div className="h-72 flex items-center justify-center text-st-gray dark:text-gray-400 text-sm">
-                      No data for this selection. Try a different date range or dimension.
+                      {nightlyNotice ? 'No data yet — nightly calculation pending.' : 'No data for this selection. Try a different date range or dimension.'}
                     </div>
                   ) : (
                     <div className="h-72">

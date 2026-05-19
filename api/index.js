@@ -47,6 +47,7 @@ import webhookIncomingRouter from './routes/webhook-incoming.js'
 import { trackerIdRouter } from './routes/tracker-id.js'
 import { gdprRouter } from './routes/gdpr.js'
 import { pixelRouter } from './routes/pixel.js'
+import { annotationsRouter } from './routes/annotations.js'
 
 const app = express()
 
@@ -240,6 +241,9 @@ app.get('/api/sessions', requireUserAuth, validateSiteKey, requireSiteMembership
 
 // Cookieless tracker identity endpoint (public — called from customer sites)
 app.use('/api/tracker/id', trackerIdRouter)
+
+// Annotations — chart markers for deploys, campaigns, events
+app.use('/api/annotations', requireUserAuth, validateSiteKey, requireSiteMembership, annotationsRouter)
 
 // GDPR / privacy endpoints (authenticated)
 app.use('/api/gdpr', requireUserAuth, gdprRouter)

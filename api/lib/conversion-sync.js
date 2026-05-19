@@ -4,111 +4,244 @@ function sha256(str) {
   return createHash('sha256').update(str.trim().toLowerCase()).digest('hex')
 }
 
+// ─── Meta CAPI event name mapping ────────────────────────────────────────────
+// Maps SourceTrack conversion_type → Meta standard event name.
+// Full reference: https://developers.facebook.com/docs/meta-pixel/reference
+const META_EVENT_MAP = {
+  purchase:          'Purchase',
+  sale:              'Purchase',
+  order:             'Purchase',
+  lead:              'Lead',
+  form_submit:       'Lead',
+  contact:           'Lead',
+  signup:            'CompleteRegistration',
+  register:          'CompleteRegistration',
+  registration:      'CompleteRegistration',
+  trial:             'StartTrial',
+  trial_start:       'StartTrial',
+  subscribe:         'Subscribe',
+  subscription:      'Subscribe',
+  add_to_cart:       'AddToCart',
+  checkout:          'InitiateCheckout',
+  initiate_checkout: 'InitiateCheckout',
+  view_content:      'ViewContent',
+  search:            'Search',
+  wishlist:          'AddToWishlist',
+  donate:            'Donate',
+}
+
+function getMetaEventName(conversionType) {
+  if (!conversionType) return 'Lead'
+  const key = String(conversionType).toLowerCase().trim()
+  return META_EVENT_MAP[key] || 'Lead'
+}
+
+// ─── TikTok CAPI event name mapping ──────────────────────────────────────────
+// Reference: https://business-api.tiktok.com/portal/docs
+const TIKTOK_EVENT_MAP = {
+  purchase:    'PlaceAnOrder',
+  sale:        'PlaceAnOrder',
+  order:       'PlaceAnOrder',
+  lead:        'SubmitForm',
+  form_submit: 'SubmitForm',
+  contact:     'Contact',
+  signup:      'Register',
+  register:    'Register',
+  trial:       'Subscribe',
+  subscribe:   'Subscribe',
+  subscription:'Subscribe',
+  add_to_cart: 'AddToCart',
+  checkout:    'Checkout',
+  view_content:'ViewContent',
+  search:      'Search',
+  download:    'Download',
+}
+
+function getTikTokEventName(conversionType) {
+  if (!conversionType) return 'Lead'
+  const key = String(conversionType).toLowerCase().trim()
+  return TIKTOK_EVENT_MAP[key] || 'Lead'
+}
+
+// ─── Meta CAPI ────────────────────────────────────────────────────────────────
 export async function sendMetaCAPI(site, evt) {
   if (!site.meta_pixel_id || !site.meta_capi_token) return null
 
   const userData = {}
-  if (evt.ip_address) userData.client_ip_address = evt.ip_address
-  if (evt.user_agent) userData.client_user_agent = evt.user_agent
-  if (evt.email) userData.em = [sha256(evt.email)]
+  if (evt.ip_address)  userData.client_ip_address  = evt.ip_address
+  if (evt.user_agent)  userData.client_user_agent  = evt.user_agent
+  if (evt.email)       userData.em                 = [sha256(evt.email)]
+  if (evt.fbclid)      userData.fbc = `fb.1.${Date.now()}.${evt.fbclid}`
+
+  const eventName = getMetaEventName(evt.conversion_type)
 
   const body = {
     data: [{
-      event_name: 'Purchase',
-      event_time: Math.floor(new Date(evt.timestamp ?? Date.now()).getTime() / 1000),
-      action_source: 'website',
-      event_source_url: evt.page_url ?? null,
-      user_data: userData,
-      custom_data: { value: Number(evt.conversion_value) || 0, currency: evt.currency ?? 'USD' }
+      event_name:        eventName,
+      event_time:        Math.floor(new Date(evt.timestamp ?? Date.now()).getTime() / 1000),
+      action_source:     'website',
+      event_source_url:  evt.page_url ?? null,
+      event_id:          evt.external_event_id ?? undefined, // dedup key
+      user_data:         userData,
+      custom_data: {
+        value:    Number(evt.conversion_value) || 0,
+        currency: evt.currency ?? 'USD',
+        ...(evt.order_id       ? { order_id: evt.order_id }             : {}),
+        ...(evt.conversion_type? { content_type: evt.conversion_type }  : {}),
+      }
     }]
   }
-  if (process.env.NODE_ENV !== 'production') body.test_event_code = process.env.META_TEST_EVENT_CODE || 'TEST12345'
+
+  // Only attach test_event_code if explicitly set — never use a hardcoded fallback
+  const testCode = process.env.META_TEST_EVENT_CODE
+  if (testCode) body.test_event_code = testCode
 
   const r = await fetch(
     `https://graph.facebook.com/v19.0/${site.meta_pixel_id}/events?access_token=${site.meta_capi_token}`,
     { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
   )
   const result = await r.json()
-  if (!r.ok) console.error('[Meta CAPI]', JSON.stringify(result))
+  if (!r.ok) console.error('[Meta CAPI]', eventName, JSON.stringify(result))
   return result
 }
 
+// ─── Google Ads Conversion Upload ────────────────────────────────────────────
+// Requires an OAuth2 access token (NOT the developer token).
+// Customers must provide their own token via GOOGLE_ADS_ACCESS_TOKEN env var
+// or per-site google_ads_access_token column.
+//
+// How to get an access token:
+//   1. Create OAuth2 credentials in Google Cloud Console
+//   2. Complete OAuth2 flow for the Google Ads account
+//   3. Use the resulting access_token (refresh periodically — 1h TTL)
+//   Reference: https://developers.google.com/google-ads/api/docs/oauth/overview
 export async function sendGoogleConversion(site, evt) {
-  if (!site.google_ads_customer_id || !site.google_ads_developer_token || !evt.gclid) return null
+  if (!site.google_ads_customer_id || !site.google_ads_developer_token) return null
+  if (!evt.gclid && !evt.gbraid && !evt.wbraid) return null // no click ID = no attribution
+
+  // OAuth2 access token: per-site column takes priority, then global env var
+  const accessToken = site.google_ads_access_token || process.env.GOOGLE_ADS_ACCESS_TOKEN
+  if (!accessToken) {
+    console.warn('[Google Ads CAPI] Skipped — no OAuth2 access token configured. Set GOOGLE_ADS_ACCESS_TOKEN env var or google_ads_access_token on the site.')
+    return null
+  }
+
+  const clickIds = {}
+  if (evt.gclid)  clickIds.gclid  = evt.gclid
+  if (evt.gbraid) clickIds.gbraid = evt.gbraid
+  if (evt.wbraid) clickIds.wbraid = evt.wbraid
 
   const body = {
     conversions: [{
-      gclid: evt.gclid,
+      ...clickIds,
       conversion_action: `customers/${site.google_ads_customer_id}/conversionActions/${site.google_ads_conversion_action_id}`,
       conversion_date_time: new Date(evt.timestamp ?? Date.now()).toISOString().replace('T', ' ').replace('Z', '+00:00'),
       conversion_value: Number(evt.conversion_value) || 0,
       currency_code: evt.currency ?? 'USD',
+      order_id: evt.order_id ?? undefined,
       user_identifiers: evt.email ? [{ hashed_email: sha256(evt.email) }] : []
     }]
   }
+
   const r = await fetch(
     `https://googleads.googleapis.com/v16/customers/${site.google_ads_customer_id}:uploadClickConversions`,
     {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${site.google_ads_developer_token}`, 'developer-token': site.google_ads_developer_token, 'Content-Type': 'application/json' },
+      headers: {
+        'Authorization':   `Bearer ${accessToken}`,       // OAuth2 token
+        'developer-token': site.google_ads_developer_token, // separate header
+        'Content-Type':    'application/json'
+      },
       body: JSON.stringify(body)
     }
   )
-  if (!r.ok) console.error('[Google Conversion] HTTP', r.status)
+  if (!r.ok) {
+    const detail = await r.text().catch(() => '')
+    console.error('[Google Ads CAPI] HTTP', r.status, detail.slice(0, 200))
+  }
   return r.ok
 }
 
+// ─── Microsoft UET ───────────────────────────────────────────────────────────
 export async function sendMicrosoftConversion(site, evt) {
   if (!site.microsoft_tag_id || !site.microsoft_capi_token) return null
+
   const r = await fetch('https://bat.bing.com/bat.svc/c', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ TagId: site.microsoft_tag_id, MsclkId: evt.msclkid ?? null, Revenue: Number(evt.conversion_value) || 0, Currency: evt.currency ?? 'USD' })
+    body: JSON.stringify({
+      TagId:    site.microsoft_tag_id,
+      MsclkId:  evt.msclkid ?? null,
+      Revenue:  Number(evt.conversion_value) || 0,
+      Currency: evt.currency ?? 'USD',
+      EventType: evt.conversion_type ?? 'conversion'
+    })
   })
   if (!r.ok) console.error('[Microsoft UET] HTTP', r.status)
   return r.ok
 }
 
+// ─── LinkedIn CAPI ───────────────────────────────────────────────────────────
 export async function sendLinkedInConversion(site, evt) {
   if (!site.linkedin_partner_id || !site.linkedin_capi_token) return null
+
   const body = {
     conversion: `urn:lla:llaPartnerConversion:${site.linkedin_partner_id}`,
     conversionHappenedAt: new Date(evt.timestamp ?? Date.now()).getTime(),
-    conversionValue: { currencyCode: evt.currency ?? 'USD', amount: String(Number(evt.conversion_value) || 0) }
+    conversionValue: {
+      currencyCode: evt.currency ?? 'USD',
+      amount: String(Number(evt.conversion_value) || 0)
+    }
   }
-  if (evt.email) body.user = { userIds: [{ idType: 'SHA256_EMAIL', idValue: sha256(evt.email) }] }
+  if (evt.email) {
+    body.user = { userIds: [{ idType: 'SHA256_EMAIL', idValue: sha256(evt.email) }] }
+  }
+  if (evt.li_fat_id) {
+    body.user = body.user || { userIds: [] }
+    body.user.userIds.push({ idType: 'LINKEDIN_FIRST_PARTY_ADS_TRACKING_UUID', idValue: evt.li_fat_id })
+  }
+
   const r = await fetch('https://api.linkedin.com/v2/conversionEvents', {
     method: 'POST',
-    headers: { 'Authorization': `Bearer ${site.linkedin_capi_token}`, 'LinkedIn-Version': '202406', 'Content-Type': 'application/json' },
+    headers: {
+      'Authorization':    `Bearer ${site.linkedin_capi_token}`,
+      'LinkedIn-Version': '202406',
+      'Content-Type':     'application/json'
+    },
     body: JSON.stringify(body)
   })
   if (!r.ok) console.error('[LinkedIn CAPI] HTTP', r.status)
   return r.ok
 }
 
+// ─── TikTok CAPI ─────────────────────────────────────────────────────────────
 export async function sendTikTokConversion(site, eventData) {
   if (!site?.tiktok_pixel_id || !site?.tiktok_access_token) return
+
+  const eventName = getTikTokEventName(eventData.conversion_type)
+
   try {
     const payload = {
       pixel_code: site.tiktok_pixel_id,
-      event: 'CompletePayment',
-      event_time: Math.floor(Date.now() / 1000),
+      event:      eventName,
+      event_time: Math.floor(new Date(eventData.timestamp ?? Date.now()).getTime() / 1000),
+      event_id:   eventData.external_event_id ?? undefined, // dedup key
       context: {
         user: {
-          ttclid: eventData.ttclid || undefined,
-          ip: eventData.ip_address
-            ? createHash('sha256').update(eventData.ip_address).digest('hex')
-            : undefined
+          ...(eventData.ttclid    ? { ttclid: eventData.ttclid } : {}),
+          ...(eventData.ip_address ? { ip:     sha256(eventData.ip_address) } : {}),
+          ...(eventData.email      ? { email:  sha256(eventData.email) }      : {}),
         },
         page: { url: eventData.page_url || undefined }
       },
       properties: {
-        currency: 'USD',
-        value: Number(eventData.conversion_value) || 0,
-        order_id: eventData.order_id || undefined,
-        content_type: eventData.conversion_type || 'product'
+        currency:     'USD',
+        value:        Number(eventData.conversion_value) || 0,
+        ...(eventData.order_id       ? { order_id:     eventData.order_id }       : {}),
+        ...(eventData.conversion_type? { content_type: eventData.conversion_type } : {}),
       }
     }
+
     const res = await fetch('https://business-api.tiktok.com/open_api/v1.3/event/track/', {
       method: 'POST',
       headers: {
@@ -122,9 +255,9 @@ export async function sendTikTokConversion(site, eventData) {
     })
     if (!res.ok) {
       const err = await res.text()
-      console.error('[TikTokCAPI]', err)
+      console.error('[TikTok CAPI]', eventName, err.slice(0, 200))
     }
   } catch (e) {
-    console.error('[TikTokCAPI]', e.message)
+    console.error('[TikTok CAPI]', e.message)
   }
 }

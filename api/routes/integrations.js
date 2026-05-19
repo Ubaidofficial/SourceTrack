@@ -1,5 +1,7 @@
 import express from 'express'
 import { queryHogQL } from '../lib/posthog.js'
+import { createClient } from '@supabase/supabase-js'
+import WebSocket from 'ws'
 
 const router = express.Router()
 
@@ -263,6 +265,63 @@ router.get('/overview', async (req, res) => {
   } catch (err) {
     console.error(err)
     res.status(500).json({ success: false, data: null, error: 'Integration overview query failed' })
+  }
+})
+
+// PATCH /api/integrations/settings — update per-site attribution window
+router.patch('/settings', async (req, res) => {
+  try {
+    const siteId = req.site?.id
+    if (!siteId) {
+      return res.status(400).json({ success: false, data: null, error: 'site_key required' })
+    }
+
+    const ALLOWED_WINDOWS = [1, 7, 14, 30, 60, 90]
+    const raw = req.body.attribution_window_days
+    const windowDays = raw != null ? parseInt(raw, 10) : null
+
+    if (windowDays !== null && !ALLOWED_WINDOWS.includes(windowDays)) {
+      return res.status(400).json({
+        success: false, data: null,
+        error: `attribution_window_days must be one of: ${ALLOWED_WINDOWS.join(', ')}`
+      })
+    }
+
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_KEY,
+      { realtime: { transport: WebSocket } }
+    )
+
+    const updates = {}
+    if (windowDays !== null) updates.attribution_window_days = windowDays
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ success: false, data: null, error: 'No valid fields to update' })
+    }
+
+    const { data, error } = await supabase
+      .from('sites')
+      .update(updates)
+      .eq('id', siteId)
+      .select('id, attribution_window_days')
+      .single()
+
+    if (error) {
+      // Graceful degradation if column doesn't exist yet (migration not run)
+      if (error.message?.includes('attribution_window_days')) {
+        return res.status(503).json({
+          success: false, data: null,
+          error: 'Attribution window column not yet available. Please run the DB migration.'
+        })
+      }
+      throw error
+    }
+
+    return res.json({ success: true, data, error: null })
+  } catch (err) {
+    console.error('[integrations] PATCH settings error:', err?.message)
+    return res.status(500).json({ success: false, data: null, error: 'Failed to update settings' })
   }
 })
 

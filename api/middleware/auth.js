@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
+import NodeCache from 'node-cache'
 
 function getSupabase() {
   return createClient(
@@ -11,6 +12,13 @@ function getSupabase() {
 
 const TRIAL_DAYS = 14
 
+// In-memory site key cache — 5 min TTL.
+// Eliminates one Supabase round-trip per tracking event. Without this, every
+// pageview and conversion hits the DB just to validate the site key.
+// On cache miss (first request, or after 5 min), we still hit Supabase.
+// Supabase downtime is still a risk but the blast radius is much smaller.
+const siteCache = new NodeCache({ stdTTL: 300, checkperiod: 60 })
+
 export async function validateSiteKey(req, res, next) {
   try {
     const siteKey = req.body?.site_key || req.query?.site_key
@@ -19,10 +27,31 @@ export async function validateSiteKey(req, res, next) {
       return res.status(401).json({ success: false, data: null, error: 'Missing site_key' })
     }
 
+    // Cache hit — skip DB call entirely
+    const cached = siteCache.get(siteKey)
+    if (cached) {
+      // Trial re-check still needed (TTL is 5min, trial could expire within that window)
+      if (cached.plan === 'trial') {
+        const trialEnd = cached.trial_ends_at
+          ? new Date(cached.trial_ends_at)
+          : new Date(new Date(cached.created_at).getTime() + TRIAL_DAYS * 24 * 60 * 60 * 1000)
+        if (new Date() > trialEnd) {
+          siteCache.del(siteKey) // bust cache so next request re-checks DB
+          return res.status(402).json({ success: false, data: null, error: 'Trial expired' })
+        }
+      }
+      if (cached.plan === 'inactive') {
+        return res.status(402).json({ success: false, data: null, error: 'Subscription inactive' })
+      }
+      req.site = cached.site
+      return next()
+    }
+
+    // Cache miss — query Supabase
     const supabase = getSupabase()
     const { data, error } = await supabase
       .from('sites')
-      .select('id, plan, created_at, company_id, owner_id, business_type, trial_ends_at')
+      .select('id, plan, created_at, company_id, owner_id, business_type, trial_ends_at, attribution_window_days')
       .eq('site_key', siteKey)
       .single()
 
@@ -43,7 +72,19 @@ export async function validateSiteKey(req, res, next) {
       }
     }
 
-    req.site = { id: data.id, plan: data.plan, company_id: data.company_id, owner_id: data.owner_id, trial_ends_at: data.trial_ends_at || null }
+    const site = {
+      id: data.id,
+      plan: data.plan,
+      company_id: data.company_id,
+      owner_id: data.owner_id,
+      trial_ends_at: data.trial_ends_at || null,
+      attribution_window_days: data.attribution_window_days || 30
+    }
+
+    // Store in cache — include plan/trial_ends_at so cache can do quick plan checks
+    siteCache.set(siteKey, { site, plan: data.plan, trial_ends_at: data.trial_ends_at, created_at: data.created_at })
+
+    req.site = site
     next()
   } catch (_err) {
     res.status(500).json({ success: false, data: null, error: 'Auth error' })
