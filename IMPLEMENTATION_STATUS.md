@@ -66,6 +66,7 @@ None in this session (all backend SQL handled via application code + existing ta
 - aad61e3: feat: add area chart and linear attribution model to report builder
 - 8d78ec8: feat: add U-Shaped attribution model
 - 428676c: feat: add funnel visualization to analytics
+- 3e12049: feat: add RPV to attribution route response
 - e402e85: docs: add implementation status log
 
 ## Still Requires Manual Action
@@ -111,3 +112,11 @@ Backend: GET /api/analytics/funnel — aggregate step-completion counts, zero PI
 Frontend: FunnelChart.jsx component, integrated in Analytics.jsx
 Privacy: session_id and url only, no user data
 Commit: 428676c
+
+## Feature 5: Revenue Per Visitor (RPV)
+Status: COMPLETE
+Backend: rpv field added to dashboard.js and attribution.js responses
+Frontend: KPI tile "Best Rev/Visitor" added to Dashboard (Task 19)
+Frontend: Rev/Visitor column added to Attribution Table (Task 19)
+Formula: revenue / sessions (falls back to revenue / conversions)
+Commit: 3e12049
