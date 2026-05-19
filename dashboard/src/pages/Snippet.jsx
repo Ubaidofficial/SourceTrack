@@ -303,6 +303,147 @@ export default function Snippet() {
         )}
       </div>
 
+      {/* Step 2: Identify Users (Required for LTV) */}
+      <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#333838] p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <UserCheck className="w-5 h-5 text-gray-700" />
+          <h3 className="font-semibold text-st-black">Step 2: Identify Users After Login</h3>
+        </div>
+
+        <p className="text-sm text-gray-600">
+          Call this once after a user signs up or logs in. Required for LTV attribution to work.
+          Without identify(), recurring revenue cannot be attributed to the original ad source.
+        </p>
+
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-medium text-gray-700">JavaScript — after signup</p>
+            <div className="bg-st-black rounded-lg p-4 relative mt-1.5">
+              <pre className="text-green-400 text-xs overflow-x-auto whitespace-pre-wrap pr-12">{`// Call once after user signs up or logs in
+sourcetrack.identify({
+  email: 'user@example.com',    // required for LTV
+  name: 'Jane Smith',           // optional
+  plan: 'trial'                 // optional
+})`}</pre>
+              <button
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(`// Call once after user signs up or logs in\nsourcetrack.identify({\n  email: 'user@example.com',    // required for LTV\n  name: 'Jane Smith',           // optional\n  plan: 'trial'                 // optional\n})`)
+                  } catch (_err) { /* clipboard unavailable */ }
+                }}
+                className="absolute top-3 right-3 p-1.5 bg-gray-800 hover:bg-gray-700 rounded text-gray-300 transition-colors"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-sm font-medium text-gray-700">React example</p>
+            <div className="bg-st-black rounded-lg p-4 relative mt-1.5">
+              <pre className="text-green-400 text-xs overflow-x-auto whitespace-pre-wrap pr-12">{`// In your auth context or useEffect after login
+useEffect(() => {
+  if (user) {
+    window.sourcetrack?.identify({
+      email: user.email,
+      name: user.name,
+      plan: user.subscription_plan
+    })
+  }
+}, [user])`}</pre>
+              <button
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(`// In your auth context or useEffect after login\nuseEffect(() => {\n  if (user) {\n    window.sourcetrack?.identify({\n      email: user.email,\n      name: user.name,\n      plan: user.subscription_plan\n    })\n  }\n}, [user])`)
+                  } catch (_err) { /* clipboard unavailable */ }
+                }}
+                className="absolute top-3 right-3 p-1.5 bg-gray-800 hover:bg-gray-700 rounded text-gray-300 transition-colors"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Step 3: Track Recurring Revenue (Stripe Subscriptions) */}
+      <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#333838] p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <RefreshCw className="w-5 h-5 text-gray-700" />
+          <h3 className="font-semibold text-st-black">Step 3: Forward Stripe Webhooks (For Recurring Revenue)</h3>
+        </div>
+
+        <p className="text-sm text-gray-600">
+          For SaaS subscriptions, forward Stripe invoice.paid events to SourceTrack.
+          This attributes every recurring payment to the original ad source — showing true LTV, not just first payment.
+        </p>
+
+        <div>
+          <p className="text-sm font-medium text-gray-700">Node.js Stripe webhook handler</p>
+          <div className="bg-st-black rounded-lg p-4 relative mt-1.5">
+            <pre className="text-green-400 text-xs overflow-x-auto whitespace-pre-wrap pr-12">{`// In your Stripe webhook handler
+app.post('/stripe/webhook', express.raw({type: 'application/json'}), async (req, res) => {
+  const event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET)
+
+  if (event.type === 'invoice.paid') {
+    const invoice = event.data.object
+    const customer = await stripe.customers.retrieve(invoice.customer)
+
+    await fetch('https://app.sourcetrack.ai/api/conversion/offline', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        site_key: 'YOUR_SITE_KEY',
+        user_id: customer.email,           // must match identify() email
+        conversion_value: invoice.amount_paid / 100,
+        conversion_type: 'recurring_payment',
+        // Store first touch source in Stripe metadata at signup:
+        first_touch_source: customer.metadata?.st_first_touch_source || 'direct'
+      })
+    })
+  }
+  res.json({ received: true })
+})`}</pre>
+            <button
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(`// In your Stripe webhook handler\napp.post('/stripe/webhook', express.raw({type: 'application/json'}), async (req, res) => {\n  const event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET)\n\n  if (event.type === 'invoice.paid') {\n    const invoice = event.data.object\n    const customer = await stripe.customers.retrieve(invoice.customer)\n\n    await fetch('https://app.sourcetrack.ai/api/conversion/offline', {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json' },\n      body: JSON.stringify({\n        site_key: 'YOUR_SITE_KEY',\n        user_id: customer.email,           // must match identify() email\n        conversion_value: invoice.amount_paid / 100,\n        conversion_type: 'recurring_payment',\n        // Store first touch source in Stripe metadata at signup:\n        first_touch_source: customer.metadata?.st_first_touch_source || 'direct'\n      })\n    })\n  }\n  res.json({ received: true })\n})`)
+                } catch (_err) { /* clipboard unavailable */ }
+              }}
+              className="absolute top-3 right-3 p-1.5 bg-gray-800 hover:bg-gray-700 rounded text-gray-300 transition-colors"
+            >
+              <Copy className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+          <p className="font-medium text-xs">Important: Store first touch source in Stripe</p>
+          <p className="text-xs mt-0.5">
+            Store the visitor's first touch source in Stripe customer metadata at signup time by passing it from your backend. Example:
+          </p>
+          <div className="bg-amber-100 dark:bg-amber-900/30 rounded p-2 mt-1.5">
+            <pre className="text-xs whitespace-pre-wrap text-amber-900 dark:text-amber-200">{`await stripe.customers.create({
+  email: user.email,
+  metadata: {
+    st_first_touch_source: req.body.first_touch_source || 'direct',
+    st_first_touch_medium: req.body.first_touch_medium || 'none'
+  }
+})`}</pre>
+          </div>
+        </div>
+      </div>
+
+      {/* Why this matters */}
+      <div className="bg-lime-50 dark:bg-lime-900/10 border border-lime-200 dark:border-lime-800 rounded-xl p-5 space-y-2">
+        <h3 className="text-sm font-semibold text-st-black">Why this matters</h3>
+        <ul className="text-sm text-st-black space-y-1.5">
+          <li><strong>Without identify():</strong> LTV shows $0 for all customers.</li>
+          <li><strong>Without Stripe webhooks:</strong> LTV shows only first payment, not recurring revenue.</li>
+          <li><strong>With both:</strong> SourceTrack shows true attributed LTV across every renewal.</li>
+        </ul>
+      </div>
+
       {/* Advanced Setup */}
       <div>
         <h3 className="text-sm font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-3">Advanced Setup</h3>
