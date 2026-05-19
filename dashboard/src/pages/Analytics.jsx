@@ -131,6 +131,18 @@ export default function Analytics() {
     enabled: !!site?.site_key
   })
 
+  const { data: browserData } = useQuery({
+    queryKey: ['analytics-browsers', site?.site_key, days],
+    queryFn: () => fetchApi(`/analytics/browsers?site_key=${site.site_key}&days=${days}`),
+    enabled: !!site?.site_key
+  })
+
+  const { data: osData } = useQuery({
+    queryKey: ['analytics-os', site?.site_key, days],
+    queryFn: () => fetchApi(`/analytics/os?site_key=${site.site_key}&days=${days}`),
+    enabled: !!site?.site_key
+  })
+
   const { data: funnelData } = useQuery({
     queryKey: ['funnel', site?.site_key, funnelSteps, days],
     queryFn: async () => {
@@ -161,6 +173,8 @@ export default function Analytics() {
   const outboundLinks= outboundData?.data || []
   const customEvents = customEventsData?.data?.events || []
   const recentEvents = customEventsData?.data?.recent || []
+  const browsers      = browserData?.data || []
+  const osList        = osData?.data || []
 
   const newVisitors       = kpis.new_visitors ?? 0
   const returningVisitors = kpis.returning_visitors ?? 0
@@ -176,6 +190,8 @@ export default function Analytics() {
   const maxExit    = Math.max(...exitPages.map(r => r.count), 1)
   const maxEvent   = Math.max(...customEvents.map(r => r.count), 1)
   const maxOutbound= Math.max(...outboundLinks.map(r => r.count), 1)
+  const maxBrowser = Math.max(...browsers.map(r => r.visitors), 1)
+  const maxOS      = Math.max(...osList.map(r => r.visitors), 1)
   const trendMax   = Math.max(...trend.map(t => t.views), 1)
 
   const snippetUrl = site
@@ -230,6 +246,8 @@ export default function Analytics() {
     { key: 'ai',        label: '✦ AI Traffic' },
     { key: 'countries', label: 'Countries' },
     { key: 'devices',   label: 'Devices' },
+    { key: 'browsers',  label: 'Browsers' },
+    { key: 'os',        label: 'OS' },
   ]
 
   if (!site) return null
@@ -439,6 +457,26 @@ export default function Analytics() {
                       pct={Math.round(val / Object.values(devices).reduce((s,v)=>s+v,0) * 100)}
                       onClick={() => toggleFilter('Device', key)}
                       active={isActive('Device', key)} />
+                  ))
+              )}
+              {rightTab === 'browsers' && (
+                browsers.length === 0
+                  ? <p className="text-xs text-st-gray py-8 text-center">No browser data yet</p>
+                  : browsers.map((r, i) => (
+                    <DataRow key={i} label={r.browser} value={r.visitors} max={maxBrowser}
+                      pct={r.percentage}
+                      onClick={() => toggleFilter('Browser', r.browser)}
+                      active={isActive('Browser', r.browser)} />
+                  ))
+              )}
+              {rightTab === 'os' && (
+                osList.length === 0
+                  ? <p className="text-xs text-st-gray py-8 text-center">No OS data yet</p>
+                  : osList.map((r, i) => (
+                    <DataRow key={i} label={r.os} value={r.visitors} max={maxOS}
+                      pct={r.percentage}
+                      onClick={() => toggleFilter('OS', r.os)}
+                      active={isActive('OS', r.os)} />
                   ))
               )}
             </TabPanel>

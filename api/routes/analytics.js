@@ -41,6 +41,7 @@ router.post('/collect', async (req, res) => {
     let country = null
     if (ip) { const geo = geoip.lookup(ip); country = geo?.country || null }
     const serverBrowser = (() => { const n = (parser.getBrowser().name || '').toLowerCase(); if (n.includes('edge')) return 'edge'; if (n.includes('chrome')) return 'chrome'; if (n.includes('firefox')) return 'firefox'; if (n.includes('safari')) return 'safari'; return 'other' })()
+    const serverOS = parser.getOS().name || 'unknown'
     const AI_DOMAINS = { 'chatgpt.com': 'ChatGPT', 'chat.openai.com': 'ChatGPT', 'claude.ai': 'Claude', 'perplexity.ai': 'Perplexity', 'gemini.google.com': 'Gemini', 'grok.com': 'Grok', 'copilot.microsoft.com': 'Copilot', 'deepseek.com': 'DeepSeek' }
     let ai_source = null
     if (referrer) { try { const h = new URL(referrer).hostname.replace('www.', ''); ai_source = AI_DOMAINS[h] || null } catch (_e) {} }
@@ -48,7 +49,7 @@ router.post('/collect', async (req, res) => {
       await supabase.from('pageviews').update({ duration_seconds }).eq('site_id', site.id).eq('session_id', session_id).eq('url', url)
       return res.json({ ok: true })
     }
-    await supabase.from('pageviews').insert({ site_id: site.id, url, referrer: referrer || null, utm_source: utm_source || null, utm_medium: utm_medium || null, utm_campaign: utm_campaign || null, country, device: device || parser.getDevice().type || 'desktop', browser: browser || serverBrowser, session_id: session_id || null, duration_seconds: 0, ai_source, entry_page: entry_page || url, exit_page: exit_page || null, timestamp: new Date().toISOString() })
+    await supabase.from('pageviews').insert({ site_id: site.id, url, referrer: referrer || null, utm_source: utm_source || null, utm_medium: utm_medium || null, utm_campaign: utm_campaign || null, country, device: device || parser.getDevice().type || 'desktop', browser: browser || serverBrowser, os: req.body.os || serverOS, session_id: session_id || null, duration_seconds: 0, ai_source, entry_page: entry_page || url, exit_page: exit_page || null, timestamp: new Date().toISOString() })
     res.json({ ok: true })
   } catch (err) { console.error('[analytics/collect]', err.message); res.status(500).json({ error: 'Collection failed' }) }
 })
@@ -181,6 +182,91 @@ router.get('/custom-events', requireUserAuth, validateSiteKey, async (req, res) 
     const recent = rows.slice(0,50).map(r=>({ name: r.event_name, url: r.url, properties: r.properties, timestamp: r.timestamp }))
     res.json({ success: true, data: { events, recent } })
   } catch (err) { res.status(500).json({ success: false, error: err.message }) }
+})
+
+router.get('/browsers', requireUserAuth, validateSiteKey, async (req, res) => {
+  try {
+    const siteId = String(req.site.id)
+    const days = Math.min(parseInt(req.query.days) || 30, 90)
+    const from = new Date(Date.now() - days * 86400000).toISOString()
+    const supabase = getSupabase()
+
+    let query = supabase
+      .from('pageviews')
+      .select('browser, session_id')
+      .eq('site_id', siteId)
+      .gte('timestamp', from)
+      .not('browser', 'is', null)
+      .limit(50000)
+
+    if (req.query.filter_type && req.query.filter_value) {
+      const filterCol = req.query.filter_type === 'Browser' ? 'browser' : null
+      if (filterCol) query = query.eq(filterCol, req.query.filter_value)
+    }
+
+    const { data: rows } = await query
+    if (!rows) return res.json({ success: true, data: [] })
+
+    const counts = {}
+    for (const r of rows) {
+      const b = r.browser || 'other'
+      counts[b] = counts[b] || { browser: b, sessions: new Set() }
+      if (r.session_id) counts[b].sessions.add(r.session_id)
+    }
+
+    const total = Object.values(counts).reduce((s, c) => s + c.sessions.size, 0) || 1
+    const results = Object.values(counts)
+      .map(c => ({ browser: c.browser, visitors: c.sessions.size, percentage: parseFloat((c.sessions.size / total * 100).toFixed(1)) }))
+      .sort((a, b) => b.visitors - a.visitors)
+      .slice(0, 10)
+
+    res.json({ success: true, data: results })
+  } catch (err) {
+    console.error('[analytics/browsers]', err.message)
+    res.status(500).json({ success: false, error: 'Browser breakdown failed' })
+  }
+})
+
+router.get('/os', requireUserAuth, validateSiteKey, async (req, res) => {
+  try {
+    const siteId = String(req.site.id)
+    const days = Math.min(parseInt(req.query.days) || 30, 90)
+    const from = new Date(Date.now() - days * 86400000).toISOString()
+    const supabase = getSupabase()
+
+    let query = supabase
+      .from('pageviews')
+      .select('os, session_id')
+      .eq('site_id', siteId)
+      .gte('timestamp', from)
+      .not('os', 'is', null)
+      .limit(50000)
+
+    if (req.query.filter_type && req.query.filter_value) {
+      if (req.query.filter_type === 'OS') query = query.eq('os', req.query.filter_value)
+    }
+
+    const { data: rows } = await query
+    if (!rows) return res.json({ success: true, data: [] })
+
+    const counts = {}
+    for (const r of rows) {
+      const o = r.os || 'unknown'
+      counts[o] = counts[o] || { os: o, sessions: new Set() }
+      if (r.session_id) counts[o].sessions.add(r.session_id)
+    }
+
+    const total = Object.values(counts).reduce((s, c) => s + c.sessions.size, 0) || 1
+    const results = Object.values(counts)
+      .map(c => ({ os: c.os, visitors: c.sessions.size, percentage: parseFloat((c.sessions.size / total * 100).toFixed(1)) }))
+      .sort((a, b) => b.visitors - a.visitors)
+      .slice(0, 10)
+
+    res.json({ success: true, data: results })
+  } catch (err) {
+    console.error('[analytics/os]', err.message)
+    res.status(500).json({ success: false, error: 'OS breakdown failed' })
+  }
 })
 
 router.get('/funnel', requireUserAuth, validateSiteKey, async (req, res) => {
