@@ -67,6 +67,8 @@ None in this session (all backend SQL handled via application code + existing ta
 - 8d78ec8: feat: add U-Shaped attribution model
 - 428676c: feat: add funnel visualization to analytics
 - 3e12049: feat: add RPV to attribution route response
+- 040d54a: feat: add period comparison to analytics KPI tiles
+- e178d92: docs: add RPV to implementation status
 - e402e85: docs: add implementation status log
 
 ## Still Requires Manual Action
@@ -120,3 +122,10 @@ Frontend: KPI tile "Best Rev/Visitor" added to Dashboard (Task 19)
 Frontend: Rev/Visitor column added to Attribution Table (Task 19)
 Formula: revenue / sessions (falls back to revenue / conversions)
 Commit: 3e12049
+
+## Feature 6: Period Comparison on Analytics
+Status: COMPLETE
+Added: prior period parallel query in Analytics.jsx
+Added: delta display on all 4 KPI tiles (visitors, pageviews, bounce, duration)
+Pattern: copied from ReportBuilder.jsx priorPeriod pattern
+Commit: 040d54a
