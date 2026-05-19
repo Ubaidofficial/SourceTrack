@@ -31,7 +31,8 @@ const MODELS = [
   { key: 'last_touch', label: 'Last Touch' },
   { key: 'first_touch_non_direct', label: 'First Touch (Non-Direct)' },
   { key: 'last_touch_non_direct', label: 'Last Touch (Non-Direct)' },
-  { key: 'ai_platforms', label: 'AI Platforms' }
+  { key: 'ai_platforms', label: 'AI Platforms' },
+  { key: 'linear', label: 'Linear' }
 ]
 
 const DIMENSIONS = [
@@ -68,6 +69,7 @@ const METRICS = [
 const CHART_TYPES = [
   { key: 'bar', label: 'Bar' },
   { key: 'line', label: 'Line' },
+  { key: 'area', label: 'Area' },
   { key: 'pie', label: 'Pie' },
   { key: 'kpi', label: 'KPI' },
   { key: 'table', label: 'Table Only' }
@@ -501,9 +503,11 @@ export default function ReportBuilder() {
             label: mDef?.label || mk,
             data: results.slice(0, 15).map(r => r[mk] ?? 0),
             backgroundColor: MULTI_COLORS[mi % MULTI_COLORS.length],
-            borderColor: chartType === 'line' ? MULTI_COLORS[mi % MULTI_COLORS.length] : undefined,
+            borderColor: chartType === 'line' || chartType === 'area' ? MULTI_COLORS[mi % MULTI_COLORS.length] : undefined,
             borderRadius: chartType === 'bar' ? 4 : 0,
             tension: 0.3,
+            fill: chartType === 'area',
+            backgroundColor: chartType === 'area' ? MULTI_COLORS[mi % MULTI_COLORS.length].replace('0.85)', '0.15)') : MULTI_COLORS[mi % MULTI_COLORS.length],
             stack: chartType === 'bar' ? 'stack0' : undefined,
           }
         })
@@ -511,9 +515,10 @@ export default function ReportBuilder() {
           label: metricLabel,
           data: results.slice(0, 15).map(r => getMetricValue(r)),
           backgroundColor: results.slice(0, 15).map((_, i) => COLORS[i % COLORS.length]),
-          borderColor: chartType === 'line' ? 'rgba(17, 24, 39, 1)' : undefined,
+          borderColor: chartType === 'line' || chartType === 'area' ? 'rgba(17, 24, 39, 1)' : undefined,
           borderRadius: chartType === 'bar' ? 4 : 0,
-          tension: 0.3
+          tension: 0.3,
+          fill: chartType === 'area'
         }]
   }
 
@@ -1174,7 +1179,7 @@ export default function ReportBuilder() {
               </div>
 
               {/* Chart */}
-              {(chartType === 'bar' || chartType === 'line' || chartType === 'pie') && (
+              {(chartType === 'bar' || chartType === 'line' || chartType === 'area' || chartType === 'pie') && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                   {isLoading ? (
                     <div className="h-72 flex items-center justify-center">
@@ -1188,6 +1193,7 @@ export default function ReportBuilder() {
                     <div className="h-72">
                       {chartType === 'bar' && <Bar data={chartData} options={chartOptions} />}
                       {chartType === 'line' && <Line data={chartData} options={chartOptions} />}
+                      {chartType === 'area' && <Line data={chartData} options={chartOptions} />}
                       {chartType === 'pie' && <Pie data={chartData} options={chartOptions} />}
                     </div>
                   )}
