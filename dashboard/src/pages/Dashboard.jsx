@@ -783,7 +783,6 @@ export default function Dashboard() {
                   rows={recentLeadsData}
                   emptyMessage="No recent leads yet. Data will appear as conversions flow in."
                 />
-                <p className="text-[10px] text-st-gray dark:text-gray-400 mt-2 text-right">CAC calculated from campaign spend data. Add spend in Campaigns page.</p>
               )}
             </DashboardCard>
 
