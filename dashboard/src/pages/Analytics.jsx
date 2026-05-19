@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { fetchApi } from '../lib/api'
 import { supabase } from '../lib/supabase'
@@ -98,6 +97,15 @@ export default function Analytics() {
     enabled: !!site?.site_key
   })
 
+  const priorFrom = new Date(Date.now() - days * 2 * 86400000).toISOString().slice(0, 10)
+  const priorTo = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
+
+  const { data: priorSummary } = useQuery({
+    queryKey: ['prior-analytics-summary', site?.site_key, days],
+    queryFn: () => fetchApi(`/analytics/summary?site_key=${site.site_key}&from=${priorFrom}&to=${priorTo}`),
+    enabled: !!site?.site_key
+  })
+
   const { data: liveData, refetch: refetchLive } = useQuery({
     queryKey: ['analytics-live', site?.site_key],
     queryFn: () => fetchApi(`/live?site_key=${site.site_key}`),
@@ -140,6 +148,7 @@ export default function Analytics() {
 
   const d            = summary?.data
   const kpis         = d?.kpis || {}
+  const priorKpis    = priorSummary?.data?.kpis || {}
   const topPages     = d?.top_pages || []
   const topSources   = d?.top_sources || []
   const aiSources    = d?.ai_sources || []
@@ -187,11 +196,24 @@ export default function Analytics() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  function delta(current, prior, inverted = false) {
+    if (prior == null || prior === 0) return null
+    const pct = ((current - prior) / Math.abs(prior)) * 100
+    const isPositive = inverted ? pct < 0 : pct > 0
+    const isNeg = inverted ? pct > 0 : pct < 0
+    return { pct: Math.abs(pct).toFixed(1), color: isPositive ? 'text-green-600' : isNeg ? 'text-red-500' : 'text-st-gray' }
+  }
+
+  const pageviewsDelta = delta(kpis.pageviews, priorKpis.pageviews)
+  const visitorsDelta = delta(kpis.unique_visitors, priorKpis.unique_visitors)
+  const bounceDelta = delta(kpis.bounce_rate, priorKpis.bounce_rate, true)
+  const durationDelta = delta(kpis.avg_duration_seconds, priorKpis.avg_duration_seconds)
+
   const KPI_ITEMS = [
-    { label: 'Pageviews',      value: kpis.pageviews?.toLocaleString()          ?? '—' },
-    { label: 'Visitors',       value: kpis.unique_visitors?.toLocaleString()    ?? '—' },
-    { label: 'Bounce rate',    value: kpis.bounce_rate != null ? formatPercent(kpis.bounce_rate, 1) : '—' },
-    { label: 'Duration',       value: fmtDuration(kpis.avg_duration_seconds) },
+    { label: 'Pageviews',      value: kpis.pageviews?.toLocaleString()          ?? '—', delta: pageviewsDelta },
+    { label: 'Visitors',       value: kpis.unique_visitors?.toLocaleString()    ?? '—', delta: visitorsDelta },
+    { label: 'Bounce rate',    value: kpis.bounce_rate != null ? formatPercent(kpis.bounce_rate, 1) : '—', delta: bounceDelta },
+    { label: 'Duration',       value: fmtDuration(kpis.avg_duration_seconds), delta: durationDelta },
     { label: 'New visitors',   value: newVisitors > 0 ? `${newPct}%` : '—',
       sub: newVisitors > 0 ? `${newVisitors.toLocaleString()} new · ${returningVisitors.toLocaleString()} returning` : null },
   ]
@@ -287,6 +309,11 @@ export default function Analytics() {
                 <div key={i} className="px-4 py-3">
                   <p className="text-[11px] text-st-gray font-medium mb-1">{k.label}</p>
                   <p className="text-xl font-semibold text-st-black">{k.value}</p>
+                  {k.delta && (
+                    <p className={`text-[10px] font-medium mt-0.5 ${k.delta.color}`}>
+                      {k.delta.pct}% vs prior
+                    </p>
+                  )}
                   {k.sub && <p className="text-[10px] text-st-gray mt-0.5">{k.sub}</p>}
                 </div>
               ))}

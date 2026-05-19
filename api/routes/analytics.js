@@ -57,9 +57,16 @@ router.get('/summary', requireUserAuth, validateSiteKey, async (req, res) => {
   try {
     const siteId = String(req.site.id)
     const days = Math.min(parseInt(req.query.days) || 30, 90)
+    const fromParam = req.query.from || null
+    const toParam = req.query.to || null
     const supabase = getSupabase()
-    const from = new Date(Date.now() - days * 86400000).toISOString()
-    const { data: rows, error } = await supabase.from('pageviews').select('url,referrer,utm_source,utm_medium,utm_campaign,country,device,browser,session_id,duration_seconds,ai_source,timestamp').eq('site_id', siteId).gte('timestamp', from).order('timestamp', { ascending: false }).limit(10000)
+    const from = fromParam && toParam
+      ? new Date(fromParam).toISOString()
+      : new Date(Date.now() - days * 86400000).toISOString()
+    const to = fromParam && toParam ? new Date(toParam).toISOString() : null
+    let query = supabase.from('pageviews').select('url,referrer,utm_source,utm_medium,utm_campaign,country,device,browser,session_id,duration_seconds,ai_source,timestamp').eq('site_id', siteId).gte('timestamp', from).order('timestamp', { ascending: false }).limit(10000)
+    if (to) query = query.lte('timestamp', to)
+    const { data: rows, error } = await query
     if (error) throw error
     const pv = rows || []
     const uniqueSessions = new Set(pv.map(r => r.session_id).filter(Boolean)).size
