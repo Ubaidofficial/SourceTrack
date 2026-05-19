@@ -1,5 +1,6 @@
 import 'dotenv/config'
 import express from 'express'
+import compression from 'compression'
 import helmet from 'helmet'
 import cors from 'cors'
 import NodeCache from 'node-cache'
@@ -134,6 +135,9 @@ async function isAllowedOrigin(origin) {
     return false
   }
 }
+
+// 0. gzip compression for all responses (tracker.min.js goes from 4KB → 1.7KB)
+app.use(compression())
 
 // 1. helmet
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }))

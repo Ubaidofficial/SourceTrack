@@ -1,332 +1,157 @@
 ;(function () {
   'use strict'
 
-  // ─── Config ──────────────────────────────────────────────────────────────────
-  var script = document.currentScript || document.querySelector('script[data-site-key]')
-  var SITE_KEY = (script && script.getAttribute('data-site-key')) || ''
-  var API_BASE = (script && script.src)
-    ? new URL(script.src).origin
-    : window.location.origin
+  // ─── Config ────────────────────────────────────────────────────────────────
+  var sc = document.currentScript || document.querySelector('script[data-site-key]')
+  var K  = (sc && sc.getAttribute('data-site-key')) || ''
+  var B  = (sc && sc.src) ? new URL(sc.src).origin : location.origin
 
   // No localStorage, no sessionStorage, no cookies.
-  // Identity is derived server-side from IP + UA with a daily rotating salt.
-  // The visitor_id rotates every 24 h. The session_id rotates every 1 h.
+  // visitor_id and session_id are fetched from the server on each page load.
+  // They rotate daily (visitor) and hourly (session) via a salted SHA-256 hash.
+  var AID = null   // filled async from /api/tracker/id
+  var SID = null
+  var _q  = []     // events buffered until IDs arrive
 
-  var anonymousId = null  // filled async from /api/tracker/id
-  var sessionId   = null
-  var _queue      = []    // events buffered until IDs arrive
+  // ─── AI source detection ───────────────────────────────────────────────────
+  var _ai = {}
+  'chatgpt.com ChatGPT|chat.openai.com ChatGPT|chatgpt ChatGPT|openai ChatGPT|claude.ai Claude|anthropic.com Claude|claude Claude|anthropic Claude|perplexity.ai Perplexity|perplexity Perplexity|gemini.google.com Gemini|bard.google.com Gemini|aistudio.google.com Gemini|gemini Gemini|bard Gemini|google-gemini Gemini|grok.com Grok|grok.x.com Grok|grok Grok|xai Grok|copilot.microsoft.com Copilot|copilot Copilot|bing-copilot Copilot|deepseek.com DeepSeek|deepseek DeepSeek|deep-seek DeepSeek|meta.ai Meta AI|meta-ai Meta AI|you.com You.com|phind.com Phind|mistral.ai Mistral|poe.com Poe|kagi.com Kagi'
+    .split('|').forEach(function (e) { var i = e.indexOf(' '); _ai[e.slice(0, i)] = e.slice(i + 1) })
 
-  // ─── URL Params ───────────────────────────────────────────────────────────────
-  function getParams() {
-    var p = new URLSearchParams(window.location.search)
-    return {
-      utm_source:   p.get('utm_source')   || null,
-      utm_medium:   p.get('utm_medium')   || null,
-      utm_campaign: p.get('utm_campaign') || null,
-      utm_content:  p.get('utm_content')  || null,
-      utm_term:     p.get('utm_term')     || null,
-      ref:          p.get('ref')          || p.get('ref_param') || null,
-      source:       p.get('source')       || null,
-      via:          p.get('via')          || null,
-      gclid:        p.get('gclid')        || null,
-      gbraid:       p.get('gbraid')       || null,
-      wbraid:       p.get('wbraid')       || null,
-      fbclid:       p.get('fbclid')       || null,
-      msclkid:      p.get('msclkid')      || null,
-      ttclid:       p.get('ttclid')       || null,
-      li_fat_id:    p.get('li_fat_id')    || null,
-      twclid:       p.get('twclid')       || null
-    }
-  }
-
-  // ─── AI Source Detection ──────────────────────────────────────────────────────
-  var AI_HOSTS = {
-    'chat.openai.com': 'ChatGPT', 'chatgpt.com': 'ChatGPT',
-    'claude.ai': 'Claude', 'anthropic.com': 'Claude',
-    'perplexity.ai': 'Perplexity',
-    'gemini.google.com': 'Gemini', 'bard.google.com': 'Gemini',
-    'aistudio.google.com': 'Gemini',
-    'grok.com': 'Grok', 'grok.x.com': 'Grok',
-    'copilot.microsoft.com': 'Copilot',
-    'deepseek.com': 'DeepSeek',
-    'meta.ai': 'Meta AI',
-    'you.com': 'You.com', 'phind.com': 'Phind',
-    'mistral.ai': 'Mistral', 'poe.com': 'Poe',
-    'kagi.com': 'Kagi'
-  }
-
-  var AI_UTM_SOURCES = {
-    'chatgpt': 'ChatGPT', 'chat.openai.com': 'ChatGPT', 'openai': 'ChatGPT',
-    'claude': 'Claude', 'claude.ai': 'Claude', 'anthropic': 'Claude',
-    'perplexity': 'Perplexity', 'perplexity.ai': 'Perplexity',
-    'gemini': 'Gemini', 'bard': 'Gemini', 'google-gemini': 'Gemini',
-    'grok': 'Grok', 'xai': 'Grok',
-    'copilot': 'Copilot', 'bing-copilot': 'Copilot',
-    'deepseek': 'DeepSeek', 'deep-seek': 'DeepSeek',
-    'meta-ai': 'Meta AI', 'meta.ai': 'Meta AI'
-  }
-
-  function detectAISource(referrer, utmSource) {
-    if (utmSource && AI_UTM_SOURCES[utmSource.toLowerCase()]) {
-      return AI_UTM_SOURCES[utmSource.toLowerCase()]
-    }
-    if (referrer) {
-      try {
-        var host = new URL(referrer).hostname.replace('www.', '')
-        if (host === 'bing.com' && referrer.includes('/chat')) return 'Copilot'
-        if (host === 'x.com' && referrer.includes('/i/grok')) return 'Grok'
-        if (AI_HOSTS[host]) return AI_HOSTS[host]
-      } catch (_e) {}
-    }
+  function aiSrc(ref, utmSrc) {
+    if (utmSrc && _ai[utmSrc.toLowerCase()]) return _ai[utmSrc.toLowerCase()]
+    if (ref) try {
+      var h = new URL(ref).hostname.replace('www.', '')
+      if (h === 'bing.com' && ref.indexOf('/chat') > -1) return 'Copilot'
+      if (h === 'x.com'    && ref.indexOf('/i/grok') > -1) return 'Grok'
+      return _ai[h] || null
+    } catch (_) {}
     return null
   }
 
-  function getSourceFromReferrer(referrer) {
-    if (!referrer) return null
-    try {
-      var host = new URL(referrer).hostname.replace('www.', '')
-      if (!host || host === window.location.hostname) return null
-      return host
-    } catch (_e) { return null }
+  // ─── URL params ────────────────────────────────────────────────────────────
+  var _pk = 'utm_source,utm_medium,utm_campaign,utm_content,utm_term,ref,source,via,gclid,gbraid,wbraid,fbclid,msclkid,ttclid,li_fat_id,twclid'.split(',')
+  function params() {
+    var p = new URLSearchParams(location.search), r = {}
+    _pk.forEach(function (k) { r[k] = p.get(k) })
+    return r
   }
 
-  // ─── First-touch derivation (in-memory only, no storage) ─────────────────────
-  // We compute first-touch from the *current page* URL params + referrer.
-  // Since there is no persistent storage, every new "session" restarts first-touch.
-  // This is the cookieless trade-off: first-touch accuracy requires a conversion
-  // on the same session. Multi-session first-touch requires the standard tracker.
-  function deriveFirstTouch(params, referrer) {
-    var source = params.utm_source
-      || params.ref
-      || params.source
-      || getSourceFromReferrer(referrer)
+  // ─── First-touch derivation (in-memory only — no persistent storage) ───────
+  // Cookieless trade-off: first-touch is session-scoped, not cross-session.
+  function deriveFirstTouch(p, ref) {
+    var src = p.utm_source || p.ref || p.source
+      || (ref && (function () {
+        try { var h = new URL(ref).hostname.replace('www.', ''); return h && h !== location.hostname ? h : null } catch (_) {}
+      })())
       || 'direct'
-
-    var medium = params.utm_medium
-      || (params.gclid   ? 'cpc'         : null)
-      || (params.fbclid  ? 'paid_social'  : null)
-      || (params.msclkid ? 'cpc'          : null)
-      || (params.ttclid  ? 'paid_social'  : null)
+    var med = p.utm_medium
+      || (p.gclid || p.gbraid || p.wbraid || p.msclkid ? 'cpc' : null)
+      || (p.fbclid || p.ttclid ? 'paid_social' : null)
       || 'none'
+    return { first_touch_source: src, first_touch_medium: med, first_touch_campaign: p.utm_campaign || '' }
+  }
 
+  // ─── Shared UTM + click-id field builder ───────────────────────────────────
+  function utmFields(p) {
     return {
-      first_touch_source:   source,
-      first_touch_medium:   medium,
-      first_touch_campaign: params.utm_campaign || ''
+      utm_source: p.utm_source, utm_medium: p.utm_medium, utm_campaign: p.utm_campaign,
+      utm_content: p.utm_content, utm_term: p.utm_term,
+      gclid: p.gclid, gbraid: p.gbraid, wbraid: p.wbraid,
+      fbclid: p.fbclid, msclkid: p.msclkid, ttclid: p.ttclid,
+      li_fat_id: p.li_fat_id, twclid: p.twclid
     }
   }
 
-  // ─── Send ─────────────────────────────────────────────────────────────────────
-  function send(endpoint, payload) {
-    var body = JSON.stringify(payload)
-    var url  = API_BASE + endpoint
+  // ─── Send ──────────────────────────────────────────────────────────────────
+  function send(ep, data) {
+    var b = JSON.stringify(data), u = B + ep
     try {
-      if (navigator.sendBeacon) {
-        navigator.sendBeacon(url, new Blob([body], { type: 'application/json' }))
-      } else {
-        fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: body,
-          keepalive: true
-        }).catch(function () {})
-      }
-    } catch (_e) {}
+      navigator.sendBeacon
+        ? navigator.sendBeacon(u, new Blob([b], { type: 'application/json' }))
+        : fetch(u, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: b, keepalive: true }).catch(function () {})
+    } catch (_) {}
   }
 
-  // ─── Flush queued events once IDs arrive ────────────────────────────────────
+  // ─── Flush queued events once IDs arrive ───────────────────────────────────
   function flush() {
-    var q = _queue.slice()
-    _queue = []
+    var q = _q.splice(0)
     for (var i = 0; i < q.length; i++) {
-      send(q[i].endpoint, Object.assign({}, q[i].payload, {
-        anonymous_id: anonymousId,
-        session_id:   sessionId
-      }))
+      q[i].data.anonymous_id = AID
+      q[i].data.session_id   = SID
+      send(q[i].ep, q[i].data)
     }
   }
 
-  // ─── Fetch server-side ID ─────────────────────────────────────────────────────
-  function fetchId(cb) {
-    fetch(API_BASE + '/api/tracker/id?site_key=' + encodeURIComponent(SITE_KEY), {
-      method: 'GET',
-      credentials: 'omit'
-    })
+  // ─── Fetch server-generated visitor ID ─────────────────────────────────────
+  function fetchId() {
+    fetch(B + '/api/tracker/id?site_key=' + encodeURIComponent(K), { credentials: 'omit' })
       .then(function (r) { return r.ok ? r.json() : null })
-      .then(function (json) {
-        if (json && json.visitor_id) {
-          anonymousId = json.visitor_id
-          sessionId   = json.session_id || json.visitor_id
-        } else {
-          // Fallback: use a random ID if server call fails
-          anonymousId = 'cl-' + Math.random().toString(36).slice(2) + Date.now().toString(36)
-          sessionId   = anonymousId
-        }
-        if (cb) cb()
+      .then(function (j) {
+        AID = (j && j.visitor_id) || 'cl-' + Math.random().toString(36).slice(2) + Date.now().toString(36)
+        SID = (j && j.session_id) || AID
         flush()
       })
       .catch(function () {
-        anonymousId = 'cl-' + Math.random().toString(36).slice(2) + Date.now().toString(36)
-        sessionId   = anonymousId
-        if (cb) cb()
+        AID = 'cl-' + Math.random().toString(36).slice(2) + Date.now().toString(36)
+        SID = AID
         flush()
       })
   }
 
-  // ─── Pageview ─────────────────────────────────────────────────────────────────
-  function buildPageviewPayload() {
-    var params   = getParams()
-    var referrer = document.referrer || null
-    var aiSource = detectAISource(referrer, params.utm_source)
-    var ft       = deriveFirstTouch(params, referrer)
-
-    return {
-      site_key:      SITE_KEY,
-      event:         '$pageview',
-      anonymous_id:  anonymousId,   // may be null — flush() fills it later
-      session_id:    sessionId,
-      page_url:      window.location.href,
-      referrer:      referrer,
-      cookieless:    true,
-
-      utm_source:    params.utm_source,
-      utm_medium:    params.utm_medium,
-      utm_campaign:  params.utm_campaign,
-      utm_content:   params.utm_content,
-      utm_term:      params.utm_term,
-      ref_param:     params.ref,
-      source_param:  params.source,
-      via_param:     params.via,
-
-      gclid:         params.gclid,
-      gbraid:        params.gbraid,
-      wbraid:        params.wbraid,
-      fbclid:        params.fbclid,
-      msclkid:       params.msclkid,
-      ttclid:        params.ttclid,
-      li_fat_id:     params.li_fat_id,
-      twclid:        params.twclid,
-
-      first_touch_source:   ft.first_touch_source,
-      first_touch_medium:   ft.first_touch_medium,
-      first_touch_campaign: ft.first_touch_campaign,
-
-      ai_source: aiSource
-    }
-  }
-
+  // ─── Pageview ──────────────────────────────────────────────────────────────
   function sendPageview() {
-    var payload = buildPageviewPayload()
-    if (anonymousId) {
-      send('/api/track', payload)
-    } else {
-      _queue.push({ endpoint: '/api/track', payload: payload })
-    }
+    var p = params(), ref = document.referrer || null
+    var data = Object.assign(
+      { site_key: K, event: '$pageview', anonymous_id: AID, session_id: SID,
+        page_url: location.href, referrer: ref, cookieless: true },
+      utmFields(p),
+      { ref_param: p.ref, source_param: p.source, via_param: p.via },
+      deriveFirstTouch(p, ref),
+      { ai_source: aiSrc(ref, p.utm_source) }
+    )
+    AID ? send('/api/track', data) : _q.push({ ep: '/api/track', data: data })
   }
 
-  // ─── SPA Support ─────────────────────────────────────────────────────────────
-  var lastUrl = window.location.href
-  var _pushState = history.pushState
+  // ─── SPA routing ───────────────────────────────────────────────────────────
+  var _lastUrl = location.href, _ps = history.pushState
   history.pushState = function () {
-    _pushState.apply(this, arguments)
-    if (window.location.href !== lastUrl) {
-      lastUrl = window.location.href
-      sendPageview()
-    }
+    _ps.apply(this, arguments)
+    if (location.href !== _lastUrl) { _lastUrl = location.href; sendPageview() }
   }
-  window.addEventListener('popstate', function () {
-    if (window.location.href !== lastUrl) {
-      lastUrl = window.location.href
-      sendPageview()
-    }
+  addEventListener('popstate', function () {
+    if (location.href !== _lastUrl) { _lastUrl = location.href; sendPageview() }
   })
 
-  // ─── Public API ───────────────────────────────────────────────────────────────
+  // ─── Public API ────────────────────────────────────────────────────────────
   window.sourcetrack = {
-
     conversion: function (opts) {
       opts = opts || {}
-      var params   = getParams()
-      var referrer = document.referrer || null
-      var aiSource = detectAISource(referrer, params.utm_source)
-      var ft       = deriveFirstTouch(params, referrer)
-
-      var payload = {
-        site_key:         SITE_KEY,
-        anonymous_id:     anonymousId,
-        session_id:       sessionId,
-        page_url:         window.location.href,
-        referrer:         referrer,
-        cookieless:       true,
-        conversion_value: opts.value    || opts.conversion_value || 0,
-        conversion_type:  opts.type     || opts.conversion_type  || 'conversion',
-        order_id:         opts.order_id || opts.orderId          || null,
-
-        utm_source:    params.utm_source,
-        utm_medium:    params.utm_medium,
-        utm_campaign:  params.utm_campaign,
-        utm_content:   params.utm_content,
-        utm_term:      params.utm_term,
-
-        gclid:    params.gclid,
-        gbraid:   params.gbraid,
-        wbraid:   params.wbraid,
-        fbclid:   params.fbclid,
-        msclkid:  params.msclkid,
-        ttclid:   params.ttclid,
-        li_fat_id:params.li_fat_id,
-        twclid:   params.twclid,
-
-        first_touch_source:   ft.first_touch_source,
-        first_touch_medium:   ft.first_touch_medium,
-        first_touch_campaign: ft.first_touch_campaign,
-
-        ai_source: aiSource
-      }
-
-      if (anonymousId) {
-        send('/api/conversion', payload)
-      } else {
-        _queue.push({ endpoint: '/api/conversion', payload: payload })
-      }
+      var p = params(), ref = document.referrer || null
+      var data = Object.assign(
+        { site_key: K, anonymous_id: AID, session_id: SID, page_url: location.href, referrer: ref, cookieless: true,
+          conversion_value: opts.value || opts.conversion_value || 0,
+          conversion_type:  opts.type  || opts.conversion_type  || 'conversion',
+          order_id:         opts.order_id || opts.orderId        || null },
+        utmFields(p),
+        deriveFirstTouch(p, ref),
+        { ai_source: aiSrc(ref, p.utm_source) }
+      )
+      AID ? send('/api/conversion', data) : _q.push({ ep: '/api/conversion', data: data })
     },
 
     identify: function (traits) {
       traits = traits || {}
-      var payload = {
-        site_key:     SITE_KEY,
-        anonymous_id: anonymousId,
-        session_id:   sessionId,
-        email:        traits.email || null,
-        name:         traits.name  || null,
-        traits:       traits
-      }
-      if (anonymousId) {
-        send('/api/identify', payload)
-      } else {
-        _queue.push({ endpoint: '/api/identify', payload: payload })
-      }
+      var data = { site_key: K, anonymous_id: AID, session_id: SID, email: traits.email || null, name: traits.name || null, traits: traits }
+      AID ? send('/api/identify', data) : _q.push({ ep: '/api/identify', data: data })
     },
 
-    track: function (eventName, properties) {
-      var payload = {
-        site_key:     SITE_KEY,
-        event:        eventName,
-        anonymous_id: anonymousId,
-        session_id:   sessionId,
-        page_url:     window.location.href,
-        properties:   properties || {}
-      }
-      if (anonymousId) {
-        send('/api/track', payload)
-      } else {
-        _queue.push({ endpoint: '/api/track', payload: payload })
-      }
+    track: function (event, properties) {
+      var data = { site_key: K, event: event, anonymous_id: AID, session_id: SID, page_url: location.href, properties: properties || {} }
+      AID ? send('/api/track', data) : _q.push({ ep: '/api/track', data: data })
     }
   }
 
-  // ─── Boot: fetch ID, then send initial pageview ──────────────────────────────
-  sendPageview() // queued immediately (anonymousId is null)
-  fetchId()      // async — flushes queue when done
-
+  sendPageview()  // queued until fetchId() resolves
+  fetchId()
 })()
