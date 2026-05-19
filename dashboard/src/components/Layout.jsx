@@ -9,21 +9,44 @@ import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { supabase } from '../lib/supabase'
 
-const navItems = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/leads', label: 'Leads', icon: Users },
-  { to: '/campaigns', label: 'Campaigns', icon: BarChart3 },
-  { to: '/report-builder', label: 'Reports', icon: FileBarChart },
-  { to: '/journey', label: 'Journeys', icon: Route },
-  { to: '/analytics', label: 'Analytics', icon: Activity },
-  { to: '/ai-analytics', label: 'AI Analytics', icon: TrendingUp },
-  { to: '/integrations', label: 'Integrations', icon: Plug },
-  { to: '/snippet', label: 'Install', icon: Code },
-  { to: '/debugger', label: 'Live Events', icon: Bug },
-  { to: '/settings', label: 'Settings', icon: Settings },
-  { to: '/billing', label: 'Billing', icon: CreditCard },
-  { to: '/data-quality', label: 'Data Quality', icon: Shield },
-  { to: '/docs', label: 'API Docs', icon: BookOpen }
+// ── Grouped nav — replaces flat 14-item list ─────────────────────────────────
+// "Install" removed: Integrations already surfaces the snippet + "Full Setup Guide" link,
+// making a separate top-level Install entry redundant.
+// Items grouped into 4 logical sections so the nav is scannable at a glance.
+const NAV_GROUPS = [
+  {
+    label: null, // no heading for primary views
+    items: [
+      { to: '/dashboard',     label: 'Dashboard',    icon: LayoutDashboard },
+      { to: '/analytics',     label: 'Analytics',    icon: Activity },
+      { to: '/ai-analytics',  label: 'AI Analytics', icon: TrendingUp },
+      { to: '/campaigns',     label: 'Campaigns',    icon: BarChart3 },
+      { to: '/leads',         label: 'Leads',        icon: Users },
+    ],
+  },
+  {
+    label: 'Attribution',
+    items: [
+      { to: '/report-builder', label: 'Reports',   icon: FileBarChart },
+      { to: '/journey',        label: 'Journeys',  icon: Route },
+    ],
+  },
+  {
+    label: 'Monitoring',
+    items: [
+      { to: '/integrations', label: 'Integrations', icon: Plug },
+      { to: '/debugger',     label: 'Live Events',  icon: Bug },
+      { to: '/data-quality', label: 'Data Quality', icon: Shield },
+    ],
+  },
+  {
+    label: 'Account',
+    items: [
+      { to: '/settings', label: 'Settings',  icon: Settings },
+      { to: '/billing',  label: 'Billing',   icon: CreditCard },
+      { to: '/docs',     label: 'API Docs',  icon: BookOpen },
+    ],
+  },
 ]
 
 const PAGE_TITLES = {
@@ -108,39 +131,55 @@ export default function Layout({ children }) {
           </button>
         </div>
 
-        <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
-          {navItems.map(({ to, label, icon: Icon }) => (
-            <NavLink
-              key={to}
-              to={to}
-              onClick={() => setSidebarOpen(false)}
-              className={({ isActive }) =>
-                `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-st-lime text-st-black'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-hover hover:text-st-black dark:hover:text-white'
-                }`
-              }
-            >
-              <Icon className="w-4 h-4 flex-shrink-0" />
-              <span className="truncate">{label}</span>
-            </NavLink>
+        <nav className="flex-1 p-3 overflow-y-auto space-y-4">
+          {NAV_GROUPS.map((group, gi) => (
+            <div key={gi}>
+              {group.label && (
+                <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-600 select-none">
+                  {group.label}
+                </p>
+              )}
+              <div className="space-y-0.5">
+                {group.items.map(({ to, label, icon: Icon }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    onClick={() => setSidebarOpen(false)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        isActive
+                          ? 'bg-st-lime text-st-black'
+                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-hover hover:text-st-black dark:hover:text-white'
+                      }`
+                    }
+                  >
+                    <Icon className="w-4 h-4 flex-shrink-0" />
+                    <span className="truncate">{label}</span>
+                  </NavLink>
+                ))}
+              </div>
+            </div>
           ))}
           {role === 'super_admin' && (
-            <NavLink
-              to="/admin"
-              onClick={() => setSidebarOpen(false)}
-              className={({ isActive }) =>
-                `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-st-lime text-st-black'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-hover hover:text-st-black dark:hover:text-white'
-                }`
-              }
-            >
-              <Shield className="w-4 h-4 flex-shrink-0" />
-              <span className="truncate">Admin</span>
-            </NavLink>
+            <div>
+              <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-600 select-none">
+                Super Admin
+              </p>
+              <NavLink
+                to="/admin"
+                onClick={() => setSidebarOpen(false)}
+                className={({ isActive }) =>
+                  `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-st-lime text-st-black'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-hover hover:text-st-black dark:hover:text-white'
+                  }`
+                }
+              >
+                <Shield className="w-4 h-4 flex-shrink-0" />
+                <span className="truncate">Admin</span>
+              </NavLink>
+            </div>
           )}
         </nav>
 
