@@ -254,6 +254,18 @@ export default function Snippet() {
         </div>
       </div>
 
+      {/* Privacy policy reminder — required disclosure for GDPR / CCPA */}
+      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex gap-3">
+        <div className="text-amber-600 dark:text-amber-400 text-lg leading-none">⚠</div>
+        <div className="text-sm text-amber-900 dark:text-amber-200">
+          <strong>Update your privacy policy before deploying.</strong> SourceTrack is cookieless and
+          does not fingerprint, but you still collect IP-derived country, UTM parameters, and an
+          anonymous identifier — required disclosures under GDPR (EU), CCPA (California), and the
+          UK PECR. The tracker honors <code className="text-xs">navigator.doNotTrack</code> and
+          Global Privacy Control automatically, but a privacy notice is still your responsibility.
+        </div>
+      </div>
+
       {/* Verify Install */}
       <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#333838] p-6 space-y-4">
         <h3 className="font-semibold text-st-black">Verify Installation</h3>

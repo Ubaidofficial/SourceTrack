@@ -1,16 +1,8 @@
 import { Router } from 'express'
-import { createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
+import { getSupabase } from '../lib/supabase.js'
 
 const router = Router()
-
-function getSupabase() {
-  return createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY,
-    { global: { fetch }, realtime: { transport: WebSocket } }
-  )
-}
 
 // POST /api/reports/saved — save a new report config
 // Body: { name, config } — config is a JSON object with report parameters
@@ -71,7 +63,6 @@ router.get('/saved', async (req, res) => {
     return res.status(500).json({ success: false, data: null, error: 'Failed to list saved reports' })
   }
 })
-
 
 // PUT /api/reports/saved/:id — update an existing saved report
 // Auth: requireUserAuth + validateSiteKey + requireSiteMembership applied at parent mount

@@ -1,7 +1,6 @@
 import express from 'express'
 import { queryHogQL } from '../lib/posthog.js'
-import { createClient } from '@supabase/supabase-js'
-import WebSocket from 'ws'
+import { getSupabase } from '../lib/supabase.js'
 
 const router = express.Router()
 
@@ -287,11 +286,7 @@ router.patch('/settings', async (req, res) => {
       })
     }
 
-    const supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_KEY,
-      { realtime: { transport: WebSocket } }
-    )
+    const supabase = getSupabase()
 
     const updates = {}
     if (windowDays !== null) updates.attribution_window_days = windowDays

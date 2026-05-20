@@ -1,20 +1,12 @@
 import { Router } from 'express'
-import { createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
 import { queryHogQL } from '../lib/posthog.js'
+import { getSupabase } from '../lib/supabase.js'
 
 const router = Router()
 
 function esc(str) {
   return str.replace(/'/g, "''")
-}
-
-function getSupabase() {
-  return createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY,
-    { global: { fetch }, realtime: { transport: WebSocket } }
-  )
 }
 
 const MAX_STEP = 6

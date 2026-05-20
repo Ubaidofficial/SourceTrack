@@ -1,17 +1,9 @@
-import { createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
 import NodeCache from 'node-cache'
+import { getSupabase } from '../lib/supabase.js'
 
 // Cache counts for 5 minutes — avoids a Supabase query on every pageview
 const countCache = new NodeCache({ stdTTL: 300, checkperiod: 60 })
-
-function getSupabase() {
-  return createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY,
-    { realtime: { transport: WebSocket } }
-  )
-}
 
 // Monthly lead limits per plan (unique sessions counted from pageviews table)
 const PLAN_LIMITS = {

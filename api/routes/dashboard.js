@@ -1,12 +1,8 @@
 import { Router } from 'express'
 import { validateSiteKey } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
-import { createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
-
-function getSupabaseAdmin() {
-  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { global: { fetch }, realtime: { transport: WebSocket } })
-}
+import { getSupabase as getSupabaseAdmin } from '../lib/supabase.js'
 
 const router = Router()
 
@@ -300,7 +296,6 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     return res.status(500).json({ success: false, data: null, error: 'Dashboard overview failed' })
   }
 })
-
 
 router.get('/cac', validateSiteKey, async (req, res) => {
   try {

@@ -1,8 +1,7 @@
 import Stripe from 'stripe'
-import { createClient } from '@supabase/supabase-js'
-import WebSocket from 'ws'
 import { Router } from 'express'
 import NodeCache from 'node-cache'
+import { getSupabase } from '../lib/supabase.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2024-06-20'
@@ -29,14 +28,6 @@ function planFromPriceId(priceId) {
   return getPriceMap()[priceId] || 'pro'
 }
 
-// ── Supabase ──────────────────────────────────────────────────────────────────
-function getSupabase() {
-  return createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY,
-    { global: { fetch }, realtime: { transport: WebSocket } }
-  )
-}
 
 async function getSiteByKey(siteKey) {
   const { data, error } = await getSupabase()

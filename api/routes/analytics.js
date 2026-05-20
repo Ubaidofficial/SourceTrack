@@ -1,13 +1,12 @@
 import express from 'express'
-import { createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
 import { requireUserAuth } from '../middleware/user-auth.js'
 import { validateSiteKey } from '../middleware/auth.js'
 import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
+import { getSupabase } from '../lib/supabase.js'
 
 const router = express.Router()
-function getSupabase() { return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { global: { fetch }, realtime: { transport: WebSocket } }) }
 
 // Known bot/crawler UA patterns — silent drop (return 200 so bots don't retry)
 const BOT_UA_PATTERN = /bot|crawl|spider|slurp|mediapartners|adsbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot|discordbot|applebot|bingpreview|googleweblight|lighthouse|pagespeed|headlesschrome|phantomjs|selenium|puppeteer|playwright|wget|curl\/|python-requests|axios\/|go-http|java\/|ruby\/|php\//i
@@ -20,7 +19,6 @@ router.post('/collect', async (req, res) => {
     // Bot filter — silent drop, 200 so crawlers don't retry
     const ua = req.headers['user-agent'] || ''
     if (!ua || BOT_UA_PATTERN.test(ua)) return res.json({ ok: true })
-
 
     const supabase = getSupabase()
     const { data: site } = await supabase.from('sites').select('id').eq('site_key', site_key).single()
@@ -122,7 +120,6 @@ router.get('/summary', requireUserAuth, validateSiteKey, async (req, res) => {
             res.json({ success: true, data: { period: { days, from: from.slice(0, 10), to: new Date().toISOString().slice(0, 10) }, kpis: { pageviews: pv.length, unique_visitors: uniqueSessions, new_visitors: newVisitors, returning_visitors: returningVisitors, bounce_rate: bounceRate, avg_duration_seconds: avgDuration }, top_pages: topPages, top_sources: topSources, ai_sources: aiSources, devices: deviceCounts, top_countries: topCountries, trend } })
   } catch (err) { console.error('[analytics/summary]', err.message); res.status(500).json({ error: 'Summary failed' }) }
 })
-
 
 router.get('/entry-exit', requireUserAuth, validateSiteKey, async (req, res) => {
   try {

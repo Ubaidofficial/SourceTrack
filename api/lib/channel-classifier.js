@@ -44,7 +44,10 @@ export function channelFromEvent(props = {}) {
   // 4. Display / Retargeting
   if (['display', 'banner', 'gdn', 'expandable', 'retargeting'].includes(medium)) return 'Display'
 
-  // 5. Email / SMS
+  // 5. Affiliate (medium-based — most affiliate networks pass utm_medium=affiliate)
+  if (['affiliate', 'affiliates', 'partner', 'cpa', 'cps'].includes(medium)) return 'Affiliate'
+
+  // 6. Email / SMS
   if (['email', 'e-mail', 'newsletter', 'mailing', 'edm'].includes(medium)) return 'Email'
   if (['sms', 'text', 'mms'].includes(medium)) return 'SMS'
 

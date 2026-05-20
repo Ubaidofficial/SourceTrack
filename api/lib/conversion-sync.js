@@ -4,6 +4,46 @@ function sha256(str) {
   return createHash('sha256').update(str.trim().toLowerCase()).digest('hex')
 }
 
+/**
+ * fetch wrapper with bounded retry on 429 / 5xx.
+ * CAPI providers occasionally return transient errors (Meta especially during
+ * peak hours). Without retry, a single network hiccup means a lost conversion
+ * in the ad platform — bad for ROAS reporting.
+ *
+ * Retries: 2 attempts after the first (3 total), exponential backoff.
+ * 4xx other than 429 (auth, validation) are surfaced immediately — retrying
+ * those would only burn rate-limit budget.
+ */
+async function fetchWithRetry(url, opts = {}, label = 'CAPI') {
+  const maxAttempts = 3
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    let response
+    try {
+      response = await fetch(url, opts)
+    } catch (networkErr) {
+      // DNS / connection reset / timeout — retry transparently.
+      if (attempt < maxAttempts - 1) {
+        const wait = 500 * Math.pow(2, attempt)
+        console.warn(`[${label}] network error (${networkErr.message}) — retrying in ${wait}ms`)
+        await new Promise(r => setTimeout(r, wait))
+        continue
+      }
+      throw networkErr
+    }
+
+    const retryable = response.status === 429 || response.status >= 500
+    if (retryable && attempt < maxAttempts - 1) {
+      const retryAfter = parseInt(response.headers.get('retry-after') || '0', 10)
+      const wait = retryAfter > 0 ? retryAfter * 1000 : 500 * Math.pow(2, attempt)
+      console.warn(`[${label}] HTTP ${response.status} — retrying in ${wait}ms (attempt ${attempt + 1}/${maxAttempts})`)
+      await new Promise(r => setTimeout(r, wait))
+      continue
+    }
+
+    return response
+  }
+}
+
 // ─── Meta CAPI event name mapping ────────────────────────────────────────────
 // Maps SourceTrack conversion_type → Meta standard event name.
 // Full reference: https://developers.facebook.com/docs/meta-pixel/reference
@@ -96,9 +136,10 @@ export async function sendMetaCAPI(site, evt) {
   const testCode = process.env.META_TEST_EVENT_CODE
   if (testCode) body.test_event_code = testCode
 
-  const r = await fetch(
+  const r = await fetchWithRetry(
     `https://graph.facebook.com/v19.0/${site.meta_pixel_id}/events?access_token=${site.meta_capi_token}`,
-    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
+    'Meta CAPI'
   )
   const result = await r.json()
   if (!r.ok) console.error('[Meta CAPI]', eventName, JSON.stringify(result))
@@ -143,7 +184,7 @@ export async function sendGoogleConversion(site, evt) {
     }]
   }
 
-  const r = await fetch(
+  const r = await fetchWithRetry(
     `https://googleads.googleapis.com/v16/customers/${site.google_ads_customer_id}:uploadClickConversions`,
     {
       method: 'POST',
@@ -153,7 +194,8 @@ export async function sendGoogleConversion(site, evt) {
         'Content-Type':    'application/json'
       },
       body: JSON.stringify(body)
-    }
+    },
+    'Google Ads CAPI'
   )
   if (!r.ok) {
     const detail = await r.text().catch(() => '')
@@ -166,7 +208,7 @@ export async function sendGoogleConversion(site, evt) {
 export async function sendMicrosoftConversion(site, evt) {
   if (!site.microsoft_tag_id || !site.microsoft_capi_token) return null
 
-  const r = await fetch('https://bat.bing.com/bat.svc/c', {
+  const r = await fetchWithRetry('https://bat.bing.com/bat.svc/c', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -176,7 +218,7 @@ export async function sendMicrosoftConversion(site, evt) {
       Currency: evt.currency ?? 'USD',
       EventType: evt.conversion_type ?? 'conversion'
     })
-  })
+  }, 'Microsoft UET')
   if (!r.ok) console.error('[Microsoft UET] HTTP', r.status)
   return r.ok
 }
@@ -201,7 +243,7 @@ export async function sendLinkedInConversion(site, evt) {
     body.user.userIds.push({ idType: 'LINKEDIN_FIRST_PARTY_ADS_TRACKING_UUID', idValue: evt.li_fat_id })
   }
 
-  const r = await fetch('https://api.linkedin.com/v2/conversionEvents', {
+  const r = await fetchWithRetry('https://api.linkedin.com/v2/conversionEvents', {
     method: 'POST',
     headers: {
       'Authorization':    `Bearer ${site.linkedin_capi_token}`,
@@ -209,7 +251,7 @@ export async function sendLinkedInConversion(site, evt) {
       'Content-Type':     'application/json'
     },
     body: JSON.stringify(body)
-  })
+  }, 'LinkedIn CAPI')
   if (!r.ok) console.error('[LinkedIn CAPI] HTTP', r.status)
   return r.ok
 }
@@ -242,7 +284,7 @@ export async function sendTikTokConversion(site, eventData) {
       }
     }
 
-    const res = await fetch('https://business-api.tiktok.com/open_api/v1.3/event/track/', {
+    const res = await fetchWithRetry('https://business-api.tiktok.com/open_api/v1.3/event/track/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -252,7 +294,7 @@ export async function sendTikTokConversion(site, eventData) {
         pixel_code: site.tiktok_pixel_id,
         batch: [payload]
       })
-    })
+    }, 'TikTok CAPI')
     if (!res.ok) {
       const err = await res.text()
       console.error('[TikTok CAPI]', eventName, err.slice(0, 200))

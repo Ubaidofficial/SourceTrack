@@ -7,18 +7,10 @@
  */
 
 import { Router } from 'express'
-import { createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
+import { getSupabase } from '../lib/supabase.js'
 
 const router = Router()
-
-function getSupabase() {
-  return createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY,
-    { realtime: { transport: WebSocket } }
-  )
-}
 
 const ALLOWED_TYPES = new Set(['note', 'deploy', 'campaign', 'alert'])
 

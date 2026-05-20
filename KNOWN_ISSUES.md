@@ -104,6 +104,31 @@ Do not commit unnecessary `.bak` files.
 
 ## Recently fixed
 
+### Production Readiness Audit v2 — Round 1 + 2 (2026-05-20)
+
+Audit-driven fixes covering attribution, CAPI, security, scaling, and ops.
+
+**Round 1** (commit 8fc8809):
+- Bot filter on `/api/track` — keeps PostHog clean of crawler events
+- DNT / Global Privacy Control honoured in `tracker.js` and `analytics.js`
+- Stripe webhook idempotency (event.id dedup in NodeCache, 24h TTL)
+- Concurrency lock on nightly-attribution via `job_runs.status='running'`
+- PostHog 429 / 5xx retry with exponential backoff and `Retry-After`
+- Graceful SIGTERM/SIGINT shutdown — drains in-flight requests on deploy
+- Fail-fast env validation at startup (SUPABASE_URL / SERVICE_KEY / POSTHOG_*)
+- Performance index migration `20260520000001_attribution_performance_indexes.sql`
+  (7 indexes — applied & validated in Supabase)
+
+**Round 2** (this commit):
+- Singleton Supabase client (`api/lib/supabase.js`) — replaced 35 `createClient()`
+  calls across 32 files
+- Tracker cache headers: `public, max-age=86400, stale-while-revalidate=604800, immutable`
+- Parallel nightly attribution — bounded concurrency 4 (env `NIGHTLY_CONCURRENCY`)
+- CAPI retry on 429/5xx/network (Meta, Google, Microsoft, LinkedIn, TikTok)
+- Browser/OS enrichment in /api/track and /api/conversion
+- Affiliate channel classification
+- Privacy policy reminder in Snippet.jsx install flow
+
 ### Conversion ref/source/via parity (Session 78)
 
 `api/routes/conversion.js` now persists `ref_param`, `source_param`, and `via_param` on conversion events, matching `api/routes/track.js`.

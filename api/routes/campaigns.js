@@ -1,8 +1,7 @@
 import express from 'express'
 import { getFlexibleReport } from '../lib/attribution-engine.js'
-import { createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
-function getSupabase() { return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { global: { fetch }, realtime: { transport: WebSocket } }) }
+import { getSupabase } from '../lib/supabase.js'
 
 const ALLOWED_DIMS = new Set(['source', 'medium', 'campaign', 'ai_source'])
 const MAX_DAYS = 365

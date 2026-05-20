@@ -1,14 +1,6 @@
-import { createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
 import NodeCache from 'node-cache'
-
-function getSupabase() {
-  return createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY,
-    { realtime: { transport: WebSocket } }
-  )
-}
+import { getSupabase } from '../lib/supabase.js'
 
 const TRIAL_DAYS = 14
 

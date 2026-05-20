@@ -1,20 +1,12 @@
-import { createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
 import dotenv from 'dotenv'
+import { getSupabase } from '../lib/supabase.js'
 dotenv.config()
 
 const isMonthly = process.argv.includes('--monthly')
 const periodLabel = isMonthly ? 'Monthly' : 'Weekly'
 const days = isMonthly ? 30 : 7
 const jobName = isMonthly ? 'email-reports-monthly' : 'email-reports-weekly'
-
-function getSupabase() {
-  return createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY,
-    { realtime: { transport: WebSocket } }
-  )
-}
 
 function dateRange() {
   const end = new Date()

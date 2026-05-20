@@ -5,8 +5,7 @@ import NodeCache from 'node-cache'
 import { ph } from '../lib/posthog.js'
 import { dispatchWebhook } from '../lib/webhook.js'
 import { sendMetaCAPI, sendGoogleConversion, sendMicrosoftConversion, sendLinkedInConversion, sendTikTokConversion } from '../lib/conversion-sync.js'
-import { createClient as _capiClient } from '@supabase/supabase-js'
-import _ws from 'ws'
+import { getSupabase } from '../lib/supabase.js'
 
 // In-memory dedup cache — 24h TTL. Prevents duplicate conversions when:
 // - Form submits twice (double-click, retry)
@@ -48,6 +47,8 @@ function enrich(req) {
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || ''
   const ua = req.headers['user-agent'] || ''
   const parser = new UAParser(ua)
+  const browser = parser.getBrowser()
+  const os = parser.getOS()
 
   let country = null
   if (ip) {
@@ -57,6 +58,10 @@ function enrich(req) {
 
   return {
     device_type: parser.getDevice().type || 'desktop',
+    browser_name: (browser.name || '').toLowerCase() || null,
+    browser_version: browser.version || null,
+    os_name: os.name || null,
+    os_version: os.version || null,
     country,
     server_timestamp: new Date().toISOString(),
     ai_source: req.ai_source || null
@@ -68,10 +73,8 @@ function normalizeUtm(value) {
   return value.trim().toLowerCase()
 }
 
-function getCapiSupabase() {
-  return _capiClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY,
-    { realtime: { transport: _ws } })
-}
+// Alias kept for the CAPI block readability — same singleton underneath.
+const getCapiSupabase = getSupabase
 
 export async function conversion(req, res) {
   try {
@@ -103,6 +106,10 @@ export async function conversion(req, res) {
       twclid: req.body.twclid || null,
       ai_source: enriched.ai_source,
       device_type: enriched.device_type,
+      browser_name: enriched.browser_name,
+      browser_version: enriched.browser_version,
+      os_name: enriched.os_name,
+      os_version: enriched.os_version,
       country: enriched.country,
       server_timestamp: enriched.server_timestamp,
       ingestion_method: 'server_routed',

@@ -11,6 +11,8 @@ function enrich(req) {
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || ''
   const ua = req.headers['user-agent'] || ''
   const parser = new UAParser(ua)
+  const browser = parser.getBrowser()
+  const os = parser.getOS()
 
   let country = null
   if (ip) {
@@ -20,6 +22,10 @@ function enrich(req) {
 
   return {
     device_type: parser.getDevice().type || 'desktop',
+    browser_name: (browser.name || '').toLowerCase() || null,
+    browser_version: browser.version || null,
+    os_name: os.name || null,
+    os_version: os.version || null,
     country,
     server_timestamp: new Date().toISOString(),
     ai_source: req.ai_source || null
@@ -70,6 +76,10 @@ export async function track(req, res) {
         twclid: req.body.twclid || null,
         ai_source: enriched.ai_source,
         device_type: enriched.device_type,
+        browser_name: enriched.browser_name,
+        browser_version: enriched.browser_version,
+        os_name: enriched.os_name,
+        os_version: enriched.os_version,
         country: enriched.country,
         server_timestamp: enriched.server_timestamp,
         ingestion_method: 'server_routed',

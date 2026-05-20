@@ -1,13 +1,12 @@
 import dotenv from 'dotenv'
 dotenv.config()
 
-import { createClient as _createClient } from '@supabase/supabase-js'
-import WebSocket from 'ws'
+import { getSupabase } from '../lib/supabase.js'
 
 // Shared channel classifier — single source of truth with the live attribution engine
 import { channelFromEvent } from '../lib/channel-classifier.js'
 
-const _supabase = _createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { realtime: { transport: WebSocket } })
+const _supabase = getSupabase()
 const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL
 
 async function _slackAlert(emoji, heading, detail) {
@@ -33,10 +32,7 @@ async function _writeJobRun({ status, conversions_processed, error_message, dura
 let _processed = 0
 const _t0 = Date.now()
 
-const supabase = _createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-)
+const supabase = _supabase
 
 const POSTHOG_PERSONAL_API_KEY = process.env.POSTHOG_PERSONAL_API_KEY
 const POSTHOG_PROJECT_ID = process.env.POSTHOG_PROJECT_ID
@@ -92,22 +88,37 @@ async function main() {
     }
     
     log(`Found ${sites.length} sites to process`)
-    
+
+    // Bounded-concurrency runner. Sequential processing (the old loop) bottlenecks
+    // on per-site PostHog round-trips — at 100 sites with ~1s/site that's ~17min.
+    // Concurrency 4 keeps us well under PostHog's per-IP rate ceiling while
+    // cutting wall-clock time roughly to (sites / 4). Tune via env if needed.
+    const CONCURRENCY = Math.max(1, Math.min(8, parseInt(process.env.NIGHTLY_CONCURRENCY || '4', 10)))
     let totalProcessed = 0
     let totalFailed = 0
-    
-    for (const site of sites) {
-      try {
-        const result = await processSite(site)
-        totalProcessed += result.processed
-        totalFailed += result.failed
-        await sleep(500)
-      } catch (error) {
-        logWarn(`Site ${site.site_key} failed: ${error.message}`)
-        totalFailed++
+    let cursor = 0
+
+    async function worker() {
+      while (cursor < sites.length) {
+        const site = sites[cursor++]
+        try {
+          const result = await processSite(site)
+          totalProcessed += result.processed
+          totalFailed += result.failed
+        } catch (error) {
+          logWarn(`Site ${site.site_key} failed: ${error.message}`)
+          totalFailed++
+        }
+        // Small jitter prevents all workers from hammering PostHog at the same
+        // moment when one site finishes — spreads load across the rate window.
+        await sleep(100 + Math.floor(Math.random() * 200))
       }
     }
-    
+
+    const workerCount = Math.min(CONCURRENCY, sites.length)
+    log(`Running ${workerCount} workers (NIGHTLY_CONCURRENCY=${CONCURRENCY})`)
+    await Promise.all(Array.from({ length: workerCount }, worker))
+
     const duration = ((Date.now() - startTime) / 1000).toFixed(2)
     log(`Completed: ${totalProcessed} conversions processed, ${totalFailed} failed, ${duration}s`)
     _processed = totalProcessed

@@ -2,8 +2,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
 import { dispatchWebhook } from '../lib/webhook.js'
 import { sendMetaCAPI, sendGoogleConversion, sendMicrosoftConversion, sendLinkedInConversion, sendTikTokConversion } from '../lib/conversion-sync.js'
-import { createClient } from '@supabase/supabase-js'
-import WebSocket from 'ws'
+import { getSupabase } from '../lib/supabase.js'
 
 function getFirstTouchFields(body = {}) {
   const props = body.properties || {}
@@ -14,9 +13,8 @@ function getFirstTouchFields(body = {}) {
   }
 }
 
-function getCapiSupabase() {
-  return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { realtime: { transport: WebSocket } })
-}
+// Alias kept for the CAPI block readability — same singleton underneath.
+const getCapiSupabase = getSupabase
 
 export async function conversionOffline(req, res) {
   try {

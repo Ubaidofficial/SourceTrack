@@ -10,18 +10,10 @@
  */
 
 import { Router } from 'express'
-import { createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
+import { getSupabase } from '../lib/supabase.js'
 
 export const gdprRouter = Router()
-
-function getSupabase() {
-  return createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY,
-    { realtime: { transport: WebSocket } }
-  )
-}
 
 // Helper: resolve site record for calling user (membership-aware)
 async function getSiteForUser(supabase, userId, siteKey) {

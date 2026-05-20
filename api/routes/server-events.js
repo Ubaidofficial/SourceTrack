@@ -1,20 +1,13 @@
 import { Router } from 'express'
-import { createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
 import { createHash } from 'crypto'
 import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
+import { getSupabase } from '../lib/supabase.js'
 
 const router = Router()
-function getSupabase() {
-  return createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY,
-    { global: { fetch }, realtime: { transport: WebSocket } }
-  )
-}
 
 router.post('/event', async (req, res) => {
   try {

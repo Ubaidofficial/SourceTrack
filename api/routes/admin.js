@@ -1,21 +1,13 @@
 import { Router } from 'express'
-import { createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
 import { requireRole } from '../middleware/user-auth.js'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { getSupabase } from '../lib/supabase.js'
 
 const router = Router()
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-
-function getSupabase() {
-  return createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY,
-    { global: { fetch }, realtime: { transport: WebSocket } }
-  )
-}
 
 // All admin routes require super_admin role
 router.use(requireRole('super_admin'))

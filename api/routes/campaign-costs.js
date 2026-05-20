@@ -1,11 +1,10 @@
 import express from 'express'
-import { createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
 import { requireUserAuth } from '../middleware/user-auth.js'
 import { validateSiteKey } from '../middleware/auth.js'
+import { getSupabase } from '../lib/supabase.js'
 
 const router = express.Router()
-function getSupabase() { return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY, { global: { fetch }, realtime: { transport: WebSocket } }) }
 
 router.get('/', requireUserAuth, validateSiteKey, async (req, res) => {
   try {

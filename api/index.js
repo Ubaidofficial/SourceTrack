@@ -4,8 +4,7 @@ import compression from 'compression'
 import helmet from 'helmet'
 import cors from 'cors'
 import NodeCache from 'node-cache'
-import { createClient } from '@supabase/supabase-js'
-import WebSocket from 'ws'
+import { getSupabase } from './lib/supabase.js'
 
 import { defaultLimit, trackLimit } from './middleware/rate-limit.js'
 import { validateSiteKey } from './middleware/auth.js'
@@ -95,14 +94,6 @@ if (!process.env.POSTHOG_API_KEY) console.warn('WARN: POSTHOG_API_KEY is not set
 if (!process.env.POSTHOG_PERSONAL_API_KEY) console.warn('WARN: POSTHOG_PERSONAL_API_KEY is not set')
 if (!process.env.POSTHOG_PROJECT_ID) console.warn('WARN: POSTHOG_PROJECT_ID is not set')
 
-function getSupabase() {
-  return createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY,
-    { realtime: { transport: WebSocket } }
-  )
-}
-
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
   .split(',')
   .map(s => s.trim())
@@ -158,11 +149,17 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }))
 
 // Allow SourceTrack pixel assets to load on customer websites
 
+// Browsers re-request tracker.min.js on every customer pageview unless we
+// tell them otherwise. 24h + immutable is safe because we re-deploy when the
+// tracker changes — and customers cache-bust by waiting for the deploy.
+const TRACKER_CACHE_HEADER = 'public, max-age=86400, stale-while-revalidate=604800, immutable'
+
 // Root alias required by tracker/loader.min.js
 app.get('/tracker.min.js', (req, res) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*')
   res.setHeader('Access-Control-Allow-Credentials', 'true')
+  res.setHeader('Cache-Control', TRACKER_CACHE_HEADER)
   res.type('application/javascript')
   res.sendFile(process.cwd() + '/tracker/tracker.min.js')
 })
@@ -171,6 +168,10 @@ app.use('/tracker', (req, res, next) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*')
   res.setHeader('Access-Control-Allow-Credentials', 'true')
+  // Cache .min.js (production artifacts); leave .js (dev) uncached
+  if (req.path.endsWith('.min.js')) {
+    res.setHeader('Cache-Control', TRACKER_CACHE_HEADER)
+  }
   next()
 })
 

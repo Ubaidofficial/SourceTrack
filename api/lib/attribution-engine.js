@@ -2,6 +2,7 @@ import NodeCache from 'node-cache'
 import { queryHogQL } from './posthog.js'
 import { deriveSessions, annotateSessions } from './sessionization.js'
 import { channelFromEvent } from './channel-classifier.js'
+import { getSupabase } from './supabase.js'
 
 const cache = new NodeCache({ stdTTL: 60, checkperiod: 30 })
 
@@ -1578,11 +1579,7 @@ export async function getPreAggregatedAttribution({
   metric = 'revenue',
   filters = {}
 }) {
-  const { createClient } = await import('@supabase/supabase-js')
-  const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY
-  )
+  const supabase = getSupabase()
 
   // Determine which attribution field to use
   const sourceField = model === 'first_touch' ? 'first_touch_source' : 'last_touch_source'
@@ -1692,11 +1689,7 @@ export async function getUShapedAttribution({
   groupBy = 'source',
   metric = 'revenue'
 }) {
-  const { createClient } = await import('@supabase/supabase-js')
-  const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY
-  )
+  const supabase = getSupabase()
 
   const { data, error } = await supabase
     .from('attributed_conversions')
@@ -1743,11 +1736,7 @@ export async function getTimeDecayAttribution({
   groupBy = 'source',
   metric = 'revenue'
 }) {
-  const { createClient } = await import('@supabase/supabase-js')
-  const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY
-  )
+  const supabase = getSupabase()
 
   const { data, error } = await supabase
     .from('attributed_conversions')
@@ -1791,11 +1780,7 @@ export async function getWShapedAttribution({
   groupBy = 'source',
   metric = 'revenue'
 }) {
-  const { createClient } = await import('@supabase/supabase-js')
-  const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY
-  )
+  const supabase = getSupabase()
 
   const { data, error } = await supabase
     .from('attributed_conversions')
@@ -1839,11 +1824,7 @@ export async function getLinearAttribution({
   groupBy = 'source',
   metric = 'revenue'
 }) {
-  const { createClient } = await import('@supabase/supabase-js')
-  const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY
-  )
+  const supabase = getSupabase()
 
   const { data, error } = await supabase
     .from('attributed_conversions')

@@ -7,6 +7,70 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased] — 2026-05-20
 
+### Production Readiness Audit v2 — Round 2 (Scale + Hardening)
+
+After landing the round-1 audit fixes (bot filter, DNT, env validation, SIGTERM,
+Stripe idempotency, job-lock, PostHog 429-retry, perf-index migration), this
+round closes the remaining "controlled beta → public launch" gaps the audit
+identified.
+
+#### Performance
+
+**Singleton Supabase client** (`api/lib/supabase.js` + 32 callers)
+- Before: 35 separate `createClient(...)` calls — one per route file and job —
+  each rebuilding the WebSocket transport on every HTTP request.
+- After: one shared instance lazily constructed on first `getSupabase()` call.
+  Mechanical refactor across 28 files via brace-counting AST rewrite (4 special
+  cases — `getCapiSupabase`, `getSupabaseAdmin`, dynamic `await import()` in
+  `attribution-engine.js` — handled by hand).
+- All routes still parse, all 4 jobs still run, no behaviour change.
+
+**Tracker cache headers** (`api/index.js`)
+- `/tracker.min.js` and `/tracker/*.min.js` now serve with
+  `Cache-Control: public, max-age=86400, stale-while-revalidate=604800, immutable`.
+  Previously customers' browsers re-downloaded the tracker on every pageview;
+  now once per day with a 7-day stale-while-revalidate window.
+
+**Parallel nightly attribution** (`api/jobs/nightly-attribution.js`)
+- Replaced sequential `for (const site of sites)` loop with a bounded-concurrency
+  worker pool (default 4, tunable via `NIGHTLY_CONCURRENCY` env var, capped 1–8).
+- At 100 sites with ~1s/site this drops wall-clock time from ~17 min to ~4 min
+  while staying inside PostHog's per-IP rate ceiling.
+- 100–300 ms jitter between site claims to prevent worker thundering.
+
+#### Reliability
+
+**CAPI retry on transient failures** (`api/lib/conversion-sync.js`)
+- Added `fetchWithRetry()` wrapper: up to 3 attempts on 429 / 5xx / network
+  errors with exponential backoff (500ms → 1s → 2s) and `Retry-After` honour.
+- Applied to all 5 providers: Meta, Google Ads, Microsoft UET, LinkedIn, TikTok.
+- 4xx (auth / validation errors) still fail fast — retrying those wastes the
+  rate budget.
+
+#### Observability
+
+**Browser/OS in PostHog event properties** (`api/routes/track.js`, `api/routes/conversion.js`)
+- `enrich()` already instantiated `UAParser` for device_type but threw away
+  browser and OS data. Now also writes `browser_name`, `browser_version`,
+  `os_name`, `os_version` — enables cohort splits by browser/OS in the
+  dashboard without re-parsing UAs at query time.
+
+#### Reporting
+
+**Affiliate channel** (`api/lib/channel-classifier.js`)
+- New rule: `utm_medium` in `['affiliate','affiliates','partner','cpa','cps']`
+  → `Affiliate` channel. Previously these fell through to "Other Campaign".
+- Inserted before Email/SMS, after Display.
+
+#### Compliance
+
+**Privacy policy reminder in install flow** (`dashboard/src/pages/Snippet.jsx`)
+- New amber callout on the Install page reminding customers to disclose
+  data collection in their privacy policy before deploying. Lists what
+  SourceTrack collects (IP-derived country, UTMs, anonymous ID), notes
+  GDPR/CCPA/UK PECR, and points out that DNT and Global Privacy Control
+  are honoured automatically.
+
 ### SEO & Social Sharing Overhaul
 
 #### Bug Fixes
