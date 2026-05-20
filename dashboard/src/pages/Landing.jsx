@@ -54,12 +54,12 @@ const FEATURES = [
 
 // ── Attribution models ────────────────────────────────────────────────────────
 const MODELS = [
-  { name: 'First Touch', desc: '100% credit to the first interaction', color: 'bg-blue-500' },
-  { name: 'Last Touch', desc: '100% credit to the final touchpoint', color: 'bg-purple-500' },
-  { name: 'Linear', desc: 'Equal credit across all touchpoints', color: 'bg-green-500' },
-  { name: 'Time Decay', desc: 'More credit to recent touchpoints', color: 'bg-yellow-500' },
-  { name: 'U-Shaped', desc: '40% first, 40% last, 20% middle', color: 'bg-orange-500' },
-  { name: 'W-Shaped', desc: '30% first, 30% mid, 30% last', color: 'bg-pink-500' },
+  { name: 'First Touch',  desc: '100% credit to the first interaction',   color: 'bg-blue-500' },
+  { name: 'Last Touch',   desc: '100% credit to the final touchpoint',    color: 'bg-purple-500' },
+  { name: 'Linear',       desc: 'Equal credit across all touchpoints',    color: 'bg-green-500' },
+  { name: 'Time Decay',   desc: 'More credit to recent touchpoints',      color: 'bg-yellow-500' },
+  { name: 'U-Shaped',     desc: '40% first, 40% last, 20% middle',        color: 'bg-orange-500' },
+  { name: 'W-Shaped',     desc: '30% first, 30% mid, 30% last',           color: 'bg-pink-500' },
 ]
 
 // ── AI platforms ──────────────────────────────────────────────────────────────
@@ -71,114 +71,168 @@ const AI_PLATFORMS = [
 
 // ── Integrations ──────────────────────────────────────────────────────────────
 const INTEGRATIONS = [
-  { name: 'Meta Ads',       category: 'CAPI',      icon: '🟦', desc: 'Server-side conversion sync' },
-  { name: 'Google Ads',     category: 'CAPI',      icon: '🔵', desc: 'OAuth2 conversion upload' },
-  { name: 'TikTok Ads',     category: 'CAPI',      icon: '⬛', desc: 'Events API integration' },
-  { name: 'LinkedIn Ads',   category: 'CAPI',      icon: '🔷', desc: 'Conversion event API' },
-  { name: 'Microsoft Ads',  category: 'CAPI',      icon: '🟩', desc: 'UET CAPI integration' },
-  { name: 'Shopify',        category: 'Platform',  icon: '🛍️', desc: 'Script tag, 2-minute setup' },
-  { name: 'WooCommerce',    category: 'Platform',  icon: '🟣', desc: 'Script tag + order hook' },
-  { name: 'Webflow',        category: 'Platform',  icon: '🌐', desc: 'Custom code embed' },
-  { name: 'WordPress',      category: 'Platform',  icon: '🔵', desc: 'Header snippet or plugin' },
-  { name: 'Stripe',         category: 'Revenue',   icon: '💳', desc: 'Webhook revenue sync' },
-  { name: 'Any website',    category: 'Universal', icon: '✨', desc: 'One script tag, any stack' },
-  { name: 'REST API',       category: 'Universal', icon: '⚡', desc: 'Custom server-side events' },
+  { name: 'Meta Ads',      category: 'CAPI',      icon: '🟦', desc: 'Server-side conversion sync' },
+  { name: 'Google Ads',    category: 'CAPI',      icon: '🔵', desc: 'OAuth2 conversion upload' },
+  { name: 'TikTok Ads',    category: 'CAPI',      icon: '⬛', desc: 'Events API integration' },
+  { name: 'LinkedIn Ads',  category: 'CAPI',      icon: '🔷', desc: 'Conversion event API' },
+  { name: 'Microsoft Ads', category: 'CAPI',      icon: '🟩', desc: 'UET CAPI integration' },
+  { name: 'Shopify',       category: 'Platform',  icon: '🛍️', desc: 'Script tag, 2-minute setup' },
+  { name: 'WooCommerce',   category: 'Platform',  icon: '🟣', desc: 'Script tag + order hook' },
+  { name: 'Webflow',       category: 'Platform',  icon: '🌐', desc: 'Custom code embed' },
+  { name: 'WordPress',     category: 'Platform',  icon: '🔵', desc: 'Header snippet or plugin' },
+  { name: 'Stripe',        category: 'Revenue',   icon: '💳', desc: 'Webhook revenue sync' },
+  { name: 'Any website',   category: 'Universal', icon: '✨', desc: 'One script tag, any stack' },
+  { name: 'REST API',      category: 'Universal', icon: '⚡', desc: 'Custom server-side events' },
 ]
 
-// ── Logo strip — integration platforms ───────────────────────────────────────
+// ── Platform SVG brand logos ──────────────────────────────────────────────────
+const MetaLogo = () => (
+  <svg viewBox="0 0 200 80" fill="none" className="h-6 w-auto">
+    <path d="M20 40C20 28 27 18 36 18C42 18 47 22 53 31L60 43C66 54 71 58 77 58C84 58 89 50 89 40C89 30 84 22 77 22V10C90 10 100 23 100 40C100 57 90 70 77 70C68 70 62 65 55 53L48 41C43 32 38 30 36 30C29 30 32 30 32 40C32 50 29 50 36 50V62C27 62 20 52 20 40Z" fill="#0082FB"/>
+    <path d="M111 40C111 23 121 10 134 10V22C127 22 123 30 123 40C123 50 127 58 134 58C141 58 146 54 152 43L159 31C165 22 170 18 176 18C185 18 192 28 192 40C192 52 185 62 176 62V50C183 50 180 50 180 40C180 30 183 30 176 30C170 30 165 32 160 41L153 53C146 65 140 70 131 70C118 70 111 57 111 40Z" fill="#0082FB"/>
+  </svg>
+)
+
+const GoogleLogo = () => (
+  <svg viewBox="0 0 24 24" className="h-6 w-6">
+    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+  </svg>
+)
+
+const ShopifyLogo = () => (
+  <svg viewBox="0 0 109 124" fill="none" className="h-6 w-auto">
+    <path d="M95.3 23.8c-.1-.7-.7-1.1-1.2-1.1-.5 0-9.7-.2-9.7-.2s-7.7-7.5-8.5-8.3c-.8-.8-2.4-.6-3-.4-.1 0-1.7.5-4.3 1.3C65.8 10.4 61.9 7 57 7c-.1 0-.2 0-.3 0C55.6 5.6 53.7 5 51.8 5c-14.2.4-21 17.8-23.1 26.8-5.5 1.7-9.4 2.9-9.8 3-.5.2-2.8.9-2.9 3.3L12 97.4 79.4 110l38.6-8.3L95.3 23.8zM71.3 17c-2 .6-4.3 1.3-6.8 2.1-.1-3.4-.5-8.1-2.1-12 5.3 1 8.1 6.7 8.9 9.9zM56.4 14.3c1.5 3.8 2 9.1 2.1 12.4-3.5 1.1-7.3 2.3-11.1 3.4C49.6 21.9 52.9 15.9 56.4 14.3zM51.9 8c.7 0 1.3.2 1.9.5-4.4 2.1-9.1 7.4-11.1 18l-8.3 2.6C36.6 21 43.3 8.2 51.9 8z" fill="#96BF48"/>
+    <path d="M94.1 22.7c-.5 0-9.7-.2-9.7-.2s-7.7-7.5-8.5-8.3c-.3-.3-.7-.4-1.1-.5l-5.8 118.3 38.6-8.3L95.3 23.8c-.2-.7-.7-1.1-1.2-1.1z" fill="#5E8E3E"/>
+    <path d="M57 60.2l-4.7 14.1s-4.2-2.2-9.3-2.2c-7.5 0-7.9 4.7-7.9 5.9 0 6.5 16.9 9 16.9 24.2 0 12-7.6 19.7-17.8 19.7-12.3 0-18.5-7.6-18.5-7.6l3.3-10.8s6.4 5.5 11.8 5.5c3.5 0 5-2.8 5-4.8 0-8.4-13.9-8.8-13.9-22.7 0-11.7 8.4-23 25.3-23 6.5 0 9.8 1.9 9.8 1.9z" fill="white"/>
+  </svg>
+)
+
+const StripeLogo = () => (
+  <svg viewBox="0 0 60 25" fill="none" className="h-5 w-auto">
+    <path fillRule="evenodd" clipRule="evenodd" d="M59.64 14.28h-8.06c.19 1.93 1.6 2.55 3.2 2.55 1.64 0 2.96-.37 4.05-.95v3.32a8.33 8.33 0 0 1-4.56 1.1c-4.01 0-6.83-2.5-6.83-7.48 0-4.19 2.39-7.52 6.3-7.52 3.92 0 5.96 3.28 5.96 7.5 0 .4-.04 1.26-.06 1.48zm-5.92-5.62c-1.03 0-2.17.73-2.17 2.58h4.25c0-1.85-1.07-2.58-2.08-2.58zM40.95 20.3c-1.44 0-2.32-.6-2.9-1.04l-.02 4.63-4.12.87V6.27h3.76l.08 1.02a4.7 4.7 0 0 1 3.23-1.29c2.9 0 5.62 2.6 5.62 7.4 0 5.23-2.7 6.9-5.65 6.9zm-.95-10.9c-.94 0-1.64.31-2.04.73l.02 5.48c.35.31.9.62 2.02.62 1.54 0 2.59-1.7 2.59-3.39 0-1.92-.92-3.44-2.59-3.44zM28.24 5v3.52l-4.13.88V5zm-4.13 15.25V6.27h4.13v13.98h-4.13zm-4.52 0h-4.13V6.27h4.14v2.02c.94-1.44 2.56-2.3 4.18-2.3v4.05c-.35-.04-.7-.06-1.06-.06-1.2 0-2.7.5-3.13 1.42v8.85zM9.29 20.3c-1.96 0-3.14-.54-3.97-1.02l.01 5.5-4.12.87V6.27h3.76l.08 1.02a4.53 4.53 0 0 1 3.3-1.29c2.9 0 5.63 2.6 5.63 7.4 0 5.23-2.71 6.9-5.69 6.9zm-.97-10.9c-.9 0-1.64.35-2.03.73l.01 5.48c.37.31.92.62 2.05.62 1.52 0 2.58-1.7 2.58-3.39 0-1.92-.94-3.44-2.61-3.44z" fill="#635BFF"/>
+  </svg>
+)
+
+const TikTokLogo = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="white">
+    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.31 6.31 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.67a8.17 8.17 0 0 0 4.78 1.52V6.74a4.85 4.85 0 0 1-1.01-.05z"/>
+  </svg>
+)
+
+const LinkedInLogo = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5">
+    <rect width="24" height="24" rx="3" fill="#0A66C2"/>
+    <path d="M7.2 9.8H4.6V19H7.2V9.8zM5.9 8.7c.9 0 1.5-.6 1.5-1.4C7.4 6.5 6.8 5.9 5.9 5.9 5.1 5.9 4.4 6.5 4.4 7.3c0 .8.6 1.4 1.5 1.4zM19.6 19h-2.6v-4.6c0-1.1 0-2.5-1.5-2.5-1.5 0-1.8 1.2-1.8 2.4V19H11V9.8h2.5v1.1h.1c.4-.7 1.2-1.3 2.5-1.3 2.7 0 3.2 1.8 3.2 4.1V19h-.7z" fill="white"/>
+  </svg>
+)
+
+const MicrosoftLogo = () => (
+  <svg viewBox="0 0 21 21" className="h-5 w-5">
+    <rect x="1"  y="1"  width="9" height="9" fill="#F25022"/>
+    <rect x="11" y="1"  width="9" height="9" fill="#7FBA00"/>
+    <rect x="1"  y="11" width="9" height="9" fill="#00A4EF"/>
+    <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+  </svg>
+)
+
+const WebflowLogo = () => (
+  <svg viewBox="0 0 256 256" className="h-6 w-6" fill="none">
+    <path d="M190.5 60H65.5C56.9 60 50 66.9 50 75.5v105c0 8.6 6.9 15.5 15.5 15.5h125c8.6 0 15.5-6.9 15.5-15.5v-105c0-8.6-6.9-15.5-15.5-15.5z" fill="#4353FF"/>
+    <path d="M166.5 108.5l-20 47.5L129 113.5 111.5 156l-20-47.5H75l36 75 18.5-42.5L148 183.5l36-75h-17.5z" fill="white"/>
+  </svg>
+)
+
+const WooCommerceLogo = () => (
+  <svg viewBox="0 0 250 90" className="h-5 w-auto" fill="none">
+    <rect width="250" height="90" rx="12" fill="#7F54B3"/>
+    <text x="18" y="62" fill="white" fontSize="52" fontWeight="900" fontFamily="Arial, sans-serif">Woo</text>
+  </svg>
+)
+
+const WordPressLogo = () => (
+  <svg viewBox="0 0 24 24" className="h-5 w-5">
+    <circle cx="12" cy="12" r="12" fill="#21759B"/>
+    <path d="M2.2 12c0 4.3 2.5 8.1 6.1 9.9L3 7.4C2.5 8.8 2.2 10.4 2.2 12zm17.3-.5c0-1.3-.5-2.3-1-3-.6-.9-1.1-1.7-1.1-2.6 0-1 .8-2 1.9-2h.1a9.8 9.8 0 0 0-14.8.7h.7c1.2 0 3-.1 3-.1.6 0 .7.9.1.9 0 0-.6.1-1.3.1L10.5 18l2.3-6.8-1.6-4.4c-.6 0-1.1-.1-1.1-.1-.6 0-.5-1 .1-1 0 0 1.8.1 2.9.1 1.2 0 3-.1 3-.1.6 0 .7.9.1.9 0 0-.6.1-1.3.1l2.6 7.7.7-2.4c.3-1 .5-1.7.5-2.3zm-6.4 1.3l-2.2 6.4c.7.2 1.4.3 2.1.3.9 0 1.7-.1 2.5-.4l-.1-.2-2.3-6.1zm5.4-10A9.8 9.8 0 0 1 21.8 12a9.8 9.8 0 0 1-5 8.6l3.1-9c.6-1.4.8-2.5.8-3.5 0-.4 0-.7-.1-1.3z" fill="white"/>
+  </svg>
+)
+
 const LOGO_BRANDS = [
-  { name: 'Meta Ads',    color: '#1877F2' },
-  { name: 'Google Ads',  color: '#4285F4' },
-  { name: 'Shopify',     color: '#96BF48' },
-  { name: 'TikTok Ads',  color: '#69C9D0' },
-  { name: 'Stripe',      color: '#635BFF' },
-  { name: 'LinkedIn',    color: '#0A66C2' },
-  { name: 'Microsoft',   color: '#00A4EF' },
-  { name: 'Webflow',     color: '#4353FF' },
-  { name: 'WooCommerce', color: '#7F54B3' },
-  { name: 'WordPress',   color: '#21759B' },
+  { name: 'Meta Ads',    Logo: MetaLogo },
+  { name: 'Google Ads',  Logo: GoogleLogo },
+  { name: 'Shopify',     Logo: ShopifyLogo },
+  { name: 'Stripe',      Logo: StripeLogo },
+  { name: 'TikTok Ads',  Logo: TikTokLogo },
+  { name: 'LinkedIn',    Logo: LinkedInLogo },
+  { name: 'Microsoft',   Logo: MicrosoftLogo },
+  { name: 'Webflow',     Logo: WebflowLogo },
+  { name: 'WooCommerce', Logo: WooCommerceLogo },
+  { name: 'WordPress',   Logo: WordPressLogo },
 ]
 
-// ── Traffic-based pricing ─────────────────────────────────────────────────────
-const PRICING = [
+// ── Traffic-slider pricing ────────────────────────────────────────────────────
+const VISIT_TIERS = [
+  { label: '10k',   desc: 'Up to 10,000 monthly visits' },
+  { label: '50k',   desc: 'Up to 50,000 monthly visits' },
+  { label: '100k',  desc: 'Up to 100,000 monthly visits' },
+  { label: '200k',  desc: 'Up to 200,000 monthly visits' },
+  { label: '500k',  desc: 'Up to 500,000 monthly visits' },
+  { label: '1M',    desc: 'Up to 1,000,000 monthly visits' },
+  { label: '2M',    desc: 'Up to 2,000,000 monthly visits' },
+  { label: '5M',    desc: 'Up to 5,000,000 monthly visits' },
+  { label: '10M+',  desc: 'Custom — contact us' },
+]
+
+// Prices per tier index (null = contact us)
+const PLAN_CONFIGS = [
   {
     name: 'Starter',
-    price: '$49',
-    priceAnnual: '$39',
-    period: '/month',
-    limit: '50,000 monthly visits',
-    color: 'border-white/10',
-    cta: 'Start free trial',
-    ctaStyle: 'border border-white/20 text-white hover:border-white/40',
+    prices: [9, 19, 29, 49, 79, 99, 149, 199, null],
+    description: '1 site · ideal for growing businesses',
     features: [
-      'Up to 50,000 visits/month',
+      '1 website',
       'Unlimited conversions tracked',
       'All 8 attribution models',
       'AI platform detection (15 platforms)',
       'Server-side CAPI sync',
-      'CSV export',
+      '1 year data retention',
       '14-day free trial',
     ],
+    cta: 'Start free trial',
     highlight: false,
   },
   {
     name: 'Growth',
-    price: '$99',
-    priceAnnual: '$79',
-    period: '/month',
-    limit: '250,000 monthly visits',
-    color: 'border-st-lime/40',
-    cta: 'Start Growth trial',
-    ctaStyle: 'bg-st-lime text-black font-bold hover:bg-st-lime/90',
+    prices: [19, 39, 59, 79, 119, 149, 199, 299, null],
+    description: 'Up to 5 sites · for scaling teams',
     features: [
-      'Up to 250,000 visits/month',
+      'Up to 5 websites',
       'Unlimited conversions tracked',
       'Everything in Starter',
       'Cookieless tracking mode',
       'Customer journey maps',
-      'Data retention controls',
+      '3 years data retention',
       'Priority support',
     ],
+    cta: 'Start Growth trial',
     highlight: true,
   },
   {
-    name: 'Scale',
-    price: '$199',
-    priceAnnual: '$159',
-    period: '/month',
-    limit: '1,000,000 monthly visits',
-    color: 'border-white/10',
-    cta: 'Start Scale trial',
-    ctaStyle: 'border border-white/20 text-white hover:border-white/40',
+    name: 'Business',
+    prices: [49, 79, 99, 149, 199, 249, 299, 399, null],
+    description: 'Unlimited sites · for agencies & large teams',
     features: [
-      'Up to 1,000,000 visits/month',
+      'Unlimited websites',
       'Unlimited conversions tracked',
       'Everything in Growth',
-      'Multi-site management',
       'White-label reports',
+      'Multi-team management',
+      '5 years data retention',
       'Dedicated onboarding',
-      'SLA support',
     ],
-    highlight: false,
-  },
-  {
-    name: 'Enterprise',
-    price: 'Custom',
-    priceAnnual: 'Custom',
-    period: '',
-    limit: 'Unlimited visits',
-    color: 'border-white/10',
-    cta: 'Contact us',
-    ctaStyle: 'border border-white/20 text-white hover:border-white/40',
-    features: [
-      'Unlimited monthly visits',
-      'Unlimited conversions tracked',
-      'Everything in Scale',
-      'Custom data retention',
-      'SAML SSO',
-      'Custom integrations',
-      'Dedicated account manager',
-    ],
+    cta: 'Start Business trial',
     highlight: false,
   },
 ]
@@ -203,15 +257,15 @@ const FAQS = [
   },
   {
     q: 'How does traffic-based pricing work?',
-    a: 'You pay based on the number of monthly website visits (pageviews/sessions) your site receives — not on how many conversions you record. All plans include unlimited conversion tracking. If you exceed your plan limit, we will notify you and you can upgrade at any time with no interruption to tracking.',
+    a: 'You pay based on your monthly website visits — not per conversion recorded. All plans include unlimited conversion tracking. Use the pricing slider to find your tier. If you exceed your plan limit, we notify you and you can upgrade instantly with no data loss.',
   },
   {
     q: 'Can I track AI referrals from ChatGPT and Perplexity?',
-    a: "Yes — this is one of SourceTrack's core features. We detect visitors arriving from 15 AI platforms (22 domains) by referrer and UTM signals, including ChatGPT, Claude, Perplexity, Gemini, Grok, Copilot, DeepSeek, and more. Their conversions are attributed just like any other channel.",
+    a: "Yes — this is one of SourceTrack's core features. We detect visitors from 15 AI platforms (22 domains) by referrer and UTM signals, including ChatGPT, Claude, Perplexity, Gemini, Grok, Copilot, DeepSeek, and more. Their conversions are attributed just like any other channel.",
   },
   {
     q: 'How does server-side CAPI sync work?',
-    a: "When a conversion is fired, SourceTrack simultaneously sends a server-side event to Meta CAPI, Google Ads, TikTok, LinkedIn, and Microsoft UET (whichever you've configured). This bypasses browser ad-blockers and iOS/Safari restrictions that block pixel-only tracking, giving ad platforms more complete conversion data for smarter bidding.",
+    a: "When a conversion is fired, SourceTrack simultaneously sends a server-side event to Meta CAPI, Google Ads, TikTok, LinkedIn, and Microsoft UET (whichever you've configured). This bypasses browser ad-blockers and iOS/Safari restrictions that block pixel-only tracking.",
   },
   {
     q: 'What attribution models are available?',
@@ -224,19 +278,19 @@ const STEPS = [
   {
     number: '01',
     title: 'Paste one line',
-    body: "Drop the 1.7 KB snippet into your <head>. Works on Webflow, WordPress, Shopify, or any custom stack — no plugin, no GTM container, no additional config.",
+    body: "Drop the 1.7 KB snippet into your <head>. Works on Webflow, WordPress, Shopify, or any custom stack.",
     code: `<script async\n  src="https://app.sourcetrack.ai/tracker/tracker.min.js"\n  data-site-key="YOUR_KEY">\n</script>`,
   },
   {
     number: '02',
     title: 'Fire one conversion call',
-    body: "Call sourcetrack.conversion() on any purchase, sign-up, or form submit. Pass a revenue value and order ID if you have them. That's the entire integration.",
+    body: "Call sourcetrack.conversion() on any purchase, sign-up, or form submit. Pass a revenue value and order ID if you have them.",
     code: `sourcetrack.conversion({\n  value: 99,\n  type: 'purchase',\n  order_id: 'ORD-123'\n})`,
   },
   {
     number: '03',
     title: 'See which sources drive revenue — including AI',
-    body: 'Open your dashboard to see revenue and conversions by channel, campaign, device, and AI platform. The sources GA4 marks as direct now have names.',
+    body: 'Open your dashboard to see revenue and conversions by channel, campaign, device, and AI platform. Sources GA4 marks as direct now have names.',
     code: null,
   },
 ]
@@ -245,17 +299,17 @@ const STEPS = [
 const WHO_ITS_FOR = [
   {
     role: 'Performance marketers',
-    desc: 'See which campaigns, keywords, and creatives generate revenue — and sync that data back to Meta, Google, and TikTok CAPI automatically so the ad platforms bid on winners, not guesses.',
+    desc: 'See which campaigns, keywords, and creatives generate revenue — and sync that data back to Meta, Google, and TikTok CAPI automatically.',
     link: null,
   },
   {
     role: 'Growth teams',
-    desc: 'Map every touchpoint from first-touch to conversion, including the AI platform query that started the journey — across 8 attribution models, not one.',
+    desc: 'Map every touchpoint from first-touch to conversion, including the AI platform query that started the journey — across 8 attribution models.',
     link: null,
   },
   {
     role: 'Agencies',
-    desc: "Run multi-model attribution reports for every client in seconds, export to CSV, and surface the AI-driven revenue they didn't know existed. That's a new value-add on every retainer.",
+    desc: "Run multi-model attribution reports for every client in seconds, export to CSV, and surface AI-driven revenue they didn't know existed.",
     link: '/agency-attribution',
     linkLabel: 'Agency features →',
   },
@@ -273,40 +327,40 @@ const WHO_ITS_FOR = [
   },
   {
     role: 'Privacy-first teams',
-    desc: 'Track every conversion without cookies, consent banners, or browser storage. Cookieless mode uses a server-side rotating ID — same data quality, zero compliance risk.',
+    desc: 'Track every conversion without cookies, consent banners, or browser storage. Server-side rotating ID — same data quality, zero compliance risk.',
     link: null,
   },
 ]
 
-// ── Live dashboard demo data ───────────────────────────────────────────────────
+// ── Dashboard demo data ───────────────────────────────────────────────────────
 const REV_SPARK  = [28400, 31200, 29800, 36500, 41200, 44800, 48320]
 const AI_SPARK   = [3200, 4100, 3800, 5600, 7200, 8400, 9140]
 
 const JOURNEY_STEPS = [
-  { channel: 'ChatGPT', icon: '🤖', day: 'Day 1', type: 'AI Referral', border: 'border-emerald-500/40', bg: 'bg-emerald-500/10', text: 'text-emerald-300' },
-  { channel: 'Google Ads', icon: '🔍', day: 'Day 3', type: 'Paid Search', border: 'border-blue-500/40', bg: 'bg-blue-500/10', text: 'text-blue-300' },
-  { channel: 'Email', icon: '✉️', day: 'Day 6', type: 'Newsletter', border: 'border-purple-500/40', bg: 'bg-purple-500/10', text: 'text-purple-300' },
-  { channel: 'Purchase', icon: '★', day: 'Day 7', type: '$249', border: 'border-st-lime/40', bg: 'bg-st-lime/10', text: 'text-st-lime' },
+  { channel: 'ChatGPT',    icon: '🤖', day: 'Day 1', type: 'AI Referral', border: 'border-emerald-500/40', bg: 'bg-emerald-500/10', text: 'text-emerald-300' },
+  { channel: 'Google Ads', icon: '🔍', day: 'Day 3', type: 'Paid Search',  border: 'border-blue-500/40',    bg: 'bg-blue-500/10',    text: 'text-blue-300' },
+  { channel: 'Email',      icon: '✉️', day: 'Day 6', type: 'Newsletter',   border: 'border-purple-500/40',  bg: 'bg-purple-500/10',  text: 'text-purple-300' },
+  { channel: 'Purchase',   icon: '★',  day: 'Day 7', type: '$249',         border: 'border-st-lime/40',     bg: 'bg-st-lime/10',     text: 'text-st-lime' },
 ]
 
 const LIVE_SEED = [
-  { type: 'conversion', source: 'google / cpc', value: '$249', ago: '2s' },
-  { type: 'pageview', source: 'chatgpt.com', value: null, ago: '9s' },
-  { type: 'conversion', source: 'perplexity.ai', value: '$99', ago: '21s' },
-  { type: 'pageview', source: 'organic / seo', value: null, ago: '35s' },
+  { type: 'conversion', source: 'google / cpc',      value: '$249', ago: '2s' },
+  { type: 'pageview',   source: 'chatgpt.com',        value: null,   ago: '9s' },
+  { type: 'conversion', source: 'perplexity.ai',      value: '$99',  ago: '21s' },
+  { type: 'pageview',   source: 'organic / seo',      value: null,   ago: '35s' },
   { type: 'conversion', source: 'email / newsletter', value: '$149', ago: '48s' },
 ]
 
 const NEW_LIVE = [
-  { type: 'pageview', source: 'chatgpt.com', value: null },
-  { type: 'conversion', source: 'google / cpc', value: '$199' },
-  { type: 'pageview', source: 'claude.ai', value: null },
+  { type: 'pageview',   source: 'chatgpt.com',   value: null },
+  { type: 'conversion', source: 'google / cpc',  value: '$199' },
+  { type: 'pageview',   source: 'claude.ai',     value: null },
   { type: 'conversion', source: 'perplexity.ai', value: '$299' },
-  { type: 'pageview', source: 'organic / seo', value: null },
-  { type: 'conversion', source: 'meta / paid', value: '$149' },
+  { type: 'pageview',   source: 'organic / seo', value: null },
+  { type: 'conversion', source: 'meta / paid',   value: '$149' },
 ]
 
-// ── Scroll animation hook ─────────────────────────────────────────────────────
+// ── Animation hooks & primitives ──────────────────────────────────────────────
 function useInView(threshold = 0.1) {
   const ref = useRef(null)
   const [inView, setInView] = useState(false)
@@ -324,15 +378,50 @@ function useInView(threshold = 0.1) {
 function FadeUp({ children, delay = 0, className = '' }) {
   const [ref, inView] = useInView()
   return (
-    <div
-      ref={ref}
-      className={className}
-      style={{
-        opacity: inView ? 1 : 0,
-        transform: inView ? 'translateY(0)' : 'translateY(28px)',
-        transition: `opacity 0.65s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform 0.65s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,
-      }}
-    >
+    <div ref={ref} className={className} style={{
+      opacity: inView ? 1 : 0,
+      transform: inView ? 'translateY(0)' : 'translateY(28px)',
+      transition: `opacity 0.65s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform 0.65s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function SlideLeft({ children, delay = 0, className = '' }) {
+  const [ref, inView] = useInView(0.08)
+  return (
+    <div ref={ref} className={className} style={{
+      opacity: inView ? 1 : 0,
+      transform: inView ? 'translateX(0)' : 'translateX(-40px)',
+      transition: `opacity 0.7s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform 0.7s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function SlideRight({ children, delay = 0, className = '' }) {
+  const [ref, inView] = useInView(0.08)
+  return (
+    <div ref={ref} className={className} style={{
+      opacity: inView ? 1 : 0,
+      transform: inView ? 'translateX(0)' : 'translateX(40px)',
+      transition: `opacity 0.7s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform 0.7s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function ScaleIn({ children, delay = 0, className = '' }) {
+  const [ref, inView] = useInView(0.1)
+  return (
+    <div ref={ref} className={className} style={{
+      opacity: inView ? 1 : 0,
+      transform: inView ? 'scale(1)' : 'scale(0.85)',
+      transition: `opacity 0.5s cubic-bezier(0.34,1.56,0.64,1) ${delay}ms, transform 0.5s cubic-bezier(0.34,1.56,0.64,1) ${delay}ms`,
+    }}>
       {children}
     </div>
   )
@@ -428,16 +517,25 @@ function LiveDashboard() {
         @keyframes dash-progress { from { width: 0% } to { width: 100% } }
         @keyframes fade-in-up { from { opacity: 0; transform: translateY(6px) } to { opacity: 1; transform: translateY(0) } }
         @keyframes marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
-        @keyframes float { 0%,100% { transform: translateY(0px) } 50% { transform: translateY(-8px) } }
-        @keyframes glow-pulse { 0%,100% { opacity: 0.4 } 50% { opacity: 0.7 } }
+        @keyframes float { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
+        @keyframes glow-pulse { 0%,100% { opacity: 0.35 } 50% { opacity: 0.65 } }
+        @keyframes shimmer { 0% { background-position: -200% 0 } 100% { background-position: 200% 0 } }
+        @keyframes count-pop { 0% { transform: scale(1) } 50% { transform: scale(1.08) } 100% { transform: scale(1) } }
+        @keyframes dot-grid-pulse { 0%,100% { opacity: 0.03 } 50% { opacity: 0.07 } }
         .dash-anim { animation: fade-in-up 0.25s ease-out both; }
         .progress-bar { animation: dash-progress 5s linear forwards; }
         .marquee-track { animation: marquee 28s linear infinite; }
-        .hero-float { animation: float 6s ease-in-out infinite; }
+        .hero-float { animation: float 7s ease-in-out infinite; }
         .glow-anim { animation: glow-pulse 4s ease-in-out infinite; }
+        .count-pop { animation: count-pop 0.4s ease-out; }
+        .pricing-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 5px; border-radius: 9999px; outline: none; cursor: pointer; }
+        .pricing-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: white; cursor: pointer; box-shadow: 0 0 0 4px rgba(215,245,80,0.25); transition: box-shadow 0.15s; }
+        .pricing-slider::-webkit-slider-thumb:hover { box-shadow: 0 0 0 6px rgba(215,245,80,0.35); }
+        .pricing-slider::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: white; cursor: pointer; border: none; box-shadow: 0 0 0 4px rgba(215,245,80,0.25); }
+        .card-glow:hover { box-shadow: 0 0 30px rgba(215,245,80,0.07); }
+        .highlight-glow { box-shadow: 0 0 40px rgba(215,245,80,0.12); }
       `}</style>
 
-      {/* Browser chrome */}
       <div className="flex items-center gap-1.5 px-4 py-3 border-b border-white/5 bg-[#0C0E0E]">
         <div className="w-2.5 h-2.5 rounded-full bg-red-500/50" />
         <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/50" />
@@ -451,7 +549,6 @@ function LiveDashboard() {
         </div>
       </div>
 
-      {/* Tab bar */}
       <div className="flex items-center px-4 pt-3 border-b border-white/5 gap-0.5">
         {TABS.map((t, i) => (
           <button key={t} onClick={() => { setTab(i); setTick(k => k + 1) }}
@@ -466,9 +563,7 @@ function LiveDashboard() {
         </div>
       </div>
 
-      {/* Panel body */}
       <div className="p-4" style={{ minHeight: 340 }}>
-
         {tab === 0 && (
           <div className="space-y-3 dash-anim">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -536,10 +631,10 @@ function LiveDashboard() {
                 <span className="text-[9px] text-white/40 font-semibold uppercase tracking-wider">Platform Breakdown</span>
               </div>
               {[
-                { name: 'ChatGPT',    rev: '$6,890', share: 75, leads: 186, dot: 'bg-emerald-400' },
-                { name: 'Perplexity', rev: '$1,240', share: 14, leads: 44,  dot: 'bg-purple-400' },
-                { name: 'Claude',     rev: '$580',   share: 6,  leads: 31,  dot: 'bg-orange-400' },
-                { name: 'Gemini',     rev: '$430',   share: 5,  leads: 23,  dot: 'bg-blue-400' },
+                { name: 'ChatGPT',    rev: '$6,890', share: 75, dot: 'bg-emerald-400' },
+                { name: 'Perplexity', rev: '$1,240', share: 14, dot: 'bg-purple-400' },
+                { name: 'Claude',     rev: '$580',   share: 6,  dot: 'bg-orange-400' },
+                { name: 'Gemini',     rev: '$430',   share: 5,  dot: 'bg-blue-400' },
               ].map(p => (
                 <div key={p.name} className="flex items-center gap-3 px-3 py-2.5 border-b border-white/5 last:border-0">
                   <span className={`w-2 h-2 rounded-full shrink-0 ${p.dot}`} />
@@ -585,8 +680,8 @@ function LiveDashboard() {
             <div className="grid grid-cols-3 gap-2">
               {[
                 { label: 'Time to Convert', val: '7 days' },
-                { label: 'Touchpoints',     val: '3 sources' },
-                { label: 'Order Value',      val: '$249' },
+                { label: 'Touchpoints', val: '3 sources' },
+                { label: 'Order Value', val: '$249' },
               ].map(s => (
                 <div key={s.label} className="bg-[#1A1D1D] rounded-xl p-3 border border-white/5 text-center">
                   <p className="text-[9px] text-white/30 uppercase tracking-wider">{s.label}</p>
@@ -596,7 +691,7 @@ function LiveDashboard() {
             </div>
             <div className="bg-[#1A1D1D] rounded-xl border border-white/5 px-3 py-2.5">
               <p className="text-[10px] text-white/50 leading-relaxed">
-                <span className="text-st-lime font-semibold">ChatGPT (first)</span> gets 40% ·{' '}
+                <span className="text-st-lime font-semibold">ChatGPT (first)</span> 40% ·{' '}
                 <span className="text-white/40">Google 20%</span> ·{' '}
                 <span className="text-white/40">Email 10%</span> ·{' '}
                 <span className="text-blue-400 font-semibold">Purchase (last) 30%</span>
@@ -631,7 +726,6 @@ function LiveDashboard() {
             </div>
           </div>
         )}
-
       </div>
     </div>
   )
@@ -642,10 +736,8 @@ function FAQItem({ q, a }) {
   const [open, setOpen] = useState(false)
   return (
     <div className={`rounded-2xl border transition-colors ${open ? 'border-white/15 bg-[#111414]' : 'border-white/8 bg-[#111414]'}`}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left"
-      >
+      <button onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left">
         <span className="text-sm font-semibold text-white leading-snug">{q}</span>
         <span className={`shrink-0 text-white/40 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -653,11 +745,7 @@ function FAQItem({ q, a }) {
           </svg>
         </span>
       </button>
-      {open && (
-        <div className="px-6 pb-5">
-          <p className="text-sm text-white/50 leading-relaxed">{a}</p>
-        </div>
-      )}
+      {open && <div className="px-6 pb-5"><p className="text-sm text-white/50 leading-relaxed">{a}</p></div>}
     </div>
   )
 }
@@ -673,38 +761,199 @@ function useScrolled() {
   return scrolled
 }
 
-// ── Logo Brand Mark ───────────────────────────────────────────────────────────
-function BrandMark({ name, color }) {
-  const initials = name === 'LinkedIn' ? 'in' : name === 'Microsoft' ? 'MS' : name.charAt(0)
-  return (
-    <div className="flex items-center gap-2 shrink-0">
-      <div
-        className="w-7 h-7 rounded-md flex items-center justify-center text-white font-black text-xs shrink-0"
-        style={{ backgroundColor: color + '25', border: `1px solid ${color}40` }}
-      >
-        <span style={{ color }}>{initials}</span>
-      </div>
-      <span className="text-sm font-semibold text-white/50 whitespace-nowrap">{name}</span>
-    </div>
-  )
-}
+// ── Interactive pricing slider ────────────────────────────────────────────────
+function PricingSection() {
+  const [tierIdx, setTierIdx]   = useState(1) // default: 50k
+  const [annual,  setAnnual]    = useState(false)
+  const [prevIdx, setPrevIdx]   = useState(1)
+  const tier = VISIT_TIERS[tierIdx]
+  const pct  = (tierIdx / (VISIT_TIERS.length - 1)) * 100
 
-// ── Pricing toggle ────────────────────────────────────────────────────────────
-function PricingToggle({ annual, setAnnual }) {
+  function handleSlider(e) {
+    setPrevIdx(tierIdx)
+    setTierIdx(Number(e.target.value))
+  }
+
+  function getPrice(planPrices) {
+    const raw = planPrices[tierIdx]
+    if (raw === null) return null
+    if (!annual) return raw
+    return Math.round(raw * 10 / 12) // 2 months free
+  }
+
   return (
-    <div className="flex items-center justify-center gap-3 mb-10">
-      <span className={`text-sm ${!annual ? 'text-white' : 'text-white/40'}`}>Monthly</span>
-      <button
-        onClick={() => setAnnual(a => !a)}
-        className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${annual ? 'bg-st-lime' : 'bg-white/10'}`}
-      >
-        <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${annual ? 'translate-x-5' : 'translate-x-0'}`} />
-      </button>
-      <span className={`text-sm ${annual ? 'text-white' : 'text-white/40'}`}>
-        Annual
-        <span className="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-st-lime/15 text-st-lime">Save 20%</span>
-      </span>
-    </div>
+    <section id="pricing" className="py-24 px-6 border-t border-white/5">
+      <div className="max-w-6xl mx-auto">
+        <FadeUp>
+          <div className="text-center mb-12">
+            <p className="text-xs font-semibold text-st-lime uppercase tracking-widest mb-3">Pricing</p>
+            <h2 className="text-3xl sm:text-4xl font-black mb-4">Traffic-based plans that match your growth</h2>
+            <p className="text-white/40 max-w-xl mx-auto">Pay based on your monthly site visits. Unlimited conversions tracked on every plan — always.</p>
+          </div>
+        </FadeUp>
+
+        {/* Slider + toggle row */}
+        <FadeUp delay={80}>
+          <div className="max-w-3xl mx-auto mb-10">
+            {/* Monthly / Annual toggle */}
+            <div className="flex items-center justify-end gap-3 mb-6">
+              <div className="flex items-center gap-1 bg-white/5 rounded-full p-1 border border-white/10">
+                <button onClick={() => setAnnual(false)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${!annual ? 'bg-white text-black' : 'text-white/40 hover:text-white'}`}>
+                  Monthly
+                </button>
+                <button onClick={() => setAnnual(true)}
+                  className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 ${annual ? 'bg-white text-black' : 'text-white/40 hover:text-white'}`}>
+                  Yearly
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-st-lime text-black">2 months free</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Slider */}
+            <div className="relative">
+              {/* Floating badge above thumb */}
+              <div
+                className="absolute -top-10 transition-all duration-200 pointer-events-none"
+                style={{ left: `calc(${pct}% + ${(11 - pct * 0.22)}px)`, transform: 'translateX(-50%)' }}
+              >
+                <div className="bg-white text-black text-xs font-bold px-2.5 py-1.5 rounded-lg shadow-lg whitespace-nowrap">
+                  {tier.desc}
+                  <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0"
+                    style={{ borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '5px solid white' }} />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <span className="text-xs text-white/40 shrink-0">10k</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={VISIT_TIERS.length - 1}
+                  value={tierIdx}
+                  onChange={handleSlider}
+                  className="pricing-slider flex-1"
+                  style={{
+                    background: `linear-gradient(to right, #D7F550 ${pct}%, rgba(255,255,255,0.1) ${pct}%)`
+                  }}
+                />
+                <span className="text-xs text-white/40 shrink-0">10M+</span>
+              </div>
+            </div>
+          </div>
+        </FadeUp>
+
+        {/* Plan cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-5">
+          {PLAN_CONFIGS.map((plan, i) => {
+            const price = getPrice(plan.prices)
+            return (
+              <FadeUp key={plan.name} delay={i * 80}>
+                <div className={`rounded-2xl border p-6 flex flex-col h-full card-glow transition-all hover:-translate-y-0.5 ${
+                  plan.highlight
+                    ? 'bg-st-lime/5 border-st-lime/40 highlight-glow'
+                    : 'bg-[#111414] border-white/8'
+                }`}>
+                  {plan.highlight && (
+                    <div className="mb-3">
+                      <span className="text-[10px] font-bold uppercase tracking-wider bg-st-lime text-black px-2 py-0.5 rounded-full">Most popular</span>
+                    </div>
+                  )}
+                  <p className={`text-sm font-bold mb-0.5 ${plan.highlight ? 'text-st-lime' : 'text-white/60'}`}>{plan.name}</p>
+                  <p className="text-[10px] text-white/30 mb-3">{plan.description}</p>
+
+                  {/* Price display */}
+                  <div className="mb-1 min-h-[52px] flex items-end">
+                    {price === null ? (
+                      <div>
+                        <p className="text-2xl font-black text-white">Custom</p>
+                        <p className="text-xs text-white/40">Contact us for a quote</p>
+                      </div>
+                    ) : (
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-4xl font-black text-white tabular-nums">${price}</span>
+                        <span className="text-sm text-white/40">/mo</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {annual && price !== null && (
+                    <p className="text-[10px] text-st-lime mb-1">Billed annually · 2 months free</p>
+                  )}
+
+                  <p className="text-xs text-white/30 mb-5 min-h-[16px]">
+                    {tierIdx < VISIT_TIERS.length - 1 ? tier.desc : ''}
+                  </p>
+
+                  <ul className="space-y-2 mb-6 flex-1">
+                    {plan.features.map(f => (
+                      <li key={f} className="flex items-start gap-2 text-xs text-white/55">
+                        <span className={`shrink-0 mt-0.5 ${plan.highlight ? 'text-st-lime' : 'text-white/30'}`}>✓</span>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+
+                  <Link to={price === null ? 'mailto:hi@sourcetrack.ai' : '/signup'}
+                    className={`w-full text-center text-sm px-4 py-2.5 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] ${
+                      plan.highlight
+                        ? 'bg-st-lime text-black font-bold hover:bg-st-lime/90'
+                        : 'border border-white/20 text-white hover:border-white/40'
+                    }`}>
+                    {price === null ? 'Contact us' : plan.cta}
+                  </Link>
+                </div>
+              </FadeUp>
+            )
+          })}
+
+          {/* Enterprise card */}
+          <FadeUp delay={3 * 80}>
+            <div className="rounded-2xl border border-white/8 bg-[#0F1212] p-6 flex flex-col h-full card-glow hover:-translate-y-0.5 transition-all">
+              <p className="text-sm font-bold text-white/60 mb-0.5">Enterprise</p>
+              <p className="text-[10px] text-white/30 mb-3">Unlimited sites · custom contract</p>
+              <div className="mb-1 min-h-[52px] flex items-end">
+                <p className="text-4xl font-black text-white">Custom</p>
+              </div>
+              <p className="text-[10px] text-white/30 mb-5">Volume discounts available</p>
+              <ul className="space-y-2 mb-6 flex-1">
+                {[
+                  'Unlimited monthly visits',
+                  'Everything in Business',
+                  'SAML SSO',
+                  'Custom data retention',
+                  'Custom integrations',
+                  'Dedicated account manager',
+                  'SLA guarantee',
+                ].map(f => (
+                  <li key={f} className="flex items-start gap-2 text-xs text-white/55">
+                    <span className="shrink-0 mt-0.5 text-white/30">✓</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <a href="mailto:hi@sourcetrack.ai"
+                className="w-full text-center text-sm px-4 py-2.5 rounded-xl border border-white/20 text-white hover:border-white/40 transition-all hover:scale-[1.02]">
+                Contact us
+              </a>
+            </div>
+          </FadeUp>
+        </div>
+
+        {/* Social proof below pricing */}
+        <FadeUp delay={200}>
+          <div className="mt-10 text-center space-y-2">
+            <p className="text-xs text-white/25">All plans include a 14-day free trial. No credit card required. Cancel any time.</p>
+            <div className="flex items-center justify-center gap-6 flex-wrap text-xs text-white/20">
+              <span>✓ Unlimited conversions on all plans</span>
+              <span>✓ All 8 attribution models included</span>
+              <span>✓ CAPI sync on all paid plans</span>
+              <span>✓ AI platform detection on all plans</span>
+            </div>
+          </div>
+        </FadeUp>
+      </div>
+    </section>
   )
 }
 
@@ -713,14 +962,11 @@ export default function Landing() {
   const scrolled = useScrolled()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [solutionsOpen, setSolutionsOpen] = useState(false)
-  const [annual, setAnnual] = useState(false)
   const solutionsRef = useRef(null)
 
   useEffect(() => {
     function handleClick(e) {
-      if (solutionsRef.current && !solutionsRef.current.contains(e.target)) {
-        setSolutionsOpen(false)
-      }
+      if (solutionsRef.current && !solutionsRef.current.contains(e.target)) setSolutionsOpen(false)
     }
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
@@ -730,7 +976,7 @@ export default function Landing() {
     <div className="bg-[#0C0E0E] text-white min-h-screen font-sans antialiased">
       <Helmet>
         <title>SourceTrack — Track ChatGPT Traffic & Multi-Touch Attribution</title>
-        <meta name="description" content="The only attribution tool that tracks ChatGPT, Perplexity & 13 other AI platforms — plus full multi-touch attribution and server-side CAPI sync to Meta, Google, TikTok, LinkedIn & Microsoft. One 1.7 KB script. Live in 3 minutes. Traffic-based pricing from $49/mo." />
+        <meta name="description" content="The only attribution tool that tracks ChatGPT, Perplexity & 13 other AI platforms — plus full multi-touch attribution and server-side CAPI sync to Meta, Google, TikTok, LinkedIn & Microsoft. One 1.7 KB script. Live in 3 minutes. From $9/mo." />
         <link rel="canonical" href="https://sourcetrack.ai/" />
         <meta property="og:title"       content="SourceTrack — Track ChatGPT Traffic & Multi-Touch Attribution" />
         <meta property="og:description" content="Your AI traffic is being attributed to 'direct' right now. SourceTrack fixes it — tracking ChatGPT, Perplexity, and 13 AI platforms with full multi-touch attribution and CAPI sync." />
@@ -751,19 +997,18 @@ export default function Landing() {
           "url": "https://sourcetrack.ai",
           "description": "Multi-touch attribution platform with server-side CAPI sync, 15 AI platform detection, 8 attribution models, and GDPR cookieless compliance for eCommerce, SaaS, and lead generation businesses.",
           "offers": [
-            { "@type": "Offer", "name": "Starter",    "price": "49",  "priceCurrency": "USD", "priceSpecification": { "@type": "UnitPriceSpecification", "price": "49",  "priceCurrency": "USD", "unitText": "MONTH" }, "description": "Up to 50,000 monthly visits, unlimited conversion tracking" },
-            { "@type": "Offer", "name": "Growth",     "price": "99",  "priceCurrency": "USD", "priceSpecification": { "@type": "UnitPriceSpecification", "price": "99",  "priceCurrency": "USD", "unitText": "MONTH" }, "description": "Up to 250,000 monthly visits, cookieless mode, customer journeys" },
-            { "@type": "Offer", "name": "Scale",      "price": "199", "priceCurrency": "USD", "priceSpecification": { "@type": "UnitPriceSpecification", "price": "199", "priceCurrency": "USD", "unitText": "MONTH" }, "description": "Up to 1,000,000 monthly visits, multi-site, white-label reports" },
-            { "@type": "Offer", "name": "Enterprise", "price": "0",   "priceCurrency": "USD", "description": "Custom pricing for unlimited visits and enterprise features" }
+            { "@type": "Offer", "name": "Starter",    "price": "9",   "priceCurrency": "USD", "priceSpecification": { "@type": "UnitPriceSpecification", "price": "9",   "priceCurrency": "USD", "unitText": "MONTH" }, "description": "Up to 10k monthly visits, unlimited conversions, 1 site" },
+            { "@type": "Offer", "name": "Growth",     "price": "19",  "priceCurrency": "USD", "priceSpecification": { "@type": "UnitPriceSpecification", "price": "19",  "priceCurrency": "USD", "unitText": "MONTH" }, "description": "Up to 50k monthly visits, unlimited conversions, 5 sites" },
+            { "@type": "Offer", "name": "Business",   "price": "49",  "priceCurrency": "USD", "priceSpecification": { "@type": "UnitPriceSpecification", "price": "49",  "priceCurrency": "USD", "unitText": "MONTH" }, "description": "Up to 50k monthly visits, unlimited sites, white-label" },
+            { "@type": "Offer", "name": "Enterprise", "price": "0",   "priceCurrency": "USD", "description": "Custom pricing for unlimited visits" }
           ],
           "featureList": [
-            "First Touch, Last Touch, Linear, U-Shaped, W-Shaped, Time Decay, Position Based, Data Driven attribution models",
-            "15 AI platform detection — ChatGPT, Claude, Perplexity, Gemini, Grok, Copilot, DeepSeek and more",
+            "First Touch, Last Touch, Linear, U-Shaped, W-Shaped, Time Decay attribution models",
+            "15 AI platform detection — ChatGPT, Claude, Perplexity, Gemini, Grok, Copilot, DeepSeek",
             "Server-side Conversions API sync — Meta CAPI, Google Ads, TikTok, LinkedIn, Microsoft UET",
-            "GDPR-compliant cookieless mode — no cookies, no localStorage, no consent banner required",
-            "1.7 KB tracker script, works on Shopify, WordPress, Webflow, any website",
-            "Traffic-based pricing — unlimited conversions tracked on all plans",
-            "Real-time live dashboard, visitor journey timelines, multi-channel report builder"
+            "GDPR-compliant cookieless mode",
+            "1.7 KB tracker script",
+            "Traffic-based pricing from $9/month"
           ]
         })}</script>
         <script type="application/ld+json">{JSON.stringify({
@@ -772,17 +1017,15 @@ export default function Landing() {
           "name": "SourceTrack",
           "url": "https://sourcetrack.ai",
           "logo": "https://sourcetrack.ai/apple-touch-icon.png",
-          "description": "SourceTrack is a multi-touch marketing attribution platform that tracks every conversion source — including AI platforms like ChatGPT, Perplexity, and Claude — using server-side tracking, 8 attribution models, and GDPR-compliant cookieless mode.",
+          "description": "SourceTrack is a multi-touch marketing attribution platform that tracks every conversion source including AI platforms like ChatGPT, Perplexity, and Claude.",
           "foundingDate": "2024",
-          "sameAs": [],
           "contactPoint": { "@type": "ContactPoint", "contactType": "customer support", "url": "https://sourcetrack.ai/docs" }
         })}</script>
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "FAQPage",
           "mainEntity": FAQS.map(({ q, a }) => ({
-            "@type": "Question",
-            "name": q,
+            "@type": "Question", "name": q,
             "acceptedAnswer": { "@type": "Answer", "text": a }
           }))
         })}</script>
@@ -790,12 +1033,12 @@ export default function Landing() {
           "@context": "https://schema.org",
           "@type": "HowTo",
           "name": "How to set up multi-touch attribution with SourceTrack",
-          "description": "Add SourceTrack to any website in under 3 minutes to start tracking conversions across all marketing channels including AI platforms.",
+          "description": "Add SourceTrack to any website in under 3 minutes.",
           "totalTime": "PT3M",
           "step": [
             { "@type": "HowToStep", "position": 1, "name": "Add the snippet", "text": "Paste one 1.7 KB JavaScript snippet into your site's <head>." },
             { "@type": "HowToStep", "position": 2, "name": "Fire your first conversion", "text": "Call sourcetrack.conversion() when a purchase, sign-up, or form submission happens." },
-            { "@type": "HowToStep", "position": 3, "name": "See where revenue comes from", "text": "Open your SourceTrack dashboard to see revenue, conversions, and visitor journeys broken down by every marketing source — including AI referrals." }
+            { "@type": "HowToStep", "position": 3, "name": "See where revenue comes from", "text": "Open your SourceTrack dashboard to see revenue broken down by every marketing source — including AI referrals." }
           ]
         })}</script>
       </Helmet>
@@ -811,12 +1054,9 @@ export default function Landing() {
           </div>
 
           <nav className="hidden md:flex items-center gap-6">
-            {/* Solutions dropdown */}
             <div ref={solutionsRef} className="relative">
-              <button
-                onClick={() => setSolutionsOpen(o => !o)}
-                className="flex items-center gap-1 text-sm text-white/60 hover:text-white transition-colors"
-              >
+              <button onClick={() => setSolutionsOpen(o => !o)}
+                className="flex items-center gap-1 text-sm text-white/60 hover:text-white transition-colors">
                 Solutions
                 <svg className={`w-3 h-3 transition-transform duration-200 ${solutionsOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -825,12 +1065,8 @@ export default function Landing() {
               {solutionsOpen && (
                 <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-56 rounded-xl border border-white/10 bg-[#111414] shadow-xl py-1.5 z-50">
                   {SOLUTIONS.map(s => (
-                    <Link
-                      key={s.href}
-                      to={s.href}
-                      onClick={() => setSolutionsOpen(false)}
-                      className="flex items-start gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors group"
-                    >
+                    <Link key={s.href} to={s.href} onClick={() => setSolutionsOpen(false)}
+                      className="flex items-start gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors group">
                       <span className="text-base mt-0.5">{s.icon}</span>
                       <div>
                         <p className="text-sm font-medium text-white group-hover:text-st-lime transition-colors">{s.label}</p>
@@ -850,7 +1086,7 @@ export default function Landing() {
 
           <div className="hidden md:flex items-center gap-3">
             <Link to="/login" className="text-sm text-white/70 hover:text-white transition-colors px-3 py-1.5">Sign in</Link>
-            <Link to="/signup" className="text-sm font-semibold bg-st-lime text-black px-4 py-2 rounded-lg hover:bg-st-lime/90 transition-colors">
+            <Link to="/signup" className="text-sm font-semibold bg-st-lime text-black px-4 py-2 rounded-lg hover:bg-st-lime/90 transition-all hover:scale-[1.02]">
               Start free trial
             </Link>
           </div>
@@ -889,44 +1125,44 @@ export default function Landing() {
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="relative pt-32 pb-24 px-6 overflow-hidden">
-        {/* Animated gradient blobs */}
+        {/* Dot grid background */}
+        <div className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)',
+            backgroundSize: '28px 28px',
+          }}
+        />
+        {/* Gradient blobs */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="glow-anim absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[400px] rounded-full bg-st-lime/5 blur-3xl" />
-          <div className="glow-anim absolute top-40 right-0 w-72 h-72 rounded-full bg-blue-500/5 blur-3xl" style={{ animationDelay: '2s' }} />
-          <div className="glow-anim absolute top-60 left-0 w-64 h-64 rounded-full bg-purple-500/4 blur-3xl" style={{ animationDelay: '4s' }} />
+          <div className="glow-anim absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[450px] rounded-full bg-st-lime/5 blur-3xl" />
+          <div className="glow-anim absolute top-40 right-0 w-80 h-80 rounded-full bg-blue-500/5 blur-3xl" style={{ animationDelay: '2s' }} />
+          <div className="glow-anim absolute top-60 left-0 w-72 h-72 rounded-full bg-purple-500/4 blur-3xl" style={{ animationDelay: '4s' }} />
         </div>
 
         <div className="relative max-w-4xl mx-auto text-center">
-          <div
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-st-lime/30 bg-st-lime/5 mb-8"
-            style={{ animation: 'fade-in-up 0.5s ease-out both' }}
-          >
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-st-lime/30 bg-st-lime/5 mb-8"
+            style={{ animation: 'fade-in-up 0.5s ease-out both' }}>
             <span className="w-1.5 h-1.5 rounded-full bg-st-lime animate-pulse" />
             <span className="text-xs font-medium text-st-lime">GA4 can't see ChatGPT traffic. SourceTrack can. → Start free</span>
           </div>
 
-          <h1
-            className="text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.05] tracking-tight mb-6"
-            style={{ animation: 'fade-in-up 0.6s ease-out 0.1s both' }}
-          >
+          <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.05] tracking-tight mb-6"
+            style={{ animation: 'fade-in-up 0.6s ease-out 0.1s both' }}>
             Your competitors don't know their{' '}
             <span className="text-st-lime">ChatGPT traffic</span>{' '}
             exists. You will.
           </h1>
 
-          <p
-            className="text-lg sm:text-xl text-white/50 max-w-2xl mx-auto mb-10 leading-relaxed"
-            style={{ animation: 'fade-in-up 0.6s ease-out 0.2s both' }}
-          >
+          <p className="text-lg sm:text-xl text-white/50 max-w-2xl mx-auto mb-10 leading-relaxed"
+            style={{ animation: 'fade-in-up 0.6s ease-out 0.2s both' }}>
             SourceTrack is the only attribution tool that tracks conversions from ChatGPT, Perplexity, and 13 other AI platforms — plus full multi-touch attribution and CAPI sync to Meta, Google, TikTok, LinkedIn, and Microsoft. One 1.7 KB script. Under 3 minutes to live data.
           </p>
 
-          <div
-            className="flex flex-col sm:flex-row items-center justify-center gap-3"
-            style={{ animation: 'fade-in-up 0.6s ease-out 0.3s both' }}
-          >
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3"
+            style={{ animation: 'fade-in-up 0.6s ease-out 0.3s both' }}>
             <Link to="/signup"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-st-lime text-black text-sm font-bold rounded-xl hover:bg-st-lime/90 transition-all hover:scale-[1.02] active:scale-[0.98]">
+              className="relative w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-st-lime text-black text-sm font-bold rounded-xl hover:bg-st-lime/90 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              style={{ boxShadow: '0 0 30px rgba(215,245,80,0.3)' }}>
               See your AI traffic — free for 14 days
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
@@ -939,13 +1175,13 @@ export default function Landing() {
           </div>
 
           <p className="text-xs text-white/30 mt-4" style={{ animation: 'fade-in-up 0.6s ease-out 0.4s both' }}>
-            No credit card · GDPR-compliant · Cancel anytime · Live in under 3 minutes
+            No credit card · GDPR-compliant · Cancel anytime · Plans from $9/mo
           </p>
         </div>
 
         {/* Hero visual — floating interactive dashboard */}
         <div className="relative max-w-4xl mx-auto mt-16 hero-float">
-          <div className="absolute inset-0 -m-4 rounded-3xl bg-st-lime/5 blur-2xl glow-anim" />
+          <div className="absolute inset-0 -m-6 rounded-3xl bg-st-lime/4 blur-3xl glow-anim" />
           <div className="relative">
             <LiveDashboard />
           </div>
@@ -955,12 +1191,12 @@ export default function Landing() {
       {/* ── Social proof strip ───────────────────────────────────────────── */}
       <section className="border-y border-white/5 py-6 px-6">
         <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-center gap-x-10 gap-y-3 text-white/30 text-sm">
-          <span>✓ 1.7 KB script — 54× lighter than GA4</span>
+          <span>✓ From $9/mo · no conversion caps</span>
           <span>✓ 15 AI platforms tracked</span>
           <span>✓ 8 attribution models</span>
           <span>✓ CAPI sync to 5 ad platforms</span>
           <span>✓ Cookieless &amp; GDPR-ready</span>
-          <span>✓ Unlimited conversions on all plans</span>
+          <span>✓ 54× lighter than GA4</span>
         </div>
       </section>
 
@@ -972,13 +1208,14 @@ export default function Landing() {
           </p>
         </FadeUp>
         <div className="relative overflow-hidden">
-          {/* Fade edges */}
-          <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[#0C0E0E] to-transparent z-10 pointer-events-none" />
-          <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[#0C0E0E] to-transparent z-10 pointer-events-none" />
-          {/* Marquee track — duplicate set for seamless loop */}
-          <div className="marquee-track flex items-center gap-10 w-max">
-            {[...LOGO_BRANDS, ...LOGO_BRANDS].map((b, i) => (
-              <BrandMark key={`${b.name}-${i}`} name={b.name} color={b.color} />
+          <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-[#0C0E0E] to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-[#0C0E0E] to-transparent z-10 pointer-events-none" />
+          <div className="marquee-track flex items-center gap-12 w-max">
+            {[...LOGO_BRANDS, ...LOGO_BRANDS].map(({ name, Logo }, i) => (
+              <div key={`${name}-${i}`} className="flex items-center gap-2.5 shrink-0 opacity-60 hover:opacity-100 transition-opacity">
+                <Logo />
+                <span className="text-sm font-semibold text-white/70 whitespace-nowrap">{name}</span>
+              </div>
             ))}
           </div>
         </div>
@@ -996,7 +1233,7 @@ export default function Landing() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {WHO_ITS_FOR.map((w, i) => (
               <FadeUp key={w.role} delay={i * 80}>
-                <div className="rounded-2xl border border-white/8 bg-[#111414] p-6 hover:border-white/15 transition-all hover:-translate-y-0.5 h-full flex flex-col">
+                <div className="rounded-2xl border border-white/8 bg-[#111414] p-6 hover:border-white/15 hover:-translate-y-0.5 transition-all card-glow h-full flex flex-col">
                   <p className="text-sm font-bold text-white mb-2">{w.role}</p>
                   <p className="text-sm text-white/45 leading-relaxed flex-1">{w.desc}</p>
                   {w.link && (
@@ -1018,13 +1255,13 @@ export default function Landing() {
             <div className="text-center mb-14">
               <p className="text-xs font-semibold text-st-lime uppercase tracking-widest mb-3">Features</p>
               <h2 className="text-3xl sm:text-4xl font-black mb-4">One tool. Every attribution question answered.</h2>
-              <p className="text-white/40 max-w-xl mx-auto">GA4 gives you pageviews. SourceTrack gives you revenue by source — including the AI platforms GA4 can't see — in a 1.7 KB script with no configuration.</p>
+              <p className="text-white/40 max-w-xl mx-auto">GA4 gives you pageviews. SourceTrack gives you revenue by source — including the AI platforms GA4 can't see — in a 1.7 KB script.</p>
             </div>
           </FadeUp>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {FEATURES.map((f, i) => (
               <FadeUp key={f.title} delay={i * 80}>
-                <div className="rounded-2xl border border-white/8 bg-[#111414] p-6 hover:border-white/15 hover:-translate-y-0.5 transition-all group h-full">
+                <div className="rounded-2xl border border-white/8 bg-[#111414] p-6 hover:border-white/15 hover:-translate-y-0.5 transition-all group card-glow h-full">
                   <div className="text-3xl mb-4 group-hover:scale-110 transition-transform duration-200 inline-block">{f.icon}</div>
                   <h3 className="text-base font-bold text-white mb-2">{f.title}</h3>
                   <p className="text-sm text-white/45 leading-relaxed">{f.body}</p>
@@ -1042,13 +1279,13 @@ export default function Landing() {
             <div className="text-center mb-14">
               <p className="text-xs font-semibold text-st-lime uppercase tracking-widest mb-3">Integrations</p>
               <h2 className="text-3xl sm:text-4xl font-black mb-4">Plugs into your entire stack</h2>
-              <p className="text-white/40 max-w-xl mx-auto">Server-side CAPI sync to every major ad platform. Works with any website or e-commerce platform — no native connector required.</p>
+              <p className="text-white/40 max-w-xl mx-auto">Server-side CAPI sync to every major ad platform. Works with any website or eCommerce platform — no native connector required.</p>
             </div>
           </FadeUp>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {INTEGRATIONS.map((int, i) => (
               <FadeUp key={int.name} delay={(i % 4) * 60}>
-                <div className="rounded-xl border border-white/8 bg-[#111414] p-4 hover:border-white/20 hover:-translate-y-0.5 transition-all h-full">
+                <div className="rounded-xl border border-white/8 bg-[#111414] p-4 hover:border-white/20 hover:-translate-y-0.5 transition-all card-glow h-full">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="text-xl">{int.icon}</span>
                     <div>
@@ -1073,21 +1310,21 @@ export default function Landing() {
       <section className="py-24 px-6 border-t border-white/5">
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-14 items-center">
-            <FadeUp>
+            <SlideLeft>
               <div>
                 <p className="text-xs font-semibold text-st-lime uppercase tracking-widest mb-4">AI Era Attribution</p>
                 <h2 className="text-3xl sm:text-4xl font-black mb-5 leading-tight">
                   Every month you don't track AI traffic, you're misattributing the revenue it drives.
                 </h2>
                 <p className="text-white/45 mb-6 leading-relaxed">
-                  ChatGPT and Perplexity referrals often arrive with no referrer header — so GA4 logs them as direct traffic. That means the revenue they drive gets silently credited to the wrong source. SourceTrack identifies AI visitors correctly across 15 platforms and 22 domains using referrer signals and UTM pattern matching — no manual tagging required.
+                  ChatGPT and Perplexity referrals often arrive with no referrer header — so GA4 logs them as direct traffic. That means the revenue they drive gets silently credited to the wrong source. SourceTrack identifies AI visitors correctly across 15 platforms and 22 domains.
                 </p>
                 <ul className="space-y-3">
                   {[
-                    '15 AI platforms, 22 domains — detected automatically from referrer and UTM signals',
-                    'AI revenue vs. non-AI revenue in one dashboard view — no custom segmentation needed',
-                    'See which AI platforms drive buyers vs. browsers for your specific product',
-                    'No manual UTM tagging — organic AI traffic is identified server-side',
+                    '15 AI platforms, 22 domains — detected automatically',
+                    'AI revenue vs. non-AI revenue in one dashboard view',
+                    'See which AI platforms drive buyers vs. browsers',
+                    'No manual UTM tagging — organic AI traffic identified server-side',
                     "Conversions previously logged as 'direct' now have a source",
                   ].map(item => (
                     <li key={item} className="flex items-start gap-3 text-sm text-white/60">
@@ -1097,16 +1334,17 @@ export default function Landing() {
                   ))}
                 </ul>
               </div>
-            </FadeUp>
-            <FadeUp delay={150}>
+            </SlideLeft>
+            <SlideRight delay={150}>
               <div className="bg-[#111414] rounded-2xl border border-white/8 p-6">
                 <p className="text-xs text-white/40 uppercase tracking-wider mb-4">Detected AI platforms</p>
                 <div className="flex flex-wrap gap-2">
-                  {AI_PLATFORMS.map(p => (
-                    <span key={p}
-                      className="px-3 py-1.5 rounded-full text-xs font-medium bg-white/5 text-white/60 border border-white/8 hover:border-st-lime/40 hover:text-white hover:bg-st-lime/5 transition-all cursor-default">
-                      {p}
-                    </span>
+                  {AI_PLATFORMS.map((p, i) => (
+                    <FadeUp key={p} delay={i * 30}>
+                      <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-white/5 text-white/60 border border-white/8 hover:border-st-lime/40 hover:text-white hover:bg-st-lime/5 transition-all cursor-default">
+                        {p}
+                      </span>
+                    </FadeUp>
                   ))}
                   <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-st-lime/10 text-st-lime border border-st-lime/20">
                     + Character.AI, Pi AI
@@ -1114,24 +1352,26 @@ export default function Landing() {
                 </div>
                 <div className="mt-6 pt-5 border-t border-white/5 space-y-3">
                   {[
-                    { platform: 'ChatGPT', revenue: '$6,890', share: '14.3%', trend: '+88%' },
-                    { platform: 'Perplexity', revenue: '$2,250', share: '4.7%', trend: '+124%' },
-                    { platform: 'Claude', revenue: '$1,180', share: '2.4%', trend: '+67%' },
-                  ].map(row => (
-                    <div key={row.platform} className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-white">{row.platform}</p>
-                        <p className="text-xs text-white/30">{row.share} of revenue</p>
+                    { platform: 'ChatGPT',    revenue: '$6,890', share: '14.3%', trend: '+88%' },
+                    { platform: 'Perplexity', revenue: '$2,250', share: '4.7%',  trend: '+124%' },
+                    { platform: 'Claude',     revenue: '$1,180', share: '2.4%',  trend: '+67%' },
+                  ].map((row, i) => (
+                    <ScaleIn key={row.platform} delay={i * 80}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-white">{row.platform}</p>
+                          <p className="text-xs text-white/30">{row.share} of revenue</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-white">{row.revenue}</p>
+                          <p className="text-xs text-st-lime">{row.trend} MoM</p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold text-white">{row.revenue}</p>
-                        <p className="text-xs text-st-lime">{row.trend} MoM</p>
-                      </div>
-                    </div>
+                    </ScaleIn>
                   ))}
                 </div>
               </div>
-            </FadeUp>
+            </SlideRight>
           </div>
         </div>
       </section>
@@ -1143,13 +1383,13 @@ export default function Landing() {
             <div className="text-center mb-14">
               <p className="text-xs font-semibold text-st-lime uppercase tracking-widest mb-3">Attribution Models</p>
               <h2 className="text-3xl sm:text-4xl font-black mb-4">Your sales cycle is unique. Your attribution model should be too.</h2>
-              <p className="text-white/40 max-w-xl mx-auto">Last-click makes paid search look like a hero and content look useless. SourceTrack pre-computes all 8 models simultaneously — switch views instantly to see which channels open deals, close them, and which do both.</p>
+              <p className="text-white/40 max-w-xl mx-auto">Last-click makes paid search look like a hero and content look useless. SourceTrack pre-computes all 8 models simultaneously — switch views instantly.</p>
             </div>
           </FadeUp>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {MODELS.map((m, i) => (
               <FadeUp key={m.name} delay={i * 70}>
-                <div className="rounded-2xl border border-white/8 bg-[#111414] p-5 hover:border-white/15 hover:-translate-y-0.5 transition-all h-full">
+                <div className="rounded-2xl border border-white/8 bg-[#111414] p-5 hover:border-white/15 hover:-translate-y-0.5 transition-all card-glow h-full">
                   <div className={`w-2 h-2 rounded-full ${m.color} mb-3`} />
                   <p className="text-sm font-bold text-white mb-1">{m.name}</p>
                   <p className="text-xs text-white/40 leading-relaxed">{m.desc}</p>
@@ -1167,12 +1407,12 @@ export default function Landing() {
             <div className="text-center mb-14">
               <p className="text-xs font-semibold text-st-lime uppercase tracking-widest mb-3">Setup</p>
               <h2 className="text-3xl sm:text-4xl font-black mb-4">Live in under 3 minutes</h2>
-              <p className="text-white/40 max-w-xl mx-auto">No data engineers. No tracking plans. No GTM. No waiting. Paste one script tag and your first attribution data appears before your coffee cools.</p>
+              <p className="text-white/40 max-w-xl mx-auto">No data engineers. No tracking plans. No GTM. No waiting.</p>
             </div>
           </FadeUp>
           <div className="space-y-6">
             {STEPS.map((step, i) => (
-              <FadeUp key={step.number} delay={i * 120}>
+              <SlideLeft key={step.number} delay={i * 120}>
                 <div className="flex gap-6 items-start">
                   <div className="shrink-0 w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
                     <span className="text-sm font-black text-st-lime">{step.number}</span>
@@ -1187,7 +1427,7 @@ export default function Landing() {
                     )}
                   </div>
                 </div>
-              </FadeUp>
+              </SlideLeft>
             ))}
           </div>
         </div>
@@ -1197,7 +1437,7 @@ export default function Landing() {
       <section id="privacy" className="py-24 px-6 border-t border-white/5">
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-14 items-center">
-            <FadeUp>
+            <SlideLeft>
               <div className="bg-[#111414] rounded-2xl border border-white/8 p-8">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-10 h-10 rounded-xl bg-st-lime/10 border border-st-lime/20 flex items-center justify-center">
@@ -1213,12 +1453,12 @@ export default function Landing() {
                 </div>
                 <div className="space-y-3">
                   {[
-                    { label: 'localStorage writes', value: '0', good: true },
-                    { label: 'Cookies set', value: '0', good: true },
-                    { label: 'Personal data in browser', value: 'None', good: true },
-                    { label: 'Consent banner required', value: 'No', good: true },
-                    { label: 'Visitor ID method', value: 'Server SHA-256', good: true },
-                    { label: 'ID rotation', value: 'Daily', good: true },
+                    { label: 'localStorage writes',   value: '0',            good: true },
+                    { label: 'Cookies set',           value: '0',            good: true },
+                    { label: 'Personal data in browser', value: 'None',      good: true },
+                    { label: 'Consent banner required', value: 'No',         good: true },
+                    { label: 'Visitor ID method',     value: 'Server SHA-256', good: true },
+                    { label: 'ID rotation',           value: 'Daily',        good: true },
                   ].map(row => (
                     <div key={row.label} className="flex items-center justify-between py-2 border-b border-white/5">
                       <span className="text-sm text-white/50">{row.label}</span>
@@ -1227,15 +1467,15 @@ export default function Landing() {
                   ))}
                 </div>
               </div>
-            </FadeUp>
-            <FadeUp delay={150}>
+            </SlideLeft>
+            <SlideRight delay={150}>
               <div>
                 <p className="text-xs font-semibold text-st-lime uppercase tracking-widest mb-4">Privacy-first</p>
                 <h2 className="text-3xl sm:text-4xl font-black mb-5 leading-tight">
                   Track conversions without touching a single cookie
                 </h2>
                 <p className="text-white/45 mb-6 leading-relaxed">
-                  Enable cookieless mode and SourceTrack switches to a server-derived, daily-rotating SHA-256 hash. No personal data ever touches the browser. No consent banner needed. Same attribution accuracy — just zero compliance exposure.
+                  Enable cookieless mode and SourceTrack switches to a server-derived, daily-rotating SHA-256 hash. No personal data ever touches the browser. No consent banner needed. Same attribution accuracy — zero compliance exposure.
                 </p>
                 <ul className="space-y-3">
                   {[
@@ -1252,61 +1492,13 @@ export default function Landing() {
                   ))}
                 </ul>
               </div>
-            </FadeUp>
+            </SlideRight>
           </div>
         </div>
       </section>
 
       {/* ── Pricing ─────────────────────────────────────────────────────── */}
-      <section id="pricing" className="py-24 px-6 border-t border-white/5">
-        <div className="max-w-6xl mx-auto">
-          <FadeUp>
-            <div className="text-center mb-4">
-              <p className="text-xs font-semibold text-st-lime uppercase tracking-widest mb-3">Pricing</p>
-              <h2 className="text-3xl sm:text-4xl font-black mb-4">Traffic-based pricing. Unlimited conversions.</h2>
-              <p className="text-white/40 max-w-xl mx-auto">Pay based on your site traffic — not every conversion you record. All plans include unlimited conversion tracking, 8 attribution models, and server-side CAPI sync.</p>
-            </div>
-            <PricingToggle annual={annual} setAnnual={setAnnual} />
-          </FadeUp>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {PRICING.map((plan, i) => (
-              <FadeUp key={plan.name} delay={i * 80}>
-                <div className={`rounded-2xl border p-6 flex flex-col h-full ${plan.highlight ? 'bg-st-lime/5 border-st-lime/40' : 'bg-[#111414] border-white/8'} hover:-translate-y-0.5 transition-all`}>
-                  {plan.highlight && (
-                    <div className="mb-3">
-                      <span className="text-[10px] font-bold uppercase tracking-wider bg-st-lime text-black px-2 py-0.5 rounded-full">Most popular</span>
-                    </div>
-                  )}
-                  <p className={`text-sm font-bold mb-1 ${plan.highlight ? 'text-st-lime' : 'text-white/60'}`}>{plan.name}</p>
-                  <div className="flex items-baseline gap-1 mb-1">
-                    <span className="text-3xl font-black text-white">
-                      {plan.price === 'Custom' ? 'Custom' : (annual ? plan.priceAnnual : plan.price)}
-                    </span>
-                    {plan.period && <span className="text-sm text-white/40">{plan.period}</span>}
-                  </div>
-                  {annual && plan.price !== 'Custom' && (
-                    <p className="text-[10px] text-st-lime mb-1">Billed annually · save 20%</p>
-                  )}
-                  <p className="text-xs text-white/35 mb-5">{plan.limit}</p>
-                  <ul className="space-y-2 mb-6 flex-1">
-                    {plan.features.map(f => (
-                      <li key={f} className="flex items-start gap-2 text-xs text-white/55">
-                        <span className={`shrink-0 mt-0.5 ${plan.highlight ? 'text-st-lime' : 'text-white/30'}`}>✓</span>
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                  <Link to="/signup"
-                    className={`w-full text-center text-sm px-4 py-2.5 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] ${plan.ctaStyle}`}>
-                    {plan.cta}
-                  </Link>
-                </div>
-              </FadeUp>
-            ))}
-          </div>
-          <p className="text-center text-xs text-white/25 mt-8">All plans include a 14-day free trial. No credit card required. Cancel any time. Upgrade or downgrade instantly.</p>
-        </div>
-      </section>
+      <PricingSection />
 
       {/* ── FAQ ──────────────────────────────────────────────────────────── */}
       <section id="faq" className="py-24 px-6 border-t border-white/5">
@@ -1341,7 +1533,8 @@ export default function Landing() {
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link to="/signup"
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-st-lime text-black text-base font-bold rounded-xl hover:bg-st-lime/90 transition-all hover:scale-[1.02] active:scale-[0.98]">
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-st-lime text-black text-base font-bold rounded-xl hover:bg-st-lime/90 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                style={{ boxShadow: '0 0 30px rgba(215,245,80,0.25)' }}>
                 Start seeing your AI traffic — free
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
