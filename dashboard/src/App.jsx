@@ -27,6 +27,10 @@ import Analytics from './pages/Analytics'
 import AdminRoute from './components/AdminRoute'
 import Docs from './pages/Docs'
 import Landing from './pages/Landing'
+import SolutionEcommerce from './pages/SolutionEcommerce'
+import SolutionSaaS from './pages/SolutionSaaS'
+import SolutionLeadGen from './pages/SolutionLeadGen'
+import SolutionAgency from './pages/SolutionAgency'
 
 const queryClient = new QueryClient()
 
@@ -84,6 +88,11 @@ export default function App() {
             <Route path="/share/:token" element={<ShareDashboard />} />
             {/* Public docs — no auth required */}
             <Route path="/docs" element={<Docs />} />
+            {/* Solution pages — public */}
+            <Route path="/ecommerce-attribution" element={<SolutionEcommerce />} />
+            <Route path="/saas-attribution" element={<SolutionSaaS />} />
+            <Route path="/lead-gen-attribution" element={<SolutionLeadGen />} />
+            <Route path="/agency-attribution" element={<SolutionAgency />} />
             {/* Public landing page — accessible to everyone */}
             <Route path="/" element={<Landing />} />
             <Route path="*" element={<Navigate to="/" replace />} />
