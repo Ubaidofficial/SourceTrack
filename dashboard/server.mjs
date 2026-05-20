@@ -10,9 +10,13 @@ const CANONICAL_HOST = 'www.sourcetrack.ai'
 const app = express()
 
 // www ↔ non-www canonical redirect — always serve from CANONICAL_HOST
+// Exempt Railway's internal healthcheck hostname so deploys don't fail
 app.use((req, res, next) => {
-  const host = req.headers.host
-  if (host && host !== CANONICAL_HOST && !host.startsWith('localhost') && !host.startsWith('127.')) {
+  const host = req.headers.host || ''
+  const isInternal = host.startsWith('localhost') ||
+                     host.startsWith('127.') ||
+                     host.endsWith('.railway.app')
+  if (host && host !== CANONICAL_HOST && !isInternal) {
     return res.redirect(301, `https://${CANONICAL_HOST}${req.url}`)
   }
   next()
