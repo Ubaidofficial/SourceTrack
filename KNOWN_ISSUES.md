@@ -37,25 +37,21 @@ Relevant future session:
 
 - Session 81 dashboard saved-report widgets
 
-### 3. No paid ad click-ID capture yet
+### 3. ~~No paid ad click-ID capture~~ — ACTUALLY WORKING
 
-Do not claim Cometly/Usermaven paid attribution parity.
+**This issue was wrong. Click IDs ARE captured end-to-end:**
 
-Missing or unverified:
+- Tracker captures: `gclid`, `gbraid`, `wbraid`, `fbclid`, `msclkid`, `ttclid`, `li_fat_id`, `twclid`
+- `api/routes/track.js` stores all of them on the PostHog event
+- `api/lib/channel-classifier.js` uses them for channel classification:
+  - `gclid/gbraid/wbraid/msclkid` → Paid Search
+  - `fbclid/ttclid` → Paid Social
+- `api/jobs/nightly-attribution.js` reads click IDs from touchpoints and writes them to `attributed_conversions`
+- Confidence scoring adds +20 points when a click ID is present on the first/last touch
 
-- `gclid`
-- `gbraid`
-- `wbraid`
-- `fbclid`
-- `msclkid`
-- `ttclid`
-- `li_fat_id`
-- `ad_id`
-- `campaign_id`
-- `adset_id`
-- `creative_id`
-
-These should be captured before claiming strong paid-ad attribution parity.
+**What is still missing (truly):**
+- `ad_id`, `campaign_id`, `adset_id`, `creative_id` — granular ad-level breakdown (requires ad platform API or manual UTM tagging)
+- These are not captured because they require platform-specific integrations, not just URL params
 
 ### 4. No ad spend ingestion yet
 
@@ -187,6 +183,32 @@ U-shaped / W-shaped / Time Decay / Linear models showed blank charts with no exp
 attribution-engine.js had 14 AI domains; nightly job had 8. Canonical `api/lib/channel-classifier.js` created with 21 domains; both consumers import from it.
 
 ## New Known Gaps (Session 98–99, not yet fixed)
+
+### Deployment architecture — two separate Railway services
+
+`sourcetrack.ai` is served by the **dashboard** Railway service:
+- Builder: RAILPACK
+- Build: `npm run build` (Vite → `dashboard/dist/`)
+- Start: `npm run start` = `serve -s dist -l $PORT`
+- The `serve` package must be in `dependencies` (not devDependencies) — fixed in this session
+
+`api.sourcetrack.ai` (or similar) is served by the **api** Railway service:
+- Builder: NIXPACKS
+- Start: `node api/index.js`
+
+The Express API server does **not** serve the dashboard frontend. They are independent deployments.
+
+---
+
+### GSC sitemap "General HTTP error" — root cause: SSL cert
+
+Google Search Console shows "Sitemap could not be read — General HTTP error" for `https://sourcetrack.ai/sitemap.xml`.
+
+**Root cause:** Same SSL cert issue as the browser `NET::ERR_CERT_COMMON_NAME_INVALID`.
+The cert served is for `stream.nexus.pizza`, not `sourcetrack.ai`.
+Google's crawler follows the same HTTPS rules as a browser — it refuses to fetch over a mismatched cert.
+
+**The sitemap itself is correct.** It is in `dashboard/public/sitemap.xml`, copied to `dist/sitemap.xml` during build, and served as a static file by `serve -s dist`. Once SSL is fixed, Google can read it immediately — resubmit in GSC after fixing.
 
 ### SSL Certificate — `NET::ERR_CERT_COMMON_NAME_INVALID` (NOT a code issue)
 Certificate shows `stream.nexus.pizza` instead of `sourcetrack.ai`.
