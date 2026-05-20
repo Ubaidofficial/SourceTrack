@@ -8,7 +8,7 @@
     "build": "vite build",
     "generate-assets": "node scripts/generate-assets.mjs",
     "preview": "vite preview",
-    "start": "serve dist -l ${PORT:-3000}"
+    "start": "node server.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
@@ -17,6 +17,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "express": "^5.2.1",
     "lucide-react": "^0.445.0",
     "posthog-js": "^1.203.0",
     "react": "^18.3.1",
