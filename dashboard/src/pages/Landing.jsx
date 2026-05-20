@@ -13,33 +13,33 @@ const NAV_LINKS = [
 const FEATURES = [
   {
     icon: '⚡',
-    title: 'One script tag. Zero setup.',
-    body: 'Paste a single 1.7 KB snippet into your site\'s <head> and start capturing every pageview, conversion, and UTM parameter instantly — no GTM, no config files.',
+    title: 'One script tag. Live in 3 minutes.',
+    body: 'Paste a 1.7 KB snippet into your <head> — 54× lighter than GA4 — and immediately capture every pageview, conversion, UTM parameter, and AI referral. No GTM. No config files. No data engineers.',
   },
   {
     icon: '🤖',
-    title: 'AI traffic attribution',
-    body: 'Automatically detect visitors arriving from ChatGPT, Claude, Perplexity, Gemini, Grok, Copilot, DeepSeek and 8 more AI platforms across 22 domains — before your competitors even know AI referrals exist.',
+    title: "Track the traffic GA4 marks as 'direct'",
+    body: 'Visitors from ChatGPT, Perplexity, Claude, Gemini, Grok, Copilot, DeepSeek, and 8 more AI platforms often land with no referrer — so GA4 calls them direct. SourceTrack identifies them correctly across 22 domains, so their conversions get attributed to the right source.',
   },
   {
     icon: '🔁',
-    title: 'Multi-touch attribution',
-    body: 'See the full customer journey — not just the last click. Choose from 8 models: First Touch, Last Touch, Linear, Time Decay, U-Shaped, W-Shaped, and more.',
+    title: '8 attribution models. Not just last-click.',
+    body: 'Last-click attribution gives all the credit to the final ad. SourceTrack pre-computes all 8 models — First Touch, Last Touch, Linear, Time Decay, U-Shaped, W-Shaped, and more — so you can switch views instantly and see which channels actually start and close deals.',
   },
   {
     icon: '📊',
-    title: 'Report builder',
-    body: 'Build any attribution report in seconds with our guided 7-step workflow. Group by channel, source, campaign, country, device, AI platform, or landing page. Export to CSV.',
+    title: 'Any attribution slice in seconds',
+    body: 'Group revenue by channel, source, campaign, country, device, AI platform, or landing page with a guided 7-step builder. Export to CSV. No SQL. No BI tool. No waiting for a data analyst.',
   },
   {
     icon: '🛤️',
-    title: 'Customer journey maps',
-    body: 'Visualise every touchpoint from first visit to conversion. Understand exactly which ads, content, and referral sources work together to close deals.',
+    title: 'See exactly what closed the deal',
+    body: 'Map every touchpoint from first visit to conversion — including AI referral visits that other tools miss. Understand which combination of ads, content, and sources work together, not just which one got the last click.',
   },
   {
     icon: '🔒',
-    title: 'Cookieless & GDPR-ready',
-    body: 'Enable cookieless mode for a server-derived, daily-rotating visitor ID — no localStorage, no cookies, no consent banner required. Fully GDPR, ePrivacy, and PECR compliant.',
+    title: 'No consent banner. No cookies. Full data.',
+    body: 'Cookieless mode uses a salted SHA-256 hash that rotates every 24 hours — server-side only. No localStorage, no cookies, no consent banner. Fully GDPR, ePrivacy, and PECR compliant — with the same conversion accuracy as cookie-based tracking.',
   },
 ]
 
@@ -158,20 +158,20 @@ const FAQS = [
 const STEPS = [
   {
     number: '01',
-    title: 'Add the snippet',
-    body: 'Paste one line of JavaScript into your site\'s <head>. Works on any website — Webflow, WordPress, Shopify, custom code.',
+    title: 'Paste one line',
+    body: 'Drop the 1.7 KB snippet into your <head>. Works on Webflow, WordPress, Shopify, or any custom stack — no plugin, no GTM container, no additional config.',
     code: `<script async\n  src="https://app.sourcetrack.ai/tracker/tracker.min.js"\n  data-site-key="YOUR_KEY">\n</script>`,
   },
   {
     number: '02',
-    title: 'Fire your first conversion',
-    body: 'Call sourcetrack.conversion() when a purchase, sign-up, or form submit happens. Pass an optional value and order ID.',
+    title: 'Fire one conversion call',
+    body: 'Call sourcetrack.conversion() on any purchase, sign-up, or form submit. Pass a revenue value and order ID if you have them. That\'s the entire integration.',
     code: `sourcetrack.conversion({\n  value: 99,\n  type: 'purchase',\n  order_id: 'ORD-123'\n})`,
   },
   {
     number: '03',
-    title: 'See where revenue comes from',
-    body: 'Open your dashboard to see revenue, conversions, and visitor journeys broken down by every marketing source — including AI.',
+    title: 'See which sources drive revenue — including AI',
+    body: 'Open your dashboard to see revenue and conversions by channel, campaign, device, and AI platform. The sources GA4 marks as direct now have names.',
     code: null,
   },
 ]
@@ -179,27 +179,27 @@ const STEPS = [
 const WHO_ITS_FOR = [
   {
     role: 'Performance marketers',
-    desc: 'Know exactly which ad campaigns, keywords, and creatives generate revenue — not just clicks.',
+    desc: 'See which campaigns, keywords, and creatives generate revenue — and sync that data back to Meta, Google, and TikTok CAPI automatically so the ad platforms bid on winners, not guesses.',
   },
   {
     role: 'Growth teams',
-    desc: 'Understand your full acquisition funnel from first touch to closed deal, across every channel.',
+    desc: 'Map every touchpoint from first-touch to conversion, including the AI platform query that started the journey — across 8 attribution models, not one.',
   },
   {
     role: 'Agencies',
-    desc: 'Prove ROI to clients with multi-model attribution reports they can trust. Export to CSV in one click.',
+    desc: 'Run multi-model attribution reports for every client in seconds, export to CSV, and surface the AI-driven revenue they didn\'t know existed. That\'s a new value-add on every retainer.',
   },
   {
     role: 'E-commerce brands',
-    desc: 'Attribute purchase revenue to the right source — including organic AI traffic from ChatGPT and Perplexity.',
+    desc: 'Stop over-crediting paid ads. See exactly how much purchase revenue started with an AI search — and rebalance your budget accordingly.',
   },
   {
     role: 'SaaS companies',
-    desc: 'Track sign-ups, trial starts, and upgrades back to the marketing touchpoints that drove them.',
+    desc: 'Connect every trial start and upgrade to the exact touchpoints that drove it — including the ChatGPT recommendation your pipeline never captured.',
   },
   {
-    role: 'Privacy-conscious teams',
-    desc: 'Enable cookieless mode and track conversions without storing any personal data in the browser.',
+    role: 'Privacy-first teams',
+    desc: 'Track every conversion without cookies, consent banners, or browser storage. Cookieless mode uses a server-side rotating ID — same data quality, zero compliance risk.',
   },
 ]
 
@@ -574,11 +574,11 @@ export default function Landing() {
   return (
     <div className="bg-[#0C0E0E] text-white min-h-screen font-sans antialiased">
       <Helmet>
-        <title>SourceTrack — AI-Powered Multi-Touch Attribution</title>
-        <meta name="description" content="SourceTrack gives eCommerce, SaaS, and lead gen teams accurate multi-touch attribution across every channel — including ChatGPT, Perplexity, and 13 more AI platforms. Server-side CAPI sync, 8 attribution models, GDPR-ready cookieless tracking. From $49/mo." />
+        <title>SourceTrack — Track ChatGPT Traffic & Multi-Touch Attribution</title>
+        <meta name="description" content="The only attribution tool that tracks ChatGPT, Perplexity & 13 other AI platforms — plus full multi-touch attribution and server-side CAPI sync to Meta, Google, TikTok, LinkedIn & Microsoft. One 1.7 KB script. Live in 3 minutes. From $49/mo." />
         <link rel="canonical" href="https://sourcetrack.ai/" />
-        <meta property="og:title"       content="SourceTrack — AI-Powered Multi-Touch Attribution" />
-        <meta property="og:description" content="Accurate attribution for every channel including ChatGPT and Perplexity. 8 attribution models, server-side tracking, GDPR-ready." />
+        <meta property="og:title"       content="SourceTrack — Track ChatGPT Traffic & Multi-Touch Attribution" />
+        <meta property="og:description" content="Your AI traffic is being attributed to 'direct' right now. SourceTrack fixes it — tracking ChatGPT, Perplexity, and 13 AI platforms with full multi-touch attribution and CAPI sync." />
         <meta property="og:url"         content="https://sourcetrack.ai/" />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content="https://sourcetrack.ai/og-image.png" />
@@ -734,23 +734,23 @@ export default function Landing() {
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-st-lime/30 bg-st-lime/5 mb-8">
             <span className="w-1.5 h-1.5 rounded-full bg-st-lime animate-pulse" />
-            <span className="text-xs font-medium text-st-lime">Now tracking AI referrals from 15 platforms including ChatGPT &amp; Perplexity</span>
+            <span className="text-xs font-medium text-st-lime">GA4 can't see ChatGPT traffic. SourceTrack can. → Start free</span>
           </div>
 
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black leading-[1.05] tracking-tight mb-6">
-            Know exactly which{' '}
-            <span className="text-st-lime">marketing</span>{' '}
-            drives your revenue
+            Your competitors don't know their{' '}
+            <span className="text-st-lime">ChatGPT traffic</span>{' '}
+            exists. You will.
           </h1>
 
           <p className="text-lg sm:text-xl text-white/50 max-w-2xl mx-auto mb-10 leading-relaxed">
-            SourceTrack gives you multi-touch attribution, AI traffic detection, and full customer journey visibility — with one 1.7 KB script tag and zero configuration.
+            SourceTrack is the only attribution tool that tracks conversions from ChatGPT, Perplexity, and 13 other AI platforms — plus full multi-touch attribution and CAPI sync to Meta, Google, TikTok, LinkedIn, and Microsoft. One 1.7 KB script. Under 3 minutes to live data.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link to="/signup"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-st-lime text-black text-sm font-bold rounded-xl hover:bg-st-lime/90 transition-colors">
-              Start free — 14-day trial
+              See your AI traffic — free for 14 days
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
@@ -761,7 +761,7 @@ export default function Landing() {
             </Link>
           </div>
 
-          <p className="text-xs text-white/30 mt-4">No credit card required · GDPR-compliant · Cancel anytime</p>
+          <p className="text-xs text-white/30 mt-4">No credit card · GDPR-compliant · Cancel anytime · Live in under 3 minutes</p>
         </div>
 
         {/* Hero visual — interactive live dashboard */}
@@ -773,12 +773,12 @@ export default function Landing() {
       {/* ── Social proof strip ───────────────────────────────────────────── */}
       <section className="border-y border-white/5 py-6 px-6">
         <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-center gap-x-10 gap-y-3 text-white/30 text-sm">
-          <span>✓ 1.7 KB tracker script</span>
+          <span>✓ 1.7 KB script — 54× lighter than GA4</span>
+          <span>✓ 15 AI platforms tracked</span>
           <span>✓ 8 attribution models</span>
-          <span>✓ 15 AI platforms detected</span>
-          <span>✓ GDPR-compliant cookieless mode</span>
-          <span>✓ No GTM required</span>
-          <span>✓ REST API + webhooks</span>
+          <span>✓ CAPI sync to 5 ad platforms</span>
+          <span>✓ Cookieless &amp; GDPR-ready</span>
+          <span>✓ No GTM needed</span>
         </div>
       </section>
 
@@ -786,8 +786,8 @@ export default function Landing() {
       <section className="py-24 px-6">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-black mb-4">Built for teams that need to prove ROI</h2>
-            <p className="text-white/40 max-w-xl mx-auto">If you spend money on marketing and need to know what actually works, SourceTrack is for you.</p>
+            <h2 className="text-3xl sm:text-4xl font-black mb-4">Built for teams tired of guessing</h2>
+            <p className="text-white/40 max-w-xl mx-auto">Marketing budgets are shrinking. AI is reshaping where buyers start their research. SourceTrack shows you exactly where revenue comes from — including the channels your current analytics can't see.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {WHO_ITS_FOR.map(w => (
@@ -805,8 +805,8 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
             <p className="text-xs font-semibold text-st-lime uppercase tracking-widest mb-3">Features</p>
-            <h2 className="text-3xl sm:text-4xl font-black mb-4">Everything you need to understand your marketing</h2>
-            <p className="text-white/40 max-w-xl mx-auto">Powerful attribution in a lightweight package. No bloated analytics suite — just the data that drives decisions.</p>
+            <h2 className="text-3xl sm:text-4xl font-black mb-4">One tool. Every attribution question answered.</h2>
+            <p className="text-white/40 max-w-xl mx-auto">GA4 gives you pageviews. SourceTrack gives you revenue by source — including the AI platforms GA4 can't see — in a 1.7 KB script with no configuration.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {FEATURES.map(f => (
@@ -857,17 +857,18 @@ export default function Landing() {
             <div>
               <p className="text-xs font-semibold text-st-lime uppercase tracking-widest mb-4">AI Era Attribution</p>
               <h2 className="text-3xl sm:text-4xl font-black mb-5 leading-tight">
-                Your customers discover you on AI. Are you tracking it?
+                Every month you don't track AI traffic, you're misattributing the revenue it drives.
               </h2>
               <p className="text-white/45 mb-6 leading-relaxed">
-                Millions of buying decisions now start with a ChatGPT or Perplexity query. Standard analytics tools are blind to this traffic. SourceTrack automatically identifies visitors arriving from AI platforms and attributes their conversions correctly.
+                ChatGPT and Perplexity referrals often arrive with no referrer header — so GA4 logs them as direct traffic. That means the revenue they drive gets silently credited to the wrong source. SourceTrack identifies AI visitors correctly across 15 platforms and 22 domains using referrer signals and UTM pattern matching — no manual tagging required.
               </p>
               <ul className="space-y-3">
                 {[
-                  'Detect 15 AI platforms (22 domains) from referrer and UTM signals',
-                  'See AI revenue vs. non-AI revenue side by side',
-                  'Track which AI platforms convert best for your product',
-                  'No manual UTM tagging needed for organic AI traffic',
+                  '15 AI platforms, 22 domains — detected automatically from referrer and UTM signals',
+                  'AI revenue vs. non-AI revenue in one dashboard view — no custom segmentation needed',
+                  'See which AI platforms drive buyers vs. browsers for your specific product',
+                  'No manual UTM tagging — organic AI traffic is identified server-side',
+                  "Conversions previously logged as 'direct' now have a source",
                 ].map(item => (
                   <li key={item} className="flex items-start gap-3 text-sm text-white/60">
                     <span className="text-st-lime mt-0.5 shrink-0">✓</span>
@@ -917,8 +918,8 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
             <p className="text-xs font-semibold text-st-lime uppercase tracking-widest mb-3">Attribution Models</p>
-            <h2 className="text-3xl sm:text-4xl font-black mb-4">See your data through 8 different lenses</h2>
-            <p className="text-white/40 max-w-xl mx-auto">Every business has a different sales cycle. Switch between models to understand how different channels contribute at different stages of the funnel.</p>
+            <h2 className="text-3xl sm:text-4xl font-black mb-4">Your sales cycle is unique. Your attribution model should be too.</h2>
+            <p className="text-white/40 max-w-xl mx-auto">Last-click makes paid search look like a hero and content look useless. First-touch does the opposite. SourceTrack pre-computes all 8 models simultaneously — switch views instantly to see which channels open deals, which close them, and which do both.</p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {MODELS.map(m => (
@@ -938,7 +939,7 @@ export default function Landing() {
           <div className="text-center mb-14">
             <p className="text-xs font-semibold text-st-lime uppercase tracking-widest mb-3">Setup</p>
             <h2 className="text-3xl sm:text-4xl font-black mb-4">Live in under 3 minutes</h2>
-            <p className="text-white/40 max-w-xl mx-auto">No data engineers. No tracking plans. No waiting. Just paste a script tag and start seeing where your revenue comes from.</p>
+            <p className="text-white/40 max-w-xl mx-auto">No data engineers. No tracking plans. No GTM. No waiting. Paste one script tag and your first attribution data appears before your coffee cools.</p>
           </div>
           <div className="space-y-6">
             {STEPS.map((step, i) => (
@@ -1000,15 +1001,15 @@ export default function Landing() {
                 Track conversions without touching a single cookie
               </h2>
               <p className="text-white/45 mb-6 leading-relaxed">
-                Enable cookieless mode and SourceTrack switches to a server-derived visitor ID — a salted SHA-256 hash that rotates every 24 hours. No personal data ever leaves your server, no consent banner required.
+                Enable cookieless mode and SourceTrack switches to a server-derived, daily-rotating SHA-256 hash. No personal data ever touches the browser. No consent banner needed. Same attribution accuracy — just zero compliance exposure.
               </p>
               <ul className="space-y-3">
                 {[
-                  'Zero browser storage in cookieless mode',
-                  'IP address never stored — hashed server-side only',
-                  'Visitor ID rotates daily — no persistent tracking',
-                  'GDPR right-to-erasure API endpoint built-in',
-                  'Configurable data retention policy (30 to 365 days)',
+                  'Zero browser storage — no cookies, no localStorage, no fingerprinting',
+                  'IP address hashed server-side and never stored in raw form',
+                  'Visitor ID rotates every 24 hours — impossible to build a long-term profile',
+                  'GDPR right-to-erasure endpoint built in — one API call, user deleted',
+                  'Data retention window: 30 to 365 days, configurable per workspace',
                 ].map(item => (
                   <li key={item} className="flex items-start gap-3 text-sm text-white/60">
                     <span className="text-st-lime mt-0.5 shrink-0">✓</span>
@@ -1026,8 +1027,8 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-14">
             <p className="text-xs font-semibold text-st-lime uppercase tracking-widest mb-3">Pricing</p>
-            <h2 className="text-3xl sm:text-4xl font-black mb-4">Simple conversion-based pricing</h2>
-            <p className="text-white/40 max-w-xl mx-auto">Pay for what you use. Pageviews and sessions are always unlimited. You only pay for conversion events.</p>
+            <h2 className="text-3xl sm:text-4xl font-black mb-4">Pay for conversions. Pageviews are always free.</h2>
+            <p className="text-white/40 max-w-xl mx-auto">No pageview caps. No session limits. No surprise overages. You only pay for conversion events — the moment you actually get value from the data.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {PRICING.map(plan => (
@@ -1058,7 +1059,7 @@ export default function Landing() {
               </div>
             ))}
           </div>
-          <p className="text-center text-xs text-white/25 mt-8">All plans include a 14-day free trial. No credit card required. Cancel any time.</p>
+          <p className="text-center text-xs text-white/25 mt-8">All plans include a 14-day free trial. No credit card. Cancel any time. Switch plans as your conversion volume grows.</p>
         </div>
       </section>
 
@@ -1067,7 +1068,7 @@ export default function Landing() {
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-14">
             <p className="text-xs font-semibold text-st-lime uppercase tracking-widest mb-3">FAQ</p>
-            <h2 className="text-3xl sm:text-4xl font-black mb-4">Common questions</h2>
+            <h2 className="text-3xl sm:text-4xl font-black mb-4">Questions we get before the first conversion fires</h2>
           </div>
           <div className="space-y-4">
             {FAQS.map((item, i) => (
@@ -1081,15 +1082,17 @@ export default function Landing() {
       <section className="py-24 px-6 border-t border-white/5">
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="text-4xl sm:text-5xl font-black mb-5 leading-tight">
-            Start tracking what actually drives revenue
+            Your AI traffic is being attributed to{' '}
+            <span className="text-st-lime">'direct'</span>{' '}
+            right now.
           </h2>
           <p className="text-white/40 mb-10 text-lg">
-            14-day free trial. One script tag. No credit card required.
+            Every day without SourceTrack, AI-driven conversions are credited to the wrong source. Fix it in under 3 minutes. No credit card.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link to="/signup"
               className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-st-lime text-black text-base font-bold rounded-xl hover:bg-st-lime/90 transition-colors">
-              Create free account
+              Start seeing your AI traffic — free
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
