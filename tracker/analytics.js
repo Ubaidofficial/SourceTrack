@@ -1,4 +1,7 @@
 ;(function () {
+  // Honor browser/OS privacy signals — abort before any storage or network.
+  if (navigator.doNotTrack === '1' || window.doNotTrack === '1' || navigator.globalPrivacyControl === true) return
+
   var script = document.currentScript || document.querySelector('script[data-site-key]')
   var SITE_KEY = (script && script.getAttribute('data-site-key')) || ''
   var SESSION_KEY = 'st_sid'

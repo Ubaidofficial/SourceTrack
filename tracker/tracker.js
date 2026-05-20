@@ -1,6 +1,11 @@
 ;(function () {
   'use strict'
 
+  // ─── Do Not Track / Global Privacy Control ────────────────────────────────
+  // Opt-out signaled by the browser/OS — abort before any storage or beacons.
+  // Opt-in is still possible via the data-consent-required attribute (below).
+  if (navigator.doNotTrack === '1' || window.doNotTrack === '1' || navigator.globalPrivacyControl === true) return
+
   // ─── Config ────────────────────────────────────────────────────────────────
   var sc = document.currentScript || document.querySelector('script[data-site-key]')
   var K  = (sc && sc.getAttribute('data-site-key')) || ''

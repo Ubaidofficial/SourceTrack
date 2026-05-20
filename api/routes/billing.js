@@ -2,10 +2,16 @@ import Stripe from 'stripe'
 import { createClient } from '@supabase/supabase-js'
 import WebSocket from 'ws'
 import { Router } from 'express'
+import NodeCache from 'node-cache'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2024-06-20'
 })
+
+// Idempotency cache for Stripe webhook event.id — 24h covers Stripe's retry
+// window with margin. Survives a single process; replicas don't share this,
+// but Stripe's retry interval (4h+) makes that practically harmless.
+const _seenStripeEvents = new NodeCache({ stdTTL: 86400, checkperiod: 3600 })
 
 // ── Price → plan mapping ──────────────────────────────────────────────────────
 // Populated from env vars so production and test keys both work.
@@ -65,6 +71,17 @@ export async function billingWebhookHandler(req, res) {
   }
 
   const sb = getSupabase()
+
+  // Stripe retries webhooks for ~3 days on non-2xx. event.id is unique per
+  // event regardless of retry — record it to skip duplicate processing.
+  if (event.id) {
+    const seen = _seenStripeEvents.get(event.id)
+    if (seen) {
+      console.log(`[billing] duplicate Stripe event ${event.id} (${event.type}) — skipping`)
+      return res.json({ received: true, duplicate: true })
+    }
+    _seenStripeEvents.set(event.id, true)
+  }
 
   try {
     switch (event.type) {

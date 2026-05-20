@@ -49,6 +49,15 @@ import { gdprRouter } from './routes/gdpr.js'
 import { pixelRouter } from './routes/pixel.js'
 import { annotationsRouter } from './routes/annotations.js'
 
+// Fail fast on missing required environment variables. Better to crash on
+// startup than to fail every request with a cryptic 500 later.
+const REQUIRED_ENV = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'POSTHOG_HOST', 'POSTHOG_API_KEY']
+const missingEnv = REQUIRED_ENV.filter(k => !process.env[k])
+if (missingEnv.length) {
+  console.error(`[startup] Missing required env vars: ${missingEnv.join(', ')}`)
+  process.exit(1)
+}
+
 const app = express()
 
 // Session 70 hard CORS fix for pixel API routes
@@ -272,6 +281,23 @@ app.post('/track', express.json({ limit: '100kb' }),
 
 
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   process.stdout.write(`TrackIQ running on port ${PORT}\n`)
 })
+
+// Graceful shutdown — Railway sends SIGTERM ~10s before SIGKILL on deploys.
+// Close the HTTP server so in-flight requests finish, then exit.
+function shutdown(signal) {
+  console.log(`[shutdown] ${signal} received, draining…`)
+  server.close(() => {
+    console.log('[shutdown] http server closed')
+    process.exit(0)
+  })
+  // Hard exit if we exceed the platform's grace window.
+  setTimeout(() => {
+    console.error('[shutdown] timeout — forcing exit')
+    process.exit(1)
+  }, 10_000).unref()
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'))
+process.on('SIGINT',  () => shutdown('SIGINT'))

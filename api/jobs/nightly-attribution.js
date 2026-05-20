@@ -45,12 +45,37 @@ const POSTHOG_HOST = process.env.POSTHOG_HOST
 async function main() {
   const startTime = Date.now()
   log('Starting nightly attribution job')
-  
+
   if (!POSTHOG_PERSONAL_API_KEY || !POSTHOG_PROJECT_ID || !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
     logError('Missing required environment variables')
     throw new Error("Missing required environment variables")
   }
-  
+
+  // Concurrency lock — if a previous run is still in-flight (no terminal row
+  // logged in the last LOCK_TTL_HOURS), refuse to start. Prevents Railway
+  // crons from doubling up upserts and inflating attribution counts.
+  const LOCK_TTL_HOURS = 6
+  try {
+    const { data: lastRun } = await _supabase
+      .from('job_runs')
+      .select('status, ran_at')
+      .eq('job_name', 'nightly-attribution')
+      .order('ran_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (lastRun?.status === 'running' &&
+        Date.now() - new Date(lastRun.ran_at).getTime() < LOCK_TTL_HOURS * 3600 * 1000) {
+      log(`Another nightly-attribution run is in progress (started ${lastRun.ran_at}) — aborting`)
+      return
+    }
+  } catch (lockErr) {
+    logWarn(`Lock check failed (continuing anyway): ${lockErr.message}`)
+  }
+
+  // Mark this run as in-flight. Updated to success/failed below.
+  await _writeJobRun({ status: 'running', conversions_processed: 0, duration_ms: 0 })
+
   try {
     const { data: sites, error: sitesError } = await supabase
       .from('sites')
@@ -491,10 +516,10 @@ async function runRetentionPurge(sites) {
   }
 }
 
-async function queryPostHog(query) {
+async function queryPostHog(query, attempt = 0) {
   const host = POSTHOG_HOST.replace(/\/$/, '')
   const url = `${host}/api/projects/${POSTHOG_PROJECT_ID}/query/`
-  
+
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -505,12 +530,22 @@ async function queryPostHog(query) {
       query: { kind: 'HogQLQuery', query: query }
     })
   })
-  
+
+  // Retry on rate limit (429) and transient 5xx with exponential backoff.
+  // PostHog returns Retry-After in seconds when it knows the wait.
+  if ((response.status === 429 || response.status >= 500) && attempt < 3) {
+    const retryAfterHdr = parseInt(response.headers.get('retry-after') || '0', 10)
+    const backoffMs = retryAfterHdr > 0 ? retryAfterHdr * 1000 : Math.min(60_000, 2000 * Math.pow(2, attempt))
+    logWarn(`PostHog ${response.status} — retrying in ${backoffMs}ms (attempt ${attempt + 1}/3)`)
+    await sleep(backoffMs)
+    return queryPostHog(query, attempt + 1)
+  }
+
   if (!response.ok) {
     const errorText = await response.text()
     throw new Error(`PostHog API error (${response.status}): ${errorText}`)
   }
-  
+
   const data = await response.json()
   return data.results || []
 }

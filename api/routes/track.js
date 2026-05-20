@@ -3,6 +3,10 @@ import geoip from 'geoip-lite'
 import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
 
+// Same crawler pattern used by /api/analytics/collect — keeps PostHog event
+// counts clean (Googlebot, Lighthouse, scripted clients don't represent users).
+const BOT_UA_PATTERN = /bot|crawl|spider|slurp|mediapartners|adsbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot|discordbot|applebot|bingpreview|googleweblight|lighthouse|pagespeed|headlesschrome|phantomjs|selenium|puppeteer|playwright|wget|curl\/|python-requests|axios\/|go-http|java\/|ruby\/|php\//i
+
 function enrich(req) {
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || ''
   const ua = req.headers['user-agent'] || ''
@@ -29,6 +33,12 @@ function normalizeUtm(value) {
 
 export async function track(req, res) {
   try {
+    // Silent bot drop — return 200 so crawlers don't retry/spam
+    const ua = req.headers['user-agent'] || ''
+    if (!ua || BOT_UA_PATTERN.test(ua)) {
+      return res.status(200).json({ success: true, data: { received: true, filtered: 'bot' }, error: null })
+    }
+
     const enriched = enrich(req)
 
     ph.capture({
