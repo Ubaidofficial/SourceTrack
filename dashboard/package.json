@@ -6,12 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "generate-assets": "node scripts/generate-assets.mjs",
     "preview": "vite preview",
-    "start": "serve -s dist -l ${PORT:-3000}"
+    "start": "serve dist -l ${PORT:-3000}"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
-    "serve": "^14.2.6",
     "@tanstack/react-query": "^5.56.0",
     "chart.js": "^4.4.4",
     "class-variance-authority": "^0.7.0",
@@ -24,6 +24,7 @@
     "react-dom": "^18.3.1",
     "react-helmet-async": "^3.0.0",
     "react-router-dom": "^6.26.2",
+    "serve": "^14.2.6",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7"
   },
@@ -33,6 +34,7 @@
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.45",
+    "sharp": "^0.34.5",
     "tailwindcss": "^3.4.11",
     "vite": "^5.4.6"
   }

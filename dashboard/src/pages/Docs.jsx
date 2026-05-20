@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
+import { Helmet } from 'react-helmet-async'
 import { Copy, Check, ChevronRight, ExternalLink, Menu, X } from 'lucide-react'
 
 // ─── Code block with copy button ─────────────────────────────────────────────
@@ -193,6 +194,16 @@ export default function Docs() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#111414] text-gray-900 dark:text-white">
+      <Helmet>
+        <title>SourceTrack API Docs — Multi-Touch Attribution Integration Guide</title>
+        <meta name="description" content="Complete API reference for SourceTrack. Track events, conversions, and visitors. Server-side CAPI sync, 8 attribution models, GDPR cookieless mode. Get started in minutes." />
+        <link rel="canonical" href="https://sourcetrack.ai/docs" />
+        <meta property="og:title"       content="SourceTrack API Documentation" />
+        <meta property="og:description" content="Integrate multi-touch attribution in minutes. Full API reference for tracking, conversions, attribution, and GDPR compliance." />
+        <meta property="og:url"         content="https://sourcetrack.ai/docs" />
+        <meta property="og:type"        content="website" />
+        <meta name="robots"             content="index, follow" />
+      </Helmet>
       {/* ── Top Bar ─────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 bg-white/90 dark:bg-[#111414]/90 backdrop-blur border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">

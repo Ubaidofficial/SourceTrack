@@ -7,6 +7,53 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased] — 2026-05-20
 
+### SEO & Social Sharing Overhaul
+
+#### Bug Fixes
+
+**Sitemap served as HTML instead of XML** (`dashboard/public/serve.json`, `dashboard/package.json`)
+- `serve -s` (SPA mode) was rewriting all requests to `index.html` in production,
+  including `/sitemap.xml`, causing Google Search Console to report "Sitemap is HTML".
+- Added `serve.json` configuration with explicit rewrites that resolve `sitemap.xml`,
+  `robots.txt`, and favicons before the SPA catch-all fires.
+- Removed the `-s` flag from the start command; `serve.json` now owns all routing.
+
+#### Improvements
+
+**Open Graph & favicon assets** (`dashboard/public/`)
+- Added `og-image.png` (1200×630) — branded social preview card with attribution
+  journey visualization, feature pills, and pricing footer.
+- Added `favicon.ico` (16×16, 32×32, 48×48 multi-size) and `apple-touch-icon.png`
+  (192×192) — previously only an SVG favicon existed, breaking ICO requests and
+  iOS home screen saves.
+- `index.html` updated to reference all three icon variants and `theme-color`.
+
+**Sitemap cleanup** (`dashboard/public/sitemap.xml`)
+- Removed `/login` and `/signup` — no crawl value for auth pages.
+- Added `lastmod` dates to remaining URLs.
+
+**robots.txt cleanup** (`dashboard/public/robots.txt`)
+- Removed redundant `Allow:` directives (default behaviour; stating them adds noise).
+
+**Docs page SEO** (`dashboard/src/pages/Docs.jsx`)
+- Added `<Helmet>` with page-specific title, description, canonical URL, and OG tags.
+  Previously `/docs` inherited the homepage meta description when indexed.
+
+**AI citation structured data** (`dashboard/src/pages/Landing.jsx`)
+- Added `FAQPage` JSON-LD for all 8 FAQ entries — primary mechanism for AI Overviews
+  to surface direct Q&A answers.
+- Added `Organization` JSON-LD — establishes brand entity for AI knowledge graphs.
+- Added `HowTo` JSON-LD for the 3-step setup flow — targets procedural queries.
+- Expanded `SoftwareApplication` featureList to 7 items including report builder
+  and real-time dashboard.
+- Added `twitter:image` and `twitter:site` to Landing Helmet (were only in static HTML).
+
+**Asset generation script** (`dashboard/scripts/generate-assets.mjs`)
+- Pure Node.js script using `sharp` to regenerate `og-image.png`, `favicon.ico`,
+  and `apple-touch-icon.png` from SVG templates. Run via `npm run generate-assets`.
+
+---
+
 ### Audit-Driven Improvements (Sessions 97–98)
 
 This release closes all critical gaps identified in the full competitive audit

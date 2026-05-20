@@ -582,9 +582,12 @@ export default function Landing() {
         <meta property="og:url"         content="https://sourcetrack.ai/" />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content="https://sourcetrack.ai/og-image.png" />
-        <meta name="twitter:card"       content="summary_large_image" />
-        <meta name="twitter:title"      content="SourceTrack — AI-Powered Attribution" />
+        <meta name="twitter:card"        content="summary_large_image" />
+        <meta name="twitter:site"        content="@sourcetrackio" />
+        <meta name="twitter:title"       content="SourceTrack — AI-Powered Attribution" />
         <meta name="twitter:description" content="Track every conversion source including AI platforms. Multi-touch attribution with server-side tracking." />
+        <meta name="twitter:image"       content="https://sourcetrack.ai/og-image.png" />
+        {/* SoftwareApplication — product pricing & features */}
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "SoftwareApplication",
@@ -594,18 +597,76 @@ export default function Landing() {
           "url": "https://sourcetrack.ai",
           "description": "Multi-touch attribution platform with server-side CAPI sync, 15 AI platform detection, 8 attribution models, and GDPR cookieless compliance for eCommerce, SaaS, and lead generation businesses.",
           "offers": [
-            { "@type": "Offer", "name": "Trial", "price": "0", "priceCurrency": "USD", "description": "14-day free trial, 200 conversions" },
-            { "@type": "Offer", "name": "Starter", "price": "49", "priceCurrency": "USD", "priceSpecification": { "@type": "UnitPriceSpecification", "price": "49", "priceCurrency": "USD", "unitText": "MONTH" } },
-            { "@type": "Offer", "name": "Pro", "price": "99", "priceCurrency": "USD", "priceSpecification": { "@type": "UnitPriceSpecification", "price": "99", "priceCurrency": "USD", "unitText": "MONTH" } },
-            { "@type": "Offer", "name": "Agency", "price": "199", "priceCurrency": "USD", "priceSpecification": { "@type": "UnitPriceSpecification", "price": "199", "priceCurrency": "USD", "unitText": "MONTH" } }
+            { "@type": "Offer", "name": "Trial",   "price": "0",   "priceCurrency": "USD", "description": "14-day free trial, 200 conversions included" },
+            { "@type": "Offer", "name": "Starter", "price": "49",  "priceCurrency": "USD", "priceSpecification": { "@type": "UnitPriceSpecification", "price": "49",  "priceCurrency": "USD", "unitText": "MONTH" } },
+            { "@type": "Offer", "name": "Pro",     "price": "99",  "priceCurrency": "USD", "priceSpecification": { "@type": "UnitPriceSpecification", "price": "99",  "priceCurrency": "USD", "unitText": "MONTH" } },
+            { "@type": "Offer", "name": "Agency",  "price": "199", "priceCurrency": "USD", "priceSpecification": { "@type": "UnitPriceSpecification", "price": "199", "priceCurrency": "USD", "unitText": "MONTH" } }
           ],
           "featureList": [
-            "First Touch, Last Touch, Linear, U-Shaped, W-Shaped, Time Decay attribution",
-            "15 AI platform detection — ChatGPT, Claude, Perplexity, Gemini, Grok, Copilot, DeepSeek",
-            "Server-side CAPI sync — Meta, Google Ads, TikTok, LinkedIn, Microsoft Ads",
-            "GDPR-compliant cookieless mode — no cookies, no localStorage, no consent banner",
+            "First Touch, Last Touch, Linear, U-Shaped, W-Shaped, Time Decay, Position Based, Data Driven attribution models",
+            "15 AI platform detection — ChatGPT, Claude, Perplexity, Gemini, Grok, Copilot, DeepSeek and more",
+            "Server-side Conversions API sync — Meta CAPI, Google Ads, TikTok, LinkedIn, Microsoft UET",
+            "GDPR-compliant cookieless mode — no cookies, no localStorage, no consent banner required",
             "1.7 KB tracker script, works on Shopify, WordPress, Webflow, any website",
-            "Data retention controls and GDPR right-to-erasure API"
+            "Data retention controls and GDPR right-to-erasure API",
+            "Real-time live dashboard, visitor journey timelines, multi-channel report builder"
+          ]
+        })}</script>
+
+        {/* Organization — brand entity for AI knowledge graphs */}
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          "name": "SourceTrack",
+          "url": "https://sourcetrack.ai",
+          "logo": "https://sourcetrack.ai/apple-touch-icon.png",
+          "description": "SourceTrack is a multi-touch marketing attribution platform that tracks every conversion source — including AI platforms like ChatGPT, Perplexity, and Claude — using server-side tracking, 8 attribution models, and GDPR-compliant cookieless mode.",
+          "foundingDate": "2024",
+          "sameAs": [],
+          "contactPoint": {
+            "@type": "ContactPoint",
+            "contactType": "customer support",
+            "url": "https://sourcetrack.ai/docs"
+          }
+        })}</script>
+
+        {/* FAQPage — powers direct FAQ answers in AI Overviews */}
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          "mainEntity": FAQS.map(({ q, a }) => ({
+            "@type": "Question",
+            "name": q,
+            "acceptedAnswer": { "@type": "Answer", "text": a }
+          }))
+        })}</script>
+
+        {/* HowTo — installation steps for "how to set up attribution" queries */}
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "HowTo",
+          "name": "How to set up multi-touch attribution with SourceTrack",
+          "description": "Add SourceTrack to any website in under 3 minutes to start tracking conversions across all marketing channels including AI platforms.",
+          "totalTime": "PT3M",
+          "step": [
+            {
+              "@type": "HowToStep",
+              "position": 1,
+              "name": "Add the snippet",
+              "text": "Paste one 1.7 KB JavaScript snippet into your site's <head>. Works on any website — Webflow, WordPress, Shopify, or custom code."
+            },
+            {
+              "@type": "HowToStep",
+              "position": 2,
+              "name": "Fire your first conversion",
+              "text": "Call sourcetrack.conversion() when a purchase, sign-up, or form submission happens. Pass an optional revenue value and order ID."
+            },
+            {
+              "@type": "HowToStep",
+              "position": 3,
+              "name": "See where revenue comes from",
+              "text": "Open your SourceTrack dashboard to see revenue, conversions, and visitor journeys broken down by every marketing source — including AI referrals."
+            }
           ]
         })}</script>
       </Helmet>
