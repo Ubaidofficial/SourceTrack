@@ -1,12 +1,9 @@
 import { Router } from 'express'
 import { validateSiteKey } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
+import { esc } from '../lib/utils.js'
 
 const router = Router()
-
-function esc(str) {
-  return str.replace(/'/g, "''")
-}
 
 router.get('/weekly', validateSiteKey, async (req, res) => {
   try {

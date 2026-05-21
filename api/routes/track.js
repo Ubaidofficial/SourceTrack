@@ -2,6 +2,7 @@ import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
+import { normalizeUtm } from '../lib/utils.js'
 
 // Same crawler pattern used by /api/analytics/collect — keeps PostHog event
 // counts clean (Googlebot, Lighthouse, scripted clients don't represent users).
@@ -30,11 +31,6 @@ function enrich(req) {
     server_timestamp: new Date().toISOString(),
     ai_source: req.ai_source || null
   }
-}
-
-function normalizeUtm(value) {
-  if (!value || typeof value !== 'string') return value
-  return value.trim().toLowerCase()
 }
 
 export async function track(req, res) {

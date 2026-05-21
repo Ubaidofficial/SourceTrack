@@ -5,6 +5,76 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — 2026-05-21
+
+### Final Complete Audit (round 3)
+
+The third and last audit pass before launch. Round 1 fixed launch-blockers
+(bot filter, DNT, env validation, SIGTERM, Stripe idempotency, job-lock,
+PostHog retry, perf-indexes). Round 2 added scale prerequisites (singleton
+Supabase, parallel nightly job, CAPI retry, browser/OS, tracker caching).
+Round 3 closes the long tail: dead code, duplication, the one remaining
+security gap, and documentation drift.
+
+#### Critical fix
+
+**`requireSiteMembership` missing on 10 routes** — cross-customer data leak
+- `api/routes/analytics.js`: `/summary`, `/entry-exit`, `/outbound`,
+  `/custom-events`, `/browsers`, `/os`, `/funnel` (7 routes)
+- `api/routes/campaign-costs.js`: `GET`, `POST`, `DELETE` (3 routes)
+- All routes had `requireUserAuth + validateSiteKey` but `validateSiteKey`
+  only confirms the site exists — it doesn't check the caller's company
+  owns it. `requireSiteMembership` is the actual ownership check. Without
+  it, any authenticated user could pass any site_key and read another
+  customer's analytics + campaign cost data.
+- Round-1 audit script reported this PASS because its 400-char regex
+  window didn't capture `app.use("/api/analytics", analyticsRouter)`
+  patterns where membership lives inside the router. This round caught
+  it by reading every `router.get/post/...` line directly.
+
+#### Code quality cleanup
+
+**21 unused `import WebSocket from 'ws'` imports removed** — round 2's
+mechanical Supabase singleton refactor dropped the `createClient(... { realtime: { transport: WebSocket } })`
+call but left the unused import behind in every refactored file.
+
+**Shared utility module** (`api/lib/utils.js` + 16 callers)
+- Extracted `esc()`, `toHogDate()`, `normalizeUtm()`, `getFirstTouchFields()`
+  to one source of truth. Before: 20 local copy-pasted definitions; one
+  (`events.js`) had a defensive `String()` wrap, the others didn't.
+  Consolidated to the safer pattern.
+
+**Try-catch on async handlers** — added missing try-catch to
+`job-status.js` and `webhook-incoming.js /test/:api_key` handlers (the
+async functions could throw out of the Express middleware chain).
+
+**`/api/track` async error handling** verified: `try/catch` returns 500
+with sanitized error message; PostHog failure does not crash the response.
+
+#### Documentation
+
+**README.md** — new top-level README. The repo had 35+ scattered .md files
+but no entrypoint. Covers quick start, architecture, env vars, jobs,
+privacy claims, and links to the deeper docs.
+
+**Stale `loader.min.js` references** — replaced 14 references across 8 docs
+(DEEPSEEK.md, QA_RUNBOOK.md, ARCHITECTURE.md, PROGRESS.md, AGENT_BRIEF.md,
+DATA_CAPTURE_SPEC.md, BUG_REVIEW_LOG.md, CLAUDE.md). The actual file is
+`tracker/tracker.min.js`; `loader.min.js` never existed.
+
+**`.env.example` completion** — added `RESEND_API_KEY`, `SLACK_WEBHOOK_URL`,
+`NIGHTLY_CONCURRENCY`, `NODE_ENV` which were silently expected by jobs but
+not documented.
+
+#### Verification
+
+- 41/41 feature wiring checks pass
+- 23/23 tracker checks pass
+- 11/11 conversion + CAPI checks pass
+- 0 unused imports, 0 console.logs in tracker, 0 `createClient()` outside the singleton
+- All 4 background jobs run cleanly
+- Frontend builds without errors
+
 ## [Unreleased] — 2026-05-20
 
 ### Production Readiness Audit v2 — Round 2 (Scale + Hardening)

@@ -28,8 +28,8 @@ Do not claim full Cometly/DataFast/Usermaven parity unless verified in code and 
 - Frontend: Vite React dashboard in `/dashboard`
 - Tracker: `/tracker/tracker.js`
 - Minified tracker: `/tracker/tracker.min.js`
-- Loader: `/tracker/loader.js`
-- Minified loader: `/tracker/loader.min.js`
+- Loader: `/tracker/tracker.js`
+- Minified loader: `/tracker/tracker.min.js`
 - User/site/saved report/auth store: Supabase
 - Event analytics/query store: PostHog HogQL/events
 

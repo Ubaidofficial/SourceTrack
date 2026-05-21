@@ -1,13 +1,6 @@
 import { queryHogQL } from '../lib/posthog.js'
 import { deriveSessions, sessionAggregates, annotateSessions } from '../lib/sessionization.js'
-
-function esc(str) {
-  return str.replace(/'/g, "''")
-}
-
-function toHogDate(iso) {
-  return iso.replace('T', ' ').replace(/\.\d+Z?$/, '').replace('Z', '')
-}
+import { esc, toHogDate } from '../lib/utils.js'
 
 /**
  * GET /api/sessions/overview?site_key=X&date_from=Y&date_to=Z

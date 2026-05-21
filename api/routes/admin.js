@@ -1,5 +1,4 @@
 import { Router } from 'express'
-import WebSocket from 'ws'
 import { requireRole } from '../middleware/user-auth.js'
 import fs from 'fs'
 import path from 'path'

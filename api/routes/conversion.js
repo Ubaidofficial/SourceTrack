@@ -6,6 +6,7 @@ import { ph } from '../lib/posthog.js'
 import { dispatchWebhook } from '../lib/webhook.js'
 import { sendMetaCAPI, sendGoogleConversion, sendMicrosoftConversion, sendLinkedInConversion, sendTikTokConversion } from '../lib/conversion-sync.js'
 import { getSupabase } from '../lib/supabase.js'
+import { normalizeUtm, getFirstTouchFields } from '../lib/utils.js'
 
 // In-memory dedup cache — 24h TTL. Prevents duplicate conversions when:
 // - Form submits twice (double-click, retry)
@@ -14,34 +15,6 @@ import { getSupabase } from '../lib/supabase.js'
 // Note: restarts lose the cache. For absolute dedup use a DB — this catches
 // the common case (same session, same minute) without a DB round-trip.
 const dedupCache = new NodeCache({ stdTTL: 86400, checkperiod: 3600 })
-
-function getFirstTouchFields(body = {}) {
-  const props = body.properties || {};
-
-  return {
-    first_touch_source:
-      body.first_touch_source ||
-      body.firstTouchSource ||
-      props.first_touch_source ||
-      props.firstTouchSource ||
-      'direct',
-
-    first_touch_medium:
-      body.first_touch_medium ||
-      body.firstTouchMedium ||
-      props.first_touch_medium ||
-      props.firstTouchMedium ||
-      'none',
-
-    first_touch_campaign:
-      body.first_touch_campaign ||
-      body.firstTouchCampaign ||
-      props.first_touch_campaign ||
-      props.firstTouchCampaign ||
-      ''
-  };
-}
-
 
 function enrich(req) {
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || ''
@@ -66,11 +39,6 @@ function enrich(req) {
     server_timestamp: new Date().toISOString(),
     ai_source: req.ai_source || null
   }
-}
-
-function normalizeUtm(value) {
-  if (!value || typeof value !== 'string') return value
-  return value.trim().toLowerCase()
 }
 
 // Alias kept for the CAPI block readability — same singleton underneath.

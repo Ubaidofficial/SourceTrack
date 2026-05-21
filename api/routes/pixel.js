@@ -20,13 +20,13 @@
  */
 
 import { Router } from 'express'
-import WebSocket from 'ws'
 import { createHash } from 'crypto'
 import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
 import { getSupabase } from '../lib/supabase.js'
+import { normalizeUtm } from '../lib/utils.js'
 
 const router = Router()
 
@@ -47,11 +47,6 @@ function sendPixel(res) {
     'Cross-Origin-Resource-Policy': 'cross-origin',
   })
   res.status(200).end(GIF_1X1)
-}
-
-function normalizeUtm(value) {
-  if (!value || typeof value !== 'string') return null
-  return value.trim().toLowerCase()
 }
 
 router.get('/', async (req, res) => {

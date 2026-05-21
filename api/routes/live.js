@@ -1,7 +1,6 @@
 import express from 'express'
 import { requireUserAuth } from '../middleware/user-auth.js'
 import { queryHogQL } from '../lib/posthog.js'
-import WebSocket from 'ws'
 import { getSupabase } from '../lib/supabase.js'
 
 const router = express.Router()

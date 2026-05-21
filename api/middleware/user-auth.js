@@ -1,4 +1,3 @@
-import WebSocket from 'ws'
 import { getSupabase } from '../lib/supabase.js'
 
 // requireUserAuth — validates Supabase JWT and extracts user + role + company.

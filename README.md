@@ -1,0 +1,176 @@
+# SourceTrack
+
+Privacy-first marketing attribution + cookieless web analytics for SaaS, ecommerce, and AI-native businesses.
+
+- **Cookieless** — no `document.cookie`, no fingerprinting, no IP storage
+- **Honors DNT / Global Privacy Control** — aborts before any storage or network
+- **Multi-touch attribution** — first-touch, last-touch, linear, U-shaped, time-decay, W-shaped models
+- **Click-ID detection** — `gclid`, `gbraid`, `wbraid`, `fbclid`, `msclkid`, `ttclid`, `li_fat_id`, `twclid`
+- **AI traffic attribution** — ChatGPT, Claude, Perplexity, Gemini, Grok, Copilot, DeepSeek + ~10 more
+- **Server-side CAPI** — Meta, Google Ads, Microsoft, LinkedIn, TikTok with hashed email and event-id deduplication
+- **Cookieless web analytics** — Plausible-style page-view dashboard (separate tracker)
+
+---
+
+## Quick start
+
+### 1. Install
+
+```bash
+git clone https://github.com/Ubaidofficial/SourceTrack.git trackiq
+cd trackiq
+npm install
+cd dashboard && npm install && cd ..
+```
+
+### 2. Configure
+
+```bash
+cp .env.example .env
+# Fill in Supabase, PostHog, Stripe, and optional AI keys
+```
+
+See [Environment variables](#environment-variables) below for the full list.
+
+### 3. Run
+
+```bash
+# API + dashboard
+npm start                  # API only
+cd dashboard && npm run dev # frontend dev server
+```
+
+Production deploys on Railway — see [`AUDIT_PROD_READINESS_V2.md`](./AUDIT_PROD_READINESS_V2.md) for the cron config that needs to be set in the Railway dashboard.
+
+---
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Customer site                                                    │
+│   <script async src=".../tracker/tracker.min.js" ...>            │
+│      │ pageview + first-touch + click-IDs + AI-source            │
+│      ▼                                                            │
+│ /api/track ──► PostHog (events) ──► nightly attribution job      │
+│                                                                  │
+│   sourcetrack.conversion({ value, type, order_id, email })       │
+│      │                                                            │
+│      ▼                                                            │
+│ /api/conversion ──► PostHog ($conversion event)                  │
+│                ──► CAPI: Meta, Google, Microsoft, LinkedIn, TikTok│
+│                       (async, hashed email, event-id dedup)      │
+│                                                                  │
+│ /api/identify ──► ph.identify + ph.alias                         │
+│                       (stitches anonymous_id → user_id for LTV)  │
+└─────────────────────────────────────────────────────────────────┘
+                       │
+                       ▼
+              ┌─────────────────────┐
+              │ Nightly cron (02:00) │
+              │  - Queries PostHog   │
+              │  - Computes models   │
+              │  - Writes Supabase   │
+              │    attributed_       │
+              │    conversions       │
+              └─────────────────────┘
+                       │
+                       ▼
+              Dashboard (React)
+              reads attributed_conversions for
+              fast (< 1s) attribution reports
+```
+
+### Two trackers
+
+- **`tracker/tracker.min.js`** — attribution tracker. Sends events to `/api/track`, captures click-IDs, first-touch, AI source.
+- **`tracker/analytics.js`** — web analytics tracker (separate). Sends to `/api/analytics/collect` for Plausible-style page-view dashboards.
+
+Customers install **only** the attribution tracker on their site. The analytics tracker is bundled into the SourceTrack dashboard for our own internal page-view analytics.
+
+### Data flow
+
+1. **Pageview** → tracker.js → `/api/track` → PostHog (event-time enrichment: country via GeoIP, browser/OS via UAParser, AI source detection)
+2. **Conversion** → `sourcetrack.conversion(...)` → `/api/conversion` → PostHog `$conversion` + async CAPI to all 5 ad platforms
+3. **Nightly job** (Railway cron 02:00 UTC) → queries PostHog for the last N days of $conversion events → fetches each visitor's touchpoint history → computes 4 attribution models + confidence score → upserts to `attributed_conversions` in Supabase
+4. **Dashboard** → reads pre-aggregated `attributed_conversions` for sub-second queries
+
+See [`ATTRIBUTION.md`](./ATTRIBUTION.md) for the attribution algorithm details and [`AUDIT_PROD_READINESS_V2.md`](./AUDIT_PROD_READINESS_V2.md) for the production readiness audit results.
+
+---
+
+## Environment variables
+
+All required at startup (`api/index.js` fails fast on missing vars):
+
+| Variable | Required | Description |
+|---|---|---|
+| `SUPABASE_URL` | yes | Your Supabase project URL |
+| `SUPABASE_SERVICE_KEY` | yes | Service-role key (backend only — never bundle this) |
+| `SUPABASE_ANON_KEY` | yes | Anon key for the dashboard |
+| `POSTHOG_HOST` | yes | `https://app.posthog.com` or `https://eu.posthog.com` |
+| `POSTHOG_API_KEY` | yes | Project API key (write) |
+| `POSTHOG_PERSONAL_API_KEY` | yes | Personal API key (HogQL queries from nightly job) |
+| `POSTHOG_PROJECT_ID` | yes | PostHog numeric project ID |
+| `STRIPE_SECRET_KEY` | yes (billing) | Stripe live or test secret |
+| `STRIPE_WEBHOOK_SECRET` | yes (billing) | Stripe webhook signing secret |
+| `STRIPE_PRICE_ID_STARTER`, `_PRO`, `_AGENCY` | yes (billing) | Per-plan recurring price IDs |
+| `RESEND_API_KEY` | optional | Email reports (weekly/monthly recap) |
+| `DEEPSEEK_API_KEY` | optional | AI chat + AI analytics features |
+| `SLACK_WEBHOOK_URL` | optional | Nightly job alert webhook |
+| `NIGHTLY_CONCURRENCY` | optional | Worker pool size for nightly attribution (default 4, range 1–8) |
+| `ALLOWED_ORIGINS` | yes | Comma-separated dashboard origins for CORS |
+| `META_TEST_EVENT_CODE` | dev only | Meta CAPI test events — omit in production |
+| `GOOGLE_ADS_ACCESS_TOKEN` | optional | OAuth2 token for Google Ads CAPI |
+
+See `.env.example` for the canonical list.
+
+---
+
+## Background jobs
+
+Configured as Railway cron services (UI-only — not in this repo):
+
+| Job | Schedule (UTC) | Command |
+|---|---|---|
+| Nightly attribution | `0 2 * * *` | `node api/jobs/nightly-attribution.js` |
+| Data quality check | `0 3 * * *` | `node api/jobs/data-quality-check.js` |
+| Health agent | `*/30 * * * *` | `node api/jobs/health-agent.js` |
+| Email reports | `0 8 * * 1` | `node api/jobs/email-reports.js` |
+
+The nightly job has a concurrency lock (`job_runs.status='running'`, 6h TTL) and retries PostHog 429s with exponential backoff.
+
+---
+
+## Privacy
+
+SourceTrack is designed to be deployable without a cookie consent banner in most jurisdictions:
+
+- No `document.cookie` usage anywhere in `tracker/tracker.js` or `tracker/analytics.js`
+- No fingerprinting (no canvas, AudioContext, WebGL, navigator.plugins, etc.)
+- IP addresses are used for GeoIP lookup at request time and **not stored** in any table
+- Anonymous IDs live in `localStorage` (per-origin, never cross-customer)
+- `navigator.doNotTrack === '1'` and `navigator.globalPrivacyControl === true` are honored before any storage or network
+- `/api/gdpr/visitor` endpoint exists for right-to-erasure deletion (anonymous_id → cascades pageviews + attributed_conversions + PostHog person)
+- Per-site `data_retention_days` configurable; nightly job purges older rows
+
+You still need to disclose data collection in your privacy policy — the dashboard's Install page shows a reminder.
+
+---
+
+## Documentation
+
+| File | Purpose |
+|---|---|
+| [`ATTRIBUTION.md`](./ATTRIBUTION.md) | Attribution model details (first-touch, last-touch, U-shaped math, channel classification) |
+| [`ARCHITECTURE.md`](./ARCHITECTURE.md) | System architecture deep-dive |
+| [`SUPABASE_SCHEMA.md`](./SUPABASE_SCHEMA.md) | Database schema reference |
+| [`AUDIT_PROD_READINESS_V2.md`](./AUDIT_PROD_READINESS_V2.md) | Production-readiness audit + scoreboard + Railway config steps |
+| [`CHANGELOG.md`](./CHANGELOG.md) | Release notes |
+| [`KNOWN_ISSUES.md`](./KNOWN_ISSUES.md) | Tracked issues + their status |
+
+---
+
+## License
+
+Proprietary. All rights reserved.

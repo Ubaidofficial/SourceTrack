@@ -1,6 +1,5 @@
 import express from 'express'
 import { getFlexibleReport } from '../lib/attribution-engine.js'
-import WebSocket from 'ws'
 import { getSupabase } from '../lib/supabase.js'
 
 const ALLOWED_DIMS = new Set(['source', 'medium', 'campaign', 'ai_source'])

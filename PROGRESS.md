@@ -133,8 +133,8 @@
 - [ ] End-to-end billing flow works (requires Stripe keys)
 
 ## Install Flow
-- [x] tracker/loader.js — validates site_key, loads tracker async, queues API calls, double-init guard
-- [x] tracker/loader.min.js built (1.2kb)
+- [x] tracker/tracker.js — validates site_key, loads tracker async, queues API calls, double-init guard
+- [x] tracker/tracker.min.js built (1.2kb)
 - [x] tracker/tracker.js — install_verified event on first pageview, identify/page methods
 - [x] api/routes/install.js — GET /api/install/status with HogQL check
 - [x] api/index.js — express.static for tracker/ directory
@@ -472,7 +472,7 @@
 
 **Completed:**
 - Dashboard chart COLORS updated from vibrant indigo/blue palette to SourceTrack gray/lime palette (gray-900, lime, gray-500, gray-700, gray-300, gray-800, lime-dark) — consistent with Report Builder and Campaigns
-- Settings snippet updated from old `window.__trackiq_config` + `tracker.min.js` format to modern `loader.min.js` format matching the Install page
+- Settings snippet updated from old `window.__trackiq_config` + `tracker.min.js` format to modern `tracker.min.js` format matching the Install page
 - Full audit confirmed these pages are consistent: Layout, App, Login, Signup, Onboarding, Leads, Campaigns, Integrations, Report Builder, Journey, AIChat, Snippet, Event Debugger
 - No lingering "TrackIQ" text found in any user-facing frontend code
 - Loading spinners unified (gray-900 border), empty states consistent (centered gray text), error handling consistent (red box), table styling consistent (gray borders/gray-50 headers/hover-gray-50 rows), button/pill styling consistent (gray-900 primary/lime accent), spacing consistent (space-y-6)
@@ -506,7 +506,7 @@
 - tracker/tracker.js — identify() now sends first-touch properties and supports user_id extraction
 - api/routes/identify.js — removed stale TODO comment (tracker now sends first-touch properties)
 - tracker/tracker.min.js — rebuilt (3.3kb)
-- tracker/loader.min.js — unchanged (1.2kb)
+- tracker/tracker.min.js — unchanged (1.2kb)
 
 **Completed:**
 - Tracker `sendIdentify()` now includes `first_touch_source`, `first_touch_medium`, `first_touch_campaign` from existing `__ti_ft_` cookie data — these were already collected and sent on pageview/track calls but were missing from identify calls
@@ -824,8 +824,8 @@
 **Files modified:**
 - tracker/tracker.js — added `__tq_id`/`__tq_ft` URL param reading + cookie restoration + `getCrossDomainUrl()` + hidden field support
 - tracker/tracker.min.js — rebuilt (4.5kb)
-- tracker/loader.js — exposed `getCrossDomainUrl()` in queue API
-- tracker/loader.min.js — rebuilt (1.4kb)
+- tracker/tracker.js — exposed `getCrossDomainUrl()` in queue API
+- tracker/tracker.min.js — rebuilt (1.4kb)
 - dashboard/src/pages/Snippet.jsx — added Cross-Domain Tracking v1 section with usage docs and explicit limitations
 
 **Completed:**
@@ -1413,7 +1413,7 @@
 
 **Session type:** Audit (no feature building)
 
-**Files inspected:** tracker/tracker.js, tracker/loader.js, api/routes/track.js, api/routes/conversion.js, api/routes/conversion-offline.js, api/routes/identify.js, api/lib/attribution-engine.js, api/routes/attribution.js, api/routes/dashboard.js, api/routes/ai-analytics.js, api/middleware/ai-platform.js, api/lib/webhook.js, dashboard/src/pages/Dashboard.jsx, dashboard/src/pages/AIAnalytics.jsx, dashboard/src/pages/ReportBuilder.jsx, dashboard/src/pages/Leads.jsx, dashboard/src/pages/LeadDetail.jsx, dashboard/src/pages/Integrations.jsx, dashboard/src/pages/Snippet.jsx
+**Files inspected:** tracker/tracker.js, tracker/tracker.js, api/routes/track.js, api/routes/conversion.js, api/routes/conversion-offline.js, api/routes/identify.js, api/lib/attribution-engine.js, api/routes/attribution.js, api/routes/dashboard.js, api/routes/ai-analytics.js, api/middleware/ai-platform.js, api/lib/webhook.js, dashboard/src/pages/Dashboard.jsx, dashboard/src/pages/AIAnalytics.jsx, dashboard/src/pages/ReportBuilder.jsx, dashboard/src/pages/Leads.jsx, dashboard/src/pages/LeadDetail.jsx, dashboard/src/pages/Integrations.jsx, dashboard/src/pages/Snippet.jsx
 
 **Tiny fixes made (3 critical bugs):**
 1. `api/routes/dashboard.js` — Fixed `siteId` (Supabase row integer) → `siteKey` (PostHog UUID) in 4 raw HogQL queries. Install check, alerts, conversion types, and pipeline stages were all querying PostHog with the wrong identifier type — all would have silently returned empty results. Install status always showed "not_installed", conversion types and pipeline stages always empty.

@@ -1,12 +1,9 @@
 import express from 'express'
 import { queryHogQL } from '../lib/posthog.js'
 import { getSupabase } from '../lib/supabase.js'
+import { esc } from '../lib/utils.js'
 
 const router = express.Router()
-
-function esc(str) {
-  return str.replace(/'/g, "''")
-}
 
 router.get('/overview', async (req, res) => {
   try {

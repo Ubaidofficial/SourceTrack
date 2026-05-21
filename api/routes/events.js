@@ -1,14 +1,11 @@
 import { Router } from 'express'
 import { validateSiteKey } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
+import { esc } from '../lib/utils.js'
 
 const router = Router()
 import NodeCache from 'node-cache'
 const eventsCache = new NodeCache({ stdTTL: 60, checkperiod: 30 })
-
-function esc(value = '') {
-  return String(value).replace(/'/g, "''")
-}
 
 function isValidDate(value) {
   return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))

@@ -7,7 +7,6 @@
  */
 
 import { Router } from 'express'
-import WebSocket from 'ws'
 import { getSupabase } from '../lib/supabase.js'
 
 const router = Router()

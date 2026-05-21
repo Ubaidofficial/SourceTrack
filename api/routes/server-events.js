@@ -1,5 +1,4 @@
 import { Router } from 'express'
-import WebSocket from 'ws'
 import { createHash } from 'crypto'
 import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'

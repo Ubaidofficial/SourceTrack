@@ -8,9 +8,9 @@ Treat this as verified only for fields confirmed in tracker/API code. Mark futur
 
 Primary files:
 
-- `tracker/loader.js`
 - `tracker/tracker.js`
-- `tracker/loader.min.js`
+- `tracker/tracker.js`
+- `tracker/tracker.min.js`
 - `tracker/tracker.min.js`
 
 If `tracker/tracker.js` changes, run:

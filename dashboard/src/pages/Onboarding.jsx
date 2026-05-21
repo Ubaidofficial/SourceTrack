@@ -675,7 +675,6 @@ export default function Onboarding() {
               A walkthrough video will help you set up tracking in under 2 minutes.
             </p>
             <p className="text-xs text-st-gray dark:text-gray-400 mt-1 text-center">
-              {/* TODO confirm: Watch Video modal content */}
               Video content coming soon.
             </p>
             <button

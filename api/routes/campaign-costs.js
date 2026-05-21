@@ -1,12 +1,11 @@
 import express from 'express'
-import WebSocket from 'ws'
 import { requireUserAuth } from '../middleware/user-auth.js'
-import { validateSiteKey } from '../middleware/auth.js'
+import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import { getSupabase } from '../lib/supabase.js'
 
 const router = express.Router()
 
-router.get('/', requireUserAuth, validateSiteKey, async (req, res) => {
+router.get('/', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
   try {
     const { date_from, date_to } = req.query
     const { data, error } = await getSupabase()
@@ -23,7 +22,7 @@ router.get('/', requireUserAuth, validateSiteKey, async (req, res) => {
   }
 })
 
-router.post('/', requireUserAuth, validateSiteKey, async (req, res) => {
+router.post('/', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
   try {
     const { campaign_name, spend, period_start, period_end } = req.body
     if (!campaign_name || spend === undefined || !period_start || !period_end) {
@@ -47,7 +46,7 @@ router.post('/', requireUserAuth, validateSiteKey, async (req, res) => {
   }
 })
 
-router.delete('/:id', requireUserAuth, validateSiteKey, async (req, res) => {
+router.delete('/:id', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
   try {
     const { error } = await getSupabase()
       .from('campaign_costs')

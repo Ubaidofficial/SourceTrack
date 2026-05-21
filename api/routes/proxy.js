@@ -9,7 +9,6 @@ import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
-import WebSocket from 'ws'
 import { getSupabase } from '../lib/supabase.js'
 
 const router = express.Router()

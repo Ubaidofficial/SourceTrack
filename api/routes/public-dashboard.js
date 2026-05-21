@@ -1,5 +1,4 @@
 import express from 'express'
-import WebSocket from 'ws'
 import { getPreAggregatedAttribution } from '../lib/attribution-engine.js'
 import { requireUserAuth } from '../middleware/user-auth.js'
 import { getSupabase } from '../lib/supabase.js'

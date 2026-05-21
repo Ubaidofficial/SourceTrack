@@ -10,7 +10,6 @@
 import express from 'express'
 import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
-import WebSocket from 'ws'
 import { getSupabase } from '../lib/supabase.js'
 
 const router = express.Router()
@@ -112,26 +111,31 @@ router.post('/:api_key', async (req, res) => {
 
 // GET /api/webhooks/incoming/test/:api_key — verify endpoint is working
 router.get('/test/:api_key', async (req, res) => {
-  const supabase = getSupabase()
-  const { data: site } = await supabase
-    .from('sites')
-    .select('id, name, site_key')
-    .eq('api_key', req.params.api_key)
-    .single()
+  try {
+    const supabase = getSupabase()
+    const { data: site } = await supabase
+      .from('sites')
+      .select('id, name, site_key')
+      .eq('api_key', req.params.api_key)
+      .single()
 
-  if (!site) return res.status(401).json({ error: 'Invalid API key' })
-  res.json({
-    ok: true,
-    site: site.name || site.site_key,
-    message: 'Webhook endpoint is active. POST JSON to this URL to record conversions.',
-    example_payload: {
-      value: 99.00,
-      email: 'customer@example.com',
-      conversion_type: 'purchase',
-      order_id: 'ORD-123',
-      utm_source: 'google'
-    }
-  })
+    if (!site) return res.status(401).json({ error: 'Invalid API key' })
+    res.json({
+      ok: true,
+      site: site.name || site.site_key,
+      message: 'Webhook endpoint is active. POST JSON to this URL to record conversions.',
+      example_payload: {
+        value: 99.00,
+        email: 'customer@example.com',
+        conversion_type: 'purchase',
+        order_id: 'ORD-123',
+        utm_source: 'google'
+      }
+    })
+  } catch (err) {
+    console.error('[webhook-incoming/test]', err.message)
+    res.status(500).json({ error: 'Internal server error' })
+  }
 })
 
 export default router

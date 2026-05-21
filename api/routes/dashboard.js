@@ -1,14 +1,10 @@
 import { Router } from 'express'
 import { validateSiteKey } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
-import WebSocket from 'ws'
 import { getSupabase as getSupabaseAdmin } from '../lib/supabase.js'
+import { esc } from '../lib/utils.js'
 
 const router = Router()
-
-function esc(str) {
-  return str.replace(/'/g, "''")
-}
 
 const AI_SOURCE_PATTERNS = ['chatgpt', 'claude', 'perplexity', 'gemini', 'grok', 'copilot', 'deepseek', 'meta ai', 'you.com', 'bing ai', 'bard', 'mistral']
 function isAISource(source) {

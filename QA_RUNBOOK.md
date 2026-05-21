@@ -66,14 +66,14 @@ A Vite chunk-size warning is okay. A build failure is not okay.
 
 ## Tracker build
 
-Run after changing `tracker/tracker.js` or `tracker/loader.js`:
+Run after changing `tracker/tracker.js` or `tracker/tracker.js`:
 
     cd "$HOME/Desktop/trackiq"
     npm run build:tracker
 
 Then confirm minified files changed as expected:
 
-    git diff -- tracker/tracker.min.js tracker/loader.min.js
+    git diff -- tracker/tracker.min.js tracker/tracker.min.js
 
 ## Health checks
 

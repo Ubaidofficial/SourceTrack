@@ -104,6 +104,23 @@ Do not commit unnecessary `.bak` files.
 
 ## Recently fixed
 
+### Final Complete Audit — Round 3 (2026-05-21)
+
+- **Cross-customer data leak in /api/analytics/* and /api/campaign-costs**
+  (10 routes) — RESOLVED. Routes had `requireUserAuth + validateSiteKey`
+  but not `requireSiteMembership`, so any authenticated user with any
+  valid site_key could read another customer's data. Added the membership
+  check to all 10 routes.
+- **21 unused `import WebSocket from 'ws'` imports** — RESOLVED. Round 2
+  refactor missed the cleanup.
+- **20 duplicated helper functions across 16 files** — RESOLVED. Extracted
+  to `api/lib/utils.js` (esc, toHogDate, normalizeUtm, getFirstTouchFields).
+- **`loader.min.js` references in 8 docs** — RESOLVED. File never existed;
+  customers reading these docs would have copied a 404-ing URL.
+- **README.md missing** — RESOLVED. Created top-level entrypoint.
+- **`.env.example` missing RESEND_API_KEY, SLACK_WEBHOOK_URL,
+  NIGHTLY_CONCURRENCY, NODE_ENV** — RESOLVED.
+
 ### Production Readiness Audit v2 — Round 1 + 2 (2026-05-20)
 
 Audit-driven fixes covering attribution, CAPI, security, scaling, and ops.

@@ -74,7 +74,7 @@ Critical rules:
 - Every Supabase createClient() must use { realtime: { transport: WebSocket } }
 - getSupabase() from api/lib/supabase.js only — never call createClient() directly in routes
 - dotenv.config() must be the FIRST line in all job files
-- Tracker URL is /tracker/tracker.min.js — never /tracker/loader.min.js
+- Tracker URL is /tracker/tracker.min.js — never /tracker/tracker.min.js
 - All PostHog HogQL string interpolations must use esc() — never raw ${variable}
 - Attribution accuracy matters more than speed — verify math before committing
 - Privacy claims (cookieless, no fingerprinting, DNT) are non-negotiable — never add cookies

@@ -3,19 +3,12 @@ import { queryHogQL } from './posthog.js'
 import { deriveSessions, annotateSessions } from './sessionization.js'
 import { channelFromEvent } from './channel-classifier.js'
 import { getSupabase } from './supabase.js'
+import { esc, toHogDate } from './utils.js'
 
 const cache = new NodeCache({ stdTTL: 60, checkperiod: 30 })
 
-function toHogDate(iso) {
-  return iso.replace('T', ' ').replace(/\.\d+Z?$/, '').replace('Z', '')
-}
-
 function cacheKey(model, siteId, dateFrom, dateTo) {
   return `${model}:${siteId}:${dateFrom}:${dateTo}`
-}
-
-function esc(str) {
-  return str.replace(/'/g, "''")
 }
 
 async function firstTouchAttribution(siteId, dateFrom, dateTo) {
@@ -740,7 +733,6 @@ export async function getAttributionExplanation(siteId, model, distinctId) {
 
   return explanation
 }
-
 
 const CHANNEL_DIM_SQL = `
 COALESCE(
@@ -1482,7 +1474,6 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     LIMIT 50000
   `
   const rows = await queryHogQL(sql, 'flexible_report')
-
 
   const results = rows.map((row) => {
     const hasDim2 = dim2Expr != null

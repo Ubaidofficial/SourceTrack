@@ -5,7 +5,7 @@ This file maps the SourceTrack app so agents can find the correct files quickly.
 ## High-level flow
 
     Browser visitor
-      -> tracker/loader.js
+      -> tracker/tracker.js
       -> tracker/tracker.js
       -> Express API
       -> PostHog events
@@ -40,9 +40,9 @@ PostHog stores:
 
 Files:
 
-- `tracker/loader.js`
 - `tracker/tracker.js`
-- `tracker/loader.min.js`
+- `tracker/tracker.js`
+- `tracker/tracker.min.js`
 - `tracker/tracker.min.js`
 
 Responsibilities:

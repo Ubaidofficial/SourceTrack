@@ -1,7 +1,6 @@
 import express from 'express'
-import WebSocket from 'ws'
 import { requireUserAuth } from '../middleware/user-auth.js'
-import { validateSiteKey } from '../middleware/auth.js'
+import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { getSupabase } from '../lib/supabase.js'
@@ -52,7 +51,7 @@ router.post('/collect', async (req, res) => {
   } catch (err) { console.error('[analytics/collect]', err.message); res.status(500).json({ error: 'Collection failed' }) }
 })
 
-router.get('/summary', requireUserAuth, validateSiteKey, async (req, res) => {
+router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
   try {
     const siteId = String(req.site.id)
     const days = Math.min(parseInt(req.query.days) || 30, 90)
@@ -121,7 +120,7 @@ router.get('/summary', requireUserAuth, validateSiteKey, async (req, res) => {
   } catch (err) { console.error('[analytics/summary]', err.message); res.status(500).json({ error: 'Summary failed' }) }
 })
 
-router.get('/entry-exit', requireUserAuth, validateSiteKey, async (req, res) => {
+router.get('/entry-exit', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
   try {
     const siteId = String(req.site.id)
     const days = parseInt(req.query.days) || 30
@@ -144,7 +143,7 @@ router.get('/entry-exit', requireUserAuth, validateSiteKey, async (req, res) => 
   } catch (err) { res.status(500).json({ success: false, error: err.message }) }
 })
 
-router.get('/outbound', requireUserAuth, validateSiteKey, async (req, res) => {
+router.get('/outbound', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
   try {
     const siteId = String(req.site.id)
     const days = parseInt(req.query.days) || 30
@@ -163,7 +162,7 @@ router.get('/outbound', requireUserAuth, validateSiteKey, async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, error: err.message }) }
 })
 
-router.get('/custom-events', requireUserAuth, validateSiteKey, async (req, res) => {
+router.get('/custom-events', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
   try {
     const siteId = String(req.site.id)
     const days = parseInt(req.query.days) || 30
@@ -181,7 +180,7 @@ router.get('/custom-events', requireUserAuth, validateSiteKey, async (req, res) 
   } catch (err) { res.status(500).json({ success: false, error: err.message }) }
 })
 
-router.get('/browsers', requireUserAuth, validateSiteKey, async (req, res) => {
+router.get('/browsers', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
   try {
     const siteId = String(req.site.id)
     const days = Math.min(parseInt(req.query.days) || 30, 90)
@@ -224,7 +223,7 @@ router.get('/browsers', requireUserAuth, validateSiteKey, async (req, res) => {
   }
 })
 
-router.get('/os', requireUserAuth, validateSiteKey, async (req, res) => {
+router.get('/os', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
   try {
     const siteId = String(req.site.id)
     const days = Math.min(parseInt(req.query.days) || 30, 90)
@@ -266,7 +265,7 @@ router.get('/os', requireUserAuth, validateSiteKey, async (req, res) => {
   }
 })
 
-router.get('/funnel', requireUserAuth, validateSiteKey, async (req, res) => {
+router.get('/funnel', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
   try {
     const siteId = String(req.site.id)
     const stepsRaw = req.query.steps || ''

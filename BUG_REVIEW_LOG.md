@@ -173,7 +173,7 @@ After Session 90.1 implementation, review for any new issues. B6 leads/conversio
 |---|---|---|
 | B1 | Removed per-request `ph.shutdown()` from 4 route files | track.js, conversion.js, identify.js, conversion-offline.js |
 | B2 | Removed public POST /api/events aliases; added /api/collect + OPTIONS | api/index.js |
-| B2.1 | Tracker non-conversion events now POST to /api/collect | tracker/tracker.js, tracker.min.js, loader.min.js |
+| B2.1 | Tracker non-conversion events now POST to /api/collect | tracker/tracker.js, tracker.min.js, tracker.min.js |
 | B3 | Fixed cross-domain first-touch key serialization (abbreviated → full) | tracker/tracker.js, tracker.min.js |
 | B4 | Fixed `getSessionReport()` ORDER BY undefined alias `e` | attribution-engine.js |
 | B5 | Added company_members site-loading fallback for 4 dashboard pages | Dashboard.jsx, Leads.jsx, Campaigns.jsx, Journey.jsx |

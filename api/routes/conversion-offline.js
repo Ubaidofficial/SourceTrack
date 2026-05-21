@@ -3,15 +3,7 @@ import { ph } from '../lib/posthog.js'
 import { dispatchWebhook } from '../lib/webhook.js'
 import { sendMetaCAPI, sendGoogleConversion, sendMicrosoftConversion, sendLinkedInConversion, sendTikTokConversion } from '../lib/conversion-sync.js'
 import { getSupabase } from '../lib/supabase.js'
-
-function getFirstTouchFields(body = {}) {
-  const props = body.properties || {}
-  return {
-    first_touch_source:   body.first_touch_source   || body.firstTouchSource   || props.first_touch_source   || props.firstTouchSource   || 'direct',
-    first_touch_medium:   body.first_touch_medium   || body.firstTouchMedium   || props.first_touch_medium   || props.firstTouchMedium   || 'none',
-    first_touch_campaign: body.first_touch_campaign || body.firstTouchCampaign || props.first_touch_campaign || props.firstTouchCampaign || ''
-  }
-}
+import { getFirstTouchFields } from '../lib/utils.js'
 
 // Alias kept for the CAPI block readability — same singleton underneath.
 const getCapiSupabase = getSupabase

@@ -1,8 +1,5 @@
 import { queryHogQL } from '../lib/posthog.js'
-
-function esc(str) {
-  return str.replace(/'/g, "''")
-}
+import { esc } from '../lib/utils.js'
 
 export async function journey(req, res) {
   try {

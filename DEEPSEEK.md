@@ -49,7 +49,7 @@ Update this file after each DeepSeek session with:
 
 ### Install Flow
 **Files created:**
-- tracker/loader.js — hosted loader with validation, async loading, call queuing, double-init guard
+- tracker/tracker.js — hosted loader with validation, async loading, call queuing, double-init guard
 - api/routes/install.js — GET /api/install/status endpoint
 
 **Files modified:**
@@ -57,10 +57,10 @@ Update this file after each DeepSeek session with:
 - api/index.js — added express.static('tracker') + mounted install route
 - dashboard/src/pages/Snippet.jsx — rewritten as Install page with status badge, test button
 - dashboard/src/components/Layout.jsx — sidebar label "Snippet" → "Install"
-- package.json — build:tracker now builds loader.min.js too
+- package.json — build:tracker now builds tracker.min.js too
 
 **Completed:**
-- Single-script install snippet: `<script async src=".../tracker/loader.min.js" data-site-key="KEY"></script>`
+- Single-script install snippet: `<script async src=".../tracker/tracker.min.js" data-site-key="KEY"></script>`
 - Loader validates site_key, derives api_url from script src, loads tracker asynchronously
 - Call queuing: window.trackiq.identify/event/conversion/page work before tracker loads
 - Double-init guard via window.__trackiq_loaded
@@ -357,7 +357,7 @@ Update this file after each DeepSeek session with:
 
 **Completed:**
 - Dashboard COLORS updated to gray/lime palette (was indigo/blue)
-- Settings snippet updated to loader.min.js format (was old tracker.min.js)
+- Settings snippet updated to tracker.min.js format (was old tracker.min.js)
 - Full audit: all pages consistent in loading states, empty states, error states, tables, buttons, pills, spacing
 - No TrackIQ text remains in frontend code
 - Dashboard build: 1989 modules, passes
@@ -714,8 +714,8 @@ Update this file after each DeepSeek session with:
 **Files modified:**
 - `tracker/tracker.js` — `__tq_id`/`__tq_ft` URL param reading + cookie restoration + `getCrossDomainUrl()` + hidden field support
 - `tracker/tracker.min.js` — rebuilt (4.5kb)
-- `tracker/loader.js` — exposed `getCrossDomainUrl()` in queue API
-- `tracker/loader.min.js` — rebuilt (1.4kb)
+- `tracker/tracker.js` — exposed `getCrossDomainUrl()` in queue API
+- `tracker/tracker.min.js` — rebuilt (1.4kb)
 - `dashboard/src/pages/Snippet.jsx` — added Cross-Domain Tracking v1 section with docs and explicit limitations
 
 **Completed:**

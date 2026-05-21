@@ -1,13 +1,9 @@
 import { Router } from 'express'
-import WebSocket from 'ws'
 import { queryHogQL } from '../lib/posthog.js'
 import { getSupabase } from '../lib/supabase.js'
+import { esc } from '../lib/utils.js'
 
 const router = Router()
-
-function esc(str) {
-  return str.replace(/'/g, "''")
-}
 
 const MAX_STEP = 6
 const VALID_BUSINESS_TYPES = ['ecommerce', 'saas', 'leadgen']

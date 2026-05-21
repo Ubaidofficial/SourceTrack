@@ -1,4 +1,3 @@
-import WebSocket from 'ws'
 import NodeCache from 'node-cache'
 import { getSupabase } from '../lib/supabase.js'
 

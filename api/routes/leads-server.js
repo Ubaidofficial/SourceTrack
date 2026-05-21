@@ -1,18 +1,10 @@
 import { Router } from 'express'
-import WebSocket from 'ws'
 import { validateSiteKey } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
 import { getSupabase } from '../lib/supabase.js'
+import { esc, toHogDate } from '../lib/utils.js'
 
 const router = Router()
-
-function esc(str) {
-  return str.replace(/'/g, "''")
-}
-
-function toHogDate(iso) {
-  return iso.replace('T', ' ').replace(/\.\d+Z?$/, '').replace('Z', '')
-}
 
 router.get('/', validateSiteKey, async (req, res) => {
   try {
