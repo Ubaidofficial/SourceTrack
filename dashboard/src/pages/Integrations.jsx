@@ -68,7 +68,7 @@ export default function Integrations() {
     c => c.check_name === 'duplicate_conversion_rate' && c.status === 'warning'
   )
 
-  const overview = data?.data
+  const overview = data
   const installData = overview?.install
   const hygieneData = overview?.hygiene
   const alerts = overview?.alerts?.alerts || []
