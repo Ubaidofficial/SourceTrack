@@ -1,5 +1,4 @@
 import 'dotenv/config'
-import WebSocket from 'ws'
 import { getSupabase } from '../lib/supabase.js'
 
 function monthStart() {
@@ -215,6 +214,39 @@ async function run() {
         await insert(supabase, 'data_freshness', status, daysSince, 3, msg, site.id)
       }
     } catch (e) { console.error('  CHECK 6 failed:', e.message) }
+
+    // ── CHECK 7: duplicate_conversion_rate ───────────────────────────────────
+    // The single most common CAPI integration issue is a second tracking pixel
+    // (the customer's old Meta native pixel, GTM, a Shopify app, etc.) firing
+    // alongside SourceTrack and re-posting the same purchases. We dedupe by
+    // external_event_id in /api/conversion — when that fires, dedup_count > 1.
+    // A high dedup rate is the visible fingerprint of a second tracker.
+    //
+    // Threshold: warn above 15%. Occasional duplicates (form submitted twice,
+    // back-button re-fire) are normal; >15% is structural.
+    try {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 86_400_000).toISOString().slice(0, 10)
+      const { data: dupData } = await supabase
+        .from('attributed_conversions')
+        .select('dedup_count')
+        .eq('site_id', site.id)
+        .gte('conversion_date', sevenDaysAgo)
+        .not('dedup_count', 'is', null)
+
+      const totalWithDedup = dupData?.length || 0
+      const duplicated = (dupData || []).filter(r => Number(r.dedup_count || 0) > 1).length
+      const dupRate = totalWithDedup > 0 ? duplicated / totalWithDedup : 0
+
+      // Skip the alert path if we don't have enough conversions to be meaningful
+      if (totalWithDedup >= 5) {
+        const status = dupRate > 0.15 ? 'warning' : 'ok'
+        const pct = (dupRate * 100).toFixed(1)
+        const msg = dupRate > 0.15
+          ? `${pct}% of conversions in last 7 days were duplicates — you may have a second tracking pixel running alongside SourceTrack`
+          : `${pct}% duplicate rate (healthy)`
+        await insert(supabase, 'duplicate_conversion_rate', status, dupRate, 0.15, msg, site.id)
+      }
+    } catch (e) { console.error('  CHECK 7 failed:', e.message) }
   }
 
   console.log('\n[data-quality-check] Done.')

@@ -44,63 +44,99 @@ async function fetchWithRetry(url, opts = {}, label = 'CAPI') {
   }
 }
 
+// ─── Event-key normalization ────────────────────────────────────────────────
+// Customers ship every casing imaginable: 'Purchase', 'add-to-cart',
+// 'Initiate Checkout', 'AddToCart', 'form_submit'. Normalize once.
+//   - lowercase
+//   - hyphens and whitespace → underscore
+//   - trim
+function normalizeKey(value) {
+  return String(value || '').trim().toLowerCase().replace(/[-\s]+/g, '_')
+}
+
 // ─── Meta CAPI event name mapping ────────────────────────────────────────────
 // Maps SourceTrack conversion_type → Meta standard event name.
 // Full reference: https://developers.facebook.com/docs/meta-pixel/reference
 const META_EVENT_MAP = {
+  // Purchases
   purchase:          'Purchase',
   sale:              'Purchase',
   order:             'Purchase',
-  lead:              'Lead',
-  form_submit:       'Lead',
-  contact:           'Lead',
-  signup:            'CompleteRegistration',
-  register:          'CompleteRegistration',
-  registration:      'CompleteRegistration',
-  trial:             'StartTrial',
-  trial_start:       'StartTrial',
-  subscribe:         'Subscribe',
-  subscription:      'Subscribe',
+  buy:               'Purchase',
+  // Cart / checkout
   add_to_cart:       'AddToCart',
+  addtocart:         'AddToCart',
+  add_cart:          'AddToCart',
   checkout:          'InitiateCheckout',
   initiate_checkout: 'InitiateCheckout',
+  begin_checkout:    'InitiateCheckout',
+  // Lead-gen
+  lead:              'Lead',
+  form:              'Lead',
+  form_submit:       'Lead',
+  contact:           'Lead',
+  // Registration / trial
+  signup:            'CompleteRegistration',
+  sign_up:           'CompleteRegistration',
+  register:          'CompleteRegistration',
+  registration:      'CompleteRegistration',
+  trial:             'CompleteRegistration',
+  trial_start:       'CompleteRegistration',
+  // Subscription
+  subscribe:         'Subscribe',
+  subscription:      'Subscribe',
+  // Content / browse
   view_content:      'ViewContent',
+  page_view:         'ViewContent',
   search:            'Search',
   wishlist:          'AddToWishlist',
   donate:            'Donate',
 }
 
+// Default fallback. Most CAPI traffic is eCommerce — Purchase is the safer
+// default for Meta's optimisation than Lead, per platform UX guidance.
 function getMetaEventName(conversionType) {
-  if (!conversionType) return 'Lead'
-  const key = String(conversionType).toLowerCase().trim()
-  return META_EVENT_MAP[key] || 'Lead'
+  return META_EVENT_MAP[normalizeKey(conversionType)] || 'Purchase'
 }
 
 // ─── TikTok CAPI event name mapping ──────────────────────────────────────────
 // Reference: https://business-api.tiktok.com/portal/docs
 const TIKTOK_EVENT_MAP = {
+  // Purchases (TikTok calls this PlaceAnOrder)
   purchase:    'PlaceAnOrder',
   sale:        'PlaceAnOrder',
   order:       'PlaceAnOrder',
+  buy:         'PlaceAnOrder',
+  // Cart / checkout
+  add_to_cart: 'AddToCart',
+  addtocart:   'AddToCart',
+  add_cart:    'AddToCart',
+  checkout:    'InitiateCheckout',
+  initiate_checkout: 'InitiateCheckout',
+  begin_checkout:    'InitiateCheckout',
+  // Lead-gen
   lead:        'SubmitForm',
+  form:        'SubmitForm',
   form_submit: 'SubmitForm',
   contact:     'Contact',
-  signup:      'Register',
-  register:    'Register',
-  trial:       'Subscribe',
+  // Registration / trial
+  signup:      'CompleteRegistration',
+  sign_up:     'CompleteRegistration',
+  register:    'CompleteRegistration',
+  registration:'CompleteRegistration',
+  trial:       'CompleteRegistration',
+  // Subscription
   subscribe:   'Subscribe',
   subscription:'Subscribe',
-  add_to_cart: 'AddToCart',
-  checkout:    'Checkout',
+  // Content / browse
   view_content:'ViewContent',
+  page_view:   'ViewContent',
   search:      'Search',
   download:    'Download',
 }
 
 function getTikTokEventName(conversionType) {
-  if (!conversionType) return 'Lead'
-  const key = String(conversionType).toLowerCase().trim()
-  return TIKTOK_EVENT_MAP[key] || 'Lead'
+  return TIKTOK_EVENT_MAP[normalizeKey(conversionType)] || 'PlaceAnOrder'
 }
 
 // ─── Meta CAPI ────────────────────────────────────────────────────────────────

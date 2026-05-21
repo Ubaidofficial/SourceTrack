@@ -56,6 +56,18 @@ export default function Integrations() {
     refetchInterval: 30_000
   })
 
+  // Over-reporting detection — fetch the latest data quality run and surface a
+  // banner when duplicate_conversion_rate is flagged as 'warning'. Only fires
+  // above the 15% threshold set by the DQ job; below that it's normal noise.
+  const { data: dqLatest } = useQuery({
+    queryKey: ['dq-latest', site?.site_key],
+    queryFn: () => fetchApi(`/analytics/data-quality/latest?site_key=${site.site_key}`),
+    enabled: !!site?.site_key
+  })
+  const dupWarning = (dqLatest?.checks || []).find(
+    c => c.check_name === 'duplicate_conversion_rate' && c.status === 'warning'
+  )
+
   const overview = data?.data
   const installData = overview?.install
   const hygieneData = overview?.hygiene
@@ -101,6 +113,25 @@ export default function Integrations() {
           <Bug className="w-4 h-4" /> Live Events
         </button>
       </div>
+
+      {/* Over-reporting warning — only when DQ flagged duplicate_conversion_rate */}
+      {dupWarning && (
+        <div className="flex items-start gap-3 p-4 bg-orange-500/10 border border-orange-500/30 rounded-xl">
+          <span className="text-orange-400 text-lg mt-0.5 leading-none">⚠</span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-orange-400 mb-1">
+              Possible Over-Reporting Detected
+            </p>
+            <p className="text-sm text-st-gray">{dupWarning.message}</p>
+            <p className="text-sm text-st-gray mt-1">
+              Check if you have another tracking pixel (Meta native pixel, Google
+              Tag Manager, or a third-party app) also sending the same events to
+              your ad platforms. Remove any duplicate sources to ensure accurate
+              attribution.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Status Overview */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

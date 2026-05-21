@@ -562,6 +562,14 @@ export default function Analytics() {
                   ))}
                 </div>
               </div>
+              {/* Channel/campaign tabs pull from attributed_conversions — the count column
+                  shows conversion counts, not visitors. Make that explicit so the number
+                  isn't misread. */}
+              {['channel','campaign'].includes(sourceTab) && (
+                <p className="text-[11px] text-st-gray px-4 pt-2">
+                  Showing conversion counts · visitor-level data requires a pageview join
+                </p>
+              )}
               <SourceTabList
                 rows={sourcesRows}
                 tab={sourceTab}

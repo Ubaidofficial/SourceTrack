@@ -410,6 +410,38 @@ router.get('/recent-conversions', requireUserAuth, validateSiteKey, requireSiteM
   }
 })
 
+// ─── Latest data quality report ──────────────────────────────────────────────
+// Returns the most recent row per check_name for this site. Used by the
+// Integrations page to surface the duplicate_conversion_rate warning above
+// the pixel setup (over-reporting detection).
+router.get('/data-quality/latest', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
+  try {
+    const siteId = String(req.site.id)
+    const supabase = getSupabase()
+    // Pull the last 100 rows and reduce to one row per check_name client-side —
+    // keeps the query simple without needing a window function.
+    const { data, error } = await supabase
+      .from('data_quality_reports')
+      .select('check_name, status, value, threshold, message, checked_at')
+      .eq('site_id', siteId)
+      .order('checked_at', { ascending: false })
+      .limit(100)
+    if (error) throw error
+
+    const seen = new Set()
+    const checks = []
+    for (const row of (data || [])) {
+      if (seen.has(row.check_name)) continue
+      seen.add(row.check_name)
+      checks.push(row)
+    }
+    res.json({ success: true, data: { checks, latest_at: checks[0]?.checked_at || null } })
+  } catch (err) {
+    console.error('[analytics/data-quality/latest]', err.message)
+    res.status(500).json({ success: false, error: 'Data quality fetch failed' })
+  }
+})
+
 router.get('/entry-exit', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
   try {
     const siteId = String(req.site.id)
