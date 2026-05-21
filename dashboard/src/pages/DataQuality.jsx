@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { Shield, RefreshCw, CheckCircle, AlertTriangle, XCircle } from 'lucide-react'
+import { safeNumber } from '../utils/numbers'
 
 const STATUS_ICONS = { ok: CheckCircle, warning: AlertTriangle, critical: XCircle }
 const STATUS_COLORS = { ok: 'text-green-500', warning: 'text-amber-500', critical: 'text-red-500' }
@@ -172,10 +173,10 @@ export default function DataQuality() {
                   <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
                     <td className="px-4 py-2.5 font-medium text-st-black dark:text-white">{r.check_name}</td>
                     <td className="px-4 py-2.5 text-st-gray dark:text-gray-400">
-                      {typeof r.value === 'number' ? r.value < 10 ? `${(r.value * 100).toFixed(1)}%` : `${r.value}h` : r.value}
+                      {typeof r.value === 'number' ? r.value < 10 ? `${(safeNumber(r.value,0) * 100).toFixed(1)}%` : `${r.value}h` : r.value}
                     </td>
                     <td className="px-4 py-2.5 text-st-gray dark:text-gray-400">
-                      {r.threshold !== null ? (r.threshold < 1 ? `${(r.threshold * 100).toFixed(0)}%` : `${r.threshold}h`) : '—'}
+                      {r.threshold !== null ? (r.threshold < 1 ? `${(safeNumber(r.threshold,0) * 100).toFixed(0)}%` : `${r.threshold}h`) : '—'}
                     </td>
                     <td className="px-4 py-2.5">
                       <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_BG[r.status] || ''}`}>

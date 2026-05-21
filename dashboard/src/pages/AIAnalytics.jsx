@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { fetchApi } from '../lib/api'
+import { safeNumber } from '../utils/numbers'
 import { useAuth } from '../contexts/AuthContext'
 import { Line, Bar } from 'react-chartjs-2'
 import {
@@ -101,8 +102,10 @@ export default function AIAnalytics() {
     }
   }
 
-  const aovDelta = kpis.ai_aov && kpis.non_ai_aov && kpis.non_ai_aov > 0
-    ? { pct: ((kpis.ai_aov - kpis.non_ai_aov) / kpis.non_ai_aov) * 100, up: kpis.ai_aov >= kpis.non_ai_aov }
+  const nonAiAov = safeNumber(kpis.non_ai_aov, 0)
+  const aiAov = safeNumber(kpis.ai_aov, 0)
+  const aovDelta = aiAov && nonAiAov > 0
+    ? { pct: nonAiAov > 0 ? ((aiAov - nonAiAov) / nonAiAov) * 100 : 0, up: aiAov >= nonAiAov }
     : null
 
   const insights = []

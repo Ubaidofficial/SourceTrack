@@ -87,7 +87,8 @@ export default function Layout({ children }) {
         if (!data) return
         if (data.plan === 'trial') {
           const end  = new Date(new Date(data.created_at).getTime() + 14 * 86400000)
-          const days = Math.ceil((end - new Date()) / 86400000)
+          const endDate = end ? new Date(end) : null
+          const days = endDate && !isNaN(endDate) ? Math.ceil((endDate - new Date()) / 86400000) : 0
           setTrialInfo({ daysLeft: Math.max(0, days) })
         }
       } catch (_e) { /* silent */ }

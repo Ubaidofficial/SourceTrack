@@ -4,6 +4,7 @@ import {
   Clock, Globe, MousePointerClick, User, Bot, MapPin,
   Download, X, ChevronDown, ChevronRight, Zap, ArrowRight
 } from 'lucide-react'
+import { safeNumber } from '../utils/numbers'
 
 const EVENT_ICONS = {
   '$pageview':   Globe,
@@ -119,7 +120,7 @@ export default function JourneyModal({ visitorId, siteKey, onClose, onQualified 
                   </div>
                   <div className="bg-white dark:bg-[#1A1D1D] rounded-xl p-3 text-center shadow-sm">
                     <p className="text-xl font-bold text-st-black">
-                      {summary.conversionValue > 0 ? `$${summary.conversionValue.toFixed(0)}` : '—'}
+                      {summary.conversionValue > 0 ? `$${safeNumber(summary.conversionValue, 0).toFixed(0)}` : '—'}
                     </p>
                     <p className="text-[10px] text-st-gray dark:text-gray-400 uppercase tracking-wide mt-0.5">Value</p>
                   </div>
@@ -240,7 +241,7 @@ export default function JourneyModal({ visitorId, siteKey, onClose, onQualified 
                                 )}
                                 {e.conversion_value > 0 && (
                                   <span className="text-xs font-semibold text-st-black">
-                                    ${Number(e.conversion_value).toFixed(0)}
+                                    ${safeNumber(e.conversion_value, 0).toFixed(0)}
                                   </span>
                                 )}
                               </div>

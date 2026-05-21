@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { safeNumber } from '../utils/numbers'
 
 function useCountUp(target, duration = 650) {
   const [current, setCurrent] = useState(null)
@@ -44,8 +45,8 @@ const MetricTile = ({ label, value, format = 'number', isEmpty = false, trend = 
     const n = Number(val)
     switch (fmt) {
       case 'currency': return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: n >= 10000 ? 0 : 2 }).format(n)
-      case 'percent':  return `${n >= 0 ? '+' : ''}${n.toFixed(1)}%`
-      case 'number':   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(Math.round(n))
+      case 'percent':  return `${n >= 0 ? '+' : ''}${safeNumber(n, 0).toFixed(1)}%`
+      case 'number':   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(Math.round(safeNumber(n, 0)))
       case 'text':     return String(val)
       default:         return String(val)
     }
@@ -72,7 +73,7 @@ const MetricTile = ({ label, value, format = 'number', isEmpty = false, trend = 
       {isEmptyState && <p className="text-xs text-st-gray dark:text-gray-400 italic mt-0.5">Not yet tracked</p>}
       {!isEmptyState && trend != null && (
         <p className={`text-xs font-medium mt-0.5 ${trendPositive ? 'text-green-600' : trendNegative ? 'text-red-500' : 'text-st-gray'}`}>
-          {trendPositive ? '▲' : trendNegative ? '▼' : '—'} {Math.abs(trend).toFixed(1)}% vs last period
+          {trendPositive ? '▲' : trendNegative ? '▼' : '—'} {Math.abs(safeNumber(trend, 0)).toFixed(1)}% vs last period
         </p>
       )}
     </div>
