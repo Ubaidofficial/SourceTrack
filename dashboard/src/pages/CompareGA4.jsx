@@ -6,8 +6,9 @@ import SectionKicker from '../components/SectionKicker'
 
 const SEO = {
   title: 'SourceTrack vs GA4 — A Simpler Attribution Alternative | SourceTrack',
-  description: 'Compare SourceTrack and GA4 for marketing attribution, AI referral tracking, customer journeys, revenue reporting, and report building. Independent, neutral, focused.',
+  description: 'Compare SourceTrack and GA4 for marketing attribution, AI referral tracking, customer journeys, revenue reporting, and custom dashboards. Independent, neutral, focused attribution.',
   canonical: 'https://sourcetrack.ai/compare-ga4',
+  ogTitle: 'SourceTrack vs GA4',
 }
 
 const HERO = {

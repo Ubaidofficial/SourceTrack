@@ -7,8 +7,9 @@ import SectionKicker from '../components/SectionKicker'
 
 const SEO = {
   title: 'Marketing Attribution Software — Track Which Sources Create Revenue | SourceTrack',
-  description: 'Track first touch, last touch, multi-touch journeys, campaign performance, landing pages, AI referrals, and revenue attribution across 8 models. Independent, neutral attribution.',
+  description: 'Track first touch, last touch, multi-touch journeys, campaign performance, landing pages, AI referrals, and revenue attribution across 8 models. Independent, neutral attribution for founders and marketers.',
   canonical: 'https://sourcetrack.ai/attribution',
+  ogTitle: 'Marketing Attribution Software — SourceTrack',
 }
 
 const HERO = {

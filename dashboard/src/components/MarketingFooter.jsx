@@ -26,6 +26,7 @@ export default function MarketingFooter() {
             <Link to="/use-cases/saas" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">SaaS</Link>
             <Link to="/use-cases/ecommerce" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Ecommerce</Link>
             <Link to="/use-cases/lead-generation" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Lead generation</Link>
+            <Link to="/use-cases/agencies" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Agencies</Link>
             <Link to="/compare-ga4" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Compare GA4</Link>
           </div>
           <div>

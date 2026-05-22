@@ -6,9 +6,10 @@ import HowItWorksSteps from '../components/HowItWorksSteps'
 import SectionKicker from '../components/SectionKicker'
 
 const SEO = {
-  title: 'SourceTrack Product — Revenue attribution without the analytics maze',
-  description: 'Explore how SourceTrack captures visitor sources, connects customer journeys, tracks conversions, and attributes revenue back to the channels that created it.',
+  title: 'SourceTrack Product — Revenue Attribution Without the Analytics Maze',
+  description: 'Explore how SourceTrack captures visitor sources, connects multi-touch customer journeys, tracks conversions and AI referrals, and attributes revenue back to the channels that created it.',
   canonical: 'https://sourcetrack.ai/product',
+  ogTitle: 'SourceTrack Product — Revenue attribution without the analytics maze',
 }
 
 const HERO = {

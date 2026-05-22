@@ -6,8 +6,9 @@ import SectionKicker from '../components/SectionKicker'
 
 const SEO = {
   title: 'Attribution Report Builder — Build Custom Dashboards from Your Data | SourceTrack',
-  description: 'Build custom attribution dashboards from source, journey, conversion, AI referral, and revenue data. Start blank, pin only the metrics your team needs.',
+  description: 'Build custom attribution dashboards from source, journey, conversion, AI referral, and revenue data. Start blank, pin only the metrics your team needs for budget and channel decisions.',
   canonical: 'https://sourcetrack.ai/report-builder',
+  ogTitle: 'Report Builder — SourceTrack',
 }
 
 const HERO = {

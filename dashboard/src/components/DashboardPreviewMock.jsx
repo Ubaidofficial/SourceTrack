@@ -10,7 +10,7 @@ export default function DashboardPreviewMock() {
               <span className="w-[10px] h-[10px] rounded-full bg-[#FF8800]" />
               <span className="w-[10px] h-[10px] rounded-full bg-st-lime" />
             </div>
-            <span>Revenue attribution — see which sources create customers</span>
+            <span>SourceTrack — revenue attribution dashboard</span>
             <span className="inline-flex items-center gap-[7px] rounded-full py-[6px] px-[10px] bg-[rgba(204,240,63,.12)] text-st-lime text-xs font-black">
               <span className="w-2 h-2 rounded-full bg-st-lime" />Live
             </span>
@@ -18,7 +18,7 @@ export default function DashboardPreviewMock() {
 
           <div className="p-4 grid grid-cols-6 gap-3 text-[#F6FAFA]">
             <KpiCard label="Revenue by source" value="$150.4k" trend="↗ +23.5% from multi-touch attribution" />
-            <KpiCard label="AI-assisted conversions" value="$48.9k" trend="↗ +156% from ChatGPT, Gemini & more" />
+            <KpiCard label="AI-assisted conversions" value="$48.9k" trend="ChatGPT, Claude, Gemini, Perplexity + more" />
             <KpiCard label="Source quality score" value="92%" trend="Email + partner referrals lead" />
 
             <div className="col-span-6 bg-[#161A1A] border border-[#343A3A] rounded-[18px] p-4">
@@ -64,6 +64,25 @@ export default function DashboardPreviewMock() {
                     <span>{s[1]}</span>
                     <strong>{s[2]}</strong>
                     <span className="text-[#18C76E] text-[10px]">{s[3]}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Event timeline / journey view */}
+            <div className="col-span-6 bg-[#161A1A] border border-[#343A3A] rounded-[18px] p-4">
+              <div className="text-[#9DA7A7] text-[11px] font-black uppercase tracking-[0.055em]">Event timeline — last 24 hours</div>
+              <div className="mt-[14px] grid gap-[8px]">
+                {[
+                  ['Pageview', '/pricing', '4,826'],
+                  ['Form submit', 'Demo request /features', '38'],
+                  ['Trial started', '/signup', '24'],
+                  ['Purchase', 'Growth plan /pricing', '12'],
+                ].map((e, i) => (
+                  <div key={i} className="grid grid-cols-[1fr_1.4fr_auto] items-center gap-2 text-xs">
+                    <span className="inline-flex items-center min-w-[78px] px-2 py-[3px] rounded-full bg-[#252B2B] text-[#CCE8C0] text-[10px] font-black uppercase">{e[0]}</span>
+                    <span className="text-[#B9C2C2] truncate">{e[1]}</span>
+                    <strong className="text-[#DDE5E5]">{e[2]}</strong>
                   </div>
                 ))}
               </div>

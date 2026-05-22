@@ -5,9 +5,10 @@ import FAQSection from '../components/FAQSection'
 import SectionKicker from '../components/SectionKicker'
 
 const SEO = {
-  title: 'SourceTrack Pricing — Simple Attribution Pricing | SourceTrack',
-  description: 'Simple pricing for marketing attribution, AI referral tracking, customer journeys, conversion tracking, and report builder dashboards. Start free for 5,000 pageviews/mo.',
+  title: 'SourceTrack Pricing — Simple Attribution Pricing, Free Forever Tier | SourceTrack',
+  description: 'Simple pricing for marketing attribution, AI referral tracking, customer journeys, conversion tracking, and custom report builder dashboards. Start free for 5,000 pageviews/mo.',
   canonical: 'https://sourcetrack.ai/pricing',
+  ogTitle: 'SourceTrack Pricing',
 }
 
 const HERO = {
