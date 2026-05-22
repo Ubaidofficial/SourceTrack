@@ -81,11 +81,11 @@ export default function Snippet() {
     if (site) checkStatus()
   }, [site, checkStatus])
 
-  const apiUrl = import.meta.env.VITE_API_URL || window.location.origin
+  const trackerBaseUrl = (import.meta.env.VITE_TRACKER_BASE_URL || import.meta.env.VITE_API_URL || window.location.origin).replace(/\/+$/, '');
 
   function buildSnippet() {
     if (!site) return ''
-    const attrs = [`src="${apiUrl}/tracker/tracker.min.js"`, `data-site-key="${site.site_key}"`]
+    const attrs = [`src="${trackerBaseUrl}/tracker/tracker.min.js"`, `data-site-key="${site.site_key}"`]
     if (autoIdentify && idSelector.trim()) {
       attrs.push(`data-user-id-selector="${idSelector.trim()}"`)
     }
@@ -536,12 +536,12 @@ app.post('/stripe/webhook', express.raw({type: 'application/json'}), async (req,
               {site && (
                 <div className="bg-st-black rounded-lg p-4 relative mt-1.5">
                   <pre className="text-green-400 text-xs overflow-x-auto whitespace-pre-wrap">
-                    {`<script async src="${apiUrl}/tracker/tracker.min.js" data-site-key="${site.site_key}" data-user-id-selector="[data-trackiq-user-id]"></script>`}
+                    {`<script async src="${trackerBaseUrl}/tracker/tracker.min.js" data-site-key="${site.site_key}" data-user-id-selector="[data-trackiq-user-id]"></script>`}
                   </pre>
                   <button
                     onClick={async () => {
                       try {
-                        await navigator.clipboard.writeText(`<script async src="${apiUrl}/tracker/tracker.min.js" data-site-key="${site.site_key}" data-user-id-selector="[data-trackiq-user-id]"></script>`)
+                        await navigator.clipboard.writeText(`<script async src="${trackerBaseUrl}/tracker/tracker.min.js" data-site-key="${site.site_key}" data-user-id-selector="[data-trackiq-user-id]"></script>`)
                       } catch (_err) { /* clipboard unavailable */ }
                     }}
                     className="absolute top-3 right-3 p-1.5 bg-gray-800 hover:bg-gray-700 rounded text-gray-300 transition-colors"

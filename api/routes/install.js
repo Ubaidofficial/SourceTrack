@@ -1,8 +1,10 @@
 import { Router } from 'express'
-import { validateSiteKey } from '../middleware/auth.js'
+import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
 import { getSupabase } from '../lib/supabase.js'
 import { esc } from '../lib/utils.js'
+
+const normalizeBaseUrl = (value) => String(value || '').replace(/\/+$/, '');
 
 const router = Router()
 
@@ -33,8 +35,12 @@ router.get('/snippet', async (req, res) => {
       }
     }
 
-    const apiUrl = process.env.FRONTEND_URL || `http://localhost:${process.env.PORT || 3000}`
-    const snippet = `<script async src="${apiUrl}/tracker/tracker.min.js" data-site-key="${site.site_key}"></script>`
+    const trackerBaseUrl = normalizeBaseUrl(
+      process.env.TRACKER_BASE_URL ||
+      process.env.FRONTEND_URL ||
+      `http://localhost:${process.env.PORT || 3000}`
+    )
+    const snippet = `<script async src="${trackerBaseUrl}/tracker/tracker.min.js" data-site-key="${site.site_key}"></script>`
 
     return res.status(200).json({
       success: true,
@@ -47,7 +53,7 @@ router.get('/snippet', async (req, res) => {
   }
 })
 
-router.get('/status', validateSiteKey, async (req, res) => {
+router.get('/status', validateSiteKey, requireSiteMembership, async (req, res) => {
   try {
     const siteKey = req.query.site_key || req.body?.site_key
 

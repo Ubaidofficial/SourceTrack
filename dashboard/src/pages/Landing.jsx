@@ -145,7 +145,7 @@ const PLAN_CONFIGS = [
       'AI platform detection (15 platforms)',
       'Server-side CAPI sync',
       '1 year data retention',
-      '14-day free trial',
+      'Free forever up to 5,000 pv/mo',
     ],
     cta: 'Choose Starter',
     highlight: false,
@@ -933,7 +933,7 @@ function PricingSection() {
         {/* Social proof below pricing */}
         <FadeUp delay={200}>
           <div className="mt-10 text-center space-y-2">
-            <p className="text-xs text-white/25">All plans include a 14-day free trial. No credit card required. Cancel any time.</p>
+            <p className="text-xs text-white/25">Free forever for up to 5,000 pageviews/mo. Upgrade any time.</p>
             <div className="flex items-center justify-center gap-6 flex-wrap text-xs text-white/20">
               <span>✓ Unlimited conversions on all plans</span>
               <span>✓ All 8 attribution models included</span>
@@ -1077,7 +1077,7 @@ export default function Landing() {
           <div className="hidden md:flex items-center gap-3">
             <Link to="/login" className="text-sm text-white/70 hover:text-white transition-colors px-3 py-1.5">Sign in</Link>
             <Link to="/signup" className="text-sm font-semibold bg-st-lime text-black px-4 py-2 rounded-lg hover:bg-st-lime/90 transition-all hover:scale-[1.02]">
-              Start free trial
+              Start free
             </Link>
           </div>
 
@@ -1107,7 +1107,7 @@ export default function Landing() {
             </div>
             <div className="pt-3 border-t border-white/10 flex flex-col gap-2">
               <Link to="/login" className="text-sm text-center text-white/70 py-2">Sign in</Link>
-              <Link to="/signup" className="text-sm font-semibold text-center bg-st-lime text-black px-4 py-2.5 rounded-lg">Start free trial</Link>
+              <Link to="/signup" className="text-sm font-semibold text-center bg-st-lime text-black px-4 py-2.5 rounded-lg">Start free</Link>
             </div>
           </div>
         )}

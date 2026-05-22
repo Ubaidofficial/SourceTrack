@@ -80,7 +80,7 @@ function ParamTable({ params }) {
           {params.map((p, i) => (
             <tr key={i} className="border-b border-gray-100 dark:border-gray-800 last:border-0">
               <td className="py-2 pr-4 font-mono text-[13px] text-gray-800 dark:text-gray-200 align-top">{p.name}</td>
-              <td className="py-2 pr-4 text-[13px] text-indigo-600 dark:text-indigo-400 font-mono align-top">{p.type}</td>
+              <td className="py-2 pr-4 text-[13px] text-[#00AA57] dark:text-green-400 font-mono align-top">{p.type}</td>
               <td className="py-2 pr-4 align-top">
                 {p.required
                   ? <span className="text-[11px] font-semibold text-red-600 dark:text-red-400">required</span>

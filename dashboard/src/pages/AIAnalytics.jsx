@@ -163,7 +163,7 @@ export default function AIAnalytics() {
             <p className="text-st-gray dark:text-gray-400 mt-3">If your site gets AI traffic but nothing appears here, check the Event Logger for pageview events with ai_source values.</p>
           </div>
           <button onClick={() => window.location.href = '/snippet'}
-            className="mt-6 px-4 py-2 bg-st-black text-white rounded-lg text-sm font-medium hover:bg-gray-800">
+            className="mt-6 px-4 py-2 bg-[#1F2323] hover:bg-[#171B1B] dark:bg-[#CCF03F] dark:hover:bg-[#D9FA64] text-white dark:text-[#1F2323] rounded-lg text-sm font-medium focus-visible:ring-2 focus-visible:ring-[#CCF03F]">
             Set up tracking
           </button>
         </div>
@@ -466,7 +466,7 @@ function ForecastCard({ siteKey }) {
           </div>
           <button
             onClick={runForecast}
-            className="px-5 py-2.5 bg-st-black text-white text-sm font-semibold rounded-lg hover:bg-st-black/90"
+            className="px-5 py-2.5 bg-[#1F2323] hover:bg-[#171B1B] dark:bg-[#CCF03F] dark:hover:bg-[#D9FA64] text-white dark:text-[#1F2323] text-sm font-semibold rounded-lg focus-visible:ring-2 focus-visible:ring-[#CCF03F]"
           >
             Run Forecast
           </button>
@@ -599,7 +599,7 @@ function AnomalyCard({ siteKey }) {
             <p className="text-sm font-semibold text-st-black">Detect This Week's Anomalies</p>
             <p className="text-xs text-st-gray dark:text-gray-400 mt-1">DeepSeek compares this week vs last week across all channels</p>
           </div>
-          <button onClick={run} className="px-5 py-2.5 bg-st-black text-white text-sm font-semibold rounded-lg hover:bg-st-black/90">
+          <button onClick={run} className="px-5 py-2.5 bg-[#1F2323] hover:bg-[#171B1B] dark:bg-[#CCF03F] dark:hover:bg-[#D9FA64] text-white dark:text-[#1F2323] text-sm font-semibold rounded-lg focus-visible:ring-2 focus-visible:ring-[#CCF03F]">
             Run Detection
           </button>
         </div>
@@ -738,7 +738,7 @@ function VerdictCard({ siteKey }) {
             <p className="text-sm font-semibold text-st-black">Get Campaign Verdicts</p>
             <p className="text-xs text-st-gray dark:text-gray-400 mt-1">DeepSeek scores your last 30 days by revenue, conversions, and trends</p>
           </div>
-          <button onClick={run} className="px-5 py-2.5 bg-st-black text-white text-sm font-semibold rounded-lg hover:bg-st-black/90">
+          <button onClick={run} className="px-5 py-2.5 bg-[#1F2323] hover:bg-[#171B1B] dark:bg-[#CCF03F] dark:hover:bg-[#D9FA64] text-white dark:text-[#1F2323] text-sm font-semibold rounded-lg focus-visible:ring-2 focus-visible:ring-[#CCF03F]">
             Run Analysis
           </button>
         </div>

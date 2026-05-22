@@ -24,9 +24,20 @@ import express from 'express'
 
 export const trackerIdRouter = express.Router()
 
+// Salt resolution — fail safely in production, warn in dev
+function getTrackerSalt() {
+  if (process.env.TRACKER_SALT) return process.env.TRACKER_SALT;
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('TRACKER_SALT is required in production');
+  }
+
+  return 'sourcetrack-dev-salt';
+}
+
 // Daily rotating salt: HMAC(UTC date, TRACKER_SALT)
 function getDailySalt(date) {
-  const secret = process.env.TRACKER_SALT || 'sourcetrack-default-salt-change-me'
+  const secret = getTrackerSalt()
   return createHmac('sha256', secret)
     .update(date)
     .digest('hex')
@@ -34,7 +45,7 @@ function getDailySalt(date) {
 
 // Hourly salt for session IDs
 function getHourlySalt(dateHour) {
-  const secret = process.env.TRACKER_SALT || 'sourcetrack-default-salt-change-me'
+  const secret = getTrackerSalt()
   return createHmac('sha256', secret)
     .update(dateHour)
     .digest('hex')

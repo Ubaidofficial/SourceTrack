@@ -117,7 +117,7 @@ export default function DataQuality() {
         <button
           onClick={handleRefresh}
           disabled={refreshing}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-st-black dark:bg-white text-white dark:text-st-black rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-[#1F2323] hover:bg-[#171B1B] dark:bg-[#CCF03F] dark:hover:bg-[#D9FA64] text-white dark:text-[#1F2323] rounded-lg disabled:opacity-50 transition-colors focus-visible:ring-2 focus-visible:ring-[#CCF03F]"
         >
           <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
           {refreshing ? 'Running…' : 'Refresh'}

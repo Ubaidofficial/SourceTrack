@@ -70,7 +70,7 @@ function Nav() {
         </Link>
         <div className="flex items-center gap-3">
           <Link to="/login" className="text-sm text-white/70 hover:text-white transition-colors px-3 py-1.5 hidden sm:block">Sign in</Link>
-          <Link to="/signup" className="text-sm font-semibold bg-st-lime text-black px-4 py-2 rounded-lg hover:bg-st-lime/90 transition-colors">Start free trial</Link>
+          <Link to="/signup" className="text-sm font-semibold bg-st-lime text-black px-4 py-2 rounded-lg hover:bg-st-lime/90 transition-colors">Start free</Link>
         </div>
       </div>
     </header>
@@ -138,7 +138,7 @@ export default function SolutionPage({ data }) {
             style={{ animation: 'fade-in-up 0.6s ease-out 0.3s both' }}>
             <Link to="/signup"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-st-lime text-black text-sm font-bold rounded-xl hover:bg-st-lime/90 transition-all hover:scale-[1.02]">
-              Start free — 14 days
+              Start free
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
               </svg>
@@ -148,7 +148,7 @@ export default function SolutionPage({ data }) {
               See pricing
             </Link>
           </div>
-          <p className="text-xs text-white/30 mt-4">No credit card · GDPR-compliant · Cancel anytime</p>
+          <p className="text-xs text-white/30 mt-4">Free for up to 5,000 pageviews/mo · Upgrade any time · GDPR-compliant</p>
         </div>
       </section>
 
@@ -260,7 +260,7 @@ export default function SolutionPage({ data }) {
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link to="/signup"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-st-lime text-black text-base font-bold rounded-xl hover:bg-st-lime/90 transition-all hover:scale-[1.02]">
-                Start free trial — 14 days
+                Start free
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                 </svg>

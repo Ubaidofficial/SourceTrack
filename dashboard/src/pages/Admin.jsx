@@ -328,7 +328,7 @@ export default function Admin() {
               />
               <button onClick={loadSiteDetail}
                 disabled={siteDetailLoading || !siteDetailKey}
-                className="px-4 py-2 bg-st-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 flex items-center gap-2">
+                className="px-4 py-2 bg-[#1F2323] hover:bg-[#171B1B] dark:bg-[#CCF03F] dark:hover:bg-[#D9FA64] text-white dark:text-[#1F2323] rounded-lg text-sm font-medium disabled:opacity-50 flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-[#CCF03F]">
                 <Search className="w-4 h-4" /> Lookup
               </button>
             </div>
@@ -520,7 +520,7 @@ export default function Admin() {
                   />
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={handleQaSave} className="px-4 py-2 bg-st-black text-white rounded-lg text-sm hover:bg-gray-800">
+                  <button onClick={handleQaSave} className="px-4 py-2 bg-[#1F2323] hover:bg-[#171B1B] dark:bg-[#CCF03F] dark:hover:bg-[#D9FA64] text-white dark:text-[#1F2323] rounded-lg text-sm focus-visible:ring-2 focus-visible:ring-[#CCF03F]">
                     Save
                   </button>
                   <button onClick={() => setQaFormMode(null)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-[#252929] rounded-lg hover:bg-gray-200">

@@ -108,7 +108,7 @@ const DATA = {
   },
 
   ctaHeadline: 'Show clients the revenue their current analytics can\'t see.',
-  ctaBody: "AI attribution, CAPI sync, and multi-model reporting — for every client, from one dashboard. 14-day free trial.",
+  ctaBody: "AI attribution, CAPI sync, and multi-model reporting — for every client, from one dashboard. Start free.",
 
   jsonLd: {
     "@context": "https://schema.org",
