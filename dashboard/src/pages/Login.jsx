@@ -19,22 +19,18 @@ export default function Login() {
       await signIn(email, password)
 
       const { data: { session } } = await supabase.auth.getSession()
+      const authUser = session?.user
 
-      // Super admins go to admin panel — they may not own sites directly
-      const metaRole = session?.user?.raw_app_meta_data?.role
+      // Super admins go straight to the admin panel — they may not own sites directly.
+      const metaRole = authUser?.raw_app_meta_data?.role
       if (metaRole === 'super_admin') {
         navigate('/admin', { replace: true })
         return
       }
 
-      const { data: sites } = await supabase
-        .from('sites')
-        .select('onboarding_completed')
-        .eq('owner_id', session?.user?.id)
-        .limit(1)
-
-      const hasCompleted = sites?.some((s) => s.onboarding_completed)
-      navigate(hasCompleted ? '/dashboard' : '/onboarding', { replace: true })
+      // Everyone else goes to /dashboard; ProtectedRoute will redirect to
+      // /onboarding via /api/onboarding/me if their site isn't complete.
+      navigate('/dashboard', { replace: true })
     } catch (err) {
       setError(err.message)
     } finally {
@@ -58,14 +54,14 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-[#F1F4F4] dark:bg-[#2B302F] px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-indigo-600">SourceTrack</h1>
+          <h1 className="text-3xl font-extrabold tracking-[-0.06em] text-[#1F2323] dark:text-white">SourceTrack</h1>
           <p className="text-st-gray dark:text-gray-400 mt-2">Sign in to your account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white dark:bg-[#1A1D1D] shadow rounded-lg p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-[#1A1F1F] shadow-[0_18px_50px_rgba(31,35,35,0.10)] border border-[#DDE4E4] dark:border-white/10 rounded-2xl p-6 space-y-4">
           {error && (
             <div className="bg-red-50 dark:bg-red-900/20 text-red-600 text-sm p-3 rounded">{error}</div>
           )}
@@ -73,7 +69,7 @@ export default function Login() {
           <button
             type="button"
             onClick={handleGoogleSignIn}
-            className="w-full py-2 bg-white dark:bg-[#1A1D1D] border border-gray-300 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-[#252929] flex items-center justify-center gap-2"
+            className="w-full py-2.5 bg-white dark:bg-white/5 border border-gray-300 dark:border-white/10 rounded-xl text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/10 flex items-center justify-center gap-2"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
@@ -86,7 +82,7 @@ export default function Login() {
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
-            <div className="relative flex justify-center text-xs"><span className="bg-white dark:bg-[#1A1D1D] px-2 text-st-gray">or</span></div>
+            <div className="relative flex justify-center text-xs"><span className="bg-white dark:bg-[#1A1F1F] px-2 text-st-gray">or</span></div>
           </div>
 
           <div>
@@ -96,7 +92,7 @@ export default function Login() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 focus:border-st-black outline-none"
+              className="w-full px-3 py-2.5 bg-white dark:bg-[#252A29] text-[#1F2323] dark:text-white border border-gray-300 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-st-lime focus:border-st-lime outline-none"
             />
           </div>
 
@@ -107,14 +103,14 @@ export default function Login() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-900 focus:border-st-black outline-none"
+              className="w-full px-3 py-2.5 bg-white dark:bg-[#252A29] text-[#1F2323] dark:text-white border border-gray-300 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-st-lime focus:border-st-lime outline-none"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2 bg-st-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50"
+            className="w-full py-2.5 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90 disabled:opacity-50"
           >
             {loading ? 'Signing in...' : 'Sign in'}
           </button>

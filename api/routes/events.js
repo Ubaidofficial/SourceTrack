@@ -113,7 +113,8 @@ router.get('/latest', validateSiteKey, async (req, res) => {
       event, timestamp, distinctId, pageUrl, referrer,
       aiSource, isConversion, deviceType, country,
       utmSource, utmMedium, utmCampaign,
-      utmContent, utmTerm, refParam, sourceParam, viaParam,
+      utmContent, utmTerm, gclid, fbclid, msclkid, ttclid,
+      refParam, sourceParam, viaParam,
       firstTouchSource, firstTouchMedium, firstTouchCampaign,
       conversionType, conversionValue, ingestionMethod, rawProperties
     ]) => ({
@@ -134,6 +135,10 @@ router.get('/latest', validateSiteKey, async (req, res) => {
       utm_campaign: utmCampaign || null,
       utm_content: utmContent || null,
       utm_term: utmTerm || null,
+      gclid: gclid || null,
+      fbclid: fbclid || null,
+      msclkid: msclkid || null,
+      ttclid: ttclid || null,
       ref_param: refParam || null,
       source_param: sourceParam || null,
       via_param: viaParam || null,

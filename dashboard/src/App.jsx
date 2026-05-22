@@ -1,7 +1,9 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HelmetProvider } from 'react-helmet-async'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { useEffect, useState } from 'react'
+import { fetchApi } from './lib/api'
 import { initPostHog } from './lib/posthog'
 import Layout from './components/Layout'
 import Login from './pages/Login'
@@ -36,6 +38,46 @@ const queryClient = new QueryClient()
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
+  // Use react-router's useLocation so pathname is reactive — switching routes
+  // within the SPA re-evaluates the gate without remounting the component.
+  const { pathname } = useLocation()
+  const [onboarding, setOnboarding] = useState({ loading: true, completed: false, hasSite: false })
+
+  useEffect(() => {
+    let alive = true
+
+    async function checkOnboarding() {
+      if (!user) {
+        if (alive) setOnboarding({ loading: false, completed: false, hasSite: false })
+        return
+      }
+
+      // Super admins bypass the onboarding gate — they may not own a site directly.
+      if (user.raw_app_meta_data?.role === 'super_admin') {
+        if (alive) setOnboarding({ loading: false, completed: true, hasSite: true })
+        return
+      }
+
+      try {
+        const data = await fetchApi('/onboarding/me')
+        if (!alive) return
+        setOnboarding({
+          loading: false,
+          completed: !!data?.onboarding_completed,
+          hasSite: !!data?.has_site
+        })
+      } catch (_err) {
+        // If the endpoint fails (network error, missing column, etc), fail open
+        // so the user can still reach login/dashboard rather than infinite spinner.
+        if (alive) setOnboarding({ loading: false, completed: false, hasSite: false })
+      }
+    }
+
+    // Reset to loading whenever the user identity changes so the gate is honest.
+    setOnboarding({ loading: true, completed: false, hasSite: false })
+    checkOnboarding()
+    return () => { alive = false }
+  }, [user?.id])
 
   if (loading) {
     return (
@@ -46,6 +88,23 @@ function ProtectedRoute({ children }) {
   }
 
   if (!user) return <Navigate to="/login" replace />
+
+  if (onboarding.loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-dark-bg">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black dark:border-st-lime" />
+      </div>
+    )
+  }
+
+  // Force incomplete users to /onboarding; completed users away from it.
+  if (pathname !== '/onboarding' && !onboarding.completed) {
+    return <Navigate to="/onboarding" replace />
+  }
+  if (pathname === '/onboarding' && onboarding.completed) {
+    return <Navigate to="/dashboard" replace />
+  }
+
   return <Layout>{children}</Layout>
 }
 

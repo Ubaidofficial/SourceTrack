@@ -1,34 +1,31 @@
 import express from 'express'
-import { requireUserAuth } from '../middleware/user-auth.js'
 import { queryHogQL } from '../lib/posthog.js'
-import { getSupabase } from '../lib/supabase.js'
+import { esc } from '../lib/utils.js'
 
 const router = express.Router()
 
-router.get('/', requireUserAuth, async (req, res) => {
+// Parent mount in api/index.js applies requireUserAuth + validateSiteKey +
+// requireSiteMembership, so req.site is guaranteed populated here.
+router.get('/', async (req, res) => {
   try {
-    const { site_key } = req.query
-    if (!site_key) return res.status(400).json({ error: 'site_key required' })
-
-    const supabase = getSupabase()
-    const { data: site } = await supabase
-      .from('sites').select('id').eq('site_key', site_key).single()
-
-    if (!site) return res.status(404).json({ error: 'Site not found' })
+    if (!req.site?.id) {
+      return res.status(400).json({ success: false, data: null, error: 'Site context missing' })
+    }
 
     const sql = `
       SELECT count(DISTINCT properties.anonymous_id) AS live_visitors
       FROM events
       WHERE event = '$pageview'
-        AND properties.site_id = '${site.id}'
+        AND properties.site_id = '${esc(req.site.id)}'
         AND timestamp >= now() - INTERVAL 5 MINUTE
     `
-    const result = await queryHogQL(sql)
-    const live_visitors = Number(result?.results?.[0]?.[0] ?? 0)
-    res.json({ live_visitors })
+    const rows = await queryHogQL(sql, 'live_visitors')
+    const live_visitors = Number(rows?.[0]?.[0] ?? 0)
+    res.json({ success: true, data: { live_visitors }, error: null })
   } catch (err) {
     console.error('Live visitors error:', err)
-    res.json({ live_visitors: 0 })
+    // Soft-fail to 0 so the dashboard widget doesn't break on PostHog hiccups.
+    res.json({ success: true, data: { live_visitors: 0 }, error: null })
   }
 })
 

@@ -282,7 +282,7 @@ export default function Dashboard() {
 
       const query = supabase
         .from('sites')
-        .select('site_key, name, domain, plan')
+        .select('site_key, name, domain, plan, business_type')
         .limit(1)
 
       if (member?.company_id) {
@@ -361,8 +361,9 @@ export default function Dashboard() {
     queryKey: ['live-visitors', site?.site_key],
     queryFn: async () => {
       if (!site?.site_key) return { live_visitors: 0 }
-      const res = await fetch(`/api/live?site_key=${site.site_key}`)
-      return res.json()
+      // fetchApi sends the auth token and unwraps the { success, data, error }
+      // envelope returned by the new live.js route.
+      return fetchApi(`/live?site_key=${encodeURIComponent(site.site_key)}`)
     },
     enabled: !!site?.site_key && !previewMode,
     refetchInterval: 30000,

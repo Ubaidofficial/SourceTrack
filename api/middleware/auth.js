@@ -87,6 +87,7 @@ export async function validateSiteKey(req, res, next) {
       pv_limit: data.pv_limit ?? null,
       company_id: data.company_id,
       owner_id: data.owner_id,
+      business_type: data.business_type || null,
       trial_ends_at: data.trial_ends_at || null,
       attribution_window_days: data.attribution_window_days || 30
     }

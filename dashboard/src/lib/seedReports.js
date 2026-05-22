@@ -31,7 +31,10 @@ const SEEDS = { ecommerce: ECOMMERCE, saas: SAAS, leadgen: LEADGEN }
 export async function seedReportsForBusiness(businessType, siteKey) {
   try {
     if (!siteKey) return
-    if (localStorage.getItem(SEED_FLAG_KEY)) return
+    // Per-site flag so the same browser can set up more than one site and
+    // still get the canned reports for each.
+    const flagKey = `${SEED_FLAG_KEY}:${siteKey}`
+    if (localStorage.getItem(flagKey)) return
 
     const seeds = SEEDS[businessType]
     if (!seeds || seeds.length === 0) return
@@ -70,7 +73,7 @@ export async function seedReportsForBusiness(businessType, siteKey) {
       }
     }
 
-    localStorage.setItem(SEED_FLAG_KEY, '1')
+    localStorage.setItem(flagKey, '1')
   } catch {
     /* seeding is non-critical */
   }

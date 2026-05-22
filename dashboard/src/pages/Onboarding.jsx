@@ -153,94 +153,32 @@ export default function Onboarding() {
       return
     }
 
-    try {
-      const url = new URL(`https://${trimmed}`)
-      if (url.hostname === 'localhost' || url.hostname.includes('staging')) {
-        setError('Please enter a production domain (localhost and staging domains are not supported)')
-        return
-      }
-    } catch {
-      setError('Please enter a valid domain (e.g., yoursite.com)')
-      return
-    }
-
-    try {
-      const { data: member } = await supabase
-        .from('company_members')
-        .select('company_id')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      const query = supabase
-        .from('sites')
-        .select('id, domain, onboarding_completed, onboarding_state, site_key')
-        .eq('domain', trimmed)
-
-      if (member?.company_id) {
-        query.eq('company_id', member.company_id)
-      } else {
-        query.eq('owner_id', user.id)
-      }
-      const { data: existing } = await query.maybeSingle()
-
-      if (existing) {
-        if (existing.onboarding_completed) {
-          navigate('/dashboard', { replace: true })
-          return
-        }
-        setSiteId(existing.id)
-        setSiteKey(existing.site_key)
-        const state = existing.onboarding_state || {}
-        if (state.current_step && state.current_step > 1) {
-          setStep(state.current_step)
-          setBusinessType(state.business_type || null)
-          setInstallMethod(state.install_method || null)
-          setSelectedConversions(state.selected_conversions || [])
-        } else {
-          setStep(2)
-          await saveOnboardingStateViaSite(existing.id, 2, { business_type: null, install_method: null, selected_conversions: [] })
-        }
-        return
-      }
-    } catch {
-      /* proceed */
-    }
-
     setLoading(true)
     try {
-      const siteKey = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+      // Domain creation/resume now goes through the backend so the access
+      // checks + plan default + onboarding_state init all happen in one place.
+      // The backend POST /onboarding/site normalizes the domain and either
+      // resumes an existing one or creates a fresh site (with the DB default
+      // plan='free' applied — do NOT pass plan from the client).
+      const site = await fetchApi('/onboarding/site', {
+        method: 'POST',
+        body: JSON.stringify({ domain: trimmed })
+      })
 
-      const { data: site, error: createErr } = await supabase
-        .from('sites')
-        .insert({
-          owner_id: user.id,
-          domain: trimmed,
-          site_key: siteKey,
-          name: trimmed
-        })
-        .select('id, site_key')
-        .single()
-
-      if (createErr) {
-        if (createErr.code === '23505') {
-          setError('This domain already exists in your workspace. Resuming setup.')
-        } else if (createErr.message?.includes('duplicate')) {
-          setError('This site is already registered; resuming setup.')
-        } else {
-          setError(`Registration failed: ${createErr.message || 'Unknown error'}`)
-        }
-        throw createErr
+      if (site.onboarding_completed) {
+        navigate('/dashboard', { replace: true })
+        return
       }
 
-      setSiteId(site.id)
+      setSiteId(site.site_id)
       setSiteKey(site.site_key)
-      await saveOnboardingState(2, { business_type: null, install_method: null, selected_conversions: [] })
+      const state = site.onboarding_state || {}
+      setBusinessType(site.business_type || state.business_type || null)
+      setInstallMethod(state.install_method || 'standard')
+      setSelectedConversions(state.selected_conversions || [])
       setStep(2)
-    } catch (_err) {
-      if (!error) {
-        setError('Failed to register domain. Please try again.')
-      }
-      console.error(_err)
+    } catch (err) {
+      setError(err.message || 'Failed to register domain. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -292,9 +230,10 @@ export default function Onboarding() {
     async function poll() {
       try {
         const params = new URLSearchParams({ site_key: siteKey })
-        const res = await fetch(`/api/install/status?${params}`)
-        const json = await res.json()
-        if (json.data?.status === 'verified') {
+        // fetchApi sends the auth token + unwraps the { success, data, error }
+        // envelope so we read installStatus.status directly.
+        const installStatus = await fetchApi(`/install/status?${params}`)
+        if (installStatus?.status === 'verified') {
           setVerificationState('success')
           const completeRes = await fetchApi('/onboarding/complete', {
             method: 'POST',
@@ -342,22 +281,22 @@ export default function Onboarding() {
             subtitle="Register your domain (e.g., yourstore.com) inside SourceTrack."
           >
             <form onSubmit={handleDomainSubmit}>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Website Domain</label>
+              <label className="block text-sm font-bold text-[#1F2323] dark:text-gray-100 mb-2">Website Domain</label>
               <input
                 type="text"
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
                 placeholder="ex: google.com"
-                className="w-full px-4 py-3 bg-white text-st-black placeholder:text-st-gray border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-black focus:border-black"
+                className="w-full px-4 py-3 bg-white dark:bg-[#1A1F1F] text-[#1F2323] dark:text-white placeholder:text-[#8D9696] border border-[#C9D1D1] dark:border-white/15 rounded-xl text-sm outline-none focus:ring-2 focus:ring-st-lime focus:border-st-lime"
               />
               <p className="text-xs text-st-gray dark:text-gray-400 mt-1">We'll use this URL to personalize your set up process</p>
               {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
               <button
                 type="submit"
                 disabled={loading}
-                className="mt-4 w-full py-3 bg-st-black text-white rounded-lg text-sm font-semibold hover:bg-st-black/90 disabled:opacity-50"
+                className="mt-5 inline-flex items-center justify-center gap-2 px-7 py-3 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90 disabled:opacity-50"
               >
-                {loading ? 'Confirming...' : 'Confirm Domain'}
+                {loading ? 'Confirming...' : 'Confirm Domain'} {!loading && <ArrowRight className="w-4 h-4" />}
               </button>
             </form>
           </OnboardingCard>
@@ -372,7 +311,7 @@ export default function Onboarding() {
             showBack
             onBack={() => setStep(1)}
           >
-            <div className="grid grid-cols-1 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {BUSINESS_TYPES.map((bt) => {
                 const Icon = bt.icon
                 const selected = businessType === bt.key
@@ -380,18 +319,19 @@ export default function Onboarding() {
                   <button
                     key={bt.key}
                     onClick={() => handleBusinessTypeSelect(bt.key)}
-                    className={`flex items-center gap-4 p-4 rounded-lg border-2 text-left transition-colors ${
+                    className={`flex flex-col items-center justify-center gap-3 min-h-[142px] p-5 rounded-2xl border-2 text-center transition-colors ${
                       selected
-                        ? 'border-st-lime bg-st-lime/10'
-                        : 'border-gray-200 dark:border-[#333838] hover:border-gray-300'
+                        ? 'border-st-lime bg-st-lime/10 dark:bg-st-lime/10'
+                        : 'border-gray-200 dark:border-white/10 hover:border-st-lime/70 dark:hover:border-st-lime/70 bg-white dark:bg-white/[0.02]'
                     }`}
                   >
-                    <Icon className="w-8 h-8 text-gray-700" />
+                    <span className={`h-16 w-16 rounded-full flex items-center justify-center ${selected ? 'bg-st-lime text-[#1F2323]' : 'bg-white dark:bg-white/5 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-white/10'}`}>
+                      <Icon className="w-8 h-8" />
+                    </span>
                     <div>
-                      <p className="font-semibold text-st-black">{bt.label}</p>
-                      <p className="text-xs text-st-gray">{bt.desc}</p>
+                      <p className="font-extrabold text-[#1F2323] dark:text-white">{bt.label}</p>
+                      <p className="text-xs text-st-gray dark:text-gray-400 mt-1">{bt.desc}</p>
                     </div>
-                    {selected && <Check className="w-5 h-5 text-st-lime ml-auto" />}
                   </button>
                 )
               })}
@@ -408,8 +348,8 @@ export default function Onboarding() {
             showBack
             onBack={() => setStep(2)}
           >
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Choose Installation Method</p>
-            <div className="grid grid-cols-1 gap-3">
+            <p className="text-sm font-bold text-[#1F2323] dark:text-gray-100 mb-3">Choose Installation Method</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {INSTALL_METHODS.map((m) => {
                 const Icon = m.icon
                 const selected = installMethod === m.key
@@ -417,23 +357,24 @@ export default function Onboarding() {
                   <button
                     key={m.key}
                     onClick={() => handleInstallMethodSelect(m.key)}
-                    className={`flex items-center gap-4 p-4 rounded-lg border-2 text-left transition-colors ${
+                    className={`flex flex-col items-center justify-center gap-4 min-h-[168px] p-5 rounded-2xl border-2 text-center transition-colors ${
                       selected
-                        ? 'border-st-lime bg-st-lime/10'
+                        ? 'border-st-lime bg-st-lime/10 dark:bg-st-lime/10'
                         : m.advanced
-                          ? 'border-gray-200 dark:border-[#333838] hover:border-gray-300 opacity-90'
-                          : 'border-st-black/20 hover:border-gray-300 bg-gray-50'
+                          ? 'border-gray-200 dark:border-white/10 hover:border-st-lime/70 bg-white dark:bg-white/[0.02] opacity-90'
+                          : 'border-gray-200 dark:border-white/10 hover:border-st-lime/70 bg-white dark:bg-white/[0.02]'
                     }`}
                   >
-                    <Icon className="w-8 h-8 text-gray-700" />
+                    <span className={`h-20 w-full rounded-xl flex items-center justify-center ${selected ? 'bg-white dark:bg-white text-[#1F2323]' : 'bg-[#F1F4F4] dark:bg-white/5 text-[#1F2323] dark:text-white'}`}>
+                      <Icon className="w-10 h-10" />
+                    </span>
                     <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-semibold text-st-black">{m.label}</p>
-                        {m.recommended && <span className="text-[10px] font-semibold bg-lime-100 text-lime-800 px-1.5 py-0.5 rounded-full">Recommended</span>}
+                      <div className="flex items-center justify-center gap-2">
+                        <p className="font-extrabold text-[#1F2323] dark:text-white">{m.label}</p>
+                        {m.recommended && <span className="text-[10px] font-bold bg-lime-100 text-lime-800 px-1.5 py-0.5 rounded-full">Recommended</span>}
                       </div>
-                      <p className="text-xs text-st-gray">{m.desc}</p>
+                      <p className="text-xs text-st-gray dark:text-gray-400 mt-1">{m.desc}</p>
                     </div>
-                    {selected && <Check className="w-5 h-5 text-st-lime ml-auto" />}
                   </button>
                 )
               })}
@@ -488,7 +429,7 @@ export default function Onboarding() {
             </div>
             <button
               onClick={handleConversionsContinue}
-              className="mt-6 w-full py-3 bg-st-black text-white rounded-lg text-sm font-semibold hover:bg-st-black/90"
+              className="mt-6 w-full py-3 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90"
             >
               Continue
             </button>
@@ -514,7 +455,7 @@ export default function Onboarding() {
             {verificationState === 'idle' && (
               <button
                 onClick={handleVerify}
-                className="w-full py-3 bg-st-black text-white rounded-lg text-sm font-semibold hover:bg-st-black/90 flex items-center justify-center gap-2"
+                className="w-full py-3 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90 flex items-center justify-center gap-2"
               >
                 <Play className="w-4 h-4" /> Run Verification
               </button>
@@ -536,7 +477,7 @@ export default function Onboarding() {
                 <p className="text-lg font-semibold text-st-black">Great! Script Verified Successfully</p>
                 <button
                   onClick={() => { seedReportsForBusiness(businessType, siteKey); navigate('/dashboard', { replace: true, state: { toast: 'Setup complete! Your dashboard is ready.' } }) }}
-                  className="mt-4 px-6 py-3 bg-st-black text-white rounded-lg text-sm font-semibold hover:bg-st-black/90 flex items-center gap-2 mx-auto"
+                  className="mt-4 px-6 py-3 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90 flex items-center gap-2 mx-auto"
                 >
                   <ArrowRight className="w-4 h-4" /> Continue to Dashboard
                 </button>
@@ -558,7 +499,7 @@ export default function Onboarding() {
                   <a href="/debugger" className="text-sm text-st-black dark:text-white hover:underline">Open Event Logger</a>
                   <button
                     onClick={handleVerify}
-                    className="px-4 py-2 bg-st-black text-white rounded-lg text-sm font-semibold hover:bg-st-black/90 flex items-center gap-2"
+                    className="px-4 py-2 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90 flex items-center gap-2"
                   >
                     <RefreshCw className="w-4 h-4" /> Try Again
                   </button>
@@ -613,11 +554,11 @@ export default function Onboarding() {
           </>
         )}
 
-        <div className="bg-st-black rounded-lg p-4 relative">
-          <pre className="text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all">{snippet || 'Loading script...'}</pre>
+        <div className="bg-[#F1F4F4] dark:bg-[#252A29] border border-[#DDE4E4] dark:border-white/10 rounded-xl p-4 relative">
+          <pre className="text-xs text-[#1F2323] dark:text-gray-200 overflow-x-auto whitespace-pre-wrap break-all pr-24">{snippet || 'Loading script...'}</pre>
           <button
             onClick={handleCopySnippet}
-            className="absolute top-3 right-3 px-3 py-1.5 bg-gray-700 text-white text-xs rounded hover:bg-gray-600 flex items-center gap-1"
+            className="absolute top-3 right-3 px-3 py-1.5 bg-white dark:bg-white/10 text-[#1F2323] dark:text-white border border-gray-200 dark:border-white/10 text-xs rounded-lg hover:bg-gray-50 dark:hover:bg-white/15 flex items-center gap-1"
           >
             <Copy className="w-3 h-3" /> Copy Code
           </button>
@@ -628,7 +569,7 @@ export default function Onboarding() {
             await saveOnboardingState(5, { install_method: installMethod })
             setStep(5)
           }}
-          className="mt-6 w-full py-3 bg-st-black text-white rounded-lg text-sm font-semibold hover:bg-st-black/90"
+          className="mt-6 w-full py-3 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90"
         >
           Continue
         </button>
@@ -637,25 +578,34 @@ export default function Onboarding() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] text-st-black flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-[#2A2E2E] bg-white">
-        <h1 className="text-xl font-bold text-st-black">SourceTrack</h1>
+    <div className="min-h-screen bg-[#F1F4F4] dark:bg-[#2B302F] text-[#1F2323] dark:text-white flex flex-col">
+      {/* Header — brand left, stepper centered (desktop), watch-video right */}
+      <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-6 px-6 lg:px-12 py-8">
+        <h1 className="text-2xl font-extrabold tracking-[-0.055em] text-[#1F2323] dark:text-white">SourceTrack</h1>
+        <OnboardingProgress currentStep={step} />
         <button
           onClick={() => setVideoModalOpen(true)}
-          className="px-4 py-2 text-sm text-st-gray dark:text-gray-400 border border-gray-200 dark:border-[#333838] rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] hover:text-st-black dark:text-white transition-colors flex items-center gap-2"
+          className="justify-self-end inline-flex items-center gap-3 text-left text-[#1F2323] dark:text-white"
         >
-          <Play className="w-4 h-4" /> Watch Video
+          <span className="h-12 w-12 rounded-full bg-st-lime text-[#1F2323] flex items-center justify-center shadow-[0_14px_32px_rgba(204,240,63,0.26)]">
+            <Play className="w-5 h-5 fill-current" />
+          </span>
+          <span className="hidden sm:block">
+            <span className="block text-sm font-extrabold tracking-[-0.03em]">Watch Video</span>
+            <span className="block text-xs text-[#6B7373] dark:text-gray-400">Learn how to setup</span>
+          </span>
         </button>
       </div>
 
       {/* Body */}
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-10">
-        <span className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 dark:bg-[#252929] text-xs font-medium text-st-gray dark:text-gray-400 mb-3">
-          Step {step} of 6
-        </span>
-        <p className="text-xl font-bold text-st-black dark:text-white mb-8">{STEP_TITLES[step]}</p>
-        <OnboardingProgress currentStep={step} />
+        {/* Mobile fallback: full stepper is hidden below md, show compact step text instead */}
+        <div className="md:hidden text-center mb-6">
+          <span className="inline-flex items-center px-3 py-1 rounded-full bg-white dark:bg-white/5 text-xs font-semibold text-[#6B7373] dark:text-gray-400 mb-2">
+            Step {step} of 6
+          </span>
+          <p className="text-lg font-extrabold text-[#1F2323] dark:text-white">{STEP_TITLES[step]}</p>
+        </div>
         {renderStepContent()}
       </div>
 
@@ -679,7 +629,7 @@ export default function Onboarding() {
             </p>
             <button
               onClick={() => setVideoModalOpen(false)}
-              className="mt-4 w-full py-2 bg-st-black text-white rounded-lg text-sm font-semibold hover:bg-st-black/90"
+              className="mt-4 w-full py-2 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-lg text-sm font-semibold hover:opacity-90"
             >
               Close
             </button>
