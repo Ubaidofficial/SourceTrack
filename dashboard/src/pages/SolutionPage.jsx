@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 import { Helmet } from 'react-helmet-async'
+import { LogoFullDark } from '../components/Logo'
 
 // ── Shared scroll animation ───────────────────────────────────────────────────
 function useInView(threshold = 0.1) {
@@ -63,10 +64,7 @@ function Nav() {
     <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled ? 'bg-[#0C0E0E]/95 backdrop-blur border-b border-white/5' : ''}`}>
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-st-lime flex items-center justify-center">
-            <span className="text-black font-black text-sm">S</span>
-          </div>
-          <span className="font-bold text-white text-lg tracking-tight">SourceTrack</span>
+          <LogoFullDark className="h-8 w-auto" />
         </Link>
         <div className="flex items-center gap-3">
           <Link to="/login" className="text-sm text-white/70 hover:text-white transition-colors px-3 py-1.5 hidden sm:block">Sign in</Link>
@@ -278,10 +276,7 @@ export default function SolutionPage({ data }) {
       <footer className="border-t border-white/5 py-10 px-6">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md bg-st-lime flex items-center justify-center">
-              <span className="text-black font-black text-xs">S</span>
-            </div>
-            <span className="text-sm font-semibold text-white/70">SourceTrack</span>
+            <LogoFullDark className="h-6 w-auto" />
           </Link>
           <div className="flex items-center gap-6 text-xs text-white/30">
             <Link to="/#pricing" className="hover:text-white transition-colors">Pricing</Link>

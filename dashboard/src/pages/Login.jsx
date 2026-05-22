@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import { LogoMark } from '../components/Logo'
 
 export default function Login() {
   const { signIn } = useAuth()
@@ -57,6 +58,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-[#F1F4F4] dark:bg-[#2B302F] px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
+          <LogoMark className="w-12 h-12 mx-auto mb-4" />
           <h1 className="text-3xl font-extrabold tracking-[-0.06em] text-[#1F2323] dark:text-white">SourceTrack</h1>
           <p className="text-st-gray dark:text-gray-400 mt-2">Sign in to your account</p>
         </div>

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { LogoFullDark } from './Logo'
 
 export default function MarketingFooter() {
   return (
@@ -6,9 +7,8 @@ export default function MarketingFooter() {
       <div className="max-w-[1320px] mx-auto px-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr] gap-7">
           <div>
-            <Link to="/" className="inline-flex items-center gap-3 text-xl font-black tracking-[-0.05em] text-white">
-              <span className="w-[38px] h-[38px] grid place-items-center rounded-[14px] bg-st-black text-st-lime shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)] text-base">S</span>
-              <span>SourceTrack</span>
+            <Link to="/" className="inline-flex items-center">
+              <LogoFullDark className="h-9 w-auto" />
             </Link>
             <p className="mt-[18px] max-w-[340px] text-sm leading-relaxed text-[#B9C2C2]">
               Revenue attribution for modern marketing teams. Track sources, journeys, AI referrals, conversions, and reports from one clean workspace.

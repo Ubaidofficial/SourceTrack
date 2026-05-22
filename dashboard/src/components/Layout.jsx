@@ -8,6 +8,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { supabase } from '../lib/supabase'
+import { LogoFull, LogoFullDark } from './Logo'
 
 // ── Grouped nav — replaces flat 14-item list ─────────────────────────────────
 // "Install" removed: Integrations already surfaces the snippet + "Full Setup Guide" link,
@@ -126,8 +127,8 @@ export default function Layout({ children }) {
       `}>
         <div className="flex items-center justify-between h-14 px-4 border-b border-gray-200 dark:border-dark-border">
           <div className="flex items-center gap-2">
-            <Bot className="w-6 h-6 text-st-black dark:text-white" />
-            <h1 className="text-lg font-bold text-st-black dark:text-white">SourceTrack</h1>
+            <LogoFull className="h-7 w-auto dark:hidden" />
+            <LogoFullDark className="h-7 w-auto hidden dark:block" />
           </div>
           <button className="lg:hidden" onClick={() => setSidebarOpen(false)}>
             <X className="w-5 h-5 text-st-gray dark:text-gray-400" />

@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useState } from 'react'
+import { LogoFull } from './Logo'
 
 const NAV_LINKS = [
   { label: 'Product', href: '/product' },
@@ -16,9 +17,8 @@ export default function MarketingHeader() {
   return (
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-[rgba(31,35,35,0.08)]">
       <div className="max-w-[1320px] mx-auto px-8 h-[76px] flex items-center justify-between gap-7">
-        <Link to="/" aria-label="SourceTrack home" className="inline-flex items-center gap-3 text-xl font-black tracking-[-0.05em] text-st-black">
-          <span className="w-[38px] h-[38px] grid place-items-center rounded-[14px] bg-st-black text-st-lime shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)] text-base">S</span>
-          <span className="hidden sm:inline">SourceTrack</span>
+        <Link to="/" aria-label="SourceTrack home" className="inline-flex items-center">
+          <LogoFull className="h-9 w-auto" />
         </Link>
 
         <nav className="hidden md:flex items-center gap-[26px] text-[#586161] text-sm font-extrabold" aria-label="Primary navigation">

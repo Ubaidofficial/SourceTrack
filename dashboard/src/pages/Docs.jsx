@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { Copy, Check, ChevronRight, ExternalLink, Menu, X } from 'lucide-react'
+import { LogoFull, LogoFullDark } from '../components/Logo'
 
 // ─── Code block with copy button ─────────────────────────────────────────────
 function Code({ children, lang = 'js' }) {
@@ -208,9 +209,8 @@ export default function Docs() {
       <header className="sticky top-0 z-50 bg-white/90 dark:bg-[#111414]/90 backdrop-blur border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Link to="/dashboard" className="font-bold text-base tracking-tight text-gray-900 dark:text-white">
-              SourceTrack
-            </Link>
+            <Link to="/dashboard" className="dark:hidden"><LogoFull className="h-6 w-auto" /></Link>
+            <Link to="/dashboard" className="hidden dark:block"><LogoFullDark className="h-6 w-auto" /></Link>
             <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
             <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">API Docs</span>
           </div>

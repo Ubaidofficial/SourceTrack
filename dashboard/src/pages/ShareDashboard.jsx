@@ -1,6 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { TrendingUp, DollarSign, MousePointerClick, BarChart3, Bot, AlertCircle } from 'lucide-react'
+import { LogoFull, LogoFullDark } from '../components/Logo'
 
 export default function ShareDashboard() {
   const { token } = useParams()

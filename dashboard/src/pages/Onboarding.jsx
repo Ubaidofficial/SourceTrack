@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import OnboardingProgress from '../components/OnboardingProgress'
 import OnboardingCard from '../components/OnboardingCard'
+import { LogoFull, LogoFullDark } from '../components/Logo'
 
 const STEP_TITLES = {
   1: 'Connect Domain',
@@ -581,7 +582,8 @@ export default function Onboarding() {
     <div className="min-h-screen bg-[#F1F4F4] dark:bg-[#2B302F] text-[#1F2323] dark:text-white flex flex-col">
       {/* Header — brand left, stepper centered (desktop), watch-video right */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-6 px-6 lg:px-12 py-8">
-        <h1 className="text-2xl font-extrabold tracking-[-0.055em] text-[#1F2323] dark:text-white">SourceTrack</h1>
+        <div className="dark:hidden"><LogoFull className="h-8 w-auto" /></div>
+        <div className="hidden dark:block"><LogoFullDark className="h-8 w-auto" /></div>
         <OnboardingProgress currentStep={step} />
         <button
           onClick={() => setVideoModalOpen(true)}
