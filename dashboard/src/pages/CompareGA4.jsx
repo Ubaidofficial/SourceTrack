@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom'
 import MarketingPage from '../components/MarketingPage'
 import DashboardPreviewMock from '../components/DashboardPreviewMock'
 import FeatureCards from '../components/FeatureCards'
@@ -6,15 +5,15 @@ import ComparisonTable from '../components/ComparisonTable'
 import SectionKicker from '../components/SectionKicker'
 
 const SEO = {
-  title: 'SourceTrack vs GA4 — A simpler attribution alternative',
-  description: 'Compare SourceTrack and GA4 for marketing attribution, AI referral tracking, customer journeys, revenue reporting, and report building.',
+  title: 'SourceTrack vs GA4 — A Simpler Attribution Alternative | SourceTrack',
+  description: 'Compare SourceTrack and GA4 for marketing attribution, AI referral tracking, customer journeys, revenue reporting, and report building. Independent, neutral, focused.',
   canonical: 'https://sourcetrack.ai/compare-ga4',
 }
 
 const HERO = {
   kicker: 'GA4 alternative',
-  h1: 'A simpler way to understand where revenue comes from.',
-  sub: 'GA4 is powerful broad analytics. SourceTrack is focused on leads, journeys, campaigns, AI referrals, and revenue attribution.',
+  h1: "GA4 tells you what happened. SourceTrack tells you which source made it happen.",
+  sub: 'GA4 is powerful broad web analytics. SourceTrack is focused attribution — built to answer one question across every channel: which source, campaign, or page actually created this lead, trial, or purchase?',
   primaryCta: 'Start free',
   secondaryCta: 'View attribution',
   secondaryHref: '/attribution',
@@ -32,17 +31,18 @@ export default function CompareGA4() {
             SourceTrack vs GA4 for attribution-focused teams.
           </h2>
           <p className="mt-5 max-w-[620px] mx-auto text-[#586464] text-lg leading-[1.55]">
-            GA4 is broad web analytics. SourceTrack is focused attribution for faster revenue answers.
+            GA4 is designed for broad web analytics. Ad platforms are optimized for their own reporting. SourceTrack is focused on attribution — independent, neutral, and built to answer "which source created this customer?"
           </p>
 
           <div className="mt-[54px]">
             <ComparisonTable rows={[
               ['Feature', 'SourceTrack', 'GA4', 'Ad platforms'],
-              ['Simple install', 'Yes', 'Partial', 'Partial'],
-              ['Lead journey tracking', 'Yes', 'Hard', 'No'],
-              ['AI referral tracking', 'Yes', 'Limited', 'No'],
-              ['Custom report builder', 'Yes', 'Complex', 'No'],
-              ['Revenue attribution', 'Yes', 'Complex', 'Platform-biased'],
+              ['Multi-touch attribution', '8 models built in', 'Partial — last-click dominant', 'Platform-specific only'],
+              ['AI referral tracking', '15 platforms detected', 'Limited — often labeled direct', 'Not available'],
+              ['Full journey timeline', 'Every touchpoint per visitor', 'Hard to reconstruct', 'Not available'],
+              ['Custom report builder', 'Blank canvas + save + pin', 'Complex — Explore only', 'Not available'],
+              ['Install & setup speed', 'One script, minutes', 'Config-heavy, tag setup', 'Platform-specific'],
+              ['Revenue attribution', 'Independent, per channel', 'Partial, last-click biased', 'Platform-biased'],
             ]} />
           </div>
         </div>
@@ -55,18 +55,18 @@ export default function CompareGA4() {
             <div>
               <SectionKicker label="When SourceTrack fits better" />
               <h2 className="mt-5 text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black text-st-black">
-                Built for attribution decisions, not every analytics use case.
+                Built for teams that need attribution answers, not all-encompassing analytics.
               </h2>
             </div>
             <p className="self-end text-[#586464] text-lg leading-[1.55] tracking-[-0.02em] max-w-[480px]">
-              SourceTrack works best when the team needs a clean answer to "which source created this lead, customer, or revenue?"
+              SourceTrack isn't trying to be GA4. It's focused on one thing: attributing leads, trials, purchases, and revenue to the sources, campaigns, and pages that actually created them — including the AI platforms GA4 can't identify.
             </p>
           </div>
 
           <FeatureCards compact items={[
-            { icon: '①', title: 'You need channel ROI clarity.', body: 'Track channels, campaigns, landing pages, and conversions in a workflow built for revenue attribution.' },
-            { icon: '②', title: 'You want faster setup.', body: 'Install one script, choose conversions, and build reports without a heavy analytics project.' },
-            { icon: '③', title: 'You care about AI referrals.', body: 'Reveal emerging AI discovery sources that often disappear inside generic analytics reports.' },
+            { icon: '①', title: 'You care about which channels produce revenue.', body: 'Track every campaign, channel, landing page, and AI source. Compare them across 8 attribution models in one workspace.' },
+            { icon: '②', title: 'You want attribution that works in minutes.', body: 'Paste one script. Define your conversions. Start seeing attributed revenue on day one — no analytics implementation project required.' },
+            { icon: '③', title: 'You need AI referral tracking that actually works.', body: '15 AI platforms detected automatically. No more AI-driven leads and purchases lost to the "direct" traffic bucket.' },
           ]} />
         </div>
       </section>

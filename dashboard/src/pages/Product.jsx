@@ -7,14 +7,14 @@ import SectionKicker from '../components/SectionKicker'
 
 const SEO = {
   title: 'SourceTrack Product — Revenue attribution without the analytics maze',
-  description: "Explore SourceTrack's attribution platform for source tracking, customer journeys, conversions, AI referrals, and custom reports.",
+  description: 'Explore how SourceTrack captures visitor sources, connects customer journeys, tracks conversions, and attributes revenue back to the channels that created it.',
   canonical: 'https://sourcetrack.ai/product',
 }
 
 const HERO = {
   kicker: 'Product overview',
   h1: 'Revenue attribution without the analytics maze.',
-  sub: 'SourceTrack gives founders and marketers one place to understand channels, campaigns, AI referrals, customer journeys, conversions, and reporting.',
+  sub: 'SourceTrack gives founders and marketers one place to see which channels, campaigns, landing pages, and AI referrals actually produce leads, trials, purchases, and revenue.',
   primaryCta: 'Start free',
   secondaryCta: 'See report builder',
   secondaryHref: '/report-builder',
@@ -31,18 +31,18 @@ export default function Product() {
             <div>
               <SectionKicker label="Core platform" />
               <h2 className="mt-5 text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black text-st-black">
-                Everything you need to answer where customers came from.
+                Capture the visit. Connect the journey. Attribute the revenue.
               </h2>
             </div>
             <p className="self-end text-[#586464] text-lg leading-[1.55] tracking-[-0.02em] max-w-[480px]">
-              SourceTrack keeps the product story simple: capture the visit, connect the journey, track the conversion, and build the report.
+              SourceTrack captures every source signal, connects touchpoints into a full customer journey, and attributes conversions using 8 models — so you know which channels create revenue, not just traffic.
             </p>
           </div>
 
           <FeatureCards items={[
-            { icon: '01', title: 'Capture visitor source.', body: 'Track UTMs, referrers, landing pages, campaign params, AI sources, click IDs, and direct traffic.' },
-            { icon: '02', title: 'Connect the journey.', body: 'See the pages and touchpoints that happened before a lead, demo, trial, purchase, or custom event.' },
-            { icon: '03', title: 'Build revenue reports.', body: 'Create custom dashboards instead of forcing every business into the same default analytics template.' },
+            { icon: '01', title: 'Capture visitor source.', body: 'Track every UTM, referrer, landing page, campaign param, AI platform, click ID, and direct visit. SourceTrack captures the data most analytics tools miss.' },
+            { icon: '02', title: 'Connect the journey.', body: 'See the full path each visitor takes — every page, session, and touchpoint before a lead, demo, trial, purchase, or custom conversion event.' },
+            { icon: '03', title: 'Attribute the revenue.', body: 'Compare channels across 8 attribution models. Switch between first touch, last touch, linear, U-shaped, and W-shaped to see how credit shifts.' },
           ]} />
         </div>
       </section>
@@ -54,39 +54,39 @@ export default function Product() {
             <div className="rounded-[36px] p-[48px] bg-st-black text-white border border-white/10 shadow-[0_24px_80px_rgba(31,35,35,.12)]">
               <SectionKicker label="Why it matters" dark />
               <h2 className="mt-5 text-[clamp(26px,3.5vw,44px)] leading-[0.94] tracking-[-0.06em] font-black">
-                Ad platforms are biased. Analytics tools are noisy.
+                Ad platforms are biased toward their own clicks. SourceTrack isn't.
               </h2>
               <p className="mt-4 text-[#B9C2C2] text-base leading-[1.55]">
-                SourceTrack sits closer to your customer journey so you can compare channels with a clearer view of outcomes.
+                Every ad platform credits its own impressions. GA4 buries AI referrals in direct traffic. SourceTrack sits closer to your customer journey so you can compare channels with a neutral, independent view of what creates outcomes.
               </p>
               <Link to="/attribution" className="mt-6 inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full bg-st-lime text-st-black text-[15px] font-extrabold tracking-[-0.025em] shadow-[0_18px_52px_rgba(204,240,63,0.28)] hover:bg-[#D9FA64] transition-all hover:-translate-y-px">
-                View attribution engine
+                See the attribution engine
               </Link>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[140px]">
                 <strong className="text-lg tracking-[-0.04em]">Source capture</strong>
-                <p className="mt-1.5 text-[#586464] text-[15px]">UTMs, referrers, landing pages, source params, and campaign metadata.</p>
+                <p className="mt-1.5 text-[#586464] text-[15px]">UTMs, referrers, landing pages, AI platforms, campaign params, and click IDs.</p>
               </div>
               <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[140px]">
                 <strong className="text-lg tracking-[-0.04em]">Customer journeys</strong>
-                <p className="mt-1.5 text-[#586464] text-[15px]">Follow each visitor from first touch to conversion.</p>
+                <p className="mt-1.5 text-[#586464] text-[15px]">Every touchpoint, page, and session — from first visit to conversion.</p>
               </div>
               <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[140px]">
                 <strong className="text-lg tracking-[-0.04em]">Conversion tracking</strong>
                 <p className="mt-1.5 text-[#586464] text-[15px]">Purchases, demos, trials, forms, signups, meetings, and custom events.</p>
               </div>
               <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[140px]">
-                <strong className="text-lg tracking-[-0.04em]">AI search visibility</strong>
-                <p className="mt-1.5 text-[#586464] text-[15px]">Track emerging discovery channels that traditional reports miss.</p>
+                <strong className="text-lg tracking-[-0.04em]">AI referral tracking</strong>
+                <p className="mt-1.5 text-[#586464] text-[15px]">15 AI platforms tracked — traffic that GA4 marks as direct gets attributed correctly.</p>
               </div>
               <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[140px]">
                 <strong className="text-lg tracking-[-0.04em]">Report builder</strong>
-                <p className="mt-1.5 text-[#586464] text-[15px]">Create custom metrics and save them to the dashboard.</p>
+                <p className="mt-1.5 text-[#586464] text-[15px]">Build custom dashboards from your attribution data — pin only what matters.</p>
               </div>
               <div className="flex flex-col p-6 rounded-[26px] bg-[#F7FAFA] border border-[rgba(31,35,35,.10)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[140px]">
-                <strong className="text-lg tracking-[-0.04em]">Founder-friendly setup</strong>
-                <p className="mt-1.5 text-[#586464] text-[15px]">Get live faster without a long analytics implementation project.</p>
+                <strong className="text-lg tracking-[-0.04em]">One-script install</strong>
+                <p className="mt-1.5 text-[#586464] text-[15px]">Paste one snippet. Works on any website, Shopify, Webflow, or WordPress.</p>
               </div>
             </div>
           </div>
@@ -101,15 +101,15 @@ export default function Product() {
             From one script to source-to-revenue clarity.
           </h2>
           <p className="mt-5 max-w-[620px] mx-auto text-[#B9C2C2] text-lg leading-[1.55]">
-            SourceTrack is designed for teams that need attribution answers without a long analytics implementation project.
+            No long implementation. Paste one script, define your conversion events, and see which channels produce customers — not just clicks.
           </p>
 
           <div className="mt-[54px]">
             <HowItWorksSteps steps={[
-              { title: 'Install the tracker', body: 'Add one script directly or through Google Tag Manager.' },
-              { title: 'Capture the source', body: 'Preserve UTMs, referrers, AI sources, landing pages, and click IDs.' },
-              { title: 'Track conversions', body: 'Measure forms, demos, signups, trials, purchases, and custom events.' },
-              { title: 'Build reports', body: 'Pin only the dashboards your team actually uses to make decisions.' },
+              { title: 'Install the tracker', body: 'Paste one script into your site or add via Google Tag Manager. Works on any platform.' },
+              { title: 'Capture the source', body: 'Every UTM, referrer, AI platform, landing page, and click ID is preserved automatically.' },
+              { title: 'Track conversions', body: 'Fire events for purchases, trials, demos, forms, and any business outcome you care about.' },
+              { title: 'Build reports', body: 'Create custom dashboards around the attribution metrics your team actually uses.' },
             ]} />
           </div>
         </div>

@@ -6,15 +6,15 @@ import HowItWorksSteps from '../components/HowItWorksSteps'
 import SectionKicker from '../components/SectionKicker'
 
 const SEO = {
-  title: 'Marketing Attribution Software — SourceTrack',
-  description: 'Track first touch, last touch, campaign journeys, landing pages, AI referrals, and revenue attribution with SourceTrack.',
+  title: 'Marketing Attribution Software — Track Which Sources Create Revenue | SourceTrack',
+  description: 'Track first touch, last touch, multi-touch journeys, campaign performance, landing pages, AI referrals, and revenue attribution across 8 models. Independent, neutral attribution.',
   canonical: 'https://sourcetrack.ai/attribution',
 }
 
 const HERO = {
   kicker: 'Marketing attribution software',
-  h1: 'Know the source behind every lead and customer.',
-  sub: 'Track first touch, last touch, campaign journeys, landing pages, and conversion events so you can see what actually creates revenue.',
+  h1: 'Know the source behind every lead, trial, and purchase.',
+  sub: 'Track campaigns, journeys, landing pages, and conversions — then compare sources across 8 attribution models to see which channels actually create revenue, not just clicks.',
   primaryCta: 'Start tracking free',
   secondaryCta: 'Compare with GA4',
   secondaryHref: '/compare-ga4',
@@ -29,20 +29,20 @@ export default function Attribution() {
         <div className="max-w-[1320px] mx-auto px-8">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-7 mb-[54px]">
             <div>
-              <SectionKicker label="Attribution problems" />
+              <SectionKicker label="The attribution problem" />
               <h2 className="mt-5 text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black text-st-black">
-                When every platform claims credit, you need an independent source of truth.
+                Every platform claims credit. SourceTrack gives you an independent source of truth.
               </h2>
             </div>
             <p className="self-end text-[#586464] text-lg leading-[1.55] tracking-[-0.02em] max-w-[480px]">
-              SourceTrack helps teams compare paid, organic, social, email, partner, and AI channels using the same source and conversion logic.
+              Meta credits Meta. Google credits Google. GA4 credits the last click. SourceTrack compares paid, organic, social, email, partner, and AI channels using the same neutral attribution logic — so budget decisions are based on actual outcomes.
             </p>
           </div>
 
           <FeatureCards items={[
-            { icon: 'FT', title: 'First touch attribution.', body: 'Find the source that originally introduced a future customer to your business.' },
-            { icon: 'LT', title: 'Last touch attribution.', body: 'Identify the final campaign, channel, page, or referral before conversion.' },
-            { icon: '$', title: 'Revenue attribution.', body: 'Connect purchases, demos, trials, signups, and forms back to the channels that influenced them.' },
+            { icon: 'FT', title: 'First touch attribution.', body: 'Find the channel, campaign, or page that first introduced a visitor who later became a customer. Give credit to the sources that start the journey.' },
+            { icon: 'LT', title: 'Multi-touch attribution.', body: 'Go beyond first and last touch. Use linear, U-shaped, W-shaped, time decay, and position-based models to see the full influence picture.' },
+            { icon: '$', title: 'Revenue attribution.', body: 'Connect purchases, demos, trials, signups, and forms back to the channels that influenced them. Attribute revenue, not just events.' },
           ]} />
         </div>
       </section>
@@ -50,20 +50,20 @@ export default function Attribution() {
       {/* Attribution data captured */}
       <section className="py-[96px] bg-st-black text-white">
         <div className="max-w-[1320px] mx-auto px-8 text-center">
-          <SectionKicker label="Attribution data captured" dark />
+          <SectionKicker label="What SourceTrack attributes" dark />
           <h2 className="mt-5 text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black">
-            Designed for modern customer journeys.
+            Every signal that explains why a conversion happened.
           </h2>
           <p className="mt-5 max-w-[620px] mx-auto text-[#B9C2C2] text-lg leading-[1.55]">
-            SourceTrack captures the small details that explain why a conversion happened.
+            SourceTrack captures the small details that most analytics tools ignore — AI platform referrers, campaign params across sessions, and the full journey path.
           </p>
 
           <div className="mt-[54px]">
             <HowItWorksSteps steps={[
-              { title: 'UTMs and source params', body: 'Preserve campaign data across landing pages and sessions.' },
-              { title: 'Referrers and AI traffic', body: 'Capture traditional referrers and emerging AI discovery sources.' },
-              { title: 'Landing page paths', body: 'See which pages created or assisted conversion intent.' },
-              { title: 'Conversion events', body: 'Measure business outcomes, not only pageviews.' },
+              { title: 'UTMs and source params', body: 'Preserve campaign data across landing pages, sessions, and days. GCLID, FBCLID, MSCLKID all captured.' },
+              { title: 'Referrers and AI traffic', body: '15 AI platforms detected — ChatGPT, Claude, Gemini, Perplexity, and more. No more AI traffic in direct.' },
+              { title: 'Landing page paths', body: 'See which entry pages create leads and which assist the journey toward conversion.' },
+              { title: 'Conversion events', body: 'Attribute purchases, trials, demos, forms, and custom events — not just pageviews.' },
             ]} />
           </div>
         </div>
@@ -72,16 +72,16 @@ export default function Attribution() {
       {/* Use cases */}
       <section className="py-[96px] bg-white">
         <div className="max-w-[1320px] mx-auto px-8 text-center">
-          <SectionKicker label="Use cases" />
+          <SectionKicker label="Attribution use cases" />
           <h2 className="mt-5 text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black text-st-black">
             Answer the attribution questions teams ask every week.
           </h2>
 
           <div className="mt-[54px]">
             <FeatureCards compact items={[
-              { icon: '①', title: 'Which campaigns deserve more spend?', body: 'Compare performance by channel, landing page, and conversion event.' },
-              { icon: '②', title: 'Which pages create qualified leads?', body: 'Attribute conversions back to entry pages and assisted journeys.' },
-              { icon: '③', title: 'Is AI search creating pipeline?', body: 'Track ChatGPT, Claude, Gemini, Perplexity, and other AI-assisted visits.' },
+              { icon: '①', title: 'Which campaigns deserve more spend?', body: 'Compare channels, campaigns, and landing pages by attributed revenue — not by last-click conversions or platform-reported metrics.' },
+              { icon: '②', title: 'Which pages create qualified leads?', body: 'Attribute every form, demo, and trial back to the landing page and source that first brought the visitor.' },
+              { icon: '③', title: 'Is AI search creating pipeline?', body: 'Track ChatGPT, Claude, Gemini, and Perplexity traffic. See conversion rates and revenue from each AI platform.' },
             ]} />
           </div>
         </div>

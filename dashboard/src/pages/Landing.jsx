@@ -7,24 +7,45 @@ import ComparisonTable from '../components/ComparisonTable'
 import SectionKicker from '../components/SectionKicker'
 
 const SEO = {
-  title: 'SourceTrack — See which channels actually create revenue',
-  description: 'SourceTrack tracks visitors, leads, AI referrals, campaigns, and conversions so marketers can see what creates revenue.',
+  title: 'SourceTrack — Know which sources actually create revenue',
+  description: 'SourceTrack tracks every visitor, touchpoint, lead, trial, demo, purchase, and AI referral — then connects the journey back to the channel that created it.',
   canonical: 'https://sourcetrack.ai/',
 }
 
 const HERO = {
   kicker: 'Revenue attribution for modern marketing teams',
-  h1: 'See which channels actually',
+  h1: 'Know which sources actually',
   h1Gradient: 'create revenue.',
-  sub: 'SourceTrack tracks visitors, leads, trials, demos, purchases, AI referrals, campaigns, and conversions so teams can stop guessing where customers come from.',
+  sub: 'SourceTrack tracks every visitor, touchpoint, lead, trial, demo, purchase, and AI referral — then connects the journey back to the channel that created it.',
   primaryCta: 'Start tracking free',
   secondaryCta: 'View product',
   secondaryHref: '/product',
+  proofs: ['Install with one script or GTM', 'Free for 5,000 pageviews/mo', 'Built for founders and marketers'],
 }
 
 export default function Landing() {
   return (
     <MarketingPage seo={SEO} hero={HERO} heroChildren={<DashboardPreviewMock />}>
+
+      {/* Trust band — what SourceTrack tracks */}
+      <section className="py-[56px] border-b border-[rgba(31,35,35,.06)] bg-white">
+        <div className="max-w-[1320px] mx-auto px-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            {[
+              ['AI referral tracking', '15 AI platforms'],
+              ['Multi-touch journeys', '8 attribution models'],
+              ['Revenue attribution', 'First touch to last touch'],
+              ['Report builder', 'Custom dashboards'],
+              ['Real-time events', 'Track in milliseconds'],
+            ].map(([label, desc]) => (
+              <div key={label} className="text-center px-2">
+                <strong className="block text-st-black text-sm font-extrabold tracking-[-0.03em]">{label}</strong>
+                <span className="block mt-1 text-[#586464] text-xs font-bold">{desc}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* Platform section */}
       <section className="py-[96px]" style={{ background: '#F7FAFA' }}>
@@ -37,14 +58,14 @@ export default function Landing() {
               </h2>
             </div>
             <p className="self-end text-[#586464] text-lg leading-[1.55] tracking-[-0.02em] max-w-[480px]">
-              The v2 design keeps the strong IA, removes planning language, tightens the copy, and makes the product feel closer to the Figma dashboard direction.
+              SourceTrack captures every visitor touchpoint, connects the full customer journey, and attributes revenue back to the channels that actually created it — not just the last click.
             </p>
           </div>
 
           <FeatureCards items={[
-            { icon: '①', title: 'Attribution engine.', body: 'Capture first touch, last touch, UTMs, referrers, campaigns, landing pages, and conversion events.' },
-            { icon: '②', title: 'AI referral tracking.', body: 'Reveal leads and revenue from ChatGPT, Claude, Gemini, Perplexity, and AI answer engines.' },
-            { icon: '③', title: 'Report builder.', body: 'Start blank, choose your metrics, save widgets, and build dashboards around your business model.' },
+            { icon: '①', title: 'Attribution engine.', body: 'Track every campaign, UTM, referrer, landing page, and conversion event. Compare channels across 8 attribution models — first touch, last touch, linear, U-shaped, and more.' },
+            { icon: '②', title: 'AI referral tracking.', body: 'Reveal leads and revenue from ChatGPT, Claude, Gemini, Perplexity, and 15 AI platforms. Stop losing AI-driven conversions to direct traffic in your reports.' },
+            { icon: '③', title: 'Report builder.', body: 'Start from a blank canvas. Choose the metric and dimension that matches your business, save the widget, and pin it to your dashboard.' },
           ]} />
         </div>
       </section>
@@ -57,31 +78,56 @@ export default function Landing() {
             From one script to source-to-revenue clarity.
           </h2>
           <p className="mt-5 max-w-[620px] mx-auto text-[#B9C2C2] text-lg leading-[1.55]">
-            SourceTrack is designed for teams that need attribution answers without a long analytics implementation project.
+            No long implementation. Paste one script, define your conversion events, and see which channels produce customers — not just clicks.
           </p>
 
           <div className="mt-[54px]">
             <HowItWorksSteps steps={[
-              { title: 'Install the tracker', body: 'Add one script directly or through Google Tag Manager.' },
-              { title: 'Capture the source', body: 'Preserve UTMs, referrers, AI sources, landing pages, and click IDs.' },
-              { title: 'Track conversions', body: 'Measure forms, demos, signups, trials, purchases, and custom events.' },
-              { title: 'Build reports', body: 'Pin only the dashboards your team actually uses to make decisions.' },
+              { title: 'Install the tracker', body: 'Add one script directly or through Google Tag Manager. Works on any website, Shopify store, or Webflow site.' },
+              { title: 'Capture the source', body: 'Every UTM, referrer, AI platform, landing page, and click ID is preserved — automatically.' },
+              { title: 'Track conversions', body: 'Fire events for purchases, trials, demos, forms, signups, or any custom business outcome.' },
+              { title: 'Build reports', body: 'Create and pin dashboards around the metrics your team actually uses to make budget decisions.' },
+            ]} />
+          </div>
+        </div>
+      </section>
+
+      {/* Why SourceTrack — comparison positioning */}
+      <section className="py-[96px] bg-white">
+        <div className="max-w-[1320px] mx-auto px-8 text-center">
+          <SectionKicker label="Why SourceTrack" />
+          <h2 className="mt-5 text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black text-st-black">
+            GA4 gives you pageviews. Ad platforms give you clicks.<br />
+            <span className="text-st-black">SourceTrack gives you the source that created the customer.</span>
+          </h2>
+          <p className="mt-5 max-w-[620px] mx-auto text-[#586464] text-lg leading-[1.55]">
+            GA4 is broad web analytics. Ad platforms are optimized for their own reporting. SourceTrack focuses on one question: which channel, campaign, or page actually produced this lead, trial, or purchase?
+          </p>
+
+          <div className="mt-[54px]">
+            <ComparisonTable rows={[
+              ['Capability', 'SourceTrack', 'GA4', 'Ad platforms'],
+              ['Multi-touch attribution setup', 'Install and go', 'Config-heavy', 'Platform-specific only'],
+              ['Full customer journey timeline', 'Yes — every touchpoint', 'Hard to reconstruct', 'Not available'],
+              ['AI referral tracking (15 platforms)', 'Built in', 'Limited — marked as direct', 'Not available'],
+              ['Custom attribution reports', 'Yes — drag and pin', 'Complex — Explore only', 'Biased toward their clicks'],
+              ['Revenue attribution per channel', 'Yes — all 8 models', 'Partial — last-click biased', 'Platform-biased'],
             ]} />
           </div>
         </div>
       </section>
 
       {/* Use cases */}
-      <section className="py-[96px] bg-white">
+      <section className="py-[96px]" style={{ background: '#F7FAFA' }}>
         <div className="max-w-[1320px] mx-auto px-8">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-7">
             <div className="rounded-[36px] p-[48px] bg-st-black text-white border border-white/10 shadow-[0_24px_80px_rgba(31,35,35,.12)]">
-              <SectionKicker label="Business-specific dashboards" dark />
+              <SectionKicker label="Built for your business model" dark />
               <h2 className="mt-5 text-[clamp(26px,3.5vw,44px)] leading-[0.94] tracking-[-0.06em] font-black">
-                Use attribution data the way your business actually works.
+                Attribution that matches how you measure success.
               </h2>
               <p className="mt-4 text-[#B9C2C2] text-base leading-[1.55]">
-                Onboarding captures business type, then the dashboard can emphasize the right conversions and metrics.
+                SaaS teams care about trial-to-paid conversion. Ecommerce teams care about ROAS and AOV. Lead gen teams care about qualified pipeline. SourceTrack emphasizes the metrics that matter for your business type.
               </p>
               <Link to="/signup" className="mt-6 inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full bg-st-lime text-st-black text-[15px] font-extrabold tracking-[-0.025em] shadow-[0_18px_52px_rgba(204,240,63,0.28)] hover:bg-[#D9FA64] transition-all hover:-translate-y-px">
                 Start with your business type
@@ -90,19 +136,19 @@ export default function Landing() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Link to="/use-cases/saas" className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] hover:-translate-y-1 transition-all hover:shadow-[0_18px_52px_rgba(31,35,35,.09)]">
                 <strong className="text-lg tracking-[-0.04em]">SaaS</strong>
-                <p className="mt-1.5 text-[#586464] text-[15px]">Trials, demos, signups, paid conversions, MRR, and trial-to-paid quality.</p>
+                <p className="mt-1.5 text-[#586464] text-[15px]">Trials, demos, paid conversions, MRR by channel, and trial-to-paid attribution.</p>
               </Link>
               <Link to="/use-cases/ecommerce" className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] hover:-translate-y-1 transition-all hover:shadow-[0_18px_52px_rgba(31,35,35,.09)]">
                 <strong className="text-lg tracking-[-0.04em]">Ecommerce</strong>
-                <p className="mt-1.5 text-[#586464] text-[15px]">Orders, purchase revenue, landing-page ROI, campaign ROAS, and AI-assisted sales.</p>
+                <p className="mt-1.5 text-[#586464] text-[15px]">Orders, revenue, AOV, ROAS by campaign, and landing page purchase attribution.</p>
               </Link>
               <Link to="/use-cases/lead-generation" className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] hover:-translate-y-1 transition-all hover:shadow-[0_18px_52px_rgba(31,35,35,.09)]">
                 <strong className="text-lg tracking-[-0.04em]">Lead generation</strong>
-                <p className="mt-1.5 text-[#586464] text-[15px]">Forms, meetings, qualified leads, CPL, and source quality by campaign.</p>
+                <p className="mt-1.5 text-[#586464] text-[15px]">Qualified leads, forms, booked meetings, CPL by channel, and pipeline attribution.</p>
               </Link>
               <Link to="/report-builder" className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] hover:-translate-y-1 transition-all hover:shadow-[0_18px_52px_rgba(31,35,35,.09)]">
                 <strong className="text-lg tracking-[-0.04em]">Agencies</strong>
-                <p className="mt-1.5 text-[#586464] text-[15px]">Client-ready reports, source truth, and dashboards built from real conversion events.</p>
+                <p className="mt-1.5 text-[#586464] text-[15px]">Client reporting, source truth, CAPI sync, and dashboards built from real conversion data.</p>
               </Link>
             </div>
           </div>
@@ -110,48 +156,25 @@ export default function Landing() {
       </section>
 
       {/* AI section */}
-      <section className="py-[96px]" style={{ background: '#F7FAFA' }}>
+      <section className="py-[96px] bg-white">
         <div className="max-w-[1320px] mx-auto px-8">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-7 mb-[54px]">
             <div>
-              <SectionKicker label="Why now" />
+              <SectionKicker label="Product differentiator" />
               <h2 className="mt-5 text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black text-st-black">
-                AI discovery is becoming a measurable acquisition channel.
+                AI discovery is now a measurable acquisition channel.
               </h2>
             </div>
             <p className="self-end text-[#586464] text-lg leading-[1.55] tracking-[-0.02em] max-w-[480px]">
-              Generic analytics often buries AI answer-engine traffic inside referral or direct buckets. SourceTrack turns those visits into source, journey, conversion, and revenue reporting.
+              ChatGPT, Claude, Gemini, and Perplexity send traffic that GA4 calls "direct." SourceTrack identifies it, attributes the journey, and shows you the revenue — giving teams a competitive advantage in AI-era attribution.
             </p>
           </div>
 
           <FeatureCards compact items={[
-            { icon: 'C', title: 'ChatGPT and Claude.', body: 'Detect AI-assisted visits and measure the journeys that become leads or customers.' },
-            { icon: 'G', title: 'Gemini and AI search.', body: 'Understand which pages and queries AI-assisted visitors land on first.' },
-            { icon: 'P', title: 'Perplexity and answer engines.', body: 'Compare AI traffic quality against paid, organic, social, email, and partner sources.' },
+            { icon: 'C', title: 'ChatGPT and Claude.', body: 'Measure traffic from AI chat platforms. See conversion rates, revenue per AI source, and compare against paid, organic, and social.' },
+            { icon: 'G', title: 'Gemini and AI search.', body: 'Track visitors from AI-powered search results. Know which queries and pages AI surfaces are sending qualified traffic.' },
+            { icon: 'P', title: 'Perplexity and answer engines.', body: 'Reveal answer-engine referrals that assist pipeline. Compare AI traffic quality against traditional channels.' },
           ]} />
-        </div>
-      </section>
-
-      {/* Comparison */}
-      <section className="py-[96px] bg-white">
-        <div className="max-w-[1320px] mx-auto px-8 text-center">
-          <SectionKicker label="Focused comparison" />
-          <h2 className="mt-5 text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black text-st-black">
-            Built for attribution decisions, not every analytics use case.
-          </h2>
-          <p className="mt-5 max-w-[620px] mx-auto text-[#586464] text-lg leading-[1.55]">
-            GA4 is broad web analytics. Ad platforms are optimized for their own reporting. SourceTrack is focused on source-to-revenue visibility.
-          </p>
-
-          <div className="mt-[54px]">
-            <ComparisonTable rows={[
-              ['Capability', 'SourceTrack', 'GA4', 'Ad platforms'],
-              ['Simple attribution setup', 'Yes', 'Config-heavy', 'Platform-specific'],
-              ['Lead/customer journey timeline', 'Yes', 'Hard', 'No'],
-              ['AI referral tracking', 'Built in', 'Limited', 'No'],
-              ['Custom attribution reports', 'Yes', 'Complex', 'Biased'],
-            ]} />
-          </div>
         </div>
       </section>
     </MarketingPage>

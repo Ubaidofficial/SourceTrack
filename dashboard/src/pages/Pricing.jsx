@@ -5,15 +5,15 @@ import FAQSection from '../components/FAQSection'
 import SectionKicker from '../components/SectionKicker'
 
 const SEO = {
-  title: 'SourceTrack Pricing — Simple attribution pricing',
-  description: 'Simple pricing for marketing attribution, AI referral tracking, customer journeys, conversion tracking, and report builder dashboards.',
+  title: 'SourceTrack Pricing — Simple Attribution Pricing | SourceTrack',
+  description: 'Simple pricing for marketing attribution, AI referral tracking, customer journeys, conversion tracking, and report builder dashboards. Start free for 5,000 pageviews/mo.',
   canonical: 'https://sourcetrack.ai/pricing',
 }
 
 const HERO = {
   kicker: 'Pricing',
   h1: 'Simple attribution pricing that grows with you.',
-  sub: 'Start free, validate your tracking setup, then upgrade when attribution becomes part of your growth workflow.',
+  sub: 'Start free with 5,000 pageviews per month. Validate your tracking setup and attribution data. Upgrade when attribution becomes part of your growth workflow.',
   primaryCta: 'Start free',
   secondaryCta: 'Talk to sales',
   secondaryHref: 'mailto:sales@sourcetrack.ai',
@@ -35,15 +35,17 @@ export default function Pricing() {
         <div className="max-w-[1320px] mx-auto px-8 text-center">
           <SectionKicker label="FAQ" />
           <h2 className="mt-5 text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black text-st-black">
-            Pricing questions buyers ask before starting.
+            Questions teams ask before starting with SourceTrack.
           </h2>
 
           <div className="mt-[54px]">
             <FAQSection faqs={[
-              { q: 'Can I install with Google Tag Manager?', a: 'Yes. SourceTrack supports GTM or a direct script installation.' },
-              { q: 'Does SourceTrack track AI referrals?', a: 'Yes. It is designed to reveal AI discovery traffic and conversion impact.' },
-              { q: 'Do I need a data analyst?', a: 'No. The report builder is built for founders and marketers.' },
-              { q: 'Can I start with a blank dashboard?', a: 'Yes. Users build and pin the reports they actually need.' },
+              { q: 'How do I install SourceTrack?', a: 'Paste one 1.7 KB script tag into your site or add it through Google Tag Manager. Works on any website, Shopify store, Webflow site, or WordPress site. No developer required.' },
+              { q: 'Does SourceTrack track AI referrals like ChatGPT traffic?', a: 'Yes — it is one of the core product features. SourceTrack detects 15 AI platforms and 22 domains, including ChatGPT, Claude, Gemini, and Perplexity, and attributes leads and revenue to the correct AI source instead of labeling them as direct traffic.' },
+              { q: 'Do I need a data analyst to use SourceTrack?', a: 'No. The report builder is built for founders and marketers. Start from common attribution questions, choose the dimension, and pin widgets to your dashboard. No SQL, no Explore reports, no analytics team required.' },
+              { q: 'How does the free plan work?', a: 'Free forever for up to 5,000 pageviews per month. Includes one website, live analytics, and last-touch attribution. Perfect for validating your setup before upgrading for multi-touch models, cookieless mode, and higher limits.' },
+              { q: 'What attribution models does SourceTrack support?', a: 'All plans include last-touch. Paid plans add first touch, linear, time decay, U-shaped, W-shaped, and position-based models. Compare channels across all 8 models from a single dashboard.' },
+              { q: 'Can I cancel anytime?', a: 'Yes. No annual contracts. Upgrade or downgrade as your traffic and attribution needs change.' },
             ]} />
           </div>
         </div>
