@@ -9,7 +9,6 @@ import Layout from './components/Layout'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Dashboard from './pages/Dashboard'
-import ReportBuilder from './pages/ReportBuilder'
 import Journey from './pages/Journey'
 import AIChat from './pages/AIChat'
 import AIAnalytics from './pages/AIAnalytics'
@@ -29,6 +28,12 @@ import Analytics from './pages/Analytics'
 import AdminRoute from './components/AdminRoute'
 import Docs from './pages/Docs'
 import Landing from './pages/Landing'
+import Product from './pages/Product'
+import Attribution from './pages/Attribution'
+import AIReferralTracking from './pages/AIReferralTracking'
+import ReportBuilderGate from './ReportBuilderGate'
+import Pricing from './pages/Pricing'
+import CompareGA4 from './pages/CompareGA4'
 import SolutionEcommerce from './pages/SolutionEcommerce'
 import SolutionSaaS from './pages/SolutionSaaS'
 import SolutionLeadGen from './pages/SolutionLeadGen'
@@ -132,7 +137,7 @@ export default function App() {
             <Route path="/leads/:leadId" element={<ProtectedRoute><LeadDetail /></ProtectedRoute>} />
             <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
             <Route path="/integrations" element={<ProtectedRoute><Integrations /></ProtectedRoute>} />
-            <Route path="/report-builder" element={<ProtectedRoute><ReportBuilder /></ProtectedRoute>} />
+            <Route path="/report-builder" element={<ReportBuilderGate />} />
             <Route path="/journey" element={<ProtectedRoute><Journey /></ProtectedRoute>} />
             <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
             <Route path="/ai-chat" element={<ProtectedRoute><AIChat /></ProtectedRoute>} />
@@ -147,13 +152,22 @@ export default function App() {
             <Route path="/share/:token" element={<ShareDashboard />} />
             {/* Public docs — no auth required */}
             <Route path="/docs" element={<Docs />} />
+            {/* Public marketing pages — accessible to everyone */}
+            <Route path="/" element={<Landing />} />
+            <Route path="/product" element={<Product />} />
+            <Route path="/attribution" element={<Attribution />} />
+            <Route path="/ai-referral-tracking" element={<AIReferralTracking />} />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/compare-ga4" element={<CompareGA4 />} />
+            {/* Use-case aliases redirect to existing solution pages */}
+            <Route path="/use-cases/saas" element={<Navigate to="/saas-attribution" replace />} />
+            <Route path="/use-cases/ecommerce" element={<Navigate to="/ecommerce-attribution" replace />} />
+            <Route path="/use-cases/lead-generation" element={<Navigate to="/lead-gen-attribution" replace />} />
             {/* Solution pages — public */}
             <Route path="/ecommerce-attribution" element={<SolutionEcommerce />} />
             <Route path="/saas-attribution" element={<SolutionSaaS />} />
             <Route path="/lead-gen-attribution" element={<SolutionLeadGen />} />
             <Route path="/agency-attribution" element={<SolutionAgency />} />
-            {/* Public landing page — accessible to everyone */}
-            <Route path="/" element={<Landing />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
