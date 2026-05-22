@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { validateSiteKey } from '../middleware/auth.js'
 import { getFlexibleReport } from '../lib/attribution-engine.js'
+import { requireFeature } from '../lib/plan-features.js'
 
 const router = Router()
 
@@ -15,6 +16,8 @@ function escapeCsv(val) {
 
 router.get('/report', validateSiteKey, async (req, res) => {
   try {
+    const block = requireFeature(req.site?.plan, 'csv_export', 'CSV export')
+    if (block) return res.status(402).json(block)
     const { model, date_from, date_to, group_by, metric } = req.query
     const posthogSiteId = String(req.site.id)
 

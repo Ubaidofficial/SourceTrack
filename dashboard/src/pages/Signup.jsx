@@ -3,6 +3,24 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 
+// Common disposable email providers — see api/lib/abuse-guards.js for the full
+// list. Kept inline here so the signup form can validate before hitting the
+// network. The Supabase trigger is the bulletproof backstop.
+const DISPOSABLE_EMAIL_DOMAINS = new Set([
+  '10minutemail.com','10minutemail.net','mailinator.com','tempmail.com',
+  'temp-mail.org','temp-mail.io','guerrillamail.com','guerrillamail.net',
+  'sharklasers.com','grr.la','getnada.com','throwawaymail.com','yopmail.com',
+  'maildrop.cc','dispostable.com','fakeinbox.com','tempinbox.com','mintemail.com',
+  'mailnesia.com','emailondeck.com','mailcatch.com','spambox.us','mohmal.com',
+  'trashmail.com','trashmail.net','tempr.email','spam4.me','tempmailo.com',
+  'minuteinbox.com','tempemail.com','tempemail.net','discard.email','mt2015.com',
+])
+function isDisposableEmail(email) {
+  const at = (email || '').lastIndexOf('@')
+  if (at === -1) return false
+  return DISPOSABLE_EMAIL_DOMAINS.has(email.slice(at + 1).toLowerCase().trim())
+}
+
 export default function Signup() {
   const { signUp } = useAuth()
   const navigate = useNavigate()
@@ -16,6 +34,10 @@ export default function Signup() {
     e.preventDefault()
     setError('')
     setMessage('')
+    if (isDisposableEmail(email)) {
+      setError('Disposable email addresses are not allowed. Please use a real work or personal email.')
+      return
+    }
     setLoading(true)
     try {
       await signUp(email, password)

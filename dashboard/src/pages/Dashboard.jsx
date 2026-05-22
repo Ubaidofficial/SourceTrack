@@ -6,6 +6,7 @@ import { fetchApi } from '../lib/api'
 import { format, subDays } from 'date-fns'
 import { useAuth } from '../contexts/AuthContext'
 import { Line, Doughnut, Bar } from 'react-chartjs-2'
+import { hasFeature } from '../lib/planFeatures'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -281,7 +282,7 @@ export default function Dashboard() {
 
       const query = supabase
         .from('sites')
-        .select('site_key, name, domain')
+        .select('site_key, name, domain, plan')
         .limit(1)
 
       if (member?.company_id) {
@@ -472,9 +473,13 @@ export default function Dashboard() {
   ]
 
   const models = overview?.models || {}
-  const modelRevenues = MODELS.map(m => ({
-    model: m.key, label: m.label, total: models[m.key] || 0
-  }))
+  // Hide multi-touch model rows on free plan — the nightly job doesn't compute
+  // them for free sites so they would otherwise render as $0 and confuse users.
+  const MULTI_TOUCH = new Set(['linear', 'time_decay', 'u_shaped', 'w_shaped'])
+  const canMultiTouch = hasFeature(site?.plan, 'multi_touch_attribution')
+  const modelRevenues = MODELS
+    .filter(m => canMultiTouch || !MULTI_TOUCH.has(m.key))
+    .map(m => ({ model: m.key, label: m.label, total: models[m.key] || 0 }))
 
   const aiTrendChartData = {
     labels: aiTrendResults.map(r => r.dim_value || ''),

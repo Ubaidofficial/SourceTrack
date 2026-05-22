@@ -10,6 +10,7 @@ import DashboardCard from '../components/DashboardCard'
 import MetricTile from '../components/MetricTile'
 import StatusBadge from '../components/StatusBadge'
 import { safeNumber, formatCurrency, formatCurrencyDecimal, formatNumber, formatMultiplier } from '../utils/numbers'
+import { hasFeature } from '../lib/planFeatures'
 import { Bar } from 'react-chartjs-2'
 import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend
@@ -68,7 +69,7 @@ export default function Campaigns() {
 
       const query = supabase
         .from('sites')
-        .select('site_key, name')
+        .select('site_key, name, plan')
         .limit(1)
 
       if (member?.company_id) {
@@ -157,13 +158,20 @@ export default function Campaigns() {
             className="px-3 py-1.5 text-sm text-st-black bg-gray-50 rounded-lg hover:bg-gray-100 font-medium">
             Advanced Report
           </button>
-          <button onClick={() => {
-            if (!site) return
-            const params = new URLSearchParams({ site_key: site.site_key, model: 'last_touch', date_from: dateFrom, date_to: dateTo, group_by: activeDim, metric: 'revenue' })
-            window.open(`/api/export/report?${params}`, '_blank')
-          }} className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5">
-            <Download className="w-4 h-4" /> Export
-          </button>
+          {hasFeature(site?.plan, 'csv_export') ? (
+            <button onClick={() => {
+              if (!site) return
+              const params = new URLSearchParams({ site_key: site.site_key, model: 'last_touch', date_from: dateFrom, date_to: dateTo, group_by: activeDim, metric: 'revenue' })
+              window.open(`/api/export/report?${params}`, '_blank')
+            }} className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5">
+              <Download className="w-4 h-4" /> Export
+            </button>
+          ) : (
+            <a href="/billing" title="CSV export available on Starter and above"
+              className="px-3 py-1.5 text-sm text-st-gray bg-white border border-gray-300 rounded-lg hover:border-st-lime flex items-center gap-1.5 opacity-70">
+              🔒 Export · Upgrade
+            </a>
+          )}
         </div>
       </div>
 

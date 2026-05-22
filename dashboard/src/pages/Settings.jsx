@@ -60,11 +60,29 @@ export default function Settings() {
     setSaving(true)
     setMessage('')
     try {
+      // Block free-tier abuse: PaaS subdomains (vercel.app, netlify.app, etc.)
+      // require a custom domain or a paid plan. Defense-in-depth: the DB has a
+      // trigger too, this is the UX-friendly path.
+      const planForCheck = site?.plan || 'free'
+      if (planForCheck === 'free' && domain) {
+        const PAAS_SUFFIXES = ['.vercel.app','.netlify.app','.netlify.com','.webflow.io','.glitch.me','.replit.dev','.replit.app','.repl.co','.ngrok.io','.ngrok-free.app','.herokuapp.com','.firebaseapp.com','.web.app','.pages.dev','.workers.dev','.github.io','.gitlab.io','.surge.sh','.fly.dev','.up.railway.app','.onrender.com','.lovable.app','.myshopify.com']
+        const clean = String(domain).toLowerCase().trim().replace(/^https?:\/\//,'').replace(/\/$/,'').split('/')[0]
+        const match = PAAS_SUFFIXES.find(s => clean.endsWith(s) && clean.length > s.length)
+        if (match) {
+          setMessage(`Free accounts can't use ${match} subdomains. Use a custom domain or upgrade.`)
+          setSaving(false)
+          return
+        }
+      }
+
       if (site) {
         await supabase.from('sites').update({ name, domain }).eq('id', site.id)
       } else {
+        // Don't pass `plan` — the DB column DEFAULT 'free' applies. Passing
+        // an explicit value would override the default and risk drifting from
+        // the canonical signup-defaults-to-free policy.
         const { data } = await supabase.from('sites').insert({
-          name, domain, owner_id: user.id, plan: 'trial'
+          name, domain, owner_id: user.id
         }).select().single()
         setSite(data)
       }
@@ -220,8 +238,11 @@ export default function Settings() {
     }
   }
 
-  const plan = site?.plan || 'trial'
-  const isPro = plan === 'pro'
+  // `isPaid` covers any non-free, non-trial plan (starter/growth/business).
+  // Legacy 'pro'/'agency' are normalized to 'growth'/'business' upstream.
+  const plan = site?.plan || 'free'
+  const isPaid = ['starter', 'growth', 'business'].includes(plan)
+  const isPro = isPaid // back-compat alias for any remaining references
   const isTrial = plan === 'trial'
 
   // Days left in trial (14-day from created_at)

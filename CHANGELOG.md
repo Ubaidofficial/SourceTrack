@@ -5,7 +5,68 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [Unreleased] — 2026-05-21
+## [Unreleased] — 2026-05-22
+
+### Free tier rollout + plan-name realignment
+
+#### Added
+- **New `free` plan** (5,000 pageviews/mo, 1 site, 1 conversion event, last-touch attribution, 30-day retention, 1 webhook destination, live analytics).
+- **Central feature-gate util** at `api/lib/plan-features.js` (backend) and `dashboard/src/lib/planFeatures.js` (frontend) — single source of truth for which features are available on which plan. Use `hasFeature(plan, feature)` and `requireFeature(plan, feature)`.
+- **`<FeatureLock>` component** (`dashboard/src/components/FeatureLock.jsx`) — wrap any paid-only surface; renders a locked overlay with upgrade CTA for free users.
+- **`sites.pv_limit`** column — per-site monthly pageview cap so Stripe price tiers within a single plan (e.g. Starter @ 10K vs Starter @ 50K) can vary.
+- **`sites.last_seen_at`** column — stamped on every pageview ingest; used by the new auto-archive job.
+- **`count_monthly_pageviews(site_id, month_start)`** Postgres function — used by tier-check middleware.
+- **Free-tier 30-day pageview purge** in `nightly-attribution.js` — hard 30-day storage cap on raw pageviews for free sites.
+- **Inactive auto-archive** in `nightly-attribution.js` — free sites with no activity for 60+ days are moved to `plan='archived'`; tracker refuses archived sites.
+
+#### Changed
+- **Backend plan names realigned with Landing.jsx marketing.** `pro` → `growth`, `agency` → `business`. Legacy names still work via `normalizePlan()` in the feature-gate util.
+- **Tier-check middleware now meters pageviews, not "leads".** Old `count_monthly_sessions` RPC replaced by `count_monthly_pageviews`. Limits scaled up (5K free, 10K starter entry, etc.).
+- **New sites default to `plan = 'free'`** (was `'trial'`). Trial only applies when the user clicks a "Start free trial" CTA on a paid plan card.
+- **Stripe webhook reads `pv_limit` from price metadata** (`metadata.pv_limit` on the Stripe Price). Falls back to plan default when unset.
+- **CTA copy on paid Landing cards** changed from "Start free trial" to "Choose Starter / Growth / Business" so they don't conflict with the actual free tier.
+- **Sites table CHECK constraint widened** to allow new plan values (`free`, `starter`, `growth`, `business`, `archived`) in addition to the existing `trial` / `inactive`.
+
+#### Gated for free plan (returns HTTP 402 with upgrade payload)
+- Server-side CAPI fan-out (`api/routes/conversion.js`, `conversion-offline.js`) — skipped for free.
+- Over-reporting / data-quality detection (`api/routes/analytics.js` `/data-quality/latest`, `api/jobs/data-quality-check.js`) — skipped for free.
+- Multi-touch nightly attribution (`api/jobs/nightly-attribution.js`) — skipped for free + inactive + archived + sites with no activity in 7 days.
+
+#### Anti-abuse (free tier)
+- **Email verification gate** — `validateSiteKey` middleware refuses the tracker for free-plan sites whose owner has not confirmed their email. Skipped for paid and trial.
+- **Disposable email block** — Signup.jsx rejects ~35 common disposable providers (mailinator, tempmail, yopmail, etc.) at the form. DB trigger backs it up.
+- **PaaS subdomain block** — Free tier cannot register sites on `*.vercel.app`, `*.netlify.app`, `*.webflow.io`, `*.glitch.me`, `*.replit.dev`, `*.repl.co`, `*.github.io`, `*.lovable.app`, `*.myshopify.com`, etc. Custom domain required, or upgrade. Enforced both client-side in Settings.jsx and server-side via Supabase trigger.
+- **DB trigger `enforce_free_tier_abuse_guards`** — `BEFORE INSERT/UPDATE` on `sites`. Validates domain against `paas_subdomain_blocklist` and owner email against `disposable_email_domains` for free-plan rows only. Defense-in-depth — the dashboard inserts directly via Supabase with the anon key, so the DB layer is the only bulletproof guarantee.
+- **Signup rate limiting** — relying on Supabase Auth's built-in 30/hr/IP limit; not duplicated in our layer.
+
+#### Frontend feature locks
+- **CSV export** — Leads.jsx and Campaigns.jsx Export buttons show "🔒 Export · Upgrade" on free plan; API `/export/report` also returns 402.
+- **Attribution model selectors** — ReportBuilder.jsx shows `🔒 Linear / Time Decay / U-Shaped / W-Shaped · Upgrade` as disabled options for free; Dashboard.jsx hides those rows in the model-revenue comparison so they don't render as misleading $0 values.
+- **Over-reporting upsell card** — Integrations.jsx surfaces the locked feature to free users with an upgrade CTA (Task #7 already gated the API).
+- **Plan rename in dashboard** — Billing.jsx, Settings.jsx, Admin.jsx, Layout.jsx now use canonical names (`free`/`starter`/`growth`/`business`); legacy `pro`/`agency` normalized via `dashboard/src/lib/planFeatures.js`.
+
+#### Site creation default
+- **Fixed `Settings.jsx` site creation** — was passing `plan: 'trial'` explicitly, overriding the DB default. Now omits `plan` so the column default (`'free'` per migration `20260522000001`) applies.
+
+#### Usage threshold emails
+- New job: **`api/jobs/usage-threshold-emails.js`** — daily cron sends one email per crossing of 50% / 80% / 100% of monthly pageview limit. Idempotent via the new `usage_email_log(site_id, month, threshold)` table.
+- Honors `RESEND_API_KEY` (skips quietly if unset, logs intent for local dev).
+
+#### Migrations
+- `supabase/migrations/20260522000001_free_tier_and_plan_realign.sql` — drops legacy CHECK constraint, adds new columns, renames legacy plans, backfills `pv_limit` and `data_retention_days`, creates `count_monthly_pageviews` RPC. **Idempotent and safe to re-run.** Test on a staging DB before applying to production.
+- `supabase/migrations/20260522000002_free_tier_abuse_guards.sql` — adds `disposable_email_domains` + `paas_subdomain_blocklist` lookup tables and the `enforce_free_tier_abuse_guards` trigger on `sites`. Trigger function is `SECURITY DEFINER` because it reads `auth.users`.
+- `supabase/migrations/20260522000003_usage_email_log.sql` — adds `usage_email_log` table for the daily usage-threshold-emails job.
+
+#### Cron schedule additions
+- `0 14 * * *` — `node api/jobs/usage-threshold-emails.js`
+
+#### Cost ceiling (1,000 free users on production stack)
+- PostHog: ~$400/mo · Supabase: ~$400/mo · Railway: ~$200/mo · Misc: ~$100/mo → **≈ $1,100/mo (~$1.10/user)**
+- Break-even at ≈ 2% conversion to $9/mo Starter.
+
+---
+
+## [Released] — 2026-05-21
 
 ### Final Complete Audit (round 3)
 

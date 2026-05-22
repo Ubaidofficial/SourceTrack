@@ -23,9 +23,14 @@ import {
   Search, ChevronDown, ArrowRight, Plus, HelpCircle
 } from 'lucide-react'
 import ConversionExplanationModal from '../components/ConversionExplanationModal'
+import { hasFeature } from '../lib/planFeatures'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend)
 
+// Multi-touch models (linear, time_decay, u_shaped, w_shaped) are paid-only.
+// Free plan still sees the rest — they're single-touch and computed inline at
+// query time without the nightly attribution job.
+const MULTI_TOUCH_KEYS = new Set(['linear', 'time_decay', 'u_shaped', 'w_shaped'])
 const MODELS = [
   { key: 'first_touch',          label: 'First Touch' },
   { key: 'last_touch',           label: 'Last Touch' },
@@ -219,7 +224,7 @@ export default function ReportBuilder() {
         .eq('user_id', user.id)
         .maybeSingle()
 
-      const query = supabase.from('sites').select('site_key, name').limit(1)
+      const query = supabase.from('sites').select('site_key, name, plan').limit(1)
       if (member?.company_id) {
         query.eq('company_id', member.company_id)
       } else {
@@ -824,11 +829,31 @@ export default function ReportBuilder() {
               <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">5</span>
               <h3 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Attribution</h3>
             </div>
-            <select value={model} onChange={(e) => setModel(e.target.value)}
+            <select value={model} onChange={(e) => {
+                const next = e.target.value
+                // Block multi-touch picks for free — silently snap back to last_touch
+                if (MULTI_TOUCH_KEYS.has(next) && !hasFeature(site?.plan, 'multi_touch_attribution')) {
+                  setModel('last_touch')
+                  return
+                }
+                setModel(next)
+              }}
               className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white">
-              {MODELS.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
+              {MODELS.map(m => {
+                const locked = MULTI_TOUCH_KEYS.has(m.key) && !hasFeature(site?.plan, 'multi_touch_attribution')
+                return (
+                  <option key={m.key} value={m.key} disabled={locked}>
+                    {locked ? `🔒 ${m.label} · Upgrade` : m.label}
+                  </option>
+                )
+              })}
             </select>
-            <p className="text-xs text-st-gray dark:text-gray-400 mt-1">How credit is assigned to each touchpoint in the customer journey.</p>
+            <p className="text-xs text-st-gray dark:text-gray-400 mt-1">
+              How credit is assigned to each touchpoint in the customer journey.
+              {!hasFeature(site?.plan, 'multi_touch_attribution') && (
+                <> <a href="/billing" className="text-st-lime hover:underline">Upgrade</a> to unlock multi-touch models.</>
+              )}
+            </p>
             <div className="mt-2">
               <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Attribution Window</label>
               <select value={attributionWindow || ''} onChange={(e) => setAttributionWindow(e.target.value || null)}

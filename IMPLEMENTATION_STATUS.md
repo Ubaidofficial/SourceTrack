@@ -28,7 +28,7 @@ Last updated: 2026-05-20
 - tracker/tracker.min.js: 5113 bytes, gitignored line removed, committed and pushed
 - All files pass `node --check` syntax validation
 - duplicate imports removed from nightly-attribution.js (createClient, WebSocket, dotenv each appear once)
-- plan limits: trial=200, starter=1000, pro=4000, agency=10000
+- plan limits (pageview-based, 2026-05-22 rollout): free=5K, trial=10K, starter=10K, growth=50K, business=100K. Per-site override via `sites.pv_limit`. Legacy `pro` / `agency` aliased to `growth` / `business` in `api/lib/plan-features.js`.
 - supabase defined at char 61, outbound_click block at char 1702 (supabase before outbound_click)
 - savedReportsRouter: imported + app.use() registered at /api/saved-reports
 - CAPI sync: 0 references in track.js, 2 in conversion.js

@@ -4,6 +4,7 @@ import { dispatchWebhook } from '../lib/webhook.js'
 import { sendMetaCAPI, sendGoogleConversion, sendMicrosoftConversion, sendLinkedInConversion, sendTikTokConversion } from '../lib/conversion-sync.js'
 import { getSupabase } from '../lib/supabase.js'
 import { getFirstTouchFields } from '../lib/utils.js'
+import { hasFeature } from '../lib/plan-features.js'
 
 // Alias kept for the CAPI block readability — same singleton underneath.
 const getCapiSupabase = getSupabase
@@ -61,8 +62,9 @@ export async function conversionOffline(req, res) {
 
     ph.capture({ distinctId, event: '$conversion', properties: props })
 
-    // Fire CAPI integrations async — same as online conversion route
-    try {
+    // Fire CAPI integrations async — same as online conversion route.
+    // Gated by plan; free tier skips outbound CAPI fan-out.
+    if (hasFeature(req.site?.plan, 'capi_server_side')) try {
       getCapiSupabase()
         .from('sites')
         .select('meta_pixel_id,meta_capi_token,google_ads_customer_id,google_ads_conversion_action_id,google_ads_developer_token,google_ads_access_token,microsoft_tag_id,microsoft_capi_token,linkedin_partner_id,linkedin_capi_token,tiktok_pixel_id,tiktok_access_token')

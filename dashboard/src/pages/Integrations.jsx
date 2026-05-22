@@ -12,6 +12,7 @@ import DashboardCard from '../components/DashboardCard'
 import StatusBadge from '../components/StatusBadge'
 import MetricTile from '../components/MetricTile'
 import { safeNumber, formatNumber } from '../utils/numbers'
+import { hasFeature } from '../lib/planFeatures'
 
 const FUTURE_INTEGRATIONS = [
   { key: 'google-ads', label: 'Google Ads', icon: BarChart3, desc: 'Import campaign spend and sync attribution data' },
@@ -37,7 +38,7 @@ export default function Integrations() {
         .eq('user_id', user.id)
         .maybeSingle()
 
-      const query = supabase.from('sites').select('site_key, name, domain').limit(1)
+      const query = supabase.from('sites').select('site_key, name, domain, plan').limit(1)
       if (member?.company_id) {
         query.eq('company_id', member.company_id)
       } else {
@@ -59,10 +60,13 @@ export default function Integrations() {
   // Over-reporting detection — fetch the latest data quality run and surface a
   // banner when duplicate_conversion_rate is flagged as 'warning'. Only fires
   // above the 15% threshold set by the DQ job; below that it's normal noise.
+  // Over-reporting detection is paid-only. Skip the request entirely for free
+  // plan (the API returns 402; no point firing a doomed fetch).
+  const canSeeOverReporting = hasFeature(site?.plan, 'over_reporting_detection')
   const { data: dqLatest } = useQuery({
     queryKey: ['dq-latest', site?.site_key],
     queryFn: () => fetchApi(`/analytics/data-quality/latest?site_key=${site.site_key}`),
-    enabled: !!site?.site_key
+    enabled: !!site?.site_key && canSeeOverReporting
   })
   const dupWarning = (dqLatest?.checks || []).find(
     c => c.check_name === 'duplicate_conversion_rate' && c.status === 'warning'
@@ -130,6 +134,25 @@ export default function Integrations() {
               attribution.
             </p>
           </div>
+        </div>
+      )}
+
+      {/* Free-plan upsell — surfaces the paid feature so users know it exists */}
+      {!canSeeOverReporting && site?.plan && (
+        <div className="flex items-start gap-3 p-4 bg-st-lime/5 border border-st-lime/20 rounded-xl">
+          <span className="text-st-lime text-lg mt-0.5 leading-none">🔒</span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-white mb-1">
+              Over-reporting detection · Starter plan
+            </p>
+            <p className="text-sm text-st-gray">
+              Automatically flag duplicate pixel fires that inflate Meta / Google / TikTok
+              conversion counts. Upgrade to keep your ad platform numbers honest.
+            </p>
+          </div>
+          <a href="/billing" className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg bg-st-lime text-black hover:bg-st-lime/90">
+            Upgrade
+          </a>
         </div>
       )}
 

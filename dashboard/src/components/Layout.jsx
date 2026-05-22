@@ -85,6 +85,8 @@ export default function Layout({ children }) {
         else query.eq('owner_id', user.id)
         const { data } = await query.maybeSingle()
         if (!data) return
+        // Only show the trial countdown banner for actual trial accounts.
+        // Free-tier accounts have plan='free' and no trial countdown.
         if (data.plan === 'trial') {
           const end  = new Date(new Date(data.created_at).getTime() + 14 * 86400000)
           const endDate = end ? new Date(end) : null

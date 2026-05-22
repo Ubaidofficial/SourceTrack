@@ -114,7 +114,7 @@ All required at startup (`api/index.js` fails fast on missing vars):
 | `POSTHOG_PROJECT_ID` | yes | PostHog numeric project ID |
 | `STRIPE_SECRET_KEY` | yes (billing) | Stripe live or test secret |
 | `STRIPE_WEBHOOK_SECRET` | yes (billing) | Stripe webhook signing secret |
-| `STRIPE_PRICE_ID_STARTER`, `_PRO`, `_AGENCY` | yes (billing) | Per-plan recurring price IDs |
+| `STRIPE_PRICE_ID_STARTER`, `_GROWTH`, `_BUSINESS` | yes (billing) | Per-plan recurring price IDs. Legacy `_PRO` / `_AGENCY` are still read as fallbacks. Each Stripe price may carry a `pv_limit` metadata key to override the plan's default monthly pageview cap. |
 | `RESEND_API_KEY` | optional | Email reports (weekly/monthly recap) |
 | `DEEPSEEK_API_KEY` | optional | AI chat + AI analytics features |
 | `SLACK_WEBHOOK_URL` | optional | Nightly job alert webhook |
@@ -137,6 +137,7 @@ Configured as Railway cron services (UI-only — not in this repo):
 | Data quality check | `0 3 * * *` | `node api/jobs/data-quality-check.js` |
 | Health agent | `*/30 * * * *` | `node api/jobs/health-agent.js` |
 | Email reports | `0 8 * * 1` | `node api/jobs/email-reports.js` |
+| Usage threshold emails | `0 14 * * *` | `node api/jobs/usage-threshold-emails.js` |
 
 The nightly job has a concurrency lock (`job_runs.status='running'`, 6h TTL) and retries PostHog 429s with exponential backoff.
 

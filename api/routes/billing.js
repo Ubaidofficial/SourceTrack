@@ -2,6 +2,7 @@ import Stripe from 'stripe'
 import { Router } from 'express'
 import NodeCache from 'node-cache'
 import { getSupabase } from '../lib/supabase.js'
+import { normalizePlan, getPvLimit } from '../lib/plan-features.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2024-06-20'
@@ -14,18 +15,30 @@ const _seenStripeEvents = new NodeCache({ stdTTL: 86400, checkperiod: 3600 })
 
 // ── Price → plan mapping ──────────────────────────────────────────────────────
 // Populated from env vars so production and test keys both work.
+// Legacy env vars STRIPE_PRICE_ID_PRO/AGENCY are still read but map to the
+// new canonical names (growth/business) via normalizePlan.
 function getPriceMap() {
   return {
-    [process.env.STRIPE_PRICE_ID_STARTER]: 'starter',
-    [process.env.STRIPE_PRICE_ID_PRO]:     'pro',
-    [process.env.STRIPE_PRICE_ID_AGENCY]:  'agency',
-    // Legacy single-price env var still supported
-    ...(process.env.STRIPE_PRICE_ID ? { [process.env.STRIPE_PRICE_ID]: 'pro' } : {}),
+    [process.env.STRIPE_PRICE_ID_STARTER]:  'starter',
+    [process.env.STRIPE_PRICE_ID_GROWTH]:   'growth',
+    [process.env.STRIPE_PRICE_ID_BUSINESS]: 'business',
+    // Legacy env vars — same values mapped to canonical names
+    [process.env.STRIPE_PRICE_ID_PRO]:      'growth',
+    [process.env.STRIPE_PRICE_ID_AGENCY]:   'business',
+    ...(process.env.STRIPE_PRICE_ID ? { [process.env.STRIPE_PRICE_ID]: 'growth' } : {}),
   }
 }
 
+// Stripe price metadata may include `pv_limit` (e.g. "50000") so a single plan
+// can have multiple price tiers. Falls back to the plan's default.
+function pvLimitFromPrice(price, plan) {
+  const fromMeta = price?.metadata?.pv_limit
+  if (fromMeta && Number.isFinite(Number(fromMeta))) return Number(fromMeta)
+  return getPvLimit(plan)
+}
+
 function planFromPriceId(priceId) {
-  return getPriceMap()[priceId] || 'pro'
+  return normalizePlan(getPriceMap()[priceId] || 'growth')
 }
 
 
@@ -86,16 +99,19 @@ export async function billingWebhookHandler(req, res) {
 
         if (!siteId || !customerId) break
 
-        // Fetch subscription to get the price_id and determine plan
-        let plan = 'pro'
+        // Fetch subscription to get the price_id and determine plan + pv_limit
+        let plan = 'growth'
+        let pvLimit = getPvLimit(plan)
         if (subId) {
-          const sub = await stripe.subscriptions.retrieve(subId)
-          const priceId = sub.items?.data?.[0]?.price?.id
-          plan = planFromPriceId(priceId)
+          const sub = await stripe.subscriptions.retrieve(subId, { expand: ['items.data.price'] })
+          const price = sub.items?.data?.[0]?.price
+          plan = planFromPriceId(price?.id)
+          pvLimit = pvLimitFromPrice(price, plan)
         }
 
         await sb.from('sites').update({
           plan,
+          pv_limit: pvLimit,
           stripe_customer_id: customerId,
           stripe_subscription_id: subId || null,
         }).eq('id', siteId)
@@ -108,14 +124,15 @@ export async function billingWebhookHandler(req, res) {
       case 'customer.subscription.updated': {
         const sub        = event.data.object
         const customerId = sub.customer
-        const priceId    = sub.items?.data?.[0]?.price?.id
+        const price      = sub.items?.data?.[0]?.price
         const status     = sub.status
-        const plan       = ['active', 'trialing'].includes(status)
-          ? planFromPriceId(priceId)
-          : 'inactive'
+        const isActive   = ['active', 'trialing'].includes(status)
+        const plan       = isActive ? planFromPriceId(price?.id) : 'inactive'
+        const pvLimit    = isActive ? pvLimitFromPrice(price, plan) : 0
 
         await sb.from('sites').update({
           plan,
+          pv_limit: pvLimit,
           stripe_subscription_id: sub.id,
         }).eq('stripe_customer_id', customerId)
 
@@ -126,7 +143,7 @@ export async function billingWebhookHandler(req, res) {
       // ── Subscription cancelled ─────────────────────────────────────────────
       case 'customer.subscription.deleted': {
         const customerId = event.data.object.customer
-        await sb.from('sites').update({ plan: 'inactive' }).eq('stripe_customer_id', customerId)
+        await sb.from('sites').update({ plan: 'inactive', pv_limit: 0 }).eq('stripe_customer_id', customerId)
         console.log(`[billing] subscription cancelled — customer ${customerId}`)
         break
       }
@@ -139,11 +156,12 @@ export async function billingWebhookHandler(req, res) {
           // Reactivate if somehow marked inactive
           const site = await getSiteByCustomerId(customerId)
           if (site && site.plan === 'inactive') {
-            // Re-fetch sub to get current plan
-            const subs = await stripe.subscriptions.list({ customer: customerId, limit: 1 })
-            const priceId = subs.data[0]?.items?.data?.[0]?.price?.id
-            const plan = planFromPriceId(priceId)
-            await sb.from('sites').update({ plan }).eq('stripe_customer_id', customerId)
+            // Re-fetch sub to get current plan + price metadata
+            const subs = await stripe.subscriptions.list({ customer: customerId, limit: 1, expand: ['data.items.data.price'] })
+            const price = subs.data[0]?.items?.data?.[0]?.price
+            const plan = planFromPriceId(price?.id)
+            const pvLimit = pvLimitFromPrice(price, plan)
+            await sb.from('sites').update({ plan, pv_limit: pvLimit }).eq('stripe_customer_id', customerId)
             console.log(`[billing] payment succeeded — reactivated ${customerId} → ${plan}`)
           }
         }
@@ -156,7 +174,7 @@ export async function billingWebhookHandler(req, res) {
         const attempt    = event.data.object.attempt_count
         // Only suspend after 3rd failed attempt — Stripe retries by default
         if (attempt >= 3) {
-          await sb.from('sites').update({ plan: 'inactive' }).eq('stripe_customer_id', customerId)
+          await sb.from('sites').update({ plan: 'inactive', pv_limit: 0 }).eq('stripe_customer_id', customerId)
           console.warn(`[billing] payment failed x${attempt} — suspended ${customerId}`)
         } else {
           console.warn(`[billing] payment failed x${attempt} for ${customerId} — waiting for retry`)
@@ -181,12 +199,13 @@ const router = Router()
 
 /**
  * POST /api/billing/create-checkout
- * Body: { plan: 'starter'|'pro'|'agency', successUrl, cancelUrl }
+ * Body: { plan: 'starter'|'growth'|'business', successUrl, cancelUrl }
  * Auth: requireUserAuth middleware sets req.user; site resolved from user.
  */
 router.post('/create-checkout', async (req, res) => {
   try {
-    const { plan = 'pro', successUrl, cancelUrl, site_key } = req.body
+    const { plan: rawPlan = 'growth', successUrl, cancelUrl, site_key } = req.body
+    const plan = normalizePlan(rawPlan)
 
     if (!successUrl || !cancelUrl) {
       return res.status(400).json({ success: false, data: null, error: 'successUrl and cancelUrl are required' })
@@ -197,13 +216,13 @@ router.post('/create-checkout', async (req, res) => {
     if (!site && site_key) site = await getSiteByKey(site_key)
     if (!site) return res.status(401).json({ success: false, data: null, error: 'Site not found' })
 
-    // Pick the right price ID for the requested plan
+    // Pick the right price ID for the requested plan (new env names + legacy fallback)
     const PRICE_MAP = {
-      starter: process.env.STRIPE_PRICE_ID_STARTER,
-      pro:     process.env.STRIPE_PRICE_ID_PRO,
-      agency:  process.env.STRIPE_PRICE_ID_AGENCY,
+      starter:  process.env.STRIPE_PRICE_ID_STARTER,
+      growth:   process.env.STRIPE_PRICE_ID_GROWTH  || process.env.STRIPE_PRICE_ID_PRO,
+      business: process.env.STRIPE_PRICE_ID_BUSINESS || process.env.STRIPE_PRICE_ID_AGENCY,
     }
-    const priceId = PRICE_MAP[plan] || process.env.STRIPE_PRICE_ID_PRO || process.env.STRIPE_PRICE_ID
+    const priceId = PRICE_MAP[plan] || process.env.STRIPE_PRICE_ID
     if (!priceId) {
       return res.status(500).json({ success: false, data: null, error: `No price configured for plan: ${plan}` })
     }
@@ -266,8 +285,6 @@ router.get('/status', async (req, res) => {
     let site = req.site
     if (!site) return res.status(401).json({ success: false, data: null, error: 'Unauthorized' })
 
-    const PLAN_LIMITS = { trial: 200, starter: 1000, pro: 4000, agency: 10000 }
-
     let subscription = null
     if (site.stripe_customer_id) {
       const subs = await stripe.subscriptions.list({
@@ -286,16 +303,17 @@ router.get('/status', async (req, res) => {
       }
     }
 
+    const plan = normalizePlan(site.plan || 'free')
     return res.status(200).json({
       success: true,
       data: {
-        plan:       site.plan || 'trial',
-        limit:      PLAN_LIMITS[site.plan] || 200,
+        plan,
+        limit:      getPvLimit(plan, site.pv_limit),
         subscription,
         prices: {
-          starter: process.env.STRIPE_PRICE_ID_STARTER || null,
-          pro:     process.env.STRIPE_PRICE_ID_PRO     || null,
-          agency:  process.env.STRIPE_PRICE_ID_AGENCY  || null,
+          starter:  process.env.STRIPE_PRICE_ID_STARTER  || null,
+          growth:   process.env.STRIPE_PRICE_ID_GROWTH   || process.env.STRIPE_PRICE_ID_PRO    || null,
+          business: process.env.STRIPE_PRICE_ID_BUSINESS || process.env.STRIPE_PRICE_ID_AGENCY || null,
         }
       },
       error: null

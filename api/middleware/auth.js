@@ -42,7 +42,7 @@ export async function validateSiteKey(req, res, next) {
     const supabase = getSupabase()
     const { data, error } = await supabase
       .from('sites')
-      .select('id, plan, created_at, company_id, owner_id, business_type, trial_ends_at, attribution_window_days')
+      .select('id, plan, pv_limit, created_at, company_id, owner_id, business_type, trial_ends_at, attribution_window_days')
       .eq('site_key', siteKey)
       .single()
 
@@ -50,8 +50,26 @@ export async function validateSiteKey(req, res, next) {
       return res.status(401).json({ success: false, data: null, error: 'Invalid site_key' })
     }
 
-    if (data.plan === 'inactive') {
-      return res.status(402).json({ success: false, data: null, error: 'Subscription inactive' })
+    if (data.plan === 'inactive' || data.plan === 'archived') {
+      const msg = data.plan === 'archived'
+        ? 'Site archived after 60 days of inactivity. Reactivate from your dashboard.'
+        : 'Subscription inactive'
+      return res.status(402).json({ success: false, data: null, error: msg })
+    }
+
+    // Email verification gate — free plan only. Paid users have proven identity
+    // via Stripe; trial sign-ups also skip this until they convert. Only the
+    // free tier requires a verified email before the tracker activates.
+    if (data.plan === 'free' && data.owner_id) {
+      const { data: authUser } = await supabase.auth.admin.getUserById(data.owner_id)
+      if (!authUser?.user?.email_confirmed_at) {
+        return res.status(402).json({
+          success: false,
+          data: null,
+          error: 'Email not verified',
+          message: 'Please verify your email to activate tracking. Check your inbox for the verification link.'
+        })
+      }
     }
 
     if (data.plan === 'trial') {
@@ -66,6 +84,7 @@ export async function validateSiteKey(req, res, next) {
     const site = {
       id: data.id,
       plan: data.plan,
+      pv_limit: data.pv_limit ?? null,
       company_id: data.company_id,
       owner_id: data.owner_id,
       trial_ends_at: data.trial_ends_at || null,

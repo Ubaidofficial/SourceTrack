@@ -185,6 +185,23 @@ const VISIT_TIERS = [
   { label: '10M+',  desc: 'Custom — contact us' },
 ]
 
+// Free plan — fixed, ignores the volume slider.
+const FREE_PLAN = {
+  name: 'Free',
+  description: '1 site · for hobby projects & small sites',
+  visits: '5,000 visits/mo',
+  features: [
+    '1 website',
+    '5,000 monthly pageviews',
+    'Last-touch attribution',
+    'Live analytics (real-time)',
+    'Auto UTM + click ID capture',
+    '1 webhook destination',
+    '30-day data retention',
+  ],
+  cta: 'Start free',
+}
+
 // Prices per tier index (null = contact us)
 const PLAN_CONFIGS = [
   {
@@ -200,7 +217,7 @@ const PLAN_CONFIGS = [
       '1 year data retention',
       '14-day free trial',
     ],
-    cta: 'Start free trial',
+    cta: 'Choose Starter',
     highlight: false,
   },
   {
@@ -216,7 +233,7 @@ const PLAN_CONFIGS = [
       '3 years data retention',
       'Priority support',
     ],
-    cta: 'Start Growth trial',
+    cta: 'Choose Growth',
     highlight: true,
   },
   {
@@ -232,7 +249,7 @@ const PLAN_CONFIGS = [
       '5 years data retention',
       'Dedicated onboarding',
     ],
-    cta: 'Start Business trial',
+    cta: 'Choose Business',
     highlight: false,
   },
 ]
@@ -257,7 +274,11 @@ const FAQS = [
   },
   {
     q: 'How does traffic-based pricing work?',
-    a: 'You pay based on your monthly website visits — not per conversion recorded. All plans include unlimited conversion tracking. Use the pricing slider to find your tier. If you exceed your plan limit, we notify you and you can upgrade instantly with no data loss.',
+    a: 'You pay based on your monthly website visits — not per conversion recorded. All paid plans include unlimited conversion tracking. Use the pricing slider to find your tier. If you exceed your plan limit, we notify you and you can upgrade instantly with no data loss.',
+  },
+  {
+    q: 'Is the Free plan really free?',
+    a: 'Yes — free forever, no credit card required. You get 5,000 pageviews per month, last-touch attribution, live analytics, auto UTM + click ID capture, and one webhook destination to push data to your CRM or email tool via Zapier/n8n. Multi-touch attribution, server-side CAPI, over-reporting detection, and longer data retention are reserved for paid plans.',
   },
   {
     q: 'Can I track AI referrals from ChatGPT and Perplexity?',
@@ -844,7 +865,38 @@ function PricingSection() {
         </FadeUp>
 
         {/* Plan cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+          {/* Free plan card — fixed, not affected by slider */}
+          <FadeUp>
+            <div className="rounded-2xl border p-6 flex flex-col h-full card-glow transition-all hover:-translate-y-0.5 bg-[#111414] border-white/8">
+              <p className="text-sm font-bold mb-0.5 text-white/60">{FREE_PLAN.name}</p>
+              <p className="text-[10px] text-white/30 mb-3">{FREE_PLAN.description}</p>
+
+              <div className="mb-1 min-h-[52px] flex items-end">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl font-black text-white tabular-nums">$0</span>
+                  <span className="text-sm text-white/40">/mo forever</span>
+                </div>
+              </div>
+
+              <p className="text-xs text-white/30 mb-5 min-h-[16px]">{FREE_PLAN.visits}</p>
+
+              <ul className="space-y-2 mb-6 flex-1">
+                {FREE_PLAN.features.map(f => (
+                  <li key={f} className="flex items-start gap-2 text-xs text-white/55">
+                    <span className="shrink-0 mt-0.5 text-white/30">✓</span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+
+              <Link to="/signup"
+                className="w-full text-center text-sm px-4 py-2.5 rounded-xl transition-all hover:scale-[1.02] active:scale-[0.98] border border-white/20 text-white hover:border-white/40">
+                {FREE_PLAN.cta}
+              </Link>
+            </div>
+          </FadeUp>
+
           {PLAN_CONFIGS.map((plan, i) => {
             const price = getPrice(plan.prices)
             return (

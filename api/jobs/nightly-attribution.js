@@ -73,21 +73,27 @@ async function main() {
   await _writeJobRun({ status: 'running', conversions_processed: 0, duration_ms: 0 })
 
   try {
+    // Skip free-plan, inactive, and archived sites entirely — multi-touch
+    // attribution is a paid feature. Also skip sites with no activity in the
+    // last 7 days to save compute (no new conversions to attribute).
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
     const { data: sites, error: sitesError } = await supabase
       .from('sites')
-      .select('id, site_key, attribution_window_days')
-    
+      .select('id, site_key, plan, attribution_window_days, last_seen_at')
+      .not('plan', 'in', '(free,inactive,archived)')
+      .or(`last_seen_at.gte.${sevenDaysAgo},last_seen_at.is.null`)
+
     if (sitesError) {
       logError('Failed to fetch sites', sitesError)
       throw new Error("Failed to fetch sites")
     }
-    
+
     if (!sites || sites.length === 0) {
-      log('No sites found')
+      log('No paid sites with recent activity — nothing to process')
       return
     }
-    
-    log(`Found ${sites.length} sites to process`)
+
+    log(`Found ${sites.length} paid sites with recent activity to process`)
 
     // Bounded-concurrency runner. Sequential processing (the old loop) bottlenecks
     // on per-site PostHog round-trips — at 100 sites with ~1s/site that's ~17min.
@@ -128,6 +134,23 @@ async function main() {
       await runRetentionPurge(sites)
     } catch (purgeErr) {
       logWarn(`Retention purge failed (non-fatal): ${purgeErr.message}`)
+    }
+
+    // Free-tier-specific purge: drop pageviews > 30 days old. The general
+    // retention purge above only touches attributed_conversions; for free
+    // sites we also enforce a hard 30-day cap on the raw pageview table to
+    // keep Supabase storage bounded.
+    try {
+      await runFreeTierPageviewPurge()
+    } catch (freePurgeErr) {
+      logWarn(`Free-tier purge failed (non-fatal): ${freePurgeErr.message}`)
+    }
+
+    // Auto-archive free-tier sites inactive for 60+ days
+    try {
+      await runFreeTierAutoArchive()
+    } catch (archErr) {
+      logWarn(`Free-tier auto-archive failed (non-fatal): ${archErr.message}`)
     }
 
     return
@@ -525,6 +548,84 @@ async function runRetentionPurge(sites) {
   if (totalPurged > 0) {
     log(`Retention purge complete: ${totalPurged} total rows deleted`)
   }
+}
+
+// ─── Free-tier raw pageview purge ─────────────────────────────────────────────
+// Deletes pageviews older than 30 days for every site on the free plan. The
+// general data_retention_days purge above scopes to attributed_conversions
+// only; this enforces the additional storage cap that makes the free tier
+// economically viable.
+async function runFreeTierPageviewPurge() {
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - 30)
+  const cutoffISO = cutoff.toISOString()
+
+  const { data: freeSites, error } = await supabase
+    .from('sites')
+    .select('id, site_key')
+    .eq('plan', 'free')
+
+  if (error || !freeSites?.length) return
+
+  let totalPurged = 0
+  for (const site of freeSites) {
+    const { count, error: delErr } = await supabase
+      .from('pageviews')
+      .delete({ count: 'exact' })
+      .eq('site_id', site.id)
+      .lt('timestamp', cutoffISO)
+
+    if (delErr) {
+      logWarn(`Free-tier pageview purge for site ${site.site_key} failed: ${delErr.message}`)
+    } else if (count > 0) {
+      totalPurged += count
+    }
+  }
+
+  if (totalPurged > 0) {
+    log(`Free-tier pageview purge: ${totalPurged} rows deleted (>30d) across ${freeSites.length} free sites`)
+  }
+}
+
+// ─── Free-tier inactive auto-archive ──────────────────────────────────────────
+// Sets plan='archived' for free-plan sites with no pageview activity in 60+
+// days. Tracker auth rejects archived plans so this both stops cost and
+// frees the site_key for the user to reactivate via dashboard.
+async function runFreeTierAutoArchive() {
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - 60)
+  const cutoffISO = cutoff.toISOString()
+
+  const { data: stale, error } = await supabase
+    .from('sites')
+    .select('id, site_key, last_seen_at')
+    .eq('plan', 'free')
+    .or(`last_seen_at.lt.${cutoffISO},last_seen_at.is.null`)
+
+  if (error || !stale?.length) return
+
+  // Guard: don't archive sites that were created less than 60 days ago and
+  // happen to have last_seen_at=null (never tracked anything yet) unless
+  // they're truly old. Re-query with a created_at filter.
+  const { data: toArchive } = await supabase
+    .from('sites')
+    .select('id, site_key')
+    .eq('plan', 'free')
+    .or(`last_seen_at.lt.${cutoffISO},and(last_seen_at.is.null,created_at.lt.${cutoffISO})`)
+
+  if (!toArchive?.length) return
+
+  const ids = toArchive.map(s => s.id)
+  const { error: updErr } = await supabase
+    .from('sites')
+    .update({ plan: 'archived' })
+    .in('id', ids)
+
+  if (updErr) {
+    logWarn(`Free-tier auto-archive update failed: ${updErr.message}`)
+    return
+  }
+  log(`Free-tier auto-archive: archived ${toArchive.length} inactive sites`)
 }
 
 async function queryPostHog(query, attempt = 0) {

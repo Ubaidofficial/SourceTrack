@@ -2,31 +2,41 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { CreditCard, ExternalLink, Zap, CheckCircle2 } from 'lucide-react'
+import { normalizePlan } from '../lib/planFeatures'
 
-const PLAN_LIMITS = { trial: 200, starter: 1000, pro: 4000, agency: 10000 }
+// Default pageview limits per plan. The site's own pv_limit column takes precedence.
+const PLAN_DEFAULT_LIMITS = {
+  free:     5000,
+  trial:    10000,
+  starter:  10000,
+  growth:   50000,
+  business: 100000,
+  inactive: 0,
+  archived: 0,
+}
 
 const PLANS = [
   {
     key: 'starter',
     name: 'Starter',
-    price: '$49',
-    limit: '1,000 conversions/mo',
-    features: ['All 8 attribution models', 'AI traffic detection', 'Server-side CAPI sync', 'CSV export'],
+    price: 'from $9',
+    limit: '10,000 pageviews/mo',
+    features: ['All 8 attribution models', 'AI traffic detection', 'Server-side CAPI sync', 'Over-reporting detection'],
   },
   {
-    key: 'pro',
-    name: 'Pro',
-    price: '$99',
-    limit: '4,000 conversions/mo',
+    key: 'growth',
+    name: 'Growth',
+    price: 'from $19',
+    limit: '50,000 pageviews/mo',
     highlight: true,
-    features: ['Everything in Starter', 'Cookieless tracking mode', 'Data retention controls', 'Nightly attribution jobs'],
+    features: ['Everything in Starter', 'Cookieless tracking', 'Customer journey maps', 'Up to 5 sites', '3-year retention'],
   },
   {
-    key: 'agency',
-    name: 'Agency',
-    price: '$199',
-    limit: '10,000 conversions/mo',
-    features: ['Everything in Pro', 'Multi-site management', 'White-label reports', 'Priority support'],
+    key: 'business',
+    name: 'Business',
+    price: 'from $49',
+    limit: '100,000 pageviews/mo',
+    features: ['Everything in Growth', 'Unlimited sites', 'White-label reports', 'Multi-team management'],
   },
 ]
 
@@ -118,12 +128,13 @@ export default function Billing() {
     }
   }
 
-  const plan      = site?.plan || 'trial'
-  const limit     = PLAN_LIMITS[plan] || 200
-  const usagePct  = Math.min(100, Math.round((usage / limit) * 100))
+  const plan      = normalizePlan(site?.plan || 'free')
+  const limit     = (site?.pv_limit && Number.isFinite(site.pv_limit)) ? site.pv_limit : (PLAN_DEFAULT_LIMITS[plan] || 0)
+  const usagePct  = limit > 0 ? Math.min(100, Math.round((usage / limit) * 100)) : 0
   const usageColor = usagePct >= 95 ? 'bg-red-500' : usagePct >= 80 ? 'bg-amber-500' : 'bg-st-lime'
   const isTrial   = plan === 'trial'
-  const isPaid    = ['starter', 'pro', 'agency'].includes(plan)
+  const isFree    = plan === 'free'
+  const isPaid    = ['starter', 'growth', 'business'].includes(plan)
 
   const daysLeft = (() => {
     if (!site?.trial_ends_at || !isTrial) return null
@@ -168,11 +179,11 @@ export default function Billing() {
         <div className="flex items-baseline gap-3">
           <span className="text-2xl font-black text-st-black dark:text-white capitalize">{plan}</span>
           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-            isTrial       ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400' :
-            plan === 'pro' ? 'bg-st-lime/15 text-green-700 dark:text-st-lime' :
-                            'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
+            isTrial ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400' :
+            isPaid  ? 'bg-st-lime/15 text-green-700 dark:text-st-lime' :
+                      'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
           }`}>
-            {isTrial ? 'Free Trial' : 'Active'}
+            {isTrial ? 'Free Trial' : isFree ? 'Free Forever' : 'Active'}
           </span>
         </div>
 
@@ -185,7 +196,7 @@ export default function Billing() {
         {/* Usage meter */}
         <div className="space-y-1.5">
           <div className="flex justify-between text-xs text-st-gray dark:text-gray-400">
-            <span>{usage.toLocaleString()} of {limit.toLocaleString()} conversions used this month</span>
+            <span>{usage.toLocaleString()} of {limit.toLocaleString()} pageviews used this month</span>
             <span className={usagePct >= 80 ? 'text-amber-600 dark:text-amber-400 font-semibold' : ''}>{usagePct}%</span>
           </div>
           <div className="w-full h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">

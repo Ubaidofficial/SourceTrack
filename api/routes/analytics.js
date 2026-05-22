@@ -4,6 +4,7 @@ import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { getSupabase } from '../lib/supabase.js'
+import { requireFeature } from '../lib/plan-features.js'
 
 const router = express.Router()
 
@@ -92,6 +93,8 @@ router.post('/collect', async (req, res) => {
       return res.json({ ok: true })
     }
     await supabase.from('pageviews').insert({ site_id: site.id, url, referrer: referrer || null, utm_source: utm_source || null, utm_medium: utm_medium || null, utm_campaign: utm_campaign || null, country, device: device || parser.getDevice().type || 'desktop', browser: browser || serverBrowser, os: req.body.os || serverOS, session_id: session_id || null, duration_seconds: 0, ai_source, entry_page: entry_page || url, exit_page: exit_page || null, timestamp: new Date().toISOString() })
+    // Stamp last_seen_at — used by inactive-account auto-archive (free tier)
+    supabase.from('sites').update({ last_seen_at: new Date().toISOString() }).eq('id', site.id).then(() => {}, () => {})
     res.json({ ok: true })
   } catch (err) { console.error('[analytics/collect]', err.message); res.status(500).json({ error: 'Collection failed' }) }
 })
@@ -416,6 +419,8 @@ router.get('/recent-conversions', requireUserAuth, validateSiteKey, requireSiteM
 // the pixel setup (over-reporting detection).
 router.get('/data-quality/latest', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
   try {
+    const block = requireFeature(req.site?.plan, 'over_reporting_detection', 'Over-reporting detection')
+    if (block) return res.status(402).json(block)
     const siteId = String(req.site.id)
     const supabase = getSupabase()
     // Pull the last 100 rows and reduce to one row per check_name client-side —

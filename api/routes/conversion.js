@@ -7,6 +7,7 @@ import { dispatchWebhook } from '../lib/webhook.js'
 import { sendMetaCAPI, sendGoogleConversion, sendMicrosoftConversion, sendLinkedInConversion, sendTikTokConversion } from '../lib/conversion-sync.js'
 import { getSupabase } from '../lib/supabase.js'
 import { normalizeUtm, getFirstTouchFields } from '../lib/utils.js'
+import { hasFeature } from '../lib/plan-features.js'
 
 // In-memory dedup cache — 24h TTL. Prevents duplicate conversions when:
 // - Form submits twice (double-click, retry)
@@ -116,8 +117,9 @@ export async function conversion(req, res) {
       properties: props
     })
 
-    // CAPI sync — fire async, never block response
-    try {
+    // CAPI sync — fire async, never block response. Gated by plan; free tier
+    // skips the outbound fan-out entirely to keep costs down.
+    if (hasFeature(req.site?.plan, 'capi_server_side')) try {
       getCapiSupabase()
         .from('sites')
         .select('meta_pixel_id,meta_capi_token,google_ads_customer_id,google_ads_conversion_action_id,google_ads_developer_token,microsoft_tag_id,microsoft_capi_token,linkedin_partner_id,linkedin_capi_token,tiktok_pixel_id,tiktok_access_token')

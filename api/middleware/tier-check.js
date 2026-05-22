@@ -1,16 +1,9 @@
 import NodeCache from 'node-cache'
 import { getSupabase } from '../lib/supabase.js'
+import { normalizePlan, getPvLimit } from '../lib/plan-features.js'
 
 // Cache counts for 5 minutes — avoids a Supabase query on every pageview
 const countCache = new NodeCache({ stdTTL: 300, checkperiod: 60 })
-
-// Monthly lead limits per plan (unique sessions counted from pageviews table)
-const PLAN_LIMITS = {
-  trial:   200,   // same as Starter during trial
-  starter: 1000,
-  pro:     4000,
-  agency:  10000
-}
 
 // Returns start of current calendar month as ISO string
 function monthStart() {
@@ -18,14 +11,17 @@ function monthStart() {
   return new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
 }
 
-// Count unique sessions this month for the site
-async function getMonthlyLeadCount(siteId) {
-  const cacheKey = `leads:${siteId}:${new Date().toISOString().slice(0, 7)}`
+// Count pageviews this month for the site (raw pageview count, not unique sessions).
+// Backed by RPC `count_monthly_pageviews(site_id, month_start)` which the
+// retention migration assumes exists; if it doesn't, the catch in the middleware
+// fails open so tracking still works.
+async function getMonthlyPageviews(siteId) {
+  const cacheKey = `pv:${siteId}:${new Date().toISOString().slice(0, 7)}`
   const cached = countCache.get(cacheKey)
   if (cached !== undefined) return cached
   const supabase = getSupabase()
   const { data, error } = await supabase
-    .rpc('count_monthly_sessions', {
+    .rpc('count_monthly_pageviews', {
       p_site_id: siteId,
       p_month_start: monthStart()
     })
@@ -37,7 +33,8 @@ async function getMonthlyLeadCount(siteId) {
 // Middleware — call AFTER validateSiteKey (req.site must exist)
 export async function checkTierLimit(req, res, next) {
   try {
-    const plan  = req.site?.plan || 'trial'
+    const plan = normalizePlan(req.site?.plan || 'free')
+
     // Block expired trials regardless of usage
     if (plan === 'trial' && req.site?.trial_ends_at) {
       const expired = new Date(req.site.trial_ends_at) < new Date()
@@ -54,33 +51,45 @@ export async function checkTierLimit(req, res, next) {
         })
       }
     }
-    const limit = PLAN_LIMITS[plan] ?? PLAN_LIMITS.trial
 
-    // No limit for unknown plans — fail open (don't block tracking if misconfigured)
-    if (!limit) return next()
-
-    const siteId = req.site?.id
-    if (!siteId) return next()
-
-    const currentCount = await getMonthlyLeadCount(siteId)
-
-    if (currentCount >= limit) {
+    // Block inactive / archived sites entirely
+    if (plan === 'inactive' || plan === 'archived') {
       return res.status(402).json({
         success: false,
-        error: 'Monthly lead limit reached',
+        error: plan === 'archived' ? 'Site archived due to inactivity' : 'Subscription inactive',
         data: {
           current_plan: plan,
-          limit,
-          current_count: currentCount,
-          upgrade_url: '/settings',
-          message: `Your ${plan} plan allows ${limit} leads/month. Upgrade to continue tracking.`
+          upgrade_url: '/billing',
+          message: plan === 'archived'
+            ? 'This free-tier site was archived after 60 days of no activity. Reactivate from Settings.'
+            : 'Your subscription is inactive. Update payment to resume tracking.'
         }
       })
     }
 
-    // Invalidate cache after this request so next check is fresh
-    // (only on conversion events, not every pageview — too expensive)
-    req._tierCacheKey = `leads:${siteId}:${new Date().toISOString().slice(0, 7)}`
+    const limit = getPvLimit(plan, req.site?.pv_limit)
+    if (!limit || limit <= 0) return next()  // No limit configured → fail open
+
+    const siteId = req.site?.id
+    if (!siteId) return next()
+
+    const currentCount = await getMonthlyPageviews(siteId)
+
+    if (currentCount >= limit) {
+      return res.status(402).json({
+        success: false,
+        error: 'Monthly pageview limit reached',
+        data: {
+          current_plan: plan,
+          limit,
+          current_count: currentCount,
+          upgrade_url: '/billing',
+          message: `Your ${plan} plan allows ${limit.toLocaleString()} pageviews/month. Upgrade to continue tracking.`
+        }
+      })
+    }
+
+    req._tierCacheKey = `pv:${siteId}:${new Date().toISOString().slice(0, 7)}`
     next()
   } catch (_err) {
     // Fail open — never block tracking due to a counting error
@@ -88,8 +97,8 @@ export async function checkTierLimit(req, res, next) {
   }
 }
 
-// Call this after a conversion is recorded to bust the cache
+// Call this after a pageview/conversion is recorded to bust the cache
 export function bustTierCache(siteId) {
-  const key = `leads:${siteId}:${new Date().toISOString().slice(0, 7)}`
+  const key = `pv:${siteId}:${new Date().toISOString().slice(0, 7)}`
   countCache.del(key)
 }

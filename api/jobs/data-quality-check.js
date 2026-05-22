@@ -65,13 +65,17 @@ async function run() {
   }
 
   // ── PER-SITE CHECKS ───────────────────────────────────────────────────────
-  const { data: sites } = await supabase.from('sites').select('id, site_key, domain, plan')
+  // Skip free/inactive/archived — over-reporting detection is a paid feature.
+  const { data: sites } = await supabase
+    .from('sites')
+    .select('id, site_key, domain, plan')
+    .not('plan', 'in', '(free,inactive,archived)')
   if (!sites?.length) {
-    console.log('[data-quality-check] No sites found')
+    console.log('[data-quality-check] No paid sites found')
     process.exit(0)
   }
 
-  console.log(`[data-quality-check] Processing ${sites.length} sites`)
+  console.log(`[data-quality-check] Processing ${sites.length} paid sites`)
 
   for (const site of sites) {
     console.log(`\n--- Site: ${site.site_key} (${site.domain || 'no domain'}) ---`)

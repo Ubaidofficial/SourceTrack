@@ -10,6 +10,7 @@ import DashboardCard from '../components/DashboardCard'
 import MetricTile from '../components/MetricTile'
 import StatusBadge from '../components/StatusBadge'
 import { safeNumber, formatCurrency, formatNumber } from '../utils/numbers'
+import { hasFeature } from '../lib/planFeatures'
 
 const AI_SOURCES = ['ChatGPT', 'Claude', 'Perplexity', 'Gemini', 'Grok', 'Copilot', 'DeepSeek', 'You.com AI', 'Phind', 'Kagi']
 
@@ -52,7 +53,7 @@ export default function Leads() {
 
       const query = supabase
         .from('sites')
-        .select('site_key, name')
+        .select('site_key, name, plan')
         .limit(1)
 
       if (member?.company_id) {
@@ -103,13 +104,20 @@ export default function Leads() {
           <h2 className="text-2xl font-bold text-st-black">Leads</h2>
           <p className="text-sm text-st-gray mt-0.5">Individual visitors who have converted or engaged with your site</p>
         </div>
-        <button onClick={() => {
-          if (!site) return
-          const params = new URLSearchParams({ site_key: site.site_key, model: 'first_touch', date_from: dateFrom, date_to: dateTo, group_by: 'source', metric: 'revenue' })
-          window.open(`/api/export/report?${params}`, '_blank')
-        }} className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5">
-          <Download className="w-4 h-4" /> Export
-        </button>
+        {hasFeature(site?.plan, 'csv_export') ? (
+          <button onClick={() => {
+            if (!site) return
+            const params = new URLSearchParams({ site_key: site.site_key, model: 'first_touch', date_from: dateFrom, date_to: dateTo, group_by: 'source', metric: 'revenue' })
+            window.open(`/api/export/report?${params}`, '_blank')
+          }} className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5">
+            <Download className="w-4 h-4" /> Export
+          </button>
+        ) : (
+          <a href="/billing" title="CSV export available on Starter and above"
+            className="px-3 py-1.5 text-sm text-st-gray bg-white border border-gray-300 rounded-lg hover:border-st-lime flex items-center gap-1.5 opacity-70">
+            🔒 Export · Upgrade
+          </a>
+        )}
       </div>
 
       <div className="grid grid-cols-3 gap-4">
