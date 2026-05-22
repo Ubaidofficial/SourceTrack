@@ -1,6 +1,13 @@
 import { Link } from 'react-router-dom'
 import { useState, useEffect, useRef } from 'react'
 import { Helmet } from 'react-helmet-async'
+import {
+  MetaLogo, GoogleLogo, ShopifyLogo, StripeLogo, TikTokLogo, LinkedInLogo,
+  MicrosoftLogo, WebflowLogo, WooCommerceLogo, WordPressLogo,
+  OpenAILogo, AnthropicLogo, PerplexityLogo, GeminiLogo, GrokLogo, CopilotLogo, DeepSeekLogo,
+  PaidSearchIcon, PaidSocialIcon, OrganicSearchIcon, ReferralIcon, EmailIcon,
+  INTEGRATION_LOGOS, AI_PLATFORMS as AI_PLATFORM_BADGES,
+} from '../lib/brandLogos'
 
 // ── Navigation ────────────────────────────────────────────────────────────────
 const NAV_LINKS = [
@@ -62,12 +69,8 @@ const MODELS = [
   { name: 'W-Shaped',     desc: '30% first, 30% mid, 30% last',           color: 'bg-pink-500' },
 ]
 
-// ── AI platforms ──────────────────────────────────────────────────────────────
-const AI_PLATFORMS = [
-  'ChatGPT', 'Claude', 'Perplexity', 'Gemini', 'Grok',
-  'Copilot', 'DeepSeek', 'Meta AI', 'Mistral', 'Poe',
-  'You.com', 'Phind', 'Kagi', 'Character.AI', 'Pi AI',
-]
+// AI platform display data with logos lives in dashboard/src/lib/brandLogos.jsx
+// and is imported above as AI_PLATFORM_BADGES (7 platforms with brand SVG marks).
 
 // ── Integrations ──────────────────────────────────────────────────────────────
 const INTEGRATIONS = [
@@ -85,80 +88,7 @@ const INTEGRATIONS = [
   { name: 'REST API',      category: 'Universal', icon: '⚡', desc: 'Custom server-side events' },
 ]
 
-// ── Platform SVG brand logos ──────────────────────────────────────────────────
-const MetaLogo = () => (
-  <svg viewBox="0 0 200 80" fill="none" className="h-6 w-auto">
-    <path d="M20 40C20 28 27 18 36 18C42 18 47 22 53 31L60 43C66 54 71 58 77 58C84 58 89 50 89 40C89 30 84 22 77 22V10C90 10 100 23 100 40C100 57 90 70 77 70C68 70 62 65 55 53L48 41C43 32 38 30 36 30C29 30 32 30 32 40C32 50 29 50 36 50V62C27 62 20 52 20 40Z" fill="#0082FB"/>
-    <path d="M111 40C111 23 121 10 134 10V22C127 22 123 30 123 40C123 50 127 58 134 58C141 58 146 54 152 43L159 31C165 22 170 18 176 18C185 18 192 28 192 40C192 52 185 62 176 62V50C183 50 180 50 180 40C180 30 183 30 176 30C170 30 165 32 160 41L153 53C146 65 140 70 131 70C118 70 111 57 111 40Z" fill="#0082FB"/>
-  </svg>
-)
-
-const GoogleLogo = () => (
-  <svg viewBox="0 0 24 24" className="h-6 w-6">
-    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-  </svg>
-)
-
-const ShopifyLogo = () => (
-  <svg viewBox="0 0 109 124" fill="none" className="h-6 w-auto">
-    <path d="M95.3 23.8c-.1-.7-.7-1.1-1.2-1.1-.5 0-9.7-.2-9.7-.2s-7.7-7.5-8.5-8.3c-.8-.8-2.4-.6-3-.4-.1 0-1.7.5-4.3 1.3C65.8 10.4 61.9 7 57 7c-.1 0-.2 0-.3 0C55.6 5.6 53.7 5 51.8 5c-14.2.4-21 17.8-23.1 26.8-5.5 1.7-9.4 2.9-9.8 3-.5.2-2.8.9-2.9 3.3L12 97.4 79.4 110l38.6-8.3L95.3 23.8zM71.3 17c-2 .6-4.3 1.3-6.8 2.1-.1-3.4-.5-8.1-2.1-12 5.3 1 8.1 6.7 8.9 9.9zM56.4 14.3c1.5 3.8 2 9.1 2.1 12.4-3.5 1.1-7.3 2.3-11.1 3.4C49.6 21.9 52.9 15.9 56.4 14.3zM51.9 8c.7 0 1.3.2 1.9.5-4.4 2.1-9.1 7.4-11.1 18l-8.3 2.6C36.6 21 43.3 8.2 51.9 8z" fill="#96BF48"/>
-    <path d="M94.1 22.7c-.5 0-9.7-.2-9.7-.2s-7.7-7.5-8.5-8.3c-.3-.3-.7-.4-1.1-.5l-5.8 118.3 38.6-8.3L95.3 23.8c-.2-.7-.7-1.1-1.2-1.1z" fill="#5E8E3E"/>
-    <path d="M57 60.2l-4.7 14.1s-4.2-2.2-9.3-2.2c-7.5 0-7.9 4.7-7.9 5.9 0 6.5 16.9 9 16.9 24.2 0 12-7.6 19.7-17.8 19.7-12.3 0-18.5-7.6-18.5-7.6l3.3-10.8s6.4 5.5 11.8 5.5c3.5 0 5-2.8 5-4.8 0-8.4-13.9-8.8-13.9-22.7 0-11.7 8.4-23 25.3-23 6.5 0 9.8 1.9 9.8 1.9z" fill="white"/>
-  </svg>
-)
-
-const StripeLogo = () => (
-  <svg viewBox="0 0 60 25" fill="none" className="h-5 w-auto">
-    <path fillRule="evenodd" clipRule="evenodd" d="M59.64 14.28h-8.06c.19 1.93 1.6 2.55 3.2 2.55 1.64 0 2.96-.37 4.05-.95v3.32a8.33 8.33 0 0 1-4.56 1.1c-4.01 0-6.83-2.5-6.83-7.48 0-4.19 2.39-7.52 6.3-7.52 3.92 0 5.96 3.28 5.96 7.5 0 .4-.04 1.26-.06 1.48zm-5.92-5.62c-1.03 0-2.17.73-2.17 2.58h4.25c0-1.85-1.07-2.58-2.08-2.58zM40.95 20.3c-1.44 0-2.32-.6-2.9-1.04l-.02 4.63-4.12.87V6.27h3.76l.08 1.02a4.7 4.7 0 0 1 3.23-1.29c2.9 0 5.62 2.6 5.62 7.4 0 5.23-2.7 6.9-5.65 6.9zm-.95-10.9c-.94 0-1.64.31-2.04.73l.02 5.48c.35.31.9.62 2.02.62 1.54 0 2.59-1.7 2.59-3.39 0-1.92-.92-3.44-2.59-3.44zM28.24 5v3.52l-4.13.88V5zm-4.13 15.25V6.27h4.13v13.98h-4.13zm-4.52 0h-4.13V6.27h4.14v2.02c.94-1.44 2.56-2.3 4.18-2.3v4.05c-.35-.04-.7-.06-1.06-.06-1.2 0-2.7.5-3.13 1.42v8.85zM9.29 20.3c-1.96 0-3.14-.54-3.97-1.02l.01 5.5-4.12.87V6.27h3.76l.08 1.02a4.53 4.53 0 0 1 3.3-1.29c2.9 0 5.63 2.6 5.63 7.4 0 5.23-2.71 6.9-5.69 6.9zm-.97-10.9c-.9 0-1.64.35-2.03.73l.01 5.48c.37.31.92.62 2.05.62 1.52 0 2.58-1.7 2.58-3.39 0-1.92-.94-3.44-2.61-3.44z" fill="#635BFF"/>
-  </svg>
-)
-
-const TikTokLogo = () => (
-  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="white">
-    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.31 6.31 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.67a8.17 8.17 0 0 0 4.78 1.52V6.74a4.85 4.85 0 0 1-1.01-.05z"/>
-  </svg>
-)
-
-const LinkedInLogo = () => (
-  <svg viewBox="0 0 24 24" className="h-5 w-5">
-    <rect width="24" height="24" rx="3" fill="#0A66C2"/>
-    <path d="M7.2 9.8H4.6V19H7.2V9.8zM5.9 8.7c.9 0 1.5-.6 1.5-1.4C7.4 6.5 6.8 5.9 5.9 5.9 5.1 5.9 4.4 6.5 4.4 7.3c0 .8.6 1.4 1.5 1.4zM19.6 19h-2.6v-4.6c0-1.1 0-2.5-1.5-2.5-1.5 0-1.8 1.2-1.8 2.4V19H11V9.8h2.5v1.1h.1c.4-.7 1.2-1.3 2.5-1.3 2.7 0 3.2 1.8 3.2 4.1V19h-.7z" fill="white"/>
-  </svg>
-)
-
-const MicrosoftLogo = () => (
-  <svg viewBox="0 0 21 21" className="h-5 w-5">
-    <rect x="1"  y="1"  width="9" height="9" fill="#F25022"/>
-    <rect x="11" y="1"  width="9" height="9" fill="#7FBA00"/>
-    <rect x="1"  y="11" width="9" height="9" fill="#00A4EF"/>
-    <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
-  </svg>
-)
-
-const WebflowLogo = () => (
-  <svg viewBox="0 0 256 256" className="h-6 w-6" fill="none">
-    <path d="M190.5 60H65.5C56.9 60 50 66.9 50 75.5v105c0 8.6 6.9 15.5 15.5 15.5h125c8.6 0 15.5-6.9 15.5-15.5v-105c0-8.6-6.9-15.5-15.5-15.5z" fill="#4353FF"/>
-    <path d="M166.5 108.5l-20 47.5L129 113.5 111.5 156l-20-47.5H75l36 75 18.5-42.5L148 183.5l36-75h-17.5z" fill="white"/>
-  </svg>
-)
-
-const WooCommerceLogo = () => (
-  <svg viewBox="0 0 250 90" className="h-5 w-auto" fill="none">
-    <rect width="250" height="90" rx="12" fill="#7F54B3"/>
-    <text x="18" y="62" fill="white" fontSize="52" fontWeight="900" fontFamily="Arial, sans-serif">Woo</text>
-  </svg>
-)
-
-const WordPressLogo = () => (
-  <svg viewBox="0 0 24 24" className="h-5 w-5">
-    <circle cx="12" cy="12" r="12" fill="#21759B"/>
-    <path d="M2.2 12c0 4.3 2.5 8.1 6.1 9.9L3 7.4C2.5 8.8 2.2 10.4 2.2 12zm17.3-.5c0-1.3-.5-2.3-1-3-.6-.9-1.1-1.7-1.1-2.6 0-1 .8-2 1.9-2h.1a9.8 9.8 0 0 0-14.8.7h.7c1.2 0 3-.1 3-.1.6 0 .7.9.1.9 0 0-.6.1-1.3.1L10.5 18l2.3-6.8-1.6-4.4c-.6 0-1.1-.1-1.1-.1-.6 0-.5-1 .1-1 0 0 1.8.1 2.9.1 1.2 0 3-.1 3-.1.6 0 .7.9.1.9 0 0-.6.1-1.3.1l2.6 7.7.7-2.4c.3-1 .5-1.7.5-2.3zm-6.4 1.3l-2.2 6.4c.7.2 1.4.3 2.1.3.9 0 1.7-.1 2.5-.4l-.1-.2-2.3-6.1zm5.4-10A9.8 9.8 0 0 1 21.8 12a9.8 9.8 0 0 1-5 8.6l3.1-9c.6-1.4.8-2.5.8-3.5 0-.4 0-.7-.1-1.3z" fill="white"/>
-  </svg>
-)
-
+// Brand SVG logos live in dashboard/src/lib/brandLogos.jsx — imported above.
 const LOGO_BRANDS = [
   { name: 'Meta Ads',    Logo: MetaLogo },
   { name: 'Google Ads',  Logo: GoogleLogo },
@@ -358,10 +288,10 @@ const REV_SPARK  = [28400, 31200, 29800, 36500, 41200, 44800, 48320]
 const AI_SPARK   = [3200, 4100, 3800, 5600, 7200, 8400, 9140]
 
 const JOURNEY_STEPS = [
-  { channel: 'ChatGPT',    icon: '🤖', day: 'Day 1', type: 'AI Referral', border: 'border-emerald-500/40', bg: 'bg-emerald-500/10', text: 'text-emerald-300' },
-  { channel: 'Google Ads', icon: '🔍', day: 'Day 3', type: 'Paid Search',  border: 'border-blue-500/40',    bg: 'bg-blue-500/10',    text: 'text-blue-300' },
-  { channel: 'Email',      icon: '✉️', day: 'Day 6', type: 'Newsletter',   border: 'border-purple-500/40',  bg: 'bg-purple-500/10',  text: 'text-purple-300' },
-  { channel: 'Purchase',   icon: '★',  day: 'Day 7', type: '$249',         border: 'border-st-lime/40',     bg: 'bg-st-lime/10',     text: 'text-st-lime' },
+  { channel: 'ChatGPT',    Logo: OpenAILogo,        day: 'Day 1', type: 'AI Referral', border: 'border-emerald-500/40', bg: 'bg-emerald-500/10', text: 'text-emerald-300' },
+  { channel: 'Google Ads', Logo: GoogleLogo,        day: 'Day 3', type: 'Paid Search', border: 'border-blue-500/40',    bg: 'bg-blue-500/10',    text: 'text-blue-300' },
+  { channel: 'Email',      Logo: EmailIcon,         day: 'Day 6', type: 'Newsletter',  border: 'border-purple-500/40',  bg: 'bg-purple-500/10',  text: 'text-purple-300' },
+  { channel: 'Purchase',   Logo: null, emoji: '★',  day: 'Day 7', type: '$249',        border: 'border-st-lime/40',     bg: 'bg-st-lime/10',     text: 'text-st-lime' },
 ]
 
 const LIVE_SEED = [
@@ -543,12 +473,20 @@ function LiveDashboard() {
         @keyframes shimmer { 0% { background-position: -200% 0 } 100% { background-position: 200% 0 } }
         @keyframes count-pop { 0% { transform: scale(1) } 50% { transform: scale(1.08) } 100% { transform: scale(1) } }
         @keyframes dot-grid-pulse { 0%,100% { opacity: 0.03 } 50% { opacity: 0.07 } }
+        @keyframes logo-pop { from { transform: scale(0.6); opacity: 0 } to { transform: scale(1); opacity: 1 } }
+        @keyframes tilt-hover { 0% { transform: perspective(800px) rotateY(0) rotateX(0) } 100% { transform: perspective(800px) rotateY(2deg) rotateX(-1deg) translateY(-2px) } }
+        @keyframes lime-ring { 0% { box-shadow: 0 0 0 0 rgba(215,245,80,0.5) } 100% { box-shadow: 0 0 0 12px rgba(215,245,80,0) } }
         .dash-anim { animation: fade-in-up 0.25s ease-out both; }
         .progress-bar { animation: dash-progress 5s linear forwards; }
         .marquee-track { animation: marquee 28s linear infinite; }
         .hero-float { animation: float 7s ease-in-out infinite; }
         .glow-anim { animation: glow-pulse 4s ease-in-out infinite; }
         .count-pop { animation: count-pop 0.4s ease-out; }
+        .logo-pop { animation: logo-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both; }
+        .tilt-card { transition: transform 0.35s cubic-bezier(0.16,1,0.3,1), box-shadow 0.35s; }
+        .tilt-card:hover { transform: perspective(800px) rotateY(2deg) rotateX(-1.5deg) translateY(-3px); box-shadow: 0 25px 60px -20px rgba(215,245,80,0.15); }
+        .lime-ping { position: relative; }
+        .lime-ping::after { content: ''; position: absolute; inset: -4px; border-radius: inherit; animation: lime-ring 2s ease-out infinite; pointer-events: none; }
         .pricing-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 5px; border-radius: 9999px; outline: none; cursor: pointer; }
         .pricing-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: white; cursor: pointer; box-shadow: 0 0 0 4px rgba(215,245,80,0.25); transition: box-shadow 0.15s; }
         .pricing-slider::-webkit-slider-thumb:hover { box-shadow: 0 0 0 6px rgba(215,245,80,0.35); }
@@ -681,10 +619,10 @@ function LiveDashboard() {
             <div className="flex items-stretch gap-2">
               {JOURNEY_STEPS.map((step) => (
                 <div key={step.channel} className="flex-1 flex flex-col gap-1">
-                  <div className={`rounded-xl border p-2.5 text-center flex-1 flex flex-col items-center justify-center ${step.border} ${step.bg}`}>
-                    <span className="text-2xl">{step.icon}</span>
-                    <p className={`text-[10px] font-bold mt-1 ${step.text}`}>{step.channel}</p>
-                    <p className="text-[9px] text-white/40 mt-0.5">{step.type}</p>
+                  <div className={`rounded-xl border p-2.5 text-center flex-1 flex flex-col items-center justify-center gap-1 ${step.border} ${step.bg} transition-transform hover:-translate-y-0.5`}>
+                    {step.Logo ? <step.Logo className="h-6 w-6" /> : <span className="text-2xl leading-none">{step.emoji}</span>}
+                    <p className={`text-[10px] font-bold ${step.text}`}>{step.channel}</p>
+                    <p className="text-[9px] text-white/40">{step.type}</p>
                   </div>
                   <p className="text-[9px] text-white/25 text-center">{step.day}</p>
                 </div>
@@ -1335,24 +1273,31 @@ export default function Landing() {
             </div>
           </FadeUp>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {INTEGRATIONS.map((int, i) => (
-              <FadeUp key={int.name} delay={(i % 4) * 60}>
-                <div className="rounded-xl border border-white/8 bg-[#111414] p-4 hover:border-white/20 hover:-translate-y-0.5 transition-all card-glow h-full">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-xl">{int.icon}</span>
-                    <div>
-                      <p className="text-sm font-semibold text-white leading-tight">{int.name}</p>
-                      <span className={`text-[9px] uppercase tracking-wider font-medium px-1.5 py-0.5 rounded ${
-                        int.category === 'CAPI' ? 'bg-st-lime/10 text-st-lime' :
-                        int.category === 'Revenue' ? 'bg-purple-500/15 text-purple-300' :
-                        'bg-white/8 text-white/40'
-                      }`}>{int.category}</span>
+            {INTEGRATIONS.map((int, i) => {
+              const LogoComp = INTEGRATION_LOGOS[int.name]
+              return (
+                <FadeUp key={int.name} delay={(i % 4) * 60}>
+                  <div className="group relative rounded-xl border border-white/8 bg-[#111414] p-4 hover:border-st-lime/30 hover:-translate-y-0.5 transition-all card-glow h-full overflow-hidden">
+                    {/* Hover glow */}
+                    <div className="absolute -inset-px rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" style={{ background: 'radial-gradient(120% 80% at 0% 0%, rgba(215,245,80,0.08), transparent 60%)' }} />
+                    <div className="relative flex items-center gap-2.5 mb-2">
+                      <div className="shrink-0 flex items-center justify-center h-8 w-8 rounded-lg bg-white/5 group-hover:bg-white/10 group-hover:scale-110 transition-all">
+                        {LogoComp ? <LogoComp className="h-5 w-5" /> : <span className="text-lg">{int.icon}</span>}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-white leading-tight truncate">{int.name}</p>
+                        <span className={`text-[9px] uppercase tracking-wider font-medium px-1.5 py-0.5 rounded inline-block mt-0.5 ${
+                          int.category === 'CAPI' ? 'bg-st-lime/10 text-st-lime' :
+                          int.category === 'Revenue' ? 'bg-purple-500/15 text-purple-300' :
+                          'bg-white/8 text-white/40'
+                        }`}>{int.category}</span>
+                      </div>
                     </div>
+                    <p className="relative text-xs text-white/35 leading-relaxed">{int.desc}</p>
                   </div>
-                  <p className="text-xs text-white/35 leading-relaxed">{int.desc}</p>
-                </div>
-              </FadeUp>
-            ))}
+                </FadeUp>
+              )
+            })}
           </div>
           <p className="text-center text-xs text-white/25 mt-6">All CAPI integrations bypass ad-blockers and iOS tracking restrictions for more complete conversion data.</p>
         </div>
@@ -1391,15 +1336,17 @@ export default function Landing() {
               <div className="bg-[#111414] rounded-2xl border border-white/8 p-6">
                 <p className="text-xs text-white/40 uppercase tracking-wider mb-4">Detected AI platforms</p>
                 <div className="flex flex-wrap gap-2">
-                  {AI_PLATFORMS.map((p, i) => (
-                    <FadeUp key={p} delay={i * 30}>
-                      <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-white/5 text-white/60 border border-white/8 hover:border-st-lime/40 hover:text-white hover:bg-st-lime/5 transition-all cursor-default">
-                        {p}
+                  {AI_PLATFORM_BADGES.map((p, i) => (
+                    <FadeUp key={p.name} delay={i * 40}>
+                      <span style={{ animationDelay: `${i * 60}ms` }}
+                        className={`logo-pop group inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium border border-white/8 hover:border-st-lime/40 hover:scale-110 hover:bg-st-lime/5 transition-all cursor-default ${p.bg} ${p.text}`}>
+                        <p.Logo className="h-3.5 w-3.5" />
+                        {p.name}
                       </span>
                     </FadeUp>
                   ))}
-                  <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-st-lime/10 text-st-lime border border-st-lime/20">
-                    + Character.AI, Pi AI
+                  <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-white/5 text-white/40 border border-white/8">
+                    + Meta AI, Mistral, Poe, You.com, Phind, Kagi, Character.AI, Pi
                   </span>
                 </div>
                 <div className="mt-6 pt-5 border-t border-white/5 space-y-3">
@@ -1449,6 +1396,47 @@ export default function Landing() {
               </FadeUp>
             ))}
           </div>
+
+          {/* Dashboard teaser — same revenue, different attribution models */}
+          <FadeUp delay={120}>
+            <div className="tilt-card mt-14 max-w-3xl mx-auto rounded-2xl border border-white/10 bg-[#0d1011] overflow-hidden shadow-2xl shadow-st-lime/5">
+              <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/5 bg-[#111414]">
+                <div className="flex gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-amber-500/60" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
+                </div>
+                <p className="text-[10px] text-white/40 ml-2">app.sourcetrack.ai / dashboard / model-comparison</p>
+              </div>
+              <div className="p-5">
+                <div className="flex items-baseline justify-between mb-4">
+                  <p className="text-xs text-white/40 uppercase tracking-wider">Revenue attributed to <span className="text-st-lime">ChatGPT</span> — same week, different models</p>
+                  <p className="text-[10px] text-white/30">$48,320 total</p>
+                </div>
+                <div className="space-y-2.5">
+                  {[
+                    { model: 'Last Touch',  pct: 4,  rev: '$1,932',  color: 'bg-red-500/50',     hint: 'Misses early discovery' },
+                    { model: 'First Touch', pct: 32, rev: '$15,462', color: 'bg-blue-500/60',    hint: 'Over-credits the first visit' },
+                    { model: 'Linear',      pct: 18, rev: '$8,697',  color: 'bg-purple-500/60',  hint: 'Equal weight everywhere' },
+                    { model: 'U-Shaped',    pct: 22, rev: '$10,630', color: 'bg-st-lime/70',     hint: 'Recommended for e-commerce' },
+                    { model: 'Time Decay',  pct: 14, rev: '$6,765',  color: 'bg-amber-500/60',   hint: '7-day half-life' },
+                  ].map((row, i) => (
+                    <FadeUp key={row.model} delay={150 + i * 60}>
+                      <div className="flex items-center gap-3">
+                        <p className="text-[11px] text-white/60 w-24 shrink-0">{row.model}</p>
+                        <div className="flex-1 h-7 bg-white/5 rounded-md overflow-hidden relative">
+                          <div className={`h-full ${row.color} rounded-md transition-all`} style={{ width: `${row.pct * 2.5}%`, animation: `dash-progress ${1.5 + i * 0.2}s cubic-bezier(0.16,1,0.3,1) forwards` }} />
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-semibold text-white">{row.pct}%</span>
+                        </div>
+                        <p className="text-xs font-bold text-white w-16 text-right tabular-nums">{row.rev}</p>
+                      </div>
+                    </FadeUp>
+                  ))}
+                </div>
+                <p className="text-[10px] text-white/30 mt-4 text-center italic">"Last touch is undercounting ChatGPT by 8×. Switch to U-Shaped to see the real picture."</p>
+              </div>
+            </div>
+          </FadeUp>
         </div>
       </section>
 
@@ -1482,6 +1470,91 @@ export default function Landing() {
               </SlideLeft>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── Dashboard teaser: channel revenue breakdown ────────────────── */}
+      <section className="py-20 px-6 border-t border-white/5">
+        <div className="max-w-5xl mx-auto">
+          <FadeUp>
+            <div className="text-center mb-10">
+              <p className="text-xs font-semibold text-st-lime uppercase tracking-widest mb-3">Inside the dashboard</p>
+              <h2 className="text-3xl sm:text-4xl font-black mb-4">Revenue by channel — with the platforms you actually use</h2>
+              <p className="text-white/40 max-w-xl mx-auto">No generic "Paid / Organic / Direct" rollup. We attribute conversions to the specific platform, with the logo. The way your CMO actually thinks about it.</p>
+            </div>
+          </FadeUp>
+
+          <FadeUp delay={120}>
+            <div className="tilt-card rounded-2xl border border-white/10 bg-[#0d1011] overflow-hidden shadow-2xl shadow-purple-500/5">
+              <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/5 bg-[#111414]">
+                <div className="flex gap-1.5">
+                  <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-amber-500/60" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
+                </div>
+                <p className="text-[10px] text-white/40 ml-2">app.sourcetrack.ai / dashboard / channels</p>
+                <div className="ml-auto flex gap-1.5">
+                  <span className="text-[9px] text-white/30 px-2 py-0.5 rounded bg-white/5">Last 30d</span>
+                  <span className="text-[9px] text-st-lime px-2 py-0.5 rounded bg-st-lime/10">U-Shaped</span>
+                </div>
+              </div>
+              <div className="p-6">
+                {/* Header KPIs */}
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div>
+                    <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1">Total Revenue</p>
+                    <p className="text-2xl font-black text-white tabular-nums">$92,418</p>
+                    <p className="text-[10px] text-emerald-400 mt-0.5">+34% vs last 30d</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1">Conversions</p>
+                    <p className="text-2xl font-black text-white tabular-nums">342</p>
+                    <p className="text-[10px] text-emerald-400 mt-0.5">+18%</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1">Avg Order</p>
+                    <p className="text-2xl font-black text-white tabular-nums">$270</p>
+                    <p className="text-[10px] text-emerald-400 mt-0.5">+13%</p>
+                  </div>
+                </div>
+
+                {/* Channel rows with real logos */}
+                <div className="space-y-2">
+                  {[
+                    { Logo: GoogleLogo,    name: 'Google Ads',        cat: 'Paid Search',    rev: '$28,140', share: 30, trend: '+12%', color: 'bg-blue-500/60' },
+                    { Logo: MetaLogo,      name: 'Meta Ads',          cat: 'Paid Social',    rev: '$19,820', share: 21, trend: '+8%',  color: 'bg-blue-400/60' },
+                    { Logo: OpenAILogo,    name: 'ChatGPT',           cat: 'AI Referral',    rev: '$12,490', share: 14, trend: '+88%', color: 'bg-emerald-500/60', highlight: true },
+                    { Logo: GoogleLogo,    name: 'Google',            cat: 'Organic Search', rev: '$10,860', share: 12, trend: '+4%',  color: 'bg-green-500/50' },
+                    { Logo: TikTokLogo,    name: 'TikTok Ads',        cat: 'Paid Social',    rev: '$8,320',  share: 9,  trend: '+22%', color: 'bg-pink-500/50' },
+                    { Logo: PerplexityLogo,name: 'Perplexity',        cat: 'AI Referral',    rev: '$5,210',  share: 6,  trend: '+124%',color: 'bg-cyan-500/60', highlight: true },
+                    { Logo: AnthropicLogo, name: 'Claude',            cat: 'AI Referral',    rev: '$4,580',  share: 5,  trend: '+67%', color: 'bg-orange-500/60', highlight: true },
+                    { Logo: EmailIcon,     name: 'Newsletter',        cat: 'Email',          rev: '$2,998',  share: 3,  trend: '+2%',  color: 'bg-red-500/50' },
+                  ].map((row, i) => (
+                    <FadeUp key={`${row.name}-${row.cat}`} delay={i * 50}>
+                      <div className={`group flex items-center gap-3 px-3 py-2 rounded-lg border transition-all hover:translate-x-0.5 ${row.highlight ? 'border-st-lime/20 bg-st-lime/5' : 'border-white/5 bg-[#0d1011] hover:border-white/15'}`}>
+                        <div className="shrink-0 flex items-center justify-center h-7 w-7 rounded-md bg-white/5 group-hover:scale-110 transition-transform">
+                          <row.Logo className="h-4 w-4" />
+                        </div>
+                        <div className="w-40 shrink-0">
+                          <p className="text-xs font-semibold text-white leading-tight">{row.name}</p>
+                          <p className="text-[10px] text-white/40">{row.cat}</p>
+                        </div>
+                        <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                          <div className={`h-full ${row.color} rounded-full transition-all`} style={{ width: `${Math.min(100, row.share * 3.3)}%`, animation: `dash-progress ${1.2 + i * 0.1}s cubic-bezier(0.16,1,0.3,1) forwards` }} />
+                        </div>
+                        <p className="w-20 text-right text-sm font-bold text-white tabular-nums">{row.rev}</p>
+                        <p className="w-12 text-right text-[10px] text-emerald-400">{row.trend}</p>
+                      </div>
+                    </FadeUp>
+                  ))}
+                </div>
+
+                <p className="text-[10px] text-white/30 mt-5 text-center">
+                  <span className="text-st-lime">●</span> AI Referral channels (lime border) — invisible in GA4. Up to 124% growth, currently uncredited.
+                </p>
+              </div>
+            </div>
+          </FadeUp>
         </div>
       </section>
 
