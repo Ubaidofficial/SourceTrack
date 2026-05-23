@@ -1,7 +1,5 @@
 import { Router } from 'express'
-import { queryHogQL } from '../lib/posthog.js'
 import { getSupabase } from '../lib/supabase.js'
-import { esc } from '../lib/utils.js'
 
 const router = Router()
 
@@ -411,35 +409,11 @@ router.post('/complete', async (req, res) => {
       })
     }
 
-    // Server-side install verification: query PostHog for at least one event for this site.
-    // Reuses same query pattern as /api/install/status and dashboard overview.
-    // Checks for any $pageview event in the last 30 days.
-    // TODO confirm: the exact timeframe and event filter may need tuning for different
-    // PostHog ingestion latency profiles.
-    try {
-      const installSql = `
-        SELECT count() AS cnt
-        FROM events
-        WHERE properties.site_id = '${esc(String(site.id))}'
-          AND event = '$pageview'
-          AND timestamp >= now() - INTERVAL 30 DAY
-        LIMIT 1
-      `
-      const installRows = await queryHogQL(installSql, 'onboarding_verify')
-      const eventCount = installRows?.length > 0 ? Number(installRows[0][0]) || 0 : 0
-
-      if (eventCount === 0) {
-        return res.status(400).json({
-          success: false, data: null,
-          error: 'Tracker not detected yet. Please install the tracking script and verify that events are flowing before completing onboarding.'
-        })
-      }
-    } catch (queryErr) {
-      console.error(queryErr)
-      return res.status(500).json({ success: false, data: null, error: 'Failed to verify installation. Please try again.' })
+    const merged = {
+      ...currentState,
+      current_step: MAX_STEP,
+      verification_status: currentState.verification_status || 'pending'
     }
-
-    const merged = { ...currentState, current_step: MAX_STEP }
 
     const { error: updateErr } = await getSupabase()
       .from('sites')

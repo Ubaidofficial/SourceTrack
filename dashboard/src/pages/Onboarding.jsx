@@ -486,11 +486,11 @@ export default function Onboarding() {
 
             {verificationState === 'failed' && (
               <div className="text-center py-6">
-                <div className="w-12 h-12 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center mx-auto mb-3">
-                  <X className="w-6 h-6 text-red-500" />
+                <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center mx-auto mb-3">
+                  <X className="w-6 h-6 text-amber-500" />
                 </div>
                 <p className="text-lg font-semibold text-st-black dark:text-white">Script not detected yet</p>
-                {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
+                <p className="text-sm text-st-gray dark:text-gray-400 mt-2">Setup saved. You can verify the script later from Integrations.</p>
                 <ul className="text-sm text-st-gray dark:text-gray-400 mt-3 space-y-1">
                   <li>Make sure the script is published on your live site</li>
                   <li>It may take 1-2 minutes for the first event to appear</li>
@@ -499,11 +499,21 @@ export default function Onboarding() {
                   <a href="/debugger" className="text-sm text-st-black dark:text-white hover:underline">Open Event Logger</a>
                   <button
                     onClick={handleVerify}
-                    className="px-4 py-2 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90 flex items-center gap-2"
+                    className="px-4 py-2 bg-white dark:bg-white/10 text-[#1F2323] dark:text-white border border-gray-200 dark:border-white/10 rounded-xl text-sm font-extrabold hover:bg-gray-50 dark:hover:bg-white/15 flex items-center gap-2"
                   >
                     <RefreshCw className="w-4 h-4" /> Try Again
                   </button>
                 </div>
+                <button
+                  onClick={async () => {
+                    await fetchApi('/onboarding/complete', { method: 'POST', body: JSON.stringify({ site_id: siteId }) })
+                    seedReportsForBusiness(businessType, siteKey)
+                    navigate('/dashboard', { replace: true, state: { toast: 'Setup complete! Your dashboard is ready.' } })
+                  }}
+                  className="mt-4 w-full py-3 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90 flex items-center justify-center gap-2"
+                >
+                  <ArrowRight className="w-4 h-4" /> Continue to Dashboard
+                </button>
               </div>
             )}
           </OnboardingCard>
