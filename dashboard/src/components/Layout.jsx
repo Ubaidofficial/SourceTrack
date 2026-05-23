@@ -86,6 +86,8 @@ export default function Layout({ children }) {
         else query.eq('owner_id', user.id)
         const { data } = await query.maybeSingle()
         if (!data) return
+        // Skip trial banner for super admins — they're internal accounts.
+        if (user.raw_app_meta_data?.role === 'super_admin') return
         // Only show the trial countdown banner for actual trial accounts.
         // Free-tier accounts have plan='free' and no trial countdown.
         if (data.plan === 'trial') {
