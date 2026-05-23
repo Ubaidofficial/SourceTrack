@@ -51,7 +51,7 @@ function getDefaultConversions(businessType) {
 }
 
 export default function Onboarding() {
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
   const navigate = useNavigate()
 
   const [step, setStep] = useState(1)
@@ -66,7 +66,6 @@ export default function Onboarding() {
   const [selectedConversions, setSelectedConversions] = useState([])
   const [snippet, setSnippet] = useState('')
   const [verificationState, setVerificationState] = useState('idle')
-  const [videoModalOpen, setVideoModalOpen] = useState(false)
 
   useEffect(() => {
     loadOnboardingStatus()
@@ -580,22 +579,16 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen bg-[#F1F4F4] dark:bg-[#2B302F] text-[#1F2323] dark:text-white flex flex-col">
-      {/* Header — brand left, stepper centered (desktop), watch-video right */}
+      {/* Header — brand left, stepper centered (desktop), logout right */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-6 px-6 lg:px-12 py-8">
         <div className="dark:hidden"><LogoFull className="h-8 w-auto" /></div>
         <div className="hidden dark:block"><LogoFullDark className="h-8 w-auto" /></div>
         <OnboardingProgress currentStep={step} />
         <button
-          onClick={() => setVideoModalOpen(true)}
-          className="justify-self-end inline-flex items-center gap-3 text-left text-[#1F2323] dark:text-white"
+          onClick={() => { signOut(); navigate('/login', { replace: true }) }}
+          className="justify-self-end inline-flex items-center justify-center min-h-[44px] px-5 rounded-full border border-[rgba(31,35,35,.12)] dark:border-white/15 bg-white dark:bg-white/5 text-[#1F2323] dark:text-white text-sm font-bold hover:bg-[#F1F4F4] dark:hover:bg-white/10 transition-colors"
         >
-          <span className="h-12 w-12 rounded-full bg-st-lime text-[#1F2323] flex items-center justify-center shadow-[0_14px_32px_rgba(204,240,63,0.26)]">
-            <Play className="w-5 h-5 fill-current" />
-          </span>
-          <span className="hidden sm:block">
-            <span className="block text-sm font-extrabold tracking-[-0.03em]">Watch Video</span>
-            <span className="block text-xs text-[#6B7373] dark:text-gray-400">Learn how to setup</span>
-          </span>
+          Log out
         </button>
       </div>
 
@@ -610,34 +603,6 @@ export default function Onboarding() {
         </div>
         {renderStepContent()}
       </div>
-
-      {videoModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center" onClick={() => setVideoModalOpen(false)}>
-          <div className="bg-white dark:bg-[#1A1D1D] rounded-xl p-8 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-st-black dark:text-white">Watch Video</h3>
-              <button onClick={() => setVideoModalOpen(false)}>
-                <X className="w-5 h-5 text-st-gray" />
-              </button>
-            </div>
-            <div className="bg-gray-100 dark:bg-[#252929] rounded-lg h-48 flex items-center justify-center">
-              <Play className="w-12 h-12 text-gray-300" />
-            </div>
-            <p className="text-sm text-st-gray dark:text-gray-400 mt-3 text-center">
-              A walkthrough video will help you set up tracking in under 2 minutes.
-            </p>
-            <p className="text-xs text-st-gray dark:text-gray-400 mt-1 text-center">
-              Video content coming soon.
-            </p>
-            <button
-              onClick={() => setVideoModalOpen(false)}
-              className="mt-4 w-full py-2 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-lg text-sm font-semibold hover:opacity-90"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
