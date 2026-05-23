@@ -59,6 +59,41 @@ if (missingEnv.length) {
 
 const app = express()
 
+// ── Hardcoded dashboard origins (not customer domains, not in env var) ────────
+const HARDCODED_ALLOWED_ORIGINS = [
+  'https://www.sourcetrack.ai',
+  'https://sourcetrack.ai',
+  'https://app.sourcetrack.ai',
+  'http://localhost:5173',
+  'http://localhost:8080',
+]
+
+// ── Global OPTIONS preflight ─────────────────────────────────────────────────
+// Must run before any auth middleware since browsers send OPTIONS without
+// Authorization headers. Allow only known dashboard origins + env-var origins.
+// Customer-site origins (DB-validated) pass through to the cors middleware below.
+app.use((req, res, next) => {
+  if (req.method !== 'OPTIONS') return next()
+
+  const origin = req.headers.origin
+  if (!origin) return next()
+
+  let hostname = null
+  try { hostname = new URL(origin).hostname } catch {}
+
+  const allAllowed = [...HARDCODED_ALLOWED_ORIGINS, ...allowedOrigins]
+  if (!allAllowed.includes(origin) && !(hostname && allAllowed.includes(hostname))) {
+    return next()
+  }
+
+  res.header('Access-Control-Allow-Origin', origin)
+  res.header('Access-Control-Allow-Credentials', 'true')
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
+  res.header('Access-Control-Allow-Headers', 'Authorization, Content-Type')
+  res.header('Access-Control-Max-Age', '86400')
+  return res.status(204).end()
+})
+
 // Session 70 hard CORS fix for pixel API routes
 app.use((req, res, next) => {
   const isPixelRoute =
@@ -114,6 +149,9 @@ async function isAllowedOrigin(origin) {
   if (!origin) return true
 
   if (allowedOrigins.includes(origin)) return true
+
+  // Hardcoded dashboard origins — browsers send full origin (scheme + host)
+  if (HARDCODED_ALLOWED_ORIGINS.includes(origin)) return true
 
   const hostname = await getOriginDomain(origin)
   if (!hostname) return false

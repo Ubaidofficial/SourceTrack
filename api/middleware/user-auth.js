@@ -8,6 +8,8 @@ import { getSupabase } from '../lib/supabase.js'
 //   3. fallback → role = null (no workspace membership)
 export async function requireUserAuth(req, res, next) {
   try {
+    if (req.method === 'OPTIONS') return next()
+
     const authHeader = req.headers.authorization
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({ success: false, data: null, error: 'Missing or invalid Authorization header' })

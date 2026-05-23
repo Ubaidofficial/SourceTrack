@@ -12,6 +12,8 @@ const siteCache = new NodeCache({ stdTTL: 300, checkperiod: 60 })
 
 export async function validateSiteKey(req, res, next) {
   try {
+    if (req.method === 'OPTIONS') return next()
+
     const siteKey = req.body?.site_key || req.query?.site_key
 
     if (!siteKey) {
