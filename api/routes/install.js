@@ -95,8 +95,19 @@ router.get('/status', validateSiteKey, requireSiteMembership, async (req, res) =
       error: null
     })
   } catch (_err) {
-    console.error(_err)
-    return res.status(500).json({ success: false, data: null, error: 'Status check failed' })
+    console.error('[install/status] PostHog query failed:', _err?.message || _err)
+    return res.status(200).json({
+      success: true,
+      data: {
+        installed: false,
+        verified: false,
+        status: 'pending',
+        reason: 'verification_unavailable',
+        last_event: null,
+        domain: null
+      },
+      error: null
+    })
   }
 })
 

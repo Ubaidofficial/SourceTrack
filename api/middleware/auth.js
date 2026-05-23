@@ -100,7 +100,8 @@ export async function validateSiteKey(req, res, next) {
     req.site = site
     next()
   } catch (_err) {
-    res.status(500).json({ success: false, data: null, error: 'Auth error' })
+    console.error('[validateSiteKey] Supabase lookup failed:', _err?.message || _err)
+    res.status(401).json({ success: false, data: null, error: 'Invalid site_key' })
   }
 }
 
