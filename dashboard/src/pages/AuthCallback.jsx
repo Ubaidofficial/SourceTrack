@@ -1,19 +1,23 @@
+import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function AuthCallback() {
-  const { loading } = useAuth()
+  const navigate = useNavigate()
+  const { user, loading } = useAuth()
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-[#2B302F]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black dark:border-st-lime" />
-      </div>
-    )
-  }
+  useEffect(() => {
+    if (loading) return
+    if (user) {
+      navigate('/dashboard', { replace: true })
+    } else {
+      navigate('/login', { replace: true })
+    }
+  }, [user, loading, navigate])
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-[#2B302F]">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black dark:border-st-lime" />
+    <div className="min-h-screen flex items-center justify-center bg-[#0E1513]">
+      <div className="h-8 w-8 rounded-full border-2 border-[#CCF03F] border-t-transparent animate-spin" />
     </div>
   )
 }
