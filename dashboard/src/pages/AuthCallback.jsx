@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Helmet } from 'react-helmet-async'
 import { useAuth } from '../contexts/AuthContext'
 
 export default function AuthCallback() {
@@ -17,6 +18,10 @@ export default function AuthCallback() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0E1513]">
+      <Helmet>
+        <title>Signing in | SourceTrack</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Helmet>
       <div className="h-8 w-8 rounded-full border-2 border-[#CCF03F] border-t-transparent animate-spin" />
     </div>
   )

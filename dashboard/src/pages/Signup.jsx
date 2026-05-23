@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Helmet } from 'react-helmet-async'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { LogoMark } from '../components/Logo'
@@ -81,6 +82,12 @@ export default function Signup() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F1F4F4] dark:bg-[#2B302F] px-4">
+      <Helmet>
+        <title>Start free with SourceTrack | SourceTrack</title>
+        <meta name="description" content="Create a free SourceTrack account and start tracking attribution across 8 models in under 3 minutes." />
+        <meta name="robots" content="noindex, nofollow" />
+        <link rel="canonical" href="https://sourcetrack.ai/signup" />
+      </Helmet>
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <LogoMark className="w-12 h-12 mx-auto mb-4" />
