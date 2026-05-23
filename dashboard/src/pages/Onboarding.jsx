@@ -506,9 +506,28 @@ export default function Onboarding() {
                 </div>
                 <button
                   onClick={async () => {
-                    await fetchApi('/onboarding/complete', { method: 'POST', body: JSON.stringify({ site_id: siteId }) })
-                    seedReportsForBusiness(businessType, siteKey)
-                    navigate('/dashboard', { replace: true, state: { toast: 'Setup complete! Your dashboard is ready.' } })
+                    try {
+                      if (!businessType || !installMethod) {
+                        setError('Please go back and select your business type and install method.')
+                        return
+                      }
+                      // Persist state before completing — earlier /onboarding/update
+                      // calls may have been blocked by CORS, leaving the backend
+                      // without business_type or install_method.
+                      await fetchApi('/onboarding/update', {
+                        method: 'POST',
+                        body: JSON.stringify({
+                          site_id: siteId,
+                          step: 6,
+                          data: { business_type: businessType, install_method: installMethod }
+                        })
+                      })
+                      await fetchApi('/onboarding/complete', { method: 'POST', body: JSON.stringify({ site_id: siteId }) })
+                      seedReportsForBusiness(businessType, siteKey)
+                      navigate('/dashboard', { replace: true, state: { toast: 'Setup complete! Your dashboard is ready.' } })
+                    } catch (err) {
+                      setError(err.message || 'Failed to complete onboarding. Please try again.')
+                    }
                   }}
                   className="mt-4 w-full py-3 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90 flex items-center justify-center gap-2"
                 >
