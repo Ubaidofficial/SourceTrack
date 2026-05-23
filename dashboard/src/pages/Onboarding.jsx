@@ -8,7 +8,6 @@ import {
   Globe, ShoppingCart, CreditCard, Layers,
   Code, FileCode, Check, X, ArrowRight, ArrowLeft, Copy, RefreshCw, Play
 } from 'lucide-react'
-import OnboardingProgress from '../components/OnboardingProgress'
 import OnboardingCard from '../components/OnboardingCard'
 import { LogoFull, LogoFullDark } from '../components/Logo'
 
@@ -20,6 +19,15 @@ const STEP_TITLES = {
   5: 'Customize Conversions',
   6: 'Verify Installation'
 }
+
+const STEPPER_LABELS = [
+  'Connect Domain',
+  'Business Type',
+  'Install Method',
+  'Install Script',
+  'Customize',
+  'Run Verification'
+]
 
 const BUSINESS_TYPES = [
   { key: 'ecommerce', label: 'eCommerce', icon: ShoppingCart, desc: 'Online store selling products' },
@@ -639,7 +647,51 @@ export default function Onboarding() {
       <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-6 px-6 lg:px-12 py-8">
         <div className="dark:hidden"><LogoFull className="h-8 w-auto" /></div>
         <div className="hidden dark:block"><LogoFullDark className="h-8 w-auto" /></div>
-        <OnboardingProgress currentStep={step} />
+        {/* Clickable stepper — completed steps jump back, current non-clickable, future dimmed */}
+        <div className="hidden md:flex items-start justify-center gap-8 lg:gap-12">
+          {STEPPER_LABELS.map((label, i) => {
+            const stepNum = i + 1
+            const isCompleted = stepNum < step
+            const isCurrent = stepNum === step
+            const clickable = isCompleted && !isCurrent
+
+            return (
+              <button
+                key={stepNum}
+                type="button"
+                disabled={!clickable}
+                onClick={() => setStep(stepNum)}
+                className={`relative flex flex-col items-center gap-2 min-w-[92px] transition-colors ${
+                  clickable ? 'cursor-pointer group' : 'cursor-default'
+                }`}
+              >
+                <div
+                  className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-extrabold transition-all ${
+                    isCompleted
+                      ? `bg-st-lime text-[#1F2323] ${clickable ? 'group-hover:ring-2 group-hover:ring-st-lime/50' : ''}`
+                      : isCurrent
+                      ? 'bg-[#1F2323] dark:bg-white text-white dark:text-[#1F2323]'
+                      : 'bg-[#F1F4F4] dark:bg-white/5 text-[#1F2323] dark:text-gray-500'
+                  }`}
+                >
+                  {isCompleted ? '✓' : stepNum}
+                </div>
+                <span
+                  className={`text-sm whitespace-nowrap tracking-[-0.02em] ${
+                    isCurrent
+                      ? 'font-extrabold text-[#1F2323] dark:text-white'
+                      : isCompleted
+                      ? `font-semibold text-[#1F2323] dark:text-white ${clickable ? 'group-hover:underline' : ''}`
+                      : 'font-medium text-[#6B7373] dark:text-gray-500'
+                  }`}
+                >
+                  {label}
+                </span>
+                <div className={`h-0.5 w-24 rounded-full ${isCurrent ? 'bg-[#1F2323] dark:bg-white' : 'bg-transparent'}`} />
+              </button>
+            )
+          })}
+        </div>
         <button
           onClick={() => { signOut(); navigate('/login', { replace: true }) }}
           className="justify-self-end inline-flex items-center justify-center min-h-[44px] px-5 rounded-full border border-[rgba(31,35,35,.12)] dark:border-white/15 bg-white dark:bg-white/5 text-[#1F2323] dark:text-white text-sm font-bold hover:bg-[#F1F4F4] dark:hover:bg-white/10 transition-colors"
