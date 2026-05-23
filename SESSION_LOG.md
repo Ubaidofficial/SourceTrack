@@ -33,3 +33,87 @@ Session 82 proper will be the manual QA closeout session.
 | 96.3 | 2026-05-16 | `main` | Outbound link auto-tracking in tracker.js, bounce rate HogQL query + dashboard response | Partial QA | — |
 | 96.4 | 2026-05-16 | `main` | Public dashboard share link — /api/public/:token, public_share_token + public_share_enabled on sites, returns top sources/campaigns/channels | QA passed | — |
 | 97 | T3.4 | Business-type KPI frontend switching | getKpiConfig + enrichKpis helpers, kpiConfig.map KPI strip in Dashboard.jsx | ✅ |
+| 98 | 2026-05-23 | `main` | **Beta QA: Auth → Onboarding → Tracker → Dashboard Flow** (see below) | QA in progress | No |
+
+---
+
+## Session 98 — Beta QA: Auth → Onboarding → Tracker → Dashboard Flow
+
+**Date:** 2026-05-23
+**Branch:** `main`
+**Build:** ✅ both `node --check` (all API files) and `npm run build` (dashboard) pass
+
+### 1. OAuth callback
+- **Problem:** Google OAuth stuck on `/auth/callback#...` — spinner rendered forever.
+- **Fix:** AuthCallback now redirects authenticated users to `/dashboard`; unauthenticated users to `/login`.
+- **File:** `dashboard/src/pages/AuthCallback.jsx`
+
+### 2. Onboarding UX
+- Removed unused "Watch Video" button from onboarding.
+- Added "Log out" button on onboarding header.
+- Made failed script verification non-blocking for beta — "Continue to Dashboard" available after verification fails.
+- Added "Continue to Dashboard" path that persists latest onboarding selections before completing.
+- **Files:** `dashboard/src/pages/Onboarding.jsx`, `api/routes/onboarding.js`
+
+### 3. API/tracker domain
+- Dashboard now uses env-driven API/tracker host:
+  - `VITE_API_URL=https://api.srctk.com`
+  - `VITE_TRACKER_BASE_URL=https://api.srctk.com`
+  - `VITE_FRONTEND_URL=https://app.sourcetrack.ai`
+- No more hardcoded `localhost` references in production.
+
+### 4. Tracker QA
+- Validated local QA page with `https://api.srctk.com/tracker/tracker.min.js` — loads and fires.
+- Confirmed `/api/track` (POST) works — pageview events ingested.
+- Confirmed `/api/conversion` works via beacon — conversion events ingested.
+- Confirmed UTM/click-id capture: `utm_source=google`, `utm_medium=cpc`, `utm_campaign=qa_test`, `ref=partner`, `source=affiliate`, `via=newsletter`, `gclid=test123`.
+- Confirmed first-touch attribution fields captured correctly.
+
+### 5. Beta onboarding completion
+- `/api/onboarding/complete` no longer requires successful PostHog script verification.
+- Still requires: site exists, `business_type` set, `install_method` set, verification step reached.
+- "Continue to Dashboard" now persists latest onboarding state via `/api/onboarding/update` before calling `/api/onboarding/complete`.
+- Verification status stored as `verification_status: "pending"` in `onboarding_state` — can be verified later from Integrations.
+- **Files:** `api/routes/onboarding.js`, `dashboard/src/pages/Onboarding.jsx`
+
+### 6. CORS fix
+- **Problem:** Browser CORS from `https://www.sourcetrack.ai` to `https://api.srctk.com` failed — OPTIONS preflight hit auth middleware and returned 401.
+- **Fix:** Global OPTIONS middleware runs before any auth routes. Returns 204 with correct `Access-Control-Allow-Origin`.
+- Hardcoded allowed origins: `https://www.sourcetrack.ai`, `https://sourcetrack.ai`, `https://app.sourcetrack.ai`, `http://localhost:5173`, `http://localhost:8080`.
+- Added OPTIONS guard in `requireUserAuth` and `validateSiteKey` as defense-in-depth.
+- Verified: `curl -X OPTIONS` returns 204 with correct CORS headers.
+- **Files:** `api/index.js`, `api/middleware/user-auth.js`, `api/middleware/auth.js`
+
+### 7. Install verification hardening
+- `/api/install/status` no longer returns 500 when PostHog verification fails.
+- PostHog failure now returns safe response: `{ installed: false, verified: false, status: "pending", reason: "verification_unavailable" }`.
+- `validateSiteKey` catch block now returns 401 instead of 500 on Supabase lookup failures.
+- Error logging uses prefixed `[install/status]` and `[validateSiteKey]` for server-side debugging.
+- **Files:** `api/routes/install.js`, `api/middleware/auth.js`
+
+### 8. Deployment note
+- Railway Dashboard deploy may fail with `##NOT-AUTHORIZED## repository not authorized`.
+- Fix: reconnect GitHub repo access for SourceTrack-Dashboard.
+
+### Remaining QA checklist (to verify after latest deploy)
+- Continue to Dashboard after failed verification → should complete onboarding and navigate to `/dashboard`.
+- `/dashboard` loads correctly.
+- Refresh `/dashboard` does not redirect to `/onboarding`.
+- `/api/onboarding/me` returns `onboarding_completed: true`.
+
+### Verification commands
+
+```bash
+# CORS preflight
+curl -i -X OPTIONS "https://api.srctk.com/api/onboarding/complete" \
+  -H "Origin: https://www.sourcetrack.ai" \
+  -H "Access-Control-Request-Method: POST" \
+  -H "Access-Control-Request-Headers: authorization,content-type"
+
+# Health check
+curl -i https://api.srctk.com/health
+
+# Tracker asset
+curl -i https://api.srctk.com/tracker/tracker.min.js
+```
+| 98 | 2026-05-23 | `main` | **Beta QA: Auth → Onboarding → Tracker → Dashboard Flow** (see below) | QA in progress | No |

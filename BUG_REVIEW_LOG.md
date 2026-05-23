@@ -189,3 +189,23 @@ After Session 90.1 implementation, review for any new issues. B6 leads/conversio
 - B2/B2.1: Public ingestion is now `/api/collect`; `/api/events` is authenticated Event Debugger only.
 
 **Risk level:** Low — all changes are surgical bug fixes. No new features, no refactors, no scope creep.
+
+### Session 98 update — Beta QA fixes
+
+**Date:** 2026-05-23
+**Review type:** Production beta QA — Auth → Onboarding → Tracker → Dashboard flow.
+
+**Fixed:**
+
+| # | Issue | Root cause | Fix |
+|---|---|---|---|
+| CORS-1 | OPTIONS /api/onboarding/complete returned 401 | Auth middleware ran before CORS preflight | Global OPTIONS middleware before all routes |
+| OAUTH-1 | Google OAuth stuck on /auth/callback# | AuthCallback rendered spinner forever | Redirect authenticated → /dashboard, unauthenticated → /login |
+| ONB-1 | /api/onboarding/complete returned 400 "business type or install method not set" | Earlier /onboarding/update blocked by CORS, state not persisted | Continue to Dashboard now calls /update then /complete |
+| ONB-2 | /api/onboarding/complete blocked by PostHog verification | PostHog script detection was required to complete | Removed PostHog check; store verification_status in onboarding_state |
+| INST-1 | /api/install/status returned 500 on PostHog failure | Uncaught queryHogQL error → 500 | Returns safe pending response (status:"pending", reason:"verification_unavailable") |
+| AUTH-1 | validateSiteKey returned 500 on Supabase lookup failure | catch block returned 500 | Now returns 401 "Invalid site_key" |
+
+**Build:** ✅ `node --check` all API files clean, `npm run build` passes.
+
+**Remaining QA:** Manual browser verification of Continue to Dashboard flow, dashboard load, refresh redirect, and /api/onboarding/me response.

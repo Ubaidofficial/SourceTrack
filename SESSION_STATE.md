@@ -1,5 +1,5 @@
-Session: 97
-Last Completed: T0.2 — Dark mode (darkMode:class, CSS vars, sun/moon toggle, 30 files)
-Next Task: T3.1 — Add Stripe keys to Railway
-Build: ✅ passing
+Session: 98
+Last Completed: Beta QA — Auth → Onboarding → Tracker → Dashboard Flow
+Next Task: Manual browser QA of remaining checklist items (see SESSION_LOG.md Session 98)
+Build: ✅ passing (node --check + npm run build)
 Branch: main

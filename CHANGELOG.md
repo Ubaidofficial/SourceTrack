@@ -5,6 +5,67 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased] — 2026-05-23
+
+### Beta QA — Auth → Onboarding → Tracker → Dashboard Flow
+
+#### Fixed
+
+**OAuth callback infinite spinner**
+- AuthCallback rendered spinner forever after Google OAuth.
+- Now redirects authenticated users to `/dashboard`, unauthenticated to `/login`.
+- **File:** `dashboard/src/pages/AuthCallback.jsx`
+
+**CORS preflight returning 401**
+- Browser OPTIONS requests from `https://www.sourcetrack.ai` to `https://api.srctk.com` hit auth middleware and returned 401.
+- Added global OPTIONS preflight middleware before all auth routes.
+- Hardcoded allowed origins: `https://www.sourcetrack.ai`, `https://sourcetrack.ai`, `https://app.sourcetrack.ai`, `http://localhost:5173`, `http://localhost:8080`.
+- Added OPTIONS guard in `requireUserAuth` and `validateSiteKey` as defense-in-depth.
+- **Files:** `api/index.js`, `api/middleware/user-auth.js`, `api/middleware/auth.js`
+
+**Onboarding completion blocked by PostHog verification**
+- `/api/onboarding/complete` required successful PostHog script detection.
+- Now only requires: site exists, `business_type` set, `install_method` set, verification step reached.
+- Verification status stored as `verification_status: "pending"` in `onboarding_state`.
+- **File:** `api/routes/onboarding.js`
+
+**Onboarding state not persisted before completion**
+- "Continue to Dashboard" called `/onboarding/complete` directly, but earlier `/onboarding/update` calls were blocked by CORS.
+- Now calls `/onboarding/update` with current selections before `/onboarding/complete`.
+- Shows clear error if `business_type` or `install_method` is missing in local state.
+- **File:** `dashboard/src/pages/Onboarding.jsx`
+
+**Install verification returning 500 on PostHog failure**
+- `/api/install/status` returned 500 when PostHog query failed.
+- Now returns safe response: `{ installed: false, verified: false, status: "pending", reason: "verification_unavailable" }`.
+- **File:** `api/routes/install.js`
+
+**validateSiteKey returning 500 on Supabase failure**
+- Catch block returned 500 for supabase lookup failures.
+- Now returns 401 `{ error: "Invalid site_key" }`.
+- **File:** `api/middleware/auth.js`
+
+#### Changed
+
+**Onboarding UX**
+- Removed unused "Watch Video" button.
+- Added "Log out" button on onboarding header.
+- Made failed script verification non-blocking — "Continue to Dashboard" available after verification fails.
+- **File:** `dashboard/src/pages/Onboarding.jsx`
+
+**API domain configuration**
+- Dashboard now reads `VITE_API_URL`, `VITE_TRACKER_BASE_URL`, and `VITE_FRONTEND_URL` from env vars.
+- Production values: `https://api.srctk.com` / `https://app.sourcetrack.ai`.
+
+#### Verified (Tracker QA)
+- Tracker loads from `https://api.srctk.com/tracker/tracker.min.js`.
+- `/api/track` (POST) ingests pageview events.
+- `/api/conversion` ingests conversion events via beacon.
+- UTM/click-id capture confirmed: `utm_source`, `utm_medium`, `utm_campaign`, `ref`, `source`, `via`, `gclid`.
+- First-touch attribution fields captured.
+
+---
+
 ## [Unreleased] — 2026-05-22
 
 ### Free tier rollout + plan-name realignment
