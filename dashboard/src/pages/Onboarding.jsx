@@ -6,7 +6,7 @@ import { seedReportsForBusiness } from '../lib/seedReports'
 import { useAuth } from '../contexts/AuthContext'
 import {
   Globe, ShoppingCart, CreditCard, Layers,
-  Code, FileCode, Check, X, ArrowRight, Copy, RefreshCw, Play
+  Code, FileCode, Check, X, ArrowRight, ArrowLeft, Copy, RefreshCw, Play
 } from 'lucide-react'
 import OnboardingProgress from '../components/OnboardingProgress'
 import OnboardingCard from '../components/OnboardingCard'
@@ -311,6 +311,9 @@ export default function Onboarding() {
             showBack
             onBack={() => setStep(1)}
           >
+            <button type="button" onClick={() => setStep(1)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-white transition-colors">
+              <ArrowLeft className="w-4 h-4" /> Back
+            </button>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {BUSINESS_TYPES.map((bt) => {
                 const Icon = bt.icon
@@ -348,6 +351,9 @@ export default function Onboarding() {
             showBack
             onBack={() => setStep(2)}
           >
+            <button type="button" onClick={() => setStep(2)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-white transition-colors mb-3">
+              <ArrowLeft className="w-4 h-4" /> Back
+            </button>
             <p className="text-sm font-bold text-[#1F2323] dark:text-gray-100 mb-3">Choose Installation Method</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {INSTALL_METHODS.map((m) => {
@@ -394,6 +400,9 @@ export default function Onboarding() {
             showBack
             onBack={() => setStep(3)}
           >
+            <button type="button" onClick={() => setStep(4)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-white transition-colors mb-3">
+              <ArrowLeft className="w-4 h-4" /> Back
+            </button>
             <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Configure Conversions</p>
             <p className="text-xs text-st-gray dark:text-gray-400 mt-1 mb-4">
               Define what success means for your business. Select or create conversion events to track.
@@ -445,6 +454,9 @@ export default function Onboarding() {
             showBack
             onBack={() => setStep(5)}
           >
+            <button type="button" onClick={() => setStep(5)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-white transition-colors mb-3">
+              <ArrowLeft className="w-4 h-4" /> Back
+            </button>
             <p className="text-sm font-medium text-gray-700 dark:text-white mb-1">
               Let us Verify SourceTrack Script in {installMethod === 'gtm' ? 'GTM' : 'Your Site'}
             </p>
@@ -512,7 +524,7 @@ export default function Onboarding() {
                   onClick={async () => {
                     setError('')
                     if (!businessType || !installMethod) {
-                      setError('Please go back and select your business type and install method.')
+                      setError('Go back to Business Type and Install Method, reselect your choices, then return here to continue.')
                       return
                     }
                     setLoading(true)
@@ -566,6 +578,9 @@ export default function Onboarding() {
         showBack
         onBack={() => setStep(3)}
       >
+        <button type="button" onClick={() => setStep(3)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-white transition-colors mb-3">
+          <ArrowLeft className="w-4 h-4" /> Back
+        </button>
         {isGTM ? (
           <>
             <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Connect SourceTrack via Google Tag Manager</p>
