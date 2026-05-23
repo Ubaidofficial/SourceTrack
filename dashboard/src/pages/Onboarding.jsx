@@ -495,9 +495,11 @@ export default function Onboarding() {
                   <li>Make sure the script is published on your live site</li>
                   <li>It may take 1-2 minutes for the first event to appear</li>
                 </ul>
+                {error && <p className="text-sm text-red-500 mt-3 font-medium">{error}</p>}
                 <div className="flex items-center justify-center gap-3 mt-4">
                   <a href="/debugger" className="text-sm text-st-black dark:text-white hover:underline">Open Event Logger</a>
                   <button
+                    type="button"
                     onClick={handleVerify}
                     className="px-4 py-2 bg-white dark:bg-white/10 text-[#1F2323] dark:text-white border border-gray-200 dark:border-white/10 rounded-xl text-sm font-extrabold hover:bg-gray-50 dark:hover:bg-white/15 flex items-center gap-2"
                   >
@@ -505,15 +507,16 @@ export default function Onboarding() {
                   </button>
                 </div>
                 <button
+                  type="button"
+                  disabled={loading}
                   onClick={async () => {
+                    setError('')
+                    if (!businessType || !installMethod) {
+                      setError('Please go back and select your business type and install method.')
+                      return
+                    }
+                    setLoading(true)
                     try {
-                      if (!businessType || !installMethod) {
-                        setError('Please go back and select your business type and install method.')
-                        return
-                      }
-                      // Persist state before completing — earlier /onboarding/update
-                      // calls may have been blocked by CORS, leaving the backend
-                      // without business_type or install_method.
                       await fetchApi('/onboarding/update', {
                         method: 'POST',
                         body: JSON.stringify({
@@ -526,12 +529,21 @@ export default function Onboarding() {
                       seedReportsForBusiness(businessType, siteKey)
                       navigate('/dashboard', { replace: true, state: { toast: 'Setup complete! Your dashboard is ready.' } })
                     } catch (err) {
+                      setLoading(false)
                       setError(err.message || 'Failed to complete onboarding. Please try again.')
                     }
                   }}
-                  className="mt-4 w-full py-3 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90 flex items-center justify-center gap-2"
+                  className="mt-4 w-full py-3 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
-                  <ArrowRight className="w-4 h-4" /> Continue to Dashboard
+                  {loading ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" /> Completing setup...
+                    </>
+                  ) : (
+                    <>
+                      <ArrowRight className="w-4 h-4" /> Continue to Dashboard
+                    </>
+                  )}
                 </button>
               </div>
             )}
