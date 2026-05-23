@@ -64,7 +64,7 @@ const DATA = {
         number: '01',
         title: 'Add to your Shopify theme or WooCommerce header',
         body: "Paste the 1.7 KB script tag into your theme's <head>. On Shopify, use Online Store → Themes → Edit code → theme.liquid. On WooCommerce, use the header snippet option.",
-        code: `<script async\n  src="https://app.sourcetrack.ai/tracker/tracker.min.js"\n  data-site-key="YOUR_KEY">\n</script>`,
+        code: `<script async\n  src="https://api.sourcetrack.ai/tracker/tracker.min.js"\n  data-site-key="YOUR_KEY">\n</script>`,
       },
       {
         number: '02',

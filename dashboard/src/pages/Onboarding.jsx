@@ -204,8 +204,8 @@ export default function Onboarding() {
         const data = await fetchApi(`/install/snippet?site_id=${siteId}`)
         if (data?.snippet) setSnippet(data.snippet)
       } catch {
-        const apiUrl = import.meta.env.VITE_API_URL || window.location.origin
-        setSnippet(`<script async src="${apiUrl}/tracker/tracker.min.js" data-site-key="${siteKey}"></script>`)
+        const trackerUrl = (import.meta.env.VITE_TRACKER_BASE_URL || import.meta.env.VITE_API_URL || window.location.origin).replace(/\/+$/, '')
+        setSnippet(`<script async src="${trackerUrl}/tracker/tracker.min.js" data-site-key="${siteKey}"></script>`)
       }
     }
     await saveOnboardingState(4, { install_method: method })

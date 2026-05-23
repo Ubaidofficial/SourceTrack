@@ -70,7 +70,7 @@ const DATA = {
         number: '02',
         title: 'Paste the snippet into the client site',
         body: "Send the 1.7 KB script tag to your client's developer or paste it directly if you have CMS access. Shopify, WooCommerce, Webflow, WordPress — all work with the same tag.",
-        code: `<script async\n  src="https://app.sourcetrack.ai/tracker/tracker.min.js"\n  data-site-key="CLIENT_SITE_KEY">\n</script>`,
+        code: `<script async\n  src="https://api.sourcetrack.ai/tracker/tracker.min.js"\n  data-site-key="CLIENT_SITE_KEY">\n</script>`,
       },
       {
         number: '03',

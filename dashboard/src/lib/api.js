@@ -1,6 +1,9 @@
 import { supabase } from './supabase'
 
-const API_BASE = '/api'
+const normalizeBaseUrl = (value) => String(value || '').replace(/\/+$/, '')
+
+const API_ORIGIN = normalizeBaseUrl(import.meta.env.VITE_API_URL || '')
+const API_BASE = `${API_ORIGIN}/api`
 
 async function getAuthHeaders() {
   const { data: { session } } = await supabase.auth.getSession()

@@ -80,7 +80,7 @@ export default function Integrations() {
   const issueCount = safeNumber(alerts.length, 0) + safeNumber(hygieneData?.total_issues, 0)
 
   const snippet = site?.site_key
-    ? `<script async src="${window.location.origin}/tracker/tracker.min.js" data-site-key="${site.site_key}"></script>`
+    ? `<script async src="${(import.meta.env.VITE_TRACKER_BASE_URL || '').replace(/\/+$/, '') || window.location.origin}/tracker/tracker.min.js" data-site-key="${site.site_key}"></script>`
     : ''
 
   const handleCopy = () => {
