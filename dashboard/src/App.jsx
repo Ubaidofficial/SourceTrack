@@ -18,6 +18,7 @@ import ShareDashboard from './pages/ShareDashboard'
 import Billing from './pages/Billing'
 import DataQuality from './pages/DataQuality'
 import Onboarding from './pages/Onboarding'
+import AuthCallback from './pages/AuthCallback'
 import EventDebugger from './pages/EventDebugger'
 import Leads from './pages/Leads'
 import LeadDetail from './pages/LeadDetail'
@@ -150,6 +151,8 @@ export default function App() {
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
             <Route path="/admin" element={<AdminRoute><Layout><Admin /></Layout></AdminRoute>} />
             <Route path="/share/:token" element={<ShareDashboard />} />
+            {/* Auth callback — handles OAuth redirect flow */}
+            <Route path="/auth/callback" element={<AuthCallback />} />
             {/* Public docs — no auth required */}
             <Route path="/docs" element={<Docs />} />
             {/* Public marketing pages — accessible to everyone */}
@@ -163,6 +166,7 @@ export default function App() {
             <Route path="/use-cases/saas" element={<Navigate to="/saas-attribution" replace />} />
             <Route path="/use-cases/ecommerce" element={<Navigate to="/ecommerce-attribution" replace />} />
             <Route path="/use-cases/lead-generation" element={<Navigate to="/lead-gen-attribution" replace />} />
+            <Route path="/use-cases/agencies" element={<Navigate to="/agency-attribution" replace />} />
             {/* Solution pages — public */}
             <Route path="/ecommerce-attribution" element={<SolutionEcommerce />} />
             <Route path="/saas-attribution" element={<SolutionSaaS />} />

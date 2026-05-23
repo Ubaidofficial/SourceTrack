@@ -71,9 +71,7 @@ export default function Signup() {
       await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          // Send OAuth-signed-up users into onboarding by default; the gate
-          // will redirect to /dashboard if they happen to already be set up.
-          redirectTo: `${redirectUrl}/onboarding`
+          redirectTo: `${redirectUrl}/auth/callback`
         }
       })
     } catch (err) {

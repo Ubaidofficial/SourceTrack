@@ -395,7 +395,7 @@ export default function Onboarding() {
             showBack
             onBack={() => setStep(3)}
           >
-            <p className="text-sm font-medium text-gray-700">Configure Conversions</p>
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Configure Conversions</p>
             <p className="text-xs text-st-gray dark:text-gray-400 mt-1 mb-4">
               Define what success means for your business. Select or create conversion events to track.
             </p>
@@ -409,10 +409,10 @@ export default function Onboarding() {
                     disabled={conv.disabled}
                     className={`flex items-start gap-3 p-4 rounded-lg border-2 text-left transition-colors ${
                       conv.disabled
-                        ? 'border-gray-100 dark:border-[#2A2E2E] bg-gray-50 dark:bg-[#111414] opacity-50 cursor-not-allowed'
+                        ? 'border-gray-100 dark:border-[#2A2E2E] bg-gray-50 dark:bg-[#111414] opacity-40 cursor-not-allowed'
                         : selected
-                        ? 'border-st-lime bg-st-lime/10'
-                        : 'border-gray-200 dark:border-[#333838] hover:border-gray-300'
+                        ? 'border-st-lime bg-st-lime/10 dark:bg-st-lime/10'
+                        : 'border-gray-200 dark:border-[#454949] bg-white dark:bg-[#252A29] hover:border-gray-300 dark:hover:border-[#555A5A]'
                     }`}
                   >
                     <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
@@ -421,8 +421,8 @@ export default function Onboarding() {
                       {selected && <Check className="w-3 h-3 text-white" />}
                     </div>
                     <div>
-                      <p className="font-semibold text-sm text-st-black">{conv.label}</p>
-                      <p className="text-xs text-st-gray">{conv.desc}</p>
+                      <p className="font-semibold text-sm text-st-black dark:text-white">{conv.label}</p>
+                      <p className="text-xs text-st-gray dark:text-gray-400">{conv.desc}</p>
                     </div>
                   </button>
                 )
@@ -446,7 +446,7 @@ export default function Onboarding() {
             showBack
             onBack={() => setStep(5)}
           >
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">
+            <p className="text-sm font-medium text-gray-700 dark:text-white mb-1">
               Let us Verify SourceTrack Script in {installMethod === 'gtm' ? 'GTM' : 'Your Site'}
             </p>
             <p className="text-xs text-st-gray dark:text-gray-400 mb-4">
@@ -465,7 +465,7 @@ export default function Onboarding() {
             {verificationState === 'checking' && (
               <div className="text-center py-6">
                 <RefreshCw className="w-8 h-8 animate-spin text-st-gray dark:text-gray-400 mx-auto mb-3" />
-                <p className="text-sm text-gray-600">Checking installation...</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">Checking installation...</p>
                 <p className="text-xs text-st-gray dark:text-gray-400 mt-1">This may take up to 30 seconds</p>
               </div>
             )}
@@ -475,7 +475,7 @@ export default function Onboarding() {
                 <div className="w-12 h-12 rounded-full bg-st-lime/10 dark:bg-st-lime/5 flex items-center justify-center mx-auto mb-3">
                   <Check className="w-6 h-6 text-st-lime" />
                 </div>
-                <p className="text-lg font-semibold text-st-black">Great! Script Verified Successfully</p>
+                <p className="text-lg font-semibold text-st-black dark:text-white">Great! Script Verified Successfully</p>
                 <button
                   onClick={() => { seedReportsForBusiness(businessType, siteKey); navigate('/dashboard', { replace: true, state: { toast: 'Setup complete! Your dashboard is ready.' } }) }}
                   className="mt-4 px-6 py-3 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90 flex items-center gap-2 mx-auto"
@@ -490,7 +490,7 @@ export default function Onboarding() {
                 <div className="w-12 h-12 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center mx-auto mb-3">
                   <X className="w-6 h-6 text-red-500" />
                 </div>
-                <p className="text-lg font-semibold text-st-black">Script not detected yet</p>
+                <p className="text-lg font-semibold text-st-black dark:text-white">Script not detected yet</p>
                 {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
                 <ul className="text-sm text-st-gray dark:text-gray-400 mt-3 space-y-1">
                   <li>Make sure the script is published on your live site</li>
@@ -615,7 +615,7 @@ export default function Onboarding() {
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center" onClick={() => setVideoModalOpen(false)}>
           <div className="bg-white dark:bg-[#1A1D1D] rounded-xl p-8 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-st-black">Watch Video</h3>
+              <h3 className="text-lg font-semibold text-st-black dark:text-white">Watch Video</h3>
               <button onClick={() => setVideoModalOpen(false)}>
                 <X className="w-5 h-5 text-st-gray" />
               </button>

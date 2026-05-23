@@ -1,14 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" fill="none">
-  <!-- Lime app-icon background -->
   <rect x="4" y="4" width="72" height="72" rx="18" fill="#CCF03F"/>
-  <!-- Ring -->
-  <circle cx="40" cy="40" r="24" stroke="#1F2323" stroke-width="2.8" fill="none"/>
-  <!-- Journey path -->
-  <path d="M22 50 Q 40 14 54 30" stroke="#1F2323" stroke-width="2.8" stroke-linecap="round" fill="none"/>
-  <!-- Source node -->
-  <circle cx="22" cy="50" r="4.5" fill="#1F2323"/>
-  <!-- Conversion node -->
-  <circle cx="54" cy="30" r="5" fill="#00AA57"/>
-  <!-- Cursor -->
-  <path d="M52 18 L44 8 L40 14 Z" fill="#1F2323"/>
+  <circle cx="40" cy="40" r="20" stroke="#1F2323" stroke-width="3" fill="none"/>
+  <path d="M27 47 Q 40 24 52 37" stroke="#1F2323" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  <circle cx="27" cy="47" r="3.5" fill="#1F2323"/>
+  <circle cx="52" cy="37" r="3.8" fill="#00AA57"/>
+  <path d="M48 32 L44 26 L42 28 Z" fill="#1F2323"/>
 </svg>
