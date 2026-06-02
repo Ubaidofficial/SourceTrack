@@ -6,6 +6,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const DIST = join(__dirname, 'dist')
 const PORT = process.env.PORT || 3000
 const CANONICAL_HOST = 'www.sourcetrack.ai'
+const APP_HOST = 'app.sourcetrack.ai'
 
 const app = express()
 
@@ -16,7 +17,8 @@ app.use((req, res, next) => {
   const isInternal = host.startsWith('localhost') ||
                      host.startsWith('127.') ||
                      host.endsWith('.railway.app')
-  if (host && host !== CANONICAL_HOST && !isInternal) {
+  const isValidHost = host === CANONICAL_HOST || host === APP_HOST || isInternal
+  if (host && !isValidHost) {
     return res.redirect(301, `https://${CANONICAL_HOST}${req.url}`)
   }
   next()
