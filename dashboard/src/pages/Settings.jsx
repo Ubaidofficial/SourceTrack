@@ -160,18 +160,14 @@ export default function Settings() {
     if (!site) return
     setRetentionSaving(true)
     try {
-      const { data: session } = await supabase.auth.getSession()
-      const token = session?.session?.access_token
-      const res = await fetch('/api/gdpr/retention', {
+      const data = await fetchApi('/gdpr/retention', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ site_key: site.site_key, retention_days: retentionDays })
+        body: { site_key: site.site_key, retention_days: retentionDays }
       })
-      const json = await res.json()
-      setMessage(json.message || (json.success ? 'Retention policy saved.' : 'Error saving.'))
+      setMessage(data.message || 'Retention policy saved.')
       setTimeout(() => setMessage(''), 4000)
-    } catch (_err) {
-      setMessage('Error saving retention policy')
+    } catch (err) {
+      setMessage(err?.message || 'Error saving retention policy')
     } finally {
       setRetentionSaving(false)
     }
@@ -182,19 +178,15 @@ export default function Settings() {
     if (!site || !visitorId.trim()) return
     setVisitorDeleting(true)
     try {
-      const { data: session } = await supabase.auth.getSession()
-      const token = session?.session?.access_token
-      const res = await fetch('/api/gdpr/visitor', {
+      const data = await fetchApi('/gdpr/visitor', {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ site_key: site.site_key, anonymous_id: visitorId.trim() })
+        body: { site_key: site.site_key, anonymous_id: visitorId.trim() }
       })
-      const json = await res.json()
-      setMessage(json.message || (json.success ? 'Visitor data erased.' : 'Error erasing.'))
+      setMessage(data.message || 'Visitor data erased.')
       setVisitorId('')
       setTimeout(() => setMessage(''), 4000)
-    } catch (_err) {
-      setMessage('Error deleting visitor data')
+    } catch (err) {
+      setMessage(err?.message || 'Error deleting visitor data')
     } finally {
       setVisitorDeleting(false)
     }
@@ -204,17 +196,14 @@ export default function Settings() {
     if (deleteAccountConfirm !== 'DELETE') return
     setDeletingAccount(true)
     try {
-      const { data: session } = await supabase.auth.getSession()
-      const token = session?.session?.access_token
-      await fetch('/api/gdpr/account', {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
+      await fetchApi('/gdpr/account', {
+        method: 'DELETE'
       })
       // Force sign out — account no longer exists
       await supabase.auth.signOut()
       window.location.href = '/'
-    } catch (_err) {
-      setMessage('Error deleting account. Please contact support.')
+    } catch (err) {
+      setMessage(err?.message || 'Error deleting account. Please contact support.')
       setDeletingAccount(false)
     }
   }

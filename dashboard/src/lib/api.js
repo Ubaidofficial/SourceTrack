@@ -53,7 +53,7 @@ export async function fetchApi(path, options = {}) {
     throw new Error(data.error || `Request failed with status ${res.status}`)
   }
 
-  return data.data
+  return data.data !== undefined ? data.data : data
 }
 
 export async function getAttribution(siteKey, model, dateFrom, dateTo) {
@@ -69,13 +69,15 @@ export async function getJourney(siteKey, visitorId) {
 export async function createCheckout(siteKey, successUrl, cancelUrl, planKey = 'pro') {
   return fetchApi('/billing/create-checkout', {
     method: 'POST',
-    body: JSON.stringify({ site_key: siteKey, successUrl, cancelUrl, plan_key: planKey })
+    body: { site_key: siteKey, successUrl, cancelUrl, plan: planKey }
   })
 }
 
 export async function getBillingPortal(siteKey, returnUrl) {
-  const params = new URLSearchParams({ site_key: siteKey, return_url: returnUrl })
-  return fetchApi(`/billing/portal?${params}`)
+  return fetchApi('/billing/portal', {
+    method: 'POST',
+    body: { site_key: siteKey, returnUrl }
+  })
 }
 
 export async function getLatestEvents(siteKey) {

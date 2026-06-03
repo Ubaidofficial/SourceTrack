@@ -34,6 +34,29 @@ Session 82 proper will be the manual QA closeout session.
 | 96.4 | 2026-05-16 | `main` | Public dashboard share link — /api/public/:token, public_share_token + public_share_enabled on sites, returns top sources/campaigns/channels | QA passed | — |
 | 97 | T3.4 | Business-type KPI frontend switching | getKpiConfig + enrichKpis helpers, kpiConfig.map KPI strip in Dashboard.jsx | ✅ |
 | 98 | 2026-05-23 | `main` | **Beta QA: Auth → Onboarding → Tracker → Dashboard Flow** (see below) | QA in progress | No |
+| 101.1 | 2026-06-03 | `main` | Fix frontend API bypasses (Billing, Settings, DataQuality pages) via fetchApi helper | ✅ | No |
+
+---
+
+## Session 101.1 — Fix frontend API bypasses
+
+**Date:** 2026-06-03
+**Branch:** `main`
+**Build:** ✅ both `node --check` (all API files) and `npm run build` (dashboard) pass
+
+### 1. Stripe Billing / Checkout Bypasses
+- **Problem:** `Billing.jsx` made relative fetches directly to `/api/billing/create-checkout` and `/api/billing/portal`. In split-domain production, these requests hit the SPA client host and returned `index.html` (HTML).
+- **Fix:** Swapped raw fetches for the centralized `createCheckout` and `getBillingPortal` API helpers.
+- **Helpers update:** Fixed `createCheckout` and `getBillingPortal` in `lib/api.js` to execute POST requests and pass correct plan and return URL body parameters matching the Express API expectations.
+
+### 2. GDPR / Settings Bypasses
+- **Problem:** GDPR actions in `Settings.jsx` bypassed `fetchApi` using raw relative fetch requests to `/api/gdpr/retention`, `/api/gdpr/visitor`, and `/api/gdpr/account`.
+- **Fix:** Rewrote settings functions to use `fetchApi` (auth header injection is handled automatically).
+- **fetchApi refinement:** Enhanced `fetchApi` return statement to support flat responses without nested `data` envelopes (such as those returned by the GDPR routes).
+
+### 3. Data Quality Audit Trigger Bypass
+- **Problem:** Manual quality checks triggered via relative `/api/jobs/data-quality-check` POST requests failed in production.
+- **Fix:** Re-routed the trigger request through `fetchApi`.
 
 ---
 

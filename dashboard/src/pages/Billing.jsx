@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { CreditCard, ExternalLink, Zap, CheckCircle2 } from 'lucide-react'
 import { normalizePlan } from '../lib/planFeatures'
+import { createCheckout, getBillingPortal } from '../lib/api'
 
 // Default pageview limits per plan. The site's own pv_limit column takes precedence.
 const PLAN_DEFAULT_LIMITS = {
@@ -82,27 +83,13 @@ export default function Billing() {
     }
   }
 
-  async function getAuthHeader() {
-    const { data: { session } } = await supabase.auth.getSession()
-    return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token || ''}` }
-  }
-
   async function handleUpgrade(planKey) {
     setUpgradeLoading(planKey)
     try {
-      const headers = await getAuthHeader()
-      const res = await fetch('/api/billing/create-checkout', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          plan: planKey,
-          successUrl: `${window.location.origin}/billing?upgrade=success`,
-          cancelUrl:  `${window.location.origin}/billing`,
-          site_key:   site?.site_key,
-        })
-      })
-      const json = await res.json()
-      if (json?.data?.url) window.location.href = json.data.url
+      const successUrl = `${window.location.origin}/billing?upgrade=success`
+      const cancelUrl  = `${window.location.origin}/billing`
+      const data = await createCheckout(site?.site_key, successUrl, cancelUrl, planKey)
+      if (data?.url) window.location.href = data.url
     } catch (_e) {
       /* silent */
     } finally {
@@ -113,14 +100,9 @@ export default function Billing() {
   async function handlePortal() {
     setPortalLoading(true)
     try {
-      const headers = await getAuthHeader()
-      const res = await fetch('/api/billing/portal', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ returnUrl: `${window.location.origin}/billing` })
-      })
-      const json = await res.json()
-      if (json?.data?.url) window.location.href = json.data.url
+      const returnUrl = `${window.location.origin}/billing`
+      const data = await getBillingPortal(site?.site_key, returnUrl)
+      if (data?.url) window.location.href = data.url
     } catch (_e) {
       /* silent */
     } finally {

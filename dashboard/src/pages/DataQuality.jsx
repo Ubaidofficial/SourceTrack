@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { Shield, RefreshCw, CheckCircle, AlertTriangle, XCircle } from 'lucide-react'
 import { safeNumber } from '../utils/numbers'
+import { fetchApi } from '../lib/api'
 
 const STATUS_ICONS = { ok: CheckCircle, warning: AlertTriangle, critical: XCircle }
 const STATUS_COLORS = { ok: 'text-green-500', warning: 'text-amber-500', critical: 'text-red-500' }
@@ -64,13 +65,8 @@ export default function DataQuality() {
   async function handleRefresh() {
     setRefreshing(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      await fetch('/api/jobs/data-quality-check', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token || ''}`
-        }
+      await fetchApi('/jobs/data-quality-check', {
+        method: 'POST'
       })
       setTimeout(() => loadData(), 5000)
     } catch (_e) {
