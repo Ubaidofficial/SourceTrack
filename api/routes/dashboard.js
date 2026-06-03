@@ -401,8 +401,15 @@ router.get('/cac', validateSiteKey, async (req, res) => {
 
     return res.status(200).json({ success: true, data: results, error: null })
   } catch (_err) {
-    console.error(_err)
-    return res.status(500).json({ success: false, data: null, error: 'CAC calculation failed' })
+    console.error('[dashboard/cac] calculation failed:', _err?.message || _err)
+    return res.status(200).json({
+      success: true,
+      data: {
+        cac_unavailable: true,
+        results: []
+      },
+      error: null
+    })
   }
 })
 

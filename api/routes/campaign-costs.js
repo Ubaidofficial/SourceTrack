@@ -18,7 +18,15 @@ router.get('/', requireUserAuth, validateSiteKey, requireSiteMembership, async (
     if (error) throw error
     res.json({ success: true, data })
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message })
+    console.error('[campaign-costs] query failed:', err?.message || err)
+    res.status(200).json({
+      success: true,
+      data: {
+        campaign_costs_unavailable: true,
+        results: []
+      },
+      error: null
+    })
   }
 })
 

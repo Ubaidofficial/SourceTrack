@@ -381,7 +381,8 @@ export default function Dashboard() {
     },
     enabled: !!site?.site_key && !!overview
   })
-  const cacResults = cacData?.data || []
+  const cacResults = Array.isArray(cacData) ? cacData : (cacData?.results || [])
+  const cacUnavailable = cacData?.cac_unavailable || false
   const avgCAC = (() => {
     const withSpend = cacResults.filter(r => r.cac != null)
     if (withSpend.length === 0) return null
@@ -468,7 +469,26 @@ export default function Dashboard() {
   const installData = overview?.install
   const alerts = overview?.alerts || []
   const derivedInsights = buildDerivedInsights(kpis, aiShareTotal, aiRevResults, activeResults, businessType)
+  const isAnalyticsUnavailable = overview?.analytics_unavailable || false
   const allInsights = [
+    ...(isAnalyticsUnavailable ? [{
+      id: 'analytics_unavailable',
+      type: 'alert',
+      priority: 'high',
+      severity: 'high',
+      title: 'Analytics unavailable',
+      desc: 'Analytics are temporarily unavailable. Showing safe fallback data.',
+      suggested_action: 'Please refresh the page in a few minutes.'
+    }] : []),
+    ...(cacUnavailable ? [{
+      id: 'cac_unavailable',
+      type: 'alert',
+      priority: 'medium',
+      severity: 'medium',
+      title: 'Spend data unavailable',
+      desc: 'Spend data is temporarily unavailable.',
+      suggested_action: 'Please check back in a few minutes.'
+    }] : []),
     ...alerts.map(a => ({ ...a, type: 'alert' })),
     ...derivedInsights
   ]
@@ -847,7 +867,12 @@ export default function Dashboard() {
             {/* Avg CAC KPI tile */}
             <div className="metric-tile bg-white dark:bg-[#1A1D1D] rounded-xl p-5 shadow-sm border border-gray-100 dark:border-[#2A2E2E] flex flex-col gap-1">
               <p className="text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wide">Avg CAC</p>
-              {avgCAC != null ? (
+              {cacUnavailable ? (
+                <>
+                  <p className="text-2xl font-semibold text-amber-500">Unavailable</p>
+                  <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">spend data unavailable</p>
+                </>
+              ) : avgCAC != null ? (
                 <>
                   <p className="text-2xl font-semibold text-st-black dark:text-white tabular-nums">${avgCAC.toFixed(2)}</p>
                   <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">cost per new customer</p>
@@ -965,8 +990,8 @@ export default function Dashboard() {
                     { key: 'conversions', label: 'Conversions', render: (r) => r.conversions, cellClassName: 'text-right text-gray-600' },
                     { key: 'revenue', label: 'Revenue', render: (r) => `$${r.revenue.toFixed(0)}`, cellClassName: 'text-right font-medium text-st-black' },
                     { key: 'rpv', label: 'Rev/Conv', render: (r) => `$${(r.rpv || 0).toFixed(2)}`, cellClassName: 'text-right text-st-gray' },
-                    { key: 'cac', label: 'CAC', render: (r) => r.cac != null ? `$${r.cac.toFixed(2)}` : 'No spend data', cellClassName: 'text-right text-gray-600' },
-                    { key: 'payback', label: 'Payback', render: (r) => r.payback_months != null ? `${r.payback_months.toFixed(1)} mo` : '—', cellClassName: 'text-right text-st-gray' },
+                    { key: 'cac', label: 'CAC', render: (r) => cacUnavailable ? 'Unavailable' : (r.cac != null ? `$${r.cac.toFixed(2)}` : 'No spend data'), cellClassName: 'text-right text-gray-600' },
+                    { key: 'payback', label: 'Payback', render: (r) => cacUnavailable ? 'Unavailable' : (r.payback_months != null ? `${r.payback_months.toFixed(1)} mo` : '—'), cellClassName: 'text-right text-st-gray' },
                     { key: 'status', label: 'Status', render: () => <StatusBadge status="active" label="Active" />, cellClassName: 'text-right' }
                   ]}
                   rows={recentLeadsData}

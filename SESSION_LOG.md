@@ -40,6 +40,26 @@ Session 82 proper will be the manual QA closeout session.
 | 101.4A | 2026-06-03 | `main` | Fix tracker conversion payload parity (ref_param, source_param, via_param) | ✅ | No |
 | 101.4B | 2026-06-03 | `main` | Fix legacy attribution date-range touchpoint truncation | ✅ | No |
 | 101.5 | 2026-06-03 | `main` | Clean up sitemap, robots, auth indexability, and footer use-case links | ✅ | No |
+| 101.6 | 2026-06-03 | `main` | Polished dashboard optional data endpoints (GET /api/dashboard/cac, GET /api/campaign-costs) and Dashboard.jsx page to fail gracefully | ✅ | No |
+
+---
+
+## Session 101.6 — Dashboard Optional Data Fallback Polish
+
+**Date:** 2026-06-03
+**Branch:** `main`
+**Build:** ✅ both `node --check` (all API files) and `npm run build` (dashboard) pass
+
+### 1. Hardened API Failure Responses
+- **Problem:** When the Supabase database is unreachable or table queries error, `/api/dashboard/cac` returned a hard 500 error, and `/api/campaign-costs` returned a hard 500. This could break rendering on the dashboard.
+- **Fix:** Swapped try-catch blocks to return status 200 with standard fallback JSON structures. Specifically, `/cac` returns `{ success: true, data: { cac_unavailable: true, results: [] } }` and `/campaign-costs` returns `{ success: true, data: { campaign_costs_unavailable: true, results: [] } }`.
+
+### 2. Frontend Graceful Fallback Handling
+- **Fix:** Adjusted `Dashboard.jsx` to parse the object-shape error fallback using `Array.isArray(cacData) ? cacData : (cacData?.results || [])`.
+- Added `cacUnavailable` conditional UI rendering for:
+  - Avg CAC KPI Tile: Shows "Unavailable" badge.
+  - Revenue Source Attribution Table: Shows "Unavailable" for CAC and Payback columns.
+  - Insights Dashboard Banner: Displays a warning alert when analytics or spend data is unavailable.
 
 ---
 

@@ -1,3 +1,25 @@
+## Session 101.6 — Dashboard Optional Data Fallback Polish
+
+**Date:** 2026-06-03 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+
+1. **Graceful Optional Data Fallbacks** — Hardened the error pathways of `/api/dashboard/cac` and `/api/campaign-costs` GET routes. Instead of crashing or returning a hard HTTP 500 error when Supabase queries fail (e.g., if database tables are temporarily offline or missing), the API endpoints now return a status 200 with custom fallback object shapes wrapping an empty results array and a clear `_unavailable` flag.
+2. **Graceful Frontend Fallback Extraction** — Updated the `useQuery` parser for `cacData` inside `Dashboard.jsx` to recognize the nested fallback wrapper using:
+   `const cacResults = Array.isArray(cacData) ? cacData : (cacData?.results || [])`
+   `const cacUnavailable = cacData?.cac_unavailable || false`
+3. **Graceful UI Rendering for Unavailable States** — Integrated the `cacUnavailable` status into the dashboard UI:
+   - **Avg CAC Tile**: Renders an amber "Unavailable" text block with a "spend data unavailable" details hint when spend calculations fail.
+   - **Attribution Table**: Renders "Unavailable" in place of numeric/missing strings under the CAC and Payback columns.
+   - **Insights & Alerts Board**: Automatically appends warning cards if analytics or spend data is unavailable.
+
+### Files changed
+- `api/routes/dashboard.js` — Graceful catch block fallback inside the `/cac` endpoint.
+- `api/routes/campaign-costs.js` — Graceful catch block fallback inside the GET `/` endpoint.
+- `dashboard/src/pages/Dashboard.jsx` — Handled `cacUnavailable` conditional rendering in Avg CAC metric tile, sources table columns, and insights panel.
+
+---
+
 ## Session 101.5 — SEO, Sitemap, Robots, and Use-Cases Footer Cleanup
 
 **Date:** 2026-06-03 | **Branch:** `main` | **Build:** ✅ passing

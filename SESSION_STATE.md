@@ -1,5 +1,5 @@
-Session: 101.5
-Last Completed: Updated sitemap.xml, robots.txt, and sitemap entries to align with canonical routes, resolved report-builder robots block, verified auth noindex metadata, and cleaned up footer redirected links.
+Session: 101.6
+Last Completed: Polished dashboard optional data endpoints (GET /api/dashboard/cac and GET /api/campaign-costs) and Dashboard.jsx page to fail gracefully instead of returning hard 500s or breaking the UI.
 Next Task: —
 Build: ✅ passing (node --check + npm run build)
 Branch: main
