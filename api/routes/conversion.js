@@ -6,7 +6,7 @@ import { ph } from '../lib/posthog.js'
 import { dispatchWebhook } from '../lib/webhook.js'
 import { sendMetaCAPI, sendGoogleConversion, sendMicrosoftConversion, sendLinkedInConversion, sendTikTokConversion } from '../lib/conversion-sync.js'
 import { getSupabase } from '../lib/supabase.js'
-import { normalizeUtm, getFirstTouchFields } from '../lib/utils.js'
+import { normalizeUtm, getFirstTouchFields, redactPiiFromObject } from '../lib/utils.js'
 import { hasFeature } from '../lib/plan-features.js'
 
 // In-memory dedup cache — 24h TTL. Prevents duplicate conversions when:
@@ -96,6 +96,14 @@ const getCapiSupabase = getSupabase
 
 export async function conversion(req, res) {
   try {
+    // Ingest-side query parameter redaction to prevent PII leaks
+    if (req.body) {
+      req.body = redactPiiFromObject(req.body)
+      if (req.body.properties && typeof req.body.properties === 'object' && !Array.isArray(req.body.properties)) {
+        req.body.properties = redactPiiFromObject(req.body.properties)
+      }
+    }
+
     const enriched = enrich(req)
 
     const props = {

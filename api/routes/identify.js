@@ -1,10 +1,14 @@
 import { ph } from '../lib/posthog.js'
+import { redactPiiFromObject } from '../lib/utils.js'
 
 export async function identify(req, res) {
   try {
+    if (req.body) {
+      req.body = redactPiiFromObject(req.body)
+    }
     const { anonymous_id, user_id, traits } = req.body
 
-    const setProps = traits || {}
+    const setProps = redactPiiFromObject(traits || {})
     const setOnceProps = {}
 
     if (typeof req.body.source_system === 'string') {

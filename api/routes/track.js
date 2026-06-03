@@ -2,7 +2,7 @@ import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
-import { normalizeUtm } from '../lib/utils.js'
+import { normalizeUtm, redactPiiFromObject } from '../lib/utils.js'
 
 import { getSupabase } from '../lib/supabase.js'
 
@@ -90,6 +90,14 @@ export async function track(req, res) {
     const ua = req.headers['user-agent'] || ''
     if (!ua || BOT_UA_PATTERN.test(ua)) {
       return res.status(200).json({ success: true, data: { received: true, filtered: 'bot' }, error: null })
+    }
+
+    // Ingest-side query parameter redaction to prevent PII leaks
+    if (req.body) {
+      req.body = redactPiiFromObject(req.body)
+      if (req.body.properties && typeof req.body.properties === 'object' && !Array.isArray(req.body.properties)) {
+        req.body.properties = redactPiiFromObject(req.body.properties)
+      }
     }
 
     const enriched = enrich(req)

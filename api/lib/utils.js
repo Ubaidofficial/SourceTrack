@@ -68,3 +68,89 @@ export function getFirstTouchFields(body = {}) {
       props.first_touch_campaign || props.firstTouchCampaign || ''
   }
 }
+
+/**
+ * Redact risky PII query parameters from a URL or referrer string,
+ * while preserving marketing/attribution parameter keys intact.
+ * Uses a safe URL-safe 'REDACTED' placeholder consistent with guidelines.
+ *
+ * @param {string} url - The URL or referrer string to redact.
+ * @returns {string} The sanitized URL.
+ */
+export function redactPiiFromUrl(url) {
+  if (!url || typeof url !== 'string') return url
+
+  try {
+    let isRelative = false
+    let urlObj
+    try {
+      urlObj = new URL(url)
+    } catch (_) {
+      // Try as relative URL
+      urlObj = new URL(url, 'https://relative-base.local')
+      isRelative = true
+    }
+
+    const piiKeys = new Set([
+      'email', 'e', 'user_email', 'customer_email',
+      'phone', 'tel', 'mobile',
+      'first_name', 'last_name', 'full_name', 'name',
+      'password', 'pass',
+      'token', 'access_token', 'refresh_token', 'auth',
+      'key', 'api_key', 'secret',
+      'checkout_id', 'session_id',
+      'invite', 'invite_code', 'auth_code', 'reset_code', 'verification_code', 'code_verifier'
+    ])
+
+    let modified = false
+    urlObj.searchParams.forEach((value, key) => {
+      if (piiKeys.has(key.toLowerCase())) {
+        urlObj.searchParams.set(key, 'REDACTED')
+        modified = true
+      }
+    })
+
+    if (!modified) return url
+
+    let result = isRelative
+      ? urlObj.pathname + urlObj.search + urlObj.hash
+      : urlObj.toString()
+
+    if (isRelative && !url.startsWith('/')) {
+      if (result.startsWith('/')) {
+        result = result.substring(1)
+      }
+    }
+    return result
+  } catch (_) {
+    // Conservative fallback regex redaction if parsing fails completely
+    try {
+      let redactedUrl = url
+      const keysRegex = /([?&])(email|e|user_email|customer_email|phone|tel|mobile|first_name|last_name|full_name|name|password|pass|token|access_token|refresh_token|auth|key|api_key|secret|checkout_id|session_id|invite|invite_code|auth_code|reset_code|verification_code|code_verifier)=([^&#]*)/ig
+      return redactedUrl.replace(keysRegex, '$1$2=REDACTED')
+    } catch (fallbackErr) {
+      return url
+    }
+  }
+}
+
+/**
+ * Scans an object shallowly for URL/referrer keys and redacts them.
+ * Does not touch standard identity identifiers like user_id, customer_id, etc.
+ *
+ * @param {object} obj - Object containing properties or traits.
+ * @returns {object} A sanitized copy of the object.
+ */
+export function redactPiiFromObject(obj) {
+  if (!obj || typeof obj !== 'object') return obj
+
+  const newObj = { ...obj }
+  const urlFields = new Set(['page_url', 'referrer', 'landing_page', 'current_url', 'last_event_url', 'url', 'href'])
+
+  for (const key of Object.keys(newObj)) {
+    if (urlFields.has(key.toLowerCase()) && typeof newObj[key] === 'string') {
+      newObj[key] = redactPiiFromUrl(newObj[key])
+    }
+  }
+  return newObj
+}

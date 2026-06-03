@@ -1,6 +1,33 @@
 > [!NOTE]
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 
+## Session 102.2 — Ingest-Side PII URL/Referrer Redaction
+
+**Date:** 2026-06-03 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+
+1. **Shared Redaction Utilities** — Implemented and exported `redactPiiFromUrl` and `redactPiiFromObject` in `api/lib/utils.js`.
+   - Sanitizes common sensitive query parameter values (emails, phones, passwords, auth tokens, invite codes) in URLs/referrers to `REDACTED` while keeping UTM tags and click-IDs fully intact.
+   - Handles relative URLs gracefully and implements regex fallbacks for parsing safety.
+   - Allows targeted key-based URL/referrer property redaction in custom payload objects without modifying regular traits/identifiers.
+2. **Ingest Sanitize Interceptors** — Updated Express API controllers:
+   - `api/routes/track.js` — Sanitizes `req.body.page_url`, `req.body.referrer`, and `req.body.properties` before they are sent to PostHog, written to webhook targets, or persisted to telemetry tables.
+   - `api/routes/conversion.js` — Sanitizes `req.body.page_url`, `req.body.referrer`, and `req.body.properties` before PostHog dispatch, webhook broadcast, and external CAPI target fan-outs.
+   - `api/routes/identify.js` — Sanitizes `req.body.traits` (redacting specific keys like `page_url`, `referrer`, `landing_page` if present, without altering identity tokens or identifiers).
+3. **Manual Unit Verification** — Added a dedicated local validation script verifying all parameters behave correctly, relative paths parse safely, and invalid strings do not throw exceptions.
+
+### Files changed
+- `api/lib/utils.js` — Added `redactPiiFromUrl` and `redactPiiFromObject`.
+- `api/routes/track.js` — Intercepted track and collect routes to redact parameters.
+- `api/routes/conversion.js` — Intercepted conversion payloads to redact parameters.
+- `api/routes/identify.js` — Sanitized specific URL fields inside traits.
+
+### Next Session Plan
+- **Session 102.3** — SourceTrack Doctor & Tracking Health Alerts.
+
+---
+
 ## Session 102.1 — Snippet Installation Verification Assistant
 
 **Date:** 2026-06-03 | **Branch:** `main` | **Build:** ✅ passing
