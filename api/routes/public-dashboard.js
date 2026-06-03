@@ -8,6 +8,17 @@ const router = express.Router()
 // GET /api/public/:token — no auth, returns dashboard data for public share
 router.get('/:token', async (req, res) => {
   try {
+    if (
+      req.query.site_key || req.query.site_id || req.query.siteKey || req.query.siteId ||
+      req.body?.site_key || req.body?.site_id || req.body?.siteKey || req.body?.siteId
+    ) {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        error: "Public dashboard token determines site scope. Do not pass site scope parameters."
+      })
+    }
+
     const { token } = req.params
     if (!token || token.length < 10) return res.status(404).json({ error: 'Not found' })
 

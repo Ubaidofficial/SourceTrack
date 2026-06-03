@@ -1,7 +1,7 @@
 import { Router } from 'express'
-import { validateSiteKey } from '../middleware/auth.js'
 import { getFlexibleReport } from '../lib/attribution-engine.js'
 import { requireFeature } from '../lib/plan-features.js'
+import { getSupabase as getSupabaseAdmin } from '../lib/supabase.js'
 
 const router = Router()
 
@@ -14,27 +14,61 @@ function escapeCsv(val) {
   return str
 }
 
-router.get('/report', validateSiteKey, async (req, res) => {
+router.get('/report', async (req, res) => {
   try {
     const block = requireFeature(req.site?.plan, 'csv_export', 'CSV export')
     if (block) return res.status(402).json(block)
-    const { model, date_from, date_to, group_by, metric } = req.query
-    const posthogSiteId = String(req.site.id)
+
+    let reportConfig = {}
+    if (req.query.report_id) {
+      const supabase = getSupabaseAdmin()
+      const { data: report, error } = await supabase
+        .from('saved_reports')
+        .select('*')
+        .eq('id', req.query.report_id)
+        .eq('site_id', req.site.id)
+        .maybeSingle()
+
+      if (error || !report) {
+        return res.status(404).json({ success: false, data: null, error: 'Saved report not found or access denied' })
+      }
+      reportConfig = report.config || {}
+    }
+
+    const model = req.query.model || reportConfig.model
+    const date_from = req.query.date_from || reportConfig.date_from
+    const date_to = req.query.date_to || reportConfig.date_to
+    const group_by = req.query.group_by || reportConfig.group_by
+    const metric = req.query.metric || reportConfig.metric
 
     if (!model || !date_from || !date_to || !group_by || !metric) {
       return res.status(400).json({ success: false, data: null, error: 'model, date_from, date_to, group_by, metric are required' })
     }
 
+    const posthogSiteId = String(req.site.id)
+
     const filters = {}
-    if (req.query.filter_source) filters.source = req.query.filter_source
-    if (req.query.filter_medium) filters.medium = req.query.filter_medium
-    if (req.query.filter_campaign) filters.campaign = req.query.filter_campaign
-    if (req.query.filter_ai_source) filters.ai_source = req.query.filter_ai_source
-    if (req.query.filter_country) filters.country = req.query.filter_country
-    if (req.query.filter_device_type) filters.device_type = req.query.filter_device_type
-    if (req.query.filter_is_conversion) filters.is_conversion = req.query.filter_is_conversion
-    if (req.query.filter_has_ai_source) filters.has_ai_source = req.query.filter_has_ai_source
-    if (req.query.filter_min_conversions) filters.min_conversions = req.query.filter_min_conversions
+    const getFilterVal = (key) => req.query[`filter_${key}`] !== undefined ? req.query[`filter_${key}`] : reportConfig[`filter_${key}`]
+
+    const fSource = getFilterVal('source')
+    const fMedium = getFilterVal('medium')
+    const fCampaign = getFilterVal('campaign')
+    const fAiSource = getFilterVal('ai_source')
+    const fCountry = getFilterVal('country')
+    const fDeviceType = getFilterVal('device_type')
+    const fIsConversion = getFilterVal('is_conversion')
+    const fHasAiSource = getFilterVal('has_ai_source')
+    const fMinConversions = getFilterVal('min_conversions')
+
+    if (fSource) filters.source = fSource
+    if (fMedium) filters.medium = fMedium
+    if (fCampaign) filters.campaign = fCampaign
+    if (fAiSource) filters.ai_source = fAiSource
+    if (fCountry) filters.country = fCountry
+    if (fDeviceType) filters.device_type = fDeviceType
+    if (fIsConversion) filters.is_conversion = fIsConversion
+    if (fHasAiSource) filters.has_ai_source = fHasAiSource
+    if (fMinConversions) filters.min_conversions = fMinConversions
 
     const results = await getFlexibleReport(posthogSiteId, model, date_from, date_to, group_by, metric, filters)
 

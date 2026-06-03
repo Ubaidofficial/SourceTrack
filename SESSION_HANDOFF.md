@@ -1,6 +1,25 @@
 > [!NOTE]
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 
+## Session 102.5 — Export & Share Scope Security Hardening
+
+**Date:** 2026-06-04 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+
+1. **Surgical Export Route Hardening** — Confirmed that the `/api/export` router is mounted with site membership authentication middleware (`requireUserAuth, validateSiteKey, requireSiteMembership`) in `api/index.js`. Integrated `getSupabaseAdmin` inside `api/routes/export.js` to query saved reports strictly filtered by both `id` (the client-provided `report_id`) and `site_id` (the backend-resolved `req.site.id`), ensuring that cross-site report lookups fail with a 404/403.
+2. **Override Protections on Public Token Route** — Updated `GET /api/public/:token` inside `api/routes/public-dashboard.js` to check for and reject (`400 Bad Request`) any query or body scope override attempts (`site_key`, `site_id`, `siteKey`, `siteId`). This guarantees that only the site context matching the cryptographically verified token is queried.
+3. **Sensitive Key Check in CSVs** — Confirmed that the `escapeCsv` builder in `api/routes/export.js` only exports aggregated metric columns returned by `getFlexibleReport` (sources, campaign dimensions, etc.), ensuring no raw identifiers (like order IDs, phone numbers, emails, tokens, or customer IDs) are included.
+
+### Files changed
+- `api/routes/export.js` — Secure middleware chain, `report_id` verification, parameter fallback mapping.
+- `api/routes/public-dashboard.js` — Scope override checks on the public token GET handler.
+
+### Next Session Plan
+- **Session 102.6** — Agency Layout Client/Site Switcher Dropdown.
+
+---
+
 ## Session 102.4 — Conversion Deduplication UI Visibility
 
 **Date:** 2026-06-04 | **Branch:** `main` | **Build:** ✅ passing
