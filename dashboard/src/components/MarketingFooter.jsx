@@ -23,10 +23,10 @@ export default function MarketingFooter() {
           </div>
           <div>
             <h4 className="mb-3 text-white text-[13px] uppercase tracking-[0.08em] font-bold">Use cases</h4>
-            <Link to="/use-cases/saas" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">SaaS</Link>
-            <Link to="/use-cases/ecommerce" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Ecommerce</Link>
-            <Link to="/use-cases/lead-generation" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Lead generation</Link>
-            <Link to="/use-cases/agencies" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Agencies</Link>
+            <Link to="/saas-attribution" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">SaaS</Link>
+            <Link to="/ecommerce-attribution" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Ecommerce</Link>
+            <Link to="/lead-gen-attribution" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Lead generation</Link>
+            <Link to="/agency-attribution" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Agencies</Link>
             <Link to="/compare-ga4" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Compare GA4</Link>
           </div>
           <div>

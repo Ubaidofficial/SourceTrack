@@ -39,6 +39,23 @@ Session 82 proper will be the manual QA closeout session.
 | 101.3 | 2026-06-03 | `main` | Clean tracker build pipeline and replace stale api.sourcetrack.ai domain references | ✅ | No |
 | 101.4A | 2026-06-03 | `main` | Fix tracker conversion payload parity (ref_param, source_param, via_param) | ✅ | No |
 | 101.4B | 2026-06-03 | `main` | Fix legacy attribution date-range touchpoint truncation | ✅ | No |
+| 101.5 | 2026-06-03 | `main` | Clean up sitemap, robots, auth indexability, and footer use-case links | ✅ | No |
+
+---
+
+## Session 101.5 — SEO, Sitemap, Robots, and Use-Cases Footer Cleanup
+
+**Date:** 2026-06-03
+**Branch:** `main`
+**Build:** ✅ both `node --check` (all API files) and `npm run build` (dashboard) pass
+
+### 1. Sitemap and Robots Updates
+- **Problem:** `sitemap.xml` was missing key public marketing pages (such as Product, Pricing, GA4 comparison, Attribution). Additionally, the public-facing gate `/report-builder` (which serves a marketing view for logged-out visitors) was blocked in `robots.txt`.
+- **Fix:** Rewrote `sitemap.xml` to include all 12 public marketing pages using canonical URLs and set priority values. Removed the `Disallow: /report-builder` rule from `robots.txt` so the marketing gate page is crawlable.
+
+### 2. Auth Indexability and Footer Links
+- **Problem:** Footer linked to old `/use-cases/*` redirected routes instead of canonical attribution page paths.
+- **Fix:** Swapped footer link paths inside `MarketingFooter.jsx` to `/saas-attribution`, `/ecommerce-attribution`, `/lead-gen-attribution`, and `/agency-attribution` respectively. Verified that auth pages (`/login`, `/signup`, and `/auth/callback`) properly contain `noindex, nofollow` meta tags, and added them to the `robots.txt` disallows list for complete protection.
 
 ---
 

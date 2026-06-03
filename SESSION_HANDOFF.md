@@ -1,3 +1,23 @@
+## Session 101.5 — SEO, Sitemap, Robots, and Use-Cases Footer Cleanup
+
+**Date:** 2026-06-03 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+
+1. **Sitemap and Robots Configuration** — Created a comprehensive `sitemap.xml` listing all 12 public marketing pages with their priorities. Removed the `/report-builder` path block from `robots.txt` since it serves a public marketing gate for anonymous users.
+2. **Auth Indexability Protection** — Added `/login`, `/signup`, and `/auth/callback` to the disallow rules in `robots.txt` and verified that they have `<meta name="robots" content="noindex, nofollow" />` set inside their `<Helmet>` blocks.
+3. **Footer Redirect Link Cleanup** — Updated links in the use cases column of the footer (`MarketingFooter.jsx`) to point directly to the canonical solution URLs rather than old redirected use case routes.
+
+### Files changed
+- `dashboard/public/sitemap.xml` — Included all 12 public marketing page URLs.
+- `dashboard/public/robots.txt` — Removed `/report-builder` disallow; added `/login`, `/signup`, and `/auth/callback` disallows.
+- `dashboard/src/components/MarketingFooter.jsx` — Updated use case links directly to canonical routes.
+
+### Next Session Plan
+- **Session 102.1** — Pending future directives from developer.
+
+---
+
 ## Session 101.4B — Legacy Attribution Date-Range Touchpoint Truncation Fix
 
 **Date:** 2026-06-03 | **Branch:** `main` | **Build:** ✅ passing
@@ -9,8 +29,6 @@
 ### Files changed
 - `api/lib/attribution-engine.js` — Restructured subqueries to LEFT JOIN pageviews with `pv.timestamp <= e_inner.timestamp` and group by the unique conversion UUID `conversion_uuid` instead of `distinct_id`.
 
-### Next Session Plan
-- **Session 102.1** — Pending future directives from developer.
 
 ---
 
