@@ -25,6 +25,7 @@ import { alertsRouter } from './routes/alerts.js'
 import { hygieneRouter } from './routes/hygiene.js'
 import { exportRouter } from './routes/export.js'
 import { onboardingRouter } from './routes/onboarding.js'
+import { sitesRouter } from './routes/sites.js'
 import { dashboardRouter } from './routes/dashboard.js'
 import { aiAnalyticsRouter } from './routes/ai-analytics.js'
 import { leadsRouter } from './routes/leads-server.js'
@@ -268,6 +269,7 @@ app.use('/api/alerts', requireUserAuth, validateSiteKey, requireSiteMembership, 
 app.use('/api/hygiene', requireUserAuth, validateSiteKey, requireSiteMembership, hygieneRouter)
 app.use('/api/export', requireUserAuth, validateSiteKey, requireSiteMembership, exportRouter)
 app.use('/api/onboarding', requireUserAuth, onboardingRouter)
+app.use('/api/sites', requireUserAuth, sitesRouter)
 app.use('/api/dashboard', requireUserAuth, validateSiteKey, requireSiteMembership, dashboardRouter)
 app.use('/api/ai-analytics', requireUserAuth, validateSiteKey, requireSiteMembership, aiAnalyticsRouter)
 app.use('/api/leads', requireUserAuth, validateSiteKey, requireSiteMembership, leadsRouter)

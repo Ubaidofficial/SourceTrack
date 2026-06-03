@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { fetchApi } from '../lib/api'
 import { format, subDays } from 'date-fns'
 import { useAuth } from '../contexts/AuthContext'
+import { useSite } from '../contexts/SiteContext'
 import { Line, Doughnut, Bar } from 'react-chartjs-2'
 import { hasFeature } from '../lib/planFeatures'
 import {
@@ -246,6 +247,7 @@ function buildDerivedInsights(kpis, aiShareTotal, aiRevResults, activeResults, b
 
 export default function Dashboard() {
   const { user } = useAuth()
+  const { activeSite, loading: siteLoading } = useSite()
   const navigate = useNavigate()
   const [site, setSite] = useState(null)
   const [timeRange, setTimeRange] = useState(30)
@@ -272,30 +274,12 @@ export default function Dashboard() {
       } catch { /* corrupt preview data */ }
     }
 
-    // Normal mode: load user's own site
-    async function load() {
-      const { data: member } = await supabase
-        .from('company_members')
-        .select('company_id')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      const query = supabase
-        .from('sites')
-        .select('site_key, name, domain, plan, business_type')
-        .limit(1)
-
-      if (member?.company_id) {
-        query.eq('company_id', member.company_id)
-      } else {
-        query.eq('owner_id', user.id)
-      }
-
-      const { data } = await query.maybeSingle()
-      setSite(data)
+    if (activeSite) {
+      setSite(activeSite)
+    } else {
+      setSite(null)
     }
-    load()
-  }, [user])
+  }, [user, activeSite])
 
   const { data: overview, isLoading } = useQuery({
     queryKey: ['dashboard-overview', site?.site_key, timeRange, previewMode],

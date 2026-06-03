@@ -2,11 +2,12 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, FileBarChart, Route, MessageSquare, Code, Bug, Settings,
   Users, BarChart3, Plug, LogOut, Menu, X, Bot, Shield, TrendingUp, Activity,
-  AlertTriangle, Send, Sun, Moon, CreditCard, BookOpen
+  AlertTriangle, Send, Sun, Moon, CreditCard, BookOpen, ChevronDown
 } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
+import { useSite } from '../contexts/SiteContext'
 import { supabase } from '../lib/supabase'
 import { LogoFull, LogoFullDark } from './Logo'
 
@@ -68,6 +69,7 @@ const PAGE_TITLES = {
 export default function Layout({ children }) {
   const { signOut, user, role } = useAuth()
   const { theme, toggleTheme } = useTheme()
+  const { sites, activeSite, setActiveSiteKey, loading: sitesLoading } = useSite()
   const navigate = useNavigate()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -75,31 +77,22 @@ export default function Layout({ children }) {
   const [trialInfo, setTrialInfo]     = useState(null)
 
   useEffect(() => {
-    if (!user) return
-    async function fetchTrial() {
-      try {
-        const { data: member } = await supabase
-          .from('company_members').select('company_id')
-          .eq('user_id', user.id).maybeSingle()
-        const query = supabase.from('sites').select('plan, created_at').limit(1)
-        if (member?.company_id) query.eq('company_id', member.company_id)
-        else query.eq('owner_id', user.id)
-        const { data } = await query.maybeSingle()
-        if (!data) return
-        // Skip trial banner for super admins — they're internal accounts.
-        if (user.raw_app_meta_data?.role === 'super_admin') return
-        // Only show the trial countdown banner for actual trial accounts.
-        // Free-tier accounts have plan='free' and no trial countdown.
-        if (data.plan === 'trial') {
-          const end  = new Date(new Date(data.created_at).getTime() + 14 * 86400000)
-          const endDate = end ? new Date(end) : null
-          const days = endDate && !isNaN(endDate) ? Math.ceil((endDate - new Date()) / 86400000) : 0
-          setTrialInfo({ daysLeft: Math.max(0, days) })
-        }
-      } catch (_e) { /* silent */ }
+    if (!user || !activeSite) {
+      setTrialInfo(null)
+      return
     }
-    fetchTrial()
-  }, [user])
+    // Skip trial banner for super admins — they're internal accounts.
+    if (user.raw_app_meta_data?.role === 'super_admin') return
+    // Only show the trial countdown banner for actual trial accounts.
+    if (activeSite.plan === 'trial') {
+      const end  = new Date(new Date(activeSite.created_at).getTime() + 14 * 86400000)
+      const endDate = end ? new Date(end) : null
+      const days = endDate && !isNaN(endDate) ? Math.ceil((endDate - new Date()) / 86400000) : 0
+      setTrialInfo({ daysLeft: Math.max(0, days) })
+    } else {
+      setTrialInfo(null)
+    }
+  }, [user, activeSite])
 
   if (location.pathname === '/onboarding') {
     return <>{children}</>
@@ -135,6 +128,53 @@ export default function Layout({ children }) {
           <button className="lg:hidden" onClick={() => setSidebarOpen(false)}>
             <X className="w-5 h-5 text-st-gray dark:text-gray-400" />
           </button>
+        </div>
+
+        {/* Site Switcher */}
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-dark-border bg-gray-50/30 dark:bg-dark-hover/10">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-600 mb-1 select-none">
+            Active Site
+          </p>
+          {sitesLoading ? (
+            <div className="h-9 animate-pulse bg-gray-200 dark:bg-dark-hover rounded-lg" />
+          ) : sites.length > 1 ? (
+            <div className="relative group">
+              <select
+                value={activeSite?.site_key || ''}
+                onChange={(e) => setActiveSiteKey(e.target.value)}
+                className="w-full pl-3 pr-8 py-1.5 text-xs font-semibold text-st-black dark:text-white bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-sm hover:border-st-lime dark:hover:border-st-lime focus:outline-none focus:ring-1 focus:ring-st-lime transition-all appearance-none cursor-pointer font-sans"
+              >
+                {sites.map((s) => (
+                  <option key={s.site_key} value={s.site_key}>
+                    {s.name || s.domain}
+                  </option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none">
+                <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-gray-600 group-hover:text-st-lime transition-colors" />
+              </div>
+            </div>
+          ) : sites.length === 1 ? (
+            <div className="flex items-center justify-between px-3 py-1.5 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-sm">
+              <div className="min-w-0 flex-1 pr-2">
+                <p className="text-xs font-semibold text-st-black dark:text-white truncate">{activeSite?.name || activeSite?.domain}</p>
+                <p className="text-[9px] font-mono text-st-gray dark:text-gray-500 truncate">{activeSite?.site_key}</p>
+              </div>
+              {activeSite?.last_seen_at && (
+                <span className="w-1.5 h-1.5 rounded-full bg-st-lime animate-pulse shrink-0 ml-2" title="Active telemetry detected" />
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                setSidebarOpen(false)
+                navigate('/onboarding')
+              }}
+              className="w-full px-3 py-1.5 text-xs font-semibold text-center text-st-black bg-st-lime hover:bg-st-lime/90 rounded-lg shadow-sm transition-colors"
+            >
+              + Add New Site
+            </button>
+          )}
         </div>
 
         <nav className="flex-1 p-3 overflow-y-auto space-y-4">
@@ -307,33 +347,17 @@ export default function Layout({ children }) {
 }
 
 // ── Inline AI Chat Panel ───────────────────────────────────────────────────
-import { useRef } from 'react'
 import { fetchApi } from '../lib/api'
 
 function AIChatPanel() {
   const { user } = useAuth()
-  const [siteKey, setSiteKey] = useState(null)
+  const { activeSiteKey: siteKey } = useSite()
   const [messages, setMessages] = useState([
     { role: 'assistant', content: 'Hi! Ask me anything about your marketing data — sources, conversions, revenue, AI traffic.' }
   ])
   const [input, setInput]   = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef(null)
-
-  useEffect(() => {
-    async function load() {
-      if (!user) return
-      const { data: member } = await supabase
-        .from('company_members').select('company_id')
-        .eq('user_id', user.id).maybeSingle()
-      const query = supabase.from('sites').select('site_key').limit(1)
-      if (member?.company_id) query.eq('company_id', member.company_id)
-      else query.eq('owner_id', user.id)
-      const { data } = await query.maybeSingle()
-      setSiteKey(data?.site_key || null)
-    }
-    load()
-  }, [user])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })

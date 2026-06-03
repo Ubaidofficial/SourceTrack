@@ -46,6 +46,7 @@ Session 82 proper will be the manual QA closeout session.
 | 102.3 | 2026-06-04 | `main` | Implemented SourceTrack Doctor (Phase 1) dynamic health checks endpoint and dashboard card | ✅ | No |
 | 102.4 | 2026-06-04 | `main` | Implemented safe Conversion Deduplication tracking and UI visibility on the Event Debugger page | ✅ | No |
 | 102.5 | 2026-06-04 | `main` | Hardened CSV exports and public dashboard token route scoping and authentication | ✅ | No |
+| 102.6 | 2026-06-04 | `main` | Implemented Layout-Level Client/Site Switcher Dropdown and explicit activeSite context | ✅ | No |
 
 ---
 

@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HelmetProvider } from 'react-helmet-async'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { SiteProvider } from './contexts/SiteContext'
 import { useEffect, useState } from 'react'
 import { fetchApi } from './lib/api'
 import { initPostHog } from './lib/posthog'
@@ -129,52 +130,54 @@ export default function App() {
     <HelmetProvider>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-            <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
-            <Route path="/leads/:leadId" element={<ProtectedRoute><LeadDetail /></ProtectedRoute>} />
-            <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
-            <Route path="/integrations" element={<ProtectedRoute><Integrations /></ProtectedRoute>} />
-            <Route path="/report-builder" element={<ReportBuilderGate />} />
-            <Route path="/journey" element={<ProtectedRoute><Journey /></ProtectedRoute>} />
-            <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-            <Route path="/ai-chat" element={<ProtectedRoute><AIChat /></ProtectedRoute>} />
-            <Route path="/ai-analytics" element={<ProtectedRoute><AIAnalytics /></ProtectedRoute>} />
-            <Route path="/snippet" element={<ProtectedRoute><Snippet /></ProtectedRoute>} />
-            <Route path="/debugger" element={<ProtectedRoute><EventDebugger /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-            <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
-            <Route path="/data-quality" element={<ProtectedRoute><DataQuality /></ProtectedRoute>} />
-            <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-            <Route path="/admin" element={<AdminRoute><Layout><Admin /></Layout></AdminRoute>} />
-            <Route path="/share/:token" element={<ShareDashboard />} />
-            {/* Auth callback — handles OAuth redirect flow */}
-            <Route path="/auth/callback" element={<AuthCallback />} />
-            {/* Public docs — no auth required */}
-            <Route path="/docs" element={<Docs />} />
-            {/* Public marketing pages — accessible to everyone */}
-            <Route path="/" element={<Landing />} />
-            <Route path="/product" element={<Product />} />
-            <Route path="/attribution" element={<Attribution />} />
-            <Route path="/ai-referral-tracking" element={<AIReferralTracking />} />
-            <Route path="/pricing" element={<Pricing />} />
-            <Route path="/compare-ga4" element={<CompareGA4 />} />
-            {/* Use-case aliases redirect to existing solution pages */}
-            <Route path="/use-cases/saas" element={<Navigate to="/saas-attribution" replace />} />
-            <Route path="/use-cases/ecommerce" element={<Navigate to="/ecommerce-attribution" replace />} />
-            <Route path="/use-cases/lead-generation" element={<Navigate to="/lead-gen-attribution" replace />} />
-            <Route path="/use-cases/agencies" element={<Navigate to="/agency-attribution" replace />} />
-            {/* Solution pages — public */}
-            <Route path="/ecommerce-attribution" element={<SolutionEcommerce />} />
-            <Route path="/saas-attribution" element={<SolutionSaaS />} />
-            <Route path="/lead-gen-attribution" element={<SolutionLeadGen />} />
-            <Route path="/agency-attribution" element={<SolutionAgency />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </BrowserRouter>
+        <SiteProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+              <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
+              <Route path="/leads/:leadId" element={<ProtectedRoute><LeadDetail /></ProtectedRoute>} />
+              <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
+              <Route path="/integrations" element={<ProtectedRoute><Integrations /></ProtectedRoute>} />
+              <Route path="/report-builder" element={<ReportBuilderGate />} />
+              <Route path="/journey" element={<ProtectedRoute><Journey /></ProtectedRoute>} />
+              <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+              <Route path="/ai-chat" element={<ProtectedRoute><AIChat /></ProtectedRoute>} />
+              <Route path="/ai-analytics" element={<ProtectedRoute><AIAnalytics /></ProtectedRoute>} />
+              <Route path="/snippet" element={<ProtectedRoute><Snippet /></ProtectedRoute>} />
+              <Route path="/debugger" element={<ProtectedRoute><EventDebugger /></ProtectedRoute>} />
+              <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+              <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
+              <Route path="/data-quality" element={<ProtectedRoute><DataQuality /></ProtectedRoute>} />
+              <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+              <Route path="/admin" element={<AdminRoute><Layout><Admin /></Layout></AdminRoute>} />
+              <Route path="/share/:token" element={<ShareDashboard />} />
+              {/* Auth callback — handles OAuth redirect flow */}
+              <Route path="/auth/callback" element={<AuthCallback />} />
+              {/* Public docs — no auth required */}
+              <Route path="/docs" element={<Docs />} />
+              {/* Public marketing pages — accessible to everyone */}
+              <Route path="/" element={<Landing />} />
+              <Route path="/product" element={<Product />} />
+              <Route path="/attribution" element={<Attribution />} />
+              <Route path="/ai-referral-tracking" element={<AIReferralTracking />} />
+              <Route path="/pricing" element={<Pricing />} />
+              <Route path="/compare-ga4" element={<CompareGA4 />} />
+              {/* Use-case aliases redirect to existing solution pages */}
+              <Route path="/use-cases/saas" element={<Navigate to="/saas-attribution" replace />} />
+              <Route path="/use-cases/ecommerce" element={<Navigate to="/ecommerce-attribution" replace />} />
+              <Route path="/use-cases/lead-generation" element={<Navigate to="/lead-gen-attribution" replace />} />
+              <Route path="/use-cases/agencies" element={<Navigate to="/agency-attribution" replace />} />
+              {/* Solution pages — public */}
+              <Route path="/ecommerce-attribution" element={<SolutionEcommerce />} />
+              <Route path="/saas-attribution" element={<SolutionSaaS />} />
+              <Route path="/lead-gen-attribution" element={<SolutionLeadGen />} />
+              <Route path="/agency-attribution" element={<SolutionAgency />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </BrowserRouter>
+        </SiteProvider>
       </AuthProvider>
     </QueryClientProvider>
     </HelmetProvider>

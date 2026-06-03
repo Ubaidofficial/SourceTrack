@@ -1,5 +1,32 @@
 > [!NOTE]
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
+>
+> **Handoff:** Session 102.6 migration to centralized `SiteContext`. Dashboard and Settings are now scoped to the active site selected via the new layout dropdown. Remaining legacy pages with direct first-site queries are documented for follow-up cleanup.
+
+## Session 102.6 — Agency Layout Client/Site Switcher Dropdown
+
+**Date:** 2026-06-04 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+
+1. **Surgical Sites Listing API** — Created `GET /api/sites` endpoint in `api/routes/sites.js` and mounted it in `api/index.js` to securely list authorized sites for logged-in users, protecting user privacy and preventing cross-company info disclosure.
+2. **Safe Explicit Site Context** — Created `SiteContext.jsx` implementing standard React context to query, cache, and select active site metadata. Active site key is persisted in localStorage via `sourcetrack_active_site_key`.
+3. **Explicit Page Scoping** — Updated `Dashboard.jsx` and `Settings.jsx` to explicitly consume active site key/state from context, making all downstream analytical queries reactive without any monkey-patching or client-side interception.
+4. **Layout Switcher UI** — Rendered a beautiful, responsive client switcher inside `Layout.jsx` sidebar, showing a static badge for single-site users, a styled dropdown for multi-site users, and onboarding link for zero-site users.
+
+### Files changed
+- `api/index.js` — Registered sitesRouter.
+- `api/routes/sites.js` — Secure sites list API route.
+- `dashboard/src/contexts/SiteContext.jsx` — Site Context state provider.
+- `dashboard/src/App.jsx` — Wrap router with SiteProvider.
+- `dashboard/src/components/Layout.jsx` — Sidebar client switcher UI panel and Chat siteKey update.
+- `dashboard/src/pages/Dashboard.jsx` — Consumes activeSite.
+- `dashboard/src/pages/Settings.jsx` — Consumes activeSite and updates loadSite.
+
+### Next Session Plan
+- **Session 102.7** — Server-Side Plan Feature Gate Middleware.
+
+---
 
 ## Session 102.5 — Export & Share Scope Security Hardening
 

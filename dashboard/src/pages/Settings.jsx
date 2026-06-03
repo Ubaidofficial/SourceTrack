@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { useSite } from '../contexts/SiteContext'
 import { supabase } from '../lib/supabase'
 import { getBillingPortal, fetchApi } from '../lib/api'
 import { Copy, Check, ExternalLink, Globe, Link2, CreditCard, Link, ShieldCheck, Trash2, AlertTriangle, Clock } from 'lucide-react'
@@ -7,6 +8,7 @@ import UTMBuilder from '../components/UTMBuilder'
 
 export default function Settings() {
   const { user } = useAuth()
+  const { activeSite } = useSite()
 
   const [site, setSite]                 = useState(null)
   const [name, setName]                 = useState('')
@@ -29,20 +31,26 @@ export default function Settings() {
   const [attrWindow, setAttrWindow]                 = useState(30)
   const [attrWindowSaving, setAttrWindowSaving]     = useState(false)
 
-  useEffect(() => { loadSite() }, [user])
+  useEffect(() => { loadSite() }, [user, activeSite])
 
   async function loadSite() {
-    const { data: member } = await supabase
-      .from('company_members')
-      .select('company_id')
-      .eq('user_id', user.id)
-      .maybeSingle()
+    if (!activeSite?.site_key) {
+      setSite(null)
+      return
+    }
 
-    const query = supabase.from('sites').select('*, cookieless_mode, data_retention_days, attribution_window_days').limit(1)
-    if (member?.company_id) query.eq('company_id', member.company_id)
-    else query.eq('owner_id', user.id)
+    let query = supabase
+      .from('sites')
+      .select('*, cookieless_mode, data_retention_days, attribution_window_days')
+
+    if (activeSite.id) {
+      query = query.eq('id', activeSite.id)
+    }
+
+    query = query.eq('site_key', activeSite.site_key)
 
     const { data } = await query.maybeSingle()
+
     setSite(data)
     if (data) {
       setShareEnabled(!!data.public_share_enabled)
@@ -57,6 +65,10 @@ export default function Settings() {
 
   const handleSave = async (e) => {
     e.preventDefault()
+    if (!site || !activeSite || site.id !== activeSite.id || site.site_key !== activeSite.site_key) {
+      setMessage('Active site context mismatch. Please try again.')
+      return
+    }
     setSaving(true)
     setMessage('')
     try {
@@ -95,7 +107,7 @@ export default function Settings() {
   }
 
   const handlePortal = async () => {
-    if (!site) return
+    if (!site || !activeSite || site.id !== activeSite.id || site.site_key !== activeSite.site_key) return
     setLoadingPortal(true)
     setMessage('')
     try {
@@ -110,7 +122,7 @@ export default function Settings() {
   }
 
   const handleShareToggle = async () => {
-    if (!site) return
+    if (!site || !activeSite || site.id !== activeSite.id || site.site_key !== activeSite.site_key) return
     setShareLoading(true)
     try {
       const newEnabled = !shareEnabled
@@ -137,7 +149,7 @@ export default function Settings() {
   }
 
   const handleCookielessToggle = async () => {
-    if (!site) return
+    if (!site || !activeSite || site.id !== activeSite.id || site.site_key !== activeSite.site_key) return
     setCookielessLoading(true)
     try {
       const newMode = !cookielessMode
@@ -157,7 +169,7 @@ export default function Settings() {
   }
 
   const handleRetentionSave = async () => {
-    if (!site) return
+    if (!site || !activeSite || site.id !== activeSite.id || site.site_key !== activeSite.site_key) return
     setRetentionSaving(true)
     try {
       const data = await fetchApi('/gdpr/retention', {
@@ -175,7 +187,7 @@ export default function Settings() {
 
   const handleVisitorDelete = async (e) => {
     e.preventDefault()
-    if (!site || !visitorId.trim()) return
+    if (!site || !activeSite || site.id !== activeSite.id || site.site_key !== activeSite.site_key || !visitorId.trim()) return
     setVisitorDeleting(true)
     try {
       const data = await fetchApi('/gdpr/visitor', {
@@ -209,7 +221,7 @@ export default function Settings() {
   }
 
   const handleAttrWindowSave = async () => {
-    if (!site) return
+    if (!site || !activeSite || site.id !== activeSite.id || site.site_key !== activeSite.site_key) return
     setAttrWindowSaving(true)
     setMessage('')
     try {

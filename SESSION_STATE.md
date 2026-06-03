@@ -1,5 +1,5 @@
-Session: 102.5
-Last Completed: Implemented Session 102.5 (Export & Share Scope Security Hardening). Ensured GET /api/export/report is protected by workspace membership auth (mounted at router level), scoped report_id queries strictly to the validated req.site.id, and rejected query/body site scoping overrides on public token route GET /api/public/:token.
-Next Task: Session 102.6 (Agency Layout Client/Site Switcher Dropdown)
+Session: 102.6
+Last Completed: Implemented Session 102.6 (Agency Layout Client/Site Switcher Dropdown). Created backend GET /api/sites scoped by membership, implemented React SiteContext for frontend active site persistence (sourcetrack_active_site_key), integrated Client/Site switcher dropdown/badge into Sidebar Layout, and explicitly bound activeSite context to Dashboard.jsx and Settings.jsx.
+Next Task: Session 102.7 — Server-Side Plan Feature Gate Middleware
 Build: ✅ passing (node --check + npm run build)
 Branch: main
