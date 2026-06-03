@@ -249,6 +249,7 @@ export default function Onboarding() {
   }
 
   async function handleVerify() {
+    setError('')
     setVerificationState('checking')
     let attempts = 0
     const maxAttempts = 6
@@ -256,9 +257,8 @@ export default function Onboarding() {
     async function poll() {
       try {
         const params = new URLSearchParams({ site_key: siteKey })
-        // fetchApi sends the auth token + unwraps the { success, data, error }
-        // envelope so we read installStatus.status directly.
         const installStatus = await fetchApi(`/install/status?${params}`)
+
         if (installStatus?.status === 'verified') {
           setVerificationState('success')
           const completeRes = await fetchApi('/onboarding/complete', {
@@ -276,15 +276,35 @@ export default function Onboarding() {
           }, 1500)
           return
         }
-      } catch {
-        /* retry */
+
+        if (installStatus?.status === 'wrong_domain') {
+          setVerificationState('wrong_domain')
+          setError(installStatus.message || 'Incorrect domain detected.')
+          return
+        }
+
+        if (installStatus?.status === 'error') {
+          setVerificationState('api_failed')
+          setError(installStatus.message || 'Verification check failed.')
+          return
+        }
+      } catch (err) {
+        const msg = err.message || ''
+        if (msg.includes('site_key') || msg.includes('unauthorized') || msg.includes('Invalid')) {
+          setVerificationState('wrong_site_key')
+          setError('Invalid site key detected. Please verify your snippet.')
+          return
+        }
+        setVerificationState('api_failed')
+        setError(msg || 'Network or API error occurred.')
+        return
       }
+
       attempts++
       if (attempts < maxAttempts) {
-        setVerificationState('checking')
         setTimeout(poll, 5000)
       } else {
-        setVerificationState('failed')
+        setVerificationState(prev => (prev === 'checking' ? 'failed' : prev))
       }
     }
 
@@ -522,18 +542,33 @@ export default function Onboarding() {
               </div>
             )}
 
-            {verificationState === 'failed' && (
+            {['failed', 'wrong_domain', 'wrong_site_key', 'api_failed'].includes(verificationState) && (
               <div className="text-center py-6">
                 <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center mx-auto mb-3">
                   <X className="w-6 h-6 text-amber-500" />
                 </div>
-                <p className="text-lg font-semibold text-st-black dark:text-white">Script not detected yet</p>
-                <p className="text-sm text-st-gray dark:text-gray-400 mt-2">Setup saved. You can verify the script later from Integrations.</p>
-                <ul className="text-sm text-st-gray dark:text-gray-400 mt-3 space-y-1">
-                  <li>Make sure the script is published on your live site</li>
-                  <li>It may take 1-2 minutes for the first event to appear</li>
-                </ul>
+                <p className="text-lg font-semibold text-st-black dark:text-white">
+                  {verificationState === 'wrong_domain' ? 'Incorrect domain detected' :
+                   verificationState === 'wrong_site_key' ? 'Invalid site key' :
+                   verificationState === 'api_failed' ? 'Verification check failed' :
+                   'Script not detected yet'}
+                </p>
+                <p className="text-sm text-st-gray dark:text-gray-400 mt-2">
+                  {verificationState === 'wrong_domain' ? 'We received an event, but it came from a different domain.' :
+                   verificationState === 'wrong_site_key' ? 'The site key used for verification is invalid.' :
+                   verificationState === 'api_failed' ? 'We encountered an error connecting to the verification server.' :
+                   'Setup saved. You can verify the script later from Integrations.'}
+                </p>
+
+                {verificationState === 'failed' && (
+                  <ul className="text-sm text-st-gray dark:text-gray-400 mt-3 space-y-1">
+                    <li>Make sure the script is published on your live site</li>
+                    <li>It may take 1-2 minutes for the first event to appear</li>
+                  </ul>
+                )}
+
                 {error && <p className="text-sm text-red-500 mt-3 font-medium">{error}</p>}
+
                 <div className="flex items-center justify-center gap-3 mt-4">
                   <a href="/debugger" className="text-sm text-st-black dark:text-white hover:underline">Open Event Logger</a>
                   <button

@@ -4,9 +4,60 @@ import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
 import { normalizeUtm } from '../lib/utils.js'
 
+import { getSupabase } from '../lib/supabase.js'
+
 // Same crawler pattern used by /api/analytics/collect — keeps PostHog event
 // counts clean (Googlebot, Lighthouse, scripted clients don't represent users).
 const BOT_UA_PATTERN = /bot|crawl|spider|slurp|mediapartners|adsbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot|discordbot|applebot|bingpreview|googleweblight|lighthouse|pagespeed|headlesschrome|phantomjs|selenium|puppeteer|playwright|wget|curl\/|python-requests|axios\/|go-http|java\/|ruby\/|php\//i
+
+async function updateTelemetryMetadata(site, body) {
+  try {
+    const supabase = getSupabase()
+    const now = new Date().toISOString()
+
+    // Parse event domain
+    const pageUrl = body.page_url || ''
+    let eventDomain = null
+    try {
+      if (pageUrl) {
+        eventDomain = new URL(pageUrl).hostname.replace(/^www\./i, '')
+      }
+    } catch (_) {}
+
+    // First fetch the latest onboarding_state to prevent race conditions during onboarding
+    // (stale cache won't overwrite fresh step-selections in DB)
+    const { data } = await supabase
+      .from('sites')
+      .select('last_seen_at, onboarding_state')
+      .eq('id', site.id)
+      .single()
+
+    // Authoritative throttle check against fresh DB data
+    const freshLastSeenAt = data?.last_seen_at ? new Date(data.last_seen_at).getTime() : 0
+    const isStale = !freshLastSeenAt || Number.isNaN(freshLastSeenAt) || Date.now() - freshLastSeenAt > 5 * 60 * 1000
+
+    if (!isStale) return // Skip update, already processed recently
+
+    const currentState = data?.onboarding_state || {}
+    const mergedState = {
+      ...currentState,
+      last_event_at: now,
+      last_event_name: body.event || '$pageview',
+      last_event_url: pageUrl,
+      last_event_domain: eventDomain
+    }
+
+    await supabase
+      .from('sites')
+      .update({
+        last_seen_at: now,
+        onboarding_state: mergedState
+      })
+      .eq('id', site.id)
+  } catch (err) {
+    console.error('[telemetry-update] failed:', err?.message)
+  }
+}
 
 function enrich(req) {
   const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || ''
@@ -85,6 +136,19 @@ export async function track(req, res) {
           : {})
       }
     })
+
+    // Update telemetry metadata asynchronously & throttled (non-blocking)
+    // We use req.site from auth middleware which caches basic details
+    try {
+      const lastSeenAt = req.site.last_seen_at ? new Date(req.site.last_seen_at).getTime() : 0
+      const lastSeenIsStale = !lastSeenAt || Number.isNaN(lastSeenAt) || Date.now() - lastSeenAt > 5 * 60 * 1000
+      const shouldUpdate = lastSeenIsStale
+
+      if (shouldUpdate) {
+        // Execute without awaiting to avoid blocking response
+        updateTelemetryMetadata(req.site, req.body).catch(() => {});
+      }
+    } catch (_) {}
 
     res.status(200).json({ success: true, data: { received: true }, error: null })
   } catch (err) {

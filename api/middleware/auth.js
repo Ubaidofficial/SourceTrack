@@ -44,7 +44,7 @@ export async function validateSiteKey(req, res, next) {
     const supabase = getSupabase()
     const { data, error } = await supabase
       .from('sites')
-      .select('id, plan, pv_limit, created_at, company_id, owner_id, business_type, trial_ends_at, attribution_window_days')
+      .select('id, plan, pv_limit, created_at, company_id, owner_id, business_type, trial_ends_at, attribution_window_days, onboarding_completed, last_seen_at, onboarding_state, domain')
       .eq('site_key', siteKey)
       .single()
 
@@ -91,7 +91,11 @@ export async function validateSiteKey(req, res, next) {
       owner_id: data.owner_id,
       business_type: data.business_type || null,
       trial_ends_at: data.trial_ends_at || null,
-      attribution_window_days: data.attribution_window_days || 30
+      attribution_window_days: data.attribution_window_days || 30,
+      onboarding_completed: !!data.onboarding_completed,
+      last_seen_at: data.last_seen_at || null,
+      onboarding_state: data.onboarding_state || {},
+      domain: data.domain || null
     }
 
     // Store in cache — include plan/trial_ends_at so cache can do quick plan checks

@@ -1,3 +1,25 @@
+## Session 102.1 — Snippet Installation Verification Assistant
+
+**Date:** 2026-06-03 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+
+1. **Direct Telemetry Metadata Update** — Added a throttled, non-blocking telemetry metadata update helper to `api/routes/track.js` and `api/routes/conversion.js`. This writes the `last_seen_at` and `onboarding_state` directly to the `sites` table upon successful event ingestion, eliminating the need to query the database repeatedly.
+2. **Supabase Verification Endpoint** — Rewrote the `/api/install/status` endpoint in `api/routes/install.js` to directly read the lightweight telemetry data from the `sites` table instead of relying on slow/failing PostHog `queryHogQL` calls.
+3. **Domain Validation & Enhanced UI** — The `/status` endpoint now correctly verifies if an event came from a different domain. Updated `dashboard/src/pages/Onboarding.jsx` to parse and render these specific verification states (`wrong_domain`, `wrong_site_key`, `api_failed`) directly in the UI.
+
+### Files changed
+- `api/middleware/auth.js` — Appended telemetry fields to the site cache layer.
+- `api/routes/track.js` — Throttled metadata writes.
+- `api/routes/conversion.js` — Throttled metadata writes.
+- `api/routes/install.js` — Rewritten verification querying Supabase.
+- `dashboard/src/pages/Onboarding.jsx` — Handled new states (`wrong_domain`, `wrong_site_key`, `api_failed`) and stopped polling efficiently.
+
+### Next Session Plan
+- **Session 102.2** — SourceTrack Doctor & Tracking Health Alerts.
+
+---
+
 ## Session 101.6 — Dashboard Optional Data Fallback Polish
 
 **Date:** 2026-06-03 | **Branch:** `main` | **Build:** ✅ passing

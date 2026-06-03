@@ -41,6 +41,7 @@ Session 82 proper will be the manual QA closeout session.
 | 101.4B | 2026-06-03 | `main` | Fix legacy attribution date-range touchpoint truncation | ✅ | No |
 | 101.5 | 2026-06-03 | `main` | Clean up sitemap, robots, auth indexability, and footer use-case links | ✅ | No |
 | 101.6 | 2026-06-03 | `main` | Polished dashboard optional data endpoints (GET /api/dashboard/cac, GET /api/campaign-costs) and Dashboard.jsx page to fail gracefully | ✅ | No |
+| 102.1 | 2026-06-03 | `main` | Replaced PostHog onboarding verification with direct SourceTrack ingestion check | ✅ | No |
 
 ---
 

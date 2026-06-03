@@ -1,8 +1,8 @@
 import { Router } from 'express'
 import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
-import { queryHogQL } from '../lib/posthog.js'
+
 import { getSupabase } from '../lib/supabase.js'
-import { esc } from '../lib/utils.js'
+
 
 const normalizeBaseUrl = (value) => String(value || '').replace(/\/+$/, '');
 
@@ -55,55 +55,81 @@ router.get('/snippet', async (req, res) => {
 
 router.get('/status', validateSiteKey, requireSiteMembership, async (req, res) => {
   try {
-    const siteKey = req.query.site_key || req.body?.site_key
+    const supabase = getSupabase()
+    const { data: site, error } = await supabase
+      .from('sites')
+      .select('id, site_key, domain, last_seen_at, onboarding_state')
+      .eq('id', req.site.id)
+      .single()
 
-    const sql = `
-      SELECT
-        event,
-        timestamp,
-        properties.page_url AS page_url
-      FROM events
-      WHERE properties.site_id = '${esc(req.site.id)}'
-      ORDER BY timestamp DESC
-      LIMIT 1
-    `
+    if (error || !site) {
+      return res.status(404).json({ success: false, data: null, error: 'Site not found' })
+    }
 
-    const rows = await queryHogQL(sql, 'install_status')
-
-    if (!rows || rows.length === 0) {
+    if (!site.last_seen_at) {
       return res.status(200).json({
         success: true,
-        data: { status: 'not_installed', last_event: null, domain: null },
+        data: {
+          verified: false,
+          status: 'pending',
+          message: 'Waiting for the first pageview event...',
+          last_seen_at: null,
+          domain: null
+        },
         error: null
       })
     }
 
-    const [event, timestamp, pageUrl] = rows[0]
-    let domain = null
-    try {
-      if (pageUrl) domain = new URL(pageUrl).hostname
-    } catch (_e) { /* ignore */ }
+    const state = site.onboarding_state || {}
+    const lastEventAt = site.last_seen_at
+    const lastEventName = state.last_event_name || '$pageview'
+    const lastEventUrl = state.last_event_url || ''
+    const lastEventDomain = state.last_event_domain || null
+
+    const normalizeDomain = (d) => String(d || '').trim().toLowerCase().replace(/^www\./i, '')
+    const registeredDomain = normalizeDomain(site.domain)
+    const eventDomain = normalizeDomain(lastEventDomain)
+
+    if (eventDomain && registeredDomain && eventDomain !== registeredDomain) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          verified: false,
+          status: 'wrong_domain',
+          last_seen_at: lastEventAt,
+          last_event_name: lastEventName,
+          last_event_url: lastEventUrl,
+          site_key: site.site_key,
+          domain: lastEventDomain,
+          message: `We detected an event from '${lastEventDomain}', but this site is registered for '${site.domain}'.`
+        },
+        error: null
+      })
+    }
 
     return res.status(200).json({
       success: true,
       data: {
+        verified: true,
         status: 'verified',
-        last_event: timestamp,
-        last_event_type: event,
-        domain
+        last_seen_at: lastEventAt,
+        last_event_name: lastEventName,
+        last_event_url: lastEventUrl,
+        site_key: site.site_key,
+        domain: lastEventDomain || site.domain,
+        message: 'Snippet verified successfully!'
       },
       error: null
     })
   } catch (_err) {
-    console.error('[install/status] PostHog query failed:', _err?.message || _err)
+    console.error('[install/status] query failed:', _err?.message || _err)
     return res.status(200).json({
       success: true,
       data: {
-        installed: false,
         verified: false,
-        status: 'pending',
-        reason: 'verification_unavailable',
-        last_event: null,
+        status: 'error',
+        message: 'Verification check failed',
+        last_seen_at: null,
         domain: null
       },
       error: null
