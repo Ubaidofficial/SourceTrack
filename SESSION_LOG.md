@@ -36,6 +36,23 @@ Session 82 proper will be the manual QA closeout session.
 | 98 | 2026-05-23 | `main` | **Beta QA: Auth → Onboarding → Tracker → Dashboard Flow** (see below) | QA in progress | No |
 | 101.1 | 2026-06-03 | `main` | Fix frontend API bypasses (Billing, Settings, DataQuality pages) via fetchApi helper | ✅ | No |
 | 101.2 | 2026-06-03 | `main` | Stabilize onboarding back-step saving and resume snippet generation | ✅ | No |
+| 101.3 | 2026-06-03 | `main` | Clean tracker build pipeline and replace stale api.sourcetrack.ai domain references | ✅ | No |
+
+---
+
+## Session 101.3 — Tracker Build Pipeline and Documentation Domains
+
+**Date:** 2026-06-03
+**Branch:** `main`
+**Build:** ✅ both `node --check` (all API files) and `npm run build` (dashboard) pass
+
+### 1. Tracker Build Script Cleaned
+- **Problem:** `npm run build:tracker` referenced the missing `tracker/loader.js` script, causing it to fail.
+- **Fix:** Removed the `esbuild tracker/loader.js` compilation step from the root `package.json` and rebuilt the minified `tracker/tracker.min.js`.
+
+### 2. Stale Domain References Replaced
+- **Problem:** Code snippets and examples in solution pages and documentation still referenced the stale domain `https://api.sourcetrack.ai`.
+- **Fix:** Swapped `https://api.sourcetrack.ai` with the correct ingestion and tracker domain `https://api.srctk.com` across `SolutionSaaS.jsx`, `SolutionEcommerce.jsx`, `SolutionAgency.jsx`, `SolutionLeadGen.jsx`, `Docs.jsx`, and a comment in `api/routes/proxy.js`.
 
 ---
 

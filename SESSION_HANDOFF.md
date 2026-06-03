@@ -1,3 +1,31 @@
+## Session 101.3 — Tracker Build Pipeline and Documentation Domains
+
+**Date:** 2026-06-03 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+
+1. **Tracker Build Script Cleaned** — Removed `esbuild tracker/loader.js` step from `build:tracker` in `package.json` and successfully rebuilt `tracker/tracker.min.js`.
+2. **Stale Domain References Replaced** — Replaced all instances of stale `https://api.sourcetrack.ai` domain with the correct ingestion and tracker domain `https://api.srctk.com` in:
+   - `dashboard/src/pages/Docs.jsx`
+   - `dashboard/src/pages/SolutionEcommerce.jsx`
+   - `dashboard/src/pages/SolutionAgency.jsx`
+   - `dashboard/src/pages/SolutionSaaS.jsx`
+   - Comment in `api/routes/proxy.js`
+
+### Files changed
+- `package.json` — Cleaned `build:tracker` script by removing the missing `tracker/loader.js` reference.
+- `tracker/tracker.min.js` — Rebuilt the minified tracker script.
+- `dashboard/src/pages/Docs.jsx` — Updated code examples, URL base variables, and curl instructions to use the live domain.
+- `dashboard/src/pages/SolutionEcommerce.jsx` — Fixed domain inside code block snippet.
+- `dashboard/src/pages/SolutionAgency.jsx` — Fixed domain inside code block snippet.
+- `dashboard/src/pages/SolutionSaaS.jsx` — Fixed domain inside code block snippet.
+- `api/routes/proxy.js` — Updated domain reference in comments.
+
+### Next Session Plan
+- **Session 102.1** — Pending future directives from developer.
+
+---
+
 ## Session 101.2 — Onboarding Back-Step Saving & Resume Snippet Stabilization
 
 **Date:** 2026-06-03 | **Branch:** `main` | **Build:** ✅ passing
@@ -12,8 +40,6 @@
 - `api/routes/onboarding.js` — Relaxed back-step saves, prevented data-loss deletion, and preserved maximum stepper progress.
 - `dashboard/src/pages/Onboarding.jsx` — Added on-mount snippet fetching for resumed steps >= 4.
 
-### Next Session Plan
-- **Session 101.3** — Clean Tracker Build Pipeline and Documentation Domains.
 
 ---
 

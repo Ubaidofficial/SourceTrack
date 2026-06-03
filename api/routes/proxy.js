@@ -1,6 +1,6 @@
 /**
  * Server-side event proxy for adblocker bypass
- * Users CNAME: analytics.theirdomain.com → api.sourcetrack.ai
+ * Users CNAME: analytics.theirdomain.com → api.srctk.com
  * Tracker sends to: https://analytics.theirdomain.com/sp/e
  * Bypasses uBlock/Brave/Firefox ETP which block known tracker domains
  */

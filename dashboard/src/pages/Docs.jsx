@@ -266,7 +266,7 @@ export default function Docs() {
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
               {[
-                { label: 'Base URL', value: 'https://api.sourcetrack.ai' },
+                { label: 'Base URL', value: 'https://api.srctk.com' },
                 { label: 'Response format', value: 'JSON — always { success, data, error }' },
                 { label: 'Authentication', value: 'Bearer token (user API routes) or site_key (tracking)' },
                 { label: 'Rate limits', value: '1 000 req/min (tracking), 60 req/min (analytics)' },
@@ -286,7 +286,7 @@ export default function Docs() {
               <IC>YOUR_SITE_KEY</IC> with the key from your <Link to="/settings" className="text-blue-600 dark:text-blue-400 hover:underline">Settings</Link> page.
             </p>
             <Code lang="html">{`<!-- Standard tracker (uses localStorage) -->
-<script async src="https://api.sourcetrack.ai/tracker/tracker.min.js"
+<script async src="https://api.srctk.com/tracker/tracker.min.js"
         data-site-key="YOUR_SITE_KEY"></script>`}</Code>
             <p>That's it. Pageviews are tracked automatically on every navigation, including SPA route changes.</p>
 
@@ -360,7 +360,7 @@ window.sourcetrack.identify({
               switch to <IC>tracker.cookieless.js</IC>, which stores <em>nothing</em> in the browser.
             </p>
             <Code lang="html">{`<!-- Cookieless tracker — no localStorage, no cookies -->
-<script async src="https://api.sourcetrack.ai/tracker/tracker.cookieless.js"
+<script async src="https://api.srctk.com/tracker/tracker.cookieless.js"
         data-site-key="YOUR_SITE_KEY"></script>`}</Code>
 
             <p>
@@ -433,7 +433,7 @@ window.sourcetrack.identify({
             ]} />
 
             <H3>Example</H3>
-            <Code lang="bash">{`curl -X POST https://api.sourcetrack.ai/api/track \\
+            <Code lang="bash">{`curl -X POST https://api.srctk.com/api/track \\
   -H "Content-Type: application/json" \\
   -d '{
     "site_key":     "sk_live_abc123",
@@ -473,7 +473,7 @@ window.sourcetrack.identify({
 
             <H3>Server-side example (Node.js)</H3>
             <Code lang="js">{`// Call from your webhook / order fulfilment service
-await fetch('https://api.sourcetrack.ai/api/conversion', {
+await fetch('https://api.srctk.com/api/conversion', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -593,7 +593,7 @@ await fetch('https://api.sourcetrack.ai/api/conversion', {
             </div>
 
             <H3>Example — channel revenue under first_touch</H3>
-            <Code lang="bash">{`curl "https://api.sourcetrack.ai/api/attribution?site_key=sk_live_abc123&model=first_touch&date_from=2026-04-01&date_to=2026-04-30&group_by=channel&metric=revenue" \\
+            <Code lang="bash">{`curl "https://api.srctk.com/api/attribution?site_key=sk_live_abc123&model=first_touch&date_from=2026-04-01&date_to=2026-04-30&group_by=channel&metric=revenue" \\
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"`}</Code>
 
             <H3>Response</H3>
@@ -665,7 +665,7 @@ await fetch('https://api.sourcetrack.ai/api/conversion', {
               { name: 'site_key', type: 'string', required: true, desc: 'Your site key.' },
               { name: 'anonymous_id', type: 'string', required: true, desc: 'The visitor\'s anonymous_id to erase.' },
             ]} />
-            <Code lang="bash">{`curl -X DELETE https://api.sourcetrack.ai/api/gdpr/visitor \\
+            <Code lang="bash">{`curl -X DELETE https://api.srctk.com/api/gdpr/visitor \\
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{ "site_key": "sk_live_abc123", "anonymous_id": "550e8400-e29b-41d4-a716-446655440000" }'`}</Code>
@@ -684,7 +684,7 @@ await fetch('https://api.sourcetrack.ai/api/conversion', {
               { name: 'site_key', type: 'string', required: true, desc: 'Your site key.' },
               { name: 'retention_days', type: 'number', required: true, desc: 'Days to retain data: 30 | 60 | 90 | 180 | 365 | 0 (keep forever).' },
             ]} />
-            <Code lang="bash">{`curl -X PUT https://api.sourcetrack.ai/api/gdpr/retention \\
+            <Code lang="bash">{`curl -X PUT https://api.srctk.com/api/gdpr/retention \\
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{ "site_key": "sk_live_abc123", "retention_days": 90 }'`}</Code>
@@ -699,7 +699,7 @@ await fetch('https://api.sourcetrack.ai/api/conversion', {
               There is no undo. The user will be signed out and the account destroyed. Ensure you have a
               confirmation UI (e.g. type "DELETE") before calling this endpoint.
             </Warn>
-            <Code lang="bash">{`curl -X DELETE https://api.sourcetrack.ai/api/gdpr/account \\
+            <Code lang="bash">{`curl -X DELETE https://api.srctk.com/api/gdpr/account \\
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"`}</Code>
           </Section>
 
