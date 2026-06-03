@@ -17,6 +17,55 @@ import { hasFeature } from '../lib/plan-features.js'
 // the common case (same session, same minute) without a DB round-trip.
 const dedupCache = new NodeCache({ stdTTL: 86400, checkperiod: 3600 })
 
+// In-memory per-site dedupe log/map. Stores Timestamp + Key Type per site ID.
+// Structure: siteId (Number) -> Array of { timestamp: Number, keyType: String }
+const dedupeEventsLog = new Map()
+
+export function getDedupeSummary(siteId) {
+  if (!siteId) {
+    return {
+      duplicates_blocked_24h: null,
+      last_duplicate_at: null,
+      last_duplicate_key_type: null,
+      dedupe_window_hours: 24,
+      status: 'unknown',
+      message: 'Deduplication status is unavailable right now.'
+    }
+  }
+
+  const log = dedupeEventsLog.get(siteId) || []
+  const now = Date.now()
+  const oneDayAgo = now - 24 * 60 * 60 * 1000
+  const recentLog = log.filter(e => e.timestamp > oneDayAgo)
+
+  // Prune old entries to keep memory usage low
+  if (log.length !== recentLog.length) {
+    dedupeEventsLog.set(siteId, recentLog)
+  }
+
+  const count = recentLog.length
+  if (count === 0) {
+    return {
+      duplicates_blocked_24h: 0,
+      last_duplicate_at: null,
+      last_duplicate_key_type: null,
+      dedupe_window_hours: 24,
+      status: 'quiet',
+      message: 'No duplicate conversions detected in the last 24 hours.'
+    }
+  }
+
+  const lastEvent = recentLog[recentLog.length - 1]
+  return {
+    duplicates_blocked_24h: count,
+    last_duplicate_at: new Date(lastEvent.timestamp).toISOString(),
+    last_duplicate_key_type: lastEvent.keyType,
+    dedupe_window_hours: 24,
+    status: 'active',
+    message: `SourceTrack blocked ${count} duplicate conversion${count === 1 ? '' : 's'} in the last 24 hours.`
+  }
+}
+
 async function updateTelemetryMetadata(site, body) {
   try {
     const supabase = getSupabase()
@@ -163,6 +212,21 @@ export async function conversion(req, res) {
     // Deduplication — skip if this exact external_event_id was seen in the last 24h
     if (externalEventId) {
       if (dedupCache.get(externalEventId)) {
+        try {
+          const siteId = req.site?.id
+          if (siteId) {
+            const log = dedupeEventsLog.get(siteId) || []
+            const now = Date.now()
+            const oneDayAgo = now - 24 * 60 * 60 * 1000
+            const recentLog = log.filter(e => e.timestamp > oneDayAgo)
+
+            const keyType = (req.body.order_id || req.body.orderId) ? 'order_id' : 'derived'
+            recentLog.push({ timestamp: now, keyType })
+            dedupeEventsLog.set(siteId, recentLog)
+          }
+        } catch (err) {
+          console.error('[dedupe-stats] failed to log duplicate event:', err?.message)
+        }
         return res.status(200).json({ success: true, data: { received: true, dedup_skipped: true }, error: null })
       }
       dedupCache.set(externalEventId, true)

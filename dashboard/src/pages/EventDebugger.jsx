@@ -56,6 +56,7 @@ export default function EventDebugger() {
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState('')
   const [selectedEvent, setSelectedEvent] = useState(null)
+  const [dedupe, setDedupe] = useState(null)
   const [filters, setFilters] = useState({
     event_type: 'all',
     source: '',
@@ -102,19 +103,34 @@ export default function EventDebugger() {
     setRefreshing(true)
 
     try {
-      const [eventsData, healthData, edgeData, hygieneData] = await Promise.all([
+      const [eventsData, healthData, edgeData, hygieneData, dedupeData] = await Promise.all([
         getLatestEvents(site.site_key),
         getEventHealth(site.site_key),
         getEdgeCases(site.site_key),
         (async () => {
           const params = new URLSearchParams({ site_key: site.site_key })
           return fetchApi(`/hygiene/utms?${params}`)
+        })(),
+        (async () => {
+          try {
+            return await fetchApi(`/events/dedupe-summary?site_key=${encodeURIComponent(site.site_key)}`)
+          } catch (_) {
+            return {
+              duplicates_blocked_24h: null,
+              last_duplicate_at: null,
+              last_duplicate_key_type: null,
+              dedupe_window_hours: 24,
+              status: 'unknown',
+              message: 'Deduplication status is unavailable right now.'
+            }
+          }
         })()
       ])
       setEvents(eventsData?.events || [])
       setHealth(healthData)
       setEdge(edgeData)
       setHygiene(hygieneData)
+      setDedupe(dedupeData)
     } catch (_err) {
       /* silent */
     } finally {
@@ -302,6 +318,42 @@ export default function EventDebugger() {
                 <p className="text-xs mt-1 opacity-75">{issue.detail}</p>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Conversion Deduplication Card */}
+      {dedupe && (
+        <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#333838] p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Shield className="w-4 h-4 text-green-600 dark:text-green-400" />
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-200">Conversion Deduplication</h3>
+            <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+              dedupe.status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' :
+              dedupe.status === 'quiet' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' :
+              'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+            }`}>
+              {dedupe.status}
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+              {dedupe.message}
+            </p>
+            {dedupe.duplicates_blocked_24h > 0 && dedupe.last_duplicate_at && (
+              <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-st-gray dark:text-gray-500 mt-2">
+                <span>Last duplicate blocked: <strong className="text-gray-700 dark:text-gray-300">{new Date(dedupe.last_duplicate_at).toLocaleString()}</strong></span>
+                {dedupe.last_duplicate_key_type && (
+                  <span>Deduplication key: <strong className="text-gray-700 dark:text-gray-300">{dedupe.last_duplicate_key_type}</strong></span>
+                )}
+                <span>Window: <strong className="text-gray-700 dark:text-gray-300">{dedupe.dedupe_window_hours} hours</strong></span>
+              </div>
+            )}
+            <div className="flex flex-col gap-1 text-xs text-st-gray dark:text-gray-500 mt-2 pt-2 border-t border-gray-100 dark:border-[#2A2E2E]">
+              <p>Duplicate conversions are blocked using order_id when available. Raw identifiers are not shown for privacy.</p>
+              <p className="italic opacity-85">Recent duplicate activity may reset after deploys.</p>
+            </div>
           </div>
         </div>
       )}

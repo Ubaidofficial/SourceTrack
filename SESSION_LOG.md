@@ -44,6 +44,7 @@ Session 82 proper will be the manual QA closeout session.
 | 102.1 | 2026-06-03 | `main` | Replaced PostHog onboarding verification with direct SourceTrack ingestion check | ✅ | No |
 | 102.2 | 2026-06-03 | `main` | Implemented backend-side query parameter PII redaction for URL/referrer fields | ✅ | No |
 | 102.3 | 2026-06-04 | `main` | Implemented SourceTrack Doctor (Phase 1) dynamic health checks endpoint and dashboard card | ✅ | No |
+| 102.4 | 2026-06-04 | `main` | Implemented safe Conversion Deduplication tracking and UI visibility on the Event Debugger page | ✅ | No |
 
 ---
 

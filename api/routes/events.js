@@ -1,7 +1,8 @@
 import { Router } from 'express'
-import { validateSiteKey } from '../middleware/auth.js'
+import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
 import { esc } from '../lib/utils.js'
+import { getDedupeSummary } from './conversion.js'
 
 const router = Router()
 import NodeCache from 'node-cache'
@@ -298,6 +299,32 @@ router.get('/edge-cases', validateSiteKey, async (req, res) => {
   } catch (err) {
     console.error(err)
     return res.status(500).json({ success: false, data: null, error: 'Edge case check failed' })
+  }
+})
+
+router.get('/dedupe-summary', validateSiteKey, requireSiteMembership, async (req, res) => {
+  try {
+    const siteId = req.site.id
+    const summary = getDedupeSummary(siteId)
+    return res.status(200).json({
+      success: true,
+      data: summary,
+      error: null
+    })
+  } catch (err) {
+    console.error('[events/dedupe-summary] failed:', err.message)
+    return res.status(200).json({
+      success: true,
+      data: {
+        duplicates_blocked_24h: null,
+        last_duplicate_at: null,
+        last_duplicate_key_type: null,
+        dedupe_window_hours: 24,
+        status: 'unknown',
+        message: 'Deduplication status is unavailable right now.'
+      },
+      error: null
+    })
   }
 })
 

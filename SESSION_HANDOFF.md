@@ -1,6 +1,26 @@
 > [!NOTE]
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 
+## Session 102.4 — Conversion Deduplication UI Visibility
+
+**Date:** 2026-06-04 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+
+1. **In-Memory Deduplication Logging** — Declared a Map `dedupeEventsLog` and implemented the `getDedupeSummary(siteId)` metrics builder in `api/routes/conversion.js`. When a duplicate conversion is skipped (based on `order_id`), it logs the timestamp and key type (`order_id` or `derived`).
+2. **Secure Summary Endpoint** — Added `GET /api/events/dedupe-summary` in `api/routes/events.js`. The route is secured with both `validateSiteKey` and `requireSiteMembership` to verify authenticated site access.
+3. **Event Debugger Integration** — Updated `dashboard/src/pages/EventDebugger.jsx` to fetch deduplication metrics in parallel during the main data fetch. Added the Conversion Deduplication summary card rendering status metrics and warning parameters gracefully without exposing any raw customer identifiers.
+
+### Files changed
+- `api/routes/conversion.js` — Logged duplicate events and exported `getDedupeSummary`.
+- `api/routes/events.js` — Implemented the secure `/dedupe-summary` endpoint route handler.
+- `dashboard/src/pages/EventDebugger.jsx` — Fetched and displayed the Conversion Deduplication card.
+
+### Next Session Plan
+- **Session 102.5** — Export & Share Scope Security Hardening.
+
+---
+
 ## Session 102.3 — SourceTrack Doctor (Phase 1)
 
 **Date:** 2026-06-04 | **Branch:** `main` | **Build:** ✅ passing
