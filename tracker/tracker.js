@@ -172,7 +172,10 @@
           conversion_value: opts.value || opts.conversion_value || 0,
           conversion_type:  opts.type  || opts.conversion_type  || 'conversion',
           order_id:         opts.order_id || opts.orderId        || null,
-          properties:       opts.properties || null },
+          properties:       opts.properties || null,
+          ref_param:        p.ref || null,
+          source_param:     p.source || null,
+          via_param:        p.via || null },
         utmFields(p),
         getFT(),
         { ai_source: aiSrc(ref, p.utm_source) }

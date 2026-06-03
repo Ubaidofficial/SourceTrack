@@ -1,3 +1,20 @@
+## Session 101.4A — Tracker Conversion Payload Parity
+
+**Date:** 2026-06-03 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+
+1. **Tracker Conversion Payload Parity** — Added `ref_param`, `source_param`, and `via_param` to the conversion payload in `tracker/tracker.js` so that they align with the fields sent by pageview events. Rebuilt `tracker/tracker.min.js`.
+
+### Files changed
+- `tracker/tracker.js` — Appended `ref_param`, `source_param`, and `via_param` properties to the conversion event payload.
+- `tracker/tracker.min.js` — Rebuilt the minified tracker script.
+
+### Next Session Plan
+- **Session 102.1** — Pending future directives from developer.
+
+---
+
 ## Session 101.3 — Tracker Build Pipeline and Documentation Domains
 
 **Date:** 2026-06-03 | **Branch:** `main` | **Build:** ✅ passing
@@ -21,8 +38,6 @@
 - `dashboard/src/pages/SolutionSaaS.jsx` — Fixed domain inside code block snippet.
 - `api/routes/proxy.js` — Updated domain reference in comments.
 
-### Next Session Plan
-- **Session 102.1** — Pending future directives from developer.
 
 ---
 

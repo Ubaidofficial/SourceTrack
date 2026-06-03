@@ -37,6 +37,19 @@ Session 82 proper will be the manual QA closeout session.
 | 101.1 | 2026-06-03 | `main` | Fix frontend API bypasses (Billing, Settings, DataQuality pages) via fetchApi helper | ✅ | No |
 | 101.2 | 2026-06-03 | `main` | Stabilize onboarding back-step saving and resume snippet generation | ✅ | No |
 | 101.3 | 2026-06-03 | `main` | Clean tracker build pipeline and replace stale api.sourcetrack.ai domain references | ✅ | No |
+| 101.4A | 2026-06-03 | `main` | Fix tracker conversion payload parity (ref_param, source_param, via_param) | ✅ | No |
+
+---
+
+## Session 101.4A — Tracker Conversion Payload Parity
+
+**Date:** 2026-06-03
+**Branch:** `main`
+**Build:** ✅ both `node --check` (all API files) and `npm run build` (dashboard) pass
+
+### 1. Tracker Conversion Event Parity
+- **Problem:** Pageview events sent parameters `ref_param`, `source_param`, and `via_param` to `/api/track`, but conversion events did not include them when calling `/api/conversion`, even though the backend already supports and normalizes them.
+- **Fix:** Appended `ref_param: p.ref || null`, `source_param: p.source || null`, and `via_param: p.via || null` to the Object.assign call in the `sourcetrack.conversion()` method in `tracker/tracker.js` and rebuilt the minified `tracker/tracker.min.js`.
 
 ---
 

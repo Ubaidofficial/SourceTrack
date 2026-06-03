@@ -1,5 +1,5 @@
-Session: 101.3
-Last Completed: Cleaned tracker build pipeline (removed missing tracker/loader.js reference) and replaced stale api.sourcetrack.ai domain references with api.srctk.com across documentation and landing pages.
+Session: 101.4A
+Last Completed: Added ref_param, source_param, and via_param to the tracker conversion payload for ingestion parity, and rebuilt the minified tracker script.
 Next Task: —
 Build: ✅ passing (node --check + npm run build)
 Branch: main
