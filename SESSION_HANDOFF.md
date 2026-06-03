@@ -1,3 +1,6 @@
+> [!NOTE]
+> For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
+
 ## Session 102.1 — Snippet Installation Verification Assistant
 
 **Date:** 2026-06-03 | **Branch:** `main` | **Build:** ✅ passing
