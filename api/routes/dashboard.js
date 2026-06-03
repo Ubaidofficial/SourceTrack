@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { validateSiteKey } from '../middleware/auth.js'
+import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
 import { getSupabase as getSupabaseAdmin } from '../lib/supabase.js'
 import { esc } from '../lib/utils.js'
@@ -424,4 +424,164 @@ router.get('/live', validateSiteKey, async (req, res) => {
     res.json({ success: true, data: { live_visitors: 0 } })
   }
 })
+
+router.get('/tracking-health', validateSiteKey, requireSiteMembership, async (req, res) => {
+  try {
+    const supabase = getSupabaseAdmin()
+    // Fresh query to get latest telemetry state without cache lag
+    const { data: site, error } = await supabase
+      .from('sites')
+      .select('id, last_seen_at, domain, onboarding_state')
+      .eq('id', req.site.id)
+      .single()
+
+    if (error || !site) {
+      throw new Error(error?.message || 'Site not found')
+    }
+
+    const lastSeen = site.last_seen_at ? new Date(site.last_seen_at) : null
+    const registeredDomain = (site.domain || '').replace(/^www\./i, '')
+    const onboardingState = site.onboarding_state || {}
+
+    const lastEventAt = onboardingState.last_event_at
+    const lastEventName = onboardingState.last_event_name || null
+    const lastEventUrl = onboardingState.last_event_url || null
+    const lastEventDomain = onboardingState.last_event_domain || null
+
+    let status = 'pending'
+    let severity = 'info'
+    let message = 'We are waiting for your first tracking event.'
+    const checks = []
+
+    if (!lastSeen) {
+      // Pending state
+      checks.push({
+        label: 'Tracker events',
+        status: 'pending',
+        detail: 'No events have been received yet'
+      })
+      checks.push({
+        label: 'Domain match',
+        status: 'pending',
+        detail: 'Waiting for event domain telemetry'
+      })
+    } else {
+      const now = Date.now()
+      const diffMs = now - lastSeen.getTime()
+      const diffHours = diffMs / (1000 * 60 * 60)
+
+      let eventsPassed = false
+      let domainPassed = false
+
+      // Check 1: Event freshness
+      if (diffHours <= 24) {
+        checks.push({
+          label: 'Tracker events',
+          status: 'passed',
+          detail: 'Last event received recently'
+        })
+        eventsPassed = true
+      } else if (diffHours <= 48) {
+        checks.push({
+          label: 'Tracker events',
+          status: 'warning',
+          detail: `Last event received ${Math.round(diffHours)} hours ago`
+        })
+      } else {
+        checks.push({
+          label: 'Tracker events',
+          status: 'failed',
+          detail: 'No events received in over 48 hours'
+        })
+      }
+
+      // Check 2: Domain match
+      const eventDomain = (lastEventDomain || '').replace(/^www\./i, '')
+      if (registeredDomain && eventDomain) {
+        if (registeredDomain.toLowerCase() === eventDomain.toLowerCase()) {
+          checks.push({
+            label: 'Domain match',
+            status: 'passed',
+            detail: 'Events match registered domain'
+          })
+          domainPassed = true
+        } else {
+          checks.push({
+            label: 'Domain match',
+            status: 'warning',
+            detail: `Events received from a different domain: ${eventDomain}`
+          })
+        }
+      } else {
+        // If registered domain is missing but we have events, skip warning or label passed
+        checks.push({
+          label: 'Domain match',
+          status: 'passed',
+          detail: 'No registered domain to match against'
+        })
+        domainPassed = true
+      }
+
+      // Overall health logic
+      if (diffHours > 48) {
+        status = 'critical'
+        severity = 'error'
+        message = 'Tracking may be offline. We have not received an event in over 48 hours.'
+      } else if (diffHours > 24 || !domainPassed) {
+        status = 'warning'
+        severity = 'warning'
+        message = 'Tracking may need attention. Events are stale or coming from a different domain.'
+      } else {
+        status = 'healthy'
+        severity = 'success'
+        message = 'Tracking is healthy. We received an event recently.'
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        status,
+        severity,
+        last_seen_at: site.last_seen_at,
+        last_event_name: lastEventName,
+        last_event_domain: lastEventDomain,
+        last_event_url: lastEventUrl,
+        registered_domain: site.domain,
+        message,
+        checks
+      },
+      error: null
+    })
+  } catch (e) {
+    console.error('[dashboard/tracking-health] failed:', e.message)
+    return res.status(200).json({
+      success: true,
+      data: {
+        status: 'unknown',
+        severity: 'warning',
+        last_seen_at: null,
+        last_event_name: null,
+        last_event_domain: null,
+        last_event_url: null,
+        registered_domain: req.site?.domain || null,
+        message: 'We could not check tracking health right now.',
+        checks: [
+          {
+            label: 'Tracker events',
+            status: 'unknown',
+            detail: 'Failed to retrieve telemetry'
+          },
+          {
+            label: 'Domain match',
+            status: 'unknown',
+            detail: 'Failed to match domain'
+          }
+        ]
+      },
+      error: null
+    })
+  }
+})
+
 export { router as dashboardRouter }
