@@ -56,17 +56,22 @@ async function lastTouchAttribution(siteId, dateFrom, dateTo) {
     FROM events e
     LEFT JOIN (
       SELECT
-        distinct_id,
-        argMax(properties.utm_source,   timestamp) AS utm_source,
-        argMax(properties.utm_medium,   timestamp) AS utm_medium,
-        argMax(properties.utm_campaign, timestamp) AS utm_campaign
-      FROM events
-      WHERE properties.site_id = '${esc(siteId)}'
-        AND event = '$pageview'
-        AND timestamp >= toDateTime('${fromDate}')
-        AND timestamp <= toDateTime('${toDate}')
-      GROUP BY distinct_id
-    ) lt ON e.distinct_id = lt.distinct_id
+        e_inner.uuid AS conversion_uuid,
+        argMax(pv.properties.utm_source,   pv.timestamp) AS utm_source,
+        argMax(pv.properties.utm_medium,   pv.timestamp) AS utm_medium,
+        argMax(pv.properties.utm_campaign, pv.timestamp) AS utm_campaign
+      FROM events e_inner
+      LEFT JOIN events pv
+        ON pv.distinct_id = e_inner.distinct_id
+        AND pv.properties.site_id = e_inner.properties.site_id
+        AND pv.event = '$pageview'
+        AND pv.timestamp <= e_inner.timestamp
+      WHERE e_inner.properties.site_id = '${esc(siteId)}'
+        AND e_inner.event = '$conversion'
+        AND e_inner.timestamp >= toDateTime('${fromDate}')
+        AND e_inner.timestamp <= toDateTime('${toDate}')
+      GROUP BY conversion_uuid
+    ) lt ON e.uuid = lt.conversion_uuid
     WHERE e.properties.site_id = '${esc(siteId)}'
       AND e.event = '$conversion'
       AND e.timestamp >= toDateTime('${fromDate}')
@@ -107,20 +112,26 @@ async function firstTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
       SUM(toFloatOrZero(toString(e.properties.conversion_value))) AS revenue
     FROM events e
     LEFT JOIN (
-      SELECT distinct_id AS distinct_id,
-        argMin(properties.utm_source, timestamp) AS utm_source,
-        argMin(properties.utm_medium, timestamp) AS utm_medium,
-        argMin(properties.utm_campaign, timestamp) AS utm_campaign
-      FROM events
-      WHERE properties.site_id = '${esc(siteId)}'
-        AND event = '$pageview'
-        AND properties.utm_source IS NOT NULL
-        AND properties.utm_source != ''
-        AND properties.utm_source != 'direct'
-        AND timestamp >= toDateTime('${fromDate}')
-        AND timestamp <= toDateTime('${toDate}')
-      GROUP BY distinct_id
-    ) ft ON e.distinct_id = ft.distinct_id
+      SELECT
+        e_inner.uuid AS conversion_uuid,
+        argMin(pv.properties.utm_source, pv.timestamp) AS utm_source,
+        argMin(pv.properties.utm_medium, pv.timestamp) AS utm_medium,
+        argMin(pv.properties.utm_campaign, pv.timestamp) AS utm_campaign
+      FROM events e_inner
+      LEFT JOIN events pv
+        ON pv.distinct_id = e_inner.distinct_id
+        AND pv.properties.site_id = e_inner.properties.site_id
+        AND pv.event = '$pageview'
+        AND pv.properties.utm_source IS NOT NULL
+        AND pv.properties.utm_source != ''
+        AND pv.properties.utm_source != 'direct'
+        AND pv.timestamp <= e_inner.timestamp
+      WHERE e_inner.properties.site_id = '${esc(siteId)}'
+        AND e_inner.event = '$conversion'
+        AND e_inner.timestamp >= toDateTime('${fromDate}')
+        AND e_inner.timestamp <= toDateTime('${toDate}')
+      GROUP BY conversion_uuid
+    ) ft ON e.uuid = ft.conversion_uuid
     WHERE e.properties.site_id = '${esc(siteId)}'
       AND e.event = '$conversion'
       AND e.timestamp >= toDateTime('${fromDate}')
@@ -153,20 +164,26 @@ async function lastTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
       SUM(toFloatOrZero(toString(e.properties.conversion_value))) AS revenue
     FROM events e
     LEFT JOIN (
-      SELECT distinct_id AS distinct_id,
-        argMax(properties.utm_source, timestamp) AS utm_source,
-        argMax(properties.utm_medium, timestamp) AS utm_medium,
-        argMax(properties.utm_campaign, timestamp) AS utm_campaign
-      FROM events
-      WHERE properties.site_id = '${esc(siteId)}'
-        AND event = '$pageview'
-        AND properties.utm_source IS NOT NULL
-        AND properties.utm_source != ''
-        AND properties.utm_source != 'direct'
-        AND timestamp >= toDateTime('${fromDate}')
-        AND timestamp <= toDateTime('${toDate}')
-      GROUP BY distinct_id
-    ) lt ON e.distinct_id = lt.distinct_id
+      SELECT
+        e_inner.uuid AS conversion_uuid,
+        argMax(pv.properties.utm_source, pv.timestamp) AS utm_source,
+        argMax(pv.properties.utm_medium, pv.timestamp) AS utm_medium,
+        argMax(pv.properties.utm_campaign, pv.timestamp) AS utm_campaign
+      FROM events e_inner
+      LEFT JOIN events pv
+        ON pv.distinct_id = e_inner.distinct_id
+        AND pv.properties.site_id = e_inner.properties.site_id
+        AND pv.event = '$pageview'
+        AND pv.properties.utm_source IS NOT NULL
+        AND pv.properties.utm_source != ''
+        AND pv.properties.utm_source != 'direct'
+        AND pv.timestamp <= e_inner.timestamp
+      WHERE e_inner.properties.site_id = '${esc(siteId)}'
+        AND e_inner.event = '$conversion'
+        AND e_inner.timestamp >= toDateTime('${fromDate}')
+        AND e_inner.timestamp <= toDateTime('${toDate}')
+      GROUP BY conversion_uuid
+    ) lt ON e.uuid = lt.conversion_uuid
     WHERE e.properties.site_id = '${esc(siteId)}'
       AND e.event = '$conversion'
       AND e.timestamp >= toDateTime('${fromDate}')

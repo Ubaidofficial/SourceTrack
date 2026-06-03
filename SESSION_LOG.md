@@ -38,6 +38,19 @@ Session 82 proper will be the manual QA closeout session.
 | 101.2 | 2026-06-03 | `main` | Stabilize onboarding back-step saving and resume snippet generation | ✅ | No |
 | 101.3 | 2026-06-03 | `main` | Clean tracker build pipeline and replace stale api.sourcetrack.ai domain references | ✅ | No |
 | 101.4A | 2026-06-03 | `main` | Fix tracker conversion payload parity (ref_param, source_param, via_param) | ✅ | No |
+| 101.4B | 2026-06-03 | `main` | Fix legacy attribution date-range touchpoint truncation | ✅ | No |
+
+---
+
+## Session 101.4B — Legacy Attribution Date-Range Touchpoint Truncation Fix
+
+**Date:** 2026-06-03
+**Branch:** `main`
+**Build:** ✅ both `node --check` (all API files) and `npm run build` (dashboard) pass
+
+### 1. Date-Range Truncation Bug Fixed
+- **Problem:** Legacy attribution functions (`lastTouchAttribution`, `firstTouchNonDirectAttribution`, and `lastTouchNonDirectAttribution`) in `api/lib/attribution-engine.js` restricted pageview touchpoint queries to the report date range (using `timestamp >= fromDate`). This incorrectly attributed conversions to `direct / none` if the user's initial or non-direct pageview touchpoint occurred before the start of the report date range.
+- **Fix:** Refactored the subqueries to look up pageviews without a lower-bound date restriction (removing `timestamp >= fromDate`). To prevent matching pageviews that occurred after the conversion, the queries were restructured to left-join pageview events on `pv.timestamp <= e_inner.timestamp` and group by the unique conversion event UUID (`conversion_uuid`).
 
 ---
 

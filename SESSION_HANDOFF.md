@@ -1,3 +1,19 @@
+## Session 101.4B — Legacy Attribution Date-Range Touchpoint Truncation Fix
+
+**Date:** 2026-06-03 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+
+1. **Date-Range Truncation Bug Fixed** — Refactored legacy attribution functions (`lastTouchAttribution`, `firstTouchNonDirectAttribution`, and `lastTouchNonDirectAttribution`) in `api/lib/attribution-engine.js` to look up pageview touchpoints across all time (without a lower-bound date restriction) up to each conversion event's timestamp. This resolves the issue of misattributing historical touchpoints as `direct / none` when the pageview happened before the report window.
+
+### Files changed
+- `api/lib/attribution-engine.js` — Restructured subqueries to LEFT JOIN pageviews with `pv.timestamp <= e_inner.timestamp` and group by the unique conversion UUID `conversion_uuid` instead of `distinct_id`.
+
+### Next Session Plan
+- **Session 102.1** — Pending future directives from developer.
+
+---
+
 ## Session 101.4A — Tracker Conversion Payload Parity
 
 **Date:** 2026-06-03 | **Branch:** `main` | **Build:** ✅ passing
@@ -10,8 +26,6 @@
 - `tracker/tracker.js` — Appended `ref_param`, `source_param`, and `via_param` properties to the conversion event payload.
 - `tracker/tracker.min.js` — Rebuilt the minified tracker script.
 
-### Next Session Plan
-- **Session 102.1** — Pending future directives from developer.
 
 ---
 
