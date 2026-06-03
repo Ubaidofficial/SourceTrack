@@ -301,21 +301,14 @@ router.post('/update', async (req, res) => {
     const currentState = site.onboarding_state || {}
     const currentStep = currentState.current_step || 1
 
-    if (targetStep < currentStep && targetStep !== 1) {
+    // Allow re-saving previous steps (targetStep <= currentStep)
+    // or advancing to the next step (targetStep === currentStep + 1)
+    const isValidTransition = targetStep <= currentStep || targetStep === currentStep + 1
+    if (!isValidTransition) {
       return res.status(400).json({
-        success: false, data: null,
-        error: `Cannot go back to step ${targetStep} from step ${currentStep}. Only forward progression is allowed.`
-      })
-    }
-
-    const validJump = targetStep === currentStep ||
-                      targetStep === currentStep + 1 ||
-                      (targetStep > currentStep && targetStep <= MAX_STEP)
-
-    if (!validJump) {
-      return res.status(400).json({
-        success: false, data: null,
-        error: `Invalid step transition from ${currentStep} to ${targetStep}`
+        success: false,
+        data: null,
+        error: `Invalid step transition from step ${currentStep} to step ${targetStep}`
       })
     }
 
@@ -324,16 +317,12 @@ router.post('/update', async (req, res) => {
       return res.status(400).json({ success: false, data: null, error: dataValidation.error })
     }
 
+    // Keep the furthest progress as the database current_step to preserve stepper progress clickability
+    const nextStep = Math.max(targetStep, currentStep)
     const merged = {
       ...currentState,
-      current_step: targetStep,
+      current_step: nextStep,
       ...(stepData || {})
-    }
-
-    if (targetStep < currentState.current_step) {
-      delete merged.business_type
-      delete merged.install_method
-      delete merged.selected_conversions
     }
 
     const { error: updateErr } = await getSupabase()

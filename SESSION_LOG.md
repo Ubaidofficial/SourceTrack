@@ -35,6 +35,27 @@ Session 82 proper will be the manual QA closeout session.
 | 97 | T3.4 | Business-type KPI frontend switching | getKpiConfig + enrichKpis helpers, kpiConfig.map KPI strip in Dashboard.jsx | ✅ |
 | 98 | 2026-05-23 | `main` | **Beta QA: Auth → Onboarding → Tracker → Dashboard Flow** (see below) | QA in progress | No |
 | 101.1 | 2026-06-03 | `main` | Fix frontend API bypasses (Billing, Settings, DataQuality pages) via fetchApi helper | ✅ | No |
+| 101.2 | 2026-06-03 | `main` | Stabilize onboarding back-step saving and resume snippet generation | ✅ | No |
+
+---
+
+## Session 101.2 — Onboarding Back-Step Saving & Resume Snippet Stabilization
+
+**Date:** 2026-06-03
+**Branch:** `main`
+**Build:** ✅ both `node --check` (all API files) and `npm run build` (dashboard) pass
+
+### 1. Onboarding Back-Step saving fixed
+- **Problem:** When users navigate back to modify previous steps (e.g. from step 6 to step 3), the backend API `/api/onboarding/update` threw a 400 Bad Request error on attempts to save step 4 forward again. Additionally, any back-step update deleted user selections for business type and install methods.
+- **Fix:** Relaxed backend updates to accept any `targetStep <= currentStep`. Removed the deletion logic of selections to prevent data loss.
+
+### 2. Stepper progress preserved
+- **Problem:** If database `current_step` is set back to 4, completed steps (5 and 6) became unclickable and dimmed in the UI.
+- **Fix:** Tracked `current_step` in database using `Math.max(targetStep, currentStep)`, preserving the furthest reached progress so completed steps remain clickable.
+
+### 3. On-mount snippet resume fixed
+- **Problem:** Resuming onboarding on step 4 or later left `snippet` empty, showing a frozen "Loading script..." state unless the user navigated back to step 3 to reselect the method.
+- **Fix:** Configured `loadOnboardingStatus()` to fetch snippet on mount when step is >= 4.
 
 ---
 

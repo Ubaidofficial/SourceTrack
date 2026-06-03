@@ -112,7 +112,9 @@ export default function Onboarding() {
       setSiteKey(site.site_key)
 
       const state = site.onboarding_state || {}
+      let stepToSet = 1
       if (state.current_step && state.current_step > 1) {
+        stepToSet = state.current_step
         setStep(state.current_step)
         setBusinessType(state.business_type || null)
         setInstallMethod(state.install_method || null)
@@ -120,9 +122,25 @@ export default function Onboarding() {
       }
       if (site.domain) {
         setDomain(site.domain)
-        setStep((prev) => (prev === 1 ? 2 : prev))
+        if (stepToSet === 1) {
+          stepToSet = 2
+          setStep(2)
+        }
       }
-      if (businessType && step < 3) setStep(2)
+      if (state.business_type && stepToSet < 3) {
+        stepToSet = 2
+        setStep(2)
+      }
+
+      if (stepToSet >= 4 && site.id) {
+        try {
+          const data = await fetchApi(`/install/snippet?site_id=${site.id}`)
+          if (data?.snippet) setSnippet(data.snippet)
+        } catch (_err) {
+          const trackerUrl = (import.meta.env.VITE_TRACKER_BASE_URL || import.meta.env.VITE_API_URL || window.location.origin).replace(/\/+$/, '')
+          setSnippet(`<script async src="${trackerUrl}/tracker/tracker.min.js" data-site-key="${site.site_key}"></script>`)
+        }
+      }
     } catch (_err) {
       /* ignore */
     }

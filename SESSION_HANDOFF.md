@@ -1,3 +1,22 @@
+## Session 101.2 — Onboarding Back-Step Saving & Resume Snippet Stabilization
+
+**Date:** 2026-06-03 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+
+1. **Onboarding Back-Step saving fixed** — Adjusted step transition checks in backend `/api/onboarding/update` to permit saving previous steps (`targetStep <= currentStep`). Removed the deletion of user selections (`business_type`, `install_method`, `selected_conversions`) on back-steps to prevent onboarding data loss.
+2. **Stepper progress preserved** — Configured database `current_step` tracking to store the maximum reached progress step, keeping completed steps clickable in the stepper even when users temporarily step backward to correct options.
+3. **On-mount snippet resume fixed** — Updated the `loadOnboardingStatus()` mount logic in `Onboarding.jsx` to fetch the script snippet (or fallback to local template) when users resume onboarding at step 4 or later, eliminating the "Loading script..." freeze.
+
+### Files changed
+- `api/routes/onboarding.js` — Relaxed back-step saves, prevented data-loss deletion, and preserved maximum stepper progress.
+- `dashboard/src/pages/Onboarding.jsx` — Added on-mount snippet fetching for resumed steps >= 4.
+
+### Next Session Plan
+- **Session 101.3** — Clean Tracker Build Pipeline and Documentation Domains.
+
+---
+
 ## Session 101.1 — Fix frontend API bypasses
 
 **Date:** 2026-06-03 | **Branch:** `main` | **Build:** ✅ passing
