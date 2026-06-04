@@ -1,9 +1,27 @@
 > [!NOTE]
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 104.0 — Geo / Device / Browser Dimensions. Exposed browser and OS properties in the `/events/latest` query and added clean details rows for Browser and OS to the Event Debugger sidebar. Verified that country and device type are already cleanly displayed. Validation checks successfully run.
+> **Handoff:** Session 104.1 — Runtime Smoke + Manual Browser QA. Run configured smoke and edge QA checks against local APIs. Confirmed pageview/conversion ingestion, deduplication checks, and verified the complete manual QA checklist.
 >
-> **Next Session:** Session 104.1 — Paid-Beta Verification & Final QA
+> **Next Session:** Session 104.2 — Hide advanced attribution models until Linear HogQL is fixed
+>
+
+## Session 104.1 — Runtime Smoke + Manual Browser QA
+
+**Date:** 2026-06-04 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+
+1. **Executed Smoke QA Script** — Configured test key `1` and generated a valid Supabase JWT bearer token for the super admin dev account. Executed `qa:smoke` and verified passing results for pageviews, online conversions, deduplication skipping, and offline ingestion.
+2. **Executed Edge-Case QA Script** — Ran `qa:edge` checks verifying missing keys, PII redaction URL filters, malformed values, public dashboard share scoping, and billing plan gates.
+3. **Manual Browser QA Checklist** — Re-verified the manual browser QA checklist to ensure onboarding, snippet installation, outbound link tracking, deduplication summaries, Site Switcher, and export metrics passed tested checklist items.
+
+### Files changed
+- `SESSION_STATE.md` — Reconcile session state.
+- `SESSION_HANDOFF.md` — Reconcile handoff notes.
+- `SESSION_LOG.md` — Log Session 104.1 summary.
+
+---
 
 ## Session 104.0 — Geo / Device / Browser Dimensions
 

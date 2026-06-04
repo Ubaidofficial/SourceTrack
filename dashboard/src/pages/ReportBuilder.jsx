@@ -180,7 +180,13 @@ export default function ReportBuilder() {
 
   // Report state
   const [reportName, setReportName] = useState('')
-  const [model, setModel] = useState('last_touch')
+  const [modelRaw, setModelRaw] = useState('last_touch')
+  // Linear/advanced multi-touch models are temporarily hidden due to known HogQL issue "Unable to resolve field: ce"
+  const setModel = useCallback((val) => {
+    const BLOCKED_MODELS = new Set(['linear', 'time_decay', 'u_shaped', 'w_shaped'])
+    setModelRaw(BLOCKED_MODELS.has(val) ? 'last_touch' : val)
+  }, [])
+  const model = new Set(['linear', 'time_decay', 'u_shaped', 'w_shaped']).has(modelRaw) ? 'last_touch' : modelRaw
   const [groupBy, setGroupBy] = useState('source')
   const [metric, setMetric] = useState('revenue')
   const [selectedMetrics, setSelectedMetrics] = useState(['revenue'])
@@ -832,6 +838,12 @@ export default function ReportBuilder() {
             </div>
             <select value={model} onChange={(e) => {
                 const next = e.target.value
+                // Linear/advanced multi-touch models are temporarily hidden due to known HogQL issue "Unable to resolve field: ce"
+                const BLOCKED_MODELS = new Set(['linear', 'time_decay', 'u_shaped', 'w_shaped'])
+                if (BLOCKED_MODELS.has(next)) {
+                  setModel('last_touch')
+                  return
+                }
                 // Block multi-touch picks for free — silently snap back to last_touch
                 if (MULTI_TOUCH_KEYS.has(next) && !hasFeature(site?.plan, 'multi_touch_attribution')) {
                   setModel('last_touch')
@@ -840,7 +852,7 @@ export default function ReportBuilder() {
                 setModel(next)
               }}
               className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white">
-              {MODELS.map(m => {
+              {MODELS.filter(m => !new Set(['linear', 'time_decay', 'u_shaped', 'w_shaped']).has(m.key)).map(m => {
                 const locked = MULTI_TOUCH_KEYS.has(m.key) && !hasFeature(site?.plan, 'multi_touch_attribution')
                 return (
                   <option key={m.key} value={m.key} disabled={locked}>

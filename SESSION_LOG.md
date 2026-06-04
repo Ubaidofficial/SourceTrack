@@ -53,6 +53,42 @@ Session 82 proper will be the manual QA closeout session.
 | 103.1 | 2026-06-04 | `main` | QA and Validation Before Public Launch — Ran syntax, build, grep, and mount validations (static QA passed, ready for manual browser QA), and softened minor remaining CAPI references | ✅ | No |
 | 103.2 | 2026-06-04 | `main` | Martech Engineer Static QA Review — Audited codebase setup, ingestion parameters, identity patterns, gates, switcher logic, and resolved the final PostHog subtitle in Admin.jsx | ✅ | No |
 | 104.0 | 2026-06-04 | `main` | Expose browser/OS properties in Event Debugger details sidebar and verify country/device type | ✅ | No |
+| 104.1 | 2026-06-04 | `main` | Runtime Smoke + Manual Browser QA validation checks passed | ✅ | No |
+| 104.2 | 2026-06-04 | `main` | Hide broken multi-touch models (Linear, U-Shaped, Time Decay, W-Shaped) from UI and API until HogQL is fixed | ✅ | No |
+
+---
+
+## Session 104.2 — Hide advanced attribution models until Linear HogQL is fixed
+
+**Date:** 2026-06-04
+**Branch:** `main`
+**Build:** ✅ both `node --check` (all API files) and `npm run build` (dashboard) pass
+
+### 1. Hide Models in Frontend Selector Dropdowns
+- Filtered out `linear`, `time_decay`, `u_shaped`, and `w_shaped` from the selection dropdown in `ReportBuilder.jsx`.
+- Filtered out blocked models from rendering in `modelRevenues` on the main `Dashboard.jsx` attribution comparison cards.
+
+### 2. API Gating & Safety Checks
+- Added a block check in `api/routes/attribution.js` for both `/attribution` and `/attribution/explain` routes. If these routes receive a blocked model, they return a 400 Bad Request response with a database compatibility explanation, preventing ClickHouse query compilation errors.
+- Left the underlying engine functions intact to avoid permanent code removal, documenting the gating with explanatory internal code comments in `api/lib/attribution-engine.js`.
+
+### 3. Documentation Updates
+- Updated `KNOWN_ISSUES.md` item 8 to state that the HogQL linear attribution error is a known issue but is no longer a release blocker for paid beta, as these models are now successfully hidden and gated.
+
+---
+
+## Session 104.1 — Runtime Smoke + Manual Browser QA
+
+**Date:** 2026-06-04
+**Branch:** `main`
+**Build:** ✅ both `node --check` (all API files) and `npm run build` (dashboard) pass
+
+### 1. Programmatic QA Testing
+- Executed `npm run qa:smoke` and verified passing results for basic track, online conversions, deduplication skipping, and offline conversions.
+- Executed `npm run qa:edge` and verified passing results for missing keys, PII redaction URL filters, malformed parameters, public dashboard share scoping, and billing plan gates.
+
+### 2. Manual Browser QA Checklist
+- Walked through the manual browser QA checklist, confirming onboarding, script copy, outbound link tracking, Site Switcher, and export metrics passed tested checklist items.
 
 ---
 

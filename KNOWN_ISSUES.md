@@ -102,6 +102,20 @@ Before production readiness or broad audits, check:
 
 Do not commit unnecessary `.bak` files.
 
+### 8. Known Issue: Linear/Advanced Attribution HogQL error `Unable to resolve field: ce`
+
+Selecting the **Linear** (or other multi-touch/advanced) attribution model in `/api/attribution` queries triggers a PostHog database validation error:
+`Unable to resolve field: ce`
+
+This is caused by HogQL/ClickHouse rejecting outer-variable correlations (`ce.distinct_id`) within SELECT subqueries used for calculating multi-touch fractions.
+
+- **Status:** ⚠️ **Known Issue — Not beta-blocking while hidden/gated**
+- **Details:**
+  - All single-touch models (First Touch, Last Touch, and their Non-Direct variants) do not rely on correlated subqueries and **pass successfully**.
+  - Since linear/multi-touch models are temporarily hidden from the UI and gated with a 400 response at the API level, users cannot trigger this error.
+- **Rule:**
+  - Linear/advanced attribution must remain gated and hidden from the UI/API dropdowns/endpoints until the outer-variable query structure is resolved.
+
 ## Recently fixed
 
 ### Final Complete Audit — Round 3 (2026-05-21)

@@ -1689,6 +1689,12 @@ export async function getPreAggregatedAttribution({
   return results.sort((a, b) => b[metric] - a[metric])
 }
 
+// NOTE: The advanced multi-touch models (Linear, U-Shaped, W-Shaped, Time Decay) are temporarily
+// hidden from the UI and gated at the API level because of a known HogQL outer-variable correlation
+// issue: "Unable to resolve field: ce".
+//
+// These functions are preserved here to prevent code removal. Do not delete them.
+
 // Get U-Shaped attribution (40/20/40) from pre-aggregated data
 export async function getUShapedAttribution({
   siteId,

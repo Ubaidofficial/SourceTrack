@@ -27,6 +27,16 @@ export async function attribution(req, res) {
       })
     }
 
+    // Linear/advanced models are temporarily hidden/disabled due to known HogQL issue "Unable to resolve field: ce"
+    const BLOCKED_MODELS = new Set(['linear', 'u_shaped', 'time_decay', 'w_shaped'])
+    if (BLOCKED_MODELS.has(model)) {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        error: `The ${model} attribution model is temporarily unavailable due to a database compatibility issue.`
+      })
+    }
+
     if (['linear', 'u_shaped', 'time_decay', 'w_shaped'].includes(model)) {
       const block = requireFeature(req.site?.plan, 'multi_touch_attribution', 'Multi-touch attribution')
       if (block) return res.status(402).json(block)
@@ -300,6 +310,16 @@ export async function attributionExplain(req, res) {
         success: false,
         data: null,
         error: `Invalid model. Must be one of: ${[...ALLOWED_MODELS].join(', ')}`
+      })
+    }
+
+    // Linear/advanced models are temporarily hidden/disabled due to known HogQL issue "Unable to resolve field: ce"
+    const BLOCKED_MODELS = new Set(['linear', 'u_shaped', 'time_decay', 'w_shaped'])
+    if (BLOCKED_MODELS.has(model)) {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        error: `The ${model} attribution model is temporarily unavailable due to a database compatibility issue.`
       })
     }
 
