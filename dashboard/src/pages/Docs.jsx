@@ -102,6 +102,7 @@ const NAV = [
   { id: 'quickstart',       label: 'Quick Start' },
   { id: 'tracker',          label: 'Tracker Script',    indent: true },
   { id: 'cookieless',       label: 'Cookieless Mode',   indent: true },
+  { id: 'recipes',          label: 'Installation Guides' },
   { id: 'track',            label: 'POST /api/track' },
   { id: 'conversion',       label: 'POST /api/conversion' },
   { id: 'identify',         label: 'POST /api/identify' },
@@ -148,10 +149,301 @@ function Warn({ children }) {
   )
 }
 
+const RECIPES = {
+  html: {
+    name: 'Plain HTML',
+    desc: 'Add the pixel directly to standard HTML templates.',
+    code: `<!-- Paste this in the <head> of your pages -->
+<script async src="https://api.srctk.com/tracker/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`,
+    instructions: 'Paste this copy-paste setup directly into your index.html or layout file before the closing </head> tag. Works with your existing stack.'
+  },
+  react: {
+    name: 'React / Vite',
+    desc: 'Add to a single-page React app with dynamic script injection.',
+    code: `// Add this to your main App.jsx or layout mount effect
+import { useEffect } from 'react'
+
+export default function App() {
+  useEffect(() => {
+    // Avoid duplicate script tag creation
+    if (document.querySelector('script[data-site-key]')) return
+
+    const script = document.createElement('script')
+    script.src = 'https://api.srctk.com/tracker/tracker.min.js'
+    script.setAttribute('data-site-key', 'YOUR_SITE_KEY')
+    script.async = true
+    document.head.appendChild(script)
+  }, [])
+
+  return (
+    <div>{/* Your App */}</div>
+  )
+}`,
+    instructions: 'Loads the tracking script dynamically on initial component mount. This implementation guide works with your existing stack.'
+  },
+  nextjs: {
+    name: 'Next.js',
+    desc: 'Load the pixel using the next/script component.',
+    code: `// For App Router, add this in app/layout.jsx
+import Script from 'next/script'
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <head>
+        <Script
+          src="https://api.srctk.com/tracker/tracker.min.js"
+          data-site-key="YOUR_SITE_KEY"
+          strategy="afterInteractive"
+        />
+      </head>
+      <body>{children}</body>
+    </html>
+  )
+}`,
+    instructions: 'Utilizes the built-in Next.js Script optimizer to load after interactive phase. An easy implementation guide.'
+  },
+  webflow: {
+    name: 'Webflow',
+    desc: 'Setup tracking on your Webflow site.',
+    code: `<!-- Paste in Webflow Page Settings -> Custom Code -> Head Code -->
+<script async src="https://api.srctk.com/tracker/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`,
+    instructions: 'Go to your Webflow project settings, select Custom Code tab, and paste the code in the "Head Code" section. Save and publish. A simple copy-paste setup.'
+  },
+  framer: {
+    name: 'Framer',
+    desc: 'Deploy the tracking snippet inside Framer.',
+    code: `<!-- Paste in Framer Page Settings -> Custom Code -> Head tag -->
+<script async src="https://api.srctk.com/tracker/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`,
+    instructions: 'In Framer, open your project settings, navigate to Custom Code, select the "Start of <head>" section, paste the script, and publish. A copy-paste setup.'
+  },
+  wordpress: {
+    name: 'WordPress Manual',
+    desc: 'Manual integration via WordPress header layout.',
+    code: `<!-- Paste in wp-content/themes/your-theme/header.php before </head> -->
+<script async src="https://api.srctk.com/tracker/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`,
+    instructions: 'Paste this manual install recipe manually into your theme\'s header.php file or use a headers plugin.'
+  },
+  shopify: {
+    name: 'Shopify Manual',
+    desc: 'Pasting the pixel manually into theme.liquid layout.',
+    code: `<!-- Paste inside layout/theme.liquid before </head> -->
+<script async src="https://api.srctk.com/tracker/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`,
+    instructions: 'In your Shopify Admin, navigate to Online Store -> Themes -> Edit Code. Open layout/theme.liquid and paste the script before the closing </head> tag. A manual install recipe.'
+  },
+  woocommerce: {
+    name: 'WooCommerce Manual',
+    desc: 'Manual tracking snippet & checkout success trigger.',
+    code: `<!-- Part 1: Paste tracking snippet in header.php -->
+<script async src="https://api.srctk.com/tracker/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>
+
+<!-- Part 2: WooCommerce order confirmation script (e.g. thank-you page PHP template) -->
+<?php if (is_wc_endpoint_url('order-received')) :
+  $order_id = get_query_var('order-received');
+  $order = wc_get_order($order_id);
+  if ($order) : ?>
+    <script>
+      window.addEventListener('load', function() {
+        if (window.sourcetrack) {
+          window.sourcetrack.conversion({
+            value: <?php echo wp_json_encode((float) $order->get_total()); ?>,
+            type: 'purchase',
+            order_id: <?php echo wp_json_encode((string) $order_id); ?>
+          });
+        }
+      });
+    </script>
+<?php endif; endif; ?>`,
+    instructions: 'Part 1 inserts the base script, Part 2 extracts order details on WooCommerce\'s confirmation template page to record the conversion. This is a conversion-ready manual install recipe.'
+  },
+  stripe: {
+    name: 'Stripe Checkout',
+    desc: 'Manual conversion page trigger after checkout success.',
+    code: `<!-- Place on your checkout success redirect page (e.g. /checkout-success) -->
+<script>
+  window.addEventListener('load', function() {
+    // Extract parameters from URL for deduplication mapping
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderId = urlParams.get('session_id') || 'STRIPE_SESSION_ID';
+
+    if (window.sourcetrack) {
+      // Mark checkout completion on the frontend (value 0).
+      // Send actual verified revenue via webhook / offline conversion API.
+      window.sourcetrack.conversion({
+        value: 0,
+        type: 'purchase_success',
+        order_id: orderId
+      });
+    }
+  });
+</script>`,
+    instructions: 'Use the success page to mark checkout completion. Send verified revenue from your backend using the offline conversion endpoint.'
+  },
+  supabase: {
+    name: 'Supabase Auth',
+    desc: 'Stitch anonymous sessions with Supabase Auth users.',
+    code: `// In your Supabase Auth provider listener
+import { supabase } from './supabaseClient'
+
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' && session?.user) {
+    if (window.sourcetrack) {
+      window.sourcetrack.identify(session.user.id);
+    }
+  }
+})`,
+    instructions: 'Triggers the identify method as soon as a user successfully signs in, merging their pre-auth path with their logged-in record. Privacy-friendly setup.'
+  },
+  firebase: {
+    name: 'Firebase Auth',
+    desc: 'Stitch sessions with Firebase Authentication users.',
+    code: `// Call in your Firebase auth state change listener
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+
+const auth = getAuth();
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    if (window.sourcetrack) {
+      window.sourcetrack.identify(user.uid);
+    }
+  }
+});`,
+    instructions: 'Ensures that Firebase logged-in users are immediately identified with their user IDs for precise stitching. Works with your existing stack.'
+  },
+  clerk: {
+    name: 'Clerk Auth',
+    desc: 'Stitch sessions with Clerk Authentication users.',
+    code: `// In your App mount or navigation router when user state transitions
+import { useUser } from '@clerk/clerk-react';
+import { useEffect } from 'react';
+
+export default function UserListener() {
+  const { isLoaded, isSignedIn, user } = useUser();
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn && user) {
+      if (window.sourcetrack) {
+        window.sourcetrack.identify(user.id);
+      }
+    }
+  }, [isLoaded, isSignedIn, user]);
+
+  return null;
+}`,
+    instructions: 'Listens to Clerk authentication status changes to link the active browser session. Implementation guide for Clerk.'
+  },
+  leadform: {
+    name: 'Lead Form',
+    desc: 'Track form submissions as conversion events.',
+    code: `// Attach to your contact / lead form submit handler
+document.getElementById('lead-form').addEventListener('submit', function(e) {
+  // Capture details before submit redirect
+  if (window.sourcetrack) {
+    window.sourcetrack.conversion({
+      value: 0, // Set dynamic estimation if relevant
+      type: 'lead',
+      order_id: 'FORM_' + Date.now() // Unique ID to deduplicate double-submits
+    });
+  }
+});`,
+    instructions: 'Trigger this conversion-ready lead form submit recipe during the submit handling loop.'
+  },
+  calendly: {
+    name: 'Calendly / Demo',
+    desc: 'Track conversions on Calendly schedule embeds.',
+    code: `// Add to the parent page hosting the Calendly widget iframe
+window.addEventListener('message', function(e) {
+  // Origin guard check
+  if (!String(e.origin).includes('calendly.com')) return;
+  // Safely guard e.data
+  if (!e.data || typeof e.data !== 'object') return;
+
+  if (e.data.event && e.data.event.indexOf('calendly') === 0) {
+    if (e.data.event === 'calendly.event_scheduled') {
+      if (window.sourcetrack) {
+        window.sourcetrack.conversion({
+          value: 0,
+          type: 'demo_scheduled',
+          order_id: 'CAL_' + Date.now()
+        });
+      }
+    }
+  }
+});`,
+    instructions: 'Listens to the postMessage event sent by Calendly\'s iframe to parent page when scheduling is completed. A webhook-ready demo booking recipe.'
+  },
+  offline: {
+    name: 'Backend / Offline API',
+    desc: 'Submit backend conversions via the offline REST API.',
+    code: `// Node.js example of sending a backend-submitted conversion
+// site_key is passed in the JSON body
+await fetch('https://api.srctk.com/api/conversion/offline', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    site_key: 'YOUR_SITE_KEY',
+    user_id: 'user_123', // Or pass anonymous_id
+    conversion_value: 99.00,
+    conversion_type: 'purchase',
+    order_id: 'ORD-54321', // Keeps calculations duplicate-safe
+    currency: 'USD'
+  })
+})`,
+    instructions: 'Useful for backend payment systems or webhook processes. Send a backend-submitted conversion by providing the site_key parameter.'
+  },
+  trial: {
+    name: 'SaaS Trial',
+    desc: 'Trigger conversion and identify upon signup.',
+    code: `// Call on registration success
+function onSignupSuccess(user) {
+  if (window.sourcetrack) {
+    // 1. Identify the user
+    window.sourcetrack.identify(user.id);
+
+    // 2. Track trial conversion
+    window.sourcetrack.conversion({
+      value: 0,
+      type: 'trial',
+      order_id: 'TRIAL_' + user.id
+    });
+  }
+}`,
+    instructions: 'Triggers both identification and a free trial conversion-ready manual recipe immediately after signup completes.'
+  },
+  upgrade: {
+    name: 'Paid Upgrade',
+    desc: 'Attribute upgrade value on subscription plan upgrades.',
+    code: `// Triggers upon plan upgrade confirmation
+function onUpgradeConfirmed(userId, newPlanName, priceAmount) {
+  if (window.sourcetrack) {
+    window.sourcetrack.conversion({
+      value: priceAmount, // Upgrade revenue value
+      type: 'upgrade',
+      order_id: 'UPG_' + userId + '_' + Date.now()
+    });
+  }
+}`,
+    instructions: 'Call on upgrade success screen or via webhook integration to trigger a paid upgrade conversion-ready manual recipe.'
+  },
+  agency: {
+    name: 'Agency Multi-Site',
+    desc: 'Configuring independent sites with different site keys.',
+    code: `<!-- Client Site A Head -->
+<script async src="https://api.srctk.com/tracker/tracker.min.js" data-site-key="CLIENT_A_SITE_KEY"></script>
+
+<!-- Client Site B Head -->
+<script async src="https://api.srctk.com/tracker/tracker.min.js" data-site-key="CLIENT_B_SITE_KEY"></script>`,
+    instructions: 'Each site should utilize its own explicit site key, ensuring data isolation and correct client routing. Works with your existing stack.'
+  }
+};
+
 // ─── Main Docs Page ───────────────────────────────────────────────────────────
 export default function Docs() {
   const [activeSection, setActiveSection] = useState('overview')
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [selectedRecipe, setSelectedRecipe] = useState('html')
   const observerRef = useRef(null)
 
   // Intersection observer to highlight active nav section
@@ -299,9 +591,8 @@ window.sourcetrack.conversion({
 })`}</Code>
 
             <H3>Identify a user</H3>
-            <Code lang="js">{`// Call after login / sign-up to attach an email to the visitor
-window.sourcetrack.identify({
-  email: 'jane@example.com',
+            <Code lang="js">{`// Call after login / sign-up to attach a user ID or traits to the visitor
+window.sourcetrack.identify('user_123', {
   name:  'Jane Doe'
 })`}</Code>
 
@@ -348,7 +639,7 @@ window.sourcetrack.identify({
             <H3>Public API</H3>
             <ParamTable params={[
               { name: 'window.sourcetrack.conversion(opts)', type: 'function', required: false, desc: 'Record a conversion. opts: { value, type, order_id }' },
-              { name: 'window.sourcetrack.identify(traits)', type: 'function', required: false, desc: 'Attach identity traits to the current visitor. traits: { email, name, ...custom }' },
+              { name: 'window.sourcetrack.identify(userId, traits)', type: 'function', required: false, desc: 'Attach a user ID and optional identity traits to the current visitor. traits: { name, ...custom }' },
               { name: 'window.sourcetrack.track(event, props)', type: 'function', required: false, desc: 'Send any custom event with optional properties object.' },
             ]} />
           </Section>
@@ -402,6 +693,45 @@ window.sourcetrack.identify({
                   ))}
                 </tbody>
               </table>
+            </div>
+          </Section>
+
+          {/* ── Installation Guides ─────────────────────────────────────── */}
+          <Section id="recipes" title="Installation Guides">
+            <p>
+              Implement custom manual tracking setups for your specific framework, CMS, authentication flow, checkout success page, or backend conversion flow using these copy-paste setup recipes. All recipes are conversion-ready and work with your existing stack.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mt-6">
+              {/* Recipe tabs */}
+              <div className="md:col-span-4 flex flex-col gap-1 max-h-[500px] overflow-y-auto border border-gray-200 dark:border-gray-800 rounded-lg p-2 bg-gray-50 dark:bg-[#1a1d1d]">
+                {Object.entries(RECIPES).map(([key, r]) => (
+                  <button
+                    key={key}
+                    onClick={() => setSelectedRecipe(key)}
+                    className={`text-left px-3 py-2 rounded text-xs transition-colors ${
+                      selectedRecipe === key
+                        ? 'bg-black text-white dark:bg-white dark:text-black font-semibold'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    {r.name}
+                  </button>
+                ))}
+              </div>
+
+              {/* Selected recipe details */}
+              <div className="md:col-span-8 space-y-4">
+                <div className="border border-gray-200 dark:border-gray-800 rounded-lg p-4 bg-white dark:bg-[#111414]">
+                  <h4 className="text-sm font-bold text-gray-900 dark:text-white">{RECIPES[selectedRecipe].name}</h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{RECIPES[selectedRecipe].desc}</p>
+                  <Code lang={selectedRecipe === 'offline' || selectedRecipe === 'woocommerce' || selectedRecipe === 'wordpress' ? 'code' : 'js'}>
+                    {RECIPES[selectedRecipe].code}
+                  </Code>
+                  <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 bg-gray-50 dark:bg-[#1a1d1d] p-3 rounded border border-gray-100 dark:border-gray-800">
+                    <strong>Setup:</strong> {RECIPES[selectedRecipe].instructions}
+                  </p>
+                </div>
+              </div>
             </div>
           </Section>
 
@@ -523,8 +853,7 @@ await fetch('https://api.srctk.com/api/conversion', {
             ]} />
 
             <H3>Example</H3>
-            <Code lang="js">{`window.sourcetrack.identify({
-  email:        'jane@acme.com',
+            <Code lang="js">{`window.sourcetrack.identify('user_123', {
   name:         'Jane Doe',
   traits: {
     plan:       'pro',
