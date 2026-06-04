@@ -38,6 +38,7 @@ function eventBadgeClass(event, isConversion) {
   if (isConversion) return 'bg-green-100 text-green-700'
   if (event === '$pageview') return 'bg-blue-100 text-blue-700'
   if (event === 'install_verified') return 'bg-purple-100 text-purple-700'
+  if (event === 'outbound_click') return 'bg-amber-100 text-amber-700'
   return 'bg-gray-100 dark:bg-[#252929] text-gray-700'
 }
 
@@ -389,6 +390,7 @@ export default function EventDebugger() {
                 <option value="$conversion">Conversions</option>
                 <option value="install_verified">Install verified</option>
                 <option value="$identify">Identify</option>
+                <option value="outbound_click">Outbound Clicks</option>
               </select>
             </label>
 

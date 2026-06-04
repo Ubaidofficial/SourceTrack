@@ -227,5 +227,32 @@
     hasConsent: function () { return _consentGiven }
   }
 
+  // ─── Outbound Link Tracking ────────────────────────────────────────────────
+  function trackOutbound(e) {
+    if (e.type === 'auxclick' && e.button !== 1) return
+
+    var a = e.target
+    while (a && a.nodeName !== 'A') a = a.parentNode
+    if (!a) return
+
+    var href = a.getAttribute('href')
+    if (!href || href.indexOf('#') === 0) return
+
+    try {
+      var url = new URL(href, location.href)
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') return
+      if (url.hostname === location.hostname) return
+
+      if (window.sourcetrack) {
+        window.sourcetrack.track('outbound_click', {
+          destination_domain: url.hostname,
+          destination_url: url.origin + url.pathname
+        })
+      }
+    } catch (_) {}
+  }
+  addEventListener('click', trackOutbound)
+  addEventListener('auxclick', trackOutbound)
+
   sendPageview()
 })()

@@ -145,7 +145,7 @@ export function redactPiiFromObject(obj) {
   if (!obj || typeof obj !== 'object') return obj
 
   const newObj = { ...obj }
-  const urlFields = new Set(['page_url', 'referrer', 'landing_page', 'current_url', 'last_event_url', 'url', 'href'])
+  const urlFields = new Set(['page_url', 'referrer', 'landing_page', 'current_url', 'last_event_url', 'url', 'href', 'destination_url'])
 
   for (const key of Object.keys(newObj)) {
     if (urlFields.has(key.toLowerCase()) && typeof newObj[key] === 'string') {

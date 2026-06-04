@@ -94,6 +94,21 @@ export async function track(req, res) {
 
     // Ingest-side query parameter redaction to prevent PII leaks
     if (req.body) {
+      // Normalize destination_url if present to strip query strings and hash fragments (outbound link privacy)
+      if (req.body.properties && typeof req.body.properties === 'object' && req.body.properties.destination_url) {
+        try {
+          const parsedDest = new URL(req.body.properties.destination_url)
+          req.body.properties.destination_url = parsedDest.origin + parsedDest.pathname
+        } catch (_) {
+          let dest = String(req.body.properties.destination_url)
+          const qIdx = dest.indexOf('?')
+          if (qIdx > -1) dest = dest.substring(0, qIdx)
+          const hIdx = dest.indexOf('#')
+          if (hIdx > -1) dest = dest.substring(0, hIdx)
+          req.body.properties.destination_url = dest
+        }
+      }
+
       req.body = redactPiiFromObject(req.body)
       if (req.body.properties && typeof req.body.properties === 'object' && !Array.isArray(req.body.properties)) {
         req.body.properties = redactPiiFromObject(req.body.properties)
