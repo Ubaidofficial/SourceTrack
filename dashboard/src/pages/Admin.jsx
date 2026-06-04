@@ -362,7 +362,7 @@ export default function Admin() {
                 </div>
               </DashboardCard>
 
-              <DashboardCard title="Install Verification" subtitle="Live tracking status from PostHog">
+              <DashboardCard title="Install Verification" subtitle="Live tracking status from telemetry">
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div><p className="text-xs text-st-gray">Status</p><StatusBadge status={siteDetail.install?.status === 'verified' ? 'verified' : siteDetail.install?.status === 'not_installed' ? 'pending' : 'error'} label={siteDetail.install?.status || 'unknown'} /></div>
                   <div><p className="text-xs text-st-gray">Last Event Type</p><p className="text-st-black">{siteDetail.install?.last_event_type || '—'}</p></div>
