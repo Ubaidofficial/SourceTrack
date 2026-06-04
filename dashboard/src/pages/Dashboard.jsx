@@ -469,7 +469,7 @@ export default function Dashboard() {
   const aiDelta = null
 
   const activeResults = overview?.sources || []
-  const landingResults = overview?.landing_pages || []
+  const topPagesResults = overview?.top_pages || []
   const campaignResults = overview?.campaigns || []
   const timeResults = overview?.revenue_trend || []
   const installData = overview?.install
@@ -1521,19 +1521,19 @@ export default function Dashboard() {
               )}
             </DashboardCard>
 
-            <DashboardCard title="Landing Page Performance"
-              subtitle="Top pages by attributed revenue"
+            <DashboardCard title="Top Pages"
+              subtitle="Most visited pages by pageviews"
             >
-              {landingResults.length === 0 ? (
-                <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">Landing page data will appear after your first attributed conversions.</p>
+              {topPagesResults.length === 0 ? (
+                <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">No pageview data for this date range.</p>
               ) : (
                 <DashboardTable
                   columns={[
-                    { key: 'page', label: 'Page', render: (r) => <span className="text-xs truncate max-w-[200px] block">{r.dim_value || 'unknown'}</span> },
-                    { key: 'revenue', label: 'Revenue', render: (r) => `$${(r.revenue || 0).toFixed(0)}`, cellClassName: 'text-right font-medium text-st-black' }
+                    { key: 'path', label: 'Path', render: (r) => <span className="text-xs truncate max-w-[200px] block">{r.path || '/'}</span> },
+                    { key: 'views', label: 'Views', render: (r) => (r.views || 0).toLocaleString(), cellClassName: 'text-right font-medium text-st-black' }
                   ]}
-                  rows={landingResults.slice(0, 5)}
-                  emptyMessage="Landing page data will appear after your first attributed conversions."
+                  rows={topPagesResults.slice(0, 5)}
+                  emptyMessage="No pageview data for this date range."
                 />
               )}
             </DashboardCard>

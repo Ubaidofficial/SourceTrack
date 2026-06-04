@@ -26,13 +26,14 @@ router.get('/overview', validateSiteKey, async (req, res) => {
 
     const supabase = getSupabaseAdmin()
 
-    // 2 Supabase + 3 PostHog in parallel; bounce_rate runs after (separate await)
+    // 2 Supabase + 4 PostHog in parallel; bounce_rate runs after (separate await)
     const [
       { data: acRows },
       { data: acRowsPrior },
       installRows,
       alertRows,
-      stageRows
+      stageRows,
+      topPagesRows
     ] = await Promise.all([
       supabase
         .from('attributed_conversions')
@@ -78,7 +79,21 @@ router.get('/overview', validateSiteKey, async (req, res) => {
           AND timestamp <= toDateTime('${dateTo} 23:59:59')
         GROUP BY stage
         ORDER BY count DESC
-      `, 'dash_stages')
+        LIMIT 100
+      `, 'dash_stages'),
+      queryHogQL(`
+        SELECT
+          properties.page_url AS page_url,
+          count() AS count
+        FROM events
+        WHERE properties.site_id = '${esc(posthogSiteId)}'
+          AND event = '$pageview'
+          AND timestamp >= toDateTime('${dateFrom} 00:00:00')
+          AND timestamp <= toDateTime('${dateTo} 23:59:59')
+        GROUP BY page_url
+        ORDER BY count DESC
+        LIMIT 500
+      `, 'dash_top_pages')
     ])
 
     const rows = acRows || []
@@ -184,6 +199,19 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     const aiSources = Object.values(aiSourceMap).sort((a, b) => b.ai_revenue - a.ai_revenue)
     const aiTrend = Object.values(aiTrendMap).sort((a, b) => a.dim_value.localeCompare(b.dim_value))
 
+    // ── Process and Normalize Top Pages ─────────────────────────────────────
+    const topPagesMap = {}
+    for (const row of (topPagesRows || [])) {
+      const [pageUrl, count] = row
+      const path = getPathOnly(pageUrl)
+      topPagesMap[path] = (topPagesMap[path] || 0) + (Number(count) || 0)
+    }
+
+    const topPages = Object.entries(topPagesMap)
+      .map(([path, views]) => ({ path, views }))
+      .sort((a, b) => b.views - a.views)
+      .slice(0, 20)
+
     // ── Aggregate prior period ──────────────────────────────────────────────
     let prevRevenue = 0, prevLeads = 0, prevConversions = 0, prevAIRevenue = 0
     for (const r of priorRows) {
@@ -277,7 +305,8 @@ router.get('/overview', validateSiteKey, async (req, res) => {
         ai_sources: aiSources.slice(0, 5),
         ai_trend: aiTrend,
         sources: sources.slice(0, 10),
-        landing_pages: [],
+        landing_pages: [], // NOTE: Landing pages & Exit Pages are intentionally deferred because true visitor session telemetry is not persisted.
+        top_pages: topPages,
         campaigns: campaigns.slice(0, 5),
         channel_trend: channelTrend,
         revenue_trend: revenueTrend,
@@ -311,7 +340,8 @@ router.get('/overview', validateSiteKey, async (req, res) => {
         ai_sources: [],
         ai_trend: [],
         sources: [],
-        landing_pages: [],
+        landing_pages: [], // NOTE: Landing pages & Exit Pages are intentionally deferred because true visitor session telemetry is not persisted.
+        top_pages: [],
         campaigns: [],
         channel_trend: [],
         revenue_trend: [],
