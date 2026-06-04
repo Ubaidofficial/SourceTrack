@@ -16,6 +16,7 @@ Disallow: /billing
 Disallow: /debugger
 Disallow: /admin
 Disallow: /onboarding
+Disallow: /share/
 Disallow: /api/
 
 Sitemap: https://sourcetrack.ai/sitemap.xml

@@ -39,7 +39,7 @@ export default function MarketingHeader() {
           </Link>
         </div>
 
-        <button className="md:hidden text-st-black p-2" onClick={() => setOpen(o => !o)} aria-label="Toggle menu">
+        <button className="md:hidden text-st-black p-2 min-h-[44px] min-w-[44px] flex items-center justify-center" onClick={() => setOpen(o => !o)} aria-label="Toggle menu">
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             {open
               ? <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

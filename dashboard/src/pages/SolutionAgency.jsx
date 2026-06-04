@@ -50,8 +50,8 @@ const DATA = {
       },
       {
         icon: '🔒',
-        title: 'GDPR compliance for EU client sites',
-        body: "For clients in the EU, enable cookieless mode per site with one toggle. No consent banner required, no compliance risk for you or your client. The same data quality — without the legal exposure.",
+        title: 'Cookieless mode for EU sites',
+        body: "For clients in EU markets, enable cookieless mode per site. Cookieless mode avoids browser cookies and localStorage, making it suitable for privacy-conscious client deployments without a consent banner disrupting the user experience.",
       },
     ],
   },
@@ -69,13 +69,13 @@ const DATA = {
       {
         number: '02',
         title: 'Paste the snippet into the client site',
-        body: "Send the 1.7 KB script tag to your client's developer or paste it directly if you have CMS access. Shopify, WooCommerce, Webflow, WordPress — all work with the same tag.",
+        body: "Share the tracking snippet with your client's developer or paste it directly if you have CMS access. Works with Shopify, WooCommerce, Webflow, WordPress, and any site that accepts a script tag.",
         code: `<script async\n  src="https://api.srctk.com/tracker/tracker.min.js"\n  data-site-key="CLIENT_SITE_KEY">\n</script>`,
       },
       {
         number: '03',
         title: 'Analyze and export reports',
-        body: "Monitor client performance in the dashboard. Use flexible attribution models to see how touchpoints connect to revenue. Export white-label attribution reports monthly.",
+        body: "Monitor client performance in the dashboard. Use flexible attribution models to see how touchpoints connect to revenue. Export client attribution reports as CSV — no SourceTrack branding in the export file.",
         code: null,
       },
     ],

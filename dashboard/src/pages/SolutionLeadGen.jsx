@@ -14,9 +14,9 @@ const DATA = {
   subheadline: "Lead volume is a vanity metric. SourceTrack connects every form submission to its original acquisition source — so your media spend is optimized against closed revenue, not raw MQLs that never convert.",
 
   stats: [
-    { value: '67%', label: 'Of leads never close', sub: "Most lead gen campaigns are optimized for form fills — not SQLs or revenue. Multi-touch attribution shows you the difference" },
-    { value: '5×', label: 'More accurate than last-click', sub: "Multi-touch attribution attributes 5× more revenue to top-of-funnel channels than last-click — changing budget allocation decisions entirely" },
-    { value: '22', label: 'AI referrer domains tracked', sub: "Buyers researching your service on ChatGPT or Perplexity before submitting a form — now attributed correctly instead of logged as direct" },
+    { value: '8', label: 'Attribution models', sub: 'From first touch to W-shaped — multi-touch models reveal top-of-funnel channels that last-click misses entirely' },
+    { value: '5', label: 'Conversion stages tracked', sub: 'Track leads, MQLs, SQLs, demos, and closed revenue — each stage attributed to its original acquisition source' },
+    { value: '22', label: 'AI referrer domains tracked', sub: 'Buyers researching your service on ChatGPT or Perplexity before submitting a form — now attributed correctly instead of logged as direct' },
   ],
 
   features: {
@@ -63,7 +63,7 @@ const DATA = {
       {
         number: '01',
         title: 'Add the tracker to your site',
-        body: "Paste the 1.7 KB snippet into your site's <head>. Captures all pageviews, UTM parameters, and AI referrer signals automatically.",
+        body: "Paste the lightweight tracking snippet into your site's <head>. Captures all pageviews, UTM parameters, and AI referrer signals automatically.",
         code: `<script async\n  src="https://api.srctk.com/tracker/tracker.min.js"\n  data-site-key="YOUR_KEY">\n</script>`,
       },
       {
@@ -74,8 +74,8 @@ const DATA = {
       },
       {
         number: '03',
-        title: 'Import closed revenue from your CRM',
-        body: "When a deal closes in Salesforce, HubSpot, or any CRM, fire a server-side offline conversion with the deal value. SourceTrack will attribute that revenue to the original lead source.",
+        title: 'Import closed revenue via REST API',
+        body: "When a deal closes in your CRM, fire a server-side offline conversion via the REST API with the deal value. SourceTrack will attribute the closed revenue to the original acquisition source — connecting marketing spend to actual deals via a structured conversion payload.",
         code: null,
       },
     ],
@@ -101,8 +101,8 @@ const DATA = {
         a: "If your content appears in ChatGPT or Perplexity answers, users click through to your site and often convert later. GA4 attributes that conversion to whatever ad they saw last. SourceTrack attributes it correctly to the AI platform — letting you measure and optimize the ROI of your AI citation strategy.",
       },
       {
-        q: 'Does SourceTrack integrate with HubSpot or Salesforce?',
-        a: "Not natively, but the offline conversion REST API accepts any data you pass from your CRM. When a deal closes, send a POST with the deal value and your custom lead ID to /api/conversion/offline. SourceTrack will match it to the original attribution session.",
+        q: "Does SourceTrack integrate with HubSpot or Salesforce?",
+        a: "Not natively. SourceTrack provides a REST API for offline conversions. When a deal closes in your CRM, your backend sends a POST request with the deal value and any identifiers to /api/conversion/offline. SourceTrack will match it to the original attribution session. There is no native CRM connector — integration is via your backend code or a webhook handler.",
       },
     ],
   },

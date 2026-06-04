@@ -15,8 +15,8 @@ const DATA = {
 
   stats: [
     { value: '7+', label: 'Touchpoints before SaaS purchase', sub: "B2B SaaS buyers consult multiple sources before signing up — last-click attribution misses all but the final one" },
-    { value: '40%', label: 'Lower CAC with multi-touch data', sub: 'Teams that attribute correctly can reallocate budget from channels that drive signups to channels that drive paid conversions' },
-    { value: '18%', label: 'Average AI referral share', sub: 'Of SaaS trial signups now starting from a ChatGPT, Perplexity, or Claude product recommendation — invisible in GA4' },
+    { value: '8', label: 'Attribution models available', sub: 'From first touch to W-shaped — switch models instantly to see how credit shifts across the full SaaS buying cycle' },
+    { value: '15+', label: 'AI platforms tracked', sub: 'AI product research that starts a trial journey — now attributed correctly instead of logged as direct' },
   ],
 
   features: {
@@ -50,8 +50,8 @@ const DATA = {
       },
       {
         icon: '🔒',
-        title: 'No consent banner in EU markets',
-        body: "Enterprise SaaS buyers in Germany, France, and the UK expect privacy compliance. Cookieless mode gives you the same attribution accuracy without cookies, localStorage, or a consent popup interrupting your signup flow.",
+        title: 'Cookieless mode for EU visitors',
+        body: "Enable cookieless mode for markets where privacy-first tracking is preferred. Cookieless mode avoids browser cookies and localStorage — no consent banner disrupting your signup flow, while still capturing the attribution signals that matter.",
       },
     ],
   },
@@ -63,7 +63,7 @@ const DATA = {
       {
         number: '01',
         title: 'Add the snippet to your marketing site and app',
-        body: "Add the 1.7 KB tracker to both your marketing site and your in-app pages. This tracks the full journey — from first visit on your landing page to signup inside your product.",
+        body: "Add the lightweight tracker to both your marketing site and your in-app pages. This tracks the full journey — from first visit on your landing page to signup inside your product.",
         code: `<script async\n  src="https://api.srctk.com/tracker/tracker.min.js"\n  data-site-key="YOUR_KEY">\n</script>`,
       },
       {
@@ -94,7 +94,7 @@ const DATA = {
       },
       {
         q: 'How does SourceTrack handle long SaaS sales cycles?',
-        a: "SourceTrack stores visitor touchpoint history for up to 90 days (configurable per plan). For enterprise deals that take weeks, this captures the full journey — from the first whitepaper download to the demo request to the procurement approval. The attribution window is configurable per workspace.",
+        a: "SourceTrack keeps recent visitor touchpoints for attribution reporting. For enterprise deals that take weeks, this captures the journey — from the first whitepaper download to the demo request to the procurement approval.",
       },
       {
         q: 'Does this work for product-led growth (PLG) SaaS?',

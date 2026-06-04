@@ -32,7 +32,7 @@ export default function HeroSection({
               </span>
             )}
 
-            <h1 className="mt-[18px] max-w-[880px] text-st-black leading-[0.88] tracking-[-0.08em] font-black" style={{ fontSize: 'clamp(54px, 7.3vw, 104px)' }}>
+            <h1 className="mt-[18px] max-w-[880px] text-st-black leading-[0.88] tracking-[-0.08em] font-black" style={{ fontSize: 'clamp(40px, 7.3vw, 104px)' }}>
               {h1}{' '}
               {h1Gradient && (
                 <span className="bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(90deg, #1F2323, #4E5A23 50%, #9FC20C)' }}>

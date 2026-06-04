@@ -146,7 +146,7 @@ export default function SolutionPage({ data }) {
               See pricing
             </Link>
           </div>
-          <p className="text-xs text-white/30 mt-4">Free for up to 5,000 pageviews/mo · Upgrade any time · GDPR-compliant</p>
+          <p className="text-xs text-white/30 mt-4">Free for up to 5,000 pageviews/mo · Upgrade any time · Privacy-conscious tracking</p>
         </div>
       </section>
 
@@ -213,7 +213,7 @@ export default function SolutionPage({ data }) {
                       <h3 className="text-base font-bold text-white mb-1">{step.title}</h3>
                       <p className="text-sm text-white/45 mb-3 leading-relaxed">{step.body}</p>
                       {step.code && (
-                        <pre className="bg-[#0F1212] border border-white/8 rounded-xl p-4 text-xs text-green-400 font-mono overflow-x-auto whitespace-pre-wrap">
+                        <pre className="bg-[#0F1212] border border-white/8 rounded-xl p-4 text-xs text-green-400 font-mono overflow-x-auto whitespace-pre">
                           {step.code}
                         </pre>
                       )}

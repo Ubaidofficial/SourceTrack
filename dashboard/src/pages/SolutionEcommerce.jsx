@@ -14,9 +14,9 @@ const DATA = {
   subheadline: "Your ROAS reports look great, but last-click attribution is lying to you. SourceTrack shows the full buyer journey — from the ChatGPT recommendation to the Google retargeting click that closed the deal — for every order in your store.",
 
   stats: [
-    { value: '30%+', label: 'Revenue from AI referrals', sub: 'Average share of eCommerce revenue that originates from AI platforms like ChatGPT and Perplexity — invisible in GA4' },
-    { value: '54×', label: 'Lighter than GA4', sub: "1.7 KB script that loads instantly and doesn't slow your Core Web Vitals or conversion rate" },
-    { value: '3 min', label: 'Time to live data', sub: 'Paste one snippet into your Shopify theme or WooCommerce header — no plugin, no GTM, no developer needed' },
+    { value: '15+', label: 'AI platforms tracked', sub: 'ChatGPT, Claude, Gemini, Perplexity, and more — visitors that GA4 marks as direct traffic, now attributed correctly' },
+    { value: '8', label: 'Attribution models', sub: 'Compare first touch, last touch, linear, time decay, U-shaped, and W-shaped — all from one dashboard' },
+    { value: '3 min', label: 'Time to live data', sub: 'Paste one lightweight snippet into your Shopify theme or WooCommerce header — no plugin, no GTM, no developer needed' },
   ],
 
   features: {
@@ -25,8 +25,8 @@ const DATA = {
     items: [
       {
         icon: '🛍️',
-        title: 'Shopify & WooCommerce — 2-minute setup',
-        body: 'Paste one 1.7 KB script tag into your theme <head>. Captures every pageview, add-to-cart, and purchase with UTM parameters and AI referrer detection built in. No app or plugins required.',
+        title: 'Shopify & WooCommerce — quick setup',
+        body: 'Paste one lightweight script tag into your theme <head>. Captures every pageview, add-to-cart, and purchase with UTM parameters and AI referrer detection built in. No app or plugins required.',
       },
       {
         icon: '🤖',
@@ -50,8 +50,8 @@ const DATA = {
       },
       {
         icon: '🔒',
-        title: 'GDPR-compliant by default',
-        body: "Enable cookieless mode with one attribute on the script tag. No consent banner required. Works in EU markets, UK (PECR), and California — without sacrificing conversion accuracy.",
+        title: 'Privacy-conscious by default',
+        body: "Enable cookieless mode with one attribute on the script tag. Cookieless mode avoids browser cookies and localStorage — suitable for privacy-conscious deployments and privacy-first EU markets.",
       },
     ],
   },
@@ -63,7 +63,7 @@ const DATA = {
       {
         number: '01',
         title: 'Add to your Shopify theme or WooCommerce header',
-        body: "Paste the 1.7 KB script tag into your theme's <head>. On Shopify, use Online Store → Themes → Edit code → theme.liquid. On WooCommerce, use the header snippet option.",
+        body: "Paste the lightweight tracking snippet into your theme's <head>. On Shopify, use Online Store → Themes → Edit code → theme.liquid. On WooCommerce, use the header snippet option.",
         code: `<script async\n  src="https://api.srctk.com/tracker/tracker.min.js"\n  data-site-key="YOUR_KEY">\n</script>`,
       },
       {
@@ -86,7 +86,7 @@ const DATA = {
     items: [
       {
         q: 'Does SourceTrack work with Shopify?',
-        a: "Yes. Paste the 1.7 KB snippet into your Shopify theme's theme.liquid inside <head>. Add the conversion call to your checkout.liquid thank-you page with your order total and order ID. You'll be tracking within minutes — no app, no GTM, no plugin required.",
+        a: "Yes. Paste the lightweight tracking snippet into your Shopify theme's theme.liquid inside <head>. Add the conversion call to your checkout.liquid thank-you page with your order total and order ID. You'll be tracking within minutes — no app, no GTM, no plugin required.",
       },
       {
         q: 'How do I track abandoned cart attribution?',
@@ -114,7 +114,7 @@ const DATA = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
     "mainEntity": [
-      { "@type": "Question", "name": "Does SourceTrack work with Shopify?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Paste the 1.7 KB snippet into your Shopify theme's theme.liquid inside <head>. Add the conversion call to your checkout.liquid thank-you page with your order total and order ID." } },
+      { "@type": "Question", "name": "Does SourceTrack work with Shopify?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Paste the tracking snippet into your Shopify theme's theme.liquid inside <head>. Add the conversion call to your checkout.liquid thank-you page with your order total and order ID." } },
       { "@type": "Question", "name": "How do I track abandoned cart attribution?", "acceptedAnswer": { "@type": "Answer", "text": "Fire a sourcetrack.conversion() call with type: 'add_to_cart' when a visitor adds to cart. This lets you attribute cart additions to their source." } },
       { "@type": "Question", "name": "Why is my GA4 showing too much direct traffic from AI platforms?", "acceptedAnswer": { "@type": "Answer", "text": "ChatGPT and other AI platforms often strip referrer headers — so visits look like direct traffic in GA4. SourceTrack identifies these visitors across 15 AI platforms and 22 domains." } },
     ]

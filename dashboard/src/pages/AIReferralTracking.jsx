@@ -97,7 +97,7 @@ export default function AIReferralTracking() {
               </div>
               <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[140px]">
                 <strong className="text-lg tracking-[-0.04em]">One snippet — no extra setup</strong>
-                <p className="mt-1.5 text-[#586464] text-[15px]">The same 1.7 KB tracker detects AI platforms automatically. No extra script, no extra config.</p>
+                <p className="mt-1.5 text-[#586464] text-[15px]">The same lightweight tracker detects AI platforms automatically. No extra script, no extra config.</p>
               </div>
             </div>
           </div>

@@ -7,10 +7,45 @@ import ComparisonTable from '../components/ComparisonTable'
 import SectionKicker from '../components/SectionKicker'
 
 const SEO = {
-  title: 'SourceTrack — Revenue Attribution Software | Know Which Sources Create Revenue',
-  description: 'SourceTrack tracks every visitor, touchpoint, lead, trial, demo, purchase, and AI referral — then connects the journey back to the channel that created it. Independent, neutral marketing attribution.',
+  title: 'SourceTrack — Revenue Attribution Analytics for SaaS, Lead Gen, and Agencies',
+  description: 'SourceTrack helps SaaS, lead-gen, and agency teams track which sources, campaigns, AI referrals, and customer journeys turn into conversions and revenue. Multi-touch attribution with a lightweight install.',
   canonical: 'https://sourcetrack.ai/',
   ogTitle: 'SourceTrack — Know which sources actually create revenue',
+  jsonLd: [
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "SourceTrack",
+      "url": "https://sourcetrack.ai",
+      "logo": "https://sourcetrack.ai/og-image.png",
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "email": "support@sourcetrack.ai",
+        "contactType": "customer support"
+      }
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "SourceTrack",
+      "url": "https://sourcetrack.ai"
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "SourceTrack",
+      "applicationCategory": "AnalyticsApplication",
+      "operatingSystem": "Web",
+      "description": "Revenue attribution analytics for SaaS, lead-gen, and agency teams. Track campaigns, AI referrals, customer journeys, and conversions. Multi-touch attribution with 8 models.",
+      "url": "https://sourcetrack.ai",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "description": "Free plan available"
+      }
+    }
+  ],
 }
 
 const HERO = {
@@ -37,7 +72,7 @@ export default function Landing() {
               ['Multi-touch journeys', '8 attribution models'],
               ['Revenue attribution', 'First to last touch'],
               ['Report builder', 'Pin your own dashboards'],
-              ['Real-time events', 'Millisecond tracking'],
+              ['Event tracking', 'Low-latency capture'],
             ].map(([label, desc]) => (
               <div key={label} className="text-center px-2">
                 <strong className="block text-st-black text-sm font-extrabold tracking-[-0.03em]">{label}</strong>
@@ -150,7 +185,7 @@ export default function Landing() {
               </Link>
               <Link to="/use-cases/agencies" className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] hover:-translate-y-1 transition-all hover:shadow-[0_18px_52px_rgba(31,35,35,.09)]">
                 <strong className="text-lg tracking-[-0.04em]">Agencies</strong>
-                <p className="mt-1.5 text-[#586464] text-[15px]">Client reporting, source-of-truth attribution, campaign optimization, and white-label dashboards.</p>
+                <p className="mt-1.5 text-[#586464] text-[15px]">Client reporting, source-of-truth attribution, campaign optimization, and client-safe report exports.</p>
               </Link>
             </div>
           </div>

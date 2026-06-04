@@ -5,6 +5,12 @@ import HeroSection from './HeroSection'
 import FinalCTA from './FinalCTA'
 
 export default function MarketingPage({ seo, hero, heroChildren, children }) {
+  const jsonLdItems = Array.isArray(seo.jsonLd)
+    ? seo.jsonLd
+    : seo.jsonLd
+      ? [seo.jsonLd]
+      : []
+
   return (
     <div className="bg-white text-st-black font-sans antialiased">
       <Helmet>
@@ -16,10 +22,15 @@ export default function MarketingPage({ seo, hero, heroChildren, children }) {
         {seo.canonical && <meta property="og:url" content={seo.canonical} />}
         <meta property="og:type" content="website" />
         <meta property="og:image" content="https://sourcetrack.ai/og-image.png" />
+        <meta property="og:site_name" content="SourceTrack" />
         <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:site" content="@sourcetrackio" />
         <meta name="twitter:title" content={seo.ogTitle || seo.title} />
         <meta name="twitter:description" content={seo.ogDescription || seo.description} />
         <meta name="twitter:image" content="https://sourcetrack.ai/og-image.png" />
+        {jsonLdItems.map((schema, i) => (
+          <script key={i} type="application/ld+json">{JSON.stringify(schema)}</script>
+        ))}
       </Helmet>
 
       <MarketingHeader />
