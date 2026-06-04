@@ -2,6 +2,7 @@ import express from 'express'
 import { requireUserAuth } from '../middleware/user-auth.js'
 import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import { getSupabase } from '../lib/supabase.js'
+import { requireFeature } from '../lib/plan-features.js'
 
 const router = express.Router()
 
@@ -32,6 +33,9 @@ router.get('/', requireUserAuth, validateSiteKey, requireSiteMembership, async (
 
 router.post('/', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
   try {
+    const block = requireFeature(req.site?.plan, 'manual_spend', 'Manual spend entry')
+    if (block) return res.status(402).json(block)
+
     const { campaign_name, spend, period_start, period_end } = req.body
     if (!campaign_name || spend === undefined || !period_start || !period_end) {
       return res.status(400).json({ success: false, error: 'campaign_name, spend, period_start, period_end required' })
@@ -56,6 +60,9 @@ router.post('/', requireUserAuth, validateSiteKey, requireSiteMembership, async 
 
 router.delete('/:id', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
   try {
+    const block = requireFeature(req.site?.plan, 'manual_spend', 'Manual spend entry')
+    if (block) return res.status(402).json(block)
+
     const { error } = await getSupabase()
       .from('campaign_costs')
       .delete()

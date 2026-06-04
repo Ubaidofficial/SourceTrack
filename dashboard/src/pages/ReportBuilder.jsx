@@ -280,9 +280,10 @@ export default function ReportBuilder() {
     queryKey: ['saved-reports', site?.site_key],
     queryFn: async () => {
       if (!site?.site_key) return []
+      if (!hasFeature(site?.plan, 'saved_reports')) return []
       return fetchApi(`/reports/saved?site_key=${encodeURIComponent(site.site_key)}`)
     },
-    enabled: !!site?.site_key,
+    enabled: !!site?.site_key && hasFeature(site?.plan, 'saved_reports'),
     initialData: []
   })
 
@@ -1100,46 +1101,59 @@ export default function ReportBuilder() {
 
           {/* Save */}
           <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">✓</span>
-                <h3 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Save Report</h3>
+            {!hasFeature(site?.plan, 'saved_reports') ? (
+              <div className="flex flex-col items-center justify-center text-center py-2">
+                <span className="w-5 h-5 rounded-full bg-lime-100 dark:bg-st-lime/10 text-lime-800 dark:text-st-lime text-xs flex items-center justify-center font-bold mb-2">🔒</span>
+                <h3 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">Save Report</h3>
+                <p className="text-xs text-st-gray dark:text-gray-400 mb-3">Save custom reports for quick access.</p>
+                <a href="/billing" className="px-4 py-1.5 bg-st-lime text-st-black rounded-lg text-xs font-bold hover:bg-st-lime/90 transition-colors">
+                  Upgrade to unlock
+                </a>
               </div>
-              <button onClick={resetReport}
-                className="text-xs text-st-gray dark:text-gray-400 hover:text-st-black">
-                New report
-              </button>
-            </div>
-            {editingId && (
-              <p className="text-xs text-st-gray dark:text-gray-400 mb-2">Editing saved report</p>
-            )}
-            <div className="space-y-2">
-              <input type="text" value={reportName} onChange={(e) => setReportName(e.target.value)}
-                placeholder="Report name..." maxLength={60}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white" />
-              <div className="flex gap-2">
-                <button onClick={handleSave}
-                  className="flex-1 px-3 py-2 bg-st-black text-white rounded-lg text-sm hover:bg-gray-800 flex items-center justify-center gap-1">
-                  <Bookmark className="w-4 h-4" />
-                  {editingId ? 'Update report' : 'Save report'}
-                </button>
-                {editingId && (
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">✓</span>
+                    <h3 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Save Report</h3>
+                  </div>
                   <button onClick={resetReport}
-                    className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-[#242829] rounded-lg hover:bg-gray-200 dark:hover:bg-[#2A2E2E]">
-                    Cancel
+                    className="text-xs text-st-gray dark:text-gray-400 hover:text-st-black">
+                    New report
                   </button>
+                </div>
+                {editingId && (
+                  <p className="text-xs text-st-gray dark:text-gray-400 mb-2">Editing saved report</p>
                 )}
-              </div>
-              {saveFeedback === 'saved' && (
-                <p className="text-xs text-green-600 mt-1.5">Report saved</p>
-              )}
-              {saveFeedback === 'updated' && (
-                <p className="text-xs text-green-600 mt-1.5">Report updated</p>
-              )}
-              {saveFeedback === 'error' && (
-                <p className="text-xs text-red-600 mt-1.5">Failed to save — try again</p>
-              )}
-            </div>
+                <div className="space-y-2">
+                  <input type="text" value={reportName} onChange={(e) => setReportName(e.target.value)}
+                    placeholder="Report name..." maxLength={60}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white" />
+                  <div className="flex gap-2">
+                    <button onClick={handleSave}
+                      className="flex-1 px-3 py-2 bg-st-black text-white rounded-lg text-sm hover:bg-gray-800 flex items-center justify-center gap-1">
+                      <Bookmark className="w-4 h-4" />
+                      {editingId ? 'Update report' : 'Save report'}
+                    </button>
+                    {editingId && (
+                      <button onClick={resetReport}
+                        className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-[#242829] rounded-lg hover:bg-gray-200 dark:hover:bg-[#2A2E2E]">
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                  {saveFeedback === 'saved' && (
+                    <p className="text-xs text-green-600 mt-1.5">Report saved</p>
+                  )}
+                  {saveFeedback === 'updated' && (
+                    <p className="text-xs text-green-600 mt-1.5">Report updated</p>
+                  )}
+                  {saveFeedback === 'error' && (
+                    <p className="text-xs text-red-600 mt-1.5">Failed to save — try again</p>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Saved Reports */}

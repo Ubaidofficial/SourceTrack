@@ -1,7 +1,35 @@
 > [!NOTE]
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 102.6 migration to centralized `SiteContext`. Dashboard and Settings are now scoped to the active site selected via the new layout dropdown. Remaining legacy pages with direct first-site queries are documented for follow-up cleanup.
+> **Handoff:** Session 102.7 implementation of Server-Side Plan Feature Gate Middleware. Add plan restrictions to prevent free tier users from bypassing frontend gates for multi-touch models, saved reports, manual spend entry, AI analytics, and AI chat.
+
+## Session 102.7 — Server-Side Plan Feature Gate Middleware
+
+**Date:** 2026-06-04 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+
+1. **Synchronized Plan Matrices** — Updated `FEATURE_MATRIX` on both backend (`api/lib/plan-features.js`) and frontend (`dashboard/src/lib/planFeatures.js`) to support four new feature keys: `manual_spend`, `ai_analytics`, `ai_chat`, and `saved_reports` (all set to `free: false` and `true` for paid tiers). Added friendly labels for the upgrade prompt UI.
+2. **Multi-touch Attribution Gating** — Enforced `multi_touch_attribution` checks in `/api/attribution` and `/api/attribution/explain` for configured multi-touch models (`linear`, `u_shaped`, `time_decay`, `w_shaped`), while keeping single-touch/core attribution models available according to existing behavior.
+3. **AI Analytics & Chat Routing Protection** — Restricted AI overview, forecast, and anomaly routes `/api/ai-analytics/*` under `ai_analytics` gate. Bound the AI Chat endpoint `/api/ai-chat` under `ai_chat` gate. Restricted AI verdicts generator in `/api/attribution/verdicts` to paid plans.
+4. **Saved Reports & Manual Spend Locking** — Gated the `/api/reports/saved` saved reports routes under `saved_reports` feature check. Locked down POST and DELETE endpoints in `/api/campaign-costs` to enforce `manual_spend` permissions, keeping the read GET route open.
+5. **Frontend Performance & UI Polish** — Updated `Dashboard.jsx` and `ReportBuilder.jsx` queries to check plan permissions before querying saved reports, avoiding redundant network requests. Rendered an upgrade call-to-action lock card in `ReportBuilder.jsx` in place of the save form for free users.
+
+### Files changed
+- `api/lib/plan-features.js` — Synchronized matrix keys.
+- `dashboard/src/lib/planFeatures.js` — Synchronized matrix keys and added UI labels.
+- `api/routes/attribution.js` — Gated advanced models and verdicts.
+- `api/routes/saved-reports.js` — Gated reports database routes.
+- `api/routes/ai-analytics.js` — Gated AI analytics endpoints.
+- `api/routes/ai-chat.js` — Gated AI query parsing route.
+- `api/routes/campaign-costs.js` — Gated spend write and delete endpoints.
+- `dashboard/src/pages/Dashboard.jsx` — Wrapped saved reports query with features gate check.
+- `dashboard/src/pages/ReportBuilder.jsx` — Gated saved reports query and custom report save UI block.
+
+### Next Session Plan
+- **Session 102.8** — Public Docs & Ingest Domain Cleanup.
+
+---
 
 ## Session 102.6 — Agency Layout Client/Site Switcher Dropdown
 

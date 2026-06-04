@@ -1,7 +1,14 @@
 import { Router } from 'express'
 import { getSupabase } from '../lib/supabase.js'
+import { requireFeature } from '../lib/plan-features.js'
 
 const router = Router()
+
+router.use((req, res, next) => {
+  const block = requireFeature(req.site?.plan, 'saved_reports', 'Saved reports')
+  if (block) return res.status(402).json(block)
+  next()
+})
 
 // POST /api/reports/saved — save a new report config
 // Body: { name, config } — config is a JSON object with report parameters

@@ -298,9 +298,10 @@ export default function Dashboard() {
     queryKey: ['saved-reports-dash', site?.site_key],
     queryFn: async () => {
       if (!site?.site_key) return []
+      if (!hasFeature(site?.plan, 'saved_reports')) return []
       return fetchApi(`/reports/saved?site_key=${encodeURIComponent(site.site_key)}`)
     },
-    enabled: !!site?.site_key && !previewMode
+    enabled: !!site?.site_key && !previewMode && hasFeature(site?.plan, 'saved_reports')
   })
 
   const topReports = (savedReports || []).slice(0, 3)

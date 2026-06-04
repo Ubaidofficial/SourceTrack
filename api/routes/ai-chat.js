@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { validateSiteKey } from '../middleware/auth.js'
 import { aiLimit } from '../middleware/rate-limit.js'
+import { requireFeature } from '../lib/plan-features.js'
 import { callAI } from '../lib/ai-client.js'
 import { queryHogQL } from '../lib/posthog.js'
 
@@ -63,6 +64,9 @@ function validateHogQL(sql) {
 
 router.post('/', validateSiteKey, aiLimit, async (req, res) => {
   try {
+    const block = requireFeature(req.site?.plan, 'ai_chat', 'AI Chat')
+    if (block) return res.status(402).json(block)
+
     const { question } = req.body
 
     if (typeof question !== 'string') {

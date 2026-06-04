@@ -1,4 +1,5 @@
 import { getAttribution, getFlexibleReport, getAttributionExplanation, getPreAggregatedAttribution, getLinearAttribution, getUShapedAttribution, getTimeDecayAttribution, getWShapedAttribution } from '../lib/attribution-engine.js'
+import { requireFeature } from '../lib/plan-features.js'
 
 const ALLOWED_MODELS = new Set(['first_touch', 'last_touch', 'first_touch_non_direct', 'last_touch_non_direct', 'ai_platforms', 'linear', 'u_shaped', 'time_decay', 'w_shaped'])
 const ALLOWED_GROUPS = new Set(['channel', 'source', 'medium', 'campaign', 'ai_source', 'landing_page', 'country', 'device', 'conversion_type', 'date'])
@@ -24,6 +25,11 @@ export async function attribution(req, res) {
         data: null,
         error: `Invalid model. Must be one of: ${[...ALLOWED_MODELS].join(', ')}`
       })
+    }
+
+    if (['linear', 'u_shaped', 'time_decay', 'w_shaped'].includes(model)) {
+      const block = requireFeature(req.site?.plan, 'multi_touch_attribution', 'Multi-touch attribution')
+      if (block) return res.status(402).json(block)
     }
 
     if (!date_from || !date_to) {
@@ -297,6 +303,11 @@ export async function attributionExplain(req, res) {
       })
     }
 
+    if (['linear', 'u_shaped', 'time_decay', 'w_shaped'].includes(model)) {
+      const block = requireFeature(req.site?.plan, 'multi_touch_attribution', 'Multi-touch attribution')
+      if (block) return res.status(402).json(block)
+    }
+
     const explanation = await getAttributionExplanation(posthogSiteId, model, distinct_id)
 
     if (!explanation) {
@@ -323,6 +334,9 @@ export async function attributionVerdicts(req, res) {
   try {
     const { date_from, date_to } = req.query
     const posthogSiteId = String(req.site.id)
+
+    const block = requireFeature(req.site?.plan, 'ai_analytics', 'AI Analytics')
+    if (block) return res.status(402).json(block)
 
     if (!date_from || !date_to) {
       return res.status(400).json({ success: false, data: null, error: 'date_from and date_to required' })

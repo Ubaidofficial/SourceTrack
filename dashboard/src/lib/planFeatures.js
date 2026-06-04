@@ -24,6 +24,10 @@ const FEATURE_MATRIX = {
   multi_user:               { free: false, trial: true,  starter: true,  growth: true,  business: true },
   cookieless_mode:          { free: false, trial: true,  starter: false, growth: true,  business: true },
   white_label:              { free: false, trial: false, starter: false, growth: false, business: true },
+  manual_spend:             { free: false, trial: true,  starter: true,  growth: true,  business: true },
+  ai_analytics:             { free: false, trial: true,  starter: true,  growth: true,  business: true },
+  ai_chat:                  { free: false, trial: true,  starter: true,  growth: true,  business: true },
+  saved_reports:            { free: false, trial: true,  starter: true,  growth: true,  business: true },
   live_analytics:           { free: true,  trial: true,  starter: true,  growth: true,  business: true },
   last_touch_attribution:   { free: true,  trial: true,  starter: true,  growth: true,  business: true },
   webhook_outbound:         { free: true,  trial: true,  starter: true,  growth: true,  business: true },
@@ -50,6 +54,10 @@ export const FEATURE_LABELS = {
   multi_user:               'Team members',
   cookieless_mode:          'Cookieless tracking',
   white_label:              'White-label reports',
+  manual_spend:             'Manual spend entry',
+  ai_analytics:             'AI Analytics',
+  ai_chat:                  'AI Chat assistant',
+  saved_reports:            'Saved reports',
 }
 
 // Returns the minimum paid plan name that unlocks the feature, for upgrade copy.

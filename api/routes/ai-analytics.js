@@ -1,11 +1,15 @@
 import { Router } from 'express'
 import { validateSiteKey } from '../middleware/auth.js'
 import { getFlexibleReport } from '../lib/attribution-engine.js'
+import { requireFeature } from '../lib/plan-features.js'
 
 const router = Router()
 
 router.get('/overview', validateSiteKey, async (req, res) => {
   try {
+    const block = requireFeature(req.site?.plan, 'ai_analytics', 'AI Analytics')
+    if (block) return res.status(402).json(block)
+
     const posthogSiteId = String(req.site.id)
     const days = Math.min(Math.max(parseInt(req.query.days) || 30, 1), 90)
     const dateTo = new Date().toISOString().slice(0, 10)
@@ -85,6 +89,9 @@ router.get('/overview', validateSiteKey, async (req, res) => {
 
 router.get('/forecast', validateSiteKey, async (req, res) => {
   try {
+    const block = requireFeature(req.site?.plan, 'ai_analytics', 'AI Analytics')
+    if (block) return res.status(402).json(block)
+
     const posthogSiteId = String(req.site.id)
     const dateTo   = new Date().toISOString().slice(0, 10)
     const dateFrom = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10)
@@ -165,6 +172,9 @@ Return only the JSON object.`
 
 router.get('/anomalies', validateSiteKey, async (req, res) => {
   try {
+    const block = requireFeature(req.site?.plan, 'ai_analytics', 'AI Analytics')
+    if (block) return res.status(402).json(block)
+
     const posthogSiteId = String(req.site.id)
     const now       = new Date()
     const thisWeekTo   = now.toISOString().slice(0, 10)
