@@ -562,7 +562,9 @@ export default function EventDebugger() {
                   ['Conversion Value', selectedEvent.conversion_value],
                   ['Ingestion', selectedEvent.ingestion_method || 'pixel'],
                   ['Device', selectedEvent.device_type],
-                  ['Country', selectedEvent.country]
+                  ['Country', selectedEvent.country],
+                  ['Browser', selectedEvent.browser_name ? `${selectedEvent.browser_name} ${selectedEvent.browser_version || ''}`.trim() : null],
+                  ['OS', selectedEvent.os_name ? `${selectedEvent.os_name} ${selectedEvent.os_version || ''}`.trim() : null]
                 ].map(([label, value]) => (
                   <div key={label} className="rounded-lg bg-gray-50 dark:bg-[#111414] p-3">
                     <p className="text-xs text-st-gray">{label}</p>

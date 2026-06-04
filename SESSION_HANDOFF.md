@@ -1,9 +1,29 @@
 > [!NOTE]
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 103.2 — Martech Engineer Static QA Review. Audited code structures, layout switcher context state, and static gating logic. Resolved a residual PostHog subtitle inside Admin.jsx. Static code checks and compilation builds are passing; manual browser runtime QA remains pending.
+> **Handoff:** Session 104.0 — Geo / Device / Browser Dimensions. Exposed browser and OS properties in the `/events/latest` query and added clean details rows for Browser and OS to the Event Debugger sidebar. Verified that country and device type are already cleanly displayed. Validation checks successfully run.
 >
-> **Next Session:** Session 103.3 — Manual Browser QA checklist.
+> **Next Session:** Session 104.1 — Paid-Beta Verification & Final QA
+
+## Session 104.0 — Geo / Device / Browser Dimensions
+
+**Date:** 2026-06-04 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+
+1. **Expose Browser and OS Properties** — Added `properties.browser_name`, `properties.browser_version`, `properties.os_name`, and `properties.os_version` to the SELECT query in `api/routes/events.js` `/latest` endpoint and mapped them to top-level fields for consistent frontend consumption.
+2. **Event Debugger Clean Detail Rows** — Added clean visual rows for "Browser" and "OS" in the sidebar details panel in `dashboard/src/pages/EventDebugger.jsx`, displaying name and version properties correctly.
+3. **Verify Country and Device Type Display** — Verified that `Country` and `Device Type` are already cleanly displayed in the details sidebar panel and table (left them as Done).
+4. **Validation and QA Verification** — Executed `node --check` validation, built the production dashboard cleanly, and ran `npm run qa:static` checks successfully with zero failures or trailing whitespace warnings.
+
+### Files changed
+- `api/routes/events.js` — Expose browser and OS properties.
+- `dashboard/src/pages/EventDebugger.jsx` — Render Browser and OS rows in the Event Debugger sidebar.
+- `SESSION_STATE.md` — Reconcile session state.
+- `SESSION_LOG.md` — Log Session 104.0 summary.
+- `SESSION_HANDOFF.md` — Reconcile handoff notes.
+
+---
 
 ## Session 103.2 — Martech Engineer Static QA Review
 

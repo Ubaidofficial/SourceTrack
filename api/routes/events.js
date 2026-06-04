@@ -98,6 +98,10 @@ router.get('/latest', validateSiteKey, async (req, res) => {
         properties.conversion_type AS conversion_type,
         properties.conversion_value AS conversion_value,
         properties.ingestion_method AS ingestion_method,
+        properties.browser_name AS browser_name,
+        properties.browser_version AS browser_version,
+        properties.os_name AS os_name,
+        properties.os_version AS os_version,
         properties AS raw_properties
       FROM events
       WHERE ${where.join('\n        AND ')}
@@ -117,7 +121,9 @@ router.get('/latest', validateSiteKey, async (req, res) => {
       utmContent, utmTerm, gclid, fbclid, msclkid, ttclid,
       refParam, sourceParam, viaParam,
       firstTouchSource, firstTouchMedium, firstTouchCampaign,
-      conversionType, conversionValue, ingestionMethod, rawProperties
+      conversionType, conversionValue, ingestionMethod,
+      browserName, browserVersion, osName, osVersion,
+      rawProperties
     ]) => ({
       event,
       timestamp,
@@ -149,6 +155,10 @@ router.get('/latest', validateSiteKey, async (req, res) => {
       conversion_type: conversionType || null,
       conversion_value: conversionValue ? Number(conversionValue) || 0 : null,
       ingestion_method: ingestionMethod || null,
+      browser_name: browserName || null,
+      browser_version: browserVersion || null,
+      os_name: osName || null,
+      os_version: osVersion || null,
       properties: rawProperties || {}
     }))
 

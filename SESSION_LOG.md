@@ -52,6 +52,25 @@ Session 82 proper will be the manual QA closeout session.
 | 102.9 | 2026-06-04 | `main` | Solution Pages CAPI Claims Cleanup — Audited and softened unverified CAPI, Shopify app, CRM, and ad platform sync claims from marketing pages | ✅ | No |
 | 103.1 | 2026-06-04 | `main` | QA and Validation Before Public Launch — Ran syntax, build, grep, and mount validations (static QA passed, ready for manual browser QA), and softened minor remaining CAPI references | ✅ | No |
 | 103.2 | 2026-06-04 | `main` | Martech Engineer Static QA Review — Audited codebase setup, ingestion parameters, identity patterns, gates, switcher logic, and resolved the final PostHog subtitle in Admin.jsx | ✅ | No |
+| 104.0 | 2026-06-04 | `main` | Expose browser/OS properties in Event Debugger details sidebar and verify country/device type | ✅ | No |
+
+---
+
+## Session 104.0 — Geo / Device / Browser Dimensions
+
+**Date:** 2026-06-04
+**Branch:** `main`
+**Build:** ✅ both `node --check` (all API files) and `npm run build` (dashboard) pass
+
+### 1. Backend Ingestion Properties Exposure
+- Added `properties.browser_name`, `properties.browser_version`, `properties.os_name`, and `properties.os_version` to the SELECT query in `api/routes/events.js` `/latest` endpoint.
+- Mapped these database properties to top-level fields: `browser_name`, `browser_version`, `os_name`, and `os_version` inside the `events` payload array returned to frontend clients.
+
+### 2. Event Debugger Detail Sidebar Clean Rows
+- Added clean display rows for "Browser" and "OS" in the sidebar details panel in `dashboard/src/pages/EventDebugger.jsx` using `selectedEvent.browser_name` and `selectedEvent.os_name`.
+
+### 3. Verify Country and Device Type Display
+- Confirmed that `Country` and `Device Type` are already cleanly displayed as detail rows in the sidebar (using `selectedEvent.country` and `selectedEvent.device_type` respectively) and table, leaving them as Done.
 
 ---
 
