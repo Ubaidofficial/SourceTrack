@@ -48,6 +48,7 @@ Session 82 proper will be the manual QA closeout session.
 | 102.5 | 2026-06-04 | `main` | Hardened CSV exports and public dashboard token route scoping and authentication | ✅ | No |
 | 102.6 | 2026-06-04 | `main` | Implemented Layout-Level Client/Site Switcher Dropdown and explicit activeSite context | ✅ | No |
 | 102.7 | 2026-06-04 | `main` | Implemented Server-Side Plan Feature Gate Middleware for advanced attribution, AI models, chat, reports, and spend writes | ✅ | No |
+| 102.8 | 2026-06-04 | `main` | Public Docs & Ingest Domain Cleanup — Fixed broken trackiq branding, removed unimplemented feature docs, removed PostHog leaks, softened compliance claims, documented CAPI follow-up | ✅ | No |
 
 ---
 
@@ -247,4 +248,3 @@ curl -i https://api.srctk.com/health
 # Tracker asset
 curl -i https://api.srctk.com/tracker/tracker.min.js
 ```
-| 98 | 2026-05-23 | `main` | **Beta QA: Auth → Onboarding → Tracker → Dashboard Flow** (see below) | QA in progress | No |

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { fetchApi } from '../lib/api'
-import { Copy, Check, Code, ExternalLink, RefreshCw, Circle, Bug, Link as LinkIcon, ChevronDown, ChevronRight, ToggleLeft, ToggleRight, UserCheck } from 'lucide-react'
+import { Copy, Check, Code, ExternalLink, RefreshCw, Circle, Bug, Link as LinkIcon, ChevronDown, ChevronRight, UserCheck } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 function AccordionSection({ title, icon: Icon, when, children }) {
@@ -40,8 +40,6 @@ export default function Snippet() {
   const [statusLoading, setStatusLoading] = useState(false)
   const [testLoading, setTestLoading] = useState(false)
   const [testResult, setTestResult] = useState(null)
-  const [autoIdentify, setAutoIdentify] = useState(false)
-  const [idSelector, setIdSelector] = useState('[data-trackiq-user-id]')
 
   useEffect(() => {
     async function load() {
@@ -85,11 +83,7 @@ export default function Snippet() {
 
   function buildSnippet() {
     if (!site) return ''
-    const attrs = [`src="${trackerBaseUrl}/tracker/tracker.min.js"`, `data-site-key="${site.site_key}"`]
-    if (autoIdentify && idSelector.trim()) {
-      attrs.push(`data-user-id-selector="${idSelector.trim()}"`)
-    }
-    return `<script async ${attrs.join(' ')}></script>`
+    return `<script async src="${trackerBaseUrl}/tracker/tracker.min.js" data-site-key="${site.site_key}"></script>`
   }
 
   const snippet = buildSnippet()
@@ -171,50 +165,9 @@ export default function Snippet() {
 
         <p className="text-sm text-gray-600">
           For most websites, this single script is enough to start tracking traffic and attribution.
-          Toggle options below to customize the pixel for your setup.
+          No configuration needed — tracking starts automatically on page load.
         </p>
 
-        {/* Toggle Controls */}
-        <div className="bg-gray-50 dark:bg-[#111414] rounded-lg p-4 space-y-3">
-          <p className="text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wider">Pixel Options</p>
-
-          <div className="space-y-2">
-            {/* Auto-identify toggle */}
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1">
-                <button
-                  onClick={() => setAutoIdentify(!autoIdentify)}
-                  className="flex items-center gap-2 text-left group"
-                >
-                  {autoIdentify
-                    ? <ToggleRight className="w-5 h-5 text-st-black dark:text-white flex-shrink-0" />
-                    : <ToggleLeft className="w-5 h-5 text-gray-300 group-hover:text-st-gray dark:text-gray-400 flex-shrink-0" />
-                  }
-                  <span className="text-sm font-medium text-gray-700">Auto-identify logged-in users</span>
-                </button>
-                <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5 ml-7">
-                  Reads a user ID from a meta tag on your page after login. No custom JavaScript needed.
-                </p>
-              </div>
-            </div>
-
-            {autoIdentify && (
-              <div className="ml-7 p-3 bg-white dark:bg-[#1A1D1D] rounded-lg border border-gray-200 dark:border-[#333838] space-y-2">
-                <label className="text-xs font-medium text-gray-700 dark:text-gray-200 block">CSS selector for user ID element</label>
-                <input
-                  type="text"
-                  value={idSelector}
-                  onChange={(e) => setIdSelector(e.target.value)}
-                  placeholder="[data-trackiq-user-id]"
-                  className="w-full px-3 py-2 text-xs border border-gray-300 rounded-lg font-mono outline-none focus:ring-2 focus:ring-gray-900"
-                />
-                <p className="text-xs text-st-gray">
-                  Add <code className="bg-gray-100 dark:bg-[#252929] px-1 rounded text-xs">&lt;meta data-trackiq-user-id="usr_abc123" /&gt;</code> to your logged-in page template.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
 
         <ol className="list-decimal list-inside text-sm text-gray-600 dark:text-gray-300 space-y-1 pl-1">
           <li>Copy the script below</li>
@@ -249,7 +202,7 @@ export default function Snippet() {
             <li>Visitor country and device type</li>
           </ul>
           <p className="text-st-gray dark:text-gray-400 mt-1">
-            Conversions require an additional <code className="bg-gray-200 px-1 rounded text-xs">trackiq.conversion()</code> call — see JavaScript API below.
+            Conversions require an additional <code className="bg-gray-200 px-1 rounded text-xs">sourcetrack.conversion()</code> call — see JavaScript API below.
           </p>
         </div>
       </div>
@@ -401,7 +354,7 @@ app.post('/stripe/webhook', express.raw({type: 'application/json'}), async (req,
     const invoice = event.data.object
     const customer = await stripe.customers.retrieve(invoice.customer)
 
-    await fetch('https://app.sourcetrack.ai/api/conversion/offline', {
+    await fetch('https://api.srctk.com/api/conversion/offline', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -419,7 +372,7 @@ app.post('/stripe/webhook', express.raw({type: 'application/json'}), async (req,
             <button
               onClick={async () => {
                 try {
-                  await navigator.clipboard.writeText(`// In your Stripe webhook handler\napp.post('/stripe/webhook', express.raw({type: 'application/json'}), async (req, res) => {\n  const event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET)\n\n  if (event.type === 'invoice.paid') {\n    const invoice = event.data.object\n    const customer = await stripe.customers.retrieve(invoice.customer)\n\n    await fetch('https://app.sourcetrack.ai/api/conversion/offline', {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json' },\n      body: JSON.stringify({\n        site_key: 'YOUR_SITE_KEY',\n        user_id: customer.email,           // must match identify() email\n        conversion_value: invoice.amount_paid / 100,\n        conversion_type: 'recurring_payment',\n        // Store first touch source in Stripe metadata at signup:\n        first_touch_source: customer.metadata?.st_first_touch_source || 'direct'\n      })\n    })\n  }\n  res.json({ received: true })\n})`)
+                  await navigator.clipboard.writeText(`// In your Stripe webhook handler\napp.post('/stripe/webhook', express.raw({type: 'application/json'}), async (req, res) => {\n  const event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET)\n\n  if (event.type === 'invoice.paid') {\n    const invoice = event.data.object\n    const customer = await stripe.customers.retrieve(invoice.customer)\n\n    await fetch('https://api.srctk.com/api/conversion/offline', {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json' },\n      body: JSON.stringify({\n        site_key: 'YOUR_SITE_KEY',\n        user_id: customer.email,           // must match identify() email\n        conversion_value: invoice.amount_paid / 100,\n        conversion_type: 'recurring_payment',\n        // Store first touch source in Stripe metadata at signup:\n        first_touch_source: customer.metadata?.st_first_touch_source || 'direct'\n      })\n    })\n  }\n  res.json({ received: true })\n})`)
                 } catch (_err) { /* clipboard unavailable */ }
               }}
               className="absolute top-3 right-3 p-1.5 bg-gray-800 hover:bg-gray-700 rounded text-gray-300 transition-colors"
@@ -469,24 +422,24 @@ app.post('/stripe/webhook', express.raw({type: 'application/json'}), async (req,
           >
             <div className="space-y-3 text-sm">
               <div>
-                <p className="font-medium text-gray-700">Get visitor ID</p>
-                <code className="block bg-gray-100 dark:bg-[#252929] px-3 py-1.5 rounded text-xs mt-1">window.trackiq.id()</code>
-              </div>
-              <div>
                 <p className="font-medium text-gray-700">Identify user</p>
-                <code className="block bg-gray-100 dark:bg-[#252929] px-3 py-1.5 rounded text-xs mt-1">{'window.trackiq.identify({ user_id: "usr_abc123" })'}</code>
+                <code className="block bg-gray-100 dark:bg-[#252929] px-3 py-1.5 rounded text-xs mt-1">{'window.sourcetrack.identify("user_123", { email: "customer@example.com" })'}</code>
                 <p className="text-xs text-st-gray dark:text-gray-400 mt-1">Call after login/signup to link browsing history to a known user</p>
               </div>
               <div>
                 <p className="font-medium text-gray-700">Track custom event</p>
-                <code className="block bg-gray-100 dark:bg-[#252929] px-3 py-1.5 rounded text-xs mt-1">{'window.trackiq.event("signup", { plan: "pro" })'}</code>
+                <code className="block bg-gray-100 dark:bg-[#252929] px-3 py-1.5 rounded text-xs mt-1">{'window.sourcetrack.track("signup", { plan: "pro" })'}</code>
               </div>
               <div>
                 <p className="font-medium text-gray-700">Track conversion</p>
-                <code className="block bg-gray-100 dark:bg-[#252929] px-3 py-1.5 rounded text-xs mt-1">{'window.trackiq.conversion(29.99, { product: "starter" })'}</code>
+                <code className="block bg-gray-100 dark:bg-[#252929] px-3 py-1.5 rounded text-xs mt-1">{'window.sourcetrack.conversion({ value: 29.99, type: "purchase" })'}</code>
                 <p className="text-xs text-st-gray dark:text-gray-400 mt-1">
-                  Conversions appear in attribution reports and dashboard. Use <code className="bg-gray-100 dark:bg-[#252929] px-1 rounded text-xs">conversion_type</code> to subtype (e.g. purchase, lead, trial).
+                  Conversions appear in attribution reports and dashboard. Use <code className="bg-gray-100 dark:bg-[#252929] px-1 rounded text-xs">type</code> to subtype (e.g. purchase, lead, trial).
                 </p>
+              </div>
+              <div>
+                <p className="font-medium text-gray-700">Consent management</p>
+                <code className="block bg-gray-100 dark:bg-[#252929] px-3 py-1.5 rounded text-xs mt-1">{'window.sourcetrack.consent(true)  // grant\nwindow.sourcetrack.optOut()        // stop tracking\nwindow.sourcetrack.optIn()         // resume tracking\nwindow.sourcetrack.hasConsent()    // check status'}</code>
               </div>
             </div>
           </AccordionSection>
@@ -512,143 +465,24 @@ app.post('/stripe/webhook', express.raw({type: 'application/json'}), async (req,
             <div>
               <p className="text-sm font-medium text-gray-700">Explicit API call</p>
               <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">
-                Call <code className="bg-gray-100 dark:bg-[#252929] px-1 rounded text-xs">window.trackiq.identify()</code> immediately after login/signup.
+                Call <code className="bg-gray-100 dark:bg-[#252929] px-1 rounded text-xs">window.sourcetrack.identify()</code> immediately after login/signup.
               </p>
               <code className="block bg-gray-100 dark:bg-[#252929] px-3 py-1.5 rounded text-xs mt-1.5">
-                {'// In your app, after successful login:\nwindow.trackiq.identify({ user_id: currentUser.id })'}
+                {'// In your app, after successful login:\nwindow.sourcetrack.identify(currentUser.id, { email: currentUser.email })'}
               </code>
             </div>
-
-            <div>
-              <p className="text-sm font-medium text-gray-700">Auto-detection (no custom JS)</p>
-              <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">
-                Add a hidden meta tag to your logged-in pages. The pixel reads it automatically — no code changes beyond the meta tag.
-              </p>
-              <p className="text-xs text-st-gray dark:text-gray-400 mt-1">
-                Add this to your logged-in page template (render your actual user ID):
-              </p>
-              <code className="block bg-gray-100 dark:bg-[#252929] px-3 py-1.5 rounded text-xs mt-1.5">
-                {'<meta data-trackiq-user-id="usr_abc123" />'}
-              </code>
-              <p className="text-xs text-st-gray dark:text-gray-400 mt-2">
-                Then add <code className="bg-gray-100 dark:bg-[#252929] px-1 rounded text-xs">data-user-id-selector</code> to your pixel script:
-              </p>
-              {site && (
-                <div className="bg-st-black rounded-lg p-4 relative mt-1.5">
-                  <pre className="text-green-400 text-xs overflow-x-auto whitespace-pre-wrap">
-                    {`<script async src="${trackerBaseUrl}/tracker/tracker.min.js" data-site-key="${site.site_key}" data-user-id-selector="[data-trackiq-user-id]"></script>`}
-                  </pre>
-                  <button
-                    onClick={async () => {
-                      try {
-                        await navigator.clipboard.writeText(`<script async src="${trackerBaseUrl}/tracker/tracker.min.js" data-site-key="${site.site_key}" data-user-id-selector="[data-trackiq-user-id]"></script>`)
-                      } catch (_err) { /* clipboard unavailable */ }
-                    }}
-                    className="absolute top-3 right-3 p-1.5 bg-gray-800 hover:bg-gray-700 rounded text-gray-300 transition-colors"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-              <p className="text-xs text-st-gray dark:text-gray-400 mt-1">
-                This is an alternative configuration of the same pixel — not a different script.
-              </p>
-            </div>
           </AccordionSection>
 
-          <AccordionSection
-            title="Cross-Domain Tracking"
-            icon={LinkIcon}
-            when="Only if visitors move between multiple domains you own"
-          >
-            <p className="text-sm text-gray-600">
-              Preserve attribution when a visitor moves from one tracked domain to another.
-              Uses query-parameter pass-through. Both domains must have the SourceTrack Pixel installed.
+
+          <div className="bg-gray-50 dark:bg-[#111414] rounded-lg p-3 text-xs text-gray-600 dark:text-gray-300">
+            <p className="font-medium text-gray-700 dark:text-gray-200">Cross-domain & booking attribution</p>
+            <p className="mt-1">
+              Cross-domain handoff helpers are not available in the current tracker.
+              Use <code className="bg-gray-100 dark:bg-[#252929] px-1 rounded text-xs">sourcetrack.identify()</code> after login
+              or <code className="bg-gray-100 dark:bg-[#252929] px-1 rounded text-xs">sourcetrack.conversion()</code> with <code className="bg-gray-100 dark:bg-[#252929] px-1 rounded text-xs">order_id</code> for attribution across domains.
             </p>
+          </div>
 
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
-              <p className="font-medium text-xs">What this does not support</p>
-              <ul className="text-xs mt-1 space-y-0.5 list-disc list-inside">
-                <li>Cross-device identity (different browser/device = different visitor)</li>
-                <li>Automatic third-party checkout domains</li>
-                <li>Automatic link decoration — you explicitly call <code className="bg-amber-100 px-1 rounded text-xs">getCrossDomainUrl()</code></li>
-              </ul>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm font-medium text-gray-700">Decorate outgoing links</p>
-                <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">
-                  Call <code className="bg-gray-100 dark:bg-[#252929] px-1 rounded text-xs">getCrossDomainUrl()</code> on URLs pointing to another tracked domain.
-                </p>
-                <code className="block bg-gray-100 dark:bg-[#252929] px-3 py-1.5 rounded text-xs mt-1.5 whitespace-pre-wrap">
-                  {'var link = document.getElementById("app-link")\nlink.href = window.trackiq.getCrossDomainUrl(link.href)'}
-                </code>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-gray-700">Form-based handoff</p>
-                <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">
-                  Add a hidden field for cross-domain form submissions:
-                </p>
-                <code className="block bg-gray-100 dark:bg-[#252929] px-3 py-1.5 rounded text-xs mt-1.5">
-                  {'<input type="hidden" data-trackiq="__tq_id" name="anonymous_id" />'}
-                </code>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-gray-700">Receiving domain (automatic)</p>
-                <ul className="text-xs text-gray-600 dark:text-gray-300 mt-1 space-y-0.5 list-disc list-inside">
-                  <li>Reads <code className="bg-gray-100 dark:bg-[#252929] px-1 rounded text-xs">__tq_id</code> from URL and restores identity cookie</li>
-                  <li>Reads <code className="bg-gray-100 dark:bg-[#252929] px-1 rounded text-xs">__tq_ft</code> and restores first-touch context</li>
-                  <li>Strips params from visible URL after reading</li>
-                </ul>
-              </div>
-            </div>
-          </AccordionSection>
-
-          <AccordionSection
-            title="Booking Attribution"
-            icon={LinkIcon}
-            when="Only if conversions happen in external booking tools like Calendly"
-          >
-            <p className="text-sm text-gray-600">
-              Track scheduled meetings and booked calls as a differentiated conversion subtype.
-              Uses a documented handoff pattern — not a native integration.
-            </p>
-
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
-              <p className="font-medium text-xs">What this does not support</p>
-              <ul className="text-xs mt-1 space-y-0.5 list-disc list-inside">
-                <li>Native Calendly OAuth or API integration</li>
-                <li>Automatic booking ingestion from third-party tools</li>
-                <li>Webhook-based booking completion callbacks</li>
-              </ul>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm font-medium text-gray-700">Step 1 — Carry attribution into the booking form</p>
-                <code className="block bg-gray-100 dark:bg-[#252929] px-3 py-1.5 rounded text-xs mt-1.5 whitespace-pre-wrap">
-                  {'<input type="hidden" data-trackiq="__tq_id" name="anonymous_id" />\n<input type="hidden" data-trackiq="utm_source" name="utm_source" />'}
-                </code>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-gray-700">Step 2 — Decorate the booking link (cross-domain)</p>
-                <code className="block bg-gray-100 dark:bg-[#252929] px-3 py-1.5 rounded text-xs mt-1.5 whitespace-pre-wrap">
-                  {'var decorated = window.trackiq.getCrossDomainUrl("https://calendly.com/your-link")'}
-                </code>
-              </div>
-
-              <div>
-                <p className="text-sm font-medium text-gray-700">Step 3 — Fire conversion on confirmation page</p>
-                <code className="block bg-gray-100 dark:bg-[#252929] px-3 py-1.5 rounded text-xs mt-1.5 whitespace-pre-wrap">
-                  {'window.trackiq.conversion(0, { conversion_type: "meeting", form_name: "Calendly" })'}
-                </code>
-              </div>
-            </div>
-          </AccordionSection>
 
           <AccordionSection
             title="Webhook Identity & Contact Linkage"
@@ -682,11 +516,9 @@ app.post('/stripe/webhook', express.raw({type: 'application/json'}), async (req,
             <div>
               <p className="text-sm font-medium text-gray-700">Capturing the anonymous ID</p>
               <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">
-                Use hidden fields in your forms. The pixel populates them automatically.
+                The anonymous ID is included in every event payload SourceTrack receives.
+                Pass it from your form submission flow or event logs to the identify call above.
               </p>
-              <code className="block bg-gray-100 dark:bg-[#252929] px-3 py-1.5 rounded text-xs mt-1.5">
-                {'<input type="hidden" data-trackiq="anonymous_id" name="source_track_id" />'}
-              </code>
             </div>
           </AccordionSection>
 

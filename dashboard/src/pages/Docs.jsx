@@ -505,8 +505,8 @@ await fetch('https://api.srctk.com/api/conversion', {
             <Endpoint method="POST" path="/api/identify" description="No auth — validated by site_key" />
             <p>
               Attach identity traits to an anonymous visitor. Call this after sign-up or login. The
-              anonymous ID is aliased to the user ID in PostHog, so events before and after login are
-              stitched together.
+              anonymous ID is aliased to the user ID, so events before and after login are
+              stitched together automatically.
             </p>
 
             <H3>Request body</H3>
@@ -659,7 +659,7 @@ await fetch('https://api.srctk.com/api/conversion', {
             <Endpoint method="DELETE" path="/api/gdpr/visitor" description="Requires Bearer token" />
             <p>
               Permanently deletes all <IC>attributed_conversions</IC> records for a visitor and submits a
-              person-deletion request to PostHog. Irreversible.
+              data deletion request to the analytics backend. Irreversible.
             </p>
             <ParamTable params={[
               { name: 'site_key', type: 'string', required: true, desc: 'Your site key.' },
@@ -777,7 +777,7 @@ fetch('/api/attribution?site_key=...&model=first_touch&...', {
               {
                 date: '2026-05-16',
                 items: [
-                  'Replaced 25-call PostHog Promise.all with 2 Supabase + 4 PostHog queries in dashboard route',
+                  'Optimized dashboard data loading with faster parallel queries',
                   'Fixed NaN values on Campaigns and Leads pages',
                   'Added dark mode to Report Builder',
                   'Fixed tracker snippet URL in Analytics install guide',

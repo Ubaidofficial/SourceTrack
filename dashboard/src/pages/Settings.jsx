@@ -377,12 +377,12 @@ export default function Settings() {
         </div>
         <p className="text-xs text-st-gray dark:text-gray-400">
           When enabled, the tracker uses a server-derived daily-rotating hash instead of localStorage or cookies.
-          No personal data is stored in the browser — fully compliant with GDPR, ePrivacy, and PECR without a consent banner.
+          No personal data is stored in the browser — no cookies, no fingerprinting. Designed to reduce tracking risk and operate without a consent banner.
           Note: first-touch attribution is limited to the current session in cookieless mode.
         </p>
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-600 dark:text-gray-400">
-            {cookielessMode ? 'Cookieless mode — no browser storage, GDPR-safe' : 'Standard mode — visitor IDs stored in localStorage'}
+            {cookielessMode ? 'Cookieless mode — no browser storage, privacy-friendly' : 'Standard mode — visitor IDs stored in localStorage'}
           </span>
           <button
             onClick={handleCookielessToggle}
@@ -483,7 +483,8 @@ export default function Settings() {
         <div className="border-t border-gray-100 dark:border-gray-800 pt-4 space-y-2">
           <p className="text-xs font-semibold text-st-black dark:text-white">Erase Visitor Data (Right to Erasure)</p>
           <p className="text-xs text-st-gray dark:text-gray-400">
-            Enter a visitor's anonymous ID to permanently delete all attribution records and PostHog events associated with them.
+            Enter a visitor's anonymous ID to permanently delete all attribution records and analytics events associated with them.
+            This action is immediate and permanent, and helps support visitor erasure workflows.
           </p>
           <form onSubmit={handleVisitorDelete} className="flex items-center gap-3">
             <input

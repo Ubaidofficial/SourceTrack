@@ -1,7 +1,30 @@
 > [!NOTE]
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 102.7 implementation of Server-Side Plan Feature Gate Middleware. Add plan restrictions to prevent free tier users from bypassing frontend gates for multi-touch models, saved reports, manual spend entry, AI analytics, and AI chat.
+> **Handoff:** Session 102.8 Public Docs & Ingest Domain Cleanup. Cleaned up outdated tracker API references, removed unimplemented feature docs (cross-domain, booking, auto-identify), corrected JS API signatures, fixed stripe webhook domains, and removed internal branding/PostHog leakage. Unverified CAPI claims on solution pages are documented as a blocker for Session 102.9.
+
+## Session 102.8 — Public Docs & Ingest Domain Cleanup
+
+**Date:** 2026-06-04 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+
+1. **Snippet Installation Cleanup** — Removed unimplemented feature sections ("Cross-Domain Tracking", "Booking Attribution", "Auto-identify toggle" / `data-user-id-selector` examples) from `Snippet.jsx`. Exchanged code examples with a short, copy-paste-safe neutral note explaining proper standard API alternatives (`sourcetrack.identify` and `sourcetrack.conversion`).
+2. **Standardized JS API Reference** — Updated JavaScript API lists to solely reference valid production methods: `track`, `conversion`, `identify`, `consent`, `optOut`, `optIn`, `hasConsent`. Scrubbed `window.trackiq`, `trackiq.conversion`, and deprecated `.event()`/`.id()` signatures.
+3. **Ingest Domain Consistency** — Corrected outdated domain variables and example endpoints, ensuring user-facing integration snippets refer to `https://api.srctk.com` and `https://app.sourcetrack.ai`.
+4. **PostHog Branding Removal** — Cleared internal vendor names ("PostHog") from user-facing copy in `Docs.jsx`, `Settings.jsx`, and `Snippet.jsx`, replacing them with generic descriptors (e.g., "analytics events", "SourceTrack tracking pipeline").
+5. **Soften Compliance Claims** — Softened over-reaching compliance assertions (e.g., "fully compliant", "GDPR-safe") in favor of privacy-friendly, low-risk descriptors ("privacy-conscious", "privacy-friendly", "no cookies, no fingerprinting").
+6. **Solution Pages CAPI Audit** — Performed audit grepping for unverified Conversions API (CAPI) references on `SolutionEcommerce.jsx`, `SolutionAgency.jsx`, `SolutionSaaS.jsx`, and `SolutionLeadGen.jsx`.
+
+### Follow-up Blockers (For Session 102.9)
+- **Unverified CAPI Claims:** Marketing copy on the four main solution pages makes specific, detailed claims about native server-side CAPI sync to Meta, Google, LinkedIn, TikTok, and Microsoft UET Ads. These integrations are not yet active/verified in the current backend and must be corrected, softened, or completed.
+
+### Files changed
+- `dashboard/src/pages/Snippet.jsx` — Removed unimplemented sections, corrected API calls and domains.
+- `dashboard/src/pages/Docs.jsx` — Removed PostHog vendor leaks, updated domains/URLs.
+- `dashboard/src/pages/Settings.jsx` — Cleared vendor references, softened GDPR compliance wording.
+
+---
 
 ## Session 102.7 — Server-Side Plan Feature Gate Middleware
 
