@@ -8,7 +8,8 @@
     "dev": "nodemon api/index.js",
     "build:tracker": "esbuild tracker/tracker.js --bundle --minify --outfile=tracker/tracker.min.js",
     "qa:static": "node scripts/qa-static-launch-check.mjs",
-    "qa:smoke": "node scripts/qa-runtime-smoke.mjs"
+    "qa:smoke": "node scripts/qa-runtime-smoke.mjs",
+    "qa:edge": "node scripts/qa-edge-cases.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.96.0",

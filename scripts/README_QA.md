@@ -76,6 +76,46 @@ npm run qa:smoke
 
 ---
 
-## 3. Disclaimers
+## 3. Edge-Case QA Validation
+
+This script performs stress-tests on the running local or production API instance, validating site key authorization, URL/referrer PII redaction, positive/negative conversion values, duplicate order IDs, offline identity binding, public dashboard scope override protections, private data field leaks, and plan feature gating.
+
+### Config Environment Variables
+
+Configure environment variables before executing the script:
+
+- `SOURCETRACK_API_URL` — Target host URL (defaults to `http://localhost:3000`).
+- `SOURCETRACK_SITE_KEY` — Valid site key identifier.
+- `SOURCETRACK_BAD_SITE_KEY` — Invalid site key identifier (defaults to `qa_invalid_site_key`).
+- `SOURCETRACK_AUTH_TOKEN` — Optional JWT authorization token.
+- `SOURCETRACK_PUBLIC_SHARE_TOKEN` — Optional public share token identifier.
+
+### Usage
+
+Run from the repository root:
+
+```bash
+# Set parameters locally or run against production targets
+SOURCETRACK_API_URL=http://localhost:3000 \
+SOURCETRACK_SITE_KEY=your_site_key \
+SOURCETRACK_AUTH_TOKEN=optional_jwt \
+SOURCETRACK_PUBLIC_SHARE_TOKEN=optional_share_token \
+npm run qa:edge
+```
+
+### Endpoints Verified
+
+- `POST /api/track` & `POST /api/conversion` — Verified with missing, invalid, and malformed site keys.
+- `POST /api/track` (PII query parameters) — Verified that values containing emails/tokens/phones do not cause crashes.
+- `POST /api/conversion` (malformed conversions) — Verified with missing/negative/non-numeric conversion values.
+- `POST /api/conversion/offline` (offline validation) — Verified with missing anonymous/user identities, missing conversion type, invalid values, and valid payloads.
+- `GET /api/install/status` — Verified handling of missing, invalid, and valid site keys.
+- `GET /api/public/:token` — Verified that override query parameters (`site_key`, `site_id`, etc.) are blocked.
+- `GET /api/sites` — Verified that Stripe customer identifiers or public share tokens are never leaked to client views.
+- `GET /api/attribution` & `GET /api/export/report` — Can verify plan gate behavior when auth and suitable test-plan credentials are provided.
+
+---
+
+## 4. Disclaimers
 
 * **No Replacement for Manual browser QA:** While these scripts verify compilation, parameter redaction rules, and API payloads, they do not replace human visual review of dashboard elements, layout state reactiveness, or onboarding step navigations.
