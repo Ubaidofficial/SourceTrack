@@ -355,6 +355,17 @@ export default function Dashboard() {
   })
   const liveCount = liveData?.live_visitors ?? 0
 
+  const { data: recentActivityQuery } = useQuery({
+    queryKey: ['recent-activity', site?.site_key],
+    queryFn: async () => {
+      if (!site?.site_key) return null
+      return fetchApi(`/recent-activity?site_key=${encodeURIComponent(site.site_key)}`)
+    },
+    enabled: !!site?.site_key && !previewMode,
+    refetchInterval: 30000,
+  })
+  const recentActivity = recentActivityQuery?.data ?? recentActivityQuery ?? null
+
   const { data: healthQuery, refetch: refetchHealth, isLoading: isHealthLoading } = useQuery({
     queryKey: ['tracking-health', site?.site_key],
     queryFn: async () => {
@@ -668,12 +679,9 @@ export default function Dashboard() {
         </div>
         {!previewMode && (
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-50 dark:bg-green-900/20 border border-green-200 text-green-700 text-sm font-medium">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
-              </span>
-              {liveCount} live now
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] text-st-gray text-xs">
+              <Users className="w-3.5 h-3.5 text-st-gray" />
+              Recent visitors (5m): {liveCount}
             </div>
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] text-st-gray text-xs">
               <RefreshCw className="w-3 h-3" />
@@ -869,6 +877,133 @@ export default function Dashboard() {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Recent Activity Panel ── */}
+          {!previewMode && (
+            <div className="bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-5 shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b border-gray-100 dark:border-[#2A2E2E] pb-3">
+                <div className="flex items-center gap-2">
+                  <RefreshCw className="w-3.5 h-3.5 text-st-gray" />
+                  <h3 className="font-semibold text-st-black dark:text-white text-sm sm:text-base">Recent Activity — Last 30 minutes</h3>
+                  <span className="text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-500 px-1.5 py-0.5 rounded font-normal">Auto-refreshes every 30s</span>
+                </div>
+                <button
+                  onClick={() => navigate('/debugger')}
+                  className="text-xs text-st-gray hover:text-st-black dark:hover:text-white font-medium flex items-center gap-1"
+                >
+                  View Event Debugger <ArrowRight className="w-3 h-3" />
+                </button>
+              </div>
+
+              {!recentActivity || (!recentActivity.pageviews && !recentActivity.visitors && !recentActivity.conversions && (!recentActivity.events || recentActivity.events.length === 0)) ? (
+                <div className="text-center py-6 text-sm text-st-gray dark:text-gray-400">
+                  No recent activity yet. Visit your site or trigger a test event.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Stats Column */}
+                  <div className="space-y-4">
+                    <h4 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Metrics Summary</h4>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="bg-gray-50 dark:bg-[#252929]/50 p-3 rounded-lg border border-gray-100 dark:border-[#2A2E2E] text-center">
+                        <div className="text-xs text-st-gray mb-1">Visitors</div>
+                        <div className="text-lg font-bold text-st-black dark:text-white">{recentActivity.visitors || 0}</div>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-[#252929]/50 p-3 rounded-lg border border-gray-100 dark:border-[#2A2E2E] text-center">
+                        <div className="text-xs text-st-gray mb-1">Pageviews</div>
+                        <div className="text-lg font-bold text-st-black dark:text-white">{recentActivity.pageviews || 0}</div>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-[#252929]/50 p-3 rounded-lg border border-gray-100 dark:border-[#2A2E2E] text-center">
+                        <div className="text-xs text-st-gray mb-1">Conversions</div>
+                        <div className="text-lg font-bold text-st-black dark:text-white">{recentActivity.conversions || 0}</div>
+                      </div>
+                    </div>
+
+                    {/* Top Channels/Referrers breakdown inside the panel */}
+                    <div className="space-y-3 pt-2">
+                      {recentActivity.top_channels && recentActivity.top_channels.length > 0 && (
+                        <div>
+                          <div className="text-xs font-medium text-st-gray mb-1.5">Top Channels</div>
+                          <div className="space-y-1">
+                            {recentActivity.top_channels.map((tc, idx) => (
+                              <div key={idx} className="flex justify-between items-center text-xs">
+                                <span className="text-gray-700 dark:text-gray-300 font-medium">{tc.name || 'Direct'}</span>
+                                <span className="text-st-gray">{tc.count} event{tc.count > 1 ? 's' : ''}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {recentActivity.top_referrers && recentActivity.top_referrers.length > 0 && (
+                        <div className="pt-2">
+                          <div className="text-xs font-medium text-st-gray mb-1.5">Top Referrers</div>
+                          <div className="space-y-1">
+                            {recentActivity.top_referrers.map((tr, idx) => (
+                              <div key={idx} className="flex justify-between items-center text-xs">
+                                <span className="text-gray-700 dark:text-gray-300 truncate max-w-[200px]">{tr.name || 'Direct'}</span>
+                                <span className="text-st-gray">{tr.count} visit{tr.count > 1 ? 's' : ''}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Top Pages Column */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Top Pages (Last 30m)</h4>
+                    {recentActivity.top_pages && recentActivity.top_pages.length > 0 ? (
+                      <div className="space-y-2">
+                        {recentActivity.top_pages.map((tp, idx) => (
+                          <div key={idx} className="bg-gray-50 dark:bg-[#252929]/30 p-2.5 rounded-lg border border-gray-100 dark:border-[#2A2E2E] flex justify-between items-center text-xs">
+                            <span className="text-gray-700 dark:text-gray-300 font-mono truncate max-w-[180px] sm:max-w-[240px]">{tp.path || '/'}</span>
+                            <span className="bg-gray-200/60 dark:bg-[#333838] px-2 py-0.5 rounded text-st-black dark:text-white font-semibold">{tp.count} view{tp.count > 1 ? 's' : ''}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-st-gray py-4">No pageview events.</div>
+                    )}
+                  </div>
+
+                  {/* Recent Events List Column */}
+                  <div className="space-y-3">
+                    <h4 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Event Feed</h4>
+                    {recentActivity.events && recentActivity.events.length > 0 ? (
+                      <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                        {recentActivity.events.map((evt, idx) => (
+                          <div key={idx} className="p-2 rounded-lg border border-gray-100 dark:border-[#2A2E2E] bg-gray-50 dark:bg-[#252929]/20 flex justify-between items-center text-xs gap-2">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className={`w-1.5 h-1.5 rounded-full ${evt.event === '$conversion' ? 'bg-green-500' : 'bg-blue-400'}`} />
+                                <span className="font-semibold text-gray-800 dark:text-gray-200 truncate">
+                                  {evt.event === '$pageview' ? 'Pageview' : evt.event === '$conversion' ? 'Conversion' : evt.event}
+                                </span>
+                              </div>
+                              <div className="text-[10px] text-st-gray mt-0.5 truncate font-mono">
+                                {evt.page_path || '/'}
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              {evt.conversion_value != null && evt.conversion_value > 0 && (
+                                <span className="text-xs font-bold text-green-600 dark:text-green-400 block">${evt.conversion_value.toFixed(2)}</span>
+                              )}
+                              <span className="text-[10px] text-st-gray">
+                                {new Date(evt.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-st-gray py-4">No events found.</div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

@@ -3,6 +3,8 @@ import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
 import { getSupabase as getSupabaseAdmin } from '../lib/supabase.js'
 import { esc } from '../lib/utils.js'
+import { channelFromEvent } from '../lib/channel-classifier.js'
+
 
 const router = Router()
 
@@ -578,6 +580,188 @@ router.get('/tracking-health', validateSiteKey, requireSiteMembership, async (re
             detail: 'Failed to match domain'
           }
         ]
+      },
+      error: null
+    })
+  }
+})
+
+function getPathOnly(urlStr) {
+  if (!urlStr) return '/'
+  try {
+    const url = new URL(urlStr, 'http://dummy.com')
+    return url.pathname || '/'
+  } catch (_) {
+    return '/'
+  }
+}
+
+function getDomainOnly(referrerStr) {
+  if (!referrerStr) return null
+  try {
+    const url = new URL(referrerStr)
+    return url.hostname.replace(/^www\./i, '')
+  } catch (_) {
+    try {
+      return referrerStr.replace(/^https?:\/\//i, '').split('/')[0].replace(/^www\./i, '')
+    } catch (__) {
+      return null
+    }
+  }
+}
+
+router.get('/recent-activity', validateSiteKey, requireSiteMembership, async (req, res) => {
+  try {
+    const posthogSiteId = String(req.site.id)
+    const sql = `
+      SELECT
+        event,
+        timestamp,
+        properties.page_url AS page_url,
+        properties.referrer AS referrer,
+        properties.utm_medium AS utm_medium,
+        properties.utm_source AS utm_source,
+        properties.first_touch_source AS first_touch_source,
+        properties.first_touch_medium AS first_touch_medium,
+        properties.first_touch_campaign AS first_touch_campaign,
+        properties.gclid AS gclid,
+        properties.fbclid AS fbclid,
+        properties.msclkid AS msclkid,
+        properties.ttclid AS ttclid,
+        properties.li_fat_id AS li_fat_id,
+        properties.ai_source AS ai_source,
+        properties.conversion_value AS conversion_value,
+        properties.user_id AS user_id,
+        properties.anonymous_id AS anonymous_id,
+        distinct_id
+      FROM events
+      WHERE properties.site_id = '${esc(posthogSiteId)}'
+        AND timestamp >= now() - INTERVAL 30 MINUTE
+      ORDER BY timestamp DESC
+      LIMIT 1000
+    `
+
+    const rows = await queryHogQL(sql, 'recent_activity_events')
+
+    let pageviewsCount = 0
+    let conversionsCount = 0
+    const uniqueVisitors = new Set()
+    const referrersCount = {}
+    const pagesCount = {}
+    const channelsCount = {}
+    const eventsList = []
+
+    for (const row of (rows || [])) {
+      const [
+        event,
+        timestamp,
+        pageUrl,
+        referrer,
+        utmMedium,
+        utmSource,
+        firstTouchSource,
+        firstTouchMedium,
+        firstTouchCampaign,
+        gclid,
+        fbclid,
+        msclkid,
+        ttclid,
+        liFatId,
+        aiSource,
+        conversionValue,
+        userId,
+        anonymousId,
+        distinctId
+      ] = row
+
+      const visitorId = userId || anonymousId
+      if (visitorId) {
+        uniqueVisitors.add(visitorId)
+      }
+
+      if (event === '$pageview') {
+        pageviewsCount++
+      } else if (event === '$conversion') {
+        conversionsCount++
+      }
+
+      const normPath = getPathOnly(pageUrl)
+      const normReferrer = getDomainOnly(referrer)
+
+      const channel = channelFromEvent({
+        utm_medium: utmMedium,
+        utm_source: utmSource,
+        referrer: referrer,
+        ai_source: aiSource,
+        gclid,
+        fbclid,
+        msclkid,
+        ttclid,
+        li_fat_id: liFatId
+      })
+
+      if (event === '$pageview' && normReferrer) {
+        referrersCount[normReferrer] = (referrersCount[normReferrer] || 0) + 1
+      }
+
+      if (event === '$pageview' && normPath) {
+        pagesCount[normPath] = (pagesCount[normPath] || 0) + 1
+      }
+
+      if (channel) {
+        channelsCount[channel] = (channelsCount[channel] || 0) + 1
+      }
+
+      eventsList.push({
+        event,
+        timestamp,
+        page_path: normPath,
+        referrer_domain: normReferrer,
+        channel,
+        conversion_value: conversionValue ? Number(conversionValue) || 0 : null
+      })
+    }
+
+    const topReferrers = Object.entries(referrersCount)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5)
+
+    const topPages = Object.entries(pagesCount)
+      .map(([path, count]) => ({ path, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5)
+
+    const topChannels = Object.entries(channelsCount)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5)
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        pageviews: pageviewsCount,
+        visitors: uniqueVisitors.size,
+        conversions: conversionsCount,
+        events: eventsList.slice(0, 20),
+        top_referrers: topReferrers,
+        top_pages: topPages,
+        top_channels: topChannels
+      },
+      error: null
+    })
+  } catch (err) {
+    console.error('[dashboard/recent-activity] failed:', err.message)
+    return res.status(200).json({
+      success: true,
+      data: {
+        pageviews: 0,
+        visitors: 0,
+        conversions: 0,
+        events: [],
+        top_referrers: [],
+        top_pages: [],
+        top_channels: []
       },
       error: null
     })
