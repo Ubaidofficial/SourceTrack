@@ -1,7 +1,30 @@
 > [!NOTE]
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 102.9 Solution Pages CAPI Claims Cleanup. Audited and softened/removed unverified Conversions API (CAPI), native Shopify/WooCommerce, CRM, and ad-platform synchronization claims from public solution pages, replacing them with accurate descriptions of standard tracking snippet usage, B2B user identification, and the offline REST API.
+> **Handoff:** Session 103.1 — QA and Validation Before Public Launch. Code/static QA passed — ready for manual browser QA. Verified that auth and site scoping are secure, tracking ingestion (including PII URL/referrer redaction and UTM preservation) works correctly, onboarding and verification flows are robust, plan gates are enforced on the server-side, and no marketing overclaims or broken snippets remain. All builds, syntax, and mount tests pass.
+>
+> **Next Session:** Session 103.2 — Manual browser QA checklist.
+
+## Session 103.1 — QA and Validation Before Public Launch
+
+**Date:** 2026-06-04 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+
+1. **Syntax, Build, and Mount Verification** — Verified all API route and middleware scripts compile cleanly (`node --check`). Built the production dashboard successfully. Confirmed all endpoints (including `/api/conversion/offline` and `/api/events/dedupe-summary`) are mounted and properly gated.
+2. **Auth & Scope Security Hardening** — Verified that active site keys and user memberships are strictly verified for all dashboard analytical, export, and campaign endpoints, preventing cross-customer data access.
+3. **Tracking & PII Redaction Audit** — Verified that the PII parameter regex redactor sanitizes incoming URLs/referrers at the ingestion level while UTMs and ad click-IDs remain safe.
+4. **Marketing Truthfulness Audit** — Softened residual "server-side conversion sync wording" claims in `Billing.jsx` and `Docs.jsx` meta tag descriptions to align with the current standard webhook pipeline and offline REST API capabilities.
+5. **Install Verification & Doctor Health** — Confirmed that onboarding verification reads from Supabase metadata columns directly and doctor health statuses map safely under warning thresholds.
+
+### Files changed
+- `dashboard/src/pages/Billing.jsx` — Softened plan feature description.
+- `dashboard/src/pages/Docs.jsx` — Softened meta tags.
+- `SESSION_STATE.md` — Updated session status to 103.1 and next session task.
+- `SESSION_LOG.md` — Added Session 103.1 log entry.
+- `SESSION_HANDOFF.md` — Added QA verification details.
+
+---
 
 ## Session 102.9 — Solution Pages CAPI Claims Cleanup
 
@@ -10,7 +33,7 @@
 ### Completed
 
 1. **eCommerce Copy Softening** — Updated `SolutionEcommerce.jsx` to remove unverified Meta/Google CAPI sync and automated bidding optimization claims. Replaced them with descriptions of structured purchase conversion payloads ready for webhook routing, and removed all mentions of "Shopify app" or "WooCommerce integrations".
-2. **Agency Copy Softening** — Updated `SolutionAgency.jsx` to remove references to per-client CAPI credentials, multi-platform ad sync (TikTok, LinkedIn, Microsoft UET), and the unverified "40% more conversions" claim. Replaced them with client data isolation details, structured client switcher, and client-scoped webhook pipeline info.
+2. **Agency Copy Softening** — Updated `SolutionAgency.jsx` to remove references to per-client CAPI credentials, multi-platform ad sync (ad-platform sync), and the unverified "40% more conversions" claim. Replaced them with client data isolation details, structured client switcher, and client-scoped webhook pipeline info.
 3. **SaaS Copy Softening** — Updated `SolutionSaaS.jsx` to remove B2B LinkedIn/Google CAPI sync claims, focusing instead on trial-to-paid signup event tracking and in-app visitor identification (`sourcetrack.identify`).
 4. **Lead Gen Copy Softening** — Updated `SolutionLeadGen.jsx` to remove CAPI-sync and automated CRM deal-matching promises. Replaced them with clear descriptions of offline conversion ingestion via the `/api/conversion/offline` REST API.
 5. **Grep and Build Validation** — Verified that no marketing pages contain unverified CAPI promises, compliance overclaims, or outdated tracker API examples, and verified that the dashboard compiles successfully.
@@ -37,7 +60,7 @@
 6. **Solution Pages CAPI Audit** — Performed audit grepping for unverified Conversions API (CAPI) references on `SolutionEcommerce.jsx`, `SolutionAgency.jsx`, `SolutionSaaS.jsx`, and `SolutionLeadGen.jsx`.
 
 ### Follow-up Blockers (For Session 102.9)
-- **Unverified CAPI Claims:** Marketing copy on the four main solution pages makes specific, detailed claims about native server-side CAPI sync to Meta, Google, LinkedIn, TikTok, and Microsoft UET Ads. These integrations are not yet active/verified in the current backend and must be corrected, softened, or completed.
+- **Unverified CAPI Claims:** Marketing copy on the four main solution pages makes specific, detailed claims about unverified ad-platform conversion sync claims. These integrations are not yet active/verified in the current backend and must be corrected, softened, or completed.
 
 ### Files changed
 - `dashboard/src/pages/Snippet.jsx` — Removed unimplemented sections, corrected API calls and domains.

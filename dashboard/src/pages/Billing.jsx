@@ -22,7 +22,7 @@ const PLANS = [
     name: 'Starter',
     price: 'from $9',
     limit: '10,000 pageviews/mo',
-    features: ['All 8 attribution models', 'AI traffic detection', 'Server-side CAPI sync', 'Over-reporting detection'],
+    features: ['All 8 attribution models', 'AI traffic detection', 'Server-side webhook pipeline', 'Over-reporting detection'],
   },
   {
     key: 'growth',

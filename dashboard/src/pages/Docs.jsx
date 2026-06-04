@@ -197,7 +197,7 @@ export default function Docs() {
     <div className="min-h-screen bg-white dark:bg-[#111414] text-gray-900 dark:text-white">
       <Helmet>
         <title>SourceTrack API Docs — Multi-Touch Attribution Integration Guide</title>
-        <meta name="description" content="Complete API reference for SourceTrack. Track events, conversions, and visitors. Server-side CAPI sync, 8 attribution models, GDPR cookieless mode. Get started in minutes." />
+        <meta name="description" content="Complete API reference for SourceTrack. Track events, conversions, and visitors. Server-side conversion pipeline, 8 attribution models, GDPR cookieless mode. Get started in minutes." />
         <link rel="canonical" href="https://sourcetrack.ai/docs" />
         <meta property="og:title"       content="SourceTrack API Documentation" />
         <meta property="og:description" content="Integrate multi-touch attribution in minutes. Full API reference for tracking, conversions, attribution, and GDPR compliance." />
