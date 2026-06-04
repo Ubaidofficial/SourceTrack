@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node api/index.js",
     "dev": "nodemon api/index.js",
-    "build:tracker": "esbuild tracker/tracker.js --bundle --minify --outfile=tracker/tracker.min.js"
+    "build:tracker": "esbuild tracker/tracker.js --bundle --minify --outfile=tracker/tracker.min.js",
+    "qa:static": "node scripts/qa-static-launch-check.mjs",
+    "qa:smoke": "node scripts/qa-runtime-smoke.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.96.0",
