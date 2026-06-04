@@ -49,6 +49,7 @@ Session 82 proper will be the manual QA closeout session.
 | 102.6 | 2026-06-04 | `main` | Implemented Layout-Level Client/Site Switcher Dropdown and explicit activeSite context | ✅ | No |
 | 102.7 | 2026-06-04 | `main` | Implemented Server-Side Plan Feature Gate Middleware for advanced attribution, AI models, chat, reports, and spend writes | ✅ | No |
 | 102.8 | 2026-06-04 | `main` | Public Docs & Ingest Domain Cleanup — Fixed broken trackiq branding, removed unimplemented feature docs, removed PostHog leaks, softened compliance claims, documented CAPI follow-up | ✅ | No |
+| 102.9 | 2026-06-04 | `main` | Solution Pages CAPI Claims Cleanup — Audited and softened unverified CAPI, Shopify app, CRM, and ad platform sync claims from marketing pages | ✅ | No |
 
 ---
 

@@ -3,7 +3,7 @@ import SolutionPage from './SolutionPage'
 const DATA = {
   slug: 'saas-attribution',
   title: 'SaaS Attribution Software — Trial-to-Paid Attribution & MRR Tracking | SourceTrack',
-  description: 'Track which marketing channels convert free trials into paying customers. SourceTrack gives SaaS companies full multi-touch attribution including AI research traffic — server-side CAPI sync to Meta, Google, LinkedIn. From $49/mo.',
+  description: 'Track which marketing channels convert free trials into paying customers. SourceTrack gives SaaS companies full multi-touch attribution including AI research traffic — with a privacy-conscious, webhook-ready conversion pipeline. From $49/mo.',
   canonical: 'https://sourcetrack.ai/saas-attribution',
   ogTitle: 'SaaS Attribution — See Which Channels Drive Trial-to-Paid Conversions | SourceTrack',
   ogDescription: 'Multi-touch attribution for SaaS. Connect every trial signup and upgrade to the exact touchpoints that drove it — including the ChatGPT recommendation that started the journey.',
@@ -40,8 +40,8 @@ const DATA = {
       },
       {
         icon: '🔷',
-        title: 'LinkedIn & Google CAPI for B2B',
-        body: "B2B SaaS buyers are on LinkedIn. SourceTrack syncs subscription conversions server-side to LinkedIn Ads and Google Ads CAPI — giving your campaigns accurate signal even when cookies are blocked in corporate browsers.",
+        title: 'B2B CRM & Event Alignment',
+        body: "Identify known visitors after signup. Connect account-level traits to tracking history when identify is called, providing structured conversion payloads ready for B2B marketing database routing.",
       },
       {
         icon: '🛤️',

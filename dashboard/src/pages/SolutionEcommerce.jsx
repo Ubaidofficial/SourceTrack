@@ -6,7 +6,7 @@ const DATA = {
   description: 'Stop over-crediting paid ads. SourceTrack gives Shopify and WooCommerce stores full multi-touch attribution — including ChatGPT and AI traffic GA4 marks as direct. Traffic-based pricing from $49/mo.',
   canonical: 'https://sourcetrack.ai/ecommerce-attribution',
   ogTitle: 'eCommerce Attribution — Track Every Sale Back to Its Source | SourceTrack',
-  ogDescription: 'Multi-touch attribution for Shopify and WooCommerce. See which channels drive buyers — including AI referrals GA4 misses. Server-side CAPI sync to Meta and Google.',
+  ogDescription: 'Multi-touch attribution for Shopify and WooCommerce. See which channels drive buyers — including AI referrals GA4 misses. Designed for privacy-conscious conversion tracking.',
 
   badge: 'eCommerce Attribution — Built for Shopify, WooCommerce & DTC brands',
   headline: 'Stop over-crediting your last ad.',
@@ -26,7 +26,7 @@ const DATA = {
       {
         icon: '🛍️',
         title: 'Shopify & WooCommerce — 2-minute setup',
-        body: 'Paste one 1.7 KB script tag into your theme <head>. Captures every pageview, add-to-cart, and purchase with UTM parameters and AI referrer detection built in. No Shopify app required.',
+        body: 'Paste one 1.7 KB script tag into your theme <head>. Captures every pageview, add-to-cart, and purchase with UTM parameters and AI referrer detection built in. No app or plugins required.',
       },
       {
         icon: '🤖',
@@ -40,8 +40,8 @@ const DATA = {
       },
       {
         icon: '🔁',
-        title: 'Meta & Google CAPI sync',
-        body: "Every purchase automatically fires a server-side event to Meta CAPI and Google Ads Conversions API — bypassing iOS ad-blockers and Safari tracking restrictions. Your ad platforms get accurate conversion data for smarter bidding.",
+        title: 'Conversion-ready structure',
+        body: 'Every purchase event is structured to feed into server-side destinations. Our clean webhook payloads are designed to support future ad platform conversion sync integrations.',
       },
       {
         icon: '🛤️',
@@ -86,7 +86,7 @@ const DATA = {
     items: [
       {
         q: 'Does SourceTrack work with Shopify?',
-        a: "Yes. Paste the 1.7 KB snippet into your Shopify theme's theme.liquid inside <head>. Add the conversion call to your checkout.liquid thank-you page with your order total and order ID. You'll be tracking within minutes — no Shopify app, no GTM, no plugin required.",
+        a: "Yes. Paste the 1.7 KB snippet into your Shopify theme's theme.liquid inside <head>. Add the conversion call to your checkout.liquid thank-you page with your order total and order ID. You'll be tracking within minutes — no app, no GTM, no plugin required.",
       },
       {
         q: 'How do I track abandoned cart attribution?',
@@ -97,8 +97,8 @@ const DATA = {
         a: "ChatGPT, Perplexity, and other AI platforms often strip referrer headers before clicking through to your store — so the visit looks like direct traffic in GA4. SourceTrack identifies these visitors using server-side referrer analysis and UTM pattern matching across 15 AI platforms and 22 domains. The revenue they drove is now attributed correctly.",
       },
       {
-        q: 'Does CAPI sync work for Shopify purchases?',
-        a: "Yes. When you fire sourcetrack.conversion() with type: 'purchase', SourceTrack simultaneously sends a server-side Purchase event to Meta CAPI and a Conversion to Google Ads via their API. This bypasses iOS 14+ tracking restrictions and browser ad-blockers — giving your ad platforms more complete conversion data for ROAS optimization.",
+        q: 'How does conversion tracking work for purchases?',
+        a: "When you fire sourcetrack.conversion() with type: 'purchase', SourceTrack records the conversion event alongside the visitor's UTM parameters, click IDs, and referral history. This provides a unified history of what drove the sale, ready for export or webhook forwarding to downstream platforms.",
       },
       {
         q: 'How does traffic-based pricing work for eCommerce stores?',

@@ -3,10 +3,10 @@ import SolutionPage from './SolutionPage'
 const DATA = {
   slug: 'lead-gen-attribution',
   title: 'Lead Generation Attribution Software — Track Which Channels Close Deals | SourceTrack',
-  description: 'Stop reporting on leads that never close. SourceTrack shows which channels produce sales-qualified leads and closed revenue — not just form submissions. Multi-touch attribution with CAPI sync. From $49/mo.',
+  description: 'Stop reporting on leads that never close. SourceTrack shows which channels produce sales-qualified leads and closed revenue — not just form submissions. Multi-touch attribution with offline integration support. From $49/mo.',
   canonical: 'https://sourcetrack.ai/lead-gen-attribution',
   ogTitle: 'Lead Gen Attribution — Track Which Channels Drive Leads That Actually Close | SourceTrack',
-  ogDescription: 'Multi-touch attribution for lead generation. See which channels produce SQLs and closed revenue — not just raw lead volume. Server-side CAPI sync to Meta, Google, LinkedIn.',
+  ogDescription: 'Multi-touch attribution for lead generation. See which channels produce SQLs and closed revenue — not just raw lead volume. Supports custom offline conversion ingestion.',
 
   badge: 'Lead Generation Attribution — From form submission to closed-won',
   headline: 'Your CPC reports look great.',
@@ -40,8 +40,8 @@ const DATA = {
       },
       {
         icon: '🔷',
-        title: 'LinkedIn CAPI for B2B leads',
-        body: "B2B decision-makers use LinkedIn. SourceTrack syncs lead events server-side to LinkedIn Ads CAPI — giving your campaigns complete conversion signal even when prospects use corporate browsers with tracking blocked.",
+        title: 'Offline conversions via REST API',
+        body: "Integrate conversions from custom marketing databases or offline touchpoints. Send structured payloads to the ingestion pipeline to attribute B2B sales cycles to acquisition sources.",
       },
       {
         icon: '📊',
