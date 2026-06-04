@@ -57,14 +57,22 @@ async function lastTouchAttribution(siteId, dateFrom, dateTo) {
     LEFT JOIN (
       SELECT
         e_inner.uuid AS conversion_uuid,
-        argMax(pv.properties.utm_source,   pv.timestamp) AS utm_source,
-        argMax(pv.properties.utm_medium,   pv.timestamp) AS utm_medium,
-        argMax(pv.properties.utm_campaign, pv.timestamp) AS utm_campaign
+        argMax(pv.utm_source,   pv.timestamp) AS utm_source,
+        argMax(pv.utm_medium,   pv.timestamp) AS utm_medium,
+        argMax(pv.utm_campaign, pv.timestamp) AS utm_campaign
       FROM events e_inner
-      LEFT JOIN events pv
+      LEFT JOIN (
+        SELECT
+          distinct_id,
+          timestamp,
+          properties.utm_source AS utm_source,
+          properties.utm_medium AS utm_medium,
+          properties.utm_campaign AS utm_campaign
+        FROM events
+        WHERE properties.site_id = '${esc(siteId)}'
+          AND event = '$pageview'
+      ) pv
         ON pv.distinct_id = e_inner.distinct_id
-        AND pv.properties.site_id = e_inner.properties.site_id
-        AND pv.event = '$pageview'
         AND pv.timestamp <= e_inner.timestamp
       WHERE e_inner.properties.site_id = '${esc(siteId)}'
         AND e_inner.event = '$conversion'
@@ -114,17 +122,25 @@ async function firstTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
     LEFT JOIN (
       SELECT
         e_inner.uuid AS conversion_uuid,
-        argMin(pv.properties.utm_source, pv.timestamp) AS utm_source,
-        argMin(pv.properties.utm_medium, pv.timestamp) AS utm_medium,
-        argMin(pv.properties.utm_campaign, pv.timestamp) AS utm_campaign
+        argMin(pv.utm_source, pv.timestamp) AS utm_source,
+        argMin(pv.utm_medium, pv.timestamp) AS utm_medium,
+        argMin(pv.utm_campaign, pv.timestamp) AS utm_campaign
       FROM events e_inner
-      LEFT JOIN events pv
+      LEFT JOIN (
+        SELECT
+          distinct_id,
+          timestamp,
+          properties.utm_source AS utm_source,
+          properties.utm_medium AS utm_medium,
+          properties.utm_campaign AS utm_campaign
+        FROM events
+        WHERE properties.site_id = '${esc(siteId)}'
+          AND event = '$pageview'
+          AND properties.utm_source IS NOT NULL
+          AND properties.utm_source != ''
+          AND properties.utm_source != 'direct'
+      ) pv
         ON pv.distinct_id = e_inner.distinct_id
-        AND pv.properties.site_id = e_inner.properties.site_id
-        AND pv.event = '$pageview'
-        AND pv.properties.utm_source IS NOT NULL
-        AND pv.properties.utm_source != ''
-        AND pv.properties.utm_source != 'direct'
         AND pv.timestamp <= e_inner.timestamp
       WHERE e_inner.properties.site_id = '${esc(siteId)}'
         AND e_inner.event = '$conversion'
@@ -166,17 +182,25 @@ async function lastTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
     LEFT JOIN (
       SELECT
         e_inner.uuid AS conversion_uuid,
-        argMax(pv.properties.utm_source, pv.timestamp) AS utm_source,
-        argMax(pv.properties.utm_medium, pv.timestamp) AS utm_medium,
-        argMax(pv.properties.utm_campaign, pv.timestamp) AS utm_campaign
+        argMax(pv.utm_source, pv.timestamp) AS utm_source,
+        argMax(pv.utm_medium, pv.timestamp) AS utm_medium,
+        argMax(pv.utm_campaign, pv.timestamp) AS utm_campaign
       FROM events e_inner
-      LEFT JOIN events pv
+      LEFT JOIN (
+        SELECT
+          distinct_id,
+          timestamp,
+          properties.utm_source AS utm_source,
+          properties.utm_medium AS utm_medium,
+          properties.utm_campaign AS utm_campaign
+        FROM events
+        WHERE properties.site_id = '${esc(siteId)}'
+          AND event = '$pageview'
+          AND properties.utm_source IS NOT NULL
+          AND properties.utm_source != ''
+          AND properties.utm_source != 'direct'
+      ) pv
         ON pv.distinct_id = e_inner.distinct_id
-        AND pv.properties.site_id = e_inner.properties.site_id
-        AND pv.event = '$pageview'
-        AND pv.properties.utm_source IS NOT NULL
-        AND pv.properties.utm_source != ''
-        AND pv.properties.utm_source != 'direct'
         AND pv.timestamp <= e_inner.timestamp
       WHERE e_inner.properties.site_id = '${esc(siteId)}'
         AND e_inner.event = '$conversion'
@@ -203,62 +227,22 @@ async function lastTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
   }))
 }
 
-// Legacy PostHog-based linear (unused — real linear uses pre-aggregated getLinearAttribution below)
-async function linearAttribution(siteId, dateFrom, dateTo) {
-  const fromDate = toHogDate(dateFrom)
-  const toDate = toHogDate(dateTo) + " 23:59:59"
-
-  const sql = `
-    SELECT
-      COALESCE(NULLIF(t.source, ''), 'direct') AS source,
-      COALESCE(NULLIF(t.medium, ''), 'none') AS medium,
-      t.campaign,
-      COUNT(DISTINCT t.distinct_id) AS converting_users,
-      SUM(t.share) AS revenue
-    FROM (
-      SELECT
-        e.distinct_id,
-        e.properties.utm_source AS source,
-        e.properties.utm_medium AS medium,
-        e.properties.utm_campaign AS campaign,
-        toFloatOrZero(toString(cv.conversion_value)) / cv.tp_count AS share
-      FROM events e
-      INNER JOIN (
-        SELECT
-          ce.distinct_id,
-          FIRST_VALUE(ce.properties.conversion_value) AS conversion_value,
-          (
-            SELECT count()
-            FROM events pe
-            WHERE pe.properties.site_id = '${esc(siteId)}'
-              AND pe.event = '$pageview'
-              AND pe.distinct_id = ce.distinct_id
-          ) AS tp_count
-        FROM events ce
-        WHERE ce.properties.site_id = '${esc(siteId)}'
-          AND ce.event = '$conversion'
-          AND ce.timestamp >= toDateTime('${fromDate}')
-          AND ce.timestamp <= toDateTime('${toDate}')
-        GROUP BY ce.distinct_id
-      ) cv ON e.distinct_id = cv.distinct_id
-      WHERE e.properties.site_id = '${esc(siteId)}'
-        AND e.event = '$pageview'
-        AND e.properties.utm_source IS NOT NULL
-        AND e.properties.utm_source != ''
-        AND cv.tp_count > 0
-    ) t
-    GROUP BY t.source, t.medium, t.campaign
-    ORDER BY revenue DESC
-    LIMIT 50000
-  `
-
-  const rows = await queryHogQL(sql, 'linear_attribution')
-  return rows.map(([source, medium, campaign, convertingUsers, revenue]) => ({
-    source,
-    medium,
-    campaign: campaign || null,
-    converting_users: Number(convertingUsers) || 0,
-    revenue: Number(revenue) || 0
+// Safe JS-based multi-touch attribution helper redirecting to the new pipeline
+async function multiTouchAttributionHelper(siteId, model, dateFrom, dateTo) {
+  const results = await getMultiTouchAttributionLive({
+    siteId,
+    model,
+    dateFrom,
+    dateTo,
+    groupBy: 'source',
+    metric: 'revenue'
+  })
+  return results.map(r => ({
+    source: r.dim_value,
+    medium: 'none',
+    campaign: null,
+    converting_users: Math.round(r.conversions),
+    revenue: r.revenue
   }))
 }
 
@@ -311,7 +295,10 @@ export async function getAttribution(siteId, model, dateFrom, dateTo) {
       results = await lastTouchNonDirectAttribution(siteId, dateFrom, dateTo)
       break
     case 'linear':
-      results = await linearAttribution(siteId, dateFrom, dateTo)
+    case 'u_shaped':
+    case 'time_decay':
+    case 'w_shaped':
+      results = await multiTouchAttributionHelper(siteId, model, dateFrom, dateTo)
       break
     case 'ai_platforms':
       results = await aiPlatformAttribution(siteId, dateFrom, dateTo)
@@ -744,6 +731,15 @@ export async function getAttributionExplanation(siteId, model, distinctId) {
       explanation.fallback = !aiSrc
       break
     }
+    case 'linear':
+    case 'time_decay':
+    case 'u_shaped':
+    case 'w_shaped': {
+      explanation.attributed_to = null
+      explanation.reason = 'Step-by-step explanations are currently available for single-touch models only. Advanced models are calculated in aggregate reports.'
+      explanation.fallback = false
+      break
+    }
     default:
       explanation.reason = `Unknown model: ${model}`
   }
@@ -873,19 +869,262 @@ const GRANULARITY_MAP = {
 // - 'first_seen_date': uses the visitor's first event timestamp (MIN(timestamp) per distinct_id)
 // - 'original_source_date': uses the first event timestamp where UTM source was present
 // Non-date dimensions (source, campaign, etc.) are unaffected by attributeBy.
+export async function getMultiTouchAttributionLive({
+  siteId,
+  model,
+  dateFrom,
+  dateTo,
+  groupBy,
+  metric = 'revenue',
+  filters = {},
+  groupBy2 = null,
+  granularity = 'day',
+  attributionWindow = null,
+  attributeBy = 'conversion_date'
+}) {
+  const fromDate = toHogDate(dateFrom)
+  const toDate = toHogDate(dateTo) + " 23:59:59"
+  const safeSite = esc(siteId)
+
+  // 1. Fetch conversions
+  const convSql = `
+    SELECT
+      uuid,
+      distinct_id,
+      timestamp,
+      properties.conversion_type AS conversion_type,
+      toFloatOrZero(toString(properties.conversion_value)) AS conversion_value,
+      properties.utm_source AS utm_source,
+      properties.utm_medium AS utm_medium,
+      properties.utm_campaign AS utm_campaign,
+      properties.referrer AS referrer,
+      properties.ai_source AS ai_source,
+      properties.country AS country,
+      properties.device_type AS device_type
+    FROM events
+    WHERE properties.site_id = '${safeSite}'
+      AND event = '$conversion'
+      AND timestamp >= toDateTime('${fromDate}')
+      AND timestamp <= toDateTime('${toDate}')
+    ORDER BY timestamp DESC
+    LIMIT 10000
+  `
+  const convRows = await queryHogQL(convSql, 'multitouch_conversions_live')
+
+  const conversions = convRows.map(([uuid, distinctId, timestamp, conversionType, conversionValue, utmSource, utmMedium, utmCampaign, referrer, aiSource, country, deviceType]) => ({
+    uuid,
+    distinct_id: distinctId,
+    timestamp,
+    conversion_type: conversionType || null,
+    conversion_value: Number(conversionValue) || 0,
+    utm_source: utmSource || null,
+    utm_medium: utmMedium || null,
+    utm_campaign: utmCampaign || null,
+    referrer: referrer || null,
+    ai_source: aiSource || null,
+    country: country || null,
+    device_type: deviceType || null
+  }))
+
+  if (conversions.length === 0) {
+    return []
+  }
+
+  // 2. Fetch pageviews for lookback window
+  const windowDays = attributionWindow && attributionWindow !== 'ltv' && Number(attributionWindow) > 0 ? Number(attributionWindow) : 30
+  const lookbackDate = new Date(new Date(dateFrom).getTime() - windowDays * 24 * 60 * 60 * 1000)
+  const lookbackStr = lookbackDate.toISOString().slice(0, 10)
+
+  const pvSql = `
+    SELECT
+      distinct_id,
+      timestamp,
+      properties.utm_source AS utm_source,
+      properties.utm_medium AS utm_medium,
+      properties.utm_campaign AS utm_campaign,
+      properties.referrer AS referrer,
+      properties.ai_source AS ai_source,
+      properties.gclid AS gclid,
+      properties.gbraid AS gbraid,
+      properties.fbclid AS fbclid,
+      properties.msclkid AS msclkid,
+      properties.page_url AS page_url
+    FROM events
+    WHERE properties.site_id = '${safeSite}'
+      AND event = '$pageview'
+      AND timestamp >= toDateTime('${lookbackStr}')
+      AND timestamp <= toDateTime('${toDate}')
+    ORDER BY timestamp ASC
+    LIMIT 100000
+  `
+  const pvRows = await queryHogQL(pvSql, 'multitouch_pageviews_live')
+
+  // Group pageviews by visitor distinct_id
+  const pageviewsByVisitor = {}
+  for (const row of pvRows) {
+    const [distinctId, timestamp, utmSource, utmMedium, utmCampaign, referrer, aiSource, gclid, gbraid, fbclid, msclkid, pageUrl] = row
+    if (!pageviewsByVisitor[distinctId]) pageviewsByVisitor[distinctId] = []
+    pageviewsByVisitor[distinctId].push({
+      timestamp,
+      utm_source: utmSource || null,
+      utm_medium: utmMedium || null,
+      utm_campaign: utmCampaign || null,
+      referrer: referrer || null,
+      ai_source: aiSource || null,
+      gclid: gclid || null,
+      gbraid: gbraid || null,
+      fbclid: fbclid || null,
+      msclkid: msclkid || null,
+      page_url: pageUrl || null,
+      derived_source: utmSource || aiSource || (referrer ? (() => { try { return new URL(referrer).hostname.replace('www.', '') } catch (_) { return null } })() : null) || 'direct'
+    })
+  }
+
+  // 3. For each conversion, calculate touchpoint attribution fractions
+  const aggregated = {}
+
+  for (const conv of conversions) {
+    const visitorPvs = pageviewsByVisitor[conv.distinct_id] || []
+
+    // Filter pageviews within the window
+    const conversionTime = new Date(conv.timestamp).getTime()
+    const windowMs = windowDays * 24 * 60 * 60 * 1000
+    const touchpoints = visitorPvs.filter(pv => {
+      const pvTime = new Date(pv.timestamp).getTime()
+      return pvTime <= conversionTime && pvTime >= conversionTime - windowMs
+    })
+
+    const attribution = calculateAttribution(touchpoints, conv.conversion_value)
+
+    // Choose model attribution array
+    let shares = []
+    if (model === 'linear') shares = attribution.linear
+    else if (model === 'u_shaped') shares = attribution.u_shaped
+    else if (model === 'time_decay') shares = attribution.time_decay
+    else if (model === 'w_shaped') shares = attribution.w_shaped
+
+    // If conversion has no pageviews, attribute it 100% to Direct
+    if (!shares || shares.length === 0) {
+      shares = [{
+        source: 'direct',
+        medium: 'none',
+        campaign: null,
+        channel: 'Direct',
+        timestamp: conv.timestamp,
+        fraction: 1.0,
+        attributed_value: conv.conversion_value
+      }]
+    }
+
+    // Apply attribution allocations
+    for (const share of shares) {
+      // Determine dimension values
+      let dimVal = 'direct'
+      if (groupBy === 'source') dimVal = share.source || 'direct'
+      else if (groupBy === 'medium') dimVal = share.medium || 'none'
+      else if (groupBy === 'campaign') dimVal = share.campaign || 'none'
+      else if (groupBy === 'channel') dimVal = share.channel || 'Direct'
+      else if (groupBy === 'landing_page') {
+        dimVal = share.page_url ? (() => { try { return new URL(share.page_url).pathname } catch (_) { return '/' } })() : '/'
+      } else if (groupBy === 'country') dimVal = conv.country || 'unknown'
+      else if (groupBy === 'device') dimVal = conv.device_type || 'unknown'
+      else if (groupBy === 'conversion_type') dimVal = conv.conversion_type || 'untyped'
+      else if (groupBy === 'date') {
+        const refDate = new Date(attributeBy === 'first_seen_date' && touchpoints[0] ? touchpoints[0].timestamp : conv.timestamp)
+        if (granularity === 'quarter') {
+          const q = Math.floor(refDate.getMonth() / 3) + 1
+          dimVal = `${refDate.getFullYear()}-Q${q}`
+        } else if (granularity === 'month') {
+          dimVal = refDate.toISOString().slice(0, 7)
+        } else {
+          dimVal = refDate.toISOString().slice(0, 10)
+        }
+      }
+
+      // Apply UTM filters if present
+      if (filters.source && share.source !== filters.source) continue
+      if (filters.medium && share.medium !== filters.medium) continue
+      if (filters.campaign && share.campaign !== filters.campaign) continue
+      if (filters.country && conv.country !== filters.country) continue
+      if (filters.device_type && conv.device_type !== filters.device_type) continue
+
+      if (!aggregated[dimVal]) {
+        aggregated[dimVal] = { revenue: 0, conversions: 0 }
+      }
+
+      // Metric calculations
+      const shareVal = Number(share.attributed_value) || 0
+      const shareFrac = Number(share.fraction) || 0
+
+      if (metric === 'revenue' || metric === 'avg_conversion_value' || metric === 'ltv_revenue') {
+        aggregated[dimVal].revenue += shareVal
+        aggregated[dimVal].conversions += shareFrac
+      } else if (metric === 'conversions') {
+        aggregated[dimVal].conversions += shareFrac
+      } else if (metric === 'sessions') {
+        aggregated[dimVal].conversions += shareFrac
+      } else {
+        aggregated[dimVal].revenue += shareVal
+        aggregated[dimVal].conversions += shareFrac
+      }
+    }
+  }
+
+  // Format results to match expected flexible report schema
+  const results = Object.entries(aggregated).map(([dim_value, stats]) => {
+    const item = {
+      dim_value: dim_value || 'unknown',
+      revenue: parseFloat(stats.revenue.toFixed(2)),
+      conversions: parseFloat(stats.conversions.toFixed(2))
+    }
+    // Also inject specific metric key to match getFlexibleReport's custom keys
+    if (metric !== 'revenue' && metric !== 'conversions') {
+      item[metric] = metric === 'avg_conversion_value'
+        ? stats.conversions > 0 ? parseFloat((stats.revenue / stats.conversions).toFixed(2)) : 0
+        : parseFloat(stats.conversions.toFixed(2))
+    }
+    return item
+  })
+
+  return results.sort((a, b) => b.revenue - a.revenue)
+}
+
 export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null, granularity = 'day', attributionWindow = null, attributeBy = 'conversion_date') {
   const filterKey = JSON.stringify(filters) + groupBy2 + granularity + attributionWindow + attributeBy
   const key = cacheKey(`${model}:${groupBy}:${metric}:${filterKey}`, siteId, dateFrom, dateTo)
   const cached = cache.get(key)
   if (cached) return cached
 
+  // Intercept linear/advanced multi-touch models and process using safe JS pipeline
+  const MULTI_TOUCH = new Set(['linear', 'time_decay', 'u_shaped', 'w_shaped'])
+  if (MULTI_TOUCH.has(model)) {
+    const results = await getMultiTouchAttributionLive({
+      siteId,
+      model,
+      dateFrom,
+      dateTo,
+      groupBy,
+      metric,
+      filters,
+      groupBy2,
+      granularity,
+      attributionWindow,
+      attributeBy
+    })
+    const isTruncated = results.length >= 50000
+    const returnValue = isTruncated
+      ? { results, truncated: true, truncated_at: 50000 }
+      : results
+
+    cache.set(key, returnValue)
+    return returnValue
+  }
+
   const fromDate = toHogDate(dateFrom)
   const toDate = toHogDate(dateTo) + " 23:59:59"
   const safeSite = esc(siteId)
 
-  // Linear attribution: split each conversion equally across all prior UTM-tagged pageviews.
-  // Conversions with zero eligible touchpoints are excluded.
-  // Group by source only. attributionWindow and groupBy2 not supported for linear.
+  // Linear attribution: legacy, dead code kept for safety / documentation
   if (model === 'linear') {
     const sql = `
     SELECT
@@ -1875,4 +2114,143 @@ export async function getLinearAttribution({
   }))
 
   return results.sort((a, b) => b[metric] - a[metric])
+}
+
+export function calculateAttribution(touchpoints, conversionValue) {
+  if (!touchpoints || touchpoints.length === 0) {
+    return {
+      first_touch: null,
+      last_touch: null,
+      linear: [],
+      u_shaped: [],
+      time_decay: [],
+      w_shaped: []
+    }
+  }
+
+  const firstTouchpoint = touchpoints[0]
+  const lastTouchpoint = touchpoints[touchpoints.length - 1]
+
+  const tpCh = (tp) => channelFromEvent({
+    utm_source: tp.utm_source, utm_medium: tp.utm_medium,
+    ai_source: tp.ai_source, gclid: tp.gclid,
+    fbclid: tp.fbclid, msclkid: tp.msclkid, referrer: tp.referrer
+  })
+  const tpBase = (tp) => ({
+    source: tp.utm_source || null,
+    medium: tp.utm_medium || null,
+    campaign: tp.utm_campaign || null,
+    channel: tpCh(tp),
+    timestamp: tp.timestamp
+  })
+
+  // ── Linear ──────────────────────────────────────────────────────────────────
+  const fraction = 1.0 / touchpoints.length
+  const linearValue = conversionValue * fraction
+  const linear = touchpoints.map(tp => ({
+    ...tpBase(tp),
+    fraction: parseFloat(fraction.toFixed(4)),
+    attributed_value: parseFloat(linearValue.toFixed(2))
+  }))
+
+  // ── U-Shaped (40/20/40) ──────────────────────────────────────────────────────
+  const u_shaped = (() => {
+    if (touchpoints.length === 1) {
+      return [{ ...tpBase(firstTouchpoint), fraction: 1.0, attributed_value: parseFloat(conversionValue.toFixed(2)) }]
+    }
+    if (touchpoints.length === 2) {
+      return [
+        { ...tpBase(firstTouchpoint), fraction: 0.5, attributed_value: parseFloat((conversionValue * 0.5).toFixed(2)) },
+        { ...tpBase(lastTouchpoint),  fraction: 0.5, attributed_value: parseFloat((conversionValue * 0.5).toFixed(2)) }
+      ]
+    }
+    const middleCount = touchpoints.length - 2
+    const middleFraction = parseFloat((0.2 / middleCount).toFixed(4))
+    const middleValue = parseFloat((conversionValue * 0.2 / middleCount).toFixed(2))
+    return touchpoints.map((tp, i) => {
+      if (i === 0) return { ...tpBase(tp), fraction: 0.4, attributed_value: parseFloat((conversionValue * 0.4).toFixed(2)) }
+      if (i === touchpoints.length - 1) return { ...tpBase(tp), fraction: 0.4, attributed_value: parseFloat((conversionValue * 0.4).toFixed(2)) }
+      return { ...tpBase(tp), fraction: middleFraction, attributed_value: middleValue }
+    })
+  })()
+
+  // ── Time Decay (7-day half-life) ─────────────────────────────────────────────
+  const time_decay = (() => {
+    const conversionTime = new Date(lastTouchpoint.timestamp).getTime()
+    const halfLifeDays = 7
+    const halfLifeMs = halfLifeDays * 24 * 60 * 60 * 1000
+    const rawWeights = touchpoints.map(tp => {
+      const tpTime = new Date(tp.timestamp).getTime()
+      const daysBack = Math.max(0, (conversionTime - tpTime) / halfLifeMs)
+      return Math.pow(0.5, daysBack) // 0.5^(days/halfLife)
+    })
+    const totalWeight = rawWeights.reduce((s, w) => s + w, 0) || 1
+    return touchpoints.map((tp, i) => {
+      const frac = parseFloat((rawWeights[i] / totalWeight).toFixed(4))
+      return {
+        ...tpBase(tp),
+        fraction: frac,
+        attributed_value: parseFloat((conversionValue * frac).toFixed(2))
+      }
+    })
+  })()
+
+  // ── W-Shaped (30/30/30/10) ───────────────────────────────────────────────────
+  const w_shaped = (() => {
+    if (touchpoints.length === 1) {
+      return [{ ...tpBase(firstTouchpoint), fraction: 1.0, attributed_value: parseFloat(conversionValue.toFixed(2)) }]
+    }
+    if (touchpoints.length === 2) {
+      return [
+        { ...tpBase(firstTouchpoint), fraction: 0.5, attributed_value: parseFloat((conversionValue * 0.5).toFixed(2)) },
+        { ...tpBase(lastTouchpoint),  fraction: 0.5, attributed_value: parseFloat((conversionValue * 0.5).toFixed(2)) }
+      ]
+    }
+    if (touchpoints.length === 3) {
+      return touchpoints.map((tp, i) => ({
+        ...tpBase(tp),
+        fraction: 0.333,
+        attributed_value: parseFloat((conversionValue / 3).toFixed(2))
+      }))
+    }
+    const middleIdx = Math.floor((touchpoints.length - 1) / 2)
+    const anchorIndices = new Set([0, middleIdx, touchpoints.length - 1])
+    const otherCount = touchpoints.length - anchorIndices.size
+    const otherFrac = otherCount > 0 ? parseFloat((0.1 / otherCount).toFixed(4)) : 0
+    const otherValue = otherCount > 0 ? parseFloat((conversionValue * 0.1 / otherCount).toFixed(2)) : 0
+    return touchpoints.map((tp, i) => {
+      if (anchorIndices.has(i)) {
+        return { ...tpBase(tp), fraction: 0.3, attributed_value: parseFloat((conversionValue * 0.3).toFixed(2)) }
+      }
+      return { ...tpBase(tp), fraction: otherFrac, attributed_value: otherValue }
+    })
+  })()
+
+  const adjustReconciliation = (shares) => {
+    if (!shares || shares.length === 0) return shares
+    const sumOthers = shares.slice(0, -1).reduce((s, x) => s + x.attributed_value, 0)
+    shares[shares.length - 1].attributed_value = parseFloat((conversionValue - sumOthers).toFixed(2))
+    const fracOthers = shares.slice(0, -1).reduce((s, x) => s + x.fraction, 0)
+    shares[shares.length - 1].fraction = parseFloat((1.0 - fracOthers).toFixed(4))
+    return shares
+  }
+
+  return {
+    first_touch: {
+      source: firstTouchpoint.utm_source || null,
+      medium: firstTouchpoint.utm_medium || null,
+      campaign: firstTouchpoint.utm_campaign || null,
+      timestamp: firstTouchpoint.timestamp
+    },
+    last_touch: {
+      source: lastTouchpoint.utm_source || null,
+      medium: lastTouchpoint.utm_medium || null,
+      campaign: lastTouchpoint.utm_campaign || null,
+      timestamp: lastTouchpoint.timestamp
+    },
+    linear: adjustReconciliation(linear),
+    u_shaped: adjustReconciliation(u_shaped),
+    time_decay: adjustReconciliation(time_decay),
+    w_shaped: adjustReconciliation(w_shaped)
+  }
 }

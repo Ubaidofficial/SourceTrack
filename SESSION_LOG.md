@@ -55,6 +55,36 @@ Session 82 proper will be the manual QA closeout session.
 | 104.0 | 2026-06-04 | `main` | Expose browser/OS properties in Event Debugger details sidebar and verify country/device type | ✅ | No |
 | 104.1 | 2026-06-04 | `main` | Runtime Smoke + Manual Browser QA validation checks passed | ✅ | No |
 | 104.2 | 2026-06-04 | `main` | Hide broken multi-touch models (Linear, U-Shaped, Time Decay, W-Shaped) from UI and API until HogQL is fixed | ✅ | No |
+| 105   | 2026-06-04 | `main` | Fully fix multi-touch attribution models (Linear, Time Decay, U-Shaped, W-Shaped) via safe JS-based query engine | ✅ | No |
+
+---
+
+## Session 105 — Fully Fix Advanced Attribution Models
+
+**Date:** 2026-06-04
+**Branch:** `main`
+**Build:** ✅ both `node --check` (all API files) and `npm run build` (dashboard) pass
+
+### 1. JavaScript-Based Live Multi-Touch Attribution Engine
+- Built a safe, HogQL-compliant live pipeline in JavaScript (`getMultiTouchAttributionLive` in `api/lib/attribution-engine.js`).
+- Rather than executing complex, correlated SELECT subqueries on ClickHouse which crash due to `Unable to resolve field: ce`, the engine fetches conversions and pageviews separately, then maps and distributes shares in memory.
+- Integrated the safe pipeline for `linear`, `time_decay`, `u_shaped`, and `w_shaped` models inside `getFlexibleReport` and `getAttribution` live query handlers.
+
+### 2. Explain Endpoint Interception
+- Intercepted `/api/attribution/explain` requests for advanced models (`linear`, `time_decay`, `u_shaped`, `w_shaped`) to return a clean explanation payload indicating that step-by-step journeys are single-touch only and advanced models are aggregate.
+- Updated the frontend `ConversionExplanationModal` component to map the new models and display description cards explaining how they work.
+
+### 3. Report Builder UI Adjustments
+- Hid the "Show Explanation" toolbar button and the table's "Why" explanation column in `ReportBuilder.jsx` whenever a multi-touch model is selected, preventing misleading UI indications.
+
+### 4. Deterministic and Integration Testing
+- Implemented `scripts/qa-attribution-harness.mjs` to deterministic-test mock user conversion journeys offline.
+- Created `scripts/qa-attribution-integration.mjs` to run end-to-end API integration tests. It creates a temp auth user, temporarily extends the site's billing trial, ingests pageviews with unique UTM parameters followed by a conversion, queries the `/api/attribution` API endpoints, verifies correct revenue reconciliation and source allocation, and cleans up all database updates and test user accounts.
+- Wired both tests to run sequentially under `npm run qa:attribution`.
+
+### 5. Documentation and Safety Checks
+- Documented the explanation modal limitation in `KNOWN_ISSUES.md`.
+- Verified all database trial changes were reverted and all test users were cleaned up.
 
 ---
 

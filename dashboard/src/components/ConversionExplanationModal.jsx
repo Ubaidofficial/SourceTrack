@@ -49,7 +49,11 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
     last_touch: 'Last Touch',
     first_touch_non_direct: 'First Touch (Non-Direct)',
     last_touch_non_direct: 'Last Touch (Non-Direct)',
-    ai_platforms: 'AI Platform'
+    ai_platforms: 'AI Platform',
+    linear: 'Linear',
+    time_decay: 'Time Decay',
+    u_shaped: 'U-Shaped',
+    w_shaped: 'W-Shaped'
   }
 
   const attributedTouch = data?.all_touches?.find(t => {
@@ -107,7 +111,23 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                 {model === 'ai_platforms' && (
                   <p>AI Platform attribution detects the referrer at conversion time and matches it against known AI platform domains (ChatGPT, Claude, Perplexity, Gemini, Grok, Copilot, DeepSeek). Only conversions with a detected AI referrer receive credit.</p>
                 )}
-                <p className="text-st-gray">Single-touch model: only one touchpoint receives 100% credit.</p>
+                {model === 'linear' && (
+                  <p>Linear attribution distributes credit equally across all touchpoints in the visitor's journey. Each touchpoint receives an equal share of the conversion value.</p>
+                )}
+                {model === 'time_decay' && (
+                  <p>Time Decay attribution gives more credit to touchpoints that occurred closer in time to the conversion. It uses a 7-day half-life decay model, where older touches receive progressively less weight.</p>
+                )}
+                {model === 'u_shaped' && (
+                  <p>U-Shaped attribution (40/20/40) assigns 40% of the credit to the first touchpoint, 40% to the last touchpoint, and distributes the remaining 20% equally across all intermediate touchpoints.</p>
+                )}
+                {model === 'w_shaped' && (
+                  <p>W-Shaped attribution assigns 30% of the credit to the first touchpoint, 30% to the middle/converting touchpoint, 30% to the last touchpoint, and distributes the remaining 10% equally across other touchpoints.</p>
+                )}
+                {['linear', 'time_decay', 'u_shaped', 'w_shaped'].includes(model) ? (
+                  <p className="text-st-gray">Multi-touch model: credit is distributed across multiple touchpoints in the journey.</p>
+                ) : (
+                  <p className="text-st-gray">Single-touch model: only one touchpoint receives 100% credit.</p>
+                )}
               </div>
             </div>
           )}
@@ -332,7 +352,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                 </div>
               )}
 
-              {/* Model logic tooltip */}
+               {/* Model logic tooltip */}
               <div className="bg-gray-50 dark:bg-[#111414] rounded-lg p-3 text-xs text-gray-600 dark:text-gray-300 space-y-1">
                 <p className="font-medium text-gray-700">Why this attribution?</p>
                 {data.model === 'first_touch' && (
@@ -350,7 +370,23 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                 {data.model === 'ai_platforms' && (
                   <p>AI Platform attribution detects the referrer at conversion time and matches it against known AI platform domains (ChatGPT, Claude, Perplexity, Gemini, Grok, Copilot, DeepSeek).</p>
                 )}
-                <p className="text-st-gray dark:text-gray-400 mt-1">Single-touch model: only one touchpoint receives credit.</p>
+                {data.model === 'linear' && (
+                  <p>Linear attribution distributes credit equally across all touchpoints in the visitor's journey. Each touchpoint receives an equal share of the conversion value.</p>
+                )}
+                {data.model === 'time_decay' && (
+                  <p>Time Decay attribution gives more credit to touchpoints that occurred closer in time to the conversion. It uses a 7-day half-life decay model, where older touches receive progressively less weight.</p>
+                )}
+                {data.model === 'u_shaped' && (
+                  <p>U-Shaped attribution (40/20/40) assigns 40% of the credit to the first touchpoint, 40% to the last touchpoint, and distributes the remaining 20% equally across all intermediate touchpoints.</p>
+                )}
+                {data.model === 'w_shaped' && (
+                  <p>W-Shaped attribution assigns 30% of the credit to the first touchpoint, 30% to the middle/converting touchpoint, 30% to the last touchpoint, and distributes the remaining 10% equally across other touchpoints.</p>
+                )}
+                {['linear', 'time_decay', 'u_shaped', 'w_shaped'].includes(data.model) ? (
+                  <p className="text-st-gray dark:text-gray-400 mt-1">Multi-touch model: credit is distributed across multiple touchpoints in the journey.</p>
+                ) : (
+                  <p className="text-st-gray dark:text-gray-400 mt-1">Single-touch model: only one touchpoint receives credit.</p>
+                )}
               </div>
             </>
           )}

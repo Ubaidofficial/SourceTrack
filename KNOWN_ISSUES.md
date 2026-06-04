@@ -102,21 +102,15 @@ Before production readiness or broad audits, check:
 
 Do not commit unnecessary `.bak` files.
 
-### 8. Known Issue: Linear/Advanced Attribution HogQL error `Unable to resolve field: ce`
-
-Selecting the **Linear** (or other multi-touch/advanced) attribution model in `/api/attribution` queries triggers a PostHog database validation error:
-`Unable to resolve field: ce`
-
-This is caused by HogQL/ClickHouse rejecting outer-variable correlations (`ce.distinct_id`) within SELECT subqueries used for calculating multi-touch fractions.
-
-- **Status:** ⚠️ **Known Issue — Not beta-blocking while hidden/gated**
-- **Details:**
-  - All single-touch models (First Touch, Last Touch, and their Non-Direct variants) do not rely on correlated subqueries and **pass successfully**.
-  - Since linear/multi-touch models are temporarily hidden from the UI and gated with a 400 response at the API level, users cannot trigger this error.
-- **Rule:**
-  - Linear/advanced attribution must remain gated and hidden from the UI/API dropdowns/endpoints until the outer-variable query structure is resolved.
-
 ## Recently fixed
+
+### Safe JS-based Multi-Touch Attribution Engine (Session 105)
+- **Linear/Advanced Attribution HogQL error** `Unable to resolve field: ce` — RESOLVED.
+  - Rewrote the multi-touch live calculation pipeline to run fully in JavaScript.
+  - The engine now fetches conversions and visitor touchpoints separately using simple, highly indexable ClickHouse queries, completely avoiding slow and buggy correlated subqueries that fail in HogQL.
+  - Verified all 8 models (first_touch, last_touch, first_touch_non_direct, last_touch_non_direct, linear, time_decay, u_shaped, w_shaped) using both a deterministic QA harness and a controlled live API integration test against real PostHog ClickHouse data.
+  - Live integration test confirmed exact $120.00 revenue reconciliation per model after PostHog cloud indexing (~295 s ingestion latency, within expected 2–5 min window).
+  - PostHog cloud ClickHouse ingestion latency is non-trivial; integration test polling window is 10 minutes. This is expected infrastructure behaviour, not a code bug.
 
 ### Final Complete Audit — Round 3 (2026-05-21)
 
@@ -297,3 +291,7 @@ Action: evaluate SSR (Next.js/Astro) for the marketing landing page post-launch.
 - Annotations API returns HTTP 503 (gracefully).
 - `custom_properties` column does not exist on `attributed_conversions`.
 - `attribution_window_days` column does not exist on `sites` (defaults to 30 in code).
+
+### Per-conversion explain is single-touch-only
+Step-by-step explanations (via `/api/attribution/explain` and the Conversion Explanation Modal) are designed and supported for single-touch models only (`first_touch`, `last_touch`, `first_touch_non_direct`, `last_touch_non_direct`, `ai_platforms`).
+Advanced multi-touch models (`linear`, `time_decay`, `u_shaped`, `w_shaped`) are designed for aggregate attribution reporting, and querying `/api/attribution/explain` for them will return a clean explanation object indicating this limitation rather than raising errors or crashing.

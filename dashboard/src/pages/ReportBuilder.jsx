@@ -180,13 +180,7 @@ export default function ReportBuilder() {
 
   // Report state
   const [reportName, setReportName] = useState('')
-  const [modelRaw, setModelRaw] = useState('last_touch')
-  // Linear/advanced multi-touch models are temporarily hidden due to known HogQL issue "Unable to resolve field: ce"
-  const setModel = useCallback((val) => {
-    const BLOCKED_MODELS = new Set(['linear', 'time_decay', 'u_shaped', 'w_shaped'])
-    setModelRaw(BLOCKED_MODELS.has(val) ? 'last_touch' : val)
-  }, [])
-  const model = new Set(['linear', 'time_decay', 'u_shaped', 'w_shaped']).has(modelRaw) ? 'last_touch' : modelRaw
+  const [model, setModel] = useState('last_touch')
   const [groupBy, setGroupBy] = useState('source')
   const [metric, setMetric] = useState('revenue')
   const [selectedMetrics, setSelectedMetrics] = useState(['revenue'])
@@ -216,6 +210,7 @@ export default function ReportBuilder() {
   const [showExplanation, setShowExplanation] = useState(false)
   const [showCompare, setShowCompare] = useState(false)
   const [explainModalOpen, setExplainModalOpen] = useState(false)
+  const isMultiTouch = ['linear', 'time_decay', 'u_shaped', 'w_shaped'].includes(model)
 
   // UI state
   const [editingId, setEditingId] = useState(null)
@@ -838,12 +833,6 @@ export default function ReportBuilder() {
             </div>
             <select value={model} onChange={(e) => {
                 const next = e.target.value
-                // Linear/advanced multi-touch models are temporarily hidden due to known HogQL issue "Unable to resolve field: ce"
-                const BLOCKED_MODELS = new Set(['linear', 'time_decay', 'u_shaped', 'w_shaped'])
-                if (BLOCKED_MODELS.has(next)) {
-                  setModel('last_touch')
-                  return
-                }
                 // Block multi-touch picks for free — silently snap back to last_touch
                 if (MULTI_TOUCH_KEYS.has(next) && !hasFeature(site?.plan, 'multi_touch_attribution')) {
                   setModel('last_touch')
@@ -852,7 +841,7 @@ export default function ReportBuilder() {
                 setModel(next)
               }}
               className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white">
-              {MODELS.filter(m => !new Set(['linear', 'time_decay', 'u_shaped', 'w_shaped']).has(m.key)).map(m => {
+              {MODELS.map(m => {
                 const locked = MULTI_TOUCH_KEYS.has(m.key) && !hasFeature(site?.plan, 'multi_touch_attribution')
                 return (
                   <option key={m.key} value={m.key} disabled={locked}>
@@ -1335,17 +1324,19 @@ export default function ReportBuilder() {
                     >
                       ↓ CSV
                     </button>
-                    <button
-                      onClick={() => setShowExplanation(!showExplanation)}
-                    className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
-                      showExplanation
-                        ? 'bg-st-black text-white border-st-black'
-                        : 'bg-white dark:bg-[#242829] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-[#2A2E2E] hover:bg-gray-50 dark:hover:bg-[#252929]'
-                    }`}
-                  >
-                    <HelpCircle className="w-3.5 h-3.5" />
-                    {showExplanation ? 'Hide Explanation' : 'Show Explanation'}
-                  </button>
+                    {!isMultiTouch && (
+                      <button
+                        onClick={() => setShowExplanation(!showExplanation)}
+                        className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
+                          showExplanation
+                            ? 'bg-st-black text-white border-st-black'
+                            : 'bg-white dark:bg-[#242829] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-[#2A2E2E] hover:bg-gray-50 dark:hover:bg-[#252929]'
+                        }`}
+                      >
+                        <HelpCircle className="w-3.5 h-3.5" />
+                        {showExplanation ? 'Hide Explanation' : 'Show Explanation'}
+                      </button>
+                    )}
                   </div>
                 </div>
                 {isLoading ? (
@@ -1376,7 +1367,7 @@ export default function ReportBuilder() {
                               vs prior
                             </th>
                           ))}
-                          {showExplanation && <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">Why</th>}
+                          {showExplanation && !isMultiTouch && <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">Why</th>}
                         </tr>
                         {/* Summary row */}
                         <tr className="border-b border-gray-200 dark:border-[#2A2E2E] bg-gray-100 dark:bg-[#252929]">
@@ -1404,7 +1395,7 @@ export default function ReportBuilder() {
                               </td>
                             )
                           })}
-                          {showExplanation && <td />}
+                          {showExplanation && !isMultiTouch && <td />}
                         </tr>
                       </thead>
                       <tbody>
@@ -1435,7 +1426,7 @@ export default function ReportBuilder() {
                                   </td>
                                 )
                               })}
-                              {showExplanation && (
+                              {showExplanation && !isMultiTouch && (
                                 <td className="py-2 px-4">
                                   <button onClick={() => setExplainModalOpen(true)}
                                     className="text-xs text-st-gray dark:text-gray-400 hover:text-st-black flex items-center gap-1">

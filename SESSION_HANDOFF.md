@@ -1,10 +1,37 @@
 > [!NOTE]
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 104.1 — Runtime Smoke + Manual Browser QA. Run configured smoke and edge QA checks against local APIs. Confirmed pageview/conversion ingestion, deduplication checks, and verified the complete manual QA checklist.
+> **Handoff:** Session 105 — Fully Fix Advanced Attribution Models. Implemented safe JavaScript-based live multi-touch attribution engine supporting all 8 models. Verified by deterministic harness AND controlled live API integration test against PostHog ClickHouse (all 8 models passed, $120.00 revenue reconciliation confirmed, ~295 s indexing latency). All static checks clean. Ready to commit.
 >
-> **Next Session:** Session 104.2 — Hide advanced attribution models until Linear HogQL is fixed
+> **Next Session:** Private Paid Beta Launch
 >
+
+## Session 105 — Fully Fix Advanced Attribution Models
+
+**Date:** 2026-06-04 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+
+1. **Safe JS-based Live Multi-Touch Attribution Engine** — Created `getMultiTouchAttributionLive` in `api/lib/attribution-engine.js`. It fetches conversion events and pageview touchpoints separately using simple, highly indexable queries on ClickHouse, then joins and computes fractional shares in JavaScript.
+2. **Support All Advanced Models** — Integrated the live pipeline inside `getFlexibleReport` and `getAttribution` for `linear`, `u_shaped`, `time_decay`, and `w_shaped` models. This allows them to compute live on-the-fly for any combination of dimensions, granularity, dates, and filters.
+3. **Deterministic Test Harness** — Created `scripts/qa-attribution-harness.mjs` and successfully verified the fractional allocations for all single-touch and multi-touch models against simulated user journeys.
+4. **Re-enabled UI Dropdowns & Gating Removal** — Removed the temporary safety block and fallback logic from `api/routes/attribution.js`, `Dashboard.jsx`, and `ReportBuilder.jsx`, fully exposing the working models to paid beta users.
+5. **Intercept Advanced Explanations** — Handled the explain endpoint (`/api/attribution/explain`) for advanced models by returning a clear aggregate explanation object instead of crashing with unknown model errors.
+6. **Report Builder UI Adjustments** — Hid the explanation toolbar toggle button and the table's "Why" column for multi-touch models.
+7. **Controlled API Integration Test** — Implemented `scripts/qa-attribution-integration.mjs` which programmatically boots a temp auth user, extends billing trial, ingests unique pageviews and a conversion, queries `/api/attribution` endpoints, verifies exact revenue reconciliation and source allocation, and cleans up all database updates.
+
+### Files changed
+- `api/lib/attribution-engine.js` — Live JS multi-touch pipeline and explain endpoint interception.
+- `api/routes/attribution.js` — Remove API gating blocks.
+- `dashboard/src/components/ConversionExplanationModal.jsx` — Support multi-touch models descriptions and logic tooltips.
+- `dashboard/src/pages/Dashboard.jsx` — Re-enable cards and remove sanitization fallback.
+- `dashboard/src/pages/ReportBuilder.jsx` — Restore standard selector options and hide explanation elements for multi-touch models.
+- `package.json` — Update `qa:attribution` hook to run both tests.
+- `KNOWN_ISSUES.md` — Log the linear error fix and explain endpoint limitation.
+- `scripts/qa-attribution-harness.mjs` [NEW] — Deterministic QA test harness.
+- `scripts/qa-attribution-integration.mjs` [NEW] — Controlled API integration test script.
+
+---
 
 ## Session 104.1 — Runtime Smoke + Manual Browser QA
 

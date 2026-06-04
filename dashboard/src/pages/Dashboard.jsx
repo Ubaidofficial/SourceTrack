@@ -316,11 +316,9 @@ export default function Dashboard() {
         queryKey: ['saved-report-data', r.id, site?.site_key, cfg.isRolling ? `rolling-${cfg.rollingDays || 30}` : null],
         queryFn: async () => {
           if (!site?.site_key) return null
-          const BLOCKED_MODELS = new Set(['linear', 'time_decay', 'u_shaped', 'w_shaped'])
-          const resolvedModel = (cfg.model && BLOCKED_MODELS.has(cfg.model)) ? 'last_touch' : (cfg.model || 'last_touch')
           const params = new URLSearchParams({
             site_key: site.site_key,
-            model: resolvedModel,
+            model: cfg.model || 'last_touch',
             date_from: reportDateRange.from,
             date_to: reportDateRange.to,
             group_by: cfg.groupBy || 'source',
@@ -502,14 +500,11 @@ export default function Dashboard() {
   ]
 
   const models = overview?.models || {}
-  // Linear/advanced multi-touch models are temporarily hidden due to known HogQL issue "Unable to resolve field: ce"
-  const BLOCKED_MODELS = new Set(['linear', 'time_decay', 'u_shaped', 'w_shaped'])
   // Hide multi-touch model rows on free plan — the nightly job doesn't compute
   // them for free sites so they would otherwise render as $0 and confuse users.
   const MULTI_TOUCH = new Set(['linear', 'time_decay', 'u_shaped', 'w_shaped'])
   const canMultiTouch = hasFeature(site?.plan, 'multi_touch_attribution')
   const modelRevenues = MODELS
-    .filter(m => !BLOCKED_MODELS.has(m.key))
     .filter(m => canMultiTouch || !MULTI_TOUCH.has(m.key))
     .map(m => ({ model: m.key, label: m.label, total: models[m.key] || 0 }))
 
