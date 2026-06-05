@@ -56,6 +56,81 @@ Session 82 proper will be the manual QA closeout session.
 | 104.1 | 2026-06-04 | `main` | Runtime Smoke + Manual Browser QA validation checks passed | ✅ | No |
 | 104.2 | 2026-06-04 | `main` | Hide broken multi-touch models (Linear, U-Shaped, Time Decay, W-Shaped) from UI and API until HogQL is fixed | ✅ | No |
 | 105   | 2026-06-04 | `main` | Fully fix multi-touch attribution models (Linear, Time Decay, U-Shaped, W-Shaped) via safe JS-based query engine | ✅ | No |
+| 106   | 2026-06-04 | `main` | Improve public site SEO copy and mobile UX containers | ✅ | No |
+| 107   | 2026-06-05 | `main` | Polish public site conversion copy and CTAs | ✅ | No |
+| 108   | 2026-06-05 | `main` | Add public trust legal links, Privacy, Terms, and noindex dashboard share config | ✅ | No |
+| 109   | 2026-06-05 | `main` | Brutal competitive feature parity audit against Piqo, Cometly, DataFast, Usermaven, Growify | ✅ | No |
+| 110B  | 2026-06-05 | `main` | Fix Lead Journey Drilldown Bugs and Enrich Timeline | ✅ | No |
+
+---
+
+## Session 110B — Fix Lead Journey Drilldown Bugs and Enrich Timeline
+
+**Date:** 2026-06-05
+**Branch:** `main`
+**Build:** ✅ node --check + npm run build + static QA pass
+
+### 1. Fix Leads Page ReferenceError & Server Query Mismatch
+- Fixed Leads dashboard crashes due to undefined `CONVERSION_TYPE_BADGE`.
+- Resolved array destructuring parameter count query mismatch by querying `last_conversion_type` via `argMaxIf`.
+- Proved ClickHouse native support for `argMaxIf` over `toDateTime` fallback via local test execution scripts.
+
+### 2. Journey Data Enrichment & Timeline Detail Display
+- Exposed `order_id`, `destination_domain`, and `destination_url` via `journey.js` API handler.
+- Configured stand-alone visitor timeline and journey modal overlay to render conversion order IDs and outbound destination details.
+- Integrated a strict URL parsing utility to sanitize all query parameters, hashes, and email path patterns to prevent PII leakage.
+
+---
+
+## Session 109 — Brutal Competitive Feature Parity Audit
+
+**Date:** 2026-06-05
+**Branch:** `main`
+**Build:** ✅ node --check + npm run build + tests pass
+
+### 1. Competitive Audit Report
+- Created `competitive_feature_parity_audit.md` report reviewing product capabilities and positions relative to 5 primary competitors.
+- Drafted a segment readiness scorecard showing B2B SaaS and Lead Gen are fully ready, while eCommerce should be deferred.
+
+---
+
+## Session 108 — Public Trust Cleanup
+
+**Date:** 2026-06-05
+**Branch:** `main`
+**Build:** ✅ node --check + npm run build pass
+
+### 1. Legal Pages & Footer Links
+- Created `Privacy.jsx` and `Terms.jsx` to satisfy public trust and legal requirements.
+- Wired footer links to point to new pages.
+
+### 2. Search indexability config
+- Configured share-dashboard headers to deny search engine crawl indexation.
+
+---
+
+## Session 107 — Public Site Copy Polish
+
+**Date:** 2026-06-05
+**Branch:** `main`
+**Build:** ✅ node --check + npm run build pass
+
+### 1. Conversion Wording & CTA Alignment
+- Aligned CTA buttons on marketing pages.
+- Standardized feature lists and sitemap update timings.
+
+---
+
+## Session 106 — Public Site SEO & Mobile UX Cleanup
+
+**Date:** 2026-06-04
+**Branch:** `main`
+**Build:** ✅ node --check + npm run build pass
+
+### 1. SEO Descriptions & Viewport fixes
+- Cleaned index.html layout viewport tags and meta description content.
+- Whitelisted report-builder in robots.txt.
+- Tuned comparison table mobile layout sizes.
 
 ---
 

@@ -9,7 +9,8 @@ import { safeNumber } from '../utils/numbers'
 const EVENT_ICONS = {
   '$pageview':   Globe,
   '$conversion': MousePointerClick,
-  '$identify':   User
+  '$identify':   User,
+  'outbound_click': MousePointerClick
 }
 
 const AI_COLORS = {
@@ -22,6 +23,18 @@ const AI_COLORS = {
   'DeepSeek':   'text-cyan-600 bg-cyan-50',
 }
 const getAIColor = (src) => AI_COLORS[src] || 'text-purple-600 bg-purple-50'
+
+function normalizeUrl(urlStr) {
+  if (!urlStr) return ''
+  let cleaned = urlStr
+  try {
+    const url = new URL(urlStr)
+    cleaned = url.origin + url.pathname
+  } catch (err) {
+    cleaned = urlStr.split('?')[0].split('#')[0]
+  }
+  return cleaned.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[REDACTED_EMAIL]')
+}
 
 export default function JourneyModal({ visitorId, siteKey, onClose, onQualified }) {
   const [data, setData]       = useState(null)
@@ -201,6 +214,7 @@ export default function JourneyModal({ visitorId, siteKey, onClose, onQualified 
                       const label = isConversion ? 'Conversion'
                         : e.event === '$pageview' ? 'Pageview'
                         : e.event === '$identify' ? 'Identify'
+                        : e.event === 'outbound_click' ? 'Outbound Click'
                         : e.event
 
                       return (
@@ -273,6 +287,9 @@ export default function JourneyModal({ visitorId, siteKey, onClose, onQualified 
                                 </p>
                               )}
                               {e.device_type && <p>Device: {e.device_type}</p>}
+                              {e.order_id && <p>Order ID: {e.order_id}</p>}
+                              {e.destination_domain && <p>Destination Domain: {e.destination_domain}</p>}
+                              {e.destination_url && <p className="break-all">Destination URL: {normalizeUrl(e.destination_url)}</p>}
                             </div>
                           )}
                         </div>

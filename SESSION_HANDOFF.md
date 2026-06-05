@@ -1,10 +1,55 @@
 > [!NOTE]
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 105 — Fully Fix Advanced Attribution Models. Implemented safe JavaScript-based live multi-touch attribution engine supporting all 8 models. Verified by deterministic harness AND controlled live API integration test against PostHog ClickHouse (all 8 models passed, $120.00 revenue reconciliation confirmed, ~295 s indexing latency). All static checks clean. Ready to commit.
+> **Handoff:** Session 110B — Fix Lead Journey Drilldown Bugs and Enrich Timeline. Fixed Leads rendering ReferenceError, query mapping destructuring mismatch via ClickHouse `argMaxIf`, and exposed/redacted outbound links and conversion order IDs on standalone and modal journey timelines. Passed all syntax, build, and static QA checks.
 >
-> **Next Session:** Private Paid Beta Launch
+> **Next Task:** Run Supabase database migrations in production, deploy OG image, and begin private beta onboarding.
 >
+
+## Session 110B — Fix Lead Journey Drilldown Bugs and Enrich Timeline
+**Date:** 2026-06-05 | **Branch:** `main` | **Build:** ✅ passing
+### Completed
+1. **Array Destructuring Mismatch Fixed:** Added `argMaxIf(properties.conversion_type, timestamp, event = '$conversion') AS last_conversion_type` to `leads-server.js` query.
+2. **Leads Page ReferenceError Fix:** Declared `CONVERSION_TYPE_BADGE` styling mapping constant in `Leads.jsx`.
+3. **Journey Timeline Enrichment:** Exposed `order_id`, `destination_domain`, and `destination_url` in the query and API response of `journey.js`.
+4. **Timeline UI Details & URL Redaction:** Integrated `normalizeUrl` utility to strip query parameters and hashes (redacting emails in the path) on both `JourneyModal.jsx` and `Journey.jsx`, and displayed the new order/outbound fields.
+
+---
+
+## Session 109 — Brutal Competitive Feature Parity Audit
+**Date:** 2026-06-05 | **Branch:** `main` | **Build:** ✅ passing
+### Completed
+1. **Competitive Audit Report:** Created [competitive_feature_parity_audit.md](file:///Users/ubaid/.gemini/antigravity/brain/62433705-749b-4885-9b11-c799464b11c9/competitive_feature_parity_audit.md) detailing positioning, matrices, and launch scorecards.
+2. **Segment Readiness Check:** Verified SaaS and Lead-Gen segments are ready for immediate onboarding; eCommerce merchants should be deferred until automated ad spend ingestion is live.
+3. **Repository Sync:** Updated session log, plan state, and handoff files.
+
+---
+
+## Session 108 — Public Trust Cleanup
+**Date:** 2026-06-05 | **Branch:** `main` | **Build:** ✅ passing
+### Completed
+1. **ToS & Privacy Pages:** Created [Terms.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Terms.jsx) and [Privacy.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Privacy.jsx) with clean legal copy.
+2. **Footer Wiring:** Connected footer link pathways in [MarketingFooter.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/components/MarketingFooter.jsx).
+3. **Dashboard Share indexability:** Injected `noindex` SEO headers in [ShareDashboard.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/ShareDashboard.jsx) to prevent indexing.
+
+---
+
+## Session 107 — Public Site Copy Polish
+**Date:** 2026-06-05 | **Branch:** `main` | **Build:** ✅ passing
+### Completed
+1. **Button & Feature Aligner:** Standardized CTA buttons and pricing feature matrices in [PricingCards.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/components/PricingCards.jsx).
+2. **Sitemap validation:** Aligned modified dates in public [sitemap.xml](file:///Users/ubaid/Desktop/trackiq/dashboard/public/sitemap.xml).
+
+---
+
+## Session 106 — Public Site SEO & Mobile UX Cleanup
+**Date:** 2026-06-04 | **Branch:** `main` | **Build:** ✅ passing
+### Completed
+1. **SEO Headers:** Cleaned up HTML titles and description tags inside [index.html](file:///Users/ubaid/Desktop/trackiq/dashboard/index.html).
+2. **Robots rules:** Whitelisted `/report-builder` in [robots.txt](file:///Users/ubaid/Desktop/trackiq/dashboard/public/robots.txt).
+3. **Layout styles:** Hardened responsive container dimensions in [ComparisonTable.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/components/ComparisonTable.jsx).
+
+---
 
 ## Session 105 — Fully Fix Advanced Attribution Models
 

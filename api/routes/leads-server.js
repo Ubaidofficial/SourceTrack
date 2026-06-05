@@ -35,7 +35,8 @@ router.get('/', validateSiteKey, async (req, res) => {
         argMin(properties.first_touch_campaign, timestamp) AS campaign,
         argMin(COALESCE(NULLIF(properties.ai_source, ''), ''), timestamp) AS ai_source,
         argMin(properties.country, timestamp) AS country,
-        argMin(properties.page_url, timestamp) AS first_page_url
+        argMin(properties.page_url, timestamp) AS first_page_url,
+        argMaxIf(properties.conversion_type, timestamp, event = '$conversion') AS last_conversion_type
       FROM events
       WHERE properties.site_id = '${esc(siteId)}'
         ${dateFilter}

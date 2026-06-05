@@ -24,7 +24,10 @@ export async function journey(req, res) {
         properties.is_conversion,
         properties.conversion_value,
         properties.device_type,
-        properties.country
+        properties.country,
+        properties.order_id,
+        properties.destination_domain,
+        properties.destination_url
       FROM events
       WHERE properties.site_id = '${esc(posthogSiteId)}'
         AND distinct_id = '${esc(visitorId)}'
@@ -38,7 +41,7 @@ export async function journey(req, res) {
       event, timestamp, pageUrl, referrer,
       utmSource, utmMedium, utmCampaign,
       aiSource, isConversion, conversionValue,
-      deviceType, country
+      deviceType, country, orderId, destinationDomain, destinationUrl
     ]) => ({
       event,
       timestamp,
@@ -51,7 +54,10 @@ export async function journey(req, res) {
       is_conversion: isConversion === true || isConversion === 'true' || isConversion === 1,
       conversion_value: conversionValue ? Number(conversionValue) || 0 : null,
       device_type: deviceType || null,
-      country: country || null
+      country: country || null,
+      order_id: orderId || null,
+      destination_domain: destinationDomain || null,
+      destination_url: destinationUrl || null
     }))
 
     let person = null

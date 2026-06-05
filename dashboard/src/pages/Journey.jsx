@@ -13,6 +13,18 @@ const FILTERS = [
   { key: 'ai', label: 'AI Touchpoints' }
 ]
 
+function normalizeUrl(urlStr) {
+  if (!urlStr) return ''
+  let cleaned = urlStr
+  try {
+    const url = new URL(urlStr)
+    cleaned = url.origin + url.pathname
+  } catch (err) {
+    cleaned = urlStr.split('?')[0].split('#')[0]
+  }
+  return cleaned.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[REDACTED_EMAIL]')
+}
+
 export default function Journey() {
   const { user } = useAuth()
   const [searchParams] = useSearchParams()
@@ -69,7 +81,8 @@ export default function Journey() {
       : events.filter(e => e.ai_source != null && e.ai_source !== '')
   const eventIcons = {
     '$pageview': Globe,
-    '$conversion': MousePointerClick
+    '$conversion': MousePointerClick,
+    'outbound_click': MousePointerClick
   }
 
   // Build a simple pre-conversion path summary from ordered events.
@@ -232,7 +245,7 @@ export default function Journey() {
                         <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
                           e.is_conversion ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
                         }`}>
-                          {e.event}
+                          {e.event === 'outbound_click' ? 'Outbound Click' : e.event}
                         </span>
                         {e.ai_source && (
                           <span className="flex items-center gap-1 text-xs text-purple-600">
@@ -263,6 +276,15 @@ export default function Journey() {
                       )}
                       {e.conversion_value != null && (
                         <p className="text-xs font-medium text-green-600 mt-0.5">{formatCurrencyDecimal(e.conversion_value)}</p>
+                      )}
+                      {e.order_id && (
+                        <p className="text-xs text-st-gray mt-0.5">Order ID: {e.order_id}</p>
+                      )}
+                      {e.destination_domain && (
+                        <p className="text-xs text-st-gray mt-0.5">Destination Domain: {e.destination_domain}</p>
+                      )}
+                      {e.destination_url && (
+                        <p className="text-xs text-st-gray mt-0.5 break-all">Destination URL: {normalizeUrl(e.destination_url)}</p>
                       )}
                     </div>
                   </div>
