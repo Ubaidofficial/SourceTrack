@@ -11,7 +11,7 @@ const DATA = {
   badge: 'SaaS Attribution — Trial-to-paid, MRR, and AI research tracking',
   headline: 'See which channels drive trial starts.',
   headlineAccent: 'And which ones actually convert to paid.',
-  subheadline: "Your analytics show plenty of signups. But which sources produce paying customers — not just free-tier churn? SourceTrack traces every subscription back to its original touchpoint, including the AI product comparison that started the buyer's journey.",
+  subheadline: "Your analytics show plenty of signups, but which sources produce paying customers — and which ones just churn? SourceTrack tracks the full journey from first click to paid subscription, showing you the exact campaigns that drive MRR, not just free-tier signups.",
 
   stats: [
     { value: '7+', label: 'Touchpoints before SaaS purchase', sub: "B2B SaaS buyers consult multiple sources before signing up — last-click attribution misses all but the final one" },
@@ -31,7 +31,7 @@ const DATA = {
       {
         icon: '🤖',
         title: 'AI product research attribution',
-        body: "When a buyer asks ChatGPT 'what's the best attribution tool' and clicks through to your site, GA4 logs that as direct. SourceTrack identifies it as a ChatGPT referral — so the trial and eventual subscription are attributed to AI, not to whatever ad they saw later.",
+        body: "When a buyer asks ChatGPT 'which attribution tool should I use' and clicks through to your site, GA4 logs that as direct. SourceTrack identifies it as a ChatGPT referral — so the trial and eventual subscription are attributed to AI, not to whatever ad they saw later.",
       },
       {
         icon: '📊',

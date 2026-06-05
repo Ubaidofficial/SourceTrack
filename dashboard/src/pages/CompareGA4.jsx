@@ -14,7 +14,7 @@ const SEO = {
 const HERO = {
   kicker: 'GA4 alternative',
   h1: "GA4 tells you what happened. SourceTrack tells you which source made it happen.",
-  sub: 'GA4 is powerful broad web analytics. SourceTrack is focused attribution — built to answer one question across every channel: which source, campaign, or page actually created this lead, trial, or purchase?',
+  sub: 'GA4 is built to measure pageviews, not customer journeys. SourceTrack is focused revenue attribution — built to answer one question without data overload: which campaign, keyword, page, or AI search actually produced the customer?',
   primaryCta: 'Start free',
   secondaryCta: 'View attribution',
   secondaryHref: '/attribution',
@@ -32,7 +32,7 @@ export default function CompareGA4() {
             SourceTrack vs GA4 for attribution-focused teams.
           </h2>
           <p className="mt-5 max-w-[620px] mx-auto text-[#586464] text-lg leading-[1.55]">
-            GA4 is designed for broad web analytics. Ad platforms are optimized for their own reporting. SourceTrack is focused on attribution — independent, neutral, and built to answer "which source created this customer?"
+            GA4 leaves you drowning in data overload, while ad platforms claim duplicate credit for the same sale. SourceTrack strips away the noise, tracking the full customer journey to show you exactly where your revenue comes from.
           </p>
 
           <div className="mt-[54px]">

@@ -52,7 +52,7 @@ const HERO = {
   kicker: 'Revenue attribution for modern marketing teams',
   h1: 'Know which sources actually',
   h1Gradient: 'create revenue.',
-  sub: 'SourceTrack tracks every visitor, touchpoint, lead, trial, demo, purchase, and AI referral — then connects the journey back to the channel that created it.',
+  sub: 'Stop guessing which campaigns drive sales. SourceTrack connects the entire customer journey — from first click to paying customer — so you can stop relying on biased ad-platform self-reporting and scale what actually converts.',
   primaryCta: 'Start tracking free',
   secondaryCta: 'View product',
   secondaryHref: '/product',
@@ -137,7 +137,7 @@ export default function Landing() {
             <span className="text-st-black">SourceTrack gives you the source that created the customer.</span>
           </h2>
           <p className="mt-5 max-w-[620px] mx-auto text-[#586464] text-lg leading-[1.55]">
-            GA4 is broad web analytics — powerful but built for every metric. Ad platforms naturally favor their own clicks in reports. SourceTrack focuses on one question, asked independently across every channel: which source, campaign, or page actually produced this lead, trial, or purchase?
+            GA4 is built to track pageviews, not customer journeys. Ad platforms are built to favor their own ads, leading to duplicate conversion reports and wasted spend. SourceTrack gives you full-funnel attribution clarity. Track every touchpoint independently, prove the real ROI of your marketing, and double down on what actually works.
           </p>
 
           <div className="mt-[54px]">
@@ -171,19 +171,19 @@ export default function Landing() {
               </Link>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Link to="/use-cases/saas" className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] hover:-translate-y-1 transition-all hover:shadow-[0_18px_52px_rgba(31,35,35,.09)]">
+              <Link to="/saas-attribution" className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] hover:-translate-y-1 transition-all hover:shadow-[0_18px_52px_rgba(31,35,35,.09)]">
                 <strong className="text-lg tracking-[-0.04em]">SaaS</strong>
                 <p className="mt-1.5 text-[#586464] text-[15px]">Trials, demos, paid conversions, MRR influence, and trial-to-paid attribution by source.</p>
               </Link>
-              <Link to="/use-cases/ecommerce" className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] hover:-translate-y-1 transition-all hover:shadow-[0_18px_52px_rgba(31,35,35,.09)]">
+              <Link to="/ecommerce-attribution" className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] hover:-translate-y-1 transition-all hover:shadow-[0_18px_52px_rgba(31,35,35,.09)]">
                 <strong className="text-lg tracking-[-0.04em]">Ecommerce</strong>
                 <p className="mt-1.5 text-[#586464] text-[15px]">Purchases, revenue, AOV, ROAS per campaign, and landing page purchase attribution.</p>
               </Link>
-              <Link to="/use-cases/lead-generation" className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] hover:-translate-y-1 transition-all hover:shadow-[0_18px_52px_rgba(31,35,35,.09)]">
+              <Link to="/lead-gen-attribution" className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] hover:-translate-y-1 transition-all hover:shadow-[0_18px_52px_rgba(31,35,35,.09)]">
                 <strong className="text-lg tracking-[-0.04em]">Lead generation</strong>
                 <p className="mt-1.5 text-[#586464] text-[15px]">Qualified leads, forms, booked meetings, CPL by channel, and pipeline revenue attribution.</p>
               </Link>
-              <Link to="/use-cases/agencies" className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] hover:-translate-y-1 transition-all hover:shadow-[0_18px_52px_rgba(31,35,35,.09)]">
+              <Link to="/agency-attribution" className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] hover:-translate-y-1 transition-all hover:shadow-[0_18px_52px_rgba(31,35,35,.09)]">
                 <strong className="text-lg tracking-[-0.04em]">Agencies</strong>
                 <p className="mt-1.5 text-[#586464] text-[15px]">Client reporting, source-of-truth attribution, campaign optimization, and client-safe report exports.</p>
               </Link>

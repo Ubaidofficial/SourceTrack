@@ -15,7 +15,7 @@ const SEO = {
 const HERO = {
   kicker: 'Marketing attribution software',
   h1: 'Know the source behind every lead, trial, and purchase.',
-  sub: 'Track campaigns, journeys, landing pages, and conversions — then compare sources across 8 attribution models to see which channels actually create revenue, not just clicks.',
+  sub: 'Track the complete path from first click to paying customer. Compare channels across 8 attribution models, prove the real ROI of your campaigns, and stop relying on biased ad-platform self-reporting.',
   primaryCta: 'Start tracking free',
   secondaryCta: 'Compare with GA4',
   secondaryHref: '/compare-ga4',
@@ -36,7 +36,7 @@ export default function Attribution() {
               </h2>
             </div>
             <p className="self-end text-[#586464] text-lg leading-[1.55] tracking-[-0.02em] max-w-[480px]">
-              Meta credits Meta. Google credits Google. GA4 credits the last click. SourceTrack compares paid, organic, social, email, partner, and AI channels using the same neutral attribution logic — so budget decisions are based on actual outcomes.
+              Ad platforms self-report conversion data to justify your spend. GA4 over-credits the last click. SourceTrack tracks every touchpoint in the journey, giving you a neutral source of truth to reduce wasted budget and scale what converts.
             </p>
           </div>
 

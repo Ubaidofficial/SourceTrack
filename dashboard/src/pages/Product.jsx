@@ -15,7 +15,7 @@ const SEO = {
 const HERO = {
   kicker: 'Product overview',
   h1: 'Revenue attribution without the analytics maze.',
-  sub: 'SourceTrack gives founders and marketers one place to see which channels, campaigns, landing pages, and AI referrals actually produce leads, trials, purchases, and revenue.',
+  sub: 'Stop navigating complex analytics dashboards. SourceTrack gives founders and marketers clean customer journey timelines and revenue attribution — so you know exactly which campaigns drive sales.',
   primaryCta: 'Start free',
   secondaryCta: 'See report builder',
   secondaryHref: '/report-builder',
@@ -58,7 +58,7 @@ export default function Product() {
                 Ad platforms are biased toward their own clicks. SourceTrack isn't.
               </h2>
               <p className="mt-4 text-[#B9C2C2] text-base leading-[1.55]">
-                Every ad platform credits its own impressions. GA4 buries AI referrals in direct traffic. SourceTrack sits closer to your customer journey so you can compare channels with a neutral, independent view of what creates outcomes.
+                Ad platforms self-report to inflate their own ROI, leading to duplicate conversions and wasted ad spend. GA4 buries AI referrals in direct traffic. SourceTrack gives you an independent, full-funnel view of the customer journey — so you can stop guessing and double down on what actually converts.
               </p>
               <Link to="/attribution" className="mt-6 inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full bg-st-lime text-st-black text-[15px] font-extrabold tracking-[-0.025em] shadow-[0_18px_52px_rgba(204,240,63,0.28)] hover:bg-[#D9FA64] transition-all hover:-translate-y-px">
                 See the attribution engine

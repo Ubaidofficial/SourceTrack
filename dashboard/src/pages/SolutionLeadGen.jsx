@@ -11,7 +11,7 @@ const DATA = {
   badge: 'Lead Generation Attribution — From form submission to closed-won',
   headline: 'Your CPC reports look great.',
   headlineAccent: 'But which leads are actually closing?',
-  subheadline: "Lead volume is a vanity metric. SourceTrack connects every form submission to its original acquisition source — so your media spend is optimized against closed revenue, not raw MQLs that never convert.",
+  subheadline: "Lead volume is a vanity metric, and ad platforms love to take credit for easy form fills. SourceTrack connects every lead to the entire journey and closed revenue — so you can stop wasting ad spend on raw MQLs that never convert.",
 
   stats: [
     { value: '8', label: 'Attribution models', sub: 'From first touch to W-shaped — multi-touch models reveal top-of-funnel channels that last-click misses entirely' },

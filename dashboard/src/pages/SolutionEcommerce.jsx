@@ -11,7 +11,7 @@ const DATA = {
   badge: 'eCommerce Attribution — Built for Shopify, WooCommerce & DTC brands',
   headline: 'Stop over-crediting your last ad.',
   headlineAccent: 'See every touchpoint that drove the sale.',
-  subheadline: "Your ROAS reports look great, but last-click attribution is lying to you. SourceTrack shows the full buyer journey — from the ChatGPT recommendation to the Google retargeting click that closed the deal — for every order in your store.",
+  subheadline: "Your ROAS reports look great, but last-click attribution and ad-platform self-reporting are lying to you. SourceTrack shows the full buyer journey from first click to purchase — eliminating duplicate conversion reports so you know which campaigns actually drive revenue.",
 
   stats: [
     { value: '15+', label: 'AI platforms tracked', sub: 'ChatGPT, Claude, Gemini, Perplexity, and more — visitors that GA4 marks as direct traffic, now attributed correctly' },

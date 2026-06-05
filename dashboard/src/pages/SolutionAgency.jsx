@@ -11,7 +11,7 @@ const DATA = {
   badge: 'Agency Attribution — Multi-client dashboards, white-label reports, multi-site analytics',
   headline: 'Attribution reporting your clients',
   headlineAccent: 'will actually believe.',
-  subheadline: "Your clients are paying for results, not reports. SourceTrack gives you multi-model attribution data for every account — including the AI-driven revenue GA4 is hiding — so your retainer justification is backed by numbers clients can't argue with.",
+  subheadline: "Your clients pay for revenue, not spreadsheet reports. SourceTrack gives you independent, multi-client attribution data to prove your agency's true ROI, eliminate ad platform duplicate reporting, and justify retainers with numbers clients trust.",
 
   stats: [
     { value: '100%', label: 'Data isolation per client', sub: "Each client's tracking key, database records, and attribution dashboard are completely isolated and secure" },

@@ -31,7 +31,7 @@ export default function PricingCards() {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
       {PLANS.map((p, i) => (
-        <article key={p.key} className={`relative p-7 rounded-[32px] border flex flex-col min-h-[460px] ${
+        <article key={p.key} className={`relative p-7 rounded-[32px] border flex flex-col min-h-0 sm:min-h-[460px] ${
           p.featured
             ? 'bg-st-black text-white border-[rgba(255,255,255,.10)] shadow-[0_24px_80px_rgba(31,35,35,.12)] -translate-y-2.5'
             : 'bg-white border-[rgba(31,35,35,.10)] shadow-[0_12px_38px_rgba(31,35,35,.055)]'
