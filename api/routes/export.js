@@ -86,7 +86,7 @@ router.get('/report', async (req, res) => {
 
     res.status(200)
       .set('Content-Type', 'text/csv')
-      .set('Content-Disposition', `attachment; filename="trackiq_report_${date_from}_to_${date_to}.csv"`)
+      .set('Content-Disposition', `attachment; filename="attribution_report_${date_from}_to_${date_to}.csv"`)
       .send(csv)
   } catch (_err) {
     console.error(_err)

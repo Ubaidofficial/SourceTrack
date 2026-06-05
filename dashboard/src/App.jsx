@@ -40,6 +40,8 @@ import SolutionEcommerce from './pages/SolutionEcommerce'
 import SolutionSaaS from './pages/SolutionSaaS'
 import SolutionLeadGen from './pages/SolutionLeadGen'
 import SolutionAgency from './pages/SolutionAgency'
+import Privacy from './pages/Privacy'
+import Terms from './pages/Terms'
 
 const queryClient = new QueryClient()
 
@@ -157,6 +159,8 @@ export default function App() {
               <Route path="/auth/callback" element={<AuthCallback />} />
               {/* Public docs — no auth required */}
               <Route path="/docs" element={<Docs />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/terms" element={<Terms />} />
               {/* Public marketing pages — accessible to everyone */}
               <Route path="/" element={<Landing />} />
               <Route path="/product" element={<Product />} />

@@ -2,6 +2,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { TrendingUp, DollarSign, MousePointerClick, BarChart3, Bot, AlertCircle } from 'lucide-react'
 import { LogoFull, LogoFullDark } from '../components/Logo'
+import { Helmet } from 'react-helmet-async'
 
 export default function ShareDashboard() {
   const { token } = useParams()
@@ -34,6 +35,10 @@ export default function ShareDashboard() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-dark-bg flex items-center justify-center">
+        <Helmet>
+          <meta name="robots" content="noindex, nofollow" />
+          <meta name="googlebot" content="noindex, nofollow" />
+        </Helmet>
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white" />
       </div>
     )
@@ -42,6 +47,10 @@ export default function ShareDashboard() {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-dark-bg flex items-center justify-center">
+        <Helmet>
+          <meta name="robots" content="noindex, nofollow" />
+          <meta name="googlebot" content="noindex, nofollow" />
+        </Helmet>
         <div className="text-center space-y-4 p-8">
           <AlertCircle className="w-12 h-12 text-red-400 mx-auto" />
           <h2 className="text-xl font-bold text-st-black dark:text-white">{error}</h2>
@@ -78,6 +87,11 @@ export default function ShareDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-dark-bg">
+      <Helmet>
+        <title>Shared Attribution Dashboard — SourceTrack</title>
+        <meta name="robots" content="noindex, nofollow" />
+        <meta name="googlebot" content="noindex, nofollow" />
+      </Helmet>
       {/* Header */}
       <header className="bg-white dark:bg-dark-card border-b border-gray-200 dark:border-dark-border px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">

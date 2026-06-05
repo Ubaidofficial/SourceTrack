@@ -16,7 +16,7 @@ const PLANS = [
   {
     key: 'growth', name: 'Growth', price: 'from $19', period: '/mo',
     desc: 'For teams scaling paid, organic, partner, and AI acquisition.',
-    features: ['5 websites', '50,000 pageviews/mo', 'Cookieless mode', 'Funnels and cohorts', 'Team members'],
+    features: ['5 websites', '50,000 pageviews/mo', 'Cookieless mode', 'Advanced attribution reports', 'Team members'],
     cta: 'Choose Growth', href: '/signup', featured: true,
   },
   {

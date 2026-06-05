@@ -42,8 +42,12 @@ export default function MarketingFooter() {
             <a href="mailto:sales@sourcetrack.ai" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Contact sales</a>
           </div>
         </div>
-        <div className="mt-[30px] pt-[22px] border-t border-white/10 flex flex-col sm:flex-row justify-between gap-5 text-[13px] text-[#899393]">
-          <span>© {new Date().getFullYear()} SourceTrack.</span>
+        <div className="mt-[30px] pt-[22px] border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-5 text-[13px] text-[#899393]">
+          <div className="flex flex-wrap items-center gap-5">
+            <span>© {new Date().getFullYear()} SourceTrack.</span>
+            <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+            <Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
+          </div>
           <span>Free forever for up to 5,000 pageviews/mo.</span>
         </div>
       </div>
