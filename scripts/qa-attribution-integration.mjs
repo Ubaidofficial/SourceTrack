@@ -218,6 +218,8 @@ async function run() {
         throw new Error('Timeout waiting for PostHog event indexing (ingestion latency too high)');
       }
     }
+    console.log('Sleeping 15 seconds to ensure all touchpoint events are fully indexed...');
+    await sleep(15000);
     console.log();
 
     // 8. Run Verification on each Attribution Model
