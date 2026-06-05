@@ -33,6 +33,7 @@ export async function conversionOffline(req, res) {
 
     const props = {
       site_id:          req.site.id,
+      site_key:         req.site.site_key,
       is_conversion:    true,
       conversion_value: value,
       ...getFirstTouchFields(req.body),

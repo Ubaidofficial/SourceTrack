@@ -157,6 +157,7 @@ export async function conversion(req, res) {
 
     const props = {
       site_id: req.site.id,
+      site_key: req.site.site_key,
       anonymous_id: req.body.anonymous_id,
       is_conversion: true,
       conversion_value: req.body.conversion_value,
@@ -208,6 +209,9 @@ export async function conversion(req, res) {
       ? `${req.site.id}:${orderId}:${props.conversion_type || 'conversion'}`
       : null
     props.external_event_id = externalEventId
+    if (orderId) {
+      props.order_id = orderId
+    }
 
     // Deduplication — skip if this exact external_event_id was seen in the last 24h
     if (externalEventId) {

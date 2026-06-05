@@ -44,7 +44,7 @@ export async function validateSiteKey(req, res, next) {
     const supabase = getSupabase()
     const { data, error } = await supabase
       .from('sites')
-      .select('id, plan, pv_limit, created_at, company_id, owner_id, business_type, trial_ends_at, attribution_window_days, onboarding_completed, last_seen_at, onboarding_state, domain')
+      .select('id, site_key, plan, pv_limit, created_at, company_id, owner_id, business_type, trial_ends_at, attribution_window_days, onboarding_completed, last_seen_at, onboarding_state, domain')
       .eq('site_key', siteKey)
       .single()
 
@@ -85,6 +85,7 @@ export async function validateSiteKey(req, res, next) {
 
     const site = {
       id: data.id,
+      site_key: data.site_key,
       plan: data.plan,
       pv_limit: data.pv_limit ?? null,
       company_id: data.company_id,

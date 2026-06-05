@@ -48,6 +48,7 @@ import { trackerIdRouter } from './routes/tracker-id.js'
 import { gdprRouter } from './routes/gdpr.js'
 import { pixelRouter } from './routes/pixel.js'
 import { annotationsRouter } from './routes/annotations.js'
+import { webhooksRouter } from './routes/webhooks.js'
 
 // Fail fast on missing required environment variables. Better to crash on
 // startup than to fail every request with a cryptic 500 later.
@@ -289,6 +290,7 @@ app.use('/api/live', requireUserAuth, validateSiteKey, requireSiteMembership, li
 app.use("/api/analytics", analyticsRouter)
 app.use("/sp", proxyRouter)
 app.use("/api/webhooks/incoming", webhookIncomingRouter)
+app.use("/api/webhooks", webhooksRouter)
 app.get('/api/sessions/overview', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, sessionsOverview)
 app.get('/api/sessions', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, visitorSessions)
 

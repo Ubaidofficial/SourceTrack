@@ -6,7 +6,7 @@ import { fetchApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 import {
   Code, Bug, Copy, Check, ShieldCheck, AlertTriangle,
-  ExternalLink, Globe, Tag, ShoppingCart, BarChart3, Plug, Mail, Radio
+  ExternalLink, Globe, Tag, ShoppingCart, BarChart3, Plug, Mail, Radio, Trash, Play, RefreshCw
 } from 'lucide-react'
 import DashboardCard from '../components/DashboardCard'
 import StatusBadge from '../components/StatusBadge'
@@ -19,8 +19,7 @@ const FUTURE_INTEGRATIONS = [
   { key: 'facebook', label: 'Facebook Ads', icon: BarChart3, desc: 'Track Facebook campaign performance' },
   { key: 'shopify', label: 'Shopify', icon: ShoppingCart, desc: 'Pull order data and revenue tracking' },
   { key: 'google-analytics', label: 'Google Analytics', icon: Globe, desc: 'Compare SourceTrack with GA attribution' },
-  { key: 'hubspot', label: 'HubSpot', icon: Tag, desc: 'Sync leads and CRM data' },
-  { key: 'custom', label: 'Custom Webhook', icon: Plug, desc: 'Send events to any HTTP endpoint' }
+  { key: 'hubspot', label: 'HubSpot', icon: Tag, desc: 'Sync leads and CRM data' }
 ]
 
 export default function Integrations() {
@@ -56,6 +55,127 @@ export default function Integrations() {
     enabled: !!site?.site_key,
     refetchInterval: 30_000
   })
+
+  const { data: webhookData, refetch: refetchWebhook } = useQuery({
+    queryKey: ['webhook-config', site?.site_key],
+    queryFn: () => fetchApi(`/webhooks?site_key=${site.site_key}`),
+    enabled: !!site?.site_key
+  })
+
+  const [url, setUrl] = useState('')
+  const [active, setActive] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [uiMessage, setUiMessage] = useState('')
+  const [showSecret, setShowSecret] = useState(null)
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState(null)
+
+  useEffect(() => {
+    if (webhookData?.webhook) {
+      setUrl(webhookData.webhook.url || '')
+      setActive(!!webhookData.webhook.active)
+    } else {
+      setUrl('')
+      setActive(true)
+    }
+  }, [webhookData])
+
+  const handleSaveWebhook = async (e) => {
+    e.preventDefault()
+    if (!site?.site_key) return
+    setSubmitting(true)
+    setUiMessage('')
+    setShowSecret(null)
+    try {
+      const isEdit = !!webhookData?.webhook?.id
+      const method = isEdit ? 'PATCH' : 'POST'
+      const endpoint = isEdit ? `/webhooks/${webhookData.webhook.id}?site_key=${site.site_key}` : `/webhooks?site_key=${site.site_key}`
+      const body = { url, active }
+
+      const res = await fetchApi(endpoint, {
+        method,
+        body: JSON.stringify(body)
+      })
+
+      if (res?.webhook) {
+        setUiMessage('Webhook destination saved successfully!')
+        if (res.webhook.secret && method === 'POST') {
+          setShowSecret(res.webhook.secret)
+        }
+        refetchWebhook()
+      } else {
+        setUiMessage(res?.error || 'Failed to save webhook')
+      }
+    } catch (err) {
+      setUiMessage(err?.message || 'Error saving webhook destination')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleDeleteWebhook = async () => {
+    if (!site?.site_key || !webhookData?.webhook?.id) return
+    if (!window.confirm('Are you sure you want to delete this webhook destination? This will also purge its delivery logs.')) return
+    setSubmitting(true)
+    setUiMessage('')
+    setShowSecret(null)
+    try {
+      const res = await fetchApi(`/webhooks/${webhookData.webhook.id}?site_key=${site.site_key}`, {
+        method: 'DELETE'
+      })
+      if (res?.deleted) {
+        setUiMessage('Webhook destination deleted.')
+        refetchWebhook()
+      } else {
+        setUiMessage(res?.error || 'Failed to delete webhook')
+      }
+    } catch (err) {
+      setUiMessage(err?.message || 'Error deleting webhook')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleRegenerateSecret = async () => {
+    if (!site?.site_key || !webhookData?.webhook?.id) return
+    if (!window.confirm('Are you sure you want to regenerate the signing secret? This will invalidate the previous secret immediately.')) return
+    setSubmitting(true)
+    setUiMessage('')
+    setShowSecret(null)
+    try {
+      const res = await fetchApi(`/webhooks/${webhookData.webhook.id}/regenerate-secret?site_key=${site.site_key}`, {
+        method: 'POST'
+      })
+      if (res?.secret) {
+        setShowSecret(res.secret)
+        setUiMessage('Signing secret regenerated successfully. Copy it now, it will not be shown again!')
+        refetchWebhook()
+      } else {
+        setUiMessage(res?.error || 'Failed to regenerate secret')
+      }
+    } catch (err) {
+      setUiMessage(err?.message || 'Error regenerating secret')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleTestWebhook = async () => {
+    if (!site?.site_key || !webhookData?.webhook?.id) return
+    setTesting(true)
+    setTestResult(null)
+    try {
+      const res = await fetchApi(`/webhooks/${webhookData.webhook.id}/test?site_key=${site.site_key}`, {
+        method: 'POST'
+      })
+      setTestResult(res)
+      refetchWebhook()
+    } catch (err) {
+      setTestResult({ success: false, error_message: err?.message || 'Failed to send test' })
+    } finally {
+      setTesting(false)
+    }
+  }
 
   // Over-reporting detection — fetch the latest data quality run and surface a
   // banner when duplicate_conversion_rate is flagged as 'warning'. Only fires
@@ -346,6 +466,199 @@ export default function Integrations() {
             </div>
           ) : (
             <p className="text-sm text-st-gray py-2">Site key loading…</p>
+          )}
+        </div>
+      </DashboardCard>
+
+      {/* Outbound Webhooks */}
+      <DashboardCard
+        title="Outbound Webhooks"
+        subtitle="Send attributed conversion data to Zapier, n8n, Make, or custom HTTP endpoints in real time"
+      >
+        <div className="space-y-4">
+          {uiMessage && (
+            <div className={`p-3 text-xs rounded-lg ${uiMessage.includes('Error') || uiMessage.includes('Failed') ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
+              {uiMessage}
+            </div>
+          )}
+
+          <form onSubmit={handleSaveWebhook} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-st-gray uppercase tracking-wider mb-1">Webhook URL</label>
+              <input
+                type="text"
+                placeholder="https://your-endpoint.com/webhook"
+                value={url}
+                onChange={e => setUrl(e.target.value)}
+                disabled={submitting}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-st-black/20"
+              />
+              <p className="text-[10px] text-st-gray mt-1">
+                Must use HTTPS in production. Endpoint will receive a POST request with the conversion payload and X-SourceTrack-Signature header.
+              </p>
+            </div>
+
+            {webhookData?.webhook && (
+              <div className="bg-gray-50 rounded-lg p-3 border border-gray-100 space-y-3">
+                {/* Signing secret */}
+                <div>
+                  <label className="block text-xs font-semibold text-st-gray uppercase tracking-wider mb-1">Signing Secret</label>
+                  {showSecret ? (
+                    <div className="space-y-2">
+                      <div className="bg-green-50 border border-green-200 rounded p-2 flex items-center justify-between gap-2">
+                        <code className="text-xs font-mono text-green-700 select-all break-all">{showSecret}</code>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(showSecret).catch(() => {})
+                            alert('Copied to clipboard!')
+                          }}
+                          className="px-2 py-1 bg-green-600 text-white rounded text-[10px] font-semibold flex items-center gap-1 shrink-0"
+                        >
+                          <Copy className="w-3 h-3" /> Copy
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-green-700 font-semibold">
+                        Make sure to copy this secret now. It will not be shown again.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between gap-2">
+                      <code className="text-xs font-mono text-gray-700 select-all">{webhookData.webhook.secret}</code>
+                      <button
+                        type="button"
+                        onClick={handleRegenerateSecret}
+                        disabled={submitting}
+                        className="text-[10px] text-gray-500 hover:text-st-black font-semibold flex items-center gap-1 transition-colors"
+                      >
+                        <RefreshCw className="w-3 h-3" /> Regenerate
+                      </button>
+                    </div>
+                  )}
+                  <p className="text-[10px] text-st-gray mt-1">
+                    Use this secret to verify the HMAC SHA-256 signature in the request headers.
+                  </p>
+                </div>
+
+                {/* Status Toggle & Last delivery */}
+                <div className="flex items-center justify-between gap-4 pt-2 border-t border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={active}
+                        onChange={e => {
+                          setActive(e.target.checked)
+                          // Trigger save instantly
+                          const isEdit = !!webhookData?.webhook?.id
+                          const endpoint = `/webhooks/${webhookData.webhook.id}?site_key=${site.site_key}`
+                          fetchApi(endpoint, {
+                            method: 'PATCH',
+                            body: JSON.stringify({ active: e.target.checked })
+                          }).then(() => refetchWebhook()).catch(() => {})
+                        }}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-st-black"></div>
+                      <span className="ml-2 text-xs font-medium text-gray-700">Webhook Enabled</span>
+                    </label>
+                  </div>
+                  <div>
+                    {webhookData.deliveries && webhookData.deliveries.length > 0 ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-[10px] text-st-gray">Last Delivery:</span>
+                        <StatusBadge
+                          status={webhookData.deliveries[0].success ? 'verified' : 'error'}
+                          label={webhookData.deliveries[0].success ? `Success (${webhookData.deliveries[0].status_code})` : `Failed (${webhookData.deliveries[0].status_code || 'Err'})`}
+                        />
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-st-gray">No deliveries yet</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+              <div className="flex items-center gap-2">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-4 py-2 bg-st-black text-white text-xs font-semibold rounded-lg hover:bg-st-black/90 disabled:opacity-50 transition-colors"
+                >
+                  {submitting ? 'Saving...' : 'Save Configuration'}
+                </button>
+
+                {webhookData?.webhook && (
+                  <button
+                    type="button"
+                    onClick={handleTestWebhook}
+                    disabled={testing || submitting}
+                    className="px-4 py-2 bg-white text-gray-700 border border-gray-300 text-xs font-semibold rounded-lg hover:bg-gray-50 flex items-center gap-1.5 disabled:opacity-50 transition-colors"
+                  >
+                    <Play className="w-3 h-3" /> {testing ? 'Testing...' : 'Test Webhook'}
+                  </button>
+                )}
+              </div>
+
+              {webhookData?.webhook && (
+                <button
+                  type="button"
+                  onClick={handleDeleteWebhook}
+                  disabled={submitting}
+                  className="text-xs text-red-600 hover:text-red-800 font-semibold flex items-center gap-1 transition-colors"
+                >
+                  <Trash className="w-3.5 h-3.5" /> Delete
+                </button>
+              )}
+            </div>
+          </form>
+
+          {/* Test delivery result alert */}
+          {testResult && (
+            <div className={`p-3 text-xs rounded-lg border ${testResult.success ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-800 border-red-200'}`}>
+              <p className="font-semibold">{testResult.success ? 'Test Delivery Succeeded' : 'Test Delivery Failed'}</p>
+              <p className="mt-1">
+                {testResult.success
+                  ? `Webhook endpoint responded with status code ${testResult.status_code}.`
+                  : `Error: ${testResult.error_message || 'HTTP error ' + testResult.status_code}`
+                }
+              </p>
+            </div>
+          )}
+
+          {/* Recent Deliveries list */}
+          {webhookData?.webhook && webhookData.deliveries && webhookData.deliveries.length > 0 && (
+            <div className="pt-4 border-t border-gray-100">
+              <p className="text-xs font-semibold text-st-gray uppercase tracking-wider mb-2">Recent Deliveries</p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[11px] text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-100 text-st-gray">
+                      <th className="pb-1.5 font-medium">Event Type</th>
+                      <th className="pb-1.5 font-medium">Status</th>
+                      <th className="pb-1.5 font-medium">Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {webhookData.deliveries.map(del => (
+                      <tr key={del.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
+                        <td className="py-1.5 font-mono text-gray-700">{del.event_type}</td>
+                        <td className="py-1.5">
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${del.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                            {del.status_code || 'Error'}
+                          </span>
+                        </td>
+                        <td className="py-1.5 text-gray-500">
+                          {new Date(del.created_at).toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
         </div>
       </DashboardCard>

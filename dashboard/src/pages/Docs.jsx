@@ -109,6 +109,7 @@ const NAV = [
   { id: 'attribution',      label: 'GET /api/attribution' },
   { id: 'tracker-id',       label: 'GET /api/tracker/id' },
   { id: 'gdpr',             label: 'GDPR Endpoints' },
+  { id: 'webhooks',         label: 'Outbound Webhooks' },
   { id: 'auth',             label: 'Authentication' },
   { id: 'errors',           label: 'Error Handling' },
   { id: 'changelog',        label: 'Changelog' },
@@ -1030,6 +1031,84 @@ await fetch('https://api.srctk.com/api/conversion', {
             </Warn>
             <Code lang="bash">{`curl -X DELETE https://api.srctk.com/api/gdpr/account \\
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"`}</Code>
+          </Section>
+
+          {/* ── Outbound Webhooks ───────────────────────────────────────── */}
+          <Section id="webhooks" title="Outbound Webhooks">
+            <p>
+              SourceTrack can send attributed conversion data to custom HTTP endpoints, Zapier, n8n, Make, and CRMs in real time using generic outbound webhooks.
+            </p>
+            <p>
+              When a conversion is successfully recorded and accepted, a <IC>POST</IC> request is triggered to your configured endpoint with the conversion data payload. Duplicate conversions are not sent.
+            </p>
+
+            <H3>Payload structure</H3>
+            <Code lang="json">{`{
+  "event": "conversion.created",
+  "created_at": "2026-06-05T15:00:00.000Z",
+  "site_key": "sk_live_abc123",
+  "conversion": {
+    "type": "purchase",
+    "value": 100,
+    "currency": "USD",
+    "order_id": "ORD-1234",
+    "event_id": "550e8400-e29b-41d4-a716-446655440000"
+  },
+  "visitor": {
+    "anonymous_id": "8a7c6b5d-4e3f-2a1b-0c9d-8e7f6a5b4c3d",
+    "user_id": "user_9876"
+  },
+  "attribution": {
+    "source": "google",
+    "medium": "cpc",
+    "campaign": "brand-search",
+    "content": "brand-headline",
+    "term": "sourcetrack analytics",
+    "channel": "Paid Search"
+  },
+  "page": {
+    "page_url": "https://example.com/checkout/thank-you",
+    "referrer": "https://google.com"
+  },
+  "properties": {}
+}`}</Code>
+
+            <H3>Signature Verification</H3>
+            <p>
+              Each webhook request contains an <IC>X-SourceTrack-Signature</IC> header. You can use it to verify that the request came from SourceTrack.
+              The signature is an HMAC hex digest of the raw request body using your webhook's signing secret (SHA-256).
+            </p>
+            <Code lang="js">{`// Node.js Express verification example
+const crypto = require('crypto');
+
+app.post('/webhook-receiver', (req, res) => {
+  const signature = req.headers['x-sourcetrack-signature'];
+  const secret = 'YOUR_WEBHOOK_SIGNING_SECRET';
+
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(JSON.stringify(req.body))
+    .digest('hex');
+
+  if (signature === expectedSignature) {
+    // Request is verified and safe
+    res.sendStatus(200);
+  } else {
+    // Unauthorized
+    res.sendStatus(401);
+  }
+});`}</Code>
+
+            <H3>Zapier / n8n / Make Integration</H3>
+            <p>
+              To process SourceTrack conversions in automation tools, configure a webhook trigger step (e.g. "Webhook by Zapier" Catch Hook, "Webhook" node in n8n, or "Custom Webhook" in Make) to receive events:
+            </p>
+            <ul className="list-disc pl-5 space-y-1 mt-2 font-light">
+              <li>Create a new webhook trigger in Zapier/n8n/Make and copy the provided webhook URL.</li>
+              <li>Paste the URL into the **Outbound Webhooks** card under **Integrations** in your SourceTrack dashboard and click **Save**.</li>
+              <li>Use the **Test Webhook** button to send a sample payload to establish the schema in your workflow.</li>
+              <li>Route fields such as <IC>conversion.value</IC>, <IC>conversion.type</IC>, <IC>visitor.user_id</IC>, <IC>attribution.source</IC>, and <IC>attribution.campaign</IC> downstream to your CRMs, Slack, sheets, or analytics targets.</li>
+            </ul>
           </Section>
 
           {/* ── Authentication ───────────────────────────────────────────── */}

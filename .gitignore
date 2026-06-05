@@ -19,3 +19,4 @@ tracker/*.bak*
 dist/
 dashboard/dist/
 sourcetrack-test.html
+logs/
