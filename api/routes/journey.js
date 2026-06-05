@@ -23,8 +23,14 @@ export async function journey(req, res) {
         properties.ai_source,
         properties.is_conversion,
         properties.conversion_value,
+        properties.conversion_type,
         properties.device_type,
+        properties.browser_name,
+        properties.browser_version,
+        properties.os_name,
+        properties.os_version,
         properties.country,
+        properties.user_id,
         properties.order_id,
         properties.destination_domain,
         properties.destination_url
@@ -41,7 +47,9 @@ export async function journey(req, res) {
       event, timestamp, pageUrl, referrer,
       utmSource, utmMedium, utmCampaign,
       aiSource, isConversion, conversionValue,
-      deviceType, country, orderId, destinationDomain, destinationUrl
+      conversionType, deviceType, browserName, browserVersion,
+      osName, osVersion, country, userId,
+      orderId, destinationDomain, destinationUrl
     ]) => ({
       event,
       timestamp,
@@ -53,12 +61,19 @@ export async function journey(req, res) {
       ai_source: aiSource || null,
       is_conversion: isConversion === true || isConversion === 'true' || isConversion === 1,
       conversion_value: conversionValue ? Number(conversionValue) || 0 : null,
+      conversion_type: conversionType || null,
       device_type: deviceType || null,
+      browser_name: browserName || null,
+      browser_version: browserVersion || null,
+      os_name: osName || null,
+      os_version: osVersion || null,
       country: country || null,
+      user_id: userId || null,
       order_id: orderId || null,
       destination_domain: destinationDomain || null,
       destination_url: destinationUrl || null
     }))
+    const userId = events.find(e => e.user_id)?.user_id || null
 
     let person = null
     try {
@@ -83,6 +98,7 @@ export async function journey(req, res) {
       success: true,
       data: {
         visitor_id: visitorId,
+        user_id: userId,
         person,
         events,
         event_count: events.length

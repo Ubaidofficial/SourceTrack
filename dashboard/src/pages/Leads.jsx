@@ -47,7 +47,7 @@ export default function Leads() {
   const [filterAI, setFilterAI]         = useState('all')
   const [filterSource, setFilterSource] = useState('all')
   const [attributionModel, setAttributionModel] = useState('first_touch')
-  const [journeyVisitorId, setJourneyVisitorId] = useState(null)
+  const [journeyLead, setJourneyLead] = useState(null)
 
   const dateFrom = format(subDays(new Date(), 30), 'yyyy-MM-dd')
   const dateTo = format(new Date(), 'yyyy-MM-dd')
@@ -105,6 +105,14 @@ export default function Leads() {
   const totalRevenue = safeNumber(leadsData?.total_revenue, 0)
   const totalConversions = safeNumber(leadsData?.total_conversions, 0)
   const totalLeads = safeNumber(leadsData?.total, leads.length)
+  const journeyVisitorId = journeyLead?.id || journeyLead?.visitor_id || journeyLead?.anonymous_id || null
+
+  function openJourney(lead) {
+    if (!lead) return
+    const visitorId = lead.id || lead.visitor_id || lead.anonymous_id
+    if (!visitorId) return
+    setJourneyLead({ ...lead, id: visitorId })
+  }
 
   return (
     <div className="space-y-6">
@@ -187,8 +195,21 @@ export default function Leads() {
                   const isAI = lead.ai_source && AI_SOURCES.includes(lead.ai_source)
                   const shortId = lead.id ? lead.id.slice(0, 8) : 'unknown'
                   return (
-                    <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                      <td className="py-3 px-3 text-st-black font-mono text-xs">{shortId}...</td>
+                    <tr
+                      key={i}
+                      onClick={() => openJourney(lead)}
+                      className="border-b border-gray-50 hover:bg-lime-50/60 transition-colors cursor-pointer"
+                    >
+                      <td className="py-3 px-3 text-st-black font-mono text-xs">
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); openJourney(lead) }}
+                          className="font-mono text-xs text-st-black hover:underline underline-offset-2"
+                          title="Open journey"
+                        >
+                          {shortId}...
+                        </button>
+                      </td>
                       <td className="py-3 px-3">
                         {(() => {
                           const cls = classifySource(lead.source, lead.medium)
@@ -245,6 +266,7 @@ export default function Leads() {
                           return (
                             <select
                               value={cur}
+                              onClick={(e) => e.stopPropagation()}
                               onChange={async (e) => {
                                 const newStatus = e.target.value
                                 setStatusMap(prev => ({ ...prev, [lead.id]: newStatus }))
@@ -267,14 +289,14 @@ export default function Leads() {
                       <td className="py-3 px-3 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => navigate(`/leads/${encodeURIComponent(lead.id)}`)}
+                            onClick={(e) => { e.stopPropagation(); navigate(`/leads/${encodeURIComponent(lead.id)}`) }}
                             className="text-xs text-gray-600 hover:text-st-black font-medium flex items-center gap-1"
                           >
                             <User className="w-3 h-3" />
                             View
                           </button>
                           <button
-                            onClick={() => setJourneyVisitorId(lead.id || lead.visitor_id || lead.anonymous_id)}
+                            onClick={(e) => { e.stopPropagation(); openJourney(lead) }}
                             className="text-xs text-st-black hover:text-gray-700 font-medium flex items-center gap-1"
                           >
                             Journey <ArrowRight className="w-3 h-3" />
@@ -294,8 +316,9 @@ export default function Leads() {
         <JourneyModal
           visitorId={journeyVisitorId}
           siteKey={site?.site_key}
-          onClose={() => setJourneyVisitorId(null)}
-          onQualified={async () => { try { await fetchApi(`/leads/${journeyVisitorId}/qualify`, { method: 'PATCH', body: JSON.stringify({ qualified: true }) }) } catch(e) { console.error('qualify failed', e) } setJourneyVisitorId(null) }}
+          leadSummary={journeyLead}
+          onClose={() => setJourneyLead(null)}
+          onQualified={async () => { try { await fetchApi(`/leads/${journeyVisitorId}/qualify`, { method: 'PATCH', body: JSON.stringify({ qualified: true }) }) } catch(e) { console.error('qualify failed', e) } setJourneyLead(null) }}
         />
       )}
     </div>

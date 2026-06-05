@@ -393,7 +393,8 @@ export default function LeadDetail() {
       {showJourney && (
         <JourneyModal
           visitorId={lead?.id}
-          siteKey={lead?.site_key}
+          siteKey={site?.site_key}
+          leadSummary={lead}
           onClose={() => setShowJourney(false)}
           onQualified={async () => {
             try {

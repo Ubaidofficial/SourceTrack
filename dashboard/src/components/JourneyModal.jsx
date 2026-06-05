@@ -36,7 +36,26 @@ function normalizeUrl(urlStr) {
   return cleaned.replace(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g, '[REDACTED_EMAIL]')
 }
 
-export default function JourneyModal({ visitorId, siteKey, onClose, onQualified }) {
+function formatDateTime(value) {
+  if (!value) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  return date.toLocaleString()
+}
+
+function shortIdentifier(value) {
+  if (!value) return '—'
+  const text = String(value)
+  if (text.length <= 18) return text
+  return `${text.slice(0, 8)}...${text.slice(-6)}`
+}
+
+function nameVersion(name, version) {
+  if (!name) return null
+  return [name, version].filter(Boolean).join(' ')
+}
+
+export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose, onQualified }) {
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState({})
@@ -60,7 +79,7 @@ export default function JourneyModal({ visitorId, siteKey, onClose, onQualified 
     ? allEvents.filter(e => e.ai_source)
     : allEvents
 
-  const summary = computeSummary(allEvents)
+  const summary = computeSummary(allEvents, data, leadSummary)
 
   function toggleExpand(i) {
     setExpanded(prev => ({ ...prev, [i]: !prev[i] }))
@@ -76,7 +95,7 @@ export default function JourneyModal({ visitorId, siteKey, onClose, onQualified 
     URL.revokeObjectURL(url)
   }
 
-  const shortId = visitorId ? visitorId.slice(0, 8) + '…' : '—'
+  const shortId = shortIdentifier(summary.profileId || visitorId)
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
@@ -124,35 +143,34 @@ export default function JourneyModal({ visitorId, siteKey, onClose, onQualified 
 
               {/* ── Left Panel — lime tint ── */}
               <div className="lg:col-span-2 bg-st-lime/10 dark:bg-st-lime/5 p-6 space-y-5 border-r border-gray-100">
+                <div>
+                  <p className="text-[10px] text-st-gray dark:text-gray-400 uppercase tracking-wide">Profile</p>
+                  <h3 className="mt-1 text-lg font-bold text-st-black dark:text-white font-mono break-all">{shortId}</h3>
+                  {summary.userId && (
+                    <p className="mt-1 text-xs text-st-gray dark:text-gray-400 break-all">
+                      User ID: <span className="font-mono">{shortIdentifier(summary.userId)}</span>
+                    </p>
+                  )}
+                </div>
 
                 {/* KPI row */}
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-white dark:bg-[#1A1D1D] rounded-xl p-3 text-center shadow-sm">
-                    <p className="text-xl font-bold text-st-black">{summary.touchpoints}</p>
-                    <p className="text-[10px] text-st-gray dark:text-gray-400 uppercase tracking-wide mt-0.5">Touchpoints</p>
-                  </div>
-                  <div className="bg-white dark:bg-[#1A1D1D] rounded-xl p-3 text-center shadow-sm">
-                    <p className="text-xl font-bold text-st-black">
-                      {summary.conversionValue > 0 ? `$${safeNumber(summary.conversionValue, 0).toFixed(0)}` : '—'}
-                    </p>
-                    <p className="text-[10px] text-st-gray dark:text-gray-400 uppercase tracking-wide mt-0.5">Value</p>
-                  </div>
-                  <div className="bg-white dark:bg-[#1A1D1D] rounded-xl p-3 text-center shadow-sm">
-                    <p className="text-sm font-bold text-st-black dark:text-white truncate">{summary.journeyDuration}</p>
-                    <p className="text-[10px] text-st-gray dark:text-gray-400 uppercase tracking-wide mt-0.5">Duration</p>
-                  </div>
-                  <div className="bg-white dark:bg-[#1A1D1D] rounded-xl p-3 text-center shadow-sm">
-                    <p className="text-sm font-bold text-st-black dark:text-white truncate">{summary.device}</p>
-                    <p className="text-[10px] text-st-gray dark:text-gray-400 uppercase tracking-wide mt-0.5">Device</p>
-                  </div>
+                  <JourneyStat label="Touchpoints" value={summary.touchpoints} />
+                  <JourneyStat label="Conversions" value={summary.totalConversions} />
+                  <JourneyStat label="Revenue" value={summary.conversionValue > 0 ? `$${safeNumber(summary.conversionValue, 0).toFixed(0)}` : '—'} />
+                  <JourneyStat label="Duration" value={summary.journeyDuration} />
                 </div>
 
-                {/* Attribution path */}
+                {/* Activity and attribution */}
                 <div className="bg-white dark:bg-[#1A1D1D] rounded-xl p-4 shadow-sm space-y-2">
-                  <p className="text-xs font-semibold text-st-black dark:text-white mb-2">Attribution</p>
-                  <SummaryField label="First Touch"    value={summary.firstTouch} />
-                  <SummaryField label="Last Page"      value={summary.lastLocation} />
-                  <SummaryField label="Conversion"     value={summary.currentEventType !== '—' ? summary.currentEventType : null} />
+                  <p className="text-xs font-semibold text-st-black dark:text-white mb-2">Journey Summary</p>
+                  <SummaryField label="Profile ID" value={shortIdentifier(summary.profileId)} />
+                  <SummaryField label="First Seen" value={summary.firstSeen} />
+                  <SummaryField label="Last Active" value={summary.lastSeen} />
+                  <SummaryField label="First Touch" value={summary.firstTouch} />
+                  <SummaryField label="First Touch Date" value={summary.firstTouchDate} />
+                  <SummaryField label="Last Page" value={summary.lastLocation} />
+                  <SummaryField label="Last Conversion" value={summary.currentEventType !== '—' ? summary.currentEventType : null} />
                   {summary.aiSource && (
                     <div className="flex items-center gap-1.5 pt-1">
                       <Bot className="w-3.5 h-3.5 text-purple-500" />
@@ -161,6 +179,14 @@ export default function JourneyModal({ visitorId, siteKey, onClose, onQualified 
                       </span>
                     </div>
                   )}
+                </div>
+
+                <div className="bg-white dark:bg-[#1A1D1D] rounded-xl p-4 shadow-sm space-y-2">
+                  <p className="text-xs font-semibold text-st-black dark:text-white mb-2">Environment</p>
+                  <SummaryField label="Device" value={summary.device} />
+                  <SummaryField label="Browser" value={summary.browser} />
+                  <SummaryField label="OS" value={summary.os} />
+                  <SummaryField label="Country" value={summary.country} />
                 </div>
 
                 {/* Path preview */}
@@ -258,6 +284,11 @@ export default function JourneyModal({ visitorId, siteKey, onClose, onQualified 
                                     ${safeNumber(e.conversion_value, 0).toFixed(0)}
                                   </span>
                                 )}
+                                {e.conversion_type && (
+                                  <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-green-50 text-green-700">
+                                    {e.conversion_type}
+                                  </span>
+                                )}
                               </div>
                               {e.page_url && (
                                 <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5 truncate">
@@ -286,7 +317,11 @@ export default function JourneyModal({ visitorId, siteKey, onClose, onQualified 
                                   <MapPin className="w-3 h-3" /> {e.country}
                                 </p>
                               )}
+                              {e.user_id && <p>User ID: {shortIdentifier(e.user_id)}</p>}
                               {e.device_type && <p>Device: {e.device_type}</p>}
+                              {e.browser_name && <p>Browser: {nameVersion(e.browser_name, e.browser_version)}</p>}
+                              {e.os_name && <p>OS: {nameVersion(e.os_name, e.os_version)}</p>}
+                              {e.conversion_type && <p>Conversion Type: {e.conversion_type}</p>}
                               {e.order_id && <p>Order ID: {e.order_id}</p>}
                               {e.destination_domain && <p>Destination Domain: {e.destination_domain}</p>}
                               {e.destination_url && <p className="break-all">Destination URL: {normalizeUrl(e.destination_url)}</p>}
@@ -307,7 +342,7 @@ export default function JourneyModal({ visitorId, siteKey, onClose, onQualified 
 }
 
 function SummaryField({ label, value }) {
-  if (!value) return null
+  if (value === null || value === undefined || value === '') return null
   return (
     <div className="flex items-center justify-between">
       <p className="text-xs text-st-gray">{label}</p>
@@ -316,11 +351,22 @@ function SummaryField({ label, value }) {
   )
 }
 
-function computeSummary(events) {
+function JourneyStat({ label, value }) {
+  return (
+    <div className="bg-white dark:bg-[#1A1D1D] rounded-xl p-3 text-center shadow-sm">
+      <p className="text-lg font-bold text-st-black dark:text-white truncate">{value ?? '—'}</p>
+      <p className="text-[10px] text-st-gray dark:text-gray-400 uppercase tracking-wide mt-0.5">{label}</p>
+    </div>
+  )
+}
+
+function computeSummary(events, data = {}, leadSummary = {}) {
   const empty = {
     lastLocation: 'Unknown', conversionValue: 0, device: 'Unknown',
-    touchpoints: 0, journeyDuration: '—', firstTouch: 'Direct',
-    currentEventType: '—', aiSource: null, pathPreview: []
+    touchpoints: 0, totalConversions: 0, journeyDuration: '—', firstTouch: 'Direct',
+    firstTouchDate: null, firstSeen: null, lastSeen: null, currentEventType: '—',
+    aiSource: null, pathPreview: [], profileId: data?.visitor_id || null,
+    userId: null, browser: null, os: null, country: null
   }
   if (!events?.length) return empty
 
@@ -328,14 +374,30 @@ function computeSummary(events) {
   const conversions = events.filter(e => e.event === '$conversion')
   const lastEvent   = events[events.length - 1]
   const firstEvent  = events[0]
+  const personProps = data?.person?.properties || {}
+  const profileId = leadSummary?.id || data?.visitor_id || null
+  const userId = leadSummary?.user_id || data?.user_id || personProps.user_id || events.find(e => e.user_id)?.user_id || null
 
   let lastLocation = '—'
   if (lastEvent?.page_url) {
     try { lastLocation = new URL(lastEvent.page_url).pathname } catch { lastLocation = lastEvent.page_url }
   }
 
-  const conversionValue = conversions.reduce((s, e) => s + (Number(e.conversion_value) || 0), 0)
-  const device = events.find(e => e.device_type)?.device_type || 'Unknown'
+  const leadRevenue = leadSummary?.revenue ?? leadSummary?.total_revenue
+  const conversionValue = Number.isFinite(Number(leadRevenue))
+    ? Number(leadRevenue)
+    : conversions.reduce((s, e) => s + (Number(e.conversion_value) || 0), 0)
+  const totalConversions = Number.isFinite(Number(leadSummary?.conversions))
+    ? Number(leadSummary.conversions)
+    : conversions.length
+  const device = leadSummary?.device_type || events.find(e => e.device_type)?.device_type || 'Unknown'
+  const country = leadSummary?.country || events.find(e => e.country)?.country || null
+  const browserEvent = events.find(e => e.browser_name)
+  const osEvent = events.find(e => e.os_name)
+  const browser = nameVersion(browserEvent?.browser_name, browserEvent?.browser_version)
+  const os = nameVersion(osEvent?.os_name, osEvent?.os_version)
+  const firstSeen = formatDateTime(leadSummary?.first_seen || firstEvent?.timestamp)
+  const lastSeen = formatDateTime(leadSummary?.last_seen || lastEvent?.timestamp)
 
   let journeyDuration = '<1 day'
   if (events.length >= 2) {
@@ -346,8 +408,9 @@ function computeSummary(events) {
     } catch { /* ignore */ }
   }
 
-  const firstTouch = firstEvent?.first_touch_source || firstEvent?.utm_source || firstEvent?.source || 'Direct'
-  const currentEventType = conversions[conversions.length - 1]?.conversion_type || '—'
+  const firstTouch = leadSummary?.first_touch_source || leadSummary?.source || firstEvent?.first_touch_source || firstEvent?.utm_source || firstEvent?.source || 'Direct'
+  const firstTouchDate = formatDateTime(firstEvent?.timestamp)
+  const currentEventType = leadSummary?.last_conversion_type || conversions[conversions.length - 1]?.conversion_type || '—'
   const aiSource = events.find(e => e.ai_source)?.ai_source || null
 
   // Path preview — first 5 unique consecutive pages
@@ -361,8 +424,9 @@ function computeSummary(events) {
   }
 
   return {
-    lastLocation, conversionValue, device,
-    touchpoints: pageviews.length, journeyDuration,
-    firstTouch, currentEventType, aiSource, pathPreview
+    lastLocation, conversionValue, device, country, browser, os,
+    touchpoints: pageviews.length, totalConversions, journeyDuration,
+    firstTouch, firstTouchDate, firstSeen, lastSeen,
+    currentEventType, aiSource, pathPreview, profileId, userId
   }
 }
