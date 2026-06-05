@@ -62,6 +62,29 @@ Session 82 proper will be the manual QA closeout session.
 | 109   | 2026-06-05 | `main` | Brutal competitive feature parity audit against Piqo, Cometly, DataFast, Usermaven, Growify | ✅ | No |
 | 110B  | 2026-06-05 | `main` | Fix Lead Journey Drilldown Bugs and Enrich Timeline | ✅ | No |
 | 112 | 2026-06-05 | `main` | Final Private Beta Launch QA — Executed full E2E QA checks (static, smoke, edge cases, live attribution, outbound webhooks) with passing results | ✅ | No |
+| 115 | 2026-06-05 | `main` | Repo Cleanup + Markdown Reconciliation + Security Review — Audited docs, obsolete scripts, CORS, SSRF, billing gates, and verified public routes | ✅ | No |
+
+---
+
+## Session 115 — Repo Cleanup + Markdown Reconciliation + Security Review
+
+**Date:** 2026-06-05
+**Branch:** `main`
+**Build:** ✅ node --check + npm run build + static QA pass
+
+### 1. Markdown / Docs Audit
+- Cataloged all root-level and nested markdown files.
+- Proposed `docs/SESSION_HANDOFF.md` and root `implementation_plan.md` for archiving/deletion (after user approval) since their contents are fully canonicalized.
+- Audited and verified that GDPR, CAPI, Shopify, and other marketing claims are realistic, soft, and aligned with code.
+- Fixed typo in `CLAUDE.md` tracker path rule.
+
+### 2. Hygiene & Scratch Cleanup
+- Identified accidental files (`touch .gitignore`) and obsolete test scripts (`test-*.js`) tracked in Git that are safe to delete as they contain no unique history/docs.
+
+### 3. Security & Authorization Code Audit
+- Modified `api/routes/billing.js` to enforce authentication via `requireUserAuth`, `validateSiteKey`, and `requireSiteMembership` on checkout, portal, and status routes, preventing unauthorized users from accessing other customers' Stripe checkout/portal sessions.
+- Audited CORS origin verification (`isAllowedOrigin`) and SSRF protection checks (`validateWebhookUrl`). Both are extremely secure.
+- Confirmed that all analytical and management paths scope queries properly by `site_id` or membership.
 
 ---
 

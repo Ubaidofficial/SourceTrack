@@ -1,10 +1,18 @@
 > [!NOTE]
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 112 — Final Private Beta Launch QA. Executed E2E launch QA (static checks, smoke checks, edge cases, live attribution, and outbound webhooks), verified database schema migrations and policies, and checked SEO sitemaps/robots configurations. Recommending immediate SaaS/Lead-Gen cohort onboarding.
+> **Handoff:** Session 115 — Repo Cleanup + Markdown Reconciliation + Security Review. Audited markdown files, obsolete test scripts, CORS, SSRF, and billing gates. Hardened Stripe billing paths. Ready for production deployment and cohort onboarding.
 >
-> **Next Task:** Deploy code and migrations to production database/services and initiate cohort onboarding.
+> **Next Task:** Deploy code and migrations to production database/services and invite the first 3-5 SaaS/Lead-Gen beta users.
 >
+
+## Session 115 — Repo Cleanup + Markdown Reconciliation + Security Review
+**Date:** 2026-06-05 | **Branch:** `main` | **Build:** ✅ passing
+### Completed
+1. **Billing Gates Hardened:** Added `requireUserAuth`, `validateSiteKey`, and `requireSiteMembership` to checkout, portal, and status routes in `api/routes/billing.js`.
+2. **Obsolete Scripts Cataloged:** Identified `test-debug.js`, `test-exact-sql.js`, `test-flexible.js`, `test-hogql.js`, `test-posthog-type.js`, and `touch .gitignore` as safe to delete.
+3. **Markdown Audit:** Verified GDPR/CAPI/Shopify copy accuracy, cataloged stale docs (`docs/SESSION_HANDOFF.md` and root `implementation_plan.md`) for proposed deletion, and fixed a typo in `CLAUDE.md`.
+4. **Validation:** Ensured all backend syntax tests pass, built the production dashboard, and verified zero QA static rule errors.
 
 ## Session 112 — Final Private Beta Launch QA
 **Date:** 2026-06-05 | **Branch:** `main` | **Build:** ✅ passing

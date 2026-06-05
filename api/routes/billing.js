@@ -3,6 +3,8 @@ import { Router } from 'express'
 import NodeCache from 'node-cache'
 import { getSupabase } from '../lib/supabase.js'
 import { normalizePlan, getPvLimit } from '../lib/plan-features.js'
+import { requireUserAuth } from '../middleware/user-auth.js'
+import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2024-06-20'
@@ -202,7 +204,7 @@ const router = Router()
  * Body: { plan: 'starter'|'growth'|'business', successUrl, cancelUrl }
  * Auth: requireUserAuth middleware sets req.user; site resolved from user.
  */
-router.post('/create-checkout', async (req, res) => {
+router.post('/create-checkout', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
   try {
     const { plan: rawPlan = 'growth', successUrl, cancelUrl, site_key } = req.body
     const plan = normalizePlan(rawPlan)
@@ -253,7 +255,7 @@ router.post('/create-checkout', async (req, res) => {
  * Opens the Stripe Customer Portal for managing subscription.
  * Auth: requireUserAuth required.
  */
-router.post('/portal', async (req, res) => {
+router.post('/portal', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
   try {
     let site = req.site
     if (!site && req.body?.site_key) site = await getSiteByKey(req.body.site_key)
@@ -280,7 +282,7 @@ router.post('/portal', async (req, res) => {
  * GET /api/billing/status
  * Returns current plan, usage, and subscription info for the authenticated site.
  */
-router.get('/status', async (req, res) => {
+router.get('/status', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
   try {
     let site = req.site
     if (!site) return res.status(401).json({ success: false, data: null, error: 'Unauthorized' })
