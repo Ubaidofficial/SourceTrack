@@ -110,6 +110,7 @@ const NAV = [
   { id: 'identify',         label: 'POST /api/identify' },
   { id: 'attribution',      label: 'GET /api/attribution' },
   { id: 'tracker-id',       label: 'GET /api/tracker/id' },
+  { id: 'settings-api',     label: 'PATCH /api/integrations/settings' },
   { id: 'gdpr',             label: 'GDPR Endpoints' },
   { id: 'webhooks',         label: 'Outbound Webhooks' },
   { id: 'auth',             label: 'Authentication' },
@@ -1032,6 +1033,64 @@ await fetch('https://api.srctk.com/api/conversion', {
               <IC>visitor_id</IC> rotates at UTC midnight. <IC>session_id</IC> rotates every hour.
               Response headers include <IC>Cache-Control: no-store</IC> — do not cache this endpoint.
             </Note>
+          </Section>
+
+          {/* ── PATCH /api/integrations/settings ───────────────────────────── */}
+          <Section id="settings-api" title="Update Site Settings">
+            <Endpoint method="PATCH" path="/api/integrations/settings?site_key=xxx" description="Requires Bearer token + site_key" />
+            <p>
+              Updates the configurations for a site, including attribution window size, custom reporting timezone, and excluded path patterns.
+              Requires authentication via a Bearer token and the <IC>site_key</IC> passed as a query parameter or inside the request headers.
+            </p>
+
+            <H3>Query parameters</H3>
+            <ParamTable params={[
+              { name: 'site_key', type: 'string', required: true, desc: 'The site key of the site being configured.' },
+            ]} />
+
+            <H3>Payload</H3>
+            <p>
+              Pass a JSON object with one or more of the following properties:
+            </p>
+            <ParamTable params={[
+              { name: 'attribution_window_days', type: 'number', required: false, desc: 'Attribution lookback window in days. Must be one of: 1, 7, 14, 30, 60, 90.' },
+              { name: 'timezone', type: 'string', required: false, desc: 'Canonical timezone identifier (e.g. "America/New_York", "Europe/London"). Defaults to "UTC" on null or empty.' },
+              { name: 'excluded_paths', type: 'array|string', required: false, desc: 'Path patterns to exclude from tracking. Can be an array of paths or a comma-separated string.' },
+            ]} />
+            <Code lang="json">{`{
+  "attribution_window_days": 30,
+  "timezone": "America/New_York",
+  "excluded_paths": ["/admin/*", "/checkout/success", "/secret"]
+}`}</Code>
+
+            <H3>Response</H3>
+            <Code lang="json">{`{
+  "success": true,
+  "data": {
+    "id": "a2cec48d-3eae-4c52-82d7-4919835eaf33",
+    "attribution_window_days": 30,
+    "excluded_paths": [
+      "/admin/*",
+      "/checkout/success",
+      "/secret"
+    ],
+    "timezone": "America/New_York"
+  },
+  "error": null
+}`}</Code>
+
+            <H3>Troubleshooting & Validation</H3>
+            <ul className="list-disc list-inside space-y-2 pl-1 text-sm text-gray-600 dark:text-gray-400">
+              <li>
+                <strong>Invalid Timezone:</strong> If an unsupported timezone identifier is passed, the endpoint returns a <IC>400 Bad Request</IC> with <IC>{'{"error": "Invalid timezone: [value]"}'}</IC>. Check spelling against standard IANA names.
+              </li>
+              <li>
+                <strong>Invalid Attribution Window:</strong> Must be exactly one of the allowed numbers. Otherwise, returns <IC>400 Bad Request</IC>.
+              </li>
+              <li>
+                <strong>Caching:</strong> The server caches site configuration contexts for 5 minutes. After updating settings via this API, the cache is invalidated automatically, so changes apply to new incoming tracking events immediately.
+              </li>
+            </ul>
           </Section>
 
           {/* ── GDPR Endpoints ───────────────────────────────────────────── */}
