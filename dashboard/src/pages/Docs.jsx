@@ -117,6 +117,7 @@ const NAV = [
   { id: 'auth',             label: 'Authentication' },
   { id: 'errors',           label: 'Error Handling' },
   { id: 'visitor-sessions', label: 'Visitor Sessions' },
+  { id: 'page-path-funnels', label: 'Page-Path Funnels', indent: true },
   { id: 'changelog',        label: 'Changelog' },
 ]
 
@@ -1426,6 +1427,47 @@ fetch('/api/attribution?site_key=...&model=first_touch&...', {
               <strong>Note:</strong> Sessions are computed from events at read time. They are not stored or materialized.
               The 30-minute inactivity threshold is fixed and cannot be configured per-site.
             </div>
+          </Section>
+
+          {/* ── Page-Path Funnels ─────────────────────────────────────────── */}
+          <Section id="page-path-funnels" title="Page-Path Funnels">
+            <p>
+              Page-path funnels provide sequential analysis of page paths to understand how visitors traverse your site.
+              Funnels are evaluated dynamically using pageview logs and represent session-scoped progression.
+            </p>
+
+            <h4 className="text-sm font-semibold mt-6 mb-2">How Matching Works</h4>
+            <p>
+              Each step in the funnel is evaluated as a URL substring match.
+              The backend queries the <code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">pageviews</code> table and matches URLs containing each keyword in sequence (using <code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">LIKE '%keyword%'</code>).
+              For a visitor to progress through the funnel, they must visit each step in order within the same session.
+            </p>
+
+            <h4 className="text-sm font-semibold mt-6 mb-2">Examples of Funnel Keywords</h4>
+            <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
+              <li><code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">pricing, signup</code> — SaaS sign-up flow.</li>
+              <li><code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">product, cart, checkout, thank-you</code> — E-commerce checkout progression.</li>
+              <li><code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">blog, pricing, contact</code> — Blog reader to lead inquiry.</li>
+            </ul>
+
+            <h4 className="text-sm font-semibold mt-6 mb-2">Capabilities</h4>
+            <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
+              <li><strong>Step Progression</strong> — Tracks drop-off rates and completion percentages step-by-step.</li>
+              <li><strong>Session Locked</strong> — Ensures matching pageviews occur sequentially in the same session.</li>
+              <li><strong>Custom Steps</strong> — Supports between 2 and 8 steps of arbitrary page path keywords.</li>
+            </ul>
+
+            <h4 className="text-sm font-semibold mt-6 mb-2">Limitations</h4>
+            <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-800 dark:text-amber-300 space-y-1">
+              <p><strong>URL/Path-Based Only:</strong> Funnels are built strictly on pageview URLs. They do not support custom events, conversion types, or revenue attribution.</p>
+              <p><strong>No Cross-Session:</strong> Funnel progression is scoped to a single session. Multi-session conversion paths are not tracked.</p>
+              <p><strong>Sub-string Matching:</strong> Since matching uses LIKE queries, a keyword like <code className="text-xs bg-gray-100 dark:bg-gray-850 px-1 rounded">pricing</code> will match any URL containing that substring (e.g., <code className="text-xs bg-gray-100 dark:bg-gray-850 px-1 rounded">/pricing</code>, <code className="text-xs bg-gray-100 dark:bg-gray-850 px-1 rounded">/en/pricing-plans</code>).</p>
+            </div>
+
+            <h4 className="text-sm font-semibold mt-6 mb-2">Plan Requirements</h4>
+            <p>
+              Page-path funnels require a paid plan (Trial, Starter, Growth, or Business). Free plan users will be prompted to upgrade to access funnel visualizations.
+            </p>
           </Section>
 
           {/* ── Changelog ───────────────────────────────────────────────── */}

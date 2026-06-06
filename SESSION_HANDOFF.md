@@ -1,10 +1,29 @@
 > [!NOTE]
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 116D — Campaign Drilldown Polish. Refactored campaigns overview and export endpoints to fetch and merge sessions (visits) and leads in parallel. Restructured Campaigns dashboard grid to display 6 KPI cards (including Visits, Leads, and Manual ROAS) and realigned the table column headers to prevent cell offsets. Added UTM & Cost Tracking guide to Docs.jsx. Fixed and verified integration tests.
+> **Handoff:** Session 117C — Page-Path Funnel Presets. Added quick-select page-path funnel presets to the Analytics page, including a row of preset buttons, editable step pills with deletion handles, inline validation copy for fewer than 2 keywords, and a helper banner. Integrated loading, error, and empty status views inside the FunnelChart component. Documented page-path funnel features, examples, and limitations inside Docs.jsx.
 >
-> **Next Task:** Session 117 client/saved reports timezone grouping audit or paid beta launch preparation.
+> **Next Task:** Session 117D — Audit and plan timezone/saved reports or next paid beta dashboard task.
 >
+
+## Session 117C — Page-Path Funnel Presets
+**Date:** 2026-06-06 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+1. **Interactive Funnel Presets UI:** Added a row of 5 preset selector buttons ('Pricing → Signup', 'Landing → Pricing → Checkout', 'Blog → Product → Checkout', 'Features → Pricing → Demo', and 'Custom') in `Analytics.jsx` using keyword strings suitable for backend sequential LIKE-matching.
+2. **Active Step Deletion Handles:** Added step pills to the active steps summary in the card, allowing users to inspect active filters and remove individual step keywords via an inline delete button, which automatically updates the query state.
+3. **Card-Level Controls & Validation:** Added inline validation requiring at least 2 keywords before a funnel can be built, preventing invalid requests. Added helper copy clarifying matching behavior and session restrictions.
+4. **Hardened Funnel Visualization:** Upgraded `FunnelChart.jsx` to support loading spinners, API query error messages, default empty states, and custom empty search results states detailing LIKE-match search constraints.
+5. **Comprehensive Funnel Documentation:** Added a detailed "Page-Path Funnels" documentation section and navigation index in `Docs.jsx` explaining sequential page-path rules, keyword matching details, capabilities, plan restrictions, and limitations.
+
+## Session 117B — Session Grouping in Journey
+**Date:** 2026-06-06 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+1. **Unified Visitor Journey API:** Refactored `api/routes/journey.js` to return both flat chronological events (for backwards compatibility) and session-grouped events derived at query time using the 30-minute inactivity rule.
+2. **Visitor Journey Session Timeline:** Rewrote `Journey.jsx` and `JourneyModal.jsx` to render collapsible session cards displaying session index, source labels, duration, page/event counts, conversion badges, and entry/exit pages.
+3. **Mobile Rendering Fixes:** Handled URL/path truncation and break-all overflows to prevent horizontal scrolling on mobile viewports.
+4. **Visitor Session Docs:** Documented sessionizations, inactivity rules, bounce behavior, and API payloads in `Docs.jsx`.
 
 ## Session 116D — Campaign Drilldown Polish
 **Date:** 2026-06-06 | **Branch:** `main` | **Build:** ✅ passing

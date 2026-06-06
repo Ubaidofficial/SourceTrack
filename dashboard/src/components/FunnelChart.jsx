@@ -1,7 +1,23 @@
 import { TrendingDown } from 'lucide-react'
 
-export default function FunnelChart({ steps = [] }) {
-  if (!steps || steps.length === 0) {
+export default function FunnelChart({ steps = [], loading = false, hasSteps = false, error = false }) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-lime" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8 text-sm text-red-400">
+        Failed to load funnel data. Please try again.
+      </div>
+    )
+  }
+
+  if (!hasSteps) {
     return (
       <div className="text-center py-8 text-sm text-st-gray dark:text-gray-400">
         No funnel data to display
@@ -9,7 +25,17 @@ export default function FunnelChart({ steps = [] }) {
     )
   }
 
+  const hasFunnelResults = steps?.some(step => Number(step.visitors || 0) > 0)
+  if (!hasFunnelResults) {
+    return (
+      <div className="text-center py-8 text-sm text-st-gray dark:text-gray-400 leading-relaxed max-w-xs mx-auto">
+        No matching pageviews found for these path steps. Try broader keywords — funnels match any URL containing each keyword.
+      </div>
+    )
+  }
+
   const maxVisitors = steps[0]?.visitors || 1
+
   const lastStep = steps[steps.length - 1]
   const overallRate = maxVisitors > 0
     ? Math.round((lastStep.visitors / maxVisitors) * 100)

@@ -18,6 +18,14 @@ const BORDER_COLOR  = '#2A2E2E'
 const ST_LIME       = '#CCF03F'
 const ORANGE_400    = 'rgb(251,146,60)'
 
+const FUNNEL_PRESETS = [
+  { label: 'Pricing → Signup', steps: ['pricing', 'signup'] },
+  { label: 'Landing → Pricing → Checkout', steps: ['landing', 'pricing', 'checkout'] },
+  { label: 'Blog → Product → Checkout', steps: ['blog', 'product', 'checkout'] },
+  { label: 'Features → Pricing → Demo', steps: ['features', 'pricing', 'demo'] },
+  { label: 'Custom', steps: [] }
+]
+
 const CHANNEL_COLORS = {
   'Paid Search':    'bg-blue-500/20 text-blue-400',
   'Paid Social':    'bg-purple-500/20 text-purple-400',
@@ -164,6 +172,7 @@ export default function Analytics() {
   const [copied, setCopied] = useState(false)
   const [funnelInput, setFunnelInput] = useState('')
   const [funnelSteps, setFunnelSteps] = useState([])
+  const [selectedPreset, setSelectedPreset] = useState(null)
 
   // ─── Site ──────────────────────────────────────────────────────────────────
   const { data: site } = useQuery({
@@ -239,7 +248,7 @@ export default function Analytics() {
     queryFn: () => fetchApi(`/analytics/os?site_key=${site.site_key}&days=${days}${filterQuery}`),
     enabled: !!site?.site_key
   })
-  const { data: funnelData } = useQuery({
+  const { data: funnelData, isLoading: isFunnelLoading, isError: isFunnelError } = useQuery({
     queryKey: ['funnel', site?.site_key, funnelSteps, days],
     queryFn: () => fetchApi(`/analytics/funnel?site_key=${site.site_key}&steps=${encodeURIComponent(funnelSteps.join(','))}&days=${days}`),
     enabled: !!site?.site_key && funnelSteps.length > 0
@@ -277,6 +286,42 @@ export default function Analytics() {
   }
   function isActive(type, value) {
     return filters.some(f => f.type === type && f.value === value)
+  }
+
+  // ─── Funnel helpers ────────────────────────────────────────────────────────
+  const stepsFromInput = useMemo(() => {
+    return funnelInput.split(',').map(s => s.trim()).filter(Boolean)
+  }, [funnelInput])
+
+  const isValidFunnel = stepsFromInput.length >= 2
+
+  function handleSelectPreset(idx) {
+    setSelectedPreset(idx)
+    const preset = FUNNEL_PRESETS[idx]
+    if (preset.steps.length > 0) {
+      const stepsStr = preset.steps.join(', ')
+      setFunnelInput(stepsStr)
+    } else {
+      setFunnelInput('')
+    }
+  }
+
+  function handleInputChange(val) {
+    setFunnelInput(val)
+    setSelectedPreset(null)
+  }
+
+  function handleBuild() {
+    if (isValidFunnel) {
+      setFunnelSteps(stepsFromInput.slice(0, 8))
+    }
+  }
+
+  function handleRemoveStep(idxToRemove) {
+    const newSteps = funnelSteps.filter((_, idx) => idx !== idxToRemove)
+    setFunnelSteps(newSteps)
+    setFunnelInput(newSteps.join(', '))
+    setSelectedPreset(null)
   }
 
   // ─── Delta calc ────────────────────────────────────────────────────────────
@@ -775,29 +820,91 @@ export default function Analytics() {
               <div className="px-4 py-3 border-b border-[#2A2E2E] flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <TrendingDown className="w-3.5 h-3.5 text-st-gray" />
-                  <span className="text-sm font-semibold text-white">Funnel</span>
+                  <span className="text-sm font-semibold text-white">Page-Path Funnel</span>
                 </div>
                 <span className="text-[10px] text-st-gray">Privacy-safe</span>
               </div>
-              <div className="p-4 space-y-3">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={funnelInput}
-                    onChange={e => setFunnelInput(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && funnelInput.trim() && setFunnelSteps(funnelInput.split(',').map(s => s.trim()).filter(Boolean).slice(0, 8))}
-                    placeholder="pricing, signup, dashboard"
-                    className="flex-1 px-3 py-2 bg-[#242829] border border-[#2A2E2E] rounded-lg text-xs text-white placeholder-st-gray focus:outline-none focus:border-st-lime/40"
-                  />
-                  <button
-                    onClick={() => funnelInput.trim() && setFunnelSteps(funnelInput.split(',').map(s => s.trim()).filter(Boolean).slice(0, 8))}
-                    disabled={!funnelInput.trim()}
-                    className="px-3 py-2 bg-st-lime text-st-black text-xs font-semibold rounded-lg hover:opacity-90 disabled:opacity-40"
-                  >
-                    Build
-                  </button>
+              <div className="p-4 space-y-4">
+                {/* Quick Presets */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] text-st-gray font-medium uppercase tracking-wide">Quick Presets</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {FUNNEL_PRESETS.map((preset, idx) => {
+                      const isSelected = selectedPreset === idx
+                      return (
+                        <button
+                          key={preset.label}
+                          onClick={() => handleSelectPreset(idx)}
+                          className={`px-2.5 py-1 text-[11px] font-medium rounded-lg border transition-colors ${
+                            isSelected
+                              ? 'bg-st-lime border-st-lime text-st-black'
+                              : 'bg-[#242829] border-[#2A2E2E] text-st-gray hover:text-white hover:border-[#3A3E3E]'
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
-                <FunnelChart steps={funnelData || []} />
+
+                {/* Input & Build button */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={funnelInput}
+                      onChange={e => handleInputChange(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && isValidFunnel && handleBuild()}
+                      placeholder="pricing, signup, thank-you"
+                      className="flex-1 px-3 py-2 bg-[#242829] border border-[#2A2E2E] rounded-lg text-xs text-white placeholder-st-gray focus:outline-none focus:border-st-lime/40"
+                    />
+                    <button
+                      onClick={handleBuild}
+                      disabled={!isValidFunnel || isFunnelLoading}
+                      className="px-3 py-2 bg-st-lime text-st-black text-xs font-semibold rounded-lg hover:opacity-90 disabled:opacity-40 transition-opacity"
+                    >
+                      Build
+                    </button>
+                  </div>
+                  {!isValidFunnel && funnelInput.trim() !== '' && (
+                    <p className="text-[11px] text-red-400">
+                      Enter at least 2 page-path keywords to build a funnel.
+                    </p>
+                  )}
+                  <p className="text-[10px] text-st-gray leading-normal">
+                    Page-path funnels match URLs containing each keyword and follow visitors within the same session. They are based on pageviews, not conversion events or revenue.
+                  </p>
+                </div>
+
+                {/* Step pills */}
+                {funnelSteps.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 items-center pt-2 border-t border-[#2A2E2E]/60">
+                    <span className="text-[10px] text-st-gray uppercase font-semibold">Active Steps:</span>
+                    {funnelSteps.map((step, idx) => (
+                      <span key={idx} className="flex items-center gap-1 px-2 py-0.5 bg-[#242829] border border-[#2A2E2E] rounded-full text-xs text-white">
+                        <span className="text-st-gray text-[10px]">{idx + 1}.</span>
+                        <span className="truncate max-w-[100px]">{step}</span>
+                        <button
+                          onClick={() => handleRemoveStep(idx)}
+                          className="text-st-gray hover:text-white hover:bg-white/10 rounded-full w-3.5 h-3.5 flex items-center justify-center text-[10px] transition-colors ml-0.5"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Chart/State viz */}
+                <div className="pt-2">
+                  <FunnelChart
+                    steps={funnelData || []}
+                    loading={isFunnelLoading}
+                    hasSteps={funnelSteps.length > 0}
+                    error={isFunnelError}
+                  />
+                </div>
               </div>
             </div>
           </div>

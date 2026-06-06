@@ -5,6 +5,9 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 117C | 2026-06-06 | `main` | Page-Path Funnel Presets — Added presets selector, active steps pills with delete handle, input validation and helper copy in Analytics.jsx, spinner/error states in FunnelChart, and documentation | ✅ | No |
+| 117B | 2026-06-06 | `main` | Session Grouping in Journey — Refactored journey API to return session-grouped events, created collapsible session cards in frontend, fixed mobile overflows, added documentation | ✅ | No |
+| 116D | 2026-06-06 | `main` | Campaign Drilldown Polish — Unified campaigns backend to fetch visits and leads in parallel, aligned columns, added cost tracking docs and verification script | ✅ | No |
 | 116C | 2026-06-06 | `main` | Per-Site Timezone Reporting — implemented local daily grouping on dashboard overview trends using padded UTC window, added UI subtitles, updated settings copy & docs | ✅ | No |
 | 116B | 2026-06-06 | `main` | Path Exclusions — designed and implemented client/server-side exclusions, updated settings UI/docs | ✅ | No |
 | 75 | — | — | Saved reports backend persistence + fetchApi JSON body fix | Pending | — |
@@ -522,3 +525,62 @@ curl -i https://api.srctk.com/tracker/tracker.min.js
   - Safe header reading, explicit error payload printing, and token usage matching for export.
   - Verified all tests pass successfully.
 - **Files:** `scripts/qa-campaigns-drilldown.mjs`
+
+---
+
+## Session 117B — Session Grouping in Journey
+
+**Date:** 2026-06-06
+**Branch:** `main`
+**Build:** ✅ passing
+
+### 1. Unified Visitor Journey API
+- **Problem:** Journeys page rendered flat list of events with no sessionization context.
+- **Fix:**
+  - Refactored `api/routes/journey.js` to return both flat chronological events and session-grouped events derived at query time using the 30-minute inactivity rule.
+- **Files:** `api/routes/journey.js`
+
+### 2. Visitor Journey Session Timeline & Mobile Polish
+- **Problem:** Timeline display was difficult to read and suffered from URL overflow issues on mobile screen widths.
+- **Fix:**
+  - Rewrote `Journey.jsx` and `JourneyModal.jsx` to render collapsible session cards displaying session metadata (source, duration, page count, conversions).
+  - Added URL truncation helpers and word wrapping rules to prevent horizontal layout overflows.
+- **Files:** `dashboard/src/pages/Journey.jsx`, `dashboard/src/components/JourneyModal.jsx`
+
+### 3. Sessionization Documentation
+- **Problem:** No documentation existed detailing how user session boundaries are computed.
+- **Fix:**
+  - Added **Visitor Sessions** section in `Docs.jsx` explaining definition rules, single-event bounce sessions, and API structures.
+- **Files:** `dashboard/src/pages/Docs.jsx`
+
+---
+
+## Session 117C — Page-Path Funnel Presets
+
+**Date:** 2026-06-06
+**Branch:** `main`
+**Build:** ✅ passing
+
+### 1. Funnel Quick Presets UI
+- **Problem:** Page-path funnel required manually entering comma-separated keywords and lacked template presets.
+- **Fix:**
+  - Implemented 5 preset button components inside the card in `Analytics.jsx` matching backend sequential LIKE-matching criteria.
+- **Files:** `dashboard/src/pages/Analytics.jsx`
+
+### 2. Active Step Pills and Deletion
+- **Problem:** Active steps were not editable dynamically unless the whole text string was retyped.
+- **Fix:**
+  - Added step pills with individual delete buttons that automatically update the input and query states when removed.
+- **Files:** `dashboard/src/pages/Analytics.jsx`
+
+### 3. Loading, Error, and Empty Visuals
+- **Problem:** No spinner was shown during query execution, and empty states did not specify how matching keywords behave.
+- **Fix:**
+  - Handled loading spinners, API errors, and detailed explanations of LIKE-match queries inside the `FunnelChart` component.
+- **Files:** `dashboard/src/components/FunnelChart.jsx`, `dashboard/src/pages/Analytics.jsx`
+
+### 4. Page-Path Funnel Documentation
+- **Problem:** Funnels had no documentation entry, which could cause customer confusion about path-matching limits.
+- **Fix:**
+  - Created a comprehensive **Page-Path Funnels** documentation section in `Docs.jsx` detailing sequence logic, keyword examples, plan tiers, and limitations (strictly session-locked, no conversion types/revenue).
+- **Files:** `dashboard/src/pages/Docs.jsx`
