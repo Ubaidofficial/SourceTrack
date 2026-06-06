@@ -430,4 +430,77 @@ router.post('/stripe', async (req, res) => {
   }
 })
 
+// GET /api/integrations/shopify — fetch shopify integration settings
+router.get('/shopify', async (req, res) => {
+  try {
+    const siteKey = req.site?.site_key
+    if (!siteKey) {
+      return res.status(400).json({ success: false, data: null, error: 'Site context missing' })
+    }
+
+    const supabase = getSupabase()
+    const { data: site, error } = await supabase
+      .from('sites')
+      .select('encrypted_shopify_shared_secret')
+      .eq('site_key', siteKey)
+      .single()
+
+    if (error) throw error
+
+    const hasSecret = !!site?.encrypted_shopify_shared_secret
+
+    return res.json({
+      success: true,
+      data: {
+        configured: hasSecret,
+        masked_secret: hasSecret ? 'shpss_••••••••' : null
+      },
+      error: null
+    })
+  } catch (err) {
+    console.error('[integrations] GET shopify secret status error:', err?.message)
+    return res.status(500).json({ success: false, data: null, error: 'Failed to fetch Shopify webhook sync status' })
+  }
+})
+
+// POST /api/integrations/shopify — configure or delete shopify secret
+router.post('/shopify', async (req, res) => {
+  try {
+    const siteKey = req.site?.site_key
+    if (!siteKey) {
+      return res.status(400).json({ success: false, data: null, error: 'Site context missing' })
+    }
+
+    const { secret } = req.body
+    const supabase = getSupabase()
+
+    let encryptedSecret = null
+
+    if (secret !== undefined && secret !== null && secret.trim() !== '') {
+      const trimmedSecret = secret.trim()
+      if (trimmedSecret.length > 200) {
+        return res.status(400).json({ success: false, data: null, error: 'Secret is too long (maximum 200 characters)' })
+      }
+      encryptedSecret = encryptSecret(trimmedSecret)
+    }
+
+    const { error } = await supabase
+      .from('sites')
+      .update({ encrypted_shopify_shared_secret: encryptedSecret })
+      .eq('site_key', siteKey)
+
+    if (error) throw error
+
+    // Invalidate site cache so validateSiteKey picks up changes immediately
+    if (req.site?.site_key) {
+      siteCache.del(siteKey)
+    }
+
+    return res.json({ success: true, data: { configured: !!encryptedSecret }, error: null })
+  } catch (err) {
+    console.error('[integrations] POST shopify secret error:', err?.message)
+    return res.status(500).json({ success: false, data: null, error: 'Failed to save Shopify webhook secret' })
+  }
+})
+
 export { router as integrationsRouter }

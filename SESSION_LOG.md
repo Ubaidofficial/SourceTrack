@@ -5,6 +5,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 118E | 2026-06-06 | `main` | Shopify Order Webhook Sync — Created backend Shopify order webhook receiver with HMAC-SHA256 verification and paid-only filtering, verified idempotency, stitched storefront attributes, and built Integrations UI config card and Help Docs. | ✅ | No |
 | 118D | 2026-06-06 | `main` | Payments API Hardening + Docs — Hardened generic offline conversion endpoint, added input validations (numerical amount, valid 3-letter currency), allowed unattributed backend revenue, integrated Payments API in Integrations UI and Developer Docs, added E2E payments API test script. | ✅ | No |
 | 118C | 2026-06-06 | `main` | Stripe Webhook Ingestion Sync — Stripe raw-body webhook signature verification, decrypted Stripe secrets, claimed idempotency keys, captured conversions in PostHog, logged events to DB, built Stripe integrations UI & docs. | ✅ | No |
 | 118B | 2026-06-06 | `main` | Revenue Ingestion Foundation / Durable Idempotency + Secret Handling — SQL migration for idempotency, ingestion events, encrypted credentials. Symmetric GCM encryption helpers. SHA-256 API key hashing and fallback lookups. Startup key checks. Verification script. | ✅ | No |

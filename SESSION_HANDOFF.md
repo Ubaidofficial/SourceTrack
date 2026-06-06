@@ -1,9 +1,23 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 118D — Payments API Hardening + Docs. Hardened generic offline conversion endpoint `/api/conversion/offline` with amount, currency, and provider validation/normalization, allowed unattributed backend revenue when missing identity, integrated database-backed idempotency, added Payments API sections to Integrations UI and Developer Docs, and verified using E2E test script.
+> **Handoff:** Session 118E — Shopify Order Webhook Sync. Built backend Shopify order webhook receiver `/api/webhooks/shopify/:site_key` with HMAC-SHA256 signature verification, resolved sites by site key, decrypted webhook secret, supported paid order topics, claimed idempotency keys, and ingested conversions to PostHog without storing PII. Added Shopify configuration and instructions card to Integrations UI, added section to Docs, and verified using E2E test scripts.
 >
-> **Next Task:** Session 118E — Shopify webhook integration.
+> **Next Task:** Clean up and pending directives from user.
 >
+
+## Session 118E — Shopify Order Webhook Sync
+**Date:** 2026-06-06 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+1. **Shopify Webhook Receiver Endpoint**: Implemented `POST /api/webhooks/shopify/:site_key` mounted before Express JSON parser, verifying HMAC signatures timing-safely and parsing JSON payloads only after verification.
+2. **Paid Order Support & Filtering**: Supported `orders/paid` event topic immediately, and `orders/create` topic only when `financial_status === 'paid'`. Ignored other topics with a safe 200 ignored response.
+3. **Idempotency Claims & DB Logging**: Enforced database-backed revenue idempotency using `claimIdempotencyKeys(siteKey, 'shopify', keys)` with the order ID and webhook ID. Logged all event metrics directly to `revenue_ingestion_events`.
+4. **Privacy-Safe Normalization**: Normalised amounts, currency, order numbers, and event types without storing raw payload bytes or customer PII details (customer object, email, phone, names, billing, or shipping address).
+5. **Visitor Journey Stitching**: Scanned cart note/attributes for storefront identifiers (`_st_aid`, `st_aid`, `anonymous_id`, `visitor_id`, `sourcetrack_user_id`, `site_user_id`), falling back to unattributed Shopify revenue if none are found.
+6. **Integrations Settings Routes**: Added `GET` and `POST` `/api/integrations/shopify` endpoints in integrations router to configure site secrets and reset caches securely.
+7. **Integrations & Docs UI**: Added the copyable listener URL, signing secret inputs, disconnect form, and setup guide instructions card to the Integrations dashboard. Documented setup, stitching scripts, and constraints in Help Docs.
+8. **E2E verification tests**: Created `scripts/qa-shopify-webhook.mjs` verifying signature checks, unpaid filters, validation, corrected resubmissions, and duplicate skips.
+
 
 ## Session 118D — Payments API Hardening + Docs
 **Date:** 2026-06-06 | **Branch:** `main` | **Build:** ✅ passing

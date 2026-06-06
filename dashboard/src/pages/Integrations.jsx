@@ -85,6 +85,19 @@ export default function Integrations() {
   const [copiedPaymentsUrl, setCopiedPaymentsUrl] = useState(false)
   const [copiedCurl, setCopiedCurl] = useState(false)
 
+  // Shopify Webhook Sync integration state
+  const { data: shopifyIntegData, refetch: refetchShopifyInteg } = useQuery({
+    queryKey: ['shopify-integration', site?.site_key],
+    queryFn: () => fetchApi(`/integrations/shopify?site_key=${site.site_key}`),
+    enabled: !!site?.site_key
+  })
+
+  const [shopifySecret, setShopifySecret] = useState('')
+  const [shopifySubmitting, setShopifySubmitting] = useState(false)
+  const [shopifyMessage, setShopifyMessage] = useState('')
+  const [shopifyError, setShopifyError] = useState('')
+  const [copiedShopifyUrl, setCopiedShopifyUrl] = useState(false)
+
   const stripeWebhookUrl = site?.site_key ? `${window.location.origin.includes('localhost') ? 'http://localhost:3000' : 'https://api.srctk.com'}/api/webhooks/stripe/${site.site_key}` : ''
 
   const handleCopyStripeUrl = () => {
@@ -172,6 +185,65 @@ export default function Integrations() {
       setStripeError(err?.message || 'Error disconnecting Stripe')
     } finally {
       setStripeSubmitting(false)
+    }
+  }
+
+  const shopifyWebhookUrl = site?.site_key ? `${window.location.origin.includes('localhost') ? 'http://localhost:3000' : 'https://api.srctk.com'}/api/webhooks/shopify/${site.site_key}` : ''
+
+  const handleCopyShopifyUrl = () => {
+    if (shopifyWebhookUrl) {
+      navigator.clipboard.writeText(shopifyWebhookUrl).catch(() => {})
+      setCopiedShopifyUrl(true)
+      setTimeout(() => setCopiedShopifyUrl(false), 2000)
+    }
+  }
+
+  const handleSaveShopify = async (e) => {
+    e.preventDefault()
+    if (!site?.site_key) return
+    setShopifySubmitting(true)
+    setShopifyMessage('')
+    setShopifyError('')
+    try {
+      const res = await fetchApi(`/integrations/shopify?site_key=${site.site_key}`, {
+        method: 'POST',
+        body: { secret: shopifySecret }
+      })
+      if (res?.configured !== undefined) {
+        setShopifyMessage('Shopify webhook signing secret saved successfully!')
+        setShopifySecret('')
+        refetchShopifyInteg()
+      } else {
+        setShopifyError('Failed to save Shopify secret')
+      }
+    } catch (err) {
+      setShopifyError(err?.message || 'Error saving Shopify secret')
+    } finally {
+      setShopifySubmitting(false)
+    }
+  }
+
+  const handleDeleteShopify = async () => {
+    if (!site?.site_key) return
+    if (!window.confirm('Are you sure you want to disconnect Shopify webhook sync? This will remove the signing secret.')) return
+    setShopifySubmitting(true)
+    setShopifyMessage('')
+    setShopifyError('')
+    try {
+      const res = await fetchApi(`/integrations/shopify?site_key=${site.site_key}`, {
+        method: 'POST',
+        body: { secret: '' }
+      })
+      if (res?.configured !== undefined) {
+        setShopifyMessage('Shopify webhook sync disconnected.')
+        refetchShopifyInteg()
+      } else {
+        setShopifyError('Failed to disconnect Shopify')
+      }
+    } catch (err) {
+      setShopifyError(err?.message || 'Error disconnecting Shopify')
+    } finally {
+      setShopifySubmitting(false)
     }
   }
 
@@ -684,6 +756,123 @@ export default function Integrations() {
             </p>
             <p className="text-[11px] text-blue-700 dark:text-blue-400">
               <strong>Attribution Stitching:</strong> Ensure your checkout sessions include a stitching metadata key (e.g. <code className="font-mono">visitor_id</code>, <code className="font-mono">anonymous_id</code>, or <code className="font-mono">client_reference_id</code>). Sessions without metadata are logged as unattributed revenue.
+            </p>
+          </div>
+        </div>
+      </DashboardCard>
+
+      {/* Shopify Order Webhook Sync */}
+      <DashboardCard
+        title="Shopify Order Webhook Sync"
+        subtitle="Webhook-based Shopify order revenue events"
+      >
+        <div className="space-y-4">
+          {shopifyMessage && (
+            <div className="p-3 text-xs rounded-lg bg-green-50 text-green-700 border border-green-200">
+              {shopifyMessage}
+            </div>
+          )}
+          {shopifyError && (
+            <div className="p-3 text-xs rounded-lg bg-red-50 text-red-700 border border-red-200">
+              {shopifyError}
+            </div>
+          )}
+
+          {/* Configuration State */}
+          <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
+            <div>
+              <p className="text-sm font-semibold text-st-black dark:text-white">Status</p>
+              <p className="text-xs text-st-gray mt-0.5">Shopify webhook-based setup</p>
+            </div>
+            <StatusBadge
+              status={shopifyIntegData?.configured ? 'verified' : 'pending'}
+              label={shopifyIntegData?.configured ? 'Active' : 'Not Configured'}
+            />
+          </div>
+
+          {/* Copyable Webhook URL */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Shopify Webhook Listener URL</label>
+              <button
+                type="button"
+                onClick={handleCopyShopifyUrl}
+                className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black dark:hover:text-white transition-colors"
+              >
+                {copiedShopifyUrl ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                {copiedShopifyUrl ? 'Copied' : 'Copy URL'}
+              </button>
+            </div>
+            <div className="bg-st-black rounded-lg p-3">
+              <pre className="text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed select-all">
+                {shopifyWebhookUrl || 'Loading URL...'}
+              </pre>
+            </div>
+          </div>
+
+          {/* Form */}
+          {shopifyIntegData?.configured ? (
+            <div className="space-y-3 bg-gray-50 dark:bg-[#1a1d1d] border border-gray-100 dark:border-gray-800 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Shopify Webhook Secret</p>
+                  <code className="text-xs font-mono text-gray-700 dark:text-gray-300 mt-1 block">
+                    {shopifyIntegData.masked_secret}
+                  </code>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDeleteShopify}
+                  disabled={shopifySubmitting}
+                  className="px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-50"
+                >
+                  Disconnect
+                </button>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleSaveShopify} className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">
+                  Shopify Webhook Secret
+                </label>
+                <input
+                  type="password"
+                  value={shopifySecret}
+                  onChange={e => setShopifySecret(e.target.value)}
+                  placeholder="Paste webhook secret key"
+                  disabled={shopifySubmitting}
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a1d1d] text-st-black dark:text-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-st-black/20"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={shopifySubmitting || !shopifySecret.trim()}
+                className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 disabled:opacity-50 transition-colors"
+              >
+                {shopifySubmitting ? 'Saving...' : 'Connect Shopify'}
+              </button>
+            </form>
+          )}
+
+          {/* Setup Instructions */}
+          <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-lg p-3.5 space-y-2">
+            <h4 className="text-xs font-bold text-blue-900 dark:text-blue-300">Shopify Webhook Setup Instructions</h4>
+            <p className="text-[11px] text-blue-800 dark:text-blue-400 italic">
+              * Webhook-based setup, not a native Shopify {"app"}.
+            </p>
+            <ol className="list-decimal pl-4 text-xs text-blue-800 dark:text-blue-400 space-y-1.5 font-light">
+              <li>Log in to your <strong>Shopify Admin</strong> dashboard.</li>
+              <li>Navigate to <strong>Settings &gt; Notifications</strong> (or <strong>Settings &gt; Notifications &gt; Webhooks</strong>).</li>
+              <li>Scroll down to the <strong>Webhooks</strong> section and click <strong>Create webhook</strong>.</li>
+              <li>Select <strong>Event</strong>: <code className="font-mono bg-blue-100 dark:bg-blue-900/40 px-1 py-0.5 rounded text-[11px]">Order payment</code> (or <code className="font-mono bg-blue-100 dark:bg-blue-900/40 px-1 py-0.5 rounded text-[11px]">Order creation</code>).</li>
+              <li>Select <strong>Format</strong>: <code className="font-mono bg-blue-100 dark:bg-blue-900/40 px-1 py-0.5 rounded text-[11px]">JSON</code>.</li>
+              <li>Paste the <strong>Shopify Webhook Listener URL</strong> copy block above into the URL field.</li>
+              <li>Save the webhook, then copy the <strong>Secret key</strong> displayed at the bottom of the Webhooks list.</li>
+              <li>Paste the secret key in the input field above and click Connect.</li>
+            </ol>
+            <p className="text-[11px] text-blue-700 dark:text-blue-400 pt-1">
+              <strong>Attribution note:</strong> To stitch orders to visitor journeys, pass SourceTrack IDs into Shopify cart/note attributes. Set the <code className="font-mono">_st_aid</code> cart attribute with the visitor's anonymous ID (retrieved from browser localStorage key <code className="font-mono">st_aid</code>) when they add items or update the cart.
             </p>
           </div>
         </div>

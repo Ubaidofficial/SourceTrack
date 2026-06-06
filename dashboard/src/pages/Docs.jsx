@@ -115,6 +115,7 @@ const NAV = [
   { id: 'gdpr',             label: 'GDPR Endpoints' },
   { id: 'webhooks',         label: 'Outbound Webhooks' },
   { id: 'stripe-webhook',   label: 'Stripe Webhook Sync' },
+  { id: 'shopify-webhook',  label: 'Shopify Order Webhook Sync' },
   { id: 'payments-api',     label: 'Payments API' },
   { id: 'auth',             label: 'Authentication' },
   { id: 'errors',           label: 'Error Handling' },
@@ -1409,6 +1410,98 @@ const session = await stripe.checkout.sessions.create({
               <li>No raw Stripe payload is stored in the database.</li>
               <li>No customer names, email addresses, phone numbers, or shipping addresses are parsed, stored, or processed.</li>
               <li>Stitching is restricted strictly to the explicit metadata keys listed above.</li>
+            </ul>
+          </Section>
+
+          {/* ── Shopify Order Webhook Sync ───────────────────────────────── */}
+          <Section id="shopify-webhook" title="Shopify Order Webhook Sync">
+            <p>
+              Shopify Order Webhook Sync receives signed Shopify notifications and records them as conversion events in SourceTrack. When you pass a supported stitching identifier, those conversions can be connected to the visitor journey; otherwise they are recorded as unattributed Shopify revenue.
+            </p>
+            <p>
+              Shopify Order Webhook Sync is unauthenticated but fully cryptographically verified. It checks the signature of each incoming request using the Shopify shared secret configured for your site.
+            </p>
+
+            <H3>Supported Topics</H3>
+            <ul className="list-disc pl-5 space-y-1 font-light">
+              <li><IC>orders/paid</IC>: Processed immediately as paid revenue.</li>
+              <li><IC>orders/create</IC>: Processed only if the order's <IC>financial_status</IC> is <IC>paid</IC>.</li>
+              <li>Other event topics, or unpaid/pending orders under <IC>orders/create</IC>, are ignored with a safe <IC>200 OK</IC> status.</li>
+            </ul>
+
+            <H3>Setup Instructions</H3>
+            <ol className="list-decimal pl-5 space-y-2 mt-2 font-light">
+              <li>In your <strong>Shopify Admin</strong>, navigate to <strong>Settings &gt; Notifications</strong> (or Webhooks).</li>
+              <li>Scroll down to the <strong>Webhooks</strong> section and click <strong>Create webhook</strong>.</li>
+              <li>Select <strong>Event</strong>: <IC>Order payment</IC> (or <IC>Order creation</IC>).</li>
+              <li>Select <strong>Format</strong>: <IC>JSON</IC>.</li>
+              <li>Paste the <strong>Shopify Webhook Listener URL</strong> found on the Integrations settings card.</li>
+              <li>Save the webhook, then copy the <strong>Secret key</strong> displayed at the bottom of the Webhooks list.</li>
+              <li>In your SourceTrack dashboard, paste this secret into the Shopify card under **Integrations** and click **Connect**.</li>
+            </ol>
+
+            <H3>Stitching Conversions to Visitors</H3>
+            <p>
+              To attribute Shopify purchases back to a visitor's web traffic journey, you must pass the visitor's anonymous ID (browser localStorage key <IC>st_aid</IC>) into Shopify cart or note attributes. SourceTrack scans the order for the following keys, checked in order of preference:
+            </p>
+            <ul className="list-disc pl-5 space-y-1 mt-2 font-light">
+              <li><IC>_st_aid</IC></li>
+              <li><IC>st_aid</IC></li>
+              <li><IC>anonymous_id</IC></li>
+              <li><IC>visitor_id</IC></li>
+              <li><IC>sourcetrack_user_id</IC></li>
+              <li><IC>site_user_id</IC></li>
+            </ul>
+
+            <H3>Shopify Storefront Cart Update Example (JavaScript)</H3>
+            <p>
+              You can set the cart note attribute when items are added to the cart, or before checkout, using Shopify's AJAX API:
+            </p>
+            <Code lang="js">{`// Update Shopify cart note attributes with the visitor's anonymous ID
+fetch('/cart/update.js', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    attributes: {
+      '_st_aid': localStorage.getItem('st_aid') // standard visitor ID
+    }
+  })
+});`}</Code>
+
+            <H3>Unattributed Conversions</H3>
+            <Warn>
+              If a Shopify webhook event does not contain any of the stitching attributes listed above, the conversion will still be successfully ingested, but it will be marked as <IC>attribution_status: 'unattributed'</IC> and <IC>stitching_method: 'none'</IC> with distinct ID <IC>shopify_unattributed:&#123;order_id&#125;</IC>.
+            </Warn>
+
+            <H3>Deduplication &amp; Idempotency</H3>
+            <p>
+              SourceTrack enforces durable, database-backed revenue idempotency. For every Shopify event, it claims a combination of:
+            </p>
+            <ul className="list-disc pl-5 space-y-1 font-light">
+              <li>Shopify webhook ID (<IC>provider_event_id</IC>, from the <IC>X-Shopify-Webhook-Id</IC> header)</li>
+              <li>Shopify order ID (<IC>order_id</IC>, payload <IC>id</IC>)</li>
+            </ul>
+            <p>
+              If Shopify retries a webhook or sends duplicate event deliveries, SourceTrack will detect the claimed keys, log a duplicate audit event, and return a safe <IC>200 OK</IC> response with <IC>duplicate: true</IC> without double-counting revenue.
+            </p>
+
+            <H3>Privacy Guidelines</H3>
+            <p>
+              To protect customer privacy:
+            </p>
+            <ul className="list-disc pl-5 space-y-1 font-light">
+              <li>No raw Shopify request payload is stored.</li>
+              <li>No customer objects, customer names, email addresses, phone numbers, or shipping/billing addresses are parsed or stored.</li>
+              <li>Stitching is restricted strictly to the explicit note/cart attributes listed above.</li>
+            </ul>
+
+            <H3>Limitations</H3>
+            <ul className="list-disc pl-5 space-y-1 font-light">
+              <li>Webhook-based setup, not a native Shopify {"app"}.</li>
+              <li>No automatic email matching.</li>
+              <li>No refunds, subscriptions, or line-item analytics are processed unless explicitly supported.</li>
             </ul>
           </Section>
 
