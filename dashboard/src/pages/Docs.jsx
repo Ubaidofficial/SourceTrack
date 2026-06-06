@@ -1499,7 +1499,7 @@ fetch('/cart/update.js', {
 
             <H3>Limitations</H3>
             <ul className="list-disc pl-5 space-y-1 font-light">
-              <li>Webhook-based setup, not a native Shopify {"app"}.</li>
+              <li>Webhook-based setup, not a one-click app-store install.</li>
               <li>No automatic email matching.</li>
               <li>No refunds, subscriptions, or line-item analytics are processed unless explicitly supported.</li>
             </ul>

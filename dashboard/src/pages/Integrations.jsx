@@ -859,7 +859,7 @@ export default function Integrations() {
           <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-lg p-3.5 space-y-2">
             <h4 className="text-xs font-bold text-blue-900 dark:text-blue-300">Shopify Webhook Setup Instructions</h4>
             <p className="text-[11px] text-blue-800 dark:text-blue-400 italic">
-              * Webhook-based setup, not a native Shopify {"app"}.
+              * Webhook-based setup, not a one-click app-store install.
             </p>
             <ol className="list-decimal pl-4 text-xs text-blue-800 dark:text-blue-400 space-y-1.5 font-light">
               <li>Log in to your <strong>Shopify Admin</strong> dashboard.</li>
