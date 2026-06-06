@@ -101,6 +101,7 @@ const NAV = [
   { id: 'overview',         label: 'Overview' },
   { id: 'quickstart',       label: 'Quick Start' },
   { id: 'tracker',          label: 'Tracker Script',    indent: true },
+  { id: 'exclusions',       label: 'Path Exclusions',   indent: true },
   { id: 'cookieless',       label: 'Cookieless Mode',   indent: true },
   { id: 'recipes',          label: 'Installation Guides' },
   { id: 'track',            label: 'POST /api/track' },
@@ -643,6 +644,35 @@ window.sourcetrack.identify('user_123', {
               { name: 'window.sourcetrack.identify(userId, traits)', type: 'function', required: false, desc: 'Attach a user ID and optional identity traits to the current visitor. traits: { name, ...custom }' },
               { name: 'window.sourcetrack.track(event, props)', type: 'function', required: false, desc: 'Send any custom event with optional properties object.' },
             ]} />
+          </Section>
+
+          {/* ── Path Exclusions ────────────────────────────────────────── */}
+          <Section id="exclusions" title="Path Exclusions">
+            <p>
+              SourceTrack supports path exclusions at two levels: (1) server-side via site settings (the authoritative source of truth), and (2) client-side in the pixel tracker.
+            </p>
+            <p>
+              When a page path matches an exclusion pattern, no pageviews, conversions, or custom events on that path will be recorded. Excluded traffic is dropped immediately.
+            </p>
+
+            <H3>1. Server-Side Exclusions (Authoritative)</H3>
+            <p>
+              Configure exclusions on the Settings page of your dashboard. Enter a comma-separated list of paths (e.g. <IC>/admin/*, /staging, /secret-landing</IC>).
+            </p>
+            <ul className="list-disc list-inside space-y-1 pl-1 text-sm text-gray-600 dark:text-gray-400">
+              <li><strong>Wildcards:</strong> Use a trailing asterisk <IC>*</IC> to exclude all nested sub-paths (e.g., <IC>/admin/*</IC> matches both <IC>/admin</IC> and <IC>/admin/settings</IC>).</li>
+              <li><strong>Exact Matches:</strong> Paths without wildcards (e.g., <IC>/hidden-page</IC>) must match the pathname exactly.</li>
+            </ul>
+
+            <H3>2. Client-Side Exclusions (Snippet Helper)</H3>
+            <p>
+              To prevent the tracker from sending events on specific paths, use the <IC>data-exclude</IC> attribute directly on the tracker script tag.
+              The tracker listens to SPA routing (pushState/popstate) and dynamically suppresses event sends when navigating into excluded paths.
+            </p>
+            <Code lang="html">{`<!-- Exclude admin and checkout success pages -->
+<script async src="https://api.srctk.com/tracker/tracker.min.js"
+        data-site-key="YOUR_SITE_KEY"
+        data-exclude="/admin/*, /checkout/success"></script>`}</Code>
           </Section>
 
           {/* ── Cookieless Mode ──────────────────────────────────────────── */}

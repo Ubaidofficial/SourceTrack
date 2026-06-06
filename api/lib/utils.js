@@ -154,3 +154,54 @@ export function redactPiiFromObject(obj) {
   }
   return newObj
 }
+
+/**
+ * Checks if a pathname or page URL matches any pattern in the excluded paths.
+ * Supports wildcard patterns like `/admin/*` which matches `/admin`, `/admin/settings`, etc.
+ *
+ * @param {string} pageUrl - The URL or pathname to check.
+ * @param {string[]} excludedPaths - Array of exclusion patterns.
+ * @returns {boolean}
+ */
+export function isPathExcluded(pageUrl, excludedPaths) {
+  if (!pageUrl || typeof pageUrl !== 'string' || !Array.isArray(excludedPaths) || excludedPaths.length === 0) return false
+
+  let pathname = ''
+  try {
+    if (pageUrl.startsWith('http://') || pageUrl.startsWith('https://')) {
+      pathname = new URL(pageUrl).pathname
+    } else {
+      pathname = pageUrl.split('?')[0].split('#')[0]
+    }
+  } catch (_) {
+    pathname = pageUrl.split('?')[0].split('#')[0]
+  }
+
+  // Normalize path leading slash
+  if (!pathname.startsWith('/')) {
+    pathname = '/' + pathname
+  }
+
+  for (const pat of excludedPaths) {
+    if (typeof pat !== 'string') continue
+    const pattern = pat.trim()
+    if (!pattern) continue
+
+    // Normalize pattern leading slash
+    let normalizedPattern = pattern
+    if (!normalizedPattern.startsWith('/')) {
+      normalizedPattern = '/' + normalizedPattern
+    }
+
+    if (normalizedPattern.includes('*')) {
+      const prefix = normalizedPattern.replace(/\*/g, '')
+      if (pathname.startsWith(prefix) || pathname === prefix.replace(/\/$/, '')) {
+        return true
+      }
+    } else if (pathname === normalizedPattern) {
+      return true
+    }
+  }
+
+  return false
+}

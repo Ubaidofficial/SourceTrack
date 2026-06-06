@@ -2,9 +2,10 @@ import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
-import { normalizeUtm, redactPiiFromObject } from '../lib/utils.js'
+import { normalizeUtm, redactPiiFromObject, isPathExcluded } from '../lib/utils.js'
 
 import { getSupabase } from '../lib/supabase.js'
+
 
 // Same crawler pattern used by /api/analytics/collect — keeps PostHog event
 // counts clean (Googlebot, Lighthouse, scripted clients don't represent users).
@@ -91,6 +92,12 @@ export async function track(req, res) {
     if (!ua || BOT_UA_PATTERN.test(ua)) {
       return res.status(200).json({ success: true, data: { received: true, filtered: 'bot' }, error: null })
     }
+
+    // Check path exclusions
+    if (req.body?.page_url && isPathExcluded(req.body.page_url, req.site?.excluded_paths)) {
+      return res.status(200).json({ success: true, data: { received: true, filtered: 'excluded_path' }, error: null })
+    }
+
 
     // Ingest-side query parameter redaction to prevent PII leaks
     if (req.body) {

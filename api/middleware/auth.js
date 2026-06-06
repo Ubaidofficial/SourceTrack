@@ -8,7 +8,7 @@ const TRIAL_DAYS = 14
 // pageview and conversion hits the DB just to validate the site key.
 // On cache miss (first request, or after 5 min), we still hit Supabase.
 // Supabase downtime is still a risk but the blast radius is much smaller.
-const siteCache = new NodeCache({ stdTTL: 300, checkperiod: 60 })
+export const siteCache = new NodeCache({ stdTTL: 300, checkperiod: 60 })
 
 export async function validateSiteKey(req, res, next) {
   try {
@@ -44,7 +44,7 @@ export async function validateSiteKey(req, res, next) {
     const supabase = getSupabase()
     const { data, error } = await supabase
       .from('sites')
-      .select('id, site_key, plan, pv_limit, created_at, company_id, owner_id, business_type, trial_ends_at, attribution_window_days, onboarding_completed, last_seen_at, onboarding_state, domain')
+      .select('id, site_key, plan, pv_limit, created_at, company_id, owner_id, business_type, trial_ends_at, attribution_window_days, onboarding_completed, last_seen_at, onboarding_state, domain, excluded_paths, timezone')
       .eq('site_key', siteKey)
       .single()
 
@@ -96,8 +96,11 @@ export async function validateSiteKey(req, res, next) {
       onboarding_completed: !!data.onboarding_completed,
       last_seen_at: data.last_seen_at || null,
       onboarding_state: data.onboarding_state || {},
-      domain: data.domain || null
+      domain: data.domain || null,
+      excluded_paths: data.excluded_paths || [],
+      timezone: data.timezone || 'UTC'
     }
+
 
     // Store in cache — include plan/trial_ends_at so cache can do quick plan checks
     siteCache.set(siteKey, { site, plan: data.plan, trial_ends_at: data.trial_ends_at, created_at: data.created_at })

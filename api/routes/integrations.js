@@ -2,6 +2,7 @@ import express from 'express'
 import { queryHogQL } from '../lib/posthog.js'
 import { getSupabase } from '../lib/supabase.js'
 import { esc } from '../lib/utils.js'
+import { siteCache } from '../middleware/auth.js'
 
 const router = express.Router()
 
@@ -283,10 +284,44 @@ router.patch('/settings', async (req, res) => {
       })
     }
 
+    let timezone = req.body.timezone
+    if (timezone !== undefined) {
+      if (timezone === null) {
+        timezone = 'UTC'
+      } else if (typeof timezone !== 'string') {
+        return res.status(400).json({ success: false, data: null, error: 'timezone must be a string' })
+      } else if (timezone.trim() === '') {
+        timezone = 'UTC'
+      } else {
+        timezone = timezone.trim()
+        try {
+          Intl.DateTimeFormat(undefined, { timeZone: timezone })
+        } catch (_) {
+          return res.status(400).json({ success: false, data: null, error: `Invalid timezone: ${timezone}` })
+        }
+      }
+    }
+
+    let excludedPaths = null
+    if (req.body.excluded_paths !== undefined) {
+      const rawExcl = req.body.excluded_paths
+      if (Array.isArray(rawExcl)) {
+        excludedPaths = rawExcl.map(p => String(p).trim()).filter(Boolean)
+      } else if (typeof rawExcl === 'string') {
+        excludedPaths = rawExcl.split(',').map(p => p.trim()).filter(Boolean)
+      } else if (rawExcl === null) {
+        excludedPaths = []
+      } else {
+        return res.status(400).json({ success: false, data: null, error: 'excluded_paths must be an array or comma-separated string' })
+      }
+    }
+
     const supabase = getSupabase()
 
     const updates = {}
     if (windowDays !== null) updates.attribution_window_days = windowDays
+    if (timezone !== undefined) updates.timezone = timezone
+    if (excludedPaths !== null) updates.excluded_paths = excludedPaths
 
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ success: false, data: null, error: 'No valid fields to update' })
@@ -296,7 +331,7 @@ router.patch('/settings', async (req, res) => {
       .from('sites')
       .update(updates)
       .eq('id', siteId)
-      .select('id, attribution_window_days')
+      .select('id, attribution_window_days, excluded_paths, timezone')
       .single()
 
     if (error) {
@@ -308,6 +343,11 @@ router.patch('/settings', async (req, res) => {
         })
       }
       throw error
+    }
+
+    // Invalidate site cache so validateSiteKey picks up changes immediately
+    if (req.site?.site_key) {
+      siteCache.del(req.site.site_key)
     }
 
     return res.json({ success: true, data, error: null })

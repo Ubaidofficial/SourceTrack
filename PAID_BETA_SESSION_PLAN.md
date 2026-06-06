@@ -114,3 +114,9 @@ The session order was re-prioritized to address the **Attribution and Tracking T
 * **What not to touch:** Do not touch the minified loader outputs or tracker scripts.
 * **Paid beta blocker:** No.
 * **Public launch blocker:** Yes.
+
+---
+
+## 4. Current Progress & Status
+
+* **Session 116B — Path Exclusions:** ✅ Complete. Added database schema migration, server-side path matching logic, cached site context updates, settings patch route, standard and cookieless tracker dynamic exclusions, minification, and dashboard configurations. All static and runtime checks pass.

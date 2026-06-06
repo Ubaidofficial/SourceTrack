@@ -1,10 +1,21 @@
 > [!NOTE]
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 115 — Repo Cleanup + Markdown Reconciliation + Security Review. Audited markdown files, obsolete test scripts, CORS, SSRF, and billing gates. Hardened Stripe billing paths. Ready for production deployment and cohort onboarding.
+> **Handoff:** Session 116B — Path Exclusions. Designed and implemented server-side and client-side path exclusions. Updated site settings to configure path exclusions and timezones. Added client-side snippet helper configurations. Rebuilt minified tracker files. Run automated verification tests.
 >
-> **Next Task:** Deploy code and migrations to production database/services and invite the first 3-5 SaaS/Lead-Gen beta users.
+> **Next Task:** Session 116C timezone grouping on reporting endpoints.
 >
+
+## Session 116B — Path Exclusions
+**Date:** 2026-06-06 | **Branch:** `main` | **Build:** ✅ passing
+### Completed
+1. **Database Migration Added:** Created migration `20260606114100_add_site_settings.sql` adding `excluded_paths` and `timezone` to `sites`.
+2. **Server-Side Filtering:** Created `isPathExcluded` in `api/lib/utils.js` and enforced it in `api/routes/track.js` and `api/routes/conversion.js`.
+3. **Site-Key Context Caching:** Updated `validateSiteKey` middleware in `api/middleware/auth.js` to select, parse, cache, and populate `excluded_paths` and `timezone` in `req.site`.
+4. **Settings PATCH Update:** Updated the `/settings` endpoint in `api/routes/integrations.js` to allow updating both settings with validation.
+5. **Tracker Gating:** Updated standard `tracker.js` and cookieless `tracker.cookieless.js` to parse `data-exclude`, store exclusion patterns, check exclusions dynamically, and hook history modifiers (SPA navigation) to re-evaluate exclusions. Minified builds completed.
+6. **UI & Documentation:** Added site settings card to `Settings.jsx`, client-side helper snippet copy to `Snippet.jsx`, and detailed documentation section to `Docs.jsx`.
+7. **Automated Verification:** Added `qa-path-exclusions.mjs` verifying server-side and client-side matching correctness.
 
 ## Session 115 — Repo Cleanup + Markdown Reconciliation + Security Review
 **Date:** 2026-06-05 | **Branch:** `main` | **Build:** ✅ passing

@@ -205,6 +205,20 @@ export default function Snippet() {
             Conversions require an additional <code className="bg-gray-200 px-1 rounded text-xs">sourcetrack.conversion()</code> call — see JavaScript API below.
           </p>
         </div>
+
+        {/* Client-side Exclusions helper copy */}
+        <div className="bg-gray-50 dark:bg-[#111414] rounded-lg p-3 text-xs text-gray-600 dark:text-gray-300 space-y-2">
+          <p className="font-medium text-gray-700">Client-Side Path Exclusions (Optional)</p>
+          <p className="text-xs">
+            To prevent the tracker from sending events on specific client paths, add the <code className="bg-gray-200 dark:bg-gray-800 px-1 rounded text-xs">data-exclude</code> attribute:
+          </p>
+          <div className="bg-st-black rounded p-3 relative">
+            <pre className="text-green-400 text-xs overflow-x-auto whitespace-pre-wrap">{`<script async src="${trackerBaseUrl}/tracker/tracker.min.js"\n  data-site-key="${site?.site_key || 'YOUR_SITE_KEY'}"\n  data-exclude="/admin/*, /staging/*">\n</script>`}</pre>
+          </div>
+          <p className="text-[10px] text-st-gray dark:text-gray-400 mt-1">
+            Supports comma-separated patterns with trailing wildcards <code className="bg-gray-200 dark:bg-gray-800 px-1 rounded text-[10px]">*</code>. For absolute server-side suppression, use the Settings page.
+          </p>
+        </div>
       </div>
 
       {/* Privacy policy reminder — required disclosure for GDPR / CCPA */}

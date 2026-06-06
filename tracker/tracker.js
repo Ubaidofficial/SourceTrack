@@ -10,6 +10,31 @@
   var sc = document.currentScript || document.querySelector('script[data-site-key]')
   var K  = (sc && sc.getAttribute('data-site-key')) || ''
   var B  = (sc && sc.src) ? new URL(sc.src).origin : location.origin
+  var EXCL = (sc && sc.getAttribute('data-exclude')) || ''
+
+  function isPathExcluded(path, patternsStr) {
+    if (!patternsStr) return false
+    var patterns = patternsStr.split(',')
+    for (var i = 0; i < patterns.length; i++) {
+      var pat = patterns[i].trim()
+      if (!pat) continue
+      if (pat.charAt(0) !== '/') pat = '/' + pat
+      if (pat.indexOf('*') !== -1) {
+        var prefix = pat.replace(/\*/g, '')
+        if (path.indexOf(prefix) === 0 || path === prefix.replace(/\/$/, '')) return true
+      } else if (path === pat) {
+        return true
+      }
+    }
+    return false
+  }
+
+  function isExcluded() {
+    var pathname = location.pathname
+    if (pathname.charAt(0) !== '/') pathname = '/' + pathname
+    return isPathExcluded(pathname, EXCL)
+  }
+
 
   // ─── Storage helpers ───────────────────────────────────────────────────────
   function ls(k, v) {
@@ -147,6 +172,7 @@
   // Override send() to respect consent gate
   var _rawSend = send
   function sendGated(ep, data) {
+    if (isExcluded()) return  // Suppress sending on excluded paths!
     if (_consentGiven === false) return  // opted out
     if (CONSENT_REQUIRED && _consentGiven !== true) {
       _queue.push([ep, data])  // queue until consent(true)

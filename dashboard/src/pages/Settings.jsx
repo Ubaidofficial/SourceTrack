@@ -31,6 +31,10 @@ export default function Settings() {
   const [attrWindow, setAttrWindow]                 = useState(30)
   const [attrWindowSaving, setAttrWindowSaving]     = useState(false)
 
+  const [excludedPaths, setExcludedPaths]           = useState('')
+  const [timezone, setTimezone]                     = useState('UTC')
+  const [settingsSaving, setSettingsSaving]         = useState(false)
+
   useEffect(() => { loadSite() }, [user, activeSite])
 
   async function loadSite() {
@@ -41,7 +45,7 @@ export default function Settings() {
 
     let query = supabase
       .from('sites')
-      .select('*, cookieless_mode, data_retention_days, attribution_window_days')
+      .select('*, cookieless_mode, data_retention_days, attribution_window_days, excluded_paths, timezone')
 
     if (activeSite.id) {
       query = query.eq('id', activeSite.id)
@@ -60,6 +64,8 @@ export default function Settings() {
       setAttrWindow(data.attribution_window_days || 30)
       setName(data.name || '')
       setDomain(data.domain || '')
+      setExcludedPaths((data.excluded_paths || []).join(', '))
+      setTimezone(data.timezone || 'UTC')
     }
   }
 
@@ -238,6 +244,29 @@ export default function Settings() {
       setAttrWindowSaving(false)
     }
   }
+
+  const handleSettingsSave = async () => {
+    if (!site || !activeSite || site.id !== activeSite.id || site.site_key !== activeSite.site_key) return
+    setSettingsSaving(true)
+    setMessage('')
+    try {
+      await fetchApi(`/integrations/settings?site_key=${site.site_key}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          timezone,
+          excluded_paths: excludedPaths
+        })
+      })
+      setMessage('Site settings saved.')
+      setTimeout(() => setMessage(''), 4000)
+    } catch (err) {
+      setMessage(err?.message || 'Error saving settings')
+      setTimeout(() => setMessage(''), 4000)
+    } finally {
+      setSettingsSaving(false)
+    }
+  }
+
 
   // `isPaid` covers any non-free, non-trial plan (starter/growth/business).
   // Legacy 'pro'/'agency' are normalized to 'growth'/'business' upstream.
@@ -441,6 +470,65 @@ export default function Settings() {
           This window applies to all attribution reports unless overridden per-query in the Report Builder.
         </p>
       </section>
+
+      {/* ── Site Settings (Timezone & Path Exclusions) ───────────────── */}
+      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <Globe className="w-4 h-4 text-st-gray dark:text-gray-400" />
+          <h3 className="text-sm font-bold text-st-black dark:text-white">Site Settings</h3>
+        </div>
+        <p className="text-xs text-st-gray dark:text-gray-400">
+          Configure default reporting timezone boundaries and exclude specific client paths from tracking.
+        </p>
+
+        <form onSubmit={e => { e.preventDefault(); handleSettingsSave(); }} className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">Reporting Timezone</label>
+            <p className="text-[11px] text-st-gray dark:text-gray-400">
+              Set the default reporting timezone for your workspace. (Timezone-based grouping on overview graphs and campaign reports will be enabled in a future update).
+            </p>
+            <select
+              value={timezone}
+              onChange={e => setTimezone(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
+            >
+              <option value="UTC">UTC (Coordinated Universal Time)</option>
+              <option value="America/New_York">America/New_York (EST/EDT)</option>
+              <option value="America/Chicago">America/Chicago (CST/CDT)</option>
+              <option value="America/Denver">America/Denver (MST/MDT)</option>
+              <option value="America/Los_Angeles">America/Los_Angeles (PST/PDT)</option>
+              <option value="Europe/London">Europe/London (GMT/BST)</option>
+              <option value="Europe/Paris">Europe/Paris (CET/CEST)</option>
+              <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
+              <option value="Australia/Sydney">Australia/Sydney (AEST/AEDT)</option>
+              <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">Excluded Paths</label>
+            <p className="text-[11px] text-st-gray dark:text-gray-400">
+              Comma-separated list of paths to exclude from tracking (e.g. <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-[10px]">/admin/*, /staging, /secret</code>). Trailing wildcard <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-[10px]">*</code> matches prefixes.
+            </p>
+            <input
+              type="text"
+              value={excludedPaths}
+              onChange={e => setExcludedPaths(e.target.value)}
+              placeholder="/admin/*, /staging/*"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={settingsSaving}
+            className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors"
+          >
+            {settingsSaving ? 'Saving…' : 'Save Site Settings'}
+          </button>
+        </form>
+      </section>
+
 
       {/* ── Privacy & Data Retention ──────────────────────────────────── */}
       <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-6">

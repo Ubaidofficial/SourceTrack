@@ -5,6 +5,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 116B | 2026-06-06 | `main` | Path Exclusions — designed and implemented client/server-side exclusions, updated settings UI/docs | ✅ | No |
 | 75 | — | — | Saved reports backend persistence + fetchApi JSON body fix | Pending | — |
 | 76 | — | — | Stabilize saved report API requests | Pending | — |
 | 77 | — | `session-77-channel-taxonomy` | Channel taxonomy v1, AI→AI Search rename, Revenue/Conversions by Channel presets, session channel grouping fix | Pending | No |
@@ -63,6 +64,31 @@ Session 82 proper will be the manual QA closeout session.
 | 110B  | 2026-06-05 | `main` | Fix Lead Journey Drilldown Bugs and Enrich Timeline | ✅ | No |
 | 112 | 2026-06-05 | `main` | Final Private Beta Launch QA — Executed full E2E QA checks (static, smoke, edge cases, live attribution, outbound webhooks) with passing results | ✅ | No |
 | 115 | 2026-06-05 | `main` | Repo Cleanup + Markdown Reconciliation + Security Review — Audited docs, obsolete scripts, CORS, SSRF, billing gates, and verified public routes | ✅ | No |
+
+---
+
+## Session 116B — Path Exclusions
+
+**Date:** 2026-06-06
+**Branch:** `main`
+**Build:** ✅ node --check + npm run build + static QA pass
+
+### 1. Database Migrations & Context Caching
+- Created migration adding `excluded_paths` and `timezone` to `sites`.
+- Updated `validateSiteKey` middleware to retrieve and cache these settings in `req.site`.
+
+### 2. Exclusion Enforcement
+- Created `isPathExcluded` in `api/lib/utils.js`.
+- Checked exclusions in `api/routes/track.js` and `api/routes/conversion.js`, dropping matching traffic immediately with HTTP 200 to prevent retry loops.
+- Updated pixel trackers to parse `data-exclude` tag attributes and dynamically suppress event sends, preserving runtime initialization and handling SPA route updates correctly.
+- Compiled minified trackers successfully.
+
+### 3. Dashboard UI & Docs
+- Integrated timezone dropdown and comma-separated path exclusions input into Settings page.
+- Added code examples and usage copy to snippet loader and main API documentation.
+
+### 4. Verification
+- Created test suite `scripts/qa-path-exclusions.mjs` verifying client/server matching rules.
 
 ---
 
