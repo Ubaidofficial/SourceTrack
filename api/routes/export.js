@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { getFlexibleReport } from '../lib/attribution-engine.js'
 import { requireFeature } from '../lib/plan-features.js'
 import { getSupabase as getSupabaseAdmin } from '../lib/supabase.js'
+import { ALLOWED_MODELS, ALLOWED_GROUPS, ALLOWED_METRICS } from '../lib/report-config-validation.js'
 
 const router = Router()
 
@@ -45,6 +46,17 @@ router.get('/report', async (req, res) => {
       return res.status(400).json({ success: false, data: null, error: 'model, date_from, date_to, group_by, metric are required' })
     }
 
+    // Validate parameters
+    if (!ALLOWED_MODELS.has(model)) {
+      return res.status(400).json({ success: false, data: null, error: `Invalid model: ${model}` })
+    }
+    if (!ALLOWED_GROUPS.has(group_by)) {
+      return res.status(400).json({ success: false, data: null, error: `Invalid group_by: ${group_by}` })
+    }
+    if (!ALLOWED_METRICS.has(metric)) {
+      return res.status(400).json({ success: false, data: null, error: `Invalid metric: ${metric}` })
+    }
+
     const posthogSiteId = String(req.site.id)
 
     const filters = {}
@@ -79,7 +91,10 @@ router.get('/report', async (req, res) => {
         .send('No data\n')
     }
 
-    const keys = Object.keys(results[0])
+    // Strip sensitive internal fields case-insensitively while preserving campaigns/ad/order ids
+    const forbiddenKeys = new Set(['id', 'site_id', 'site_key', 'user_id', 'company_id', 'distinct_id', 'person_id'])
+    const keys = Object.keys(results[0]).filter(k => !forbiddenKeys.has(k.toLowerCase()))
+
     const header = keys.join(',')
     const rows = results.map(r => keys.map(k => escapeCsv(r[k])).join(','))
     const csv = [header, ...rows].join('\n') + '\n'

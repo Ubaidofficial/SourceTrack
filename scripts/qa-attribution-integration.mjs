@@ -191,7 +191,7 @@ async function run() {
     const dateTo = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
     let indexed = false;
-    const POLL_ATTEMPTS = 120;  // 120 × 5 s = 10 min max (PostHog cloud can be slow)
+    const POLL_ATTEMPTS = process.env.ALLOW_ATTRIBUTION_E2E_TIMEOUT_WARN === '1' ? 6 : 120;  // 6 attempts (30s) if warning allowed, otherwise 120 (10 min)
     const POLL_INTERVAL = 5000;
     for (let attempt = 1; attempt <= POLL_ATTEMPTS; attempt++) {
       await sleep(POLL_INTERVAL);

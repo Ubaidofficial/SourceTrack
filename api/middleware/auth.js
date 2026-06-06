@@ -42,11 +42,33 @@ export async function validateSiteKey(req, res, next) {
 
     // Cache miss — query Supabase
     const supabase = getSupabase()
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('sites')
       .select('id, site_key, plan, pv_limit, created_at, company_id, owner_id, business_type, trial_ends_at, attribution_window_days, onboarding_completed, last_seen_at, onboarding_state, domain, excluded_paths, timezone')
       .eq('site_key', siteKey)
       .single()
+
+    const isMissingColumn = error && (
+      error.code === '42703' ||
+      (error.message && error.message.includes('column') && error.message.includes('attribution_window_days'))
+    )
+
+    if (isMissingColumn) {
+      console.warn('[validateSiteKey] LOUD WARNING: sites.attribution_window_days column does not exist in database. Falling back to default 30 days and re-querying sites table.')
+      const retryResult = await supabase
+        .from('sites')
+        .select('id, site_key, plan, pv_limit, created_at, company_id, owner_id, business_type, trial_ends_at, onboarding_completed, last_seen_at, onboarding_state, domain, excluded_paths, timezone')
+        .eq('site_key', siteKey)
+        .single()
+
+      if (retryResult.error) {
+        return res.status(401).json({ success: false, data: null, error: 'Invalid site_key' })
+      }
+
+      data = retryResult.data
+      data.attribution_window_days = 30
+      error = null
+    }
 
     if (error || !data) {
       return res.status(401).json({ success: false, data: null, error: 'Invalid site_key' })

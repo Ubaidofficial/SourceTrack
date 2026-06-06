@@ -1,12 +1,22 @@
 import { Router } from 'express'
 import { getSupabase } from '../lib/supabase.js'
 import { requireFeature } from '../lib/plan-features.js'
+import { validateReportConfig } from '../lib/report-config-validation.js'
 
 const router = Router()
 
 router.use((req, res, next) => {
   const block = requireFeature(req.site?.plan, 'saved_reports', 'Saved reports')
   if (block) return res.status(402).json(block)
+  next()
+})
+
+// Enforce site ID scoping check
+router.use((req, res, next) => {
+  if (!req.site?.id) {
+    console.warn('[saved-reports] Warning: req.site.id is missing or null in saved-reports API route context')
+    return res.status(400).json({ success: false, data: null, error: 'Site context ID is missing' })
+  }
   next()
 })
 
@@ -22,6 +32,12 @@ router.post('/saved', async (req, res) => {
     }
     if (!config || typeof config !== 'object') {
       return res.status(400).json({ success: false, data: null, error: 'Report config is required' })
+    }
+
+    // Validate the saved report config payload
+    const valResult = validateReportConfig(config)
+    if (!valResult.valid) {
+      return res.status(400).json({ success: false, data: null, error: valResult.error })
     }
 
     const { data, error } = await getSupabase()
@@ -87,6 +103,12 @@ router.put('/saved/:id', async (req, res) => {
       return res.status(400).json({ success: false, data: null, error: 'Report config is required' })
     }
 
+    // Validate the saved report config payload
+    const valResult = validateReportConfig(config)
+    if (!valResult.valid) {
+      return res.status(400).json({ success: false, data: null, error: valResult.error })
+    }
+
     const { data: existing, error: fetchErr } = await getSupabase()
       .from('saved_reports')
       .select('id, user_id, site_id')
@@ -137,13 +159,15 @@ router.delete('/saved/:id', async (req, res) => {
       .from('saved_reports')
       .select('id, user_id, site_id')
       .eq('id', id)
-      .eq('user_id', req.user.id)
       .eq('site_id', req.site.id)
       .maybeSingle()
 
     if (fetchErr) throw fetchErr
     if (!existing) {
       return res.status(404).json({ success: false, data: null, error: 'Report not found' })
+    }
+    if (existing.user_id !== req.user.id) {
+      return res.status(403).json({ success: false, data: null, error: 'You do not own this report' })
     }
 
     const { error } = await getSupabase()
@@ -163,3 +187,4 @@ router.delete('/saved/:id', async (req, res) => {
 })
 
 export { router as savedReportsRouter }
+
