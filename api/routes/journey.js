@@ -1,5 +1,33 @@
 import { queryHogQL } from '../lib/posthog.js'
 import { esc } from '../lib/utils.js'
+import { deriveSessions, annotateSessions, sessionAggregates } from '../lib/sessionization.js'
+
+/**
+ * Classify a session's entry source using UTM/referrer/AI data.
+ * Local helper — does NOT import from analytics.js routes.
+ */
+function classifyEntrySource(session) {
+  if (!session) return 'Direct'
+  // AI source takes priority
+  if (session.entry_ai_source) return `AI: ${session.entry_ai_source}`
+  // UTM source
+  if (session.entry_source) {
+    const medium = (session.entry_medium || '').toLowerCase()
+    if (['cpc', 'ppc', 'paid', 'paid_search'].includes(medium)) return 'Paid Search'
+    if (['email', 'newsletter'].includes(medium)) return 'Email'
+    return session.entry_source
+  }
+  // Referrer
+  if (session.entry_referrer) {
+    try {
+      const host = new URL(session.entry_referrer).hostname.replace('www.', '')
+      if (['google.', 'bing.', 'yahoo.', 'duckduckgo.'].some(s => host.includes(s))) return 'Organic Search'
+      if (['facebook.com', 'instagram.com', 'linkedin.com', 'twitter.com', 'x.com', 'tiktok.com'].some(s => host.includes(s))) return 'Organic Social'
+      return host
+    } catch (_e) { /* invalid URL */ }
+  }
+  return session.is_direct_entry ? 'Direct' : 'Direct'
+}
 
 export async function journey(req, res) {
   try {
@@ -75,20 +103,46 @@ export async function journey(req, res) {
     }))
     const userId = events.find(e => e.user_id)?.user_id || null
 
+    // ── Derive sessions from flat events ──
+    // deriveSessions expects objects with top-level fields; our events already match.
+    // We need to also capture entry_referrer and entry_ai_source for source classification.
+    const sessionsRaw = deriveSessions(events)
+    const { sessions: annotatedSessions, converting_session_index } = annotateSessions(sessionsRaw)
+
+    // Build event index ranges and nest events inside each session.
+    // deriveSessions tracks events by order; we replicate by walking the events array.
+    const sessions = []
+    let eventCursor = 0
+    for (const sess of annotatedSessions) {
+      const sessionEvents = events.slice(eventCursor, eventCursor + sess.event_count)
+      eventCursor += sess.event_count
+
+      // Enrich session with entry referrer + AI source from first event
+      const firstEvent = sessionEvents[0] || {}
+      sess.entry_referrer = firstEvent.referrer || null
+      sess.entry_ai_source = firstEvent.ai_source || null
+      sess.source_label = classifyEntrySource(sess)
+      sess.events = sessionEvents
+
+      sessions.push(sess)
+    }
+
+    const aggregates = sessionAggregates(annotatedSessions)
+
     let person = null
     try {
       const host = process.env.POSTHOG_HOST.replace(/\/$/, '')
       const projectId = process.env.POSTHOG_PROJECT_ID
       const url = `${host}/api/projects/${projectId}/persons/${visitorId}/`
 
-      const res = await fetch(url, {
+      const personRes = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${process.env.POSTHOG_PERSONAL_API_KEY}`
         }
       })
 
-      if (res.ok) {
-        person = await res.json()
+      if (personRes.ok) {
+        person = await personRes.json()
       }
     } catch (_err) {
       /* person data is best-effort */
@@ -101,7 +155,13 @@ export async function journey(req, res) {
         user_id: userId,
         person,
         events,
-        event_count: events.length
+        sessions,
+        session_aggregates: aggregates,
+        converting_session_index,
+        event_count: events.length,
+        session_count: sessions.length,
+        derived_from_events: true,
+        session_timeout_minutes: 30
       },
       error: null
     })

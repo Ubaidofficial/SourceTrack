@@ -116,6 +116,7 @@ const NAV = [
   { id: 'webhooks',         label: 'Outbound Webhooks' },
   { id: 'auth',             label: 'Authentication' },
   { id: 'errors',           label: 'Error Handling' },
+  { id: 'visitor-sessions', label: 'Visitor Sessions' },
   { id: 'changelog',        label: 'Changelog' },
 ]
 
@@ -1375,6 +1376,56 @@ fetch('/api/attribution?site_key=...&model=first_touch&...', {
               { name: '429', type: '', required: false, desc: 'Rate limit exceeded. Back off and retry.' },
               { name: '500', type: '', required: false, desc: 'Internal server error. These are logged — contact support if they persist.' },
             ]} />
+          </Section>
+
+          {/* ── Visitor Sessions ─────────────────────────────────────────── */}
+          <Section id="visitor-sessions" title="Visitor Sessions">
+            <p>
+              The Visitor Journey page groups raw events into <strong>sessions</strong> using a <strong>30-minute inactivity rule</strong>.
+              Sessions are derived at query time from raw pageview and conversion events — they are not materialized in the database.
+            </p>
+
+            <h4 className="text-sm font-semibold mt-6 mb-2">Session Definition</h4>
+            <p>
+              A session is a continuous period of activity for a single visitor.
+              If there is no event from the same visitor for 30 minutes, the next event starts a new session.
+              This follows standard web analytics conventions.
+            </p>
+
+            <h4 className="text-sm font-semibold mt-6 mb-2">Session Metrics</h4>
+            <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
+              <li><strong>Duration</strong> — time between the first and last event in the session (in seconds).</li>
+              <li><strong>Page Count</strong> — number of <code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">$pageview</code> events in the session.</li>
+              <li><strong>Event Count</strong> — total events (pageviews + conversions + others) in the session.</li>
+              <li><strong>Entry Page</strong> — the URL of the first event in the session.</li>
+              <li><strong>Exit Page</strong> — the URL of the last event in the session.</li>
+              <li><strong>Entry Source / Medium / Campaign</strong> — UTM parameters from the session's first event.</li>
+              <li><strong>Source Label</strong> — classified as Direct, Organic Search, Organic Social, Paid Search, Email, AI, or a referrer hostname.</li>
+              <li><strong>Contains Conversion</strong> — whether at least one <code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">$conversion</code> event occurred during the session.</li>
+              <li><strong>Conversion Value</strong> — sum of all conversion values within the session.</li>
+            </ul>
+
+            <h4 className="text-sm font-semibold mt-6 mb-2">Single-Event Sessions</h4>
+            <p>
+              If a visitor has only one event (e.g., a single pageview with no follow-up), that event forms its own session.
+              The duration is 0 seconds, and both entry and exit page point to the same URL.
+              This is expected behavior — it represents a bounce or one-time visit.
+            </p>
+
+            <h4 className="text-sm font-semibold mt-6 mb-2">API Response</h4>
+            <p>
+              The <code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">GET /api/journey/:visitorId</code> endpoint returns both:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400 mt-2">
+              <li><code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">events</code> — flat chronological array of all events.</li>
+              <li><code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">sessions</code> — array of session objects, each containing a nested <code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">events</code> array.</li>
+              <li><code className="text-xs bg-gray-100 dark:bg-gray-800 px-1 rounded">session_aggregates</code> — summary stats across all sessions (total, averages, conversions).</li>
+            </ul>
+
+            <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-800 dark:text-amber-300">
+              <strong>Note:</strong> Sessions are computed from events at read time. They are not stored or materialized.
+              The 30-minute inactivity threshold is fixed and cannot be configured per-site.
+            </div>
           </Section>
 
           {/* ── Changelog ───────────────────────────────────────────────── */}

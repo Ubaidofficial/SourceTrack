@@ -38,7 +38,7 @@ export function deriveSessions(events) {
       currentSession.pageview_count += ev.event === '$pageview' ? 1 : 0
       if (ev.event === '$conversion') {
         currentSession.contains_conversion = true
-        currentSession.conversion_value += ev.conversion_value || 0
+        currentSession.conversion_value += Number(ev.conversion_value || 0)
       }
       currentSession.exit_page = ev.page_url || ev.properties?.page_url || null
     }
@@ -68,7 +68,7 @@ function startSession(firstEvent, ts, index) {
     entry_campaign: firstEvent.utm_campaign || props.utm_campaign || null,
     is_direct_entry: isDirect(firstEvent.utm_source || props.utm_source),
     contains_conversion: firstEvent.event === '$conversion',
-    conversion_value: firstEvent.event === '$conversion' ? (firstEvent.conversion_value || 0) : 0
+    conversion_value: firstEvent.event === '$conversion' ? Number(firstEvent.conversion_value || 0) : 0
   }
 }
 

@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { getJourney } from '../lib/api'
 import {
   Clock, Globe, MousePointerClick, User, Bot, MapPin,
-  Download, X, ChevronDown, ChevronRight, Zap, ArrowRight
+  Download, X, ChevronDown, ChevronRight, Zap, ArrowRight,
+  Timer, FileText, LogIn, LogOut, AlertCircle
 } from 'lucide-react'
 import { safeNumber } from '../utils/numbers'
 
@@ -55,12 +56,32 @@ function nameVersion(name, version) {
   return [name, version].filter(Boolean).join(' ')
 }
 
+function formatDuration(seconds) {
+  if (!seconds || seconds <= 0) return '<1s'
+  if (seconds < 60) return `${seconds}s`
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  return `${h}h ${m}m`
+}
+
+function truncateUrl(urlStr, maxLen = 50) {
+  if (!urlStr) return ''
+  try {
+    const path = new URL(urlStr).pathname
+    return path.length > maxLen ? path.slice(0, maxLen) + '…' : path
+  } catch {
+    return urlStr.length > maxLen ? urlStr.slice(0, maxLen) + '…' : urlStr
+  }
+}
+
 export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose, onQualified }) {
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
-  const [expanded, setExpanded] = useState({})
   const [error, setError]     = useState(null)
   const [filter, setFilter]   = useState('all') // all | conversions | ai
+  const [expandedSessions, setExpandedSessions] = useState({})
+  const [expandedEvents, setExpandedEvents] = useState({})
 
   useEffect(() => {
     if (!visitorId || !siteKey) return
@@ -73,16 +94,17 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
   }, [visitorId, siteKey])
 
   const allEvents = data?.events || []
-  const events = filter === 'conversions'
-    ? allEvents.filter(e => e.event === '$conversion')
-    : filter === 'ai'
-    ? allEvents.filter(e => e.ai_source)
-    : allEvents
+  const sessions = data?.sessions || []
 
   const summary = computeSummary(allEvents, data, leadSummary)
 
-  function toggleExpand(i) {
-    setExpanded(prev => ({ ...prev, [i]: !prev[i] }))
+  function toggleSession(idx) {
+    setExpandedSessions(prev => ({ ...prev, [idx]: !prev[idx] }))
+  }
+
+  function toggleEvent(sessionIdx, eventIdx) {
+    const key = `${sessionIdx}-${eventIdx}`
+    setExpandedEvents(prev => ({ ...prev, [key]: !prev[key] }))
   }
 
   function handleExport() {
@@ -137,7 +159,13 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black" />
             </div>
           ) : error ? (
-            <div className="py-20 text-center text-sm text-st-gray">{error}</div>
+            <div className="p-6 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-red-800 dark:text-red-400">Journey query failed</p>
+                <p className="text-xs text-red-600 dark:text-red-300 mt-1">{error}</p>
+              </div>
+            </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-5 h-full">
 
@@ -155,7 +183,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
 
                 {/* KPI row */}
                 <div className="grid grid-cols-2 gap-3">
-                  <JourneyStat label="Touchpoints" value={summary.touchpoints} />
+                  <JourneyStat label="Sessions" value={data?.session_count ?? summary.touchpoints} />
                   <JourneyStat label="Conversions" value={summary.totalConversions} />
                   <JourneyStat label="Revenue" value={summary.conversionValue > 0 ? `$${safeNumber(summary.conversionValue, 0).toFixed(0)}` : '—'} />
                   <JourneyStat label="Duration" value={summary.journeyDuration} />
@@ -205,8 +233,8 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                 )}
               </div>
 
-              {/* ── Right Panel — Timeline ── */}
-              <div className="lg:col-span-3 p-6 flex flex-col">
+              {/* ── Right Panel — Session Timeline ── */}
+              <div className="lg:col-span-3 p-6 flex flex-col overflow-hidden">
                 {/* Filter pills */}
                 <div className="flex items-center gap-2 mb-4 flex-shrink-0">
                   {[
@@ -228,103 +256,191 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                   ))}
                 </div>
 
-                {/* Timeline */}
-                {events.length === 0 ? (
+                {/* Session cards */}
+                {sessions.length === 0 ? (
                   <p className="text-sm text-st-gray dark:text-gray-400 py-8 text-center">No events match this filter.</p>
                 ) : (
                   <div className="space-y-2 overflow-y-auto flex-1">
-                    {events.map((e, i) => {
-                      const Icon = EVENT_ICONS[e.event] || Clock
-                      const isConversion = e.event === '$conversion'
-                      const isExpanded   = expanded[i]
-                      const label = isConversion ? 'Conversion'
-                        : e.event === '$pageview' ? 'Pageview'
-                        : e.event === '$identify' ? 'Identify'
-                        : e.event === 'outbound_click' ? 'Outbound Click'
-                        : e.event
+                    {sessions.map((session, sIdx) => {
+                      const isOpen = expandedSessions[sIdx]
+                      const sessionEvents = session.events || []
+                      const filtered = filter === 'all'
+                        ? sessionEvents
+                        : filter === 'conversions'
+                          ? sessionEvents.filter(e => e.event === '$conversion')
+                          : sessionEvents.filter(e => e.ai_source)
+
+                      // Skip sessions that have no matching events under current filter
+                      if (filter !== 'all' && filtered.length === 0) return null
 
                       return (
                         <div
-                          key={i}
+                          key={sIdx}
                           className={`rounded-xl border transition-all ${
-                            isConversion
+                            session.contains_conversion
                               ? 'bg-st-lime/10 dark:bg-st-lime/5 border-st-lime/40'
                               : 'bg-white dark:bg-[#1A1D1D] border-gray-100 dark:border-[#2A2E2E] hover:border-gray-200'
                           }`}
                         >
+                          {/* Session header */}
                           <div
                             className="flex items-start gap-3 p-3 cursor-pointer"
-                            onClick={() => toggleExpand(i)}
+                            onClick={() => toggleSession(sIdx)}
                           >
-                            {/* Icon */}
-                            <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                              isConversion ? 'bg-st-lime' : 'bg-gray-100'
+                            {/* Session badge */}
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-[10px] font-bold ${
+                              session.contains_conversion ? 'bg-st-lime text-st-black' : 'bg-gray-100 text-gray-600'
                             }`}>
-                              {isConversion
-                                ? <Zap className="w-3.5 h-3.5 text-st-black" />
-                                : <Icon className="w-3.5 h-3.5 text-gray-500" />
-                              }
+                              #{session.session_index}
                             </div>
 
-                            {/* Content */}
+                            {/* Session info */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${
-                                  isConversion ? 'bg-st-lime text-st-black' : 'bg-gray-100 dark:bg-[#252929] text-gray-600'
-                                }`}>
-                                  {label}
+                                <span className="text-xs font-semibold text-gray-800 dark:text-white">
+                                  Session {session.session_index}
                                 </span>
-                                {e.ai_source && (
-                                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium flex items-center gap-1 ${getAIColor(e.ai_source)}`}>
-                                    <Bot className="w-2.5 h-2.5" /> {e.ai_source}
-                                  </span>
-                                )}
-                                {e.conversion_value > 0 && (
-                                  <span className="text-xs font-semibold text-st-black">
-                                    ${safeNumber(e.conversion_value, 0).toFixed(0)}
-                                  </span>
-                                )}
-                                {e.conversion_type && (
-                                  <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-green-50 text-green-700">
-                                    {e.conversion_type}
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-[#252929] text-gray-500 font-medium truncate max-w-[120px]">
+                                  {session.source_label || 'Direct'}
+                                </span>
+                                {session.contains_conversion && (
+                                  <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-lime-100 text-lime-800 font-medium">
+                                    <Zap className="w-2.5 h-2.5" /> Converted
                                   </span>
                                 )}
                               </div>
-                              {e.page_url && (
-                                <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5 truncate">
-                                  {(() => { try { return new URL(e.page_url).pathname } catch { return e.page_url } })()}
-                                </p>
-                              )}
-                              <p className="text-[10px] text-gray-400 mt-0.5">
-                                {e.timestamp ? new Date(e.timestamp).toLocaleString() : '—'}
-                              </p>
+                              <div className="flex flex-wrap items-center gap-2 mt-0.5 text-[10px] text-gray-400">
+                                <span>{formatDateTime(session.started_at)}</span>
+                                <span>·</span>
+                                <span className="flex items-center gap-0.5">
+                                  <Timer className="w-2.5 h-2.5" />
+                                  {formatDuration(session.duration_seconds)}
+                                </span>
+                                <span>·</span>
+                                <span>{session.pageview_count} pg · {session.event_count} ev</span>
+                              </div>
+                              {/* Entry / exit */}
+                              <div className="flex items-center gap-1 mt-0.5 text-[10px] text-gray-400 overflow-hidden">
+                                {session.entry_page && (
+                                  <span className="flex items-center gap-0.5 truncate max-w-[120px]" title={session.entry_page}>
+                                    <LogIn className="w-2.5 h-2.5 flex-shrink-0" />
+                                    {truncateUrl(session.entry_page, 30)}
+                                  </span>
+                                )}
+                                {session.exit_page && session.exit_page !== session.entry_page && (
+                                  <>
+                                    <ArrowRight className="w-2.5 h-2.5 text-gray-300 flex-shrink-0" />
+                                    <span className="flex items-center gap-0.5 truncate max-w-[120px]" title={session.exit_page}>
+                                      <LogOut className="w-2.5 h-2.5 flex-shrink-0" />
+                                      {truncateUrl(session.exit_page, 30)}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
                             </div>
 
                             <button className="flex-shrink-0 text-st-gray dark:text-gray-400 mt-1">
-                              {isExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+                              {isOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                             </button>
                           </div>
 
-                          {/* Expanded detail */}
-                          {isExpanded && (
-                            <div className="px-3 pb-3 pt-0 ml-10 text-xs text-st-gray dark:text-gray-400 space-y-1 border-t border-gray-100">
-                              {e.utm_source && (
-                                <p>UTM: {[e.utm_source, e.utm_medium, e.utm_campaign].filter(Boolean).join(' / ')}</p>
+                          {/* Expanded events */}
+                          {isOpen && (
+                            <div className="px-3 pb-3 ml-10 border-t border-gray-100 dark:border-[#2A2E2E]">
+                              {filtered.length === 0 ? (
+                                <p className="text-xs text-gray-400 py-3 text-center">No matching events.</p>
+                              ) : (
+                                <div className="space-y-1.5 mt-2">
+                                  {filtered.map((e, eIdx) => {
+                                    const Icon = EVENT_ICONS[e.event] || Clock
+                                    const isConversion = e.event === '$conversion'
+                                    const isEventOpen = expandedEvents[`${sIdx}-${eIdx}`]
+                                    const label = isConversion ? 'Conversion'
+                                      : e.event === '$pageview' ? 'Pageview'
+                                      : e.event === '$identify' ? 'Identify'
+                                      : e.event === 'outbound_click' ? 'Outbound Click'
+                                      : e.event
+
+                                    return (
+                                      <div
+                                        key={eIdx}
+                                        className={`rounded-lg border transition-all ${
+                                          isConversion
+                                            ? 'bg-st-lime/10 dark:bg-st-lime/5 border-st-lime/40'
+                                            : 'bg-white dark:bg-[#1A1D1D] border-gray-100 dark:border-[#2A2E2E]'
+                                        }`}
+                                      >
+                                        <div
+                                          className="flex items-start gap-2 p-2 cursor-pointer"
+                                          onClick={() => toggleEvent(sIdx, eIdx)}
+                                        >
+                                          <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                                            isConversion ? 'bg-st-lime' : 'bg-gray-100'
+                                          }`}>
+                                            {isConversion
+                                              ? <Zap className="w-2.5 h-2.5 text-st-black" />
+                                              : <Icon className="w-2.5 h-2.5 text-gray-500" />
+                                            }
+                                          </div>
+                                          <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                              <span className={`text-[10px] font-semibold px-1 py-0.5 rounded ${
+                                                isConversion ? 'bg-st-lime text-st-black' : 'bg-gray-100 dark:bg-[#252929] text-gray-600'
+                                              }`}>
+                                                {label}
+                                              </span>
+                                              {e.ai_source && (
+                                                <span className={`text-[10px] px-1 py-0.5 rounded-full font-medium flex items-center gap-0.5 ${getAIColor(e.ai_source)}`}>
+                                                  <Bot className="w-2 h-2" /> {e.ai_source}
+                                                </span>
+                                              )}
+                                              {e.conversion_value > 0 && (
+                                                <span className="text-[10px] font-semibold text-st-black">
+                                                  ${safeNumber(e.conversion_value, 0).toFixed(0)}
+                                                </span>
+                                              )}
+                                            </div>
+                                            {e.page_url && (
+                                              <p className="text-[10px] text-st-gray dark:text-gray-400 mt-0.5 truncate break-all" title={e.page_url}>
+                                                {(() => { try { return new URL(e.page_url).pathname } catch { return e.page_url } })()}
+                                              </p>
+                                            )}
+                                            <p className="text-[9px] text-gray-400 mt-0.5">
+                                              {e.timestamp ? new Date(e.timestamp).toLocaleString() : '—'}
+                                            </p>
+                                          </div>
+                                          <button className="flex-shrink-0 text-st-gray dark:text-gray-400 mt-1">
+                                            {isEventOpen ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                                          </button>
+                                        </div>
+
+                                        {/* Expanded event detail */}
+                                        {isEventOpen && (
+                                          <div className="px-2 pb-2 pt-0 ml-7 text-[10px] text-st-gray dark:text-gray-400 space-y-0.5 border-t border-gray-100">
+                                            {e.utm_source && (
+                                              <p>UTM: {[e.utm_source, e.utm_medium, e.utm_campaign].filter(Boolean).join(' / ')}</p>
+                                            )}
+                                            {e.referrer && <p>Ref: {e.referrer}</p>}
+                                            {e.country && (
+                                              <p className="flex items-center gap-1">
+                                                <MapPin className="w-3 h-3" /> {e.country}
+                                              </p>
+                                            )}
+                                            {e.user_id && <p>User ID: {shortIdentifier(e.user_id)}</p>}
+                                            {e.device_type && <p>Device: {e.device_type}</p>}
+                                            {e.browser_name && <p>Browser: {nameVersion(e.browser_name, e.browser_version)}</p>}
+                                            {e.os_name && <p>OS: {nameVersion(e.os_name, e.os_version)}</p>}
+                                            {e.conversion_type && <p>Conversion Type: {e.conversion_type}</p>}
+                                            {e.order_id && <p>Order ID: {e.order_id}</p>}
+                                            {e.destination_domain && <p>Destination Domain: {e.destination_domain}</p>}
+                                            {e.destination_url && <p className="break-all">Destination URL: {normalizeUrl(e.destination_url)}</p>}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )
+                                  })}
+                                </div>
                               )}
-                              {e.referrer && <p>Ref: {e.referrer}</p>}
-                              {e.country && (
-                                <p className="flex items-center gap-1">
-                                  <MapPin className="w-3 h-3" /> {e.country}
-                                </p>
-                              )}
-                              {e.user_id && <p>User ID: {shortIdentifier(e.user_id)}</p>}
-                              {e.device_type && <p>Device: {e.device_type}</p>}
-                              {e.browser_name && <p>Browser: {nameVersion(e.browser_name, e.browser_version)}</p>}
-                              {e.os_name && <p>OS: {nameVersion(e.os_name, e.os_version)}</p>}
-                              {e.conversion_type && <p>Conversion Type: {e.conversion_type}</p>}
-                              {e.order_id && <p>Order ID: {e.order_id}</p>}
-                              {e.destination_domain && <p>Destination Domain: {e.destination_domain}</p>}
-                              {e.destination_url && <p className="break-all">Destination URL: {normalizeUrl(e.destination_url)}</p>}
                             </div>
                           )}
                         </div>
