@@ -145,7 +145,6 @@ export async function conversionOffline(req, res) {
       ...getFirstTouchFields(req.body),
       ingestion_method: 'offline',
       server_timestamp: occurredAt,
-      ip_address: req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || null,
       user_agent: req.headers['user-agent'] || null,
       provider,
       provider_event_id: providerEventId,

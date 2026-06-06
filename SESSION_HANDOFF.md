@@ -1,9 +1,18 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 118E — Shopify Order Webhook Sync. Built backend Shopify order webhook receiver `/api/webhooks/shopify/:site_key` with HMAC-SHA256 signature verification, resolved sites by site key, decrypted webhook secret, supported paid order topics, claimed idempotency keys, and ingested conversions to PostHog without storing PII. Added Shopify configuration and instructions card to Integrations UI, added section to Docs, and verified using E2E test scripts.
+> **Handoff:** Session 119B — Launch Audit Fixes. Resolved high-priority launch audit findings: added `ENCRYPTION_KEY` to `.env.example` along with comments/generation command; stripped `ip_address` properties from PostHog payloads in Payments API (`conversion-offline.js`) for privacy compliance; softened conversion forwarding claims in `README.md`. Successfully executed and passed the full E2E revenue load and webhook/API test suite.
 >
-> **Next Task:** Clean up and pending directives from user.
+> **Next Task:** Awaiting user instructions.
 >
+
+## Session 119B — Launch Audit Fixes
+**Date:** 2026-06-06 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+1. **Encryption Key Documentation**: Added `ENCRYPTION_KEY=` to `.env.example` with clear instructions on generating it with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` and a warning to keep it stable per environment.
+2. **Payments API IP Leak Fix**: Removed `ip_address` from the PostHog event properties dispatch in `api/routes/conversion-offline.js` to ensure alignment with the privacy policy stating IP addresses are not stored or forwarded.
+3. **Honest CAPI Claims**: Softened the CAPI claim in the `README.md` to truthfully reflect the product as outbound conversion forwarding infrastructure rather than verified one-click sync for all listed platforms.
+4. **E2E verification tests**: Successfully executed the entire E2E verification suite (`qa-revenue-load`, `qa-shopify-webhook`, `qa-payments-api`, `qa-stripe-webhook`, and `qa-revenue-foundation`), passing 100% of all checks.
 
 ## Session 118E — Shopify Order Webhook Sync
 **Date:** 2026-06-06 | **Branch:** `main` | **Build:** ✅ passing

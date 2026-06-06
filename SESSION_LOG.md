@@ -5,6 +5,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 119B | 2026-06-06 | `main` | Launch Audit Fixes — Added ENCRYPTION_KEY to .env.example with generation instructions, removed ip_address forwarding to PostHog from conversion-offline.js, and softened README CAPI claims. Verified all checks pass. | ✅ | No |
 | 118E | 2026-06-06 | `main` | Shopify Order Webhook Sync — Created backend Shopify order webhook receiver with HMAC-SHA256 verification and paid-only filtering, verified idempotency, stitched storefront attributes, and built Integrations UI config card and Help Docs. | ✅ | No |
 | 118D | 2026-06-06 | `main` | Payments API Hardening + Docs — Hardened generic offline conversion endpoint, added input validations (numerical amount, valid 3-letter currency), allowed unattributed backend revenue, integrated Payments API in Integrations UI and Developer Docs, added E2E payments API test script. | ✅ | No |
 | 118C | 2026-06-06 | `main` | Stripe Webhook Ingestion Sync — Stripe raw-body webhook signature verification, decrypted Stripe secrets, claimed idempotency keys, captured conversions in PostHog, logged events to DB, built Stripe integrations UI & docs. | ✅ | No |
@@ -652,3 +653,39 @@ curl -i https://api.srctk.com/tracker/tracker.min.js
 ### 2. UI & Docs Additions
 - Added Payments API card to Integrations dashboard page with copyable endpoint and cURL examples.
 - Added a dedicated Payments API section to developer Docs.
+
+---
+
+## Session 118E — Shopify Order Webhook Sync
+
+**Date:** 2026-06-06
+**Branch:** `main`
+**Build:** ✅ passing
+
+### 1. Shopify Webhook Receiver Endpoint
+- Implemented `POST /api/webhooks/shopify/:site_key` mounted before Express JSON parser, verifying HMAC signatures timing-safely and parsing JSON payloads only after verification.
+- Supported `orders/paid` event topic immediately, and `orders/create` topic only when `financial_status === 'paid'`. Ignored other topics with a safe 200 ignored response.
+
+### 2. Idempotency Claims & DB Logging
+- Enforced database-backed revenue idempotency using `claimIdempotencyKeys(siteKey, 'shopify', keys)` with the order ID and webhook ID. Logged all event metrics directly to `revenue_ingestion_events`.
+- Normalised amounts, currency, order numbers, and event types without storing raw payload bytes or customer PII details (customer object, email, phone, names, billing, or shipping address).
+
+### 3. Visitor Journey Stitching & UI
+- Scanned cart note/attributes for storefront identifiers (`_st_aid`, `st_aid`, `anonymous_id`, `visitor_id`, `sourcetrack_user_id`, `site_user_id`), falling back to unattributed Shopify revenue if none are found.
+- Added the copyable listener URL, signing secret inputs, disconnect form, and setup guide instructions card to the Integrations dashboard. Documented setup, stitching scripts, and constraints in Help Docs.
+
+---
+
+## Session 119B — Launch Audit Fixes
+
+**Date:** 2026-06-06
+**Branch:** `main`
+**Build:** ✅ passing
+
+### 1. Launch Audit Issues Resolved
+- Added `ENCRYPTION_KEY` to `.env.example` along with instructions to generate it via crypto randomBytes and a note to keep it stable per environment.
+- Removed `ip_address` forwarding to PostHog from the Payments API (`conversion-offline.js`) to adhere strictly to the product's privacy-first posture.
+- Softened the server-side CAPI claim in `README.md` to truthfully state the platform supports outbound conversion forwarding.
+
+### 2. Validation and E2E QA Verification
+- Executed the full E2E validation suite (`qa-revenue-load`, `qa-shopify-webhook`, `qa-payments-api`, `qa-stripe-webhook`, and `qa-revenue-foundation`) passing all checks successfully.

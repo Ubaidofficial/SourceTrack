@@ -7,7 +7,7 @@ Privacy-first marketing attribution + cookieless web analytics for SaaS, ecommer
 - **Multi-touch attribution** — first-touch, last-touch, linear, U-shaped, time-decay, W-shaped models
 - **Click-ID detection** — `gclid`, `gbraid`, `wbraid`, `fbclid`, `msclkid`, `ttclid`, `li_fat_id`, `twclid`
 - **AI traffic attribution** — ChatGPT, Claude, Perplexity, Gemini, Grok, Copilot, DeepSeek + ~10 more
-- **Server-side CAPI** — Meta, Google Ads, Microsoft, LinkedIn, TikTok with hashed email and event-id deduplication
+- **Conversion forwarding** — outbound conversion events to configured ad platforms (Meta, Google Ads, Microsoft, LinkedIn, TikTok) where customer credentials are provided; hashed PII and event-id deduplication
 - **Cookieless web analytics** — Plausible-style page-view dashboard (separate tracker)
 
 ---

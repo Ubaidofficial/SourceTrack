@@ -119,6 +119,10 @@ The session order was re-prioritized to address the **Attribution and Tracking T
 
 ## 4. Current Progress & Status
 
+* **Session 119B — Launch Audit Fixes:** ✅ Complete. Added encryption key in example env, removed IP address logging from payments API PostHog properties, and softened CAPI marketing claims in README. Verified all checks pass.
+* **Session 118E — Shopify Order Webhook Sync:** ✅ Complete. Built secure Shopify order webhook receiver with signature validation, database idempotency, normalization without PII, and storefront stitching. Added Integrations UI configurations and Help Docs.
+* **Session 118D — Payments API Hardening + Docs:** ✅ Complete. Hardened offline conversion API routes, validated values and currency, supported unattributed conversions, sanitised PII, added UI settings card and developer docs, and built verification script.
+* **Session 118C — Stripe Webhook Ingestion Sync:** ✅ Complete. Stripe raw-body webhook signature verification, decrypted secrets, claimed database idempotency keys, captured PostHog conversions, logged events, built Stripe integrations UI & docs.
 * **Session 118B — Revenue Ingestion Foundation / Durable Idempotency + Secret Handling:** ✅ Complete. SQL migration for idempotency, ingestion events, and credential tables. Symmetric GCM encryption helpers. SHA-256 API key hashing. Fail-fast startup checks. Verification script.
 * **Session 118A — Audit + Plan for Revenue Ingestion:** ✅ Complete. Audited conversion, webhook, and pixel endpoints. Created comprehensive roadmap and security analysis in revenue_ingestion_audit.md. Checked codebase with static launch check.
 * **Session 116B — Path Exclusions:** ✅ Complete. Added database schema migration, server-side path matching logic, cached site context updates, settings patch route, standard and cookieless tracker dynamic exclusions, minification, and dashboard configurations. All static and runtime checks pass.
