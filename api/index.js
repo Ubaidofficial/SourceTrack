@@ -66,6 +66,7 @@ if (process.env.NODE_ENV === 'production') {
   const rawKey = process.env.ENCRYPTION_KEY
   if (!rawKey) {
     console.error('[startup] FATAL: ENCRYPTION_KEY environment variable is missing in production!')
+    console.error('To generate a secure key, run: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"')
     process.exit(1)
   }
   let isValid = false
@@ -81,6 +82,7 @@ if (process.env.NODE_ENV === 'production') {
   }
   if (!isValid) {
     console.error('[startup] FATAL: ENCRYPTION_KEY must be a 64-character hex string or a 32-byte base64-encoded string in production!')
+    console.error('To generate a secure key, run: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"')
     process.exit(1)
   }
 }

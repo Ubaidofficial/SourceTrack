@@ -106,12 +106,13 @@ All required at startup (`api/index.js` fails fast on missing vars):
 | Variable | Required | Description |
 |---|---|---|
 | `SUPABASE_URL` | yes | Your Supabase project URL |
-| `SUPABASE_SERVICE_KEY` | yes | Service-role key (backend only — never bundle this) |
+| `SUPABASE_SERVICE_KEY` | yes | Service-role key (backend only — never bundle this). Also known as `SUPABASE_SERVICE_ROLE_KEY` in Supabase UI. |
 | `SUPABASE_ANON_KEY` | yes | Anon key for the dashboard |
 | `POSTHOG_HOST` | yes | `https://app.posthog.com` or `https://eu.posthog.com` |
 | `POSTHOG_API_KEY` | yes | Project API key (write) |
 | `POSTHOG_PERSONAL_API_KEY` | yes | Personal API key (HogQL queries from nightly job) |
 | `POSTHOG_PROJECT_ID` | yes | PostHog numeric project ID |
+| `ENCRYPTION_KEY` | yes (prod) | Symmetric key used to encrypt customer Stripe/Shopify secrets. Use a 64-character hex string generated with the command below. Must be kept stable per environment. |
 | `STRIPE_SECRET_KEY` | yes (billing) | Stripe live or test secret |
 | `STRIPE_WEBHOOK_SECRET` | yes (billing) | Stripe webhook signing secret |
 | `STRIPE_PRICE_ID_STARTER`, `_GROWTH`, `_BUSINESS` | yes (billing) | Per-plan recurring price IDs. Legacy `_PRO` / `_AGENCY` are still read as fallbacks. Each Stripe price may carry a `pv_limit` metadata key to override the plan's default monthly pageview cap. |
@@ -123,7 +124,52 @@ All required at startup (`api/index.js` fails fast on missing vars):
 | `META_TEST_EVENT_CODE` | dev only | Meta CAPI test events — omit in production |
 | `GOOGLE_ADS_ACCESS_TOKEN` | optional | OAuth2 token for Google Ads CAPI |
 
-See `.env.example` for the canonical list.
+> [!NOTE]
+> - `SUPABASE_SERVICE_ROLE_KEY` in Supabase corresponds to `SUPABASE_SERVICE_KEY` in the Node.js API codebase.
+> - `JWT_SECRET` is not used in the Node.js API backend (Supabase token validation is handled directly by the API calling `supabase.auth.getUser()`).
+
+### Generating ENCRYPTION_KEY
+To generate a secure 64-character hex key, run:
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+Do not commit this key. Set it in the production environment variables (e.g. Railway API service variables). Keep it stable per environment; if changed, existing encrypted webhook secrets will no longer decrypt and customers must re-enter them in the Integrations UI.
+
+---
+
+## Production Deployment Checklist
+
+Before launching to production, complete the following steps:
+
+### 1. Database Migrations (Supabase)
+- Ensure all migrations in `supabase/migrations/` have been run against the production database, specifically:
+  - `20260606180000_revenue_foundation.sql` (implements the idempotency keys table, ingestion audit logs, and `claim_revenue_idempotency_keys` RPC).
+  - Performance indexes migration (`20260520000001_attribution_performance_indexes.sql`).
+- Run `ANALYZE attributed_conversions; ANALYZE pageviews;` in the Supabase SQL editor to update query planner stats.
+
+### 2. Environment Variables (Railway)
+Ensure the following variables are set in the Railway API service settings:
+- **Required Core**:
+  - `SUPABASE_URL`: Production Supabase URL.
+  - `SUPABASE_SERVICE_KEY`: Production Supabase `service_role` secret key. (Note: Do NOT use the `anon` key here).
+  - `POSTHOG_HOST`: Usually `https://app.posthog.com` or `https://eu.posthog.com`.
+  - `POSTHOG_API_KEY`: PostHog project write key.
+  - `ENCRYPTION_KEY`: A cryptographically secure 64-character hex string generated using the command above. Keep this key stable!
+- **Dashboard / Analytics Querying**:
+  - `POSTHOG_PROJECT_ID`: Required for dashboards/attribution querying.
+  - `POSTHOG_PERSONAL_API_KEY`: Required for querying PostHog events via HogQL.
+  - `STRIPE_SECRET_KEY` & `STRIPE_WEBHOOK_SECRET`: Required for user subscription handling.
+  - `STRIPE_PRICE_ID_STARTER`, `_GROWTH`, `_BUSINESS`: Stripe recurring price IDs.
+  - `RESEND_API_KEY`: Required for daily/weekly recaptured email reports.
+  - `ALLOWED_ORIGINS`: Comma-separated list of allowed frontend dashboard URLs (e.g. `https://app.sourcetrack.ai`).
+
+### 3. Background Cron Jobs (Railway)
+Verify the background jobs are set up as cron services in the Railway dashboard:
+- `node api/jobs/nightly-attribution.js` runs daily at `0 2 * * *`.
+- `node api/jobs/data-quality-check.js` runs daily at `0 3 * * *`.
+- `node api/jobs/health-agent.js` runs every 30 minutes (`*/30 * * * *`).
+- `node api/jobs/email-reports.js` runs every Monday at `0 8 * * 1`.
+- `node api/jobs/usage-threshold-emails.js` runs daily at `0 14 * * *`.
 
 ---
 
