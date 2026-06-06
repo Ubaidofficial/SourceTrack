@@ -483,3 +483,42 @@ curl -i https://api.srctk.com/health
 # Tracker asset
 curl -i https://api.srctk.com/tracker/tracker.min.js
 ```
+
+---
+
+## Session 116D — Campaign Drilldown Polish
+
+**Date:** 2026-06-06
+**Branch:** `main`
+**Build:** ✅ both `node --check` and `npm run build` pass
+
+### 1. Unified Campaigns Backend API
+- **Problem:** Campaigns overview page lacked standard visits/leads metrics and export option.
+- **Fix:**
+  - Updated `/api/campaigns/overview` to query `sessions` and `leads` in parallel using `getFlexibleReport`.
+  - Merged and sorted rows case-insensitively, preventing campaigns with zero conversions from being hidden.
+  - Implemented `/api/campaigns/export` which returns a clean, sanitised CSV containing all Campaign drilldown headers.
+- **Files:** `api/routes/campaigns.js`
+
+### 2. Campaigns Dashboard Grid & Alignment
+- **Problem:** UI table headers were misaligned with table cells, causing offset columns. KPI tiles only had 4 cards.
+- **Fix:**
+  - Expanded Campaign view KPI cards to 6 grid items: Visits, Leads, Conversions, Total Revenue, Total Spend, and Manual ROAS.
+  - Aligned all `thead` and `tbody` columns, placing Visits, Leads, Spend, CPL, Manual ROAS, and Trend headers exactly above their respective cells.
+  - Added save status indicators (spinners, success checks) for inline manual spend updates.
+- **Files:** `dashboard/src/pages/Campaigns.jsx`
+
+### 3. Help Center Documentation
+- **Problem:** Documentation lacked UTM parameters best practices, cost tracking details, and ad platform capability limitations.
+- **Fix:**
+  - Added **UTM & Cost Tracking** section to `Docs.jsx`.
+  - Detailed all supported parameters, query structuring, and troubleshooting recommendations.
+  - Explicitly clarified that ROAS is a manual metric dependent on user-entered cost, with no automatic platform sync.
+- **Files:** `dashboard/src/pages/Docs.jsx`
+
+### 4. Integration Test Verification
+- **Problem:** `qa-campaigns-drilldown.mjs` header assertions and authorization logic needed refinement.
+- **Fix:**
+  - Safe header reading, explicit error payload printing, and token usage matching for export.
+  - Verified all tests pass successfully.
+- **Files:** `scripts/qa-campaigns-drilldown.mjs`

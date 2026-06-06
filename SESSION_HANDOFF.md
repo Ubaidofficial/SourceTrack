@@ -1,10 +1,19 @@
 > [!NOTE]
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 116C — Per-Site Timezone Reporting. Implemented timezone-aware date grouping behavior for dashboard overview daily trends using a padded UTC query window (expanded by ±24h) and local timezone string bucket helpers, while keeping other reports/feeds in raw UTC. Displays timezone labels next to chart subtitles in the dashboard. Updated settings copy and documentation page.
+> **Handoff:** Session 116D — Campaign Drilldown Polish. Refactored campaigns overview and export endpoints to fetch and merge sessions (visits) and leads in parallel. Restructured Campaigns dashboard grid to display 6 KPI cards (including Visits, Leads, and Manual ROAS) and realigned the table column headers to prevent cell offsets. Added UTM & Cost Tracking guide to Docs.jsx. Fixed and verified integration tests.
 >
 > **Next Task:** Session 117 client/saved reports timezone grouping audit or paid beta launch preparation.
 >
+
+## Session 116D — Campaign Drilldown Polish
+**Date:** 2026-06-06 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+1. **Unified Campaigns Backend API:** Refactored campaigns overview in `api/routes/campaigns.js` to query sessions (visits) and leads in parallel via `getFlexibleReport`. Case-insensitively merged and sorted rows, exposing traffic-only campaigns with zero conversions. Implemented `/api/campaigns/export` serving sanitised CSV data.
+2. **Realigned Campaigns UI:** Expanded Campaign KPI cards in `Campaigns.jsx` to 6 items: Visits, Leads, Conversions, Revenue, Spend, and Manual ROAS. Aligned all `thead` and `tbody` columns, placing Visits, Leads, Spend, CPL, Manual ROAS, and Trend headers exactly above their cells. Added inline spend saving indicators.
+3. **UTM & Cost Tracking Docs:** Added UTM & Cost Tracking section to `Docs.jsx` containing supported parameters, tagging guidelines, troubleshooting, and clarifying the manual nature of ROAS calculations.
+4. **Integration Test Verification:** Polished authorization, header parsing safety, and output CSV header validation in `scripts/qa-campaigns-drilldown.mjs`. Verified all tests pass.
 
 ## Session 116C — Per-Site Timezone Reporting
 **Date:** 2026-06-06 | **Branch:** `main` | **Build:** ✅ passing

@@ -53,6 +53,7 @@ export default function Campaigns() {
   const [spendMap, setSpendMap] = useState({}) // { campaignName: spend }
   const [editingSpend, setEditingSpend] = useState(null)
   const [spendInput, setSpendInput] = useState('')
+  const [savingState, setSavingState] = useState({ campaign: null, status: 'idle' }) // 'idle' | 'saving' | 'success' | 'error'
   const [site, setSite] = useState(null)
   const [activeDim, setActiveDim] = useState('source')
   const [dateRange, setDateRange] = useState(30)
@@ -84,7 +85,7 @@ export default function Campaigns() {
     load()
   }, [user])
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ['campaigns-overview', site?.site_key, activeDim, dateRange, search, statusFilter],
     queryFn: () => fetchApi(`/campaigns/overview?site_key=${site.site_key}&dimension=${activeDim}&days=${dateRange}&search=${encodeURIComponent(search)}&status=${statusFilter}`),
     enabled: !!site
@@ -136,13 +137,26 @@ export default function Campaigns() {
 
   async function saveSpend(campaignName) {
     const spend = parseFloat(spendInput) || 0
-    await fetchApi('/campaign-costs', {
-      method: 'POST',
-      body: JSON.stringify({ site_key: site.site_key, campaign_name: campaignName, spend, period_start: dateFrom, period_end: dateTo })
-    })
-    setSpendMap(prev => ({ ...prev, [campaignName]: spend }))
-    setEditingSpend(null)
-    refetchCosts()
+    setSavingState({ campaign: campaignName, status: 'saving' })
+    try {
+      await fetchApi('/campaign-costs', {
+        method: 'POST',
+        body: JSON.stringify({ site_key: site.site_key, campaign_name: campaignName, spend, period_start: dateFrom, period_end: dateTo })
+      })
+      setSpendMap(prev => ({ ...prev, [campaignName]: spend }))
+      setSavingState({ campaign: campaignName, status: 'success' })
+      setTimeout(() => {
+        setSavingState({ campaign: null, status: 'idle' })
+        setEditingSpend(null)
+      }, 1000)
+      refetchCosts()
+    } catch (err) {
+      console.error(err)
+      setSavingState({ campaign: campaignName, status: 'error' })
+      setTimeout(() => {
+        setSavingState({ campaign: null, status: 'idle' })
+      }, 2000)
+    }
   }
 
   return (
@@ -161,8 +175,8 @@ export default function Campaigns() {
           {hasFeature(site?.plan, 'csv_export') ? (
             <button onClick={() => {
               if (!site) return
-              const params = new URLSearchParams({ site_key: site.site_key, model: 'last_touch', date_from: dateFrom, date_to: dateTo, group_by: activeDim, metric: 'revenue' })
-              window.open(`/api/export/report?${params}`, '_blank')
+              const params = new URLSearchParams({ site_key: site.site_key, model: 'last_touch', days: dateRange, dimension: activeDim, search, status: statusFilter })
+              window.open(`/api/campaigns/export?${params}`, '_blank')
             }} className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5">
               <Download className="w-4 h-4" /> Export
             </button>
@@ -226,16 +240,17 @@ export default function Campaigns() {
       </div>
 
       {/* KPI Tiles */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <MetricTile label="Total Revenue" value={formatCurrency(kpis?.total_revenue)} />
-        <MetricTile label="Conversions"   value={formatNumber(kpis?.total_conversions)} />
-        <MetricTile label="Avg Value"     value={formatCurrencyDecimal(kpis?.avg_value)} />
-        <MetricTile label="Active Channels" value={formatNumber(kpis?.active_channels)} />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <MetricTile label="Total Visits"    value={formatNumber(kpis?.total_visits)} />
+        <MetricTile label="Total Leads"     value={formatNumber(kpis?.total_leads)} />
+        <MetricTile label="Conversions"     value={formatNumber(kpis?.total_conversions)} />
+        <MetricTile label="Total Revenue"   value={formatCurrency(kpis?.total_revenue)} />
+        <MetricTile label="Total Spend"     value={formatCurrency(kpis?.total_spend)} />
         {(() => {
-          const totalSpend = Object.values(spendMap).reduce((s, v) => s + (Number(v) || 0), 0)
+          const totalSpend = safeNumber(kpis?.total_spend, 0)
           const totalRev   = safeNumber(kpis?.total_revenue, 0)
           const roas = totalSpend > 0 ? formatMultiplier(totalRev / totalSpend) : '—'
-          return <MetricTile label="Blended ROAS" value={roas} isEmpty={totalSpend === 0} />
+          return <MetricTile label="Manual ROAS" value={roas} isEmpty={totalSpend === 0} />
         })()}
       </div>
 
@@ -248,6 +263,10 @@ export default function Campaigns() {
           {isLoading ? (
             <div className="py-12 text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black mx-auto" />
+            </div>
+          ) : isError ? (
+            <div className="py-12 text-center text-sm text-red-500 bg-red-50 rounded-lg border border-red-200 m-4">
+              Error loading campaigns: {error?.message || 'Please check your connection.'}
             </div>
           ) : rows.length === 0 ? (
             <div className="py-12 text-center text-sm text-st-gray">
@@ -267,16 +286,19 @@ export default function Campaigns() {
                       Status
                     </th>
                     <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
-                      Revenue
+                      Visits
+                    </th>
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                      Leads
                     </th>
                     <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
                       Conversions
                     </th>
                     <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
-                      Avg Value
+                      Revenue
                     </th>
                     <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
-                      Trend
+                      Avg Value
                     </th>
                     <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
                       Spend ✏️
@@ -285,7 +307,10 @@ export default function Campaigns() {
                       CPL
                     </th>
                     <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
-                      ROAS
+                      Manual ROAS
+                    </th>
+                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                      Trend
                     </th>
                   </tr>
                 </thead>
@@ -299,11 +324,17 @@ export default function Campaigns() {
                         <td className="py-3 px-4 text-right">
                           <StatusBadge status={r.status} label={statusLabel(r.status)} />
                         </td>
-                        <td className="py-3 px-4 text-right font-semibold text-st-black">
-                          {formatCurrency(r.revenue)}
+                        <td className="py-3 px-4 text-right text-gray-600">
+                          {safeNumber(r.visits, 0)}
+                        </td>
+                        <td className="py-3 px-4 text-right text-gray-600">
+                          {safeNumber(r.leads, 0)}
                         </td>
                         <td className="py-3 px-4 text-right text-gray-600">
                           {safeNumber(r.conversions, 0)}
+                        </td>
+                        <td className="py-3 px-4 text-right font-semibold text-st-black">
+                          {formatCurrency(r.revenue)}
                         </td>
                         <td className="py-3 px-4 text-right text-st-gray">
                           {formatCurrencyDecimal(r.avg_value)}
@@ -311,17 +342,30 @@ export default function Campaigns() {
                         <td className="py-3 px-4 text-right">
                           {editingSpend === r.name ? (
                             <div className="flex items-center justify-end gap-1">
-                              <input
-                                type="number"
-                                className="w-20 text-right border border-gray-300 rounded px-1 py-0.5 text-xs"
-                                value={spendInput}
-                                onChange={e => setSpendInput(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && saveSpend(r.name)}
-                                autoFocus
-                              />
-                              <button onClick={() => saveSpend(r.name)} className="text-green-600 hover:text-green-700">
-                                <Check className="w-3.5 h-3.5" />
-                              </button>
+                              {savingState.campaign === r.name && savingState.status === 'saving' ? (
+                                <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-st-black" />
+                              ) : savingState.campaign === r.name && savingState.status === 'success' ? (
+                                <span className="text-green-600 text-xs font-medium">✓</span>
+                              ) : savingState.campaign === r.name && savingState.status === 'error' ? (
+                                <span className="text-red-500 text-[10px] font-medium">Error</span>
+                              ) : (
+                                <>
+                                  <input
+                                    type="number"
+                                    className="w-20 text-right border border-gray-300 rounded px-1 py-0.5 text-xs"
+                                    value={spendInput}
+                                    onChange={e => setSpendInput(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && saveSpend(r.name)}
+                                    autoFocus
+                                  />
+                                  <button onClick={() => saveSpend(r.name)} className="text-green-600 hover:text-green-700">
+                                    <Check className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button onClick={() => setEditingSpend(null)} className="text-st-gray hover:text-gray-600">
+                                    <span className="text-xs px-1">×</span>
+                                  </button>
+                                </>
+                              )}
                             </div>
                           ) : (
                             <div className="flex items-center justify-end gap-1 group">
@@ -370,6 +414,10 @@ export default function Campaigns() {
           {isLoading ? (
             <div className="h-64 flex items-center justify-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black" />
+            </div>
+          ) : isError ? (
+            <div className="h-64 flex items-center justify-center text-sm text-red-500">
+              Failed to load chart data
             </div>
           ) : rows.length === 0 ? (
             <div className="h-64 flex items-center justify-center text-sm text-st-gray">

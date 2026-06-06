@@ -104,6 +104,7 @@ const NAV = [
   { id: 'exclusions',       label: 'Path Exclusions',   indent: true },
   { id: 'cookieless',       label: 'Cookieless Mode',   indent: true },
   { id: 'timezone',         label: 'Timezone Behavior', indent: true },
+  { id: 'utm-best-practices', label: 'UTM & Cost Tracking', indent: true },
   { id: 'recipes',          label: 'Installation Guides' },
   { id: 'track',            label: 'POST /api/track' },
   { id: 'conversion',       label: 'POST /api/conversion' },
@@ -752,6 +753,99 @@ window.sourcetrack.identify('user_123', {
             <Note>
               Timezone-aware query execution utilizes index-friendly padded search windows (±24h UTC boundaries) to retrieve candidate rows, keeping queries index-friendly and performance-conscious.
             </Note>
+          </Section>
+
+          {/* ── UTM & Cost Tracking ──────────────────────────────────────── */}
+          <Section id="utm-best-practices" title="UTM & Cost Tracking">
+            <p>
+              SourceTrack uses URL query parameters and referrers to attribute conversions to marketing campaigns. Using structured tags and entering manual costs allows you to unlock full acquisition funnel insights.
+            </p>
+
+            <H3>Supported Tracking Parameters</H3>
+            <p>
+              The tracking pixel automatically captures the following campaign parameters from the page URL on every visit:
+            </p>
+            <div className="overflow-x-auto my-4">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left font-semibold py-2 pr-4 text-xs text-gray-500 uppercase">Parameter</th>
+                    <th className="text-left font-semibold py-2 text-xs text-gray-500 uppercase">Description & Behavior</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                  <tr className="border-b border-gray-100 dark:border-gray-800 last:border-0">
+                    <td className="py-2 pr-4 font-mono text-[13px] text-gray-800 dark:text-gray-200 align-top"><IC>utm_source</IC></td>
+                    <td className="py-2 text-[13px] text-gray-600 dark:text-gray-400">Marketing channel/platform (e.g. <IC>google</IC>, <IC>newsletter</IC>). Falls back to referrer domain or <IC>direct</IC>.</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 dark:border-gray-800 last:border-0">
+                    <td className="py-2 pr-4 font-mono text-[13px] text-gray-800 dark:text-gray-200 align-top"><IC>utm_medium</IC></td>
+                    <td className="py-2 text-[13px] text-gray-600 dark:text-gray-400">Campaign medium (e.g. <IC>cpc</IC>, <IC>email</IC>, <IC>social</IC>). Defaults to <IC>none</IC>.</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 dark:border-gray-800 last:border-0">
+                    <td className="py-2 pr-4 font-mono text-[13px] text-gray-800 dark:text-gray-200 align-top"><IC>utm_campaign</IC></td>
+                    <td className="py-2 text-[13px] text-gray-600 dark:text-gray-400">Unique marketing campaign name (e.g. <IC>summer_sale_2026</IC>).</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 dark:border-gray-800 last:border-0">
+                    <td className="py-2 pr-4 font-mono text-[13px] text-gray-800 dark:text-gray-200 align-top"><IC>utm_content</IC></td>
+                    <td className="py-2 text-[13px] text-gray-600 dark:text-gray-400">Ad creative or specific link identifier (optional).</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 dark:border-gray-800 last:border-0">
+                    <td className="py-2 pr-4 font-mono text-[13px] text-gray-800 dark:text-gray-200 align-top"><IC>utm_term</IC></td>
+                    <td className="py-2 text-[13px] text-gray-600 dark:text-gray-400">Paid search keywords (optional).</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 dark:border-gray-800 last:border-0">
+                    <td className="py-2 pr-4 font-mono text-[13px] text-gray-800 dark:text-gray-200 align-top"><IC>ref</IC>, <IC>source</IC>, <IC>via</IC></td>
+                    <td className="py-2 text-[13px] text-gray-600 dark:text-gray-400">Alternative query parameters mapped automatically to source if <IC>utm_source</IC> is missing.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <H3>UTM Best Practices</H3>
+            <ul className="list-disc list-inside space-y-2 pl-1 text-sm text-gray-600 dark:text-gray-400">
+              <li>
+                <strong>Always Use Lowercase:</strong> Parameter values are case-sensitive. Always write <IC>google</IC> and <IC>cpc</IC> in lowercase to prevent splitting metrics across different casing.
+              </li>
+              <li>
+                <strong>Avoid Spaces and Special Characters:</strong> Use underscores (<IC>_</IC>) or dashes (<IC>-</IC>) instead of spaces (e.g. use <IC>summer_sale</IC> instead of <IC>summer sale</IC>).
+              </li>
+              <li>
+                <strong>Protect User Privacy (No PII):</strong> Do not include personally identifiable information like email addresses or phone numbers in your UTM parameters. SourceTrack automatically redacts query parameter values containing PII pattern matches to maintain privacy compliance.
+              </li>
+            </ul>
+
+            <H3>Troubleshooting Campaign Tracking</H3>
+            <ul className="list-disc list-inside space-y-2 pl-1 text-sm text-gray-600 dark:text-gray-400">
+              <li>
+                <strong>Missing or Blank Campaigns:</strong> Make sure your links contain the correct parameters, and that no redirects on your website strip off the query parameters before the page loads.
+              </li>
+              <li>
+                <strong>Ad Blocker Suppression:</strong> Standard scripts can sometimes be blocked. You can toggle **Cookieless Mode** in settings or route events through a proxy to prevent tracker blocking.
+              </li>
+              <li>
+                <strong>Single Page App (SPA) Navigation:</strong> Ensure the tracker script is loaded early in the head so history changes can be intercepted immediately.
+              </li>
+            </ul>
+
+            <H3>Manual Spend &amp; Cost Efficiency</H3>
+            <p>
+              To calculate cost-efficiency metrics, you must manually enter your advertising spend for each campaign, source, or medium:
+            </p>
+            <ul className="list-disc list-inside space-y-2 pl-1 text-sm text-gray-600 dark:text-gray-400">
+              <li>
+                <strong>How to Enter Spend:</strong> Go to the **Campaigns** tab, hover over the Spend column, and click the pencil icon next to the target row.
+              </li>
+              <li>
+                <strong>Cost Efficiency Metrics:</strong> Once cost is entered, the dashboard computes **Cost Per Lead (CPL)** and **Manual ROAS** dynamically.
+              </li>
+              <li>
+                <strong>Note on Leads:</strong> The Leads count in the campaigns view is defined strictly as conversion events matching explicit lead-type labels (such as <IC>lead</IC>, <IC>signup</IC>, <IC>trial</IC>, <IC>meeting</IC>, etc. or untyped conversions for legacy compatibility).
+              </li>
+            </ul>
+            <Warn>
+              SourceTrack does not support automatic ad account integrations or API synchronization with Google Ads, Meta Ads, or other ad platforms at this time. All cost calculations depend strictly on the spend entered manually by you.
+            </Warn>
           </Section>
 
           {/* ── Installation Guides ─────────────────────────────────────── */}
