@@ -82,6 +82,8 @@ export default function Integrations() {
   const [stripeMessage, setStripeMessage] = useState('')
   const [stripeError, setStripeError] = useState('')
   const [copiedStripeUrl, setCopiedStripeUrl] = useState(false)
+  const [copiedPaymentsUrl, setCopiedPaymentsUrl] = useState(false)
+  const [copiedCurl, setCopiedCurl] = useState(false)
 
   const stripeWebhookUrl = site?.site_key ? `${window.location.origin.includes('localhost') ? 'http://localhost:3000' : 'https://api.srctk.com'}/api/webhooks/stripe/${site.site_key}` : ''
 
@@ -90,6 +92,37 @@ export default function Integrations() {
       navigator.clipboard.writeText(stripeWebhookUrl).catch(() => {})
       setCopiedStripeUrl(true)
       setTimeout(() => setCopiedStripeUrl(false), 2000)
+    }
+  }
+
+  const paymentsApiUrl = site?.site_key ? `${window.location.origin.includes('localhost') ? 'http://localhost:3000' : 'https://api.srctk.com'}/api/conversion/offline` : ''
+
+  const handleCopyPaymentsUrl = () => {
+    if (paymentsApiUrl) {
+      navigator.clipboard.writeText(paymentsApiUrl).catch(() => {})
+      setCopiedPaymentsUrl(true)
+      setTimeout(() => setCopiedPaymentsUrl(false), 2000)
+    }
+  }
+
+  const curlExample = site?.site_key
+    ? `curl -X POST ${paymentsApiUrl} \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "site_key": "${site.site_key}",
+    "user_id": "customer_123",
+    "conversion_value": 99.00,
+    "currency": "USD",
+    "order_id": "ORD_98765",
+    "conversion_type": "purchase"
+  }'`
+    : ''
+
+  const handleCopyCurl = () => {
+    if (curlExample) {
+      navigator.clipboard.writeText(curlExample).catch(() => {})
+      setCopiedCurl(true)
+      setTimeout(() => setCopiedCurl(false), 2000)
     }
   }
 
@@ -651,6 +684,80 @@ export default function Integrations() {
             </p>
             <p className="text-[11px] text-blue-700 dark:text-blue-400">
               <strong>Attribution Stitching:</strong> Ensure your checkout sessions include a stitching metadata key (e.g. <code className="font-mono">visitor_id</code>, <code className="font-mono">anonymous_id</code>, or <code className="font-mono">client_reference_id</code>). Sessions without metadata are logged as unattributed revenue.
+            </p>
+          </div>
+        </div>
+      </DashboardCard>
+
+      {/* Payments API */}
+      <DashboardCard
+        title="Payments API"
+        subtitle="Send backend revenue events from custom checkouts, Stripe backend, Paddle, or Lemon Squeezy"
+      >
+        <div className="space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
+            <div>
+              <p className="text-sm font-semibold text-st-black dark:text-white">Authentication Method</p>
+              <p className="text-xs text-st-gray mt-0.5">site_key parameter in JSON body or query string</p>
+            </div>
+            <StatusBadge status="verified" label="Active" />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Payments API Endpoint</label>
+              <button
+                type="button"
+                onClick={handleCopyPaymentsUrl}
+                className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black dark:hover:text-white transition-colors"
+              >
+                {copiedPaymentsUrl ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                {copiedPaymentsUrl ? 'Copied' : 'Copy URL'}
+              </button>
+            </div>
+            <div className="bg-st-black rounded-lg p-3">
+              <pre className="text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed select-all">
+                {paymentsApiUrl || 'Loading URL...'}
+              </pre>
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">cURL Example</label>
+              <button
+                type="button"
+                onClick={handleCopyCurl}
+                className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black dark:hover:text-white transition-colors"
+              >
+                {copiedCurl ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                {copiedCurl ? 'Copied' : 'Copy cURL'}
+              </button>
+            </div>
+            <div className="bg-st-black rounded-lg p-3">
+              <pre className="text-xs text-green-400 overflow-x-auto whitespace-pre-wrap leading-relaxed select-all font-mono">
+                {curlExample}
+              </pre>
+            </div>
+          </div>
+
+          <div className="bg-amber-50 dark:bg-amber-950/10 border border-amber-200 dark:border-amber-900/30 rounded-lg p-3.5 space-y-2">
+            <h4 className="text-xs font-bold text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" /> Deduplication & Ingestion Warning
+            </h4>
+            <p className="text-xs text-amber-800 dark:text-amber-400 font-light leading-relaxed">
+              Always provide a stable <strong>stable order ID, payment ID, or idempotency key</strong> for every event.
+              For revenue events (where conversion value is greater than 0), the API will reject requests missing all of these keys to prevent duplicate transactions from inflating your metrics.
+            </p>
+          </div>
+
+          <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-lg p-3.5 space-y-2">
+            <h4 className="text-xs font-bold text-blue-900 dark:text-blue-300">Integration Guidelines</h4>
+            <p className="text-xs text-blue-800 dark:text-blue-400 font-light leading-relaxed">
+              This manual/API-based provider integration is designed for custom checkout systems, backend order management tools, or billing webhook triggers (Stripe, Paddle, Lemon Squeezy, custom invoices).
+            </p>
+            <p className="text-xs text-blue-800 dark:text-blue-400 font-light leading-relaxed">
+              To link a payment back to a visitor's traffic journey, send the visitor's anonymous ID (e.g. read from the browser storage <code>st_aid</code>) in the <code>anonymous_id</code> field. If no identity is provided, the transaction is safely recorded as unattributed revenue.
             </p>
           </div>
         </div>

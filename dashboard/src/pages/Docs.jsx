@@ -115,6 +115,7 @@ const NAV = [
   { id: 'gdpr',             label: 'GDPR Endpoints' },
   { id: 'webhooks',         label: 'Outbound Webhooks' },
   { id: 'stripe-webhook',   label: 'Stripe Webhook Sync' },
+  { id: 'payments-api',     label: 'Payments API' },
   { id: 'auth',             label: 'Authentication' },
   { id: 'errors',           label: 'Error Handling' },
   { id: 'visitor-sessions', label: 'Visitor Sessions' },
@@ -276,7 +277,7 @@ export default function RootLayout({ children }) {
 
     if (window.sourcetrack) {
       // Mark checkout completion on the frontend (value 0).
-      // Send actual verified revenue via webhook / offline conversion API.
+      // Send backend revenue events via webhook / offline conversion API.
       window.sourcetrack.conversion({
         value: 0,
         type: 'purchase_success',
@@ -285,7 +286,7 @@ export default function RootLayout({ children }) {
     }
   });
 </script>`,
-    instructions: 'Use the success page to mark checkout completion. Send verified revenue from your backend using the offline conversion endpoint.'
+    instructions: 'Use the success page to mark checkout completion. Send backend revenue events from your backend using the offline conversion endpoint.'
   },
   supabase: {
     name: 'Supabase Auth',
@@ -1408,6 +1409,112 @@ const session = await stripe.checkout.sessions.create({
               <li>No raw Stripe payload is stored in the database.</li>
               <li>No customer names, email addresses, phone numbers, or shipping addresses are parsed, stored, or processed.</li>
               <li>Stitching is restricted strictly to the explicit metadata keys listed above.</li>
+            </ul>
+          </Section>
+
+          {/* ── Payments API ────────────────────────────────────────────────── */}
+          <Section id="payments-api" title="Payments API">
+            <p>
+              The Payments API provides a secure endpoint to send backend revenue events from custom checkout forms, payment processors, or billing systems. It supports deduplication to protect your analytics from duplicate counts.
+            </p>
+            <p>
+              This manual/API-based provider integration expects requests with a plaintext site key and stable order, payment, or event identifiers.
+            </p>
+
+            <Endpoint method="POST" path="/api/conversion/offline" description="Ingest offline/backend conversion" />
+
+            <H3>Request Parameters</H3>
+            <ParamTable params={[
+              { name: 'site_key', type: 'string', required: true, desc: 'Your unique tracking site key, from Settings.' },
+              { name: 'conversion_value', type: 'number', required: true, desc: 'The transaction value (e.g. 99.50) or 0 for lead events. Also accepts amount.' },
+              { name: 'currency', type: 'string', required: false, desc: '3-letter uppercase currency code (e.g. USD). Required only if conversion_value > 0.' },
+              { name: 'order_id', type: 'string', required: false, desc: 'Stable order or checkout session identifier. Required if value > 0 unless payment_id, idempotency_key, or provider_event_id is provided.' },
+              { name: 'payment_id', type: 'string', required: false, desc: 'Stable payment transaction identifier (e.g. Stripe charge ID). Required if value > 0 unless order_id, idempotency_key, or provider_event_id is provided.' },
+              { name: 'idempotency_key', type: 'string', required: false, desc: 'Stable custom unique request key. Required if value > 0 unless order_id, payment_id, or provider_event_id is provided.' },
+              { name: 'provider_event_id', type: 'string', required: false, desc: 'Unique event identifier from the payment gateway. Required if value > 0 unless order_id, payment_id, or idempotency_key is provided.' },
+              { name: 'user_id', type: 'string', required: false, desc: 'Your application user/customer ID to stitch this purchase with their web traffic.' },
+              { name: 'anonymous_id', type: 'string', required: false, desc: 'The visitor anonymous ID (e.g. st_aid read from the visitor browser cookie) to stitch the conversion.' },
+              { name: 'occurred_at', type: 'string', required: false, desc: 'ISO 8601 date string when the payment occurred. Defaults to the current time. Also accepts timestamp.' },
+              { name: 'provider', type: 'string', required: false, desc: 'Platform name (e.g. paddle, stripe, custom). Trimmed and lowercased, maximum 50 characters, only alphanumeric, underscores, or hyphens. Defaults to payments_api.' },
+              { name: 'conversion_type', type: 'string', required: false, desc: 'Custom conversion name. Defaults to purchase if value > 0.' },
+              { name: 'properties', type: 'object', required: false, desc: 'Custom metadata payload. Also accepts metadata. Keys are automatically sanitized of sensitive PII query parameters.' }
+            ]} />
+
+            <H3>Deduplication &amp; Idempotency</H3>
+            <p>
+              To protect transaction counts, the Payments API enforces database-backed revenue idempotency. For every event, it claims a combination of:
+            </p>
+            <ul className="list-disc pl-5 space-y-1 font-light">
+              <li>Gateway event ID (<IC>provider_event_id</IC>)</li>
+              <li>Order or session ID (<IC>order_id</IC>)</li>
+              <li>Payment transaction ID (<IC>payment_id</IC>)</li>
+              <li>Custom idempotency key (<IC>idempotency_key</IC>)</li>
+            </ul>
+            <p>
+              When a duplicate transaction or event is detected, the API returns a success response with duplicate set to true:
+            </p>
+            <Code lang="json">{`{ "success": true, "duplicate": true }`}</Code>
+
+            <H3>Stitching &amp; Attribution</H3>
+            <p>
+              To link a payment transaction back to a visitor's web traffic journey, pass the visitor's anonymous ID (e.g., read from the browser storage <IC>st_aid</IC>) in the <IC>anonymous_id</IC> parameter.
+            </p>
+            <p>
+              If neither <IC>user_id</IC> nor <IC>anonymous_id</IC> is present, but at least one stable dedupe key is provided, the API will accept the transaction and ingest it as unattributed backend revenue (<IC>attribution_status: 'unattributed'</IC>).
+            </p>
+
+            <H3>Example: cURL</H3>
+            <Code lang="bash">{`curl -X POST https://api.srctk.com/api/conversion/offline \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "site_key": "YOUR_SITE_KEY",
+    "user_id": "user_12345",
+    "conversion_value": 99.00,
+    "currency": "USD",
+    "order_id": "ORD-109923",
+    "conversion_type": "purchase"
+  }'`}</Code>
+
+            <H3>Example: Node.js Fetch</H3>
+            <Code lang="js">{`await fetch('https://api.srctk.com/api/conversion/offline', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    site_key: 'YOUR_SITE_KEY',
+    anonymous_id: 'visitor_aid_hash_123',
+    conversion_value: 120.00,
+    currency: 'USD',
+    order_id: 'ORD-109924',
+    conversion_type: 'purchase'
+  })
+});`}</Code>
+
+            <H3>Example: Webhook Ingest (e.g., Paddle / Lemon Squeezy)</H3>
+            <Code lang="json">{`// Send a POST request from your server or webhook receiver
+{
+  "site_key": "YOUR_SITE_KEY",
+  "conversion_value": 49.00,
+  "currency": "EUR",
+  "order_id": "pdl_order_882190",
+  "provider": "paddle",
+  "provider_event_id": "evt_9918230",
+  "anonymous_id": "st_aid_value_from_metadata"
+}`}</Code>
+
+            <H3>Privacy Guidance</H3>
+            <ul className="list-disc pl-5 space-y-1 font-light">
+              <li>Do not include raw PII, such as customer names, raw email addresses, physical addresses, or phone numbers in custom properties/metadata.</li>
+              <li>Standard parameter sanitization: URL and referrer traits in the request are automatically redacted of common query parameters.</li>
+              <li>Raw request payloads are not stored in the database.</li>
+            </ul>
+
+            <H3>Limitations</H3>
+            <ul className="list-disc pl-5 space-y-1 font-light">
+              <li>Manual/API-based provider integration, not a native provider sync.</li>
+              <li>No automatic customer email matching (stitching is strictly via <IC>user_id</IC> or <IC>anonymous_id</IC>).</li>
+              <li>Does not support refunds or subscription cycles unless explicitly supported.</li>
             </ul>
           </Section>
 

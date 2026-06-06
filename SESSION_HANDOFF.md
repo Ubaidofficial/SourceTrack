@@ -1,9 +1,35 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 118B — Revenue Ingestion Foundation / Durable Idempotency + Secret Handling. Created SQL migration 20260606180000_revenue_foundation.sql, implemented AES-256-GCM encryption/decryption helpers in utils.js, implemented DB-backed claimIdempotencyKeys and logIngestionEvent in idempotency.js, added SHA-256 API key hashing and fallback lookups in api-key.js and webhook-incoming.js, added startup checks in api/index.js, and verified with qa-revenue-foundation.mjs.
+> **Handoff:** Session 118D — Payments API Hardening + Docs. Hardened generic offline conversion endpoint `/api/conversion/offline` with amount, currency, and provider validation/normalization, allowed unattributed backend revenue when missing identity, integrated database-backed idempotency, added Payments API sections to Integrations UI and Developer Docs, and verified using E2E test script.
 >
-> **Next Task:** Session 118C — Stripe Webhook Sync.
+> **Next Task:** Session 118E — Shopify webhook integration.
 >
+
+## Session 118D — Payments API Hardening + Docs
+**Date:** 2026-06-06 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+1. **Hardened Backend Route:** Modified `/api/conversion/offline` route with numeric conversion value validation, 3-letter currency code validation, and provider name checks (lowercase, trim, max 50 chars, allowed characters `/^[a-z0-9_-]+$/`).
+2. **Unattributed Ingestion Support:** Enabled payment ingestion without user identity (`user_id` / `anonymous_id`) when a stable dedupe key is provided, recording it under `attribution_status: 'unattributed'` and `stitching_method: 'none'`.
+3. **Database Idempotency Integration:** Wired `claimIdempotencyKeys(siteKey, provider, keys)` using `site_key` context and logged all ingestion events to `revenue_ingestion_events`.
+4. **Custom Property Sanitization:** Passed metadata/properties custom objects to `redactPiiFromObject` before sending to PostHog, keeping client parameter leaks secure while retaining explicit IDs. Disabled raw payload storage.
+5. **Dashboard Integrations Card:** Designed and added the copyable Payments API card on the Integrations page showing cURL template, endpoint definitions, and deduplication alerts.
+6. **Developer Docs:** Added the Payments API section in Docs page layout and navigation.
+7. **E2E verification tests:** Created test script `scripts/qa-payments-api.mjs` verifying all edge cases and validation.
+
+---
+
+## Session 118C — Stripe Webhook Sync
+**Date:** 2026-06-06 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+1. **Raw Body Verification:** Wired Stripe incoming webhook verification using the raw body buffer and `stripe-signature` header.
+2. **Secret Decryption:** Configured Stripe webhook secret decryption using GCM helpers.
+3. **DB Idempotency:** Claimed event/session/payment transaction keys atomically in database to block duplicate webhooks.
+4. **PostHog Ingestion:** Ingested successful checkouts into PostHog with user stitching.
+5. **UI & Docs:** Added Stripe Webhook Sync card to Integrations dashboard and documented instructions in Docs page.
+
+---
 
 ## Session 118B — Revenue Ingestion Foundation / Durable Idempotency + Secret Handling
 **Date:** 2026-06-06 | **Branch:** `main` | **Build:** ✅ passing

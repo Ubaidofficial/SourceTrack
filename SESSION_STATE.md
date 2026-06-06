@@ -1,5 +1,5 @@
-Session: 118B
-Last Completed: Completed Session 118B — Revenue Ingestion Foundation / Durable Idempotency + Secret Handling. Created SQL migration 20260606180000_revenue_foundation.sql, implemented AES-256-GCM encryption/decryption helpers in utils.js, implemented DB-backed claimIdempotencyKeys and logIngestionEvent in idempotency.js, added SHA-256 API key hashing and fallback lookups in api-key.js and webhook-incoming.js, added startup checks in api/index.js, and verified with qa-revenue-foundation.mjs.
-Next Task: Session 118C — Implement Stripe webhook sync.
+Session: 118D
+Last Completed: Completed Session 118D — Payments API Hardening + Docs. Hardened generic offline conversion endpoint `/api/conversion/offline` with amount, currency, and provider validation/normalization, allowed unattributed backend revenue when missing identity, integrated database-backed idempotency, added Payments API sections to Integrations UI and Developer Docs, and verified using E2E test script.
+Next Task: Session 118E — Shopify webhook integration.
 Build: ✅ passing
 Branch: main

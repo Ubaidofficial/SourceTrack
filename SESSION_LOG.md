@@ -5,6 +5,8 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 118D | 2026-06-06 | `main` | Payments API Hardening + Docs — Hardened generic offline conversion endpoint, added input validations (numerical amount, valid 3-letter currency), allowed unattributed backend revenue, integrated Payments API in Integrations UI and Developer Docs, added E2E payments API test script. | ✅ | No |
+| 118C | 2026-06-06 | `main` | Stripe Webhook Ingestion Sync — Stripe raw-body webhook signature verification, decrypted Stripe secrets, claimed idempotency keys, captured conversions in PostHog, logged events to DB, built Stripe integrations UI & docs. | ✅ | No |
 | 118B | 2026-06-06 | `main` | Revenue Ingestion Foundation / Durable Idempotency + Secret Handling — SQL migration for idempotency, ingestion events, encrypted credentials. Symmetric GCM encryption helpers. SHA-256 API key hashing and fallback lookups. Startup key checks. Verification script. | ✅ | No |
 | 118A | 2026-06-06 | `main` | Audit + Plan for Revenue Ingestion — Audited conversions, webhooks, and pixel endpoints. Created comprehensive roadmap and security analysis in revenue_ingestion_audit.md | ✅ | No |
 | 117C | 2026-06-06 | `main` | Page-Path Funnel Presets — Added presets selector, active steps pills with delete handle, input validation and helper copy in Analytics.jsx, spinner/error states in FunnelChart, and documentation | ✅ | No |
@@ -586,3 +588,66 @@ curl -i https://api.srctk.com/tracker/tracker.min.js
 - **Fix:**
   - Created a comprehensive **Page-Path Funnels** documentation section in `Docs.jsx` detailing sequence logic, keyword examples, plan tiers, and limitations (strictly session-locked, no conversion types/revenue).
 - **Files:** `dashboard/src/pages/Docs.jsx`
+
+---
+
+## Session 118A — Audit + Plan for Revenue Ingestion
+
+**Date:** 2026-06-06
+**Branch:** `main`
+**Build:** ✅ passing
+
+### 1. Revenue Ingestion Audit
+- Completed a detailed audit of standard conversions, offline conversions, incoming webhooks, outbound webhooks, and pixel routes.
+- Identified data fields, deduplication mapping gaps, security/privacy risks, UI/documentation status.
+
+---
+
+## Session 118B — Revenue Ingestion Foundation / Durable Idempotency + Secret Handling
+
+**Date:** 2026-06-06
+**Branch:** `main`
+**Build:** ✅ node --check + E2E QA pass
+
+### 1. DB Idempotency & Logging
+- Created migration for `revenue_idempotency_keys` and `revenue_ingestion_events` tables.
+- Implemented DB-backed `claimIdempotencyKeys` and `logIngestionEvent` helper.
+
+### 2. Encryption & Key Hashing
+- Implemented GCM symmetric secret encryption/decryption.
+- Added SHA-256 API key hashing.
+
+---
+
+## Session 118C — Stripe Webhook Ingestion Sync
+
+**Date:** 2026-06-06
+**Branch:** `main`
+**Build:** ✅ node --check + E2E QA pass
+
+### 1. Webhook Signature Verification
+- Created Stripe Webhook Sync receiver endpoint using raw body request signature verification.
+- Decrypted stripe secrets dynamically.
+
+### 2. PostHog Ingestion
+- Claimed idempotency keys to block duplicate webhooks.
+- Ingested checkout events into PostHog with client metadata stitching.
+
+---
+
+## Session 118D — Payments API Hardening + Docs
+
+**Date:** 2026-06-06
+**Branch:** `main`
+**Build:** ✅ node --check + npm run build + E2E QA pass
+
+### 1. Hardened Payments API
+- Hardened `/api/conversion/offline` with amount validation, 3-letter currency code check, and provider normalization.
+- Allowed missing identity on payments, ingesting as unattributed backend revenue if a dedupe key exists.
+- Claimed idempotency keys and logged events to database.
+- Sanitized metadata/properties using `redactPiiFromObject` (preserves explicit IDs).
+- Dropped raw request payload storage.
+
+### 2. UI & Docs Additions
+- Added Payments API card to Integrations dashboard page with copyable endpoint and cURL examples.
+- Added a dedicated Payments API section to developer Docs.
