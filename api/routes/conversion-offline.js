@@ -62,7 +62,23 @@ export async function conversionOffline(req, res) {
       return res.status(400).json({ success: false, error: 'provider must be 1-50 characters and contain only letters, numbers, underscores, or hyphens' })
     }
 
-    // 5. Construct and claim deduplication keys
+    // 5. Parse occurred_at / timestamp (validation must happen before claiming idempotency)
+    let occurredAt = new Date().toISOString()
+    const rawTime = req.body.occurred_at || req.body.timestamp
+    if (rawTime !== undefined && rawTime !== null) {
+      if (typeof rawTime === 'string') {
+        const parsed = new Date(rawTime)
+        if (!isNaN(parsed.getTime())) {
+          occurredAt = parsed.toISOString()
+        } else {
+          return res.status(400).json({ success: false, error: 'occurred_at or timestamp must be a valid ISO 8601 date string' })
+        }
+      } else {
+        return res.status(400).json({ success: false, error: 'occurred_at or timestamp must be a string' })
+      }
+    }
+
+    // 6. Construct and claim deduplication keys
     const keys = []
     if (orderId) keys.push({ key_type: 'order_id', key_value: orderId })
     if (paymentId) keys.push({ key_type: 'payment_id', key_value: paymentId })
@@ -91,22 +107,6 @@ export async function conversionOffline(req, res) {
           errorMessage: claim.error || 'Failed to claim idempotency keys'
         })
         return res.status(500).json({ success: false, error: 'Temporary database failure' })
-      }
-    }
-
-    // 6. Parse occurred_at / timestamp
-    let occurredAt = new Date().toISOString()
-    const rawTime = req.body.occurred_at || req.body.timestamp
-    if (rawTime !== undefined && rawTime !== null) {
-      if (typeof rawTime === 'string') {
-        const parsed = new Date(rawTime)
-        if (!isNaN(parsed.getTime())) {
-          occurredAt = parsed.toISOString()
-        } else {
-          return res.status(400).json({ success: false, error: 'occurred_at or timestamp must be a valid ISO 8601 date string' })
-        }
-      } else {
-        return res.status(400).json({ success: false, error: 'occurred_at or timestamp must be a string' })
       }
     }
 

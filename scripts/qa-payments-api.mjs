@@ -233,6 +233,54 @@ async function runQa() {
         testFailed = true
       }
 
+      // Test Case 9: Invalid-then-corrected retry behavior
+      console.log('\n--- Test Case 9: Invalid-then-corrected retry behavior ---')
+      const orderId9 = 'ord_qa_999_' + Date.now()
+
+      // Step 9a: Send with invalid timestamp (should fail with 400, but NOT claim keys)
+      const res9a = await fetch('http://localhost:3998/api/conversion/offline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          site_key: siteKey,
+          user_id: 'user_qa_123',
+          conversion_value: 99.99,
+          currency: 'USD',
+          order_id: orderId9,
+          occurred_at: 'not-a-date'
+        })
+      })
+      console.log(`Step 9a Status: ${res9a.status} (Expected: 400)`)
+      const body9a = await res9a.json()
+      if (res9a.status === 400 && !body9a.success) {
+        console.log('✅ Correctly rejected invalid timestamp with 400')
+      } else {
+        console.error('❌ Expected 400 bad request for invalid timestamp')
+        testFailed = true
+      }
+
+      // Step 9b: Retry with same order_id but corrected valid timestamp (should succeed with 200, duplicate: false)
+      const res9b = await fetch('http://localhost:3998/api/conversion/offline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          site_key: siteKey,
+          user_id: 'user_qa_123',
+          conversion_value: 99.99,
+          currency: 'USD',
+          order_id: orderId9,
+          occurred_at: new Date().toISOString()
+        })
+      })
+      console.log(`Step 9b Status: ${res9b.status} (Expected: 200)`)
+      const body9b = await res9b.json()
+      if (res9b.status === 200 && body9b.success && !body9b.duplicate) {
+        console.log('✅ Correctly allowed ingestion of corrected event after previous validation failure')
+      } else {
+        console.error('❌ Expected 200 success response with duplicate=false for corrected retry')
+        testFailed = true
+      }
+
     } catch (err) {
       console.error('❌ Exception during QA execution:', err.message)
       testFailed = true
