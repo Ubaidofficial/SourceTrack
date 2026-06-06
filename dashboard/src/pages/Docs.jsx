@@ -103,6 +103,7 @@ const NAV = [
   { id: 'tracker',          label: 'Tracker Script',    indent: true },
   { id: 'exclusions',       label: 'Path Exclusions',   indent: true },
   { id: 'cookieless',       label: 'Cookieless Mode',   indent: true },
+  { id: 'timezone',         label: 'Timezone Behavior', indent: true },
   { id: 'recipes',          label: 'Installation Guides' },
   { id: 'track',            label: 'POST /api/track' },
   { id: 'conversion',       label: 'POST /api/conversion' },
@@ -725,6 +726,31 @@ window.sourcetrack.identify('user_123', {
                 </tbody>
               </table>
             </div>
+          </Section>
+
+          {/* ── Timezone Behavior ────────────────────────────────────────── */}
+          <Section id="timezone" title="Timezone Behavior">
+            <p>
+              By default, all sites in SourceTrack report using Coordinated Universal Time (UTC).
+              However, you can configure a custom reporting timezone in your dashboard under <strong>Settings → Site Settings</strong>.
+            </p>
+            <p>
+              Once configured, the following behavior will apply:
+            </p>
+            <ul className="list-disc list-inside space-y-2 pl-1 text-sm text-gray-600 dark:text-gray-400">
+              <li>
+                <strong>Dashboard Trends:</strong> The "Revenue Trend" and "Leads Over Time" daily charts on your overview dashboard will group metrics and conversions according to the selected local timezone day boundaries (e.g. 12:00 AM to 11:59 PM in New York).
+              </li>
+              <li>
+                <strong>Raw Event Feeds & Logs:</strong> The Event Logger, recent activity lists, and raw debugger logs will remain in UTC or use exact timestamps. This ensures debugging remains simple and matches the raw ingestion pipeline telemetry.
+              </li>
+              <li>
+                <strong>Custom/Saved Reports:</strong> The Report Builder and custom saved reports currently process dates in UTC.
+              </li>
+            </ul>
+            <Note>
+              Timezone-aware query execution utilizes index-friendly padded search windows (±24h UTC boundaries) to retrieve candidate rows, keeping queries index-friendly and performance-conscious.
+            </Note>
           </Section>
 
           {/* ── Installation Guides ─────────────────────────────────────── */}

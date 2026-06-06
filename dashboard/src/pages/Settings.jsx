@@ -485,7 +485,7 @@ export default function Settings() {
           <div className="space-y-1">
             <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">Reporting Timezone</label>
             <p className="text-[11px] text-st-gray dark:text-gray-400">
-              Set the default reporting timezone for your workspace. (Timezone-based grouping on overview graphs and campaign reports will be enabled in a future update).
+              Set the default reporting timezone for your workspace. Supported reports (such as dashboard overview graphs) will group daily totals using this timezone. Custom reports and event logs remain UTC.
             </p>
             <select
               value={timezone}

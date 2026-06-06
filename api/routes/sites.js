@@ -10,7 +10,7 @@ router.get('/', async (req, res) => {
     // Query only safe fields from the sites table
     const query = supabase
       .from('sites')
-      .select('id, site_key, name, domain, plan, created_at, last_seen_at')
+      .select('id, site_key, name, domain, plan, created_at, last_seen_at, timezone, excluded_paths')
       .order('created_at', { ascending: true })
 
     if (req.user.role === 'super_admin') {

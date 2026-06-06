@@ -205,3 +205,123 @@ export function isPathExcluded(pageUrl, excludedPaths) {
 
   return false
 }
+
+/**
+ * Checks if a timezone identifier is valid and conforms to safe patterns.
+ *
+ * @param {string} timeZone - The timezone string to validate.
+ * @returns {boolean}
+ */
+export function isValidTimezone(timeZone) {
+  if (!timeZone || typeof timeZone !== 'string') return false
+  if (!/^[a-zA-Z0-9_\-\+\/]+$/.test(timeZone)) return false
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone })
+    return true
+  } catch (_) {
+    return false
+  }
+}
+
+/**
+ * Returns the local date string (YYYY-MM-DD) for a given date and timezone.
+ *
+ * @param {Date|number|string} date - The date to format.
+ * @param {string} timeZone - The target timezone.
+ * @returns {string}
+ */
+export function getLocalDateString(date, timeZone) {
+  const tz = isValidTimezone(timeZone) ? timeZone : 'UTC'
+  const d = date instanceof Date ? date : new Date(date)
+  if (isNaN(d.getTime())) return ''
+
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(d)
+
+  let year = '', month = '', day = ''
+  for (const p of parts) {
+    if (p.type === 'year') year = p.value
+    else if (p.type === 'month') month = p.value
+    else if (p.type === 'day') day = p.value
+  }
+  return `${year}-${month}-${day}`
+}
+
+/**
+ * Returns the local month string (YYYY-MM) for a given date and timezone.
+ *
+ * @param {Date|number|string} date - The date to format.
+ * @param {string} timeZone - The target timezone.
+ * @returns {string}
+ */
+export function getLocalMonthString(date, timeZone) {
+  const tz = isValidTimezone(timeZone) ? timeZone : 'UTC'
+  const d = date instanceof Date ? date : new Date(date)
+  if (isNaN(d.getTime())) return ''
+
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit'
+  }).formatToParts(d)
+
+  let year = '', month = ''
+  for (const p of parts) {
+    if (p.type === 'year') year = p.value
+    else if (p.type === 'month') month = p.value
+  }
+  return `${year}-${month}`
+}
+
+/**
+ * Returns the local week start date string (YYYY-MM-DD, Monday) for a given date and timezone.
+ *
+ * @param {Date|number|string} date - The date to format.
+ * @param {string} timeZone - The target timezone.
+ * @returns {string}
+ */
+export function getLocalWeekString(date, timeZone) {
+  const tz = isValidTimezone(timeZone) ? timeZone : 'UTC'
+  const d = date instanceof Date ? date : new Date(date)
+  if (isNaN(d.getTime())) return ''
+
+  const weekdayStr = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    weekday: 'short'
+  }).format(d)
+
+  const DAYS = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
+  const dayIndex = DAYS[weekdayStr] ?? 0
+  const daysToSubtract = dayIndex === 0 ? 6 : dayIndex - 1
+
+  const mondayDate = new Date(d.getTime() - daysToSubtract * 86400000)
+  return getLocalDateString(mondayDate, tz)
+}
+
+/**
+ * Return dates padded by 1 day on both sides to cover all timezone shifting variations.
+ *
+ * @param {string} localDateFrom - Local start date (YYYY-MM-DD).
+ * @param {string} localDateTo - Local end date (YYYY-MM-DD).
+ * @returns {{from: string, to: string}}
+ */
+export function getPaddedUtcDateRange(localDateFrom, localDateTo) {
+  const from = new Date(localDateFrom)
+  const to = new Date(localDateTo)
+
+  if (isNaN(from.getTime()) || isNaN(to.getTime())) {
+    return { from: localDateFrom, to: localDateTo }
+  }
+
+  from.setUTCDate(from.getUTCDate() - 1)
+  to.setUTCDate(to.getUTCDate() + 1)
+
+  return {
+    from: from.toISOString().slice(0, 10),
+    to: to.toISOString().slice(0, 10)
+  }
+}

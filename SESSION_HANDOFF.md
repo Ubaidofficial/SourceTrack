@@ -1,10 +1,27 @@
 > [!NOTE]
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 116B — Path Exclusions. Designed and implemented server-side and client-side path exclusions. Updated site settings to configure path exclusions and timezones. Added client-side snippet helper configurations. Rebuilt minified tracker files. Run automated verification tests.
+> **Handoff:** Session 116C — Per-Site Timezone Reporting. Implemented timezone-aware date grouping behavior for dashboard overview daily trends using a padded UTC query window (expanded by ±24h) and local timezone string bucket helpers, while keeping other reports/feeds in raw UTC. Displays timezone labels next to chart subtitles in the dashboard. Updated settings copy and documentation page.
 >
-> **Next Task:** Session 116C timezone grouping on reporting endpoints.
+> **Next Task:** Session 117 client/saved reports timezone grouping audit or paid beta launch preparation.
 >
+
+## Session 116C — Per-Site Timezone Reporting
+**Date:** 2026-06-06 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+1. **Utility Helpers:** Created `isValidTimezone`, `getLocalDateString`, `getLocalMonthString`, `getLocalWeekString`, and `getPaddedUtcDateRange` in `api/lib/utils.js`.
+2. **Dashboard Overview Routing:**
+   - Selected `conversion_timestamp` from `attributed_conversions` inside `/overview` endpoint.
+   - Padded Supabase queries by ±24h based on the site's local timezone.
+   - Filtered returned database rows in-memory in Javascript using string local date buckets, trimming out-of-bounds rows.
+   - Shifted HogQL queries (stages, top pages, bounce_rate) using exact UTC boundaries matching local day boundaries using `toTimeZone(timestamp, tz)`.
+3. **Sites API Route:** Exposed `timezone` and `excluded_paths` field in `api/routes/sites.js` list endpoint.
+4. **Dashboard & Settings UI:**
+   - Appended site's timezone (e.g. `• America/New_York`) to "Revenue Trend" and "Leads Over Time" chart subtitles in `Dashboard.jsx`.
+   - Updated the timezone setting description in `Settings.jsx` to state that timezone grouping applies only to dashboard overview trends, while custom reports and logs remain UTC.
+5. **Documentation:** Added "Timezone Behavior" section under navigation and details in `Docs.jsx`.
+6. **Automated Verification:** Added `scripts/qa-timezone.mjs` verifying validation, date, month, week, and padded date calculation logic.
 
 ## Session 116B — Path Exclusions
 **Date:** 2026-06-06 | **Branch:** `main` | **Build:** ✅ passing

@@ -1228,7 +1228,7 @@ export default function Dashboard() {
 
             <DashboardCard
               title="Revenue Trend"
-              subtitle={`Last ${timeRange} days`}
+              subtitle={`Last ${timeRange} days • ${site?.timezone || 'UTC'}`}
               action={!previewMode && (
                 <button
                   onClick={() => setAnnotationForm(f => ({ ...f, open: !f.open, date: format(new Date(), 'yyyy-MM-dd'), note: '' }))}
@@ -1426,7 +1426,7 @@ export default function Dashboard() {
 
           {/* T5.4 — Leads Over Time (Channel States) */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <DashboardCard title="Leads Over Time" subtitle={`Daily lead trend — last ${timeRange} days`}>
+            <DashboardCard title="Leads Over Time" subtitle={`Daily lead trend — last ${timeRange} days • ${site?.timezone || 'UTC'}`}>
               {channelTrendResults.length === 0 ? (
                 <EmptyState icon={TrendingUp} title="No lead data yet" description="Lead trend will appear as conversions flow in." />
               ) : (

@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
 import { getSupabase as getSupabaseAdmin } from '../lib/supabase.js'
-import { esc } from '../lib/utils.js'
+import { esc, isValidTimezone, getLocalDateString, getPaddedUtcDateRange } from '../lib/utils.js'
 import { channelFromEvent } from '../lib/channel-classifier.js'
 
 
@@ -19,10 +19,17 @@ router.get('/overview', validateSiteKey, async (req, res) => {
   try {
     const posthogSiteId = String(req.site.id)
     const days = Math.min(Math.max(parseInt(req.query.days) || 30, 1), 90)
-    const dateTo = new Date().toISOString().slice(0, 10)
-    const dateFrom = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
-    const prevDateFrom = new Date(Date.now() - days * 2 * 86400000).toISOString().slice(0, 10)
-    const prevDateTo = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
+    const tz = isValidTimezone(req.site?.timezone) ? req.site.timezone : 'UTC'
+
+    // Compute local date boundaries
+    const localDateTo = getLocalDateString(new Date(), tz)
+    const localDateFrom = getLocalDateString(new Date(Date.now() - days * 86400000), tz)
+    const localPrevDateFrom = getLocalDateString(new Date(Date.now() - days * 2 * 86400000), tz)
+    const localPrevDateTo = getLocalDateString(new Date(Date.now() - days * 86400000), tz)
+
+    // Compute padded UTC boundaries for Supabase index querying (±1 day)
+    const currentPadded = getPaddedUtcDateRange(localDateFrom, localDateTo)
+    const priorPadded = getPaddedUtcDateRange(localPrevDateFrom, localPrevDateTo)
 
     const supabase = getSupabaseAdmin()
 
@@ -37,16 +44,16 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     ] = await Promise.all([
       supabase
         .from('attributed_conversions')
-        .select('first_touch_source, first_touch_channel, last_touch_channel, first_touch_campaign, conversion_value, conversion_type, conversion_date, status, touchpoint_count')
+        .select('first_touch_source, first_touch_channel, last_touch_channel, first_touch_campaign, conversion_value, conversion_type, conversion_date, status, touchpoint_count, conversion_timestamp')
         .eq('site_id', req.site.id)
-        .gte('conversion_date', dateFrom)
-        .lte('conversion_date', dateTo),
+        .gte('conversion_date', currentPadded.from)
+        .lte('conversion_date', currentPadded.to),
       supabase
         .from('attributed_conversions')
-        .select('first_touch_source, first_touch_channel, last_touch_channel, conversion_value, conversion_type, status')
+        .select('first_touch_source, first_touch_channel, last_touch_channel, conversion_value, conversion_type, status, conversion_date, conversion_timestamp')
         .eq('site_id', req.site.id)
-        .gte('conversion_date', prevDateFrom)
-        .lte('conversion_date', prevDateTo),
+        .gte('conversion_date', priorPadded.from)
+        .lte('conversion_date', priorPadded.to),
       queryHogQL(`
         SELECT event, timestamp, properties.page_url AS page_url
         FROM events
@@ -75,8 +82,10 @@ router.get('/overview', validateSiteKey, async (req, res) => {
           AND event = '$conversion'
           AND properties.ingestion_method = 'offline'
           AND properties.conversion_type IN ('lead_created', 'qualified', 'opportunity', 'closed_won')
-          AND timestamp >= toDateTime('${dateFrom} 00:00:00')
-          AND timestamp <= toDateTime('${dateTo} 23:59:59')
+          AND timestamp >= toDateTime('${currentPadded.from} 00:00:00')
+          AND timestamp <= toDateTime('${currentPadded.to} 23:59:59')
+          AND toTimeZone(timestamp, '${esc(tz)}') >= toDateTime('${localDateFrom} 00:00:00')
+          AND toTimeZone(timestamp, '${esc(tz)}') <= toDateTime('${localDateTo} 23:59:59')
         GROUP BY stage
         ORDER BY count DESC
         LIMIT 100
@@ -88,8 +97,10 @@ router.get('/overview', validateSiteKey, async (req, res) => {
         FROM events
         WHERE properties.site_id = '${esc(posthogSiteId)}'
           AND event = '$pageview'
-          AND timestamp >= toDateTime('${dateFrom} 00:00:00')
-          AND timestamp <= toDateTime('${dateTo} 23:59:59')
+          AND timestamp >= toDateTime('${currentPadded.from} 00:00:00')
+          AND timestamp <= toDateTime('${currentPadded.to} 23:59:59')
+          AND toTimeZone(timestamp, '${esc(tz)}') >= toDateTime('${localDateFrom} 00:00:00')
+          AND toTimeZone(timestamp, '${esc(tz)}') <= toDateTime('${localDateTo} 23:59:59')
         GROUP BY page_url
         ORDER BY count DESC
         LIMIT 500
@@ -116,8 +127,12 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     let ltNonDirectRevenue = 0
 
     for (const r of rows) {
+      const localDate = getLocalDateString(new Date(r.conversion_timestamp || r.conversion_date), tz)
+      if (localDate < localDateFrom || localDate > localDateTo) {
+        continue
+      }
+
       const val = Number(r.conversion_value) || 0
-      const date = r.conversion_date?.slice(0, 10) || ''
       const source = r.first_touch_source || 'Direct'
       const campaign = r.first_touch_campaign || null
       const ftChannel = r.first_touch_channel || 'Direct'
@@ -143,15 +158,15 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       }
 
       // revenue trend by date
-      if (date) {
-        if (!revTrendMap[date]) revTrendMap[date] = { dim_value: date, revenue: 0 }
-        revTrendMap[date].revenue += val
+      if (localDate) {
+        if (!revTrendMap[localDate]) revTrendMap[localDate] = { dim_value: localDate, revenue: 0 }
+        revTrendMap[localDate].revenue += val
       }
 
       // channel/leads trend by date
-      if (date) {
-        if (!channelTrendMap[date]) channelTrendMap[date] = { dim_value: date, leads: 0 }
-        channelTrendMap[date].leads++
+      if (localDate) {
+        if (!channelTrendMap[localDate]) channelTrendMap[localDate] = { dim_value: localDate, leads: 0 }
+        channelTrendMap[localDate].leads++
       }
 
       // AI source breakdown
@@ -162,9 +177,9 @@ router.get('/overview', validateSiteKey, async (req, res) => {
         aiSourceMap[aiSrc].ai_revenue += val
         aiSourceMap[aiSrc].ai_conversions++
         aiSourceMap[aiSrc].ai_leads++
-        if (date) {
-          if (!aiTrendMap[date]) aiTrendMap[date] = { dim_value: date, ai_revenue: 0 }
-          aiTrendMap[date].ai_revenue += val
+        if (localDate) {
+          if (!aiTrendMap[localDate]) aiTrendMap[localDate] = { dim_value: localDate, ai_revenue: 0 }
+          aiTrendMap[localDate].ai_revenue += val
         }
       }
 
@@ -215,6 +230,10 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     // ── Aggregate prior period ──────────────────────────────────────────────
     let prevRevenue = 0, prevLeads = 0, prevConversions = 0, prevAIRevenue = 0
     for (const r of priorRows) {
+      const localDate = getLocalDateString(new Date(r.conversion_timestamp || r.conversion_date), tz)
+      if (localDate < localPrevDateFrom || localDate > localPrevDateTo) {
+        continue
+      }
       const val = Number(r.conversion_value) || 0
       prevRevenue += val
       prevConversions++
@@ -235,7 +254,20 @@ router.get('/overview', validateSiteKey, async (req, res) => {
 
     // ── Bounce rate + sessions (single PostHog call — same subquery) ─────────
     // Returns [bounce_rate_pct, total_unique_visitors] in one round-trip
-    const bounceRateSql = `SELECT countIf(pv_count = 1) * 100.0 / count(), count() AS total_sessions FROM (SELECT distinct_id, count() AS pv_count FROM events WHERE event = '$pageview' AND properties.site_id = '${posthogSiteId}' AND timestamp >= toDateTime('${dateFrom}') AND timestamp <= toDateTime('${dateTo} 23:59:59') GROUP BY distinct_id)`
+    const bounceRateSql = `
+      SELECT countIf(pv_count = 1) * 100.0 / count(), count() AS total_sessions
+      FROM (
+        SELECT distinct_id, count() AS pv_count
+        FROM events
+        WHERE event = '$pageview'
+          AND properties.site_id = '${posthogSiteId}'
+          AND timestamp >= toDateTime('${currentPadded.from} 00:00:00')
+          AND timestamp <= toDateTime('${currentPadded.to} 23:59:59')
+          AND toTimeZone(timestamp, '${esc(tz)}') >= toDateTime('${localDateFrom} 00:00:00')
+          AND toTimeZone(timestamp, '${esc(tz)}') <= toDateTime('${localDateTo} 23:59:59')
+        GROUP BY distinct_id
+      )
+    `
     let bounceRate = null
     let totalSessions = 0
     try {
@@ -280,8 +312,8 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     return res.status(200).json({
       success: true,
       data: {
-        date_from: dateFrom,
-        date_to: dateTo,
+        date_from: localDateFrom,
+        date_to: localDateTo,
         business_type: req.site.business_type || 'saas',
         kpis: {
           revenue: totalRevenue,

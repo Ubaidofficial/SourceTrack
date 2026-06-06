@@ -5,6 +5,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 116C | 2026-06-06 | `main` | Per-Site Timezone Reporting — implemented local daily grouping on dashboard overview trends using padded UTC window, added UI subtitles, updated settings copy & docs | ✅ | No |
 | 116B | 2026-06-06 | `main` | Path Exclusions — designed and implemented client/server-side exclusions, updated settings UI/docs | ✅ | No |
 | 75 | — | — | Saved reports backend persistence + fetchApi JSON body fix | Pending | — |
 | 76 | — | — | Stabilize saved report API requests | Pending | — |
