@@ -1,7 +1,7 @@
 import express from 'express'
 import { queryHogQL } from '../lib/posthog.js'
 import { getSupabase } from '../lib/supabase.js'
-import { esc } from '../lib/utils.js'
+import { esc, encryptSecret } from '../lib/utils.js'
 import { siteCache } from '../middleware/auth.js'
 
 const router = express.Router()
@@ -268,8 +268,8 @@ router.get('/overview', async (req, res) => {
 // PATCH /api/integrations/settings — update per-site attribution window
 router.patch('/settings', async (req, res) => {
   try {
-    const siteId = req.site?.id
-    if (!siteId) {
+    const siteKey = req.site?.site_key
+    if (!siteKey) {
       return res.status(400).json({ success: false, data: null, error: 'site_key required' })
     }
 
@@ -330,7 +330,7 @@ router.patch('/settings', async (req, res) => {
     const { data, error } = await supabase
       .from('sites')
       .update(updates)
-      .eq('id', siteId)
+      .eq('site_key', siteKey)
       .select('id, attribution_window_days, excluded_paths, timezone')
       .single()
 
@@ -347,13 +347,86 @@ router.patch('/settings', async (req, res) => {
 
     // Invalidate site cache so validateSiteKey picks up changes immediately
     if (req.site?.site_key) {
-      siteCache.del(req.site.site_key)
+      siteCache.del(siteKey)
     }
 
     return res.json({ success: true, data, error: null })
   } catch (err) {
     console.error('[integrations] PATCH settings error:', err?.message)
     return res.status(500).json({ success: false, data: null, error: 'Failed to update settings' })
+  }
+})
+
+// GET /api/integrations/stripe — fetch stripe integration settings
+router.get('/stripe', async (req, res) => {
+  try {
+    const siteKey = req.site?.site_key
+    if (!siteKey) {
+      return res.status(400).json({ success: false, data: null, error: 'Site context missing' })
+    }
+
+    const supabase = getSupabase()
+    const { data: site, error } = await supabase
+      .from('sites')
+      .select('encrypted_stripe_webhook_secret')
+      .eq('site_key', siteKey)
+      .single()
+
+    if (error) throw error
+
+    const hasSecret = !!site?.encrypted_stripe_webhook_secret
+
+    return res.json({
+      success: true,
+      data: {
+        configured: hasSecret,
+        masked_secret: hasSecret ? 'whsec_••••••••••••••••' : null
+      },
+      error: null
+    })
+  } catch (err) {
+    console.error('[integrations] GET stripe secret status error:', err?.message)
+    return res.status(500).json({ success: false, data: null, error: 'Failed to fetch Stripe webhook sync status' })
+  }
+})
+
+// POST /api/integrations/stripe — configure or delete stripe secret
+router.post('/stripe', async (req, res) => {
+  try {
+    const siteKey = req.site?.site_key
+    if (!siteKey) {
+      return res.status(400).json({ success: false, data: null, error: 'Site context missing' })
+    }
+
+    const { secret } = req.body
+    const supabase = getSupabase()
+
+    let encryptedSecret = null
+
+    if (secret !== undefined && secret !== null && secret.trim() !== '') {
+      const trimmedSecret = secret.trim()
+      if (!trimmedSecret.startsWith('whsec_')) {
+        return res.status(400).json({ success: false, data: null, error: 'Webhook secret must start with whsec_' })
+      }
+      encryptedSecret = encryptSecret(trimmedSecret)
+    }
+
+    const { error } = await supabase
+      .from('sites')
+      .update({ encrypted_stripe_webhook_secret: encryptedSecret })
+      .eq('site_key', siteKey)
+
+    if (error) throw error
+
+    // Invalidate site cache so validateSiteKey picks up changes immediately
+    if (req.site?.site_key) {
+      siteCache.del(siteKey)
+    }
+
+    return res.json({ success: true, data: { configured: !!encryptedSecret }, error: null })
+  } catch (err) {
+    console.error('[integrations] POST stripe secret error:', err?.message)
+    return res.status(500).json({ success: false, data: null, error: 'Failed to save Stripe webhook secret' })
   }
 })
 

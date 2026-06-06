@@ -114,6 +114,7 @@ const NAV = [
   { id: 'settings-api',     label: 'PATCH /api/integrations/settings' },
   { id: 'gdpr',             label: 'GDPR Endpoints' },
   { id: 'webhooks',         label: 'Outbound Webhooks' },
+  { id: 'stripe-webhook',   label: 'Stripe Webhook Sync' },
   { id: 'auth',             label: 'Authentication' },
   { id: 'errors',           label: 'Error Handling' },
   { id: 'visitor-sessions', label: 'Visitor Sessions' },
@@ -1319,6 +1320,94 @@ app.post('/webhook-receiver', (req, res) => {
               <li>Paste the URL into the **Outbound Webhooks** card under **Integrations** in your SourceTrack dashboard and click **Save**.</li>
               <li>Use the **Test Webhook** button to send a sample payload to establish the schema in your workflow.</li>
               <li>Route fields such as <IC>conversion.value</IC>, <IC>conversion.type</IC>, <IC>visitor.user_id</IC>, <IC>attribution.source</IC>, and <IC>attribution.campaign</IC> downstream to your CRMs, Slack, sheets, or analytics targets.</li>
+            </ul>
+          </Section>
+
+          {/* ── Stripe Webhook Sync ───────────────────────────────────────── */}
+          <Section id="stripe-webhook" title="Stripe Webhook Sync">
+            <p>
+              Stripe Webhook Sync receives signed Stripe Checkout completion events and records them as conversion events in SourceTrack. When you pass a supported stitching identifier, those conversions can be connected to the visitor journey; otherwise they are recorded as unattributed Stripe revenue.
+            </p>
+            <p>
+              Stripe Webhook Sync is unauthenticated but fully cryptographically verified. It checks the signature of each incoming request using the Stripe signing secret (<IC>whsec_...</IC>) configured for your site.
+            </p>
+
+            <H3>Supported Events</H3>
+            <ul className="list-disc pl-5 space-y-1 font-light">
+              <li><IC>checkout.session.completed</IC>: Ingested and parsed to record order revenue and associate conversions.</li>
+              <li>Other Stripe events (e.g. charge, invoice, subscription, customer updates) are ignored with a safe <IC>200 OK</IC> status.</li>
+            </ul>
+
+            <H3>Setup Instructions</H3>
+            <ol className="list-decimal pl-5 space-y-2 mt-2 font-light">
+              <li>In your <strong>Stripe Dashboard</strong>, go to <strong>Developers &gt; Webhooks</strong>.</li>
+              <li>Click <strong>Add endpoint</strong> and paste the <strong>Stripe Webhook Listener URL</strong> found on the Integrations settings card.</li>
+              <li>Under "Select events to send", select only <IC>checkout.session.completed</IC>.</li>
+              <li>Click <strong>Add endpoint</strong>. Once created, click <strong>Reveal</strong> under "Signing secret" and copy the key (starts with <IC>whsec_</IC>).</li>
+              <li>In your SourceTrack dashboard, paste this secret into the Stripe Webhook Sync card under **Integrations** and click **Connect**.</li>
+            </ol>
+
+            <H3>Stitching Conversions to Visitors</H3>
+            <p>
+              To attribute Stripe purchases back to a visitor's web traffic journey, Stripe checkout sessions must contain a reference to the visitor's identity. SourceTrack stitches conversions using the following fields, checked in order of preference:
+            </p>
+            <ul className="list-disc pl-5 space-y-1 mt-2 font-light">
+              <li>Checkout session <IC>client_reference_id</IC> (recommended)</li>
+              <li>Checkout session metadata key <IC>anonymous_id</IC></li>
+              <li>Checkout session metadata key <IC>visitor_id</IC></li>
+              <li>Checkout session metadata key <IC>sourcetrack_user_id</IC></li>
+              <li>Checkout session metadata key <IC>site_user_id</IC></li>
+            </ul>
+
+            <H3>Stripe Checkout Integration Example (Node.js)</H3>
+            <Code lang="js">{`// When creating a Stripe Checkout Session on your backend
+const session = await stripe.checkout.sessions.create({
+  payment_method_types: ['card'],
+  line_items: [{ price: 'price_H5gg...', quantity: 1 }],
+  mode: 'payment',
+  success_url: 'https://example.com/success',
+  cancel_url: 'https://example.com/cancel',
+
+  // recommended: pass the SourceTrack visitor ID to client_reference_id
+  client_reference_id: req.body.visitorId, // e.g. st_aid read from visitor's browser
+
+  // or pass identifiers inside metadata
+  metadata: {
+    visitor_id: req.body.visitorId
+  }
+});`}</Code>
+
+            <H3>Unattributed Conversions</H3>
+            <Warn>
+              If a Stripe webhook event does not contain any of the stitching identifiers listed above, the conversion will still be successfully ingested, but it will be marked as <IC>attribution_status: 'unattributed'</IC> and <IC>stitching_method: 'none'</IC>. Ensure you pass one of the stitching IDs in your Stripe checkout session creation.
+            </Warn>
+
+            <H3>Deduplication & Idempotency</H3>
+            <p>
+              SourceTrack enforces durable, database-backed revenue idempotency. For every event, it claims a combination of:
+            </p>
+            <ul className="list-disc pl-5 space-y-1 font-light">
+              <li>Stripe event ID (<IC>provider_event_id</IC>)</li>
+              <li>Stripe checkout session ID (<IC>order_id</IC>)</li>
+              <li>Stripe payment intent ID (<IC>payment_id</IC>)</li>
+            </ul>
+            <p>
+              If Stripe retries a webhook or sends duplicate event deliveries, SourceTrack will detect the claimed keys, log a duplicate audit event, and return a safe <IC>200 OK</IC> response without ingesting duplicate revenue.
+            </p>
+
+            <H3>Test Mode & Live Mode</H3>
+            <Note>
+              Stripe Webhook Sync supports both live mode and test mode events automatically. When testing, you can use Stripe test cards and trigger webhook events to test the flow end-to-end.
+            </Note>
+
+            <H3>Privacy Guidelines</H3>
+            <p>
+              To protect customer privacy:
+            </p>
+            <ul className="list-disc pl-5 space-y-1 font-light">
+              <li>No raw Stripe payload is stored in the database.</li>
+              <li>No customer names, email addresses, phone numbers, or shipping addresses are parsed, stored, or processed.</li>
+              <li>Stitching is restricted strictly to the explicit metadata keys listed above.</li>
             </ul>
           </Section>
 

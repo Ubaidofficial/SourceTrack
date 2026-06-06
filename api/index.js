@@ -49,6 +49,7 @@ import { gdprRouter } from './routes/gdpr.js'
 import { pixelRouter } from './routes/pixel.js'
 import { annotationsRouter } from './routes/annotations.js'
 import { webhooksRouter } from './routes/webhooks.js'
+import { stripeWebhookRouter } from './routes/stripe-webhook.js'
 
 // Fail fast on missing required environment variables. Better to crash on
 // startup than to fail every request with a cryptic 500 later.
@@ -244,6 +245,7 @@ app.use('/tracker', express.static('tracker'))
 
 // 2. Stripe webhook (MUST be before express.json)
 app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), billingWebhookHandler)
+app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }), stripeWebhookRouter)
 
 // 3. express.json
 app.use(express.json())

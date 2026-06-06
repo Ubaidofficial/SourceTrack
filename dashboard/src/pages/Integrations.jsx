@@ -70,6 +70,78 @@ export default function Integrations() {
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState(null)
 
+  // Stripe Webhook Sync integration state
+  const { data: stripeIntegData, refetch: refetchStripeInteg } = useQuery({
+    queryKey: ['stripe-integration', site?.site_key],
+    queryFn: () => fetchApi(`/integrations/stripe?site_key=${site.site_key}`),
+    enabled: !!site?.site_key
+  })
+
+  const [stripeSecret, setStripeSecret] = useState('')
+  const [stripeSubmitting, setStripeSubmitting] = useState(false)
+  const [stripeMessage, setStripeMessage] = useState('')
+  const [stripeError, setStripeError] = useState('')
+  const [copiedStripeUrl, setCopiedStripeUrl] = useState(false)
+
+  const stripeWebhookUrl = site?.site_key ? `${window.location.origin.includes('localhost') ? 'http://localhost:3000' : 'https://api.srctk.com'}/api/webhooks/stripe/${site.site_key}` : ''
+
+  const handleCopyStripeUrl = () => {
+    if (stripeWebhookUrl) {
+      navigator.clipboard.writeText(stripeWebhookUrl).catch(() => {})
+      setCopiedStripeUrl(true)
+      setTimeout(() => setCopiedStripeUrl(false), 2000)
+    }
+  }
+
+  const handleSaveStripe = async (e) => {
+    e.preventDefault()
+    if (!site?.site_key) return
+    setStripeSubmitting(true)
+    setStripeMessage('')
+    setStripeError('')
+    try {
+      const res = await fetchApi(`/integrations/stripe?site_key=${site.site_key}`, {
+        method: 'POST',
+        body: { secret: stripeSecret }
+      })
+      if (res?.configured !== undefined) {
+        setStripeMessage('Stripe webhook signing secret saved successfully!')
+        setStripeSecret('')
+        refetchStripeInteg()
+      } else {
+        setStripeError('Failed to save Stripe secret')
+      }
+    } catch (err) {
+      setStripeError(err?.message || 'Error saving Stripe secret')
+    } finally {
+      setStripeSubmitting(false)
+    }
+  }
+
+  const handleDeleteStripe = async () => {
+    if (!site?.site_key) return
+    if (!window.confirm('Are you sure you want to disconnect Stripe webhook sync? This will remove the signing secret.')) return
+    setStripeSubmitting(true)
+    setStripeMessage('')
+    setStripeError('')
+    try {
+      const res = await fetchApi(`/integrations/stripe?site_key=${site.site_key}`, {
+        method: 'POST',
+        body: { secret: '' }
+      })
+      if (res?.configured !== undefined) {
+        setStripeMessage('Stripe webhook sync disconnected.')
+        refetchStripeInteg()
+      } else {
+        setStripeError('Failed to disconnect Stripe')
+      }
+    } catch (err) {
+      setStripeError(err?.message || 'Error disconnecting Stripe')
+    } finally {
+      setStripeSubmitting(false)
+    }
+  }
+
   useEffect(() => {
     if (webhookData?.webhook) {
       setUrl(webhookData.webhook.url || '')
@@ -467,6 +539,120 @@ export default function Integrations() {
           ) : (
             <p className="text-sm text-st-gray py-2">Site key loading…</p>
           )}
+        </div>
+      </DashboardCard>
+
+      {/* Stripe Webhook Sync */}
+      <DashboardCard
+        title="Stripe Webhook Sync"
+        subtitle="Signed Stripe checkout revenue events for attribution"
+      >
+        <div className="space-y-4">
+          {stripeMessage && (
+            <div className="p-3 text-xs rounded-lg bg-green-50 text-green-700 border border-green-200">
+              {stripeMessage}
+            </div>
+          )}
+          {stripeError && (
+            <div className="p-3 text-xs rounded-lg bg-red-50 text-red-700 border border-red-200">
+              {stripeError}
+            </div>
+          )}
+
+          {/* Configuration State */}
+          <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
+            <div>
+              <p className="text-sm font-semibold text-st-black dark:text-white">Status</p>
+              <p className="text-xs text-st-gray mt-0.5">Stripe customer webhook sync</p>
+            </div>
+            <StatusBadge
+              status={stripeIntegData?.configured ? 'verified' : 'pending'}
+              label={stripeIntegData?.configured ? 'Active' : 'Not Configured'}
+            />
+          </div>
+
+          {/* Copyable Webhook URL */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Stripe Webhook Listener URL</label>
+              <button
+                type="button"
+                onClick={handleCopyStripeUrl}
+                className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black dark:hover:text-white transition-colors"
+              >
+                {copiedStripeUrl ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                {copiedStripeUrl ? 'Copied' : 'Copy URL'}
+              </button>
+            </div>
+            <div className="bg-st-black rounded-lg p-3">
+              <pre className="text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed select-all">
+                {stripeWebhookUrl || 'Loading URL...'}
+              </pre>
+            </div>
+          </div>
+
+          {/* Form */}
+          {stripeIntegData?.configured ? (
+            <div className="space-y-3 bg-gray-50 dark:bg-[#1a1d1d] border border-gray-100 dark:border-gray-800 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Stripe Webhook Secret</p>
+                  <code className="text-xs font-mono text-gray-700 dark:text-gray-300 mt-1 block">
+                    {stripeIntegData.masked_secret}
+                  </code>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDeleteStripe}
+                  disabled={stripeSubmitting}
+                  className="px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-50"
+                >
+                  Disconnect
+                </button>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleSaveStripe} className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">
+                  Stripe Webhook Secret (whsec_...)
+                </label>
+                <input
+                  type="password"
+                  value={stripeSecret}
+                  onChange={e => setStripeSecret(e.target.value)}
+                  placeholder="whsec_..."
+                  disabled={stripeSubmitting}
+                  className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a1d1d] text-st-black dark:text-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-st-black/20"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={stripeSubmitting || !stripeSecret.trim()}
+                className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 disabled:opacity-50 transition-colors"
+              >
+                {stripeSubmitting ? 'Saving...' : 'Connect Stripe'}
+              </button>
+            </form>
+          )}
+
+          {/* Setup Instructions */}
+          <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-lg p-3.5 space-y-2">
+            <h4 className="text-xs font-bold text-blue-900 dark:text-blue-300">Stripe Webhook Setup Instructions</h4>
+            <ol className="list-decimal pl-4 text-xs text-blue-800 dark:text-blue-400 space-y-1.5 font-light">
+              <li>Open your <strong>Stripe Dashboard</strong> and go to <strong>Developers &gt; Webhooks</strong>.</li>
+              <li>Click <strong>Add endpoint</strong> and paste the <strong>Stripe Webhook Listener URL</strong> copy block above.</li>
+              <li>Select the event to send: <code className="font-mono bg-blue-100 dark:bg-blue-900/40 px-1 py-0.5 rounded text-[11px]">checkout.session.completed</code>.</li>
+              <li>Click <strong>Add endpoint</strong>, then reveal and copy the <strong>Signing secret</strong> (starts with <code className="font-mono">whsec_</code>).</li>
+              <li>Paste the signing secret in the input field above and save.</li>
+            </ol>
+            <p className="text-[11px] text-blue-700 dark:text-blue-400 pt-1">
+              <strong>Test mode / Live mode:</strong> Webhook events from both Stripe Live mode and Test mode are fully supported.
+            </p>
+            <p className="text-[11px] text-blue-700 dark:text-blue-400">
+              <strong>Attribution Stitching:</strong> Ensure your checkout sessions include a stitching metadata key (e.g. <code className="font-mono">visitor_id</code>, <code className="font-mono">anonymous_id</code>, or <code className="font-mono">client_reference_id</code>). Sessions without metadata are logged as unattributed revenue.
+            </p>
+          </div>
         </div>
       </DashboardCard>
 
