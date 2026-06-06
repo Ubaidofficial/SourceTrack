@@ -1,10 +1,28 @@
-> [!NOTE]
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 117C — Page-Path Funnel Presets. Added quick-select page-path funnel presets to the Analytics page, including a row of preset buttons, editable step pills with deletion handles, inline validation copy for fewer than 2 keywords, and a helper banner. Integrated loading, error, and empty status views inside the FunnelChart component. Documented page-path funnel features, examples, and limitations inside Docs.jsx.
+> **Handoff:** Session 118B — Revenue Ingestion Foundation / Durable Idempotency + Secret Handling. Created SQL migration 20260606180000_revenue_foundation.sql, implemented AES-256-GCM encryption/decryption helpers in utils.js, implemented DB-backed claimIdempotencyKeys and logIngestionEvent in idempotency.js, added SHA-256 API key hashing and fallback lookups in api-key.js and webhook-incoming.js, added startup checks in api/index.js, and verified with qa-revenue-foundation.mjs.
 >
-> **Next Task:** Session 117D — Audit and plan timezone/saved reports or next paid beta dashboard task.
+> **Next Task:** Session 118C — Stripe Webhook Sync.
 >
+
+## Session 118B — Revenue Ingestion Foundation / Durable Idempotency + Secret Handling
+**Date:** 2026-06-06 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+1. **Durable DB-Backed Idempotency Migration:** Created migration `20260606180000_revenue_foundation.sql` adding `revenue_idempotency_keys` table with indexes, RLS policies, and non-empty checks for `provider`, `key_type`, and `key_value`. Created `revenue_ingestion_events` table for transaction history. Added `claim_revenue_idempotency_keys` Postgres RPC function executing in a single atomic transaction block. Added encrypted webhook secret and API key columns to `sites`, with a SHA-256 backfill for existing API keys.
+2. **Symmetric GCM Encryption Helpers:** Implemented `encryptSecret` and `decryptSecret` in `api/lib/utils.js` using `aes-256-gcm`. They validate the `ENCRYPTION_KEY` on usage and throw errors if it is missing or invalid.
+3. **Database-Backed Idempotency Helper:** Implemented `claimIdempotencyKeys` and `logIngestionEvent` in `api/lib/idempotency.js`. The JS helper translates the RPC's `false` return value into `{ success: false, duplicate: true }`.
+4. **Secret API Key Hashing:** Refactored `api/middleware/api-key.js` and `api/routes/webhook-incoming.js` to hash incoming API keys using SHA-256 and query the `api_key_hash` column first, falling back to plaintext `api_key` for backward compatibility.
+5. **Startup GCM Key Check:** Added fail-fast validation in `api/index.js` to crash the server on startup in production if `ENCRYPTION_KEY` is missing or invalid.
+6. **Automated Verification:** Implemented `scripts/qa-revenue-foundation.mjs` testing encryption/decryption round-trips, validation throwing behavior, and RPC/database idempotency and rollback atomicity.
+
+## Session 118A — Audit + Plan for Revenue Ingestion
+**Date:** 2026-06-06 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+1. **Revenue Ingestion Audit:** Completed a detailed audit of standard conversions (`api/routes/conversion.js`), offline conversions (`api/routes/conversion-offline.js`), incoming webhooks (`api/routes/webhook-incoming.js`), outbound webhooks (`api/lib/webhook.js` and `api/routes/webhooks.js`), and pixel routes (`api/routes/pixel.js`).
+2. **Detailed Plan Created:** Created [revenue_ingestion_audit.md](file:///Users/ubaid/.gemini/antigravity/brain/77b33e63-5989-4fc8-99ee-bcd620aa29e4/revenue_ingestion_audit.md) outlining data fields, deduplication mapping gaps, security/privacy risks, UI/documentation status, and exact implementation plans for Stripe sync, Payments API, and Shopify webhooks.
+3. **Static Launch Verification:** Executed `npm run qa:static` checking backend file syntaxes, production frontend compilation, git status, and plan/scoping gates. All checks passed with zero errors.
 
 ## Session 117C — Page-Path Funnel Presets
 **Date:** 2026-06-06 | **Branch:** `main` | **Build:** ✅ passing

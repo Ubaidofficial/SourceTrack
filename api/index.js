@@ -59,6 +59,31 @@ if (missingEnv.length) {
   process.exit(1)
 }
 
+// Fail fast in production if ENCRYPTION_KEY is missing or invalid
+if (process.env.NODE_ENV === 'production') {
+  const rawKey = process.env.ENCRYPTION_KEY
+  if (!rawKey) {
+    console.error('[startup] FATAL: ENCRYPTION_KEY environment variable is missing in production!')
+    process.exit(1)
+  }
+  let isValid = false
+  if (/^[0-9a-fA-F]{64}$/.test(rawKey)) {
+    isValid = true
+  } else {
+    try {
+      const buf = Buffer.from(rawKey, 'base64')
+      if (buf.length === 32) {
+        isValid = true
+      }
+    } catch (_) {}
+  }
+  if (!isValid) {
+    console.error('[startup] FATAL: ENCRYPTION_KEY must be a 64-character hex string or a 32-byte base64-encoded string in production!')
+    process.exit(1)
+  }
+}
+
+
 const app = express()
 
 // ── Hardcoded dashboard origins (not customer domains, not in env var) ────────

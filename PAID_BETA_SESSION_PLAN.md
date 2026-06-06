@@ -119,4 +119,6 @@ The session order was re-prioritized to address the **Attribution and Tracking T
 
 ## 4. Current Progress & Status
 
+* **Session 118B — Revenue Ingestion Foundation / Durable Idempotency + Secret Handling:** ✅ Complete. SQL migration for idempotency, ingestion events, and credential tables. Symmetric GCM encryption helpers. SHA-256 API key hashing. Fail-fast startup checks. Verification script.
+* **Session 118A — Audit + Plan for Revenue Ingestion:** ✅ Complete. Audited conversion, webhook, and pixel endpoints. Created comprehensive roadmap and security analysis in revenue_ingestion_audit.md. Checked codebase with static launch check.
 * **Session 116B — Path Exclusions:** ✅ Complete. Added database schema migration, server-side path matching logic, cached site context updates, settings patch route, standard and cookieless tracker dynamic exclusions, minification, and dashboard configurations. All static and runtime checks pass.

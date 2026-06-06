@@ -8,6 +8,8 @@
  * `String()`. The consolidated version uses the safer pattern.
  */
 
+import crypto from 'crypto'
+
 /**
  * Escape a value for safe inclusion in HogQL string literals.
  * Doubles single quotes (ClickHouse/HogQL escape rule).
@@ -324,4 +326,76 @@ export function getPaddedUtcDateRange(localDateFrom, localDateTo) {
     from: from.toISOString().slice(0, 10),
     to: to.toISOString().slice(0, 10)
   }
+}
+
+let cachedKeyBuffer = null
+
+function getEncryptionKeyBuffer() {
+  if (cachedKeyBuffer) return cachedKeyBuffer
+
+  const rawKey = process.env.ENCRYPTION_KEY
+  if (!rawKey) {
+    throw new Error('ENCRYPTION_KEY environment variable is missing.')
+  }
+
+  // Check 64-character hex format
+  if (/^[0-9a-fA-F]{64}$/.test(rawKey)) {
+    cachedKeyBuffer = Buffer.from(rawKey, 'hex')
+    return cachedKeyBuffer
+  }
+
+  // Check 32-byte base64 format
+  try {
+    const buf = Buffer.from(rawKey, 'base64')
+    if (buf.length === 32) {
+      cachedKeyBuffer = buf
+      return cachedKeyBuffer
+    }
+  } catch (_) {
+    // Ignore and throw below
+  }
+
+  throw new Error('ENCRYPTION_KEY must be a 64-character hex string or a 32-byte base64-encoded string.')
+}
+
+/**
+ * Encrypt a secret value using AES-256-GCM.
+ * Returns the format `iv:ciphertext:tag` in hex.
+ *
+ * @param {string} text - The plaintext to encrypt.
+ * @returns {string} The encrypted string.
+ */
+export function encryptSecret(text) {
+  if (text === null || text === undefined) return text
+  const key = getEncryptionKeyBuffer()
+  const iv = crypto.randomBytes(12)
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv)
+  let encrypted = cipher.update(String(text), 'utf8', 'hex')
+  encrypted += cipher.final('hex')
+  const tag = cipher.getAuthTag().toString('hex')
+  return `${iv.toString('hex')}:${encrypted}:${tag}`
+}
+
+/**
+ * Decrypt a secret value encrypted using AES-256-GCM.
+ * Expects the format `iv:ciphertext:tag` in hex.
+ *
+ * @param {string} encryptedText - The encrypted string.
+ * @returns {string} The decrypted plaintext.
+ */
+export function decryptSecret(encryptedText) {
+  if (!encryptedText) return encryptedText
+  const parts = encryptedText.split(':')
+  if (parts.length !== 3) {
+    throw new Error('Invalid encrypted secret format. Must be iv:ciphertext:tag.')
+  }
+  const key = getEncryptionKeyBuffer()
+  const iv = Buffer.from(parts[0], 'hex')
+  const encrypted = parts[1]
+  const tag = Buffer.from(parts[2], 'hex')
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv)
+  decipher.setAuthTag(tag)
+  let decrypted = decipher.update(encrypted, 'hex', 'utf8')
+  decrypted += decipher.final('utf8')
+  return decrypted
 }

@@ -8,6 +8,7 @@
  * Auth: api_key in URL path (easier for no-code tools than headers)
  */
 import express from 'express'
+import crypto from 'crypto'
 import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
 import { getSupabase } from '../lib/supabase.js'
@@ -66,12 +67,23 @@ router.post('/:api_key', async (req, res) => {
 
     const supabase = getSupabase()
 
+    const keyHash = crypto.createHash('sha256').update(api_key).digest('hex')
     // Validate API key → get site
-    const { data: site } = await supabase
+    let { data: site } = await supabase
       .from('sites')
       .select('id, site_key, name')
-      .eq('api_key', api_key)
-      .single()
+      .eq('api_key_hash', keyHash)
+      .maybeSingle()
+
+    if (!site) {
+      // Fallback check for plaintext api_key
+      const { data: fallbackSite } = await supabase
+        .from('sites')
+        .select('id, site_key, name')
+        .eq('api_key', api_key)
+        .maybeSingle()
+      site = fallbackSite
+    }
 
     if (!site) return res.status(401).json({ error: 'Invalid API key' })
 
@@ -113,11 +125,22 @@ router.post('/:api_key', async (req, res) => {
 router.get('/test/:api_key', async (req, res) => {
   try {
     const supabase = getSupabase()
-    const { data: site } = await supabase
+    const keyHash = crypto.createHash('sha256').update(req.params.api_key).digest('hex')
+    let { data: site } = await supabase
       .from('sites')
       .select('id, name, site_key')
-      .eq('api_key', req.params.api_key)
-      .single()
+      .eq('api_key_hash', keyHash)
+      .maybeSingle()
+
+    if (!site) {
+      // Fallback check for plaintext api_key
+      const { data: fallbackSite } = await supabase
+        .from('sites')
+        .select('id, name, site_key')
+        .eq('api_key', req.params.api_key)
+        .maybeSingle()
+      site = fallbackSite
+    }
 
     if (!site) return res.status(401).json({ error: 'Invalid API key' })
     res.json({

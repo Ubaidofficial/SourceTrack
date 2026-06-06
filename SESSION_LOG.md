@@ -5,6 +5,8 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 118B | 2026-06-06 | `main` | Revenue Ingestion Foundation / Durable Idempotency + Secret Handling — SQL migration for idempotency, ingestion events, encrypted credentials. Symmetric GCM encryption helpers. SHA-256 API key hashing and fallback lookups. Startup key checks. Verification script. | ✅ | No |
+| 118A | 2026-06-06 | `main` | Audit + Plan for Revenue Ingestion — Audited conversions, webhooks, and pixel endpoints. Created comprehensive roadmap and security analysis in revenue_ingestion_audit.md | ✅ | No |
 | 117C | 2026-06-06 | `main` | Page-Path Funnel Presets — Added presets selector, active steps pills with delete handle, input validation and helper copy in Analytics.jsx, spinner/error states in FunnelChart, and documentation | ✅ | No |
 | 117B | 2026-06-06 | `main` | Session Grouping in Journey — Refactored journey API to return session-grouped events, created collapsible session cards in frontend, fixed mobile overflows, added documentation | ✅ | No |
 | 116D | 2026-06-06 | `main` | Campaign Drilldown Polish — Unified campaigns backend to fetch visits and leads in parallel, aligned columns, added cost tracking docs and verification script | ✅ | No |

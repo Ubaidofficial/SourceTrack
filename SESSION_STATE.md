@@ -1,5 +1,5 @@
-Session: 117C
-Last Completed: Completed Session 117C — Page-Path Funnel Presets. Added quick-select page-path funnel presets to the Analytics page, including a row of preset buttons, editable step pills with deletion handles, inline validation copy for fewer than 2 keywords, and a helper banner. Integrated loading, error, and empty status views inside the FunnelChart component. Documented page-path funnel features, examples, and limitations inside Docs.jsx.
-Next Task: Session 117D — Audit and plan timezone/saved reports or next paid beta dashboard task.
+Session: 118B
+Last Completed: Completed Session 118B — Revenue Ingestion Foundation / Durable Idempotency + Secret Handling. Created SQL migration 20260606180000_revenue_foundation.sql, implemented AES-256-GCM encryption/decryption helpers in utils.js, implemented DB-backed claimIdempotencyKeys and logIngestionEvent in idempotency.js, added SHA-256 API key hashing and fallback lookups in api-key.js and webhook-incoming.js, added startup checks in api/index.js, and verified with qa-revenue-foundation.mjs.
+Next Task: Session 118C — Implement Stripe webhook sync.
 Build: ✅ passing
 Branch: main
