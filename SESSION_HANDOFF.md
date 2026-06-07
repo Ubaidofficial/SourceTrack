@@ -1,10 +1,32 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 127B — Owner Billing and Trial Fix. Implemented shared dashboard billing helper for trial status, friendly plan labels, and paid-plan checks. Returned trial timestamps from sites API and utilized database `trial_ends_at` instead of hardcoded 14-day creation math in layout and settings views. Cleared stale trial banner state for super admins and verified all cases using a sandboxed unit test script.
+> **Handoff:** Session 128A — Manual Ad Cost Imports and Campaign ROI. Implemented manual CSV/paste ad cost imports and campaign ROI reporting updates. Added a shared library for validation, normalization, and CSV parsing. Created migration for platform/clicks/impressions/currency columns on campaign_costs and a new ad_sync_runs logging table. Updated campaigns dashboard with upgraded table columns (Clicks, Impressions, CTR, CPC, CPA, ROAS), platform badges, and currency status tooltips. Created E2E QA verification script and updated documentation.
 >
-> **Next Task:** QA verification in staging/production environment after deployment.
+> **Next Task:** Session 128B — Automated Google and Meta Ads API cost synchronization.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 128A — Manual Ad Cost Imports + Campaign ROI
+**Date:** 2026-06-08 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+1. **Database Schema:** Created migration `supabase/migrations/20260608000000_add_ad_cost_imports.sql` adding platform, clicks, impressions, currency, and cost_dedupe_key columns to `campaign_costs`, performing preflight deduplication merging of existing rows to prevent unique index violation failures, creating a unique index on `site_id + platform + cost_dedupe_key + period_start`, and establishing the `ad_sync_runs` table with Row-Level Security for logging sync logs history.
+2. **Shared Imports Library:** Created `api/lib/ad-cost-imports.js` containing deduplication key hashing, row normalization, validation guards (future dates, clicks vs impressions, batch limit of 1000), upload payload aggregation, currency status evaluation (comparing spend currencies with tracked revenue currency), and a RFC 4180-compliant quoted CSV parser and header mapper.
+3. **Backend API Endpoints:**
+   - Modified `api/routes/campaign-costs.js` to return new columns on `GET /`, support the new unique index on legacy inline manual `POST /` (preserving range spend), implement `POST /import` for bulk uploads (strictly deriving `site_id` from authenticated site context, never trusting client payload site parameters, merging payload duplicates first, and logging imports history), and implement `GET /import-history`.
+   - Modified `api/routes/campaigns.js` to retrieve active checkout currencies from `revenue_ingestion_events`, aggregate spend/clicks/impressions, calculate CPA/ROAS/CPC/CTR metrics, suppress ROAS/CPA calculations if mixed or mismatched currencies are found, and expose `platforms` in campaign row payloads.
+4. **Campaigns UI Dashboard:** Updated `dashboard/src/pages/Campaigns.jsx` to render upgraded columns (Clicks, Impressions, CTR, CPC, CPA, ROAS), display platform badges, show warn icons with hover tooltips on suppressed/mismatched currencies, trigger main report refetches when spend is saved, and added an **Import Costs Modal** (featuring drag-and-drop CSV box, paste textarea, live validation preview highlighting error rows, currency alerts, downloadable template, and the **Import History** log view tab).
+5. **Help Center Docs:** Added "Ad Spend Integration" guide to `dashboard/src/pages/Docs.jsx` describing setup rules, CSV formats, currency warnings, unique constraints, and REST API specification, adhering to strict product wording guidelines.
+6. **QA Test Harness:** Created `scripts/qa-ad-cost-imports.mjs` verifying E2E CSV parser formats, validation rules, deduplication merging, currency status logic, and database schema/RLS setup.
+
+### Files changed
+- `supabase/migrations/20260608000000_add_ad_cost_imports.sql` [NEW]
+- `api/lib/ad-cost-imports.js` [NEW]
+- `scripts/qa-ad-cost-imports.mjs` [NEW]
+- `api/routes/campaign-costs.js`
+- `api/routes/campaigns.js`
+- `dashboard/src/pages/Campaigns.jsx`
+- `dashboard/src/pages/Docs.jsx`
 
 ## Session 127B — Owner Billing and Trial Fix
 **Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)

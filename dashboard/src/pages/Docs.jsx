@@ -110,6 +110,7 @@ const NAV = [
   { id: 'timezone',         label: 'Timezone Behavior', indent: true },
   { id: 'dashboard-widgets', label: 'Dashboard Widgets', indent: true },
   { id: 'utm-best-practices', label: 'UTM & Cost Tracking', indent: true },
+  { id: 'ad-spend-imports', label: 'Ad Cost Imports (CSV/API)', indent: true },
   { id: 'recipes',          label: 'Installation Guides' },
   { id: 'track',            label: 'POST /api/track' },
   { id: 'conversion',       label: 'POST /api/conversion' },
@@ -1286,6 +1287,94 @@ window.location.href = decoratedUrl;`}</Code>
             <Warn>
               SourceTrack does not support automatic ad account integrations or API synchronization with Google Ads, Meta Ads, or other ad platforms at this time. All cost calculations depend strictly on the spend entered manually by you.
             </Warn>
+          </Section>
+
+          {/* ── Ad Cost Imports (CSV & API) ──────────────────────────────── */}
+          <Section id="ad-spend-imports" title="Ad Cost Imports (CSV & API)">
+            <p>
+              To see campaign performance with advanced metric calculations, you can import ad cost data using a CSV file, copy-pasting ad spend rows, or using our REST API. This allows SourceTrack to display the **matched campaign cost** and **imported ad spend** directly alongside your conversions.
+            </p>
+            <p>
+              Once ad cost data is imported, SourceTrack calculates the **estimated ROAS based on tracked revenue and imported spend**, as well as CPA (Cost Per Acquisition), CPC (Cost Per Click), and CTR (Click-Through Rate).
+            </p>
+
+            <H3>CSV Template Format</H3>
+            <p>
+              Your CSV file or pasted text must include a header row and follow this format:
+            </p>
+            <Code lang="csv">{`date,platform,campaign_name,campaign_id,spend,currency,clicks,impressions
+2026-06-08,facebook,Summer Sale,1202941094,45.50,USD,40,1200
+2026-06-08,google,Brand Search,,12.30,USD,12,180`}</Code>
+
+            <H3>Import Columns & Validation Rules</H3>
+            <ParamTable params={[
+              { name: 'date', type: 'string', required: true, desc: 'The date in YYYY-MM-DD format. Cannot be a future date.' },
+              { name: 'platform', type: 'string', required: true, desc: 'The marketing platform name (e.g. google, facebook). Defaults to manual_csv if omitted. Must be lowercase, alphanumeric/hyphens/underscores, max 50 characters.' },
+              { name: 'campaign_name', type: 'string', required: true, desc: 'The exact campaign name to match against the utm_campaign parameter. Max 255 characters.' },
+              { name: 'campaign_id', type: 'string', required: false, desc: 'Optional campaign identifier. Max 255 characters.' },
+              { name: 'spend', type: 'number', required: true, desc: 'The advertising spend amount. Must be a non-negative number.' },
+              { name: 'currency', type: 'string', required: false, desc: 'The 3-letter currency code (e.g. USD, EUR). Defaults to USD.' },
+              { name: 'clicks', type: 'number', required: false, desc: 'Optional click count. Must be a non-negative integer.' },
+              { name: 'impressions', type: 'number', required: false, desc: 'Optional impression count. Must be a non-negative integer and greater than or equal to clicks.' }
+            ]} />
+
+            <H3>Currency Matching & ROAS Suppression</H3>
+            <p>
+              SourceTrack tracks visitor checkout revenue in its raw transaction currency. When displaying aggregated ROI reports:
+            </p>
+            <ul className="list-disc list-inside space-y-2 pl-1 text-sm text-gray-600 dark:text-gray-400">
+              <li>
+                <strong>Currency Status (OK):</strong> If the imported spend currency matches the site's tracked checkout revenue currency, ROAS and CPA are computed.
+              </li>
+              <li>
+                <strong>Mixed Currency:</strong> If a campaign contains spend records in multiple currencies, or the site's revenue contains multiple currencies, ROAS and CPA calculations are suppressed with a warning to prevent skewed aggregates.
+              </li>
+              <li>
+                <strong>Currency Mismatch:</strong> If the single campaign spend currency differs from the tracked revenue currency (e.g., EUR spend vs USD revenue), ROAS and CPA calculations are suppressed.
+              </li>
+            </ul>
+
+            <H3>Unique Constraints & Deduplication</H3>
+            <p>
+              To prevent duplicate spend entries, SourceTrack uses a database unique constraint index on <IC>site_id + platform + cost_dedupe_key + period_start</IC>.
+            </p>
+            <p>
+              The <IC>cost_dedupe_key</IC> is derived automatically:
+            </p>
+            <ul className="list-disc list-inside space-y-1 pl-1 text-sm text-gray-600 dark:text-gray-400">
+              <li>If <IC>campaign_id</IC> is present, it uses <IC>id:campaign_id</IC> (allowing you to rename campaigns without duplicate costs).</li>
+              <li>If <IC>campaign_id</IC> is missing, it falls back to <IC>name:campaign_name</IC> (trimmed and lowercased).</li>
+            </ul>
+            <p>
+              When a row with the same deduplication keys and date is imported again, the existing database record is updated/overwritten (upserted). If multiple rows in the same upload share the same keys/date, they are aggregated (summed) before saving.
+            </p>
+
+            <H3>REST API Import Endpoint</H3>
+            <Endpoint method="POST" path="/api/campaign-costs/import" description="Bulk upload ad cost records" />
+            <p>
+              You can programmatically import ad costs by sending a POST request containing your API Bearer token in the header and a JSON body.
+            </p>
+            <Code lang="js">{`await fetch('https://api.srctk.com/api/campaign-costs/import?site_key=YOUR_SITE_KEY', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_API_TOKEN',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    rows: [
+      {
+        date: '2026-06-08',
+        platform: 'facebook',
+        campaign_name: 'Summer Sale',
+        campaign_id: '1202941094',
+        spend: 45.50,
+        currency: 'USD',
+        clicks: 40,
+        impressions: 1200
+      }
+    ]
+  })
+})`}</Code>
           </Section>
 
           {/* ── Installation Guides ─────────────────────────────────────── */}

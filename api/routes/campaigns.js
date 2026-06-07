@@ -1,6 +1,7 @@
 import express from 'express'
 import { getFlexibleReport } from '../lib/attribution-engine.js'
 import { getSupabase } from '../lib/supabase.js'
+import { summarizeCurrencyStatus } from '../lib/ad-cost-imports.js'
 
 const ALLOWED_DIMS = new Set(['source', 'medium', 'campaign', 'ai_source'])
 const MAX_DAYS = 365
@@ -37,13 +38,32 @@ async function getCampaignsData(req) {
   const prevDateTo = fmtDate(new Date(today - 86400000))
   const prevDateFrom = fmtDate(new Date(today - (days + 1) * 86400000))
 
+  const supabase = getSupabase()
+
+  // 1. Detect site's tracked revenue currency from recent ingestion success events
+  const { data: revEvents } = await supabase
+    .from('revenue_ingestion_events')
+    .select('currency')
+    .eq('site_key', req.site.site_key)
+    .eq('status', 'success')
+    .limit(100)
+
+  const revCurrencies = [...new Set(revEvents?.map(e => e.currency?.toUpperCase()).filter(Boolean) || [])]
+  const trackedCurrency = revCurrencies.length === 1 ? revCurrencies[0] : (revCurrencies.length > 1 ? 'MIXED' : 'USD')
+
+  // 2. Fetch PostHog analytics and campaign spend records in parallel
   const [currentRevenue, currentConversions, currentVisits, currentLeads, prevRevenue, spendData] = await Promise.all([
     getFlexibleReport(posthogSiteId, model, dateFrom, dateTo, dimension, 'revenue', {}),
     getFlexibleReport(posthogSiteId, model, dateFrom, dateTo, dimension, 'conversions', {}),
     getFlexibleReport(posthogSiteId, model, dateFrom, dateTo, dimension, 'sessions', {}),
     getFlexibleReport(posthogSiteId, model, dateFrom, dateTo, dimension, 'leads', {}),
-    getFlexibleReport(posthogSiteId, model, prevDateFrom, prevDateTo, dimension, 'revenue', {}),
-    getSupabase().from('campaign_costs').select('campaign_name, spend').eq('site_id', req.site.id).gte('period_start', dateFrom).lte('period_end', dateTo)
+    getFlexibleRev(posthogSiteId, model, prevDateFrom, prevDateTo, dimension),
+    supabase
+      .from('campaign_costs')
+      .select('campaign_name, spend, clicks, impressions, currency, platform, campaign_id')
+      .eq('site_id', req.site.id)
+      .gte('period_start', dateFrom)
+      .lte('period_end', dateTo)
   ])
 
   const combined = {}
@@ -58,7 +78,9 @@ async function getCampaignsData(req) {
         leads: 0,
         conversions: 0,
         revenue: 0,
-        spend: 0
+        spend: 0,
+        clicks: 0,
+        impressions: 0
       }
     }
     return combined[lower]
@@ -84,9 +106,19 @@ async function getCampaignsData(req) {
     getOrInit(name).revenue += Number(r.revenue) || 0
   })
 
+  // Map spend data to calculate aggregates
+  const spendByCampaignName = {}
   for (const row of spendData?.data || []) {
-    const name = row.campaign_name || 'unknown'
-    getOrInit(name).spend += parseFloat(row.spend) || 0
+    const name = (row.campaign_name || 'unknown').trim().toLowerCase()
+    if (!spendByCampaignName[name]) {
+      spendByCampaignName[name] = []
+    }
+    spendByCampaignName[name].push(row)
+
+    const item = getOrInit(row.campaign_name)
+    item.spend += parseFloat(row.spend) || 0
+    item.clicks += parseInt(row.clicks, 10) || 0
+    item.impressions += parseInt(row.impressions, 10) || 0
   }
 
   const prevRevenueMap = {}
@@ -102,14 +134,30 @@ async function getCampaignsData(req) {
     const conversions = item.conversions
     const revenue = item.revenue
     const spend = item.spend
+    const clicks = item.clicks
+    const impressions = item.impressions
 
     const avgValue = conversions > 0 ? revenue / conversions : 0
     const lower = name.toLowerCase()
     const prevRev = prevRevenueMap[lower] || 0
     const trend = prevRev > 0 ? ((revenue - prevRev) / prevRev) * 100 : null
 
-    const roas = spend > 0 ? parseFloat((revenue / spend).toFixed(2)) : null
-    const cpl = spend > 0 && conversions > 0 ? parseFloat((spend / conversions).toFixed(2)) : null
+    // Determine currency status for this campaign's spend rows
+    const campaignSpends = spendByCampaignName[lower] || []
+    const currencySummary = summarizeCurrencyStatus(campaignSpends, trackedCurrency)
+
+    let roas = null
+    let cpl = null
+    let cpc = null
+    let ctr = null
+
+    if (currencySummary.status === 'ok') {
+      roas = spend > 0 ? parseFloat((revenue / spend).toFixed(2)) : null
+      cpl = spend > 0 && conversions > 0 ? parseFloat((spend / conversions).toFixed(2)) : null
+    }
+
+    cpc = spend > 0 && clicks > 0 ? parseFloat((spend / clicks).toFixed(2)) : null
+    ctr = impressions > 0 ? parseFloat(((clicks / impressions) * 100).toFixed(2)) : null
 
     let status = 'none'
     if (conversions >= 10 || visits >= 100) {
@@ -118,7 +166,27 @@ async function getCampaignsData(req) {
       status = 'low'
     }
 
-    return { name, visits, leads, conversions, revenue, avg_value: avgValue, trend, status, spend, roas, cpl }
+    return {
+      name,
+      visits,
+      leads,
+      conversions,
+      revenue,
+      avg_value: avgValue,
+      trend,
+      status,
+      spend,
+      clicks,
+      impressions,
+      roas,
+      cpl,
+      cpc,
+      ctr,
+      spend_currency: currencySummary.spendCurrency,
+      tracked_currency: trackedCurrency,
+      currency_status: currencySummary.status,
+      platforms: [...new Set(campaignSpends.map(s => s.platform).filter(Boolean))]
+    }
   })
 
   // Filtering
@@ -144,6 +212,9 @@ async function getCampaignsData(req) {
   const avgValue = totalConversions > 0 ? totalRevenue / totalConversions : 0
   const totalSpend = rows.reduce((s, r) => s + (r.spend || 0), 0)
 
+  // Overall Currency logic
+  const overallCurrencySummary = summarizeCurrencyStatus(spendData?.data || [], trackedCurrency)
+
   return {
     dimension,
     dateFrom,
@@ -157,9 +228,26 @@ async function getCampaignsData(req) {
       active_channels: activeChannels,
       avg_value: avgValue,
       total_spend: totalSpend,
-      avg_roas: (() => { const withRoas = rows.filter(r => r.roas !== null); return withRoas.length ? parseFloat((withRoas.reduce((s, r) => s + r.roas, 0) / withRoas.length).toFixed(2)) : null })()
+      avg_roas: (() => {
+        if (overallCurrencySummary.status !== 'ok') return null
+        const withRoas = rows.filter(r => r.roas !== null)
+        return withRoas.length ? parseFloat((withRoas.reduce((s, r) => s + r.roas, 0) / withRoas.length).toFixed(2)) : null
+      })(),
+      spend_currency: overallCurrencySummary.spendCurrency,
+      tracked_currency: trackedCurrency,
+      currency_status: overallCurrencySummary.status
     },
     rows
+  }
+}
+
+// Resilient wrapper for prior period revenue check
+async function getFlexibleRev(posthogSiteId, model, dateFrom, dateTo, dimension) {
+  try {
+    return await getFlexibleReport(posthogSiteId, model, dateFrom, dateTo, dimension, 'revenue', {})
+  } catch (err) {
+    console.warn('[campaigns] prior period revenue fetch failed:', err.message)
+    return []
   }
 }
 
@@ -189,7 +277,7 @@ async function exportCsv(req, res) {
       return
     }
 
-    const headers = ['Name', 'Status', 'Visits', 'Leads', 'Conversions', 'Revenue', 'Avg Value', 'Spend', 'CPL', 'Manual ROAS', 'Trend (%)']
+    const headers = ['Name', 'Status', 'Visits', 'Leads', 'Conversions', 'Revenue', 'Avg Value', 'Spend', 'Clicks', 'Impressions', 'CTR (%)', 'CPC', 'CPL', 'ROAS', 'Currency']
     const csvRows = rows.map(r => [
       escapeCsv(r.name),
       escapeCsv(r.status),
@@ -199,9 +287,13 @@ async function exportCsv(req, res) {
       r.revenue.toFixed(2),
       r.avg_value.toFixed(2),
       r.spend.toFixed(2),
-      r.cpl ? r.cpl.toFixed(2) : '—',
-      r.roas ? r.roas.toFixed(2) : '—',
-      r.trend !== null ? r.trend.toFixed(1) : '—'
+      r.clicks,
+      r.impressions,
+      r.ctr !== null ? r.ctr.toFixed(2) : '—',
+      r.cpc !== null ? r.cpc.toFixed(2) : '—',
+      r.cpl !== null ? r.cpl.toFixed(2) : '—',
+      r.roas !== null ? r.roas.toFixed(2) : '—',
+      escapeCsv(r.spend_currency)
     ].join(','))
 
     const csvContent = [headers.join(','), ...csvRows].join('\n') + '\n'
