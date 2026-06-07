@@ -1,10 +1,46 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 124C — Layered Rate-Limit Implementation. Built layered rate-limiting (visitor, IP, site, global IP) across approved ingestion paths. Bounded/hashed user-controlled key parts to prevent memory bloat and protect privacy. Configured defaultLimit skip helper. Created scripts/qa-rate-limits.mjs verification suite.
+> **Handoff:** Session 125A — Managed First-Party Proxy. Implemented managed custom tracking subdomains, DNS CNAME verification, SSL routing checks, two-stage proxy middleware (Stage 1 early gate, Stage 2 site-key binding), settings UI configurations, and E2E QA test scripts.
 >
-> **Next Task:** Session 125A — Managed First-Party Proxy.
+> **Next Task:** Pending next session planning.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 125A — Managed First-Party Proxy
+**Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+1. **Database Migration:** Created additive, safe schema migration file `supabase/migrations/20260607184000_add_managed_proxy_domains.sql` setting up `managed_proxy_domains` with company member RLS policies.
+2. **DNS/SSL Verification Utility:** Implemented recursive CNAME validation and HTTPS health checks to `/.well-known/sourcetrack/proxy-health` to confirm secure proxy routing. Supported mock resolution under `ST_MOCK_DNS_RESOLVE=true`.
+3. **Two-Stage Middleware:**
+   - **Stage 1 (Early Gate):** Mounts at the very top of `api/index.js` to validate the `Host` header, normalization, strip port, check platform-host pass-throughs, verify active status in database, and enforce path allowlists.
+   - **Stage 2 (Site Key Binding):** Mounts inside ingestion routes after body-parsing to enforce that any incoming `site_key` matches the bound host site key.
+4. **Settings UI:** Added custom tracking domain configuration card in `Settings.jsx` showing DNS instructions, CNAME copy action, verification button with statuses (Not configured / Waiting for DNS / Securing domain / Active / Needs attention), deletion flows, and the customized snippet.
+5. **Dynamic Snippet Generation:** Updated `Snippet.jsx` to dynamically load scripts from the verified active custom subdomain if configured.
+6. **Troubleshooting Docs:** Added setup instructions, comparison tables, CSP/DNS troubleshooting steps, and API warnings in `Docs.jsx`.
+7. **E2E Integration Test Suite:** Added `scripts/qa-managed-proxy.mjs` verifying all routes, gates, platform-host pass-throughs, cache invalidations, and production fail-closed behaviors.
+
+### Files changed
+- `api/lib/dns-resolver.js` [NEW]
+- `api/middleware/managed-proxy.js` [NEW]
+- `api/index.js`
+- `api/routes/integrations.js`
+- `dashboard/src/pages/Docs.jsx`
+- `dashboard/src/pages/Settings.jsx`
+- `dashboard/src/pages/Snippet.jsx`
+- `supabase/migrations/20260607184000_add_managed_proxy_domains.sql` [NEW]
+- `scripts/qa-managed-proxy.mjs` [NEW]
+
+### Verification commands
+```bash
+node scripts/qa-managed-proxy.mjs
+node scripts/qa-rate-limits.mjs
+node scripts/qa-ip-resolver.mjs
+node scripts/diagnostic-trust-proxy.mjs
+node scripts/qa-proxy-validation.mjs
+node --check api/index.js api/routes/integrations.js api/middleware/managed-proxy.js api/lib/dns-resolver.js scripts/qa-managed-proxy.mjs
+cd dashboard && npm run build
+```
 
 ## Session 124C — Layered Rate-Limit Implementation
 **Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)

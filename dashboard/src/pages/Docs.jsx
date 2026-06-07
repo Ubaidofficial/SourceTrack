@@ -103,6 +103,7 @@ const NAV = [
   { id: 'tracker',          label: 'Tracker Script',    indent: true },
   { id: 'exclusions',       label: 'Path Exclusions',   indent: true },
   { id: 'cookieless',       label: 'Cookieless Mode',   indent: true },
+  { id: 'managed-first-party-proxy', label: 'Managed Proxy', indent: true },
   { id: 'self-hosted-proxy', label: 'Self-Hosted Proxy', indent: true },
   { id: 'custom-params',    label: 'Custom URL Params', indent: true },
   { id: 'timezone',         label: 'Timezone Behavior', indent: true },
@@ -757,6 +758,103 @@ window.sourcetrack.identify('user_123', {
             </div>
           </Section>
 
+          {/* ── Managed First-Party Proxy ──────────────────────────────────── */}
+          <Section id="managed-first-party-proxy" title="Managed First-Party Proxy">
+            <p>
+              SourceTrack supports routing script loads and event ingestion through a custom subdomain (e.g., <IC>cdn.yourdomain.com</IC> or <IC>a.yourdomain.com</IC>).
+              Routing script execution and telemetry events through a custom first-party subdomain helps improve <strong>script delivery reliability</strong> and telemetry consistency,
+              as neutral domain names are more resilient and less noisy in network tooling.
+            </p>
+
+            <H3>Setup Instructions</H3>
+            <p>
+              To configure a custom tracking domain, navigate to the <strong>Settings</strong> page in your dashboard:
+            </p>
+            <ul className="list-decimal pl-5 my-2 space-y-1 text-sm text-gray-700 dark:text-gray-300">
+              <li>Enter your neutral subdomain (e.g. <IC>cdn.yourdomain.com</IC>) in the Custom Tracking Domain settings card.</li>
+              <li>Log in to your DNS provider (Cloudflare, GoDaddy, AWS, etc.) and add a <strong>CNAME</strong> record pointing your subdomain to <IC>proxy.sourcetrack.io</IC>.</li>
+              <li>Wait for DNS propagation and SSL certificate provisioning. Status will transition to <strong>Active</strong> once verified.</li>
+              <li>Re-copy the updated tracking snippet from your settings card or install instructions and paste it onto your website.</li>
+            </ul>
+
+            <H3>Troubleshooting & Common Issues</H3>
+            <ul className="list-disc pl-5 my-2 space-y-1.5 text-sm text-gray-700 dark:text-gray-300">
+              <li><strong>DNS Propagation Delay:</strong> DNS updates can take from a few minutes up to 24 hours to propagate globally. Click <em>Check CNAME Status</em> to re-evaluate.</li>
+              <li><strong>CNAME vs Redirects:</strong> Ensure you configure a CNAME record in your DNS settings, not a URL forwarder or HTTP redirection rule.</li>
+              <li><strong>Proxy/CDN Interferences (e.g., Cloudflare Orange Cloud):</strong> If using Cloudflare, make sure your record is set to <em>DNS only</em> (grey cloud) during initial setup if certificate verification fails, or set SSL/TLS mode to Full/Strict.</li>
+              <li><strong>Content Security Policy (CSP):</strong> If your site enforces a Content Security Policy, ensure you add your new subdomain (e.g. <IC>cdn.yourdomain.com</IC>) to the <IC>script-src</IC> and <IC>connect-src</IC> directives.</li>
+              <li><strong>Verify in Network Tab:</strong> Open your browser Developer Tools, click the Network tab, reload your page, and confirm that both the script fetch and POST telemetry dispatches (like <IC>/api/track</IC>) are resolved through your custom domain.</li>
+            </ul>
+
+            <H3>Removal Workflow</H3>
+            <p>
+              To remove the custom tracking subdomain:
+            </p>
+            <ul className="list-decimal pl-5 my-2 space-y-1 text-sm text-gray-700 dark:text-gray-300">
+              <li>Click <strong>Remove Custom Domain</strong> in the Settings card.</li>
+              <li>Log in to your DNS provider and delete the CNAME record to prevent DNS drift.</li>
+              <li>Replace the custom subdomain tracking script on your website with the standard SourceTrack snippet.</li>
+            </ul>
+
+            <H3>Comparison: Managed vs Self-Hosted Proxy</H3>
+            <div className="overflow-x-auto my-3">
+              <table className="w-full text-xs border-collapse border border-gray-200 dark:border-gray-800">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+                    <th className="p-2 text-left font-bold text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-800">Feature</th>
+                    <th className="p-2 text-left font-bold text-gray-700 dark:text-gray-300 border-r border-gray-200 dark:border-gray-800">Managed Proxy (CNAME)</th>
+                    <th className="p-2 text-left font-bold text-gray-700 dark:text-gray-300">Self-Hosted Proxy (Cloudflare/Nginx)</th>
+                  </tr>
+                </thead>
+                <tbody className="text-gray-600 dark:text-gray-400">
+                  <tr className="border-b border-gray-150 dark:border-gray-800">
+                    <td className="p-2 font-semibold border-r border-gray-200 dark:border-gray-800">Setup Complexity</td>
+                    <td className="p-2 border-r border-gray-200 dark:border-gray-800">Extremely Simple (Single CNAME DNS record)</td>
+                    <td className="p-2">Moderate (Requires deploying code or writing server rewrite rules)</td>
+                  </tr>
+                  <tr className="border-b border-gray-150 dark:border-gray-800">
+                    <td className="p-2 font-semibold border-r border-gray-200 dark:border-gray-800">Maintenance</td>
+                    <td className="p-2 border-r border-gray-200 dark:border-gray-800">None (SSL/TLS and path updates handled by SourceTrack)</td>
+                    <td className="p-2">Customer-managed (Must maintain server, certs, and path allowlist)</td>
+                  </tr>
+                  <tr className="border-b border-gray-150 dark:border-gray-800">
+                    <td className="p-2 font-semibold border-r border-gray-200 dark:border-gray-800">IP Resolution & Geo-Location</td>
+                    <td className="p-2 border-r border-gray-200 dark:border-gray-800">Fully Supported (Preserves client IP for geo-location/cookieless hashing)</td>
+                    <td className="p-2">Collapses (All traffic appears to originate from the customer's proxy IP)</td>
+                  </tr>
+                  <tr>
+                    <td className="p-2 font-semibold border-r border-gray-200 dark:border-gray-800">Layered Rate Limiting</td>
+                    <td className="p-2 border-r border-gray-200 dark:border-gray-800">Fully Enabled (Visitor and IP limiters function normally)</td>
+                    <td className="p-2">Limited (Limiting collapses to the proxy's server IP)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <H3>Workspace Settings API (Custom Domain)</H3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+              Note: The following endpoints are authenticated workspace settings routes, NOT public ingestion APIs, and cannot be used for browser tracking.
+            </p>
+            <ul className="space-y-3 font-mono text-xs">
+              <li className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700">
+                <span className="font-bold text-blue-600 mr-2">GET</span> /api/integrations/proxy-domain?site_key=&lt;key&gt;
+                <p className="font-sans text-[11px] text-gray-500 mt-1">Fetches custom tracking domain configurations and friendly validation status details.</p>
+              </li>
+              <li className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700">
+                <span className="font-bold text-green-600 mr-2">POST</span> /api/integrations/proxy-domain?site_key=&lt;key&gt;
+                <p className="font-sans text-[11px] text-gray-500 mt-1">Configures a new subdomain (requires body: <IC>{`{ "domain": "sub.domain.com" }`}</IC>).</p>
+              </li>
+              <li className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700">
+                <span className="font-bold text-green-600 mr-2">POST</span> /api/integrations/proxy-domain/verify?site_key=&lt;key&gt;
+                <p className="font-sans text-[11px] text-gray-500 mt-1">Triggers DNS CNAME resolving checks and HTTPS self-check verification.</p>
+              </li>
+              <li className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700">
+                <span className="font-bold text-red-600 mr-2">DELETE</span> /api/integrations/proxy-domain?site_key=&lt;key&gt;
+                <p className="font-sans text-[11px] text-gray-500 mt-1">Removes custom tracking domain configurations from the site.</p>
+              </li>
+            </ul>
+          </Section>
+
           {/* ── Self-Hosted Proxy Routing ──────────────────────────────────── */}
           <Section id="self-hosted-proxy" title="Self-Hosted Proxy Routing">
             <p>
@@ -1073,7 +1171,7 @@ module.exports = {
                 <strong>Missing or Blank Campaigns:</strong> Make sure your links contain the correct parameters, and that no redirects on your website strip off the query parameters before the page loads.
               </li>
               <li>
-                <strong>Ad Blocker Suppression:</strong> Standard scripts can sometimes be blocked. You can toggle **Cookieless Mode** in settings or route events through a proxy to prevent tracker blocking.
+                <strong>Script Routing & Delivery:</strong> Standard tracking scripts can sometimes be restricted by aggressive browser settings. You can toggle **Cookieless Mode** in settings or route events through a custom first-party subdomain to ensure consistent event delivery.
               </li>
               <li>
                 <strong>Single Page App (SPA) Navigation:</strong> Ensure the tracker script is loaded early in the head so history changes can be intercepted immediately.

@@ -31,6 +31,13 @@ export default function Settings() {
   const [attrWindow, setAttrWindow]                 = useState(30)
   const [attrWindowSaving, setAttrWindowSaving]     = useState(false)
 
+  const [proxyDomain, setProxyDomain]               = useState('')
+  const [proxyConfig, setProxyConfig]               = useState(null)
+  const [proxyLoading, setProxyLoading]             = useState(false)
+  const [proxyError, setProxyError]                 = useState('')
+  const [proxySuccess, setProxySuccess]             = useState('')
+  const [proxyCopied, setProxyCopied]               = useState(false)
+
   const [excludedPaths, setExcludedPaths]           = useState('')
   const [timezone, setTimezone]                     = useState('UTC')
   const [settingsSaving, setSettingsSaving]         = useState(false)
@@ -71,6 +78,85 @@ export default function Settings() {
       setExcludedPaths((data.excluded_paths || []).join(', '))
       setTimezone(data.timezone || 'UTC')
       setCustomParams(data.custom_url_params || [])
+    }
+
+    try {
+      const proxyData = await fetchApi(`/integrations/proxy-domain?site_key=${activeSite.site_key}`)
+      setProxyConfig(proxyData)
+      if (proxyData?.domain) {
+        setProxyDomain(proxyData.domain)
+      } else {
+        setProxyDomain('')
+      }
+    } catch (err) {
+      console.error('Failed to load proxy config:', err)
+    }
+  }
+
+  const handleSaveProxy = async (e) => {
+    e.preventDefault()
+    if (!proxyDomain.trim()) {
+      setProxyError('Domain name is required')
+      return
+    }
+    setProxyLoading(true)
+    setProxyError('')
+    setProxySuccess('')
+    try {
+      const data = await fetchApi(`/integrations/proxy-domain?site_key=${activeSite.site_key}`, {
+        method: 'POST',
+        body: { domain: proxyDomain.trim() }
+      })
+      setProxyConfig(data)
+      setProxySuccess('Custom domain saved. Please configure your DNS CNAME record.')
+    } catch (err) {
+      setProxyError(err.message || 'Failed to save custom domain')
+    } finally {
+      setProxyLoading(false)
+    }
+  }
+
+  const handleVerifyProxy = async () => {
+    setProxyLoading(true)
+    setProxyError('')
+    setProxySuccess('')
+    try {
+      const data = await fetchApi(`/integrations/proxy-domain/verify?site_key=${activeSite.site_key}`, {
+        method: 'POST'
+      })
+      setProxyConfig(data)
+      if (data.status === 'active') {
+        setProxySuccess('Custom tracking domain verified and active!')
+      } else if (data.status === 'pending_ssl_or_routing') {
+        setProxySuccess('DNS resolves correctly! SSL certificate is now provisioning. Please allow 10-30 minutes.')
+      } else {
+        setProxyError(data.error_message || 'Verification failed. CNAME does not match the target.')
+      }
+    } catch (err) {
+      setProxyError(err.message || 'Failed to verify custom domain')
+    } finally {
+      setProxyLoading(false)
+    }
+  }
+
+  const handleDeleteProxy = async () => {
+    if (!window.confirm('Are you sure you want to remove this custom tracking domain? This will stop script and event delivery through this subdomain.')) {
+      return
+    }
+    setProxyLoading(true)
+    setProxyError('')
+    setProxySuccess('')
+    try {
+      await fetchApi(`/integrations/proxy-domain?site_key=${activeSite.site_key}`, {
+        method: 'DELETE'
+      })
+      setProxyConfig(null)
+      setProxyDomain('')
+      setProxySuccess('Custom domain removed successfully.')
+    } catch (err) {
+      setProxyError(err.message || 'Failed to delete custom domain')
+    } finally {
+      setProxyLoading(false)
     }
   }
 
@@ -501,6 +587,170 @@ export default function Settings() {
             </code>
           </div>
         )}
+      </section>
+
+      {/* ── Custom Tracking Domain ───────────────────────────────────── */}
+      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Globe className="w-4 h-4 text-st-gray dark:text-gray-400" />
+            <h3 className="text-sm font-bold text-st-black dark:text-white">Custom Tracking Domain</h3>
+          </div>
+          {(() => {
+            const getProxyStatusInfo = () => {
+              if (!proxyConfig) {
+                return { label: 'Not configured', color: 'text-gray-500 bg-gray-50 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700' }
+              }
+              switch (proxyConfig.status) {
+                case 'pending_dns':
+                  return { label: 'Waiting for DNS', color: 'text-amber-600 bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-900/30' }
+                case 'pending_ssl_or_routing':
+                  return { label: 'Securing domain', color: 'text-sky-600 bg-sky-50 dark:bg-sky-900/10 border-sky-200 dark:border-sky-900/30' }
+                case 'active':
+                  return { label: 'Active', color: 'text-green-600 bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-900/30' }
+                case 'error':
+                  return { label: 'Needs attention', color: 'text-red-600 bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-900/30' }
+                default:
+                  return { label: 'Unknown', color: 'text-gray-500 bg-gray-50 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700' }
+              }
+            }
+            const statusInfo = getProxyStatusInfo()
+            return (
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border ${statusInfo.color}`}>
+                {statusInfo.label}
+              </span>
+            )
+          })()}
+        </div>
+
+        <p className="text-xs text-st-gray dark:text-gray-400">
+          Tip: short neutral names like <code className="font-mono bg-gray-50 dark:bg-gray-800 px-1 py-0.5 rounded">a.yourdomain.com</code> or <code className="font-mono bg-gray-50 dark:bg-gray-800 px-1 py-0.5 rounded">cdn.yourdomain.com</code> work best.
+        </p>
+
+        {proxyError && (
+          <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 p-3 rounded-lg text-xs flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-semibold">Verification Alert</p>
+              <p className="opacity-90">{proxyError}</p>
+            </div>
+          </div>
+        )}
+
+        {proxySuccess && (
+          <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-900/30 text-green-600 dark:text-green-400 p-3 rounded-lg text-xs">
+            {proxySuccess}
+          </div>
+        )}
+
+        {!proxyConfig ? (
+          <form onSubmit={handleSaveProxy} className="space-y-3">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={proxyDomain}
+                onChange={e => setProxyDomain(e.target.value)}
+                placeholder="track.yourdomain.com"
+                disabled={proxyLoading}
+                className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-50"
+              />
+              <button
+                type="submit"
+                disabled={proxyLoading}
+                className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors"
+              >
+                {proxyLoading ? 'Saving...' : 'Set Domain'}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="space-y-4">
+            <div className="bg-gray-50 dark:bg-[#202222] border border-gray-100 dark:border-gray-800 rounded-xl p-4 space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <div>
+                  <span className="block text-st-gray dark:text-gray-400 font-medium mb-1">DNS Record Type</span>
+                  <code className="font-mono text-st-black dark:text-white font-bold bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded">CNAME</code>
+                </div>
+                <div>
+                  <span className="block text-st-gray dark:text-gray-400 font-medium mb-1">Host/Subdomain</span>
+                  <code className="font-mono text-st-black dark:text-white font-bold bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded">{proxyConfig.domain}</code>
+                </div>
+                <div className="md:col-span-2">
+                  <span className="block text-st-gray dark:text-gray-400 font-medium mb-1">Points To (Target)</span>
+                  <div className="flex items-center gap-2">
+                    <code className="font-mono text-st-black dark:text-white font-bold bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded truncate flex-1">{proxyConfig.cname_target}</code>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(proxyConfig.cname_target)
+                          setProxySuccess('CNAME target copied to clipboard!')
+                          setTimeout(() => setProxySuccess(''), 2000)
+                        } catch (_) {}
+                      }}
+                      className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-st-gray transition-colors flex-shrink-0"
+                      title="Copy Target"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={handleVerifyProxy}
+                disabled={proxyLoading}
+                className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+              >
+                {proxyLoading ? 'Checking...' : 'Check CNAME Status'}
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteProxy}
+                disabled={proxyLoading}
+                className="px-4 py-2 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 text-sm font-semibold rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 disabled:opacity-50 transition-colors"
+              >
+                Remove Custom Domain
+              </button>
+            </div>
+
+            {proxyConfig.status === 'active' && (
+              <div className="bg-gray-50 dark:bg-[#202222] border border-gray-100 dark:border-gray-800 rounded-xl p-4 space-y-2">
+                <span className="block text-xs font-semibold text-st-black dark:text-white">Your first-party tracking snippet:</span>
+                <div className="flex items-center gap-2 bg-gray-200 dark:bg-gray-700 rounded-lg p-2">
+                  <code className="font-mono text-xs text-st-black dark:text-white break-all flex-1 select-all">
+                    {`<script async src="https://${proxyConfig.domain}/${site?.cookieless_mode ? 'tracker.cookieless.min.js' : 'tracker.min.js'}" data-site-key="${site?.site_key || 'YOUR_SITE_KEY'}"></script>`}
+                  </code>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const snippetText = `<script async src="https://${proxyConfig.domain}/${site?.cookieless_mode ? 'tracker.cookieless.min.js' : 'tracker.min.js'}" data-site-key="${site?.site_key || 'YOUR_SITE_KEY'}"></script>`
+                        await navigator.clipboard.writeText(snippetText)
+                        setProxyCopied(true)
+                        setTimeout(() => setProxyCopied(false), 2000)
+                      } catch (_) {}
+                    }}
+                    className="p-1.5 hover:bg-gray-300 dark:hover:bg-gray-600 rounded text-st-gray transition-colors flex-shrink-0"
+                    title="Copy Snippet"
+                  >
+                    {proxyCopied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        <div className="text-right">
+          <a
+            href="/docs#managed-first-party-proxy"
+            className="inline-flex items-center gap-1 text-xs font-medium text-st-gray hover:text-st-black dark:text-gray-400 dark:hover:text-white transition-colors"
+          >
+            Custom Domain Setup Guide
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
       </section>
 
       {/* ── Attribution Window ────────────────────────────────────────── */}

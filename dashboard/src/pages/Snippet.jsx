@@ -40,6 +40,7 @@ export default function Snippet() {
   const [statusLoading, setStatusLoading] = useState(false)
   const [testLoading, setTestLoading] = useState(false)
   const [testResult, setTestResult] = useState(null)
+  const [proxyDomain, setProxyDomain] = useState(null)
 
   useEffect(() => {
     async function load() {
@@ -57,6 +58,16 @@ export default function Snippet() {
       }
       const { data } = await query.maybeSingle()
       setSite(data)
+      if (data?.site_key) {
+        try {
+          const proxyData = await fetchApi(`/integrations/proxy-domain?site_key=${data.site_key}`)
+          if (proxyData && proxyData.status === 'active') {
+            setProxyDomain(proxyData.domain)
+          }
+        } catch (err) {
+          console.error('Failed to load proxy configuration in snippet:', err)
+        }
+      }
     }
     load()
   }, [user])
@@ -84,7 +95,8 @@ export default function Snippet() {
   function buildSnippet() {
     if (!site) return ''
     const trackerFile = site.cookieless_mode ? 'tracker.cookieless.min.js' : 'tracker.min.js'
-    return `<script async src="${trackerBaseUrl}/tracker/${trackerFile}" data-site-key="${site.site_key}"></script>`
+    const scriptSrc = proxyDomain ? `https://${proxyDomain}/${trackerFile}` : `${trackerBaseUrl}/tracker/${trackerFile}`
+    return `<script async src="${scriptSrc}" data-site-key="${site.site_key}"></script>`
   }
 
   const snippet = buildSnippet()

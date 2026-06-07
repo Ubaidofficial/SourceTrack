@@ -3,6 +3,8 @@ import { queryHogQL } from '../lib/posthog.js'
 import { getSupabase } from '../lib/supabase.js'
 import { esc, encryptSecret } from '../lib/utils.js'
 import { siteCache } from '../middleware/auth.js'
+import { resolveCname, verifySslAndRouting, normalizeDnsName } from '../lib/dns-resolver.js'
+import { invalidateProxyCache } from '../middleware/managed-proxy.js'
 
 const router = express.Router()
 
@@ -543,6 +545,225 @@ router.post('/shopify', async (req, res) => {
   } catch (err) {
     console.error('[integrations] POST shopify secret error:', err?.message)
     return res.status(500).json({ success: false, data: null, error: 'Failed to save Shopify webhook secret' })
+  }
+})
+
+// GET /api/integrations/proxy-domain — Retrieve custom proxy domain config
+router.get('/proxy-domain', async (req, res) => {
+  try {
+    const siteKey = req.site?.site_key
+    if (!siteKey) {
+      return res.status(400).json({ success: false, data: null, error: 'Site context missing' })
+    }
+
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('managed_proxy_domains')
+      .select('domain, status, cname_target, verified_at, last_checked_at, error_code, error_message')
+      .eq('site_key', siteKey)
+      .maybeSingle()
+
+    if (error) throw error
+
+    return res.json({ success: true, data: data || null, error: null })
+  } catch (err) {
+    console.error('[integrations] GET proxy-domain error:', err?.message)
+    return res.status(500).json({ success: false, data: null, error: 'Failed to fetch custom tracking domain' })
+  }
+})
+
+// POST /api/integrations/proxy-domain — Add or update custom tracking domain
+router.post('/proxy-domain', async (req, res) => {
+  try {
+    const siteKey = req.site?.site_key
+    if (!siteKey) {
+      return res.status(400).json({ success: false, data: null, error: 'Site context missing' })
+    }
+
+    let { domain } = req.body
+    if (!domain || typeof domain !== 'string') {
+      return res.status(400).json({ success: false, data: null, error: 'Domain name is required' })
+    }
+
+    // Normalize domain
+    domain = domain.trim().toLowerCase().replace(/\/+$/, '')
+
+    if (/^https?:\/\//.test(domain)) {
+      return res.status(400).json({ success: false, data: null, error: 'Enter domain only, without http:// or https://' })
+    }
+    if (domain.includes('/') || domain.includes('?') || domain.includes('*') || domain.includes(' ')) {
+      return res.status(400).json({ success: false, data: null, error: 'Invalid domain format (wildcards, paths, or spaces not allowed)' })
+    }
+    if (domain === 'localhost' || domain === '127.0.0.1' || domain === '::1' || /^(\d{1,3}\.){3}\d{1,3}$/.test(domain)) {
+      return res.status(400).json({ success: false, data: null, error: 'Localhost and IP addresses are not allowed as custom domains' })
+    }
+
+    const domainRegex = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/
+    if (!domainRegex.test(domain) || domain.length > 253) {
+      return res.status(400).json({ success: false, data: null, error: 'Invalid custom domain subdomain format' })
+    }
+
+    const cnameTarget = normalizeDnsName(process.env.ST_MANAGED_PROXY_TARGET || 'proxy.sourcetrack.io')
+    const supabase = getSupabase()
+
+    // Enforce uniqueness across different sites
+    const { data: duplicateCheck } = await supabase
+      .from('managed_proxy_domains')
+      .select('site_key')
+      .eq('domain', domain)
+      .maybeSingle()
+
+    if (duplicateCheck && duplicateCheck.site_key !== siteKey) {
+      return res.status(400).json({ success: false, data: null, error: 'This custom domain is already registered by another site' })
+    }
+
+    // Retrieve old domain to invalidate its cache
+    const { data: currentRecord } = await supabase
+      .from('managed_proxy_domains')
+      .select('domain')
+      .eq('site_key', siteKey)
+      .maybeSingle()
+
+    if (currentRecord) {
+      invalidateProxyCache(currentRecord.domain)
+    }
+
+    // Upsert domain settings (Enforced 1-domain-per-site via site_key uniqueness)
+    const { data: savedRecord, error } = await supabase
+      .from('managed_proxy_domains')
+      .upsert({
+        site_key: siteKey,
+        domain,
+        status: 'pending_dns',
+        cname_target: cnameTarget,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'site_key' })
+      .select('domain, status, cname_target, verified_at, last_checked_at, error_code, error_message')
+      .single()
+
+    if (error) throw error
+
+    invalidateProxyCache(domain)
+
+    return res.json({ success: true, data: savedRecord, error: null })
+  } catch (err) {
+    console.error('[integrations] POST proxy-domain error:', err?.message)
+    return res.status(500).json({ success: false, data: null, error: 'Failed to configure custom tracking domain' })
+  }
+})
+
+// POST /api/integrations/proxy-domain/verify — Trigger DNS CNAME and SSL verification checks
+router.post('/proxy-domain/verify', async (req, res) => {
+  try {
+    const siteKey = req.site?.site_key
+    if (!siteKey) {
+      return res.status(400).json({ success: false, data: null, error: 'Site context missing' })
+    }
+
+    const supabase = getSupabase()
+    const { data: record, error: fetchErr } = await supabase
+      .from('managed_proxy_domains')
+      .select('domain, cname_target')
+      .eq('site_key', siteKey)
+      .maybeSingle()
+
+    if (fetchErr || !record) {
+      return res.status(404).json({ success: false, data: null, error: 'No custom tracking domain configured' })
+    }
+
+    const domain = record.domain
+    const expectedTarget = normalizeDnsName(record.cname_target)
+    let dnsValid = false
+    let resolvedCnames = []
+    let dnsErrorCode = null
+    let dnsErrorMessage = null
+
+    // 1. Verify CNAME DNS records
+    try {
+      resolvedCnames = await resolveCname(domain)
+      dnsValid = resolvedCnames.some(cname => normalizeDnsName(cname) === expectedTarget)
+      if (!dnsValid) {
+        dnsErrorCode = 'CNAME_MISMATCH'
+        dnsErrorMessage = `Subdomain DNS records do not point to the expected target. Resolved: [${resolvedCnames.join(', ') || 'none'}], Expected: ${expectedTarget}.`
+      }
+    } catch (dnsErr) {
+      dnsErrorCode = dnsErr.code || 'DNS_LOOKUP_FAILED'
+      dnsErrorMessage = dnsErr.message || 'DNS query failed or timed out.'
+    }
+
+    let finalStatus = 'pending_dns'
+    let verifiedAt = null
+
+    if (dnsValid) {
+      // 2. Perform HTTP/HTTPS health self-check routing verification
+      const sslValid = await verifySslAndRouting(domain)
+      if (sslValid) {
+        finalStatus = 'active'
+        verifiedAt = new Date().toISOString()
+        dnsErrorCode = null
+        dnsErrorMessage = null
+      } else {
+        finalStatus = 'pending_ssl_or_routing'
+        dnsErrorCode = 'SSL_ROUTING_PENDING'
+        dnsErrorMessage = 'DNS CNAME resolves correctly, but SSL/routing gateway is provisioning. Please allow 10-30 minutes for certificate generation.'
+      }
+    } else {
+      finalStatus = 'error'
+    }
+
+    const { data: updatedRecord, error: updateErr } = await supabase
+      .from('managed_proxy_domains')
+      .update({
+        status: finalStatus,
+        verified_at: verifiedAt,
+        last_checked_at: new Date().toISOString(),
+        error_code: dnsErrorCode,
+        error_message: dnsErrorMessage
+      })
+      .eq('site_key', siteKey)
+      .select('domain, status, cname_target, verified_at, last_checked_at, error_code, error_message')
+      .single()
+
+    if (updateErr) throw updateErr
+
+    invalidateProxyCache(domain)
+
+    return res.json({ success: true, data: updatedRecord, error: null })
+  } catch (err) {
+    console.error('[integrations] POST proxy-domain/verify error:', err?.message)
+    return res.status(500).json({ success: false, data: null, error: 'Failed to verify custom tracking domain' })
+  }
+})
+
+// DELETE /api/integrations/proxy-domain — Delete custom tracking domain config
+router.delete('/proxy-domain', async (req, res) => {
+  try {
+    const siteKey = req.site?.site_key
+    if (!siteKey) {
+      return res.status(400).json({ success: false, data: null, error: 'Site context missing' })
+    }
+
+    const supabase = getSupabase()
+    const { data: record } = await supabase
+      .from('managed_proxy_domains')
+      .select('domain')
+      .eq('site_key', siteKey)
+      .maybeSingle()
+
+    if (record) {
+      invalidateProxyCache(record.domain)
+      const { error } = await supabase
+        .from('managed_proxy_domains')
+        .delete()
+        .eq('site_key', siteKey)
+
+      if (error) throw error
+    }
+
+    return res.json({ success: true, data: { deleted: true }, error: null })
+  } catch (err) {
+    console.error('[integrations] DELETE proxy-domain error:', err?.message)
+    return res.status(500).json({ success: false, data: null, error: 'Failed to remove custom tracking domain' })
   }
 })
 

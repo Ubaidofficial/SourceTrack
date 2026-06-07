@@ -1,8 +1,8 @@
-Session: 124C
-Last Completed: Completed Session 124C — Layered Rate-Limit Implementation. Implemented layered rate-limiting (visitor, IP, site, global IP) across approved ingestion paths (/api/track, /api/collect, /track, /api/conversion, /api/tracker/id, /api/identify). Bounded and hashed user-controlled key parts to prevent memory leaks and protect identity privacy. Configured defaultLimit to precisely skip only these six paths. Created scripts/qa-rate-limits.mjs verification suite.
-Next Task: Session 125A — Managed First-Party Proxy.
+Session: 125A
+Last Completed: Completed Session 125A — Managed First-Party Proxy. Implemented database tables, DNS/SSL routing verification, two-stage proxy middleware (early gate + site key binding), Settings UI domain cards, and E2E QA scripts.
+Next Task: Pending next session planning.
 Roadmap Queue:
-- Session 125A: Managed First-Party Proxy
+- Pending next planning
 Build: ✅ passing
 Branch: main
 

@@ -67,6 +67,7 @@ import { webhooksRouter } from './routes/webhooks.js'
 import { stripeWebhookRouter } from './routes/stripe-webhook.js'
 import { shopifyWebhookRouter } from './routes/shopify-webhook.js'
 import { inspectClientIp } from './lib/ip-resolver.js'
+import { managedProxyEarlyGate, bindManagedProxySiteKey } from './middleware/managed-proxy.js'
 
 // Fail fast on missing required environment variables. Better to crash on
 // startup than to fail every request with a cryptic 500 later.
@@ -79,6 +80,14 @@ if (missingEnv.length) {
 
 // Fail fast in production if ENCRYPTION_KEY is missing or invalid
 if (process.env.NODE_ENV === 'production') {
+  if (!process.env.ST_MANAGED_PROXY_TARGET) {
+    console.error('[startup] FATAL: ST_MANAGED_PROXY_TARGET environment variable is missing in production!')
+    process.exit(1)
+  }
+  if (!process.env.ST_PLATFORM_HOSTS) {
+    console.error('[startup] FATAL: ST_PLATFORM_HOSTS environment variable is missing in production!')
+    process.exit(1)
+  }
   const rawKey = process.env.ENCRYPTION_KEY
   if (!rawKey) {
     console.error('[startup] FATAL: ENCRYPTION_KEY environment variable is missing in production!')
@@ -116,6 +125,9 @@ if (process.env.NODE_ENV === 'production') {
 
 
 const app = express()
+
+// Stage 1 Early Managed Proxy Gate
+app.use(managedProxyEarlyGate)
 
 // ── Hardcoded dashboard origins (not customer domains, not in env var) ────────
 const HARDCODED_ALLOWED_ORIGINS = [
@@ -304,6 +316,7 @@ app.use(defaultLimit)
 
 // 6. Routes
 app.post('/api/track',
+  bindManagedProxySiteKey,
   trackVisitorLimit,
   trackIpLimit,
   trackSiteLimit,
@@ -323,6 +336,7 @@ app.post('/api/collect',
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
     next()
   },
+  bindManagedProxySiteKey,
   trackVisitorLimit,
   trackIpLimit,
   trackSiteLimit,
@@ -341,6 +355,7 @@ app.options('/api/collect', (req, res) => {
     return res.status(200).send('OK')
   })
 app.post('/api/identify',
+  bindManagedProxySiteKey,
   identifyVisitorLimit,
   identifyIpLimit,
   identifySiteLimit,
@@ -349,6 +364,7 @@ app.post('/api/identify',
   identify
 )
 app.post('/api/conversion',
+  bindManagedProxySiteKey,
   conversionVisitorLimit,
   conversionIpLimit,
   conversionSiteLimit,
@@ -396,7 +412,7 @@ app.get('/api/sessions/overview', requireUserAuth, validateSiteKey, requireSiteM
 app.get('/api/sessions', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, visitorSessions)
 
 // Cookieless tracker identity endpoint (public — called from customer sites)
-app.use('/api/tracker/id', trackerIdRouter)
+app.use('/api/tracker/id', bindManagedProxySiteKey, trackerIdRouter)
 
 // Annotations — chart markers for deploys, campaigns, events
 app.use('/api/annotations', requireUserAuth, validateSiteKey, requireSiteMembership, annotationsRouter)
@@ -449,6 +465,7 @@ app.use((err, req, res, next) => {
 // Root /track alias — same handler as /api/track, no loopback
 app.post('/track',
   express.json({ limit: '100kb' }),
+  bindManagedProxySiteKey,
   trackVisitorLimit,
   trackIpLimit,
   trackSiteLimit,

@@ -1,8 +1,8 @@
 /**
- * Server-side event proxy for adblocker bypass
+ * Server-side event proxy for custom first-party subdomains
  * Users CNAME: analytics.theirdomain.com → api.srctk.com
  * Tracker sends to: https://analytics.theirdomain.com/sp/e
- * Bypasses uBlock/Brave/Firefox ETP which block known tracker domains
+ * Routes events through a customer-owned custom subdomain while maintaining platform security and isolation
  */
 import express from 'express'
 import UAParser from 'ua-parser-js'
