@@ -770,7 +770,13 @@ window.sourcetrack.identify('user_123', {
               as they are more likely to appear in filter lists or user-blocking rules. Instead, use neutral names like <IC>assets</IC>, <IC>static</IC>, <IC>cdn</IC>, or <IC>lib</IC>.
             </p>
             <Note>
-              Self-hosted proxy routing can improve script and event delivery. IP, geo, and rate-limit behavior may vary by hosting provider and proxy configuration. SourceTrack does not yet trust customer-provided client IP headers for self-hosted proxies. Proxy identity and rate-limit hardening are planned for a separate security design session.
+              <strong>Self-Hosted Proxy Routing Guidelines & Limitations:</strong>
+              <ul className="list-disc pl-5 mt-2 space-y-1">
+                <li><strong>Recommended Tracker:</strong> The standard storage-based tracker (<IC>tracker.min.js</IC>) is recommended for self-hosted proxy setups, as it persists identity locally in the browser.</li>
+                <li><strong>Cookieless Warning:</strong> Cookieless tracking (<IC>tracker.cookieless.min.js</IC>) relies on hashing visitor IP addresses. Because self-hosted proxies collapse all traffic to the proxy's server IP, using cookieless mode through a self-hosted proxy will result in visitor identity collapse. Do not use cookieless mode with self-hosted proxies unless trusted client IP preservation is active. This is planned for a future Managed Proxy flow and is not available in the current self-hosted proxy setup.</li>
+                <li><strong>Geo-Location Accuracy:</strong> Because SourceTrack does not yet trust customer-provided client IP headers for self-hosted setups, all routed event geo-attributions will resolve to the geographical location of your proxy server.</li>
+                <li><strong>Rate Limiting:</strong> Self-hosted proxies do not support proxy-aware per-user rate limiting. Traffic will be limited based on the proxy server's connection IP.</li>
+              </ul>
             </Note>
             <p>
               Proxying does not remove privacy, consent, or disclosure obligations. Ensure your privacy policy is updated to disclose that analytics data is routed through your domain, and continue to respect visitor consent preferences.

@@ -1,8 +1,8 @@
-Session: 123B
-Last Completed: Completed Session 123B — First-Party Proxy Path Hardening + Self-Hosted Guide MVP. Implemented root /tracker.cookieless.min.js alias, self-hosted proxy documentation page, path-allowlisted Cloudflare Worker and Next.js examples, and verification QA harness.
+Session: 123D
+Last Completed: Completed Session 123D — Docs Correction + IP Spoofing Diagnostic. Updated self-hosted proxy docs with standard tracker recommendations, cookieless identity collapse warnings, geo/rate-limit caveats, and added the local trust proxy diagnostic script.
 Next Task: Awaiting commit approval.
 Roadmap Queue:
-- Session 123C: Managed Proxy Infrastructure Plan (CNAME, SSL, verification)
-- Session 124A: Managed First-Party Proxy MVP implementation
+- Session 124A: IP Trust + Rate-Limit Hardening Implementation
+- Session 125A: Managed First-Party Proxy MVP
 Build: ✅ passing
 Branch: main

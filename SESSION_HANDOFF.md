@@ -1,9 +1,30 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 123B — First-Party Proxy Path Hardening + Self-Hosted Guide MVP. Added root alias `/tracker.cookieless.min.js`, self-hosted proxy documentation page, path-allowlisted Cloudflare Worker and Next.js examples, and verification QA harness.
+> **Handoff:** Session 123D — Docs Correction + IP Spoofing Diagnostic. Updated self-hosted proxy docs in `Docs.jsx` with storage-based tracking recommendations, identity collapse warnings for cookieless mode, and geo/rate-limit collapse disclosures. Added local diagnostic script `scripts/diagnostic-trust-proxy.mjs` verifying `trust proxy` behavior under simulated direct and proxy chains.
 >
 > **Next Task:** Awaiting commit approval.
 >
+
+## Session 123D — Docs Correction + IP Spoofing Diagnostic
+**Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + diagnostics pass)
+
+### Completed
+1. **Self-Hosted Proxy Docs Correction:** Refactored the proxy guide in `Docs.jsx` to warn against cookieless tracking setups on self-hosted proxies due to identity collapse risks, recommending standard tracking instead. Documented geo-location collapse and rate-limiting behaviors.
+2. **Local Trust Proxy Diagnostic Tool:** Created `scripts/diagnostic-trust-proxy.mjs` to compare `trust proxy = false` vs `trust proxy = 1` using local HTTP instances and simulated spoofed IP request headers.
+3. **No Production Code Alterations:** Confirmed that no production backend server configs (e.g. `api/index.js` or `trust proxy`), tracking routes, CAPI endpoints, rate limiters, database schemas, or tracking script assets were modified.
+
+### Files changed
+- `dashboard/src/pages/Docs.jsx`
+- `scripts/diagnostic-trust-proxy.mjs` [NEW]
+
+### Verification commands
+```bash
+node scripts/diagnostic-trust-proxy.mjs
+node --check scripts/diagnostic-trust-proxy.mjs
+git diff --check
+cd dashboard && npm run build
+cd ..
+```
 
 ## Session 123B — First-Party Proxy Path Hardening + Self-Hosted Guide MVP
 **Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
