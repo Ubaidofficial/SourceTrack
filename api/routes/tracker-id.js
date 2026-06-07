@@ -21,6 +21,7 @@
 
 import { createHmac, createHash } from 'crypto'
 import express from 'express'
+import { resolveClientIp } from '../lib/ip-resolver.js'
 
 export const trackerIdRouter = express.Router()
 
@@ -59,15 +60,6 @@ function sha256(input) {
   return createHash('sha256').update(input).digest('hex')
 }
 
-function getClientIp(req) {
-  const forwarded = req.headers['x-forwarded-for']
-  if (forwarded) {
-    // Take the first IP (client IP, not proxy chain)
-    return forwarded.split(',')[0].trim()
-  }
-  return req.socket?.remoteAddress || req.ip || ''
-}
-
 trackerIdRouter.get('/', (req, res) => {
   // CORS — must work cross-origin (called from customer websites)
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*')
@@ -75,7 +67,7 @@ trackerIdRouter.get('/', (req, res) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
 
   const siteKey = req.query.site_key || ''
-  const ip      = getClientIp(req)
+  const ip      = resolveClientIp(req)
   const ua      = req.headers['user-agent'] || ''
 
   const now       = new Date()

@@ -8,6 +8,7 @@ import { sendMetaCAPI, sendGoogleConversion, sendMicrosoftConversion, sendLinked
 import { getSupabase } from '../lib/supabase.js'
 import { normalizeUtm, getFirstTouchFields, redactPiiFromObject, isPathExcluded, extractCustomParams } from '../lib/utils.js'
 import { hasFeature } from '../lib/plan-features.js'
+import { resolveClientIp } from '../lib/ip-resolver.js'
 
 // In-memory dedup cache — 24h TTL. Prevents duplicate conversions when:
 // - Form submits twice (double-click, retry)
@@ -115,8 +116,7 @@ async function updateTelemetryMetadata(site, body) {
   }
 }
 
-function enrich(req) {
-  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || ''
+function enrich(req, ip) {
   const ua = req.headers['user-agent'] || ''
   const parser = new UAParser(ua)
   const browser = parser.getBrowser()
@@ -145,6 +145,8 @@ const getCapiSupabase = getSupabase
 
 export async function conversion(req, res) {
   try {
+    const clientIp = resolveClientIp(req)
+
     // Check path exclusions
     if (req.body?.page_url && isPathExcluded(req.body.page_url, req.site?.excluded_paths)) {
       return res.status(200).json({ success: true, data: { received: true, filtered: 'excluded_path' }, error: null })
@@ -160,7 +162,7 @@ export async function conversion(req, res) {
       }
     }
 
-    const enriched = enrich(req)
+    const enriched = enrich(req, clientIp)
 
     const props = {
       site_id: req.site.id,
@@ -261,11 +263,11 @@ export async function conversion(req, res) {
         .then(({ data: capiSite }) => {
           if (!capiSite) return
           Promise.allSettled([
-            sendMetaCAPI(capiSite, { ...props, ip_address: req.ip }),
+            sendMetaCAPI(capiSite, { ...props, ip_address: clientIp }),
             sendGoogleConversion(capiSite, props),
             sendMicrosoftConversion(capiSite, props),
             sendLinkedInConversion(capiSite, props),
-            sendTikTokConversion(capiSite, { ...props, ip_address: req.ip })
+            sendTikTokConversion(capiSite, { ...props, ip_address: clientIp })
           ]).then(results => results.forEach((r, i) => {
             if (r.status === 'rejected') console.error(`[CAPI ${i}]`, r.reason?.message)
           }))

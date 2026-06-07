@@ -3,6 +3,7 @@ import geoip from 'geoip-lite'
 import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
 import { normalizeUtm, redactPiiFromObject, isPathExcluded, extractCustomParams } from '../lib/utils.js'
+import { resolveClientIp } from '../lib/ip-resolver.js'
 
 
 import { getSupabase } from '../lib/supabase.js'
@@ -62,7 +63,7 @@ async function updateTelemetryMetadata(site, body) {
 }
 
 function enrich(req) {
-  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || ''
+  const ip = resolveClientIp(req)
   const ua = req.headers['user-agent'] || ''
   const parser = new UAParser(ua)
   const browser = parser.getBrowser()

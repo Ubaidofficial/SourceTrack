@@ -86,6 +86,17 @@ if (process.env.NODE_ENV === 'production') {
     console.error('To generate a secure key, run: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"')
     process.exit(1)
   }
+
+  // Warn if ST_IP_RESOLVER_MODE is not set to railway in production
+  if (process.env.ST_IP_RESOLVER_MODE !== 'railway') {
+    console.warn('\n================================================================================')
+    console.warn('[startup] WARNING: ST_IP_RESOLVER_MODE is not set to "railway" in production!')
+    console.warn('Migrated ingestion routes will fall back to connection-mode (socket) IPs.')
+    console.warn('If deployed behind Railway Edge, this will result in using internal 100.64.x.x IPs')
+    console.warn('for client geo-location, cookieless visitor identity, and CAPI dispatches.')
+    console.warn('Please ensure ST_IP_RESOLVER_MODE=railway is configured on the Railway service.')
+    console.warn('================================================================================\n')
+  }
 }
 
 

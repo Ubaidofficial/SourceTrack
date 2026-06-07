@@ -1,11 +1,41 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 124A — IP Resolver Hardening Audit + Safe Diagnostic Mode. Created `api/lib/ip-resolver.js` to inspect/resolve connection-level client IP normalized of `::ffff:` without trusting raw `X-Forwarded-For` headers. Mounted a temporary gated diagnostic endpoint `/api/diag/ip` under `ST_IP_DIAGNOSTIC_SECRET` returning only diagnostic fields with `Cache-Control: no-store`. Verified with `scripts/qa-ip-resolver.mjs`. Deferred all production ingestion route and rate limiter migrations until real-world Railway traffic header behavior is verified.
+> **Handoff:** Session 124B — Railway-Aware IP Resolver Route Migration. Integrated resolves across track.js, conversion.js, and tracker-id.js. Implemented ST_IP_RESOLVER_MODE=railway that filters out internal/private container IPs and extracts the first public IP from the sanitized XFF chain. Expanded scripts/qa-ip-resolver.mjs with tests for isPublicIp, railway mode resolving, and static source checks.
 >
-> **Next Task:** Deploy diagnostic endpoint, verify real-world header behavior on Railway, then proceed to Session 124B.
+> **Next Task:** Implement layered rate limiting (Session 124C) to enforce client IP and site key rate limiting using the new centralized client IP resolver.
 >
-> ⚠️ **IMPORTANT OPERATIONAL NOTE:** After Railway IP diagnostics are complete, remove ST_IP_DIAGNOSTIC_SECRET from the deployed environment to disable /api/diag/ip.
->
+> ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. Without this variable, migrated ingestion routes will fall back to connection-mode IPs and may use Railway internal 100.64.x.x addresses for geo, CAPI, and cookieless identity.
+
+## Session 124B — Railway-Aware IP Resolver Route Migration
+**Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+1. **Centralized IP Resolution Mode:** Configured central resolver in `api/lib/ip-resolver.js` to support environment-controlled mode `ST_IP_RESOLVER_MODE=railway`. In `railway` mode, it parses the `X-Forwarded-For` chain, validates each IP against public IP parameters, and selects the first valid public IP, falling back to connection IP.
+2. **Ingestion Routes Migration:**
+   - Modified `api/routes/track.js` to replace manual `x-forwarded-for` parsing inside `enrich(req)` with `resolveClientIp(req)`.
+   - Modified `api/routes/conversion.js` to use `resolveClientIp(req)` inside `enrich(req)` and for outbound Meta CAPI and TikTok CAPI IP dispatches.
+   - Modified `api/routes/tracker-id.js` to delete its local `getClientIp(req)` helper and use `resolveClientIp(req)` to generate visitor and session hashes.
+3. **Rigorous QA Verification:**
+   - Updated `scripts/qa-ip-resolver.mjs` to add unit tests for `isPublicIp(ip)` and `inspectClientIp(req)` under `ST_IP_RESOLVER_MODE=railway` (covering public, private, CGNAT, link-local, loopback, and malformed IPs).
+   - Added integration tests verifying spawned server behavior under `ST_IP_RESOLVER_MODE=railway` with multi-hop XFF chains and private-only fallbacks.
+   - Added automated static checks verifying that migrated ingestion files contain no manual `x-forwarded-for` checks or `getClientIp` helpers.
+4. **No Side Effects:** Preserved `trust proxy` configuration (remains disabled in production) and rate limiter connection-based settings.
+
+### Files changed
+- `api/lib/ip-resolver.js`
+- `api/routes/track.js`
+- `api/routes/conversion.js`
+- `api/routes/tracker-id.js`
+- `scripts/qa-ip-resolver.mjs`
+
+### Verification commands
+```bash
+node scripts/qa-ip-resolver.mjs
+node scripts/diagnostic-trust-proxy.mjs
+node scripts/qa-proxy-validation.mjs
+node --check api/index.js api/routes/*.js api/lib/*.js
+cd dashboard && npm run build
+```
 
 ## Session 124A — IP Resolver Hardening Audit + Safe Diagnostic Mode
 **Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)

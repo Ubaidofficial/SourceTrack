@@ -5,6 +5,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 124B | 2026-06-07 | `main` | Railway-Aware IP Resolver Route Migration — Configured environment-controlled ST_IP_RESOLVER_MODE=railway to filter out internal/private container IPs and select the first valid public IP from sanitized XFF chains. Migrated track.js, conversion.js, and tracker-id.js routes to use resolveClientIp(req). Added unit, integration, and source code checks to scripts/qa-ip-resolver.mjs. | ✅ | No |
 | 124A | 2026-06-07 | `main` | IP Resolver Hardening Audit + Safe Diagnostic Mode — Created safe client IP resolver utility exposing `inspectClientIp` and `resolveClientIp`. Registered a temporary diagnostic endpoint `/api/diag/ip` under header-only authentication guarded by `ST_IP_DIAGNOSTIC_SECRET`. Created QA validation test suite verifying all resolver mock logic, diagnostic routes, and spoofing protection. | ✅ | No |
 | 123D | 2026-06-07 | `main` | Docs Correction + IP Spoofing Diagnostic — Updated self-hosted proxy guidelines in public Docs page with standard tracker recommendations, identity collapse warnings, and rate-limiting disclosures. Created trust proxy local diagnostic script simulating direct and Edge proxy header chains. | ✅ | No |
 | 123B | 2026-06-07 | `main` | First-Party Proxy Path Hardening + Self-Hosted Guide MVP — Root /tracker.cookieless.min.js alias matching existing tracker.min.js. Created path-allowlisted Cloudflare Worker & Next.js reverse proxy rewrite examples. Documented self-hosted proxy guidelines in public Docs page. Added E2E QA verification harness checking path restriction rules. | ✅ | No |
@@ -816,3 +817,23 @@ curl -i https://api.srctk.com/tracker/tracker.min.js
 ### 3. Verification & E2E QA
 - Created `scripts/qa-dashboard-widgets.mjs` verifying migration columns,PATCH visibility updates, bad request 400 validations (missing fields, invalid string positions, non-boolean values), maximum 9 limit, position ASC sorting, and cross-user isolation.
 - Executed all static checks, production build, and QA test suites cleanly.
+
+## Session 124B — Railway-Aware IP Resolver Route Migration
+
+**Date:** 2026-06-07
+**Branch:** `main`
+**Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### 1. Centralized IP Resolution Mode
+- Configured central resolver in `api/lib/ip-resolver.js` to support environment-controlled mode `ST_IP_RESOLVER_MODE=railway`.
+- In `railway` mode, it parses the `X-Forwarded-For` chain, validates each IP against public IP parameters, and selects the first valid public IP, falling back to connection IP.
+
+### 2. Ingestion Routes Migration
+- Modified `api/routes/track.js` to replace manual `x-forwarded-for` parsing inside `enrich(req)` with `resolveClientIp(req)`.
+- Modified `api/routes/conversion.js` to use `resolveClientIp(req)` inside `enrich(req)` and for outbound Meta CAPI and TikTok CAPI IP dispatches.
+- Modified `api/routes/tracker-id.js` to delete its local `getClientIp(req)` helper and use `resolveClientIp(req)` to generate visitor and session hashes.
+
+### 3. Rigorous QA Verification
+- Updated `scripts/qa-ip-resolver.mjs` to add unit tests for `isPublicIp(ip)` and `inspectClientIp(req)` under `ST_IP_RESOLVER_MODE=railway` (covering public, private, CGNAT, link-local, loopback, and malformed IPs).
+- Added integration tests verifying spawned server behavior under `ST_IP_RESOLVER_MODE=railway` with multi-hop XFF chains and private-only fallbacks.
+- Added automated static checks verifying that migrated ingestion files contain no manual `x-forwarded-for` checks or `getClientIp` helpers.
