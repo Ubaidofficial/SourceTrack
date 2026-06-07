@@ -48,6 +48,8 @@ import { campaignsRouter } from './routes/campaigns.js'
 import { campaignCostsRouter } from './routes/campaign-costs.js'
 import { publicDashboardRouter } from './routes/public-dashboard.js'
 import { integrationsRouter } from './routes/integrations.js'
+import { googleSearchConsoleRouter } from './routes/google-search-console.js'
+import { seoRevenueRouter } from './routes/seo-revenue.js'
 import { adminRouter } from './routes/admin.js'
 import { savedReportsRouter } from './routes/saved-reports.js'
 import { requireUserAuth } from './middleware/user-auth.js'
@@ -396,7 +398,9 @@ app.use('/api/saved-reports', requireUserAuth, validateSiteKey, requireSiteMembe
 // Backwards-compatible alias used by the dashboard app and onboarding seeds.
 // The router path is /saved, so this exposes /api/reports/saved.
 app.use('/api/reports', requireUserAuth, validateSiteKey, requireSiteMembership, savedReportsRouter)
+app.use('/api/integrations/google-search-console', googleSearchConsoleRouter)
 app.use('/api/integrations', requireUserAuth, validateSiteKey, requireSiteMembership, integrationsRouter)
+app.use('/api/seo-revenue', requireUserAuth, validateSiteKey, requireSiteMembership, seoRevenueRouter)
 app.use('/api/campaign-costs', requireUserAuth, validateSiteKey, requireSiteMembership, campaignCostsRouter)
 app.use('/api/public', publicDashboardRouter)
 app.use('/api/server', serverEventsRouter)

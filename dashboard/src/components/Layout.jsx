@@ -1,6 +1,6 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
-  LayoutDashboard, FileBarChart, Route, MessageSquare, Code, Bug, Settings,
+  LayoutDashboard, FileBarChart, Route, MessageSquare, Code, Bug, Settings, Search,
   Users, BarChart3, Plug, LogOut, Menu, X, Bot, Shield, TrendingUp, Activity,
   AlertTriangle, Send, Sun, Moon, CreditCard, BookOpen, ChevronDown
 } from 'lucide-react'
@@ -29,8 +29,9 @@ const NAV_GROUPS = [
   {
     label: 'Attribution',
     items: [
-      { to: '/report-builder', label: 'Reports',   icon: FileBarChart },
-      { to: '/journey',        label: 'Journeys',  icon: Route },
+      { to: '/report-builder', label: 'Reports',     icon: FileBarChart },
+      { to: '/journey',        label: 'Journeys',    icon: Route },
+      { to: '/seo-revenue',    label: 'SEO Revenue', icon: Search },
     ],
   },
   {

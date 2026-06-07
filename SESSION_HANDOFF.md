@@ -1,10 +1,45 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 125A — Managed First-Party Proxy. Implemented managed custom tracking subdomains, DNS CNAME verification, SSL routing checks, two-stage proxy middleware (Stage 1 early gate, Stage 2 site-key binding), settings UI configurations, and E2E QA test scripts.
+> **Handoff:** Session 126A — Google Search Console & SEO Revenue. Implemented database schema migrations, secure HMAC-signed OAuth callback flow, search performance daily cached synchronization, path-normalized SEO revenue report with PostHog landing page resolution, Settings integrations card, SEO Revenue Attribution report page, and a GSC QA script.
 >
-> **Next Task:** Pending next session planning.
+> **Next Task:** Pending QA review.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 126A — Google Search Console & SEO Revenue
+**Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+1. **Database Schema:** Created idempotent migration `supabase/migrations/20260607212000_add_google_search_console.sql` setting up `gsc_connections`, `gsc_performance_daily`, and `gsc_sync_runs` tables with appropriate indexes, CHECK constraints, and RLS policies.
+2. **Secure OAuth callback flow:** Hardened state token validation and signature check, verified user site membership in OAuth callback, removed raw site key from redirects, mapped browser errors, and enforced callback safety.
+3. **Synchronizer Client Library:** Implemented `google-search-console.js` client with offline access consent request, GSC property verifications, pagination logic up to 25k rows per sync run, bounded date ranges (skipping unfinalized today), and memory + database concurrency locks.
+4. **Estimated Allocation Logic Report:** Implemented `seo-revenue.js` report resolver joining organic conversions from `attributed_conversions` with GSC cached daily performance click-shares. Resolved landing page paths via ClickHouse (PostHog) earliest pageviews (capped at 1k converter IDs, 10s AbortController timeout).
+5. **Dashboard Integrations Card:** Added Google Search Console integration card in `Integrations.jsx` allowing account OAuth connection, property URL verification & selection, manual sync dispatch, and status feedbacks.
+6. **SEO Revenue Attribution Report Page:** Created `SEORevenue.jsx` reporting page displaying Organic Search Conversions/Revenue, GSC clicks, Top Landing Pages primary table, and Associated Search Queries secondary context, including the required aggregate data notice.
+7. **Sidebar & App Routing:** Registered `/seo-revenue` under Attribution nav section in `Layout.jsx` and added its ProtectedRoute mapping in `App.jsx`.
+8. **Help Center Documentation:** Added GSC setup instructions, path-normalization logic, click-share allocation details, limits, and disclaimers in `Docs.jsx`.
+9. **E2E Integration Test Suite:** Added `scripts/qa-gsc-integration.mjs` verifying OAuth state signatures, shape validation, path normalization, CTR/position math, and copy-phrase restrictions.
+
+### Files changed
+- `api/lib/google-search-console.js` [NEW]
+- `api/lib/url-normalization.js` [NEW]
+- `api/routes/google-search-console.js` [NEW]
+- `api/routes/seo-revenue.js` [NEW]
+- `api/index.js`
+- `dashboard/src/App.jsx`
+- `dashboard/src/components/Layout.jsx`
+- `dashboard/src/pages/Docs.jsx`
+- `dashboard/src/pages/Integrations.jsx`
+- `dashboard/src/pages/SEORevenue.jsx` [NEW]
+- `supabase/migrations/20260607212000_add_google_search_console.sql` [NEW]
+- `scripts/qa-gsc-integration.mjs` [NEW]
+
+### Verification commands
+```bash
+node scripts/qa-gsc-integration.mjs
+node --check api/index.js api/lib/google-search-console.js api/lib/url-normalization.js api/routes/google-search-console.js api/routes/seo-revenue.js scripts/qa-gsc-integration.mjs
+cd dashboard && npm run build
+```
 
 ## Session 125A — Managed First-Party Proxy
 **Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)

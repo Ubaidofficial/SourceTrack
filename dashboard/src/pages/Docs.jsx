@@ -124,6 +124,7 @@ const NAV = [
   { id: 'stripe-webhook',   label: 'Stripe Webhook Sync' },
   { id: 'shopify-webhook',  label: 'Shopify Order Webhook Sync' },
   { id: 'payments-api',     label: 'Payments API' },
+  { id: 'gsc-integration',   label: 'Google Search Console' },
   { id: 'auth',             label: 'Authentication' },
   { id: 'errors',           label: 'Error Handling' },
   { id: 'visitor-sessions', label: 'Visitor Sessions' },
@@ -2269,6 +2270,47 @@ fetch('/cart/update.js', {
               <li>No automatic customer email matching (stitching is strictly via <IC>user_id</IC> or <IC>anonymous_id</IC>).</li>
               <li>Does not support refunds or subscription cycles unless explicitly supported.</li>
             </ul>
+          </Section>
+
+          {/* ── Google Search Console ────────────────────────────────────────── */}
+          <Section id="gsc-integration" title="Google Search Console">
+            <p>
+              The Google Search Console integration connects aggregated search performance with SourceTrack’s organic landing-page revenue report. It shows associated GSC queries with estimated revenue context based on landing-page click share.
+            </p>
+            <p>
+              Due to privacy limitations, Google does not expose search queries at a user level. SourceTrack solves this using an **estimated allocation model** (landing-page matched SEO revenue estimates).
+            </p>
+
+            <H3>Estimated Allocation Logic</H3>
+            <p>
+              SourceTrack estimates query-level context from landing-page click share. Google Search Console provides aggregated query data, not user-level query-to-conversion identity.
+            </p>
+            <ol className="list-decimal pl-5 space-y-1.5 font-light">
+              <li><strong>Path Normalization:</strong> Raw entry page URLs from GSC and pageview URLs from SourceTrack tracking scripts are normalized (stripping domains, query parameters, trailing slashes, and protocols).</li>
+              <li><strong>Landing Page Attributions:</strong> Conversions are filtered for organic search traffic (where <IC>first_touch_channel = 'Organic Search'</IC>) and grouped by their initial entry landing page path.</li>
+              <li><strong>Click Share Calculation:</strong> The click share for each query on that page path is calculated: <IC>Query Clicks / Total Page Clicks</IC>.</li>
+              <li><strong>Estimated Query Context:</strong> The landing page's organic conversions and revenue are estimated for associated queries using their share of GSC clicks on that landing page.</li>
+            </ol>
+
+            <H3>Aggregate Metrics</H3>
+            <p>
+              When viewing queries aggregated across multiple page paths, CTR and positions are mathematically aggregated to remain accurate:
+            </p>
+            <ul className="list-disc pl-5 space-y-1 font-light">
+              <li><strong>CTR:</strong> Sum of clicks divided by sum of impressions (raw CTR values are never averaged).</li>
+              <li><strong>Average Position:</strong> Impressions-weighted average position: <IC>Sum(position * impressions) / Sum(impressions)</IC>.</li>
+            </ul>
+
+            <H3>Data Lags &amp; Limits</H3>
+            <ul className="list-disc pl-5 space-y-1 font-light">
+              <li><strong>Google Lag:</strong> Google Search Console data is delayed by 2 to 3 days. Synchronization skips the current day to avoid incomplete data.</li>
+              <li><strong>Sync Limits:</strong> Standard sync fetches performance data for the past 30 days, capped at a maximum of 90 days. Rows are fetched in batches of 5,000 up to a maximum cap of 25,000 rows per sync run.</li>
+            </ul>
+
+            <H3>Privacy &amp; Disclaimers</H3>
+            <p className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 p-3.5 rounded-lg text-xs text-blue-900 dark:text-blue-300 leading-relaxed font-sans">
+              <strong>Aggregated Data Notice:</strong> Google Search Console provides aggregated query data, not user-level query-to-conversion identity. Query revenue is estimated from click share on matching landing pages.
+            </p>
           </Section>
 
           {/* ── Authentication ───────────────────────────────────────────── */}

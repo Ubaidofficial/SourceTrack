@@ -247,6 +247,113 @@ export default function Integrations() {
     }
   }
 
+  // Google Search Console integration state
+  const { data: gscIntegData, refetch: refetchGscInteg } = useQuery({
+    queryKey: ['gsc-integration', site?.site_key],
+    queryFn: () => fetchApi(`/integrations/google-search-console/status?site_key=${site.site_key}`),
+    enabled: !!site?.site_key
+  })
+
+  const { data: gscPropertiesData } = useQuery({
+    queryKey: ['gsc-properties', site?.site_key],
+    queryFn: () => fetchApi(`/integrations/google-search-console/properties?site_key=${site.site_key}`),
+    enabled: !!site?.site_key && !!gscIntegData?.connected && !gscIntegData?.property_url
+  })
+
+  const [selectedProperty, setSelectedProperty] = useState('')
+  const [selectingProperty, setSelectingProperty] = useState(false)
+  const [syncingGsc, setSyncingGsc] = useState(false)
+  const [syncMessage, setSyncMessage] = useState('')
+  const [disconnectingGsc, setDisconnectingGsc] = useState(false)
+  const [gscStatusMessage, setGscStatusMessage] = useState('')
+  const [gscStatusError, setGscStatusError] = useState('')
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('gsc_connected') === 'true') {
+      setGscStatusMessage('Successfully connected to Google Search Console! Please select your property below.')
+      window.history.replaceState({}, document.title, window.location.pathname)
+    } else if (params.get('gsc_error')) {
+      const err = params.get('gsc_error')
+      let msg = 'Google Search Console connection failed.'
+      if (err === 'missing_refresh_token') {
+        msg = 'Connection failed: Google did not return a refresh token. Please click "Connect" again and ensure you grant offline access consent.'
+      } else if (err === 'expired_state') {
+        msg = 'Connection failed: The authorization session expired. Please try again.'
+      } else if (err === 'invalid_state') {
+        msg = 'Connection failed: The security state token was invalid.'
+      } else if (err === 'access_denied') {
+        msg = 'Connection failed: You are not authorized to connect GSC for this site.'
+      } else if (err === 'token_exchange_failed') {
+        msg = 'Connection failed: Could not exchange authorization code for Google access credentials.'
+      }
+      setGscStatusError(msg)
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+  }, [])
+
+  const handleConnectGsc = async () => {
+    try {
+      const res = await fetchApi(`/integrations/google-search-console/auth-url?site_key=${site.site_key}`)
+      if (res?.url) {
+        window.location.href = res.url
+      } else {
+        alert('Failed to generate connection URL')
+      }
+    } catch (err) {
+      alert(err.message || 'Error connecting to GSC')
+    }
+  }
+
+  const handleSelectProperty = async (e) => {
+    e.preventDefault()
+    if (!selectedProperty) return
+    setSelectingProperty(true)
+    try {
+      await fetchApi(`/integrations/google-search-console/select-property?site_key=${site.site_key}`, {
+        method: 'POST',
+        body: { property_url: selectedProperty }
+      })
+      refetchGscInteg()
+    } catch (err) {
+      alert(err.message || 'Failed to select property')
+    } finally {
+      setSelectingProperty(false)
+    }
+  }
+
+  const handleSyncGsc = async () => {
+    setSyncingGsc(true)
+    setSyncMessage('')
+    try {
+      const res = await fetchApi(`/integrations/google-search-console/sync?site_key=${site.site_key}`, {
+        method: 'POST',
+        body: { days: 30 }
+      })
+      setSyncMessage(res.message || 'Sync started successfully in background.')
+      refetchGscInteg()
+    } catch (err) {
+      alert(err.message || 'Failed to sync GSC')
+    } finally {
+      setSyncingGsc(false)
+    }
+  }
+
+  const handleDisconnectGsc = async () => {
+    if (!window.confirm('Are you sure you want to disconnect Google Search Console? All daily performance cache will be purged.')) return
+    setDisconnectingGsc(true)
+    try {
+      await fetchApi(`/integrations/google-search-console/disconnect?site_key=${site.site_key}`, {
+        method: 'POST'
+      })
+      refetchGscInteg()
+    } catch (err) {
+      alert(err.message || 'Failed to disconnect GSC')
+    } finally {
+      setDisconnectingGsc(false)
+    }
+  }
+
   useEffect(() => {
     if (webhookData?.webhook) {
       setUrl(webhookData.webhook.url || '')
@@ -887,6 +994,167 @@ export default function Integrations() {
           </div>
         </div>
       </DashboardCard>
+
+      {/* Google Search Console Integration */}
+      <DashboardCard
+        title="Google Search Console"
+        subtitle="Connect organic landing-page revenue with associated Google Search Console queries using landing-page matched click share estimates"
+      >
+        <div className="space-y-4">
+          {gscStatusMessage && (
+            <div className="p-3 text-xs rounded-lg bg-green-50 text-green-700 border border-green-200">
+              {gscStatusMessage}
+            </div>
+          )}
+          {gscStatusError && (
+            <div className="p-3 text-xs rounded-lg bg-red-50 text-red-700 border border-red-200">
+              {gscStatusError}
+            </div>
+          )}
+          {syncMessage && (
+            <div className="p-3 text-xs rounded-lg bg-blue-50 text-blue-700 border border-blue-200">
+              {syncMessage}
+            </div>
+          )}
+
+          {/* Configuration State */}
+          <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
+            <div>
+              <p className="text-sm font-semibold text-st-black dark:text-white">Status</p>
+              <p className="text-xs text-st-gray mt-0.5">Google Search Console connection</p>
+            </div>
+            <StatusBadge
+              status={
+                gscIntegData?.connected
+                  ? gscIntegData.property_selected
+                    ? 'verified'
+                    : 'warning'
+                  : 'pending'
+              }
+              label={
+                gscIntegData?.connected
+                  ? gscIntegData.property_selected
+                    ? 'Connected'
+                    : 'Connected — Select Property'
+                  : 'Not Connected'
+              }
+            />
+          </div>
+
+          {!gscIntegData?.connected ? (
+            <div className="space-y-3">
+              <p className="text-xs text-st-gray">
+                Connect your Google Search Console account to map daily page impressions, search queries, and clicks to SourceTrack conversions.
+              </p>
+              <button
+                type="button"
+                onClick={handleConnectGsc}
+                className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 transition-colors"
+              >
+                Connect Google Search Console
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* If no property is selected, show list of properties to choose from */}
+              {!gscIntegData.property_selected ? (
+                <form onSubmit={handleSelectProperty} className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">
+                      Select Search Console Property
+                    </label>
+                    {gscPropertiesData?.properties && gscPropertiesData.properties.length > 0 ? (
+                      <select
+                        value={selectedProperty}
+                        onChange={e => setSelectedProperty(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a1d1d] text-st-black dark:text-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-st-black/20"
+                      >
+                        <option value="">-- Choose verified property URL --</option>
+                        {gscPropertiesData.properties.map(p => (
+                          <option key={p.siteUrl} value={p.siteUrl}>
+                            {p.siteUrl} ({p.permissionLevel})
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="text-xs text-st-gray py-2">
+                        {gscPropertiesData?.properties
+                          ? 'No verified properties found in your Google Search Console account.'
+                          : 'Loading verified GSC properties...'}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={selectingProperty || !selectedProperty}
+                    className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 disabled:opacity-50 transition-colors"
+                  >
+                    {selectingProperty ? 'Saving...' : 'Confirm Property Selection'}
+                  </button>
+                </form>
+              ) : (
+                <div className="space-y-3 bg-gray-50 dark:bg-[#1a1d1d] border border-gray-100 dark:border-gray-800 rounded-lg p-4">
+                  <div className="space-y-2">
+                    <div>
+                      <p className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Property URL</p>
+                      <code className="text-xs font-mono text-gray-700 dark:text-gray-300 mt-1 block break-all">
+                        {gscIntegData.property_url}
+                      </code>
+                    </div>
+                    {gscIntegData.last_synced_at && (
+                      <div>
+                        <p className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Last Synced At</p>
+                        <span className="text-xs text-st-black mt-0.5 block">
+                          {new Date(gscIntegData.last_synced_at).toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-200 dark:border-gray-800 justify-between">
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSyncGsc}
+                        disabled={syncingGsc}
+                        className="px-3 py-1.5 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 disabled:opacity-50 transition-colors"
+                      >
+                        {syncingGsc ? 'Syncing...' : 'Sync Search Analytics'}
+                      </button>
+                      <Link
+                        to="/seo-revenue"
+                        className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-50 transition-colors inline-flex items-center"
+                      >
+                        View Report
+                      </Link>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleDisconnectGsc}
+                      disabled={disconnectingGsc}
+                      className="px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-50"
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Setup Instructions / Wording Disclaimer */}
+          <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-lg p-3.5 space-y-2">
+            <h4 className="text-xs font-bold text-blue-900 dark:text-blue-300 font-sans">Estimated SEO Revenue Allocation Logic</h4>
+            <p className="text-xs text-blue-800 dark:text-blue-400 font-light leading-relaxed font-sans">
+              This integration maps GSC aggregate performance data to SourceTrack conversion records using a landing-page matched estimated allocation model.
+            </p>
+            <p className="text-xs text-blue-800 dark:text-blue-400 font-light leading-relaxed font-sans">
+              <strong>Important Disclaimer:</strong> Google Search Console provides aggregated query data, not user-level query-to-conversion identity. Query revenue is estimated from click share on matching landing pages.
+            </p>
+          </div>
+        </div>
+      </DashboardCard>
+
 
       {/* Payments API */}
       <DashboardCard

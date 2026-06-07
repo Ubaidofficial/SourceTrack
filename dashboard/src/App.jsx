@@ -42,6 +42,7 @@ import SolutionLeadGen from './pages/SolutionLeadGen'
 import SolutionAgency from './pages/SolutionAgency'
 import Privacy from './pages/Privacy'
 import Terms from './pages/Terms'
+import SEORevenue from './pages/SEORevenue'
 
 const queryClient = new QueryClient()
 
@@ -144,6 +145,7 @@ export default function App() {
               <Route path="/integrations" element={<ProtectedRoute><Integrations /></ProtectedRoute>} />
               <Route path="/report-builder" element={<ReportBuilderGate />} />
               <Route path="/journey" element={<ProtectedRoute><Journey /></ProtectedRoute>} />
+              <Route path="/seo-revenue" element={<ProtectedRoute><SEORevenue /></ProtectedRoute>} />
               <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
               <Route path="/ai-chat" element={<ProtectedRoute><AIChat /></ProtectedRoute>} />
               <Route path="/ai-analytics" element={<ProtectedRoute><AIAnalytics /></ProtectedRoute>} />
