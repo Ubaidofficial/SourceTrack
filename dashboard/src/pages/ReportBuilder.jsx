@@ -62,6 +62,15 @@ const DIMENSIONS = [
   { key: 'device', label: 'Device' }
 ]
 
+const getDimensionLabel = (key) => {
+  if (!key) return ''
+  if (key.startsWith('custom_param:')) {
+    const param = key.split(':')[1]
+    return param.charAt(0).toUpperCase() + param.slice(1)
+  }
+  return DIMENSIONS.find(d => d.key === key)?.label || key
+}
+
 const METRICS = [
   { key: 'sessions', label: 'Unique Visitors', format: (v) => v.toLocaleString(), group: 'Core', desc: 'Count of distinct visitors (distinct_id). Not session-based.' },
   { key: 'conversions', label: 'Conversions', format: (v) => v.toLocaleString(), group: 'Core', desc: 'Completed conversion events' },
@@ -231,7 +240,7 @@ export default function ReportBuilder() {
         .eq('user_id', user.id)
         .maybeSingle()
 
-      const query = supabase.from('sites').select('site_key, name, plan').limit(1)
+      const query = supabase.from('sites').select('site_key, name, plan, custom_url_params').limit(1)
       if (member?.company_id) {
         query.eq('company_id', member.company_id)
       } else {
@@ -548,7 +557,7 @@ export default function ReportBuilder() {
     const cfg = report.config || {}
     return {
       metricLabel: METRICS.find(m => m.key === cfg.metric)?.label || cfg.metric || 'Metric',
-      groupLabel: DIMENSIONS.find(d => d.key === cfg.groupBy)?.label || cfg.groupBy || 'Source',
+      groupLabel: getDimensionLabel(cfg.groupBy) || 'Source',
       modelLabel: MODELS.find(m => m.key === cfg.model)?.label || cfg.model || 'Last Touch',
       dateLabel: cfg.dateFrom && cfg.dateTo
         ? `${cfg.dateFrom} → ${cfg.dateTo}`
@@ -878,19 +887,48 @@ export default function ReportBuilder() {
                 </button>
               ))}
             </div>
+
+            {/* Custom Parameters for Group By 1 */}
+            <div className="mt-3 pt-2 border-t border-gray-100 dark:border-[#2A2E2E]">
+              <span className="text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider block mb-1.5">Custom Parameters</span>
+              {site?.custom_url_params && site.custom_url_params.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {site.custom_url_params.map((p) => {
+                    const key = `custom_param:${p}`
+                    return (
+                      <button key={key} onClick={() => setGroupBy(key)}
+                        className={`px-2.5 py-1.5 text-xs rounded-full transition-colors ${
+                          groupBy === key ? 'bg-lime-100 text-lime-800 font-medium' : 'bg-gray-100 dark:bg-[#242829] text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#2A2E2E]'
+                        }`}>
+                        {p}
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="bg-gray-50 dark:bg-gray-800/40 rounded-lg p-2.5 text-[11px] text-st-gray dark:text-gray-400 space-y-0.5">
+                  <p className="font-semibold text-st-black dark:text-white">No custom parameters active</p>
+                  <p>Configure custom parameters (like *affiliate* or *creative*) in your Site Settings to group reports by them.</p>
+                  <a href="/settings" className="inline-block text-st-black dark:text-white underline font-semibold mt-0.5">
+                    Configure Settings →
+                  </a>
+                </div>
+              )}
+            </div>
+
             {!showGroupBy2 ? (
               <button onClick={() => setShowGroupBy2(true)}
-                className="mt-2 text-xs text-st-black hover:text-gray-800 font-medium">
+                className="mt-3 text-xs text-st-black hover:text-gray-800 font-medium block">
                 + Add another Group By
               </button>
             ) : (
-              <div className="mt-2 pt-2 border-t border-gray-100 dark:border-[#2A2E2E]">
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-medium text-st-gray dark:text-gray-400">Group By 2</label>
+              <div className="mt-3 pt-2 border-t border-gray-100 dark:border-[#2A2E2E]">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider block">Group By 2</label>
                   <button onClick={() => { setShowGroupBy2(false); setGroupBy2(null) }}
                     className="text-xs text-st-gray dark:text-gray-400 hover:text-red-500">&times; Remove</button>
                 </div>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-1.5 mb-2">
                   {DIMENSIONS.filter(d => d.key !== groupBy || d.key === 'date').map((d) => (
                     <button key={d.key} onClick={() => setGroupBy2(d.key)}
                       className={`px-2.5 py-1.5 text-xs rounded-full transition-colors ${
@@ -900,6 +938,25 @@ export default function ReportBuilder() {
                     </button>
                   ))}
                 </div>
+                {site?.custom_url_params && site.custom_url_params.length > 0 && (
+                  <div className="space-y-1.5 pt-1.5 border-t border-dashed border-gray-100 dark:border-[#2A2E2E]">
+                    <span className="text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider block">Custom Parameters</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {site.custom_url_params.map((p) => {
+                        const key = `custom_param:${p}`
+                        if (key === groupBy) return null
+                        return (
+                          <button key={key} onClick={() => setGroupBy2(key)}
+                            className={`px-2.5 py-1.5 text-xs rounded-full transition-colors ${
+                              groupBy2 === key ? 'bg-lime-100 text-lime-800 font-medium' : 'bg-gray-100 dark:bg-[#242829] text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#2A2E2E]'
+                            }`}>
+                            {p}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             {(groupBy === 'keyword' || groupBy2 === 'keyword') && (
@@ -1486,10 +1543,10 @@ export default function ReportBuilder() {
                       <thead>
                         <tr className="border-b border-gray-100 dark:border-[#2A2E2E] bg-gray-50 dark:bg-[#242829]">
                           <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">
-                            {DIMENSIONS.find(d => d.key === groupBy)?.label || 'Dimension'}
+                            {getDimensionLabel(groupBy) || 'Dimension'}
                           </th>
                           {groupBy2 && <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">
-                            {DIMENSIONS.find(d => d.key === groupBy2)?.label || 'Dimension 2'}
+                            {getDimensionLabel(groupBy2) || 'Dimension 2'}
                           </th>}
                           {selectedMetrics.map(mk => (
                             <th key={mk} className="text-right py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">

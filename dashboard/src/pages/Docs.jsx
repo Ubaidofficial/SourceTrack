@@ -103,6 +103,7 @@ const NAV = [
   { id: 'tracker',          label: 'Tracker Script',    indent: true },
   { id: 'exclusions',       label: 'Path Exclusions',   indent: true },
   { id: 'cookieless',       label: 'Cookieless Mode',   indent: true },
+  { id: 'custom-params',    label: 'Custom URL Params', indent: true },
   { id: 'timezone',         label: 'Timezone Behavior', indent: true },
   { id: 'dashboard-widgets', label: 'Dashboard Widgets', indent: true },
   { id: 'utm-best-practices', label: 'UTM & Cost Tracking', indent: true },
@@ -734,6 +735,32 @@ window.sourcetrack.identify('user_123', {
                 </tbody>
               </table>
             </div>
+          </Section>
+
+          {/* ── Custom URL Parameters ─────────────────────────────────────── */}
+          <Section id="custom-params" title="Custom URL Parameters">
+            <p>
+              SourceTrack allows capturing and reporting on custom marketing or query parameters (e.g. <IC>?affiliate=123</IC> or <IC>?partner=abc</IC>).
+              This allows tracking campaign variations, affiliate partners, and user segments outside of standard UTM tags.
+            </p>
+            <H3>How it works</H3>
+            <ol className="list-decimal list-inside space-y-2 pl-1 text-sm text-gray-600 dark:text-gray-400">
+              <li>
+                <strong>Configure Allowlist:</strong> Go to your Site Settings, navigate to the <em>Custom URL Parameters</em> section, and add the parameter keys you want to capture (e.g. <IC>affiliate</IC>). You can add up to 10 parameters.
+              </li>
+              <li>
+                <strong>Server-Side Extraction:</strong> The ingestion server extracts these parameters directly from visitor page URLs before stripping or redacting any query arguments. No tracker script changes are required.
+              </li>
+              <li>
+                <strong>PII Gating:</strong> Values containing emails, phone numbers, credit card patterns, or security tokens are automatically dropped to maintain privacy and compliance.
+              </li>
+              <li>
+                <strong>Report Builder:</strong> The allowlisted parameters become available in the <em>Report Builder</em> under the "Custom Parameters" section in Step 4. You can select them as a dimension to group reports.
+              </li>
+            </ol>
+            <Note>
+              Key format: custom parameter keys must be lowercase letters, numbers, underscores, or dashes (max 40 characters). Sensitive keys containing substrings like <IC>token</IC> or <IC>secret</IC> are blocked.
+            </Note>
           </Section>
 
           {/* ── Timezone Behavior ────────────────────────────────────────── */}

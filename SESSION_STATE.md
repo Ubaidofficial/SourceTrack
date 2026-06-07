@@ -1,5 +1,10 @@
-Session: 121A
-Last Completed: Completed Session 121A — Add Report to Dashboard Workflow. Created migration for show_on_dashboard, position, and size columns in saved_reports. Updated saved-reports list/patch API routes with strict security validations. Added toggles and loader lock in Report Builder, and created isolated widget query cards with strong cache invalidation on the dashboard. Verified all static, build, and widget API/security checks successfully.
-Next Task: Awaiting next session instructions.
+Session: 122A
+Last Completed: Completed Session 122A — Custom URL Parameter Capture Implementation. Created migration for custom_url_params column. Integrated extraction, PII protection, configuration allowlist, settings validation, and CSV export. Added card in Settings UI, Report Builder section, Docs, and QA script. Tested all verification checks successfully.
+Next Task: Awaiting next session instructions/commit approval.
+Roadmap Queue:
+- Session 123A: First-Party Proxy Audit & Design
+- Session 123B: Self-Hosted Proxy Guides (Cloudflare Workers, rewrites, Nginx/Caddy)
+- Session 123C: Managed Proxy Infrastructure Plan (CNAME, SSL, verification)
+- Session 124A: Managed First-Party Proxy MVP implementation
 Build: ✅ passing
 Branch: main

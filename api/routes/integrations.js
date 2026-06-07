@@ -316,12 +316,55 @@ router.patch('/settings', async (req, res) => {
       }
     }
 
+    let customUrlParams = null
+    if (req.body.custom_url_params !== undefined) {
+      const rawParams = req.body.custom_url_params
+      if (!Array.isArray(rawParams)) {
+        return res.status(400).json({ success: false, data: null, error: 'custom_url_params must be an array' })
+      }
+
+      // Deduplicate, normalize to lowercase, filter out empty values
+      const uniqueParams = [...new Set(rawParams.map(p => typeof p === 'string' ? p.trim().toLowerCase() : '').filter(Boolean))]
+
+      // Limit check
+      if (uniqueParams.length > 10) {
+        return res.status(400).json({ success: false, data: null, error: 'Maximum of 10 custom URL parameters allowed per site' })
+      }
+
+      // Regex validation (lowercase letters, numbers, underscore, dash only, length 1-40)
+      const paramRegex = /^[a-z0-9_-]{1,40}$/
+      const blockedSubstrings = ['email', 'phone', 'name', 'address', 'token', 'secret', 'password', 'session', 'auth', 'cookie', 'card', 'ssn']
+
+      for (const p of uniqueParams) {
+        if (!paramRegex.test(p)) {
+          return res.status(400).json({
+            success: false,
+            data: null,
+            error: `Invalid custom URL parameter key "${p}". Keys must be 1-40 characters and contain only lowercase letters, numbers, underscores, or dashes.`
+          })
+        }
+
+        for (const sub of blockedSubstrings) {
+          if (p.includes(sub)) {
+            return res.status(400).json({
+              success: false,
+              data: null,
+              error: `Custom URL parameter key "${p}" is blocked. It contains the sensitive word "${sub}".`
+            })
+          }
+        }
+      }
+
+      customUrlParams = uniqueParams
+    }
+
     const supabase = getSupabase()
 
     const updates = {}
     if (windowDays !== null) updates.attribution_window_days = windowDays
     if (timezone !== undefined) updates.timezone = timezone
     if (excludedPaths !== null) updates.excluded_paths = excludedPaths
+    if (customUrlParams !== null) updates.custom_url_params = customUrlParams
 
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ success: false, data: null, error: 'No valid fields to update' })
@@ -331,7 +374,7 @@ router.patch('/settings', async (req, res) => {
       .from('sites')
       .update(updates)
       .eq('site_key', siteKey)
-      .select('id, attribution_window_days, excluded_paths, timezone')
+      .select('id, attribution_window_days, excluded_paths, timezone, custom_url_params')
       .single()
 
     if (error) {

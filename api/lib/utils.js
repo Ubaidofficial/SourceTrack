@@ -399,3 +399,105 @@ export function decryptSecret(encryptedText) {
   decrypted += decipher.final('utf8')
   return decrypted
 }
+
+/**
+ * Parses and extracts allowlisted custom parameters from a URL search string.
+ * Enforces strict key allowlists, regex validation, max lengths, blocked words,
+ * and value-level PII checks (emails, JWTs, phone numbers, credit card-like patterns).
+ * Unsafe values are dropped entirely (not saved as REDACTED).
+ *
+ * @param {string} pageUrl - The URL or pathname to parse.
+ * @param {string[]} allowlist - The site's allowed custom parameter keys.
+ * @returns {object} Flat object mapping `custom_<key>` to sanitized value.
+ */
+export function extractCustomParams(pageUrl, allowlist) {
+  if (!pageUrl || typeof pageUrl !== 'string' || !Array.isArray(allowlist) || allowlist.length === 0) {
+    return {}
+  }
+
+  const customProps = {}
+  try {
+    let urlObj
+    try {
+      urlObj = new URL(pageUrl)
+    } catch (_) {
+      urlObj = new URL(pageUrl, 'https://relative-base.local')
+    }
+
+    const searchParams = urlObj.searchParams
+    const blockedSubstrings = ['email', 'phone', 'name', 'address', 'token', 'secret', 'password', 'session', 'auth', 'cookie', 'card', 'ssn']
+
+    for (const key of allowlist) {
+      if (typeof key !== 'string' || key.length > 40 || !/^[a-z0-9_-]+$/.test(key)) {
+        continue
+      }
+
+      let isBlocked = false
+      for (const sub of blockedSubstrings) {
+        if (key.toLowerCase().includes(sub)) {
+          isBlocked = true
+          break
+        }
+      }
+      if (isBlocked) continue
+
+      if (searchParams.has(key)) {
+        const val = searchParams.get(key)
+        if (typeof val === 'string' && val.length > 0) {
+          const trimmed = val.trim()
+
+          // Drop unsafe values completely (PII Gating)
+          if (trimmed.length > 120) continue // too long
+
+          // Stricter Email check: drop if it contains @ (and a general email signature check)
+          if (trimmed.includes('@')) continue
+          if (/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/.test(trimmed)) continue
+
+          // Phone number check (7+ digits)
+          if (/^\+?[0-9\s\-()]{7,25}$/.test(trimmed) && trimmed.replace(/[^0-9]/g, '').length >= 7) continue
+
+          // JWT token check
+          if (trimmed.split('.').length === 3 && /^[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+$/.test(trimmed)) continue
+
+          // Card pattern check (13 to 16 digits)
+          if (/^\d{13,16}$/.test(trimmed.replace(/[-\s]/g, ''))) continue
+
+          // Long hex string check (session IDs, MD5/SHA hashes, etc.)
+          if (trimmed.length >= 32 && /^[0-9a-fA-F]+$/.test(trimmed)) continue
+
+          // Long Base64 / Base64url-ish high entropy check (JWT-like or token-like)
+          if (trimmed.length >= 32 && /^[a-zA-Z0-9\-_]+={0,2}$/.test(trimmed) && /[a-z]/.test(trimmed) && /[A-Z]/.test(trimmed) && /[0-9]/.test(trimmed)) continue
+
+          // Common token prefixes/patterns
+          const lowerTrimmed = trimmed.toLowerCase()
+          if (
+            lowerTrimmed.startsWith('ghp_') ||
+            lowerTrimmed.startsWith('xoxb-') ||
+            lowerTrimmed.startsWith('xoxp-') ||
+            lowerTrimmed.startsWith('sk_live') ||
+            lowerTrimmed.startsWith('sk_test') ||
+            lowerTrimmed.startsWith('pk_live') ||
+            lowerTrimmed.startsWith('pk_test') ||
+            lowerTrimmed.startsWith('whsec_') ||
+            lowerTrimmed.startsWith('secret_') ||
+            lowerTrimmed.startsWith('token_') ||
+            lowerTrimmed.startsWith('session_') ||
+            lowerTrimmed.startsWith('auth_') ||
+            lowerTrimmed.startsWith('jwt_')
+          ) {
+            continue
+          }
+
+          // Token-like over 60 chars check
+          if (trimmed.length > 60 && /^[a-zA-Z0-9\-_~.+%=/]+$/.test(trimmed)) continue
+
+          customProps[`custom_${key}`] = trimmed
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[custom-params-extract] failed:', err.message)
+  }
+
+  return customProps
+}

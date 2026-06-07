@@ -409,6 +409,15 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
     filterClauses += `\n    AND properties.device_type = '${esc(filters.device_type)}'`
   }
 
+  const getCustomKey = (dim) => dim && dim.startsWith('custom_param:') ? dim.split(':')[1] : null
+  const custKey1 = getCustomKey(groupBy)
+  const custKey2 = getCustomKey(groupBy2)
+
+  const selectParts = []
+  if (custKey1) selectParts.push(`properties.custom_${custKey1} AS custom_${custKey1}`)
+  if (custKey2 && custKey2 !== custKey1) selectParts.push(`properties.custom_${custKey2} AS custom_${custKey2}`)
+  const customSelect = selectParts.length > 0 ? ',\n      ' + selectParts.join(',\n      ') : ''
+
   // Query pageviews for session derivation
   const sql = `
     SELECT
@@ -419,7 +428,7 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
       properties.utm_medium,
       properties.utm_campaign,
       properties.country,
-      properties.device_type
+      properties.device_type${customSelect}
     FROM events
     WHERE properties.site_id = '${safeSite}'
       AND event = '$pageview'
@@ -451,9 +460,16 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
   const eventsByVisitor = new Map()
 
   for (const row of rows) {
-    const [distinctId, timestamp, pageUrl, utmSource, utmMedium, utmCampaign, country, deviceType] = row
-    if (!eventsByVisitor.has(distinctId)) eventsByVisitor.set(distinctId, [])
-    eventsByVisitor.get(distinctId).push({
+    const distinctId = row[0]
+    const timestamp = row[1]
+    const pageUrl = row[2]
+    const utmSource = row[3]
+    const utmMedium = row[4]
+    const utmCampaign = row[5]
+    const country = row[6]
+    const deviceType = row[7]
+
+    const eventObj = {
       event: '$pageview',
       timestamp,
       page_url: pageUrl || null,
@@ -463,7 +479,13 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
       country: country || null,
       device_type: deviceType || null,
       conversion_value: null
-    })
+    }
+
+    if (custKey1) eventObj[`custom_${custKey1}`] = row[8]
+    if (custKey2) eventObj[`custom_${custKey2}`] = row[custKey1 && custKey1 !== custKey2 ? 9 : 8]
+
+    if (!eventsByVisitor.has(distinctId)) eventsByVisitor.set(distinctId, [])
+    eventsByVisitor.get(distinctId).push(eventObj)
   }
 
   for (const row of convRows) {
@@ -492,6 +514,10 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
 
   // Group sessions by dimension
   const dimKey = (sess) => {
+    if (groupBy.startsWith('custom_param:')) {
+      const key = groupBy.split(':')[1]
+      return sess.entry_event?.[`custom_${key}`] || 'unknown'
+    }
     switch (groupBy) {
       case 'conversion_type': return "COALESCE(NULLIF(any(properties.conversion_type), ''), 'untyped')"
       case 'channel': return channelFromEvent(sess.entry_event || sess.events?.[0] || sess)
@@ -507,6 +533,10 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
   }
 
   const dim2Key = groupBy2 ? (sess) => {
+    if (groupBy2.startsWith('custom_param:')) {
+      const key = groupBy2.split(':')[1]
+      return sess.entry_event?.[`custom_${key}`] || 'unknown'
+    }
     switch (groupBy2) {
       case 'source': return sess.entry_source || 'direct'
       case 'medium': return sess.entry_medium || 'none'
@@ -1027,6 +1057,15 @@ export async function getMultiTouchAttributionLive({
   const lookbackDate = new Date(new Date(dateFrom).getTime() - windowDays * 24 * 60 * 60 * 1000)
   const lookbackStr = lookbackDate.toISOString().slice(0, 10)
 
+  const getCustomKey = (dim) => dim && dim.startsWith('custom_param:') ? dim.split(':')[1] : null
+  const custKey1 = getCustomKey(groupBy)
+  const custKey2 = getCustomKey(groupBy2)
+
+  const selectParts = []
+  if (custKey1) selectParts.push(`properties.custom_${custKey1} AS custom_${custKey1}`)
+  if (custKey2 && custKey2 !== custKey1) selectParts.push(`properties.custom_${custKey2} AS custom_${custKey2}`)
+  const customPvSelect = selectParts.length > 0 ? ',\n      ' + selectParts.join(',\n      ') : ''
+
   const pvSql = `
     SELECT
       distinct_id,
@@ -1041,7 +1080,7 @@ export async function getMultiTouchAttributionLive({
       properties.fbclid AS fbclid,
       properties.msclkid AS msclkid,
       properties.page_url AS page_url,
-      properties.utm_term AS utm_term
+      properties.utm_term AS utm_term${customPvSelect}
     FROM events
     WHERE properties.site_id = '${safeSite}'
       AND event = '$pageview'
@@ -1055,9 +1094,21 @@ export async function getMultiTouchAttributionLive({
   // Group pageviews by visitor distinct_id
   const pageviewsByVisitor = {}
   for (const row of pvRows) {
-    const [distinctId, timestamp, utmSource, utmMedium, utmCampaign, referrer, aiSource, gclid, gbraid, fbclid, msclkid, pageUrl, utmTerm] = row
-    if (!pageviewsByVisitor[distinctId]) pageviewsByVisitor[distinctId] = []
-    pageviewsByVisitor[distinctId].push({
+    const distinctId = row[0]
+    const timestamp = row[1]
+    const utmSource = row[2]
+    const utmMedium = row[3]
+    const utmCampaign = row[4]
+    const referrer = row[5]
+    const aiSource = row[6]
+    const gclid = row[7]
+    const gbraid = row[8]
+    const fbclid = row[9]
+    const msclkid = row[10]
+    const pageUrl = row[11]
+    const utmTerm = row[12]
+
+    const pvObj = {
       timestamp,
       utm_source: utmSource || null,
       utm_medium: utmMedium || null,
@@ -1071,7 +1122,13 @@ export async function getMultiTouchAttributionLive({
       page_url: pageUrl || null,
       utm_term: utmTerm || null,
       derived_source: utmSource || aiSource || (referrer ? (() => { try { return new URL(referrer).hostname.replace('www.', '') } catch (_) { return null } })() : null) || 'direct'
-    })
+    }
+
+    if (custKey1) pvObj[`custom_${custKey1}`] = row[13]
+    if (custKey2) pvObj[`custom_${custKey2}`] = row[custKey1 && custKey1 !== custKey2 ? 14 : 13]
+
+    if (!pageviewsByVisitor[distinctId]) pageviewsByVisitor[distinctId] = []
+    pageviewsByVisitor[distinctId].push(pvObj)
   }
 
   // 3. For each conversion, calculate touchpoint attribution fractions
@@ -1112,9 +1169,12 @@ export async function getMultiTouchAttributionLive({
 
     // Apply attribution allocations
     for (const share of shares) {
-      // Determine dimension values
       let dimVal = 'direct'
-      if (groupBy === 'source') dimVal = share.source || 'direct'
+      if (groupBy.startsWith('custom_param:')) {
+        const key = groupBy.split(':')[1]
+        dimVal = share[`custom_${key}`] || 'unknown'
+      }
+      else if (groupBy === 'source') dimVal = share.source || 'direct'
       else if (groupBy === 'medium') dimVal = share.medium || 'none'
       else if (groupBy === 'campaign') dimVal = share.campaign || 'none'
       else if (groupBy === 'keyword') dimVal = share.keyword || share.utm_term || 'unknown'
@@ -1457,11 +1517,47 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     ) _nd ON events.distinct_id = _nd.distinct_id`
   }
 
-  const dimExpr = groupBy === 'date'
-    ? granularity === 'quarter'
-      ? `concat(toString(toYear(${refTs})), '-Q', toString(toQuarter(${refTs})))`
-      : `formatDateTime(${refTs}, ${GRANULARITY_MAP[granularity] || GRANULARITY_MAP.day})`
-    : GROUP_COLUMNS[groupBy]?.[model]
+  const getCustomKey = (dim) => dim && dim.startsWith('custom_param:') ? dim.split(':')[1] : null
+  const custKey1 = getCustomKey(groupBy)
+  const custKey2 = getCustomKey(groupBy2)
+
+  let customJoin = ''
+  if (custKey1 || custKey2) {
+    const selectParts = []
+    if (custKey1) {
+      selectParts.push(`argMin(properties.custom_${custKey1}, timestamp) AS first_cust_${custKey1}`)
+      selectParts.push(`argMax(properties.custom_${custKey1}, timestamp) AS last_cust_${custKey1}`)
+    }
+    if (custKey2 && custKey2 !== custKey1) {
+      selectParts.push(`argMin(properties.custom_${custKey2}, timestamp) AS first_cust_${custKey2}`)
+      selectParts.push(`argMax(properties.custom_${custKey2}, timestamp) AS last_cust_${custKey2}`)
+    }
+    customJoin = `
+    LEFT JOIN (
+      SELECT distinct_id AS distinct_id,
+        ${selectParts.join(',\n        ')}
+      FROM events
+      WHERE properties.site_id = '${safeSite}'
+        AND event = '$pageview'
+      GROUP BY distinct_id
+    ) _cust ON events.distinct_id = _cust.distinct_id`
+  }
+
+  let dimExpr = null
+  if (custKey1) {
+    if (metric === 'sessions') {
+      dimExpr = `COALESCE(NULLIF(properties.custom_${custKey1}, ''), 'unknown')`
+    } else {
+      const prefix = (model === 'first_touch' || model === 'first_touch_non_direct') ? 'first' : 'last'
+      dimExpr = `COALESCE(NULLIF(_cust.${prefix}_cust_${custKey1}, ''), 'unknown')`
+    }
+  } else {
+    dimExpr = groupBy === 'date'
+      ? granularity === 'quarter'
+        ? `concat(toString(toYear(${refTs})), '-Q', toString(toQuarter(${refTs})))`
+        : `formatDateTime(${refTs}, ${GRANULARITY_MAP[granularity] || GRANULARITY_MAP.day})`
+      : GROUP_COLUMNS[groupBy]?.[model]
+  }
 
   if (!dimExpr) {
     throw new Error(`Unsupported group_by: ${groupBy} for model: ${model}`)
@@ -1469,11 +1565,20 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
 
   let dim2Expr = null
   if (groupBy2) {
-    dim2Expr = groupBy2 === 'date'
-      ? granularity === 'quarter'
-        ? `concat(toString(toYear(${refTs})), '-Q', toString(toQuarter(${refTs})))`
-        : `formatDateTime(${refTs}, ${GRANULARITY_MAP[granularity] || GRANULARITY_MAP.day})`
-      : GROUP_COLUMNS[groupBy2]?.[model]
+    if (custKey2) {
+      if (metric === 'sessions') {
+        dim2Expr = `COALESCE(NULLIF(properties.custom_${custKey2}, ''), 'unknown')`
+      } else {
+        const prefix = (model === 'first_touch' || model === 'first_touch_non_direct') ? 'first' : 'last'
+        dim2Expr = `COALESCE(NULLIF(_cust.${prefix}_cust_${custKey2}, ''), 'unknown')`
+      }
+    } else {
+      dim2Expr = groupBy2 === 'date'
+        ? granularity === 'quarter'
+          ? `concat(toString(toYear(${refTs})), '-Q', toString(toQuarter(${refTs})))`
+          : `formatDateTime(${refTs}, ${GRANULARITY_MAP[granularity] || GRANULARITY_MAP.day})`
+        : GROUP_COLUMNS[groupBy2]?.[model]
+    }
     if (!dim2Expr) {
       throw new Error(`Unsupported group_by2: ${groupBy2} for model: ${model}`)
     }
@@ -1689,6 +1794,12 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     const ndAggFn = model === 'first_touch_non_direct' ? 'argMin' : 'argMax'
 
     function ltvPersonDimExpr(gb, md) {
+      if (gb.startsWith('custom_param:')) {
+        const key = gb.split(':')[1]
+        const prefix = (md === 'first_touch' || md === 'first_touch_non_direct') ? 'first' : 'last'
+        return `any(COALESCE(NULLIF(_cust.${prefix}_cust_${key}, ''), 'unknown'))`
+      }
+
       if (gb === 'date') {
         return granularity === 'quarter'
           ? `concat(toString(toYear(MAX(timestamp))), '-Q', toString(toQuarter(MAX(timestamp))))`
@@ -1808,7 +1919,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
         events.distinct_id,
         ${ltvDimExpr} AS ltv_dim${ltvDim2Expr ? `,\n        ${ltvDim2Expr} AS ltv_dim2` : ''},
         SUM(toFloatOrZero(toString(properties.conversion_value))) AS total_revenue
-      FROM events${ltvJoin}
+      FROM events${ltvJoin}${customJoin}
       WHERE properties.site_id = '${safeSite}'
         AND event = '$conversion'
         AND timestamp >= toDateTime('${fromDate}')
@@ -1850,7 +1961,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
       ${effectiveDimExpr} AS dim_value${effectiveDim2Expr ? `,\n      ${effectiveDim2Expr} AS dim_value2` : ''},
       ${metricCol} AS metric_value
       ${extraSelect}
-    FROM events${refJoin}${qualifyingJoin}${windowJoin}
+    FROM events${refJoin}${qualifyingJoin}${windowJoin}${customJoin}
     WHERE properties.site_id = '${safeSite}'
       AND timestamp >= toDateTime('${fromDate}')
       AND timestamp <= toDateTime('${toDate}')
@@ -1888,7 +1999,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
         SELECT
           ${dimExpr} AS dim_value${dim2Expr ? `,\n          ${dim2Expr} AS dim_value2` : ''},
           count(DISTINCT distinct_id) AS sessions
-        FROM events${refJoin}
+        FROM events${refJoin}${customJoin}
         WHERE properties.site_id = '${safeSite}'
           AND event = '$pageview'
           AND timestamp >= toDateTime('${fromDate}')
@@ -2267,16 +2378,24 @@ export function calculateAttribution(touchpoints, conversionValue) {
     ai_source: tp.ai_source, gclid: tp.gclid,
     fbclid: tp.fbclid, msclkid: tp.msclkid, referrer: tp.referrer
   })
-  const tpBase = (tp) => ({
-    source: tp.utm_source || null,
-    medium: tp.utm_medium || null,
-    campaign: tp.utm_campaign || null,
-    keyword: tp.utm_term || null,
-    utm_term: tp.utm_term || null,
-    referrer_domain: extractReferrerDomain(tp.referrer),
-    channel: tpCh(tp),
-    timestamp: tp.timestamp
-  })
+  const tpBase = (tp) => {
+    const base = {
+      source: tp.utm_source || null,
+      medium: tp.utm_medium || null,
+      campaign: tp.utm_campaign || null,
+      keyword: tp.utm_term || null,
+      utm_term: tp.utm_term || null,
+      referrer_domain: extractReferrerDomain(tp.referrer),
+      channel: tpCh(tp),
+      timestamp: tp.timestamp
+    }
+    for (const key of Object.keys(tp)) {
+      if (key.startsWith('custom_')) {
+        base[key] = tp[key]
+      }
+    }
+    return base
+  }
 
   // ── Linear ──────────────────────────────────────────────────────────────────
   const fraction = 1.0 / touchpoints.length

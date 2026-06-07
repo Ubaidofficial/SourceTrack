@@ -6,7 +6,7 @@ import { ph } from '../lib/posthog.js'
 import { dispatchWebhook } from '../lib/webhook.js'
 import { sendMetaCAPI, sendGoogleConversion, sendMicrosoftConversion, sendLinkedInConversion, sendTikTokConversion } from '../lib/conversion-sync.js'
 import { getSupabase } from '../lib/supabase.js'
-import { normalizeUtm, getFirstTouchFields, redactPiiFromObject, isPathExcluded } from '../lib/utils.js'
+import { normalizeUtm, getFirstTouchFields, redactPiiFromObject, isPathExcluded, extractCustomParams } from '../lib/utils.js'
 import { hasFeature } from '../lib/plan-features.js'
 
 // In-memory dedup cache — 24h TTL. Prevents duplicate conversions when:
@@ -150,6 +150,8 @@ export async function conversion(req, res) {
       return res.status(200).json({ success: true, data: { received: true, filtered: 'excluded_path' }, error: null })
     }
 
+    const customParams = extractCustomParams(req.body?.page_url, req.site?.custom_url_params)
+
     // Ingest-side query parameter redaction to prevent PII leaks
     if (req.body) {
       req.body = redactPiiFromObject(req.body)
@@ -197,7 +199,8 @@ export async function conversion(req, res) {
       // Feature: custom event properties — any object passed as `properties` is merged in
       ...(req.body.properties && typeof req.body.properties === 'object' && !Array.isArray(req.body.properties)
         ? { custom_properties: req.body.properties }
-        : {})
+        : {}),
+      ...customParams
     }
 
     if (typeof req.body.conversion_type === 'string') {

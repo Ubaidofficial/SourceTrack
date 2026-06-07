@@ -35,6 +35,10 @@ export default function Settings() {
   const [timezone, setTimezone]                     = useState('UTC')
   const [settingsSaving, setSettingsSaving]         = useState(false)
 
+  const [customParams, setCustomParams]             = useState([])
+  const [newParam, setNewParam]                     = useState('')
+  const [customParamsSaving, setCustomParamsSaving] = useState(false)
+
   useEffect(() => { loadSite() }, [user, activeSite])
 
   async function loadSite() {
@@ -45,7 +49,7 @@ export default function Settings() {
 
     let query = supabase
       .from('sites')
-      .select('*, cookieless_mode, data_retention_days, attribution_window_days, excluded_paths, timezone')
+      .select('*, cookieless_mode, data_retention_days, attribution_window_days, excluded_paths, timezone, custom_url_params')
 
     if (activeSite.id) {
       query = query.eq('id', activeSite.id)
@@ -66,6 +70,7 @@ export default function Settings() {
       setDomain(data.domain || '')
       setExcludedPaths((data.excluded_paths || []).join(', '))
       setTimezone(data.timezone || 'UTC')
+      setCustomParams(data.custom_url_params || [])
     }
   }
 
@@ -266,6 +271,69 @@ export default function Settings() {
       setSettingsSaving(false)
     }
   }
+
+  const handleCustomParamsSave = async (updatedParams) => {
+    if (!site || !activeSite || site.id !== activeSite.id || site.site_key !== activeSite.site_key) return
+    setCustomParamsSaving(true)
+    setMessage('')
+    try {
+      await fetchApi(`/integrations/settings?site_key=${site.site_key}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          custom_url_params: updatedParams
+        })
+      })
+      setMessage('Custom parameters saved.')
+      setTimeout(() => setMessage(''), 4000)
+    } catch (err) {
+      setMessage(err?.message || 'Error saving custom parameters')
+      setTimeout(() => setMessage(''), 4000)
+    } finally {
+      setCustomParamsSaving(false)
+    }
+  }
+
+  const handleAddParam = (e) => {
+    e.preventDefault()
+    const trimmed = newParam.trim().toLowerCase()
+    if (!trimmed) return
+
+    if (!/^[a-z0-9_-]{1,40}$/.test(trimmed)) {
+      setMessage('Invalid key format. Must be 1-40 lowercase alphanumeric characters, underscores or dashes.')
+      return
+    }
+
+    const blockedSubstrings = ['email', 'phone', 'name', 'address', 'token', 'secret', 'password', 'session', 'auth', 'cookie', 'card', 'ssn']
+    for (const sub of blockedSubstrings) {
+      if (trimmed.includes(sub)) {
+        setMessage(`Key cannot contain sensitive word: "${sub}"`)
+        return
+      }
+    }
+
+    if (customParams.includes(trimmed)) {
+      setMessage('Parameter is already allowlisted.')
+      return
+    }
+
+    if (customParams.length >= 10) {
+      setMessage('Maximum of 10 custom parameters allowed.')
+      return
+    }
+
+    const updated = [...customParams, trimmed]
+    setCustomParams(updated)
+    setNewParam('')
+    handleCustomParamsSave(updated)
+  }
+
+  const handleRemoveParam = (paramToRemove) => {
+    const updated = customParams.filter(p => p !== paramToRemove)
+    setCustomParams(updated)
+    handleCustomParamsSave(updated)
+  }
+
+
 
 
   // `isPaid` covers any non-free, non-trial plan (starter/growth/business).
@@ -527,6 +595,59 @@ export default function Settings() {
             {settingsSaving ? 'Saving…' : 'Save Site Settings'}
           </button>
         </form>
+      </section>
+
+      {/* ── Custom URL Parameters ─────────────────────────────────────── */}
+      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <Link className="w-4 h-4 text-st-gray dark:text-gray-400" />
+          <h3 className="text-sm font-bold text-st-black dark:text-white">Custom URL Parameters</h3>
+        </div>
+        <p className="text-xs text-st-gray dark:text-gray-400">
+          Capture and attribute custom marketing parameters (e.g. <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-[10px]">?affiliate=123</code> or <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-[10px]">?partner=xyz</code>).
+          Values matching emails, phone numbers, or credentials/tokens are automatically dropped to maintain privacy.
+        </p>
+
+        <form onSubmit={handleAddParam} className="flex gap-2">
+          <input
+            type="text"
+            value={newParam}
+            onChange={e => setNewParam(e.target.value)}
+            placeholder="e.g. affiliate"
+            className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
+            disabled={customParamsSaving}
+          />
+          <button
+            type="submit"
+            disabled={customParamsSaving || !newParam.trim()}
+            className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors"
+          >
+            Add
+          </button>
+        </form>
+
+        {customParams.length > 0 ? (
+          <div className="border border-gray-200 dark:border-gray-800 rounded-lg divide-y divide-gray-200 dark:divide-gray-800">
+            {customParams.map(param => (
+              <div key={param} className="flex items-center justify-between p-3">
+                <span className="text-sm font-mono text-st-black dark:text-white">{param}</span>
+                <button
+                  onClick={() => handleRemoveParam(param)}
+                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 text-red-500 rounded"
+                  disabled={customParamsSaving}
+                  title="Remove parameter"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-st-gray dark:text-gray-400 italic">No custom parameters allowlisted yet.</p>
+        )}
+        <p className="text-[10px] text-st-gray dark:text-gray-400">
+          Max 10 active parameters. Keys must be lowercase alphanumeric with underscores/dashes, up to 40 characters.
+        </p>
       </section>
 
 

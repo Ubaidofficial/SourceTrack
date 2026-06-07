@@ -59,12 +59,24 @@ export async function attribution(req, res) {
       })
     }
 
+    const isCustomParam = (dim) => {
+      if (typeof dim !== 'string' || !/^custom_param:[a-z0-9_-]{1,40}$/.test(dim)) {
+        return false
+      }
+      const key = dim.split(':')[1]
+      const blockedSubstrings = ['email', 'phone', 'name', 'address', 'token', 'secret', 'password', 'session', 'auth', 'cookie', 'card', 'ssn']
+      for (const sub of blockedSubstrings) {
+        if (key.includes(sub)) return false
+      }
+      return Array.isArray(req.site?.custom_url_params) && req.site.custom_url_params.includes(key)
+    }
+
     if (group_by && metric) {
-      if (!ALLOWED_GROUPS.has(group_by)) {
+      if (!ALLOWED_GROUPS.has(group_by) && !isCustomParam(group_by)) {
         return res.status(400).json({
           success: false,
           data: null,
-          error: `Invalid group_by. Must be one of: ${[...ALLOWED_GROUPS].join(', ')}`
+          error: `Invalid group_by. Must be one of: ${[...ALLOWED_GROUPS].join(', ')} or an allowlisted custom_param:<key>`
         })
       }
       if (!ALLOWED_METRICS.has(metric)) {
@@ -74,11 +86,11 @@ export async function attribution(req, res) {
           error: `Invalid metric. Must be one of: ${[...ALLOWED_METRICS].join(', ')}`
         })
       }
-      if (req.query.group_by2 && !ALLOWED_GROUPS.has(req.query.group_by2)) {
+      if (req.query.group_by2 && !ALLOWED_GROUPS.has(req.query.group_by2) && !isCustomParam(req.query.group_by2)) {
         return res.status(400).json({
           success: false,
           data: null,
-          error: `Invalid group_by2. Must be one of: ${[...ALLOWED_GROUPS].join(', ')}`
+          error: `Invalid group_by2. Must be one of: ${[...ALLOWED_GROUPS].join(', ')} or an allowlisted custom_param:<key>`
         })
       }
       if (req.query.time_granularity && !ALLOWED_GRANULARITY.has(req.query.time_granularity)) {
@@ -127,7 +139,7 @@ export async function attribution(req, res) {
       }
 
       // Use pre-aggregated data for first_touch, last_touch, and linear
-      if ((model === "first_touch" || model === "last_touch") && group_by !== "keyword" && req.query.group_by2 !== "keyword" && group_by !== "referrer_domain" && req.query.group_by2 !== "referrer_domain" && group_by !== "provider" && req.query.group_by2 !== "provider" && group_by !== "attribution_status" && req.query.group_by2 !== "attribution_status" && group_by !== "stitching_method" && req.query.group_by2 !== "stitching_method") {
+      if ((model === "first_touch" || model === "last_touch") && group_by !== "keyword" && req.query.group_by2 !== "keyword" && group_by !== "referrer_domain" && req.query.group_by2 !== "referrer_domain" && group_by !== "provider" && req.query.group_by2 !== "provider" && group_by !== "attribution_status" && req.query.group_by2 !== "attribution_status" && group_by !== "stitching_method" && req.query.group_by2 !== "stitching_method" && !group_by.startsWith('custom_param:') && !(req.query.group_by2 && req.query.group_by2.startsWith('custom_param:'))) {
         try {
           const results = await getPreAggregatedAttribution({
             siteId: req.site.id,
@@ -147,7 +159,7 @@ export async function attribution(req, res) {
       // instead of silently rendering a blank chart.
       const NIGHTLY_NOTICE = 'This model is calculated by the nightly attribution job (runs ~2 AM UTC). Results will appear after the first run. If you have recent conversions and still see no data, the job may not be configured — contact support.'
 
-      if (model === "linear" && group_by !== "keyword" && req.query.group_by2 !== "keyword" && group_by !== "referrer_domain" && req.query.group_by2 !== "referrer_domain" && group_by !== "provider" && req.query.group_by2 !== "provider" && group_by !== "attribution_status" && req.query.group_by2 !== "attribution_status" && group_by !== "stitching_method" && req.query.group_by2 !== "stitching_method") {
+      if (model === "linear" && group_by !== "keyword" && req.query.group_by2 !== "keyword" && group_by !== "referrer_domain" && req.query.group_by2 !== "referrer_domain" && group_by !== "provider" && req.query.group_by2 !== "provider" && group_by !== "attribution_status" && req.query.group_by2 !== "attribution_status" && group_by !== "stitching_method" && req.query.group_by2 !== "stitching_method" && !group_by.startsWith('custom_param:') && !(req.query.group_by2 && req.query.group_by2.startsWith('custom_param:'))) {
         try {
           const results = await getLinearAttribution({
             siteId: req.site.id,
@@ -163,7 +175,7 @@ export async function attribution(req, res) {
           return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results: [], _notice: NIGHTLY_NOTICE } })
         }
       }
-      if (model === "u_shaped" && group_by !== "keyword" && req.query.group_by2 !== "keyword" && group_by !== "referrer_domain" && req.query.group_by2 !== "referrer_domain" && group_by !== "provider" && req.query.group_by2 !== "provider" && group_by !== "attribution_status" && req.query.group_by2 !== "attribution_status" && group_by !== "stitching_method" && req.query.group_by2 !== "stitching_method") {
+      if (model === "u_shaped" && group_by !== "keyword" && req.query.group_by2 !== "keyword" && group_by !== "referrer_domain" && req.query.group_by2 !== "referrer_domain" && group_by !== "provider" && req.query.group_by2 !== "provider" && group_by !== "attribution_status" && req.query.group_by2 !== "attribution_status" && group_by !== "stitching_method" && req.query.group_by2 !== "stitching_method" && !group_by.startsWith('custom_param:') && !(req.query.group_by2 && req.query.group_by2.startsWith('custom_param:'))) {
         try {
           const results = await getUShapedAttribution({
             siteId: req.site.id,
@@ -179,7 +191,7 @@ export async function attribution(req, res) {
           return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results: [], _notice: NIGHTLY_NOTICE } })
         }
       }
-      if (model === "time_decay" && group_by !== "keyword" && req.query.group_by2 !== "keyword" && group_by !== "referrer_domain" && req.query.group_by2 !== "referrer_domain" && group_by !== "provider" && req.query.group_by2 !== "provider" && group_by !== "attribution_status" && req.query.group_by2 !== "attribution_status" && group_by !== "stitching_method" && req.query.group_by2 !== "stitching_method") {
+      if (model === "time_decay" && group_by !== "keyword" && req.query.group_by2 !== "keyword" && group_by !== "referrer_domain" && req.query.group_by2 !== "referrer_domain" && group_by !== "provider" && req.query.group_by2 !== "provider" && group_by !== "attribution_status" && req.query.group_by2 !== "attribution_status" && group_by !== "stitching_method" && req.query.group_by2 !== "stitching_method" && !group_by.startsWith('custom_param:') && !(req.query.group_by2 && req.query.group_by2.startsWith('custom_param:'))) {
         try {
           const results = await getTimeDecayAttribution({
             siteId: req.site.id,
@@ -195,7 +207,7 @@ export async function attribution(req, res) {
           return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results: [], _notice: NIGHTLY_NOTICE } })
         }
       }
-      if (model === "w_shaped" && group_by !== "keyword" && req.query.group_by2 !== "keyword" && group_by !== "referrer_domain" && req.query.group_by2 !== "referrer_domain" && group_by !== "provider" && req.query.group_by2 !== "provider" && group_by !== "attribution_status" && req.query.group_by2 !== "attribution_status" && group_by !== "stitching_method" && req.query.group_by2 !== "stitching_method") {
+      if (model === "w_shaped" && group_by !== "keyword" && req.query.group_by2 !== "keyword" && group_by !== "referrer_domain" && req.query.group_by2 !== "referrer_domain" && group_by !== "provider" && req.query.group_by2 !== "provider" && group_by !== "attribution_status" && req.query.group_by2 !== "attribution_status" && group_by !== "stitching_method" && req.query.group_by2 !== "stitching_method" && !group_by.startsWith('custom_param:') && !(req.query.group_by2 && req.query.group_by2.startsWith('custom_param:'))) {
         try {
           const results = await getWShapedAttribution({
             siteId: req.site.id,

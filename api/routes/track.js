@@ -2,7 +2,8 @@ import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
-import { normalizeUtm, redactPiiFromObject, isPathExcluded } from '../lib/utils.js'
+import { normalizeUtm, redactPiiFromObject, isPathExcluded, extractCustomParams } from '../lib/utils.js'
+
 
 import { getSupabase } from '../lib/supabase.js'
 
@@ -98,6 +99,7 @@ export async function track(req, res) {
       return res.status(200).json({ success: true, data: { received: true, filtered: 'excluded_path' }, error: null })
     }
 
+    const customParams = extractCustomParams(req.body?.page_url, req.site?.custom_url_params)
 
     // Ingest-side query parameter redaction to prevent PII leaks
     if (req.body) {
@@ -163,7 +165,8 @@ export async function track(req, res) {
         // Feature: custom event properties — any object passed as `properties` is spread
         ...(req.body.properties && typeof req.body.properties === 'object' && !Array.isArray(req.body.properties)
           ? { custom_properties: req.body.properties }
-          : {})
+          : {}),
+        ...customParams
       }
     })
 

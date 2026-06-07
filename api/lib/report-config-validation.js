@@ -67,17 +67,30 @@ export function validateReportConfig(config) {
     }
   }
 
+  const isCustomParam = (dim) => {
+    if (typeof dim !== 'string' || !/^custom_param:[a-z0-9_-]{1,40}$/.test(dim)) {
+      return false
+    }
+    const key = dim.split(':')[1]
+    const blockedSubstrings = ['email', 'phone', 'name', 'address', 'token', 'secret', 'password', 'session', 'auth', 'cookie', 'card', 'ssn']
+    for (const sub of blockedSubstrings) {
+      if (key.includes(sub)) return false
+    }
+    return true
+  }
+
   // Validate dimensions
   if (config.groupBy !== undefined && config.groupBy !== null) {
-    if (!ALLOWED_GROUPS.has(config.groupBy)) {
+    if (!ALLOWED_GROUPS.has(config.groupBy) && !isCustomParam(config.groupBy)) {
       return { valid: false, error: `Invalid groupBy dimension: ${config.groupBy}` }
     }
   }
   if (config.groupBy2 !== undefined && config.groupBy2 !== null) {
-    if (!ALLOWED_GROUPS.has(config.groupBy2)) {
+    if (!ALLOWED_GROUPS.has(config.groupBy2) && !isCustomParam(config.groupBy2)) {
       return { valid: false, error: `Invalid groupBy2 dimension: ${config.groupBy2}` }
     }
   }
+
 
   // Validate metrics
   if (config.metric !== undefined && config.metric !== null) {

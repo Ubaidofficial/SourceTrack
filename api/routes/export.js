@@ -50,7 +50,19 @@ router.get('/report', async (req, res) => {
     if (!ALLOWED_MODELS.has(model)) {
       return res.status(400).json({ success: false, data: null, error: `Invalid model: ${model}` })
     }
-    if (!ALLOWED_GROUPS.has(group_by)) {
+    const isCustomParam = (dim) => {
+      if (typeof dim !== 'string' || !/^custom_param:[a-z0-9_-]{1,40}$/.test(dim)) {
+        return false
+      }
+      const key = dim.split(':')[1]
+      const blockedSubstrings = ['email', 'phone', 'name', 'address', 'token', 'secret', 'password', 'session', 'auth', 'cookie', 'card', 'ssn']
+      for (const sub of blockedSubstrings) {
+        if (key.includes(sub)) return false
+      }
+      return Array.isArray(req.site?.custom_url_params) && req.site.custom_url_params.includes(key)
+    }
+
+    if (!ALLOWED_GROUPS.has(group_by) && !isCustomParam(group_by)) {
       return res.status(400).json({ success: false, data: null, error: `Invalid group_by: ${group_by}` })
     }
     if (!ALLOWED_METRICS.has(metric)) {
