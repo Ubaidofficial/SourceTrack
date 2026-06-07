@@ -1,9 +1,19 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 119B — Launch Audit Fixes. Resolved high-priority launch audit findings: added `ENCRYPTION_KEY` to `.env.example` along with comments/generation command; stripped `ip_address` properties from PostHog payloads in Payments API (`conversion-offline.js`) for privacy compliance; softened conversion forwarding claims in `README.md`. Successfully executed and passed the full E2E revenue load and webhook/API test suite.
+> **Handoff:** Session 119D — Report Builder Security & Production Readiness. Implemented strict config validation (allowed keys, metrics, dimensions, models, dates, empty selectedMetrics, override keys, and SQL injection signatures), robust cross-user saved report scoping checks (same-site 403 blocks), database column fallback handling in validateSiteKey, stripped internal database columns in CSV exports, and verified database schema readiness and scoping E2E.
 >
 > **Next Task:** Awaiting user instructions.
 >
+
+## Session 119D — Report Builder Security & Production Readiness
+**Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+1. **Hardened Scoping & Ownership Validation**: Updated saved-reports routes (`saved-reports.js`) so that `DELETE` queries retrieve the report by ID and site ID first and verify ownership explicitly, returning `403 Forbidden` rather than a silent `404` for cross-user same-site requests.
+2. **Report Configuration Tampering Protections**: Implemented a comprehensive config validator in `report-config-validation.js` which verifies allowed keys, chart types, metrics, dimensions, attribution models, and restricts override keys (`site_id`, `user_id`, etc.) and SQL/HogQL injection keywords or characters in filters.
+3. **Internal Database Column Cleansing**: Updated `export.js` to strip internal database identifiers (`id`, `site_id`, `site_key`, `user_id`, etc.) case-insensitively before serving CSV outputs.
+4. **Graceful DB Column Fallback**: Updated `auth.js` to catch database queries failing on missing columns (`sites.attribution_window_days`), logging a loud warning and falling back to 30.
+5. **E2E QA Verification Suite**: Created `scripts/qa-schema-readiness.mjs` verifying schema migrations. Added cross-user same-site update/delete `403` checks and CSV data cleansing tests to `scripts/qa-report-security.mjs`. Enabled fast execution of `qa-attribution-integration.mjs` using `ALLOW_ATTRIBUTION_E2E_TIMEOUT_WARN=1`.
 
 ## Session 119B — Launch Audit Fixes
 **Date:** 2026-06-06 | **Branch:** `main` | **Build:** ✅ passing

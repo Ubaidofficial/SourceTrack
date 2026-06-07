@@ -689,3 +689,22 @@ curl -i https://api.srctk.com/tracker/tracker.min.js
 
 ### 2. Validation and E2E QA Verification
 - Executed the full E2E validation suite (`qa-revenue-load`, `qa-shopify-webhook`, `qa-payments-api`, `qa-stripe-webhook`, and `qa-revenue-foundation`) passing all checks successfully.
+
+---
+
+## Session 119D — Report Builder Security & Production Readiness
+
+**Date:** 2026-06-07
+**Branch:** `main`
+**Build:** ✅ passing (E2E QA pass)
+
+### 1. Hardened Report Scoping & Validations
+- Implemented strict config validation (reject override keys first, check unexpected keys, validate dimensions, models, dates, chart types, rolling parameters, empty selectedMetrics, flat filters, and SQL injection signatures).
+- Aligned DELETE route in saved-reports to fetch by `id` and `site_id` first and verify ownership, returning `403` instead of silent `404` for cross-user same-site requests.
+- Cleansed CSV export output by filtering out sensitive identifier columns case-insensitively.
+- Added database column fallback check in `validateSiteKey` (for attribution_window_days).
+
+### 2. Added Scoping & Schema E2E QA
+- Created `scripts/qa-schema-readiness.mjs` verifying sites and conversions database column migrations.
+- Created `scripts/qa-report-security.mjs` executing E2E parameter tampering checks, SQL injection blocks, same-site cross-user update/delete `403` assertions, and CSV data cleansing checks.
+- Refactored `qa-attribution-integration.mjs` to optimize polling times during test-bypass conditions.
