@@ -49,7 +49,7 @@ export default function Snippet() {
         .eq('user_id', user.id)
         .maybeSingle()
 
-      const query = supabase.from('sites').select('site_key, name, domain').limit(1)
+      const query = supabase.from('sites').select('site_key, name, domain, cookieless_mode').limit(1)
       if (member?.company_id) {
         query.eq('company_id', member.company_id)
       } else {
@@ -83,7 +83,8 @@ export default function Snippet() {
 
   function buildSnippet() {
     if (!site) return ''
-    return `<script async src="${trackerBaseUrl}/tracker/tracker.min.js" data-site-key="${site.site_key}"></script>`
+    const trackerFile = site.cookieless_mode ? 'tracker.cookieless.min.js' : 'tracker.min.js'
+    return `<script async src="${trackerBaseUrl}/tracker/${trackerFile}" data-site-key="${site.site_key}"></script>`
   }
 
   const snippet = buildSnippet()
@@ -213,7 +214,7 @@ export default function Snippet() {
             To prevent the tracker from sending events on specific client paths, add the <code className="bg-gray-200 dark:bg-gray-800 px-1 rounded text-xs">data-exclude</code> attribute:
           </p>
           <div className="bg-st-black rounded p-3 relative">
-            <pre className="text-green-400 text-xs overflow-x-auto whitespace-pre-wrap">{`<script async src="${trackerBaseUrl}/tracker/tracker.min.js"\n  data-site-key="${site?.site_key || 'YOUR_SITE_KEY'}"\n  data-exclude="/admin/*, /staging/*">\n</script>`}</pre>
+            <pre className="text-green-400 text-xs overflow-x-auto whitespace-pre-wrap">{`<script async src="${trackerBaseUrl}/tracker/${site?.cookieless_mode ? 'tracker.cookieless.min.js' : 'tracker.min.js'}"\n  data-site-key="${site?.site_key || 'YOUR_SITE_KEY'}"\n  data-exclude="/admin/*, /staging/*">\n</script>`}</pre>
           </div>
           <p className="text-[10px] text-st-gray dark:text-gray-400 mt-1">
             Supports comma-separated patterns with trailing wildcards <code className="bg-gray-200 dark:bg-gray-800 px-1 rounded text-[10px]">*</code>. For absolute server-side suppression, use the Settings page.
@@ -588,7 +589,7 @@ app.post('/stripe/webhook', express.raw({type: 'application/json'}), async (req,
             <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
               <p className="font-medium text-xs">What this is not</p>
               <ul className="text-xs mt-1 space-y-0.5 list-disc list-inside">
-                <li>Not cookieless — identity relies on browser storage (cookies with localStorage backup)</li>
+                <li>Supports standard storage-based tracking (localStorage/sessionStorage) and Cookieless Mode (zero browser storage, server-derived daily-rotating visitor IDs).</li>
                 <li>Not a first-party subdomain — events go to the SourceTrack API domain</li>
                 <li>Not ad-blocker resistant — requests to the tracking domain may be blocked</li>
               </ul>

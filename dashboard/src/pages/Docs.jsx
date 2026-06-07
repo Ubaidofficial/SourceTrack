@@ -114,6 +114,9 @@ const NAV = [
   { id: 'attribution',      label: 'GET /api/attribution' },
   { id: 'tracker-id',       label: 'GET /api/tracker/id' },
   { id: 'settings-api',     label: 'PATCH /api/integrations/settings' },
+  { id: 'saved-reports-api', label: 'Saved Reports API' },
+  { id: 'csv-export-api',   label: 'Report CSV Export' },
+  { id: 'production-env-vars', label: 'Deployment / self-hosting / admin reference' },
   { id: 'gdpr',             label: 'GDPR Endpoints' },
   { id: 'webhooks',         label: 'Outbound Webhooks' },
   { id: 'stripe-webhook',   label: 'Stripe Webhook Sync' },
@@ -162,6 +165,22 @@ function Warn({ children }) {
 }
 
 const RECIPES = {
+  gtm: {
+    name: 'Google Tag Manager',
+    desc: 'Load the tracking script dynamically via GTM Custom HTML tag.',
+    code: `<!-- Paste this inside a Custom HTML Tag in GTM -->
+<script>
+  (function() {
+    if (document.querySelector('script[data-site-key]')) return;
+    var script = document.createElement('script');
+    script.src = 'https://api.srctk.com/tracker/tracker.min.js';
+    script.setAttribute('data-site-key', 'YOUR_SITE_KEY');
+    script.async = true;
+    document.head.appendChild(script);
+  })();
+</script>`,
+    instructions: 'Create a new Custom HTML Tag in GTM, paste the code snippet, replace YOUR_SITE_KEY, and set the trigger to "Initialization - All Pages" or "All Pages - Page View". Publish the container to deploy.'
+  },
   html: {
     name: 'Plain HTML',
     desc: 'Add the pixel directly to standard HTML templates.',
@@ -740,27 +759,61 @@ window.sourcetrack.identify('user_123', {
           {/* ── Custom URL Parameters ─────────────────────────────────────── */}
           <Section id="custom-params" title="Custom URL Parameters">
             <p>
-              SourceTrack allows capturing and reporting on custom marketing or query parameters (e.g. <IC>?affiliate=123</IC> or <IC>?partner=abc</IC>).
-              This allows tracking campaign variations, affiliate partners, and user segments outside of standard UTM tags.
+              SourceTrack allows capturing and reporting on custom marketing or query parameters (e.g. <IC>?affiliate=john_partner</IC> or <IC>?creative=video_a</IC>).
+              This allows tracking campaign variations, affiliate partners, and user experiments outside of standard UTM tags.
             </p>
-            <H3>How it works</H3>
-            <ol className="list-decimal list-inside space-y-2 pl-1 text-sm text-gray-600 dark:text-gray-400">
+
+            <H3>Configuration & Integration</H3>
+            <ul className="list-disc list-inside space-y-2 pl-1 text-sm text-gray-600 dark:text-gray-400">
               <li>
-                <strong>Configure Allowlist:</strong> Go to your Site Settings, navigate to the <em>Custom URL Parameters</em> section, and add the parameter keys you want to capture (e.g. <IC>affiliate</IC>). You can add up to 10 parameters.
+                <strong>Settings UI & API Allowlist:</strong> Configure parameter keys in your Site Settings card or via the settings API by updating the <code>custom_url_params</code> array (e.g. via <code>PATCH /api/integrations/settings</code>).
               </li>
               <li>
-                <strong>Server-Side Extraction:</strong> The ingestion server extracts these parameters directly from visitor page URLs before stripping or redacting any query arguments. No tracker script changes are required.
+                <strong>Limit:</strong> Maximum of 10 custom URL parameters can be configured per site.
               </li>
               <li>
-                <strong>PII Gating:</strong> Values containing emails, phone numbers, credit card patterns, or security tokens are automatically dropped to maintain privacy and compliance.
+                <strong>Key Format Constraints:</strong> Key names must consist strictly of lowercase letters, numbers, underscores, or dashes, and have a maximum length of 40 characters (regex: <code>/^[a-z0-9_-]&#123;1,40&#125;$/</code>).
               </li>
               <li>
-                <strong>Report Builder:</strong> The allowlisted parameters become available in the <em>Report Builder</em> under the "Custom Parameters" section in Step 4. You can select them as a dimension to group reports.
+                <strong>Blocklisted Substrings:</strong> Any key containing any of the following substrings will be rejected with a <code>400 Bad Request</code> validation error:
+                <div className="flex flex-wrap gap-1 mt-1.5 font-mono text-xs text-red-600 dark:text-red-400 pl-4">
+                  {['email', 'phone', 'name', 'address', 'token', 'secret', 'password', 'session', 'auth', 'cookie', 'card', 'ssn'].map(k => <span key={k} className="bg-red-50 dark:bg-red-950/30 px-1.5 py-0.5 rounded border border-red-100 dark:border-red-900/40">{k}</span>)}
+                </div>
               </li>
-            </ol>
-            <Note>
-              Key format: custom parameter keys must be lowercase letters, numbers, underscores, or dashes (max 40 characters). Sensitive keys containing substrings like <IC>token</IC> or <IC>secret</IC> are blocked.
-            </Note>
+            </ul>
+
+            <H3>Ingestion & Processing Behavior</H3>
+            <ul className="list-disc list-inside space-y-2 pl-1 text-sm text-gray-600 dark:text-gray-400">
+              <li>
+                <strong>Server-Side Extraction:</strong> The backend extracts values from the page URL (specifically <code>page_url</code>). No client-side tracker changes or minified scripts need modification.
+              </li>
+              <li>
+                <strong>Strict Capture:</strong> Only allowlisted parameters are captured. Unlisted query parameters are automatically stripped or redacted according to standard GDPR filters.
+              </li>
+              <li>
+                <strong>Unsafe PII Dropping:</strong> If a custom parameter contains values matching common email, phone, or credit card patterns, the value is dropped entirely on ingestion (not stored as <code>REDACTED</code>).
+              </li>
+              <li>
+                <strong>Report Builder Format:</strong> Custom parameters are queried in the Report Builder (and CSV exports) using the dimension format: <code>custom_param:&lt;key&gt;</code>.
+              </li>
+              <li>
+                <strong>Storage Format:</strong> Inside the analytics event properties, they are stored under the property key: <code>custom_&lt;key&gt;</code>.
+              </li>
+            </ul>
+
+            <H3>Examples</H3>
+            <ul className="list-disc list-inside space-y-1 pl-1 text-sm text-gray-605 dark:text-gray-400">
+              <li><code>?affiliate=john_partner</code> &rarr; captured as <code>custom_affiliate: "john_partner"</code></li>
+              <li><code>?creative=video_a</code> &rarr; captured as <code>custom_creative: "video_a"</code></li>
+              <li><code>?experiment=homepage_test</code> &rarr; captured as <code>custom_experiment: "homepage_test"</code></li>
+              <li><code>?variant=b</code> &rarr; captured as <code>custom_variant: "b"</code></li>
+            </ul>
+
+            <H3>Limitations</H3>
+            <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-800 dark:text-amber-300 space-y-1">
+              <p><strong>Parameter-Based Only:</strong> Custom parameters are strictly extracted from page URL query strings at load time. They do not represent offline integrations, server-side variables, or ad-platform API imports.</p>
+              <p><strong>Do Not Send PII:</strong> Never configure parameters designed to transmit personally identifiable information (PII). Values failing validation or containing unsafe patterns will be silently dropped.</p>
+            </div>
           </Section>
 
           {/* ── Timezone Behavior ────────────────────────────────────────── */}
@@ -1173,6 +1226,34 @@ await fetch('https://api.srctk.com/api/conversion', {
               </table>
             </div>
 
+            <H3>Report Builder Grouping Dimensions & Caveats</H3>
+            <p>
+              When using the Report Builder or the attribution APIs, you can group and aggregate metrics by several marketing and technical dimensions:
+            </p>
+            <ul className="list-disc list-inside space-y-2 pl-1 text-sm text-gray-600 dark:text-gray-400">
+              <li>
+                <strong>source / medium / campaign:</strong> Standard UTM parameters representing the acquisition source (e.g. <code>google</code>), medium (e.g. <code>cpc</code>), and campaign name (e.g. <code>summer_sale</code>).
+              </li>
+              <li>
+                <strong>keyword:</strong> Parameter-based search term captured from the URL (e.g. via <code>utm_term</code>). <span className="text-amber-600 dark:text-amber-400">Caveat:</span> Keyword reporting is strictly parameter-based. SourceTrack does not import keyword search term data from Google Search Console, Google Ads API, or Microsoft Advertising API.
+              </li>
+              <li>
+                <strong>referrer_domain:</strong> The hostname of the external referring website extracted from the browser <code>document.referrer</code> API. <span className="text-amber-600 dark:text-amber-400">Caveat:</span> Referrer domain is browser-derived only. SourceTrack does not run an active SEO backlink crawler or synchronize index data with Google Search Console.
+              </li>
+              <li>
+                <strong>provider:</strong> The payment or conversion system (e.g. <code>stripe</code>, <code>shopify</code>, or <code>payments_api</code>) that sent the transaction.
+              </li>
+              <li>
+                <strong>attribution_status:</strong> Classifies whether the conversion was successfully stitched to a visitor session (<code>attributed</code>) or recorded as unattributed backend revenue (<code>unattributed</code>). <span className="text-amber-600 dark:text-amber-400">Caveat:</span> Attribution status reflects browser-to-server identity stitching; it does not guarantee paid campaign conversion or platform-level ad matching.
+              </li>
+              <li>
+                <strong>stitching_method:</strong> The identifier used to merge the offline transaction with the web session (e.g. <code>user_id</code>, <code>anonymous_id</code>, or <code>none</code>).
+              </li>
+              <li>
+                <strong>custom_param:&lt;key&gt;:</strong> Groups reports by your allowlisted custom URL parameters (e.g. <code>custom_param:affiliate</code>). <span className="text-amber-600 dark:text-amber-400">Caveat:</span> Only explicitly allowlisted parameter keys (max 10) are captured from page URL query arguments at ingestion.
+              </li>
+            </ul>
+
             <H3>Example — channel revenue under first_touch</H3>
             <Code lang="bash">{`curl "https://api.srctk.com/api/attribution?site_key=sk_live_abc123&model=first_touch&date_from=2026-04-01&date_to=2026-04-30&group_by=channel&metric=revenue" \\
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"`}</Code>
@@ -1233,7 +1314,7 @@ await fetch('https://api.srctk.com/api/conversion', {
           <Section id="settings-api" title="Update Site Settings">
             <Endpoint method="PATCH" path="/api/integrations/settings?site_key=xxx" description="Requires Bearer token + site_key" />
             <p>
-              Updates the configurations for a site, including attribution window size, custom reporting timezone, and excluded path patterns.
+              Updates the configurations for a site, including attribution window size, custom reporting timezone, excluded path patterns, and custom URL parameters.
               Requires authentication via a Bearer token and the <IC>site_key</IC> passed as a query parameter or inside the request headers.
             </p>
 
@@ -1250,11 +1331,13 @@ await fetch('https://api.srctk.com/api/conversion', {
               { name: 'attribution_window_days', type: 'number', required: false, desc: 'Attribution lookback window in days. Must be one of: 1, 7, 14, 30, 60, 90.' },
               { name: 'timezone', type: 'string', required: false, desc: 'Canonical timezone identifier (e.g. "America/New_York", "Europe/London"). Defaults to "UTC" on null or empty.' },
               { name: 'excluded_paths', type: 'array|string', required: false, desc: 'Path patterns to exclude from tracking. Can be an array of paths or a comma-separated string.' },
+              { name: 'custom_url_params', type: 'array', required: false, desc: 'Allowlisted custom query parameters to capture (maximum 10). Keys must be lowercase alphanumeric with dashes/underscores only.' }
             ]} />
             <Code lang="json">{`{
   "attribution_window_days": 30,
   "timezone": "America/New_York",
-  "excluded_paths": ["/admin/*", "/checkout/success", "/secret"]
+  "excluded_paths": ["/admin/*", "/checkout/success", "/secret"],
+  "custom_url_params": ["affiliate", "creative", "experiment"]
 }`}</Code>
 
             <H3>Response</H3>
@@ -1268,7 +1351,12 @@ await fetch('https://api.srctk.com/api/conversion', {
       "/checkout/success",
       "/secret"
     ],
-    "timezone": "America/New_York"
+    "timezone": "America/New_York",
+    "custom_url_params": [
+      "affiliate",
+      "creative",
+      "experiment"
+    ]
   },
   "error": null
 }`}</Code>
@@ -1282,9 +1370,249 @@ await fetch('https://api.srctk.com/api/conversion', {
                 <strong>Invalid Attribution Window:</strong> Must be exactly one of the allowed numbers. Otherwise, returns <IC>400 Bad Request</IC>.
               </li>
               <li>
+                <strong>Custom URL Parameters Validation:</strong> Attempting to configure more than 10 keys, keys containing blocked substrings (e.g. <code>token</code>, <code>secret</code>, <code>email</code>), or keys with special characters returns a <IC>400 Bad Request</IC> with a specific descriptive validation error.
+              </li>
+              <li>
                 <strong>Caching:</strong> The server caches site configuration contexts for 5 minutes. After updating settings via this API, the cache is invalidated automatically, so changes apply to new incoming tracking events immediately.
               </li>
             </ul>
+          </Section>
+
+          {/* ── Saved Reports API ───────────────────────────────────────── */}
+          <Section id="saved-reports-api" title="Saved Reports API">
+            <p>
+              Manage saved Report Builder configurations. Persisted reports can be loaded in the UI, updated, or pinned as widgets on the Overview dashboard. All requests require user authentication and site membership scoping.
+            </p>
+
+            <H3>Endpoints Overview</H3>
+            <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 dark:text-gray-400">
+              <li><Method verb="POST" /> <IC>/api/reports/saved</IC> — Create a saved report</li>
+              <li><Method verb="GET" /> <IC>/api/reports/saved</IC> — List all saved reports (or filter to pinned dashboard widgets)</li>
+              <li><Method verb="PUT" /> <IC>/api/reports/saved/:id</IC> — Update a saved report's name and configuration</li>
+              <li><Method verb="DELETE" /> <IC>/api/reports/saved/:id</IC> — Delete a saved report</li>
+              <li><Method verb="PATCH" /> <IC>/api/reports/saved/:id/dashboard</IC> — Pin/configure dashboard widget</li>
+            </ul>
+
+            <H3>Authentication & Headers</H3>
+            <ParamTable params={[
+              { name: 'Authorization', type: 'string', required: true, desc: 'Bearer <token> (obtained from Supabase auth).' },
+              { name: 'X-Site-Key', type: 'string', required: true, desc: 'Your active site key (e.g. sk_live_xxx).' }
+            ]} />
+
+            <H3>1. Save a New Report</H3>
+            <Endpoint method="POST" path="/api/reports/saved" description="Requires Bearer token + X-Site-Key" />
+            <ParamTable params={[
+              { name: 'name', type: 'string', required: true, desc: 'Display name for the report.' },
+              { name: 'config', type: 'object', required: true, desc: 'Report configurations including model, metric, date_from, date_to, and group_by.' }
+            ]} />
+            <Code lang="bash">{`curl -X POST https://api.srctk.com/api/reports/saved \\
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \\
+  -H "X-Site-Key: YOUR_SITE_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "First-Touch Revenue by Source",
+    "config": {
+      "model": "first_touch",
+      "metric": "revenue",
+      "group_by": "source",
+      "date_from": "2026-05-01",
+      "date_to": "2026-05-31"
+    }
+  }'`}</Code>
+            <Code lang="json">{`{
+  "success": true,
+  "data": {
+    "id": "7f0ba722-e221-4f1b-b461-88c9cf012bd9",
+    "name": "First-Touch Revenue by Source",
+    "config": {
+      "model": "first_touch",
+      "metric": "revenue",
+      "group_by": "source",
+      "date_from": "2026-05-01",
+      "date_to": "2026-05-31"
+    },
+    "site_id": "a2cec48d-3eae-4c52-82d7-4919835eaf33",
+    "user_id": "usr_9918",
+    "show_on_dashboard": false,
+    "dashboard_position": 0,
+    "dashboard_size": "medium",
+    "created_at": "2026-06-07T12:00:00.000Z",
+    "updated_at": "2026-06-07T12:00:00.000Z"
+  },
+  "error": null
+}`}</Code>
+
+            <H3>2. List Saved Reports / Dashboard Widgets</H3>
+            <Endpoint method="GET" path="/api/reports/saved" description="Requires Bearer token + X-Site-Key" />
+            <ParamTable params={[
+              { name: 'show_on_dashboard', type: 'boolean', required: false, desc: 'If true, filters results to pinned widgets, ordered by position and date, capped at a maximum of 9.' }
+            ]} />
+            <Code lang="bash">{`curl "https://api.srctk.com/api/reports/saved?show_on_dashboard=true" \\
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \\
+  -H "X-Site-Key: YOUR_SITE_KEY"`}</Code>
+
+            <H3>3. Update Saved Report</H3>
+            <Endpoint method="PUT" path="/api/reports/saved/:id" description="Requires Bearer token + X-Site-Key" />
+            <Code lang="bash">{`curl -X PUT https://api.srctk.com/api/reports/saved/7f0ba722-e221-4f1b-b461-88c9cf012bd9 \\
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \\
+  -H "X-Site-Key: YOUR_SITE_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "Updated Report Name",
+    "config": {
+      "model": "last_touch",
+      "metric": "conversions",
+      "group_by": "campaign",
+      "date_from": "2026-05-01",
+      "date_to": "2026-05-31"
+    }
+  }'`}</Code>
+
+            <H3>4. Delete Saved Report</H3>
+            <Endpoint method="DELETE" path="/api/reports/saved/:id" description="Requires Bearer token + X-Site-Key" />
+            <Code lang="bash">{`curl -X DELETE https://api.srctk.com/api/reports/saved/7f0ba722-e221-4f1b-b461-88c9cf012bd9 \\
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \\
+  -H "X-Site-Key: YOUR_SITE_KEY"`}</Code>
+
+            <H3>5. Configure Dashboard Widget Pin</H3>
+            <Endpoint method="PATCH" path="/api/reports/saved/:id/dashboard" description="Requires Bearer token + X-Site-Key" />
+            <p>
+              Pin a saved report to the dashboard or adjust its layout attributes.
+            </p>
+            <ParamTable params={[
+              { name: 'show_on_dashboard', type: 'boolean', required: true, desc: 'Whether to show the widget on the Overview dashboard. Must be a boolean.' },
+              { name: 'dashboard_size', type: 'string', required: false, desc: 'Size of the widget card. Must be: small | medium | large.' },
+              { name: 'dashboard_position', type: 'number', required: false, desc: 'Non-negative integer position index for custom sorting.' }
+            ]} />
+            <Code lang="bash">{`curl -X PATCH https://api.srctk.com/api/reports/saved/7f0ba722-e221-4f1b-b461-88c9cf012bd9/dashboard \\
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \\
+  -H "X-Site-Key: YOUR_SITE_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "show_on_dashboard": true,
+    "dashboard_size": "medium",
+    "dashboard_position": 2
+  }'`}</Code>
+
+            <H3>Validation & Constraints</H3>
+            <ul className="list-disc list-inside space-y-2 pl-1 text-sm text-gray-600 dark:text-gray-400">
+              <li><strong>Max Widgets:</strong> The dashboard displays a maximum of 9 pinned widgets per site/user. Pinned widgets are sorted by <code>dashboard_position ASC</code>, then <code>updated_at DESC</code>.</li>
+              <li><strong>Plan Locking:</strong> Saved reports require a paid subscription plan. Free tier requests will be rejected with a <IC>402 Payment Required</IC> error.</li>
+              <li><strong>Access Control & Scoping:</strong> Reports are strictly scoped by user and site. Requests for reports owned by other users or registered on other sites return <IC>403 Forbidden</IC> or <IC>404 Not Found</IC>.</li>
+              <li><strong>Private Dashboards Only:</strong> Dashboard widgets are strictly private. There is no support for public sharing links or unauthenticated dashboards.</li>
+              <li><strong>Layout Mechanics:</strong> Widget positioning is controlled strictly via the <code>dashboard_position</code> index. There is no interactive drag-and-drop layout engine.</li>
+            </ul>
+          </Section>
+
+          {/* ── GET /api/export/report ───────────────────────────────────── */}
+          <Section id="csv-export-api" title="Report CSV Export">
+            <Endpoint method="GET" path="/api/export/report" description="Requires Bearer token + X-Site-Key" />
+            <p>
+              Generates and downloads a custom attribution report in CSV format. Supports the exact same models, metrics, grouping dimensions, and filters as the flexible attribution endpoint.
+            </p>
+
+            <H3>Query Parameters</H3>
+            <p className="text-sm">
+              Either provide a <IC>report_id</IC> parameter to load a saved report configuration, or pass configuration parameters manually:
+            </p>
+            <ParamTable params={[
+              { name: 'report_id', type: 'string', required: false, desc: 'Saved report UUID to load configuration from.' },
+              { name: 'model', type: 'string', required: false, desc: 'Attribution model (e.g. first_touch, u_shaped).' },
+              { name: 'date_from', type: 'string', required: false, desc: 'Start date (YYYY-MM-DD).' },
+              { name: 'date_to', type: 'string', required: false, desc: 'End date (YYYY-MM-DD).' },
+              { name: 'group_by', type: 'string', required: false, desc: 'Grouping dimension (e.g. source, campaign, custom_param:affiliate).' },
+              { name: 'metric', type: 'string', required: false, desc: 'Aggregation metric (e.g. revenue, conversions).' },
+              { name: 'filter_[dimension]', type: 'string', required: false, desc: 'Optional filters like filter_source=google or filter_device_type=desktop.' }
+            ]} />
+
+            <H3>Example Request</H3>
+            <Code lang="bash">{`curl "https://api.srctk.com/api/export/report?model=first_touch&date_from=2026-05-01&date_to=2026-05-31&group_by=source&metric=revenue" \\
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \\
+  -H "X-Site-Key: YOUR_SITE_KEY"`}</Code>
+
+            <H3>Response Headers</H3>
+            <Code lang="text">{`HTTP/1.1 200 OK
+Content-Type: text/csv; charset=utf-8
+Content-Disposition: attachment; filename="attribution_report_2026-05-01_to_2026-05-31.csv"`}</Code>
+
+            <H3>Security & Privacy Notes</H3>
+            <ul className="list-disc list-inside space-y-2 pl-1 text-sm text-gray-600 dark:text-gray-400">
+              <li><strong>PII & Internal Cleansing:</strong> All sensitive database identifiers (including <code>id</code>, <code>site_id</code>, <code>site_key</code>, <code>user_id</code>, <code>distinct_id</code>, <code>person_id</code>) are automatically stripped from the CSV output.</li>
+              <li><strong>Plan Locking:</strong> CSV Export requires a paid subscription plan. Free tier requests are rejected with a <IC>402 Payment Required</IC> error.</li>
+            </ul>
+          </Section>
+
+          {/* ── Deployment & Admin Reference ────────────────────────────── */}
+          <Section id="production-env-vars" title="Deployment / self-hosting / admin reference">
+            <p className="text-sm text-gray-500 italic">
+              Note: This section is intended for developers, administrators, and self-hosted deployments. Normal SaaS users of SourceTrack do not need to configure these server variables.
+            </p>
+
+            <H3>Production Environment Variables</H3>
+            <p>
+              When hosting the SourceTrack API service in a production environment, the following security variables must be configured on the host server:
+            </p>
+            <ParamTable params={[
+              { name: 'ENCRYPTION_KEY', type: 'string', required: true, desc: 'Symmetric encryption key used to protect stored integration secrets (Stripe and Shopify signing secrets). Must be a stable 64-character hex string. Do not rotate this key without re-encrypting existing secrets, as it will render previously stored integration credentials unreadable.' },
+              { name: 'SUPABASE_URL', type: 'string', required: true, desc: 'Your Supabase project URL.' },
+              { name: 'SUPABASE_SERVICE_KEY', type: 'string', required: true, desc: 'Your Supabase service role API key (bypass RLS for background workers).' },
+              { name: 'POSTHOG_HOST', type: 'string', required: true, desc: 'Your PostHog host URL.' },
+              { name: 'POSTHOG_API_KEY', type: 'string', required: true, desc: 'Your PostHog ingestion API key.' }
+            ]} />
+
+            <H3>Generating the Encryption Key</H3>
+            <p>
+              You can generate a cryptographically secure 64-character hexadecimal key using the following Node.js command:
+            </p>
+            <Code lang="bash">{`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`}</Code>
+
+            <H3>Database Schema Migrations</H3>
+            <p>
+              SourceTrack is backed by Supabase database tables. Ensure all schema migrations inside the <code>supabase/migrations/</code> directory are applied to the live database instance before starting the API server. This is required for schema-backed features (like saved reports, custom parameter allowlists, and Stripe/Shopify secret storage) to initialize successfully.
+            </p>
+
+            <H3>Background Cron Jobs</H3>
+            <p>
+              The platform relies on exactly 5 background worker scripts that must be scheduled via system crontab or scheduler. Verify these paths on your self-hosted API container:
+            </p>
+            <div className="overflow-x-auto my-4">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left font-semibold py-2 pr-4 text-xs text-gray-500 uppercase">Cron Script</th>
+                    <th className="text-left font-semibold py-2 pr-4 text-xs text-gray-500 uppercase">Recommended Schedule</th>
+                    <th className="text-left font-semibold py-2 text-xs text-gray-500 uppercase">Description</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800 text-[13px]">
+                  <tr>
+                    <td className="py-2 pr-4 font-mono text-gray-800 dark:text-gray-200"><IC>node api/jobs/nightly-attribution.js</IC></td>
+                    <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">Every night (e.g. 0 2 * * *)</td>
+                    <td className="py-2 text-gray-600 dark:text-gray-400">Processes and materializes fractional attribution shares for multi-touch models (Linear, U-Shaped, W-Shaped, Time Decay).</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 font-mono text-gray-800 dark:text-gray-200"><IC>node api/jobs/data-quality-check.js</IC></td>
+                    <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">Daily (e.g. 0 3 * * *)</td>
+                    <td className="py-2 text-gray-600 dark:text-gray-400">Scans conversion payloads, flags missing values or inconsistent campaign tags, and logs health issues to the db.</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 font-mono text-gray-800 dark:text-gray-200"><IC>node api/jobs/email-reports.js</IC></td>
+                    <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">Weekly/Daily (e.g. 0 8 * * 1)</td>
+                    <td className="py-2 text-gray-600 dark:text-gray-400">Generates and sends automated campaign performance digest emails to workspace members.</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 font-mono text-gray-800 dark:text-gray-200"><IC>node api/jobs/health-agent.js</IC></td>
+                    <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">Hourly (e.g. 0 * * * *)</td>
+                    <td className="py-2 text-gray-600 dark:text-gray-400">SourceTrack Doctor agent. Scans active sites; if no pageviews or conversions are captured in 48h, logs a tracking offline health alert.</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4 font-mono text-gray-800 dark:text-gray-200"><IC>node api/jobs/usage-threshold-emails.js</IC></td>
+                    <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">Hourly (e.g. 30 * * * *)</td>
+                    <td className="py-2 text-gray-600 dark:text-gray-400">Checks site event counts against plan limits and fires warning emails when usage hits 80% or 100% capacity thresholds.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </Section>
 
           {/* ── GDPR Endpoints ───────────────────────────────────────────── */}

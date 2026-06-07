@@ -1,9 +1,35 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 121A — Add Saved Reports to Dashboard Workflow. Created migration for show_on_dashboard, position, and size columns in saved_reports. Updated saved-reports list/patch API routes with strict security validations. Added toggles and loader lock in Report Builder, and created isolated widget query cards with strong cache invalidation on the dashboard. Verified all static, build, and widget API/security checks successfully.
+> **Handoff:** Session 122B — Public Docs + API Docs Coverage Audit. Documented Saved Reports CRUD, Dashboard Widgets configurations, and CSV Export endpoints. Added self-hosting production environment references for ENCRYPTION_KEY and the 5 backend cron jobs. Integrated custom URL parameter capture specs and caveats. Linked setup guides for Stripe, Shopify, and Payments API to the Help Center documentation anchors.
 >
-> **Next Task:** Awaiting user instructions.
+> **Next Task:** Awaiting commit approval.
 >
+
+## Session 122B — Public Docs + API Docs Coverage Audit
+**Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check pass)
+
+### Completed
+1. **API Endpoints Documentation:** Added detailed API endpoints specifications and examples in `Docs.jsx` for Saved Reports CRUD (`POST/GET/PUT/DELETE /api/reports/saved`), Dashboard Widgets (`PATCH /api/reports/saved/:id/dashboard`), and CSV Report Export (`GET /api/export/report`).
+2. **Production / Self-Hosting Reference:** Documented required production variables (`ENCRYPTION_KEY` format, stable secret storage warnings), Supabase schema database migrations, and the exactly 5 cron scripts (`nightly-attribution.js`, `data-quality-check.js`, `email-reports.js`, `health-agent.js`, `usage-threshold-emails.js`).
+3. **Custom URL Parameters Specs:** Detailed parameter configuration validation rules (maximum 10, key format, sensitive blocklists, dropped unsafe values) and Report Builder group_by format (`custom_param:<key>`).
+4. **UI Navigation Links:** Linked Stripe, Shopify, Payments API, and Outbound Webhooks setup cards in `Integrations.jsx` directly to their respective anchors in `Docs.jsx`. Added settings and documentation links to the custom parameter empty state card in `ReportBuilder.jsx`.
+5. **Install / Snippet Cleanups:** Updated `Snippet.jsx` and `Docs.jsx` references to `tracker.cookieless.js` to target the correct compiled `tracker.cookieless.min.js` file.
+6. **No Unshipped Features:** Confirmed that no unverified coming soon or queued roadmap features (such as First-Party Proxy, Managed Proxy, GSC, etc.) are present in the public docs.
+
+### Files changed
+- `dashboard/src/pages/Docs.jsx`
+- `dashboard/src/pages/Integrations.jsx`
+- `dashboard/src/pages/ReportBuilder.jsx`
+- `dashboard/src/pages/Snippet.jsx`
+
+### Verification commands
+```bash
+node --check api/index.js
+node --check api/routes/saved-reports.js
+node --check api/routes/export.js
+git diff --check
+cd dashboard && npm run build
+```
 
 ## Session 121A — Add Report to Dashboard Workflow
 **Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing (E2E QA pass)

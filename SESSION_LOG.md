@@ -5,6 +5,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 122B | 2026-06-07 | `main` | Public Docs + API Docs Coverage Audit — Documented Saved Reports CRUD, Dashboard Widgets configurations, and CSV Export endpoints. Added self-hosting production environment references for ENCRYPTION_KEY and the 5 backend cron jobs. Integrated custom URL parameter capture specs and caveats. Linked setup guides for Stripe, Shopify, and Payments API to the Help Center documentation anchors. | ✅ | No |
 | 121A | 2026-06-07 | `main` | Add Saved Reports to Dashboard Workflow — Created migration for show_on_dashboard, position, and size columns in saved_reports. Updated saved-reports list/patch API routes. Added toggles and loading lock in Report Builder, and created isolated widget query cards with strong cache invalidation on the dashboard. Verified all E2E widget validation QA checks. | ✅ | No |
 | 120B | 2026-06-07 | `main` | Revenue Provider + Attribution Status Reporting — Added provider, attribution_status, and stitching_method dimensions. Added validations, routing bypasses, HogQL mappings, LTV, UI/Docs updates, and E2E QA checks. | ✅ | No |
 | 120A | 2026-06-07 | `main` | Report Builder Referrer Domain Dimension — Mapped Referrer Domain reporting dimension (`referrer_domain`) to captured browser referrer. Added validations, routing bypasses, HogQL extraction, LTV support, UI helpers, help docs, and verification tests. | ✅ | No |

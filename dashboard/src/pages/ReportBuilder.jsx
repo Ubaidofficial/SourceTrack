@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { fetchApi } from '../lib/api'
 import { format, subDays, startOfMonth } from 'date-fns'
@@ -909,9 +909,15 @@ export default function ReportBuilder() {
                 <div className="bg-gray-50 dark:bg-gray-800/40 rounded-lg p-2.5 text-[11px] text-st-gray dark:text-gray-400 space-y-0.5">
                   <p className="font-semibold text-st-black dark:text-white">No custom parameters active</p>
                   <p>Configure custom parameters (like *affiliate* or *creative*) in your Site Settings to group reports by them.</p>
-                  <a href="/settings" className="inline-block text-st-black dark:text-white underline font-semibold mt-0.5">
-                    Configure Settings →
-                  </a>
+                  <div className="flex items-center gap-2 mt-1 font-semibold">
+                    <Link to="/settings" className="text-st-black dark:text-white underline">
+                      Configure Settings →
+                    </Link>
+                    <span className="text-gray-300 dark:text-gray-700">|</span>
+                    <Link to="/docs#custom-params" className="text-st-black dark:text-white underline">
+                      Read Docs →
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>

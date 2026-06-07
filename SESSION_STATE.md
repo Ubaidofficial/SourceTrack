@@ -1,6 +1,6 @@
-Session: 122A
-Last Completed: Completed Session 122A — Custom URL Parameter Capture Implementation. Created migration for custom_url_params column. Integrated extraction, PII protection, configuration allowlist, settings validation, and CSV export. Added card in Settings UI, Report Builder section, Docs, and QA script. Tested all verification checks successfully.
-Next Task: Awaiting next session instructions/commit approval.
+Session: 122B
+Last Completed: Completed Session 122B — Public Docs + API Docs Coverage Audit. Documented Saved Reports CRUD, Dashboard Widgets configurations, and CSV Export endpoints. Added self-hosting production environment references for ENCRYPTION_KEY and the 5 backend cron jobs. Integrated custom URL parameter capture specs and caveats. Linked setup guides for Stripe, Shopify, and Payments API to the Help Center documentation anchors.
+Next Task: Awaiting commit approval.
 Roadmap Queue:
 - Session 123A: First-Party Proxy Audit & Design
 - Session 123B: Self-Hosted Proxy Guides (Cloudflare Workers, rewrites, Nginx/Caddy)

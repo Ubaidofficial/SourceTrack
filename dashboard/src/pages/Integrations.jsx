@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { fetchApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
@@ -743,7 +743,12 @@ export default function Integrations() {
 
           {/* Setup Instructions */}
           <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-lg p-3.5 space-y-2">
-            <h4 className="text-xs font-bold text-blue-900 dark:text-blue-300">Stripe Webhook Setup Instructions</h4>
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-blue-900 dark:text-blue-300">Stripe Webhook Setup Instructions</h4>
+              <Link to="/docs#stripe-webhook" className="text-xs text-blue-700 hover:text-blue-950 dark:text-blue-400 dark:hover:text-blue-300 underline font-semibold">
+                Read API Docs →
+              </Link>
+            </div>
             <ol className="list-decimal pl-4 text-xs text-blue-800 dark:text-blue-400 space-y-1.5 font-light">
               <li>Open your <strong>Stripe Dashboard</strong> and go to <strong>Developers &gt; Webhooks</strong>.</li>
               <li>Click <strong>Add endpoint</strong> and paste the <strong>Stripe Webhook Listener URL</strong> copy block above.</li>
@@ -857,7 +862,12 @@ export default function Integrations() {
 
           {/* Setup Instructions */}
           <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-lg p-3.5 space-y-2">
-            <h4 className="text-xs font-bold text-blue-900 dark:text-blue-300">Shopify Webhook Setup Instructions</h4>
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-blue-900 dark:text-blue-300">Shopify Webhook Setup Instructions</h4>
+              <Link to="/docs#shopify-webhook" className="text-xs text-blue-700 hover:text-blue-950 dark:text-blue-400 dark:hover:text-blue-300 underline font-semibold">
+                Read API Docs →
+              </Link>
+            </div>
             <p className="text-[11px] text-blue-800 dark:text-blue-400 italic">
               * Webhook-based setup, not a one-click app-store install.
             </p>
@@ -941,7 +951,12 @@ export default function Integrations() {
           </div>
 
           <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-lg p-3.5 space-y-2">
-            <h4 className="text-xs font-bold text-blue-900 dark:text-blue-300">Integration Guidelines</h4>
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-blue-900 dark:text-blue-300">Integration Guidelines</h4>
+              <Link to="/docs#payments-api" className="text-xs text-blue-700 hover:text-blue-950 dark:text-blue-400 dark:hover:text-blue-300 underline font-semibold">
+                Read API Docs →
+              </Link>
+            </div>
             <p className="text-xs text-blue-800 dark:text-blue-400 font-light leading-relaxed">
               This manual/API-based provider integration is designed for custom checkout systems, backend order management tools, or billing webhook triggers (Stripe, Paddle, Lemon Squeezy, custom invoices).
             </p>
@@ -958,6 +973,16 @@ export default function Integrations() {
         subtitle="Send attributed conversion data to Zapier, n8n, Make, or custom HTTP endpoints in real time"
       >
         <div className="space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
+            <div>
+              <p className="text-xs font-semibold text-st-black dark:text-white">API Reference</p>
+              <p className="text-[11px] text-st-gray mt-0.5">Payload format, signing secret HMAC verification, and recipes</p>
+            </div>
+            <Link to="/docs#webhooks" className="text-xs text-blue-700 hover:text-blue-950 dark:text-blue-400 dark:hover:text-blue-300 underline font-semibold">
+              Read API Docs →
+            </Link>
+          </div>
+
           {uiMessage && (
             <div className={`p-3 text-xs rounded-lg ${uiMessage.includes('Error') || uiMessage.includes('Failed') ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
               {uiMessage}
