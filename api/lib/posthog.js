@@ -39,8 +39,11 @@ export async function queryHogQL(sql, queryName = 'trackiq') {
     clearTimeout(timeout)
 
     if (!res.ok) {
-      const text = await res.text()
-      throw new Error(`HogQL ${queryName} failed (${res.status}): ${text}`)
+      const raw = await res.text()
+      // Strip HTML tags and truncate to avoid leaking huge HTML bodies into error messages
+      const cleaned = raw.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+      const snippet = cleaned.length > 200 ? cleaned.slice(0, 200) + '…' : cleaned
+      throw new Error(`HogQL ${queryName} failed (${res.status}): ${snippet}`)
     }
 
     const data = await res.json()

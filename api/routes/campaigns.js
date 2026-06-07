@@ -51,12 +51,22 @@ async function getCampaignsData(req) {
   const revCurrencies = [...new Set(revEvents?.map(e => e.currency?.toUpperCase()).filter(Boolean) || [])]
   const trackedCurrency = revCurrencies.length === 1 ? revCurrencies[0] : (revCurrencies.length > 1 ? 'MIXED' : 'USD')
 
-  // 2. Fetch PostHog analytics and campaign spend records in parallel
-  const [currentRevenue, currentConversions, currentVisits, currentLeads, prevRevenue, spendData] = await Promise.all([
-    getFlexibleReport(posthogSiteId, model, dateFrom, dateTo, dimension, 'revenue', {}),
-    getFlexibleReport(posthogSiteId, model, dateFrom, dateTo, dimension, 'conversions', {}),
-    getFlexibleReport(posthogSiteId, model, dateFrom, dateTo, dimension, 'sessions', {}),
-    getFlexibleReport(posthogSiteId, model, dateFrom, dateTo, dimension, 'leads', {}),
+  // 2. Fetch PostHog analytics (isolated per-query) and Supabase cost data in parallel
+  //    Each HogQL call is wrapped so a single 502 doesn't kill the whole response.
+  const safeHogQL = async (fn) => {
+    try { return await fn() } catch (err) {
+      console.warn('[campaigns] HogQL query failed (graceful):', err.message?.slice(0, 200))
+      return null // null = failed
+    }
+  }
+
+  const [
+    revenueResult, conversionsResult, visitsResult, leadsResult, prevRevenueResult, spendData
+  ] = await Promise.all([
+    safeHogQL(() => getFlexibleReport(posthogSiteId, model, dateFrom, dateTo, dimension, 'revenue', {})),
+    safeHogQL(() => getFlexibleReport(posthogSiteId, model, dateFrom, dateTo, dimension, 'conversions', {})),
+    safeHogQL(() => getFlexibleReport(posthogSiteId, model, dateFrom, dateTo, dimension, 'sessions', {})),
+    safeHogQL(() => getFlexibleReport(posthogSiteId, model, dateFrom, dateTo, dimension, 'leads', {})),
     getFlexibleRev(posthogSiteId, model, prevDateFrom, prevDateTo, dimension),
     supabase
       .from('campaign_costs')
@@ -65,6 +75,13 @@ async function getCampaignsData(req) {
       .gte('period_start', dateFrom)
       .lte('period_end', dateTo)
   ])
+
+  const currentRevenue = revenueResult || []
+  const currentConversions = conversionsResult || []
+  const currentVisits = visitsResult || []
+  const currentLeads = leadsResult || []
+  const prevRevenue = prevRevenueResult || []
+  const analyticsAvailable = revenueResult !== null && conversionsResult !== null && visitsResult !== null && leadsResult !== null
 
   const combined = {}
 
@@ -220,6 +237,13 @@ async function getCampaignsData(req) {
     dateFrom,
     dateTo,
     days,
+    analytics_available: analyticsAvailable,
+    ...(analyticsAvailable ? {} : {
+      warning: {
+        type: 'analytics_unavailable',
+        message: 'Campaign analytics are temporarily unavailable.'
+      }
+    }),
     kpis: {
       total_revenue: totalRevenue,
       total_conversions: totalConversions,
@@ -260,8 +284,14 @@ async function overview(req, res) {
       error: null
     })
   } catch (err) {
-    console.error(err)
-    res.status(500).json({ success: false, data: null, error: err.message || 'Campaign overview query failed' })
+    // Log concise error server-side only, never leak raw provider text to frontend
+    const safeLog = (err.message || '').slice(0, 300)
+    console.error('[campaigns] overview failed:', safeLog)
+    res.status(500).json({
+      success: false,
+      data: null,
+      error: 'Campaign data is temporarily unavailable. Please try again.'
+    })
   }
 }
 

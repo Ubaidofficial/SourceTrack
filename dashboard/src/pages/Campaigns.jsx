@@ -260,15 +260,16 @@ export default function Campaigns() {
     load()
   }, [user])
 
-  const { data, isLoading, isError, error, refetch: refetchOverview } = useQuery({
+  const { data: overview, isLoading, isError, error, refetch: refetchOverview } = useQuery({
     queryKey: ['campaigns-overview', site?.site_key, activeDim, dateRange, search, statusFilter],
     queryFn: () => fetchApi(`/campaigns/overview?site_key=${site.site_key}&dimension=${activeDim}&days=${dateRange}&search=${encodeURIComponent(search)}&status=${statusFilter}`),
     enabled: !!site
   })
 
-  const overview = data?.data
   const kpis = overview?.kpis
   const rows = overview?.rows || []
+  const analyticsAvailable = overview?.analytics_available !== false
+  const analyticsWarning = overview?.warning?.message || null
 
   const dateFrom = overview?.date_from || format(subDays(new Date(), dateRange), 'yyyy-MM-dd')
   const dateTo = overview?.date_to || format(new Date(), 'yyyy-MM-dd')
@@ -470,14 +471,14 @@ export default function Campaigns() {
           <p className="text-sm text-st-gray mt-0.5">Performance by marketing channel with real-time revenue and conversion data</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => navigate('/report-builder')}
-            className="px-3 py-1.5 text-sm text-st-black bg-gray-50 rounded-lg hover:bg-gray-100 font-medium">
-            Advanced Report
-          </button>
-
           <button onClick={() => setImportModalOpen(true)}
             className="px-3 py-1.5 text-sm text-st-black bg-[#d7f550] hover:bg-[#c4df45] rounded-lg transition-colors font-medium flex items-center gap-1.5 shadow-sm">
             <UploadCloud className="w-4 h-4" /> Import Costs
+          </button>
+
+          <button onClick={() => navigate('/report-builder')}
+            className="px-3 py-1.5 text-sm text-gray-500 bg-gray-50 rounded-lg hover:bg-gray-100 font-medium">
+            Advanced Report
           </button>
 
           {hasFeature(site?.plan, 'csv_export') ? (
@@ -497,8 +498,16 @@ export default function Campaigns() {
         </div>
       </div>
 
+      {/* Analytics Warning Banner */}
+      {!isLoading && !isError && !analyticsAvailable && analyticsWarning && (
+        <div className="flex items-center gap-2.5 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
+          <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500" />
+          <span>{analyticsWarning} Imported costs can still be managed.</span>
+        </div>
+      )}
+
       {/* Filter Bar */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+      <div className="bg-white/60 rounded-xl border border-gray-100 p-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex-1 min-w-[200px] relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-st-gray" />
@@ -589,16 +598,42 @@ export default function Campaigns() {
           {isLoading ? (
             <div className="py-12 text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black mx-auto" />
+              <p className="text-xs text-st-gray mt-3">Loading campaign data…</p>
             </div>
           ) : isError ? (
-            <div className="py-12 text-center text-sm text-red-500 bg-red-50 rounded-lg border border-red-200 m-4">
-              Error loading campaigns: {error?.message || 'Please check your connection.'}
+            <div className="py-12 text-center px-4">
+              <p className="text-sm text-gray-500">Campaign data is temporarily unavailable.</p>
+              <p className="text-xs text-st-gray mt-1">Imported costs can still be managed below.</p>
+              <button onClick={() => setImportModalOpen(true)}
+                className="mt-4 px-4 py-2 text-sm text-st-black bg-[#d7f550] hover:bg-[#c4df45] rounded-lg transition-colors font-medium inline-flex items-center gap-1.5">
+                <UploadCloud className="w-4 h-4" /> Import Costs
+              </button>
             </div>
           ) : rows.length === 0 ? (
-            <div className="py-12 text-center text-sm text-st-gray">
-              {search || statusFilter !== 'all'
-                ? 'No results match your filters.'
-                : 'No attribution data yet. UTM-tagged traffic will appear here after conversions.'}
+            <div className="py-12 text-center px-4">
+              {search || statusFilter !== 'all' ? (
+                <p className="text-sm text-st-gray">No results match your filters.</p>
+              ) : (
+                <>
+                  <p className="text-base font-semibold text-st-black">No campaign data yet</p>
+                  <p className="text-sm text-st-gray mt-1">Import ad costs or wait for tracked campaign traffic.</p>
+                  <div className="flex items-center justify-center gap-3 mt-4">
+                    <button onClick={() => setImportModalOpen(true)}
+                      className="px-4 py-2 text-sm text-st-black bg-[#d7f550] hover:bg-[#c4df45] rounded-lg transition-colors font-medium inline-flex items-center gap-1.5">
+                      <UploadCloud className="w-4 h-4" /> Import Costs
+                    </button>
+                    <a
+                      href={`data:text/csv;charset=utf-8,${encodeURIComponent(
+                        "date,platform,campaign_name,campaign_id,spend,currency,clicks,impressions\n2026-06-08,facebook,Summer Sale,12345,45.50,USD,40,1200\n"
+                      )}`}
+                      download="sourcetrack_ad_spend_template.csv"
+                      className="text-xs text-gray-500 hover:text-gray-700 hover:underline font-medium"
+                    >
+                      Download CSV template
+                    </a>
+                  </div>
+                </>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -781,9 +816,9 @@ export default function Campaigns() {
               <div className="h-64 flex items-center justify-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black" />
               </div>
-            ) : isError ? (
-              <div className="h-64 flex items-center justify-center text-sm text-red-500">
-                Failed to load chart data
+            ) : isError || !analyticsAvailable ? (
+              <div className="h-64 flex items-center justify-center text-sm text-gray-400">
+                Revenue chart unavailable
               </div>
             ) : rows.length === 0 ? (
               <div className="h-64 flex items-center justify-center text-sm text-st-gray">
