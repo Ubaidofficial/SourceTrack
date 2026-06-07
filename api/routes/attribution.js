@@ -2,7 +2,7 @@ import { getAttribution, getFlexibleReport, getAttributionExplanation, getPreAgg
 import { requireFeature } from '../lib/plan-features.js'
 
 const ALLOWED_MODELS = new Set(['first_touch', 'last_touch', 'first_touch_non_direct', 'last_touch_non_direct', 'ai_platforms', 'linear', 'u_shaped', 'time_decay', 'w_shaped'])
-const ALLOWED_GROUPS = new Set(['channel', 'source', 'medium', 'campaign', 'keyword', 'ai_source', 'landing_page', 'country', 'device', 'conversion_type', 'date'])
+const ALLOWED_GROUPS = new Set(['channel', 'source', 'medium', 'campaign', 'keyword', 'referrer_domain', 'ai_source', 'landing_page', 'country', 'device', 'conversion_type', 'date'])
 const ALLOWED_METRICS = new Set([
   'revenue', 'conversions', 'sessions', 'leads', 'conversion_rate',
   'avg_conversion_value', 'ai_conversions', 'ai_revenue', 'ai_conversion_share',
@@ -127,7 +127,7 @@ export async function attribution(req, res) {
       }
 
       // Use pre-aggregated data for first_touch, last_touch, and linear
-      if ((model === "first_touch" || model === "last_touch") && group_by !== "keyword" && req.query.group_by2 !== "keyword") {
+      if ((model === "first_touch" || model === "last_touch") && group_by !== "keyword" && req.query.group_by2 !== "keyword" && group_by !== "referrer_domain" && req.query.group_by2 !== "referrer_domain") {
         try {
           const results = await getPreAggregatedAttribution({
             siteId: req.site.id,
@@ -147,7 +147,7 @@ export async function attribution(req, res) {
       // instead of silently rendering a blank chart.
       const NIGHTLY_NOTICE = 'This model is calculated by the nightly attribution job (runs ~2 AM UTC). Results will appear after the first run. If you have recent conversions and still see no data, the job may not be configured — contact support.'
 
-      if (model === "linear" && group_by !== "keyword" && req.query.group_by2 !== "keyword") {
+      if (model === "linear" && group_by !== "keyword" && req.query.group_by2 !== "keyword" && group_by !== "referrer_domain" && req.query.group_by2 !== "referrer_domain") {
         try {
           const results = await getLinearAttribution({
             siteId: req.site.id,
@@ -163,7 +163,7 @@ export async function attribution(req, res) {
           return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results: [], _notice: NIGHTLY_NOTICE } })
         }
       }
-      if (model === "u_shaped" && group_by !== "keyword" && req.query.group_by2 !== "keyword") {
+      if (model === "u_shaped" && group_by !== "keyword" && req.query.group_by2 !== "keyword" && group_by !== "referrer_domain" && req.query.group_by2 !== "referrer_domain") {
         try {
           const results = await getUShapedAttribution({
             siteId: req.site.id,
@@ -179,7 +179,7 @@ export async function attribution(req, res) {
           return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results: [], _notice: NIGHTLY_NOTICE } })
         }
       }
-      if (model === "time_decay" && group_by !== "keyword" && req.query.group_by2 !== "keyword") {
+      if (model === "time_decay" && group_by !== "keyword" && req.query.group_by2 !== "keyword" && group_by !== "referrer_domain" && req.query.group_by2 !== "referrer_domain") {
         try {
           const results = await getTimeDecayAttribution({
             siteId: req.site.id,
@@ -195,7 +195,7 @@ export async function attribution(req, res) {
           return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results: [], _notice: NIGHTLY_NOTICE } })
         }
       }
-      if (model === "w_shaped" && group_by !== "keyword" && req.query.group_by2 !== "keyword") {
+      if (model === "w_shaped" && group_by !== "keyword" && req.query.group_by2 !== "keyword" && group_by !== "referrer_domain" && req.query.group_by2 !== "referrer_domain") {
         try {
           const results = await getWShapedAttribution({
             siteId: req.site.id,

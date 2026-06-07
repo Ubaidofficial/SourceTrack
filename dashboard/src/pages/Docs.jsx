@@ -844,6 +844,22 @@ window.sourcetrack.identify('user_123', {
               <strong>Important:</strong> Keyword reporting is parameter-based only. SourceTrack does not natively query Google Ads or Microsoft Ads API search-term reports. To capture keywords, you must configure your ad platform's tracking templates to pass keywords dynamically (for example, using <code>utm_term={"{keyword}"}</code> on Google Ads).
             </Note>
 
+            <H3>Referrer Domain Reporting</H3>
+            <p>
+              SourceTrack supports Referrer Domain attribution reporting by extracting the domain from the browser's <code>document.referrer</code> on initial and subsequent page visits. This helps identify organic search engines, partner traffic, AI tools, and backlinks.
+            </p>
+            <p>
+              When grouping by **Referrer Domain**, the dashboard normalizes the referrer URLs:
+            </p>
+            <ul className="list-disc list-inside space-y-2 pl-1 text-sm text-gray-600 dark:text-gray-400">
+              <li><strong>Domain Extraction:</strong> Extracts the hostname and removes any leading <code>www.</code> prefix (e.g., <code>https://www.google.com/search?q=...</code> becomes <IC>google.com</IC>). Other examples include <IC>chatgpt.com</IC>, <IC>partner-site.com</IC>, and <IC>github.com</IC>.</li>
+              <li><strong>Direct Traffic:</strong> If the visitor has no referrer (e.g., typed the URL directly, clicked a bookmark, or came from a private window/redirect that stripped headers), it returns <IC>direct</IC>.</li>
+              <li><strong>Unknown Referrer:</strong> If the referrer value is invalid or malformed, it returns <IC>unknown</IC>.</li>
+            </ul>
+            <Note>
+              <strong>Privacy and Scope:</strong> Referrer Domain reports use domain-level grouping for aggregate analysis and do not expose full referrer URLs to protect visitor privacy. In addition, SourceTrack does not operate an active SEO backlink crawler and does not integrate with Google Search Console or external SEO indices.
+            </Note>
+
             <H3>Manual Spend &amp; Cost Efficiency</H3>
             <p>
               To calculate cost-efficiency metrics, you must manually enter your advertising spend for each campaign, source, or medium:
@@ -1047,7 +1063,7 @@ await fetch('https://api.srctk.com/api/conversion', {
               { name: 'model', type: 'string', required: true, desc: 'Attribution model: first_touch · last_touch · first_touch_non_direct · last_touch_non_direct · ai_platforms · linear · u_shaped' },
               { name: 'date_from', type: 'string', required: true, desc: 'ISO 8601 date (YYYY-MM-DD). Start of range (inclusive).' },
               { name: 'date_to', type: 'string', required: true, desc: 'ISO 8601 date (YYYY-MM-DD). End of range (inclusive).' },
-              { name: 'group_by', type: 'string', required: false, desc: 'Dimension to break down by: channel · source · medium · campaign · keyword · ai_source · landing_page · country · device · conversion_type · date' },
+              { name: 'group_by', type: 'string', required: false, desc: 'Dimension to break down by: channel · source · medium · campaign · keyword · referrer_domain · ai_source · landing_page · country · device · conversion_type · date' },
               { name: 'metric', type: 'string', required: false, desc: 'Metric to aggregate: revenue · conversions · conversion_rate · avg_conversion_value · ai_conversions · ai_revenue · ltv_revenue · days_to_convert · touchpoints_per_conversion' },
               { name: 'group_by2', type: 'string', required: false, desc: 'Optional second dimension for a 2D breakdown.' },
               { name: 'time_granularity', type: 'string', required: false, desc: 'When group_by=date: day · week · month · quarter · year' },

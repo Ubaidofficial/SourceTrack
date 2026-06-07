@@ -5,6 +5,9 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 120A | 2026-06-07 | `main` | Report Builder Referrer Domain Dimension — Mapped Referrer Domain reporting dimension (`referrer_domain`) to captured browser referrer. Added validations, routing bypasses, HogQL extraction, LTV support, UI helpers, help docs, and verification tests. | ✅ | No |
+| 119E | 2026-06-07 | `main` | Report Builder Keyword / Term Dimension — Added Keyword/Term dimension (`keyword`) mapped to utm_term. Bypassed Supabase aggregated tables, added in-memory and live HogQL support, UI filters, help docs, and E2E QA checks. | ✅ | No |
+| 119D | 2026-06-07 | `main` | Report Builder Security & Production Readiness — Hardened scoping, configuration validation (preventing SQL/HogQL injection), cleansed internal IDs from CSV exports, added fallback for missing site columns, and created security QA script. | ✅ | No |
 | 119B | 2026-06-06 | `main` | Launch Audit Fixes — Added ENCRYPTION_KEY to .env.example with generation instructions, removed ip_address forwarding to PostHog from conversion-offline.js, and softened README CAPI claims. Verified all checks pass. | ✅ | No |
 | 118E | 2026-06-06 | `main` | Shopify Order Webhook Sync — Created backend Shopify order webhook receiver with HMAC-SHA256 verification and paid-only filtering, verified idempotency, stitched storefront attributes, and built Integrations UI config card and Help Docs. | ✅ | No |
 | 118D | 2026-06-06 | `main` | Payments API Hardening + Docs — Hardened generic offline conversion endpoint, added input validations (numerical amount, valid 3-letter currency), allowed unattributed backend revenue, integrated Payments API in Integrations UI and Developer Docs, added E2E payments API test script. | ✅ | No |
@@ -733,3 +736,29 @@ curl -i https://api.srctk.com/tracker/tracker.min.js
 ### 3. Verification & E2E QA
 - Created `scripts/qa-keyword-reporting.mjs` verifying config validation, invalid dimensions rejection, and clean report API/export CSV download queries.
 - Executed E2E check under `ALLOW_ATTRIBUTION_E2E_TIMEOUT_WARN=1` to assert clean execution of live attribution and export queries without HogQL self-join timeouts.
+
+---
+
+## Session 120A — Report Builder Referrer Domain Dimension
+
+**Date:** 2026-06-07
+**Branch:** `main`
+**Build:** ✅ passing (E2E QA pass)
+
+### 1. Referrer Domain Reporting Dimension
+- Added `'referrer_domain'` to allowed groupBy groups inside `report-config-validation.js` and `api/routes/attribution.js`.
+- Bypassed Supabase pre-aggregated/nightly tables inside `api/routes/attribution.js` if `group_by === 'referrer_domain'` or `req.query.group_by2 === 'referrer_domain'`, routing queries to the live flexible Report path instead.
+- Implemented `referrer_domain` dimension mapping in `GROUP_COLUMNS` using the shared SQL expression: `multiIf(properties.referrer IS NULL OR properties.referrer = '', 'direct', domain(properties.referrer) = '', 'unknown', replaceRegexpAll(domain(properties.referrer), '^www\\.', ''))`.
+- Selected `_pv.properties.referrer` as `_w_referrer` inside the `windowJoin` subquery of `getFlexibleReport` and mapped `referrer_domain` grouping in windowed paths.
+- Exported and integrated `extractReferrerDomain(referrer)` helper in `calculateAttribution` (in-memory multi-touch) and `getMultiTouchAttributionLive` grouping loop.
+- Added `referrer_domain` support inside the LTV person-dimension mapping switches (`ltvPersonDimExpr`) for first-touch and last-touch models.
+
+### 2. UI & Docs Additions
+- Added `Referrer Domain` to Report Builder dimensions list on the dashboard frontend.
+- Added Step 4 helper banner clarifying that Referrer Domain uses browser-captured referrer and is not an active crawler or Search Console import.
+- Documented Referrer Domain behavior, examples, Direct/Unknown fallbacks, privacy note, and scope boundaries in developer Docs (`Docs.jsx`).
+
+### 3. Verification & E2E QA
+- Created `scripts/qa-referrer-domain-reporting.mjs` verifying helper normalization, live HogQL probe compilation, saved report validation, API/export smoke, and strict full URL leakage checks.
+- Confirmed all baseline, security, and integration QA suites pass cleanly.
+

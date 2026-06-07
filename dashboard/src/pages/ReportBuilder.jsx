@@ -50,6 +50,7 @@ const DIMENSIONS = [
   { key: 'medium', label: 'Medium' },
   { key: 'campaign', label: 'Campaign' },
   { key: 'keyword', label: 'Keyword / Term' },
+  { key: 'referrer_domain', label: 'Referrer Domain' },
   { key: 'conversion_type', label: 'Conversion Type' },
   { key: 'ai_source', label: 'AI Source' },
   { key: 'landing_page', label: 'Landing Page' },
@@ -827,6 +828,11 @@ export default function ReportBuilder() {
             {(groupBy === 'keyword' || groupBy2 === 'keyword') && (
               <div className="mt-3 text-[11px] text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-[#242829] rounded-lg p-2.5 border border-gray-100 dark:border-[#2A2E2E]">
                 💡 <strong>Keyword / Term</strong> uses captured URL parameters such as <code>utm_term</code>. It does not import native ad-platform search terms.
+              </div>
+            )}
+            {(groupBy === 'referrer_domain' || groupBy2 === 'referrer_domain') && (
+              <div className="mt-3 text-[11px] text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-[#242829] rounded-lg p-2.5 border border-gray-100 dark:border-[#2A2E2E]">
+                💡 <strong>Referrer Domain</strong> uses the captured browser referrer. It is not a backlink crawler or Search Console import.
               </div>
             )}
           </div>

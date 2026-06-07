@@ -7,6 +7,32 @@ import { esc, toHogDate } from './utils.js'
 
 const cache = new NodeCache({ stdTTL: 60, checkperiod: 30 })
 
+export function extractReferrerDomain(referrer) {
+  if (!referrer || referrer.trim() === '') return 'direct'
+  let str = referrer.trim()
+  if (!str.includes('://')) {
+    str = 'https://' + str
+  }
+  try {
+    const url = new URL(str)
+    let host = url.hostname.toLowerCase()
+    if (host.startsWith('www.')) {
+      host = host.slice(4)
+    }
+    return host || 'unknown'
+  } catch (_) {
+    return 'unknown'
+  }
+}
+
+export function makeReferrerDomainExpr(refVar) {
+  return `multiIf(${refVar} IS NULL OR ${refVar} = '', 'direct', domain(${refVar}) = '', 'unknown', replaceRegexpAll(domain(${refVar}), '^www\\\\.', ''))`
+}
+
+const REFERRER_DOMAIN_SQL = makeReferrerDomainExpr('properties.referrer')
+
+
+
 function cacheKey(model, siteId, dateFrom, dateTo) {
   return `${model}:${siteId}:${dateFrom}:${dateTo}`
 }
@@ -814,6 +840,14 @@ const GROUP_COLUMNS = {
     first_touch_non_direct: "COALESCE(NULLIF(_nd.nd_term, ''), COALESCE(NULLIF(properties.utm_term, ''), 'unknown'))",
     last_touch_non_direct: "COALESCE(NULLIF(_nd.nd_term, ''), COALESCE(NULLIF(properties.utm_term, ''), 'unknown'))"
   },
+  referrer_domain: {
+    first_touch: REFERRER_DOMAIN_SQL,
+    last_touch: REFERRER_DOMAIN_SQL,
+    linear: REFERRER_DOMAIN_SQL,
+    ai_platforms: "'—'",
+    first_touch_non_direct: REFERRER_DOMAIN_SQL,
+    last_touch_non_direct: REFERRER_DOMAIN_SQL
+  },
   ai_source: {
     first_touch: "COALESCE(NULLIF(properties.ai_source, ''), 'none')",
     last_touch: "COALESCE(NULLIF(properties.ai_source, ''), 'none')",
@@ -1036,6 +1070,7 @@ export async function getMultiTouchAttributionLive({
       else if (groupBy === 'medium') dimVal = share.medium || 'none'
       else if (groupBy === 'campaign') dimVal = share.campaign || 'none'
       else if (groupBy === 'keyword') dimVal = share.keyword || share.utm_term || 'unknown'
+      else if (groupBy === 'referrer_domain') dimVal = share.referrer_domain || 'direct'
       else if (groupBy === 'channel') dimVal = share.channel || 'Direct'
       else if (groupBy === 'landing_page') {
         dimVal = share.page_url ? (() => { try { return new URL(share.page_url).pathname } catch (_) { return '/' } })() : '/'
@@ -1508,7 +1543,8 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
         ${aggFn}(_pv.properties.utm_source, _pv.timestamp) AS _w_source,
         ${aggFn}(_pv.properties.utm_medium, _pv.timestamp) AS _w_medium,
         ${aggFn}(_pv.properties.utm_campaign, _pv.timestamp) AS _w_campaign,
-        ${aggFn}(_pv.properties.utm_term, _pv.timestamp) AS _w_term
+        ${aggFn}(_pv.properties.utm_term, _pv.timestamp) AS _w_term,
+        ${aggFn}(_pv.properties.referrer, _pv.timestamp) AS _w_referrer
       FROM events
       LEFT JOIN events AS _pv
         ON _pv.distinct_id = events.distinct_id
@@ -1525,24 +1561,28 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
       GROUP BY events.uuid
     ) _win ON events.uuid = _win._win_uuid`
 
-    if (groupBy === 'source' || groupBy === 'medium' || groupBy === 'campaign' || groupBy === 'keyword') {
+    if (groupBy === 'source' || groupBy === 'medium' || groupBy === 'campaign' || groupBy === 'keyword' || groupBy === 'referrer_domain') {
       windowedDimExpr = groupBy === 'source'
         ? "COALESCE(NULLIF(_win._w_source, ''), 'direct')"
         : groupBy === 'medium'
           ? "COALESCE(NULLIF(_win._w_medium, ''), 'none')"
           : groupBy === 'keyword'
             ? "COALESCE(NULLIF(_win._w_term, ''), 'unknown')"
-            : '_win._w_campaign'
+            : groupBy === 'referrer_domain'
+              ? makeReferrerDomainExpr('_win._w_referrer')
+              : '_win._w_campaign'
     }
 
-    if (groupBy2 === 'source' || groupBy2 === 'medium' || groupBy2 === 'campaign' || groupBy2 === 'keyword') {
+    if (groupBy2 === 'source' || groupBy2 === 'medium' || groupBy2 === 'campaign' || groupBy2 === 'keyword' || groupBy2 === 'referrer_domain') {
       windowedDim2Expr = groupBy2 === 'source'
         ? "COALESCE(NULLIF(_win._w_source, ''), 'direct')"
         : groupBy2 === 'medium'
           ? "COALESCE(NULLIF(_win._w_medium, ''), 'none')"
           : groupBy2 === 'keyword'
             ? "COALESCE(NULLIF(_win._w_term, ''), 'unknown')"
-            : '_win._w_campaign'
+            : groupBy2 === 'referrer_domain'
+              ? makeReferrerDomainExpr('_win._w_referrer')
+              : '_win._w_campaign'
     }
   }
 
@@ -1610,6 +1650,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
           case 'medium': return "any(COALESCE(NULLIF(properties.first_touch_medium, ''), 'none'))"
           case 'campaign': return 'any(properties.first_touch_campaign)'
           case 'keyword': return "any(COALESCE(NULLIF(properties.utm_term, ''), 'unknown'))"
+          case 'referrer_domain': return `any(${makeReferrerDomainExpr('properties.referrer')})`
           case 'ai_source': return "any(COALESCE(NULLIF(properties.ai_source, ''), 'none'))"
           case 'landing_page': return "argMin(COALESCE(NULLIF(properties.page_url, ''), '/'), timestamp)"
           case 'country': return "any(COALESCE(NULLIF(properties.country, ''), 'unknown'))"
@@ -1624,6 +1665,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
           case 'medium': return "COALESCE(NULLIF(any(_nd.nd_medium), ''), COALESCE(NULLIF(any(properties.first_touch_medium), ''), 'none'))"
           case 'campaign': return "COALESCE(NULLIF(any(_nd.nd_campaign), ''), any(properties.first_touch_campaign))"
           case 'keyword': return "COALESCE(NULLIF(any(_nd.nd_term), ''), any(COALESCE(NULLIF(properties.utm_term, ''), 'unknown')))"
+          case 'referrer_domain': return `any(${makeReferrerDomainExpr('properties.referrer')})`
           case 'ai_source': return "any(COALESCE(NULLIF(properties.ai_source, ''), 'none'))"
           case 'landing_page': return "argMin(COALESCE(NULLIF(properties.page_url, ''), '/'), timestamp)"
           case 'country': return "any(COALESCE(NULLIF(properties.country, ''), 'unknown'))"
@@ -1638,6 +1680,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
           case 'medium': return "COALESCE(NULLIF(any(_nd.nd_medium), ''), COALESCE(NULLIF(argMax(properties.utm_medium, timestamp), ''), 'none'))"
           case 'campaign': return "COALESCE(NULLIF(any(_nd.nd_campaign), ''), argMax(properties.utm_campaign, timestamp))"
           case 'keyword': return "COALESCE(NULLIF(any(_nd.nd_term), ''), argMax(COALESCE(NULLIF(properties.utm_term, ''), 'unknown'), timestamp))"
+          case 'referrer_domain': return `argMax(${makeReferrerDomainExpr('properties.referrer')}, timestamp)`
           case 'ai_source': return "argMax(COALESCE(NULLIF(properties.ai_source, ''), 'none'), timestamp)"
           case 'landing_page': return "argMax(COALESCE(NULLIF(properties.page_url, ''), '/'), timestamp)"
           case 'country': return "argMax(COALESCE(NULLIF(properties.country, ''), 'unknown'), timestamp)"
@@ -1653,6 +1696,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
         case 'medium': return "argMax(COALESCE(NULLIF(properties.utm_medium, ''), 'none'), timestamp)"
         case 'campaign': return 'argMax(properties.utm_campaign, timestamp)'
         case 'keyword': return "argMax(COALESCE(NULLIF(properties.utm_term, ''), 'unknown'), timestamp)"
+        case 'referrer_domain': return `argMax(${makeReferrerDomainExpr('properties.referrer')}, timestamp)`
         case 'ai_source': return "argMax(COALESCE(NULLIF(properties.ai_source, ''), 'none'), timestamp)"
         case 'landing_page': return "argMax(COALESCE(NULLIF(properties.page_url, ''), '/'), timestamp)"
         case 'country': return "argMax(COALESCE(NULLIF(properties.country, ''), 'unknown'), timestamp)"
@@ -2166,6 +2210,7 @@ export function calculateAttribution(touchpoints, conversionValue) {
     campaign: tp.utm_campaign || null,
     keyword: tp.utm_term || null,
     utm_term: tp.utm_term || null,
+    referrer_domain: extractReferrerDomain(tp.referrer),
     channel: tpCh(tp),
     timestamp: tp.timestamp
   })
@@ -2268,6 +2313,7 @@ export function calculateAttribution(touchpoints, conversionValue) {
       campaign: firstTouchpoint.utm_campaign || null,
       keyword: firstTouchpoint.utm_term || null,
       utm_term: firstTouchpoint.utm_term || null,
+      referrer_domain: extractReferrerDomain(firstTouchpoint.referrer),
       timestamp: firstTouchpoint.timestamp
     },
     last_touch: {
@@ -2276,6 +2322,7 @@ export function calculateAttribution(touchpoints, conversionValue) {
       campaign: lastTouchpoint.utm_campaign || null,
       keyword: lastTouchpoint.utm_term || null,
       utm_term: lastTouchpoint.utm_term || null,
+      referrer_domain: extractReferrerDomain(lastTouchpoint.referrer),
       timestamp: lastTouchpoint.timestamp
     },
     linear: adjustReconciliation(linear),

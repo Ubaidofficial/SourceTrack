@@ -1,12 +1,38 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 119E — Report Builder Keyword / Term Dimension. Added parameter-based Keyword / Term reporting dimension mapped to captured utm_term. Updated report config validation allowlists, attribution route intercepts, and live PostHog-based single-touch/multi-touch queries. Added helper banners on the frontend, updated docs reference page, implemented E2E QA checks, and validated the build/static checks.
+> **Handoff:** Session 120A — Report Builder Referrer Domain Dimension. Added Referrer Domain reporting dimension mapped to captured browser referrer. Updated report config validations, attribution route allowlists, and live PostHog-based query paths (including lookback window and LTV queries) utilizing a robust regex-based HogQL extraction expression. Integrated helper cards on the frontend, added a dedicated docs section, created Referrer Domain QA checks, and validated static/build checks.
 >
 > **Next Task:** Awaiting user instructions.
 >
 
-## Session 119E — Report Builder Keyword / Term Dimension
+## Session 120A — Report Builder Referrer Domain Dimension
 **Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+1. **Referrer Domain Reporting Dimension**: Added `'referrer_domain'` to allowed groupBy groups inside `report-config-validation.js` and `api/routes/attribution.js`.
+2. **Live-Path Aggregation Intercepts**: Configured attribution router (`api/routes/attribution.js`) to bypass Supabase pre-aggregated/nightly helpers whenever `group_by === 'referrer_domain'` or `req.query.group_by2 === 'referrer_domain'`, routing queries to the live flexible Report path instead.
+3. **Attribution Engine Support**: Added `referrer_domain` dimension mapping in `GROUP_COLUMNS` inside `api/lib/attribution-engine.js` using a robust regex-based HogQL extraction expression: `multiIf(properties.referrer IS NULL OR properties.referrer = '', 'direct', domain(properties.referrer) = '', 'unknown', replaceRegexpAll(domain(properties.referrer), '^www\\.', ''))`. Added LTV grouping support under `ltvPersonDimExpr`.
+4. **Windowed Attribution Mapping**: Selected `_pv.properties.referrer` as `_w_referrer` inside the `windowJoin` subquery of `getFlexibleReport` and mapped `referrer_domain` grouping in windowed paths.
+5. **Deterministic JS Helper**: Exported `extractReferrerDomain(referrer)` from `api/lib/attribution-engine.js` and integrated it into `calculateAttribution` (in-memory multi-touch) and `getMultiTouchAttributionLive` grouping loop.
+6. **UI & Docs Card**: Added Referrer Domain dimension to the dashboard frontend. Added Step 4 helper banner explaining that Referrer Domain is based strictly on the browser-captured referrer (not an active backlink crawler or Search Console import). Documented behavior, direct/unknown fallbacks, privacy note, and scope limits in developer help center Docs (`Docs.jsx`).
+
+### Files changed
+- `api/lib/report-config-validation.js`
+- `api/routes/attribution.js`
+- `api/lib/attribution-engine.js`
+- `dashboard/src/pages/Docs.jsx`
+- `dashboard/src/pages/ReportBuilder.jsx`
+- `scripts/qa-referrer-domain-reporting.mjs`
+
+### Verification commands
+```bash
+ALLOW_ATTRIBUTION_E2E_TIMEOUT_WARN=1 node scripts/qa-referrer-domain-reporting.mjs
+```
+
+### Caveats & Limitations
+- Live known-referrer PostHog assertion may be skipped under indexing latency. Deterministic helper tests, live HogQL extraction probe, API/export smoke, and CSV leakage checks passed.
+- Referrer Domain is based only on captured browser referrer/document.referrer. It is not a backlink crawler, SEO crawler, or Search Console import.
+
 
 ### Completed
 1. **Keyword / Term Reporting Dimension**: Added `'keyword'` to allowed groupBy groups inside `report-config-validation.js` and `api/routes/attribution.js`.
