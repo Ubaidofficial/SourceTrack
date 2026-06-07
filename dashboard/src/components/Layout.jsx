@@ -10,6 +10,7 @@ import { useTheme } from '../contexts/ThemeContext'
 import { useSite } from '../contexts/SiteContext'
 import { supabase } from '../lib/supabase'
 import { LogoFull, LogoFullDark } from './Logo'
+import { getTrialInfo } from '../lib/billing'
 
 // ── Grouped nav — replaces flat 14-item list ─────────────────────────────────
 // "Install" removed: Integrations already surfaces the snippet + "Full Setup Guide" link,
@@ -83,13 +84,14 @@ export default function Layout({ children }) {
       return
     }
     // Skip trial banner for super admins — they're internal accounts.
-    if (user.raw_app_meta_data?.role === 'super_admin') return
-    // Only show the trial countdown banner for actual trial accounts.
-    if (activeSite.plan === 'trial') {
-      const end  = new Date(new Date(activeSite.created_at).getTime() + 14 * 86400000)
-      const endDate = end ? new Date(end) : null
-      const days = endDate && !isNaN(endDate) ? Math.ceil((endDate - new Date()) / 86400000) : 0
-      setTrialInfo({ daysLeft: Math.max(0, days) })
+    if (user.raw_app_meta_data?.role === 'super_admin') {
+      setTrialInfo(null)
+      return
+    }
+    // Use the shared helper to determine trial info.
+    const info = getTrialInfo(activeSite)
+    if (info.isTrial) {
+      setTrialInfo({ daysLeft: info.daysLeft, expired: info.expired })
     } else {
       setTrialInfo(null)
     }

@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { getBillingPortal, fetchApi } from '../lib/api'
 import { Copy, Check, ExternalLink, Globe, Link2, CreditCard, Link, ShieldCheck, Trash2, AlertTriangle, Clock } from 'lucide-react'
 import UTMBuilder from '../components/UTMBuilder'
+import { getTrialInfo, getPlanLabel, isPaidPlan } from '../lib/billing'
 
 export default function Settings() {
   const { user } = useAuth()
@@ -459,17 +460,14 @@ export default function Settings() {
   // `isPaid` covers any non-free, non-trial plan (starter/growth/business).
   // Legacy 'pro'/'agency' are normalized to 'growth'/'business' upstream.
   const plan = site?.plan || 'free'
-  const isPaid = ['starter', 'growth', 'business'].includes(plan)
+  const isPaid = isPaidPlan(plan)
   const isPro = isPaid // back-compat alias for any remaining references
   const isTrial = plan === 'trial'
 
-  // Days left in trial (14-day from created_at)
-  const daysLeft = (() => {
-    if (!site?.created_at || !isTrial) return null
-    const end = new Date(new Date(site.created_at).getTime() + 14 * 86400000)
-    const diff = Math.ceil((end - new Date()) / 86400000)
-    return Math.max(0, diff)
-  })()
+  // Days left in trial
+  const trialInfo = site ? getTrialInfo(site) : null
+  const daysLeft = trialInfo?.daysLeft ?? null
+  const trialExpired = trialInfo?.expired ?? false
 
   return (
     <div className="space-y-8 max-w-2xl">
@@ -496,10 +494,10 @@ export default function Settings() {
             <CreditCard className="w-4 h-4 text-st-gray dark:text-gray-400" />
             <div>
               <p className="text-sm font-bold text-st-black dark:text-white">
-                Plan: <span className="capitalize">{plan}</span>
+                Plan: <span className="capitalize">{getPlanLabel(plan)}</span>
                 {isTrial && daysLeft !== null && (
-                  <span className={`ml-2 text-xs font-medium ${daysLeft <= 3 ? 'text-red-500' : 'text-amber-500'}`}>
-                    ({daysLeft > 0 ? `${daysLeft}d left` : 'expired'})
+                  <span className={`ml-2 text-xs font-medium ${trialExpired ? 'text-red-500' : daysLeft <= 3 ? 'text-red-500' : 'text-amber-500'}`}>
+                    ({trialExpired ? 'expired' : `${daysLeft}d left`})
                   </span>
                 )}
               </p>
