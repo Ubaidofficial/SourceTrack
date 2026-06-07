@@ -1,10 +1,41 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 124B — Railway-Aware IP Resolver Route Migration. Integrated resolves across track.js, conversion.js, and tracker-id.js. Implemented ST_IP_RESOLVER_MODE=railway that filters out internal/private container IPs and extracts the first public IP from the sanitized XFF chain. Expanded scripts/qa-ip-resolver.mjs with tests for isPublicIp, railway mode resolving, and static source checks.
+> **Handoff:** Session 124C — Layered Rate-Limit Implementation. Built layered rate-limiting (visitor, IP, site, global IP) across approved ingestion paths. Bounded/hashed user-controlled key parts to prevent memory bloat and protect privacy. Configured defaultLimit skip helper. Created scripts/qa-rate-limits.mjs verification suite.
 >
-> **Next Task:** Implement layered rate limiting (Session 124C) to enforce client IP and site key rate limiting using the new centralized client IP resolver.
+> **Next Task:** Session 125A — Managed First-Party Proxy.
 >
-> ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. Without this variable, migrated ingestion routes will fall back to connection-mode IPs and may use Railway internal 100.64.x.x addresses for geo, CAPI, and cookieless identity.
+> ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 124C — Layered Rate-Limit Implementation
+**Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+1. **Layered Rate Limiters:** Implemented multi-layered rate-limiting systems (Visitor, IP, Site, Global IP) for approved ingestion routes: `/api/track`, `/api/collect`, `/track`, `/api/conversion`, `/api/tracker/id`, `/api/identify`.
+2. **Safe Hashing & Bounding:** Added `hashKeyPart` using SHA-256 slice (16 chars) to hash and bound user-controlled parameters (`site_key`, `anonymous_id`, `visitor_id`, `user_id`, `order_id`, and `resolved IP`), preventing memory bloat and leaks.
+3. **Safe Hashed Logging:** Standardized logging using `[rate-limit]` prefix, tracking hashes (`site_key_hash`, `ip_hash`, `limiter_key_hash`, `resolver_mode`, `route`, `layer`, `status=429`) instead of raw/cleartext IPs or keys. Log hashes are generated using HMAC-SHA256 with the environment's `ST_LOG_HASH_SECRET` or `TRACKER_SALT` (both bounded to 500 characters, validated on startup in production, and falling back only in dev/test).
+4. **Skip Boundaries:** Configured `defaultLimit` to skip the six ingestion paths (and global OPTIONS requests). Trailing slash normalization in the skip rule is implemented for Express consistency, and logged as normalized routes.
+5. **Exact Log & Key Mapping:** Captured the exact rate limiter key generated inside each keyGenerator under `req.rateLimitKey` to ensure `limiter_key_hash` is 100% cryptographically accurate. Resolved routes in logs dynamically to stable normalized paths via `getSafeRouteLabel`.
+6. **QA Test Harness:** Created `scripts/qa-rate-limits.mjs` verifying visitor cap, IP cap, site cap, global IP cap, OPTIONS bypass, oversized ID hashing, skip boundaries, CORS 429 headers, malformed site_key formats, trailing slash normalization, and cryptographic verification of hashed logs.
+7. **No Side Effects:** Confirmed that `/sp` routes, `/api/pixel` route, tracker assets, `trust proxy`, and database schemas are completely untouched.
+
+### Files changed
+- `api/middleware/rate-limit.js`
+- `api/index.js`
+- `api/routes/tracker-id.js`
+- `scripts/qa-rate-limits.mjs` [NEW]
+- `SESSION_STATE.md`
+- `SESSION_LOG.md`
+- `SESSION_HANDOFF.md`
+
+### Verification commands
+```bash
+node scripts/qa-rate-limits.mjs
+node scripts/qa-ip-resolver.mjs
+node scripts/diagnostic-trust-proxy.mjs
+node scripts/qa-proxy-validation.mjs
+node --check api/index.js api/middleware/rate-limit.js api/routes/tracker-id.js scripts/qa-rate-limits.mjs
+cd dashboard && npm run build
+```
 
 ## Session 124B — Railway-Aware IP Resolver Route Migration
 **Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)

@@ -22,6 +22,12 @@
 import { createHmac, createHash } from 'crypto'
 import express from 'express'
 import { resolveClientIp } from '../lib/ip-resolver.js'
+import {
+  trackerIdVisitorLimit,
+  trackerIdIpLimit,
+  trackerIdSiteLimit,
+  trackerIdGlobalIpLimit
+} from '../middleware/rate-limit.js'
 
 export const trackerIdRouter = express.Router()
 
@@ -60,11 +66,18 @@ function sha256(input) {
   return createHash('sha256').update(input).digest('hex')
 }
 
-trackerIdRouter.get('/', (req, res) => {
-  // CORS — must work cross-origin (called from customer websites)
-  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*')
-  res.setHeader('Access-Control-Allow-Credentials', 'false')
-  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
+trackerIdRouter.get('/',
+  (req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*')
+    res.setHeader('Access-Control-Allow-Credentials', 'false')
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
+    next()
+  },
+  trackerIdVisitorLimit,
+  trackerIdIpLimit,
+  trackerIdSiteLimit,
+  trackerIdGlobalIpLimit,
+  (req, res) => {
 
   const siteKey = req.query.site_key || ''
   const ip      = resolveClientIp(req)

@@ -6,7 +6,22 @@ import cors from 'cors'
 import NodeCache from 'node-cache'
 import { getSupabase } from './lib/supabase.js'
 
-import { defaultLimit, trackLimit } from './middleware/rate-limit.js'
+import {
+  defaultLimit,
+  trackLimit,
+  trackVisitorLimit,
+  trackIpLimit,
+  trackSiteLimit,
+  trackGlobalIpLimit,
+  conversionVisitorLimit,
+  conversionIpLimit,
+  conversionSiteLimit,
+  conversionGlobalIpLimit,
+  identifyVisitorLimit,
+  identifyIpLimit,
+  identifySiteLimit,
+  identifyGlobalIpLimit
+} from './middleware/rate-limit.js'
 import { validateSiteKey } from './middleware/auth.js'
 import { requireSiteMembership } from './middleware/auth.js'
 import { detectAIPlatform } from './middleware/ai-platform.js'
@@ -286,19 +301,37 @@ app.use(cors({
 
 // 5. Rate limits
 app.use(defaultLimit)
-app.use('/api/track', trackLimit)
 
 // 6. Routes
-app.post('/api/track', validateSiteKey, checkTierLimit, detectAIPlatform, track)
+app.post('/api/track',
+  trackVisitorLimit,
+  trackIpLimit,
+  trackSiteLimit,
+  trackGlobalIpLimit,
+  validateSiteKey,
+  checkTierLimit,
+  detectAIPlatform,
+  track
+)
 app.get('/api/pixel', trackLimit, pixelRouter)  // 1×1 GIF — email & no-JS tracking
-app.post('/api/collect', trackLimit, (req, res, next) => {
+app.post('/api/collect',
+  (req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*')
     res.setHeader('Access-Control-Allow-Credentials', 'true')
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
     next()
-  }, validateSiteKey, checkTierLimit, detectAIPlatform, track)
+  },
+  trackVisitorLimit,
+  trackIpLimit,
+  trackSiteLimit,
+  trackGlobalIpLimit,
+  validateSiteKey,
+  checkTierLimit,
+  detectAIPlatform,
+  track
+)
 app.options('/api/collect', (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*')
     res.setHeader('Access-Control-Allow-Credentials', 'true')
@@ -307,8 +340,24 @@ app.options('/api/collect', (req, res) => {
     res.setHeader('Access-Control-Max-Age', '86400')
     return res.status(200).send('OK')
   })
-app.post('/api/identify', validateSiteKey, identify)
-app.post('/api/conversion', validateSiteKey, checkTierLimit, detectAIPlatform, conversion)
+app.post('/api/identify',
+  identifyVisitorLimit,
+  identifyIpLimit,
+  identifySiteLimit,
+  identifyGlobalIpLimit,
+  validateSiteKey,
+  identify
+)
+app.post('/api/conversion',
+  conversionVisitorLimit,
+  conversionIpLimit,
+  conversionSiteLimit,
+  conversionGlobalIpLimit,
+  validateSiteKey,
+  checkTierLimit,
+  detectAIPlatform,
+  conversion
+)
 app.post('/api/conversion/offline', validateSiteKey, conversionOffline)
 app.get('/api/attribution', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, attribution)
 app.get('/api/attribution/explain', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, attributionExplain)
@@ -398,8 +447,17 @@ app.use((err, req, res, next) => {
 
 
 // Root /track alias — same handler as /api/track, no loopback
-app.post('/track', express.json({ limit: '100kb' }),
-  validateSiteKey, checkTierLimit, detectAIPlatform, track)
+app.post('/track',
+  express.json({ limit: '100kb' }),
+  trackVisitorLimit,
+  trackIpLimit,
+  trackSiteLimit,
+  trackGlobalIpLimit,
+  validateSiteKey,
+  checkTierLimit,
+  detectAIPlatform,
+  track
+)
 
 
 
