@@ -627,7 +627,7 @@ export default function Dashboard() {
     window.location.reload()
   }
 
-  const isEmpty = !isLoading && savedReports.length === 0
+  const isEmpty = !isLoading && dashboardReports.length === 0
 
   return (
     <div className="st-container space-y-6">
