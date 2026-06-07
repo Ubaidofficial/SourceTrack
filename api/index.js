@@ -233,6 +233,15 @@ app.get('/tracker.min.js', (req, res) => {
   res.sendFile(process.cwd() + '/tracker/tracker.min.js')
 })
 
+app.get('/tracker.cookieless.min.js', (req, res) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*')
+  res.setHeader('Access-Control-Allow-Credentials', 'true')
+  res.setHeader('Cache-Control', TRACKER_CACHE_HEADER)
+  res.type('application/javascript')
+  res.sendFile(process.cwd() + '/tracker/tracker.cookieless.min.js')
+})
+
 app.use('/tracker', (req, res, next) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*')

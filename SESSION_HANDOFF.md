@@ -1,9 +1,33 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 122B — Public Docs + API Docs Coverage Audit. Documented Saved Reports CRUD, Dashboard Widgets configurations, and CSV Export endpoints. Added self-hosting production environment references for ENCRYPTION_KEY and the 5 backend cron jobs. Integrated custom URL parameter capture specs and caveats. Linked setup guides for Stripe, Shopify, and Payments API to the Help Center documentation anchors.
+> **Handoff:** Session 123B — First-Party Proxy Path Hardening + Self-Hosted Guide MVP. Added root alias `/tracker.cookieless.min.js`, self-hosted proxy documentation page, path-allowlisted Cloudflare Worker and Next.js examples, and verification QA harness.
 >
 > **Next Task:** Awaiting commit approval.
 >
+
+## Session 123B — First-Party Proxy Path Hardening + Self-Hosted Guide MVP
+**Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+1. **Ingestion Server Alias:** Registered root-level alias route `GET /tracker.cookieless.min.js` mirroring standard `/tracker.min.js` behavior with matching CORS, cache, and Content-Type headers.
+2. **Self-Hosted Proxy Docs:** Integrated dedicated self-hosted proxy setup guide in `Docs.jsx` with clean first-party event delivery terminology (avoiding ad-blocker evasion or unblockable overclaims).
+3. **Hardened Proxy Examples:** Documented path-allowlisted Cloudflare Worker and Next.js rewrite templates strictly forwarding the six canonical tracking paths (`/tracker.min.js`, `/tracker.cookieless.min.js`, `/api/track`, `/api/conversion`, `/api/tracker/id`, `/api/identify`) and returning 404 for all other routes.
+4. **Verification QA Harness:** Created `scripts/qa-proxy-validation.mjs` verifying root aliases, local proxy routing, blocked paths, and open-proxy checks. Configured rate-limiter check to run as informational/deferred to Session 123C.
+5. **No Scope Creep:** Confirmed that legacy `/sp` routes remain untouched, no global `trust proxy` setting changes were made, and no minified tracker files were modified.
+
+### Files changed
+- `api/index.js`
+- `dashboard/src/pages/Docs.jsx`
+- `scripts/qa-proxy-validation.mjs` [NEW]
+
+### Verification commands
+```bash
+node scripts/qa-proxy-validation.mjs
+node --check api/index.js
+git diff --check
+cd dashboard && npm run build
+cd ..
+```
 
 ## Session 122B — Public Docs + API Docs Coverage Audit
 **Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check pass)

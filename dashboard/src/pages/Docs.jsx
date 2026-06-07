@@ -103,6 +103,7 @@ const NAV = [
   { id: 'tracker',          label: 'Tracker Script',    indent: true },
   { id: 'exclusions',       label: 'Path Exclusions',   indent: true },
   { id: 'cookieless',       label: 'Cookieless Mode',   indent: true },
+  { id: 'self-hosted-proxy', label: 'Self-Hosted Proxy', indent: true },
   { id: 'custom-params',    label: 'Custom URL Params', indent: true },
   { id: 'timezone',         label: 'Timezone Behavior', indent: true },
   { id: 'dashboard-widgets', label: 'Dashboard Widgets', indent: true },
@@ -754,6 +755,138 @@ window.sourcetrack.identify('user_123', {
                 </tbody>
               </table>
             </div>
+          </Section>
+
+          {/* ── Self-Hosted Proxy Routing ──────────────────────────────────── */}
+          <Section id="self-hosted-proxy" title="Self-Hosted Proxy Routing">
+            <p>
+              SourceTrack supports routing script loads and event ingestion through your own domain using a self-hosted reverse proxy.
+              Routing analytics through your own domain enables <strong>first-party event delivery</strong> and improves <strong>implementation reliability</strong>,
+              as it can reduce blocking in some environments.
+            </p>
+            <p>
+              To set this up, choose a subdomain under your main website domain (for example, <IC>assets.yoursite.com</IC>).
+              Avoid obvious subdomain prefixes such as <IC>analytics</IC>, <IC>tracking</IC>, <IC>pixel</IC>, or <IC>events</IC>,
+              as they are more likely to appear in filter lists or user-blocking rules. Instead, use neutral names like <IC>assets</IC>, <IC>static</IC>, <IC>cdn</IC>, or <IC>lib</IC>.
+            </p>
+            <Note>
+              Self-hosted proxy routing can improve script and event delivery. IP, geo, and rate-limit behavior may vary by hosting provider and proxy configuration. SourceTrack does not yet trust customer-provided client IP headers for self-hosted proxies. Proxy identity and rate-limit hardening are planned for a separate security design session.
+            </Note>
+            <p>
+              Proxying does not remove privacy, consent, or disclosure obligations. Ensure your privacy policy is updated to disclose that analytics data is routed through your domain, and continue to respect visitor consent preferences.
+            </p>
+
+            <H3>Canonical Proxy Paths</H3>
+            <p>
+              Your reverse proxy must only allow and forward requests matching the following six canonical paths. All other paths (such as admin interfaces, billing, or external resources) must be rejected with a <IC>404 Not Found</IC> error.
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse my-2">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left text-xs font-semibold text-gray-500 py-2 pr-4">Proxy Path</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 py-2 pr-4">Upstream Target Route</th>
+                    <th className="text-left text-xs font-semibold text-gray-500 py-2">Purpose</th>
+                  </tr>
+                </thead>
+                <tbody className="text-[13px] font-mono">
+                  {[
+                    ['/tracker.min.js', '/tracker/tracker.min.js', 'Standard tracking script'],
+                    ['/tracker.cookieless.min.js', '/tracker/tracker.cookieless.min.js', 'Cookieless tracking script'],
+                    ['/api/track', '/api/track', 'Pageviews and custom events'],
+                    ['/api/conversion', '/api/conversion', 'Conversion tracking'],
+                    ['/api/tracker/id', '/api/tracker/id', 'Cookieless ID lookup'],
+                    ['/api/identify', '/api/identify', 'Visitor identity linking']
+                  ].map(([p, t, d]) => (
+                    <tr key={p} className="border-b border-gray-100 dark:border-gray-800 last:border-0">
+                      <td className="py-2 pr-4 text-gray-800 dark:text-gray-200">{p}</td>
+                      <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">{t}</td>
+                      <td className="py-2 font-sans text-gray-600 dark:text-gray-400">{d}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <H3>Example 1: Cloudflare Worker</H3>
+            <p>
+              Create a new Cloudflare Worker on your subdomain (e.g. <IC>assets.yoursite.com/*</IC>) and deploy the following code.
+              This worker checks the path against the allowlist and forwards matching requests to SourceTrack.
+            </p>
+            <Code lang="js">{`const UPSTREAM = 'https://api.srctk.com';
+
+const ALLOWED_PATHS = {
+  '/tracker.min.js': '/tracker/tracker.min.js',
+  '/tracker.cookieless.min.js': '/tracker/tracker.cookieless.min.js',
+  '/api/track': '/api/track',
+  '/api/conversion': '/api/conversion',
+  '/api/tracker/id': '/api/tracker/id',
+  '/api/identify': '/api/identify'
+};
+
+addEventListener('fetch', event => {
+  event.respondWith(handleRequest(event.request));
+});
+
+async function handleRequest(request) {
+  const url = new URL(request.url);
+  const path = url.pathname;
+
+  // Strict path allowlist check
+  if (!ALLOWED_PATHS.hasOwnProperty(path)) {
+    return new Response('Not Found', { status: 404 });
+  }
+
+  // Rewrite to canonical upstream path
+  const targetUrl = new URL(ALLOWED_PATHS[path], UPSTREAM);
+  targetUrl.search = url.search;
+
+  const newRequest = new Request(targetUrl, {
+    method: request.method,
+    headers: request.headers,
+    body: request.body,
+    redirect: 'manual'
+  });
+
+  return fetch(newRequest);
+}`}</Code>
+
+            <H3>Example 2: Next.js Rewrite</H3>
+            <p>
+              If your site is built with Next.js, add the following configuration to your <IC>next.config.js</IC> file.
+              This rewrites only the canonical routes, keeping other paths secure.
+            </p>
+            <Code lang="js">{`// next.config.js
+module.exports = {
+  async rewrites() {
+    return [
+      {
+        source: '/tracker.min.js',
+        destination: 'https://api.srctk.com/tracker/tracker.min.js',
+      },
+      {
+        source: '/tracker.cookieless.min.js',
+        destination: 'https://api.srctk.com/tracker/tracker.cookieless.min.js',
+      },
+      {
+        source: '/api/track',
+        destination: 'https://api.srctk.com/api/track',
+      },
+      {
+        source: '/api/conversion',
+        destination: 'https://api.srctk.com/api/conversion',
+      },
+      {
+        source: '/api/tracker/id',
+        destination: 'https://api.srctk.com/api/tracker/id',
+      },
+      {
+        source: '/api/identify',
+        destination: 'https://api.srctk.com/api/identify',
+      }
+    ];
+  }
+};`}</Code>
           </Section>
 
           {/* ── Custom URL Parameters ─────────────────────────────────────── */}
