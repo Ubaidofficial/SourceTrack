@@ -1,10 +1,27 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 127A — Cross-Domain Tracking. Implemented DB migration columns, settings GET/PATCH routes with strict domain tie-in validations, cookies read/write fallback, precedence rules (no identity or first-touch override), early pointerdown/mousedown link decoration preserving browser native actions, Snippet/Settings/Docs UI additions, and a sandboxed E2E QA verification script.
+> **Handoff:** Session 127B — Owner Billing and Trial Fix. Implemented shared dashboard billing helper for trial status, friendly plan labels, and paid-plan checks. Returned trial timestamps from sites API and utilized database `trial_ends_at` instead of hardcoded 14-day creation math in layout and settings views. Cleared stale trial banner state for super admins and verified all cases using a sandboxed unit test script.
 >
-> **Next Task:** Pending commit approval.
+> **Next Task:** QA verification in staging/production environment after deployment.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 127B — Owner Billing and Trial Fix
+**Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+1. **Shared Billing Helper:** Created `dashboard/src/lib/billing.js` to centralize plan labeling, trial calculation, and paid tier matching.
+2. **Backend Sites Selection:** Updated the `/sites` API query in `api/routes/sites.js` to retrieve `trial_started_at` and `trial_ends_at`.
+3. **Frontend Integration:** Refactored `dashboard/src/components/Layout.jsx` and `dashboard/src/pages/Settings.jsx` to consume the shared helper functions.
+4. **Super Admin Guard:** Hardened layout state to clear any stale trial banner when super admins are logged in.
+5. **QA Test Harness:** Created `scripts/qa-billing-helper.mjs` verifying all calculations, fallbacks, and labels.
+
+### Files changed
+- `api/routes/sites.js`
+- `dashboard/src/components/Layout.jsx`
+- `dashboard/src/pages/Settings.jsx`
+- `dashboard/src/lib/billing.js` [NEW]
+- `scripts/qa-billing-helper.mjs` [NEW]
 
 ## Session 127A — Cross-Domain Tracking
 **Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
