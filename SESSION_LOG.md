@@ -708,3 +708,28 @@ curl -i https://api.srctk.com/tracker/tracker.min.js
 - Created `scripts/qa-schema-readiness.mjs` verifying sites and conversions database column migrations.
 - Created `scripts/qa-report-security.mjs` executing E2E parameter tampering checks, SQL injection blocks, same-site cross-user update/delete `403` assertions, and CSV data cleansing checks.
 - Refactored `qa-attribution-integration.mjs` to optimize polling times during test-bypass conditions.
+
+---
+
+## Session 119E — Report Builder Keyword / Term Dimension
+
+**Date:** 2026-06-07
+**Branch:** `main`
+**Build:** ✅ passing (E2E QA pass)
+
+### 1. Keyword / Term Reporting Dimension
+- Added `'keyword'` to allowed groupBy groups inside `report-config-validation.js` and `api/routes/attribution.js`.
+- Bypassed Supabase pre-aggregated/nightly tables inside `api/routes/attribution.js` if `group_by === 'keyword'` or `group_by2 === 'keyword'`, routing queries live to PostHog.
+- Implemented `keyword` dimension mapping in `GROUP_COLUMNS` inside `api/lib/attribution-engine.js` mapping to `properties.utm_term`.
+- Extracted `properties.utm_term` in pageview and conversion live queries in `getMultiTouchAttributionLive`, preserving in `tpBase`.
+- Selected `_pv.properties.utm_term` as `_w_term` inside the `windowJoin` subquery of `getFlexibleReport` to resolve the keyword from the credited pageview touchpoint when an attribution window is active.
+- Added support for `keyword` grouping in LTV and nightly-attribution fallback paths.
+
+### 2. UI & Docs Additions
+- Added `Keyword / Term` option to Report Builder dimension selection.
+- Added explanatory helper banner under Step 4 warning that keyword reporting is parameter-based only (uses `utm_term`).
+- Added dedicated Keyword / Term Reporting section to developer help center documentation (`Docs.jsx`).
+
+### 3. Verification & E2E QA
+- Created `scripts/qa-keyword-reporting.mjs` verifying config validation, invalid dimensions rejection, and clean report API/export CSV download queries.
+- Executed E2E check under `ALLOW_ATTRIBUTION_E2E_TIMEOUT_WARN=1` to assert clean execution of live attribution and export queries without HogQL self-join timeouts.

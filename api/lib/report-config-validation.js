@@ -1,5 +1,5 @@
 const ALLOWED_MODELS = new Set(['first_touch', 'last_touch', 'first_touch_non_direct', 'last_touch_non_direct', 'ai_platforms', 'linear', 'u_shaped', 'time_decay', 'w_shaped'])
-const ALLOWED_GROUPS = new Set(['channel', 'source', 'medium', 'campaign', 'ai_source', 'landing_page', 'country', 'device', 'conversion_type', 'date'])
+const ALLOWED_GROUPS = new Set(['channel', 'source', 'medium', 'campaign', 'keyword', 'ai_source', 'landing_page', 'country', 'device', 'conversion_type', 'date'])
 const ALLOWED_METRICS = new Set([
   'revenue', 'conversions', 'sessions', 'leads', 'conversion_rate',
   'avg_conversion_value', 'ai_conversions', 'ai_revenue', 'ai_conversion_share',

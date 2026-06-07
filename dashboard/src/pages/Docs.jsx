@@ -833,6 +833,17 @@ window.sourcetrack.identify('user_123', {
               </li>
             </ul>
 
+            <H3>Keyword / Term Reporting</H3>
+            <p>
+              SourceTrack supports keyword-level attribution reporting via URL parameter capture. When you group reports by **Keyword / Term**, the dashboard uses captured <code>utm_term</code> parameters.
+            </p>
+            <p>
+              For example, accessing your site via <code>?utm_source=google&amp;utm_medium=cpc&amp;utm_campaign=spring&amp;utm_term=running-shoes</code> will track the keyword as <IC>running-shoes</IC> under the selected attribution model.
+            </p>
+            <Note>
+              <strong>Important:</strong> Keyword reporting is parameter-based only. SourceTrack does not natively query Google Ads or Microsoft Ads API search-term reports. To capture keywords, you must configure your ad platform's tracking templates to pass keywords dynamically (for example, using <code>utm_term={"{keyword}"}</code> on Google Ads).
+            </Note>
+
             <H3>Manual Spend &amp; Cost Efficiency</H3>
             <p>
               To calculate cost-efficiency metrics, you must manually enter your advertising spend for each campaign, source, or medium:
@@ -1036,7 +1047,7 @@ await fetch('https://api.srctk.com/api/conversion', {
               { name: 'model', type: 'string', required: true, desc: 'Attribution model: first_touch · last_touch · first_touch_non_direct · last_touch_non_direct · ai_platforms · linear · u_shaped' },
               { name: 'date_from', type: 'string', required: true, desc: 'ISO 8601 date (YYYY-MM-DD). Start of range (inclusive).' },
               { name: 'date_to', type: 'string', required: true, desc: 'ISO 8601 date (YYYY-MM-DD). End of range (inclusive).' },
-              { name: 'group_by', type: 'string', required: false, desc: 'Dimension to break down by: channel · source · medium · campaign · ai_source · landing_page · country · device · conversion_type · date' },
+              { name: 'group_by', type: 'string', required: false, desc: 'Dimension to break down by: channel · source · medium · campaign · keyword · ai_source · landing_page · country · device · conversion_type · date' },
               { name: 'metric', type: 'string', required: false, desc: 'Metric to aggregate: revenue · conversions · conversion_rate · avg_conversion_value · ai_conversions · ai_revenue · ltv_revenue · days_to_convert · touchpoints_per_conversion' },
               { name: 'group_by2', type: 'string', required: false, desc: 'Optional second dimension for a 2D breakdown.' },
               { name: 'time_granularity', type: 'string', required: false, desc: 'When group_by=date: day · week · month · quarter · year' },

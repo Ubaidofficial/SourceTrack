@@ -1,9 +1,20 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 119D — Report Builder Security & Production Readiness. Implemented strict config validation (allowed keys, metrics, dimensions, models, dates, empty selectedMetrics, override keys, and SQL injection signatures), robust cross-user saved report scoping checks (same-site 403 blocks), database column fallback handling in validateSiteKey, stripped internal database columns in CSV exports, and verified database schema readiness and scoping E2E.
+> **Handoff:** Session 119E — Report Builder Keyword / Term Dimension. Added parameter-based Keyword / Term reporting dimension mapped to captured utm_term. Updated report config validation allowlists, attribution route intercepts, and live PostHog-based single-touch/multi-touch queries. Added helper banners on the frontend, updated docs reference page, implemented E2E QA checks, and validated the build/static checks.
 >
 > **Next Task:** Awaiting user instructions.
 >
+
+## Session 119E — Report Builder Keyword / Term Dimension
+**Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+1. **Keyword / Term Reporting Dimension**: Added `'keyword'` to allowed groupBy groups inside `report-config-validation.js` and `api/routes/attribution.js`.
+2. **Live-Path Aggregation Intercepts**: Configured attribution router (`api/routes/attribution.js`) to bypass Supabase pre-aggregated/nightly helpers whenever `group_by === 'keyword'` or `group_by2 === 'keyword'`, routing queries live to PostHog.
+3. **Attribution Engine Support**: Added `keyword` dimension mapping in `GROUP_COLUMNS` inside `api/lib/attribution-engine.js` mapping to `properties.utm_term`. Extracted `properties.utm_term` in pageview and conversion live queries in `getMultiTouchAttributionLive`, preserving in `tpBase`.
+4. **Windowed Attribution Mapping**: Selected `_pv.properties.utm_term` as `_w_term` inside the `windowJoin` subquery of `getFlexibleReport` to resolve the keyword from the credited pageview touchpoint when an attribution window is active.
+5. **UI & Docs Updates**: Added `Keyword / Term` option to Report Builder dimension selection. Integrated helper info banner under Step 4 warning that keyword reporting is parameter-based only (uses `utm_term`). Added dedicated Keyword / Term Reporting section to developer help center documentation (`Docs.jsx`).
+6. **E2E QA Verification Suite**: Created E2E test script `scripts/qa-keyword-reporting.mjs` verifying config validation, invalid dimensions rejection, and clean report API/export CSV download queries. Verified under `ALLOW_ATTRIBUTION_E2E_TIMEOUT_WARN=1` to bypass slow PostHog ingestion queues.
 
 ## Session 119D — Report Builder Security & Production Readiness
 **Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing

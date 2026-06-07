@@ -806,6 +806,14 @@ const GROUP_COLUMNS = {
     first_touch_non_direct: 'COALESCE(_nd.nd_campaign, properties.first_touch_campaign)',
     last_touch_non_direct: 'COALESCE(_nd.nd_campaign, properties.utm_campaign)'
   },
+  keyword: {
+    first_touch: "COALESCE(NULLIF(properties.utm_term, ''), 'unknown')",
+    last_touch: "COALESCE(NULLIF(properties.utm_term, ''), 'unknown')",
+    linear: "COALESCE(NULLIF(properties.utm_term, ''), 'unknown')",
+    ai_platforms: "'—'",
+    first_touch_non_direct: "COALESCE(NULLIF(_nd.nd_term, ''), COALESCE(NULLIF(properties.utm_term, ''), 'unknown'))",
+    last_touch_non_direct: "COALESCE(NULLIF(_nd.nd_term, ''), COALESCE(NULLIF(properties.utm_term, ''), 'unknown'))"
+  },
   ai_source: {
     first_touch: "COALESCE(NULLIF(properties.ai_source, ''), 'none')",
     last_touch: "COALESCE(NULLIF(properties.ai_source, ''), 'none')",
@@ -900,7 +908,8 @@ export async function getMultiTouchAttributionLive({
       properties.referrer AS referrer,
       properties.ai_source AS ai_source,
       properties.country AS country,
-      properties.device_type AS device_type
+      properties.device_type AS device_type,
+      properties.utm_term AS utm_term
     FROM events
     WHERE properties.site_id = '${safeSite}'
       AND event = '$conversion'
@@ -911,7 +920,7 @@ export async function getMultiTouchAttributionLive({
   `
   const convRows = await queryHogQL(convSql, 'multitouch_conversions_live')
 
-  const conversions = convRows.map(([uuid, distinctId, timestamp, conversionType, conversionValue, utmSource, utmMedium, utmCampaign, referrer, aiSource, country, deviceType]) => ({
+  const conversions = convRows.map(([uuid, distinctId, timestamp, conversionType, conversionValue, utmSource, utmMedium, utmCampaign, referrer, aiSource, country, deviceType, utmTerm]) => ({
     uuid,
     distinct_id: distinctId,
     timestamp,
@@ -923,7 +932,8 @@ export async function getMultiTouchAttributionLive({
     referrer: referrer || null,
     ai_source: aiSource || null,
     country: country || null,
-    device_type: deviceType || null
+    device_type: deviceType || null,
+    utm_term: utmTerm || null
   }))
 
   if (conversions.length === 0) {
@@ -948,7 +958,8 @@ export async function getMultiTouchAttributionLive({
       properties.gbraid AS gbraid,
       properties.fbclid AS fbclid,
       properties.msclkid AS msclkid,
-      properties.page_url AS page_url
+      properties.page_url AS page_url,
+      properties.utm_term AS utm_term
     FROM events
     WHERE properties.site_id = '${safeSite}'
       AND event = '$pageview'
@@ -962,7 +973,7 @@ export async function getMultiTouchAttributionLive({
   // Group pageviews by visitor distinct_id
   const pageviewsByVisitor = {}
   for (const row of pvRows) {
-    const [distinctId, timestamp, utmSource, utmMedium, utmCampaign, referrer, aiSource, gclid, gbraid, fbclid, msclkid, pageUrl] = row
+    const [distinctId, timestamp, utmSource, utmMedium, utmCampaign, referrer, aiSource, gclid, gbraid, fbclid, msclkid, pageUrl, utmTerm] = row
     if (!pageviewsByVisitor[distinctId]) pageviewsByVisitor[distinctId] = []
     pageviewsByVisitor[distinctId].push({
       timestamp,
@@ -976,6 +987,7 @@ export async function getMultiTouchAttributionLive({
       fbclid: fbclid || null,
       msclkid: msclkid || null,
       page_url: pageUrl || null,
+      utm_term: utmTerm || null,
       derived_source: utmSource || aiSource || (referrer ? (() => { try { return new URL(referrer).hostname.replace('www.', '') } catch (_) { return null } })() : null) || 'direct'
     })
   }
@@ -1023,6 +1035,7 @@ export async function getMultiTouchAttributionLive({
       if (groupBy === 'source') dimVal = share.source || 'direct'
       else if (groupBy === 'medium') dimVal = share.medium || 'none'
       else if (groupBy === 'campaign') dimVal = share.campaign || 'none'
+      else if (groupBy === 'keyword') dimVal = share.keyword || share.utm_term || 'unknown'
       else if (groupBy === 'channel') dimVal = share.channel || 'Direct'
       else if (groupBy === 'landing_page') {
         dimVal = share.page_url ? (() => { try { return new URL(share.page_url).pathname } catch (_) { return '/' } })() : '/'
@@ -1346,7 +1359,8 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
       SELECT distinct_id AS distinct_id,
         ${ndAggFn}(properties.utm_source, timestamp) AS nd_source,
         ${ndAggFn}(properties.utm_medium, timestamp) AS nd_medium,
-        ${ndAggFn}(properties.utm_campaign, timestamp) AS nd_campaign
+        ${ndAggFn}(properties.utm_campaign, timestamp) AS nd_campaign,
+        ${ndAggFn}(properties.utm_term, timestamp) AS nd_term
       FROM events
       WHERE properties.site_id = '${safeSite}'
         AND event = '$pageview'
@@ -1493,7 +1507,8 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
         events.uuid AS _win_uuid,
         ${aggFn}(_pv.properties.utm_source, _pv.timestamp) AS _w_source,
         ${aggFn}(_pv.properties.utm_medium, _pv.timestamp) AS _w_medium,
-        ${aggFn}(_pv.properties.utm_campaign, _pv.timestamp) AS _w_campaign
+        ${aggFn}(_pv.properties.utm_campaign, _pv.timestamp) AS _w_campaign,
+        ${aggFn}(_pv.properties.utm_term, _pv.timestamp) AS _w_term
       FROM events
       LEFT JOIN events AS _pv
         ON _pv.distinct_id = events.distinct_id
@@ -1510,20 +1525,24 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
       GROUP BY events.uuid
     ) _win ON events.uuid = _win._win_uuid`
 
-    if (groupBy === 'source' || groupBy === 'medium' || groupBy === 'campaign') {
+    if (groupBy === 'source' || groupBy === 'medium' || groupBy === 'campaign' || groupBy === 'keyword') {
       windowedDimExpr = groupBy === 'source'
         ? "COALESCE(NULLIF(_win._w_source, ''), 'direct')"
         : groupBy === 'medium'
           ? "COALESCE(NULLIF(_win._w_medium, ''), 'none')"
-          : '_win._w_campaign'
+          : groupBy === 'keyword'
+            ? "COALESCE(NULLIF(_win._w_term, ''), 'unknown')"
+            : '_win._w_campaign'
     }
 
-    if (groupBy2 === 'source' || groupBy2 === 'medium' || groupBy2 === 'campaign') {
+    if (groupBy2 === 'source' || groupBy2 === 'medium' || groupBy2 === 'campaign' || groupBy2 === 'keyword') {
       windowedDim2Expr = groupBy2 === 'source'
         ? "COALESCE(NULLIF(_win._w_source, ''), 'direct')"
         : groupBy2 === 'medium'
           ? "COALESCE(NULLIF(_win._w_medium, ''), 'none')"
-          : '_win._w_campaign'
+          : groupBy2 === 'keyword'
+            ? "COALESCE(NULLIF(_win._w_term, ''), 'unknown')"
+            : '_win._w_campaign'
     }
   }
 
@@ -1590,6 +1609,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
           case 'source': return "any(COALESCE(NULLIF(properties.first_touch_source, ''), 'direct'))"
           case 'medium': return "any(COALESCE(NULLIF(properties.first_touch_medium, ''), 'none'))"
           case 'campaign': return 'any(properties.first_touch_campaign)'
+          case 'keyword': return "any(COALESCE(NULLIF(properties.utm_term, ''), 'unknown'))"
           case 'ai_source': return "any(COALESCE(NULLIF(properties.ai_source, ''), 'none'))"
           case 'landing_page': return "argMin(COALESCE(NULLIF(properties.page_url, ''), '/'), timestamp)"
           case 'country': return "any(COALESCE(NULLIF(properties.country, ''), 'unknown'))"
@@ -1603,6 +1623,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
           case 'source': return "COALESCE(NULLIF(any(_nd.nd_source), ''), COALESCE(NULLIF(any(properties.first_touch_source), ''), 'direct'))"
           case 'medium': return "COALESCE(NULLIF(any(_nd.nd_medium), ''), COALESCE(NULLIF(any(properties.first_touch_medium), ''), 'none'))"
           case 'campaign': return "COALESCE(NULLIF(any(_nd.nd_campaign), ''), any(properties.first_touch_campaign))"
+          case 'keyword': return "COALESCE(NULLIF(any(_nd.nd_term), ''), any(COALESCE(NULLIF(properties.utm_term, ''), 'unknown')))"
           case 'ai_source': return "any(COALESCE(NULLIF(properties.ai_source, ''), 'none'))"
           case 'landing_page': return "argMin(COALESCE(NULLIF(properties.page_url, ''), '/'), timestamp)"
           case 'country': return "any(COALESCE(NULLIF(properties.country, ''), 'unknown'))"
@@ -1616,6 +1637,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
           case 'source': return "COALESCE(NULLIF(any(_nd.nd_source), ''), COALESCE(NULLIF(argMax(properties.utm_source, timestamp), ''), 'direct'))"
           case 'medium': return "COALESCE(NULLIF(any(_nd.nd_medium), ''), COALESCE(NULLIF(argMax(properties.utm_medium, timestamp), ''), 'none'))"
           case 'campaign': return "COALESCE(NULLIF(any(_nd.nd_campaign), ''), argMax(properties.utm_campaign, timestamp))"
+          case 'keyword': return "COALESCE(NULLIF(any(_nd.nd_term), ''), argMax(COALESCE(NULLIF(properties.utm_term, ''), 'unknown'), timestamp))"
           case 'ai_source': return "argMax(COALESCE(NULLIF(properties.ai_source, ''), 'none'), timestamp)"
           case 'landing_page': return "argMax(COALESCE(NULLIF(properties.page_url, ''), '/'), timestamp)"
           case 'country': return "argMax(COALESCE(NULLIF(properties.country, ''), 'unknown'), timestamp)"
@@ -1630,6 +1652,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
         case 'source': return "argMax(COALESCE(NULLIF(properties.utm_source, ''), 'direct'), timestamp)"
         case 'medium': return "argMax(COALESCE(NULLIF(properties.utm_medium, ''), 'none'), timestamp)"
         case 'campaign': return 'argMax(properties.utm_campaign, timestamp)'
+        case 'keyword': return "argMax(COALESCE(NULLIF(properties.utm_term, ''), 'unknown'), timestamp)"
         case 'ai_source': return "argMax(COALESCE(NULLIF(properties.ai_source, ''), 'none'), timestamp)"
         case 'landing_page': return "argMax(COALESCE(NULLIF(properties.page_url, ''), '/'), timestamp)"
         case 'country': return "argMax(COALESCE(NULLIF(properties.country, ''), 'unknown'), timestamp)"
@@ -1657,7 +1680,8 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
       SELECT distinct_id AS distinct_id,
         ${ndAggFn}(properties.utm_source, timestamp) AS nd_source,
         ${ndAggFn}(properties.utm_medium, timestamp) AS nd_medium,
-        ${ndAggFn}(properties.utm_campaign, timestamp) AS nd_campaign
+        ${ndAggFn}(properties.utm_campaign, timestamp) AS nd_campaign,
+        ${ndAggFn}(properties.utm_term, timestamp) AS nd_term
       FROM events
       WHERE properties.site_id = '${safeSite}'
         AND event = '$pageview'
@@ -2140,6 +2164,8 @@ export function calculateAttribution(touchpoints, conversionValue) {
     source: tp.utm_source || null,
     medium: tp.utm_medium || null,
     campaign: tp.utm_campaign || null,
+    keyword: tp.utm_term || null,
+    utm_term: tp.utm_term || null,
     channel: tpCh(tp),
     timestamp: tp.timestamp
   })
@@ -2240,12 +2266,16 @@ export function calculateAttribution(touchpoints, conversionValue) {
       source: firstTouchpoint.utm_source || null,
       medium: firstTouchpoint.utm_medium || null,
       campaign: firstTouchpoint.utm_campaign || null,
+      keyword: firstTouchpoint.utm_term || null,
+      utm_term: firstTouchpoint.utm_term || null,
       timestamp: firstTouchpoint.timestamp
     },
     last_touch: {
       source: lastTouchpoint.utm_source || null,
       medium: lastTouchpoint.utm_medium || null,
       campaign: lastTouchpoint.utm_campaign || null,
+      keyword: lastTouchpoint.utm_term || null,
+      utm_term: lastTouchpoint.utm_term || null,
       timestamp: lastTouchpoint.timestamp
     },
     linear: adjustReconciliation(linear),
