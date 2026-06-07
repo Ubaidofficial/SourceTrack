@@ -5,6 +5,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 121A | 2026-06-07 | `main` | Add Saved Reports to Dashboard Workflow — Created migration for show_on_dashboard, position, and size columns in saved_reports. Updated saved-reports list/patch API routes. Added toggles and loading lock in Report Builder, and created isolated widget query cards with strong cache invalidation on the dashboard. Verified all E2E widget validation QA checks. | ✅ | No |
 | 120B | 2026-06-07 | `main` | Revenue Provider + Attribution Status Reporting — Added provider, attribution_status, and stitching_method dimensions. Added validations, routing bypasses, HogQL mappings, LTV, UI/Docs updates, and E2E QA checks. | ✅ | No |
 | 120A | 2026-06-07 | `main` | Report Builder Referrer Domain Dimension — Mapped Referrer Domain reporting dimension (`referrer_domain`) to captured browser referrer. Added validations, routing bypasses, HogQL extraction, LTV support, UI helpers, help docs, and verification tests. | ✅ | No |
 | 119E | 2026-06-07 | `main` | Report Builder Keyword / Term Dimension — Added Keyword/Term dimension (`keyword`) mapped to utm_term. Bypassed Supabase aggregated tables, added in-memory and live HogQL support, UI filters, help docs, and E2E QA checks. | ✅ | No |
@@ -790,3 +791,24 @@ curl -i https://api.srctk.com/tracker/tracker.min.js
 - Created `scripts/qa-revenue-provider-reporting.mjs` verifying normalization logic, config validation, invalid dimensions rejection, saved report config, attribution API smoke, and export API smoke.
 - Verified all static validations, frontend production build, and all QA test runs pass cleanly.
 
+---
+
+## Session 121A — Add Saved Reports to Dashboard Workflow
+
+**Date:** 2026-06-07
+**Branch:** `main`
+**Build:** ✅ passing (E2E QA pass)
+
+### 1. Database Schema & Backend Routes
+- Created SQL migration `20260607133300_add_dashboard_fields_to_saved_reports.sql` adding `show_on_dashboard` (boolean), `dashboard_position` (integer), and `dashboard_size` (text checked with constraint `saved_reports_dashboard_size_check`) columns to `saved_reports`.
+- Updated `GET /saved` endpoint to filter by `show_on_dashboard=true`, enforce a limit of 9, and sort by `dashboard_position` ASC then `updated_at` DESC.
+- Created `PATCH /saved/:id/dashboard` route with strict app-layer site and user authentication checking to safely toggle dashboard visibility, position, and size.
+
+### 2. Frontend Report Builder & Dashboard Widgets
+- Added dashboard toggles in Report Builder save flow and list sidebar. Added an `isDashboardToggling` block state to disable the toggle button and ignore concurrent clicks during report creation.
+- Mounted a new `<DashboardWidgetCard />` grid in `Dashboard.jsx` to render pinned widgets in individual cards. Configured a strong useQuery queryKey cache key based on `report.updated_at` and `JSON.stringify(cfg)` to prevent stale cache displays.
+- Documented "Dashboard Widgets" in help center Docs (`Docs.jsx`).
+
+### 3. Verification & E2E QA
+- Created `scripts/qa-dashboard-widgets.mjs` verifying migration columns,PATCH visibility updates, bad request 400 validations (missing fields, invalid string positions, non-boolean values), maximum 9 limit, position ASC sorting, and cross-user isolation.
+- Executed all static checks, production build, and QA test suites cleanly.

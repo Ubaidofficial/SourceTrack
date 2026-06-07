@@ -1,9 +1,33 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 120B — Revenue Provider + Attribution Status Reporting. Added Revenue Provider, Attribution Status, and Stitching Method reporting dimensions mapped to conversion metadata/properties. Updated config validations, live/LTV query paths, and frontend wizard/documentation. Verified all static, build, and API QA verification flows successfully.
+> **Handoff:** Session 121A — Add Saved Reports to Dashboard Workflow. Created migration for show_on_dashboard, position, and size columns in saved_reports. Updated saved-reports list/patch API routes with strict security validations. Added toggles and loader lock in Report Builder, and created isolated widget query cards with strong cache invalidation on the dashboard. Verified all static, build, and widget API/security checks successfully.
 >
 > **Next Task:** Awaiting user instructions.
 >
+
+## Session 121A — Add Report to Dashboard Workflow
+**Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing (E2E QA pass)
+
+### Completed
+1. **Database Schema**: Created Supabase SQL migration (`20260607133300_add_dashboard_fields_to_saved_reports.sql`) adding `show_on_dashboard` (boolean), `dashboard_position` (integer), and `dashboard_size` (text check constraint) columns to `saved_reports`.
+2. **Backend API Route**: Modified `GET /saved` endpoint to support `show_on_dashboard=true` filtering, limiting results to 9 widgets ordered by `dashboard_position` ASC and `updated_at` DESC. Added `PATCH /saved/:id/dashboard` visibility route with strict site/owner scoping and validation.
+3. **Frontend Report Builder**: Mapped dashboard toggles to the save panel and saved list. Added `isDashboardToggling` block state to disable the toggle button and ignore concurrent/rapid clicks during unsaved report creation.
+4. **Frontend Dashboard**: Replaced the legacy top slice placeholder with the new isolated `<DashboardWidgetCard />` component grid. Configured a strong React Query cache key including `report.updated_at` and `JSON.stringify(config)` to prevent stale card states.
+5. **Help Docs & QA verification**: Documented widgets in `Docs.jsx`. Created `scripts/qa-dashboard-widgets.mjs` verifying schema, visibility toggles, 400 validations (missing fields, invalid position string "abc", non-boolean show_on_dashboard), limit of 9, position ASC sorting, and cross-user isolation.
+
+### Files changed
+- `api/routes/saved-reports.js`
+- `dashboard/src/pages/Dashboard.jsx`
+- `dashboard/src/pages/ReportBuilder.jsx`
+- `dashboard/src/pages/Docs.jsx`
+- `scripts/qa-dashboard-widgets.mjs` [NEW]
+- `supabase/migrations/20260607133300_add_dashboard_fields_to_saved_reports.sql` [NEW]
+
+### Verification commands
+```bash
+node scripts/qa-dashboard-widgets.mjs
+node scripts/qa-schema-readiness.mjs
+```
 
 ## Session 120B — Revenue Provider + Attribution Status Reporting
 **Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing

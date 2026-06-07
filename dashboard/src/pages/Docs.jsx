@@ -104,6 +104,7 @@ const NAV = [
   { id: 'exclusions',       label: 'Path Exclusions',   indent: true },
   { id: 'cookieless',       label: 'Cookieless Mode',   indent: true },
   { id: 'timezone',         label: 'Timezone Behavior', indent: true },
+  { id: 'dashboard-widgets', label: 'Dashboard Widgets', indent: true },
   { id: 'utm-best-practices', label: 'UTM & Cost Tracking', indent: true },
   { id: 'recipes',          label: 'Installation Guides' },
   { id: 'track',            label: 'POST /api/track' },
@@ -757,6 +758,33 @@ window.sourcetrack.identify('user_123', {
             </ul>
             <Note>
               Timezone-aware query execution utilizes index-friendly padded search windows (±24h UTC boundaries) to retrieve candidate rows, keeping queries index-friendly and performance-conscious.
+            </Note>
+          </Section>
+
+          {/* ── Dashboard Widgets ────────────────────────────────────────── */}
+          <Section id="dashboard-widgets" title="Dashboard Widgets">
+            <p>
+              SourceTrack allows pinning custom saved Report Builder configurations to your Performance Overview dashboard as reusable cards or widgets.
+            </p>
+            <H3>Saves vs Pinned Widgets</H3>
+            <p>
+              Saving a report configuration keeps it in your <strong>Saved Reports</strong> list inside the Report Builder for quick loading and editing.
+              Pinning a report (by clicking <strong>Add to Dashboard</strong>) instructs the main dashboard layout to fetch the configured metrics and dimensions live on every dashboard visit.
+            </p>
+            <H3>Widget Layout & Sizes</H3>
+            <ul className="list-disc list-inside space-y-2 pl-1 text-sm text-gray-600 dark:text-gray-400">
+              <li>
+                <strong>Widget Sizes:</strong> Widgets support three responsive sizes: <code>small</code>, <code>medium</code>, and <code>large</code>. This controls the number of columns they occupy on your overview grid (1, 2, or 3 columns respectively).
+              </li>
+              <li>
+                <strong>Widget Ordering:</strong> Pinned widgets are sorted by their database layout position (ascending) and then by their update date/time (newest first).
+              </li>
+              <li>
+                <strong>Limit:</strong> The dashboard displays a maximum of 9 pinned widgets to maintain high query efficiency and clean dashboard presentation.
+              </li>
+            </ul>
+            <Note>
+              <strong>Data Isolation:</strong> Pinned dashboard widgets are scoped strictly by site and user. An authenticated user can only view widgets they own on sites they are explicitly members of, preventing any cross-customer data leakage.
             </Note>
           </Section>
 

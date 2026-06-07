@@ -20,7 +20,8 @@ import {
 } from 'chart.js'
 import {
   RefreshCw, Bookmark, Trash2, Download, Copy,
-  Search, ChevronDown, ArrowRight, Plus, HelpCircle
+  Search, ChevronDown, ArrowRight, Plus, HelpCircle,
+  BarChart3
 } from 'lucide-react'
 import ConversionExplanationModal from '../components/ConversionExplanationModal'
 import { hasFeature } from '../lib/planFeatures'
@@ -294,6 +295,8 @@ export default function ReportBuilder() {
   })
 
   const [saveFeedback, setSaveFeedback] = useState(null)
+  const [dashboardFeedback, setDashboardFeedback] = useState(null)
+  const [isDashboardToggling, setIsDashboardToggling] = useState(false)
   const [priorReportData, setPriorReportData] = useState(null)
 
   const priorPeriod = getPriorPeriod(effectiveDateFrom, effectiveDateTo)
@@ -313,6 +316,8 @@ export default function ReportBuilder() {
 
   const results = data?.results || []
   const nightlyNotice = data?._notice || null   // shown when nightly-computed model has no data yet
+  const activeReport = (savedReports || []).find(r => r.id === editingId)
+  const isPinned = activeReport?.show_on_dashboard || false
   const metricDef = METRICS.find(m => m.key === metric)
   const metricLabel = metricDef?.label || 'Value'
   const metricFormat = metricDef?.format || ((v) => String(v))
@@ -441,6 +446,75 @@ export default function ReportBuilder() {
       await fetchApi(`/reports/saved/${id}?site_key=${encodeURIComponent(site.site_key)}`, { method: 'DELETE' })
       refetchReports()
     } catch { /* silent */ }
+  }
+
+  const handleDashboardToggle = async () => {
+    if (isDashboardToggling) return
+    setIsDashboardToggling(true)
+
+    let reportId = editingId
+    const name = reportName.trim() || `Report ${new Date().toLocaleDateString()}`
+    const config = {
+      model, groupBy, metric, selectedMetrics, chartType, dateFrom, dateTo,
+      granularity, groupBy2, attributionWindow, attributeBy,
+      filters, isRolling, rollingDays
+    }
+
+    try {
+      if (!reportId) {
+        // Step 1: Save report first to database (server will run config validation)
+        const saveRes = await fetchApi(`/reports/saved?site_key=${encodeURIComponent(site.site_key)}`, {
+          method: 'POST',
+          body: { name, config }
+        })
+        if (!saveRes?.id) {
+          throw new Error('Failed to save report configuration')
+        }
+        reportId = saveRes.id
+        setEditingId(reportId)
+        setReportName(saveRes.name)
+      }
+
+      // Find if already pinned
+      const activeReport = (savedReports || []).find(r => r.id === reportId)
+      const nextPinnedState = !(activeReport?.show_on_dashboard)
+
+      // Step 2: PATCH dashboard visibility
+      const patchRes = await fetchApi(`/reports/saved/${reportId}/dashboard?site_key=${encodeURIComponent(site.site_key)}`, {
+        method: 'PATCH',
+        body: {
+          show_on_dashboard: nextPinnedState,
+          dashboard_size: activeReport?.dashboard_size || 'medium',
+          dashboard_position: activeReport?.dashboard_position || 0
+        }
+      })
+
+      setDashboardFeedback(nextPinnedState ? 'pinned' : 'unpinned')
+      await refetchReports()
+    } catch (err) {
+      console.error('Dashboard toggle failed:', err)
+      setDashboardFeedback('error')
+    } finally {
+      setIsDashboardToggling(false)
+    }
+    setTimeout(() => setDashboardFeedback(null), 3000)
+  }
+
+  const handleListPinToggle = async (report) => {
+    try {
+      const nextState = !report.show_on_dashboard
+      await fetchApi(`/reports/saved/${report.id}/dashboard?site_key=${encodeURIComponent(site.site_key)}`, {
+        method: 'PATCH',
+        body: {
+          show_on_dashboard: nextState,
+          dashboard_size: report.dashboard_size || 'medium',
+          dashboard_position: report.dashboard_position || 0
+        }
+      })
+      refetchReports()
+    } catch (err) {
+      console.error('List pin toggle failed:', err)
+    }
   }
 
   const handleLoad = (report) => {
@@ -1150,18 +1224,37 @@ export default function ReportBuilder() {
                   <input type="text" value={reportName} onChange={(e) => setReportName(e.target.value)}
                     placeholder="Report name..." maxLength={60}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white" />
-                  <div className="flex gap-2">
-                    <button onClick={handleSave}
-                      className="flex-1 px-3 py-2 bg-st-black text-white rounded-lg text-sm hover:bg-gray-800 flex items-center justify-center gap-1">
-                      <Bookmark className="w-4 h-4" />
-                      {editingId ? 'Update report' : 'Save report'}
-                    </button>
-                    {editingId && (
-                      <button onClick={resetReport}
-                        className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-[#242829] rounded-lg hover:bg-gray-200 dark:hover:bg-[#2A2E2E]">
-                        Cancel
+                  <div className="flex flex-col gap-2">
+                    <div className="flex gap-2">
+                      <button onClick={handleSave}
+                        className="flex-1 px-3 py-2 bg-st-black text-white rounded-lg text-sm hover:bg-gray-800 flex items-center justify-center gap-1">
+                        <Bookmark className="w-4 h-4" />
+                        {editingId ? 'Update report' : 'Save report'}
                       </button>
-                    )}
+                      {editingId && (
+                        <button onClick={resetReport}
+                          className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-[#242829] rounded-lg hover:bg-gray-200 dark:hover:bg-[#2A2E2E]">
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+
+                    <button onClick={handleDashboardToggle}
+                      disabled={isDashboardToggling}
+                      className={`w-full px-3 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+                        isDashboardToggling
+                          ? 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600 border border-gray-200 dark:border-gray-700 cursor-not-allowed'
+                          : isPinned
+                            ? 'bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-900/30 border border-red-200 dark:border-red-800'
+                            : 'bg-lime-50 text-lime-800 hover:bg-lime-100 dark:bg-lime-950/20 dark:text-lime-400 dark:hover:bg-lime-900/30 border border-lime-200 dark:border-lime-800'
+                      }`}>
+                      {isDashboardToggling ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <BarChart3 className="w-4 h-4" />
+                      )}
+                      {isDashboardToggling ? 'Toggling...' : isPinned ? 'Remove from Dashboard' : 'Add to Dashboard'}
+                    </button>
                   </div>
                   {saveFeedback === 'saved' && (
                     <p className="text-xs text-green-600 mt-1.5">Report saved</p>
@@ -1171,6 +1264,18 @@ export default function ReportBuilder() {
                   )}
                   {saveFeedback === 'error' && (
                     <p className="text-xs text-red-600 mt-1.5">Failed to save — try again</p>
+                  )}
+                  {dashboardFeedback === 'pinned' && (
+                    <div className="text-xs text-green-600 mt-1.5 flex items-center justify-between bg-green-50 dark:bg-green-950/20 px-2 py-1.5 rounded border border-green-100 dark:border-green-800">
+                      <span>✓ Pinned to dashboard</span>
+                      <a href="/" className="font-semibold underline hover:text-green-800 dark:hover:text-green-300">View Dashboard →</a>
+                    </div>
+                  )}
+                  {dashboardFeedback === 'unpinned' && (
+                    <p className="text-xs text-st-gray mt-1.5">Removed from dashboard</p>
+                  )}
+                  {dashboardFeedback === 'error' && (
+                    <p className="text-xs text-red-600 mt-1.5">Failed to update dashboard widget — try again</p>
                   )}
                 </div>
               </>
@@ -1202,6 +1307,15 @@ export default function ReportBuilder() {
                           </div>
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
+                          <button onClick={() => handleListPinToggle(r)}
+                            title={r.show_on_dashboard ? "Remove from Dashboard" : "Pin to Dashboard"}
+                            className={`p-1 rounded transition-colors ${
+                              r.show_on_dashboard
+                                ? 'text-lime-700 bg-lime-50 hover:bg-lime-100 dark:text-lime-400 dark:bg-lime-950/20'
+                                : 'text-st-gray hover:text-st-black hover:bg-gray-100 dark:hover:bg-[#242829]'
+                            }`}>
+                            <Bookmark className="w-3.5 h-3.5" style={{ fill: r.show_on_dashboard ? 'currentColor' : 'none' }} />
+                          </button>
                           <button onClick={() => handleLoad(r)}
                             className="px-2 py-1 text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-[#242829] hover:bg-gray-200 dark:hover:bg-[#2A2E2E] rounded transition-colors">
                             Load

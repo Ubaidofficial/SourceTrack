@@ -38,6 +38,21 @@ async function run() {
   }
   console.log('✅ attributed_conversions.custom_properties column exists.\n')
 
+  console.log('3. Checking saved_reports dashboard widget columns...')
+  const { data: reportData, error: reportErr } = await supabase
+    .from('saved_reports')
+    .select('show_on_dashboard, dashboard_position, dashboard_size')
+    .limit(1)
+
+  if (reportErr) {
+    console.error('❌ Error querying saved_reports dashboard columns:')
+    console.error(reportErr.message || reportErr)
+    console.error('👉 Please apply the migration SQL in your Supabase SQL Editor:');
+    console.error('   supabase/migrations/20260607133300_add_dashboard_fields_to_saved_reports.sql\n');
+    process.exit(1)
+  }
+  console.log('✅ saved_reports dashboard columns exist.\n')
+
   console.log('🎉 SCHEMA READINESS CHECK PASSED.')
   process.exit(0)
 }

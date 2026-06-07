@@ -294,50 +294,14 @@ export default function Dashboard() {
     enabled: !!site?.site_key
   })
 
-  const { data: savedReports = [] } = useQuery({
-    queryKey: ['saved-reports-dash', site?.site_key],
+  const { data: dashboardReports = [] } = useQuery({
+    queryKey: ['dashboard-widgets', site?.site_key],
     queryFn: async () => {
       if (!site?.site_key) return []
       if (!hasFeature(site?.plan, 'saved_reports')) return []
-      return fetchApi(`/reports/saved?site_key=${encodeURIComponent(site.site_key)}`)
+      return fetchApi(`/reports/saved?site_key=${encodeURIComponent(site.site_key)}&show_on_dashboard=true`)
     },
     enabled: !!site?.site_key && !previewMode && hasFeature(site?.plan, 'saved_reports')
-  })
-
-  const topReports = (savedReports || []).slice(0, 3)
-
-  const reportQueries = useQueries({
-    queries: topReports.map((r) => {
-      const cfg = r.config || {}
-      const reportDateRange = cfg.isRolling
-        ? getRollingDateRange(cfg.rollingDays || 30)
-        : { from: cfg.dateFrom || format(subDays(new Date(), 30), 'yyyy-MM-dd'), to: cfg.dateTo || format(new Date(), 'yyyy-MM-dd') }
-      return {
-        queryKey: ['saved-report-data', r.id, site?.site_key, cfg.isRolling ? `rolling-${cfg.rollingDays || 30}` : null],
-        queryFn: async () => {
-          if (!site?.site_key) return null
-          const params = new URLSearchParams({
-            site_key: site.site_key,
-            model: cfg.model || 'last_touch',
-            date_from: reportDateRange.from,
-            date_to: reportDateRange.to,
-            group_by: cfg.groupBy || 'source',
-            metric: cfg.metric || 'revenue'
-          })
-          if (cfg.granularity && cfg.granularity !== 'day') params.set('time_granularity', cfg.granularity)
-          if (cfg.groupBy2) params.set('group_by2', cfg.groupBy2)
-          if (cfg.attributionWindow) params.set('attribution_window', cfg.attributionWindow)
-          if (cfg.attributeBy && cfg.attributeBy !== 'conversion_date') params.set('attribute_by', cfg.attributeBy)
-          if (cfg.filters) {
-            Object.entries(cfg.filters).forEach(([k, v]) => {
-              if (v) params.set(`filter_${k}`, v)
-            })
-          }
-          return fetchApi(`/attribution?${params}`)
-        },
-        enabled: !!site?.site_key && !!cfg.metric
-      }
-    })
   })
 
 
@@ -1112,85 +1076,36 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Saved Reports — shown first, above the analytics wall */}
-          {!previewMode && (savedReports.length > 0 ? (
-            <DashboardCard title="Your Reports"
-              subtitle="Saved report configurations — data fetched live"
+          {/* Pinned Reports widgets - isolated states, custom sizes, max 9 */}
+          {!previewMode && hasFeature(site?.plan, 'saved_reports') && (
+            <DashboardCard title="Pinned Reports"
+              subtitle="Saved report widgets pinned to your dashboard — max 9"
               action={
                 <button onClick={() => navigate('/report-builder')} className="text-xs text-st-black dark:text-white hover:text-gray-700 font-medium flex items-center gap-1">
-                  <Plus className="w-3 h-3" /> New Report
+                  <Plus className="w-3 h-3" /> Manage Reports
                 </button>
               }
             >
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {topReports.map((report, idx) => {
-                  const cfg = report.config || {}
-                  const reportData = reportQueries[idx]?.data
-                  const results = reportData?.results || []
-                  const total = results.reduce((s, r) => {
-                    const metricKey = cfg.metric || 'revenue'
-                    return s + (r[metricKey] || r.revenue || r.conversions || r.sessions || 0)
-                  }, 0)
-                  const metricDef = METRIC_DEFS[cfg.metric] || METRIC_DEFS.revenue
-                  const maxVal = Math.max(...results.slice(0, 4).map(r => {
-                    const mk = cfg.metric || 'revenue'
-                    return r[mk] || r.revenue || r.conversions || r.sessions || 0
-                  }), 1)
-
-                  return (
-                    <button
-                      key={report.id}
-                      onClick={() => {
-                        sessionStorage.setItem('sourcetrack_edit_widget', JSON.stringify({
-                          id: report.id, name: report.name, ...cfg
-                        }))
-                        navigate(`/report-builder?edit=${report.id}`)
-                      }}
-                      className="bg-gray-50 dark:bg-[#111414] rounded-lg p-3 text-left hover:bg-gray-100 dark:hover:bg-[#2A2E2E] transition-colors border border-gray-100 dark:border-[#2A2E2E] hover:border-gray-300"
-                    >
-                      <p className="text-xs font-medium text-st-black dark:text-white truncate">{report.name}</p>
-                      <p className="text-lg font-bold text-st-black dark:text-white mt-0.5">
-                        {metricDef.format(total)}
-                      </p>
-                      <p className="text-xs text-st-gray">{metricDef.label} total</p>
-                      {cfg.isRolling && (
-                        <p className="text-xs text-lime-700 mt-0.5">Rolling — last {cfg.rollingDays || 30} days</p>
-                      )}
-
-                      {results.length > 0 ? (
-                        <div className="mt-2 space-y-1">
-                          {results.slice(0, 5).map((r, i) => {
-                            const mk = cfg.metric || 'revenue'
-                            const val = r[mk] || r.revenue || r.conversions || r.sessions || 0
-                            const barW = maxVal > 0 ? (val / maxVal) * 100 : 0
-                            return (
-                              <div key={i} className="flex items-center gap-1.5">
-                                <span className="text-xs text-st-gray dark:text-gray-400 w-16 truncate flex-shrink-0">
-                                  {r.dim_value || '—'}
-                                </span>
-                                <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                  <div className="h-full bg-st-black rounded-full transition-all" style={{ width: `${barW}%` }} />
-                                </div>
-                                <span className="text-xs text-gray-600 dark:text-gray-300 w-12 text-right flex-shrink-0">
-                                  {metricDef.format(val)}
-                                </span>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      ) : reportQueries[idx]?.isLoading ? (
-                        <div className="h-16 flex items-center justify-center">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400" />
-                        </div>
-                      ) : (
-                        <p className="text-xs text-st-gray dark:text-gray-400 mt-2">No data for this period</p>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
+              {dashboardReports.length === 0 ? (
+                <div className="text-center py-8 bg-gray-50/50 dark:bg-[#111414]/30 rounded-lg border border-dashed border-gray-200 dark:border-[#2A2E2E] p-6">
+                  <Bookmark className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">No reports pinned to dashboard</p>
+                  <p className="text-xs text-st-gray dark:text-gray-500 mt-1 max-w-sm mx-auto mb-3">
+                    Pin your saved reports from the Report Builder to display them as widgets on your dashboard.
+                  </p>
+                  <button onClick={() => navigate('/report-builder')} className="px-3 py-1.5 bg-st-black text-white rounded-lg text-xs font-bold hover:bg-gray-800">
+                    Go to Report Builder
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {dashboardReports.map((report) => (
+                    <DashboardWidgetCard key={report.id} report={report} site={site} />
+                  ))}
+                </div>
+              )}
             </DashboardCard>
-          ) : null)}
+          )}
 
           {/* Row 1: Recent Leads + Revenue Trend */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -1644,6 +1559,165 @@ export default function Dashboard() {
         siteKey={site?.site_key}
         model={explainModel}
       />
+    </div>
+  )
+}
+
+// Isolated Dashboard Widget Component
+function DashboardWidgetCard({ report, site }) {
+  const navigate = useNavigate()
+  const cfg = report.config || {}
+
+  // Guardrail 3: Handle legacy/invalid configurations safely
+  const reportDateRange = (() => {
+    try {
+      if (cfg.isRolling) {
+        return getRollingDateRange(cfg.rollingDays || 30)
+      }
+      return {
+        from: cfg.dateFrom || format(subDays(new Date(), 30), 'yyyy-MM-dd'),
+        to: cfg.dateTo || format(new Date(), 'yyyy-MM-dd')
+      }
+    } catch (e) {
+      console.warn("Invalid widget date range:", report.id, e)
+      return {
+        from: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
+        to: format(new Date(), 'yyyy-MM-dd')
+      }
+    }
+  })()
+
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: [
+      'saved-report-data',
+      report.id,
+      report.updated_at,
+      site?.site_key,
+      JSON.stringify(cfg)
+    ],
+    queryFn: async () => {
+      // Guardrail 3: do not execute if config missing metric
+      if (!cfg.metric) {
+        throw new Error('Config missing metric')
+      }
+      const params = new URLSearchParams({
+        site_key: site.site_key,
+        model: cfg.model || 'last_touch',
+        date_from: reportDateRange.from,
+        date_to: reportDateRange.to,
+        group_by: cfg.groupBy || 'source',
+        metric: cfg.metric || 'revenue'
+      })
+      if (cfg.granularity && cfg.granularity !== 'day') params.set('time_granularity', cfg.granularity)
+      if (cfg.groupBy2) params.set('group_by2', cfg.groupBy2)
+      if (cfg.attributionWindow) params.set('attribution_window', cfg.attributionWindow)
+      if (cfg.attributeBy && cfg.attributeBy !== 'conversion_date') params.set('attribute_by', cfg.attributeBy)
+      if (cfg.filters) {
+        Object.entries(cfg.filters).forEach(([k, v]) => {
+          if (v) params.set(`filter_${k}`, v)
+        })
+      }
+      return fetchApi(`/attribution?${params}`)
+    },
+    enabled: !!site?.site_key && !!cfg.metric
+  })
+
+  const results = data?.results || []
+  const total = results.reduce((s, r) => {
+    const metricKey = cfg.metric || 'revenue'
+    return s + (r[metricKey] || r.revenue || r.conversions || r.sessions || 0)
+  }, 0)
+  const metricDef = METRIC_DEFS[cfg.metric] || METRIC_DEFS.revenue
+  const maxVal = Math.max(...results.slice(0, 4).map(r => {
+    const mk = cfg.metric || 'revenue'
+    return r[mk] || r.revenue || r.conversions || r.sessions || 0
+  }), 1)
+
+  const sizeClasses = {
+    small: 'col-span-1',
+    medium: 'col-span-1 md:col-span-2',
+    large: 'col-span-1 md:col-span-3'
+  }
+  const sizeClass = sizeClasses[report.dashboard_size] || sizeClasses.medium
+
+  return (
+    <div className={`bg-gray-50 dark:bg-[#111414] rounded-lg p-4 text-left border border-gray-100 dark:border-[#2A2E2E] hover:border-gray-300 dark:hover:border-gray-600 transition-colors flex flex-col justify-between ${sizeClass}`}>
+      <div>
+        <div className="flex items-start justify-between gap-2 border-b border-gray-100 dark:border-[#2A2E2E] pb-2">
+          <div className="min-w-0">
+            <h4 className="text-xs font-semibold text-st-black dark:text-white truncate" title={report.name}>{report.name}</h4>
+            <div className="flex flex-wrap gap-x-1.5 text-[9px] text-st-gray dark:text-gray-400 mt-0.5">
+              <span>{MODELS.find(m => m.key === cfg.model)?.label || cfg.model}</span>
+              <span>•</span>
+              <span className="truncate">{cfg.groupBy}</span>
+              {cfg.isRolling && (
+                <>
+                  <span>•</span>
+                  <span className="text-lime-700 font-medium">Rolling ({cfg.rollingDays}d)</span>
+                </>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              sessionStorage.setItem('sourcetrack_edit_widget', JSON.stringify({
+                id: report.id, name: report.name, ...cfg
+              }))
+              navigate(`/report-builder?edit=${report.id}`)
+            }}
+            className="text-[10px] text-st-gray hover:text-st-black dark:hover:text-white font-medium shrink-0"
+          >
+            Edit
+          </button>
+        </div>
+
+        {isLoading ? (
+          <div className="h-28 flex items-center justify-center">
+            <RefreshCw className="w-4 h-4 animate-spin text-st-gray" />
+          </div>
+        ) : isError ? (
+          <div className="h-28 flex flex-col items-center justify-center text-center p-2">
+            <span className="text-red-500 text-xs font-semibold">⚠️ Query failed</span>
+            <p className="text-[9px] text-st-gray mt-1 leading-normal">
+              {error?.message || 'Configuration error'}
+            </p>
+          </div>
+        ) : results.length === 0 ? (
+          <div className="h-28 flex items-center justify-center text-st-gray text-xs text-center p-4">
+            No data for this selection
+          </div>
+        ) : (
+          <div className="mt-3 space-y-2">
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-2xl font-bold text-st-black dark:text-white tabular-nums">
+                {metricDef.format(total)}
+              </span>
+              <span className="text-[10px] text-st-gray">{metricDef.label}</span>
+            </div>
+
+            <div className="space-y-1.5 pt-2 border-t border-gray-100/50 dark:border-[#2A2E2E]/50">
+              {results.slice(0, 5).map((r, i) => {
+                const mk = cfg.metric || 'revenue'
+                const val = r[mk] || r.revenue || r.conversions || r.sessions || 0
+                const barW = maxVal > 0 ? (val / maxVal) * 100 : 0
+                return (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="text-[10px] text-st-gray dark:text-gray-400 w-16 truncate flex-shrink-0" title={r.dim_value || '—'}>
+                      {r.dim_value || '—'}
+                    </span>
+                    <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+                      <div className="h-full bg-st-black dark:bg-white rounded-full transition-all" style={{ width: `${barW}%` }} />
+                    </div>
+                    <span className="text-[10px] font-medium text-gray-700 dark:text-gray-300 w-14 text-right flex-shrink-0 tabular-nums">
+                      {metricDef.format(val)}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

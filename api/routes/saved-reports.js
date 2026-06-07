@@ -70,12 +70,27 @@ router.post('/saved', async (req, res) => {
 // Auth: requireUserAuth + validateSiteKey + requireSiteMembership applied at parent mount
 router.get('/saved', async (req, res) => {
   try {
-    const { data, error } = await getSupabase()
+    const showOnDashboard = req.query.show_on_dashboard === 'true'
+
+    let query = getSupabase()
       .from('saved_reports')
       .select('*')
       .eq('user_id', req.user.id)
       .eq('site_id', req.site.id)
-      .order('updated_at', { ascending: false })
+
+    if (showOnDashboard) {
+      query = query.eq('show_on_dashboard', true)
+      // Custom dashboard widget sorting: position ASC, updated_at DESC
+      query = query
+        .order('dashboard_position', { ascending: true })
+        .order('updated_at', { ascending: false })
+        .limit(9) // Max 9 widgets on dashboard
+    } else {
+      // Normal saved reports listing: keep existing behavior
+      query = query.order('updated_at', { ascending: false })
+    }
+
+    const { data, error } = await query
 
     if (error) throw error
 
@@ -183,6 +198,72 @@ router.delete('/saved/:id', async (req, res) => {
   } catch (_err) {
     console.error(_err)
     return res.status(500).json({ success: false, data: null, error: 'Failed to delete report' })
+  }
+})
+
+// PATCH /api/reports/saved/:id/dashboard — toggle dashboard visibility
+// Auth: requireUserAuth + validateSiteKey + requireSiteMembership applied at parent mount
+router.patch('/saved/:id/dashboard', async (req, res) => {
+  try {
+    const { id } = req.params
+    const { show_on_dashboard, dashboard_position, dashboard_size } = req.body
+
+    if (!id) {
+      return res.status(400).json({ success: false, data: null, error: 'Report ID is required' })
+    }
+
+    if (show_on_dashboard === undefined || typeof show_on_dashboard !== 'boolean') {
+      return res.status(400).json({ success: false, data: null, error: 'show_on_dashboard must be a boolean' })
+    }
+
+    if (dashboard_size !== undefined && !['small', 'medium', 'large'].includes(dashboard_size)) {
+      return res.status(400).json({ success: false, data: null, error: 'Invalid dashboard_size' })
+    }
+
+    if (dashboard_position !== undefined) {
+      if (typeof dashboard_position !== 'number' || !Number.isInteger(dashboard_position) || dashboard_position < 0) {
+        return res.status(400).json({ success: false, data: null, error: 'dashboard_position must be a non-negative integer' })
+      }
+    }
+
+    // App-layer scoping: Retrieve first to verify existence on current site & ownership
+    const { data: existing, error: fetchErr } = await getSupabase()
+      .from('saved_reports')
+      .select('id, user_id, site_id')
+      .eq('id', id)
+      .eq('site_id', req.site.id)
+      .maybeSingle()
+
+    if (fetchErr) throw fetchErr
+    if (!existing) {
+      return res.status(404).json({ success: false, data: null, error: 'Report not found' })
+    }
+    if (existing.user_id !== req.user.id) {
+      return res.status(403).json({ success: false, data: null, error: 'You do not own this report' })
+    }
+
+    const updates = {
+      show_on_dashboard,
+      updated_at: new Date().toISOString()
+    }
+    if (dashboard_position !== undefined) updates.dashboard_position = dashboard_position
+    if (dashboard_size !== undefined) updates.dashboard_size = dashboard_size
+
+    const { data, error } = await getSupabase()
+      .from('saved_reports')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', req.user.id)
+      .eq('site_id', req.site.id)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return res.json({ success: true, data, error: null })
+  } catch (_err) {
+    console.error(_err)
+    return res.status(500).json({ success: false, data: null, error: 'Failed to update dashboard widget visibility' })
   }
 })
 
