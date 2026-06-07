@@ -21,22 +21,36 @@ SET
 WHERE cost_dedupe_key IS NULL OR cost_dedupe_key = '';
 
 -- 3. Safely deduplicate existing rows before unique constraint/index application
+-- Uses row_number() instead of MAX(id) because id is UUID and MAX is not deterministic on UUIDs.
+-- Keeps the most recently created duplicate per (site_id, platform, cost_dedupe_key, period_start).
+CREATE TEMP TABLE temp_keep_ids AS
+SELECT id AS keep_id
+FROM (
+  SELECT id,
+    row_number() OVER (
+      PARTITION BY site_id, platform, cost_dedupe_key, period_start
+      ORDER BY created_at DESC NULLS LAST, id::text DESC
+    ) AS rn
+  FROM public.campaign_costs
+) ranked
+WHERE rn = 1;
+
+-- Aggregate spend/clicks/impressions per duplicate group
 CREATE TEMP TABLE temp_merged_costs AS
 SELECT
   site_id,
   platform,
   cost_dedupe_key,
   period_start,
-  MAX(id) as keep_id,
-  COALESCE(SUM(spend), 0) as total_spend,
-  COALESCE(SUM(clicks), 0) as total_clicks,
-  COALESCE(SUM(impressions), 0) as total_impressions
+  COALESCE(SUM(spend), 0) AS total_spend,
+  COALESCE(SUM(clicks), 0) AS total_clicks,
+  COALESCE(SUM(impressions), 0) AS total_impressions
 FROM public.campaign_costs
 GROUP BY site_id, platform, cost_dedupe_key, period_start;
 
 -- Delete all duplicate records that are not the chosen primary ID
 DELETE FROM public.campaign_costs
-WHERE id NOT IN (SELECT keep_id FROM temp_merged_costs);
+WHERE id NOT IN (SELECT keep_id FROM temp_keep_ids);
 
 -- Update the remaining single record with aggregated sums
 UPDATE public.campaign_costs c
@@ -45,8 +59,12 @@ SET
   clicks = t.total_clicks,
   impressions = t.total_impressions
 FROM temp_merged_costs t
-WHERE c.id = t.keep_id;
+WHERE c.site_id = t.site_id
+  AND c.platform = t.platform
+  AND c.cost_dedupe_key = t.cost_dedupe_key
+  AND c.period_start = t.period_start;
 
+DROP TABLE temp_keep_ids;
 DROP TABLE temp_merged_costs;
 
 -- 4. Enforce NOT NULL on deduplication key
