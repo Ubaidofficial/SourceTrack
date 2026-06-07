@@ -428,6 +428,15 @@ async function runLoadTest() {
       const stripeEventIdG = `qa_load_stripe_evt_G_${Date.now()}`
       const shopifyWebhookIdG = `qa_load_shopify_webhook_G_${Date.now()}`
 
+      const shopifyPayloadStrG = JSON.stringify({
+        id: parseInt(scopedOrderId.replace(/\D/g, '').slice(-9)) || 12345678,
+        name: '#ORD-' + scopedOrderId,
+        total_price: '100.00',
+        currency: 'USD',
+        financial_status: 'paid',
+        processed_at: new Date().toISOString()
+      })
+
       const batch1 = [
         {
           type: 'payments_api_valid',
@@ -531,26 +540,9 @@ async function runLoadTest() {
               'Content-Type': 'application/json',
               'X-Shopify-Topic': 'orders/paid',
               'X-Shopify-Webhook-Id': shopifyWebhookIdG,
-              'X-Shopify-Hmac-Sha256': generateShopifyHmac(
-                JSON.stringify({
-                  id: parseInt(scopedOrderId.replace(/\D/g, '').slice(-9)) || 12345678,
-                  name: '#ORD-' + scopedOrderId,
-                  total_price: '100.00',
-                  currency: 'USD',
-                  financial_status: 'paid',
-                  processed_at: new Date().toISOString()
-                }),
-                shopifyTestSecret
-              )
+              'X-Shopify-Hmac-Sha256': generateShopifyHmac(shopifyPayloadStrG, shopifyTestSecret)
             },
-            body: JSON.stringify({
-              id: parseInt(scopedOrderId.replace(/\D/g, '').slice(-9)) || 12345678,
-              name: '#ORD-' + scopedOrderId,
-              total_price: '100.00',
-              currency: 'USD',
-              financial_status: 'paid',
-              processed_at: new Date().toISOString()
-            })
+            body: shopifyPayloadStrG
           },
           expectedStatus: 200,
           expectedDuplicate: false
@@ -669,26 +661,9 @@ async function runLoadTest() {
               'Content-Type': 'application/json',
               'X-Shopify-Topic': 'orders/paid',
               'X-Shopify-Webhook-Id': shopifyWebhookIdG,
-              'X-Shopify-Hmac-Sha256': generateShopifyHmac(
-                JSON.stringify({
-                  id: parseInt(scopedOrderId.replace(/\D/g, '').slice(-9)) || 12345678,
-                  name: '#ORD-' + scopedOrderId,
-                  total_price: '100.00',
-                  currency: 'USD',
-                  financial_status: 'paid',
-                  processed_at: new Date().toISOString()
-                }),
-                shopifyTestSecret
-              )
+              'X-Shopify-Hmac-Sha256': generateShopifyHmac(shopifyPayloadStrG, shopifyTestSecret)
             },
-            body: JSON.stringify({
-              id: parseInt(scopedOrderId.replace(/\D/g, '').slice(-9)) || 12345678,
-              name: '#ORD-' + scopedOrderId,
-              total_price: '100.00',
-              currency: 'USD',
-              financial_status: 'paid',
-              processed_at: new Date().toISOString()
-            })
+            body: shopifyPayloadStrG
           },
           expectedStatus: 200,
           expectedDuplicate: true

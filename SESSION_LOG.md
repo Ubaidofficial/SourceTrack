@@ -5,6 +5,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 120B | 2026-06-07 | `main` | Revenue Provider + Attribution Status Reporting — Added provider, attribution_status, and stitching_method dimensions. Added validations, routing bypasses, HogQL mappings, LTV, UI/Docs updates, and E2E QA checks. | ✅ | No |
 | 120A | 2026-06-07 | `main` | Report Builder Referrer Domain Dimension — Mapped Referrer Domain reporting dimension (`referrer_domain`) to captured browser referrer. Added validations, routing bypasses, HogQL extraction, LTV support, UI helpers, help docs, and verification tests. | ✅ | No |
 | 119E | 2026-06-07 | `main` | Report Builder Keyword / Term Dimension — Added Keyword/Term dimension (`keyword`) mapped to utm_term. Bypassed Supabase aggregated tables, added in-memory and live HogQL support, UI filters, help docs, and E2E QA checks. | ✅ | No |
 | 119D | 2026-06-07 | `main` | Report Builder Security & Production Readiness — Hardened scoping, configuration validation (preventing SQL/HogQL injection), cleansed internal IDs from CSV exports, added fallback for missing site columns, and created security QA script. | ✅ | No |
@@ -761,4 +762,31 @@ curl -i https://api.srctk.com/tracker/tracker.min.js
 ### 3. Verification & E2E QA
 - Created `scripts/qa-referrer-domain-reporting.mjs` verifying helper normalization, live HogQL probe compilation, saved report validation, API/export smoke, and strict full URL leakage checks.
 - Confirmed all baseline, security, and integration QA suites pass cleanly.
+
+---
+
+## Session 120B — Revenue Provider + Attribution Status Reporting
+
+**Date:** 2026-06-07
+**Branch:** `main`
+**Build:** ✅ passing (E2E QA pass)
+
+### 1. Revenue Metadata Dimensions
+- Added `'provider'`, `'attribution_status'`, and `'stitching_method'` to allowed groupBy groups inside `report-config-validation.js` and `api/routes/attribution.js`.
+- Bypassed Supabase pre-aggregated/nightly tables inside `api/routes/attribution.js` when grouping by these dimensions, routing queries live to PostHog instead.
+- Implemented robust SQL extraction constants in `attribution-engine.js`:
+  - `PROVIDER_SQL`: `COALESCE(NULLIF(properties.provider, ''), multiIf(properties.ingestion_method = 'server_routed', 'browser', properties.ingestion_method = 'offline', 'payments_api', 'unknown'))`
+  - `ATTRIBUTION_STATUS_SQL`: `COALESCE(NULLIF(properties.attribution_status, ''), multiIf(properties.ingestion_method = 'server_routed', 'attributed', properties.stitching_method IS NOT NULL AND properties.stitching_method != '' AND properties.stitching_method != 'none', 'attributed', properties.stitching_method = 'none', 'unattributed', 'unknown'))`
+  - `STITCHING_METHOD_SQL`: `COALESCE(NULLIF(properties.stitching_method, ''), multiIf(properties.ingestion_method = 'server_routed', 'browser', 'unknown'))`
+- Added LTV support for all models using `any()` or `argMax()` aggregation wrappers under `ltvPersonDimExpr`.
+- Mapped these dimensions in `getMultiTouchAttributionLive` query SELECT, mapping, and key-value grouping loops.
+
+### 2. UI & Docs Additions
+- Added `Revenue Provider`, `Attribution Status`, and `Stitching Method` dimensions to the frontend Report Builder dropdown.
+- Integrated a new Step 4 warning banner explaining conversion-level grouping restrictions and browser fallback rules.
+- Added a dedicated "Revenue Metadata Reporting" section in the help center Docs (`Docs.jsx`).
+
+### 3. Verification & E2E QA
+- Created `scripts/qa-revenue-provider-reporting.mjs` verifying normalization logic, config validation, invalid dimensions rejection, saved report config, attribution API smoke, and export API smoke.
+- Verified all static validations, frontend production build, and all QA test runs pass cleanly.
 

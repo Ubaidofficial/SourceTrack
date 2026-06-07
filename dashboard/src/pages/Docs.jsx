@@ -860,6 +860,19 @@ window.sourcetrack.identify('user_123', {
               <strong>Privacy and Scope:</strong> Referrer Domain reports use domain-level grouping for aggregate analysis and do not expose full referrer URLs to protect visitor privacy. In addition, SourceTrack does not operate an active SEO backlink crawler and does not integrate with Google Search Console or external SEO indices.
             </Note>
 
+            <H3>Revenue Metadata Reporting</H3>
+            <p>
+              SourceTrack supports granular reporting on conversion-level revenue source, attribution status, and visitor stitching details. These dimensions help you audit ingestion channels and attribution connectivity:
+            </p>
+            <ul className="list-disc list-inside space-y-2 pl-1 text-sm text-gray-600 dark:text-gray-400">
+              <li><strong>Revenue Provider:</strong> Represents the ingestion source for conversion events. Normalizes to values such as <IC>stripe</IC>, <IC>shopify</IC>, <IC>browser</IC>, <IC>payments_api</IC>, or custom values (e.g. <IC>paddle</IC>).</li>
+              <li><strong>Attribution Status:</strong> Identifies if a conversion was successfully stitched back to a visitor journey (<IC>attributed</IC>), remained unconnected (<IC>unattributed</IC>), or is <IC>unknown</IC>.</li>
+              <li><strong>Stitching Method:</strong> Details the technical connection method used to link the event. Normalizes to values like <IC>browser</IC>, custom identifiers, or <IC>unknown</IC>.</li>
+            </ul>
+            <Note>
+              <strong>Important:</strong> These dimensions are conversion-event-specific. Session-only metrics and pages that do not record conversion attributes may show <IC>unknown</IC>. For browser conversions, <IC>attributed</IC> means tied to the browser visitor identity; it does not guarantee a paid campaign, UTM, or ad source was present.
+            </Note>
+
             <H3>Manual Spend &amp; Cost Efficiency</H3>
             <p>
               To calculate cost-efficiency metrics, you must manually enter your advertising spend for each campaign, source, or medium:
@@ -1063,7 +1076,7 @@ await fetch('https://api.srctk.com/api/conversion', {
               { name: 'model', type: 'string', required: true, desc: 'Attribution model: first_touch · last_touch · first_touch_non_direct · last_touch_non_direct · ai_platforms · linear · u_shaped' },
               { name: 'date_from', type: 'string', required: true, desc: 'ISO 8601 date (YYYY-MM-DD). Start of range (inclusive).' },
               { name: 'date_to', type: 'string', required: true, desc: 'ISO 8601 date (YYYY-MM-DD). End of range (inclusive).' },
-              { name: 'group_by', type: 'string', required: false, desc: 'Dimension to break down by: channel · source · medium · campaign · keyword · referrer_domain · ai_source · landing_page · country · device · conversion_type · date' },
+              { name: 'group_by', type: 'string', required: false, desc: 'Dimension to break down by: channel · source · medium · campaign · keyword · referrer_domain · provider · attribution_status · stitching_method · ai_source · landing_page · country · device · conversion_type · date' },
               { name: 'metric', type: 'string', required: false, desc: 'Metric to aggregate: revenue · conversions · conversion_rate · avg_conversion_value · ai_conversions · ai_revenue · ltv_revenue · days_to_convert · touchpoints_per_conversion' },
               { name: 'group_by2', type: 'string', required: false, desc: 'Optional second dimension for a 2D breakdown.' },
               { name: 'time_granularity', type: 'string', required: false, desc: 'When group_by=date: day · week · month · quarter · year' },

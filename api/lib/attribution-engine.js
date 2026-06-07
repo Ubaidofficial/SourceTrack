@@ -31,6 +31,11 @@ export function makeReferrerDomainExpr(refVar) {
 
 const REFERRER_DOMAIN_SQL = makeReferrerDomainExpr('properties.referrer')
 
+const PROVIDER_SQL = `COALESCE(NULLIF(properties.provider, ''), multiIf(properties.ingestion_method = 'server_routed', 'browser', properties.ingestion_method = 'offline', 'payments_api', 'unknown'))`
+
+const ATTRIBUTION_STATUS_SQL = `COALESCE(NULLIF(properties.attribution_status, ''), multiIf(properties.ingestion_method = 'server_routed', 'attributed', properties.stitching_method IS NOT NULL AND properties.stitching_method != '' AND properties.stitching_method != 'none', 'attributed', properties.stitching_method = 'none', 'unattributed', 'unknown'))`
+
+const STITCHING_METHOD_SQL = `COALESCE(NULLIF(properties.stitching_method, ''), multiIf(properties.ingestion_method = 'server_routed', 'browser', 'unknown'))`
 
 
 function cacheKey(model, siteId, dateFrom, dateTo) {
@@ -848,6 +853,30 @@ const GROUP_COLUMNS = {
     first_touch_non_direct: REFERRER_DOMAIN_SQL,
     last_touch_non_direct: REFERRER_DOMAIN_SQL
   },
+  provider: {
+    first_touch: PROVIDER_SQL,
+    last_touch: PROVIDER_SQL,
+    linear: PROVIDER_SQL,
+    ai_platforms: PROVIDER_SQL,
+    first_touch_non_direct: PROVIDER_SQL,
+    last_touch_non_direct: PROVIDER_SQL
+  },
+  attribution_status: {
+    first_touch: ATTRIBUTION_STATUS_SQL,
+    last_touch: ATTRIBUTION_STATUS_SQL,
+    linear: ATTRIBUTION_STATUS_SQL,
+    ai_platforms: ATTRIBUTION_STATUS_SQL,
+    first_touch_non_direct: ATTRIBUTION_STATUS_SQL,
+    last_touch_non_direct: ATTRIBUTION_STATUS_SQL
+  },
+  stitching_method: {
+    first_touch: STITCHING_METHOD_SQL,
+    last_touch: STITCHING_METHOD_SQL,
+    linear: STITCHING_METHOD_SQL,
+    ai_platforms: STITCHING_METHOD_SQL,
+    first_touch_non_direct: STITCHING_METHOD_SQL,
+    last_touch_non_direct: STITCHING_METHOD_SQL
+  },
   ai_source: {
     first_touch: "COALESCE(NULLIF(properties.ai_source, ''), 'none')",
     last_touch: "COALESCE(NULLIF(properties.ai_source, ''), 'none')",
@@ -943,7 +972,11 @@ export async function getMultiTouchAttributionLive({
       properties.ai_source AS ai_source,
       properties.country AS country,
       properties.device_type AS device_type,
-      properties.utm_term AS utm_term
+      properties.utm_term AS utm_term,
+      properties.provider AS provider,
+      properties.attribution_status AS attribution_status,
+      properties.stitching_method AS stitching_method,
+      properties.ingestion_method AS ingestion_method
     FROM events
     WHERE properties.site_id = '${safeSite}'
       AND event = '$conversion'
@@ -954,21 +987,36 @@ export async function getMultiTouchAttributionLive({
   `
   const convRows = await queryHogQL(convSql, 'multitouch_conversions_live')
 
-  const conversions = convRows.map(([uuid, distinctId, timestamp, conversionType, conversionValue, utmSource, utmMedium, utmCampaign, referrer, aiSource, country, deviceType, utmTerm]) => ({
-    uuid,
-    distinct_id: distinctId,
-    timestamp,
-    conversion_type: conversionType || null,
-    conversion_value: Number(conversionValue) || 0,
-    utm_source: utmSource || null,
-    utm_medium: utmMedium || null,
-    utm_campaign: utmCampaign || null,
-    referrer: referrer || null,
-    ai_source: aiSource || null,
-    country: country || null,
-    device_type: deviceType || null,
-    utm_term: utmTerm || null
-  }))
+  const conversions = convRows.map(([uuid, distinctId, timestamp, conversionType, conversionValue, utmSource, utmMedium, utmCampaign, referrer, aiSource, country, deviceType, utmTerm, rawProvider, rawAttrStatus, rawStitchMethod, rawIngestionMethod]) => {
+    const ingestionMethod = rawIngestionMethod || null
+    const provider = rawProvider || (ingestionMethod === 'server_routed' ? 'browser' : ingestionMethod === 'offline' ? 'payments_api' : 'unknown')
+    const stitchingMethod = rawStitchMethod || (ingestionMethod === 'server_routed' ? 'browser' : 'unknown')
+    let attributionStatus = rawAttrStatus || null
+    if (!attributionStatus) {
+      if (ingestionMethod === 'server_routed') attributionStatus = 'attributed'
+      else if (rawStitchMethod && rawStitchMethod !== '' && rawStitchMethod !== 'none') attributionStatus = 'attributed'
+      else if (rawStitchMethod === 'none') attributionStatus = 'unattributed'
+      else attributionStatus = 'unknown'
+    }
+    return {
+      uuid,
+      distinct_id: distinctId,
+      timestamp,
+      conversion_type: conversionType || null,
+      conversion_value: Number(conversionValue) || 0,
+      utm_source: utmSource || null,
+      utm_medium: utmMedium || null,
+      utm_campaign: utmCampaign || null,
+      referrer: referrer || null,
+      ai_source: aiSource || null,
+      country: country || null,
+      device_type: deviceType || null,
+      utm_term: utmTerm || null,
+      provider,
+      attribution_status: attributionStatus,
+      stitching_method: stitchingMethod
+    }
+  })
 
   if (conversions.length === 0) {
     return []
@@ -1077,6 +1125,9 @@ export async function getMultiTouchAttributionLive({
       } else if (groupBy === 'country') dimVal = conv.country || 'unknown'
       else if (groupBy === 'device') dimVal = conv.device_type || 'unknown'
       else if (groupBy === 'conversion_type') dimVal = conv.conversion_type || 'untyped'
+      else if (groupBy === 'provider') dimVal = conv.provider || 'unknown'
+      else if (groupBy === 'attribution_status') dimVal = conv.attribution_status || 'unknown'
+      else if (groupBy === 'stitching_method') dimVal = conv.stitching_method || 'unknown'
       else if (groupBy === 'date') {
         const refDate = new Date(attributeBy === 'first_seen_date' && touchpoints[0] ? touchpoints[0].timestamp : conv.timestamp)
         if (granularity === 'quarter') {
@@ -1655,6 +1706,9 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
           case 'landing_page': return "argMin(COALESCE(NULLIF(properties.page_url, ''), '/'), timestamp)"
           case 'country': return "any(COALESCE(NULLIF(properties.country, ''), 'unknown'))"
           case 'device': return "any(COALESCE(NULLIF(properties.device_type, ''), 'unknown'))"
+          case 'provider': return `any(${PROVIDER_SQL})`
+          case 'attribution_status': return `any(${ATTRIBUTION_STATUS_SQL})`
+          case 'stitching_method': return `any(${STITCHING_METHOD_SQL})`
           default: throw new Error(`Unsupported group_by for LTV first_touch: ${gb}`)
         }
       }
@@ -1670,6 +1724,9 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
           case 'landing_page': return "argMin(COALESCE(NULLIF(properties.page_url, ''), '/'), timestamp)"
           case 'country': return "any(COALESCE(NULLIF(properties.country, ''), 'unknown'))"
           case 'device': return "any(COALESCE(NULLIF(properties.device_type, ''), 'unknown'))"
+          case 'provider': return `any(${PROVIDER_SQL})`
+          case 'attribution_status': return `any(${ATTRIBUTION_STATUS_SQL})`
+          case 'stitching_method': return `any(${STITCHING_METHOD_SQL})`
           default: throw new Error(`Unsupported group_by for LTV first_touch_non_direct: ${gb}`)
         }
       }
@@ -1685,6 +1742,9 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
           case 'landing_page': return "argMax(COALESCE(NULLIF(properties.page_url, ''), '/'), timestamp)"
           case 'country': return "argMax(COALESCE(NULLIF(properties.country, ''), 'unknown'), timestamp)"
           case 'device': return "argMax(COALESCE(NULLIF(properties.device_type, ''), 'unknown'), timestamp)"
+          case 'provider': return `argMax(${PROVIDER_SQL}, timestamp)`
+          case 'attribution_status': return `argMax(${ATTRIBUTION_STATUS_SQL}, timestamp)`
+          case 'stitching_method': return `argMax(${STITCHING_METHOD_SQL}, timestamp)`
           default: throw new Error(`Unsupported group_by for LTV last_touch_non_direct: ${gb}`)
         }
       }
@@ -1701,6 +1761,9 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
         case 'landing_page': return "argMax(COALESCE(NULLIF(properties.page_url, ''), '/'), timestamp)"
         case 'country': return "argMax(COALESCE(NULLIF(properties.country, ''), 'unknown'), timestamp)"
         case 'device': return "argMax(COALESCE(NULLIF(properties.device_type, ''), 'unknown'), timestamp)"
+        case 'provider': return `argMax(${PROVIDER_SQL}, timestamp)`
+        case 'attribution_status': return `argMax(${ATTRIBUTION_STATUS_SQL}, timestamp)`
+        case 'stitching_method': return `argMax(${STITCHING_METHOD_SQL}, timestamp)`
         default: throw new Error(`Unsupported group_by for LTV last_touch: ${gb}`)
       }
     }

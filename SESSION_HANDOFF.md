@@ -1,9 +1,37 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 120A — Report Builder Referrer Domain Dimension. Added Referrer Domain reporting dimension mapped to captured browser referrer. Updated report config validations, attribution route allowlists, and live PostHog-based query paths (including lookback window and LTV queries) utilizing a robust regex-based HogQL extraction expression. Integrated helper cards on the frontend, added a dedicated docs section, created Referrer Domain QA checks, and validated static/build checks.
+> **Handoff:** Session 120B — Revenue Provider + Attribution Status Reporting. Added Revenue Provider, Attribution Status, and Stitching Method reporting dimensions mapped to conversion metadata/properties. Updated config validations, live/LTV query paths, and frontend wizard/documentation. Verified all static, build, and API QA verification flows successfully.
 >
 > **Next Task:** Awaiting user instructions.
 >
+
+## Session 120B — Revenue Provider + Attribution Status Reporting
+**Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing
+
+### Completed
+1. **Revenue Metadata Dimensions**: Added `'provider'`, `'attribution_status'`, and `'stitching_method'` to allowed groupBy groups inside `report-config-validation.js` and `api/routes/attribution.js`.
+2. **Aggregation Intercepts**: Configured attribution router (`api/routes/attribution.js`) to bypass Supabase pre-aggregated/nightly helpers when grouping by these dimensions, routing queries live to PostHog.
+3. **Attribution Engine Support**: Added dimension mappings in `GROUP_COLUMNS` inside `api/lib/attribution-engine.js` using robust fallback HogQL expressions:
+   - `PROVIDER_SQL`: `COALESCE(NULLIF(properties.provider, ''), multiIf(properties.ingestion_method = 'server_routed', 'browser', properties.ingestion_method = 'offline', 'payments_api', 'unknown'))`
+   - `ATTRIBUTION_STATUS_SQL`: `COALESCE(NULLIF(properties.attribution_status, ''), multiIf(properties.ingestion_method = 'server_routed', 'attributed', properties.stitching_method IS NOT NULL AND properties.stitching_method != '' AND properties.stitching_method != 'none', 'attributed', properties.stitching_method = 'none', 'unattributed', 'unknown'))`
+   - `STITCHING_METHOD_SQL`: `COALESCE(NULLIF(properties.stitching_method, ''), multiIf(properties.ingestion_method = 'server_routed', 'browser', 'unknown'))`
+   Added LTV grouping support under `ltvPersonDimExpr`.
+4. **Live-Path Mapping**: Handled `getMultiTouchAttributionLive` by extracting these properties in conversion queries and mapping them to response rows.
+5. **UI & Docs Card**: Integrated the dimensions into the Report Builder React frontend dimension lists and added Step 4 helper warnings explaining conversion-level grouping limitations and browser fallback semantics. Documented dimensions and behaviors in help center Docs (`Docs.jsx`).
+6. **E2E QA Verification Suite**: Created E2E test script `scripts/qa-revenue-provider-reporting.mjs` verifying config validation, invalid dimensions rejection, and clean report API/export CSV download queries. Verified under `ALLOW_ATTRIBUTION_E2E_TIMEOUT_WARN=1`.
+
+### Files changed
+- `api/lib/report-config-validation.js`
+- `api/routes/attribution.js`
+- `api/lib/attribution-engine.js`
+- `dashboard/src/pages/Docs.jsx`
+- `dashboard/src/pages/ReportBuilder.jsx`
+- `scripts/qa-revenue-provider-reporting.mjs` [NEW]
+
+### Verification commands
+```bash
+ALLOW_ATTRIBUTION_E2E_TIMEOUT_WARN=1 node scripts/qa-revenue-provider-reporting.mjs
+```
 
 ## Session 120A — Report Builder Referrer Domain Dimension
 **Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing
