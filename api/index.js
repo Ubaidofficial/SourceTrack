@@ -51,6 +51,7 @@ import { annotationsRouter } from './routes/annotations.js'
 import { webhooksRouter } from './routes/webhooks.js'
 import { stripeWebhookRouter } from './routes/stripe-webhook.js'
 import { shopifyWebhookRouter } from './routes/shopify-webhook.js'
+import { inspectClientIp } from './lib/ip-resolver.js'
 
 // Fail fast on missing required environment variables. Better to crash on
 // startup than to fail every request with a cryptic 500 later.
@@ -342,6 +343,31 @@ app.use('/api/annotations', requireUserAuth, validateSiteKey, requireSiteMembers
 
 // GDPR / privacy endpoints (authenticated)
 app.use('/api/gdpr', requireUserAuth, gdprRouter)
+
+// Temporary deployment diagnostic route. Should be disabled by removing
+// ST_IP_DIAGNOSTIC_SECRET from the environment after verification.
+if (process.env.ST_IP_DIAGNOSTIC_SECRET) {
+  app.get('/api/diag/ip', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+    const secret = req.headers['x-diagnostic-secret']
+    if (!secret || secret !== process.env.ST_IP_DIAGNOSTIC_SECRET) {
+      return res.status(401).json({ error: 'Unauthorized diagnostic request' })
+    }
+    const info = inspectClientIp(req)
+    return res.json({
+      req_ip: info.req_ip,
+      req_ips: info.req_ips,
+      socket_remote_address: info.socket_remote_address,
+      raw_x_forwarded_for: info.raw_x_forwarded_for,
+      cf_connecting_ip: info.cf_connecting_ip,
+      normalized_socket_ip: info.normalized_socket_ip,
+      normalized_req_ip: info.normalized_req_ip,
+      selected_ip: info.selected_ip,
+      mode: info.mode,
+      warning_flags: info.warning_flags
+    })
+  })
+}
 
 // 7. Health check
 app.get('/health', (_req, res) => {

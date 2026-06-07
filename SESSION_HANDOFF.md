@@ -1,9 +1,43 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 123D — Docs Correction + IP Spoofing Diagnostic. Updated self-hosted proxy docs in `Docs.jsx` with storage-based tracking recommendations, identity collapse warnings for cookieless mode, and geo/rate-limit collapse disclosures. Added local diagnostic script `scripts/diagnostic-trust-proxy.mjs` verifying `trust proxy` behavior under simulated direct and proxy chains.
+> **Handoff:** Session 124A — IP Resolver Hardening Audit + Safe Diagnostic Mode. Created `api/lib/ip-resolver.js` to inspect/resolve connection-level client IP normalized of `::ffff:` without trusting raw `X-Forwarded-For` headers. Mounted a temporary gated diagnostic endpoint `/api/diag/ip` under `ST_IP_DIAGNOSTIC_SECRET` returning only diagnostic fields with `Cache-Control: no-store`. Verified with `scripts/qa-ip-resolver.mjs`. Deferred all production ingestion route and rate limiter migrations until real-world Railway traffic header behavior is verified.
 >
-> **Next Task:** Awaiting commit approval.
+> **Next Task:** Deploy diagnostic endpoint, verify real-world header behavior on Railway, then proceed to Session 124B.
 >
+> ⚠️ **IMPORTANT OPERATIONAL NOTE:** After Railway IP diagnostics are complete, remove ST_IP_DIAGNOSTIC_SECRET from the deployed environment to disable /api/diag/ip.
+>
+
+## Session 124A — IP Resolver Hardening Audit + Safe Diagnostic Mode
+**Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+1. **Central IP Resolver:** Created `api/lib/ip-resolver.js` exposing `inspectClientIp(req)` and `resolveClientIp(req)`. It resolves connection IP safely (stripped of `::ffff:`) and labels it as connection/socket IP, not true visitor IP. It flags raw `X-Forwarded-For` headers as `XFF_HEADER_PRESENT` and checks for mismatch.
+2. **Gated Diagnostic Route:** Mounted `GET /api/diag/ip` in `api/index.js`, mounted only when `ST_IP_DIAGNOSTIC_SECRET` is present. Implements header-only auth, adds `Cache-Control: no-store`, and outputs only clean diagnostic fields (no cookie/auth headers returned).
+3. **QA Verification Script:** Created `scripts/qa-ip-resolver.mjs` verifying mock unit resolutions, gated access return codes (401/404), cache control headers, and spoofed XFF rejection.
+4. **No Production Ingestion Alterations:** Confirmed that no production tracking, conversion, tracker-id, analytics, pixel, or server-events routes were changed. Verified no rate-limiters were altered, and `trust proxy` remains disabled.
+
+> [!WARNING]
+> After Railway IP diagnostics are complete, remove ST_IP_DIAGNOSTIC_SECRET from the deployed environment to disable /api/diag/ip.
+
+### Files changed
+- `api/index.js`
+- `api/lib/ip-resolver.js` [NEW]
+- `scripts/qa-ip-resolver.mjs` [NEW]
+
+### Verification commands
+```bash
+node scripts/qa-ip-resolver.mjs
+node scripts/diagnostic-trust-proxy.mjs
+node scripts/qa-proxy-validation.mjs
+node --check api/index.js
+node --check api/lib/ip-resolver.js
+node --check scripts/qa-ip-resolver.mjs
+git diff --check
+cd dashboard && npm run build
+cd ..
+git status --short
+```
+
 
 ## Session 123D — Docs Correction + IP Spoofing Diagnostic
 **Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + diagnostics pass)
