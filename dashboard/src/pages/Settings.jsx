@@ -46,6 +46,10 @@ export default function Settings() {
   const [newParam, setNewParam]                     = useState('')
   const [customParamsSaving, setCustomParamsSaving] = useState(false)
 
+  const [crossDomainDomains, setCrossDomainDomains]           = useState('')
+  const [crossDomainCookieDomain, setCrossDomainCookieDomain] = useState('')
+  const [crossDomainSaving, setCrossDomainSaving]             = useState(false)
+
   useEffect(() => { loadSite() }, [user, activeSite])
 
   async function loadSite() {
@@ -56,7 +60,7 @@ export default function Settings() {
 
     let query = supabase
       .from('sites')
-      .select('*, cookieless_mode, data_retention_days, attribution_window_days, excluded_paths, timezone, custom_url_params')
+      .select('*, cookieless_mode, data_retention_days, attribution_window_days, excluded_paths, timezone, custom_url_params, cross_domain_domains, cross_domain_cookie_domain')
 
     if (activeSite.id) {
       query = query.eq('id', activeSite.id)
@@ -78,6 +82,8 @@ export default function Settings() {
       setExcludedPaths((data.excluded_paths || []).join(', '))
       setTimezone(data.timezone || 'UTC')
       setCustomParams(data.custom_url_params || [])
+      setCrossDomainDomains((data.cross_domain_domains || []).join(', '))
+      setCrossDomainCookieDomain(data.cross_domain_cookie_domain || '')
     }
 
     try {
@@ -376,6 +382,34 @@ export default function Settings() {
       setTimeout(() => setMessage(''), 4000)
     } finally {
       setCustomParamsSaving(false)
+    }
+  }
+
+  const handleCrossDomainSave = async (e) => {
+    if (e) e.preventDefault()
+    if (!site || !activeSite || site.id !== activeSite.id || site.site_key !== activeSite.site_key) return
+    setCrossDomainSaving(true)
+    setMessage('')
+    try {
+      const domainsArr = crossDomainDomains
+        ? crossDomainDomains.split(',').map(d => d.trim().toLowerCase()).filter(Boolean)
+        : []
+      const cookieDomainVal = crossDomainCookieDomain ? crossDomainCookieDomain.trim().toLowerCase() : null
+
+      await fetchApi(`/integrations/settings?site_key=${site.site_key}`, {
+        method: 'PATCH',
+        body: {
+          cross_domain_domains: domainsArr,
+          cross_domain_cookie_domain: cookieDomainVal
+        }
+      })
+      setMessage('Cross-domain settings saved.')
+      setTimeout(() => setMessage(''), 4000)
+    } catch (err) {
+      setMessage(err?.message || 'Error saving cross-domain settings')
+      setTimeout(() => setMessage(''), 4000)
+    } finally {
+      setCrossDomainSaving(false)
     }
   }
 
@@ -900,6 +934,56 @@ export default function Settings() {
         </p>
       </section>
 
+      {/* ── Cross-Domain Tracking ─────────────────────────────────────── */}
+      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <svg className="w-4 h-4 text-st-gray dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+          </svg>
+          <h3 className="text-sm font-bold text-st-black dark:text-white">Cross-Domain Tracking</h3>
+        </div>
+        <p className="text-xs text-st-gray dark:text-gray-400">
+          Stitch visitor attribution continuity across separate domains you own. Links pointing to domains listed here will be decorated automatically with secure identity tags.
+        </p>
+
+        <form onSubmit={handleCrossDomainSave} className="space-y-4">
+          <div className="space-y-2">
+            <label className="block text-xs font-semibold text-st-black dark:text-white">Cross-Domain Hostnames</label>
+            <input
+              type="text"
+              value={crossDomainDomains}
+              onChange={e => setCrossDomainDomains(e.target.value)}
+              placeholder="e.g. app.example.com, checkout.example.com"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
+            />
+            <p className="text-[10px] text-st-gray dark:text-gray-400">
+              Comma-separated list of target domains (maximum 20). No protocols, wildcards, or paths.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-xs font-semibold text-st-black dark:text-white">TLD Cookie Domain Fallback (Optional)</label>
+            <input
+              type="text"
+              value={crossDomainCookieDomain}
+              onChange={e => setCrossDomainCookieDomain(e.target.value)}
+              placeholder="e.g. .example.com"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
+            />
+            <p className="text-[10px] text-st-gray dark:text-gray-400">
+              Must start with a leading dot and match or be a parent domain of your primary site domain. Enables fallback storage continuity.
+            </p>
+          </div>
+
+          <button
+            type="submit"
+            disabled={crossDomainSaving}
+            className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors"
+          >
+            {crossDomainSaving ? 'Saving…' : 'Save Cross-Domain Settings'}
+          </button>
+        </form>
+      </section>
 
       {/* ── Privacy & Data Retention ──────────────────────────────────── */}
       <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-6">

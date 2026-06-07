@@ -1,10 +1,37 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 126A — Google Search Console & SEO Revenue. Implemented database schema migrations, secure HMAC-signed OAuth callback flow, search performance daily cached synchronization, path-normalized SEO revenue report with PostHog landing page resolution, Settings integrations card, SEO Revenue Attribution report page, and a GSC QA script.
+> **Handoff:** Session 127A — Cross-Domain Tracking. Implemented DB migration columns, settings GET/PATCH routes with strict domain tie-in validations, cookies read/write fallback, precedence rules (no identity or first-touch override), early pointerdown/mousedown link decoration preserving browser native actions, Snippet/Settings/Docs UI additions, and a sandboxed E2E QA verification script.
 >
-> **Next Task:** Pending QA review.
+> **Next Task:** Pending commit approval.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 127A — Cross-Domain Tracking
+**Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+1. **Database Schema:** Created migration `supabase/migrations/20260607231500_add_cross_domain_settings.sql` adding `cross_domain_domains` and `cross_domain_cookie_domain` columns to the `sites` table.
+2. **Auth Middleware:** Updated `api/middleware/auth.js` `validateSiteKey` select queries to load cross-domain settings (with resilient fallback to safe defaults if columns are missing).
+3. **Backend API settings:** Implemented `GET /api/integrations/settings` and updated `PATCH /api/integrations/settings` in `api/routes/integrations.js` to validate domains (max 20, format restrictions, localhost in prod) and cookie domains (must start with `.`, match site domain parent scope, no unsafe public suffixes like `.com`).
+4. **Standard Tracker (`tracker.js`):** Implemented TLD cookie read/write fallback, restoration precedence rules (no identity override, no first-touch override), Base64url parameter parsing and sanitization, parameter cleanup from history state, and early link decoration (on `mousedown`/`touchstart`) matching the allowlist while preserving normal browser default click behaviors (cmd/ctrl clicks, middle clicks, target="_blank", downloads).
+5. **Cookieless Tracker (`tracker.cookieless.js`):** Exposed `window.sourcetrack.decorateUrl(url)` with async server ID without writing or reading to browser storage/cookies.
+6. **UI & Snippet Settings:** Updated `Settings.jsx` to load and save cross-domain settings, and added inputs. Updated `Snippet.jsx` to select columns and print snippet script attributes conditionally.
+7. **Docs Guide:** Updated `Docs.jsx` with cross-domain instructions, manual/auto-decoration rules, and cookieless warning indicators.
+8. **Tracker minification:** Minified standard and cookieless script bundles.
+9. **E2E QA Verification:** Created `scripts/qa-cross-domain.mjs` verifying E2E settings validation, identity precedence rules, auto-decoration click events, and minified code compliance.
+
+### Files changed
+- `supabase/migrations/20260607231500_add_cross_domain_settings.sql` [NEW]
+- `scripts/qa-cross-domain.mjs` [NEW]
+- `api/middleware/auth.js`
+- `api/routes/integrations.js`
+- `tracker/tracker.js`
+- `tracker/tracker.cookieless.js`
+- `tracker/tracker.min.js`
+- `tracker/tracker.cookieless.min.js`
+- `dashboard/src/pages/Settings.jsx`
+- `dashboard/src/pages/Snippet.jsx`
+- `dashboard/src/pages/Docs.jsx`
 
 ## Session 126A — Google Search Console & SEO Revenue
 **Date:** 2026-06-07 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)

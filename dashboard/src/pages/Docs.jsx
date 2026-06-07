@@ -106,6 +106,7 @@ const NAV = [
   { id: 'managed-first-party-proxy', label: 'Managed Proxy', indent: true },
   { id: 'self-hosted-proxy', label: 'Self-Hosted Proxy', indent: true },
   { id: 'custom-params',    label: 'Custom URL Params', indent: true },
+  { id: 'cross-domain',     label: 'Cross-Domain Tracking', indent: true },
   { id: 'timezone',         label: 'Timezone Behavior', indent: true },
   { id: 'dashboard-widgets', label: 'Dashboard Widgets', indent: true },
   { id: 'utm-best-practices', label: 'UTM & Cost Tracking', indent: true },
@@ -1051,6 +1052,54 @@ module.exports = {
             <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-800 dark:text-amber-300 space-y-1">
               <p><strong>Parameter-Based Only:</strong> Custom parameters are strictly extracted from page URL query strings at load time. They do not represent offline integrations, server-side variables, or ad-platform API imports.</p>
               <p><strong>Do Not Send PII:</strong> Never configure parameters designed to transmit personally identifiable information (PII). Values failing validation or containing unsafe patterns will be silently dropped.</p>
+            </div>
+          </Section>
+
+          {/* ── Cross-Domain Tracking ─────────────────────────────────────── */}
+          <Section id="cross-domain" title="Cross-Domain Tracking">
+            <p>
+              SourceTrack supports attributing visitors across separate domains you own (e.g. from your landing site <code>example.com</code> to your application <code>app.example.com</code> or billing page).
+              This maintains attribution continuity for visitor journeys that span multiple web domains without relying on third-party cookies or intrusive fingerprinting.
+            </p>
+
+            <H3>Setup & Configuration</H3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Cross-domain tracking requires setting script attributes on your tracking tag to opt in to continuity:
+            </p>
+            <ul className="list-disc list-inside space-y-2 pl-1 mt-2 text-sm text-gray-600 dark:text-gray-400">
+              <li>
+                <strong>data-cross-domains:</strong> Comma-separated list of target hostnames you own (e.g., <code>app.example.com,checkout.example.com</code>).
+                The standard tracker will listen for outbound link clicks to these domains and automatically append secure identity query parameters (<code>__st_id</code> and <code>__st_ft</code>) to maintain continuity.
+              </li>
+              <li>
+                <strong>data-cookie-domain:</strong> (Optional) Configure a fallback cookie domain starting with a leading dot (e.g., <code>.example.com</code>).
+                This allows storing the anonymous visitor ID at a higher domain level so that subdomains can natively access the same ID, ensuring seamless persistence.
+              </li>
+            </ul>
+
+            <H3>Manual Link Decoration</H3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+              If you have dynamic redirects or client-side navigation (e.g., React/Vue routers) where the standard click listener does not execute, you can decorate URLs manually using the exposed SDK API:
+            </p>
+            <Code lang="javascript">{`// Dynamically decorate a URL before navigating
+const originalUrl = 'https://checkout.example.com/payment';
+const decoratedUrl = window.sourcetrack.decorateUrl(originalUrl);
+window.location.href = decoratedUrl;`}</Code>
+
+            <H3>Identity Restoration Rules</H3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              To guarantee data integrity and prevent identity manipulation or link pollution:
+            </p>
+            <ul className="list-disc list-inside space-y-1.5 pl-1 mt-1 text-sm text-gray-600 dark:text-gray-400">
+              <li><strong>Prioritize local identity:</strong> If a visitor already has an established local anonymous ID, any incoming <code>__st_id</code> parameter in the URL is ignored.</li>
+              <li><strong>Preserve first-touch:</strong> If first-touch attributes (UTM campaigns or referring sources) are already stored locally, any incoming first-touch payload (<code>__st_ft</code>) is ignored. First-touch attribution is never overwritten.</li>
+              <li><strong>Payload validation:</strong> The first-touch parameter (<code>__st_ft</code>) is Base64url-encoded and limited to 300 characters, containing only safe marketing attributes (source, medium, campaign) up to 100 characters each. All control characters are stripped.</li>
+            </ul>
+
+            <H3>Cookieless Mode Limitations</H3>
+            <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-800 dark:text-amber-300 space-y-2">
+              <p><strong>Storage-Free Limitations:</strong> Under Cookieless Mode, the tracker script does not write to local storage or set cookies, and restoration of incoming URL tags is disabled.</p>
+              <p><strong>Async Decoration:</strong> The cookieless SDK can only decorate URLs after the async visitor ID resolves from the server. If the ID is not resolved, <code>decorateUrl(url)</code> returns the original URL unchanged. For full cross-domain continuity, the standard tracker mode with TLD cookies is strongly recommended.</p>
             </div>
           </Section>
 

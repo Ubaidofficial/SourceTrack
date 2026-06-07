@@ -44,7 +44,7 @@ export async function validateSiteKey(req, res, next) {
     const supabase = getSupabase()
     let { data, error } = await supabase
       .from('sites')
-      .select('id, site_key, plan, pv_limit, created_at, company_id, owner_id, business_type, trial_ends_at, attribution_window_days, onboarding_completed, last_seen_at, onboarding_state, domain, excluded_paths, timezone, custom_url_params')
+      .select('id, site_key, plan, pv_limit, created_at, company_id, owner_id, business_type, trial_ends_at, attribution_window_days, onboarding_completed, last_seen_at, onboarding_state, domain, excluded_paths, timezone, custom_url_params, cross_domain_domains, cross_domain_cookie_domain')
       .eq('site_key', siteKey)
       .single()
 
@@ -54,7 +54,7 @@ export async function validateSiteKey(req, res, next) {
     )
 
     if (isMissingColumn) {
-      console.warn('[validateSiteKey] LOUD WARNING: sites.attribution_window_days column does not exist in database. Falling back to default 30 days and re-querying sites table.')
+      console.warn('[validateSiteKey] LOUD WARNING: sites.attribution_window_days or cross-domain columns do not exist in database. Falling back to default values.')
       const retryResult = await supabase
         .from('sites')
         .select('id, site_key, plan, pv_limit, created_at, company_id, owner_id, business_type, trial_ends_at, onboarding_completed, last_seen_at, onboarding_state, domain, excluded_paths, timezone, custom_url_params')
@@ -67,6 +67,8 @@ export async function validateSiteKey(req, res, next) {
 
       data = retryResult.data
       data.attribution_window_days = 30
+      data.cross_domain_domains = null
+      data.cross_domain_cookie_domain = null
       error = null
     }
 

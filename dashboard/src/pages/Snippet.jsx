@@ -50,7 +50,7 @@ export default function Snippet() {
         .eq('user_id', user.id)
         .maybeSingle()
 
-      const query = supabase.from('sites').select('site_key, name, domain, cookieless_mode').limit(1)
+      const query = supabase.from('sites').select('site_key, name, domain, cookieless_mode, cross_domain_domains, cross_domain_cookie_domain').limit(1)
       if (member?.company_id) {
         query.eq('company_id', member.company_id)
       } else {
@@ -96,7 +96,14 @@ export default function Snippet() {
     if (!site) return ''
     const trackerFile = site.cookieless_mode ? 'tracker.cookieless.min.js' : 'tracker.min.js'
     const scriptSrc = proxyDomain ? `https://${proxyDomain}/${trackerFile}` : `${trackerBaseUrl}/tracker/${trackerFile}`
-    return `<script async src="${scriptSrc}" data-site-key="${site.site_key}"></script>`
+    let attrs = ` async src="${scriptSrc}" data-site-key="${site.site_key}"`
+    if (site.cross_domain_domains && site.cross_domain_domains.length > 0) {
+      attrs += ` data-cross-domains="${site.cross_domain_domains.join(',')}"`
+    }
+    if (site.cross_domain_cookie_domain) {
+      attrs += ` data-cookie-domain="${site.cross_domain_cookie_domain}"`
+    }
+    return `<script${attrs}></script>`
   }
 
   const snippet = buildSnippet()

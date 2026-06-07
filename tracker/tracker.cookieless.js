@@ -149,8 +149,52 @@
     if (location.href !== _lastUrl) { _lastUrl = location.href; sendPageview() }
   })
 
+  function base64urlEncode(str) {
+    try {
+      var base64 = btoa(unescape(encodeURIComponent(str)))
+      return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+    } catch (_) { return '' }
+  }
+
+  function sanitizeFtValue(val) {
+    if (typeof val !== 'string') return ''
+    var clean = val.replace(/[\x00-\x1F\x7F]/g, '').trim()
+    return clean.slice(0, 100)
+  }
+
   // ─── Public API ────────────────────────────────────────────────────────────
   window.sourcetrack = {
+    decorateUrl: function (url) {
+      if (!url) return url
+      if (!AID) return url
+      try {
+        var u = new URL(url, location.href)
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') return url
+
+        if (!u.searchParams.has('__st_id')) {
+          u.searchParams.set('__st_id', AID)
+        }
+
+        var p = params()
+        var ref = document.referrer || null
+        var ft = deriveFirstTouch(p, ref)
+        if (ft && ft.first_touch_source && ft.first_touch_source !== 'direct' && !u.searchParams.has('__st_ft')) {
+          var payload = {
+            s: sanitizeFtValue(ft.first_touch_source),
+            m: sanitizeFtValue(ft.first_touch_medium) || 'none',
+            c: sanitizeFtValue(ft.first_touch_campaign) || ''
+          }
+          var encoded = base64urlEncode(JSON.stringify(payload))
+          if (encoded && encoded.length <= 300) {
+            u.searchParams.set('__st_ft', encoded)
+          }
+        }
+        return u.toString()
+      } catch (_) {
+        return url
+      }
+    },
+
     conversion: function (opts) {
       opts = opts || {}
       var p = params(), ref = document.referrer || null

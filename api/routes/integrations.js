@@ -5,6 +5,7 @@ import { esc, encryptSecret } from '../lib/utils.js'
 import { siteCache } from '../middleware/auth.js'
 import { resolveCname, verifySslAndRouting, normalizeDnsName } from '../lib/dns-resolver.js'
 import { invalidateProxyCache } from '../middleware/managed-proxy.js'
+import { validateCrossDomainSettings } from '../lib/cross-domain-validation.js'
 
 const router = express.Router()
 
@@ -267,7 +268,33 @@ router.get('/overview', async (req, res) => {
   }
 })
 
-// PATCH /api/integrations/settings — update per-site attribution window
+// GET /api/integrations/settings — fetch current site settings
+router.get('/settings', async (req, res) => {
+  try {
+    const siteKey = req.site?.site_key
+    if (!siteKey) {
+      return res.status(400).json({ success: false, data: null, error: 'site_key required' })
+    }
+
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('sites')
+      .select('id, site_key, attribution_window_days, timezone, excluded_paths, custom_url_params, cross_domain_domains, cross_domain_cookie_domain, domain')
+      .eq('site_key', siteKey)
+      .single()
+
+    if (error) {
+      throw error
+    }
+
+    return res.json({ success: true, data, error: null })
+  } catch (err) {
+    console.error('[integrations] GET settings error:', err?.message)
+    return res.status(500).json({ success: false, data: null, error: 'Failed to fetch settings' })
+  }
+})
+
+// PATCH /api/integrations/settings — update per-site attribution window and cross-domain tracking
 router.patch('/settings', async (req, res) => {
   try {
     const siteKey = req.site?.site_key
@@ -360,6 +387,22 @@ router.patch('/settings', async (req, res) => {
       customUrlParams = uniqueParams
     }
 
+    let crossDomainDomains = undefined
+    let crossDomainCookieDomain = undefined
+    if (req.body.cross_domain_domains !== undefined || req.body.cross_domain_cookie_domain !== undefined) {
+      try {
+        const validated = validateCrossDomainSettings(
+          req.body,
+          req.site?.domain,
+          process.env.NODE_ENV === 'production'
+        )
+        crossDomainDomains = validated.crossDomainDomains
+        crossDomainCookieDomain = validated.crossDomainCookieDomain
+      } catch (err) {
+        return res.status(400).json({ success: false, data: null, error: err.message })
+      }
+    }
+
     const supabase = getSupabase()
 
     const updates = {}
@@ -367,6 +410,8 @@ router.patch('/settings', async (req, res) => {
     if (timezone !== undefined) updates.timezone = timezone
     if (excludedPaths !== null) updates.excluded_paths = excludedPaths
     if (customUrlParams !== null) updates.custom_url_params = customUrlParams
+    if (crossDomainDomains !== undefined) updates.cross_domain_domains = crossDomainDomains
+    if (crossDomainCookieDomain !== undefined) updates.cross_domain_cookie_domain = crossDomainCookieDomain
 
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ success: false, data: null, error: 'No valid fields to update' })
@@ -376,7 +421,7 @@ router.patch('/settings', async (req, res) => {
       .from('sites')
       .update(updates)
       .eq('site_key', siteKey)
-      .select('id, attribution_window_days, excluded_paths, timezone, custom_url_params')
+      .select('id, attribution_window_days, excluded_paths, timezone, custom_url_params, cross_domain_domains, cross_domain_cookie_domain')
       .single()
 
     if (error) {

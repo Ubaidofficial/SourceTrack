@@ -43,6 +43,37 @@
   function ss(k, v) {
     try { return v !== undefined ? (sessionStorage.setItem(k, v), v) : sessionStorage.getItem(k) } catch (_) { return null }
   }
+  function getCookie(name) {
+    try {
+      var matches = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + '=([^;]*)'))
+      return matches ? decodeURIComponent(matches[1]) : null
+    } catch (_) { return null }
+  }
+  function setCookie(name, value, domain) {
+    try {
+      var cookie = name + '=' + encodeURIComponent(value) + '; path=/; SameSite=Lax; max-age=31536000'
+      if (domain) {
+        cookie += '; domain=' + domain
+      }
+      if (location.protocol === 'https:') {
+        cookie += '; Secure'
+      }
+      document.cookie = cookie
+    } catch (_) {}
+  }
+  function base64urlEncode(str) {
+    try {
+      var base64 = btoa(unescape(encodeURIComponent(str)))
+      return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+    } catch (_) { return '' }
+  }
+  function base64urlDecode(str) {
+    try {
+      var base64 = str.replace(/-/g, '+').replace(/_/g, '/')
+      while (base64.length % 4) { base64 += '=' }
+      return decodeURIComponent(escape(atob(base64)))
+    } catch (_) { return null }
+  }
 
   // ─── Identity ──────────────────────────────────────────────────────────────
   function uid() {
@@ -51,7 +82,87 @@
       return (c === 'x' ? r : r & 3 | 8).toString(16)
     })
   }
-  var AID = ls('st_aid') || ls('st_aid', uid())   // anonymous_id — permanent
+
+  var cookieDomain = sc && sc.getAttribute('data-cookie-domain')
+  var validCookieDomain = null
+  if (cookieDomain) {
+    cookieDomain = cookieDomain.trim().toLowerCase()
+    if (cookieDomain.indexOf('.') === 0 && cookieDomain.length <= 100 && /^\.[a-z0-9.-]+$/.test(cookieDomain)) {
+      var unsafe = [
+        '.com', '.net', '.org', '.co', '.io', '.ai', '.app', '.dev',
+        '.co.uk', '.com.au', '.org.uk', '.localhost', '.edu', '.gov'
+      ]
+      if (unsafe.indexOf(cookieDomain) === -1 && cookieDomain.slice(1).split('.').filter(Boolean).length >= 2) {
+        var host = location.hostname.toLowerCase()
+        var sDomain = cookieDomain.slice(1)
+        if (host === sDomain || host.slice(-sDomain.length - 1) === '.' + sDomain) {
+          validCookieDomain = cookieDomain
+        }
+      }
+    }
+  }
+
+  var AID = ls('st_aid')
+  if (!AID && validCookieDomain) {
+    AID = getCookie('st_aid')
+  }
+  var isNewIdentity = !AID
+
+  var urlParams = null
+  var urlAid = null
+  var urlFt = null
+  try {
+    urlParams = new URLSearchParams(location.search)
+    urlAid = urlParams.get('__st_id')
+    urlFt = urlParams.get('__st_ft')
+  } catch (_) {}
+
+  if (isNewIdentity && urlAid && urlAid.length >= 1 && urlAid.length <= 50 && /^[a-zA-Z0-9_-]{1,50}$/.test(urlAid)) {
+    AID = urlAid
+    isNewIdentity = false
+  }
+
+  if (!AID) {
+    AID = uid()
+  }
+
+  ls('st_aid', AID)
+
+  if (validCookieDomain) {
+    setCookie('st_aid', AID, validCookieDomain)
+  }
+
+  if (!ls('st_ft_src') && urlFt && urlFt.length <= 300) {
+    var decodedFt = base64urlDecode(urlFt)
+    if (decodedFt && decodedFt.length <= 500) {
+      try {
+        var parsedFt = JSON.parse(decodedFt)
+        if (parsedFt && typeof parsedFt === 'object') {
+          var cleanSrc = typeof parsedFt.s === 'string' ? parsedFt.s.trim().slice(0, 100).replace(/[\x00-\x1F\x7F]/g, '') : ''
+          var cleanMed = typeof parsedFt.m === 'string' ? parsedFt.m.trim().slice(0, 100).replace(/[\x00-\x1F\x7F]/g, '') : ''
+          var cleanCmp = typeof parsedFt.c === 'string' ? parsedFt.c.trim().slice(0, 100).replace(/[\x00-\x1F\x7F]/g, '') : ''
+
+          if (cleanSrc) {
+            ls('st_ft_src', cleanSrc)
+            ls('st_ft_med', cleanMed || 'none')
+            ls('st_ft_cmp', cleanCmp || '')
+            ls('st_ft_ts', new Date().toISOString())
+          }
+        }
+      } catch (_) {}
+    }
+  }
+
+  if (urlParams && (urlParams.has('__st_id') || urlParams.has('__st_ft'))) {
+    try {
+      urlParams.delete('__st_id')
+      urlParams.delete('__st_ft')
+      var newSearch = urlParams.toString()
+      var newUrl = location.pathname + (newSearch ? '?' + newSearch : '') + location.hash
+      history.replaceState(null, '', newUrl)
+    } catch (_) {}
+  }
+
   var SID = ss('st_sid') || ss('st_sid', uid())   // session_id   — per-tab
 
   // ─── AI source detection ───────────────────────────────────────────────────
@@ -187,8 +298,42 @@
     for (var i = 0; i < q.length; i++) _rawSend(q[i][0], q[i][1])
   }
 
+  function sanitizeFtValue(val) {
+    if (typeof val !== 'string') return ''
+    var clean = val.replace(/[\x00-\x1F\x7F]/g, '').trim()
+    return clean.slice(0, 100)
+  }
+
   // ─── Public API ────────────────────────────────────────────────────────────
   window.sourcetrack = {
+    decorateUrl: function (url) {
+      if (!url) return url
+      try {
+        var u = new URL(url, location.href)
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') return url
+
+        if (!u.searchParams.has('__st_id')) {
+          u.searchParams.set('__st_id', AID)
+        }
+
+        var ftSrc = sanitizeFtValue(ls('st_ft_src'))
+        if (ftSrc && !u.searchParams.has('__st_ft')) {
+          var payload = {
+            s: ftSrc,
+            m: sanitizeFtValue(ls('st_ft_med')) || 'none',
+            c: sanitizeFtValue(ls('st_ft_cmp')) || ''
+          }
+          var encoded = base64urlEncode(JSON.stringify(payload))
+          if (encoded && encoded.length <= 300) {
+            u.searchParams.set('__st_ft', encoded)
+          }
+        }
+        return u.toString()
+      } catch (_) {
+        return url
+      }
+    },
+
     // sourcetrack.conversion({ value: 99, type: 'purchase', order_id: '123', properties: { plan: 'pro' } })
     conversion: function (opts) {
       opts = opts || {}
@@ -279,6 +424,50 @@
   }
   addEventListener('click', trackOutbound)
   addEventListener('auxclick', trackOutbound)
+
+  // ─── Auto-decoration ───────────────────────────────────────────────────────
+  function handleCrossDomainClick(e) {
+    if (e.button === 2) return // Skip right clicks
+
+    var a = e.target
+    while (a && a.nodeName !== 'A') a = a.parentNode
+    if (!a) return
+
+    var href = a.getAttribute('href')
+    if (!href) return
+
+    if (a.hasAttribute('download')) return
+    var extRegex = /\.(zip|tar|gz|pdf|docx|xlsx|pptx|dmg|exe|pkg|bin|csv|mp3|mp4|wav|avi)$/i
+    if (extRegex.test(href.split('?')[0].split('#')[0])) return
+
+    try {
+      var url = new URL(href, location.href)
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') return
+      if (url.hostname === location.hostname) return
+
+      var crossDomainsStr = sc && sc.getAttribute('data-cross-domains')
+      if (!crossDomainsStr) return
+      var list = crossDomainsStr.split(',').map(function (d) { return d.trim().toLowerCase() }).filter(Boolean)
+
+      var targetHost = url.hostname.toLowerCase().split(':')[0]
+      var matched = false
+      for (var i = 0; i < list.length; i++) {
+        var item = list[i]
+        if (targetHost === item || targetHost.slice(-item.length - 1) === '.' + item) {
+          matched = true
+          break
+        }
+      }
+      if (!matched) return
+
+      if (url.searchParams.has('__st_id')) return
+
+      var decorated = window.sourcetrack.decorateUrl(href)
+      a.setAttribute('href', decorated)
+    } catch (_) {}
+  }
+  addEventListener('mousedown', handleCrossDomainClick)
+  addEventListener('touchstart', handleCrossDomainClick)
 
   sendPageview()
 })()
