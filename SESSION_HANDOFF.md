@@ -1076,3 +1076,35 @@ curl -i -X OPTIONS "https://api.srctk.com/api/onboarding/complete" -H "Origin: h
 curl -i https://api.srctk.com/health
 curl -i https://api.srctk.com/tracker/tracker.min.js
 ```
+
+---
+
+## Session 128B — Connected Ad Platform Sync
+
+**Date:** 2026-06-08 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+
+1. **Ad platform connection schema** — Added SQL migration `20260608010000_add_ad_platform_connections.sql` defining connections table, triggers, and indices.
+2. **Google Ads OAuth setup** — Implemented signed state verification, token encryption, and campaign spend query parser.
+3. **Meta Ads advanced manual token setup** — Implemented access token validation, credentials checking, and campaign insights mapping.
+4. **Integrations UI Card** — Created "Ad Cost Sync" collapsible container with statuses, config setup, and sync logs in `Integrations.jsx`.
+5. **Campaigns UI Sync** — Added "Sync connected accounts" button on Campaigns overview page.
+6. **Double-unwrapping bug fixes** — Fixed `fetchApi` data extraction bugs in both `Integrations.jsx` and `Campaigns.jsx` preventing runtime crashes.
+
+### Files changed
+- `api/index.js`
+- `api/lib/ad-cost-imports.js`
+- `api/lib/google-ads.js`
+- `api/lib/meta-ads.js`
+- `api/routes/ad-platforms.js`
+- `api/routes/campaign-costs.js`
+- `dashboard/src/pages/Campaigns.jsx`
+- `dashboard/src/pages/Docs.jsx`
+- `dashboard/src/pages/Integrations.jsx`
+- `scripts/qa-ad-platform-sync.mjs`
+- `supabase/migrations/20260608010000_add_ad_platform_connections.sql`
+
+### Remaining QA (manual browser verification needed)
+- Navigate to `/integrations`, ensure "Ad Cost Sync" card shows Google Ads as "Not Configured" and Meta Ads setup is collapsed by default.
+- Navigate to `/campaigns` and verify the "Sync connected accounts" button appears if connected, and "Import Costs" modal opens properly.

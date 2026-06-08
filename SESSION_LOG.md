@@ -5,6 +5,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 128B | 2026-06-08 | `main` | Connected Ad Platform Sync — Created SQL migration for ad_platform_connections table with status constraints and index, built Google Ads client with GAQL parsing, Meta Ads client with insights normalization, private sync routes with locks, Integrations setup card, Campaigns sync controls, Docs guide, and E2E QA checks. | ✅ | No |
 | 128A | 2026-06-08 | `main` | Ad Cost Imports & Campaign ROI — Created SQL migration for platform/clicks/impressions/currency columns on campaign_costs, aggregated existing rows to prevent constraint errors, set up RLS-enabled ad_sync_runs logging, built ad-cost-imports shared library with YYYY-MM-DD/negative limits/clicks-vs-impressions validation rules, aggregated bulk uploads, added campaigns overview ROI/CPA suppresses on currency status mismatch, built Campaigns UI Cost Import Modal with drag-drop/paste and live preview validation grid, updated documentation page, and created E2E QA verification script. | ✅ | No |
 | 127B | 2026-06-07 | `main` | Owner Billing and Trial Fix — Implemented shared dashboard billing helper for trial status, friendly plan labels, and paid-plan checks. Returned trial timestamps from sites API and utilized database `trial_ends_at` instead of hardcoded 14-day creation math in layout and settings views. Cleared stale trial banner state for super admins and verified all cases using a sandboxed unit test script. | ✅ | No |
 | 127A | 2026-06-07 | `main` | Cross-Domain Tracking — Implemented DB migration columns, settings GET/PATCH routes with strict domain tie-in validations, cookies read/write fallback, precedence rules (no identity or first-touch override), early pointerdown/mousedown link decoration preserving browser native actions, Snippet/Settings/Docs UI additions, and a sandboxed E2E QA verification script. | ✅ | No |
@@ -843,3 +844,26 @@ curl -i https://api.srctk.com/tracker/tracker.min.js
 - Updated `scripts/qa-ip-resolver.mjs` to add unit tests for `isPublicIp(ip)` and `inspectClientIp(req)` under `ST_IP_RESOLVER_MODE=railway` (covering public, private, CGNAT, link-local, loopback, and malformed IPs).
 - Added integration tests verifying spawned server behavior under `ST_IP_RESOLVER_MODE=railway` with multi-hop XFF chains and private-only fallbacks.
 - Added automated static checks verifying that migrated ingestion files contain no manual `x-forwarded-for` checks or `getClientIp` helpers.
+
+---
+
+## Session 128B — Connected Ad Platform Sync
+
+**Date:** 2026-06-08
+**Branch:** `main`
+**Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### 1. Database Schema & API Clients
+- Created database migration `20260608010000_add_ad_platform_connections.sql` adding `ad_platform_connections` table, status constraints (`chk_google_credentials` & `chk_meta_credentials`), site_key index, and sync trigger.
+- Implemented Google Ads API client in `google-ads.js` with signed state tokens, configurable API version, GAQL query generator, and credentials checker.
+- Implemented Meta Ads API client in `meta-ads.js` with manual advanced token setup and verification.
+- Reused `ad-cost-imports.js` shared logic to upsert fetched campaigns data into `campaign_costs` while preserving records during platform disconnections.
+
+### 2. Frontend UI Setup
+- Added a compact "Ad Cost Sync" card in `Integrations.jsx` with Google Ads connection flows, Meta Ads advanced manual settings, and collapsible recent sync logs.
+- Added a "Sync connected accounts" button on the Campaigns dashboard page matching the connection status.
+- Added a step-by-step help guide in `Docs.jsx` for configuring ad platform tokens and scopes on-demand.
+
+### 3. Verification & QA Checks
+- Created E2E check in `scripts/qa-ad-platform-sync.mjs` validating signature validation, credential validations, connection isolation, cost preservation, and unwrap shape checks.
+- Confirmed all static build compilation and automated tests pass.
