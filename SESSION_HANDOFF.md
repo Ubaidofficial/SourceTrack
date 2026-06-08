@@ -1,10 +1,30 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 128C — Integrations UX Simplification. Refactored the Integrations page layout to hide setup details, snippets, and developer tools behind collapsible rows. Realigned "View install guide" and "Full setup guide" actions to navigate directly to `/docs#install-tracking`. Implemented a concise `#install-tracking` section in the docs, with a `useLocation`-based auto-scroll trigger. Redesigned the `/snippet` page into a clean, 3-step guided installation view, collapsing all advanced options (Identify, Stripe webhook handler, React hook integration, offline conversions, outbound webhooks) inside a single `Advanced setup` accordion card, and converted the privacy notice into a calm, compact expandable block.
+> **Handoff:** Session 128D-A — Core Report Builder & AI Sources Tab. Removed AI Analytics from the sidebar; added a lightweight AI Sources tab to the Analytics page; fixed a ClickHouse column-name mismatch bug for the `browser` dimension mapping (`properties.browser_name`); fixed the `conversion_type` filter mapping bug in the attribution engine; and added four preset AI templates to the Report Builder quick presets selector.
 >
-> **Next Task:** Pending user visual and QA validation of Integrations and Install pages.
+> **Next Task:** Visual/QA validation of the new Analytics tab and the Report Builder presets.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 128D-A — Core Report Builder & AI Sources Tab
+**Date:** 2026-06-08 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+1. **Sidebar Navigation Update:** Removed AI Analytics from the primary sidebar navigation menu in `Layout.jsx` while keeping the `/ai-analytics` route active in `App.jsx` for direct or backwards-compatible access.
+2. **AI Sources Analytics Tab:** Added a lightweight AI Sources tab to the Traffic Sources panel on the Analytics page, rendering a clean custom empty-state educating users about AI referrals (pointing to the external documentation rather than `/snippet`), and querying the new backend helper `/sources?tab=ai_source`.
+3. **Attribution Engine Dimensions & Filters:**
+   - Added support for the `browser` dimension mapping, querying ClickHouse's `properties.browser_name` to prevent returning `'unknown'` due to schema differences across ingestion paths.
+   - Fixed the `conversion_type` filter mismatch by adding it to allowed filters validation and parsing/passing it down to the single-touch and multi-touch engines.
+4. **Report Builder AI Templates:** Added four AI templates (AI Traffic Sources, AI Revenue by Source, AI Landing Pages, and AI-assisted Conversions) to the Report Builder quick presets.
+
+### Files changed
+- `api/lib/attribution-engine.js`
+- `api/lib/report-config-validation.js`
+- `api/routes/analytics.js`
+- `api/routes/attribution.js`
+- `dashboard/src/components/Layout.jsx`
+- `dashboard/src/pages/Analytics.jsx`
+- `dashboard/src/pages/ReportBuilder.jsx`
 
 ## Session 128A — Manual Ad Cost Imports + Campaign ROI
 **Date:** 2026-06-08 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)

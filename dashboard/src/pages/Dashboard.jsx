@@ -1308,10 +1308,10 @@ export default function Dashboard() {
           {aiShareTotal > 5 && !previewMode && (
             <DashboardCard
               title="AI Analytics"
-              subtitle={`AI-driven traffic accounts for ${aiShareTotal.toFixed(1)}% of your revenue — use AI Analytics for deeper insights`}
+              subtitle={`AI-driven traffic accounts for ${aiShareTotal.toFixed(1)}% of your revenue — view AI Sources for deeper insights`}
               action={
-                <button onClick={() => navigate('/ai-analytics')} className="text-xs text-lime-800 hover:text-lime-700 font-medium flex items-center gap-1">
-                  Open AI Analytics <ArrowRight className="w-3 h-3" />
+                <button onClick={() => navigate('/analytics?tab=ai_source')} className="text-xs text-lime-800 hover:text-lime-700 font-medium flex items-center gap-1">
+                  View AI Sources <ArrowRight className="w-3 h-3" />
                 </button>
               }
             >
@@ -1532,8 +1532,8 @@ export default function Dashboard() {
               title="AI Revenue Forecast"
               subtitle="7-day prediction powered by DeepSeek"
               action={
-                <button onClick={() => navigate('/ai-analytics')} className="text-xs text-st-black dark:text-white hover:text-st-gray dark:text-gray-400 font-medium flex items-center gap-1">
-                  Run Forecast <ArrowRight className="w-3 h-3" />
+                <button onClick={() => navigate('/report-builder')} className="text-xs text-st-black dark:text-white hover:text-st-gray dark:text-gray-400 font-medium flex items-center gap-1">
+                  Create AI Report <ArrowRight className="w-3 h-3" />
                 </button>
               }
             >

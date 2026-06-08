@@ -52,6 +52,8 @@ function applyPageviewFilters(query, filters) {
       query = query.eq('browser', value)
     else if (type === 'OS')
       query = query.eq('os', value)
+    else if (type === 'AI Source')
+      query = query.eq('ai_source', value)
   }
   return query
 }
@@ -277,12 +279,77 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
   try {
     const siteId = String(req.site.id)
     const days = Math.min(parseInt(req.query.days) || 30, 90)
-    const tab = ['channel','referrer','campaign','medium'].includes(req.query.tab) ? req.query.tab : 'referrer'
+    const tab = ['channel','referrer','campaign','medium','ai_source'].includes(req.query.tab) ? req.query.tab : 'referrer'
     const supabase = getSupabase()
     const from = new Date(Date.now() - days * 86400000).toISOString()
     const fromDate = from.slice(0,10)
     const toDate = new Date().toISOString().slice(0,10)
     const filters = parseFilters(req)
+
+    function normalizeAISourceName(source) {
+      if (!source) return null
+      const s = source.toLowerCase().trim()
+      if (s.includes('chatgpt') || s.includes('openai')) return 'ChatGPT'
+      if (s.includes('claude') || s.includes('anthropic')) return 'Claude'
+      if (s.includes('perplexity')) return 'Perplexity'
+      if (s.includes('gemini') || s.includes('bard')) return 'Gemini'
+      if (s.includes('grok')) return 'Grok'
+      if (s.includes('copilot')) return 'Copilot'
+      if (s.includes('deepseek')) return 'DeepSeek'
+      if (s.includes('meta.ai') || s.includes('meta-ai')) return 'Meta AI'
+      if (s.includes('you.com')) return 'You.com'
+      if (s.includes('phind')) return 'Phind'
+      if (s.includes('kagi')) return 'Kagi'
+      if (s.includes('mistral')) return 'Mistral'
+      if (s.includes('poe.com') || s === 'poe') return 'Poe'
+      return source.charAt(0).toUpperCase() + source.slice(1)
+    }
+
+    if (tab === 'ai_source') {
+      let query = supabase.from('pageviews')
+        .select('session_id, ai_source')
+        .eq('site_id', siteId)
+        .gte('timestamp', from)
+        .not('ai_source', 'is', null)
+        .neq('ai_source', '')
+        .limit(50000)
+      query = applyPageviewFilters(query, filters)
+      const { data: rows } = await query
+
+      const groups = {}
+      ;(rows || []).forEach(r => {
+        const normName = normalizeAISourceName(r.ai_source)
+        if (!normName) return
+        groups[normName] = groups[normName] || { name: normName, visitors_set: new Set() }
+        if (r.session_id) groups[normName].visitors_set.add(r.session_id)
+      })
+
+      let revenueByKey = {}
+      try {
+        const { data: convRows } = await supabase
+          .from('attributed_conversions')
+          .select('first_touch_source, conversion_value')
+          .eq('site_id', siteId)
+          .gte('conversion_date', fromDate)
+          .lte('conversion_date', toDate)
+        ;(convRows || []).forEach(r => {
+          const normName = normalizeAISourceName(r.first_touch_source)
+          if (normName) {
+            revenueByKey[normName] = (revenueByKey[normName] || 0) + (Number(r.conversion_value) || 0)
+          }
+        })
+      } catch (_e) { /* table may be empty */ }
+
+      const out = Object.values(groups)
+        .map(g => ({
+          name: g.name,
+          visitors: g.visitors_set.size,
+          revenue: revenueByKey[g.name] || 0
+        }))
+        .sort((a, b) => b.visitors - a.visitors)
+        .slice(0, 100)
+      return res.json({ success: true, data: { tab, rows: out } })
+    }
 
     if (tab === 'channel' || tab === 'campaign') {
       // Pull from attributed_conversions

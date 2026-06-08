@@ -2,7 +2,7 @@ import { getAttribution, getFlexibleReport, getAttributionExplanation, getPreAgg
 import { requireFeature } from '../lib/plan-features.js'
 
 const ALLOWED_MODELS = new Set(['first_touch', 'last_touch', 'first_touch_non_direct', 'last_touch_non_direct', 'ai_platforms', 'linear', 'u_shaped', 'time_decay', 'w_shaped'])
-const ALLOWED_GROUPS = new Set(['channel', 'source', 'medium', 'campaign', 'keyword', 'referrer_domain', 'ai_source', 'landing_page', 'country', 'device', 'conversion_type', 'date', 'provider', 'attribution_status', 'stitching_method'])
+const ALLOWED_GROUPS = new Set(['channel', 'source', 'medium', 'campaign', 'keyword', 'referrer_domain', 'ai_source', 'landing_page', 'country', 'device', 'browser', 'conversion_type', 'date', 'provider', 'attribution_status', 'stitching_method'])
 const ALLOWED_METRICS = new Set([
   'revenue', 'conversions', 'sessions', 'leads', 'conversion_rate',
   'avg_conversion_value', 'ai_conversions', 'ai_revenue', 'ai_conversion_share',
@@ -134,6 +134,7 @@ export async function attribution(req, res) {
       if (req.query.filter_is_conversion) filters.is_conversion = req.query.filter_is_conversion
       if (req.query.filter_has_ai_source) filters.has_ai_source = req.query.filter_has_ai_source
       if (req.query.filter_min_conversions) filters.min_conversions = req.query.filter_min_conversions
+      if (req.query.filter_conversion_type) filters.conversion_type = req.query.filter_conversion_type
       if (req.query.filter_customer_type && ['new', 'returning'].includes(req.query.filter_customer_type)) {
         filters.customer_type = req.query.filter_customer_type
       }

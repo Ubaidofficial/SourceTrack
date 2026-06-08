@@ -1,8 +1,10 @@
-Session: 128C
-Last Completed: Realigned Integrations install links to /docs#install-tracking, added concise docs section with auto-scroll listener, and redesigned /snippet as a clean 3-step guide with collapsed Advanced Setup section.
-Next Task: Visual browser verification and final commit approval.
+Session: 128D-A
+Last Completed: Removed AI Analytics from sidebar; added lightweight AI Sources tab to Analytics; resolved ClickHouse browser_name dimension and conversion_type filter bugs; and added AI preset templates to Report Builder.
+Next Task: Visual browser/QA validation of Report Builder and Analytics tabs.
 Roadmap Queue:
-- Team Roles
+- Phase B (Report Builder two-panel UI)
+- Phase C (Dashboard saved widget cards)
+- Phase D (Campaigns AI Copilot)
 Build: ✅ passing
 Branch: main
 

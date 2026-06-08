@@ -1,5 +1,5 @@
 const ALLOWED_MODELS = new Set(['first_touch', 'last_touch', 'first_touch_non_direct', 'last_touch_non_direct', 'ai_platforms', 'linear', 'u_shaped', 'time_decay', 'w_shaped'])
-const ALLOWED_GROUPS = new Set(['channel', 'source', 'medium', 'campaign', 'keyword', 'referrer_domain', 'ai_source', 'landing_page', 'country', 'device', 'conversion_type', 'date', 'provider', 'attribution_status', 'stitching_method'])
+const ALLOWED_GROUPS = new Set(['channel', 'source', 'medium', 'campaign', 'keyword', 'referrer_domain', 'ai_source', 'landing_page', 'country', 'device', 'browser', 'conversion_type', 'date', 'provider', 'attribution_status', 'stitching_method'])
 const ALLOWED_METRICS = new Set([
   'revenue', 'conversions', 'sessions', 'leads', 'conversion_rate',
   'avg_conversion_value', 'ai_conversions', 'ai_revenue', 'ai_conversion_share',
@@ -14,7 +14,7 @@ const ALLOWED_CHART_TYPES = new Set(['bar', 'line', 'area', 'pie', 'kpi', 'table
 
 const ALLOWED_FILTER_KEYS = new Set([
   'channel', 'source', 'medium', 'campaign', 'ai_source', 'country', 'device_type',
-  'is_conversion', 'has_ai_source', 'min_conversions', 'customer_type'
+  'is_conversion', 'has_ai_source', 'min_conversions', 'customer_type', 'conversion_type'
 ])
 
 const ALLOWED_CONFIG_KEYS = new Set([

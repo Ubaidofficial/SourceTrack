@@ -59,7 +59,8 @@ const DIMENSIONS = [
   { key: 'ai_source', label: 'AI Source' },
   { key: 'landing_page', label: 'Landing Page' },
   { key: 'country', label: 'Country' },
-  { key: 'device', label: 'Device' }
+  { key: 'device', label: 'Device' },
+  { key: 'browser', label: 'Browser' }
 ]
 
 const getDimensionLabel = (key) => {
@@ -117,12 +118,14 @@ const GRANULARITY = [
 const PRESETS = [
   { name: 'Revenue by Channel', model: 'last_touch', groupBy: 'channel', groupBy2: null, metric: 'revenue', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: {}, desc: 'Revenue grouped by high-level marketing channel' },
   { name: 'Conversions by Channel', model: 'last_touch', groupBy: 'channel', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: {}, desc: 'Conversions grouped by high-level marketing channel' },
-  { name: 'AI Revenue by Source', model: 'ai_platforms', groupBy: 'ai_source', groupBy2: null, metric: 'ai_revenue', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { has_ai_source: 'true' }, desc: 'See which AI platforms send the most revenue' },
+  { name: 'AI Traffic Sources', model: 'last_touch', groupBy: 'ai_source', groupBy2: null, metric: 'sessions', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { has_ai_source: 'true' }, desc: 'Unique visitors arriving from AI platforms' },
+  { name: 'AI Revenue by Source', model: 'last_touch', groupBy: 'ai_source', groupBy2: null, metric: 'revenue', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { has_ai_source: 'true' }, desc: 'See which AI platforms send the most revenue' },
+  { name: 'AI Landing Pages', model: 'first_touch', groupBy: 'landing_page', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { has_ai_source: 'true' }, desc: 'Which landing pages AI-referred visitors convert on' },
+  { name: 'AI-assisted Conversions', model: 'linear', groupBy: 'ai_source', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { has_ai_source: 'true' }, desc: 'Conversions attributed across AI touchpoints' },
   { name: 'Best Lead Sources', model: 'last_touch', groupBy: 'channel', groupBy2: null, metric: 'leads', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { min_conversions: '1' }, desc: 'Which channels bring in the most leads' },
   { name: 'Campaign Revenue', model: 'last_touch', groupBy: 'campaign', groupBy2: null, metric: 'revenue', days: 90, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { min_conversions: '5' }, desc: 'Revenue performance across campaigns' },
   { name: 'Top Landing Pages', model: 'first_touch', groupBy: 'landing_page', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: {}, desc: 'Which pages convert visitors best' },
   { name: 'Conversion Trend', model: 'last_touch', groupBy: 'date', groupBy2: null, metric: 'conversions', days: 30, chartType: 'line', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: {}, desc: 'How conversions are trending over time' },
-  { name: 'AI Platform Share', model: 'ai_platforms', groupBy: 'ai_source', groupBy2: null, metric: 'ai_conversion_share', days: 30, chartType: 'pie', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { has_ai_source: 'true' }, desc: 'Share of AI-driven conversions by platform' },
   { name: 'New Customer Revenue', model: 'first_touch', groupBy: 'channel', groupBy2: null, metric: 'revenue', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { customer_type: 'new' }, desc: 'Revenue from first-time customers only, by acquisition channel' },
   { name: 'Returning Customer Revenue', model: 'last_touch', groupBy: 'channel', groupBy2: null, metric: 'revenue', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { customer_type: 'returning' }, desc: 'Revenue from repeat customers by last touchpoint' }
 ]
@@ -154,6 +157,7 @@ async function getFlexibleReport(siteKey, model, dateFrom, dateTo, groupBy, metr
   if (filters.country) params.set('filter_country', filters.country)
   if (filters.device_type) params.set('filter_device_type', filters.device_type)
   if (filters.is_conversion) params.set('filter_is_conversion', filters.is_conversion)
+  if (filters.conversion_type) params.set('filter_conversion_type', filters.conversion_type)
   if (filters.has_ai_source) params.set('filter_has_ai_source', filters.has_ai_source)
   if (filters.min_conversions) params.set('filter_min_conversions', filters.min_conversions)
   if (filters.customer_type) params.set('filter_customer_type', filters.customer_type)

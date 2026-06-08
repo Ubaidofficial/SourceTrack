@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend, Filler } from 'chart.js'
 import { Chart } from 'react-chartjs-2'
@@ -163,12 +164,16 @@ function KPITile({ label, value, delta, sub, dotColor, onClick, active, dim }) {
 // ─── Main page ───────────────────────────────────────────────────────────────
 export default function Analytics() {
   const { user } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const initialTab = searchParams.get('tab') || 'referrer'
   const [days, setDays] = useState(30)
   const [granularity, setGranularity] = useState('daily')
   const [filters, setFilters] = useState([])          // Feature 2: multi-filter
   const [showVisitors, setShowVisitors] = useState(true)
   const [showRevenue, setShowRevenue]   = useState(true)
-  const [sourceTab, setSourceTab] = useState('referrer')   // channel / referrer / campaign / medium
+  const [sourceTab, setSourceTab] = useState(
+    ['channel', 'referrer', 'campaign', 'medium', 'ai_source'].includes(initialTab) ? initialTab : 'referrer'
+  )
   const [copied, setCopied] = useState(false)
   const [funnelInput, setFunnelInput] = useState('')
   const [funnelSteps, setFunnelSteps] = useState([])
@@ -597,12 +602,12 @@ export default function Analytics() {
               <div className="px-4 py-3 border-b border-[#2A2E2E] flex items-center justify-between flex-wrap gap-2">
                 <h3 className="text-sm font-semibold text-white">Sources</h3>
                 <div className="flex gap-1">
-                  {['channel','referrer','campaign','medium'].map(tab => (
-                    <button key={tab} onClick={() => setSourceTab(tab)}
+                  {['channel','referrer','campaign','medium','ai_source'].map(tab => (
+                    <button key={tab} onClick={() => { setSourceTab(tab); setSearchParams({ tab }); }}
                       className={`px-2.5 py-1 rounded text-[11px] font-medium capitalize transition-colors ${
                         sourceTab === tab ? 'bg-st-lime text-st-black' : 'text-st-gray hover:text-white'
                       }`}>
-                      {tab}
+                      {tab === 'ai_source' ? 'AI Sources' : tab}
                     </button>
                   ))}
                 </div>
@@ -613,6 +618,11 @@ export default function Analytics() {
               {['channel','campaign'].includes(sourceTab) && (
                 <p className="text-[11px] text-st-gray px-4 pt-2">
                   Showing conversion counts · visitor-level data requires a pageview join
+                </p>
+              )}
+              {sourceTab === 'ai_source' && (
+                <p className="text-[11px] text-st-gray px-4 pt-2">
+                  Revenue uses first-touch attributed conversions for this source overview.
                 </p>
               )}
               <SourceTabList
@@ -922,7 +932,33 @@ function SourceTabList({ rows, tab, toggleFilter, isActive }) {
   const maxRevenue  = useMemo(() => Math.max(1, ...rows.map(r => safeNumber(r.revenue, 0))), [rows])
 
   if (!rows || rows.length === 0) {
-    return <p className="text-xs text-st-gray py-10 text-center">No {tab} data yet</p>
+    if (tab === 'ai_source') {
+      return (
+        <div className="flex flex-col items-center justify-center text-center py-12 px-4 space-y-3">
+          <div className="text-white font-semibold text-sm">No AI traffic detected yet</div>
+          <p className="text-xs text-st-gray max-w-sm">
+            When visitors arrive from ChatGPT, Claude, Perplexity, Gemini, or similar AI platforms, they’ll appear here.
+          </p>
+          <div className="flex items-center gap-2 pt-2">
+            <a
+              href="https://www.sourcetrack.ai/docs"
+              target="_blank"
+              rel="noreferrer"
+              className="px-3 py-1.5 bg-[#242829] border border-[#2A2E2E] text-st-gray hover:text-white text-xs font-medium rounded-lg transition-colors"
+            >
+              View install guide
+            </a>
+            <Link
+              to="/report-builder"
+              className="px-3 py-1.5 bg-st-lime text-st-black hover:opacity-90 text-xs font-semibold rounded-lg transition-opacity"
+            >
+              Create AI report
+            </Link>
+          </div>
+        </div>
+      )
+    }
+    return <p className="text-xs text-st-gray py-10 text-center">No {tab === 'ai_source' ? 'AI Sources' : tab} data yet</p>
   }
 
   // Channel tab uses channel-pill labels (label IS the channel)
@@ -939,10 +975,14 @@ function SourceTabList({ rows, tab, toggleFilter, isActive }) {
           channel={tab === 'channel' ? r.name : null}
           onClick={() => {
             // Filtering by channel/campaign/medium requires backend filter mapping —
-            // for now we only emit click events for the referrer tab (which maps to Source).
+            // for now we only emit click events for the referrer tab (which maps to Source) and AI sources.
             if (tab === 'referrer') toggleFilter('Source', r.name)
+            else if (tab === 'ai_source') toggleFilter('AI Source', r.name)
           }}
-          active={tab === 'referrer' ? isActive('Source', r.name) : false}
+          active={
+            tab === 'referrer' ? isActive('Source', r.name) :
+            tab === 'ai_source' ? isActive('AI Source', r.name) : false
+          }
         />
       ))}
       {rows.length > 8 && (

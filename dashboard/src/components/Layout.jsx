@@ -22,7 +22,6 @@ const NAV_GROUPS = [
     items: [
       { to: '/dashboard',     label: 'Dashboard',    icon: LayoutDashboard },
       { to: '/analytics',     label: 'Analytics',    icon: Activity },
-      { to: '/ai-analytics',  label: 'AI Analytics', icon: TrendingUp },
       { to: '/campaigns',     label: 'Campaigns',    icon: BarChart3 },
       { to: '/leads',         label: 'Leads',        icon: Users },
     ],

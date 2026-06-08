@@ -491,13 +491,15 @@ function calculateAttribution(touchpoints, conversionValue) {
       source: firstTouchpoint.utm_source || null,
       medium: firstTouchpoint.utm_medium || null,
       campaign: firstTouchpoint.utm_campaign || null,
-      timestamp: firstTouchpoint.timestamp
+      timestamp: firstTouchpoint.timestamp,
+      derived_source: firstTouchpoint.derived_source || null
     },
     last_touch: {
       source: lastTouchpoint.utm_source || null,
       medium: lastTouchpoint.utm_medium || null,
       campaign: lastTouchpoint.utm_campaign || null,
-      timestamp: lastTouchpoint.timestamp
+      timestamp: lastTouchpoint.timestamp,
+      derived_source: lastTouchpoint.derived_source || null
     },
     linear,
     u_shaped,

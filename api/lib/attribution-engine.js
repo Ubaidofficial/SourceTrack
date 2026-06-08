@@ -939,6 +939,14 @@ const GROUP_COLUMNS = {
     first_touch_non_direct: "COALESCE(NULLIF(properties.device_type, ''), 'unknown')",
     last_touch_non_direct: "COALESCE(NULLIF(properties.device_type, ''), 'unknown')"
   },
+  browser: {
+    first_touch: "COALESCE(NULLIF(properties.browser_name, ''), NULLIF(properties.browser, ''), 'unknown')",
+    last_touch: "COALESCE(NULLIF(properties.browser_name, ''), NULLIF(properties.browser, ''), 'unknown')",
+    linear: "COALESCE(NULLIF(properties.browser_name, ''), NULLIF(properties.browser, ''), 'unknown')",
+    ai_platforms: "COALESCE(NULLIF(properties.browser_name, ''), NULLIF(properties.browser, ''), 'unknown')",
+    first_touch_non_direct: "COALESCE(NULLIF(properties.browser_name, ''), NULLIF(properties.browser, ''), 'unknown')",
+    last_touch_non_direct: "COALESCE(NULLIF(properties.browser_name, ''), NULLIF(properties.browser, ''), 'unknown')"
+  },
   date: {
     // These entries are dead code — date dimExpr is now always generated
     // via formatDateTime(refTs, ...) to support attributeBy.
@@ -1206,6 +1214,7 @@ export async function getMultiTouchAttributionLive({
       if (filters.campaign && share.campaign !== filters.campaign) continue
       if (filters.country && conv.country !== filters.country) continue
       if (filters.device_type && conv.device_type !== filters.device_type) continue
+      if (filters.conversion_type && conv.conversion_type !== filters.conversion_type) continue
 
       if (!aggregated[dimVal]) {
         aggregated[dimVal] = { revenue: 0, conversions: 0 }
@@ -1773,6 +1782,9 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
   }
   if (filters.is_conversion === 'true') {
     filterClauses += `\n    AND properties.is_conversion = true`
+  }
+  if (filters.conversion_type) {
+    filterClauses += `\n    AND properties.conversion_type = '${esc(filters.conversion_type)}'`
   }
   if (filters.has_ai_source === 'true') {
     filterClauses += `\n    AND properties.ai_source IS NOT NULL AND properties.ai_source != ''`
