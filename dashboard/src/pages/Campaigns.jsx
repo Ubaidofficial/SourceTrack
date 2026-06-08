@@ -7,7 +7,7 @@ import { format, subDays } from 'date-fns'
 import { useAuth } from '../contexts/AuthContext'
 import {
   Search, Download, TrendingUp, TrendingDown, Filter, Eye, Pencil, Check,
-  UploadCloud, AlertTriangle, History, HelpCircle, X, Loader2
+  UploadCloud, AlertTriangle, History, HelpCircle, X, Loader2, RefreshCw
 } from 'lucide-react'
 import DashboardCard from '../components/DashboardCard'
 import MetricTile from '../components/MetricTile'
@@ -295,6 +295,44 @@ export default function Campaigns() {
     }
   }
 
+  const { data: adPlatStatus, refetch: refetchAdPlatStatus } = useQuery({
+    queryKey: ['ad-platforms-status', site?.site_key],
+    queryFn: () => fetchApi(`/integrations/ad-platforms/status?site_key=${site.site_key}`),
+    enabled: !!site?.site_key
+  })
+
+  const adPlatformData = adPlatStatus?.data || adPlatStatus || {}
+  const googleStatus = adPlatformData.google_ads
+  const metaStatus = adPlatformData.meta_ads
+
+  const googleConnected = googleStatus?.status === 'connected'
+  const metaConnected = metaStatus?.status === 'connected'
+  const anyConnected = googleConnected || metaConnected
+  const lastSyncedGoogle = googleStatus?.last_synced_at
+  const lastSyncedMeta = metaStatus?.last_synced_at
+
+  const [syncingAll, setSyncingAll] = useState(false)
+  const handleSyncAllConnected = async () => {
+    setSyncingAll(true)
+    try {
+      const promises = []
+      if (googleConnected) {
+        promises.push(fetchApi(`/integrations/ad-platforms/google/sync?site_key=${site.site_key}`, { method: 'POST' }))
+      }
+      if (metaConnected) {
+        promises.push(fetchApi(`/integrations/ad-platforms/meta/sync?site_key=${site.site_key}`, { method: 'POST' }))
+      }
+      await Promise.all(promises)
+      alert('Cost sync started. Check Import History for details.')
+      refetchAdPlatStatus()
+      loadImportHistory()
+    } catch (err) {
+      alert(err.message || 'Error triggering syncs')
+    } finally {
+      setSyncingAll(false)
+    }
+  }
+
   const { data: costsData, refetch: refetchCosts } = useQuery({
     queryKey: ['campaign-costs', site?.site_key, dateFrom, dateTo],
     queryFn: async () => {
@@ -469,8 +507,26 @@ export default function Campaigns() {
         <div>
           <h2 className="text-2xl font-bold text-st-black">Campaigns & Attribution</h2>
           <p className="text-sm text-st-gray mt-0.5">Performance by marketing channel with real-time revenue and conversion data</p>
+          {anyConnected && (
+            <div className="text-[11px] text-st-gray mt-1 flex items-center gap-1.5 font-medium">
+              <span className="inline-block w-2 h-2 rounded-full bg-[#d7f550] animate-pulse" />
+              <span>
+                {googleConnected && lastSyncedGoogle && `Google Ads synced: ${new Date(lastSyncedGoogle).toLocaleString()}`}
+                {googleConnected && lastSyncedGoogle && metaConnected && lastSyncedMeta && ' · '}
+                {metaConnected && lastSyncedMeta && `Meta Ads synced: ${new Date(lastSyncedMeta).toLocaleString()}`}
+                {!lastSyncedGoogle && !lastSyncedMeta && 'Awaiting first automated sync'}
+              </span>
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
+          {anyConnected && (
+            <button onClick={handleSyncAllConnected} disabled={syncingAll}
+              className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5 transition-colors font-medium shadow-sm">
+              <RefreshCw className={`w-4 h-4 ${syncingAll ? 'animate-spin' : ''}`} />
+              {syncingAll ? 'Syncing...' : 'Sync connected accounts'}
+            </button>
+          )}
           <button onClick={() => setImportModalOpen(true)}
             className="px-3 py-1.5 text-sm text-st-black bg-[#d7f550] hover:bg-[#c4df45] rounded-lg transition-colors font-medium flex items-center gap-1.5 shadow-sm">
             <UploadCloud className="w-4 h-4" /> Import Costs

@@ -299,3 +299,52 @@ export function csvToObjects(lines = []) {
 
   return result
 }
+
+/**
+ * Maps rows to campaign_costs db shape, deriving site_id from site.id context.
+ *
+ * @param {Array} rows - Normalized/aggregated rows
+ * @param {object} site - Authenticated site context
+ * @returns {Array}
+ */
+export function buildCampaignCostUpsertRows(rows = [], site = {}) {
+  if (!site || !site.id) {
+    throw new Error('Site context with valid ID is required')
+  }
+
+  return rows.map(r => {
+    const platform = r.platform || 'manual_csv'
+    const dedupeKey = getCostDedupeKey(r.campaign_id, r.campaign_name)
+    return {
+      site_id: site.id,
+      campaign_name: r.campaign_name,
+      campaign_id: r.campaign_id || null,
+      platform,
+      cost_dedupe_key: dedupeKey,
+      spend: r.spend,
+      clicks: r.clicks,
+      impressions: r.impressions,
+      currency: r.currency || 'USD',
+      period_start: r.date,
+      period_end: r.date
+    }
+  })
+}
+
+/**
+ * Performs database upsert for campaign costs rows on conflict of site_id, platform, cost_dedupe_key, period_start.
+ *
+ * @param {object} supabase - Supabase client instance
+ * @param {Array} dbRows - Prepared database rows
+ * @returns {Promise<object>}
+ */
+export async function upsertCampaignCostRows(supabase, dbRows = []) {
+  if (dbRows.length === 0) return { success: true, count: 0 }
+
+  const { error } = await supabase
+    .from('campaign_costs')
+    .upsert(dbRows, { onConflict: 'site_id,platform,cost_dedupe_key,period_start' })
+
+  if (error) throw error
+  return { success: true, count: dbRows.length }
+}

@@ -247,6 +247,197 @@ export default function Integrations() {
     }
   }
 
+  // Ad Platforms Cost Sync integration state
+  const { data: adPlatStatus, refetch: refetchAdPlatStatus } = useQuery({
+    queryKey: ['ad-platforms-status', site?.site_key],
+    queryFn: () => fetchApi(`/integrations/ad-platforms/status?site_key=${site.site_key}`),
+    enabled: !!site?.site_key
+  })
+
+  const { data: adSyncHistory, refetch: refetchAdSyncHistory } = useQuery({
+    queryKey: ['ad-sync-history', site?.site_key],
+    queryFn: () => fetchApi(`/integrations/ad-platforms/sync-history?site_key=${site.site_key}`),
+    enabled: !!site?.site_key
+  })
+
+  const [googleCustomerId, setGoogleCustomerId] = useState('')
+  const [googleLoginCustomerId, setGoogleLoginCustomerId] = useState('')
+  const [metaAccessToken, setMetaAccessToken] = useState('')
+  const [metaAdAccountId, setMetaAdAccountId] = useState('')
+
+  const [gadsSaving, setGadsSaving] = useState(false)
+  const [metaConnecting, setMetaConnecting] = useState(false)
+  const [syncingGads, setSyncingGads] = useState(false)
+  const [syncingMeta, setSyncingMeta] = useState(false)
+
+  const [adPlatError, setAdPlatError] = useState('')
+  const [adPlatMessage, setAdPlatMessage] = useState('')
+
+  const [showGoogleAdvanced, setShowGoogleAdvanced] = useState(false)
+  const [showMetaAdvanced, setShowMetaAdvanced] = useState(false)
+  const [showRecentSyncs, setShowRecentSyncs] = useState(false)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('google_ads_connected') === 'true') {
+      setAdPlatMessage('Google Ads connection authenticated successfully! Please enter your ad customer ID to complete setup.')
+      window.history.replaceState({}, document.title, window.location.pathname)
+    } else if (params.get('google_ads_error')) {
+      const err = params.get('google_ads_error')
+      let msg = 'Google Ads authorization failed.'
+      if (err === 'missing_refresh_token') {
+        msg = 'Connection failed: Google did not return a refresh token. Please click "Connect" again and make sure you approve offline access.'
+      } else if (err === 'expired_state') {
+        msg = 'Connection failed: The security session expired. Please try again.'
+      } else if (err === 'invalid_state') {
+        msg = 'Connection failed: The state validation check failed.'
+      } else if (err === 'access_denied') {
+        msg = 'Connection failed: Access denied.'
+      }
+      setAdPlatError(msg)
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+  }, [])
+
+  const handleConnectGoogleAds = async () => {
+    setAdPlatError('')
+    setAdPlatMessage('')
+    try {
+      const res = await fetchApi(`/integrations/ad-platforms/google/auth-url?site_key=${site.site_key}`)
+      if (res?.not_configured) {
+        setAdPlatError('Google Ads is not configured on this server yet. Missing client environment variables.')
+      } else if (res?.url) {
+        window.location.href = res.url
+      } else {
+        setAdPlatError('Failed to generate connection link.')
+      }
+    } catch (err) {
+      setAdPlatError(err.message || 'Error redirecting to Google')
+    }
+  }
+
+  const handleSaveGoogleAccount = async (e) => {
+    e.preventDefault()
+    setAdPlatError('')
+    setAdPlatMessage('')
+    setGadsSaving(true)
+    try {
+      const res = await fetchApi(`/integrations/ad-platforms/google/save-account?site_key=${site.site_key}`, {
+        method: 'POST',
+        body: JSON.stringify({ customer_id: googleCustomerId, login_customer_id: googleLoginCustomerId })
+      })
+      if (res.success) {
+        setAdPlatMessage('Google Ads customer configuration saved successfully!')
+        refetchAdPlatStatus()
+      } else {
+        setAdPlatError(res.error || 'Failed to save Google Ads account details.')
+      }
+    } catch (err) {
+      setAdPlatError(err.message || 'Error saving Google Ads credentials')
+    } finally {
+      setGadsSaving(false)
+    }
+  }
+
+  const handleSyncGoogleAds = async () => {
+    setAdPlatError('')
+    setAdPlatMessage('')
+    setSyncingGads(true)
+    try {
+      const res = await fetchApi(`/integrations/ad-platforms/google/sync?site_key=${site.site_key}`, {
+        method: 'POST'
+      })
+      if (res.success) {
+        setAdPlatMessage('Google Ads sync task triggered in the background.')
+        refetchAdPlatStatus()
+        refetchAdSyncHistory()
+      } else {
+        setAdPlatError(res.error || 'Failed to trigger sync.')
+      }
+    } catch (err) {
+      setAdPlatError(err.message || 'Error triggering sync')
+    } finally {
+      setSyncingGads(false)
+    }
+  }
+
+  const handleDisconnectGoogleAds = async () => {
+    if (!window.confirm('Are you sure you want to disconnect Google Ads? Your historical imported/synced spend data will remain intact.')) return
+    setAdPlatError('')
+    setAdPlatMessage('')
+    try {
+      await fetchApi(`/integrations/ad-platforms/google/disconnect?site_key=${site.site_key}`, { method: 'POST' })
+      setAdPlatMessage('Google Ads credentials removed.')
+      setGoogleCustomerId('')
+      setGoogleLoginCustomerId('')
+      refetchAdPlatStatus()
+      refetchAdSyncHistory()
+    } catch (err) {
+      setAdPlatError(err.message || 'Failed to disconnect')
+    }
+  }
+
+  const handleConnectMetaAds = async (e) => {
+    e.preventDefault()
+    setAdPlatError('')
+    setAdPlatMessage('')
+    setMetaConnecting(true)
+    try {
+      const res = await fetchApi(`/integrations/ad-platforms/meta/connect?site_key=${site.site_key}`, {
+        method: 'POST',
+        body: JSON.stringify({ access_token: metaAccessToken, ad_account_id: metaAdAccountId })
+      })
+      if (res.success) {
+        setAdPlatMessage('Meta Ads token saved and validated successfully!')
+        setMetaAccessToken('')
+        setMetaAdAccountId('')
+        refetchAdPlatStatus()
+      } else {
+        setAdPlatError(res.error || 'Failed to connect Meta.')
+      }
+    } catch (err) {
+      setAdPlatError(err.message || 'Error connecting Meta')
+    } finally {
+      setMetaConnecting(false)
+    }
+  }
+
+  const handleSyncMetaAds = async () => {
+    setAdPlatError('')
+    setAdPlatMessage('')
+    setSyncingMeta(true)
+    try {
+      const res = await fetchApi(`/integrations/ad-platforms/meta/sync?site_key=${site.site_key}`, {
+        method: 'POST'
+      })
+      if (res.success) {
+        setAdPlatMessage('Meta Ads sync task triggered in the background.')
+        refetchAdPlatStatus()
+        refetchAdSyncHistory()
+      } else {
+        setAdPlatError(res.error || 'Failed to trigger sync.')
+      }
+    } catch (err) {
+      setAdPlatError(err.message || 'Error triggering sync')
+    } finally {
+      setSyncingMeta(false)
+    }
+  }
+
+  const handleDisconnectMetaAds = async () => {
+    if (!window.confirm('Are you sure you want to disconnect Meta Ads? Your historical imported/synced spend data will remain intact.')) return
+    setAdPlatError('')
+    setAdPlatMessage('')
+    try {
+      await fetchApi(`/integrations/ad-platforms/meta/disconnect?site_key=${site.site_key}`, { method: 'POST' })
+      setAdPlatMessage('Meta Ads credentials removed.')
+      refetchAdPlatStatus()
+      refetchAdSyncHistory()
+    } catch (err) {
+      setAdPlatError(err.message || 'Failed to disconnect')
+    }
+  }
+
   // Google Search Console integration state
   const { data: gscIntegData, refetch: refetchGscInteg } = useQuery({
     queryKey: ['gsc-integration', site?.site_key],
@@ -991,6 +1182,306 @@ export default function Integrations() {
             <p className="text-[11px] text-blue-700 dark:text-blue-400 pt-1">
               <strong>Attribution note:</strong> To stitch orders to visitor journeys, pass SourceTrack IDs into Shopify cart/note attributes. Set the <code className="font-mono">_st_aid</code> cart attribute with the visitor's anonymous ID (retrieved from browser localStorage key <code className="font-mono">st_aid</code>) when they add items or update the cart.
             </p>
+          </div>
+        </div>
+      </DashboardCard>
+
+      {/* Ad Cost Sync */}
+      <DashboardCard
+        title="Ad Cost Sync"
+        subtitle="Sync campaign-level spend, clicks, and impressions from advertising networks on demand"
+        action={
+          <Link to="/docs#ad-spend-sync" className="text-xs text-st-black dark:text-white hover:text-gray-700 dark:hover:text-gray-300 font-medium flex items-center gap-1">
+            View guide <ExternalLink className="w-3 h-3" />
+          </Link>
+        }
+      >
+        <div className="space-y-4">
+          {adPlatMessage && (
+            <div className="p-3 text-xs rounded-lg bg-green-50 text-green-700 border border-green-200">
+              {adPlatMessage}
+            </div>
+          )}
+          {adPlatError && (
+            <div className="p-3 text-xs rounded-lg bg-red-50 text-red-700 border border-red-200">
+              {adPlatError}
+            </div>
+          )}
+
+          {/* Google Ads Row */}
+          <div className="border-b border-gray-100 dark:border-gray-800 pb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-st-black dark:text-white">Google Ads</p>
+                {adPlatStatus?.data?.google_ads?.connected && adPlatStatus?.data?.google_ads?.account_id && (
+                  <p className="text-xs text-st-gray mt-0.5">
+                    Customer ID: {adPlatStatus.data.google_ads.account_id}
+                    {adPlatStatus.data.google_ads.last_synced_at && ` · Last synced: ${new Date(adPlatStatus.data.google_ads.last_synced_at).toLocaleString()}`}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <StatusBadge
+                  status={
+                    !adPlatStatus?.data?.google_ads?.env_configured
+                      ? 'pending'
+                      : adPlatStatus?.data?.google_ads?.status === 'connected'
+                      ? 'verified'
+                      : adPlatStatus?.data?.google_ads?.status === 'needs_account'
+                      ? 'warning'
+                      : adPlatStatus?.data?.google_ads?.status === 'needs_reconnect'
+                      ? 'error'
+                      : adPlatStatus?.data?.google_ads?.status === 'error'
+                      ? 'error'
+                      : 'pending'
+                  }
+                  label={
+                    !adPlatStatus?.data?.google_ads?.env_configured
+                      ? 'Not Configured'
+                      : adPlatStatus?.data?.google_ads?.status === 'connected'
+                      ? 'Connected'
+                      : adPlatStatus?.data?.google_ads?.status === 'needs_account'
+                      ? 'Choose ad account'
+                      : adPlatStatus?.data?.google_ads?.status === 'needs_reconnect'
+                      ? 'Reconnect needed'
+                      : adPlatStatus?.data?.google_ads?.status === 'error'
+                      ? 'Needs attention'
+                      : 'Not Connected'
+                  }
+                />
+
+                {adPlatStatus?.data?.google_ads?.env_configured && (
+                  <>
+                    {!adPlatStatus?.data?.google_ads?.connected ? (
+                      <button
+                        type="button"
+                        onClick={handleConnectGoogleAds}
+                        className="px-3 py-1.5 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 transition-colors"
+                      >
+                        Connect
+                      </button>
+                    ) : (
+                      <>
+                        {adPlatStatus?.data?.google_ads?.status === 'connected' && (
+                          <button
+                            type="button"
+                            onClick={handleSyncGoogleAds}
+                            disabled={syncingGads}
+                            className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1"
+                          >
+                            {syncingGads ? 'Syncing...' : 'Sync Now'}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setShowGoogleAdvanced(!showGoogleAdvanced)}
+                          className="px-3 py-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-semibold rounded-lg transition-colors"
+                        >
+                          Configure
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleDisconnectGoogleAds}
+                          className="px-3 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold rounded-lg transition-colors"
+                        >
+                          Disconnect
+                        </button>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Google Ads Configure Form */}
+            {showGoogleAdvanced && adPlatStatus?.data?.google_ads?.connected && (
+              <form onSubmit={handleSaveGoogleAccount} className="mt-4 bg-gray-50 dark:bg-[#1a1d1d] border border-gray-100 dark:border-gray-800 rounded-lg p-4 space-y-3">
+                <p className="text-xs font-semibold text-st-black dark:text-white uppercase tracking-wider">Account Settings</p>
+                <div>
+                  <label className="block text-[11px] font-medium text-st-gray mb-1">
+                    Target Customer ID (10 digits)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={googleCustomerId}
+                    onChange={e => setGoogleCustomerId(e.target.value)}
+                    placeholder="1234567890"
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#111414] text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium text-st-gray mb-1">
+                    Login Customer ID (Optional manager account link, 10 digits)
+                  </label>
+                  <input
+                    type="text"
+                    value={googleLoginCustomerId}
+                    onChange={e => setGoogleLoginCustomerId(e.target.value)}
+                    placeholder="9876543210"
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#111414] text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={gadsSaving}
+                  className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 transition-colors"
+                >
+                  {gadsSaving ? 'Saving...' : 'Save Configuration'}
+                </button>
+              </form>
+            )}
+          </div>
+
+          {/* Meta Ads Row */}
+          <div className="border-b border-gray-100 dark:border-gray-800 pb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-st-black dark:text-white">Meta Ads</p>
+                {adPlatStatus?.data?.meta_ads?.connected && (
+                  <p className="text-xs text-st-gray mt-0.5">
+                    Account ID: {adPlatStatus.data.meta_ads.account_id}
+                    {adPlatStatus.data.meta_ads.last_synced_at && ` · Last synced: ${new Date(adPlatStatus.data.meta_ads.last_synced_at).toLocaleString()}`}
+                  </p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <StatusBadge
+                  status={adPlatStatus?.data?.meta_ads?.status === 'connected' ? 'verified' : 'pending'}
+                  label={adPlatStatus?.data?.meta_ads?.status === 'connected' ? 'Connected' : 'Not Connected'}
+                />
+
+                {!adPlatStatus?.data?.meta_ads?.connected ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowMetaAdvanced(!showMetaAdvanced)}
+                    className="px-3 py-1.5 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 transition-colors"
+                  >
+                    Setup
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleSyncMetaAds}
+                      disabled={syncingMeta}
+                      className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg transition-colors"
+                    >
+                      {syncingMeta ? 'Syncing...' : 'Sync Now'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowMetaAdvanced(!showMetaAdvanced)}
+                      className="px-3 py-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-semibold rounded-lg transition-colors"
+                    >
+                      Configure
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDisconnectMetaAds}
+                      className="px-3 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold rounded-lg transition-colors"
+                    >
+                      Disconnect
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Meta Ads Configure Form */}
+            {showMetaAdvanced && (
+              <form onSubmit={handleConnectMetaAds} className="mt-4 bg-gray-50 dark:bg-[#1a1d1d] border border-gray-100 dark:border-gray-800 rounded-lg p-4 space-y-3">
+                <h4 className="text-xs font-bold text-st-black dark:text-white">Meta Ads — Advanced manual token setup</h4>
+                <p className="text-[11px] text-st-gray leading-normal">
+                  Paste a Meta access token and ad account ID. This is a beta setup for syncing spend only.
+                </p>
+                <div>
+                  <label className="block text-[11px] font-medium text-st-gray mb-1">
+                    Meta Access Token
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    value={metaAccessToken}
+                    onChange={e => setMetaAccessToken(e.target.value)}
+                    placeholder="EAA..."
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#111414] text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-medium text-st-gray mb-1">
+                    Ad Account ID (act_123 or 123)
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={metaAdAccountId}
+                    onChange={e => setMetaAdAccountId(e.target.value)}
+                    placeholder="123456789"
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#111414] text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={metaConnecting}
+                  className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 transition-colors"
+                >
+                  {metaConnecting ? 'Saving...' : 'Connect Meta Ads'}
+                </button>
+              </form>
+            )}
+          </div>
+
+          {/* Sync History Logs */}
+          {adSyncHistory?.data && adSyncHistory.data.length > 0 && (
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setShowRecentSyncs(!showRecentSyncs)}
+                className="text-xs font-semibold text-st-gray hover:text-st-black flex items-center gap-1"
+              >
+                {showRecentSyncs ? 'Hide' : 'Show'} Recent Syncs
+              </button>
+
+              {showRecentSyncs && (
+                <div className="mt-3 overflow-x-auto border border-gray-100 dark:border-gray-800 rounded-lg p-3 bg-gray-50/50">
+                  <table className="w-full text-left text-[11px]">
+                    <thead>
+                      <tr className="border-b border-gray-100 text-st-gray">
+                        <th className="pb-1.5">Platform</th>
+                        <th className="pb-1.5">Status</th>
+                        <th className="pb-1.5">Records</th>
+                        <th className="pb-1.5">Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {adSyncHistory.data.map(run => (
+                        <tr key={run.id} className="border-b border-gray-50 last:border-0">
+                          <td className="py-1.5 font-medium text-gray-850 capitalize">{run.platform?.replace('_', ' ')}</td>
+                          <td className="py-1.5">
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                              run.status === 'success' ? 'bg-green-50 text-green-700' : run.status === 'pending' ? 'bg-blue-50 text-blue-700' : 'bg-red-50 text-red-700'
+                            }`}>
+                              {run.status}
+                            </span>
+                          </td>
+                          <td className="py-1.5 text-gray-650">{run.records_synced}</td>
+                          <td className="py-1.5 text-gray-500">{new Date(run.sync_start).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Docs link */}
+          <div className="pt-2 flex items-center justify-between">
+            <span className="text-[11px] text-st-gray">Sync estimates ROAS based on tracked checkout revenue.</span>
+            <Link to="/docs#ad-spend-sync" className="text-xs text-blue-700 hover:text-blue-950 font-semibold underline">
+              API Docs & Setup →
+            </Link>
           </div>
         </div>
       </DashboardCard>

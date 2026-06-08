@@ -3,7 +3,7 @@ import { requireUserAuth } from '../middleware/user-auth.js'
 import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import { getSupabase } from '../lib/supabase.js'
 import { requireFeature } from '../lib/plan-features.js'
-import { getCostDedupeKey, validateAdCostRows, aggregateAdCostRows } from '../lib/ad-cost-imports.js'
+import { getCostDedupeKey, validateAdCostRows, aggregateAdCostRows, buildCampaignCostUpsertRows, upsertCampaignCostRows } from '../lib/ad-cost-imports.js'
 
 const router = express.Router()
 
@@ -118,30 +118,10 @@ router.post('/import', requireUserAuth, validateSiteKey, requireSiteMembership, 
     runLogId = runLog.id
 
     // Map rows to Supabase table records, deriving site_id from authenticated site context ONLY
-    const dbRows = aggregated.map(r => {
-      const platform = r.platform || 'manual_csv'
-      const dedupeKey = getCostDedupeKey(r.campaign_id, r.campaign_name)
-      return {
-        site_id: req.site.id,
-        campaign_name: r.campaign_name,
-        campaign_id: r.campaign_id || null,
-        platform,
-        cost_dedupe_key: dedupeKey,
-        spend: r.spend,
-        clicks: r.clicks,
-        impressions: r.impressions,
-        currency: r.currency || 'USD',
-        period_start: r.date,
-        period_end: r.date
-      }
-    })
+    const dbRows = buildCampaignCostUpsertRows(aggregated, req.site)
 
-    // Perform bulk upserts based on non-null dedupe key
-    const { error: upsertErr } = await supabase
-      .from('campaign_costs')
-      .upsert(dbRows, { onConflict: 'site_id,platform,cost_dedupe_key,period_start' })
-
-    if (upsertErr) throw upsertErr
+    // Perform bulk upserts based on non-null dedupe key using shared helper
+    await upsertCampaignCostRows(supabase, dbRows)
 
     // Update import history log to success
     await supabase

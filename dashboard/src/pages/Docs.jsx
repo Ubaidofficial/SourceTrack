@@ -1375,6 +1375,39 @@ window.location.href = decoratedUrl;`}</Code>
     ]
   })
 })`}</Code>
+
+            <H3 id="ad-spend-sync">Connected Ad Cost Sync</H3>
+            <p>
+              SourceTrack can sync campaign-level spend, clicks, and impressions from connected ad accounts. Use the sync controls to refresh costs on demand.
+            </p>
+            <p className="text-sm text-gray-500 mt-2">
+              Note: Automated nightly scheduling is currently in the backlog and costs must be refreshed manually.
+            </p>
+
+            <H4>Google Ads Integration</H4>
+            <ul className="list-disc list-inside space-y-1.5 pl-1 text-sm text-gray-650 dark:text-gray-400">
+              <li><strong>Developer Token:</strong> Synchronizing Google Ads requires a Google Ads Developer Token configured on the server. Approval or access reviews for these developer tokens can take time.</li>
+              <li><strong>Customer ID:</strong> Set the Target Customer ID to the specific 10-digit Google Ads account ID.</li>
+              <li><strong>Login Customer ID:</strong> If your ad account is accessed through a manager account, you must also specify the 10-digit Login Customer ID of the manager account.</li>
+              <li><strong>API Version:</strong> Google Ads API versions sunset periodically. Review the server's <code>GOOGLE_ADS_API_VERSION</code> env periodically to keep sync tasks running smoothly.</li>
+            </ul>
+
+            <H4>Meta Ads Integration (Advanced Manual Token Setup)</H4>
+            <p className="text-sm text-gray-650 dark:text-gray-400">
+              To keep paid beta setups simple and secure, Meta Ads uses a manual, advanced token flow rather than full Meta Login:
+            </p>
+            <ul className="list-disc list-inside space-y-1.5 pl-1 text-sm text-gray-650 dark:text-gray-400">
+              <li><strong>Access Token:</strong> Generate and paste a User/System access token from the Meta App Developer dashboard.</li>
+              <li><strong>Permissions:</strong> The token must have <code>ads_read</code> and <code>read_insights</code> permissions.</li>
+              <li><strong>Ad Account ID:</strong> Provide the numeric ID of your target Facebook Ad Account (any leading <code>act_</code> prefix is stripped).</li>
+            </ul>
+
+            <H4>Data Syncing & Calculations</H4>
+            <ul className="list-disc list-inside space-y-1.5 pl-1 text-sm text-gray-650 dark:text-gray-400">
+              <li><strong>Synced Data:</strong> Connected accounts can be refreshed from the Campaigns page. SourceTrack stores the synced daily campaign costs for ROI reporting.</li>
+              <li><strong>Attribution Matching:</strong> Imported spend is matched directly with utm_campaign parameter values using campaign names or IDs.</li>
+              <li><strong>ROAS & Currency:</strong> ROAS is estimated from tracked checkout conversion values and synced spend. Mixed or mismatched currencies will suppress ROAS and CPA calculations to prevent skewed aggregates. SourceTrack does not perform dynamic exchange-rate currency conversion.</li>
+            </ul>
           </Section>
 
           {/* ── Installation Guides ─────────────────────────────────────── */}
