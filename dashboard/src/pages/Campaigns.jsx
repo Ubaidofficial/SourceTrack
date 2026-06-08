@@ -338,15 +338,23 @@ export default function Campaigns() {
     queryFn: async () => {
       if (!site?.site_key) return []
       const res = await fetchApi(`/campaign-costs?site_key=${site.site_key}&date_from=${dateFrom}&date_to=${dateTo}`)
-      return res.data || []
+      return res?.data || res || []
     },
-    enabled: !!site?.site_key,
-    onSuccess: (data) => {
+    enabled: !!site?.site_key
+  })
+
+  useEffect(() => {
+    if (costsData) {
+      const data = costsData.data || costsData || []
       const map = {}
-      data.forEach(c => { map[c.campaign_name] = c.spend })
+      if (Array.isArray(data)) {
+        data.forEach(c => {
+          map[c.campaign_name] = c.spend
+        })
+      }
       setSpendMap(map)
     }
-  })
+  }, [costsData])
 
   async function saveSpend(campaignName) {
     const spend = parseFloat(spendInput) || 0
