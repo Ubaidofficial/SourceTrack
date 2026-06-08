@@ -260,6 +260,9 @@ export default function Integrations() {
     enabled: !!site?.site_key
   })
 
+  const adPlatformData = adPlatStatus?.data || adPlatStatus || {}
+  const syncHistoryList = Array.isArray(adSyncHistory?.data) ? adSyncHistory.data : (Array.isArray(adSyncHistory) ? adSyncHistory : [])
+
   const [googleCustomerId, setGoogleCustomerId] = useState('')
   const [googleLoginCustomerId, setGoogleLoginCustomerId] = useState('')
   const [metaAccessToken, setMetaAccessToken] = useState('')
@@ -1213,46 +1216,46 @@ export default function Integrations() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-st-black dark:text-white">Google Ads</p>
-                {adPlatStatus?.data?.google_ads?.connected && adPlatStatus?.data?.google_ads?.account_id && (
+                {adPlatformData.google_ads?.connected && adPlatformData.google_ads?.account_id && (
                   <p className="text-xs text-st-gray mt-0.5">
-                    Customer ID: {adPlatStatus.data.google_ads.account_id}
-                    {adPlatStatus.data.google_ads.last_synced_at && ` · Last synced: ${new Date(adPlatStatus.data.google_ads.last_synced_at).toLocaleString()}`}
+                    Customer ID: {adPlatformData.google_ads.account_id}
+                    {adPlatformData.google_ads.last_synced_at && ` · Last synced: ${new Date(adPlatformData.google_ads.last_synced_at).toLocaleString()}`}
                   </p>
                 )}
               </div>
               <div className="flex items-center gap-2">
                 <StatusBadge
                   status={
-                    !adPlatStatus?.data?.google_ads?.env_configured
+                    !adPlatformData.google_ads?.env_configured
                       ? 'pending'
-                      : adPlatStatus?.data?.google_ads?.status === 'connected'
+                      : adPlatformData.google_ads?.status === 'connected'
                       ? 'verified'
-                      : adPlatStatus?.data?.google_ads?.status === 'needs_account'
+                      : adPlatformData.google_ads?.status === 'needs_account'
                       ? 'warning'
-                      : adPlatStatus?.data?.google_ads?.status === 'needs_reconnect'
+                      : adPlatformData.google_ads?.status === 'needs_reconnect'
                       ? 'error'
-                      : adPlatStatus?.data?.google_ads?.status === 'error'
+                      : adPlatformData.google_ads?.status === 'error'
                       ? 'error'
                       : 'pending'
                   }
                   label={
-                    !adPlatStatus?.data?.google_ads?.env_configured
+                    !adPlatformData.google_ads?.env_configured
                       ? 'Not Configured'
-                      : adPlatStatus?.data?.google_ads?.status === 'connected'
+                      : adPlatformData.google_ads?.status === 'connected'
                       ? 'Connected'
-                      : adPlatStatus?.data?.google_ads?.status === 'needs_account'
+                      : adPlatformData.google_ads?.status === 'needs_account'
                       ? 'Choose ad account'
-                      : adPlatStatus?.data?.google_ads?.status === 'needs_reconnect'
+                      : adPlatformData.google_ads?.status === 'needs_reconnect'
                       ? 'Reconnect needed'
-                      : adPlatStatus?.data?.google_ads?.status === 'error'
+                      : adPlatformData.google_ads?.status === 'error'
                       ? 'Needs attention'
                       : 'Not Connected'
                   }
                 />
 
-                {adPlatStatus?.data?.google_ads?.env_configured && (
+                {adPlatformData.google_ads?.env_configured && (
                   <>
-                    {!adPlatStatus?.data?.google_ads?.connected ? (
+                    {!adPlatformData.google_ads?.connected ? (
                       <button
                         type="button"
                         onClick={handleConnectGoogleAds}
@@ -1262,7 +1265,7 @@ export default function Integrations() {
                       </button>
                     ) : (
                       <>
-                        {adPlatStatus?.data?.google_ads?.status === 'connected' && (
+                        {adPlatformData.google_ads?.status === 'connected' && (
                           <button
                             type="button"
                             onClick={handleSyncGoogleAds}
@@ -1294,7 +1297,7 @@ export default function Integrations() {
             </div>
 
             {/* Google Ads Configure Form */}
-            {showGoogleAdvanced && adPlatStatus?.data?.google_ads?.connected && (
+            {showGoogleAdvanced && adPlatformData.google_ads?.connected && (
               <form onSubmit={handleSaveGoogleAccount} className="mt-4 bg-gray-50 dark:bg-[#1a1d1d] border border-gray-100 dark:border-gray-800 rounded-lg p-4 space-y-3">
                 <p className="text-xs font-semibold text-st-black dark:text-white uppercase tracking-wider">Account Settings</p>
                 <div>
@@ -1338,20 +1341,20 @@ export default function Integrations() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold text-st-black dark:text-white">Meta Ads</p>
-                {adPlatStatus?.data?.meta_ads?.connected && (
+                {adPlatformData.meta_ads?.connected && (
                   <p className="text-xs text-st-gray mt-0.5">
-                    Account ID: {adPlatStatus.data.meta_ads.account_id}
-                    {adPlatStatus.data.meta_ads.last_synced_at && ` · Last synced: ${new Date(adPlatStatus.data.meta_ads.last_synced_at).toLocaleString()}`}
+                    Account ID: {adPlatformData.meta_ads.account_id}
+                    {adPlatformData.meta_ads.last_synced_at && ` · Last synced: ${new Date(adPlatformData.meta_ads.last_synced_at).toLocaleString()}`}
                   </p>
                 )}
               </div>
               <div className="flex items-center gap-2">
                 <StatusBadge
-                  status={adPlatStatus?.data?.meta_ads?.status === 'connected' ? 'verified' : 'pending'}
-                  label={adPlatStatus?.data?.meta_ads?.status === 'connected' ? 'Connected' : 'Not Connected'}
+                  status={adPlatformData.meta_ads?.status === 'connected' ? 'verified' : 'pending'}
+                  label={adPlatformData.meta_ads?.status === 'connected' ? 'Connected' : 'Not Connected'}
                 />
 
-                {!adPlatStatus?.data?.meta_ads?.connected ? (
+                {!adPlatformData.meta_ads?.connected ? (
                   <button
                     type="button"
                     onClick={() => setShowMetaAdvanced(!showMetaAdvanced)}
@@ -1433,7 +1436,7 @@ export default function Integrations() {
           </div>
 
           {/* Sync History Logs */}
-          {adSyncHistory?.data && adSyncHistory.data.length > 0 && (
+          {syncHistoryList.length > 0 && (
             <div className="pt-2">
               <button
                 type="button"
@@ -1455,7 +1458,7 @@ export default function Integrations() {
                       </tr>
                     </thead>
                     <tbody>
-                      {adSyncHistory.data.map(run => (
+                      {syncHistoryList.map(run => (
                         <tr key={run.id} className="border-b border-gray-50 last:border-0">
                           <td className="py-1.5 font-medium text-gray-850 capitalize">{run.platform?.replace('_', ' ')}</td>
                           <td className="py-1.5">
