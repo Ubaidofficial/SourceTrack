@@ -1,10 +1,48 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 128D-A — Core Report Builder & AI Sources Tab. Removed AI Analytics from the sidebar; added a lightweight AI Sources tab to the Analytics page; fixed a ClickHouse column-name mismatch bug for the `browser` dimension mapping (`properties.browser_name`); fixed the `conversion_type` filter mapping bug in the attribution engine; and added four preset AI templates to the Report Builder quick presets selector.
+> **Handoff:** Session 128D-B.1 — Report Builder UI Polish. Replaced all native HTML select dropdowns with dark-theme consistent React CustomSelects, added custom N-days input to rolling date selection, renamed AI Platforms model to AI-assisted with helper text, and refined traffic source category filter presets. Documented deferred filter support, noted schema-valid attribution accuracy risks, and confirmed that the duplicate saved reports feature was not added.
 >
-> **Next Task:** Visual/QA validation of the new Analytics tab and the Report Builder presets.
+> **Next Task:** Visual local QA and validation of /report-builder.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 128D-B.1 — Report Builder UI Polish
+**Date:** 2026-06-08 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+1. **Custom styled dropdowns**: Added CustomSelect React helper component and replaced all native select dropdowns (Metric, Group By, Group By 2, Date presets, Attribution Model, and all advanced filters).
+2. **Custom rolling days input**: Implemented custom N-days numeric input support for rolling range selections that falls back to Custom and binds integer values.
+3. **AI-assisted renaming**: Renamed "AI Platforms" model to "AI-assisted" and added description helper text explaining it.
+4. **Enhanced Sources filter presets**: Refined the traffic sources selector panel in Advanced Settings to provide 10 distinct groups (Organic Search, Paid Search, Paid Social, Organic Social, AI, Referral, Review Sites, Email, SMS, Direct/None) and wired them to allowed filters.
+5. **Delete Confirmation safety**: Added native `window.confirm` blocker to the saved reports delete button action in the drawer.
+6. **Deferred Filter Dimensions**: Documented that Browser, Referrer Domain, Landing Page / URL, and Custom URL Parameter filters are deferred from the direct filter scope (currently supported only as group-by targets).
+7. **Attribution Accuracy Risk**: Noted that source shortcut filters are schema-valid but value accuracy depends on backend normalization and customer data.
+8. **Duplicate Saved Reports**: Confirmed that the "Duplicate Saved Report" feature was not added to the drawer, keeping the scope clean and preventing accidental shipping of duplicates.
+
+### Files changed
+- `dashboard/src/pages/ReportBuilder.jsx`
+- `KNOWN_ISSUES.md`
+
+
+---
+
+
+## Session 128D-B — Report Builder Two-Panel UI
+**Date:** 2026-06-08 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+1. **Two-Panel Layout**: Redesigned `/report-builder` using a clean two-panel layout (left card for configuration, right card for preview) using CSS grid.
+2. **Compact Presets Row**: Replaced preset cards with a compact horizontal list of business question presets below the main header.
+3. **Unified Config Panel**: Combined Report Name, Metric, Group By, Primary Dimension, and Date Range into a single left Configure card.
+4. **Collapsible Accordion**: Moved Attribution Model, Attribution Window, Attribute By, and custom Filter segments into a collapsible Advanced Settings block (collapsed by default).
+5. **Preview Panel**: Integrated a stateful Preview card displaying report metadata, summary metrics, charting/table visualizations, and actions, or a helpful empty state when configuration is incomplete.
+6. **Saved Reports Drawer**: Created a side-over drawer layout to view, load, delete, and pin saved reports without cluttering the main screen.
+
+### Files changed
+- `dashboard/src/pages/ReportBuilder.jsx`
+
+---
+
 
 ## Session 128D-A — Core Report Builder & AI Sources Tab
 **Date:** 2026-06-08 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)

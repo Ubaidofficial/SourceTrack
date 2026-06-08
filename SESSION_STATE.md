@@ -1,8 +1,7 @@
-Session: 128D-A
-Last Completed: Removed AI Analytics from sidebar; added lightweight AI Sources tab to Analytics; resolved ClickHouse browser_name dimension and conversion_type filter bugs; and added AI preset templates to Report Builder.
-Next Task: Visual browser/QA validation of Report Builder and Analytics tabs.
+Session: 128D-B.1 (Report Builder Polish Pass)
+Last Completed: Refactored all native selects in Report Builder to dark-theme consistent CustomSelects, added custom N-days input to rolling date selection, renamed AI Platforms model to AI-assisted with helper text, and refined traffic source category filter grid.
+Next Task: Visual verification of /report-builder and local visual QA approval by the user.
 Roadmap Queue:
-- Phase B (Report Builder two-panel UI)
 - Phase C (Dashboard saved widget cards)
 - Phase D (Campaigns AI Copilot)
 Build: ✅ passing

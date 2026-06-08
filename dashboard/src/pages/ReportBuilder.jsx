@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -21,27 +21,25 @@ import {
 import {
   RefreshCw, Bookmark, Trash2, Download, Copy,
   Search, ChevronDown, ArrowRight, Plus, HelpCircle,
-  BarChart3
+  BarChart3, X
 } from 'lucide-react'
 import ConversionExplanationModal from '../components/ConversionExplanationModal'
 import { hasFeature } from '../lib/planFeatures'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend)
 
-// Multi-touch models (linear, time_decay, u_shaped, w_shaped) are paid-only.
-// Free plan still sees the rest — they're single-touch and computed inline at
-// query time without the nightly attribution job.
+// Multi-touch models are paid-only.
 const MULTI_TOUCH_KEYS = new Set(['linear', 'time_decay', 'u_shaped', 'w_shaped'])
 const MODELS = [
-  { key: 'first_touch',          label: 'First Touch' },
-  { key: 'last_touch',           label: 'Last Touch' },
+  { key: 'first_touch',            label: 'First Touch' },
+  { key: 'last_touch',             label: 'Last Touch' },
   { key: 'first_touch_non_direct', label: 'First Touch (Non-Direct)' },
   { key: 'last_touch_non_direct',  label: 'Last Touch (Non-Direct)' },
-  { key: 'linear',               label: 'Linear' },
-  { key: 'time_decay',           label: 'Time Decay (7-day half-life)' },
-  { key: 'u_shaped',             label: 'U-Shaped (40/20/40)' },
-  { key: 'w_shaped',             label: 'W-Shaped (30/30/30/10)' },
-  { key: 'ai_platforms',         label: 'AI Platforms' },
+  { key: 'linear',                 label: 'Linear' },
+  { key: 'time_decay',             label: 'Time Decay (7-day half-life)' },
+  { key: 'u_shaped',               label: 'U-Shaped (40/20/40)' },
+  { key: 'w_shaped',               label: 'W-Shaped (30/30/30/10)' },
+  { key: 'ai_platforms',           label: 'AI conversion source' },
 ]
 
 const DIMENSIONS = [
@@ -115,22 +113,13 @@ const GRANULARITY = [
   { key: 'year', label: 'Yearly' }
 ]
 
-const PRESETS = [
-  { name: 'Revenue by Channel', model: 'last_touch', groupBy: 'channel', groupBy2: null, metric: 'revenue', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: {}, desc: 'Revenue grouped by high-level marketing channel' },
-  { name: 'Conversions by Channel', model: 'last_touch', groupBy: 'channel', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: {}, desc: 'Conversions grouped by high-level marketing channel' },
-  { name: 'AI Traffic Sources', model: 'last_touch', groupBy: 'ai_source', groupBy2: null, metric: 'sessions', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { has_ai_source: 'true' }, desc: 'Unique visitors arriving from AI platforms' },
-  { name: 'AI Revenue by Source', model: 'last_touch', groupBy: 'ai_source', groupBy2: null, metric: 'revenue', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { has_ai_source: 'true' }, desc: 'See which AI platforms send the most revenue' },
-  { name: 'AI Landing Pages', model: 'first_touch', groupBy: 'landing_page', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { has_ai_source: 'true' }, desc: 'Which landing pages AI-referred visitors convert on' },
-  { name: 'AI-assisted Conversions', model: 'linear', groupBy: 'ai_source', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { has_ai_source: 'true' }, desc: 'Conversions attributed across AI touchpoints' },
-  { name: 'Best Lead Sources', model: 'last_touch', groupBy: 'channel', groupBy2: null, metric: 'leads', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { min_conversions: '1' }, desc: 'Which channels bring in the most leads' },
-  { name: 'Campaign Revenue', model: 'last_touch', groupBy: 'campaign', groupBy2: null, metric: 'revenue', days: 90, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { min_conversions: '5' }, desc: 'Revenue performance across campaigns' },
-  { name: 'Top Landing Pages', model: 'first_touch', groupBy: 'landing_page', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: {}, desc: 'Which pages convert visitors best' },
-  { name: 'Conversion Trend', model: 'last_touch', groupBy: 'date', groupBy2: null, metric: 'conversions', days: 30, chartType: 'line', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: {}, desc: 'How conversions are trending over time' },
-  { name: 'New Customer Revenue', model: 'first_touch', groupBy: 'channel', groupBy2: null, metric: 'revenue', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { customer_type: 'new' }, desc: 'Revenue from first-time customers only, by acquisition channel' },
-  { name: 'Returning Customer Revenue', model: 'last_touch', groupBy: 'channel', groupBy2: null, metric: 'revenue', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { customer_type: 'returning' }, desc: 'Revenue from repeat customers by last touchpoint' }
+const PRESET_TEMPLATES = [
+  { name: 'AI sources', desc: 'See which AI platforms send converting visitors', model: 'last_touch', groupBy: 'ai_source', groupBy2: null, metric: 'sessions', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { has_ai_source: 'true' } },
+  { name: 'AI revenue', desc: 'Revenue generated from AI referral touchpoints', model: 'last_touch', groupBy: 'ai_source', groupBy2: null, metric: 'revenue', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { has_ai_source: 'true' } },
+  { name: 'AI landing pages', desc: 'Landing pages where AI visitors convert best', model: 'first_touch', groupBy: 'landing_page', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { has_ai_source: 'true' } },
+  { name: 'Campaign revenue', desc: 'Revenue performance across campaigns', model: 'last_touch', groupBy: 'campaign', groupBy2: null, metric: 'revenue', days: 90, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { min_conversions: '5' } },
+  { name: 'Channel revenue', desc: 'Revenue grouped by high-level marketing channel', model: 'last_touch', groupBy: 'channel', groupBy2: null, metric: 'revenue', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: {} },
 ]
-
-
 
 const COLORS = [
   'rgba(17, 24, 39, 0.85)',
@@ -141,6 +130,19 @@ const COLORS = [
   'rgba(31, 41, 55, 0.85)',
   'rgba(180, 195, 60, 0.85)',
   'rgba(156, 163, 175, 0.85)'
+]
+
+const SOURCE_GROUPS = [
+  { name: 'Organic Search', icon: '🔍', subs: ['Google Organic', 'Bing Organic', 'DuckDuckGo Organic'] },
+  { name: 'Paid Search', icon: '💰', subs: ['Google Ads'] },
+  { name: 'Paid Social', icon: '📢', subs: ['Facebook Ads', 'LinkedIn Ads'] },
+  { name: 'Organic Social', icon: '👥', subs: ['Facebook', 'Instagram', 'Twitter / X', 'LinkedIn'] },
+  { name: 'AI', icon: '✦', subs: ['ChatGPT', 'Claude', 'Gemini', 'Perplexity'] },
+  { name: 'Referral', icon: '🔗', subs: [] },
+  { name: 'Review Sites', icon: '⭐', subs: ['G2', 'Capterra', 'Trustpilot'] },
+  { name: 'Email', icon: '✉️', subs: [] },
+  { name: 'SMS', icon: '💬', subs: [] },
+  { name: 'Direct / None', icon: '🚪', subs: [] }
 ]
 
 async function getFlexibleReport(siteKey, model, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null, granularity = 'day', attributionWindow = null, attributeBy = 'conversion_date') {
@@ -179,7 +181,7 @@ function getRollingDateRange(days) {
 function getPriorPeriod(dateFrom, dateTo) {
   const from = new Date(dateFrom)
   const to = new Date(dateTo)
-  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime())) {
+  if (isNaN(from.getTime()) || isNaN(to.getTime())) {
     return null
   }
   const durationMs = to.getTime() - from.getTime()
@@ -189,6 +191,246 @@ function getPriorPeriod(dateFrom, dateTo) {
     date_from: priorFrom.toISOString().slice(0, 10),
     date_to: priorTo.toISOString().slice(0, 10)
   }
+}
+
+// Custom Select Component for consistent dark mode look
+function CustomSelect({ value, onChange, options, placeholder = 'Select option...', disabled = false }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const containerRef = useRef(null)
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const selectedOpt = options.find(o => o.value === value)
+  const displayLabel = selectedOpt ? selectedOpt.label : placeholder
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-3 py-2 text-sm bg-white dark:bg-[#242829] border border-gray-300 dark:border-[#2A2E2E] rounded-lg shadow-sm focus:outline-none text-gray-700 dark:text-gray-200 text-left disabled:opacity-50"
+      >
+        <span className="truncate">{displayLabel}</span>
+        <ChevronDown className="w-4 h-4 ml-2 text-gray-400 flex-shrink-0" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-[#242829] border border-gray-200 dark:border-[#2A2E2E] rounded-lg shadow-xl max-h-60 overflow-y-auto">
+          {options.map((opt) => {
+            const isSelected = opt.value === value
+            const isDisabled = opt.disabled
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                disabled={isDisabled}
+                onClick={() => {
+                  onChange(opt.value)
+                  setIsOpen(false)
+                }}
+                className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between transition-colors ${
+                  isSelected
+                    ? 'bg-lime-50 text-lime-800 dark:bg-lime-950/20 dark:text-lime-400 font-medium'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#252929]'
+                } ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+              >
+                <span className="truncate">{opt.label}</span>
+                {isSelected && <span className="text-lime-600 dark:text-lime-400">✓</span>}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Date Range Popover Component
+function DateRangePopover({
+  isRolling,
+  setIsRolling,
+  rollingDays,
+  setRollingDays,
+  datePreset,
+  setDatePreset,
+  dateFrom,
+  setDateFrom,
+  dateTo,
+  setDateTo,
+  handleDatePreset
+}) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [customDaysVal, setCustomDaysVal] = useState(rollingDays)
+  const containerRef = useRef(null)
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  useEffect(() => {
+    setCustomDaysVal(rollingDays)
+  }, [rollingDays])
+
+  const displayLabel = isRolling
+    ? `Rolling: Last ${rollingDays} days`
+    : datePreset === 'month'
+      ? 'This month'
+      : datePreset === 0
+        ? `${dateFrom} → ${dateTo}`
+        : `Last ${datePreset} days`
+
+  const handleRollingSelect = (days) => {
+    setRollingDays(days)
+    setIsRolling(true)
+    setDatePreset(0)
+    setIsOpen(false)
+  }
+
+  const handleCustomRollingApply = () => {
+    let days = parseInt(customDaysVal, 10)
+    if (isNaN(days) || days < 1) days = 1
+    if (days > 730) days = 730
+    setRollingDays(days)
+    setIsRolling(true)
+    setDatePreset(0)
+    setIsOpen(false)
+  }
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-3 py-2 text-sm bg-white dark:bg-[#242829] border border-gray-300 dark:border-[#2A2E2E] rounded-lg shadow-sm focus:outline-none text-gray-700 dark:text-gray-200 text-left"
+      >
+        <span className="truncate">{displayLabel}</span>
+        <ChevronDown className="w-4 h-4 ml-2 text-gray-400 flex-shrink-0" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 left-0 w-80 mt-1 bg-white dark:bg-[#242829] border border-gray-200 dark:border-[#2A2E2E] rounded-xl shadow-xl p-4 text-xs">
+          <div className="flex gap-2 mb-3 border-b border-gray-100 dark:border-[#2A2E2E] pb-2">
+            <button
+              type="button"
+              onClick={() => setIsRolling(true)}
+              className={`flex-1 py-1 rounded-md font-medium text-center ${isRolling ? 'bg-st-black dark:bg-lime-500 dark:text-st-black text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}
+            >
+              Rolling
+            </button>
+            <button
+              type="button"
+              onClick={() => { setIsRolling(false); setDatePreset(30) }}
+              className={`flex-1 py-1 rounded-md font-medium text-center ${!isRolling ? 'bg-st-black dark:bg-lime-500 dark:text-st-black text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'}`}
+            >
+              Fixed
+            </button>
+          </div>
+
+          {isRolling ? (
+            <div className="space-y-2.5">
+              <div className="grid grid-cols-2 gap-1.5">
+                {[7, 14, 30, 60, 90].map(d => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => handleRollingSelect(d)}
+                    className={`py-1.5 rounded border ${rollingDays === d ? 'border-lime-500 bg-lime-500/10 text-lime-800 dark:text-lime-400' : 'border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                  >
+                    Last {d} days
+                  </button>
+                ))}
+              </div>
+              <div className="pt-2 border-t border-gray-100 dark:border-[#2A2E2E] flex items-center gap-2">
+                <span className="text-gray-500">Last</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="730"
+                  value={customDaysVal}
+                  onChange={(e) => setCustomDaysVal(e.target.value)}
+                  className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded text-center text-st-black dark:text-white"
+                />
+                <span className="text-gray-500">days</span>
+                <button
+                  type="button"
+                  onClick={handleCustomRollingApply}
+                  className="ml-auto px-2.5 py-1 bg-st-black dark:bg-lime-500 dark:text-st-black text-white rounded font-semibold"
+                >
+                  Apply
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-1.5">
+                {[
+                  { label: 'Last 7 days', days: 7 },
+                  { label: 'Last 30 days', days: 30 },
+                  { label: 'Last 90 days', days: 90 },
+                  { label: 'This month', days: 'month' }
+                ].map(p => (
+                  <button
+                    key={p.label}
+                    type="button"
+                    onClick={() => { handleDatePreset(p); setIsOpen(false) }}
+                    className={`py-1.5 rounded border ${datePreset === p.days ? 'border-lime-500 bg-lime-500/10 text-lime-800 dark:text-lime-400' : 'border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+              <div className="pt-2 border-t border-gray-100 dark:border-[#2A2E2E]">
+                <button
+                  type="button"
+                  onClick={() => setDatePreset(0)}
+                  className={`w-full py-1.5 rounded border mb-2 text-center ${datePreset === 0 ? 'border-lime-500 text-lime-800 dark:text-lime-400' : 'border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                >
+                  Custom date range
+                </button>
+                {datePreset === 0 && (
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    <div>
+                      <label className="block text-[10px] text-gray-500 mb-1">From</label>
+                      <input
+                        type="date"
+                        value={dateFrom}
+                        onChange={(e) => setDateFrom(e.target.value)}
+                        className="w-full px-2 py-1 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded text-center text-st-black dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-gray-500 mb-1">To</label>
+                      <input
+                        type="date"
+                        value={dateTo}
+                        onChange={(e) => setDateTo(e.target.value)}
+                        className="w-full px-2 py-1 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded text-center text-st-black dark:text-white"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function ReportBuilder() {
@@ -210,7 +452,7 @@ export default function ReportBuilder() {
         ? prev.length > 1 ? prev.filter(k => k !== key) : prev
         : [...prev, key]
     )
-    setMetric(key) // keep single metric in sync for backward compat
+    setMetric(key)
   }
   const [chartType, setChartType] = useState('bar')
   const [datePreset, setDatePreset] = useState(30)
@@ -224,11 +466,12 @@ export default function ReportBuilder() {
   const [attributionWindow, setAttributionWindow] = useState(null)
   const [attributeBy, setAttributeBy] = useState('conversion_date')
   const [filters, setFilters] = useState({})
-  const [showFilters, setShowFilters] = useState(false)
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false)
   const [filterCount, setFilterCount] = useState(0)
   const [showExplanation, setShowExplanation] = useState(false)
   const [showCompare, setShowCompare] = useState(false)
   const [explainModalOpen, setExplainModalOpen] = useState(false)
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false)
   const isMultiTouch = ['linear', 'time_decay', 'u_shaped', 'w_shaped'].includes(model)
 
   // UI state
@@ -328,7 +571,7 @@ export default function ReportBuilder() {
   }, [showCompare, priorRes])
 
   const results = data?.results || []
-  const nightlyNotice = data?._notice || null   // shown when nightly-computed model has no data yet
+  const nightlyNotice = data?._notice || null
   const activeReport = (savedReports || []).find(r => r.id === editingId)
   const isPinned = activeReport?.show_on_dashboard || false
   const metricDef = METRICS.find(m => m.key === metric)
@@ -359,7 +602,6 @@ export default function ReportBuilder() {
     setDateTo(range.to)
     setFilters(preset.filters || {})
     setFilterCount(Object.keys(preset.filters || {}).length)
-    setShowFilters(false)
     setIsRolling(false)
     setRollingDays(30)
     setEditingId(null)
@@ -382,14 +624,137 @@ export default function ReportBuilder() {
     })
   }
 
-  const applyQuickChannelFilter = (channel, hasAiSource = false) => {
+  // Handle Marketer-friendly Source Filter Presets
+  const applySourceFilter = (groupName, subSourceName = null) => {
     setFilters(prev => {
-      const next = { ...prev, channel }
-      if (hasAiSource) next.has_ai_source = 'true'
-      else delete next.has_ai_source
+      const next = { ...prev }
+
+      // Clear all related source tags
+      delete next.channel
+      delete next.source
+      delete next.medium
+      delete next.ai_source
+      delete next.has_ai_source
+
+      if (groupName === 'Organic Search') {
+        next.channel = 'Organic Search'
+        if (subSourceName === 'Google Organic') {
+          next.source = 'google'
+          next.medium = 'organic'
+        } else if (subSourceName === 'Bing Organic') {
+          next.source = 'bing'
+          next.medium = 'organic'
+        } else if (subSourceName === 'DuckDuckGo Organic') {
+          next.source = 'duckduckgo'
+          next.medium = 'organic'
+        }
+      } else if (groupName === 'Paid Search') {
+        next.channel = 'Paid Search'
+        if (subSourceName === 'Google Ads') {
+          next.source = 'google'
+          next.medium = 'cpc'
+        }
+      } else if (groupName === 'Paid Social') {
+        next.channel = 'Paid Social'
+        if (subSourceName === 'Facebook Ads') {
+          next.source = 'facebook'
+          next.medium = 'cpc'
+        } else if (subSourceName === 'LinkedIn Ads') {
+          next.source = 'linkedin'
+          next.medium = 'cpc'
+        }
+      } else if (groupName === 'Organic Social') {
+        next.channel = 'Organic Social'
+        if (subSourceName === 'Facebook') {
+          next.source = 'facebook'
+        } else if (subSourceName === 'Instagram') {
+          next.source = 'instagram'
+        } else if (subSourceName === 'Twitter / X') {
+          next.source = 'twitter'
+        } else if (subSourceName === 'LinkedIn') {
+          next.source = 'linkedin'
+        }
+      } else if (groupName === 'AI') {
+        next.channel = 'AI Search'
+        next.has_ai_source = 'true'
+        if (subSourceName === 'ChatGPT') {
+          next.ai_source = 'ChatGPT'
+        } else if (subSourceName === 'Claude') {
+          next.ai_source = 'Claude'
+        } else if (subSourceName === 'Gemini') {
+          next.ai_source = 'Gemini'
+        } else if (subSourceName === 'Perplexity') {
+          next.ai_source = 'Perplexity'
+        }
+      } else if (groupName === 'Referral') {
+        next.channel = 'Referral'
+      } else if (groupName === 'Review Sites') {
+        next.channel = 'Referral'
+        if (subSourceName === 'G2') {
+          next.source = 'g2.com'
+        } else if (subSourceName === 'Capterra') {
+          next.source = 'capterra.com'
+        } else if (subSourceName === 'Trustpilot') {
+          next.source = 'trustpilot.com'
+        }
+      } else if (groupName === 'Email') {
+        next.channel = 'Email'
+      } else if (groupName === 'SMS') {
+        next.medium = 'sms'
+      } else if (groupName === 'Direct / None') {
+        next.channel = 'Direct'
+      }
+
       setFilterCount(Object.keys(next).length)
       return next
     })
+  }
+
+  const isSourceGroupActive = (groupName) => {
+    if (groupName === 'Organic Search') return filters.channel === 'Organic Search'
+    if (groupName === 'Paid Search') return filters.channel === 'Paid Search'
+    if (groupName === 'Paid Social') return filters.channel === 'Paid Social'
+    if (groupName === 'Organic Social') return filters.channel === 'Organic Social'
+    if (groupName === 'AI') return filters.channel === 'AI Search' && filters.has_ai_source === 'true'
+    if (groupName === 'Referral') return filters.channel === 'Referral' && !['g2.com', 'capterra.com', 'trustpilot.com'].includes(filters.source)
+    if (groupName === 'Review Sites') return filters.channel === 'Referral' && ['g2.com', 'capterra.com', 'trustpilot.com'].includes(filters.source)
+    if (groupName === 'Email') return filters.channel === 'Email'
+    if (groupName === 'SMS') return filters.medium === 'sms'
+    if (groupName === 'Direct / None') return filters.channel === 'Direct'
+    return false
+  }
+
+  const isSubSourceActive = (groupName, subName) => {
+    if (groupName === 'Organic Search') {
+      if (subName === 'Google Organic') return filters.source === 'google' && filters.medium === 'organic'
+      if (subName === 'Bing Organic') return filters.source === 'bing' && filters.medium === 'organic'
+      if (subName === 'DuckDuckGo Organic') return filters.source === 'duckduckgo' && filters.medium === 'organic'
+    }
+    if (groupName === 'Paid Search') {
+      if (subName === 'Google Ads') return filters.source === 'google' && filters.medium === 'cpc'
+    }
+    if (groupName === 'Paid Social') {
+      if (subName === 'Facebook Ads') return filters.source === 'facebook' && filters.medium === 'cpc'
+      if (subName === 'LinkedIn Ads') return filters.source === 'linkedin' && filters.medium === 'cpc'
+    }
+    if (groupName === 'Organic Social') {
+      if (subName === 'Facebook') return filters.source === 'facebook'
+      if (subName === 'Instagram') return filters.source === 'instagram'
+      if (subName === 'Twitter / X') return filters.source === 'twitter'
+      if (subName === 'LinkedIn') return filters.source === 'linkedin'
+    }
+    if (groupName === 'AI') {
+      if (subName === 'ChatGPT') return filters.ai_source === 'ChatGPT'
+      if (subName === 'Claude') return filters.ai_source === 'Claude'
+      if (subName === 'Gemini') return filters.ai_source === 'Gemini'
+      if (subName === 'Perplexity') return filters.ai_source === 'Perplexity'
+    }
+    if (groupName === 'Review Sites') {
+      if (subName === 'G2') return filters.source === 'g2.com'
+      if (subName === 'Capterra') return filters.source === 'capterra.com'
+      if (subName === 'Trustpilot') return filters.source === 'trustpilot.com'
+    }
+    return false
   }
 
   const handleEdit = (report) => {
@@ -444,16 +809,6 @@ export default function ReportBuilder() {
     setTimeout(() => setSaveFeedback(null), 2500)
   }
 
-  const handleDuplicate = async (report) => {
-    try {
-      await fetchApi(`/reports/saved?site_key=${encodeURIComponent(site.site_key)}`, {
-        method: 'POST',
-        body: JSON.stringify({ site_key: site.site_key, name: `${report.name} (copy)`, config: report.config })
-      })
-      refetchReports()
-    } catch { /* silent */ }
-  }
-
   const handleDelete = async (id) => {
     try {
       await fetchApi(`/reports/saved/${id}?site_key=${encodeURIComponent(site.site_key)}`, { method: 'DELETE' })
@@ -475,7 +830,6 @@ export default function ReportBuilder() {
 
     try {
       if (!reportId) {
-        // Step 1: Save report first to database (server will run config validation)
         const saveRes = await fetchApi(`/reports/saved?site_key=${encodeURIComponent(site.site_key)}`, {
           method: 'POST',
           body: { name, config }
@@ -488,12 +842,10 @@ export default function ReportBuilder() {
         setReportName(saveRes.name)
       }
 
-      // Find if already pinned
       const activeReport = (savedReports || []).find(r => r.id === reportId)
       const nextPinnedState = !(activeReport?.show_on_dashboard)
 
-      // Step 2: PATCH dashboard visibility
-      const patchRes = await fetchApi(`/reports/saved/${reportId}/dashboard?site_key=${encodeURIComponent(site.site_key)}`, {
+      await fetchApi(`/reports/saved/${reportId}/dashboard?site_key=${encodeURIComponent(site.site_key)}`, {
         method: 'PATCH',
         body: {
           show_on_dashboard: nextPinnedState,
@@ -554,7 +906,7 @@ export default function ReportBuilder() {
     setIsRolling(false)
     setRollingDays(30)
     setSaveFeedback(null)
-    setShowFilters(false)
+    setIsAdvancedOpen(false)
   }
 
   function getSavedReportMeta(report) {
@@ -670,815 +1022,826 @@ export default function ReportBuilder() {
 
   const canPreview = site && metric && groupBy && effectiveDateFrom && effectiveDateTo
 
+  // Group By Options mapping
+  const groupByOptions = [
+    ...DIMENSIONS.map(d => ({ value: d.key, label: d.label })),
+    ...(site?.custom_url_params || []).map(p => ({ value: `custom_param:${p}`, label: `Custom: ${p}` }))
+  ]
+
+  const groupBy2Options = [
+    { value: '', label: 'None' },
+    ...DIMENSIONS.filter(d => d.key !== groupBy || d.key === 'date').map(d => ({ value: d.key, label: d.label })),
+    ...(site?.custom_url_params || []).filter(p => `custom_param:${p}` !== groupBy).map(p => ({ value: `custom_param:${p}`, label: `Custom: ${p}` }))
+  ]
+
+  // Attribution Model Options mapping
+  const modelOptions = MODELS.map(m => {
+    const locked = MULTI_TOUCH_KEYS.has(m.key) && !hasFeature(site?.plan, 'multi_touch_attribution')
+    return {
+      value: m.key,
+      label: locked ? `🔒 ${m.label} · Upgrade` : m.label,
+      disabled: locked
+    }
+  })
+
+  // Window options
+  const windowOptions = [
+    { value: '', label: 'No lookback (date range only)' },
+    { value: '1', label: '1 day' },
+    { value: '7', label: '7 days' },
+    { value: '14', label: '14 days' },
+    { value: '30', label: '30 days' },
+    { value: '60', label: '60 days' },
+    { value: '90', label: '90 days' }
+  ]
+
+  // Attribute By options
+  const attributeByOptions = [
+    { value: 'conversion_date', label: 'Conversion Date' },
+    { value: 'first_seen_date', label: 'First Seen Date' },
+    { value: 'original_source_date', label: 'Original Source Date' }
+  ]
+
+  // Chart type options
+  const chartTypeOptions = CHART_TYPES.map(c => ({ value: c.key, label: c.label }))
+
+  // Device options
+  const deviceOptions = [
+    { value: '', label: 'Any Device' },
+    { value: 'desktop', label: 'Desktop' },
+    { value: 'mobile', label: 'Mobile' },
+    { value: 'tablet', label: 'Tablet' }
+  ]
+
+  // AI Source filter options
+  const aiSourceFilterOptions = [
+    { value: '', label: 'Any AI Source' },
+    { value: 'ChatGPT', label: 'ChatGPT' },
+    { value: 'Claude', label: 'Claude' },
+    { value: 'Perplexity', label: 'Perplexity' },
+    { value: 'Gemini', label: 'Gemini' },
+    { value: 'Grok', label: 'Grok' },
+    { value: 'Copilot', label: 'Copilot' },
+    { value: 'DeepSeek', label: 'DeepSeek' },
+    { value: 'You.com AI', label: 'You.com AI' },
+    { value: 'Phind', label: 'Phind' },
+    { value: 'Kagi', label: 'Kagi' }
+  ]
+
+  // Has AI Source options
+  const hasAiSourceFilterOptions = [
+    { value: '', label: 'Any' },
+    { value: 'true', label: 'Yes' },
+    { value: 'false', label: 'No' }
+  ]
+
+  // Customer Type options
+  const customerTypeFilterOptions = [
+    { value: '', label: 'All Customers' },
+    { value: 'new', label: 'New Customers Only' },
+    { value: 'returning', label: 'Returning Customers Only' }
+  ]
+
   return (
     <div className="space-y-6">
+      {/* Top Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-st-black">Report Builder</h2>
-          <p className="text-sm text-st-gray dark:text-gray-400 mt-1">Build attribution reports with a guided workflow</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Report Builder</h2>
+          <p className="text-sm text-st-gray dark:text-gray-400 mt-1">Choose a business question → lightly configure → preview answer → save/pin</p>
         </div>
-        <div className="flex items-center gap-2">
-          {canPreview && (
-            <button onClick={handleExportCSV}
-              className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-[#1A1D1D] border border-gray-300 dark:border-[#2A2E2E] rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] flex items-center gap-1">
-              <Download className="w-4 h-4" />
-              Export
-            </button>
+        <button
+          onClick={() => setIsDrawerOpen(true)}
+          className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-[#1A1D1D] border border-gray-300 dark:border-[#2A2E2E] rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] flex items-center gap-1.5 transition-all font-semibold shadow-sm"
+        >
+          <Bookmark className="w-4 h-4 text-lime-500" />
+          Saved Reports
+          {savedReports.length > 0 && (
+            <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-lime-500 text-st-black rounded-full font-bold">
+              {savedReports.length}
+            </span>
           )}
-        </div>
+        </button>
       </div>
 
+      {/* Preset question pills */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Templates:</span>
+        {PRESET_TEMPLATES.map((p) => {
+          const isActive = reportName === p.name
+          return (
+            <button
+              key={p.name}
+              onClick={() => applyPreset(p)}
+              className={`px-3 py-1.5 text-xs rounded-full border transition-all ${
+                isActive
+                  ? 'bg-lime-500 text-st-black border-lime-500 font-semibold'
+                  : 'bg-white dark:bg-[#1A1D1D] text-gray-700 dark:text-gray-300 border-gray-200 dark:border-[#2A2E2E] hover:bg-gray-50 dark:hover:bg-[#252929]'
+              }`}
+              title={p.desc}
+            >
+              {p.name}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Active preset helper description */}
+      {(() => {
+        const activePreset = PRESET_TEMPLATES.find(p => reportName === p.name)
+        if (activePreset && activePreset.desc) {
+          return (
+            <div className="text-xs text-st-gray dark:text-gray-400 bg-lime-500/10 border border-lime-500/20 rounded-lg px-3 py-2 max-w-max">
+              💡 <span className="font-semibold text-gray-900 dark:text-white">{activePreset.name}:</span> {activePreset.desc}
+            </div>
+          )
+        }
+        return null
+      })()}
+
+      {/* Two-Panel Layout Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Guided controls */}
-        <div className="space-y-3">
-          {/* Presets */}
-          <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-4">
-            <h3 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-3">Quick Start</h3>
-            <div className="grid grid-cols-1 gap-1.5">
-              {PRESETS.map((p) => (
-                <button key={p.name} onClick={() => applyPreset(p)}
-                  className="w-full text-left px-3 py-2.5 text-sm bg-gray-50 dark:bg-[#242829] hover:bg-gray-100 dark:hover:bg-[#2A2E2E] rounded-lg transition-colors border border-gray-100 dark:border-[#2A2E2E] hover:border-gray-200">
-                  <span className="text-gray-700 dark:text-gray-300 font-medium">{p.name}</span>
-                  {p.desc && <span className="block text-xs text-st-gray dark:text-gray-400 mt-0.5">{p.desc}</span>}
-                </button>
-              ))}
-            </div>
-          </div>
 
-          {/* Step 1: Name */}
-          <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">1</span>
-              <h3 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Report Name</h3>
-            </div>
-            <input type="text" value={reportName} onChange={(e) => setReportName(e.target.value)}
-              placeholder="e.g. Weekly Revenue by Source" maxLength={60}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white" />
-          </div>
+        {/* Left Column: Configure Card */}
+        <div className="space-y-4">
+          <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-5 space-y-4">
+            <h3 className="text-sm font-semibold text-gray-800 dark:text-white pb-3 border-b border-gray-100 dark:border-[#2A2E2E]">Configure Report</h3>
 
-          {/* Step 2: Date Range */}
-          <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">2</span>
-              <h3 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Date Range</h3>
+            {/* 1. Report Name */}
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Report Name</label>
+              <input
+                type="text"
+                value={reportName}
+                onChange={(e) => setReportName(e.target.value)}
+                placeholder="e.g. Weekly Revenue by Source"
+                maxLength={60}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-1 focus:ring-lime-500 dark:bg-[#242829] dark:text-white"
+              />
             </div>
 
-            <div className="flex items-center gap-2 mb-3">
-              <button
-                type="button"
-                onClick={() => setIsRolling(true)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${
-                  isRolling ? 'bg-st-black text-white border-st-black' : 'bg-white dark:bg-[#242829] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-[#2A2E2E]'
-                }`}
-              >
-                Rolling
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsRolling(false)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium border ${
-                  !isRolling ? 'bg-st-black text-white border-st-black' : 'bg-white dark:bg-[#242829] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-[#2A2E2E]'
-                }`}
-              >
-                Fixed
-              </button>
-            </div>
-
-            {isRolling ? (
-              <div>
-                <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Rolling window</label>
-                <select
-                  value={rollingDays}
-                  onChange={e => setRollingDays(Number(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white"
-                >
-                  <option value={7}>Last 7 days</option>
-                  <option value={14}>Last 14 days</option>
-                  <option value={30}>Last 30 days</option>
-                  <option value={60}>Last 60 days</option>
-                  <option value={90}>Last 90 days</option>
-                </select>
-                <p className="mt-1 text-xs text-st-gray dark:text-gray-400">This report will update automatically based on the current date.</p>
-              </div>
-            ) : (
-              <>
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {DATE_PRESETS.map((p) => (
-                    <button key={p.label} onClick={() => handleDatePreset(p)}
-                      className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
-                        datePreset === p.days ? 'bg-lime-100 text-lime-800 font-medium' : 'bg-gray-100 dark:bg-[#242829] text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#2A2E2E]'
-                      }`}>
-                      {p.label}
-                    </button>
-                  ))}
+            {/* 2. Date Range */}
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Date Range</label>
+              <DateRangePopover
+                isRolling={isRolling}
+                setIsRolling={setIsRolling}
+                rollingDays={rollingDays}
+                setRollingDays={setRollingDays}
+                datePreset={datePreset}
+                setDatePreset={setDatePreset}
+                dateFrom={dateFrom}
+                setDateFrom={setDateFrom}
+                dateTo={dateTo}
+                setDateTo={setDateTo}
+                handleDatePreset={handleDatePreset}
+              />
+              {(groupBy === 'date' || groupBy2 === 'date') && (
+                <div className="pt-2">
+                  <label className="block text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">Granularity</label>
+                  <div className="flex flex-wrap gap-1">
+                    {GRANULARITY.map(g => (
+                      <button
+                        key={g.key}
+                        type="button"
+                        onClick={() => setGranularity(g.key)}
+                        className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
+                          granularity === g.key ? 'bg-lime-100 text-lime-800 dark:bg-lime-500/20 dark:text-lime-400 font-semibold' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                        }`}
+                      >
+                        {g.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                {datePreset === 0 && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
-                      className="w-full px-2 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white" />
-                    <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
-                      className="w-full px-2 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white" />
+              )}
+            </div>
+
+            {/* 3. Metric Select */}
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Metric</label>
+              {selectedMetrics.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-1.5">
+                  {selectedMetrics.map(k => {
+                    const m = METRICS.find(x => x.key === k)
+                    return (
+                      <span key={k} className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] bg-lime-100 dark:bg-lime-950/30 text-lime-800 dark:text-lime-400 rounded-full font-medium">
+                        {m?.label || k}
+                        {selectedMetrics.length > 1 && (
+                          <button onClick={() => toggleMetric(k)} className="text-lime-600 hover:text-red-500 ml-0.5">&times;</button>
+                        )}
+                      </span>
+                    )
+                  })}
+                </div>
+              )}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowMetricDropdown(!showMetricDropdown)}
+                  className="w-full flex items-center justify-between px-3 py-2 text-sm bg-white dark:bg-[#242829] border border-gray-300 dark:border-[#2A2E2E] rounded-lg shadow-sm text-gray-700 dark:text-gray-200 text-left"
+                >
+                  <span className="truncate text-xs text-st-gray dark:text-gray-400">
+                    {selectedMetrics.length === 0 ? 'Select metrics...' : `+ Add metric (${selectedMetrics.length} selected)`}
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                </button>
+                {showMetricDropdown && (
+                  <div className="absolute z-40 mt-1 w-full bg-white dark:bg-[#242829] border border-gray-200 dark:border-[#2A2E2E] rounded-lg shadow-lg max-h-72 overflow-auto">
+                    <div className="p-2 border-b border-gray-100 dark:border-[#2A2E2E] sticky top-0 bg-white dark:bg-[#242829]">
+                      <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 dark:bg-[#1A1D1D] rounded">
+                        <Search className="w-3.5 h-3.5 text-st-gray dark:text-gray-400" />
+                        <input
+                          type="text"
+                          value={metricSearch}
+                          onChange={(e) => setMetricSearch(e.target.value)}
+                          placeholder="Search metrics..."
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex-1 bg-transparent text-sm outline-none"
+                        />
+                      </div>
+                      <p className="text-[10px] text-st-gray dark:text-gray-400 mt-1 px-1">Click to add/remove (up to 4 metrics).</p>
+                    </div>
+                    {['Core', 'Conversion', 'AI', 'LTV', 'Session'].map(group => {
+                      const groupMetrics = filteredMetrics.filter(m => m.group === group)
+                      if (groupMetrics.length === 0) return null
+                      return (
+                        <div key={group}>
+                          <div className="px-3 py-1 text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase bg-gray-50 dark:bg-[#252929]">{group}</div>
+                          {groupMetrics.map((m) => {
+                            const isSelected = selectedMetrics.includes(m.key)
+                            return (
+                              <button
+                                key={m.key}
+                                type="button"
+                                onClick={() => {
+                                  if (selectedMetrics.length < 4 || isSelected) toggleMetric(m.key)
+                                  if (selectedMetrics.length === 1 && !isSelected) setShowMetricDropdown(false)
+                                }}
+                                className={`w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-[#252929] transition-colors flex items-center gap-2 ${
+                                  isSelected ? 'bg-lime-50 text-lime-800 dark:bg-lime-950/20 dark:text-lime-400 font-semibold' : 'text-gray-700 dark:text-gray-300'
+                                }`}
+                              >
+                                <span className={`w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center text-[10px] ${isSelected ? 'bg-lime-500 border-lime-500 text-white' : 'border-gray-300'}`}>
+                                  {isSelected ? '✓' : ''}
+                                </span>
+                                <div>
+                                  <div>{m.label}</div>
+                                </div>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      )
+                    })}
                   </div>
                 )}
-              </>
-            )}
-            {(groupBy === 'date' || groupBy2 === 'date') && (
-              <div className="mt-2">
-                <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Granularity</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {GRANULARITY.map(g => (
-                    <button key={g.key} onClick={() => setGranularity(g.key)}
-                      className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
-                        granularity === g.key ? 'bg-lime-100 text-lime-800 font-medium' : 'bg-gray-100 dark:bg-[#242829] text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#2A2E2E]'
-                      }`}>
-                      {g.label}
-                    </button>
-                  ))}
-                </div>
               </div>
-            )}
-          </div>
-
-          {/* Step 3: Metric */}
-          <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">3</span>
-              <h3 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Metric</h3>
             </div>
-            {/* Selected metric pills */}
-            {selectedMetrics.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-2">
-                {selectedMetrics.map(k => {
-                  const m = METRICS.find(x => x.key === k)
+
+            {/* 4. Group By */}
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Group By</label>
+              <CustomSelect
+                value={groupBy}
+                onChange={setGroupBy}
+                options={groupByOptions}
+              />
+            </div>
+
+            {/* 5. Group By 2 */}
+            {showGroupBy2 ? (
+              <div className="space-y-1 pt-1.5 border-t border-dashed border-gray-100 dark:border-[#2A2E2E]">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Group By 2</label>
+                  <button
+                    onClick={() => { setShowGroupBy2(false); setGroupBy2(null) }}
+                    className="text-xs text-red-500 hover:text-red-600"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <CustomSelect
+                  value={groupBy2 || ''}
+                  onChange={(val) => setGroupBy2(val || null)}
+                  options={groupBy2Options}
+                />
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowGroupBy2(true)}
+                className="text-xs text-lime-600 hover:text-lime-700 font-semibold flex items-center gap-1 pt-1"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Add secondary Group By
+              </button>
+            )}
+
+            {/* Source Shortcut Chips */}
+            <div className="space-y-1.5 pt-1.5 border-t border-dashed border-gray-100 dark:border-[#2A2E2E]">
+              <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Filter by Traffic Source</label>
+              <div className="flex flex-wrap gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilters(prev => {
+                      const next = { ...prev }
+                      delete next.channel
+                      delete next.source
+                      delete next.medium
+                      delete next.ai_source
+                      delete next.has_ai_source
+                      setFilterCount(Object.keys(next).length)
+                      return next
+                    })
+                  }}
+                  className={`px-2 py-0.5 rounded-full text-[10px] border transition-all ${
+                    !(filters.channel || filters.source || filters.medium || filters.ai_source || filters.has_ai_source)
+                      ? 'bg-lime-500 text-st-black border-lime-500 font-semibold'
+                      : 'bg-white dark:bg-gray-800 text-gray-750 dark:text-gray-400 border-gray-200 dark:border-gray-750 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  All Sources
+                </button>
+                {SOURCE_GROUPS.map((g) => {
+                  const isActive = isSourceGroupActive(g.name)
                   return (
-                    <span key={k} className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-lime-100 text-lime-800 rounded-full font-medium">
-                      {m?.label || k}
-                      {selectedMetrics.length > 1 && (
-                        <button onClick={() => toggleMetric(k)} className="text-lime-600 hover:text-red-500 ml-0.5">&times;</button>
-                      )}
-                    </span>
+                    <button
+                      key={g.name}
+                      type="button"
+                      onClick={() => applySourceFilter(g.name)}
+                      className={`px-2 py-0.5 rounded-full text-[10px] border transition-all ${
+                        isActive
+                          ? 'bg-lime-500 text-st-black border-lime-500 font-semibold'
+                          : 'bg-white dark:bg-gray-800 text-gray-750 dark:text-gray-400 border-gray-200 dark:border-gray-750 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      {g.name}
+                    </button>
                   )
                 })}
               </div>
-            )}
-            <div className="relative">
-              <div className="flex items-center px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm cursor-pointer hover:border-gray-400 dark:bg-[#242829]"
-                onClick={() => setShowMetricDropdown(!showMetricDropdown)}>
-                <span className="flex-1 text-st-gray dark:text-gray-400 text-xs">
-                  {selectedMetrics.length === 0 ? 'Select metrics...' : `+ Add metric (${selectedMetrics.length} selected)`}
-                </span>
-                <ChevronDown className="w-4 h-4 text-st-gray dark:text-gray-400" />
-              </div>
-              {showMetricDropdown && (
-                <div className="absolute z-10 mt-1 w-full bg-white dark:bg-[#242829] border border-gray-200 dark:border-[#2A2E2E] rounded-lg shadow-lg max-h-72 overflow-auto">
-                  <div className="p-2 border-b border-gray-100 dark:border-[#2A2E2E] sticky top-0 bg-white dark:bg-[#242829]">
-                    <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 dark:bg-[#1A1D1D] rounded">
-                      <Search className="w-3.5 h-3.5 text-st-gray dark:text-gray-400" />
-                      <input type="text" value={metricSearch} onChange={(e) => setMetricSearch(e.target.value)}
-                        placeholder="Search metrics..." onClick={(e) => e.stopPropagation()}
-                        className="flex-1 bg-transparent text-sm outline-none" />
-                    </div>
-                    <p className="text-[10px] text-st-gray dark:text-gray-400 mt-1 px-1">Click to add/remove. Up to 4 metrics.</p>
-                  </div>
-                  {['Core', 'Conversion', 'AI', 'LTV', 'Session'].map(group => {
-                    const groupMetrics = filteredMetrics.filter(m => m.group === group)
-                    if (groupMetrics.length === 0) return null
-                    return (
-                      <div key={group}>
-                        <div className="px-3 py-1.5 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase bg-gray-50 dark:bg-[#252929]">{group}</div>
-                        {groupMetrics.map((m) => {
-                          const isSelected = selectedMetrics.includes(m.key)
-                          return (
-                            <button key={m.key}
-                              onClick={() => {
-                                if (selectedMetrics.length < 4 || isSelected) toggleMetric(m.key)
-                                if (selectedMetrics.length === 1 && !isSelected) setShowMetricDropdown(false)
-                              }}
-                              className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-[#252929] transition-colors flex items-center gap-2 ${
-                                isSelected ? 'bg-lime-50 text-lime-800 font-medium' : 'text-gray-700 dark:text-gray-300'
-                              }`}>
-                              <span className={`w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center text-[10px] ${isSelected ? 'bg-lime-500 border-lime-500 text-white' : 'border-gray-300'}`}>
-                                {isSelected ? '✓' : ''}
-                              </span>
-                              <div>
-                                <div>{m.label}</div>
-                                {m.desc && <div className="text-xs text-st-gray dark:text-gray-400 font-normal">{m.desc.slice(0, 60)}{m.desc.length > 60 ? '…' : ''}</div>}
-                              </div>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Step 4: Group By */}
-          <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">4</span>
-              <h3 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Group By</h3>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {DIMENSIONS.map((d) => (
-                <button key={d.key} onClick={() => setGroupBy(d.key)}
-                  className={`px-2.5 py-1.5 text-xs rounded-full transition-colors ${
-                    groupBy === d.key ? 'bg-lime-100 text-lime-800 font-medium' : 'bg-gray-100 dark:bg-[#242829] text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#2A2E2E]'
-                  }`}>
-                  {d.label}
-                </button>
-              ))}
             </div>
 
-            {/* Custom Parameters for Group By 1 */}
-            <div className="mt-3 pt-2 border-t border-gray-100 dark:border-[#2A2E2E]">
-              <span className="text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider block mb-1.5">Custom Parameters</span>
-              {site?.custom_url_params && site.custom_url_params.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {site.custom_url_params.map((p) => {
-                    const key = `custom_param:${p}`
-                    return (
-                      <button key={key} onClick={() => setGroupBy(key)}
-                        className={`px-2.5 py-1.5 text-xs rounded-full transition-colors ${
-                          groupBy === key ? 'bg-lime-100 text-lime-800 font-medium' : 'bg-gray-100 dark:bg-[#242829] text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#2A2E2E]'
-                        }`}>
-                        {p}
-                      </button>
-                    )
-                  })}
+            {/* Advanced Settings collapsible row */}
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
+                className="w-full flex items-center justify-between py-2 px-3 border border-gray-200 dark:border-[#2A2E2E] bg-gray-50/50 dark:bg-gray-800/20 hover:bg-gray-50 dark:hover:bg-[#252929] rounded-xl transition-all"
+              >
+                <div className="text-left">
+                  <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Advanced Settings</div>
+                  <div className="text-[10px] text-st-gray dark:text-gray-400 mt-0.5">Attribution · filters · comparison</div>
                 </div>
-              ) : (
-                <div className="bg-gray-50 dark:bg-gray-800/40 rounded-lg p-2.5 text-[11px] text-st-gray dark:text-gray-400 space-y-0.5">
-                  <p className="font-semibold text-st-black dark:text-white">No custom parameters active</p>
-                  <p>Configure custom parameters (like *affiliate* or *creative*) in your Site Settings to group reports by them.</p>
-                  <div className="flex items-center gap-2 mt-1 font-semibold">
-                    <Link to="/settings" className="text-st-black dark:text-white underline">
-                      Configure Settings →
-                    </Link>
-                    <span className="text-gray-300 dark:text-gray-700">|</span>
-                    <Link to="/docs#custom-params" className="text-st-black dark:text-white underline">
-                      Read Docs →
-                    </Link>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {!showGroupBy2 ? (
-              <button onClick={() => setShowGroupBy2(true)}
-                className="mt-3 text-xs text-st-black hover:text-gray-800 font-medium block">
-                + Add another Group By
+                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isAdvancedOpen ? 'rotate-180' : ''}`} />
               </button>
-            ) : (
-              <div className="mt-3 pt-2 border-t border-gray-100 dark:border-[#2A2E2E]">
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider block">Group By 2</label>
-                  <button onClick={() => { setShowGroupBy2(false); setGroupBy2(null) }}
-                    className="text-xs text-st-gray dark:text-gray-400 hover:text-red-500">&times; Remove</button>
-                </div>
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {DIMENSIONS.filter(d => d.key !== groupBy || d.key === 'date').map((d) => (
-                    <button key={d.key} onClick={() => setGroupBy2(d.key)}
-                      className={`px-2.5 py-1.5 text-xs rounded-full transition-colors ${
-                        groupBy2 === d.key ? 'bg-lime-100 text-lime-800 font-medium' : 'bg-gray-100 dark:bg-[#242829] text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#2A2E2E]'
-                      }`}>
-                      {d.label}
-                    </button>
-                  ))}
-                </div>
-                {site?.custom_url_params && site.custom_url_params.length > 0 && (
-                  <div className="space-y-1.5 pt-1.5 border-t border-dashed border-gray-100 dark:border-[#2A2E2E]">
-                    <span className="text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider block">Custom Parameters</span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {site.custom_url_params.map((p) => {
-                        const key = `custom_param:${p}`
-                        if (key === groupBy) return null
+
+              {isAdvancedOpen && (
+                <div className="space-y-4 mt-3 pt-3 border-t border-gray-100 dark:border-[#2A2E2E] text-xs">
+
+                  {/* Attribution Model */}
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-st-gray dark:text-gray-400">Attribution Model</label>
+                    <CustomSelect
+                      value={model}
+                      onChange={(next) => {
+                        if (MULTI_TOUCH_KEYS.has(next) && !hasFeature(site?.plan, 'multi_touch_attribution')) {
+                          return
+                        }
+                        setModel(next)
+                      }}
+                      options={modelOptions}
+                    />
+                    {model === 'ai_platforms' ? (
+                      <p className="text-[10px] text-lime-600 dark:text-lime-400 mt-1">
+                        Groups conversions by the AI source detected on the conversion event.
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-st-gray dark:text-gray-400 mt-1">
+                        How credit is assigned to each touchpoint in the customer journey.
+                      </p>
+                    )}
+                    {!hasFeature(site?.plan, 'multi_touch_attribution') && (
+                      <p className="text-[10px] text-st-gray dark:text-gray-400">
+                        🔒 Multi-touch models require an <a href="/billing" className="text-st-lime hover:underline font-semibold">Upgrade</a>.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Attribution Window */}
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-st-gray dark:text-gray-400">Attribution Lookback Window</label>
+                    <CustomSelect
+                      value={attributionWindow || ''}
+                      onChange={(val) => setAttributionWindow(val || null)}
+                      options={windowOptions}
+                    />
+                    <p className="text-[10px] text-st-gray dark:text-gray-400 mt-1">How far back from conversion to look for touchpoints.</p>
+                  </div>
+
+                  {/* Attribute By */}
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-st-gray dark:text-gray-400">Attribute Anchored By</label>
+                    <CustomSelect
+                      value={attributeBy}
+                      onChange={setAttributeBy}
+                      options={attributeByOptions}
+                    />
+                  </div>
+
+                  {/* Chart Type */}
+                  <div className="space-y-1">
+                    <label className="block text-xs font-medium text-st-gray dark:text-gray-400">Chart Type</label>
+                    <CustomSelect
+                      value={chartType}
+                      onChange={setChartType}
+                      options={chartTypeOptions}
+                    />
+                  </div>
+
+                  {/* Sources filter grid */}
+                  <div className="space-y-2 border-t border-gray-100 dark:border-[#2A2E2E] pt-3">
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Traffic Sources</label>
+                    <p className="text-[10px] text-st-gray dark:text-gray-400">Filter report results by category or specific source.</p>
+
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {SOURCE_GROUPS.map((g) => {
+                        const isGroupActive = isSourceGroupActive(g.name)
                         return (
-                          <button key={key} onClick={() => setGroupBy2(key)}
-                            className={`px-2.5 py-1.5 text-xs rounded-full transition-colors ${
-                              groupBy2 === key ? 'bg-lime-100 text-lime-800 font-medium' : 'bg-gray-100 dark:bg-[#242829] text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#2A2E2E]'
-                            }`}>
-                            {p}
-                          </button>
+                          <div key={g.name} className="space-y-1">
+                            <button
+                              type="button"
+                              onClick={() => applySourceFilter(g.name)}
+                              className={`w-full flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-left transition-all border ${
+                                isGroupActive
+                                  ? 'bg-lime-500/10 border-lime-500 text-lime-800 dark:text-lime-400 font-semibold'
+                                  : 'bg-gray-50 dark:bg-[#242829] border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2A2E2E]'
+                              }`}
+                            >
+                              <span>{g.icon}</span>
+                              <span className="truncate">{g.name}</span>
+                            </button>
+                            {g.subs.length > 0 && isGroupActive && (
+                              <div className="pl-2 space-y-0.5">
+                                {g.subs.map((sub) => {
+                                  const isSubActive = isSubSourceActive(g.name, sub)
+                                  return (
+                                    <button
+                                      key={sub}
+                                      type="button"
+                                      onClick={() => applySourceFilter(g.name, sub)}
+                                      className={`w-full text-[10px] text-left px-2 py-0.5 rounded transition-all ${
+                                        isSubActive
+                                          ? 'bg-lime-500 text-st-black font-semibold'
+                                          : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'
+                                      }`}
+                                    >
+                                      {sub}
+                                    </button>
+                                  )}
+                                )}
+                              </div>
+                            )}
+                          </div>
                         )
                       })}
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
-            {(groupBy === 'keyword' || groupBy2 === 'keyword') && (
-              <div className="mt-3 text-[11px] text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-[#242829] rounded-lg p-2.5 border border-gray-100 dark:border-[#2A2E2E]">
-                💡 <strong>Keyword / Term</strong> uses captured URL parameters such as <code>utm_term</code>. It does not import native ad-platform search terms.
-              </div>
-            )}
-            {(groupBy === 'referrer_domain' || groupBy2 === 'referrer_domain') && (
-              <div className="mt-3 text-[11px] text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-[#242829] rounded-lg p-2.5 border border-gray-100 dark:border-[#2A2E2E]">
-                💡 <strong>Referrer Domain</strong> uses the captured browser referrer. It is not a backlink crawler or Search Console import.
-              </div>
-            )}
-            {(groupBy === 'provider' || groupBy2 === 'provider' || groupBy === 'attribution_status' || groupBy2 === 'attribution_status' || groupBy === 'stitching_method' || groupBy2 === 'stitching_method') && (
-              <div className="mt-3 text-[11px] text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-[#242829] rounded-lg p-2.5 border border-gray-100 dark:border-[#2A2E2E]">
-                💡 <strong>Revenue Metadata</strong>: These dimensions are conversion-event-level. Session-only metrics may show <code>unknown</code>. For browser conversions, <code>attributed</code> means tied to the browser visitor identity (it does not guarantee a paid campaign, UTM, or ad source was present).
-              </div>
-            )}
-          </div>
-
-          {/* Step 5: Model */}
-          <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">5</span>
-              <h3 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Attribution</h3>
-            </div>
-            <select value={model} onChange={(e) => {
-                const next = e.target.value
-                // Block multi-touch picks for free — silently snap back to last_touch
-                if (MULTI_TOUCH_KEYS.has(next) && !hasFeature(site?.plan, 'multi_touch_attribution')) {
-                  setModel('last_touch')
-                  return
-                }
-                setModel(next)
-              }}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white">
-              {MODELS.map(m => {
-                const locked = MULTI_TOUCH_KEYS.has(m.key) && !hasFeature(site?.plan, 'multi_touch_attribution')
-                return (
-                  <option key={m.key} value={m.key} disabled={locked}>
-                    {locked ? `🔒 ${m.label} · Upgrade` : m.label}
-                  </option>
-                )
-              })}
-            </select>
-            <p className="text-xs text-st-gray dark:text-gray-400 mt-1">
-              How credit is assigned to each touchpoint in the customer journey.
-              {!hasFeature(site?.plan, 'multi_touch_attribution') && (
-                <> <a href="/billing" className="text-st-lime hover:underline">Upgrade</a> to unlock multi-touch models.</>
-              )}
-            </p>
-            <div className="mt-2">
-              <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Attribution Window</label>
-              <select value={attributionWindow || ''} onChange={(e) => setAttributionWindow(e.target.value || null)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white">
-                <option value="">No lookback (date range only)</option>
-                <option value="1">1 day</option>
-                <option value="7">7 days</option>
-                <option value="14">14 days</option>
-                <option value="30">30 days</option>
-                <option value="60">60 days</option>
-                <option value="90">90 days</option>
-              </select>
-              <p className="text-xs text-st-gray dark:text-gray-400 mt-1">How far back from conversion to look for touchpoints. &quot;No lookback&quot; uses only the selected date range.</p>
-            </div>
-            <div className="mt-2">
-              <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Attribute By</label>
-              <select value={attributeBy} onChange={(e) => setAttributeBy(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white">
-                <option value="conversion_date">Conversion Date</option>
-                <option value="first_seen_date">First Seen Date</option>
-                <option value="original_source_date">Original Source Date</option>
-              </select>
-              <p className="text-xs text-st-gray dark:text-gray-400 mt-1">
-                {attributeBy === 'conversion_date' && 'Group conversions by the date they occurred.'}
-                {attributeBy === 'first_seen_date' && 'Group conversions by the date each visitor was first seen.'}
-                {attributeBy === 'original_source_date' && 'Group conversions by the date of the first UTM-tagged touchpoint. Visitors without UTM source data are excluded.'}
-              </p>
-            </div>
-          </div>
-
-          {/* Step 6: Chart Type */}
-          <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">6</span>
-              <h3 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Chart</h3>
-            </div>
-            <select value={chartType} onChange={(e) => setChartType(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white">
-              {CHART_TYPES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
-            </select>
-          </div>
-
-          {/* Step 7: Filters (collapsible) */}
-          <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-4">
-            <button onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center justify-between w-full text-left">
-              <div className="flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-gray-100 dark:bg-[#2A2E2E] text-st-gray dark:text-gray-400 dark:text-gray-300 text-xs flex items-center justify-center font-bold">7</span>
-                <h3 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Filters</h3>
-                {filterCount > 0 ? (
-                  <span className="px-1.5 py-0.5 text-xs bg-lime-100 text-lime-800 rounded-full">{filterCount} active</span>
-                ) : (
-                  <span className="text-xs text-st-gray dark:text-gray-400">None</span>
-                )}
-              </div>
-              <span className="text-xs text-st-gray dark:text-gray-400">{showFilters ? 'Hide' : 'Show'}</span>
-            </button>
-
-            {/* Active filter pills */}
-            {filterCount > 0 && !showFilters && (
-              <div className="flex flex-wrap gap-1.5 mt-2">
-                {Object.entries(filters).map(([key, value]) => (
-                  <span key={key} className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-lime-50 text-lime-800 rounded-full">
-                    {key}: {String(value)}
-                    <button onClick={() => applyFilter(key, undefined)} className="text-lime-600 hover:text-gray-800">&times;</button>
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {showFilters && (
-              <div className="space-y-2 mt-3 pt-3 border-t border-gray-100 dark:border-[#2A2E2E]">
-                <div className="bg-gray-50 dark:bg-[#242829] rounded-lg p-3 text-xs text-st-gray dark:text-gray-400 space-y-1">
-                  <p>UTMs are captured automatically by the pixel.</p>
-                  <p>Filters only narrow this report; they are not required for tracking.</p>
-                </div>
-                {/* Grouped Source Picker */}
-                <div>
-                  <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1.5">Sources</label>
-                  <p className="text-[10px] text-st-gray dark:text-gray-400 mb-2">Select a channel or specific source. Leave blank for all.</p>
-                  {[
-                    { group: 'Organic Search', channel: 'Organic Search', icon: '🔍', sources: [
-                      { label: 'Google Organic', src: 'google', icon: 'G' },
-                      { label: 'Bing Organic', src: 'bing', icon: 'B' },
-                      { label: 'DuckDuckGo', src: 'duckduckgo', icon: 'D' },
-                      { label: 'Yahoo Organic', src: 'yahoo', icon: 'Y' },
-                    ]},
-                    { group: 'Paid Search', channel: 'Paid Search', icon: '💰', sources: [
-                      { label: 'Google Ads', src: 'google', icon: 'G' },
-                      { label: 'Microsoft Ads', src: 'bing', icon: 'B' },
-                    ]},
-                    { group: 'Organic Social', channel: 'Organic Social', icon: '👥', sources: [
-                      { label: 'Facebook', src: 'facebook', icon: 'f' },
-                      { label: 'Instagram', src: 'instagram', icon: 'ig' },
-                      { label: 'LinkedIn', src: 'linkedin', icon: 'in' },
-                      { label: 'Twitter / X', src: 'twitter', icon: 'X' },
-                      { label: 'TikTok', src: 'tiktok', icon: 'tt' },
-                      { label: 'Reddit', src: 'reddit', icon: 'r/' },
-                      { label: 'YouTube', src: 'youtube', icon: 'yt' },
-                    ]},
-                    { group: 'Paid Social', channel: 'Paid Social', icon: '📢', sources: [
-                      { label: 'Facebook Ads', src: 'facebook', icon: 'f' },
-                      { label: 'Instagram Ads', src: 'instagram', icon: 'ig' },
-                      { label: 'LinkedIn Ads', src: 'linkedin', icon: 'in' },
-                      { label: 'TikTok Ads', src: 'tiktok', icon: 'tt' },
-                    ]},
-                    { group: 'AI Search', channel: 'AI Search', icon: '✦', sources: [
-                      { label: 'ChatGPT', src: 'chatgpt', icon: 'gpt' },
-                      { label: 'Claude', src: 'claude', icon: 'cl' },
-                      { label: 'Perplexity', src: 'perplexity', icon: 'px' },
-                      { label: 'Gemini', src: 'gemini', icon: 'G' },
-                      { label: 'Grok', src: 'grok', icon: 'X' },
-                      { label: 'DeepSeek', src: 'deepseek', icon: 'ds' },
-                    ]},
-                    { group: 'Email', channel: 'Email', icon: '✉️', sources: [
-                      { label: 'Newsletter', src: 'newsletter', icon: 'nl' },
-                    ]},
-                    { group: 'Direct', channel: 'Direct', icon: '→', sources: [] },
-                    { group: 'Referral', channel: 'Referral', icon: '🔗', sources: [] },
-                  ].map(({ group, channel, icon, sources }) => {
-                    const isChannelActive = filters.channel === channel && !filters.source
-                    return (
-                      <div key={group} className="mb-0.5">
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => { applyFilter('channel', channel); applyFilter('source', undefined); if (channel === 'AI Search') applyFilter('has_ai_source', 'true'); else applyFilter('has_ai_source', undefined) }}
-                            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded-lg flex-1 text-left transition-colors ${isChannelActive ? 'bg-lime-100 text-lime-800 font-semibold' : 'bg-gray-50 dark:bg-[#242829] text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2A2E2E]'}`}
-                          >
-                            <span className="text-[11px]">{icon}</span>
-                            <span className="font-medium">{group}</span>
-                          </button>
-                          {isChannelActive && (
-                            <button onClick={() => { applyFilter('channel', undefined); applyFilter('source', undefined); applyFilter('has_ai_source', undefined) }} className="text-gray-300 hover:text-red-400 text-sm px-1">&times;</button>
-                          )}
-                        </div>
-                        {sources.length > 0 && (
-                          <div className="ml-3 mt-0.5 space-y-0.5 mb-1">
-                            {sources.map(({ label, src, icon: si }) => {
-                              const isActive = filters.source === src && filters.channel === channel
-                              return (
-                                <button key={label}
-                                  onClick={() => { applyFilter('channel', channel); applyFilter('source', src); if (channel === 'AI Search') applyFilter('has_ai_source', 'true'); else applyFilter('has_ai_source', undefined) }}
-                                  className={`flex items-center gap-2 w-full px-2 py-1 text-xs rounded transition-colors ${isActive ? 'bg-lime-50 text-lime-800 font-medium' : 'text-st-gray dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#252929] hover:text-gray-800 dark:hover:text-gray-200'}`}
-                                >
-                                  <span className="w-4 h-4 rounded text-[9px] bg-gray-200 dark:bg-[#2A2E2E] flex items-center justify-center flex-shrink-0 font-bold">{si}</span>
-                                  {label}
-                                </button>
-                              )
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                  {(filters.channel || filters.source) && (
-                    <button onClick={() => { applyFilter('channel', undefined); applyFilter('source', undefined); applyFilter('has_ai_source', undefined) }}
-                      className="mt-2 text-xs text-red-400 hover:text-red-600">Clear source filter</button>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Medium</label>
-                  <input type="text" value={filters.medium || ''} onChange={(e) => applyFilter('medium', e.target.value || undefined)}
-                    placeholder="e.g. cpc" className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Campaign</label>
-                  <input type="text" value={filters.campaign || ''} onChange={(e) => applyFilter('campaign', e.target.value || undefined)}
-                    placeholder="e.g. summer_sale" className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Country</label>
-                  <input type="text" value={filters.country || ''} onChange={(e) => applyFilter('country', e.target.value || undefined)}
-                    placeholder="e.g. US" className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Device</label>
-                  <select value={filters.device_type || ''} onChange={(e) => applyFilter('device_type', e.target.value || undefined)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white">
-                    <option value="">Any</option><option value="desktop">Desktop</option><option value="mobile">Mobile</option><option value="tablet">Tablet</option>
-                  </select>
-                </div>
-
-                <div className="pt-2 border-t border-gray-100 dark:border-[#2A2E2E]">
-                  <p className="text-xs font-medium text-st-gray dark:text-gray-400 uppercase mb-2">Advanced</p>
-                  <div>
-                    <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Conversion Type</label>
-                    <input type="text" value={filters.conversion_type || ''} onChange={(e) => applyFilter('conversion_type', e.target.value || undefined)}
-                      placeholder="e.g. lead_created, purchase" className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">AI Source</label>
-                    <select value={filters.ai_source || ''} onChange={(e) => applyFilter('ai_source', e.target.value || undefined)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white">
-                      <option value="">Any</option>
-                      <option value="ChatGPT">ChatGPT</option><option value="Claude">Claude</option>
-                      <option value="Perplexity">Perplexity</option><option value="Gemini">Gemini</option>
-                      <option value="Grok">Grok</option><option value="Copilot">Copilot</option>
-                      <option value="DeepSeek">DeepSeek</option>
-                      <option value="You.com AI">You.com AI</option><option value="Phind">Phind</option>
-                      <option value="Kagi">Kagi</option>
-                    </select>
-                  </div>
-                  <div className="mt-2">
-                    <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Has AI Source</label>
-                    <select value={filters.has_ai_source || ''} onChange={(e) => applyFilter('has_ai_source', e.target.value || undefined)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white">
-                      <option value="">Any</option>
-                      <option value="true">Yes</option>
-                      <option value="false">No</option>
-                    </select>
-                    <p className="text-xs text-st-gray dark:text-gray-400 mt-1">Show only traffic from or excluding AI platforms (ChatGPT, Claude, etc.).</p>
-                  </div>
-                  <div className="mt-2">
-                    <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Min Conversions</label>
-                    <input type="number" value={filters.min_conversions || ''} onChange={(e) => applyFilter('min_conversions', e.target.value || undefined)}
-                      placeholder="e.g. 10" min="0" className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white" />
-                  </div>
-                  <div className="mt-2">
-                    <label className="block text-xs font-medium text-st-gray dark:text-gray-400 mb-1">Customer Type</label>
-                    <select value={filters.customer_type || ''} onChange={(e) => applyFilter('customer_type', e.target.value || undefined)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white">
-                      <option value="">All Customers</option>
-                      <option value="new">New Customers Only</option>
-                      <option value="returning">Returning Customers Only</option>
-                    </select>
-                    <p className="text-xs text-st-gray dark:text-gray-400 mt-1">Segment conversions by first-time vs repeat customers.</p>
-                  </div>
-                  <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer mt-2">
-                    <input type="checkbox" checked={filters.is_conversion === 'true'}
-                      onChange={(e) => applyFilter('is_conversion', e.target.checked ? 'true' : undefined)}
-                      className="rounded border-gray-300 text-st-black focus:ring-gray-900" />
-                    Conversions only
-                  </label>
-                </div>
-                {filterCount > 0 && (
-                  <button type="button" onClick={() => { setFilters({}); setFilterCount(0) }}
-                    className="w-full px-3 py-1.5 text-xs text-red-500 hover:text-red-700 transition-colors">
-                    Clear all filters
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Save */}
-          <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-4">
-            {!hasFeature(site?.plan, 'saved_reports') ? (
-              <div className="flex flex-col items-center justify-center text-center py-2">
-                <span className="w-5 h-5 rounded-full bg-lime-100 dark:bg-st-lime/10 text-lime-800 dark:text-st-lime text-xs flex items-center justify-center font-bold mb-2">🔒</span>
-                <h3 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">Save Report</h3>
-                <p className="text-xs text-st-gray dark:text-gray-400 mb-3">Save custom reports for quick access.</p>
-                <a href="/billing" className="px-4 py-1.5 bg-st-lime text-st-black rounded-lg text-xs font-bold hover:bg-st-lime/90 transition-colors">
-                  Upgrade to unlock
-                </a>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-lime-100 text-lime-800 text-xs flex items-center justify-center font-bold">✓</span>
-                    <h3 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Save Report</h3>
-                  </div>
-                  <button onClick={resetReport}
-                    className="text-xs text-st-gray dark:text-gray-400 hover:text-st-black">
-                    New report
-                  </button>
-                </div>
-                {editingId && (
-                  <p className="text-xs text-st-gray dark:text-gray-400 mb-2">Editing saved report</p>
-                )}
-                <div className="space-y-2">
-                  <input type="text" value={reportName} onChange={(e) => setReportName(e.target.value)}
-                    placeholder="Report name..." maxLength={60}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900 dark:focus:ring-gray-400 dark:bg-[#242829] dark:text-white" />
-                  <div className="flex flex-col gap-2">
-                    <div className="flex gap-2">
-                      <button onClick={handleSave}
-                        className="flex-1 px-3 py-2 bg-st-black text-white rounded-lg text-sm hover:bg-gray-800 flex items-center justify-center gap-1">
-                        <Bookmark className="w-4 h-4" />
-                        {editingId ? 'Update report' : 'Save report'}
+                    {(filters.channel || filters.source || filters.medium || filters.ai_source || filters.has_ai_source) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFilters(prev => {
+                            const next = { ...prev }
+                            delete next.channel
+                            delete next.source
+                            delete next.medium
+                            delete next.ai_source
+                            delete next.has_ai_source
+                            setFilterCount(Object.keys(next).length)
+                            return next
+                          })
+                        }}
+                        className="text-xs text-red-500 hover:text-red-600 block mt-1 font-semibold"
+                      >
+                        Clear source filters
                       </button>
-                      {editingId && (
-                        <button onClick={resetReport}
-                          className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-[#242829] rounded-lg hover:bg-gray-200 dark:hover:bg-[#2A2E2E]">
-                          Cancel
-                        </button>
-                      )}
-                    </div>
-
-                    <button onClick={handleDashboardToggle}
-                      disabled={isDashboardToggling}
-                      className={`w-full px-3 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 transition-colors ${
-                        isDashboardToggling
-                          ? 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600 border border-gray-200 dark:border-gray-700 cursor-not-allowed'
-                          : isPinned
-                            ? 'bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 dark:hover:bg-red-900/30 border border-red-200 dark:border-red-800'
-                            : 'bg-lime-50 text-lime-800 hover:bg-lime-100 dark:bg-lime-950/20 dark:text-lime-400 dark:hover:bg-lime-900/30 border border-lime-200 dark:border-lime-800'
-                      }`}>
-                      {isDashboardToggling ? (
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <BarChart3 className="w-4 h-4" />
-                      )}
-                      {isDashboardToggling ? 'Toggling...' : isPinned ? 'Remove from Dashboard' : 'Add to Dashboard'}
-                    </button>
+                    )}
                   </div>
-                  {saveFeedback === 'saved' && (
-                    <p className="text-xs text-green-600 mt-1.5">Report saved</p>
-                  )}
-                  {saveFeedback === 'updated' && (
-                    <p className="text-xs text-green-600 mt-1.5">Report updated</p>
-                  )}
-                  {saveFeedback === 'error' && (
-                    <p className="text-xs text-red-600 mt-1.5">Failed to save — try again</p>
-                  )}
-                  {dashboardFeedback === 'pinned' && (
-                    <div className="text-xs text-green-600 mt-1.5 flex items-center justify-between bg-green-50 dark:bg-green-950/20 px-2 py-1.5 rounded border border-green-100 dark:border-green-800">
-                      <span>✓ Pinned to dashboard</span>
-                      <a href="/" className="font-semibold underline hover:text-green-800 dark:hover:text-green-300">View Dashboard →</a>
-                    </div>
-                  )}
-                  {dashboardFeedback === 'unpinned' && (
-                    <p className="text-xs text-st-gray mt-1.5">Removed from dashboard</p>
-                  )}
-                  {dashboardFeedback === 'error' && (
-                    <p className="text-xs text-red-600 mt-1.5">Failed to update dashboard widget — try again</p>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
 
-          {/* Saved Reports */}
-          {savedReports.length > 0 && (
-            <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-4">
-              <h3 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-3">Saved Reports</h3>
-              <div className="space-y-2">
-                {savedReports.map((r) => {
-                  const meta = getSavedReportMeta(r)
-                  return (
-                    <div key={r.id} className="rounded-lg border border-gray-100 dark:border-[#2A2E2E] p-3 hover:bg-gray-50 dark:hover:bg-[#252929] transition-colors">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-st-black truncate">{r.name}</p>
-                          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
-                            <span className="text-xs text-st-gray dark:text-gray-400">{meta.metricLabel}</span>
-                            <span className="text-xs text-st-gray dark:text-gray-400">{meta.groupLabel}</span>
-                            <span className="text-xs text-st-gray dark:text-gray-400">{meta.modelLabel}</span>
-                            <span className="text-xs text-st-gray dark:text-gray-400">{meta.dateLabel}</span>
-                            {meta.filterCount > 0 && (
-                              <span className="text-xs text-lime-700 bg-lime-50 px-1.5 py-0.5 rounded">
-                                {meta.filterCount} filter{meta.filterCount > 1 ? 's' : ''}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <button onClick={() => handleListPinToggle(r)}
-                            title={r.show_on_dashboard ? "Remove from Dashboard" : "Pin to Dashboard"}
-                            className={`p-1 rounded transition-colors ${
-                              r.show_on_dashboard
-                                ? 'text-lime-700 bg-lime-50 hover:bg-lime-100 dark:text-lime-400 dark:bg-lime-950/20'
-                                : 'text-st-gray hover:text-st-black hover:bg-gray-100 dark:hover:bg-[#242829]'
-                            }`}>
-                            <Bookmark className="w-3.5 h-3.5" style={{ fill: r.show_on_dashboard ? 'currentColor' : 'none' }} />
-                          </button>
-                          <button onClick={() => handleLoad(r)}
-                            className="px-2 py-1 text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-[#242829] hover:bg-gray-200 dark:hover:bg-[#2A2E2E] rounded transition-colors">
-                            Load
-                          </button>
-                          <button onClick={() => handleDuplicate(r)}
-                            className="px-2 py-1 text-xs text-st-gray dark:text-gray-400 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-[#242829] rounded transition-colors">
-                            Duplicate
-                          </button>
-                          <button onClick={() => handleDelete(r.id)}
-                            className="px-2 py-1 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition-colors">
-                            Delete
-                          </button>
-                        </div>
+                  {/* Other standard filter fields */}
+                  <div className="space-y-3 border-t border-gray-100 dark:border-[#2A2E2E] pt-3">
+                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Other Filters</label>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Channel */}
+                      <div className="space-y-1">
+                        <label className="block text-[10px] text-gray-500">Channel Name</label>
+                        <input
+                          type="text"
+                          value={filters.channel || ''}
+                          onChange={(e) => applyFilter('channel', e.target.value || undefined)}
+                          placeholder="e.g. Organic Search"
+                          className="w-full px-2 py-1 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded text-st-black dark:text-white text-xs outline-none"
+                        />
+                      </div>
+
+                      {/* Source */}
+                      <div className="space-y-1">
+                        <label className="block text-[10px] text-gray-500">Source Name</label>
+                        <input
+                          type="text"
+                          value={filters.source || ''}
+                          onChange={(e) => applyFilter('source', e.target.value || undefined)}
+                          placeholder="e.g. google"
+                          className="w-full px-2 py-1 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded text-st-black dark:text-white text-xs outline-none"
+                        />
+                      </div>
+
+                      {/* Medium */}
+                      <div className="space-y-1">
+                        <label className="block text-[10px] text-gray-500">Medium</label>
+                        <input
+                          type="text"
+                          value={filters.medium || ''}
+                          onChange={(e) => applyFilter('medium', e.target.value || undefined)}
+                          placeholder="e.g. cpc"
+                          className="w-full px-2 py-1 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded text-st-black dark:text-white text-xs outline-none"
+                        />
+                      </div>
+
+                      {/* Campaign */}
+                      <div className="space-y-1">
+                        <label className="block text-[10px] text-gray-500">Campaign</label>
+                        <input
+                          type="text"
+                          value={filters.campaign || ''}
+                          onChange={(e) => applyFilter('campaign', e.target.value || undefined)}
+                          placeholder="e.g. summer_sale"
+                          className="w-full px-2 py-1 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded text-st-black dark:text-white text-xs outline-none"
+                        />
                       </div>
                     </div>
-                  )
-                })}
-              </div>
+
+                    {/* Conversion Type */}
+                    <div className="space-y-1">
+                      <label className="block text-[10px] text-gray-500">Conversion Type</label>
+                      <input
+                        type="text"
+                        value={filters.conversion_type || ''}
+                        onChange={(e) => applyFilter('conversion_type', e.target.value || undefined)}
+                        placeholder="e.g. signup"
+                        className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded text-st-black dark:text-white"
+                      />
+                    </div>
+
+                    {/* Min Conversions */}
+                    <div className="space-y-1">
+                      <label className="block text-[10px] text-gray-500">Min Conversions (threshold)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={filters.min_conversions || ''}
+                        onChange={(e) => applyFilter('min_conversions', e.target.value || undefined)}
+                        placeholder="e.g. 5"
+                        className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded text-st-black dark:text-white"
+                      />
+                    </div>
+
+                    {/* Customer Type */}
+                    <div className="space-y-1">
+                      <label className="block text-[10px] text-gray-500">Customer Type</label>
+                      <CustomSelect
+                        value={filters.customer_type || ''}
+                        onChange={(val) => applyFilter('customer_type', val || undefined)}
+                        options={customerTypeFilterOptions}
+                      />
+                    </div>
+
+                    {/* Device */}
+                    <div className="space-y-1">
+                      <label className="block text-[10px] text-gray-500">Device</label>
+                      <CustomSelect
+                        value={filters.device_type || ''}
+                        onChange={(val) => applyFilter('device_type', val || undefined)}
+                        options={deviceOptions}
+                      />
+                    </div>
+
+                    {/* Country */}
+                    <div className="space-y-1">
+                      <label className="block text-[10px] text-gray-500">Country</label>
+                      <input
+                        type="text"
+                        value={filters.country || ''}
+                        onChange={(e) => applyFilter('country', e.target.value || undefined)}
+                        placeholder="e.g. US"
+                        className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded text-st-black dark:text-white"
+                      />
+                    </div>
+
+                    {/* Conversions only check */}
+                    <label className="flex items-center gap-2 cursor-pointer pt-1 font-medium text-gray-700 dark:text-gray-300">
+                      <input
+                        type="checkbox"
+                        checked={filters.is_conversion === 'true'}
+                        onChange={(e) => applyFilter('is_conversion', e.target.checked ? 'true' : undefined)}
+                        className="rounded border-gray-300 text-st-black focus:ring-lime-500"
+                      />
+                      Conversions only
+                    </label>
+
+                    {filterCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => { setFilters({}); setFilterCount(0) }}
+                        className="w-full py-1.5 border border-red-200 dark:border-red-950 text-red-500 hover:text-red-600 rounded transition-all font-semibold"
+                      >
+                        Clear all filters
+                      </button>
+                    )}
+
+                  </div>
+
+                </div>
+              )}
             </div>
-          )}
+
+            {/* Reset / New button */}
+            <div className="pt-2 border-t border-gray-100 dark:border-[#2A2E2E]">
+              <button
+                type="button"
+                onClick={resetReport}
+                className="w-full text-center text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 py-1"
+              >
+                Reset Configuration
+              </button>
+            </div>
+
+          </div>
         </div>
 
-        {/* Right: Live Preview */}
+        {/* Right Column: Live Preview Panel */}
         <div className="lg:col-span-2 space-y-4">
           {!canPreview ? (
-            <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-12 text-center">
+            <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-16 text-center">
               <ArrowRight className="w-10 h-10 text-gray-300 mx-auto mb-4" />
-              <p className="text-st-gray dark:text-gray-400 font-medium">Build your report</p>
-              <p className="text-sm text-st-gray dark:text-gray-400 mt-1">
-                Select a metric, group-by dimension, and date range to see results.
+              <p className="text-st-gray dark:text-gray-400 font-semibold text-lg">Build your report</p>
+              <p className="text-sm text-st-gray dark:text-gray-400 mt-1 max-w-sm mx-auto">
+                Enter a report name, choose your date range, metric, and dimension to generate a real-time preview.
               </p>
             </div>
           ) : (
             <>
               {data?.truncated && (
-                <div className="mb-3 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-center gap-2">
+                <div className="px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 flex items-center gap-2">
                   <span>⚠</span>
-                  <span>Results may be incomplete — this report hit the 50,000 event limit. Try a shorter date range for accurate data.</span>
+                  <span>Results may be incomplete — this report hit the 50,000 event limit. Try a shorter date range.</span>
                 </div>
               )}
 
-              {/* Summary */}
-              <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-4">
-                <div className="flex items-center justify-between">
+              {/* Summary and Header Actions Card */}
+              <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
-                    <p className="text-xs text-st-gray dark:text-gray-400">Total {metricLabel}</p>
-                    <p className="text-2xl font-bold text-st-black">{metricFormat(total)}</p>
+                    <h4 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Previewing</h4>
+                    <p className="text-lg font-bold text-st-black truncate mt-0.5">{reportName || 'Untitled Report'}</p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className="text-xs font-bold text-lime-600 dark:text-lime-400">{metricFormat(total)}</span>
+                      <span className="text-xs text-st-gray dark:text-gray-400">total {metricLabel}</span>
+                    </div>
                   </div>
-                  {isLoading && (
-                    <span className="flex items-center gap-1.5 text-xs text-st-gray dark:text-gray-400">
-                      <RefreshCw className="w-4 h-4 animate-spin" /> Loading…
-                    </span>
-                  )}
+
+                  {/* Actions Header */}
+                  <div className="flex items-center gap-2 self-start sm:self-center">
+                    {hasFeature(site?.plan, 'saved_reports') ? (
+                      <>
+                        <button
+                          onClick={handleSave}
+                          className="px-3 py-1.5 text-xs bg-st-black text-white hover:bg-gray-800 dark:bg-lime-500 dark:text-st-black dark:hover:bg-lime-400 rounded-lg flex items-center gap-1 font-semibold transition-all shadow-sm"
+                        >
+                          <Bookmark className="w-3.5 h-3.5" />
+                          {editingId ? 'Update' : 'Save'}
+                        </button>
+                        <button
+                          onClick={handleDashboardToggle}
+                          disabled={isDashboardToggling}
+                          className={`px-3 py-1.5 text-xs rounded-lg flex items-center gap-1.5 font-semibold transition-colors border shadow-sm ${
+                            isPinned
+                              ? 'bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30 border-red-200'
+                              : 'bg-lime-50 text-lime-800 hover:bg-lime-100 dark:bg-lime-950/20 dark:text-lime-400 dark:border-lime-900/30 border-lime-200'
+                          }`}
+                        >
+                          {isDashboardToggling ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <BarChart3 className="w-3.5 h-3.5" />
+                          )}
+                          {isPinned ? 'Unpin' : 'Pin'}
+                        </button>
+                      </>
+                    ) : (
+                      <span className="text-xs text-st-gray dark:text-gray-400">
+                        🔒 Save requires <a href="/billing" className="text-st-lime hover:underline font-semibold">Upgrade</a>
+                      </span>
+                    )}
+                    <button
+                      onClick={handleExportCSV}
+                      className="px-3 py-1.5 text-xs bg-white dark:bg-[#242829] hover:bg-gray-50 dark:hover:bg-[#2A2E2E] text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-[#2A2E2E] rounded-lg flex items-center gap-1 font-semibold shadow-sm"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      CSV
+                    </button>
+                  </div>
                 </div>
+
+                {/* Save Feedback Messages */}
+                {saveFeedback && (
+                  <div className="mt-3 text-xs">
+                    {saveFeedback === 'saved' && <p className="text-green-600 font-semibold">✓ Report saved successfully.</p>}
+                    {saveFeedback === 'updated' && <p className="text-green-600 font-semibold">✓ Report updated successfully.</p>}
+                    {saveFeedback === 'error' && <p className="text-red-500 font-semibold">⚠ Failed to save report.</p>}
+                  </div>
+                )}
+                {dashboardFeedback && (
+                  <div className="mt-3 text-xs">
+                    {dashboardFeedback === 'pinned' && (
+                      <p className="text-green-600 bg-green-50 dark:bg-green-950/20 border border-green-100 dark:border-green-800 px-2 py-1.5 rounded flex items-center justify-between">
+                        <span>✓ Pinned to dashboard.</span>
+                        <Link to="/" className="underline font-bold">View Dashboard →</Link>
+                      </p>
+                    )}
+                    {dashboardFeedback === 'unpinned' && <p className="text-gray-500 dark:text-gray-400">Removed from dashboard.</p>}
+                    {dashboardFeedback === 'error' && <p className="text-red-500 font-semibold">⚠ Failed to update dashboard pin.</p>}
+                  </div>
+                )}
               </div>
 
-              {/* Chart */}
-              {(chartType === 'bar' || chartType === 'line' || chartType === 'area' || chartType === 'pie') && (
-                <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-6">
-                  {/* Nightly model notice — shown when pre-aggregated model has no data yet */}
-                  {nightlyNotice && results.length === 0 && !isLoading && (
-                    <div className="mb-3 flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-2.5">
-                      <span className="text-amber-500 mt-0.5">⏳</span>
-                      <p className="text-xs text-amber-800 dark:text-amber-300">{nightlyNotice}</p>
-                    </div>
-                  )}
-                  {isLoading ? (
-                    <div className="h-72 flex flex-col items-center justify-center gap-2">
-                      <RefreshCw className="w-6 h-6 animate-spin text-st-gray dark:text-gray-400" />
-                      <p className="text-xs text-st-gray dark:text-gray-400">Loading report…</p>
-                    </div>
-                  ) : results.length === 0 ? (
-                    <div className="h-72 flex items-center justify-center text-st-gray dark:text-gray-400 text-sm">
-                      {nightlyNotice ? 'No data yet — nightly calculation pending.' : 'No data for this selection. Try a different date range or dimension.'}
-                    </div>
-                  ) : (
-                    <div className="h-72">
-                      {chartType === 'bar' && <Bar data={chartData} options={chartOptions} />}
-                      {chartType === 'line' && <Line data={chartData} options={chartOptions} />}
-                      {chartType === 'area' && <Line data={chartData} options={chartOptions} />}
-                      {chartType === 'pie' && <Pie data={chartData} options={chartOptions} />}
-                    </div>
-                  )}
+              {/* Data Visualization / Sparse results check */}
+              {results.length > 0 && results.length < 3 && !isLoading ? (
+                <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-6 space-y-4">
+                  <h4 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Sparse Result Overview</h4>
+                  <div className="space-y-3.5">
+                    {results.map((r, idx) => {
+                      const val = getMetricValue(r)
+                      const percent = total > 0 ? (val / total) * 100 : 0
+                      return (
+                        <div key={idx} className="space-y-1 text-xs">
+                          <div className="flex justify-between items-center font-medium">
+                            <span className="text-gray-800 dark:text-gray-200 truncate">{r.dim_value || 'Direct / None'}</span>
+                            <span className="font-bold text-gray-900 dark:text-white">{metricFormat(val)}</span>
+                          </div>
+                          <div className="h-3 bg-gray-100 dark:bg-[#242829] rounded-full overflow-hidden flex">
+                            <div className="h-full bg-lime-500 rounded-full" style={{ width: `${percent}%` }} />
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <p className="text-[10px] text-st-gray dark:text-gray-400">Sparse dataset (fewer than 3 rows) loaded as ranked list.</p>
                 </div>
+              ) : (
+                /* Chart visual card */
+                (chartType === 'bar' || chartType === 'line' || chartType === 'area' || chartType === 'pie') && (
+                  <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-6">
+                    {nightlyNotice && results.length === 0 && !isLoading && (
+                      <div className="mb-3 flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-2">
+                        <span className="text-amber-500 mt-0.5">⏳</span>
+                        <p className="text-xs text-amber-800 dark:text-amber-300">{nightlyNotice}</p>
+                      </div>
+                    )}
+                    {isLoading ? (
+                      <div className="h-72 flex flex-col items-center justify-center gap-2">
+                        <RefreshCw className="w-6 h-6 animate-spin text-st-gray dark:text-gray-400" />
+                        <p className="text-xs text-st-gray dark:text-gray-400">Loading report data...</p>
+                      </div>
+                    ) : results.length === 0 ? (
+                      <div className="h-72 flex items-center justify-center text-st-gray dark:text-gray-400 text-sm">
+                        {nightlyNotice ? 'No data yet — nightly calculation pending.' : 'No data for this selection. Try a different date range or dimension.'}
+                      </div>
+                    ) : (
+                      <div className="h-72">
+                        {chartType === 'bar' && <Bar data={chartData} options={chartOptions} />}
+                        {chartType === 'line' && <Line data={chartData} options={chartOptions} />}
+                        {chartType === 'area' && <Line data={chartData} options={chartOptions} />}
+                        {chartType === 'pie' && <Pie data={chartData} options={chartOptions} />}
+                      </div>
+                    )}
+                  </div>
+                )
               )}
 
-              {/* KPI */}
+              {/* KPI view */}
               {chartType === 'kpi' && (
                 <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-6">
                   {isLoading ? (
                     <div className="flex flex-col items-center justify-center py-12 gap-2">
                       <RefreshCw className="w-6 h-6 animate-spin text-st-gray dark:text-gray-400" />
-                      <p className="text-xs text-st-gray dark:text-gray-400">Loading report…</p>
+                      <p className="text-xs text-st-gray dark:text-gray-400">Loading report delta...</p>
                     </div>
                   ) : results.length === 0 ? (
-                    <div className="py-12 text-center text-st-gray dark:text-gray-400 text-sm">No KPI data yet</div>
+                    <div className="py-12 text-center text-st-gray dark:text-gray-400 text-sm">No KPI data found</div>
                   ) : (() => {
                     const currentVal = getKpiValue(results, metric)
                     const priorRows = priorReportData?.results
@@ -1487,14 +1850,14 @@ export default function ReportBuilder() {
                     return (
                       <div>
                         <p className="text-sm text-st-gray dark:text-gray-400">{metricLabel}</p>
-                        <div className="mt-2 text-4xl font-semibold text-st-black">{formatKpiValue(currentVal, metric)}</div>
+                        <div className="mt-2 text-4xl font-semibold text-st-black dark:text-white">{formatKpiValue(currentVal, metric)}</div>
                         <div className="mt-3 text-sm">
                           {delta ? (
                             <span className={delta.positive ? 'text-green-600' : 'text-red-600'}>
                               {delta.label}
                             </span>
                           ) : (
-                            <span className="text-st-gray dark:text-gray-400">No prior comparison</span>
+                            <span className="text-st-gray dark:text-gray-400">No prior period comparison</span>
                           )}
                           <span className="text-st-gray dark:text-gray-400 ml-2">vs previous period</span>
                         </div>
@@ -1504,81 +1867,80 @@ export default function ReportBuilder() {
                 </div>
               )}
 
-              {/* Table */}
+              {/* Table Data list view */}
               <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] overflow-hidden">
                 <div className="p-4 border-b border-gray-100 dark:border-[#2A2E2E] flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Data</h3>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Data View</h3>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setShowCompare(c => !c)}
                       className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
                         showCompare
-                          ? 'bg-st-black text-white border-st-black'
+                          ? 'bg-st-black text-white border-st-black dark:bg-lime-500 dark:text-st-black'
                           : 'bg-white dark:bg-[#242829] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-[#2A2E2E] hover:bg-gray-50 dark:hover:bg-[#252929]'
                       }`}
                     >
                       Compare period
-                    </button>
-                    <button
-                      onClick={handleExportCSV}
-                      className="flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border bg-white dark:bg-[#242829] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-[#2A2E2E] hover:bg-gray-50 dark:hover:bg-[#252929] transition-colors"
-                    >
-                      ↓ CSV
                     </button>
                     {!isMultiTouch && (
                       <button
                         onClick={() => setShowExplanation(!showExplanation)}
                         className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
                           showExplanation
-                            ? 'bg-st-black text-white border-st-black'
+                            ? 'bg-st-black text-white border-st-black dark:bg-lime-500 dark:text-st-black'
                             : 'bg-white dark:bg-[#242829] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-[#2A2E2E] hover:bg-gray-50 dark:hover:bg-[#252929]'
                         }`}
                       >
                         <HelpCircle className="w-3.5 h-3.5" />
-                        {showExplanation ? 'Hide Explanation' : 'Show Explanation'}
+                        {showExplanation ? 'Hide Guide' : 'Attribution Guide'}
                       </button>
                     )}
                   </div>
                 </div>
+
                 {isLoading ? (
                   <div className="p-8 text-center space-y-2">
                     <RefreshCw className="w-5 h-5 animate-spin text-st-gray dark:text-gray-400 mx-auto" />
-                    <p className="text-xs text-st-gray dark:text-gray-400">Loading report…</p>
+                    <p className="text-xs text-st-gray dark:text-gray-400">Loading data...</p>
                   </div>
                 ) : results.length === 0 ? (
-                  <div className="p-8 text-center text-sm text-st-gray dark:text-gray-400">No data yet</div>
+                  <div className="p-8 text-center text-sm text-st-gray dark:text-gray-400">No report rows found</div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-gray-100 dark:border-[#2A2E2E] bg-gray-50 dark:bg-[#242829]">
-                          <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">
+                          <th className="text-left py-2.5 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">
                             {getDimensionLabel(groupBy) || 'Dimension'}
                           </th>
-                          {groupBy2 && <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">
-                            {getDimensionLabel(groupBy2) || 'Dimension 2'}
-                          </th>}
+                          {groupBy2 && (
+                            <th className="text-left py-2.5 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">
+                              {getDimensionLabel(groupBy2) || 'Dimension 2'}
+                            </th>
+                          )}
                           {selectedMetrics.map(mk => (
-                            <th key={mk} className="text-right py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">
+                            <th key={mk} className="text-right py-2.5 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">
                               {METRICS.find(m => m.key === mk)?.label || mk}
                             </th>
                           ))}
-                          {selectedMetrics.map(mk => (
-                            <th key={mk + '_chg'} className="text-right py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">
+                          {showCompare && selectedMetrics.map(mk => (
+                            <th key={mk + '_chg'} className="text-right py-2.5 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">
                               vs prior
                             </th>
                           ))}
-                          {showExplanation && !isMultiTouch && <th className="text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">Why</th>}
+                          {showExplanation && !isMultiTouch && (
+                            <th className="text-left py-2.5 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">Attribution logic</th>
+                          )}
                         </tr>
-                        {/* Summary row */}
-                        <tr className="border-b border-gray-200 dark:border-[#2A2E2E] bg-gray-100 dark:bg-[#252929]">
-                          <td className="py-2 px-4 text-xs font-semibold text-gray-700 dark:text-gray-300">Summary</td>
+                        {/* Summary Row */}
+                        <tr className="border-b border-gray-200 dark:border-[#2A2E2E] bg-gray-100/50 dark:bg-[#252929]/50">
+                          <td className="py-2.5 px-4 text-xs font-semibold text-gray-700 dark:text-gray-300">Summary Total</td>
                           {groupBy2 && <td />}
                           {selectedMetrics.map(mk => {
                             const mDef = METRICS.find(m => m.key === mk)
                             const fmt = mDef?.format || (v => String(v))
-                            const total = results.reduce((s, r) => s + (r[mk] ?? 0), 0)
-                            return <td key={mk} className="py-2 px-4 text-right text-xs font-bold text-st-black">{fmt(total)}</td>
+                            const totalVal = results.reduce((s, r) => s + (r[mk] ?? 0), 0)
+                            return <td key={mk} className="py-2.5 px-4 text-right text-xs font-bold text-st-black dark:text-white">{fmt(totalVal)}</td>
                           })}
                           {showCompare && selectedMetrics.map(mk => {
                             const curTotal = results.reduce((s, r) => s + (r[mk] ?? 0), 0)
@@ -1586,12 +1948,12 @@ export default function ReportBuilder() {
                             const priorTotal = priorRows.reduce((s, r) => s + (r[mk] ?? 0), 0)
                             const delta = priorTotal > 0 ? ((curTotal - priorTotal) / priorTotal) * 100 : null
                             return (
-                              <td key={mk + '_chg_sum'} className="py-2 px-4 text-right text-xs">
+                              <td key={mk + '_chg_sum'} className="py-2.5 px-4 text-right text-xs">
                                 {delta !== null
-                                  ? <span className={delta >= 0 ? 'text-green-600 font-semibold' : 'text-red-500 font-semibold'}>
+                                  ? <span className={delta >= 0 ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}>
                                       {delta >= 0 ? '+' : ''}{delta.toFixed(1)}%
                                     </span>
-                                  : <span className="text-gray-300">—</span>
+                                  : <span className="text-gray-300 dark:text-gray-600">—</span>
                                 }
                               </td>
                             )
@@ -1605,38 +1967,40 @@ export default function ReportBuilder() {
                           const priorRow = priorRows.find(p => p.dim_value === r.dim_value)
                           return (
                             <tr key={i} className="border-b border-gray-50 dark:border-[#2A2E2E] hover:bg-gray-50 dark:hover:bg-[#252929]">
-                              <td className="py-2 px-4 text-st-black font-medium">{r.dim_value || '—'}</td>
-                              {groupBy2 && <td className="py-2 px-4 text-gray-600 dark:text-gray-400">{r.dim_value2}</td>}
+                              <td className="py-2.5 px-4 text-st-black dark:text-gray-200 font-medium">{r.dim_value || 'Direct / None'}</td>
+                              {groupBy2 && <td className="py-2.5 px-4 text-gray-600 dark:text-gray-400">{r.dim_value2}</td>}
                               {selectedMetrics.map(mk => {
                                 const mDef = METRICS.find(m => m.key === mk)
                                 const fmt = mDef?.format || (v => String(v))
-                                return <td key={mk} className="py-2 px-4 text-right font-medium text-st-black">{fmt(r[mk] ?? 0)}</td>
+                                return <td key={mk} className="py-2.5 px-4 text-right font-semibold text-st-black dark:text-white">{fmt(r[mk] ?? 0)}</td>
                               })}
                               {showCompare && selectedMetrics.map(mk => {
                                 const cur = r[mk] ?? 0
                                 const prior = priorRow?.[mk] ?? 0
                                 const delta = prior > 0 ? ((cur - prior) / prior) * 100 : null
                                 return (
-                                  <td key={mk + '_chg'} className="py-2 px-4 text-right text-xs">
+                                  <td key={mk + '_chg'} className="py-2.5 px-4 text-right text-xs">
                                     {delta !== null
-                                      ? <span className={`px-1.5 py-0.5 rounded-full text-[11px] font-semibold ${delta >= 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+                                      ? <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${delta >= 0 ? 'bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400' : 'bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400'}`}>
                                           {delta >= 0 ? '+' : ''}{delta.toFixed(1)}%
                                         </span>
-                                      : <span className="text-gray-300 text-[11px]">—</span>
+                                      : <span className="text-gray-300 dark:text-gray-600 text-[10px]">—</span>
                                     }
                                   </td>
                                 )
                               })}
                               {showExplanation && !isMultiTouch && (
-                                <td className="py-2 px-4">
-                                  <button onClick={() => setExplainModalOpen(true)}
-                                    className="text-xs text-st-gray dark:text-gray-400 hover:text-st-black flex items-center gap-1">
+                                <td className="py-2.5 px-4">
+                                  <button
+                                    onClick={() => setExplainModalOpen(true)}
+                                    className="text-xs text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white flex items-center gap-1"
+                                  >
                                     <HelpCircle className="w-3 h-3" />
-                                    {model === 'first_touch' && 'First visit UTM'}
-                                    {model === 'last_touch' && 'Conversion page UTM'}
-                                    {model === 'first_touch_non_direct' && 'Earliest non-direct'}
-                                    {model === 'last_touch_non_direct' && 'Latest non-direct'}
-                                    {model === 'ai_platforms' && 'AI referrer match'}
+                                    {model === 'first_touch' && 'First visit attribution'}
+                                    {model === 'last_touch' && 'Conversion page referrer'}
+                                    {model === 'first_touch_non_direct' && 'Earliest campaigns'}
+                                    {model === 'last_touch_non_direct' && 'Latest campaigns'}
+                                    {model === 'ai_platforms' && 'AI referrer domain'}
                                   </button>
                                 </td>
                               )}
@@ -1651,7 +2015,90 @@ export default function ReportBuilder() {
             </>
           )}
         </div>
+
       </div>
+
+      {/* Slide-over Saved Reports Drawer */}
+      {isDrawerOpen && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => setIsDrawerOpen(false)} />
+          <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
+            <div className="w-screen max-w-md bg-white dark:bg-[#1A1D1D] border-l border-gray-200 dark:border-[#2A2E2E] shadow-2xl flex flex-col">
+              <div className="px-6 py-5 border-b border-gray-100 dark:border-[#2A2E2E] flex items-center justify-between">
+                <h3 className="text-lg font-bold text-gray-800 dark:text-white">Saved Reports</h3>
+                <button onClick={() => setIsDrawerOpen(false)} className="text-gray-400 hover:text-gray-500">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {reportsLoading ? (
+                  <div className="flex items-center justify-center py-8 text-st-gray">
+                    <RefreshCw className="w-5 h-5 animate-spin mr-2" /> Loading...
+                  </div>
+                ) : savedReports.length === 0 ? (
+                  <div className="text-center py-12 text-sm text-st-gray dark:text-gray-400">
+                    No saved reports found. Configure a report on the left and save it above.
+                  </div>
+                ) : (
+                  savedReports.map((r) => {
+                    const meta = getSavedReportMeta(r)
+                    return (
+                      <div key={r.id} className="rounded-xl border border-gray-200 dark:border-[#2A2E2E] p-4 bg-gray-50/50 dark:bg-[#242829]/50 hover:bg-gray-50 dark:hover:bg-[#252929] transition-all">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{r.name}</p>
+                            <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-1.5 text-[10px] text-st-gray dark:text-gray-400">
+                              <span className="bg-gray-100 dark:bg-gray-850 px-1.5 py-0.5 rounded">{meta.metricLabel}</span>
+                              <span className="bg-gray-100 dark:bg-gray-850 px-1.5 py-0.5 rounded">{meta.groupLabel}</span>
+                              <span className="bg-gray-100 dark:bg-gray-850 px-1.5 py-0.5 rounded">{meta.modelLabel}</span>
+                              {meta.filterCount > 0 && (
+                                <span className="bg-lime-50 text-lime-800 dark:bg-lime-950/20 dark:text-lime-400 px-1.5 py-0.5 rounded font-semibold">
+                                  {meta.filterCount} filter{meta.filterCount > 1 ? 's' : ''}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between border-t border-gray-100 dark:border-[#2A2E2E] mt-3 pt-3">
+                          <button
+                            onClick={() => handleListPinToggle(r)}
+                            className={`text-xs flex items-center gap-1 font-semibold transition-colors ${
+                              r.show_on_dashboard
+                                ? 'text-lime-600 dark:text-lime-400'
+                                : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                            }`}
+                          >
+                            <Bookmark className="w-3.5 h-3.5" style={{ fill: r.show_on_dashboard ? 'currentColor' : 'none' }} />
+                            {r.show_on_dashboard ? 'Pinned' : 'Pin'}
+                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => { handleLoad(r); setIsDrawerOpen(false) }}
+                              className="px-2.5 py-1 text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-[#1A1D1D] hover:bg-gray-100 dark:hover:bg-[#252929] border border-gray-200 dark:border-[#2A2E2E] rounded transition-all font-semibold"
+                            >
+                              Load
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (window.confirm(`Are you sure you want to delete "${r.name}"?`)) {
+                                  handleDelete(r.id)
+                                }
+                              }}
+                              className="px-2 py-1 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 rounded transition-all font-semibold"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ConversionExplanationModal
         isOpen={explainModalOpen}

@@ -232,7 +232,21 @@ U-shaped / W-shaped / Time Decay / Linear models showed blank charts with no exp
 ### 11. Duplicate channelFromEvent — AI domains diverged (FIXED Session 97–98)
 attribution-engine.js had 14 AI domains; nightly job had 8. Canonical `api/lib/channel-classifier.js` created with 21 domains; both consumers import from it.
 
+
+## New Known Gaps (Session 128D-B.1, not yet fixed)
+
+### Deferred filter support in Report Builder
+The following dimensions are supported as group-by targets in the Report Builder but are deferred as direct filters:
+- Browser filter
+- Referrer Domain filter
+- Landing Page / URL filter
+- Custom URL Parameter filter
+
+### Schema-valid source filters vs attribution accuracy
+Source shortcut filters are schema-valid and safe, but source/channel value accuracy still depends on backend normalization and real customer data.
+
 ## New Known Gaps (Session 98–99, not yet fixed)
+
 
 ### Deployment architecture — two separate Railway services
 
