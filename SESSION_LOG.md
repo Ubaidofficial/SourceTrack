@@ -5,6 +5,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 128C | 2026-06-08 | `main` | Integrations UX Simplification — Refactored Integrations page layout with progressive disclosure collapsible rows. Added single-run query guard loading check to prevent background refetches overriding active selection. Redesigned pending install callout as a calm grey next-step block and wired the "View install guide" action to smooth-scroll to the Core Tracking card. Improved header text contrast for dark mode, renamed developer inner options to "API & Webhook Tools", passed card overrides to DashboardCard, styled buttons cleanly (blue Connect, gray pills, slate Doc links), removed Coming Soon card, and resolved JSX compiler errors. | ✅ | No |
 | 128B | 2026-06-08 | `main` | Connected Ad Platform Sync — Created SQL migration for ad_platform_connections table with status constraints and index, built Google Ads client with GAQL parsing, Meta Ads client with insights normalization, private sync routes with locks, Integrations setup card, Campaigns sync controls, Docs guide, and E2E QA checks. | ✅ | No |
 | 128A | 2026-06-08 | `main` | Ad Cost Imports & Campaign ROI — Created SQL migration for platform/clicks/impressions/currency columns on campaign_costs, aggregated existing rows to prevent constraint errors, set up RLS-enabled ad_sync_runs logging, built ad-cost-imports shared library with YYYY-MM-DD/negative limits/clicks-vs-impressions validation rules, aggregated bulk uploads, added campaigns overview ROI/CPA suppresses on currency status mismatch, built Campaigns UI Cost Import Modal with drag-drop/paste and live preview validation grid, updated documentation page, and created E2E QA verification script. | ✅ | No |
 | 127B | 2026-06-07 | `main` | Owner Billing and Trial Fix — Implemented shared dashboard billing helper for trial status, friendly plan labels, and paid-plan checks. Returned trial timestamps from sites API and utilized database `trial_ends_at` instead of hardcoded 14-day creation math in layout and settings views. Cleared stale trial banner state for super admins and verified all cases using a sandboxed unit test script. | ✅ | No |
@@ -867,3 +868,28 @@ curl -i https://api.srctk.com/tracker/tracker.min.js
 ### 3. Verification & QA Checks
 - Created E2E check in `scripts/qa-ad-platform-sync.mjs` validating signature validation, credential validations, connection isolation, cost preservation, and unwrap shape checks.
 - Confirmed all static build compilation and automated tests pass.
+
+---
+
+## Session 128C — Integrations UX Simplification
+
+**Date:** 2026-06-08
+**Branch:** `main`
+**Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### 1. Progressive Disclosure & Install Routing Fixes
+- Restructured `dashboard/src/pages/Integrations.jsx` to wrap advanced details behind collapsible rows.
+- Renamed "Developer Options" inner row title to "API & Webhook Tools" and corrected header colors for optimal dark mode contrast.
+- Updated `View install guide` and `Full setup guide` links on the Integrations page to navigate directly to `/docs#install-tracking` instead of smooth-scrolling or pointing to the complex `/snippet` page.
+- Added a concise `#install-tracking` section inside `Docs.jsx` featuring basic script copy widgets, paste steps, platform configuration tips (Shopify, WordPress, GTM), and a link to advanced setup.
+- Implemented hash-scroll listeners inside `Docs.jsx` using React Router's `useLocation` hook, enabling smooth auto-scrolling to hashed section anchors on page mount or click.
+
+### 2. Guided `/snippet` Redesign & Advanced Setup Collapse
+- Simplified the `/snippet` page to render a clean, 3-step guided installation view (Copy script, Paste script, Visit site & Verify status).
+- Collapsed all advanced setup blocks (Identify users, React example, Stripe webhooks, Offline conversions, Cross-domain tracking, CRM/Zapier stitching, Outbound webhooks, Attribution key events) under a single `Advanced setup` accordion section that is collapsed by default.
+- Added smooth hash recovery to `/snippet` to automatically expand the `Advanced setup` folder and scroll to it when the URL has a `#advanced` hash.
+- Replaced the large orange privacy alert banner with a calm, compact inline block containing an expandable "Read privacy notes" details toggle.
+
+### 3. Static Verification & Production Build
+- Ran static QA validator `npm run qa:static` and verified that it checks out perfectly.
+- Compiled the production dashboard build successfully. Verified that `/campaigns?import=true` works cleanly and cleans the URL params.

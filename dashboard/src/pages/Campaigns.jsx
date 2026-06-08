@@ -260,6 +260,17 @@ export default function Campaigns() {
     load()
   }, [user])
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('import') === 'true') {
+      setImportModalOpen(true)
+      params.delete('import')
+      const search = params.toString()
+      const nextUrl = window.location.pathname + (search ? `?${search}` : '')
+      window.history.replaceState({}, document.title, nextUrl)
+    }
+  }, [])
+
   const { data: overview, isLoading, isError, error, refetch: refetchOverview } = useQuery({
     queryKey: ['campaigns-overview', site?.site_key, activeDim, dateRange, search, statusFilter],
     queryFn: () => fetchApi(`/campaigns/overview?site_key=${site.site_key}&dimension=${activeDim}&days=${dateRange}&search=${encodeURIComponent(search)}&status=${statusFilter}`),
@@ -305,8 +316,8 @@ export default function Campaigns() {
   const googleStatus = adPlatformData.google_ads
   const metaStatus = adPlatformData.meta_ads
 
-  const googleConnected = googleStatus?.status === 'connected'
-  const metaConnected = metaStatus?.status === 'connected'
+  const googleConnected = googleStatus?.connected === true || googleStatus?.status === 'connected'
+  const metaConnected = metaStatus?.connected === true || metaStatus?.status === 'connected'
   const anyConnected = googleConnected || metaConnected
   const lastSyncedGoogle = googleStatus?.last_synced_at
   const lastSyncedMeta = metaStatus?.last_synced_at

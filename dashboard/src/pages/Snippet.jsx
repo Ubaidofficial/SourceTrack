@@ -2,35 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { fetchApi } from '../lib/api'
-import { Copy, Check, Code, ExternalLink, RefreshCw, Circle, Bug, Link as LinkIcon, ChevronDown, ChevronRight, UserCheck } from 'lucide-react'
+import { Copy, Check, Code, RefreshCw, ChevronDown, ChevronRight, Bug } from 'lucide-react'
 import { Link } from 'react-router-dom'
-
-function AccordionSection({ title, icon: Icon, when, children }) {
-  const [open, setOpen] = useState(false)
-
-  return (
-    <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full p-5 flex items-center gap-3 text-left hover:bg-gray-50 dark:hover:bg-[#252929] transition-colors rounded-xl"
-      >
-        <Icon className="w-5 h-5 text-st-gray dark:text-gray-400 flex-shrink-0" />
-        <div className="flex-1 min-w-0">
-          <span className="text-sm font-semibold text-st-black">{title}</span>
-          {when && <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">{when}</p>}
-        </div>
-        {open ? <ChevronDown className="w-4 h-4 text-st-gray dark:text-gray-400 flex-shrink-0" /> : <ChevronRight className="w-4 h-4 text-st-gray dark:text-gray-400 flex-shrink-0" />}
-      </button>
-      {open && (
-        <div className="px-5 pb-5 pt-0 border-t border-gray-100">
-          <div className="pt-4 space-y-4">
-            {children}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
 
 export default function Snippet() {
   const { user } = useAuth()
@@ -41,6 +14,10 @@ export default function Snippet() {
   const [testLoading, setTestLoading] = useState(false)
   const [testResult, setTestResult] = useState(null)
   const [proxyDomain, setProxyDomain] = useState(null)
+
+  const [showPrivacyNotes, setShowPrivacyNotes] = useState(false)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [activeSub, setActiveSub] = useState(null)
 
   useEffect(() => {
     async function load() {
@@ -90,6 +67,16 @@ export default function Snippet() {
     if (site) checkStatus()
   }, [site, checkStatus])
 
+  // Check URL hash for opening advanced setup directly
+  useEffect(() => {
+    if (window.location.hash === '#advanced') {
+      setAdvancedOpen(true)
+      setTimeout(() => {
+        document.getElementById('advanced-section')?.scrollIntoView({ behavior: 'smooth' })
+      }, 200)
+    }
+  }, [])
+
   const trackerBaseUrl = (import.meta.env.VITE_TRACKER_BASE_URL || import.meta.env.VITE_API_URL || window.location.origin).replace(/\/+$/, '');
 
   function buildSnippet() {
@@ -117,7 +104,7 @@ export default function Snippet() {
     } catch (_err) {
       /* clipboard unavailable */
     }
-  }
+  };
 
   const handleTest = async () => {
     if (!site) return
@@ -128,6 +115,7 @@ export default function Snippet() {
       const data = await fetchApi(`/install/status?${params}`)
       if (data.status === 'verified') {
         setTestResult({ ok: true, message: 'Install verified. Events are being received.', domain: data.domain })
+        setStatus(data)
       } else {
         setTestResult({ ok: false, message: 'No events received yet. Paste the snippet and visit your site.' })
       }
@@ -138,500 +126,344 @@ export default function Snippet() {
     }
   }
 
-  const statusColor = status?.status === 'verified'
-    ? 'text-green-500'
-    : status?.status === 'not_installed'
-      ? 'text-amber-500'
-      : 'text-st-gray'
-
-  const statusLabel = status?.status === 'verified'
-    ? 'Receiving data'
-    : status?.status === 'not_installed'
-      ? 'Waiting for first event'
-      : 'Checking...'
-
-  return (
-    <div className="space-y-6 max-w-2xl">
-      <div>
-        <h2 className="text-2xl font-bold text-st-black">Install</h2>
-        <p className="text-sm text-st-gray dark:text-gray-400 mt-1">Add the SourceTrack Pixel to your website</p>
-      </div>
-
-      {/* Status — compact inline */}
-      {site && (
-        <div className="flex items-center gap-3 px-4 py-3 bg-white dark:bg-[#1A1D1D] rounded-lg border border-gray-200 dark:border-[#333838] shadow-sm">
-          <Circle className={`w-2.5 h-2.5 fill-current ${statusColor}`} />
-          <span className={`text-sm font-medium ${statusColor}`}>{statusLabel}</span>
-          {status?.status === 'verified' && status?.domain && (
-            <span className="text-xs text-st-gray dark:text-gray-400 ml-auto truncate">{status.domain}</span>
-          )}
-          <button
-            onClick={checkStatus}
-            disabled={statusLoading}
-            className="ml-auto flex items-center gap-1 text-xs text-st-gray dark:text-gray-400 hover:text-gray-600 disabled:opacity-50"
-          >
-            <RefreshCw className={`w-3 h-3 ${statusLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
-        </div>
-      )}
-
-      {/* SourceTrack Pixel — the only required install step */}
-      <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#333838] p-6 space-y-4">
-        <div className="flex items-center gap-2">
-          <Code className="w-5 h-5 text-gray-700" />
-          <h3 className="font-semibold text-st-black">SourceTrack Pixel</h3>
-        </div>
-
-        <p className="text-sm text-gray-600">
-          For most websites, this single script is enough to start tracking traffic and attribution.
-          No configuration needed — tracking starts automatically on page load.
-        </p>
-
-
-        <ol className="list-decimal list-inside text-sm text-gray-600 dark:text-gray-300 space-y-1 pl-1">
-          <li>Copy the script below</li>
-          <li>Paste it in the <code className="bg-gray-100 dark:bg-[#252929] px-1 rounded text-xs">&lt;head&gt;</code> of your website</li>
-          <li>Deploy — tracking starts automatically on the next page load</li>
-        </ol>
-
-        {site && (
-          <div className="bg-st-black rounded-lg p-4 relative">
-            <pre className="text-green-400 text-xs overflow-x-auto whitespace-pre-wrap pr-12">{snippet}</pre>
-            <button
-              onClick={handleCopy}
-              className="absolute top-3 right-3 p-1.5 bg-gray-800 hover:bg-gray-700 rounded text-gray-300 transition-colors"
-            >
-              {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
-            </button>
-          </div>
-        )}
-
-        {!site && (
-          <p className="text-sm text-st-gray">Complete onboarding or create a site in Settings to get your pixel.</p>
-        )}
-
-        {/* What you get immediately */}
-        <div className="bg-gray-50 dark:bg-[#111414] rounded-lg p-3 text-xs text-gray-600 dark:text-gray-300 space-y-1">
-          <p className="font-medium text-gray-700">What this captures automatically</p>
-          <ul className="list-disc list-inside space-y-0.5">
-            <li>Pageviews and session activity</li>
-            <li>Traffic sources — UTM params, referrers, direct visits</li>
-            <li>ref/source/via URL params as attribution fallbacks</li>
-            <li>AI platform traffic — ChatGPT, Claude, Perplexity, and others</li>
-            <li>Visitor country and device type</li>
-          </ul>
-          <p className="text-st-gray dark:text-gray-400 mt-1">
-            Conversions require an additional <code className="bg-gray-200 px-1 rounded text-xs">sourcetrack.conversion()</code> call — see JavaScript API below.
-          </p>
-        </div>
-
-        {/* Client-side Exclusions helper copy */}
-        <div className="bg-gray-50 dark:bg-[#111414] rounded-lg p-3 text-xs text-gray-600 dark:text-gray-300 space-y-2">
-          <p className="font-medium text-gray-700">Client-Side Path Exclusions (Optional)</p>
-          <p className="text-xs">
-            To prevent the tracker from sending events on specific client paths, add the <code className="bg-gray-200 dark:bg-gray-800 px-1 rounded text-xs">data-exclude</code> attribute:
-          </p>
-          <div className="bg-st-black rounded p-3 relative">
-            <pre className="text-green-400 text-xs overflow-x-auto whitespace-pre-wrap">{`<script async src="${trackerBaseUrl}/tracker/${site?.cookieless_mode ? 'tracker.cookieless.min.js' : 'tracker.min.js'}"\n  data-site-key="${site?.site_key || 'YOUR_SITE_KEY'}"\n  data-exclude="/admin/*, /staging/*">\n</script>`}</pre>
-          </div>
-          <p className="text-[10px] text-st-gray dark:text-gray-400 mt-1">
-            Supports comma-separated patterns with trailing wildcards <code className="bg-gray-200 dark:bg-gray-800 px-1 rounded text-[10px]">*</code>. For absolute server-side suppression, use the Settings page.
-          </p>
-        </div>
-      </div>
-
-      {/* Privacy policy reminder — required disclosure for GDPR / CCPA */}
-      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex gap-3">
-        <div className="text-amber-600 dark:text-amber-400 text-lg leading-none">⚠</div>
-        <div className="text-sm text-amber-900 dark:text-amber-200">
-          <strong>Update your privacy policy before deploying.</strong> SourceTrack is cookieless and
-          does not fingerprint, but you still collect IP-derived country, UTM parameters, and an
-          anonymous identifier — required disclosures under GDPR (EU), CCPA (California), and the
-          UK PECR. The tracker honors <code className="text-xs">navigator.doNotTrack</code> and
-          Global Privacy Control automatically, but a privacy notice is still your responsibility.
-        </div>
-      </div>
-
-      {/* Verify Install */}
-      <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#333838] p-6 space-y-4">
-        <h3 className="font-semibold text-st-black">Verify Installation</h3>
-        <p className="text-sm text-st-gray">
-          After pasting the pixel, click below to confirm events are being received.
-        </p>
-
+  const renderSubRow = (id, title, subtitle, content) => {
+    const isExpanded = activeSub === id
+    return (
+      <div className="border-b border-gray-150 dark:border-gray-800 last:border-0 pb-3 last:pb-0 pt-3 first:pt-0">
         <button
-          onClick={handleTest}
-          disabled={testLoading || !site}
-          className="px-4 py-2 bg-st-black text-white rounded-lg text-sm font-medium hover:bg-gray-800 disabled:opacity-50 flex items-center gap-2"
+          onClick={() => setActiveSub(isExpanded ? null : id)}
+          className="w-full flex items-center justify-between text-left group"
         >
-          {testLoading ? (
-            <>
-              <RefreshCw className="w-4 h-4 animate-spin" />
-              Checking...
-            </>
+          <div className="pr-4">
+            <h4 className="text-xs font-semibold text-gray-800 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-450 transition-colors">{title}</h4>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 font-light mt-0.5">{subtitle}</p>
+          </div>
+          {isExpanded ? (
+            <ChevronDown className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
           ) : (
-            <>
-              <ExternalLink className="w-4 h-4" />
-              Check Now
-            </>
+            <ChevronRight className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
           )}
         </button>
-
-        {testResult && (
-          <div className={`rounded-lg px-4 py-3 text-sm ${
-            testResult.ok
-              ? 'bg-green-50 dark:bg-green-900/20 text-green-700 border border-green-200'
-              : 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 border border-amber-200'
-          }`}>
-            <p>{testResult.message}</p>
-            {testResult.domain && (
-              <p className="text-xs mt-1 opacity-75">Domain: {testResult.domain}</p>
-            )}
+        {isExpanded && (
+          <div className="mt-3 space-y-2.5 pl-1 text-[13px] text-gray-600 dark:text-gray-300 font-light leading-relaxed">
+            {content}
           </div>
-        )}
-
-        {status?.status === 'verified' && (
-          <Link
-            to="/debugger"
-            className="inline-flex items-center gap-1 text-xs text-gray-700 dark:text-gray-200 hover:text-gray-800 font-medium"
-          >
-            <Bug className="w-3.5 h-3.5" />
-            See recent events in Event Logger
-          </Link>
         )}
       </div>
+    )
+  }
 
-      {/* Step 2: Identify Users (Required for LTV) */}
-      <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#333838] p-6 space-y-4">
-        <div className="flex items-center gap-2">
-          <UserCheck className="w-5 h-5 text-gray-700" />
-          <h3 className="font-semibold text-st-black">Step 2: Identify Users After Login</h3>
+  return (
+    <div className="space-y-6 max-w-2xl pb-10">
+      <div>
+        <h2 className="text-2xl font-bold text-st-black dark:text-white">Install SourceTrack</h2>
+        <p className="text-sm text-st-gray dark:text-gray-400 mt-1">Add one script to your website and verify tracking.</p>
+      </div>
+
+      {/* 3-Step Guided Installation */}
+      <div className="bg-white dark:bg-[#1A1D1D] rounded-xl border border-gray-200 dark:border-[#333838] shadow-sm p-6 space-y-6">
+
+        {/* Step 1 */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-450 text-xs font-bold">1</span>
+            <h3 className="font-semibold text-sm text-st-black dark:text-white">Copy your tracking script</h3>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 pl-7">
+            Add this tracking code to your website to automatically capture pageviews, sessions, and UTM traffic sources.
+          </p>
+          {site ? (
+            <div className="pl-7">
+              <div className="bg-st-black rounded-lg p-3.5 relative border border-gray-800">
+                <pre className="text-green-400 text-[11px] font-mono overflow-x-auto whitespace-pre-wrap pr-12 leading-relaxed select-all">{snippet}</pre>
+                <button
+                  onClick={handleCopy}
+                  className="absolute top-2.5 right-2.5 p-1.5 bg-gray-800 hover:bg-gray-750 text-gray-300 hover:text-white rounded transition-colors"
+                  title="Copy to clipboard"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-st-gray pl-7">Loading your script key...</p>
+          )}
         </div>
 
-        <p className="text-sm text-gray-600">
-          Call this once after a user signs up or logs in. Required for LTV attribution to work.
-          Without identify(), recurring revenue cannot be attributed to the original ad source.
-        </p>
+        {/* Step 2 */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-450 text-xs font-bold">2</span>
+            <h3 className="font-semibold text-sm text-st-black dark:text-white">Paste before closing head tag</h3>
+          </div>
+          <p className="text-xs text-gray-650 dark:text-gray-400 pl-7">
+            Paste the copied snippet into the <code className="bg-gray-150 dark:bg-gray-800 px-1 py-0.5 rounded text-xs font-mono">&lt;head&gt;</code> element of your website's HTML code.
+          </p>
+        </div>
 
+        {/* Step 3 */}
         <div className="space-y-3">
-          <div>
-            <p className="text-sm font-medium text-gray-700">JavaScript — after signup</p>
-            <div className="bg-st-black rounded-lg p-4 relative mt-1.5">
-              <pre className="text-green-400 text-xs overflow-x-auto whitespace-pre-wrap pr-12">{`// Call once after user signs up or logs in
-sourcetrack.identify({
-  email: 'user@example.com',    // required for LTV
-  name: 'Jane Smith',           // optional
-  plan: 'trial'                 // optional
-})`}</pre>
-              <button
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(`// Call once after user signs up or logs in\nsourcetrack.identify({\n  email: 'user@example.com',    // required for LTV\n  name: 'Jane Smith',           // optional\n  plan: 'trial'                 // optional\n})`)
-                  } catch (_err) { /* clipboard unavailable */ }
-                }}
-                className="absolute top-3 right-3 p-1.5 bg-gray-800 hover:bg-gray-700 rounded text-gray-300 transition-colors"
-              >
-                <Copy className="w-4 h-4" />
-              </button>
-            </div>
+          <div className="flex items-center gap-2">
+            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-450 text-xs font-bold">3</span>
+            <h3 className="font-semibold text-sm text-st-black dark:text-white">Visit site and verify</h3>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 pl-7">
+            Open your website in a new browser tab to trigger a pageview event, then click verify.
+          </p>
+          <div className="pl-7 flex flex-wrap items-center gap-3">
+            <button
+              onClick={handleTest}
+              disabled={testLoading || !site}
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-750 text-white rounded-lg text-xs font-semibold disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-sm"
+            >
+              {testLoading ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  Verifying...
+                </>
+              ) : (
+                <>
+                  <Check className="w-3.5 h-3.5" />
+                  Verify installation
+                </>
+              )}
+            </button>
+
+            {/* Verification status display */}
+            {status && (
+              <div className="flex items-center gap-2 text-xs font-medium">
+                <span className={`w-2 h-2 rounded-full ${
+                  status.status === 'verified' ? 'bg-green-500 animate-pulse' : 'bg-amber-500'
+                }`} />
+                <span className={status.status === 'verified' ? 'text-green-600 dark:text-green-450' : 'text-amber-600 dark:text-amber-450'}>
+                  {status.status === 'verified' ? 'Verified' : 'Pending'}
+                </span>
+                {status.status === 'verified' && status.last_seen_at && (
+                  <span className="text-gray-400 font-light font-sans pl-1">
+                    (Last event: {status.last_event_name || '$pageview'} at {new Date(status.last_seen_at).toLocaleTimeString()})
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
+          {/* Test feedback banner */}
+          {testResult && (
+            <div className="pl-7">
+              <div className={`rounded-lg px-3.5 py-2.5 text-xs ${
+                testResult.ok
+                  ? 'bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border border-green-250 dark:border-green-900/35'
+                  : 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border border-amber-255 dark:border-amber-900/35'
+              }`}>
+                <p className="font-medium">{testResult.message}</p>
+                {testResult.ok && status?.status === 'verified' && (
+                  <div className="mt-1">
+                    <Link to="/debugger" className="inline-flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-450 hover:underline font-semibold">
+                      <Bug className="w-3 h-3" /> View live events in Event Logger
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Calm Privacy Reminder */}
+      <div className="bg-gray-50 dark:bg-[#161919]/60 rounded-xl border border-gray-150 dark:border-gray-800/80 p-4">
+        <div className="flex items-start gap-2.5">
+          <span className="text-gray-500 mt-0.5 text-sm">🔒</span>
+          <div className="flex-1 text-xs text-st-gray dark:text-gray-400">
+            <span className="font-semibold text-gray-700 dark:text-gray-300">Privacy reminder. </span>
+            SourceTrack is cookieless and does not fingerprint users. Update your privacy policy before production use.{' '}
+            <button
+              onClick={() => setShowPrivacyNotes(!showPrivacyNotes)}
+              className="text-blue-600 dark:text-blue-400 font-semibold hover:underline ml-1"
+            >
+              {showPrivacyNotes ? 'Hide notes' : 'Read privacy notes'}
+            </button>
+            {showPrivacyNotes && (
+              <p className="mt-2 text-xs text-gray-600 dark:text-gray-450 leading-relaxed pt-2 border-t border-gray-150 dark:border-gray-800/60">
+                Under GDPR, CCPA, and PECR regulations, you must disclose that you collect anonymous site metrics (referrers, UTM params, session length, and IP-derived location). No cookie consent banner is needed for the standard cookieless pixel.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Advanced Setup Accordion */}
+      <div id="advanced-section" className="bg-white dark:bg-[#1A1D1D] rounded-xl border border-gray-200 dark:border-[#333838] overflow-hidden shadow-sm">
+        <button
+          onClick={() => setAdvancedOpen(!advancedOpen)}
+          className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-[#252929] transition-colors"
+        >
           <div>
-            <p className="text-sm font-medium text-gray-700">React example</p>
-            <div className="bg-st-black rounded-lg p-4 relative mt-1.5">
-              <pre className="text-green-400 text-xs overflow-x-auto whitespace-pre-wrap pr-12">{`// In your auth context or useEffect after login
+            <h3 className="text-sm font-semibold text-st-black dark:text-white">Advanced setup</h3>
+            <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">Optional for SaaS, ecommerce, CRM, and server-side conversions.</p>
+          </div>
+          {advancedOpen ? <ChevronDown className="w-4 h-4 text-st-gray" /> : <ChevronRight className="w-4 h-4 text-st-gray" />}
+        </button>
+
+        {advancedOpen && (
+          <div className="border-t border-gray-150 dark:border-gray-800 p-5 space-y-3 bg-gray-50/20 dark:bg-[#151818]/10">
+            {renderSubRow(
+              'identify',
+              'Identify users',
+              'Link anonymous visitors to known user accounts after login or signup',
+              <>
+                <p>
+                  Call <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[11px] font-mono">sourcetrack.identify()</code> when a user logs in or registers. This allows SourceTrack to attach user traits and compute Customer Lifetime Value (LTV).
+                </p>
+                <div className="bg-st-black rounded-lg p-3 relative mt-1 border border-gray-850">
+                  <pre className="text-green-400 text-[11px] font-mono overflow-x-auto whitespace-pre-wrap pr-8 leading-relaxed">{`window.sourcetrack?.identify('user_123', {
+  email: 'customer@example.com',
+  name: 'Jane Doe'
+})`}</pre>
+                </div>
+                <div className="bg-st-black rounded-lg p-3 relative mt-1.5 border border-gray-850">
+                  <pre className="text-green-400 text-[11px] font-mono overflow-x-auto whitespace-pre-wrap pr-8 leading-relaxed">{`// React hook example
 useEffect(() => {
   if (user) {
-    window.sourcetrack?.identify({
+    window.sourcetrack?.identify(user.id, {
       email: user.email,
-      name: user.name,
-      plan: user.subscription_plan
+      name: user.name
     })
   }
 }, [user])`}</pre>
-              <button
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(`// In your auth context or useEffect after login\nuseEffect(() => {\n  if (user) {\n    window.sourcetrack?.identify({\n      email: user.email,\n      name: user.name,\n      plan: user.subscription_plan\n    })\n  }\n}, [user])`)
-                  } catch (_err) { /* clipboard unavailable */ }
-                }}
-                className="absolute top-3 right-3 p-1.5 bg-gray-800 hover:bg-gray-700 rounded text-gray-300 transition-colors"
-              >
-                <Copy className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+                </div>
+              </>
+            )}
 
-      {/* Step 3: Track Recurring Revenue (Stripe Subscriptions) */}
-      <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#333838] p-6 space-y-4">
-        <div className="flex items-center gap-2">
-          <RefreshCw className="w-5 h-5 text-gray-700" />
-          <h3 className="font-semibold text-st-black">Step 3: Forward Stripe Webhooks (For Recurring Revenue)</h3>
-        </div>
-
-        <p className="text-sm text-gray-600">
-          For SaaS subscriptions, forward Stripe invoice.paid events to SourceTrack.
-          This attributes every recurring payment to the original ad source — showing true LTV, not just first payment.
-        </p>
-
-        <div>
-          <p className="text-sm font-medium text-gray-700">Node.js Stripe webhook handler</p>
-          <div className="bg-st-black rounded-lg p-4 relative mt-1.5">
-            <pre className="text-green-400 text-xs overflow-x-auto whitespace-pre-wrap pr-12">{`// In your Stripe webhook handler
-app.post('/stripe/webhook', express.raw({type: 'application/json'}), async (req, res) => {
-  const event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET)
-
-  if (event.type === 'invoice.paid') {
-    const invoice = event.data.object
-    const customer = await stripe.customers.retrieve(invoice.customer)
-
-    await fetch('https://api.srctk.com/api/conversion/offline', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        site_key: 'YOUR_SITE_KEY',
-        user_id: customer.email,           // must match identify() email
-        conversion_value: invoice.amount_paid / 100,
-        conversion_type: 'recurring_payment',
-        // Store first touch source in Stripe metadata at signup:
-        first_touch_source: customer.metadata?.st_first_touch_source || 'direct'
-      })
-    })
-  }
-  res.json({ received: true })
-})`}</pre>
-            <button
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(`// In your Stripe webhook handler\napp.post('/stripe/webhook', express.raw({type: 'application/json'}), async (req, res) => {\n  const event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET)\n\n  if (event.type === 'invoice.paid') {\n    const invoice = event.data.object\n    const customer = await stripe.customers.retrieve(invoice.customer)\n\n    await fetch('https://api.srctk.com/api/conversion/offline', {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json' },\n      body: JSON.stringify({\n        site_key: 'YOUR_SITE_KEY',\n        user_id: customer.email,           // must match identify() email\n        conversion_value: invoice.amount_paid / 100,\n        conversion_type: 'recurring_payment',\n        // Store first touch source in Stripe metadata at signup:\n        first_touch_source: customer.metadata?.st_first_touch_source || 'direct'\n      })\n    })\n  }\n  res.json({ received: true })\n})`)
-                } catch (_err) { /* clipboard unavailable */ }
-              }}
-              className="absolute top-3 right-3 p-1.5 bg-gray-800 hover:bg-gray-700 rounded text-gray-300 transition-colors"
-            >
-              <Copy className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
-          <p className="font-medium text-xs">Important: Store first touch source in Stripe</p>
-          <p className="text-xs mt-0.5">
-            Store the visitor's first touch source in Stripe customer metadata at signup time by passing it from your backend. Example:
-          </p>
-          <div className="bg-amber-100 dark:bg-amber-900/30 rounded p-2 mt-1.5">
-            <pre className="text-xs whitespace-pre-wrap text-amber-900 dark:text-amber-200">{`await stripe.customers.create({
-  email: user.email,
-  metadata: {
-    st_first_touch_source: req.body.first_touch_source || 'direct',
-    st_first_touch_medium: req.body.first_touch_medium || 'none'
-  }
-})`}</pre>
-          </div>
-        </div>
-      </div>
-
-      {/* Why this matters */}
-      <div className="bg-lime-50 dark:bg-lime-900/10 border border-lime-200 dark:border-lime-800 rounded-xl p-5 space-y-2">
-        <h3 className="text-sm font-semibold text-st-black">Why this matters</h3>
-        <ul className="text-sm text-st-black space-y-1.5">
-          <li><strong>Without identify():</strong> LTV shows $0 for all customers.</li>
-          <li><strong>Without Stripe webhooks:</strong> LTV shows only first payment, not recurring revenue.</li>
-          <li><strong>With both:</strong> SourceTrack shows true attributed LTV across every renewal.</li>
-        </ul>
-      </div>
-
-      {/* Advanced Setup */}
-      <div>
-        <h3 className="text-sm font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-3">Advanced Setup</h3>
-        <p className="text-xs text-st-gray dark:text-gray-400 -mt-2 mb-3">Optional — expand a section only if you need it</p>
-
-        <div className="space-y-3">
-          <AccordionSection
-            title="JavaScript API"
-            icon={Code}
-            when="When you need custom events, conversions, or user identification"
-          >
-            <div className="space-y-3 text-sm">
-              <div>
-                <p className="font-medium text-gray-700">Identify user</p>
-                <code className="block bg-gray-100 dark:bg-[#252929] px-3 py-1.5 rounded text-xs mt-1">{'window.sourcetrack.identify("user_123", { email: "customer@example.com" })'}</code>
-                <p className="text-xs text-st-gray dark:text-gray-400 mt-1">Call after login/signup to link browsing history to a known user</p>
-              </div>
-              <div>
-                <p className="font-medium text-gray-700">Track custom event</p>
-                <code className="block bg-gray-100 dark:bg-[#252929] px-3 py-1.5 rounded text-xs mt-1">{'window.sourcetrack.track("signup", { plan: "pro" })'}</code>
-              </div>
-              <div>
-                <p className="font-medium text-gray-700">Track conversion</p>
-                <code className="block bg-gray-100 dark:bg-[#252929] px-3 py-1.5 rounded text-xs mt-1">{'window.sourcetrack.conversion({ value: 29.99, type: "purchase" })'}</code>
-                <p className="text-xs text-st-gray dark:text-gray-400 mt-1">
-                  Conversions appear in attribution reports and dashboard. Use <code className="bg-gray-100 dark:bg-[#252929] px-1 rounded text-xs">type</code> to subtype (e.g. purchase, lead, trial).
+            {renderSubRow(
+              'stripe',
+              'Stripe webhooks',
+              'Attribute Stripe payments and recurring revenue (LTV) to campaigns',
+              <>
+                <p>
+                  Forward Stripe <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[11px] font-mono">invoice.paid</code> events to attribute recurring invoice payments to the customer's original campaign source.
                 </p>
-              </div>
-              <div>
-                <p className="font-medium text-gray-700">Consent management</p>
-                <code className="block bg-gray-100 dark:bg-[#252929] px-3 py-1.5 rounded text-xs mt-1">{'window.sourcetrack.consent(true)  // grant\nwindow.sourcetrack.optOut()        // stop tracking\nwindow.sourcetrack.optIn()         // resume tracking\nwindow.sourcetrack.hasConsent()    // check status'}</code>
-              </div>
-            </div>
-          </AccordionSection>
+                <div className="bg-st-black rounded-lg p-3 relative mt-1 border border-gray-850">
+                  <pre className="text-green-400 text-[11px] font-mono overflow-x-auto whitespace-pre-wrap pr-8 leading-relaxed">{`// In your Stripe webhook handler (Node.js example)
+if (event.type === 'invoice.paid') {
+  const invoice = event.data.object
+  const customer = await stripe.customers.retrieve(invoice.customer)
+  await fetch('https://api.srctk.com/api/conversion/offline', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      site_key: '${site?.site_key || 'YOUR_SITE_KEY'}',
+      user_id: customer.email,
+      conversion_value: invoice.amount_paid / 100,
+      conversion_type: 'recurring_payment',
+      first_touch_source: customer.metadata?.st_first_touch_source || 'direct'
+    })
+  })
+}`}</pre>
+                </div>
+              </>
+            )}
 
-          <AccordionSection
-            title="Identity Stitching"
-            icon={LinkIcon}
-            when="When you need to connect anonymous visitors to known users after login"
-          >
-            <p className="text-sm text-gray-600">
-              Merges a visitor's anonymous browsing history with their known profile after they log in or sign up.
-              This gives you a complete journey view — from first anonymous visit through to conversion as a known user.
-            </p>
+            {renderSubRow(
+              'offline',
+              'Offline conversions',
+              'Send backend events like CRM status changes, offline sales, or refunds',
+              <>
+                <p>
+                  Send conversions directly from your server or backend database for CRM lifecycle stages or offline sales.
+                </p>
+                <div className="bg-st-black rounded-lg p-3 relative mt-1 border border-gray-850">
+                  <pre className="text-green-400 text-[11px] font-mono overflow-x-auto whitespace-pre-wrap pr-8 leading-relaxed">{`POST https://api.srctk.com/api/conversion/offline
+Content-Type: application/json
 
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
-              <p className="font-medium text-xs">Important</p>
-              <p className="text-xs mt-0.5">
-                Always use a stable internal user ID (e.g. <code className="bg-amber-100 px-1 rounded text-xs">usr_abc123</code>).
-                Do not use email addresses — they can change and break identity linking.
-              </p>
-            </div>
+{
+  "site_key": "${site?.site_key || 'YOUR_SITE_KEY'}",
+  "user_id": "customer@example.com",
+  "conversion_value": 49.00,
+  "conversion_type": "purchase",
+  "order_id": "ORD-54321"
+}`}</pre>
+                </div>
+              </>
+            )}
 
-            <div>
-              <p className="text-sm font-medium text-gray-700">Explicit API call</p>
-              <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">
-                Call <code className="bg-gray-100 dark:bg-[#252929] px-1 rounded text-xs">window.sourcetrack.identify()</code> immediately after login/signup.
-              </p>
-              <code className="block bg-gray-100 dark:bg-[#252929] px-3 py-1.5 rounded text-xs mt-1.5">
-                {'// In your app, after successful login:\nwindow.sourcetrack.identify(currentUser.id, { email: currentUser.email })'}
-              </code>
-            </div>
-          </AccordionSection>
+            {renderSubRow(
+              'cross_domain',
+              'Cross-domain tracking',
+              'Track visitor journeys seamlessly across multiple separate domains',
+              <>
+                <p>
+                  To link attribution across multiple domains (e.g. landing page and app domain), add the <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[11px] font-mono">data-cross-domains</code> attribute to your tracking snippet.
+                </p>
+                <div className="bg-st-black rounded-lg p-3 relative mt-1 border border-gray-850">
+                  <pre className="text-green-400 text-[11px] font-mono overflow-x-auto whitespace-pre-wrap pr-8 leading-relaxed">{`<script async src="https://api.srctk.com/tracker/tracker.min.js"
+        data-site-key="${site?.site_key || 'YOUR_SITE_KEY'}"
+        data-cross-domains="app.yoursite.com, checkout.yoursite.com"></script>`}</pre>
+                </div>
+              </>
+            )}
 
+            {renderSubRow(
+              'crm',
+              'CRM/Zapier identity stitching',
+              'Stitch anonymous visitors to contacts inside HubSpot, Salesforce, or Zapier',
+              <>
+                <p>
+                  Link anonymous visitor sessions to CRM contact profiles by calling the identify API. Use a stable user ID or email.
+                </p>
+                <div className="bg-st-black rounded-lg p-3 relative mt-1 border border-gray-850">
+                  <pre className="text-green-400 text-[11px] font-mono overflow-x-auto whitespace-pre-wrap pr-8 leading-relaxed">{`POST https://api.srctk.com/api/identify
+Content-Type: application/json
 
-          <div className="bg-gray-50 dark:bg-[#111414] rounded-lg p-3 text-xs text-gray-600 dark:text-gray-300">
-            <p className="font-medium text-gray-700 dark:text-gray-200">Cross-domain & booking attribution</p>
-            <p className="mt-1">
-              Cross-domain handoff helpers are not available in the current tracker.
-              Use <code className="bg-gray-100 dark:bg-[#252929] px-1 rounded text-xs">sourcetrack.identify()</code> after login
-              or <code className="bg-gray-100 dark:bg-[#252929] px-1 rounded text-xs">sourcetrack.conversion()</code> with <code className="bg-gray-100 dark:bg-[#252929] px-1 rounded text-xs">order_id</code> for attribution across domains.
-            </p>
+{
+  "site_key": "${site?.site_key || 'YOUR_SITE_KEY'}",
+  "anonymous_id": "visitor_anonymous_id_from_cookie",
+  "user_id": "crm_contact_12345",
+  "contact_email": "lead@example.com"
+}`}</pre>
+                </div>
+              </>
+            )}
+
+            {renderSubRow(
+              'outbound',
+              'Outbound webhooks',
+              'Receive conversion event notifications in real-time on your server',
+              <>
+                <p>
+                  Configure an outbound webhook URL to receive immediate POST payloads when a conversion event occurs. Webhooks are configured via environment variables on the backend.
+                </p>
+                <div className="bg-st-black rounded-lg p-3 relative mt-1 border border-gray-850">
+                  <pre className="text-green-400 text-[11px] font-mono overflow-x-auto whitespace-pre-wrap pr-8 leading-relaxed">{`// Outbound Conversion Payload Example
+{
+  "event_type": "conversion",
+  "site_key": "YOUR_SITE_KEY",
+  "value": 49.00,
+  "conversion_type": "purchase",
+  "referrer": "google.com",
+  "utm_source": "google"
+}`}</pre>
+                </div>
+              </>
+            )}
+
+            {renderSubRow(
+              'key_events',
+              'Attribution key events',
+              'Trigger custom events to count towards specific campaign attribution targets',
+              <>
+                <p>
+                  Track key customer actions or milestones that do not have a cash value, such as signups, lead forms, or bookings.
+                </p>
+                <div className="bg-st-black rounded-lg p-3 relative mt-1 border border-gray-850">
+                  <pre className="text-green-400 text-[11px] font-mono overflow-x-auto whitespace-pre-wrap pr-8 leading-relaxed">{`window.sourcetrack?.track('lead_signup', {
+  plan_tier: 'premium_trial',
+  form_id: 'contact_sales_footer'
+})`}</pre>
+                </div>
+              </>
+            )}
           </div>
-
-
-          <AccordionSection
-            title="Webhook Identity & Contact Linkage"
-            icon={LinkIcon}
-            when="Only if linking tracked visitors to CRM contacts via Zapier or n8n"
-          >
-            <p className="text-sm text-gray-600">
-              Link tracked anonymous visitors to downstream CRM identities via the Identify API.
-              Suitable for Zapier, n8n, or custom webhook workflows.
-            </p>
-
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
-              <p className="font-medium text-xs">What this does not support</p>
-              <ul className="text-xs mt-1 space-y-0.5 list-disc list-inside">
-                <li>Native HubSpot, Salesforce, or CRM platform sync</li>
-                <li>Automatic bidirectional sync</li>
-                <li>Fuzzy identity matching — linkage is explicit and deterministic</li>
-              </ul>
-            </div>
-
-            <div>
-              <p className="text-sm font-medium text-gray-700">Zapier / n8n example</p>
-              <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">
-                POST to <code className="bg-gray-100 dark:bg-[#252929] px-1 rounded text-xs">/api/identify</code> when a new contact is created in your CRM.
-              </p>
-              <code className="block bg-gray-100 dark:bg-[#252929] px-3 py-1.5 rounded text-xs mt-1.5 whitespace-pre-wrap">
-                {'POST /api/identify\nContent-Type: application/json\n\n{\n  "site_key": "your-site-key",\n  "anonymous_id": "__ti_id_from_visitor",\n  "user_id": "usr_abc123",\n  "source_system": "hubspot",\n  "external_id": "hs-contact-456",\n  "contact_email": "lead@example.com",\n  "traits": {\n    "contact_name": "Jane Doe",\n    "company": "Acme Corp"\n  }\n}'}
-              </code>
-            </div>
-
-            <div>
-              <p className="text-sm font-medium text-gray-700">Capturing the anonymous ID</p>
-              <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">
-                The anonymous ID is included in every event payload SourceTrack receives.
-                Pass it from your form submission flow or event logs to the identify call above.
-              </p>
-            </div>
-          </AccordionSection>
-
-          <AccordionSection
-            title="Outbound Webhooks"
-            icon={LinkIcon}
-            when="Only if sending conversion events to external systems via webhook"
-          >
-            <p className="text-sm text-gray-600">
-              SourceTrack can POST conversion events to an external webhook URL.
-              Consume these in Zapier, n8n, or any HTTP endpoint.
-            </p>
-
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
-              <p className="font-medium text-xs">What this does not support</p>
-              <ul className="text-xs mt-1 space-y-0.5 list-disc list-inside">
-                <li>Retries, delivery history, or guaranteed delivery</li>
-                <li>Multi-destination configuration (single webhook URL per deployment)</li>
-                <li>Native Zapier/n8n integration — generic HTTP webhook only</li>
-              </ul>
-            </div>
-
-            <div>
-              <p className="text-sm font-medium text-gray-700">Configuration</p>
-              <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">
-                Set the <code className="bg-gray-100 dark:bg-[#252929] px-1 rounded text-xs">WEBHOOK_URL</code> environment variable on your backend deployment.
-                If unset, no webhooks are sent.
-              </p>
-              <code className="block bg-gray-100 dark:bg-[#252929] px-3 py-1.5 rounded text-xs mt-1.5">
-                WEBHOOK_URL=https://hooks.zapier.com/hooks/catch/your-id
-              </code>
-            </div>
-
-            <div>
-              <p className="text-sm font-medium text-gray-700">Events sent</p>
-              <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
-                <code className="bg-gray-100 dark:bg-[#252929] px-1 rounded text-xs">conversion</code> (on-site) and <code className="bg-gray-100 dark:bg-[#252929] px-1 rounded text-xs">conversion.offline</code> (API/CRM).
-                Best-effort delivery, 5 second timeout, fire-and-forget.
-              </p>
-            </div>
-          </AccordionSection>
-
-          <AccordionSection
-            title="Architecture: How events flow"
-            icon={LinkIcon}
-            when="Technical reference — not needed for standard setup"
-          >
-            <p className="text-sm text-gray-600">
-              All tracked events are routed through SourceTrack's backend before reaching analytics storage.
-              Server-side enrichment (geo, device, AI detection, UTM normalization) happens during ingestion.
-            </p>
-
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
-              <p className="font-medium text-xs">What this is not</p>
-              <ul className="text-xs mt-1 space-y-0.5 list-disc list-inside">
-                <li>Supports standard storage-based tracking (localStorage/sessionStorage) and Cookieless Mode (zero browser storage, server-derived daily-rotating visitor IDs).</li>
-                <li>Not a first-party subdomain — events go to the SourceTrack API domain</li>
-                <li>Not ad-blocker resistant — requests to the tracking domain may be blocked</li>
-              </ul>
-            </div>
-
-            <div>
-              <p className="text-sm font-medium text-gray-700">Event flow</p>
-              <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
-                Browser (pixel) → SourceTrack backend → enrichment → analytics storage
-              </p>
-            </div>
-
-            <div>
-              <p className="text-sm font-medium text-gray-700">Server-side enrichment</p>
-              <ul className="text-xs text-gray-600 dark:text-gray-300 mt-1 space-y-0.5 list-disc list-inside">
-                <li>IP → country detection</li>
-                <li>User-Agent → device type (desktop, mobile, tablet)</li>
-                <li>Referrer → AI platform detection (ChatGPT, Claude, Perplexity, etc.)</li>
-                <li>UTM normalization (trim + lowercase)</li>
-              </ul>
-            </div>
-          </AccordionSection>
-        </div>
+        )}
       </div>
     </div>
   )

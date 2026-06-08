@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { Copy, Check, ChevronRight, ExternalLink, Menu, X } from 'lucide-react'
 import { LogoFull, LogoFullDark } from '../components/Logo'
@@ -100,6 +100,7 @@ function ParamTable({ params }) {
 const NAV = [
   { id: 'overview',         label: 'Overview' },
   { id: 'quickstart',       label: 'Quick Start' },
+  { id: 'install-tracking', label: 'Install Tracking',  indent: true },
   { id: 'tracker',          label: 'Tracker Script',    indent: true },
   { id: 'exclusions',       label: 'Path Exclusions',   indent: true },
   { id: 'cookieless',       label: 'Cookieless Mode',   indent: true },
@@ -481,6 +482,19 @@ export default function Docs() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [selectedRecipe, setSelectedRecipe] = useState('html')
   const observerRef = useRef(null)
+  const location = useLocation()
+
+  useEffect(() => {
+    if (location.hash) {
+      const id = location.hash.slice(1)
+      setTimeout(() => {
+        const el = document.getElementById(id)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+      }, 150)
+    }
+  }, [location.hash])
 
   // Intersection observer to highlight active nav section
   useEffect(() => {
@@ -634,6 +648,63 @@ window.sourcetrack.identify('user_123', {
 
             <H3>Custom event</H3>
             <Code lang="js">{`window.sourcetrack.track('button_clicked', { button: 'hero_cta' })`}</Code>
+          </Section>
+
+          {/* ── Install Tracking ────────────────────────────────────────── */}
+          <Section id="install-tracking" title="Install Tracking">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Set up basic tracking on your site in three steps:
+            </p>
+            <ol className="list-decimal pl-5 space-y-3 text-sm">
+              <li className="mt-2">
+                <strong>Copy your tracking script</strong>
+                <Code lang="html">{`<!-- SourceTrack Pixel -->
+<script async src="https://api.srctk.com/tracker/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`}</Code>
+              </li>
+              <li>
+                <strong>Paste it before the closing <IC>&lt;/head&gt;</IC> tag</strong> of your website.
+              </li>
+              <li>
+                <strong>Visit your website</strong> once, then confirm tracking works via the <Link to="/snippet" className="text-blue-600 dark:text-blue-400 hover:underline">Install status page</Link>.
+              </li>
+            </ol>
+
+            <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800">
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Platform Setup Guides</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <div>
+                  <h5 className="font-semibold text-gray-800 dark:text-gray-300">Shopify</h5>
+                  <p className="text-gray-500 dark:text-gray-400 mt-0.5">
+                    Navigate to Online Store → Themes → Edit Code. Open <IC>layout/theme.liquid</IC> and paste the script before <IC>&lt;/head&gt;</IC>.
+                  </p>
+                </div>
+                <div>
+                  <h5 className="font-semibold text-gray-800 dark:text-gray-300">WordPress</h5>
+                  <p className="text-gray-500 dark:text-gray-400 mt-0.5">
+                    Use a header injection plugin (like "Insert Headers and Footers") or edit your theme's <IC>header.php</IC> template.
+                  </p>
+                </div>
+                <div>
+                  <h5 className="font-semibold text-gray-800 dark:text-gray-300">Google Tag Manager</h5>
+                  <p className="text-gray-500 dark:text-gray-400 mt-0.5">
+                    Create a new Custom HTML tag, paste the script inside it, and set the trigger to fire on All Pages.
+                  </p>
+                </div>
+                <div>
+                  <h5 className="font-semibold text-gray-800 dark:text-gray-300">Custom Site / SPA</h5>
+                  <p className="text-gray-500 dark:text-gray-400 mt-0.5">
+                    Insert the snippet directly into the main HTML skeleton, or inject the script dynamically on component mount (e.g. `useEffect`).
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-6 bg-gray-50 dark:bg-[#1a1d1d] p-3 rounded-lg border border-gray-200 dark:border-gray-800">
+              Need advanced setup for Stripe, user identification, offline conversions, or outbound webhooks?{' '}
+              <Link to="/snippet#advanced" className="text-blue-600 dark:text-blue-400 font-semibold hover:underline">
+                Open advanced setup guide →
+              </Link>
+            </p>
           </Section>
 
           {/* ── Tracker Script ───────────────────────────────────────────── */}

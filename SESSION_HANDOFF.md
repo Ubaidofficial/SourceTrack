@@ -1,8 +1,8 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 128A — Manual Ad Cost Imports and Campaign ROI. Implemented manual CSV/paste ad cost imports and campaign ROI reporting updates. Added a shared library for validation, normalization, and CSV parsing. Created migration for platform/clicks/impressions/currency columns on campaign_costs and a new ad_sync_runs logging table. Updated campaigns dashboard with upgraded table columns (Clicks, Impressions, CTR, CPC, CPA, ROAS), platform badges, and currency status tooltips. Created E2E QA verification script and updated documentation.
+> **Handoff:** Session 128C — Integrations UX Simplification. Refactored the Integrations page layout to hide setup details, snippets, and developer tools behind collapsible rows. Realigned "View install guide" and "Full setup guide" actions to navigate directly to `/docs#install-tracking`. Implemented a concise `#install-tracking` section in the docs, with a `useLocation`-based auto-scroll trigger. Redesigned the `/snippet` page into a clean, 3-step guided installation view, collapsing all advanced options (Identify, Stripe webhook handler, React hook integration, offline conversions, outbound webhooks) inside a single `Advanced setup` accordion card, and converted the privacy notice into a calm, compact expandable block.
 >
-> **Next Task:** Session 128B — Automated Google and Meta Ads API cost synchronization.
+> **Next Task:** Pending user visual and QA validation of Integrations and Install pages.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
 
@@ -1108,3 +1108,30 @@ curl -i https://api.srctk.com/tracker/tracker.min.js
 ### Remaining QA (manual browser verification needed)
 - Navigate to `/integrations`, ensure "Ad Cost Sync" card shows Google Ads as "Not Configured" and Meta Ads setup is collapsed by default.
 - Navigate to `/campaigns` and verify the "Sync connected accounts" button appears if connected, and "Import Costs" modal opens properly.
+
+---
+
+## Session 128C — Integrations UX Simplification
+
+**Date:** 2026-06-08 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+
+1. **Integrations Layout Refactoring** — Redesigned the `Integrations.jsx` page layout to prevent technical setup details from displaying by default. Renamed inner title developer options to "API & Webhook Tools" and corrected header text contrasts.
+2. **Correct Install Guide Routing** — Updated the `View install guide` top callout and `Full setup guide` links on the Integrations page to navigate to `/docs#install-tracking`.
+3. **Concise Docs Installation Guide** — Added a concise `#install-tracking` section in `Docs.jsx` with copy script widgets, paste instructions, simple platform setup summaries, and a link to advanced setups. Mounted a `useLocation`-based hash-change listener to scroll to sections automatically.
+4. **Guided `/snippet` Install Page Redesign** — Simplified `/snippet` into a 3-step script copy and verification walkthrough, collapsing all advanced options (Identify, Stripe, Offline, Cross-Domain, CRM, Outbound, Key Events) under a single collapsed accordion. Turned the privacy warning into a calm, compact expandable row.
+5. **Spend CSV Upload Workflow** — Linked the "Import CSV Costs" row directly to `/campaigns?import=true` and added a query parameter hook in `Campaigns.jsx` to intercept the parameter, open the import modal, and clear the address bar.
+
+### Files changed
+- `dashboard/src/pages/Campaigns.jsx`
+- `dashboard/src/pages/Docs.jsx`
+- `dashboard/src/pages/Integrations.jsx`
+- `dashboard/src/pages/Snippet.jsx`
+
+### Remaining QA (manual browser verification needed)
+- Navigate to `/integrations`, click `View install guide` and check that it routes to `/docs#install-tracking` and scrolls to the new section.
+- Click `Full setup guide` in the expanded snippet row, verifying it resolves to the same route.
+- Open `/snippet` and verify it displays the simple 3-step install layout, that all advanced rows are collapsed under "Advanced setup", and that Stripe webhooks code and identify API references are hidden.
+- Verify the privacy reminder is small and calm, only expanding details when "Read privacy notes" is clicked.
+- Navigate to `/integrations` and click "Import CSV" to verify it redirects to `/campaigns`, opens the cost import modal, and clears the `?import=true` query param.

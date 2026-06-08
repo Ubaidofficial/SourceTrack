@@ -1,8 +1,8 @@
-Session: 128B
-Last Completed: Completed Session 128B — Connected Ad Platform Sync.
-Next Task: Pending next planning
+Session: 128C
+Last Completed: Realigned Integrations install links to /docs#install-tracking, added concise docs section with auto-scroll listener, and redesigned /snippet as a clean 3-step guide with collapsed Advanced Setup section.
+Next Task: Visual browser verification and final commit approval.
 Roadmap Queue:
-- Pending next planning
+- Team Roles
 Build: ✅ passing
 Branch: main
 

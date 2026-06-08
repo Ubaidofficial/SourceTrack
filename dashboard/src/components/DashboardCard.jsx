@@ -1,7 +1,7 @@
 import { MoreHorizontal } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 
-export default function DashboardCard({ title, subtitle, action, menuItems, children, className = '' }) {
+export default function DashboardCard({ title, subtitle, action, menuItems, children, className = '', headerClassName = '', bodyClassName = '' }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef(null)
 
@@ -16,9 +16,9 @@ export default function DashboardCard({ title, subtitle, action, menuItems, chil
   return (
     <div className={`bg-white dark:bg-[#1A1D1D] rounded-xl border border-gray-200 dark:border-[#333838] shadow-sm overflow-hidden ${className}`}>
       {(title || action || menuItems) && (
-        <div className="px-5 py-4 border-b border-gray-100 dark:border-[#2A2E2E] flex items-center justify-between">
+        <div className={`px-5 py-4 border-b border-gray-100 dark:border-[#2A2E2E] flex items-center justify-between ${headerClassName}`}>
           <div>
-            {title && <h3 className="text-sm font-semibold text-st-black">{title}</h3>}
+            {title && <h3 className="text-sm font-semibold text-st-black dark:text-white">{title}</h3>}
             {subtitle && <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">{subtitle}</p>}
           </div>
           <div className="flex items-center gap-2">
@@ -47,7 +47,7 @@ export default function DashboardCard({ title, subtitle, action, menuItems, chil
           </div>
         </div>
       )}
-      <div className="p-5">
+      <div className={`p-5 ${bodyClassName}`}>
         {children}
       </div>
     </div>
