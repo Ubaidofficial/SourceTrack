@@ -851,16 +851,28 @@ export default function Integrations() {
     }
   }
 
-  const INSTALL_GUIDE_URL = 'https://www.sourcetrack.ai/docs'
-
   const handleViewInstallGuide = () => {
-    window.open(INSTALL_GUIDE_URL, '_blank', 'noopener,noreferrer')
-  }
-
+    setActiveSection('core.tracker')
+    requestAnimationFrame(() => {
+      document.getElementById('core-tracking')?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    })
   const apiBase = window.location.origin.includes('localhost') ? 'https://api.srctk.com' : 'https://api.srctk.com'
   const pixelBase = site?.site_key ? `${apiBase}/api/pixel?site_key=${site.site_key}` : ''
   const emailPixelExample = pixelBase ? `${pixelBase}&event=email_open&uid={{USER_ID}}&campaign={{CAMPAIGN_NAME}}` : ''
   const serverPixelExample = pixelBase ? `${pixelBase}&event=pageview&uid={{USER_ID}}&url={{PAGE_URL}}` : ''
+  const [emailTab, setEmailTab] = useState('pixel')
+
+  const handleCopyPixel = (txt) => {
+    if (txt) {
+      navigator.clipboard.writeText(txt).catch(() => {})
+      setCopiedPixel(true)
+      setTimeout(() => setCopiedPixel(false), 2000)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -915,1066 +927,1168 @@ export default function Integrations() {
         </div>
       )}
 
-      {/* Status Overview (Sleek integrated status rail) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-white dark:bg-[#161919]/50 border border-gray-150 dark:border-gray-800/80 rounded-xl p-2.5 shadow-sm">
-        <div className="flex items-center gap-2.5 px-2">
-          <div className={`p-1.5 rounded-lg ${isVerified ? 'bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400' : 'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400'}`}>
-            <ShieldCheck className="w-4 h-4" />
+      {/* Status Overview (Simplified status rail with proper hierarchy) */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-[#161919]/50 border border-gray-150 dark:border-gray-800/80 rounded-xl p-4 shadow-sm">
+        {/* Primary Status */}
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-xl shrink-0 ${isVerified ? 'bg-green-500/10 text-green-500' : 'bg-amber-500/10 text-amber-500'}`}>
+            <ShieldCheck className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[9px] uppercase font-bold tracking-wider text-st-gray dark:text-gray-500">Install Status</p>
-            <p className="text-xs font-semibold text-st-black dark:text-white leading-tight">{isVerified ? 'Verified' : 'Pending'}</p>
+            <p className="text-[10px] uppercase font-bold tracking-wider text-st-gray dark:text-gray-500">Tracking Status</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <span className={`w-2 h-2 rounded-full ${isVerified ? 'bg-green-500' : 'bg-amber-500'}`}></span>
+              <span className="text-sm font-bold text-st-black dark:text-white">{isVerified ? 'Active' : 'Pending Verification'}</span>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2.5 px-2 border-l border-gray-100 dark:border-gray-800/60">
-          <div className="p-1.5 bg-gray-50 dark:bg-gray-800/40 text-st-gray dark:text-gray-400 rounded-lg">
-            <Globe className="w-4 h-4" />
+
+        {/* Secondary Info */}
+        <div className="flex flex-wrap items-center gap-x-8 gap-y-3 pt-3 md:pt-0 border-t md:border-t-0 border-gray-150 dark:border-gray-800/80">
+          <div className="flex items-center gap-2">
+            <Globe className="w-3.5 h-3.5 text-st-gray dark:text-gray-500" />
+            <div>
+              <p className="text-[9px] uppercase font-bold tracking-wider text-st-gray dark:text-gray-500">Domain</p>
+              <p className="text-xs font-semibold text-st-black dark:text-white/80">{site?.domain || '—'}</p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="text-[9px] uppercase font-bold tracking-wider text-st-gray dark:text-gray-500">Site Domain</p>
-            <p className="text-xs font-semibold text-st-black dark:text-white leading-tight truncate">{site?.domain || '—'}</p>
+
+          <div className="flex items-center gap-2">
+            <AlertTriangle className={`w-3.5 h-3.5 ${alerts.length > 0 ? 'text-red-500' : 'text-green-500'}`} />
+            <div>
+              <p className="text-[9px] uppercase font-bold tracking-wider text-st-gray dark:text-gray-500">Alerts</p>
+              <p className="text-xs font-semibold text-st-black dark:text-white/80">
+                {alerts.length > 0 ? `${alerts.length} Active` : 'No alerts'}
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2.5 px-2 border-l border-gray-100 dark:border-gray-800/60">
-          <div className={`p-1.5 rounded-lg ${alerts.length > 0 ? 'bg-red-50 dark:bg-red-950/30 text-red-650 dark:text-red-400' : 'bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400'}`}>
-            <AlertTriangle className="w-4 h-4" />
-          </div>
-          <div>
-            <p className="text-[9px] uppercase font-bold tracking-wider text-st-gray dark:text-gray-500">Active Alerts</p>
-            <p className="text-xs font-semibold text-st-black dark:text-white leading-tight">{alerts.length}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2.5 px-2 border-l border-gray-100 dark:border-gray-800/60">
-          <div className={`p-1.5 rounded-lg ${safeNumber(hygieneData?.total_issues, 0) > 0 ? 'bg-amber-50 dark:bg-amber-955/30 text-amber-655 dark:text-amber-400' : 'bg-green-50 dark:bg-green-955/30 text-green-600 dark:text-green-400'}`}>
-            <Bug className="w-4 h-4" />
-          </div>
-          <div>
-            <p className="text-[9px] uppercase font-bold tracking-wider text-st-gray dark:text-gray-500">Data Hygiene</p>
-            <p className="text-xs font-semibold text-st-black dark:text-white leading-tight">
-              {safeNumber(hygieneData?.total_issues, 0) > 0 ? 'Needs Review' : 'Clean'}
-            </p>
+
+          <div className="flex items-center gap-2">
+            <Bug className={`w-3.5 h-3.5 ${safeNumber(hygieneData?.total_issues, 0) > 0 ? 'text-amber-500' : 'text-green-500'}`} />
+            <div>
+              <p className="text-[9px] uppercase font-bold tracking-wider text-st-gray dark:text-gray-500">Data Health</p>
+              <p className="text-xs font-semibold text-st-black dark:text-white/80">
+                {safeNumber(hygieneData?.total_issues, 0) > 0 ? 'Needs Review' : 'Healthy'}
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Compact next step callout for pending tracking snippet */}
+      {/* Active State Next Step Callout */}
+      {isVerified && (
+        <div className="p-3 bg-st-lime/5 border border-st-lime/20 rounded-xl flex items-center gap-2 max-w-max">
+          <span className="w-1.5 h-1.5 rounded-full bg-st-lime animate-pulse shrink-0"></span>
+          <p className="text-xs text-white/90 font-medium">
+            Next step: connect revenue or import ad costs.
+          </p>
+        </div>
+      )}
+
+      {/* Strong Setup Card (When Pending) */}
       {!isVerified && (
-        <div className="p-3 bg-gray-50 dark:bg-[#161919]/50 border border-gray-150 dark:border-gray-800/80 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-none">
-          <div className="min-w-0">
-            <h4 className="text-xs font-bold text-st-black dark:text-white">
-              Install the tracking script
-            </h4>
-            <p className="text-[11px] text-st-gray dark:text-gray-400 mt-0.5 leading-relaxed font-sans font-light">
-              SourceTrack needs to detect traffic before revenue and ad costs can be attributed.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={handleCopy}
-              className="px-2.5 py-1 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600 rounded-lg transition-colors flex items-center gap-1 shrink-0"
-            >
-              {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              {copied ? 'Copied' : 'Copy script'}
-            </button>
-            <button
-              onClick={handleViewInstallGuide}
-              className="px-2.5 py-1 bg-white hover:bg-gray-50 border border-gray-250 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border dark:border-slate-700 text-xs font-semibold rounded-lg transition-colors"
-            >
-              View install guide
-            </button>
+        <div className="p-6 bg-gradient-to-br from-st-black to-[#1a1d1d] dark:from-[#161919] dark:to-[#1a1d1d] border border-st-lime/30 dark:border-st-lime/20 rounded-2xl shadow-lg relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-st-lime/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-st-lime/10 text-st-lime text-[11px] font-semibold uppercase tracking-wider">
+                <span className="w-1.5 h-1.5 rounded-full bg-st-lime animate-pulse"></span>
+                Setup Required
+              </div>
+              <h3 className="text-lg font-bold text-white leading-snug">
+                Install tracking first
+              </h3>
+              <p className="text-sm text-gray-300 dark:text-gray-400 max-w-xl font-light font-sans leading-relaxed">
+                SourceTrack needs the script before attribution, revenue, and costs can work.
+              </p>
+              <p className="text-xs text-st-gray dark:text-gray-500 font-sans font-light">
+                Next step: install the JavaScript snippet. Revenue, SEO, and ad cost integrations work after tracking is active.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 shrink-0">
+              <button
+                onClick={handleCopy}
+                className="px-4 py-2.5 text-xs font-semibold bg-st-green hover:opacity-90 text-white rounded-xl transition-colors flex items-center gap-2 shadow-sm"
+              >
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copied ? 'Copied' : 'Copy script'}
+              </button>
+              <button
+                onClick={handleViewInstallGuide}
+                className="px-4 py-2.5 bg-white/10 hover:bg-white/15 text-white border border-white/10 text-xs font-semibold rounded-xl transition-colors"
+              >
+                Show install steps
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* 1. Core Tracking Card */}
-      <div id="core-tracking">
+      {/* REQUIRED SECTION */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-bold text-st-gray dark:text-gray-400 uppercase tracking-wider">Required</h3>
+        <div id="core-tracking">
+          <DashboardCard
+            title="Core Tracking"
+            subtitle="Tracking script and site verification"
+            className="border-gray-150 dark:border-gray-800/80 shadow-none"
+            headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-150 dark:border-gray-800/80"
+            bodyClassName="p-4 pt-3"
+          >
+            <div className="space-y-1">
+              <CollapsibleRow
+                icon={Code}
+                title="JavaScript Snippet"
+                subtitle="The primary tracking script installed in your site's header"
+                status={isVerified ? 'success' : 'pending'}
+                badgeLabel={isVerified ? 'Live — Events Flowing' : 'Not Installed'}
+                isExpanded={activeSection === 'core.tracker'}
+                onToggle={() => setActiveSection(activeSection === 'core.tracker' ? null : 'core.tracker')}
+                actionButton={
+                  <div className="flex items-center gap-2">
+                    <a
+                      href="https://www.sourcetrack.ai/docs"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1"
+                    >
+                      Docs
+                    </a>
+                    {!isVerified && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleCopy(); }}
+                        className="px-2.5 py-1 text-xs font-semibold bg-st-green hover:opacity-90 text-white rounded-lg transition-colors flex items-center gap-1 shrink-0"
+                      >
+                        {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                        {copied ? 'Copied' : 'Copy script'}
+                      </button>
+                    )}
+                  </div>
+                }
+              >
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4 pb-3 border-b border-gray-100 dark:border-gray-800">
+                    <div>
+                      <p className="text-xs text-st-gray dark:text-gray-400 font-medium uppercase tracking-wider mb-1">Last Event</p>
+                      <p className="text-sm text-st-black dark:text-white">
+                        {installData?.last_event ? new Date(installData.last_event).toLocaleString() : '—'}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-st-gray dark:text-gray-400 font-medium uppercase tracking-wider mb-1">Event Type</p>
+                      <p className="text-sm text-st-black dark:text-white">{installData?.last_event_type || '—'}</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-st-black rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs text-st-gray font-medium">Tracking Script</span>
+                      <button onClick={handleCopy}
+                        className="px-2.5 py-1 bg-gray-700 text-white text-xs rounded-md hover:bg-gray-600 flex items-center gap-1.5 transition-colors">
+                        {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                        {copied ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                    <pre className="text-xs text-green-400 overflow-x-auto whitespace-pre-wrap select-all leading-relaxed font-mono">
+                      {snippet || 'Loading...'}
+                    </pre>
+                  </div>
+
+                  {!isVerified && (
+                    <div className="bg-amber-50 dark:bg-amber-955/15 border border-amber-200 dark:border-amber-900/30 rounded-lg p-3">
+                      <p className="text-sm text-amber-850 dark:text-amber-300 font-medium">Installation not verified</p>
+                      <p className="text-xs text-amber-650 dark:text-amber-400 mt-1 font-light font-sans">
+                        Paste the tracking script in your site's &lt;head&gt; tag and visit the site to trigger verification.
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end pt-1">
+                    <a
+                      href="https://www.sourcetrack.ai/docs"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline font-semibold flex items-center gap-1"
+                    >
+                      Full setup guide <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                </div>
+              </CollapsibleRow>
+            </div>
+          </DashboardCard>
+        </div>
+      </div>
+
+      {/* RECOMMENDED SECTION */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold text-st-gray dark:text-gray-400 uppercase tracking-wider">Recommended</h3>
+        </div>
+
+        {/* 1. Revenue Connections Card */}
         <DashboardCard
-          title="Core Tracking"
-          subtitle="Tracking script and site verification"
-          className="mt-6 border-gray-150 dark:border-gray-800/80 shadow-none"
+          title="Revenue Connections"
+          subtitle="Stitch transaction, checkout, and email events back to user journeys"
+          className="border-gray-150 dark:border-gray-800/80 shadow-none"
           headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-150 dark:border-gray-800/80"
           bodyClassName="p-4 pt-3"
         >
-        <div className="space-y-1">
-          <CollapsibleRow
-            icon={Code}
-            title="JavaScript Snippet"
-            subtitle="The primary tracking script installed in your site's header"
-            status={isVerified ? 'success' : 'pending'}
-            badgeLabel={isVerified ? 'Live — Events Flowing' : 'Not Installed'}
-            isExpanded={activeSection === 'core.tracker'}
-            onToggle={() => setActiveSection(activeSection === 'core.tracker' ? null : 'core.tracker')}
-          >
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4 pb-3 border-b border-gray-100 dark:border-gray-800">
-                <div>
-                  <p className="text-xs text-st-gray dark:text-gray-400 font-medium uppercase tracking-wider mb-1">Last Event</p>
-                  <p className="text-sm text-st-black dark:text-white">
-                    {installData?.last_event ? new Date(installData.last_event).toLocaleString() : '—'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-st-gray dark:text-gray-400 font-medium uppercase tracking-wider mb-1">Event Type</p>
-                  <p className="text-sm text-st-black dark:text-white">{installData?.last_event_type || '—'}</p>
-                </div>
+          <div className="space-y-1">
+            {stripeMessage && (
+              <div className="p-3 text-xs rounded-lg bg-green-50 text-green-700 border border-green-200 mb-3 font-sans">
+                {stripeMessage}
               </div>
-
-              <div className="bg-st-black rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-st-gray font-medium">Tracking Script</span>
-                  <button onClick={handleCopy}
-                    className="px-2.5 py-1 bg-gray-700 text-white text-xs rounded-md hover:bg-gray-600 flex items-center gap-1.5 transition-colors">
-                    {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                    {copied ? 'Copied' : 'Copy'}
-                  </button>
-                </div>
-                <pre className="text-xs text-green-400 overflow-x-auto whitespace-pre-wrap select-all leading-relaxed font-mono">
-                  {snippet || 'Loading...'}
-                </pre>
+            )}
+            {stripeError && (
+              <div className="p-3 text-xs rounded-lg bg-red-50 text-red-700 border border-red-200 mb-3 font-sans">
+                {stripeError}
               </div>
-
-              {!isVerified && (
-                <div className="bg-amber-50 dark:bg-amber-950/15 border border-amber-200 dark:border-amber-900/30 rounded-lg p-3">
-                  <p className="text-sm text-amber-800 dark:text-amber-300 font-medium">Installation not verified</p>
-                  <p className="text-xs text-amber-650 dark:text-amber-400 mt-1 font-light font-sans">
-                    Paste the tracking script in your site's &lt;head&gt; tag and visit the site to trigger verification.
-                  </p>
-                </div>
-              )}
-
-              <div className="flex justify-end pt-1">
-                <button
-                  onClick={() => window.open(INSTALL_GUIDE_URL, '_blank', 'noopener,noreferrer')}
-                  className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline font-semibold flex items-center gap-1"
-                >
-                  Full setup guide <ExternalLink className="w-3 h-3" />
-                </button>
+            )}
+            {shopifyMessage && (
+              <div className="p-3 text-xs rounded-lg bg-green-50 text-green-700 border border-green-200 mb-3 font-sans">
+                {shopifyMessage}
               </div>
-            </div>
-          </CollapsibleRow>
-
-          <CollapsibleRow
-            icon={Globe}
-            title="Cross-Domain Tracking"
-            subtitle="Link and stitch customer journeys across multiple domains automatically"
-            status={crossDomainConfigured ? 'success' : 'pending'}
-            badgeLabel={crossDomainConfigured ? 'Active' : 'Not Configured'}
-            actionButton={
-              <Link to="/settings" className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors">
-                Manage in Settings
-              </Link>
-            }
-          />
-
-          <CollapsibleRow
-            icon={ShieldCheck}
-            title="Custom Tracking Domain / Managed Proxy"
-            subtitle="Bypass standard browser ad-blockers and run tracking as a first-party resource"
-            status={proxyStatusBadgeType === 'verified' ? 'success' : proxyStatusBadgeType}
-            badgeLabel={proxyStatusLabel}
-            actionButton={
-              <Link to="/settings" className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors">
-                Manage in Settings
-              </Link>
-            }
-          />
-        </div>
-      </DashboardCard>
-      </div>
-
-      {/* 2. Revenue Connections Card */}
-      <DashboardCard
-        title="Revenue Connections"
-        subtitle="Stitch transaction, checkout, and email events back to user journeys"
-        className="border-gray-150 dark:border-gray-800/80 shadow-none"
-        headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-150 dark:border-gray-800/80"
-        bodyClassName="p-4 pt-3"
-      >
-        <div className="space-y-1">
-          {stripeMessage && (
-            <div className="p-3 text-xs rounded-lg bg-green-50 text-green-700 border border-green-200 mb-3 font-sans">
-              {stripeMessage}
-            </div>
-          )}
-          {stripeError && (
-            <div className="p-3 text-xs rounded-lg bg-red-50 text-red-700 border border-red-200 mb-3 font-sans">
-              {stripeError}
-            </div>
-          )}
-          {shopifyMessage && (
-            <div className="p-3 text-xs rounded-lg bg-green-50 text-green-700 border border-green-200 mb-3 font-sans">
-              {shopifyMessage}
-            </div>
-          )}
-          {shopifyError && (
-            <div className="p-3 text-xs rounded-lg bg-red-50 text-red-700 border border-red-200 mb-3 font-sans">
-              {shopifyError}
-            </div>
-          )}
-
-          <CollapsibleRow
-            icon={Plug}
-            title="Stripe Webhook Sync"
-            subtitle="Capture and attribute signed Stripe checkout session revenue"
-            status={stripeConnected ? 'success' : 'pending'}
-            badgeLabel={stripeConnected ? 'Active' : 'Not Configured'}
-            actionButton={
-              <div className="flex items-center gap-3">
-                <a href="/docs#stripe-webhook" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline">
-                  Docs
-                </a>
-                <button
-                  onClick={() => setActiveSection(activeSection === 'revenue.stripe' ? 'revenue' : 'revenue.stripe')}
-                  className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
-                    stripeConnected
-                      ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600'
-                  }`}
-                >
-                  {stripeConnected ? 'Manage' : 'Connect'}
-                </button>
+            )}
+            {shopifyError && (
+              <div className="p-3 text-xs rounded-lg bg-red-50 text-red-700 border border-red-200 mb-3 font-sans">
+                {shopifyError}
               </div>
-            }
-            isExpanded={activeSection === 'revenue.stripe'}
-            onToggle={() => setActiveSection(activeSection === 'revenue.stripe' ? 'revenue' : 'revenue.stripe')}
-          >
-            <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Stripe Webhook Listener URL</label>
-                  <button
-                    type="button"
-                    onClick={handleCopyStripeUrl}
-                    className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black dark:hover:text-white transition-colors"
-                  >
-                    {copiedStripeUrl ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
-                    {copiedStripeUrl ? 'Copied' : 'Copy URL'}
-                  </button>
-                </div>
-                <div className="bg-st-black rounded-lg p-3">
-                  <pre className="text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed select-all font-mono">
-                    {stripeWebhookUrl || 'Loading URL...'}
-                  </pre>
-                </div>
-              </div>
+            )}
 
-              {stripeConnected ? (
-                <div className="space-y-3 bg-gray-50 dark:bg-[#1a1d1d] border border-gray-100 dark:border-gray-800 rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Stripe Webhook Secret</p>
-                      <code className="text-xs font-mono text-gray-700 dark:text-gray-300 mt-1 block">
-                        {stripeMaskedSecret}
-                      </code>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleDeleteStripe}
-                      disabled={stripeSubmitting}
-                      className="px-3 py-1.5 border border-red-200 text-red-655 rounded-lg text-xs font-semibold hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-50"
-                    >
-                      Disconnect
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <form onSubmit={handleSaveStripe} className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">
-                      Stripe Webhook Secret (whsec_...)
-                    </label>
-                    <input
-                      type="password"
-                      value={stripeSecret}
-                      onChange={e => setStripeSecret(e.target.value)}
-                      placeholder="whsec_..."
-                      disabled={stripeSubmitting}
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a1d1d] text-st-black dark:text-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-st-black/20"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={stripeSubmitting || !stripeSecret.trim()}
-                    className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 disabled:opacity-50 transition-colors"
-                  >
-                    {stripeSubmitting ? 'Saving...' : 'Connect Stripe'}
-                  </button>
-                </form>
-              )}
-
-              <div className="pt-3 border-t border-gray-100 dark:border-gray-800/60 space-y-2">
-                <p className="text-xs font-semibold text-st-black dark:text-white">Quick setup</p>
-                <ul className="text-xs text-st-gray dark:text-gray-400 space-y-1.5 font-sans">
-                  <li className="flex items-start gap-2">
-                    <span className="text-green-500 font-medium">✓</span>
-                    <span>Create webhook in Stripe Developers dashboard</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-green-500 font-medium">✓</span>
-                    <span>Select <code className="font-mono bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[10px]">checkout.session.completed</code> event</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-green-500 font-medium">✓</span>
-                    <span>Paste signing secret here</span>
-                  </li>
-                </ul>
-                <div className="pt-0.5">
-                  <a href="/docs#stripe-webhook" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline inline-flex items-center gap-0.5">
-                    Read full guide →
+            <CollapsibleRow
+              icon={Plug}
+              title="Stripe Webhook Sync"
+              subtitle="Capture and attribute signed Stripe checkout session revenue"
+              status={stripeConnected ? 'success' : 'pending'}
+              badgeLabel={stripeConnected ? 'Active' : 'Not Configured'}
+              actionButton={
+                <div className="flex items-center gap-2">
+                  <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
+                    Docs
                   </a>
-                </div>
-              </div>
-            </div>
-          </CollapsibleRow>
-
-          <CollapsibleRow
-            icon={ShoppingCart}
-            title="Shopify Webhook Sync"
-            subtitle="Sync Shopify paid order revenue events using webhooks"
-            status={shopifyConnected ? 'success' : 'pending'}
-            badgeLabel={shopifyConnected ? 'Active' : 'Not Configured'}
-            actionButton={
-              <div className="flex items-center gap-3">
-                <a href="/docs#shopify-webhook" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline">
-                  Docs
-                </a>
-                <button
-                  onClick={() => setActiveSection(activeSection === 'revenue.shopify' ? 'revenue' : 'revenue.shopify')}
-                  className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
-                    shopifyConnected
-                      ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600'
-                  }`}
-                >
-                  {shopifyConnected ? 'Manage' : 'Connect'}
-                </button>
-              </div>
-            }
-            isExpanded={activeSection === 'revenue.shopify'}
-            onToggle={() => setActiveSection(activeSection === 'revenue.shopify' ? 'revenue' : 'revenue.shopify')}
-          >
-            <div className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Shopify Webhook Listener URL</label>
                   <button
-                    type="button"
-                    onClick={handleCopyShopifyUrl}
-                    className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black dark:hover:text-white transition-colors"
-                  >
-                    {copiedShopifyUrl ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
-                    {copiedShopifyUrl ? 'Copied' : 'Copy URL'}
-                  </button>
-                </div>
-                <div className="bg-st-black rounded-lg p-3">
-                  <pre className="text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed select-all font-mono">
-                    {shopifyWebhookUrl || 'Loading URL...'}
-                  </pre>
-                </div>
-              </div>
-
-              {shopifyConnected ? (
-                <div className="space-y-3 bg-gray-50 dark:bg-[#1a1d1d] border border-gray-100 dark:border-gray-800 rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Shopify Webhook Secret</p>
-                      <code className="text-xs font-mono text-gray-700 dark:text-gray-300 mt-1 block">
-                        {shopifyMaskedSecret}
-                      </code>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleDeleteShopify}
-                      disabled={shopifySubmitting}
-                      className="px-3 py-1.5 border border-red-200 text-red-655 rounded-lg text-xs font-semibold hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-50"
-                    >
-                      Disconnect
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <form onSubmit={handleSaveShopify} className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">
-                      Shopify Webhook Secret
-                    </label>
-                    <input
-                      type="password"
-                      value={shopifySecret}
-                      onChange={e => setShopifySecret(e.target.value)}
-                      placeholder="Paste webhook secret key"
-                      disabled={shopifySubmitting}
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a1d1d] text-st-black dark:text-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-st-black/20"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={shopifySubmitting || !shopifySecret.trim()}
-                    className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 disabled:opacity-50 transition-colors"
-                  >
-                    {shopifySubmitting ? 'Saving...' : 'Connect Shopify'}
-                  </button>
-                </form>
-              )}
-
-              <div className="pt-3 border-t border-gray-100 dark:border-gray-800/60 space-y-2">
-                <p className="text-xs font-semibold text-st-black dark:text-white">Quick setup</p>
-                <ul className="text-xs text-st-gray dark:text-gray-400 space-y-1.5 font-sans">
-                  <li className="flex items-start gap-2">
-                    <span className="text-green-500 font-medium">✓</span>
-                    <span>Create webhook in Shopify Admin Notifications</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-green-500 font-medium">✓</span>
-                    <span>Select <code className="font-mono bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[10px]">Order payment</code> event</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-green-500 font-medium">✓</span>
-                    <span>Paste secret here</span>
-                  </li>
-                </ul>
-                <div className="pt-0.5">
-                  <a href="/docs#shopify-webhook" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline inline-flex items-center gap-0.5">
-                    Read full guide →
-                  </a>
-                </div>
-              </div>
-            </div>
-          </CollapsibleRow>
-
-          <CollapsibleRow
-            icon={Mail}
-            title="Email Campaign Attribution"
-            subtitle="Add source parameters to email links so campaigns are attributed correctly"
-            status="success"
-            badgeLabel="Available"
-            actionButton={
-              <button
-                onClick={() => setActiveSection(activeSection === 'revenue.email' ? 'revenue' : 'revenue.email')}
-                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors"
-              >
-                View setup
-              </button>
-            }
-            isExpanded={activeSection === 'revenue.email'}
-            onToggle={() => setActiveSection(activeSection === 'revenue.email' ? 'revenue' : 'revenue.email')}
-          >
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <p className="text-xs text-st-gray dark:text-gray-400">
-                  Embed a 1×1 transparent GIF in any HTML email to record opens and attribute conversions.
-                </p>
-              </div>
-
-              {site?.site_key ? (
-                <div className="space-y-3">
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <p className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Email Image Tag</p>
-                      <button onClick={() => handleCopyPixel(emailPixelExample)}
-                        className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black dark:hover:text-white transition-colors"
-                      >
-                        {copiedPixel ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                        {copiedPixel ? 'Copied' : 'Copy'}
-                      </button>
-                    </div>
-                    <div className="bg-st-black rounded-lg p-3">
-                      <pre className="text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed select-all font-mono">
-                        {`<img src="${emailPixelExample}" width="1" height="1" alt="" />`}
-                      </pre>
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1.5">Server-side HTTP GET (no JS)</p>
-                    <div className="bg-st-black rounded-lg p-3">
-                      <pre className="text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed select-all font-mono">
-                        {`GET ${serverPixelExample}`}
-                      </pre>
-                    </div>
-                  </div>
-
-                  <div className="bg-gray-50 dark:bg-[#111414] rounded-lg p-3 border border-gray-100 dark:border-[#2A2E2E]">
-                    <p className="text-xs font-semibold text-st-black dark:text-white mb-2">Query Parameters Reference</p>
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-                      {[
-                        ['site_key', 'Your site key (required)'],
-                        ['event', 'Event name — e.g. email_open'],
-                        ['uid', 'User ID for attribution stitching'],
-                        ['campaign', 'Campaign name (utm_campaign)'],
-                        ['utm_source', 'Traffic source'],
-                        ['utm_medium', 'Traffic medium'],
-                        ['url', 'Page or email URL'],
-                        ['val', 'Numeric value (for conversions)'],
-                      ].map(([k, v]) => (
-                        <div key={k} className="flex items-start gap-1.5">
-                          <code className="text-[10px] font-mono text-st-black dark:text-white bg-gray-250 dark:bg-[#2A2E2E] px-1 py-0.5 rounded shrink-0">{k}</code>
-                          <span className="text-[10px] text-st-gray dark:text-gray-400">{v}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-xs text-st-gray dark:text-gray-400 py-2">Site key loading…</p>
-              )}
-            </div>
-          </CollapsibleRow>
-        </div>
-      </DashboardCard>
-
-      {/* 3. Ad Cost Sync Card */}
-      <DashboardCard
-        title="Ad Cost Sync"
-        subtitle="Synchronize advertising costs and impressions to calculate true ROAS"
-        className="border-gray-150 dark:border-gray-800/80 shadow-none"
-        headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-150 dark:border-gray-800/80"
-        bodyClassName="p-4 pt-3"
-      >
-        <div className="space-y-1">
-          {adPlatMessage && (
-            <div className="p-3 text-xs rounded-lg bg-green-50 text-green-700 border border-green-200 mb-3 font-sans">
-              {adPlatMessage}
-            </div>
-          )}
-          {adPlatError && (
-            <div className="p-3 text-xs rounded-lg bg-red-50 text-red-700 border border-red-200 mb-3 font-sans">
-              {adPlatError}
-            </div>
-          )}
-
-          <CollapsibleRow
-            icon={Copy}
-            title="Import CSV Costs"
-            subtitle="Upload generic campaigns or spreadsheets manually"
-            status="success"
-            badgeLabel="Available"
-            actionButton={
-              <Link to="/campaigns?import=true" className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors">
-                Import CSV
-              </Link>
-            }
-          />
-
-          <CollapsibleRow
-            icon={BarChart3}
-            title="Google Ads"
-            subtitle="Sync campaign clicks, impressions, and spend data"
-            status={
-              !adPlatformData.google_ads?.env_configured
-                ? 'pending'
-                : googleAdsConnected
-                ? 'success'
-                : adPlatformData.google_ads?.status === 'needs_account'
-                ? 'warning'
-                : adPlatformData.google_ads?.status === 'needs_reconnect'
-                ? 'error'
-                : adPlatformData.google_ads?.status === 'error'
-                ? 'error'
-                : 'pending'
-            }
-            badgeLabel={
-              !adPlatformData.google_ads?.env_configured
-                ? 'Not Configured'
-                : googleAdsConnected
-                ? 'Connected'
-                : adPlatformData.google_ads?.status === 'needs_account'
-                ? 'Choose Account'
-                : adPlatformData.google_ads?.status === 'needs_reconnect'
-                ? 'Reconnect Needed'
-                : adPlatformData.google_ads?.status === 'error'
-                ? 'Needs Attention'
-                : 'Not Connected'
-            }
-            actionButton={
-              <div className="flex items-center gap-3">
-                <a href="/docs#ad-spend" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline">
-                  Docs
-                </a>
-                {adPlatformData.google_ads?.env_configured && (
-                  <button
-                    onClick={() => {
-                      if (!googleAdsConnected) {
-                        handleConnectGoogleAds()
-                      } else {
-                        setActiveSection(activeSection === 'ad.google_ads' ? 'ad_cost_sync' : 'ad.google_ads')
-                      }
-                    }}
+                    onClick={() => setActiveSection(activeSection === 'revenue.stripe' ? null : 'revenue.stripe')}
                     className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
-                      googleAdsConnected
+                      stripeConnected
                         ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700'
-                        : 'bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600'
+                        : 'bg-st-green hover:opacity-90 text-white'
                     }`}
                   >
-                    {googleAdsConnected ? 'Manage' : 'Connect'}
+                    {stripeConnected ? 'Manage' : 'Connect'}
                   </button>
-                )}
-              </div>
-            }
-            isExpanded={activeSection === 'ad.google_ads'}
-            onToggle={() => setActiveSection(activeSection === 'ad.google_ads' ? 'ad_cost_sync' : 'ad.google_ads')}
-          >
-            <div className="space-y-4">
-              {googleAdsConnected && adPlatformData.google_ads?.account_id && (
-                <p className="text-xs text-st-gray dark:text-gray-400">
-                  Customer ID: {adPlatformData.google_ads.account_id}
-                  {adPlatformData.google_ads.last_synced_at && ` · Last synced: ${new Date(adPlatformData.google_ads.last_synced_at).toLocaleString()}`}
-                </p>
-              )}
-
-              {adPlatformData.google_ads?.env_configured ? (
-                <div className="flex flex-wrap gap-2">
-                  {!googleAdsConnected ? (
+                </div>
+              }
+              isExpanded={activeSection === 'revenue.stripe'}
+              onToggle={() => setActiveSection(activeSection === 'revenue.stripe' ? null : 'revenue.stripe')}
+            >
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Stripe Webhook Listener URL</label>
                     <button
                       type="button"
-                      onClick={handleConnectGoogleAds}
-                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors"
+                      onClick={handleCopyStripeUrl}
+                      className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black dark:hover:text-white transition-colors"
                     >
-                      Connect Google Ads
+                      {copiedStripeUrl ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                      {copiedStripeUrl ? 'Copied' : 'Copy URL'}
                     </button>
-                  ) : (
-                    <>
+                  </div>
+                  <div className="bg-st-black rounded-lg p-3">
+                    <pre className="text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed select-all font-mono">
+                      {stripeWebhookUrl || 'Loading URL...'}
+                    </pre>
+                  </div>
+                </div>
+
+                {stripeConnected ? (
+                  <div className="space-y-3 bg-gray-50 dark:bg-[#1a1d1d] border border-gray-100 dark:border-gray-800 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Stripe Webhook Secret</p>
+                        <code className="text-xs font-mono text-gray-700 dark:text-gray-300 mt-1 block">
+                          {stripeMaskedSecret}
+                        </code>
+                      </div>
                       <button
                         type="button"
-                        onClick={handleSyncGoogleAds}
-                        disabled={syncingGads}
-                        className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1"
-                      >
-                        {syncingGads ? 'Syncing...' : 'Sync Now'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setShowGoogleAdvanced(!showGoogleAdvanced)}
-                        className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-xs font-semibold rounded-lg transition-colors"
-                      >
-                        {showGoogleAdvanced ? 'Hide Settings' : 'Configure Account'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleDisconnectGoogleAds}
-                        className="px-3 py-1.5 border border-red-250 text-red-650 hover:bg-red-50 dark:hover:bg-red-950/20 text-xs font-semibold rounded-lg transition-colors"
+                        onClick={handleDeleteStripe}
+                        disabled={stripeSubmitting}
+                        className="px-3 py-1.5 border border-red-200 text-red-655 rounded-lg text-xs font-semibold hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-50"
                       >
                         Disconnect
                       </button>
-                    </>
-                  )}
+                    </div>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSaveStripe} className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">
+                        Stripe Webhook Secret (whsec_...)
+                      </label>
+                      <input
+                        type="password"
+                        value={stripeSecret}
+                        onChange={e => setStripeSecret(e.target.value)}
+                        placeholder="whsec_..."
+                        disabled={stripeSubmitting}
+                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a1d1d] text-st-black dark:text-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-st-black/20"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={stripeSubmitting || !stripeSecret.trim()}
+                      className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 disabled:opacity-50 transition-colors"
+                    >
+                      {stripeSubmitting ? 'Saving...' : 'Connect Stripe'}
+                    </button>
+                  </form>
+                )}
+
+                <div className="pt-3 border-t border-gray-100 dark:border-gray-800/60 space-y-2">
+                  <p className="text-xs font-semibold text-st-black dark:text-white">Quick setup</p>
+                  <ul className="text-xs text-st-gray dark:text-gray-400 space-y-1.5 font-sans">
+                    <li className="flex items-start gap-2">
+                      <span className="text-green-500 font-medium">✓</span>
+                      <span>Create webhook in Stripe Developers dashboard</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-green-500 font-medium">✓</span>
+                      <span>Select <code className="font-mono bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[10px]">checkout.session.completed</code> event</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-green-500 font-medium">✓</span>
+                      <span>Paste signing secret here</span>
+                    </li>
+                  </ul>
+                  <div className="pt-0.5">
+                    <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline inline-flex items-center gap-0.5">
+                      Read full guide →
+                    </a>
+                  </div>
                 </div>
-              ) : (
-                <p className="text-xs text-amber-600 dark:text-amber-400">
-                  Google Ads is not configured on this server. Missing environment variables.
-                </p>
-              )}
-
-              {showGoogleAdvanced && googleAdsConnected && (
-                <form onSubmit={handleSaveGoogleAccount} className="bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 rounded-lg p-4 space-y-3">
-                  <p className="text-xs font-semibold text-st-black dark:text-white uppercase tracking-wider">Account ID Selection</p>
-                  <div>
-                    <label className="block text-[11px] font-medium text-st-gray dark:text-gray-400 mb-1">
-                      Target Customer ID (10 digits, e.g. 1234567890)
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={googleCustomerId}
-                      onChange={e => setGoogleCustomerId(e.target.value)}
-                      placeholder="1234567890"
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-800 text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-medium text-st-gray dark:text-gray-400 mb-1">
-                      Login Customer ID (Optional manager account ID link)
-                    </label>
-                    <input
-                      type="text"
-                      value={googleLoginCustomerId}
-                      onChange={e => setGoogleLoginCustomerId(e.target.value)}
-                      placeholder="9876543210"
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-800 text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={gadsSaving}
-                    className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 transition-colors"
-                  >
-                    {gadsSaving ? 'Saving...' : 'Save Configuration'}
-                  </button>
-                </form>
-              )}
-            </div>
-          </CollapsibleRow>
-
-          <CollapsibleRow
-            icon={BarChart3}
-            title="Meta Ads"
-            subtitle="Sync Meta (Facebook/Instagram) ad account clicks and spend"
-            status={metaAdsConnected ? 'success' : 'pending'}
-            badgeLabel={metaAdsConnected ? 'Connected' : 'Not Connected'}
-            actionButton={
-              <div className="flex items-center gap-3">
-                <a href="/docs#ad-spend" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline">
-                  Docs
-                </a>
-                <button
-                  onClick={() => setActiveSection(activeSection === 'ad.meta_ads' ? 'ad_cost_sync' : 'ad.meta_ads')}
-                  className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
-                    metaAdsConnected
-                      ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600'
-                  }`}
-                >
-                  {metaAdsConnected ? 'Manage' : 'Connect'}
-                </button>
               </div>
-            }
-            isExpanded={activeSection === 'ad.meta_ads'}
-            onToggle={() => setActiveSection(activeSection === 'ad.meta_ads' ? 'ad_cost_sync' : 'ad.meta_ads')}
-          >
-            <div className="space-y-4">
-              {metaAdsConnected && (
-                <div className="space-y-1">
-                  <p className="text-xs text-st-gray dark:text-gray-400">
-                    Account ID: {adPlatformData.meta_ads.account_id}
-                    {adPlatformData.meta_ads.last_synced_at && ` · Last synced: ${new Date(adPlatformData.meta_ads.last_synced_at).toLocaleString()}`}
-                  </p>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={handleSyncMetaAds}
-                      disabled={syncingMeta}
-                      className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 text-xs font-semibold rounded-lg transition-colors"
-                    >
-                      {syncingMeta ? 'Syncing...' : 'Sync Now'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowMetaAdvanced(!showMetaAdvanced)}
-                      className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-xs font-semibold rounded-lg transition-colors"
-                    >
-                      Configure
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleDisconnectMetaAds}
-                      className="px-3 py-1.5 border border-red-200 text-red-650 hover:bg-red-50 text-xs font-semibold rounded-lg transition-colors"
-                    >
-                      Disconnect
-                    </button>
-                  </div>
-                </div>
-              )}
+            </CollapsibleRow>
 
-              {(!metaAdsConnected || showMetaAdvanced) && (
-                <form onSubmit={handleConnectMetaAds} className="bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 rounded-lg p-4 space-y-3">
-                  <h4 className="text-xs font-bold text-st-black dark:text-white">Meta Ads — Advanced manual token setup</h4>
-                  <p className="text-[11px] text-st-gray dark:text-gray-400 leading-normal">
-                    Paste a Meta access token and ad account ID. This is a beta setup for syncing spend only.
-                  </p>
-                  <div>
-                    <label className="block text-[11px] font-medium text-st-gray dark:text-gray-400 mb-1">
-                      Meta Access Token
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      value={metaAccessToken}
-                      onChange={e => setMetaAccessToken(e.target.value)}
-                      placeholder="EAA..."
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-800 text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-medium text-st-gray dark:text-gray-400 mb-1">
-                      Ad Account ID (act_123 or 123)
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={metaAdAccountId}
-                      onChange={e => setMetaAdAccountId(e.target.value)}
-                      placeholder="123456789"
-                      className="w-full px-3 py-2 border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-800 text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
-                    />
-                  </div>
+            <CollapsibleRow
+              icon={ShoppingCart}
+              title="Shopify Webhook Sync"
+              subtitle="Sync Shopify paid order revenue events using webhooks"
+              status={shopifyConnected ? 'success' : 'pending'}
+              badgeLabel={shopifyConnected ? 'Active' : 'Not Configured'}
+              actionButton={
+                <div className="flex items-center gap-2">
+                  <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
+                    Docs
+                  </a>
                   <button
-                    type="submit"
-                    disabled={metaConnecting}
-                    className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 transition-colors"
+                    onClick={() => setActiveSection(activeSection === 'revenue.shopify' ? null : 'revenue.shopify')}
+                    className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
+                      shopifyConnected
+                        ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700'
+                        : 'bg-st-green hover:opacity-90 text-white'
+                    }`}
                   >
-                    {metaConnecting ? 'Saving...' : 'Connect Meta Ads'}
-                  </button>
-                </form>
-              )}
-            </div>
-          </CollapsibleRow>
-
-          {/* Sync History Logs (Collapsible list within Ad Cost Sync) */}
-          {syncHistoryList.length > 0 && (
-            <div className="pt-3 border-t border-gray-100 dark:border-gray-800/60">
-              <button
-                type="button"
-                onClick={() => setShowRecentSyncs(!showRecentSyncs)}
-                className="text-xs font-semibold text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white flex items-center gap-1 font-sans"
-              >
-                {showRecentSyncs ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                {showRecentSyncs ? 'Hide' : 'Show'} Recent Sync Logs
-              </button>
-
-              {showRecentSyncs && (
-                <div className="mt-3 overflow-x-auto border border-gray-100 dark:border-gray-800 rounded-lg p-3 bg-gray-50/50 dark:bg-gray-800/20">
-                  <table className="w-full text-left text-[11px] border-collapse">
-                    <thead>
-                      <tr className="border-b border-gray-150 dark:border-gray-800 text-st-gray dark:text-gray-400">
-                        <th className="pb-1.5 font-medium">Platform</th>
-                        <th className="pb-1.5 font-medium">Status</th>
-                        <th className="pb-1.5 font-medium">Records</th>
-                        <th className="pb-1.5 font-medium">Time</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {syncHistoryList.map(run => (
-                        <tr key={run.id} className="border-b border-gray-50 dark:border-gray-850/30 last:border-0 hover:bg-gray-50/55 dark:hover:bg-gray-800/10">
-                          <td className="py-1.5 font-medium text-gray-850 dark:text-gray-300 capitalize">{run.platform?.replace('_', ' ')}</td>
-                          <td className="py-1.5">
-                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                              run.status === 'success' ? 'bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400' : run.status === 'pending' ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400' : 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400'
-                            }`}>
-                              {run.status}
-                            </span>
-                          </td>
-                          <td className="py-1.5 text-gray-655 dark:text-gray-400">{run.records_synced}</td>
-                          <td className="py-1.5 text-gray-500 dark:text-gray-500 font-sans">{new Date(run.sync_start).toLocaleString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </DashboardCard>
-
-      {/* 4. SEO Revenue Card */}
-      <DashboardCard
-        title="SEO Revenue"
-        subtitle="Map search query traffic and click-share estimated revenue"
-        className="border-gray-150 dark:border-gray-800/80 shadow-none"
-        headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-150 dark:border-gray-800/80"
-        bodyClassName="p-4 pt-3"
-      >
-        <div className="space-y-1">
-          {gscStatusMessage && (
-            <div className="p-3 text-xs rounded-lg bg-green-50 text-green-700 border border-green-200 mb-3 font-sans">
-              {gscStatusMessage}
-            </div>
-          )}
-          {gscStatusError && (
-            <div className="p-3 text-xs rounded-lg bg-red-50 text-red-700 border border-red-200 mb-3 font-sans">
-              {gscStatusError}
-            </div>
-          )}
-          {syncMessage && (
-            <div className="p-3 text-xs rounded-lg bg-blue-50 text-blue-700 border border-blue-200 mb-3 font-sans">
-              {syncMessage}
-            </div>
-          )}
-
-          <CollapsibleRow
-            icon={Globe}
-            title="Google Search Console"
-            subtitle="Connect Search Console to estimate SEO landing page and query revenue"
-            status={
-              gscIntegData?.connected
-                ? gscIntegData.property_selected
-                  ? 'success'
-                  : 'warning'
-                : 'pending'
-            }
-            badgeLabel={
-              gscIntegData?.connected
-                ? gscIntegData.property_selected
-                  ? 'Connected'
-                  : 'Select Property'
-                : 'Not Connected'
-            }
-            actionButton={
-              <div className="flex items-center gap-3">
-                <a href="/docs#google-search-console" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline">
-                  Docs
-                </a>
-                <button
-                  onClick={() => {
-                    if (!gscIntegData?.connected) {
-                      handleConnectGsc()
-                    } else {
-                      setActiveSection(activeSection === 'seo.gsc' ? null : 'seo.gsc')
-                    }
-                  }}
-                  className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
-                    gscIntegData?.connected
-                      ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600'
-                  }`}
-                >
-                  {gscIntegData?.connected ? 'Manage' : 'Connect'}
-                </button>
-              </div>
-            }
-            isExpanded={activeSection === 'seo.gsc'}
-            onToggle={() => setActiveSection(activeSection === 'seo.gsc' ? null : 'seo.gsc')}
-          >
-            <div className="space-y-4">
-              {!gscIntegData?.connected ? (
-                <div className="space-y-3">
-                  <button
-                    type="button"
-                    onClick={handleConnectGsc}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition-colors"
-                  >
-                    Connect Google Search Console
+                    {shopifyConnected ? 'Manage' : 'Connect'}
                   </button>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {!gscIntegData.property_selected ? (
-                    <form onSubmit={handleSelectProperty} className="space-y-3">
+              }
+              isExpanded={activeSection === 'revenue.shopify'}
+              onToggle={() => setActiveSection(activeSection === 'revenue.shopify' ? null : 'revenue.shopify')}
+            >
+              <div className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Shopify Webhook Listener URL</label>
+                    <button
+                      type="button"
+                      onClick={handleCopyShopifyUrl}
+                      className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black dark:hover:text-white transition-colors"
+                    >
+                      {copiedShopifyUrl ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                      {copiedShopifyUrl ? 'Copied' : 'Copy URL'}
+                    </button>
+                  </div>
+                  <div className="bg-st-black rounded-lg p-3">
+                    <pre className="text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed select-all font-mono">
+                      {shopifyWebhookUrl || 'Loading URL...'}
+                    </pre>
+                  </div>
+                </div>
+
+                {shopifyConnected ? (
+                  <div className="space-y-3 bg-gray-50 dark:bg-[#1a1d1d] border border-gray-100 dark:border-gray-800 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
                       <div>
-                        <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">
-                          Select Search Console Property
-                        </label>
-                        {gscPropertiesData?.properties && gscPropertiesData.properties.length > 0 ? (
-                          <select
-                            value={selectedProperty}
-                            onChange={e => setSelectedProperty(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-250 bg-white text-st-black dark:text-white rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-st-black/20"
-                          >
-                            <option value="">-- Choose verified property URL --</option>
-                            {gscPropertiesData.properties.map(p => (
-                              <option key={p.siteUrl} value={p.siteUrl}>
-                                {p.siteUrl} ({p.permissionLevel})
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <p className="text-xs text-st-gray dark:text-gray-400 py-2 font-sans font-light">
-                            {gscPropertiesData?.properties
-                              ? 'No verified properties found in your Google Search Console account.'
-                              : 'Loading verified GSC properties...'}
-                          </p>
-                        )}
+                        <p className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Shopify Webhook Secret</p>
+                        <code className="text-xs font-mono text-gray-700 dark:text-gray-300 mt-1 block">
+                          {shopifyMaskedSecret}
+                        </code>
                       </div>
                       <button
-                        type="submit"
-                        disabled={selectingProperty || !selectedProperty}
-                        className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 disabled:opacity-50 transition-colors"
+                        type="button"
+                        onClick={handleDeleteShopify}
+                        disabled={shopifySubmitting}
+                        className="px-3 py-1.5 border border-red-200 text-red-655 rounded-lg text-xs font-semibold hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-50"
                       >
-                        {selectingProperty ? 'Saving...' : 'Confirm Property Selection'}
+                        Disconnect
                       </button>
-                    </form>
-                  ) : (
-                    <div className="space-y-3 bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 rounded-lg p-4">
-                      <div className="space-y-2 font-sans">
-                        <div>
-                          <p className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Property URL</p>
-                          <code className="text-xs font-mono text-gray-750 dark:text-gray-300 mt-1 block break-all">
-                            {gscIntegData.property_url}
-                          </code>
-                        </div>
-                        {gscIntegData.last_synced_at && (
-                          <div>
-                            <p className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Last Synced At</p>
-                            <span className="text-xs text-st-black dark:text-white mt-0.5 block">
-                              {new Date(gscIntegData.last_synced_at).toLocaleString()}
-                            </span>
-                          </div>
-                        )}
-                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSaveShopify} className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">
+                        Shopify Webhook Secret
+                      </label>
+                      <input
+                        type="password"
+                        value={shopifySecret}
+                        onChange={e => setShopifySecret(e.target.value)}
+                        placeholder="Paste webhook secret key"
+                        disabled={shopifySubmitting}
+                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a1d1d] text-st-black dark:text-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-st-black/20"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={shopifySubmitting || !shopifySecret.trim()}
+                      className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 disabled:opacity-50 transition-colors"
+                    >
+                      {shopifySubmitting ? 'Saving...' : 'Connect Shopify'}
+                    </button>
+                  </form>
+                )}
 
-                      <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-200 dark:border-gray-850/60 justify-between items-center">
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={handleSyncGsc}
-                            disabled={syncingGsc}
-                            className="px-3 py-1.5 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 disabled:opacity-50 transition-colors"
-                          >
-                            {syncingGsc ? 'Syncing...' : 'Sync Search Analytics'}
-                          </button>
-                          <Link
-                            to="/seo-revenue"
-                            className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors inline-flex items-center"
-                          >
-                            View Report
-                          </Link>
+                <div className="pt-3 border-t border-gray-100 dark:border-gray-800/60 space-y-2">
+                  <p className="text-xs font-semibold text-st-black dark:text-white">Quick setup</p>
+                  <ul className="text-xs text-st-gray dark:text-gray-400 space-y-1.5 font-sans">
+                    <li className="flex items-start gap-2">
+                      <span className="text-green-500 font-medium">✓</span>
+                      <span>Create webhook in Shopify Admin Notifications</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-green-500 font-medium">✓</span>
+                      <span>Select <code className="font-mono bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[10px]">Order payment</code> event</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-green-500 font-medium">✓</span>
+                      <span>Paste secret here</span>
+                    </li>
+                  </ul>
+                  <div className="pt-0.5">
+                    <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline inline-flex items-center gap-0.5">
+                      Read full guide →
+                    </a>
+                  </div>
+                </div>
+              </div>
+            </CollapsibleRow>
+
+            <CollapsibleRow
+              icon={Mail}
+              title="Email Campaign Attribution"
+              subtitle="Add source parameters to email links so campaigns are attributed correctly"
+              status="success"
+              badgeLabel="Available"
+              actionButton={
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveSection(activeSection === 'revenue.email' ? null : 'revenue.email');
+                  }}
+                  className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-150 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors"
+                >
+                  {activeSection === 'revenue.email' ? 'Close' : 'Setup'}
+                </button>
+              }
+              isExpanded={activeSection === 'revenue.email'}
+              onToggle={() => setActiveSection(activeSection === 'revenue.email' ? null : 'revenue.email')}
+            >
+              <div className="space-y-4">
+                <p className="text-xs text-st-gray dark:text-gray-400 font-sans">
+                  Track email opens and campaigns without executing any client-side JavaScript.
+                </p>
+
+                {/* Tab layout */}
+                <div className="flex border-b border-gray-150 dark:border-gray-800/80">
+                  {[
+                    { id: 'pixel', label: 'Image pixel' },
+                    { id: 'server', label: 'Server-side event' },
+                    { id: 'params', label: 'Parameters' }
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setEmailTab(tab.id)}
+                      className={`px-3 py-1.5 text-xs font-semibold border-b-2 transition-colors ${
+                        emailTab === tab.id
+                          ? 'border-st-lime text-st-lime dark:text-white'
+                          : 'border-transparent text-st-gray hover:text-white'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {site?.site_key ? (
+                  <div className="space-y-3">
+                    {emailTab === 'pixel' && (
+                      <div className="space-y-2">
+                        <p className="text-xs text-st-gray dark:text-gray-400 font-light leading-relaxed">
+                          Embed a 1×1 transparent GIF in any HTML email to record opens and attribute conversions.
+                        </p>
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <p className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Email Image Tag</p>
+                            <button onClick={() => handleCopyPixel(emailPixelExample)}
+                              className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black dark:hover:text-white transition-colors"
+                            >
+                              {copiedPixel ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                              {copiedPixel ? 'Copied' : 'Copy'}
+                            </button>
+                          </div>
+                          <div className="bg-st-black rounded-lg p-3">
+                            <pre className="text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed select-all font-mono">
+                              {`<img src="${emailPixelExample}" width="1" height="1" alt="" />`}
+                            </pre>
+                          </div>
                         </div>
+                      </div>
+                    )}
+
+                    {emailTab === 'server' && (
+                      <div className="space-y-2">
+                        <p className="text-xs text-st-gray dark:text-gray-400 font-light leading-relaxed">
+                          Send a server-side HTTP GET request to capture custom events without using JavaScript.
+                        </p>
+                        <div>
+                          <p className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1.5">Server-side HTTP GET</p>
+                          <div className="bg-st-black rounded-lg p-3">
+                            <pre className="text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed select-all font-mono">
+                              {`GET ${serverPixelExample}`}
+                            </pre>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {emailTab === 'params' && (
+                      <div className="space-y-3">
+                        <p className="text-xs text-st-gray dark:text-gray-400 font-light leading-relaxed">
+                          Query parameters supported by the pixel endpoint:
+                        </p>
+                        <div className="bg-gray-50 dark:bg-[#111414] rounded-lg p-3 border border-gray-100 dark:border-[#2A2E2E]">
+                          <div className="grid grid-cols-2 gap-x-6 gap-y-1">
+                            {[
+                              ['site_key', 'Your site key (required)'],
+                              ['event', 'Event name — e.g. email_open'],
+                              ['uid', 'User ID for attribution stitching'],
+                              ['campaign', 'Campaign name (utm_campaign)'],
+                              ['utm_source', 'Traffic source'],
+                              ['utm_medium', 'Traffic medium'],
+                              ['url', 'Page or email URL'],
+                              ['val', 'Numeric value (for conversions)'],
+                            ].map(([k, v]) => (
+                              <div key={k} className="flex items-start gap-1.5">
+                                <code className="text-[10px] font-mono text-st-black dark:text-white bg-gray-250 dark:bg-[#2A2E2E] px-1 py-0.5 rounded shrink-0">{k}</code>
+                                <span className="text-[10px] text-st-gray dark:text-gray-400">{v}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-st-gray dark:text-gray-400 py-2">Site key loading…</p>
+                )}
+              </div>
+            </CollapsibleRow>
+          </div>
+        </DashboardCard>
+
+        {/* 2. Ad Cost Sync Card */}
+        <DashboardCard
+          title="Ad Cost Sync"
+          subtitle="Synchronize advertising costs and impressions to calculate true ROAS"
+          className="border-gray-150 dark:border-gray-800/80 shadow-none"
+          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-150 dark:border-gray-800/80"
+          bodyClassName="p-4 pt-3"
+        >
+          <div className="space-y-1">
+            {adPlatMessage && (
+              <div className="p-3 text-xs rounded-lg bg-green-50 text-green-700 border border-green-200 mb-3 font-sans">
+                {adPlatMessage}
+              </div>
+            )}
+            {adPlatError && (
+              <div className="p-3 text-xs rounded-lg bg-red-50 text-red-700 border border-red-200 mb-3 font-sans">
+                {adPlatError}
+              </div>
+            )}
+
+            <CollapsibleRow
+              icon={Copy}
+              title="Import CSV Costs"
+              subtitle="Upload generic campaigns or spreadsheets manually"
+              status="success"
+              badgeLabel="Available"
+              actionButton={
+                <Link to="/campaigns?import=true" className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-150 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors">
+                  Import
+                </Link>
+              }
+            />
+
+            <CollapsibleRow
+              icon={BarChart3}
+              title="Google Ads"
+              subtitle="Sync campaign clicks, impressions, and spend data"
+              status={
+                !adPlatformData.google_ads?.env_configured
+                  ? 'pending'
+                  : googleAdsConnected
+                  ? 'success'
+                  : adPlatformData.google_ads?.status === 'needs_account'
+                  ? 'warning'
+                  : adPlatformData.google_ads?.status === 'needs_reconnect'
+                  ? 'error'
+                  : adPlatformData.google_ads?.status === 'error'
+                  ? 'error'
+                  : 'pending'
+              }
+              badgeLabel={
+                !adPlatformData.google_ads?.env_configured
+                  ? 'Not Configured'
+                  : googleAdsConnected
+                  ? 'Connected'
+                  : adPlatformData.google_ads?.status === 'needs_account'
+                  ? 'Choose Account'
+                  : adPlatformData.google_ads?.status === 'needs_reconnect'
+                  ? 'Reconnect Needed'
+                  : adPlatformData.google_ads?.status === 'error'
+                  ? 'Needs Attention'
+                  : 'Not Connected'
+              }
+              actionButton={
+                <div className="flex items-center gap-2">
+                  <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
+                    Docs
+                  </a>
+                  {adPlatformData.google_ads?.env_configured && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!googleAdsConnected) {
+                          handleConnectGoogleAds()
+                        } else {
+                          setActiveSection(activeSection === 'ad.google_ads' ? null : 'ad.google_ads')
+                        }
+                      }}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
+                        googleAdsConnected
+                          ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700'
+                          : 'bg-st-green hover:opacity-90 text-white'
+                      }`}
+                    >
+                      {googleAdsConnected ? 'Manage' : 'Connect'}
+                    </button>
+                  )}
+                </div>
+              }
+              isExpanded={activeSection === 'ad.google_ads'}
+              onToggle={() => setActiveSection(activeSection === 'ad.google_ads' ? null : 'ad.google_ads')}
+            >
+              <div className="space-y-4">
+                {googleAdsConnected && adPlatformData.google_ads?.account_id && (
+                  <p className="text-xs text-st-gray dark:text-gray-400">
+                    Customer ID: {adPlatformData.google_ads.account_id}
+                    {adPlatformData.google_ads.last_synced_at && ` · Last synced: ${new Date(adPlatformData.google_ads.last_synced_at).toLocaleString()}`}
+                  </p>
+                )}
+
+                {adPlatformData.google_ads?.env_configured ? (
+                  <div className="flex flex-wrap gap-2">
+                    {!googleAdsConnected ? (
+                      <button
+                        type="button"
+                        onClick={handleConnectGoogleAds}
+                        className="px-3 py-1.5 bg-st-green hover:opacity-90 text-white text-xs font-semibold rounded-lg transition-colors"
+                      >
+                        Connect Google Ads
+                      </button>
+                    ) : (
+                      <>
                         <button
                           type="button"
-                          onClick={handleDisconnectGsc}
-                          disabled={disconnectingGsc}
-                          className="px-3 py-1.5 border border-red-205 text-red-650 rounded-lg text-xs font-semibold hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors disabled:opacity-50"
+                          onClick={handleSyncGoogleAds}
+                          disabled={syncingGads}
+                          className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1"
+                        >
+                          {syncingGads ? 'Syncing...' : 'Sync Now'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setShowGoogleAdvanced(!showGoogleAdvanced)}
+                          className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-xs font-semibold rounded-lg transition-colors"
+                        >
+                          {showGoogleAdvanced ? 'Hide Settings' : 'Configure Account'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleDisconnectGoogleAds}
+                          className="px-3 py-1.5 border border-red-250 text-red-650 hover:bg-red-50 dark:hover:bg-red-955/20 text-xs font-semibold rounded-lg transition-colors"
                         >
                           Disconnect
                         </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-amber-655 dark:text-amber-400 font-sans">
+                    Google Ads is not configured on this server. Missing environment variables.
+                  </p>
+                )}
 
-              <div className="pt-3 border-t border-gray-100 dark:border-gray-800/60 space-y-1.5 text-xs text-st-gray dark:text-gray-400 font-sans">
-                <p className="font-semibold text-st-black dark:text-white">Estimated SEO Revenue Allocation Logic</p>
-                <p className="leading-relaxed font-light">
-                  This integration maps GSC performance data to SourceTrack conversion records using a landing-page matched estimated allocation model.
-                </p>
-                <p className="leading-relaxed font-light">
-                  <strong>Disclaimer:</strong> GSC provides aggregate query data, not user-level attribution. Query revenue is estimated from click share on matching pages.
-                </p>
-                <div className="pt-1">
-                  <a href="/docs#google-search-console" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline">
-                    Read GSC Setup Docs →
+                {showGoogleAdvanced && googleAdsConnected && (
+                  <form onSubmit={handleSaveGoogleAccount} className="bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 rounded-lg p-4 space-y-3">
+                    <p className="text-xs font-semibold text-st-black dark:text-white uppercase tracking-wider">Account ID Selection</p>
+                    <div>
+                      <label className="block text-[11px] font-medium text-st-gray dark:text-gray-400 mb-1">
+                        Target Customer ID (10 digits, e.g. 1234567890)
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={googleCustomerId}
+                        onChange={e => setGoogleCustomerId(e.target.value)}
+                        placeholder="1234567890"
+                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-800 text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-medium text-st-gray dark:text-gray-400 mb-1">
+                        Login Customer ID (Optional manager account ID link)
+                      </label>
+                      <input
+                        type="text"
+                        value={googleLoginCustomerId}
+                        onChange={e => setGoogleLoginCustomerId(e.target.value)}
+                        placeholder="9876543210"
+                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-800 text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={gadsSaving}
+                      className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 transition-colors"
+                    >
+                      {gadsSaving ? 'Saving...' : 'Save Configuration'}
+                    </button>
+                  </form>
+                )}
+              </div>
+            </CollapsibleRow>
+
+            <CollapsibleRow
+              icon={BarChart3}
+              title="Meta Ads"
+              subtitle="Sync Meta (Facebook/Instagram) ad account clicks and spend"
+              status={metaAdsConnected ? 'success' : 'pending'}
+              badgeLabel={metaAdsConnected ? 'Connected' : 'Not Connected'}
+              actionButton={
+                <div className="flex items-center gap-2">
+                  <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
+                    Docs
                   </a>
+                  <button
+                    onClick={() => setActiveSection(activeSection === 'ad.meta_ads' ? null : 'ad.meta_ads')}
+                    className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
+                      metaAdsConnected
+                        ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700'
+                        : 'bg-st-green hover:opacity-90 text-white'
+                    }`}
+                  >
+                    {metaAdsConnected ? 'Manage' : 'Connect'}
+                  </button>
+                </div>
+              }
+              isExpanded={activeSection === 'ad.meta_ads'}
+              onToggle={() => setActiveSection(activeSection === 'ad.meta_ads' ? null : 'ad.meta_ads')}
+            >
+              <div className="space-y-4">
+                {metaAdsConnected && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-st-gray dark:text-gray-400">
+                      Account ID: {adPlatformData.meta_ads.account_id}
+                      {adPlatformData.meta_ads.last_synced_at && ` · Last synced: ${new Date(adPlatformData.meta_ads.last_synced_at).toLocaleString()}`}
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSyncMetaAds}
+                        disabled={syncingMeta}
+                        className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 text-xs font-semibold rounded-lg transition-colors"
+                      >
+                        {syncingMeta ? 'Syncing...' : 'Sync Now'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowMetaAdvanced(!showMetaAdvanced)}
+                        className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-xs font-semibold rounded-lg transition-colors"
+                      >
+                        Configure
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDisconnectMetaAds}
+                        className="px-3 py-1.5 border border-red-200 text-red-650 hover:bg-red-50 text-xs font-semibold rounded-lg transition-colors"
+                      >
+                        Disconnect
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {(!metaAdsConnected || showMetaAdvanced) && (
+                  <form onSubmit={handleConnectMetaAds} className="bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 rounded-lg p-4 space-y-3">
+                    <h4 className="text-xs font-bold text-st-black dark:text-white">Meta Ads — Advanced manual token setup</h4>
+                    <p className="text-[11px] text-st-gray dark:text-gray-400 leading-normal font-sans font-light">
+                      Paste a Meta access token and ad account ID. This is a beta setup for syncing spend only.
+                    </p>
+                    <div>
+                      <label className="block text-[11px] font-medium text-st-gray dark:text-gray-400 mb-1">
+                        Meta Access Token
+                      </label>
+                      <input
+                        type="password"
+                        required
+                        value={metaAccessToken}
+                        onChange={e => setMetaAccessToken(e.target.value)}
+                        placeholder="EAA..."
+                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-800 text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-medium text-st-gray dark:text-gray-400 mb-1">
+                        Ad Account ID (act_123 or 123)
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={metaAdAccountId}
+                        onChange={e => setMetaAdAccountId(e.target.value)}
+                        placeholder="123456789"
+                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-800 text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={metaConnecting}
+                      className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 transition-colors"
+                    >
+                      {metaConnecting ? 'Saving...' : 'Connect Meta Ads'}
+                    </button>
+                  </form>
+                )}
+              </div>
+            </CollapsibleRow>
+
+            {/* Sync History Logs */}
+            {syncHistoryList.length > 0 && (
+              <div className="pt-3 border-t border-gray-150 dark:border-gray-800/80">
+                <button
+                  type="button"
+                  onClick={() => setShowRecentSyncs(!showRecentSyncs)}
+                  className="text-xs font-semibold text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white flex items-center gap-1 font-sans"
+                >
+                  {showRecentSyncs ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                  {showRecentSyncs ? 'Hide' : 'Show'} Recent Sync Logs
+                </button>
+
+                {showRecentSyncs && (
+                  <div className="mt-3 overflow-x-auto border border-gray-100 dark:border-gray-800 rounded-lg p-3 bg-gray-50/50 dark:bg-gray-800/20">
+                    <table className="w-full text-left text-[11px] border-collapse">
+                      <thead>
+                        <tr className="border-b border-gray-150 dark:border-gray-800 text-st-gray dark:text-gray-400">
+                          <th className="pb-1.5 font-medium">Platform</th>
+                          <th className="pb-1.5 font-medium">Status</th>
+                          <th className="pb-1.5 font-medium">Records</th>
+                          <th className="pb-1.5 font-medium">Time</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {syncHistoryList.map(run => (
+                          <tr key={run.id} className="border-b border-gray-50 dark:border-gray-850/30 last:border-0 hover:bg-gray-50/55 dark:hover:bg-gray-800/10">
+                            <td className="py-1.5 font-medium text-gray-850 dark:text-gray-300 capitalize">{run.platform?.replace('_', ' ')}</td>
+                            <td className="py-1.5">
+                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                run.status === 'success' ? 'bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400' : run.status === 'pending' ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400' : 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400'
+                              }`}>
+                                {run.status}
+                              </span>
+                            </td>
+                            <td className="py-1.5 text-gray-655 dark:text-gray-400">{run.records_synced}</td>
+                            <td className="py-1.5 text-gray-500 dark:text-gray-500 font-sans">{new Date(run.sync_start).toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </DashboardCard>
+
+        {/* 3. SEO Revenue Card */}
+        <DashboardCard
+          title="SEO Revenue"
+          subtitle="Map search query traffic and click-share estimated revenue"
+          className="border-gray-150 dark:border-gray-800/80 shadow-none"
+          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-150 dark:border-gray-800/80"
+          bodyClassName="p-4 pt-3"
+        >
+          <div className="space-y-1">
+            {gscStatusMessage && (
+              <div className="p-3 text-xs rounded-lg bg-green-50 text-green-700 border border-green-200 mb-3 font-sans">
+                {gscStatusMessage}
+              </div>
+            )}
+            {gscStatusError && (
+              <div className="p-3 text-xs rounded-lg bg-red-50 text-red-700 border border-red-200 mb-3 font-sans">
+                {gscStatusError}
+              </div>
+            )}
+            {syncMessage && (
+              <div className="p-3 text-xs rounded-lg bg-blue-50 text-blue-700 border border-blue-200 mb-3 font-sans">
+                {syncMessage}
+              </div>
+            )}
+
+            <CollapsibleRow
+              icon={Globe}
+              title="Google Search Console"
+              subtitle="Connect Search Console to estimate SEO landing page and query revenue"
+              status={
+                gscIntegData?.connected
+                  ? gscIntegData.property_selected
+                    ? 'success'
+                    : 'warning'
+                  : 'pending'
+              }
+              badgeLabel={
+                gscIntegData?.connected
+                  ? gscIntegData.property_selected
+                    ? 'Connected'
+                    : 'Select Property'
+                  : 'Not Connected'
+              }
+              actionButton={
+                <div className="flex items-center gap-2">
+                  <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
+                    Docs
+                  </a>
+                  <button
+                    onClick={() => {
+                      if (!gscIntegData?.connected) {
+                        handleConnectGsc()
+                      } else {
+                        setActiveSection(activeSection === 'seo.gsc' ? null : 'seo.gsc')
+                      }
+                    }}
+                    className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
+                      gscIntegData?.connected
+                        ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700'
+                        : 'bg-st-green hover:opacity-90 text-white'
+                    }`}
+                  >
+                    {gscIntegData?.connected ? 'Manage' : 'Connect'}
+                  </button>
+                </div>
+              }
+              isExpanded={activeSection === 'seo.gsc'}
+              onToggle={() => setActiveSection(activeSection === 'seo.gsc' ? null : 'seo.gsc')}
+            >
+              <div className="space-y-4">
+                {!gscIntegData?.connected ? (
+                  <div className="space-y-3">
+                    <button
+                      type="button"
+                      onClick={handleConnectGsc}
+                      className="px-4 py-2 bg-st-green hover:opacity-90 text-white text-xs font-semibold rounded-lg transition-colors"
+                    >
+                      Connect Google Search Console
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {!gscIntegData.property_selected ? (
+                      <form onSubmit={handleSelectProperty} className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">
+                            Select Search Console Property
+                          </label>
+                          {gscPropertiesData?.properties && gscPropertiesData.properties.length > 0 ? (
+                            <select
+                              value={selectedProperty}
+                              onChange={e => setSelectedProperty(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-250 bg-white text-st-black dark:text-white rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-st-black/20"
+                            >
+                              <option value="">-- Choose verified property URL --</option>
+                              {gscPropertiesData.properties.map(p => (
+                                <option key={p.siteUrl} value={p.siteUrl}>
+                                  {p.siteUrl} ({p.permissionLevel})
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <p className="text-xs text-st-gray dark:text-gray-400 py-2 font-sans font-light">
+                              {gscPropertiesData?.properties
+                                ? 'No verified properties found in your Google Search Console account.'
+                                : 'Loading verified GSC properties...'}
+                            </p>
+                          )}
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={selectingProperty || !selectedProperty}
+                          className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 disabled:opacity-50 transition-colors"
+                        >
+                          {selectingProperty ? 'Saving...' : 'Confirm Property Selection'}
+                        </button>
+                      </form>
+                    ) : (
+                      <div className="space-y-3 bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 rounded-lg p-4">
+                        <div className="space-y-2 font-sans">
+                          <div>
+                            <p className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Property URL</p>
+                            <code className="text-xs font-mono text-gray-750 dark:text-gray-300 mt-1 block break-all">
+                              {gscIntegData.property_url}
+                            </code>
+                          </div>
+                          {gscIntegData.last_synced_at && (
+                            <div>
+                              <p className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Last Synced At</p>
+                              <span className="text-xs text-st-black dark:text-white mt-0.5 block">
+                                {new Date(gscIntegData.last_synced_at).toLocaleString()}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-200 dark:border-gray-850/60 justify-between items-center">
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={handleSyncGsc}
+                              disabled={syncingGsc}
+                              className="px-3 py-1.5 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 disabled:opacity-50 transition-colors"
+                            >
+                              {syncingGsc ? 'Syncing...' : 'Sync Search Analytics'}
+                            </button>
+                            <Link
+                              to="/seo-revenue"
+                              className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors inline-flex items-center"
+                            >
+                              View Report
+                            </Link>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleDisconnectGsc}
+                            disabled={disconnectingGsc}
+                            className="px-3 py-1.5 border border-red-205 text-red-655 rounded-lg text-xs font-semibold hover:bg-red-55 dark:hover:bg-red-955/20 transition-colors disabled:opacity-50"
+                          >
+                            Disconnect
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="pt-3 border-t border-gray-150 dark:border-gray-800/60 space-y-1.5 text-xs text-st-gray dark:text-gray-400 font-sans">
+                  <p className="font-semibold text-st-black dark:text-white">Estimated SEO Revenue Allocation Logic</p>
+                  <p className="leading-relaxed font-light">
+                    This integration maps GSC performance data to SourceTrack conversion records using a landing-page matched estimated allocation model.
+                  </p>
+                  <p className="leading-relaxed font-light">
+                    <strong>Disclaimer:</strong> GSC provides aggregate query data, not user-level attribution. Query revenue is estimated from click share on matching pages.
+                  </p>
+                  <div className="pt-1">
+                    <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline">
+                      Read GSC Setup Docs →
+                    </a>
+                  </div>
                 </div>
               </div>
-            </div>
-          </CollapsibleRow>
-        </div>
-      </DashboardCard>
+            </CollapsibleRow>
+          </div>
+        </DashboardCard>
+      </div>
 
-      {!(activeSection === 'developer' || activeSection?.startsWith('developer.')) ? (
+      {/* ADVANCED TRACKING SECTION */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-bold text-st-gray dark:text-gray-400 uppercase tracking-wider">Advanced Tracking</h3>
         <DashboardCard
-          title="Developer Options"
-          subtitle="Advanced custom integrations, conversion webhooks, and raw API access"
-          className="border-gray-100 dark:border-gray-800/60 shadow-none"
-          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-100 dark:border-gray-800/60"
+          title="Advanced Domains & Routing"
+          subtitle="Managed proxy domains and cross-domain tracking setup"
+          className="border-gray-150 dark:border-gray-800/80 shadow-none"
+          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-150 dark:border-gray-800/80"
           bodyClassName="p-4 pt-3"
         >
           <div className="space-y-1">
             <CollapsibleRow
-              icon={Bug}
-              title="API & Webhook Tools"
-              subtitle="Advanced API and webhook tools for custom checkout flows"
-              status="verified"
-              badgeLabel="Advanced"
+              icon={Globe}
+              title="Cross-Domain Tracking"
+              subtitle="Link and stitch customer journeys across multiple domains automatically"
+              status={crossDomainConfigured ? 'success' : 'pending'}
+              badgeLabel={crossDomainConfigured ? 'Active' : 'Not Configured'}
               actionButton={
-                <button
-                  onClick={() => setActiveSection('developer')}
-                  className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors"
-                >
-                  Expand
-                </button>
+                <div className="flex items-center gap-2">
+                  <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
+                    Docs
+                  </a>
+                  <Link to="/settings" className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors">
+                    Manage
+                  </Link>
+                </div>
               }
-              onToggle={() => setActiveSection('developer')}
+            />
+
+            <CollapsibleRow
+              icon={ShieldCheck}
+              title="Custom Tracking Domain / Managed Proxy"
+              subtitle="Bypass standard browser ad-blockers and run tracking as a first-party resource"
+              status={proxyStatusBadgeType === 'verified' ? 'success' : proxyStatusBadgeType}
+              badgeLabel={proxyStatusLabel}
+              actionButton={
+                <div className="flex items-center gap-2">
+                  <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
+                    Docs
+                  </a>
+                  <Link to="/settings" className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors">
+                    Manage
+                  </Link>
+                </div>
+              }
             />
           </div>
         </DashboardCard>
-      ) : (
+      </div>
+
+      {/* DEVELOPER SECTION */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-bold text-st-gray dark:text-gray-400 uppercase tracking-wider">Developer</h3>
         <DashboardCard
           title="Developer Options"
           subtitle="Advanced custom integrations, conversion webhooks, and raw API access"
-          className="border-gray-100 dark:border-gray-800/60 shadow-none"
-          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-100 dark:border-gray-800/60"
+          className="border-gray-150 dark:border-gray-800/80 shadow-none"
+          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-150 dark:border-gray-800/80"
           bodyClassName="p-4 pt-3"
         >
           <div className="space-y-1">
@@ -1984,319 +2098,393 @@ export default function Integrations() {
               </div>
             )}
 
-            <div className="flex justify-between items-center pb-2 mb-2 border-b border-gray-150 dark:border-gray-800/60">
-              <span className="text-xs text-st-gray font-sans">Developer options expanded</span>
-              <button
-                onClick={() => setActiveSection(null)}
-                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors"
-              >
-                Collapse
-              </button>
-            </div>
-
-            <CollapsibleRow
-              icon={Radio}
-              title="Payments API"
-              subtitle="Trigger server-side checkout conversions from backend applications"
-              status="verified"
-              badgeLabel="Active"
-              isExpanded={activeSection === 'developer.payments_api'}
-              onToggle={() => setActiveSection(activeSection === 'developer.payments_api' ? 'developer' : 'developer.payments_api')}
-            >
-              <div className="space-y-4">
-                <div>
-                  <p className="text-xs text-st-gray">
-                    Authentication Method: site_key parameter in JSON body or query string
-                  </p>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-semibold text-st-gray uppercase tracking-wider">Payments API Endpoint</label>
-                    <button
-                      type="button"
-                      onClick={handleCopyPaymentsUrl}
-                      className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black transition-colors font-sans"
-                    >
-                      {copiedPaymentsUrl ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
-                      {copiedPaymentsUrl ? 'Copied' : 'Copy URL'}
-                    </button>
-                  </div>
-                  <div className="bg-st-black rounded-lg p-3">
-                    <pre className="text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed select-all font-mono">
-                      {paymentsApiUrl || 'Loading URL...'}
-                    </pre>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-semibold text-st-gray uppercase tracking-wider">cURL Example</label>
-                    <button
-                      type="button"
-                      onClick={handleCopyCurl}
-                      className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black transition-colors font-sans"
-                    >
-                      {copiedCurl ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
-                      {copiedCurl ? 'Copied' : 'Copy cURL'}
-                    </button>
-                  </div>
-                  <div className="bg-st-black rounded-lg p-3">
-                    <pre className="text-xs text-green-400 overflow-x-auto whitespace-pre-wrap leading-relaxed select-all font-mono">
-                      {curlExample}
-                    </pre>
-                  </div>
-                </div>
-
-                <div className="pt-3 border-t border-gray-100 dark:border-gray-800/60 space-y-1">
-                  <h4 className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5 font-sans">
-                    <AlertTriangle className="w-4 h-4 text-amber-600" /> Deduplication Requirement
-                  </h4>
-                  <p className="text-xs text-st-gray dark:text-gray-400 font-sans leading-relaxed font-light">
-                    Always provide a stable <strong>order ID, payment ID, or idempotency key</strong>.
-                    For revenue events, the API will reject requests missing all of these keys to prevent duplicate transactions.
-                  </p>
-                </div>
-
-                <div className="pt-3 border-t border-gray-100 dark:border-gray-800/60 space-y-1.5">
-                  <div className="flex justify-between items-center">
-                    <h4 className="text-xs font-semibold text-st-black dark:text-white">Integration Guidelines</h4>
-                    <Link to="/docs#payments-api" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline font-sans">
-                      Read Payments API Docs →
-                    </Link>
-                  </div>
-                  <p className="text-xs text-st-gray dark:text-gray-400 font-sans leading-relaxed font-light">
-                    Stitch payments back to visitor traffic journeys by sending the anonymous ID (from the browser storage <code className="font-mono text-[11px] bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-st-black dark:text-white">st_aid</code>) in the <code className="font-mono text-[11px] bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-st-black dark:text-white">anonymous_id</code> field.
-                  </p>
-                </div>
-              </div>
-            </CollapsibleRow>
-
-            <CollapsibleRow
-              icon={Plug}
-              title="Webhook Conversion Adapter"
-              subtitle="Stream real-time conversion payloads to custom URLs or automation platforms"
-              status={webhookData?.webhook?.active ? 'verified' : 'pending'}
-              badgeLabel={webhookData?.webhook?.active ? 'Active' : 'Inactive'}
-              isExpanded={activeSection === 'developer.webhook_adapter'}
-              onToggle={() => setActiveSection(activeSection === 'developer.webhook_adapter' ? 'developer' : 'developer.webhook_adapter')}
-            >
-              <div className="space-y-4">
-                <form onSubmit={handleSaveWebhook} className="space-y-4">
+            {!(activeSection === 'developer' || activeSection?.startsWith('developer.')) ? (
+              <CollapsibleRow
+                icon={Bug}
+                title="Developer options"
+                subtitle="API, webhooks, and custom conversion methods"
+                status="verified"
+                badgeLabel="Advanced"
+                actionButton={
+                  <button
+                    onClick={() => setActiveSection('developer')}
+                    className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors"
+                  >
+                    Expand
+                  </button>
+                }
+                onToggle={() => setActiveSection('developer')}
+              />
+            ) : (
+              <div className="space-y-2">
+                <div className="flex justify-between items-center pb-2 mb-2 border-b border-gray-150 dark:border-gray-800/60">
                   <div>
-                    <label className="block text-xs font-semibold text-st-gray uppercase tracking-wider mb-1">Webhook URL</label>
-                    <input
-                      type="text"
-                      placeholder="https://your-endpoint.com/webhook"
-                      value={url}
-                      onChange={e => setUrl(e.target.value)}
-                      disabled={submitting}
-                      className="w-full px-3 py-2 border border-gray-250 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-st-black/20"
-                    />
-                    <p className="text-[10px] text-st-gray mt-1 font-sans">
-                      Endpoint will receive a POST request with the conversion payload and X-SourceTrack-Signature header.
-                    </p>
+                    <h4 className="text-sm font-semibold text-st-black dark:text-white">Developer Options</h4>
+                    <p className="text-xs text-st-gray dark:text-gray-400">API, webhooks, and custom conversion methods</p>
                   </div>
+                  <button
+                    onClick={() => setActiveSection(null)}
+                    className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors"
+                  >
+                    Collapse
+                  </button>
+                </div>
 
-                  {webhookData?.webhook && (
-                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-100 space-y-3">
+                <div className="space-y-1 pl-4 border-l-2 border-st-lime/20">
+                  <CollapsibleRow
+                    icon={Radio}
+                    title="Payments API"
+                    subtitle="Trigger server-side checkout conversions from backend applications"
+                    status="verified"
+                    badgeLabel="Active"
+                    isExpanded={activeSection === 'developer.payments_api'}
+                    onToggle={() => setActiveSection(activeSection === 'developer.payments_api' ? 'developer' : 'developer.payments_api')}
+                    actionButton={
+                      <div className="flex items-center gap-2">
+                        <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
+                          Docs
+                        </a>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveSection(activeSection === 'developer.payments_api' ? 'developer' : 'developer.payments_api');
+                          }}
+                          className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-150 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors"
+                        >
+                          {activeSection === 'developer.payments_api' ? 'Close' : 'Setup'}
+                        </button>
+                      </div>
+                    }
+                  >
+                    <div className="space-y-4">
                       <div>
-                        <label className="block text-xs font-semibold text-st-gray uppercase tracking-wider mb-1">Signing Secret</label>
-                        {showSecret ? (
-                          <div className="space-y-2">
-                            <div className="bg-green-50 border border-green-200 rounded p-2 flex items-center justify-between gap-2">
-                              <code className="text-xs font-mono text-green-700 select-all break-all">{showSecret}</code>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(showSecret).catch(() => {})
-                                  alert('Copied to clipboard!')
-                                }}
-                                className="px-2 py-1 bg-green-600 text-white rounded text-[10px] font-semibold flex items-center gap-1 shrink-0 font-sans"
-                              >
-                                <Copy className="w-3 h-3" /> Copy
-                              </button>
-                            </div>
-                            <p className="text-[10px] text-green-700 font-semibold font-sans">
-                              Make sure to copy this secret now. It will not be shown again.
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-between gap-2">
-                            <code className="text-xs font-mono text-gray-700 select-all">{webhookData.webhook.secret}</code>
-                            <button
-                              type="button"
-                              onClick={handleRegenerateSecret}
-                              disabled={submitting}
-                              className="text-[10px] text-gray-500 hover:text-st-black font-semibold flex items-center gap-1 transition-colors font-sans"
-                            >
-                              <RefreshCw className="w-3 h-3" /> Regenerate
-                            </button>
-                          </div>
-                        )}
-                        <p className="text-[10px] text-st-gray mt-1 font-sans">
-                          Use this secret to verify the HMAC SHA-256 signature in the request headers.
+                        <p className="text-xs text-st-gray">
+                          Authentication Method: site_key parameter in JSON body or query string
                         </p>
                       </div>
 
-                      <div className="flex items-center justify-between gap-4 pt-2 border-t border-gray-200">
-                        <div className="flex items-center gap-2">
-                          <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={active}
-                              onChange={e => {
-                                setActive(e.target.checked)
-                                const isEdit = !!webhookData?.webhook?.id
-                                const endpoint = `/webhooks/${webhookData.webhook.id}?site_key=${site.site_key}`
-                                fetchApi(endpoint, {
-                                  method: 'PATCH',
-                                  body: JSON.stringify({ active: e.target.checked })
-                                }).then(() => refetchWebhook()).catch(() => {})
-                              }}
-                              className="sr-only peer"
-                            />
-                            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-st-black font-sans"></div>
-                            <span className="ml-2 text-xs font-medium text-gray-700 font-sans">Webhook Enabled</span>
-                          </label>
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="block text-xs font-semibold text-st-gray uppercase tracking-wider">Payments API Endpoint</label>
+                          <button
+                            type="button"
+                            onClick={handleCopyPaymentsUrl}
+                            className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black transition-colors font-sans"
+                          >
+                            {copiedPaymentsUrl ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                            {copiedPaymentsUrl ? 'Copied' : 'Copy URL'}
+                          </button>
                         </div>
-                        <div>
-                          {webhookData.deliveries && webhookData.deliveries.length > 0 ? (
-                            <div className="flex items-center gap-1 font-sans">
-                              <span className="text-[10px] text-st-gray">Last Delivery:</span>
-                              <StatusBadge
-                                status={webhookData.deliveries[0].success ? 'verified' : 'error'}
-                                label={webhookData.deliveries[0].success ? `Success (${webhookData.deliveries[0].status_code})` : `Failed (${webhookData.deliveries[0].status_code || 'Err'})`}
-                              />
-                            </div>
-                          ) : (
-                            <span className="text-[10px] text-st-gray font-sans">No deliveries yet</span>
-                          )}
+                        <div className="bg-st-black rounded-lg p-3">
+                          <pre className="text-xs text-green-400 overflow-x-auto whitespace-pre-wrap break-all leading-relaxed select-all font-mono">
+                            {paymentsApiUrl || 'Loading URL...'}
+                          </pre>
                         </div>
                       </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="block text-xs font-semibold text-st-gray uppercase tracking-wider">cURL Example</label>
+                          <button
+                            type="button"
+                            onClick={handleCopyCurl}
+                            className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black transition-colors font-sans"
+                          >
+                            {copiedCurl ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                            {copiedCurl ? 'Copied' : 'Copy cURL'}
+                          </button>
+                        </div>
+                        <div className="bg-st-black rounded-lg p-3">
+                          <pre className="text-xs text-green-400 overflow-x-auto whitespace-pre-wrap leading-relaxed select-all font-mono">
+                            {curlExample}
+                          </pre>
+                        </div>
+                      </div>
+
+                      <div className="pt-3 border-t border-gray-100 dark:border-gray-800/60 space-y-1">
+                        <h4 className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5 font-sans">
+                          <AlertTriangle className="w-4 h-4 text-amber-600" /> Deduplication Requirement
+                        </h4>
+                        <p className="text-xs text-st-gray dark:text-gray-400 font-sans leading-relaxed font-light">
+                          Always provide a stable <strong>order ID, payment ID, or idempotency key</strong>.
+                          For revenue events, the API will reject requests missing all of these keys to prevent duplicate transactions.
+                        </p>
+                      </div>
+
+                      <div className="pt-3 border-t border-gray-100 dark:border-gray-800/60 space-y-1.5">
+                        <div className="flex justify-between items-center">
+                          <h4 className="text-xs font-semibold text-st-black dark:text-white">Integration Guidelines</h4>
+                          <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline font-sans">
+                            Read Payments API Docs →
+                          </a>
+                        </div>
+                        <p className="text-xs text-st-gray dark:text-gray-400 font-sans leading-relaxed font-light">
+                          Stitch payments back to visitor traffic journeys by sending the anonymous ID (from the browser storage <code className="font-mono text-[11px] bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-st-black dark:text-white">st_aid</code>) in the <code className="font-mono text-[11px] bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-st-black dark:text-white">anonymous_id</code> field.
+                        </p>
+                      </div>
                     </div>
-                  )}
+                  </CollapsibleRow>
 
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
-                    <div className="flex items-center gap-2 font-sans">
-                      <button
-                        type="submit"
-                        disabled={submitting}
-                        className="px-4 py-2 bg-st-black text-white text-xs font-semibold rounded-lg hover:bg-st-black/90 disabled:opacity-50 transition-colors"
-                      >
-                        {submitting ? 'Saving...' : 'Save Configuration'}
-                      </button>
-
-                      {webhookData?.webhook && (
+                  <CollapsibleRow
+                    icon={Plug}
+                    title="Webhook Conversion Adapter"
+                    subtitle="Stream real-time conversion payloads to custom URLs or automation platforms"
+                    status={webhookData?.webhook?.active ? 'verified' : 'pending'}
+                    badgeLabel={webhookData?.webhook?.active ? 'Active' : 'Inactive'}
+                    isExpanded={activeSection === 'developer.webhook_adapter'}
+                    onToggle={() => setActiveSection(activeSection === 'developer.webhook_adapter' ? 'developer' : 'developer.webhook_adapter')}
+                    actionButton={
+                      <div className="flex items-center gap-2">
+                        <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
+                          Docs
+                        </a>
                         <button
-                          type="button"
-                          onClick={handleTestWebhook}
-                          disabled={testing || submitting}
-                          className="px-4 py-2 bg-white text-gray-700 border border-gray-300 text-xs font-semibold rounded-lg hover:bg-gray-50 flex items-center gap-1.5 disabled:opacity-50 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveSection(activeSection === 'developer.webhook_adapter' ? 'developer' : 'developer.webhook_adapter');
+                          }}
+                          className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-150 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors"
                         >
-                          <Play className="w-3 h-3" /> {testing ? 'Testing...' : 'Test Webhook'}
+                          {activeSection === 'developer.webhook_adapter' ? 'Close' : 'Setup'}
                         </button>
+                      </div>
+                    }
+                  >
+                    <div className="space-y-4">
+                      <form onSubmit={handleSaveWebhook} className="space-y-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-st-gray uppercase tracking-wider mb-1">Webhook URL</label>
+                          <input
+                            type="text"
+                            placeholder="https://your-endpoint.com/webhook"
+                            value={url}
+                            onChange={e => setUrl(e.target.value)}
+                            disabled={submitting}
+                            className="w-full px-3 py-2 border border-gray-250 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-st-black/20"
+                          />
+                          <p className="text-[10px] text-st-gray mt-1 font-sans">
+                            Endpoint will receive a POST request with the conversion payload and X-SourceTrack-Signature header.
+                          </p>
+                        </div>
+
+                        {webhookData?.webhook && (
+                          <div className="bg-gray-50 rounded-lg p-3 border border-gray-100 space-y-3">
+                            <div>
+                              <label className="block text-xs font-semibold text-st-gray uppercase tracking-wider mb-1">Signing Secret</label>
+                              {showSecret ? (
+                                <div className="space-y-2">
+                                  <div className="bg-green-50 border border-green-200 rounded p-2 flex items-center justify-between gap-2">
+                                    <code className="text-xs font-mono text-green-700 select-all break-all">{showSecret}</code>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(showSecret).catch(() => {})
+                                        alert('Copied to clipboard!')
+                                      }}
+                                      className="px-2 py-1 bg-green-600 text-white rounded text-[10px] font-semibold flex items-center gap-1 shrink-0 font-sans"
+                                    >
+                                      <Copy className="w-3 h-3" /> Copy
+                                    </button>
+                                  </div>
+                                  <p className="text-[10px] text-green-700 font-semibold font-sans">
+                                    Make sure to copy this secret now. It will not be shown again.
+                                  </p>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-between gap-2">
+                                  <code className="text-xs font-mono text-gray-700 select-all">{webhookData.webhook.secret}</code>
+                                  <button
+                                    type="button"
+                                    onClick={handleRegenerateSecret}
+                                    disabled={submitting}
+                                    className="text-[10px] text-gray-500 hover:text-st-black font-semibold flex items-center gap-1 transition-colors font-sans"
+                                  >
+                                    <RefreshCw className="w-3 h-3" /> Regenerate
+                                  </button>
+                                </div>
+                              )}
+                              <p className="text-[10px] text-st-gray mt-1 font-sans">
+                                Use this secret to verify the HMAC SHA-256 signature in the request headers.
+                              </p>
+                            </div>
+
+                            <div className="flex items-center justify-between gap-4 pt-2 border-t border-gray-200">
+                              <div className="flex items-center gap-2">
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                  <input
+                                    type="checkbox"
+                                    checked={active}
+                                    onChange={e => {
+                                      setActive(e.target.checked)
+                                      const isEdit = !!webhookData?.webhook?.id
+                                      const endpoint = `/webhooks/${webhookData.webhook.id}?site_key=${site.site_key}`
+                                      fetchApi(endpoint, {
+                                        method: 'PATCH',
+                                        body: JSON.stringify({ active: e.target.checked })
+                                      }).then(() => refetchWebhook()).catch(() => {})
+                                    }}
+                                    className="sr-only peer"
+                                  />
+                                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-st-black font-sans"></div>
+                                  <span className="ml-2 text-xs font-medium text-gray-700 font-sans">Webhook Enabled</span>
+                                </label>
+                              </div>
+                              <div>
+                                {webhookData.deliveries && webhookData.deliveries.length > 0 ? (
+                                  <div className="flex items-center gap-1 font-sans">
+                                    <span className="text-[10px] text-st-gray">Last Delivery:</span>
+                                    <StatusBadge
+                                      status={webhookData.deliveries[0].success ? 'verified' : 'error'}
+                                      label={webhookData.deliveries[0].success ? `Success (${webhookData.deliveries[0].status_code})` : `Failed (${webhookData.deliveries[0].status_code || 'Err'})`}
+                                    />
+                                  </div>
+                                ) : (
+                                  <span className="text-[10px] text-st-gray font-sans">No deliveries yet</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+                          <div className="flex items-center gap-2 font-sans">
+                            <button
+                              type="submit"
+                              disabled={submitting}
+                              className="px-4 py-2 bg-st-black text-white text-xs font-semibold rounded-lg hover:bg-st-black/90 disabled:opacity-50 transition-colors"
+                            >
+                              {submitting ? 'Saving...' : 'Save Configuration'}
+                            </button>
+
+                            {webhookData?.webhook && (
+                              <button
+                                type="button"
+                                onClick={handleTestWebhook}
+                                disabled={testing || submitting}
+                                className="px-4 py-2 bg-white text-gray-700 border border-gray-300 text-xs font-semibold rounded-lg hover:bg-gray-50 flex items-center gap-1.5 disabled:opacity-50 transition-colors"
+                              >
+                                <Play className="w-3 h-3" /> {testing ? 'Testing...' : 'Test Webhook'}
+                              </button>
+                            )}
+                          </div>
+
+                          {webhookData?.webhook && (
+                            <button
+                              type="button"
+                              onClick={handleDeleteWebhook}
+                              disabled={submitting}
+                              className="text-xs text-red-655 hover:text-red-850 font-semibold flex items-center gap-1 transition-colors font-sans"
+                            >
+                              <Trash className="w-3.5 h-3.5" /> Delete
+                            </button>
+                          )}
+                        </div>
+                      </form>
+
+                      {testResult && (
+                        <div className={`p-3 text-xs rounded-lg border font-sans ${testResult.success ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-800 border-red-200'}`}>
+                          <p className="font-semibold">{testResult.success ? 'Test Delivery Succeeded' : 'Test Delivery Failed'}</p>
+                          <p className="mt-1 font-sans">
+                            {testResult.success
+                              ? `Webhook responded with status code ${testResult.status_code}.`
+                              : `Error: ${testResult.error_message || 'HTTP error ' + testResult.status_code}`
+                            }
+                          </p>
+                        </div>
                       )}
+
+                      {webhookData?.webhook && webhookData.deliveries && webhookData.deliveries.length > 0 && (
+                        <div className="pt-4 border-t border-gray-100">
+                          <p className="text-xs font-semibold text-st-gray uppercase tracking-wider mb-2">Recent Deliveries</p>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-[11px] text-left border-collapse">
+                              <thead>
+                                <tr className="border-b border-gray-100 text-st-gray">
+                                  <th className="pb-1.5 font-medium font-sans">Event Type</th>
+                                  <th className="pb-1.5 font-medium font-sans">Status</th>
+                                  <th className="pb-1.5 font-medium font-sans">Time</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {webhookData.deliveries.map(del => (
+                                  <tr key={del.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
+                                    <td className="py-1.5 font-mono text-gray-750">{del.event_type}</td>
+                                    <td className="py-1.5">
+                                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${del.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                                        {del.status_code || 'Error'}
+                                      </span>
+                                    </td>
+                                    <td className="py-1.5 text-gray-500 font-sans">
+                                      {new Date(del.created_at).toLocaleString()}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="pt-2 flex justify-end">
+                        <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline font-semibold font-sans">
+                          Read Webhook Docs →
+                        </a>
+                      </div>
                     </div>
+                  </CollapsibleRow>
 
-                    {webhookData?.webhook && (
-                      <button
-                        type="button"
-                        onClick={handleDeleteWebhook}
-                        disabled={submitting}
-                        className="text-xs text-red-655 hover:text-red-800 font-semibold flex items-center gap-1 transition-colors font-sans"
-                      >
-                        <Trash className="w-3.5 h-3.5" /> Delete
-                      </button>
-                    )}
-                  </div>
-                </form>
-
-                {testResult && (
-                  <div className={`p-3 text-xs rounded-lg border font-sans ${testResult.success ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-800 border-red-200'}`}>
-                    <p className="font-semibold">{testResult.success ? 'Test Delivery Succeeded' : 'Test Delivery Failed'}</p>
-                    <p className="mt-1 font-sans">
-                      {testResult.success
-                        ? `Webhook responded with status code ${testResult.status_code}.`
-                        : `Error: ${testResult.error_message || 'HTTP error ' + testResult.status_code}`
-                      }
-                    </p>
-                  </div>
-                )}
-
-                {webhookData?.webhook && webhookData.deliveries && webhookData.deliveries.length > 0 && (
-                  <div className="pt-4 border-t border-gray-100">
-                    <p className="text-xs font-semibold text-st-gray uppercase tracking-wider mb-2">Recent Deliveries</p>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-[11px] text-left border-collapse">
-                        <thead>
-                          <tr className="border-b border-gray-100 text-st-gray">
-                            <th className="pb-1.5 font-medium font-sans">Event Type</th>
-                            <th className="pb-1.5 font-medium font-sans">Status</th>
-                            <th className="pb-1.5 font-medium font-sans">Time</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {webhookData.deliveries.map(del => (
-                            <tr key={del.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
-                              <td className="py-1.5 font-mono text-gray-750">{del.event_type}</td>
-                              <td className="py-1.5">
-                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${del.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                                  {del.status_code || 'Error'}
-                                </span>
-                              </td>
-                              <td className="py-1.5 text-gray-500 font-sans">
-                                {new Date(del.created_at).toLocaleString()}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                <div className="pt-2 flex justify-end">
-                  <Link to="/docs#webhooks" className="text-xs text-blue-750 hover:underline font-semibold font-sans">
-                    Read Webhook Docs →
-                  </Link>
-                </div>
-              </div>
-            </CollapsibleRow>
-
-            <CollapsibleRow
-              icon={Code}
-              title="Conversion Source Map"
-              subtitle="Frontend JavaScript methods for manually firing custom client-side conversions"
-              status="verified"
-              badgeLabel="Ready"
-              isExpanded={activeSection === 'developer.source_map'}
-              onToggle={() => setActiveSection(activeSection === 'developer.source_map' ? 'developer' : 'developer.source_map')}
-            >
-              <div className="space-y-4">
-                <div className="text-xs text-st-gray leading-relaxed space-y-2">
-                  <p>
-                    If you cannot trigger conversions from a backend server or webhook, you can trigger conversions directly in the browser using the standard client-side JavaScript object.
-                  </p>
-                  <p>
-                    Ensure the main tracking script is loaded on the page before executing this method.
-                  </p>
-                </div>
-                <div className="bg-st-black rounded-lg p-3">
-                  <pre className="text-xs text-green-400 overflow-x-auto whitespace-pre-wrap leading-relaxed select-all font-mono">
+                  <CollapsibleRow
+                    icon={Code}
+                    title="Conversion Source Map"
+                    subtitle="Frontend JavaScript methods for manually firing custom client-side conversions"
+                    status="verified"
+                    badgeLabel="Ready"
+                    isExpanded={activeSection === 'developer.source_map'}
+                    onToggle={() => setActiveSection(activeSection === 'developer.source_map' ? 'developer' : 'developer.source_map')}
+                    actionButton={
+                      <div className="flex items-center gap-2">
+                        <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
+                          Docs
+                        </a>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveSection(activeSection === 'developer.source_map' ? 'developer' : 'developer.source_map');
+                          }}
+                          className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-150 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors"
+                        >
+                          {activeSection === 'developer.source_map' ? 'Close' : 'Setup'}
+                        </button>
+                      </div>
+                    }
+                  >
+                    <div className="space-y-4">
+                      <div className="text-xs text-st-gray leading-relaxed space-y-2">
+                        <p>
+                          If you cannot trigger conversions from a backend server or webhook, you can trigger conversions directly in the browser using the standard client-side JavaScript object.
+                        </p>
+                        <p>
+                          Ensure the main tracking script is loaded on the page before executing this method.
+                        </p>
+                      </div>
+                      <div className="bg-st-black rounded-lg p-3">
+                        <pre className="text-xs text-green-400 overflow-x-auto whitespace-pre-wrap leading-relaxed select-all font-mono">
 {`window.st('track', 'conversion', {
   value: 99.00,
   currency: 'USD',
   order_id: 'ORD_12345',
   email: 'customer@example.com' // Optional for advanced mapping
 });`}
-                  </pre>
+                        </pre>
+                      </div>
+                    </div>
+                  </CollapsibleRow>
                 </div>
               </div>
-            </CollapsibleRow>
+            )}
           </div>
         </DashboardCard>
-      )}
+      </div>
 
       {/* Clean Integrations Footer */}
       <div className="text-center mt-8 pb-12">
@@ -2306,4 +2494,5 @@ export default function Integrations() {
       </div>
     </div>
   )
+}
 }
