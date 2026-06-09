@@ -121,7 +121,7 @@ export default function SEORevenue() {
             </div>
           </div>
           <Link
-            to="/integrations"
+            to="/app/integrations"
             className="px-3.5 py-1.5 bg-st-lime text-black font-semibold rounded-lg text-xs hover:bg-st-lime/90 transition-colors shrink-0 text-center"
           >
             Connect Integration
@@ -140,7 +140,7 @@ export default function SEORevenue() {
               </div>
             </div>
             <Link
-              to="/integrations"
+              to="/app/integrations"
               className="px-3.5 py-1.5 bg-st-lime text-black font-semibold rounded-lg text-xs hover:bg-st-lime/90 transition-colors shrink-0 text-center"
             >
               Select Property

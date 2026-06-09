@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom'
 import MarketingPage from '../components/MarketingPage'
-import DashboardPreviewMock from '../components/DashboardPreviewMock'
 import FeatureCards from '../components/FeatureCards'
 import HowItWorksSteps from '../components/HowItWorksSteps'
 import SectionKicker from '../components/SectionKicker'
+import HeroPreviewCard from '../components/HeroPreviewCard'
 
 const SEO = {
   title: 'Marketing Attribution Software — Track Which Sources Create Revenue | SourceTrack',
@@ -18,15 +18,15 @@ const HERO = {
   sub: 'Track the complete path from first click to paying customer. Compare channels across 8 attribution models, prove the real ROI of your campaigns, and stop relying on biased ad-platform self-reporting.',
   primaryCta: 'Start tracking free',
   secondaryCta: 'Compare with GA4',
-  secondaryHref: '/compare-ga4',
+  secondaryHref: '/compare/ga4',
 }
 
 export default function Attribution() {
   return (
-    <MarketingPage seo={SEO} hero={HERO} heroChildren={<DashboardPreviewMock />}>
+    <MarketingPage seo={SEO} hero={HERO} heroChildren={<HeroPreviewCard />}>
 
       {/* Attribution problems */}
-      <section className="py-[96px]" style={{ background: '#F7FAFA' }}>
+      <section className="py-[96px] bg-[#F7FAFA]">
         <div className="max-w-[1320px] mx-auto px-8">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-7 mb-[54px]">
             <div>
@@ -48,6 +48,51 @@ export default function Attribution() {
         </div>
       </section>
 
+      {/* Neutral Positioning Notice Callout */}
+      <section className="py-12 bg-white">
+        <div className="max-w-[960px] mx-auto px-8 text-center">
+          <div className="p-8 rounded-3xl bg-[#F7FAFA] border border-[rgba(31,35,35,.08)]">
+            <span className="block text-2xl mb-3">🛡️</span>
+            <p className="text-[#1F2323] text-lg font-bold leading-relaxed max-w-[720px] mx-auto">
+              “SourceTrack gives you an independent attribution view from your own visitor and conversion data, not only ad-platform self-reporting.”
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Attribution Models Section */}
+      <section className="py-[96px] bg-white">
+        <div className="max-w-[1320px] mx-auto px-8">
+          <div className="text-center mb-[54px]">
+            <SectionKicker label="Models & Signals" />
+            <h2 className="text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black text-st-black">
+              Attribution models available in SourceTrack
+            </h2>
+            <p className="mt-4 max-w-[620px] mx-auto text-[#586464] text-lg leading-[1.55]">
+              Compare acquisition touchpoints across standard modeling rules.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { name: 'First Touch', desc: 'Attributes 100% of the conversion value to the very first touchpoint in the visitor history stream.' },
+              { name: 'Last Touch', desc: 'Attributes 100% of the conversion value to the last active touchpoint before the conversion occurred.' },
+              { name: 'Linear', desc: 'Distributes conversion credit equally across all touchpoints identified in the visitor timeline.' },
+              { name: 'U-Shaped', desc: 'Assigns 40% of credit to the first touch, 40% to the last touch, and splits 20% among intermediate page views.' },
+              { name: 'UTM Parameters', desc: 'Stitches utm_source, utm_medium, utm_campaign, utm_content, and utm_term campaign tags.' },
+              { name: 'Click ID Tracking', desc: 'Captures and stores click identifiers like GCLID, FBCLID, and MSCLKID directly from conversion parameters.' },
+              { name: 'Referring Domains', desc: 'Extracts domain referrers from document.referrer directly to classify organic, search, and social platforms.' },
+              { name: 'AI Search Capture', desc: 'Resolves referrals from Claude, Perplexity, and ChatGPT automatically instead of marking them as direct traffic.' },
+            ].map((m, i) => (
+              <div key={i} className="p-5 rounded-2xl bg-[#F7FAFA] border border-[rgba(31,35,35,.06)]">
+                <strong className="text-[#1F2323] text-base tracking-tight block mb-2">{m.name}</strong>
+                <p className="text-[#586464] text-sm leading-relaxed">{m.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Attribution data captured */}
       <section className="py-[96px] bg-st-black text-white">
         <div className="max-w-[1320px] mx-auto px-8 text-center">
@@ -65,24 +110,6 @@ export default function Attribution() {
               { title: 'Referrers and AI traffic', body: '15 AI platforms detected — ChatGPT, Claude, Gemini, Perplexity, and more. No more AI traffic in direct.' },
               { title: 'Landing page paths', body: 'See which entry pages create leads and which assist the journey toward conversion.' },
               { title: 'Conversion events', body: 'Attribute purchases, trials, demos, forms, and custom events — not just pageviews.' },
-            ]} />
-          </div>
-        </div>
-      </section>
-
-      {/* Use cases */}
-      <section className="py-[96px] bg-white">
-        <div className="max-w-[1320px] mx-auto px-8 text-center">
-          <SectionKicker label="Attribution use cases" />
-          <h2 className="mt-5 text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black text-st-black">
-            Answer the attribution questions teams ask every week.
-          </h2>
-
-          <div className="mt-[54px]">
-            <FeatureCards compact items={[
-              { icon: '①', title: 'Which campaigns deserve more spend?', body: 'Compare channels, campaigns, and landing pages by attributed revenue — not by last-click conversions or platform-reported metrics.' },
-              { icon: '②', title: 'Which pages create qualified leads?', body: 'Attribute every form, demo, and trial back to the landing page and source that first brought the visitor.' },
-              { icon: '③', title: 'Is AI search creating pipeline?', body: 'Track ChatGPT, Claude, Gemini, and Perplexity traffic. See conversion rates and revenue from each AI platform.' },
             ]} />
           </div>
         </div>

@@ -72,7 +72,9 @@ export const demoData = {
         revenue: '$120.00',
         status: 'Attributed (Linear Model)',
         stitchingMethod: 'st_aid (Cookie Stitching)',
-        conversionType: 'Stripe Checkout'
+        conversionType: 'Stripe Checkout',
+        explanation: 'Attributed to ChatGPT under the Linear model. The user first discovered the product via ChatGPT, researched the pricing page, and upgraded via Stripe.',
+        recommendedTemplate: 'AI referral revenue by landing page'
       },
       'Google Organic': {
         sourceName: 'Google Organic',
@@ -82,7 +84,9 @@ export const demoData = {
         revenue: '$49.00',
         status: 'Attributed (Last Touch)',
         stitchingMethod: 'cookie',
-        conversionType: 'Trial Signup'
+        conversionType: 'Trial Signup',
+        explanation: 'Attributed to Google Organic. The visitor arrived via a standard search engine query, browsed features, and signed up for a trial account.',
+        recommendedTemplate: 'First-touch signup campaigns'
       },
       'Google Ads': {
         sourceName: 'Google Ads',
@@ -92,7 +96,9 @@ export const demoData = {
         revenue: '$250.00',
         status: 'Attributed (Click ID)',
         stitchingMethod: 'gclid (Google Click ID)',
-        conversionType: 'Stripe Checkout'
+        conversionType: 'Stripe Checkout',
+        explanation: 'Attributed to Google Ads click ID. The click was mapped back to the active campaign using GCLID parameters on landing page entry.',
+        recommendedTemplate: 'Paid search ROI & attributed conversions'
       },
       'Direct': {
         sourceName: 'Direct',
@@ -102,7 +108,9 @@ export const demoData = {
         revenue: '$120.00',
         status: 'Attributed (First Touch)',
         stitchingMethod: 'cookie',
-        conversionType: 'Stripe Checkout'
+        conversionType: 'Stripe Checkout',
+        explanation: 'Attributed to Direct traffic. The visitor manually keyed in the website domain, browsed plans, and converted.',
+        recommendedTemplate: 'First-touch signup campaigns'
       },
       'Partner': {
         sourceName: 'Partner',
@@ -112,7 +120,9 @@ export const demoData = {
         revenue: '$99.00',
         status: 'Attributed (Affiliate)',
         stitchingMethod: 'ref_param',
-        conversionType: 'Stripe Checkout'
+        conversionType: 'Stripe Checkout',
+        explanation: 'Attributed to Partner. Captured via referral links and tracked through the custom affiliate parameter mappings.',
+        recommendedTemplate: 'Stripe webhook/API revenue by campaign'
       },
       'Claude': {
         sourceName: 'Claude',
@@ -122,7 +132,9 @@ export const demoData = {
         revenue: '$0.00',
         status: 'Attributed (Last Touch)',
         stitchingMethod: 'st_aid (Cookie Stitching)',
-        conversionType: 'Trial Signup'
+        conversionType: 'Trial Signup',
+        explanation: 'Attributed to Claude AI search. The conversion was initiated via an anthropic.com referring domain recommendation.',
+        recommendedTemplate: 'AI referral revenue by landing page'
       },
       'Gemini': {
         sourceName: 'Gemini',
@@ -132,7 +144,9 @@ export const demoData = {
         revenue: '$0.00',
         status: 'Attributed (First Touch)',
         stitchingMethod: 'st_aid (Cookie Stitching)',
-        conversionType: 'Trial Signup'
+        conversionType: 'Trial Signup',
+        explanation: 'Attributed to Gemini AI. Visitor clicked a referral link on google.com AI-powered search results and signed up.',
+        recommendedTemplate: 'AI referral revenue by landing page'
       },
       'Perplexity': {
         sourceName: 'Perplexity',
@@ -142,7 +156,9 @@ export const demoData = {
         revenue: '$120.00',
         status: 'Attributed (Linear)',
         stitchingMethod: 'st_aid (Cookie Stitching)',
-        conversionType: 'Stripe Checkout'
+        conversionType: 'Stripe Checkout',
+        explanation: 'Attributed to Perplexity. Visitor researched attribution tooling inside Perplexity and navigated directly to our pricing table.',
+        recommendedTemplate: 'AI referral revenue by landing page'
       },
       '/pricing': {
         sourceName: '/pricing',
@@ -152,7 +168,9 @@ export const demoData = {
         revenue: '$120.00',
         status: 'Attributed',
         stitchingMethod: 'cookie',
-        conversionType: 'Stripe Checkout'
+        conversionType: 'Stripe Checkout',
+        explanation: 'Attributed to pricing landing page. The visitor completed their purchase after landing on the product pricing table.',
+        recommendedTemplate: 'First-touch signup campaigns'
       },
       '/blog/attribution-guide': {
         sourceName: '/blog/attribution-guide',
@@ -162,7 +180,9 @@ export const demoData = {
         revenue: '$120.00',
         status: 'Attributed',
         stitchingMethod: 'cookie',
-        conversionType: 'Stripe Checkout'
+        conversionType: 'Stripe Checkout',
+        explanation: 'Attributed to organic blog entry. The buyer landed on the attribution guide from search and subsequently upgraded.',
+        recommendedTemplate: 'First-touch signup campaigns'
       },
       '/features': {
         sourceName: '/features',
@@ -172,7 +192,9 @@ export const demoData = {
         revenue: '$120.00',
         status: 'Attributed',
         stitchingMethod: 'cookie',
-        conversionType: 'Stripe Checkout'
+        conversionType: 'Stripe Checkout',
+        explanation: 'Attributed to features page views. Captured via social posts and matched to the pricing checkout funnel.',
+        recommendedTemplate: 'First-touch signup campaigns'
       },
       '/docs': {
         sourceName: '/docs',
@@ -182,7 +204,9 @@ export const demoData = {
         revenue: '$0.00',
         status: 'Attributed',
         stitchingMethod: 'st_aid (Cookie Stitching)',
-        conversionType: 'Trial Signup'
+        conversionType: 'Trial Signup',
+        explanation: 'Attributed to documentation page read. The visitor was directed to our developer docs from a chatbot recommendations list.',
+        recommendedTemplate: 'AI referral revenue by landing page'
       }
     }
   },
@@ -259,7 +283,9 @@ export const demoData = {
         revenue: '$148.00',
         status: 'Attributed (Last Touch)',
         stitchingMethod: 'fbclid (Meta Click ID)',
-        conversionType: 'Store Purchase'
+        conversionType: 'Store Purchase',
+        explanation: 'Attributed to Meta Ads. Handled via the fbclid url parameter and matched to the cart update webhook.',
+        recommendedTemplate: 'Shopify webhook revenue by source'
       },
       'Google Shopping': {
         sourceName: 'Google Shopping',
@@ -269,7 +295,9 @@ export const demoData = {
         revenue: '$89.00',
         status: 'Attributed (First Touch)',
         stitchingMethod: 'gclid (Google Click ID)',
-        conversionType: 'Store Purchase'
+        conversionType: 'Store Purchase',
+        explanation: 'Attributed to Google Shopping click ID. Mapped using GCLID parameters to attribute the cart order value.',
+        recommendedTemplate: 'Imported cost vs attributed revenue'
       },
       'TikTok': {
         sourceName: 'TikTok',
@@ -279,7 +307,9 @@ export const demoData = {
         revenue: '$110.00',
         status: 'Attributed (Linear Model)',
         stitchingMethod: 'ttclid (TikTok Click ID)',
-        conversionType: 'Store Purchase'
+        conversionType: 'Store Purchase',
+        explanation: 'Attributed to TikTok. Visitor was directed from social referral link and ordered within their attribution history window.',
+        recommendedTemplate: 'Shopify webhook revenue by source'
       },
       'ChatGPT': {
         sourceName: 'ChatGPT',
@@ -289,7 +319,9 @@ export const demoData = {
         revenue: '$95.00',
         status: 'Attributed (Linear)',
         stitchingMethod: 'st_aid (Cookie Stitching)',
-        conversionType: 'Store Purchase'
+        conversionType: 'Store Purchase',
+        explanation: 'Attributed to ChatGPT. Stitched via first-touch AI domain matching with orders mapped through Shopify cart attributes.',
+        recommendedTemplate: 'Shopify webhook revenue by source'
       },
       'Email': {
         sourceName: 'Email',
@@ -299,7 +331,9 @@ export const demoData = {
         revenue: '$165.00',
         status: 'Attributed (UTM Campaign)',
         stitchingMethod: 'utm_source',
-        conversionType: 'Store Purchase'
+        conversionType: 'Store Purchase',
+        explanation: 'Attributed to Email campaign. Klaviyo newsletter link passed UTM attributes mapping the purchase to the newsletter.',
+        recommendedTemplate: 'Shopify webhook revenue by source'
       },
       'Perplexity': {
         sourceName: 'Perplexity',
@@ -309,7 +343,9 @@ export const demoData = {
         revenue: '$85.00',
         status: 'Attributed',
         stitchingMethod: 'st_aid (Cookie Stitching)',
-        conversionType: 'Store Purchase'
+        conversionType: 'Store Purchase',
+        explanation: 'Attributed to Perplexity. Visitor discovered sneakers on Perplexity search and purchased via Shopify checkout.',
+        recommendedTemplate: 'Shopify webhook revenue by source'
       },
       'Claude': {
         sourceName: 'Claude',
@@ -319,7 +355,9 @@ export const demoData = {
         revenue: '$120.00',
         status: 'Attributed',
         stitchingMethod: 'st_aid (Cookie Stitching)',
-        conversionType: 'Store Purchase'
+        conversionType: 'Store Purchase',
+        explanation: 'Attributed to Claude AI. Referring domain logs verified the purchase originated from a Claude recommendation thread.',
+        recommendedTemplate: 'Shopify webhook revenue by source'
       },
       'Gemini': {
         sourceName: 'Gemini',
@@ -329,7 +367,9 @@ export const demoData = {
         revenue: '$75.00',
         status: 'Attributed',
         stitchingMethod: 'st_aid (Cookie Stitching)',
-        conversionType: 'Store Purchase'
+        conversionType: 'Store Purchase',
+        explanation: 'Attributed to Gemini search. Conversion traced to organic chatbot referral path.',
+        recommendedTemplate: 'Shopify webhook revenue by source'
       },
       '/products/leather-jacket': {
         sourceName: '/products/leather-jacket',
@@ -339,7 +379,9 @@ export const demoData = {
         revenue: '$189.00',
         status: 'Attributed',
         stitchingMethod: 'fbclid',
-        conversionType: 'Store Purchase'
+        conversionType: 'Store Purchase',
+        explanation: 'Attributed to leather jacket page views. Campaign traffic drove direct interest in this inventory item.',
+        recommendedTemplate: 'Shopify webhook revenue by source'
       },
       '/products/classic-sneakers': {
         sourceName: '/products/classic-sneakers',
@@ -349,7 +391,9 @@ export const demoData = {
         revenue: '$110.00',
         status: 'Attributed',
         stitchingMethod: 'gclid',
-        conversionType: 'Store Purchase'
+        conversionType: 'Store Purchase',
+        explanation: 'Attributed to sneakers product page views. Paid shopping listings drove targeted high-intent traffic.',
+        recommendedTemplate: 'Shopify webhook revenue by source'
       },
       '/cart': {
         sourceName: '/cart',
@@ -359,7 +403,9 @@ export const demoData = {
         revenue: '$85.00',
         status: 'Attributed',
         stitchingMethod: 'cookie',
-        conversionType: 'Store Purchase'
+        conversionType: 'Store Purchase',
+        explanation: 'Attributed to direct cart additions. Visitor went straight to checkout using standard session tracking.',
+        recommendedTemplate: 'Shopify webhook revenue by source'
       },
       '/reviews': {
         sourceName: '/reviews',
@@ -369,7 +415,9 @@ export const demoData = {
         revenue: '$95.00',
         status: 'Attributed',
         stitchingMethod: 'ttclid',
-        conversionType: 'Store Purchase'
+        conversionType: 'Store Purchase',
+        explanation: 'Attributed to reviews page visits. TikTok referral traffic visited reviews before completing purchase.',
+        recommendedTemplate: 'Shopify webhook revenue by source'
       }
     }
   },
@@ -446,7 +494,9 @@ export const demoData = {
         revenue: '$450.00',
         status: 'Attributed (First Touch)',
         stitchingMethod: 'gclid (Google Click ID)',
-        conversionType: 'Lead Callback'
+        conversionType: 'Lead Callback',
+        explanation: 'Attributed to Google Ads. Leads are synced via GCLID mappings on demo page submissions.',
+        recommendedTemplate: 'Stripe webhook/API revenue by campaign'
       },
       'LinkedIn': {
         sourceName: 'LinkedIn',
@@ -456,7 +506,9 @@ export const demoData = {
         revenue: '$750.00',
         status: 'Attributed (W-Shaped Model)',
         stitchingMethod: 'cookie (Direct Stitch)',
-        conversionType: 'Booked Meeting'
+        conversionType: 'Booked Meeting',
+        explanation: 'Attributed to LinkedIn. Multi-touch cookie tracking attributes opportunity milestones across their visit history.',
+        recommendedTemplate: 'Stripe webhook/API revenue by campaign'
       },
       'ChatGPT': {
         sourceName: 'ChatGPT',
@@ -466,7 +518,9 @@ export const demoData = {
         revenue: '$250.00',
         status: 'Attributed (Linear)',
         stitchingMethod: 'st_aid (Cookie Stitching)',
-        conversionType: 'Contact Form'
+        conversionType: 'Contact Form',
+        explanation: 'Attributed to ChatGPT. Traced to first-touch AI reference with client side identifiers stitched upon form submit.',
+        recommendedTemplate: 'AI referral revenue by landing page'
       },
       'Referral': {
         sourceName: 'Referral',
@@ -476,7 +530,9 @@ export const demoData = {
         revenue: '$350.00',
         status: 'Attributed (Last Touch)',
         stitchingMethod: 'cookie',
-        conversionType: 'Contact Form'
+        conversionType: 'Contact Form',
+        explanation: 'Attributed to Partner Referral. Last-touch credit assigned to partner blog referring path.',
+        recommendedTemplate: 'Stripe webhook/API revenue by campaign'
       },
       'Direct': {
         sourceName: 'Direct',
@@ -486,7 +542,9 @@ export const demoData = {
         revenue: '$200.00',
         status: 'Attributed',
         stitchingMethod: 'cookie',
-        conversionType: 'Contact Form'
+        conversionType: 'Contact Form',
+        explanation: 'Attributed to Direct entry. The visitor filled out their contact info directly from our team page.',
+        recommendedTemplate: 'First-touch signup campaigns'
       },
       'Claude': {
         sourceName: 'Claude',
@@ -496,7 +554,9 @@ export const demoData = {
         revenue: '$250.00',
         status: 'Attributed',
         stitchingMethod: 'st_aid (Cookie Stitching)',
-        conversionType: 'Booked Meeting'
+        conversionType: 'Booked Meeting',
+        explanation: 'Attributed to Claude AI. Traced to a recommendation link referring from claude.ai.',
+        recommendedTemplate: 'AI referral revenue by landing page'
       },
       'Gemini': {
         sourceName: 'Gemini',
@@ -506,7 +566,9 @@ export const demoData = {
         revenue: '$250.00',
         status: 'Attributed',
         stitchingMethod: 'st_aid (Cookie Stitching)',
-        conversionType: 'Booked Meeting'
+        conversionType: 'Booked Meeting',
+        explanation: 'Attributed to Gemini AI. Visitor clicked referral link on google.com AI-powered search results.',
+        recommendedTemplate: 'AI referral revenue by landing page'
       },
       'Perplexity': {
         sourceName: 'Perplexity',
@@ -516,7 +578,9 @@ export const demoData = {
         revenue: '$200.00',
         status: 'Attributed',
         stitchingMethod: 'st_aid (Cookie Stitching)',
-        conversionType: 'Contact Form'
+        conversionType: 'Contact Form',
+        explanation: 'Attributed to Perplexity. Visitor discovered reviews on Perplexity search and completed contact forms.',
+        recommendedTemplate: 'AI referral revenue by landing page'
       },
       '/landing-page-roi': {
         sourceName: '/landing-page-roi',
@@ -526,7 +590,9 @@ export const demoData = {
         revenue: '$450.00',
         status: 'Attributed',
         stitchingMethod: 'gclid',
-        conversionType: 'Booked Meeting'
+        conversionType: 'Booked Meeting',
+        explanation: 'Attributed to the ROI landing page. Targeted paid traffic clicked through and requested meetings.',
+        recommendedTemplate: 'Stripe webhook/API revenue by campaign'
       },
       '/case-study-saas': {
         sourceName: '/case-study-saas',
@@ -536,7 +602,9 @@ export const demoData = {
         revenue: '$750.00',
         status: 'Attributed',
         stitchingMethod: 'cookie',
-        conversionType: 'Booked Meeting'
+        conversionType: 'Booked Meeting',
+        explanation: 'Attributed to Case Study page. Social updates sent high-value readers who converted.',
+        recommendedTemplate: 'Stripe webhook/API revenue by campaign'
       },
       '/book-a-call': {
         sourceName: '/book-a-call',
@@ -546,7 +614,9 @@ export const demoData = {
         revenue: '$250.00',
         status: 'Attributed',
         stitchingMethod: 'cookie',
-        conversionType: 'Booked Meeting'
+        conversionType: 'Booked Meeting',
+        explanation: 'Attributed to book a call page view. Visitor navigated directly to request callback.',
+        recommendedTemplate: 'Stripe webhook/API revenue by campaign'
       },
       '/resources/whitepaper': {
         sourceName: '/resources/whitepaper',
@@ -556,7 +626,206 @@ export const demoData = {
         revenue: '$150.00',
         status: 'Attributed',
         stitchingMethod: 'cookie',
-        conversionType: 'Form Submit'
+        conversionType: 'Form Submit',
+        explanation: 'Attributed to Whitepaper download. Visitor completed lead forms after clicking a partner link.',
+        recommendedTemplate: 'Stripe webhook/API revenue by campaign'
+      }
+    }
+  },
+  Agency: {
+    label: "Agency",
+    revenueLabel: "Attributed Revenue",
+    conversionsLabel: "Conversions",
+    aiRevenueLabel: "AI Revenue",
+    metrics: [
+      { id: 'visitors', label: 'Visitors', value: '24,840', trend: 'Last 30 days' },
+      { id: 'revenue', label: 'Attributed Revenue', value: '$142,500', trend: '↗ +19.6% attribution' },
+      { id: 'conversions', label: 'Conversions', value: '1,280', trend: '5.15% conv. rate' },
+      { id: 'revPerVisitor', label: 'Client Sites', value: '12', trend: 'Active workspaces' },
+      { id: 'live', label: 'Live Visitors', value: '38', trend: 'Real-time tracking', isLive: true },
+      { id: 'aiRevenue', label: 'AI Revenue', value: '$28,400', trend: 'ChatGPT, Perplexity, etc.' },
+    ],
+    chartData: [
+      { date: 'May 10', visitors: 610, revenue: 3800 },
+      { date: 'May 13', visitors: 650, revenue: 4900 },
+      { date: 'May 16', visitors: 625, revenue: 4200 },
+      { date: 'May 19', visitors: 750, revenue: 6100 },
+      { date: 'May 22', visitors: 740, revenue: 5300 },
+      { date: 'May 25', visitors: 875, revenue: 7200 },
+      { date: 'May 28', visitors: 990, revenue: 8100 },
+      { date: 'May 31', visitors: 1050, revenue: 9400 },
+      { date: 'Jun 03', visitors: 950, revenue: 8800 },
+      { date: 'Jun 06', visitors: 1150, revenue: 10200 },
+      { date: 'Jun 09', visitors: 1300, revenue: 11200 }
+    ],
+    tables: {
+      sources: [
+        { name: 'Client A', visitors: '6,240', conversions: 310, rate: '4.9%', revenue: '$38,400' },
+        { name: 'Client B', visitors: '5,140', conversions: 242, rate: '4.7%', revenue: '$32,800' },
+        { name: 'Client C', visitors: '4,150', conversions: 188, rate: '4.5%', revenue: '$25,820' },
+        { name: 'Google Ads', visitors: '3,920', conversions: 142, rate: '3.6%', revenue: '$22,140' },
+        { name: 'Meta Ads', visitors: '2,580', conversions: 98, rate: '3.8%', revenue: '$14,710' },
+      ],
+      ai: [
+        { name: 'ChatGPT', visitors: '4,640', conversions: 158, rate: '3.4%', revenue: '$18,400' },
+        { name: 'Perplexity', visitors: '1,610', conversions: 58, rate: '3.6%', revenue: '$6,400' },
+        { name: 'Claude', visitors: '1,520', conversions: 38, rate: '2.5%', revenue: '$3,600' },
+      ],
+      pages: [
+        { name: '/client-a/landing', visitors: '3,840', conversions: 98, rate: '2.6%', revenue: '$13,426' },
+        { name: '/client-b/pricing', visitors: '2,920', conversions: 78, rate: '2.7%', revenue: '$10,686' },
+        { name: '/client-c/features', visitors: '2,400', conversions: 122, rate: '5.1%', revenue: '$16,714' },
+      ],
+      country: [
+        { name: 'United States', visitors: '12,420', conversions: 610, rate: '4.9%', revenue: '$72,800' },
+        { name: 'United Kingdom', visitors: '4,100', conversions: 198, rate: '4.8%', revenue: '$23,100' },
+        { name: 'Canada', visitors: '3,200', conversions: 148, rate: '4.6%', revenue: '$18,400' },
+        { name: 'Australia', visitors: '2,120', conversions: 98, rate: '4.6%', revenue: '$11,500' },
+      ],
+      browser: [
+        { name: 'Chrome', visitors: '14,840', conversions: 710, rate: '4.7%', revenue: '$81,000' },
+        { name: 'Safari', visitors: '6,250', conversions: 298, rate: '4.7%', revenue: '$34,400' },
+        { name: 'Firefox', visitors: '2,150', conversions: 118, rate: '5.4%', revenue: '$13,800' },
+        { name: 'Edge', visitors: '1,600', conversions: 72, rate: '4.5%', revenue: '$8,220' },
+      ],
+      device: [
+        { name: 'Desktop', visitors: '16,340', conversions: 888, rate: '5.4%', revenue: '$102,800' },
+        { name: 'Mobile', visitors: '7,180', conversions: 340, rate: '4.7%', revenue: '$34,000' },
+        { name: 'Tablet', visitors: '1,320', conversions: 52, rate: '3.9%', revenue: '$5,700' },
+      ]
+    },
+    journeys: {
+      'Client A': {
+        sourceName: 'Client A',
+        steps: ['Client A Referral', 'Client A Site', 'Purchase Complete'],
+        firstTouch: 'Client A Campaign',
+        lastTouch: 'Direct',
+        revenue: '$250.00',
+        status: 'Attributed',
+        stitchingMethod: 'cookie',
+        conversionType: 'Store Purchase',
+        explanation: 'Attributed to Client A tracking campaign. First-party tracking parameters stitched conversion metrics seamlessly.',
+        recommendedTemplate: 'Multi-site client summary'
+      },
+      'Client B': {
+        sourceName: 'Client B',
+        steps: ['Client B Newsletter', 'Client B Shop', 'Purchase Complete'],
+        firstTouch: 'Client B Campaign',
+        lastTouch: 'Client B Campaign',
+        revenue: '$180.00',
+        status: 'Attributed',
+        stitchingMethod: 'cookie',
+        conversionType: 'Store Purchase',
+        explanation: 'Attributed to Client B campaign newsletter. The conversion pipeline tracked first-touch context and stitched order parameters.',
+        recommendedTemplate: 'Multi-site client summary'
+      },
+      'Client C': {
+        sourceName: 'Client C',
+        steps: ['Client C Search', 'Client C Page', 'Conversion Complete'],
+        firstTouch: 'Client C Referral',
+        lastTouch: 'Direct',
+        revenue: '$320.00',
+        status: 'Attributed',
+        stitchingMethod: 'cookie',
+        conversionType: 'Store Purchase',
+        explanation: 'Attributed to Client C referring search domain. Cookie stitching matched conversion profiles automatically.',
+        recommendedTemplate: 'Multi-site client summary'
+      },
+      'Google Ads': {
+        sourceName: 'Google Ads',
+        steps: ['Google Search', 'Client Landing Page', 'Order Upgrade'],
+        firstTouch: 'Google Ads (Paid Search)',
+        lastTouch: 'Google Ads',
+        revenue: '$450.00',
+        status: 'Attributed (Click ID)',
+        stitchingMethod: 'gclid (Google Click ID)',
+        conversionType: 'Stripe Checkout',
+        explanation: 'Attributed to Google Ads click ID. Captured campaign details using GCLID identifiers at transaction time.',
+        recommendedTemplate: 'Stripe webhook/API revenue by campaign'
+      },
+      'Meta Ads': {
+        sourceName: 'Meta Ads',
+        steps: ['Instagram Promo', 'Client Landing Page', 'Order Upgrade'],
+        firstTouch: 'Meta Ads (Paid Social)',
+        lastTouch: 'Direct',
+        revenue: '$380.00',
+        status: 'Attributed (Click ID)',
+        stitchingMethod: 'fbclid (Meta Click ID)',
+        conversionType: 'Stripe Checkout',
+        explanation: 'Attributed to Meta Ads. Stitched via FBCLID click ID tracking and attributed to paid social campaigns.',
+        recommendedTemplate: 'Stripe webhook/API revenue by campaign'
+      },
+      'ChatGPT': {
+        sourceName: 'ChatGPT',
+        steps: ['ChatGPT', 'Client Site', 'Purchase Complete'],
+        firstTouch: 'ChatGPT (AI Referral)',
+        lastTouch: 'Direct',
+        revenue: '$120.00',
+        status: 'Attributed (Linear Model)',
+        stitchingMethod: 'st_aid (Cookie Stitching)',
+        conversionType: 'Store Purchase',
+        explanation: 'Attributed to ChatGPT. Stitched via AI referring domain metrics with client data isolation maintained.',
+        recommendedTemplate: 'AI referral revenue by landing page'
+      },
+      'Perplexity': {
+        sourceName: 'Perplexity',
+        steps: ['Perplexity AI', 'Client Site', 'Purchase Complete'],
+        firstTouch: 'Perplexity (AI Referral)',
+        lastTouch: 'Direct',
+        revenue: '$95.00',
+        status: 'Attributed',
+        stitchingMethod: 'st_aid (Cookie Stitching)',
+        conversionType: 'Store Purchase',
+        explanation: 'Attributed to Perplexity AI. Traced back to organic chatbot referral searches.',
+        recommendedTemplate: 'AI referral revenue by landing page'
+      },
+      'Claude': {
+        sourceName: 'Claude',
+        steps: ['Claude AI', 'Client Site', 'Purchase Complete'],
+        firstTouch: 'Claude (AI Referral)',
+        lastTouch: 'Direct',
+        revenue: '$140.00',
+        status: 'Attributed',
+        stitchingMethod: 'st_aid (Cookie Stitching)',
+        conversionType: 'Store Purchase',
+        explanation: 'Attributed to Claude AI recommendations under first-touch reference matching rules.',
+        recommendedTemplate: 'AI referral revenue by landing page'
+      },
+      '/client-a/landing': {
+        sourceName: '/client-a/landing',
+        steps: ['Direct', 'Client A Landing', 'Purchase Complete'],
+        firstTouch: 'Direct',
+        lastTouch: 'Direct',
+        revenue: '$250.00',
+        status: 'Attributed',
+        stitchingMethod: 'cookie',
+        conversionType: 'Store Purchase',
+        explanation: 'Attributed to Client A landing page path. Direct entry drove conversion outcomes.',
+        recommendedTemplate: 'Multi-site client summary'
+      },
+      '/client-b/pricing': {
+        sourceName: '/client-b/pricing',
+        steps: ['Direct', 'Client B Pricing', 'Purchase Complete'],
+        firstTouch: 'Direct',
+        lastTouch: 'Direct',
+        revenue: '$180.00',
+        status: 'Attributed',
+        stitchingMethod: 'cookie',
+        conversionType: 'Store Purchase',
+        explanation: 'Attributed to Client B pricing page. Visitor converted from the client site plan grid.',
+        recommendedTemplate: 'Multi-site client summary'
+      },
+      '/client-c/features': {
+        sourceName: '/client-c/features',
+        steps: ['Direct', 'Client C Features', 'Purchase Complete'],
+        firstTouch: 'Direct',
+        lastTouch: 'Direct',
+        revenue: '$320.00',
+        status: 'Attributed',
+        stitchingMethod: 'cookie',
+        conversionType: 'Store Purchase',
+        explanation: 'Attributed to Client C features path. Drove organic signups after feature reviews.',
+        recommendedTemplate: 'Multi-site client summary'
       }
     }
   }

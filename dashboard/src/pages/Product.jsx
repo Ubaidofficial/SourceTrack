@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom'
 import MarketingPage from '../components/MarketingPage'
-import DashboardPreviewMock from '../components/DashboardPreviewMock'
 import FeatureCards from '../components/FeatureCards'
 import HowItWorksSteps from '../components/HowItWorksSteps'
 import SectionKicker from '../components/SectionKicker'
+import HeroPreviewCard from '../components/HeroPreviewCard'
 
 const SEO = {
   title: 'SourceTrack Product — Revenue Attribution Without the Analytics Maze',
@@ -23,10 +23,10 @@ const HERO = {
 
 export default function Product() {
   return (
-    <MarketingPage seo={SEO} hero={HERO} heroChildren={<DashboardPreviewMock />}>
+    <MarketingPage seo={SEO} hero={HERO} heroChildren={<HeroPreviewCard />}>
 
       {/* Core platform */}
-      <section className="py-[96px]" style={{ background: '#F7FAFA' }}>
+      <section className="py-[96px] bg-[#F7FAFA]">
         <div className="max-w-[1320px] mx-auto px-8">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-7 mb-[54px]">
             <div>
@@ -41,55 +41,43 @@ export default function Product() {
           </div>
 
           <FeatureCards items={[
-            { icon: '01', title: 'Capture visitor source.', body: 'Track every UTM, referrer, landing page, campaign param, AI platform, click ID, and direct visit. SourceTrack captures the data most analytics tools miss.' },
-            { icon: '02', title: 'Connect the journey.', body: 'See the full path each visitor takes — every page, session, and touchpoint before a lead, demo, trial, purchase, or custom conversion event.' },
+            { icon: '01', title: 'Capture visitor source.', body: 'Track campaign URL parameters, referring domain sources, search queries, and AI chatbot referrals in a single first-party pipeline.' },
+            { icon: '02', title: 'Connect the journey.', body: 'See the full path each visitor takes — every page view, session, and touchpoint before a lead form submit or paid order conversion.' },
             { icon: '03', title: 'Attribute the revenue.', body: 'Compare channels across 8 attribution models. Switch between first touch, last touch, linear, U-shaped, and W-shaped to see how credit shifts.' },
           ]} />
         </div>
       </section>
 
-      {/* Why it matters */}
+      {/* What is inside SourceTrack? */}
       <section className="py-[96px] bg-white">
         <div className="max-w-[1320px] mx-auto px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-7">
-            <div className="rounded-[36px] p-[48px] bg-st-black text-white border border-white/10 shadow-[0_24px_80px_rgba(31,35,35,.12)]">
-              <SectionKicker label="Why it matters" dark />
-              <h2 className="mt-5 text-[clamp(26px,3.5vw,44px)] leading-[0.94] tracking-[-0.06em] font-black">
-                Ad platforms are biased toward their own clicks. SourceTrack isn't.
-              </h2>
-              <p className="mt-4 text-[#B9C2C2] text-base leading-[1.55]">
-                Ad platforms self-report to inflate their own ROI, leading to duplicate conversions and wasted ad spend. GA4 buries AI referrals in direct traffic. SourceTrack gives you an independent, full-funnel view of the customer journey — so you can stop guessing and double down on what actually converts.
-              </p>
-              <Link to="/attribution" className="mt-6 inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full bg-st-lime text-st-black text-[15px] font-extrabold tracking-[-0.025em] shadow-[0_18px_52px_rgba(204,240,63,0.28)] hover:bg-[#D9FA64] transition-all hover:-translate-y-px">
-                See the attribution engine
-              </Link>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[140px]">
-                <strong className="text-lg tracking-[-0.04em]">Source capture</strong>
-                <p className="mt-1.5 text-[#586464] text-[15px]">UTMs, referrers, landing pages, AI platforms, campaign params, and click IDs.</p>
+          <div className="text-center mb-[54px]">
+            <SectionKicker label="Features List" />
+            <h2 className="text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black text-st-black">
+              What is inside SourceTrack?
+            </h2>
+            <p className="mt-4 max-w-[620px] mx-auto text-[#586464] text-lg leading-[1.55]">
+              Everything you need for clean revenue attribution, built without enterprise bloat.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[
+              { title: 'Lightweight Tracker', desc: 'A tiny snippet that loads in milliseconds. Collects pageviews and handles UTM parameters without slowing down your site load speed.' },
+              { title: 'Source Capture', desc: 'Automatically preserves UTM parameters, referring domains, organic search signals, and ad platform click ID properties.' },
+              { title: 'Journey Timeline', desc: 'Traces the chronological touchpoints of converting customers, showing every referral entry and pricing visit.' },
+              { title: 'Conversion Tracking', desc: 'Trigger event tracking on form submissions, checkout page hits, trial starts, or custom conversion outcomes.' },
+              { title: 'Revenue Attribution', desc: 'Distribute order values across channels using first-touch, last-touch, linear, or position-based attribution rules.' },
+              { title: 'AI Referral Tracking', desc: 'Categorize referring traffic from AI chat engines like ChatGPT and Claude that standard analytics label as direct.' },
+              { title: 'Report Builder', desc: 'Create custom widgets using flexible metrics and filter rules, then pin them directly to your dashboard.' },
+              { title: 'Developer API', desc: 'Use our HTTP ingestion endpoints to report offline conversions, backend trial updates, and database actions.' },
+              { title: 'Spreadsheet Export', desc: 'Download clean, unbranded CSV reports of campaigns, referrers, and conversion parameters for client reports.' },
+            ].map((f, i) => (
+              <div key={i} className="p-6 rounded-2xl bg-[#F7FAFA] border border-[rgba(31,35,35,.08)] shadow-[0_12px_38px_rgba(31,35,35,.01)]">
+                <strong className="text-lg tracking-[-0.04em] text-st-black block mb-2">{f.title}</strong>
+                <p className="text-[#586464] text-sm leading-relaxed">{f.desc}</p>
               </div>
-              <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[140px]">
-                <strong className="text-lg tracking-[-0.04em]">Customer journeys</strong>
-                <p className="mt-1.5 text-[#586464] text-[15px]">Every touchpoint, page, and session — from first visit to conversion.</p>
-              </div>
-              <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[140px]">
-                <strong className="text-lg tracking-[-0.04em]">Conversion tracking</strong>
-                <p className="mt-1.5 text-[#586464] text-[15px]">Purchases, demos, trials, forms, signups, meetings, and custom events.</p>
-              </div>
-              <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[140px]">
-                <strong className="text-lg tracking-[-0.04em]">AI referral tracking</strong>
-                <p className="mt-1.5 text-[#586464] text-[15px]">15 AI platforms tracked — traffic that GA4 marks as direct gets attributed correctly.</p>
-              </div>
-              <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[140px]">
-                <strong className="text-lg tracking-[-0.04em]">Report builder</strong>
-                <p className="mt-1.5 text-[#586464] text-[15px]">Build custom dashboards from your attribution data — pin only what matters.</p>
-              </div>
-              <div className="flex flex-col p-6 rounded-[26px] bg-[#F7FAFA] border border-[rgba(31,35,35,.10)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[140px]">
-                <strong className="text-lg tracking-[-0.04em]">One-script install</strong>
-                <p className="mt-1.5 text-[#586464] text-[15px]">Paste one snippet. Works on any website, Shopify, Webflow, or WordPress.</p>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
       </section>

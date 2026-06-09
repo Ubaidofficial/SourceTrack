@@ -18,16 +18,91 @@ const HERO = {
   primaryCta: 'Start free',
   secondaryCta: 'Talk to sales',
   secondaryHref: 'mailto:sales@sourcetrack.ai',
+  proofs: ['Verify setup on the free plan', 'No annual contracts', 'Upgrade or downgrade anytime'],
 }
+
+const COMPARISON_FEATURES = [
+  { category: 'Limits', items: [
+    { name: 'Active Sites', free: '1 site', starter: '1 site', growth: '3 sites', scale: '10+ sites' },
+    { name: 'Tracked Pageviews / mo', free: '5,000', starter: '50,000', growth: '150,000', scale: '500,000+' },
+    { name: 'Attributed Conversions / mo', free: '30', starter: '150', growth: '750', scale: '2,500+' },
+    { name: 'Data Retention History', free: '30 days', starter: '90 days', growth: '1 year', scale: '5 years' },
+  ]},
+  { category: 'Reporting & Analytics', items: [
+    { name: 'Traffic Sources & Pages', free: 'Yes', starter: 'Yes', growth: 'Yes', scale: 'Yes' },
+    { name: 'AI Referral Detection', free: 'Yes', starter: 'Yes', growth: 'Yes', scale: 'Yes' },
+    { name: 'Attribution Models Supported', free: 'Last-touch only', freeLabel: 'Last-touch', starter: 'Last-touch only', growth: 'All 8 models', scale: 'All 8 models' },
+    { name: 'Dashboard Widget Pinning', free: 'No', starter: 'No', growth: 'Yes', scale: 'Yes' },
+    { name: 'CSV Report Exports', free: 'No', starter: 'Yes', growth: 'Yes', scale: 'Yes' },
+  ]},
+  { category: 'Integrations & API', items: [
+    { name: 'JavaScript Tracking Snippet', free: 'Yes', starter: 'Yes', growth: 'Yes', scale: 'Yes' },
+    { name: 'Shopify Webhook Listener Recipe', free: 'Yes', starter: 'Yes', growth: 'Yes', scale: 'Yes' },
+    { name: 'Stripe Webhook setup recipe', free: 'Yes', starter: 'Yes', growth: 'Yes', scale: 'Yes' },
+    { name: 'Google Search Console Integration', free: 'No', starter: 'No', growth: 'Yes', scale: 'Yes' },
+    { name: 'Developer Offline Ingestion API', free: 'No', starter: 'No', growth: 'Yes', scale: 'Yes' },
+  ]},
+  { category: 'Team & Collaboration', items: [
+    { name: 'User Seats Included', free: '1 user', starter: '1 user', growth: '3 users', scale: '99 users' },
+    { name: 'Support Tier', free: 'Self-serve', starter: 'Email', growth: 'Email', scale: 'Priority onboarding' }
+  ]}
+]
 
 export default function Pricing() {
   return (
     <MarketingPage seo={SEO} hero={HERO}>
 
       {/* Pricing cards */}
-      <section className="py-[96px]" style={{ background: '#F7FAFA' }}>
+      <section className="py-[96px] bg-[#F7FAFA]">
         <div className="max-w-[1320px] mx-auto px-8">
           <PricingCards />
+        </div>
+      </section>
+
+      {/* Feature Comparison Matrix */}
+      <section className="py-[96px] bg-white border-b border-[rgba(31,35,35,.06)]">
+        <div className="max-w-[960px] mx-auto px-8">
+          <div className="text-center mb-[54px]">
+            <SectionKicker label="Features Matrix" />
+            <h2 className="text-[clamp(32px,4vw,48px)] leading-[0.95] tracking-[-0.06em] font-black text-st-black">
+              Compare plans and capabilities
+            </h2>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs font-semibold text-[#586464]">
+              <thead>
+                <tr className="border-b-2 border-st-black text-st-black font-black uppercase text-[10px] tracking-wider">
+                  <th className="py-3 pr-4 w-[280px]">Feature capability</th>
+                  <th className="py-3 px-3 w-[120px] text-center">Free</th>
+                  <th className="py-3 px-3 w-[120px] text-center">Starter</th>
+                  <th className="py-3 px-3 w-[120px] text-center">Growth</th>
+                  <th className="py-3 px-3 w-[120px] text-center">Scale</th>
+                </tr>
+              </thead>
+              <tbody>
+                {COMPARISON_FEATURES.map((cat, catIdx) => (
+                  <React.Fragment key={catIdx}>
+                    {/* Category Header Row */}
+                    <tr className="bg-[#F7FAFA] border-b border-[rgba(31,35,35,.08)]">
+                      <td colSpan={5} className="py-2.5 px-3 text-st-black font-black uppercase tracking-wider text-[9px] bg-[#F7FAFA]">
+                        {cat.category}
+                      </td>
+                    </tr>
+                    {cat.items.map((row, rowIdx) => (
+                      <tr key={rowIdx} className="border-b border-[rgba(31,35,35,.06)] hover:bg-[#F7FAFA]/30 transition-colors">
+                        <td className="py-3.5 pr-4 pl-3 font-bold text-st-black text-sm tracking-tight">{row.name}</td>
+                        <td className="py-3.5 px-3 text-center text-sm font-medium">{row.free}</td>
+                        <td className="py-3.5 px-3 text-center text-sm font-medium">{row.starter}</td>
+                        <td className="py-3.5 px-3 text-center text-sm font-bold text-st-black">{row.growth}</td>
+                        <td className="py-3.5 px-3 text-center text-sm font-medium">{row.scale}</td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 

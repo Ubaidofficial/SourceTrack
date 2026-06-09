@@ -43,6 +43,9 @@ import SolutionAgency from './pages/SolutionAgency'
 import Privacy from './pages/Privacy'
 import Terms from './pages/Terms'
 import SEORevenue from './pages/SEORevenue'
+import PublicIntegrations from './pages/PublicIntegrations'
+import Security from './pages/Security'
+import Demo from './pages/Demo'
 
 const queryClient = new QueryClient()
 
@@ -142,7 +145,10 @@ export default function App() {
               <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
               <Route path="/leads/:leadId" element={<ProtectedRoute><LeadDetail /></ProtectedRoute>} />
               <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
-              <Route path="/integrations" element={<ProtectedRoute><Integrations /></ProtectedRoute>} />
+              <Route path="/app/integrations" element={<ProtectedRoute><Integrations /></ProtectedRoute>} />
+              <Route path="/integrations" element={<PublicIntegrations />} />
+              <Route path="/security" element={<Security />} />
+              <Route path="/demo" element={<Demo />} />
               <Route path="/report-builder" element={<ReportBuilderGate />} />
               <Route path="/journey" element={<ProtectedRoute><Journey /></ProtectedRoute>} />
               <Route path="/seo-revenue" element={<ProtectedRoute><SEORevenue /></ProtectedRoute>} />
@@ -169,17 +175,18 @@ export default function App() {
               <Route path="/attribution" element={<Attribution />} />
               <Route path="/ai-referral-tracking" element={<AIReferralTracking />} />
               <Route path="/pricing" element={<Pricing />} />
-              <Route path="/compare-ga4" element={<CompareGA4 />} />
-              {/* Use-case aliases redirect to existing solution pages */}
-              <Route path="/use-cases/saas" element={<Navigate to="/saas-attribution" replace />} />
-              <Route path="/use-cases/ecommerce" element={<Navigate to="/ecommerce-attribution" replace />} />
-              <Route path="/use-cases/lead-generation" element={<Navigate to="/lead-gen-attribution" replace />} />
-              <Route path="/use-cases/agencies" element={<Navigate to="/agency-attribution" replace />} />
-              {/* Solution pages — public */}
-              <Route path="/ecommerce-attribution" element={<SolutionEcommerce />} />
-              <Route path="/saas-attribution" element={<SolutionSaaS />} />
-              <Route path="/lead-gen-attribution" element={<SolutionLeadGen />} />
-              <Route path="/agency-attribution" element={<SolutionAgency />} />
+              <Route path="/compare/ga4" element={<CompareGA4 />} />
+              <Route path="/compare-ga4" element={<Navigate to="/compare/ga4" replace />} />
+              {/* Solution pages — public direct canonical routes */}
+              <Route path="/use-cases/saas" element={<SolutionSaaS />} />
+              <Route path="/use-cases/ecommerce" element={<SolutionEcommerce />} />
+              <Route path="/use-cases/lead-generation" element={<SolutionLeadGen />} />
+              <Route path="/use-cases/agencies" element={<SolutionAgency />} />
+              {/* Legacy redirects */}
+              <Route path="/saas-attribution" element={<Navigate to="/use-cases/saas" replace />} />
+              <Route path="/ecommerce-attribution" element={<Navigate to="/use-cases/ecommerce" replace />} />
+              <Route path="/lead-gen-attribution" element={<Navigate to="/use-cases/lead-generation" replace />} />
+              <Route path="/agency-attribution" element={<Navigate to="/use-cases/agencies" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>

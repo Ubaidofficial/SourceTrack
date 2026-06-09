@@ -8,6 +8,7 @@ const NAV_LINKS = [
   { label: 'AI Tracking', href: '/ai-referral-tracking' },
   { label: 'Reports', href: '/report-builder' },
   { label: 'Pricing', href: '/pricing' },
+  { label: 'Demo', href: '/demo' },
 ]
 
 export default function MarketingHeader() {

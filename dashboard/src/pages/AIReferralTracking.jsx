@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import MarketingPage from '../components/MarketingPage'
-import DashboardPreviewMock from '../components/DashboardPreviewMock'
+import HeroPreviewCard from '../components/HeroPreviewCard'
 import SectionKicker from '../components/SectionKicker'
 
 const SEO = {
@@ -21,10 +21,10 @@ const HERO = {
 
 export default function AIReferralTracking() {
   return (
-    <MarketingPage seo={SEO} hero={HERO} heroChildren={<DashboardPreviewMock />}>
+    <MarketingPage seo={SEO} hero={HERO} heroChildren={<HeroPreviewCard />}>
 
       {/* The problem */}
-      <section className="py-[96px]" style={{ background: '#F7FAFA' }}>
+      <section className="py-[96px] bg-[#F7FAFA]">
         <div className="max-w-[1320px] mx-auto px-8">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-7 mb-[54px]">
             <div>
@@ -54,6 +54,41 @@ export default function AIReferralTracking() {
                 <p className="relative z-10 mt-3 text-[#667272] text-base leading-[1.55]">{f.body}</p>
               </article>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* AI referring domain classification */}
+      <section className="py-[96px] bg-[#F7FAFA] border-b border-[rgba(31,35,35,.06)]">
+        <div className="max-w-[1320px] mx-auto px-8">
+          <div className="text-center mb-[54px]">
+            <SectionKicker label="Classification Logic" />
+            <h2 className="text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black text-st-black">
+              How SourceTrack detects AI referrers
+            </h2>
+            <p className="mt-4 max-w-[620px] mx-auto text-[#586464] text-lg leading-[1.55]">
+              First-party referring domain analysis mapped against verified AI platforms.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="p-6 rounded-2xl bg-white border border-[rgba(31,35,35,.06)]">
+              <strong className="text-st-black text-lg tracking-tight block mb-2">Referring Domain Lists</strong>
+              <p className="text-[#586464] text-sm leading-relaxed">
+                SourceTrack cross-references the HTTP referrer domain against a compiled index of known AI chatbot and search environments (such as chatgpt.com, claude.ai, perplexity.ai, deepseek.com, and grok.com).
+              </p>
+            </div>
+            <div className="p-6 rounded-2xl bg-white border border-[rgba(31,35,35,.06)]">
+              <strong className="text-st-black text-lg tracking-tight block mb-2">Parameter-Based Fallbacks</strong>
+              <p className="text-[#586464] text-sm leading-relaxed">
+                If the referring header is stripped by the browser or engine, SourceTrack parses custom parameters (e.g. `ai_source` URL tags) to preserve attribution signal continuity across sessions.
+              </p>
+            </div>
+            <div className="p-6 rounded-2xl bg-white border border-[rgba(31,35,35,.06)]">
+              <strong className="text-st-black text-lg tracking-tight block mb-2">Assisted Conversion Timeline</strong>
+              <p className="text-[#586464] text-sm leading-relaxed">
+                When an AI discovery click initiates a journey, the touchpoint is recorded on the customer timeline. The final webhook transaction is stitched to verify exact AI-referred pipeline influence.
+              </p>
+            </div>
           </div>
         </div>
       </section>

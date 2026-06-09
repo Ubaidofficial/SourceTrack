@@ -745,7 +745,7 @@ window.sourcetrack.identify('user_123', {
 
             <H3>Public API</H3>
             <ParamTable params={[
-              { name: 'window.sourcetrack.conversion(opts)', type: 'function', required: false, desc: 'Record a conversion. opts: { value, type, order_id }' },
+              { name: 'window.sourcetrack.conversion(opts)', type: 'function', required: false, desc: 'Record a conversion. opts: { value, type, order_id, properties }' },
               { name: 'window.sourcetrack.identify(userId, traits)', type: 'function', required: false, desc: 'Attach a user ID and optional identity traits to the current visitor. traits: { name, ...custom }' },
               { name: 'window.sourcetrack.track(event, props)', type: 'function', required: false, desc: 'Send any custom event with optional properties object.' },
             ]} />
@@ -1584,6 +1584,7 @@ window.location.href = decoratedUrl;`}</Code>
               { name: 'utm_source / utm_medium / utm_campaign', type: 'string', required: false, desc: 'Last-touch UTM signals (current page).' },
               { name: 'first_touch_source / first_touch_medium / first_touch_campaign', type: 'string', required: false, desc: 'First-touch signals stored on the client. Critical for first-touch attribution models.' },
               { name: 'gclid / fbclid / msclkid / ttclid', type: 'string', required: false, desc: 'Click IDs for last-touch ad channel detection.' },
+              { name: 'properties', type: 'object', required: false, desc: 'Custom metadata properties object. Stripped of sensitive parameters.' },
             ]} />
 
             <H3>Server-side example (Node.js)</H3>

@@ -37,7 +37,7 @@ const NAV_GROUPS = [
   {
     label: 'Monitoring',
     items: [
-      { to: '/integrations', label: 'Integrations', icon: Plug },
+      { to: '/app/integrations', label: 'Integrations', icon: Plug },
       { to: '/debugger',     label: 'Live Events',  icon: Bug },
       { to: '/data-quality', label: 'Data Quality', icon: Shield },
     ],
@@ -60,7 +60,7 @@ const PAGE_TITLES = {
   '/journey': 'Visitor Journeys',
   '/ai-analytics': 'AI Analytics',
   '/analytics': 'Analytics',
-  '/integrations': 'Integrations',
+  '/app/integrations': 'Integrations',
   '/snippet': 'Install Tracking',
   '/debugger': 'Live Events',
   '/settings': 'Settings',

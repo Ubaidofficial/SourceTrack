@@ -25,7 +25,7 @@ export default function ReportBuilderMarketing() {
     <MarketingPage seo={SEO} hero={HERO} heroChildren={<ReportBuilderMock />}>
 
       {/* Why report builder matters */}
-      <section className="py-[96px]" style={{ background: '#F7FAFA' }}>
+      <section className="py-[96px] style={{ background: '#F7FAFA' }}">
         <div className="max-w-[1320px] mx-auto px-8">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-7 mb-[54px]">
             <div>
@@ -40,15 +40,15 @@ export default function ReportBuilderMarketing() {
           </div>
 
           <FeatureCards items={[
-            { icon: '01', title: 'Choose the question.', body: 'Start from revenue by channel, AI traffic quality, campaign ROAS, landing page performance, lead source quality, or any custom metric.' },
-            { icon: '02', title: 'Choose the dimension.', body: 'Group results by source, channel, campaign, landing page, referrer, device, country, or conversion event type.' },
+            { icon: '01', title: 'Choose the question.', body: 'Start from attributed revenue, AI traffic conversion rates, landing page performance, lead source quality, or custom milestones.' },
+            { icon: '02', title: 'Choose the dimension.', body: 'Group results by source, channel, campaign, landing page, referring domain, browser, or conversion type.' },
             { icon: '03', title: 'Pin what matters.', body: 'Save the widget. Pin it to your dashboard. Change it when your questions change. No clutter, no irrelevant metrics.' },
           ]} />
         </div>
       </section>
 
       {/* Report templates */}
-      <section className="py-[96px] bg-white">
+      <section className="py-[96px] bg-[#F7FAFA]">
         <div className="max-w-[1320px] mx-auto px-8 text-center">
           <SectionKicker label="Report templates" />
           <h2 className="mt-5 text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black text-st-black">
@@ -56,29 +56,29 @@ export default function ReportBuilderMarketing() {
           </h2>
 
           <div className="mt-[54px] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="flex flex-col p-6 rounded-[26px] bg-[#F7FAFA] border border-[rgba(31,35,35,.10)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[138px]">
-              <strong className="text-lg tracking-[-0.04em]">Revenue by channel</strong>
-              <p className="mt-1.5 text-[#586464] text-[15px]">Show which channels create paid customers across all attribution models.</p>
+            <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[138px]">
+              <strong className="text-lg tracking-[-0.04em]">Attributed purchase revenue</strong>
+              <p className="mt-1.5 text-[#586464] text-[15px] font-semibold">Show which channels create paid customers across all attribution models.</p>
             </div>
             <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[138px]">
               <strong className="text-lg tracking-[-0.04em]">AI traffic quality</strong>
-              <p className="mt-1.5 text-[#586464] text-[15px]">Compare AI referral conversion rates and revenue against all channels.</p>
+              <p className="mt-1.5 text-[#586464] text-[15px] font-semibold">Compare AI referral conversion rates and revenue against traditional search and social paths.</p>
             </div>
             <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[138px]">
               <strong className="text-lg tracking-[-0.04em]">Landing page revenue</strong>
-              <p className="mt-1.5 text-[#586464] text-[15px]">Find entry pages that produce pipeline — attribute revenue back to the pages that start journeys.</p>
+              <p className="mt-1.5 text-[#586464] text-[15px] font-semibold">Find entry pages that produce pipeline — attribute revenue back to the pages that start journeys.</p>
             </div>
             <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[138px]">
-              <strong className="text-lg tracking-[-0.04em]">Campaign ROAS</strong>
-              <p className="mt-1.5 text-[#586464] text-[15px]">Measure campaign performance beyond platform-reported last-click conversions.</p>
+              <strong className="text-lg tracking-[-0.04em]">Imported cost vs attributed revenue</strong>
+              <p className="mt-1.5 text-[#586464] text-[15px] font-semibold">Measure campaign cost performance by mapping spreadsheet ad spend against attributed revenue outcomes.</p>
             </div>
             <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[138px]">
               <strong className="text-lg tracking-[-0.04em]">Lead source quality</strong>
-              <p className="mt-1.5 text-[#586464] text-[15px]">See which sources produce qualified leads vs. raw form fills. Measure CPL by channel.</p>
+              <p className="mt-1.5 text-[#586464] text-[15px] font-semibold">See which sources produce qualified leads vs. raw form fills. Measure average quality scores by channel.</p>
             </div>
             <div className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] min-h-[138px]">
-              <strong className="text-lg tracking-[-0.04em]">Trial to paid</strong>
-              <p className="mt-1.5 text-[#586464] text-[15px]">Track trial conversion by acquisition channel — see which sources produce paying customers.</p>
+              <strong className="text-lg tracking-[-0.04em]">Stripe/API trial-to-paid</strong>
+              <p className="mt-1.5 text-[#586464] text-[15px] font-semibold">Track trial conversion events by acquisition channel using webhook integration recipes.</p>
             </div>
           </div>
         </div>

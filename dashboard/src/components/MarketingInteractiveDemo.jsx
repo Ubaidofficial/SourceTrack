@@ -23,6 +23,9 @@ export default function MarketingInteractiveDemo() {
     } else if (mode === 'LeadGen') {
       setSelectedRowName('Google Ads');
       setActiveTabA('sources');
+    } else if (mode === 'Agency') {
+      setSelectedRowName('Client A');
+      setActiveTabA('sources');
     }
   };
 
@@ -71,7 +74,7 @@ export default function MarketingInteractiveDemo() {
                 Interactive demo · sample data
               </span>
               <span className="inline-flex items-center gap-[5px] sm:gap-[7px] rounded-full py-[4px] px-[8px] bg-[rgba(204,240,63,.12)] text-[#CCF03F] text-[10px] sm:text-xs font-black">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#CCF03F] animate-pulse" />Live
+                <span className="w-1.5 h-1.5 rounded-full bg-[#CCF03F] animate-pulse" />Sample
               </span>
             </div>
           </div>
@@ -79,16 +82,18 @@ export default function MarketingInteractiveDemo() {
           {/* Sub Navigation controls - switcher and date */}
           <div className="p-3 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-[#131717] border-b border-white/5">
             {/* Mode Switcher */}
-            <div className="flex items-center bg-[#1D2222] border border-white/10 rounded-full p-0.5 self-start">
+            <nav className="flex items-center bg-[#1D2222] border border-white/10 rounded-full p-0.5 self-start" aria-label="Demo scenario selector">
               {[
                 ['SaaS', 'SaaS'],
                 ['eCommerce', 'eCommerce'],
-                ['LeadGen', 'Lead Gen']
+                ['LeadGen', 'Lead Gen'],
+                ['Agency', 'Agency']
               ].map(([key, label]) => (
                 <button
                   key={key}
                   onClick={() => handleModeChange(key)}
-                  className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-extrabold transition-all ${
+                  aria-pressed={activeMode === key}
+                  className={`px-3 sm:px-4 py-1.5 rounded-full text-xs font-extrabold transition-all focus:outline-none focus:ring-2 focus:ring-st-lime ${
                     activeMode === key
                       ? 'bg-[#CCF03F] text-[#111414] shadow-md'
                       : 'text-[#B9C2C2] hover:text-white'
@@ -97,7 +102,7 @@ export default function MarketingInteractiveDemo() {
                   {label}
                 </button>
               ))}
-            </div>
+            </nav>
 
             {/* Date Preset Selector */}
             <div className="flex items-center gap-2 text-xs font-bold text-[#B9C2C2]">
@@ -136,7 +141,7 @@ export default function MarketingInteractiveDemo() {
                     Combined Traffic &amp; {modeData.revenueLabel} Trend
                   </h4>
                   <p className="text-[#7D8090] text-xs mt-0.5">
-                    Hover over bars to inspect daily metrics
+                    Hover over bars to inspect daily metrics (Sample data)
                   </p>
                 </div>
                 <div className="text-right text-xs bg-[#1D2222] border border-white/5 px-3 py-1.5 rounded-lg text-white font-mono">
@@ -200,7 +205,7 @@ export default function MarketingInteractiveDemo() {
             <div className="bg-[#161A1A] border border-[#2E3434] rounded-xl p-4 sm:p-5 flex flex-col justify-between min-h-[300px]">
               <div>
                 {/* Tab selector A */}
-                <div className="flex border-b border-[#2A2F2F] pb-2 mb-3">
+                <div className="flex border-b border-[#2A2F2F] pb-2 mb-3" role="tablist">
                   {[
                     ['sources', 'Sources'],
                     ['ai', 'AI Sources'],
@@ -208,8 +213,10 @@ export default function MarketingInteractiveDemo() {
                   ].map(([key, label]) => (
                     <button
                       key={key}
+                      role="tab"
+                      aria-selected={activeTabA === key}
                       onClick={() => setActiveTabA(key)}
-                      className={`mr-4 pb-2 text-xs font-black transition-all border-b-2 -mb-[10px] ${
+                      className={`mr-4 pb-2 text-xs font-black transition-all border-b-2 -mb-[10px] focus:outline-none focus:text-white ${
                         activeTabA === key
                           ? 'border-[#CCF03F] text-white'
                           : 'border-transparent text-[#7D8090] hover:text-[#B9C2C2]'
@@ -236,24 +243,29 @@ export default function MarketingInteractiveDemo() {
                         return (
                           <tr
                             key={row.name}
-                            onClick={() => setSelectedRowName(row.name)}
-                            className={`group border-b border-[#202525] last:border-0 hover:bg-white/5 cursor-pointer transition-colors ${
+                            className={`group border-b border-[#202525] last:border-0 hover:bg-white/5 transition-colors ${
                               isSelected ? 'bg-[rgba(204,240,63,.06)] text-[#CCF03F]' : ''
                             }`}
                           >
-                            <td className="py-2.5 pr-2 font-bold truncate max-w-[120px]">
-                              <span className="flex items-center gap-1.5">
-                                {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-[#CCF03F]" />}
-                                {row.name}
-                              </span>
+                            <td className="py-2 pr-2 font-bold truncate max-w-[120px]">
+                              <button
+                                onClick={() => setSelectedRowName(row.name)}
+                                aria-pressed={isSelected}
+                                className={`w-full text-left font-bold focus:outline-none focus:ring-2 focus:ring-st-lime rounded px-1 -mx-1 py-1 flex items-center gap-1.5 transition-all ${
+                                  isSelected ? 'text-[#CCF03F]' : 'text-white hover:text-white'
+                                }`}
+                              >
+                                {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-[#CCF03F] shrink-0" />}
+                                <span className="truncate">{row.name}</span>
+                              </button>
                             </td>
-                            <td className="py-2.5 text-right font-mono pr-2 text-[#DDE5E5] group-hover:text-white">
+                            <td className="py-2 text-right font-mono pr-2 text-[#DDE5E5] group-hover:text-white">
                               {row.visitors}
                             </td>
-                            <td className="py-2.5 text-right font-mono pr-2 text-[#DDE5E5] group-hover:text-white">
+                            <td className="py-2 text-right font-mono pr-2 text-[#DDE5E5] group-hover:text-white">
                               {row.conversions} <span className="text-[9px] text-[#7D8090] font-normal">({row.rate})</span>
                             </td>
-                            <td className={`py-2.5 text-right font-extrabold ${isSelected ? 'text-[#CCF03F]' : 'text-white'}`}>
+                            <td className={`py-2 text-right font-extrabold ${isSelected ? 'text-[#CCF03F]' : 'text-white'}`}>
                               {row.revenue}
                             </td>
                           </tr>
@@ -264,7 +276,7 @@ export default function MarketingInteractiveDemo() {
                 </div>
               </div>
               <div className="mt-3 text-[10px] text-[#7D8090] italic font-medium">
-                * Click a row to inspect its attribution journey.
+                * Select a source button to inspect its attribution journey.
               </div>
             </div>
 
@@ -272,7 +284,7 @@ export default function MarketingInteractiveDemo() {
             <div className="bg-[#161A1A] border border-[#2E3434] rounded-xl p-4 sm:p-5 flex flex-col justify-between min-h-[300px]">
               <div>
                 {/* Tab selector B */}
-                <div className="flex border-b border-[#2A2F2F] pb-2 mb-3">
+                <div className="flex border-b border-[#2A2F2F] pb-2 mb-3" role="tablist">
                   {[
                     ['country', 'Country'],
                     ['browser', 'Browser'],
@@ -280,8 +292,10 @@ export default function MarketingInteractiveDemo() {
                   ].map(([key, label]) => (
                     <button
                       key={key}
+                      role="tab"
+                      aria-selected={activeTabB === key}
                       onClick={() => setActiveTabB(key)}
-                      className={`mr-4 pb-2 text-xs font-black transition-all border-b-2 -mb-[10px] ${
+                      className={`mr-4 pb-2 text-xs font-black transition-all border-b-2 -mb-[10px] focus:outline-none focus:text-white ${
                         activeTabB === key
                           ? 'border-[#CCF03F] text-white'
                           : 'border-transparent text-[#7D8090] hover:text-[#B9C2C2]'
@@ -323,7 +337,7 @@ export default function MarketingInteractiveDemo() {
                 </div>
               </div>
               <div className="mt-3 text-[10px] text-[#7D8090] font-medium uppercase tracking-wider">
-                Demographic split
+                Demographic split (Sample data)
               </div>
             </div>
 
@@ -334,12 +348,12 @@ export default function MarketingInteractiveDemo() {
                   Attribution Journey — <span className="text-[#CCF03F]">{journey.sourceName}</span>
                 </h4>
                 
-                <p className="text-[#7D8090] text-[11px] leading-relaxed">
-                  Why this conversion was attributed
+                <p className="text-[#7D8090] text-[10px] leading-relaxed uppercase tracking-wider font-extrabold">
+                  Journey Timeline
                 </p>
 
                 {/* Journey Steps Nodes */}
-                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-4">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mt-2">
                   {journey.steps.map((step, idx) => (
                     <React.Fragment key={idx}>
                       {idx > 0 && (
@@ -354,34 +368,49 @@ export default function MarketingInteractiveDemo() {
                   ))}
                 </div>
 
+                {/* Attribution Explanation Card */}
+                {journey.explanation && (
+                  <p className="text-[#B9C2C2] text-[11px] leading-relaxed mt-3 bg-[#1D2222] p-2.5 rounded-lg border border-white/5 font-semibold">
+                    {journey.explanation}
+                  </p>
+                )}
+
+                {/* Recommended Report Template Card */}
+                {journey.recommendedTemplate && (
+                  <div className="mt-3 p-2.5 rounded-lg bg-[#CCF03F]/10 border border-[#CCF03F]/20 text-[10px] font-black text-st-lime">
+                    <span className="text-[#7D8090] text-[8px] uppercase tracking-wider block mb-0.5 font-bold">Recommended Template</span>
+                    {journey.recommendedTemplate}
+                  </div>
+                )}
+
                 {/* Attribution properties */}
-                <div className="grid grid-cols-2 gap-2 mt-4 text-[11px] font-bold">
-                  <div className="p-2.5 rounded-lg bg-[#1D2222] border border-white/5 truncate">
-                    <div className="text-[#7D8090] text-[9px] uppercase tracking-wider">First Touch</div>
+                <div className="grid grid-cols-2 gap-2 mt-4 text-[10px] font-bold">
+                  <div className="p-2 rounded-lg bg-[#1D2222] border border-white/5 truncate">
+                    <div className="text-[#7D8090] text-[8px] uppercase tracking-wider">First Touch</div>
                     <div className="mt-0.5 text-white truncate" title={journey.firstTouch}>{journey.firstTouch}</div>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-[#1D2222] border border-white/5 truncate">
-                    <div className="text-[#7D8090] text-[9px] uppercase tracking-wider">Last Touch</div>
+                  <div className="p-2 rounded-lg bg-[#1D2222] border border-white/5 truncate">
+                    <div className="text-[#7D8090] text-[8px] uppercase tracking-wider">Last Touch</div>
                     <div className="mt-0.5 text-white truncate" title={journey.lastTouch}>{journey.lastTouch}</div>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-[#1D2222] border border-white/5 truncate">
-                    <div className="text-[#7D8090] text-[9px] uppercase tracking-wider">Attributed Value</div>
+                  <div className="p-2 rounded-lg bg-[#1D2222] border border-white/5 truncate">
+                    <div className="text-[#7D8090] text-[8px] uppercase tracking-wider">Attributed Value</div>
                     <div className="mt-0.5 text-[#CCF03F] truncate">{journey.revenue}</div>
                   </div>
-                  <div className="p-2.5 rounded-lg bg-[#1D2222] border border-white/5 truncate">
-                    <div className="text-[#7D8090] text-[9px] uppercase tracking-wider">Attribution Status</div>
+                  <div className="p-2 rounded-lg bg-[#1D2222] border border-white/5 truncate">
+                    <div className="text-[#7D8090] text-[8px] uppercase tracking-wider">Attribution Status</div>
                     <div className="mt-0.5 text-[#18C76E] truncate" title={journey.status}>{journey.status}</div>
                   </div>
                 </div>
 
-                <div className="mt-3 p-2.5 rounded-lg bg-[#1D2222] border border-white/5 text-[11px] font-bold">
-                  <div className="flex justify-between items-center border-b border-white/5 pb-1.5">
-                    <span className="text-[#7D8090] text-[9px] uppercase tracking-wider">Stitching Method</span>
-                    <span className="text-white font-mono text-[10px]">{journey.stitchingMethod}</span>
+                <div className="mt-3 p-2 rounded-lg bg-[#1D2222] border border-white/5 text-[10px] font-bold">
+                  <div className="flex justify-between items-center border-b border-white/5 pb-1">
+                    <span className="text-[#7D8090] text-[8px] uppercase tracking-wider">Stitching Method</span>
+                    <span className="text-white font-mono text-[9px]">{journey.stitchingMethod}</span>
                   </div>
-                  <div className="flex justify-between items-center pt-1.5">
-                    <span className="text-[#7D8090] text-[9px] uppercase tracking-wider">Conversion Type</span>
-                    <span className="text-white text-[10px]">{journey.conversionType}</span>
+                  <div className="flex justify-between items-center pt-1 text-[10px]">
+                    <span className="text-[#7D8090] text-[8px] uppercase tracking-wider">Conversion Type</span>
+                    <span className="text-white text-[9px]">{journey.conversionType}</span>
                   </div>
                 </div>
               </div>

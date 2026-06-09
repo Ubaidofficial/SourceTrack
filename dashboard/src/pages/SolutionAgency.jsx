@@ -1,14 +1,14 @@
 import SolutionPage from './SolutionPage'
 
 const DATA = {
-  slug: 'agency-attribution',
-  title: 'Marketing Agency Attribution Software — Multi-Client Attribution & White-Label Reports | SourceTrack',
-  description: "Stop building attribution reports in spreadsheets. SourceTrack gives agencies multi-client attribution dashboards, white-label reports, and a clean server-side conversion pipeline across client accounts. From $199/mo.",
-  canonical: 'https://sourcetrack.ai/agency-attribution',
-  ogTitle: 'Agency Attribution — Multi-Client Attribution & White-Label Reporting | SourceTrack',
-  ogDescription: "Attribution reporting your clients will actually believe. Multi-site dashboards, white-label exports, and client-level attribution — without the spreadsheet grind.",
+  slug: 'use-cases/agencies',
+  title: 'Multi-Site Agency Attribution Reporting | SourceTrack',
+  description: "Stop building attribution reports in spreadsheets. SourceTrack gives agencies multi-client attribution dashboards, unbranded CSV exports, and a clean server-side conversion pipeline. From $149/mo.",
+  canonical: 'https://sourcetrack.ai/use-cases/agencies',
+  ogTitle: 'Agency Attribution — Multi-Client Attribution & Unbranded Reporting | SourceTrack',
+  ogDescription: "Attribution reporting your clients will actually believe. Multi-site dashboards, unbranded exports, and client-level attribution — without the spreadsheet grind.",
 
-  badge: 'Agency Attribution — Multi-client dashboards, white-label reports, multi-site analytics',
+  badge: 'Agency Attribution — Multi-client dashboards, unbranded CSV exports, multi-site analytics',
   headline: 'Attribution reporting your clients',
   headlineAccent: 'will actually believe.',
   subheadline: "Your clients pay for revenue, not spreadsheet reports. SourceTrack gives you independent, multi-client attribution data to prove your agency's true ROI, eliminate ad platform duplicate reporting, and justify retainers with numbers clients trust.",
@@ -30,8 +30,8 @@ const DATA = {
       },
       {
         icon: '📋',
-        title: 'White-label report export',
-        body: "Export attribution reports to CSV for any client, date range, and attribution model. Add your agency branding before sending. No SourceTrack branding visible in exports — it looks like your own proprietary reporting.",
+        title: 'Unbranded report export',
+        body: "Export client attribution reports to CSV for any date range and attribution model. Raw CSV data exports contain no formatting, styling, or SourceTrack branding markers, allowing you to load them into custom client templates.",
       },
       {
         icon: '🔁',
@@ -75,7 +75,7 @@ const DATA = {
       {
         number: '03',
         title: 'Analyze and export reports',
-        body: "Monitor client performance in the dashboard. Use flexible attribution models to see how touchpoints connect to revenue. Export client attribution reports as CSV — no SourceTrack branding in the export file.",
+        body: "Monitor client performance in the dashboard. Use flexible attribution models to see how touchpoints connect to revenue. Export client attribution reports as raw CSV data without SourceTrack styling or formatting.",
         code: null,
       },
     ],
@@ -90,7 +90,7 @@ const DATA = {
       },
       {
         q: 'Can I white-label the attribution reports?',
-        a: "Yes. All CSV and report exports contain no SourceTrack branding. Export any date range, attribution model, and channel breakdown for any client site, and present it as your own proprietary reporting. The Scale plan includes white-label report generation.",
+        a: "All CSV data exports contain no formatting, styling, or SourceTrack branding markers, letting you load the raw data directly into your own client-facing presentation templates. White-label dashboard sharing is supported on the Scale plan.",
       },
       {
         q: "How do I explain AI attribution as a value-add to clients?",
@@ -102,7 +102,7 @@ const DATA = {
       },
       {
         q: "What's the best pricing plan for agencies?",
-        a: "The Scale plan (from $149/mo) includes multi-site management, white-label report exports, and up to 500,000+ monthly events across all client sites. For agencies with higher traffic volumes, contact sales for custom pricing.",
+        a: "The Scale plan (from $149/mo) includes multi-site management, unbranded CSV exports, and up to 500,000+ monthly events across client sites. For agencies with higher traffic volumes, contact sales for custom pricing.",
       },
     ],
   },
