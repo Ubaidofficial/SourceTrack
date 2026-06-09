@@ -1,6 +1,6 @@
-Session: 128D-B.1 (Report Builder Polish Pass)
-Last Completed: Refactored all native selects in Report Builder to dark-theme consistent CustomSelects, added custom N-days input to rolling date selection, renamed AI Platforms model to AI-assisted with helper text, and refined traffic source category filter grid.
-Next Task: Visual verification of /report-builder and local visual QA approval by the user.
+Session: 128F (Public Interactive Demo Preview)
+Last Completed: Created static marketing demo data, implemented the modern dark-themed interactive MarketingInteractiveDemo component with SaaS/eCommerce/LeadGen switcher and attribution details journey mapping, and integrated it into the Landing page replacing the static mockup.
+Next Task: Review of the public interactive demo preview implementation, manual QA validation, and commit.
 Roadmap Queue:
 - Phase C (Dashboard saved widget cards)
 - Phase D (Campaigns AI Copilot)

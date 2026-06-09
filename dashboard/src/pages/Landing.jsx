@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import MarketingPage from '../components/MarketingPage'
-import DashboardPreviewMock from '../components/DashboardPreviewMock'
+import MarketingInteractiveDemo from '../components/MarketingInteractiveDemo'
 import FeatureCards from '../components/FeatureCards'
 import HowItWorksSteps from '../components/HowItWorksSteps'
 import ComparisonTable from '../components/ComparisonTable'
@@ -61,7 +61,14 @@ const HERO = {
 
 export default function Landing() {
   return (
-    <MarketingPage seo={SEO} hero={HERO} heroChildren={<DashboardPreviewMock />}>
+    <MarketingPage seo={SEO} hero={HERO} heroChildren={null}>
+
+      {/* Interactive Demo Section */}
+      <section className="py-[72px] border-b border-[rgba(31,35,35,.06)] bg-[#F7FAFA]">
+        <div className="max-w-[1320px] mx-auto px-4 sm:px-6 lg:px-8">
+          <MarketingInteractiveDemo />
+        </div>
+      </section>
 
       {/* Trust band — what SourceTrack tracks */}
       <section className="py-[56px] border-b border-[rgba(31,35,35,.06)] bg-white">

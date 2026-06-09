@@ -1,10 +1,27 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 128D-B.1 — Report Builder UI Polish. Replaced all native HTML select dropdowns with dark-theme consistent React CustomSelects, added custom N-days input to rolling date selection, renamed AI Platforms model to AI-assisted with helper text, and refined traffic source category filter presets. Documented deferred filter support, noted schema-valid attribution accuracy risks, and confirmed that the duplicate saved reports feature was not added.
+> **Handoff:** Session 128F — Public Interactive Demo Preview. Created static marketing demo data, implemented the modern dark-themed interactive MarketingInteractiveDemo component with SaaS/eCommerce/LeadGen switcher and attribution details journey mapping, and integrated it into the Landing page replacing the static mockup.
 >
-> **Next Task:** Visual local QA and validation of /report-builder.
+> **Next Task:** Review of the public interactive demo preview implementation, manual QA validation, and commit.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 128F — Public Interactive Demo Preview
+**Date:** 2026-06-09 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+1. **Static Marketing Datasets**: Created `dashboard/src/lib/marketingDemoData.js` with structured, realistic mock data for SaaS, eCommerce, and Lead Gen business models.
+2. **Marketing Interactive Demo**: Built `dashboard/src/components/MarketingInteractiveDemo.jsx` component presenting a browser-frame mockup of the SourceTrack dashboard.
+3. **Wired Interactions**: Wired mode switchers (SaaS, eCommerce, Lead Gen), table tabs, simple trend chart hover inspectors, and a conversion journey explanation panel which updates when source rows are clicked.
+4. **Landing Integration**: Replaced `DashboardPreviewMock` in `Landing.jsx` with the new interactive demo inside a full-width section.
+5. **No API Calls & Offline Scoping**: Ensured the component uses strictly static fixtures, completely bypasses real API routes, auth, Supabase, and PostHog.
+
+### Files changed
+- `dashboard/src/pages/Landing.jsx`
+- `dashboard/src/components/MarketingInteractiveDemo.jsx` [NEW]
+- `dashboard/src/lib/marketingDemoData.js` [NEW]
+
+---
 
 ## Session 128D-B.1 — Report Builder UI Polish
 **Date:** 2026-06-08 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)

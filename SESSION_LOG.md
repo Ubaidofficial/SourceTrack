@@ -5,6 +5,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 128F | 2026-06-09 | `main` | Public Interactive Demo Preview — Created static marketing demo data, implemented the modern dark-themed interactive MarketingInteractiveDemo component with SaaS/eCommerce/LeadGen switcher and attribution details journey mapping, and integrated it into the Landing page replacing the static mockup. | ✅ | No |
 | 128D-B.1 | 2026-06-08 | `main` | Report Builder UI Polish — Replaced native selects with custom styled dropdowns, supported custom N-days rolling date inputs, renamed AI Platforms to AI-assisted with helper text, and refined traffic source category filter grid. | ✅ | No |
 | 128D-B | 2026-06-08 | `main` | Report Builder Two-Panel UI — Restructured Report Builder to a modern two-panel layout, added compact business question presets row, unified configuration options on the left Configure card, collapsed advanced filters by default, implemented a right Preview card, and created a right-sliding Saved Reports drawer. | ✅ | No |
 | 128D-A | 2026-06-08 | `main` | Core Report Builder & AI Sources Tab — Removed AI Analytics from sidebar, added lightweight AI Sources tab to Analytics, added Browser dimension with ClickHouse `properties.browser_name` support, resolved `conversion_type` filter mismatch in attribution engine, and added four AI presets to Report Builder. | ✅ | No |
