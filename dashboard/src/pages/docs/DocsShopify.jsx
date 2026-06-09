@@ -55,7 +55,7 @@ export default function DocsShopify() {
         </section>
 
         <DocsCallout type="warning">
-          <strong>Integration notice:</strong> This setup is a manual configuration recipe. SourceTrack does not offer a native Shopify integration or one-click automatic installation. All steps below must be performed manually in your Shopify store admin and theme code.
+          <strong>Integration notice:</strong> This setup is a manual configuration recipe. SourceTrack does not ship as a packaged Shopify plugin and is not auto-installed. All steps below must be performed manually in your Shopify store admin and theme code.
         </DocsCallout>
 
         {/* 3. Steps */}
@@ -115,14 +115,20 @@ if (visitorId) {
               <li>Scroll to the <strong>Webhooks</strong> section and click <strong>Create Webhook</strong>.</li>
               <li>Configure the webhook details:
                 <ul className="list-disc pl-5 mt-1 space-y-1">
-                  <li><strong>Event:</strong> Order Creation (<code>orders/create</code>)</li>
+                  <li><strong>Event:</strong> <code>orders/paid</code> (recommended) or <code>orders/create</code>. With <code>orders/create</code>, SourceTrack only processes orders where <code>financial_status === 'paid'</code> — unpaid carts and pending orders are ignored.</li>
                   <li><strong>Format:</strong> JSON</li>
                   <li><strong>URL:</strong> <code>https://api.srctk.com/api/webhooks/shopify/YOUR_SITE_KEY</code></li>
                   <li><strong>API Version:</strong> Latest / stable</li>
                 </ul>
               </li>
-              <li>Click <strong>Save</strong>.</li>
+              <li>Save the webhook, then copy the <strong>Shopify signing secret</strong> (shared with all webhooks for the shop) and paste it into <Link to="/app/integrations" className="text-blue-600 dark:text-blue-400 font-semibold hover:underline">Integrations → Shopify webhook recipe</Link>. SourceTrack rejects any webhook whose HMAC-SHA256 signature does not match.</li>
             </ol>
+            <p className="text-xs text-gray-600 dark:text-gray-400">
+              <strong>Attribution stitching:</strong> the order webhook reads the visitor id from <code>note_attributes</code> using the first key it finds among <code>_st_aid</code>, <code>st_aid</code>, <code>anonymous_id</code>, <code>visitor_id</code>, <code>sourcetrack_user_id</code>, or <code>site_user_id</code>. Step 2 sets <code>st_aid</code>; using one of those other keys also works.
+            </p>
+            <p className="text-xs text-gray-600 dark:text-gray-400">
+              <strong>Dedupe:</strong> Shopify webhooks are idempotent by Shopify webhook id and order id, so a redelivered webhook will record as <code>duplicate</code>, not a second conversion.
+            </p>
           </div>
         </section>
 

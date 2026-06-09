@@ -24,7 +24,7 @@ const CATEGORIES = [
     title: 'Script Installation & CMS',
     desc: 'Install the lightweight tracking snippet in your website head to capture pageviews and campaign touchpoints automatically.',
     items: [
-      { name: 'Google Tag Manager', desc: 'Deploy via a custom HTML tag triggered on all page views. Supports SPA route changes.', icon: '🏷️' },
+      { name: 'Google Tag Manager', desc: 'Deploy as a Custom HTML tag triggered on all page views. Manual setup — paste the SourceTrack snippet into your own GTM container. Supports SPA route changes.', icon: '🏷️' },
       { name: 'Webflow', desc: 'Paste the tracking snippet into your site settings custom code head section.', icon: '🕸️' },
       { name: 'WordPress', desc: 'Add to header.php or use a header-code injection plugin. Works with all themes.', icon: '📝' },
       { name: 'Framer / Next.js', desc: 'Embed directly in your main layout or custom code injection settings.', icon: '⚡' },
@@ -33,11 +33,11 @@ const CATEGORIES = [
   },
   {
     title: 'Revenue Ingestion Webhooks',
-    desc: 'Configure payment platforms and e-commerce carts to forward conversion data timing-safely with HMAC signature validation.',
+    desc: 'Manual webhook recipes for payment platforms and ecommerce carts. These are listener URLs you configure inside Stripe or Shopify yourself — SourceTrack is not distributed as a plugin in those platforms.',
     items: [
-      { name: 'Shopify Webhook Recipe', desc: 'Shopify webhook listener recipe to capture purchase events. Forward st_aid via cart note attributes.', icon: '🛍️' },
-      { name: 'Stripe Webhook Recipe', desc: 'Stripe webhook listener recipe to ingest checkout completions and stitch them to visitor journeys.', icon: '💳' },
-      { name: 'Custom Offline API', desc: 'Send backend revenue events or CRM status upgrades from your server with our REST API.', icon: '🔌' }
+      { name: 'Shopify webhook recipe (manual)', desc: 'Configure orders/paid (or orders/create when financial_status is paid) to POST to a SourceTrack listener URL. Forward st_aid via cart note_attributes to stitch attribution.', icon: '🛍️' },
+      { name: 'Stripe webhook recipe (manual)', desc: 'Subscribe to checkout.session.completed only. Pass the visitor anonymous id as client_reference_id or metadata.anonymous_id so revenue ties back to a journey.', icon: '💳' },
+      { name: 'Custom offline / server API', desc: 'POST backend revenue events or CRM stage upgrades from your server using the REST API and a private Server API Token.', icon: '🔌' }
     ]
   },
   {

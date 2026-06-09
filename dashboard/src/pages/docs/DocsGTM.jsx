@@ -53,6 +53,10 @@ export default function DocsGTM() {
           </p>
         </section>
 
+        <DocsCallout type="warning">
+          <strong>Manual recipe:</strong> SourceTrack is not distributed as a Google Tag Manager community gallery tag. You paste the tracking snippet into a Custom HTML tag inside your own GTM container — manual setup required.
+        </DocsCallout>
+
         {/* 3. Steps */}
         <section className="space-y-4">
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">

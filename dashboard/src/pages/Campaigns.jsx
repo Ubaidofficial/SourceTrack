@@ -533,7 +533,7 @@ export default function Campaigns() {
                 {googleConnected && lastSyncedGoogle && `Google Ads synced: ${new Date(lastSyncedGoogle).toLocaleString()}`}
                 {googleConnected && lastSyncedGoogle && metaConnected && lastSyncedMeta && ' · '}
                 {metaConnected && lastSyncedMeta && `Meta Ads synced: ${new Date(lastSyncedMeta).toLocaleString()}`}
-                {!lastSyncedGoogle && !lastSyncedMeta && 'Awaiting first automated sync'}
+                {!lastSyncedGoogle && !lastSyncedMeta && 'Not synced yet — click Sync connected accounts'}
               </span>
             </div>
           )}

@@ -23,6 +23,54 @@ const FUTURE_INTEGRATIONS = [
   { key: 'hubspot', label: 'HubSpot', icon: Tag, desc: 'Sync leads and CRM data' }
 ]
 
+const IngestionActivityLog = ({ events, providerLabel }) => {
+  const list = events?.data?.events || events?.events || []
+  if (!list.length) {
+    return (
+      <div className="rounded-lg border border-gray-150 dark:border-gray-800 p-3">
+        <p className="text-[11px] font-semibold text-st-gray dark:text-gray-400 mb-1">Recent webhook activity</p>
+        <p className="text-[11px] text-st-gray dark:text-gray-500 font-sans">
+          No {providerLabel} webhooks received yet. Refreshes every 15s while this card is open.
+        </p>
+      </div>
+    )
+  }
+  const statusStyle = (s) =>
+    s === 'success' ? 'text-green-700 bg-green-50 dark:text-green-300 dark:bg-green-950/30 border-green-200 dark:border-green-900/40' :
+    s === 'duplicate' ? 'text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/40' :
+    'text-red-700 bg-red-50 dark:text-red-300 dark:bg-red-950/30 border-red-200 dark:border-red-900/40'
+  return (
+    <div className="rounded-lg border border-gray-150 dark:border-gray-800 p-3">
+      <p className="text-[11px] font-semibold text-st-gray dark:text-gray-400 mb-2">Recent webhook activity</p>
+      <ul className="space-y-1.5">
+        {list.map(ev => (
+          <li key={ev.id} className="flex items-center justify-between gap-2 text-[11px] font-sans">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border ${statusStyle(ev.status)}`}>
+                {ev.status}
+              </span>
+              <span className="text-st-gray dark:text-gray-400 truncate" title={ev.order_id || ev.provider_event_id || ''}>
+                {ev.order_id || ev.provider_event_id || '—'}
+              </span>
+              {ev.value !== null && ev.value !== undefined && (
+                <span className="text-st-gray dark:text-gray-400 tabular-nums">
+                  {ev.currency || ''} {Number(ev.value).toFixed(2)}
+                </span>
+              )}
+            </div>
+            <span className="text-st-gray dark:text-gray-500 tabular-nums whitespace-nowrap">
+              {new Date(ev.created_at).toLocaleTimeString()}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="text-[10px] text-st-gray dark:text-gray-500 mt-2 font-sans">
+        Last 5 events. <code className="font-mono">duplicate</code> = already processed (safe). <code className="font-mono">error</code> = check the signature secret and event format.
+      </p>
+    </div>
+  )
+}
+
 const CollapsibleRow = ({
   icon: Icon,
   title,
@@ -393,6 +441,29 @@ export default function Integrations() {
 
   const [activeSection, setActiveSection] = useState(null)
   const [didAutoExpand, setDidAutoExpand] = useState(false)
+
+  // Recent webhook ingestion event logs — only fetched when the relevant card is expanded
+  const stripeRowOpen = activeSection === 'revenue.stripe'
+  const shopifyRowOpen = activeSection === 'revenue.shopify'
+  const paymentsApiRowOpen = activeSection === 'developer.payments_api'
+  const { data: stripeEventsData } = useQuery({
+    queryKey: ['ingestion-events-stripe', site?.site_key],
+    queryFn: () => fetchApi(`/integrations/ingestion-events?site_key=${site.site_key}&provider=stripe&limit=5`),
+    enabled: !!site?.site_key && stripeRowOpen,
+    refetchInterval: stripeRowOpen ? 15_000 : false
+  })
+  const { data: shopifyEventsData } = useQuery({
+    queryKey: ['ingestion-events-shopify', site?.site_key],
+    queryFn: () => fetchApi(`/integrations/ingestion-events?site_key=${site.site_key}&provider=shopify&limit=5`),
+    enabled: !!site?.site_key && shopifyRowOpen,
+    refetchInterval: shopifyRowOpen ? 15_000 : false
+  })
+  const { data: paymentsApiEventsData } = useQuery({
+    queryKey: ['ingestion-events-payments-api', site?.site_key],
+    queryFn: () => fetchApi(`/integrations/ingestion-events?site_key=${site.site_key}&provider=payments_api&limit=5`),
+    enabled: !!site?.site_key && paymentsApiRowOpen,
+    refetchInterval: paymentsApiRowOpen ? 15_000 : false
+  })
 
   // Reset auto-expansion on site changes
   useEffect(() => {
@@ -1158,15 +1229,15 @@ export default function Integrations() {
 
             <CollapsibleRow
               icon={Plug}
-              title="Stripe Webhook Sync"
-              subtitle="Capture and attribute signed Stripe checkout session revenue"
+              title="Stripe webhook recipe"
+              subtitle="Manual Stripe webhook listener — captures checkout.session.completed only"
               status={stripeConnected ? 'success' : 'pending'}
               badgeLabel={stripeConnected ? 'Active' : 'Not Configured'}
               actionButton={
                 <div className="flex items-center gap-2">
-                  <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
+                  <Link to="/docs/platforms/stripe" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
                     Docs
-                  </a>
+                  </Link>
                   <button
                     onClick={() => setActiveSection(activeSection === 'revenue.stripe' ? null : 'revenue.stripe')}
                     className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
@@ -1262,26 +1333,37 @@ export default function Integrations() {
                       <span>Paste signing secret here</span>
                     </li>
                   </ul>
-                  <div className="pt-0.5">
-                    <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline inline-flex items-center gap-0.5">
-                      Read full guide →
-                    </a>
+                </div>
+
+                <div className="rounded-lg border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/20 p-3">
+                  <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 mb-1">What this recipe does — and doesn't</p>
+                  <ul className="text-[11px] text-amber-700 dark:text-amber-300/90 space-y-1 font-sans leading-relaxed">
+                    <li>• Only <code className="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 rounded text-[10px]">checkout.session.completed</code> events are processed. Other event types are received and ignored.</li>
+                    <li>• For attribution, your checkout must forward the visitor's anonymous id (<code className="font-mono">st_aid</code>) as Stripe <code className="font-mono">client_reference_id</code> or <code className="font-mono">metadata.anonymous_id</code>. Without it, the conversion lands as <code className="font-mono">unattributed</code>.</li>
+                    <li>• Duplicate Stripe events are deduped by Stripe event id, order id, and payment id.</li>
+                  </ul>
+                  <div className="pt-2">
+                    <Link to="/docs/platforms/stripe" className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 hover:underline inline-flex items-center gap-0.5">
+                      Read the full Stripe recipe →
+                    </Link>
                   </div>
                 </div>
+
+                <IngestionActivityLog events={stripeEventsData?.data || stripeEventsData} providerLabel="Stripe" />
               </div>
             </CollapsibleRow>
 
             <CollapsibleRow
               icon={ShoppingCart}
-              title="Shopify Webhook Sync"
-              subtitle="Sync Shopify paid order revenue events using webhooks"
+              title="Shopify webhook recipe"
+              subtitle="Manual Shopify webhook listener — captures paid orders only"
               status={shopifyConnected ? 'success' : 'pending'}
               badgeLabel={shopifyConnected ? 'Active' : 'Not Configured'}
               actionButton={
                 <div className="flex items-center gap-2">
-                  <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
+                  <Link to="/docs/platforms/shopify" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
                     Docs
-                  </a>
+                  </Link>
                   <button
                     onClick={() => setActiveSection(activeSection === 'revenue.shopify' ? null : 'revenue.shopify')}
                     className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
@@ -1366,23 +1448,35 @@ export default function Integrations() {
                   <ul className="text-xs text-st-gray dark:text-gray-400 space-y-1.5 font-sans">
                     <li className="flex items-start gap-2">
                       <span className="text-green-500 font-medium">✓</span>
-                      <span>Create webhook in Shopify Admin Notifications</span>
+                      <span>Create webhook in Shopify Admin → Settings → Notifications</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-green-500 font-medium">✓</span>
-                      <span>Select <code className="font-mono bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[10px]">Order payment</code> event</span>
+                      <span>Subscribe to <code className="font-mono bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[10px]">orders/paid</code> (or <code className="font-mono bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[10px]">orders/create</code>) — JSON format</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="text-green-500 font-medium">✓</span>
-                      <span>Paste secret here</span>
+                      <span>Paste the shared secret here</span>
                     </li>
                   </ul>
-                  <div className="pt-0.5">
-                    <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline inline-flex items-center gap-0.5">
-                      Read full guide →
-                    </a>
+                </div>
+
+                <div className="rounded-lg border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/20 p-3">
+                  <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 mb-1">What this recipe does — and doesn't</p>
+                  <ul className="text-[11px] text-amber-700 dark:text-amber-300/90 space-y-1 font-sans leading-relaxed">
+                    <li>• Accepts <code className="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 rounded text-[10px]">orders/paid</code>, and <code className="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 rounded text-[10px]">orders/create</code> only when <code className="font-mono">financial_status === 'paid'</code>. Refunds and unpaid orders are ignored.</li>
+                    <li>• For attribution, forward the visitor's anonymous id via the cart's <code className="font-mono">note_attributes</code> using a key of <code className="font-mono">_st_aid</code>, <code className="font-mono">st_aid</code>, <code className="font-mono">anonymous_id</code>, or <code className="font-mono">visitor_id</code>. Without it, the order lands as <code className="font-mono">unattributed</code>.</li>
+                    <li>• Duplicate webhooks are deduped by Shopify webhook id and order id. HMAC-SHA256 signatures are verified timing-safely.</li>
+                    <li>• This is a manual recipe — SourceTrack is not distributed as a Shopify plugin; setup is done by hand in your store admin.</li>
+                  </ul>
+                  <div className="pt-2">
+                    <Link to="/docs/platforms/shopify" className="text-[11px] font-semibold text-amber-800 dark:text-amber-300 hover:underline inline-flex items-center gap-0.5">
+                      Read the full Shopify recipe →
+                    </Link>
                   </div>
                 </div>
+
+                <IngestionActivityLog events={shopifyEventsData?.data || shopifyEventsData} providerLabel="Shopify" />
               </div>
             </CollapsibleRow>
 
@@ -1532,16 +1626,67 @@ export default function Integrations() {
 
             <CollapsibleRow
               icon={Copy}
-              title="Import CSV Costs"
-              subtitle="Upload generic campaigns or spreadsheets manually"
+              title="Imported campaign costs (CSV)"
+              subtitle="Manual upload of ad/campaign spend rows — pair with attributed revenue to see ROAS"
               status="success"
               badgeLabel="Available"
               actionButton={
-                <Link to="/campaigns?import=true" className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-150 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors">
-                  Import
-                </Link>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setActiveSection(activeSection === 'ad.csv' ? null : 'ad.csv') }}
+                    className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1"
+                  >
+                    Details
+                  </button>
+                  <Link to="/campaigns?import=true" className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-150 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors">
+                    Import
+                  </Link>
+                </div>
               }
-            />
+              isExpanded={activeSection === 'ad.csv'}
+              onToggle={() => setActiveSection(activeSection === 'ad.csv' ? null : 'ad.csv')}
+            >
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs font-semibold text-st-black dark:text-white mb-1.5">CSV columns</p>
+                  <div className="overflow-x-auto">
+                    <table className="text-[11px] w-full border-collapse">
+                      <thead>
+                        <tr className="text-st-gray dark:text-gray-400 border-b border-gray-150 dark:border-gray-800 text-left">
+                          <th className="py-1.5 pr-3 font-semibold">Column</th>
+                          <th className="py-1.5 pr-3 font-semibold">Required</th>
+                          <th className="py-1.5 font-semibold">Notes</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-st-gray dark:text-gray-300">
+                        <tr className="border-b border-gray-100 dark:border-gray-850/60"><td className="py-1 pr-3 font-mono">date</td><td className="py-1 pr-3">Required</td><td className="py-1">YYYY-MM-DD — cannot be in the future</td></tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-850/60"><td className="py-1 pr-3 font-mono">platform</td><td className="py-1 pr-3">Optional</td><td className="py-1">lowercase alphanumeric (e.g. <code className="font-mono">facebook</code>, <code className="font-mono">google</code>). Defaults to <code className="font-mono">manual_csv</code>.</td></tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-850/60"><td className="py-1 pr-3 font-mono">campaign_name</td><td className="py-1 pr-3">Required</td><td className="py-1">Max 255 characters</td></tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-850/60"><td className="py-1 pr-3 font-mono">campaign_id</td><td className="py-1 pr-3">Optional</td><td className="py-1">Improves dedupe when re-importing</td></tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-850/60"><td className="py-1 pr-3 font-mono">spend</td><td className="py-1 pr-3">Required</td><td className="py-1">Non-negative number, no thousands separators</td></tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-850/60"><td className="py-1 pr-3 font-mono">currency</td><td className="py-1 pr-3">Optional</td><td className="py-1">3-letter ISO code (defaults to USD). Must match your conversion currency for ROAS to compute.</td></tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-850/60"><td className="py-1 pr-3 font-mono">clicks</td><td className="py-1 pr-3">Optional</td><td className="py-1">Non-negative integer; cannot exceed impressions</td></tr>
+                        <tr><td className="py-1 pr-3 font-mono">impressions</td><td className="py-1 pr-3">Optional</td><td className="py-1">Non-negative integer</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <a
+                    href={`data:text/csv;charset=utf-8,${encodeURIComponent('date,platform,campaign_name,campaign_id,spend,currency,clicks,impressions\n2026-06-08,facebook,Summer Sale,12345,45.50,USD,40,1200\n')}`}
+                    download="sourcetrack_ad_spend_template.csv"
+                    className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1"
+                  >
+                    <Copy className="w-3 h-3" /> Download sample CSV
+                  </a>
+                  <span className="text-[11px] text-st-gray dark:text-gray-400">Max 1,000 rows per import. Duplicate (date, platform, campaign) rows are aggregated automatically.</span>
+                </div>
+                <p className="text-[11px] text-st-gray dark:text-gray-400 leading-relaxed">
+                  This is a manual import — SourceTrack does not auto-sync from ad networks here. For Google/Meta auto-sync, see those rows below (when configured on the server).
+                </p>
+              </div>
+            </CollapsibleRow>
 
             <CollapsibleRow
               icon={BarChart3}
@@ -1872,7 +2017,7 @@ export default function Integrations() {
             <CollapsibleRow
               icon={Globe}
               title="Google Search Console"
-              subtitle="Connect Search Console to estimate SEO landing page and query revenue"
+              subtitle="Aggregate query and landing-page data — used to estimate SEO revenue allocation"
               status={
                 gscIntegData?.connected
                   ? gscIntegData.property_selected
@@ -1889,9 +2034,9 @@ export default function Integrations() {
               }
               actionButton={
                 <div className="flex items-center gap-2">
-                  <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
-                    Docs
-                  </a>
+                  <Link to="/seo-revenue" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
+                    Report
+                  </Link>
                   <button
                     onClick={() => {
                       if (!gscIntegData?.connected) {
@@ -1914,6 +2059,14 @@ export default function Integrations() {
               onToggle={() => setActiveSection(activeSection === 'seo.gsc' ? null : 'seo.gsc')}
             >
               <div className="space-y-4">
+                <div className="rounded-lg border border-blue-200 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-950/20 p-3">
+                  <p className="text-[11px] font-semibold text-blue-800 dark:text-blue-300 mb-1">What GSC does — and doesn't</p>
+                  <ul className="text-[11px] text-blue-700 dark:text-blue-300/90 space-y-1 font-sans leading-relaxed">
+                    <li>• Pulls <em>aggregated</em> query, click, impression, and position data per landing page.</li>
+                    <li>• Cannot identify which individual visitor came from a specific query — Google does not expose that.</li>
+                    <li>• Query-level revenue is an <em>estimate</em> based on click share on each matching landing page.</li>
+                  </ul>
+                </div>
                 {!gscIntegData?.connected ? (
                   <div className="space-y-3">
                     <button
@@ -2157,10 +2310,20 @@ export default function Integrations() {
                     }
                   >
                     <div className="space-y-4">
-                      <div>
-                        <p className="text-xs text-st-gray">
-                          Authentication Method: site_key parameter in JSON body or query string
-                        </p>
+                      <div className="rounded-lg border border-blue-200 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-950/20 p-3 space-y-1.5">
+                        <p className="text-[11px] font-semibold text-blue-800 dark:text-blue-300">Two ways to authenticate</p>
+                        <ul className="text-[11px] text-blue-700 dark:text-blue-300/90 space-y-1 font-sans leading-relaxed">
+                          <li><strong>Public Site Key</strong> — included in the JSON body or query string. Safe to expose in browser code. Used by <code className="font-mono">/api/conversion/offline</code> below.</li>
+                          <li><strong>Private Server API Token</strong> — sent as <code className="font-mono">Authorization: Bearer st_live_…</code>. <em>Server-only — never ship this in browser code.</em> Used by <code className="font-mono">/api/server/event</code> for backend-originated events.</li>
+                        </ul>
+                        <div className="pt-1 flex flex-wrap gap-3">
+                          <Link to="/settings#api-tokens" className="text-[11px] font-semibold text-blue-700 dark:text-blue-300 hover:underline inline-flex items-center gap-0.5">
+                            Manage Server API Tokens →
+                          </Link>
+                          <Link to="/developers/api" className="text-[11px] font-semibold text-blue-700 dark:text-blue-300 hover:underline inline-flex items-center gap-0.5">
+                            API reference →
+                          </Link>
+                        </div>
                       </div>
 
                       <div>
@@ -2213,15 +2376,22 @@ export default function Integrations() {
 
                       <div className="pt-3 border-t border-gray-100 dark:border-gray-800/60 space-y-1.5">
                         <div className="flex justify-between items-center">
-                          <h4 className="text-xs font-semibold text-st-black dark:text-white">Integration Guidelines</h4>
-                          <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline font-sans">
-                            Read Payments API Docs →
-                          </a>
+                          <h4 className="text-xs font-semibold text-st-black dark:text-white">Stitching to visitor journeys</h4>
+                          <div className="flex gap-3">
+                            <Link to="/developers/offline-conversions" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline font-sans">
+                              Offline conversions →
+                            </Link>
+                            <Link to="/developers/security" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline font-sans">
+                              Security →
+                            </Link>
+                          </div>
                         </div>
                         <p className="text-xs text-st-gray dark:text-gray-400 font-sans leading-relaxed font-light">
-                          Stitch payments back to visitor traffic journeys by sending the anonymous ID (from the browser storage <code className="font-mono text-[11px] bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-st-black dark:text-white">st_aid</code>) in the <code className="font-mono text-[11px] bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-st-black dark:text-white">anonymous_id</code> field.
+                          Stitch payments to a visitor journey by sending the anonymous id (from the browser storage <code className="font-mono text-[11px] bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-st-black dark:text-white">st_aid</code>) in the <code className="font-mono text-[11px] bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-st-black dark:text-white">anonymous_id</code> field. Without it, the conversion is recorded as <code className="font-mono">unattributed</code>.
                         </p>
                       </div>
+
+                      <IngestionActivityLog events={paymentsApiEventsData?.data || paymentsApiEventsData} providerLabel="Payments API" />
                     </div>
                   </CollapsibleRow>
 

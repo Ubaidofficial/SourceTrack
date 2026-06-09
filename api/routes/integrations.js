@@ -449,6 +449,42 @@ router.patch('/settings', async (req, res) => {
   }
 })
 
+// GET /api/integrations/ingestion-events — recent webhook activity log (read-only)
+//   Used by the Integrations page to show whether Stripe/Shopify/Payments-API webhooks
+//   actually arrived, were deduped, or errored — without exposing PII.
+router.get('/ingestion-events', async (req, res) => {
+  try {
+    const siteKey = req.site?.site_key
+    if (!siteKey) {
+      return res.status(400).json({ success: false, data: null, error: 'Site context missing' })
+    }
+
+    const ALLOWED_PROVIDERS = new Set(['stripe', 'shopify', 'payments_api'])
+    const provider = typeof req.query.provider === 'string' ? req.query.provider.toLowerCase() : ''
+    if (!ALLOWED_PROVIDERS.has(provider)) {
+      return res.status(400).json({ success: false, data: null, error: 'Invalid provider' })
+    }
+
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 5, 1), 25)
+
+    const supabase = getSupabase()
+    const { data, error } = await supabase
+      .from('revenue_ingestion_events')
+      .select('id, provider, status, value, currency, order_id, provider_event_id, error_message, created_at')
+      .eq('site_key', siteKey)
+      .eq('provider', provider)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (error) throw error
+
+    return res.json({ success: true, data: { events: data || [] }, error: null })
+  } catch (err) {
+    console.error('[integrations] GET ingestion-events error:', err?.message)
+    return res.status(500).json({ success: false, data: null, error: 'Failed to fetch ingestion events' })
+  }
+})
+
 // GET /api/integrations/stripe — fetch stripe integration settings
 router.get('/stripe', async (req, res) => {
   try {

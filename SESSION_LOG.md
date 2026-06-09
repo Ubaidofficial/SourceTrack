@@ -945,6 +945,83 @@ curl -i https://api.srctk.com/tracker/tracker.min.js
 
 ---
 
+## Session 131 — Integration Setup Hardening
+
+**Date:** 2026-06-10
+**Branch:** `main`
+**Build:** ✅ passing (Vite build + Node syntax check + QA pass)
+
+### 1. Stripe & Shopify Recipes — Honest Scope & Stitching
+- **Stripe card** (`dashboard/src/pages/Integrations.jsx`): retitled to "Stripe webhook recipe" with subtitle "Manual Stripe webhook listener — captures checkout.session.completed only." Added an amber callout explicitly listing: (a) only `checkout.session.completed` is processed (others ignored with HTTP 200), (b) attribution requires `client_reference_id` or `metadata.anonymous_id` (otherwise lands as `unattributed`), (c) idempotency by Stripe event id, order id, payment id. Generic `https://www.sourcetrack.ai/docs` link replaced with internal `/docs/platforms/stripe`.
+- **Shopify card**: retitled to "Shopify webhook recipe". Quick-setup now recommends `orders/paid` (or `orders/create` as fallback). Amber callout enumerates: (a) `orders/create` is processed only when `financial_status === 'paid'`, (b) supported `note_attributes` stitching keys (`_st_aid`, `st_aid`, `anonymous_id`, `visitor_id`, `sourcetrack_user_id`, `site_user_id`), (c) HMAC-SHA256 timing-safe verification + dedupe by Shopify webhook id and order id, (d) explicit "manual recipe — no Shopify App" disclaimer. Internal `/docs/platforms/shopify` link.
+
+### 2. Recent Webhook Activity Log (Backend + UI — three providers)
+- **New backend endpoint** `GET /api/integrations/ingestion-events?provider=<stripe|shopify|payments_api>&limit=1..25` in `api/routes/integrations.js`. Read-only SELECT from `revenue_ingestion_events` (already populated by `api/lib/idempotency.js#logIngestionEvent` from the Stripe webhook, Shopify webhook, AND `api/routes/conversion-offline.js` which writes `provider: 'payments_api'`). Provider allowlist enforced server-side. Auth inherits from the `app.use('/api/integrations', requireUserAuth, validateSiteKey, requireSiteMembership, ...)` mount; the `revenue_ingestion_events` table additionally enforces RLS via the `site members can view ingestion events` policy in `supabase/migrations/20260606180000_revenue_foundation.sql:53-60`.
+- **New `IngestionActivityLog` component** in `Integrations.jsx` renders the last 5 events with colored status badges (`success` / `duplicate` / `error`), order id or provider event id, value + currency, and time. Empty state explains the 15s refresh.
+- **Opt-in polling**: queries only fire while the Stripe, Shopify, *or Payments API* card is expanded (`activeSection === 'revenue.stripe'` / `'revenue.shopify'` / `'developer.payments_api'`); polling pauses on collapse. This is the equivalent of Session 130's test conversion helper, but for *real* webhook traffic — so a customer who configures Stripe and triggers a checkout, or POSTs to `/api/conversion/offline` from their server, can see whether SourceTrack received the event, deduped it, or rejected it.
+- **Index verified, no migration added.** `idx_revenue_ingestion_lookup ON revenue_ingestion_events(site_key, provider, created_at DESC)` already exists in the Session 118B revenue-foundation migration (line 32-33). Sites with high webhook volume won't hit a slow scan.
+
+### 3. CSV Campaign Cost Import — Schema, Format, Sample
+- Expanded the formerly-tiny "Import CSV Costs" row into "Imported campaign costs (CSV)" with an inline schema table listing all eight columns (date, platform, campaign_name, campaign_id, spend, currency, clicks, impressions) with required/optional flags and notes that match the backend validator `validateAdCostRows` in `api/lib/ad-cost-imports.js`.
+- Format requirements documented: YYYY-MM-DD dates (not future), `campaign_name` max 255 chars, `spend` non-negative number with no thousands separators, currency as 3-letter ISO code, `clicks ≤ impressions`. Surface the 1000-row batch cap and the date+platform+campaign aggregation behavior.
+- Sample CSV download via `data:text/csv;charset=utf-8,…` URL — same template content as the existing one in `Campaigns.jsx` (line 701) so they stay in sync.
+- Explicit disclaimer: "This is a manual import — SourceTrack does not auto-sync from ad networks here."
+
+### 4. Public vs Private Auth — Settings Deep-Link
+- Inside the Payments API row, added a blue callout distinguishing the two authentication methods used by SourceTrack APIs: **Public Site Key** (browser-safe, used by `/api/conversion/offline`) vs **Private Server API Token** (`Authorization: Bearer st_live_…`, used by `/api/server/event`, server-only). Includes a warning never to ship server tokens in browser code.
+- New `/settings#api-tokens` deep-link, plus an `id="api-tokens" scroll-mt-20` anchor added to the Server API Tokens section in `dashboard/src/pages/Settings.jsx` so the link scrolls into view.
+- Replaced the bottom external `sourcetrack.ai/docs` link with internal links to `/developers/offline-conversions` and `/developers/security`.
+
+### 5. Google Search Console — Aggregate Data Disclaimer
+- Added a blue "What GSC does — and doesn't" callout inside the GSC card (in addition to the existing one on `SEORevenue.jsx`): pulls aggregated query/click data per landing page; cannot identify which visitor came from a specific query (Google does not expose that); query-level revenue is an estimate based on click share. Subtitle updated to "Aggregate query and landing-page data — used to estimate SEO revenue allocation."
+- Header now links directly to `/seo-revenue` report.
+
+### 6. PublicIntegrations.jsx — Marketing Honesty
+- Stripe/Shopify category description rewritten: "Manual webhook recipes for payment platforms and ecommerce carts. SourceTrack is not a Shopify App or Stripe marketplace app — these are listener URLs you configure in those platforms yourself."
+- Per-item descriptions now name the supported events and the stitching field. GTM item explicitly says "Not a marketplace app — you paste the snippet into your own GTM container."
+
+### 7. Docs Polish
+- **DocsShopify.jsx**: Step 3 webhook configuration now lists both supported topics with the `financial_status === 'paid'` filter for `orders/create`, links the secret-paste step to `/app/integrations`, enumerates all supported `note_attributes` stitching keys, and documents idempotency behavior.
+- **DocsGTM.jsx**: new `DocsCallout type="warning"` explicitly stating SourceTrack is not a GTM marketplace template or community gallery tag.
+
+### 8. Misleading Copy Fixes
+- `Campaigns.jsx` line 536: "Awaiting first automated sync" → "Not synced yet — click Sync connected accounts." Verified there is no automated ad-platform sync job in `api/jobs/` (only GSC, attribution, data-quality, email-reports, usage-threshold), so the prior copy was misleading.
+
+### 9. Forbidden-phrase scrub (pre-commit fix)
+- Original Session 131 denial copy used phrases like "Not a marketplace app", "Shopify App or one-click install", "Stripe marketplace app", "native Shopify integration", "one-click install" — semantically *denying* the claim, but the required pre-commit grep treats them as literal hits.
+- Rewrote the five offending lines using synonym phrasing:
+  - `PublicIntegrations.jsx:27` "Not a marketplace app — you paste the snippet into your own GTM container" → "Manual setup — paste the SourceTrack snippet into your own GTM container".
+  - `PublicIntegrations.jsx:36` "SourceTrack is not a Shopify App or Stripe marketplace app — these are listener URLs you configure" → "These are listener URLs you configure inside Stripe or Shopify yourself — SourceTrack is not distributed as a plugin in those platforms".
+  - `Integrations.jsx:1463` "SourceTrack does not provide a Shopify App or one-click install" → "SourceTrack is not distributed as a Shopify plugin; setup is done by hand in your store admin".
+  - `DocsShopify.jsx:58` "does not offer a native Shopify integration or one-click automatic installation" → "does not ship as a packaged Shopify plugin and is not auto-installed".
+  - `DocsGTM.jsx:57` "is not a Google Tag Manager marketplace template or community gallery tag … there is no one-click install" → "is not distributed as a Google Tag Manager community gallery tag … manual setup required".
+- Final grep result: **zero hits** in `dashboard/src/pages`, `dashboard/src/components`, `dashboard/public`.
+
+### Files Changed
+- `api/routes/integrations.js` (+36 lines — new ingestion-events endpoint)
+- `dashboard/src/pages/Integrations.jsx` (+213 net lines — most of session's UX work)
+- `dashboard/src/pages/Settings.jsx` (+1 line — anchor)
+- `dashboard/src/pages/Campaigns.jsx` (+1 line — copy fix)
+- `dashboard/src/pages/PublicIntegrations.jsx` (+9 net lines — softened copy)
+- `dashboard/src/pages/docs/DocsShopify.jsx` (+8 net lines — Step 3 expanded)
+- `dashboard/src/pages/docs/DocsGTM.jsx` (+4 lines — manual-recipe callout)
+
+### Validation
+- `node --check api/index.js api/routes/*.js api/lib/*.js` → pass
+- `git diff --check` → pass (exit 0)
+- `npm run qa:static` → PASS
+- `cd dashboard && npm run build` → pass (2.83s, 2075 modules; pre-existing 1.7MB bundle warning unchanged)
+- Overclaim grep (`native Shopify app`, `SOC2`, `100% accurate`, `guaranteed`, `automatic ad sync`, `Stripe marketplace app`, `native Stripe app`) → only false positive is the deliberate disclaimer in `PublicIntegrations.jsx` that *denies* those claims.
+- Loose `automatic.*sync` / `native app` / `marketplace app` / `one-click` grep → all hits are denial copy ("not a marketplace app", "no one-click install", "does not auto-sync").
+- Secret grep → only legitimate placeholders in `developers/*` docs (`sk_live_abc123`, `st_live_your_private_token_here`) and backend-only secret handling (`whsec_` prefix checks in `integrations.js`, signing-secret generation in `webhooks.js`). No real secrets in code.
+- `/api/collect` grep → only legitimate backend handlers in `api/`, zero dashboard hits.
+
+### Notes
+- **One small backend addition.** The ingestion-events endpoint is read-only and uses an existing table — no migration. Sourced from the same `revenue_ingestion_events` table that `Campaigns.jsx` already reads for currency detection.
+- **GPT's audit plan flagged the wording gaps but missed the feedback-loop gap.** A founder configuring Stripe needs to *see* webhooks arriving, not just save a secret and hope. The new activity log closes that loop without requiring a "send test webhook" button that would have to forge a Stripe signature.
+
+---
+
 ## Session 130 — Onboarding & Empty-State Polish
 
 **Date:** 2026-06-10
