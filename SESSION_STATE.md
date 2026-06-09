@@ -1,6 +1,6 @@
-Session: 128G Polish (Beginner-Friendly Docs Readability + Accuracy Audit + Public Site Consistency)
-Last Completed: Verified and restructured User Docs (/docs/*) and Developer Docs (/developers/*) using structured templates, key terms definitions, and exact parameter specifications. Standardized terms (source-to-revenue attribution, conversions) and corrected overclaims across the public site (landing, pricing, solution pages, footer). Fixed blank page Docs rendering bug. Cleaned trailing whitespace. Verified all syntax, production builds, and static QA checks pass.
-Next Task: Ready for user signoff.
+Session: 129A Self-Serve Server API Tokens
+Last Completed: Implemented self-serve Server API Token management on backend (GET, POST, DELETE api-keys endpoints under integrationsRouter) and frontend (Settings API Tokens card, Create Token Modal with one-time reveal, and copy workflows). Updated database schema migrations and developer docs. All static launch QAs and runtime integration tests passed.
+Next Task: Ready for user review of Session 129A.
 Roadmap Queue:
 - Phase C (Dashboard saved widget cards)
 - Phase D (Campaigns AI Copilot)

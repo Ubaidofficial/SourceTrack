@@ -23,6 +23,7 @@ Current important migration files:
 - `supabase/migration_saved_reports.sql`
 - `supabase/migration_onboarding.sql`
 - `supabase/migration_admin_phase2.sql`
+- `supabase/migration_server_api_keys.sql`
 
 ## Main schema alignment migration
 
@@ -58,6 +59,7 @@ Live DB should include:
 - `dashboard_widgets`
 - `admin_audit_log`
 - `qa_notes`
+- `api_keys`
 
 ## `sites`
 
@@ -123,6 +125,27 @@ Expected policy:
 
 - `Owner access`
 
+## `api_keys`
+
+Table:
+
+- `api_keys`
+
+Expected columns:
+
+- `id` (uuid, primary key)
+- `site_id` (uuid, foreign key to sites.id)
+- `owner_id` (uuid, foreign key to auth.users.id)
+- `key_prefix` (text, displays token prefix st_live_xxxx...)
+- `key_hash` (text, SHA-256 hash of plaintext token)
+- `name` (text, descriptive name of key)
+- `last_used_at` (timestamptz, timestamp of last event track using this key)
+- `created_at` (timestamptz, creation date)
+
+Expected policy:
+
+- `Owner access` (users can read/write own API keys)
+
 ## Dashboard widgets
 
 Table:
@@ -171,6 +194,7 @@ Current expected policies:
 - `qa_notes` -> Service key access only
 - `saved_reports` -> Owner access
 - `sites` -> users can read own sites
+- `api_keys` -> Owner access
 
 `dashboard_widgets` may not have a policy yet. This is okay until dashboard widget persistence becomes active work.
 

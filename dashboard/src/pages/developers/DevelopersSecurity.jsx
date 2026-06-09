@@ -45,31 +45,45 @@ export default function DevelopersSecurity() {
             2. Site Token Authorization Scope
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            SourceTrack routes incoming data points using a public site key:
+            SourceTrack manages access using two different types of tokens:
           </p>
           <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
-            <li><strong>Public key:</strong> Your site key is visible in your website\'s HTML source. It acts strictly as an ingestion identifier, allowing our server to route pageview and conversion events to your database workspace.</li>
-            <li><strong>Data Access Protection:</strong> The public site key cannot be used to retrieve, view, or modify any stored workspace data. All data access requests (reports, settings, visitor journeys) require user authentication and site membership checks.</li>
+            <li><strong>Public Site Key:</strong> Visible in your website's HTML source. It acts strictly as an ingestion router for client-side pixel pageviews and conversions. It cannot read any of your workspace data.</li>
+            <li><strong>Private Server API Tokens:</strong> Authenticate server-to-server writes to the <code>/api/server/event</code> route. These tokens are highly sensitive and must never be exposed in public browsers.</li>
           </ul>
         </section>
 
         <section className="space-y-4">
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
-            3. Securing Manual &amp; API Integrations
+            3. Private Server API Tokens Secrecy &amp; Revocation
+          </h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            Private Server API Tokens grant write access to your workspace's server-side telemetry events. Treat them with the same level of security as database passwords:
+          </p>
+          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
+            <li><strong>Server-Only Context:</strong> Never include private API tokens in front-end code, client-side scripts, browser cookies, or check them into public Git repositories.</li>
+            <li><strong>Single Exposure:</strong> When you generate an API token under Settings, the plaintext token is shown only once and is never stored in plaintext on our servers. Make sure to copy it and store it in a secure environment variable manager (e.g. AWS Secrets Manager, Vercel Env, or dotenv files).</li>
+            <li><strong>Instant Revocation:</strong> If a token is compromised, you can revoke it immediately in the Settings dashboard. Revocation permanently deletes the token mapping, causing any subsequent API calls using that token to fail instantly with a <code>401 Unauthorized</code> response.</li>
+          </ul>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            4. Securing Manual &amp; API Integrations
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
             When building manual integrations or webhook handlers, ensure the following best practices are applied:
           </p>
           <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
             <li><strong>HTTPS Enforced:</strong> All server-side requests to the offline conversion API (<code>/api/conversion/offline</code>) must be transmitted over encrypted HTTPS channels.</li>
-            <li><strong>HMAC Validation:</strong> When configuring inbound webhooks from Stripe, Shopify, or other payment gateways, always verify the payload signature timing-safely before processing the data, using the gateway\'s signing secret.</li>
+            <li><strong>HMAC Validation:</strong> When configuring inbound webhooks from Stripe, Shopify, or other payment gateways, always verify the payload signature timing-safely before processing the data, using the gateway's signing secret.</li>
             <li><strong>Outbound webhook validation:</strong> Outbound webhooks sent by SourceTrack contain a cryptographic signature header calculated using your unique signing key, allowing your endpoint to verify the authenticity of the event.</li>
           </ul>
         </section>
 
         <section className="space-y-4">
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
-            4. Data Minimization Guidance
+            5. Data Minimization Guidance
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
             SourceTrack is designed to report attribution patterns while respecting user privacy. We recommend following data minimization principles: do not send raw email addresses, customer names, billing addresses, or phone numbers in custom properties. Keep identifiers pseudonymized and only transmit parameters necessary for conversion verification and journey stitching.

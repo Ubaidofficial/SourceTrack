@@ -1,4 +1,5 @@
 import express from 'express'
+import crypto from 'crypto'
 import { queryHogQL } from '../lib/posthog.js'
 import { getSupabase } from '../lib/supabase.js'
 import { esc, encryptSecret } from '../lib/utils.js'
@@ -6,6 +7,7 @@ import { siteCache } from '../middleware/auth.js'
 import { resolveCname, verifySslAndRouting, normalizeDnsName } from '../lib/dns-resolver.js'
 import { invalidateProxyCache } from '../middleware/managed-proxy.js'
 import { validateCrossDomainSettings } from '../lib/cross-domain-validation.js'
+import { requireFeature } from '../lib/plan-features.js'
 
 const router = express.Router()
 
@@ -809,6 +811,115 @@ router.delete('/proxy-domain', async (req, res) => {
   } catch (err) {
     console.error('[integrations] DELETE proxy-domain error:', err?.message)
     return res.status(500).json({ success: false, data: null, error: 'Failed to remove custom tracking domain' })
+  }
+})
+
+// GET /api/integrations/api-keys — List API keys for the current site
+router.get('/api-keys', async (req, res) => {
+  try {
+    const siteId = req.site?.id
+    if (!siteId) {
+      return res.status(400).json({ success: false, data: null, error: 'Site context missing' })
+    }
+
+    const supabase = getSupabase()
+    const { data: keys, error } = await supabase
+      .from('api_keys')
+      .select('id, key_prefix, name, last_used_at, created_at')
+      .eq('site_id', siteId)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    return res.json({ success: true, data: keys || [], error: null })
+  } catch (err) {
+    console.error('[integrations] GET api-keys error:', err?.message)
+    return res.status(500).json({ success: false, data: null, error: 'Failed to fetch API keys' })
+  }
+})
+
+// POST /api/integrations/api-keys — Generate a new API key for the current site
+router.post('/api-keys', async (req, res) => {
+  try {
+    const siteId = req.site?.id
+    if (!siteId) {
+      return res.status(400).json({ success: false, data: null, error: 'Site context missing' })
+    }
+
+    const name = req.body?.name?.trim()
+    if (!name || typeof name !== 'string') {
+      return res.status(400).json({ success: false, data: null, error: 'Token name is required' })
+    }
+    if (name.length > 100) {
+      return res.status(400).json({ success: false, data: null, error: 'Token name is too long (maximum 100 characters)' })
+    }
+
+    // Gating check
+    const block = requireFeature(req.site?.plan, 'api_access', 'API access')
+    if (block) {
+      return res.status(402).json(block)
+    }
+
+    const randomPart = crypto.randomBytes(32).toString('hex')
+    const rawToken = `st_live_${randomPart}`
+    const keyHash = crypto.createHash('sha256').update(rawToken).digest('hex')
+    const keyPrefix = `st_live_${randomPart.slice(0, 4)}...`
+
+    const supabase = getSupabase()
+    const { data: newKey, error } = await supabase
+      .from('api_keys')
+      .insert({
+        site_id: siteId,
+        owner_id: req.user?.id,
+        key_prefix: keyPrefix,
+        key_hash: keyHash,
+        name
+      })
+      .select('id, key_prefix, name, last_used_at, created_at')
+      .single()
+
+    if (error) throw error
+
+    return res.json({
+      success: true,
+      data: {
+        ...newKey,
+        token: rawToken
+      },
+      error: null
+    })
+  } catch (err) {
+    console.error('[integrations] POST api-keys error:', err?.message)
+    return res.status(500).json({ success: false, data: null, error: 'Failed to create API key' })
+  }
+})
+
+// DELETE /api/integrations/api-keys/:id — Revoke/delete an API key
+router.delete('/api-keys/:id', async (req, res) => {
+  try {
+    const siteId = req.site?.id
+    if (!siteId) {
+      return res.status(400).json({ success: false, data: null, error: 'Site context missing' })
+    }
+
+    const { id } = req.params
+    if (!id) {
+      return res.status(400).json({ success: false, data: null, error: 'Key ID is required' })
+    }
+
+    const supabase = getSupabase()
+    const { error } = await supabase
+      .from('api_keys')
+      .delete()
+      .eq('id', id)
+      .eq('site_id', siteId)
+
+    if (error) throw error
+
+    return res.json({ success: true, data: { revoked: true }, error: null })
+  } catch (err) {
+    console.error('[integrations] DELETE api-keys error:', err?.message)
+    return res.status(500).json({ success: false, data: null, error: 'Failed to revoke API key' })
   }
 })
 

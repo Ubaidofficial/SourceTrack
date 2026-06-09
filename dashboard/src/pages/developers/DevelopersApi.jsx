@@ -155,6 +155,54 @@ export default function DevelopersApi() {
           </p>
         </section>
 
+        <section className="space-y-4">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            POST /api/server/event
+          </h2>
+          <Endpoint method="POST" path="/api/server/event" description="Auth — validated by Bearer Token" />
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            Submit events directly from your server. Authorize the call using a private <strong>Server API Token</strong> generated under Settings.
+          </p>
+
+          <DocsCallout type="info">
+            Server API Tokens must be created in the <strong>Settings</strong> page under the <strong>Server API Tokens</strong> section. They require a Growth or Scale plan.
+          </DocsCallout>
+
+          <h4 className="text-sm font-extrabold text-gray-900 dark:text-white">Request Body</h4>
+          <ParamTable params={[
+            { name: 'event', type: 'string', required: false, desc: 'Event label. Defaults to $pageview.' },
+            { name: 'anonymous_id', type: 'string', required: false, desc: 'Visitor anonymous UUID.' },
+            { name: 'user_id', type: 'string', required: false, desc: 'Internal user profile ID.' },
+            { name: 'user_ip', type: 'string', required: false, desc: 'IP address of the client (for geo-resolution).' },
+            { name: 'user_agent', type: 'string', required: false, desc: 'User-agent string of the client browser.' },
+            { name: 'page_url', type: 'string', required: false, desc: 'Full page URL.' },
+            { name: 'referrer', type: 'string', required: false, desc: 'HTTP Referrer.' },
+            { name: 'utm_source', type: 'string', required: false, desc: 'UTM source campaign.' },
+            { name: 'utm_medium', type: 'string', required: false, desc: 'UTM medium.' },
+            { name: 'utm_campaign', type: 'string', required: false, desc: 'Campaign name.' },
+            { name: 'conversion_value', type: 'number', required: false, desc: 'Monetary conversion value.' },
+            { name: 'conversion_type', type: 'string', required: false, desc: 'Conversion type label.' },
+            { name: 'timestamp', type: 'string', required: false, desc: 'ISO 8601 UTC date string when the event occurred (defaults to ingestion time).' },
+            { name: 'properties', type: 'object', required: false, desc: 'JSON object containing custom metadata.' }
+          ]} />
+
+          <h4 className="text-sm font-extrabold text-gray-900 dark:text-white">Example CURL Request</h4>
+          <DocsCodeBlock lang="bash">
+{`curl -X POST https://api.srctk.com/api/server/event \\
+  -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer st_live_your_private_token_here" \\
+  -d '{
+    "event":            "purchase_completed",
+    "anonymous_id":     "550e8400-e29b-41d4-a716-446655440000",
+    "user_id":          "user_10029",
+    "user_ip":          "192.168.1.1",
+    "user_agent":       "Mozilla/5.0...",
+    "conversion_value": 149.00,
+    "conversion_type":  "sale"
+  }'`}
+          </DocsCodeBlock>
+        </section>
+
         {/* Common Errors */}
         <section className="space-y-4">
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">

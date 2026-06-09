@@ -3,9 +3,10 @@ import { useAuth } from '../contexts/AuthContext'
 import { useSite } from '../contexts/SiteContext'
 import { supabase } from '../lib/supabase'
 import { getBillingPortal, fetchApi } from '../lib/api'
-import { Copy, Check, ExternalLink, Globe, Link2, CreditCard, Link, ShieldCheck, Trash2, AlertTriangle, Clock } from 'lucide-react'
+import { Copy, Check, ExternalLink, Globe, Link2, CreditCard, Link, ShieldCheck, Trash2, AlertTriangle, Clock, Key, X } from 'lucide-react'
 import UTMBuilder from '../components/UTMBuilder'
 import { getTrialInfo, getPlanLabel, isPaidPlan } from '../lib/billing'
+import { hasFeature } from '../lib/planFeatures'
 
 export default function Settings() {
   const { user } = useAuth()
@@ -51,6 +52,71 @@ export default function Settings() {
   const [crossDomainCookieDomain, setCrossDomainCookieDomain] = useState('')
   const [crossDomainSaving, setCrossDomainSaving]             = useState(false)
 
+  // API Keys state
+  const [apiKeys, setApiKeys]                       = useState([])
+  const [apiKeysLoading, setApiKeysLoading]         = useState(false)
+  const [apiKeysError, setApiKeysError]             = useState('')
+  const [newTokenName, setNewTokenName]             = useState('')
+  const [newTokenModalOpen, setNewTokenModalOpen]   = useState(false)
+  const [createdToken, setCreatedToken]             = useState(null)
+  const [tokenCopied, setTokenCopied]               = useState(false)
+
+  async function loadApiKeys() {
+    if (!activeSite?.site_key) return
+    setApiKeysLoading(true)
+    setApiKeysError('')
+    try {
+      const keys = await fetchApi(`/integrations/api-keys?site_key=${activeSite.site_key}`)
+      setApiKeys(keys || [])
+    } catch (err) {
+      console.error('Failed to load API keys:', err)
+      setApiKeysError(err.message || 'Failed to load API keys')
+    } finally {
+      setApiKeysLoading(false)
+    }
+  }
+
+  const handleCreateApiKey = async (e) => {
+    e.preventDefault()
+    if (!newTokenName.trim()) {
+      setApiKeysError('Token name is required')
+      return
+    }
+    setApiKeysLoading(true)
+    setApiKeysError('')
+    try {
+      const data = await fetchApi(`/integrations/api-keys?site_key=${activeSite.site_key}`, {
+        method: 'POST',
+        body: { name: newTokenName.trim() }
+      })
+      setCreatedToken(data)
+      setNewTokenName('')
+      await loadApiKeys()
+    } catch (err) {
+      setApiKeysError(err.message || 'Failed to generate token')
+    } finally {
+      setApiKeysLoading(false)
+    }
+  }
+
+  const handleRevokeApiKey = async (id) => {
+    if (!window.confirm('Are you sure you want to revoke this API token? Any server-side applications using this token will fail immediately.')) {
+      return
+    }
+    setApiKeysLoading(true)
+    setApiKeysError('')
+    try {
+      await fetchApi(`/integrations/api-keys/${id}?site_key=${activeSite.site_key}`, {
+        method: 'DELETE'
+      })
+      await loadApiKeys()
+    } catch (err) {
+      setApiKeysError(err.message || 'Failed to revoke token')
+    } finally {
+      setApiKeysLoading(false)
+    }
+  }
+
   useEffect(() => { loadSite() }, [user, activeSite])
 
   async function loadSite() {
@@ -85,6 +151,7 @@ export default function Settings() {
       setCustomParams(data.custom_url_params || [])
       setCrossDomainDomains((data.cross_domain_domains || []).join(', '))
       setCrossDomainCookieDomain(data.cross_domain_cookie_domain || '')
+      loadApiKeys()
     }
 
     try {
@@ -1047,6 +1114,138 @@ export default function Settings() {
         </div>
       </section>
 
+      {/* ── Server API Tokens ─────────────────────────────────────────── */}
+      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Key className="w-4 h-4 text-st-gray dark:text-gray-400" />
+            <h3 className="text-sm font-bold text-st-black dark:text-white">Server API Tokens</h3>
+          </div>
+          <a
+            href="/developers"
+            className="text-xs text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white underline"
+          >
+            Developer Portal →
+          </a>
+        </div>
+
+        <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
+          Use Server API Tokens to track offline events, server-side conversions, or send telemetry from backends (like Node.js, Python, or Ruby) directly to the <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded font-mono">/api/server/event</code> endpoint.
+        </p>
+
+        <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-lg p-3 space-y-1">
+          <p className="text-xs font-semibold text-blue-800 dark:text-blue-400">Site Key vs. Private API Token</p>
+          <p className="text-[11px] text-blue-700/85 dark:text-blue-305/85 leading-relaxed">
+            Your <strong>Site Key</strong> is public and embedded in your tracking pixel. It can only ingest client-side traffic and cannot read your data. A <strong>Private API Token</strong> authorizes server-side conversion writes and must be kept secure.
+          </p>
+        </div>
+
+        <div className="bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-lg p-3 flex gap-2.5 items-start">
+          <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-amber-800 dark:text-amber-400">Security Warning</p>
+            <p className="text-[11px] text-amber-700/85 dark:text-amber-305/85 leading-relaxed">
+              <strong>Never use private API tokens in browser-side JavaScript or public client code.</strong> Doing so exposes your secret credentials. Only use them in secure backend environments.
+            </p>
+          </div>
+        </div>
+
+        {apiKeysError && (
+          <div className="p-3 text-xs bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 rounded-lg border border-red-100 dark:border-red-900/20">
+            {apiKeysError}
+          </div>
+        )}
+
+        {!hasFeature(plan, 'api_access') ? (
+          <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-800 p-6 text-center bg-gray-50/30 dark:bg-dark-hover/5">
+            <div className="text-xs font-semibold text-amber-600 uppercase tracking-widest mb-2">🔒 Premium Feature</div>
+            <p className="text-xs font-bold text-st-black dark:text-white mb-1">Server API Token Management</p>
+            <p className="text-[11px] text-st-gray dark:text-gray-400 mb-4">API access is available on Growth and Scale plans.</p>
+            <a
+              href="/billing"
+              className="inline-block text-xs font-semibold px-4 py-2 rounded-lg bg-st-black dark:bg-white text-white dark:text-st-black hover:bg-st-black/95 dark:hover:bg-gray-100 transition-colors"
+            >
+              Upgrade to unlock
+            </a>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Tokens table/list */}
+            {apiKeysLoading && apiKeys.length === 0 ? (
+              <div className="text-center py-4 text-xs text-st-gray dark:text-gray-400 animate-pulse">
+                Loading API tokens...
+              </div>
+            ) : apiKeys.length === 0 ? (
+              <div className="text-center py-6 border border-dashed border-gray-100 dark:border-gray-800 rounded-lg text-xs text-st-gray dark:text-gray-400">
+                No active API tokens. Click the button below to generate one.
+              </div>
+            ) : (
+              <div className="overflow-x-auto border border-gray-100 dark:border-gray-800 rounded-lg">
+                <table className="w-full text-xs text-left border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-800/40 border-b border-gray-100 dark:border-gray-800 text-st-gray dark:text-gray-400">
+                      <th className="p-3 font-semibold">Name</th>
+                      <th className="p-3 font-semibold">Token prefix</th>
+                      <th className="p-3 font-semibold">Created</th>
+                      <th className="p-3 font-semibold">Last Used</th>
+                      <th className="p-3 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-850">
+                    {apiKeys.map(k => (
+                      <tr key={k.id} className="text-st-black dark:text-gray-300">
+                        <td className="p-3 font-medium truncate max-w-[150px]">{k.name}</td>
+                        <td className="p-3 font-mono text-[11px]">{k.key_prefix}</td>
+                        <td className="p-3 text-st-gray dark:text-gray-400">{new Date(k.created_at).toLocaleDateString()}</td>
+                        <td className="p-3 text-st-gray dark:text-gray-400">
+                          {k.last_used_at ? new Date(k.last_used_at).toLocaleDateString() : 'Never'}
+                        </td>
+                        <td className="p-3 text-right">
+                          <button
+                            onClick={() => handleRevokeApiKey(k.id)}
+                            className="text-red-505 hover:text-red-705 font-semibold text-xs"
+                          >
+                            Revoke
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <button
+              onClick={() => {
+                setCreatedToken(null);
+                setNewTokenModalOpen(true);
+              }}
+              className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 transition-colors"
+            >
+              + Generate API Token
+            </button>
+          </div>
+        )}
+
+        {/* Links to developer resources */}
+        <div className="flex flex-wrap gap-4 pt-2 border-t border-gray-100 dark:border-gray-800 text-[11px]">
+          <a
+            href="/developers/api"
+            className="flex items-center gap-1 text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            API Integration Guide
+          </a>
+          <a
+            href="/developers/security"
+            className="flex items-center gap-1 text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white"
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            Security & Token Best Practices
+          </a>
+        </div>
+      </section>
+
       {/* ── Danger Zone (Account Deletion) ────────────────────────────── */}
       <section className="bg-white dark:bg-[#1A1C1C] border border-red-200 dark:border-red-900/40 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-2">
@@ -1085,6 +1284,112 @@ export default function Settings() {
         <p className="text-xs text-st-gray dark:text-gray-400">Generate tagged URLs for accurate campaign tracking. All parameters are lowercased automatically.</p>
         <UTMBuilder />
       </section>
+
+      {/* ── Create Token Modal ────────────────────────────────────────── */}
+      {newTokenModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-2">
+              <h3 className="text-sm font-bold text-st-black dark:text-white">Generate Server API Token</h3>
+              {!createdToken && (
+                <button
+                  onClick={() => setNewTokenModalOpen(false)}
+                  className="text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            {!createdToken ? (
+              <form onSubmit={handleCreateApiKey} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="block text-xs text-st-gray dark:text-gray-400">Token Description Name</label>
+                  <input
+                    type="text"
+                    value={newTokenName}
+                    onChange={e => setNewTokenName(e.target.value)}
+                    placeholder="e.g. Production Backend SDK"
+                    required
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
+                  />
+                  <p className="text-[10px] text-st-gray dark:text-gray-400">
+                    Use a descriptive name so you remember where this token is deployed.
+                  </p>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setNewTokenModalOpen(false)}
+                    className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-st-black dark:text-white text-xs font-semibold rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={apiKeysLoading}
+                    className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors"
+                  >
+                    {apiKeysLoading ? 'Generating…' : 'Generate Token'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-green-50/50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30 rounded-lg p-3">
+                  <p className="text-xs font-semibold text-green-800 dark:text-green-400">Token Generated Successfully</p>
+                  <p className="text-[11px] text-green-700/80 dark:text-green-300/80 leading-relaxed mt-0.5">
+                    Copy the token now. <strong>For security, we cannot show this token to you again.</strong>
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-xs text-st-gray dark:text-gray-400">API Token</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={createdToken.token}
+                      className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-850 dark:text-white rounded-lg text-xs font-mono select-all focus:outline-none"
+                    />
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(createdToken.token);
+                        setTokenCopied(true);
+                        setTimeout(() => setTokenCopied(false), 2000);
+                      }}
+                      className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-st-black dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 shrink-0 flex items-center justify-center"
+                      title="Copy to Clipboard"
+                    >
+                      {tokenCopied ? <Check className="w-4 h-4 text-green-650" /> : <Copy className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-lg p-3 flex gap-2.5 items-start">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-amber-700/85 dark:text-amber-305/85 leading-relaxed font-semibold">
+                    Never commit this token to Git repositories, include it in frontend source files, or post it publicly.
+                  </p>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    onClick={() => {
+                      setNewTokenModalOpen(false);
+                      setCreatedToken(null);
+                    }}
+                    className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 transition-colors"
+                  >
+                    I Have Copied It
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

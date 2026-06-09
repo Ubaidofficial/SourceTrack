@@ -1,12 +1,63 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 128F — Public Interactive Demo Preview. Created static marketing demo data, implemented the modern dark-themed interactive MarketingInteractiveDemo component with SaaS/eCommerce/LeadGen switcher and attribution details journey mapping, and integrated it into the Landing page replacing the static mockup.
+> **Handoff:** Session 129A — Self-Serve Server API Tokens. Completed production schema fixes, added integrations backend routes (GET, POST, DELETE /api-keys), implemented UI in Settings with plan gating (Growth/Scale required) and copy-once capability, updated dev docs, and verified successfully with end-to-end integration tests.
 >
-> **Next Task:** Review of the public interactive demo preview implementation, manual QA validation, and commit.
+> **Next Task:** Proceed with the remaining self-serve paid beta roadmap items (e.g. GSC/CSV failure UX polishing, phase C, or phase D).
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
 
+## Session 129A — Self-Serve Server API Tokens
+**Date:** 2026-06-09 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+1. **Backend API Endpoints**: Verified secure integrations routes (`GET /api/integrations/api-keys`, `POST /api/integrations/api-keys`, `DELETE /api/integrations/api-keys/:id`) mounted with proper auth (`requireUserAuth`), site validation (`validateSiteKey`), and company membership (`requireSiteMembership`) middlewares.
+2. **PostgreSQL Migrations & Schema Drift**: Added numbered migration file `supabase/migrations/20260609110000_add_server_api_keys.sql` detailing the schema alignment, sites.id default random UUID and unique indexes, and `api_keys` table creation, aligning database state.
+3. **Settings UI Management**: Verified settings dashboard UI additions featuring a "Server API Tokens" card, Growth/Scale plan gating checks, generate name modal, one-time reveal copied status, and delete/revocation workflow.
+4. **Developer Reference Portal**: Verified updated documentation explaining server tokens management, `Authorization: Bearer <token>` authorization protocol, secrecy instructions, and revocation consequences under `/developers/api` and `/developers/security`.
+
+### Files changed
+- `api/routes/integrations.js`
+- `dashboard/src/pages/Settings.jsx`
+- `dashboard/src/pages/developers/DevelopersApi.jsx`
+- `dashboard/src/pages/developers/DevelopersSecurity.jsx`
+- `supabase/migration_server_api_keys.sql`
+- `supabase/migrations/20260609110000_add_server_api_keys.sql` [NEW]
+- `SUPABASE_SCHEMA.md`
+
+---
+
+## Session 128H — Full Self-Serve Paid Beta Audit
+**Date:** 2026-06-09 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+1. **Brutally Honest Audit**: Evaluated domain connectivity, business type setup, tracking script snippet flow, conversions customization, and verification polling. Checked webhooks validation, deduplication rules, and dynamic sessionization.
+2. **Launch Plan & Blocker Report**: Logged issues and recommended fixes in `SELF_SERVE_PAID_BETA_AUDIT.md`. Identified the missing API Key management UI as a P1 blocker, and the 1.7MB monolithic bundle size as a P2 performance polish opportunity.
+
+### Files changed
+- `SELF_SERVE_PAID_BETA_AUDIT.md` [NEW]
+
+---
+
+## Session 128G — Beginner-Friendly Docs Polish & Public Consistency Audit
+**Date:** 2026-06-09 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+1. **User & Developer Docs Restructuring**: Refined templates for user-facing guides, parameterized developer references, normalized ingestion paths to `/api/track`, and resolved Docs page render crashes.
+2. **Marketing Copy Polish**: Softened eCommerce, SaaS, Lead Gen, and Agency conversion/CAPI/Shopify integration claims, and verified zero private module leaks.
+
+### Files changed
+- `dashboard/src/pages/Docs.jsx`
+- `dashboard/src/pages/Snippet.jsx`
+- `dashboard/src/pages/Settings.jsx`
+- `dashboard/src/pages/SolutionEcommerce.jsx`
+- `dashboard/src/pages/SolutionAgency.jsx`
+- `dashboard/src/pages/SolutionSaaS.jsx`
+- `dashboard/src/pages/SolutionLeadGen.jsx`
+
+---
+
 ## Session 128F — Public Interactive Demo Preview
+
 **Date:** 2026-06-09 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
 
 ### Completed

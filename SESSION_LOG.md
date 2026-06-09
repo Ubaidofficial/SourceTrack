@@ -5,6 +5,9 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 129A | 2026-06-09 | `main` | Self-Serve Server API Tokens — Implemented secure backend integrations routes (GET, POST, DELETE /api-keys), added PostgreSQL server api_keys migrations, added plan gating with feature check, and built Settings API Tokens card with one-time copy modal and instant revocation, updating Developer API/Security documentation. | ✅ | No |
+| 128H | 2026-06-09 | `main` | Full Self-Serve Paid Beta Audit — Audited domain connect, business type setup, tracker snippet flow, conversion customization, and verification polling. Checked webhooks validation, deduplication rules, dynamic sessionization, and classified AI platform traffic. | ✅ | No |
+| 128G | 2026-06-09 | `main` | Beginner-Friendly Docs Polish & Public Consistency Audit — Restructured user and developer docs templates, normalized endpoint terms to '/api/track', fixed blank docs page rendering, and softened public site overclaims. | ✅ | No |
 | 128F | 2026-06-09 | `main` | Public Interactive Demo Preview — Created static marketing demo data, implemented the modern dark-themed interactive MarketingInteractiveDemo component with SaaS/eCommerce/LeadGen switcher and attribution details journey mapping, and integrated it into the Landing page replacing the static mockup. | ✅ | No |
 | 128D-B.1 | 2026-06-08 | `main` | Report Builder UI Polish — Replaced native selects with custom styled dropdowns, supported custom N-days rolling date inputs, renamed AI Platforms to AI-assisted with helper text, and refined traffic source category filter grid. | ✅ | No |
 | 128D-B | 2026-06-08 | `main` | Report Builder Two-Panel UI — Restructured Report Builder to a modern two-panel layout, added compact business question presets row, unified configuration options on the left Configure card, collapsed advanced filters by default, implemented a right Preview card, and created a right-sliding Saved Reports drawer. | ✅ | No |
@@ -921,4 +924,42 @@ curl -i https://api.srctk.com/tracker/tracker.min.js
 ### 3. Verification & Whitespace Checks
 - Ran Node syntax checks and compiled frontend production bundle successfully.
 - Cleaned up trailing whitespace and resolved double-newlines at the end of files. Verified that static launch checks pass cleanly.
+
+---
+
+## Session 128H — Full Self-Serve Paid Beta Audit
+
+**Date:** 2026-06-09
+**Branch:** `main`
+**Build:** ✅ passing (Vite build + Node syntax check + QA pass)
+
+### 1. Brutally Honest Onboarding & Ingestion Audit
+- Audited the standard domain connect, business type setup, code installation snippet flow, customized conversions selection, and polling verification routines. Everything is well-designed and fails open to let users proceed.
+- Verified Stripe & Shopify webhooks TimingSafeHMAC validation, deduplication on event IDs and order IDs, and raw body buffer configurations.
+- Verified dynamic sessionization (30 min inactivity) and AI channel classification mappings.
+
+### 2. Strategic Launch Plan & Blockers Identification
+- Created the full launch readiness audit report `SELF_SERVE_PAID_BETA_AUDIT.md`.
+- Identified one critical P1 Developer blocker: there is no UI in Settings or Developers settings to view, generate, or revoke the private API keys required by the `api_keys` table for `POST /api/server/event` server-to-server tracking.
+- Identified the 1.7MB monolithic bundle size as a P2 performance polish opportunity, requiring React lazy loading.
+
+---
+
+## Session 129A — Self-Serve Server API Tokens
+
+**Date:** 2026-06-09
+**Branch:** `main`
+**Build:** ✅ passing (Vite build + Node syntax check + QA pass)
+
+### 1. Backend Routes & Authentication Verification
+- Verified integrations route group `/api/integrations/api-keys` (GET, POST, DELETE) mounted with strict authentication (`requireUserAuth`), site key validation (`validateSiteKey`), and workspace/company membership (`requireSiteMembership`) middlewares.
+- Verified `/api/server/event` endpoint authentication (`Authorization: Bearer <token>`) format, SHA-256 token hashing at rest, and plan gating (`api_access` gate).
+- Added a PostgreSQL numbered database migration under `supabase/migrations/20260609110000_add_server_api_keys.sql` documenting the alignment, sites.id default random UUID and unique indexes, and `api_keys` table creation to ensure no schema drift.
+- Verified successful updates of `last_used_at` timestamps upon valid server event dispatches.
+
+### 2. Settings UI & Developer Documentation
+- Verified Settings page "Server API Tokens" section card featuring Site Key vs Private Token guidance, client-side usage warning, token creation name form, and revoked action.
+- Verified Growth/Scale plan locks gating access when the workspace plan does not contain `api_access`.
+- Verified one-time modal reveal of private token on generate with clipboard copy button.
+- Verified Developers API reference page and Developers Security spec page explaining where to manage server tokens, Bearer authorization, secrecy rules, and instant revocation.
 
