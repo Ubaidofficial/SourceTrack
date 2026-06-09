@@ -190,9 +190,11 @@ export default function EventDebugger() {
   if (health?.status === 'never_seen') {
     hints.push({ text: 'Check snippet — paste it in the <head> of your live site.', link: '/snippet' })
     hints.push({ text: 'Verify domain matches your Supabase site settings.', link: '/settings' })
+    hints.push({ text: 'Read the troubleshooting guide for common issues.', link: '/docs/troubleshooting' })
   }
   if (health?.status === 'silent_24h') {
     hints.push({ text: 'No events in 24h. Visit your site or check the snippet is still live.', link: '/snippet' })
+    hints.push({ text: 'Read the troubleshooting guide for common issues.', link: '/docs/troubleshooting' })
   }
   if (edge?.multiple_domains) {
     hints.push({ text: `Events coming from ${edge.domain_count} domains. Make sure you are tracking the right site.` })
@@ -453,8 +455,28 @@ export default function EventDebugger() {
 
         {!loading && !error && events.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-sm text-st-gray">No events match these filters.</p>
-            <p className="text-xs text-st-gray dark:text-gray-400 mt-1">Clear filters or send a fresh pageview/conversion event.</p>
+            {(filters.event_type !== 'all' || filters.source || filters.date_from || filters.date_to || filters.search) ? (
+              <>
+                <p className="text-sm text-st-gray">No events match these filters.</p>
+                <p className="text-xs text-st-gray dark:text-gray-400 mt-1">Clear filters or send a fresh pageview/conversion event.</p>
+              </>
+            ) : health?.status === 'never_seen' || !health ? (
+              <>
+                <p className="text-sm font-medium text-st-black dark:text-white">No events received yet</p>
+                <p className="text-xs text-st-gray dark:text-gray-400 mt-1 max-w-sm">SourceTrack hasn't received any data from your website.</p>
+                <ol className="text-xs text-st-gray dark:text-gray-400 mt-3 space-y-1 text-left">
+                  <li>1. <Link to="/snippet" className="text-blue-600 dark:text-blue-400 hover:underline">Install the tracker snippet</Link></li>
+                  <li>2. Open your website in a new tab</li>
+                  <li>3. Come back here and click Refresh</li>
+                </ol>
+                <Link to="/docs/troubleshooting" className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-3">Need help? → Troubleshooting guide</Link>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-st-gray">No recent events.</p>
+                <p className="text-xs text-st-gray dark:text-gray-400 mt-1">Visit your site or trigger a test event to see data here.</p>
+              </>
+            )}
           </div>
         )}
 

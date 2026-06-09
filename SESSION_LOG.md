@@ -945,6 +945,57 @@ curl -i https://api.srctk.com/tracker/tracker.min.js
 
 ---
 
+## Session 130 — Onboarding & Empty-State Polish
+
+**Date:** 2026-06-10
+**Branch:** `main`
+**Build:** ✅ passing (Vite build + Node syntax check + QA pass)
+
+### 1. Snippet Page — Setup Checklist, Site Key, Platform Links
+- Added a 6-step setup checklist at the top of `/snippet` driven by live state (`copied`, `status?.status === 'verified'`, `testConvResult?.ok`). Each step renders a `CheckCircle` (done), `ArrowRight` (current), or `Circle` (todo) icon and includes inline links to the snippet block, platform docs, and `/dashboard`.
+- Added a standalone "Your Site Key" card with a one-click copy-to-clipboard button, separated from the snippet code block, so customers can grab the key for server-side API calls without re-parsing the script tag.
+- Added a "Platform install guides" footer block linking to per-platform docs (GTM, Webflow, WordPress, Framer, Shopify) with external-link icons.
+
+### 2. Snippet Page — Precise Test Conversion Helper
+- Added a "Send a test conversion" card that POSTs `conversion_type: 'test_conversion'`, `conversion_value: 0`, `anonymous_id: 'test-<timestamp>'` to `/api/conversion` using `fetchApi`. No new backend endpoint was added.
+- **Copy is deliberately precise:**
+  - Description #1: "Send a $0 test conversion from this dashboard to confirm SourceTrack can receive conversion events for this site."
+  - Description #2: "This does not test your website install or real attribution. To test real attribution, install the tracker on your website, visit the site, then trigger a conversion from your website."
+  - Button label: "Send test conversion"
+  - Success: "Test conversion sent. Check the Event Debugger to confirm it arrived. Reports can take a few minutes to update."
+  - Next-step link: "Next: test real attribution from your website →" → `/developers/conversions`
+  - Warning (amber, `AlertTriangle`): "Test conversions use type `test_conversion` and value `$0`. They may still appear in reports because there is no test-data filter yet."
+
+### 3. Dashboard Empty-State Polish
+- Added a blue "Finish setting up" banner that appears in the empty-reports view when `healthData` is missing / `pending` / `never_seen`. Banner contains a primary CTA button (`Zap` icon) routing to `/snippet`.
+- The existing "No reports yet" sub-copy now flips conditionally: install-first message when tracker is unverified, original build-reports message otherwise.
+
+### 4. Event Debugger Empty-State Polish
+- Split the empty state into three branches based on filter state and tracker health:
+  - **Active filters**: existing "No events match these filters." copy + clear hint.
+  - **`never_seen` / no health**: a 3-step guided flow — install snippet (link to `/snippet`), visit site, click Refresh — plus a "Need help? → Troubleshooting guide" link to `/docs/troubleshooting`.
+  - **All other cases**: a calm "No recent events." / visit-your-site copy.
+- Also appended a troubleshooting-guide hint to the existing `never_seen` and `silent_24h` hint lists.
+
+### 5. Onboarding Platform Guides
+- Added a "Platform guides:" inline link row directly under the install method step in `Onboarding.jsx` (GTM, Webflow, WordPress, Framer, Shopify) to give brand-new users a fast path to platform-specific docs without leaving the onboarding flow.
+
+### Files changed
+- `dashboard/src/pages/Snippet.jsx`
+- `dashboard/src/pages/Dashboard.jsx`
+- `dashboard/src/pages/EventDebugger.jsx`
+- `dashboard/src/pages/Onboarding.jsx`
+
+### Validation
+- `node --check api/index.js api/routes/*.js api/lib/*.js` → pass (no backend changes; sanity check)
+- `git diff --check` → pass (no whitespace errors)
+- `npm run qa:static` → pass
+- `cd dashboard && npm run build` → pass
+- Overclaim grep (`native Shopify app`, `SOC2`, `100% accurate`, `guaranteed`, `automatic ad sync`, etc.) → no hits in dashboard pages.
+- `/api/collect` grep → no hits in dashboard.
+
+---
+
 ## Session 129A — Self-Serve Server API Tokens
 
 **Date:** 2026-06-09

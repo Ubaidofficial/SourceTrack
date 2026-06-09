@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { fetchApi } from '../lib/api'
-import { Copy, Check, Code, RefreshCw, ChevronDown, ChevronRight, Bug } from 'lucide-react'
+import { Copy, Check, Code, RefreshCw, ChevronDown, ChevronRight, Bug, Send, ExternalLink, Key, CheckCircle, Circle, ArrowRight, AlertTriangle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 export default function Snippet() {
@@ -18,6 +18,9 @@ export default function Snippet() {
   const [showPrivacyNotes, setShowPrivacyNotes] = useState(false)
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [activeSub, setActiveSub] = useState(null)
+
+  const [testConvLoading, setTestConvLoading] = useState(false)
+  const [testConvResult, setTestConvResult] = useState(null)
 
   useEffect(() => {
     async function load() {
@@ -126,6 +129,29 @@ export default function Snippet() {
     }
   }
 
+  const handleTestConversion = async () => {
+    if (!site) return
+    setTestConvLoading(true)
+    setTestConvResult(null)
+    try {
+      await fetchApi('/conversion', {
+        method: 'POST',
+        body: {
+          site_key: site.site_key,
+          conversion_type: 'test_conversion',
+          conversion_value: 0,
+          anonymous_id: `test-${Date.now()}`,
+          page_url: window.location.href
+        }
+      })
+      setTestConvResult({ ok: true })
+    } catch (_err) {
+      setTestConvResult({ ok: false, message: 'Failed to send test conversion. Check your connection.' })
+    } finally {
+      setTestConvLoading(false)
+    }
+  }
+
   const renderSubRow = (id, title, subtitle, content) => {
     const isExpanded = activeSub === id
     return (
@@ -160,6 +186,61 @@ export default function Snippet() {
         <p className="text-sm text-st-gray dark:text-gray-400 mt-1">Add one script to your website and verify tracking.</p>
       </div>
 
+      {/* Setup Checklist */}
+      <div className="bg-white dark:bg-[#1A1D1D] rounded-xl border border-gray-200 dark:border-[#333838] shadow-sm p-5">
+        <h3 className="text-sm font-semibold text-st-black dark:text-white mb-3">Setup checklist</h3>
+        <div className="space-y-2">
+          {[
+            { done: true, label: 'Create your site', detail: 'Done' },
+            { done: copied, label: 'Copy tracker snippet', detail: copied ? 'Copied' : 'Copy below', action: () => document.getElementById('snippet-code')?.scrollIntoView({ behavior: 'smooth' }) },
+            { done: false, label: 'Install on your website', detail: 'Paste before </head>', links: true },
+            { done: status?.status === 'verified', label: 'Verify first pageview', detail: status?.status === 'verified' ? `Verified — ${status.last_event_name || '$pageview'}` : 'Click Verify below' },
+            { done: testConvResult?.ok, label: 'Send a test conversion', detail: testConvResult?.ok ? 'Test sent' : 'Use button below' },
+            { done: false, label: 'View your attribution report', detail: null, href: '/dashboard' },
+          ].map((step, i) => {
+            const isCurrent = !step.done && (i === 0 || [true, true, copied, copied, status?.status === 'verified', testConvResult?.ok][i - 1] !== false)
+            return (
+              <div key={i} className="flex items-start gap-2.5 text-xs">
+                <span className="mt-0.5 flex-shrink-0">
+                  {step.done ? (
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                  ) : isCurrent ? (
+                    <ArrowRight className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  ) : (
+                    <Circle className="w-4 h-4 text-gray-300 dark:text-gray-600" />
+                  )}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {step.href ? (
+                      <Link to={step.href} className="font-medium text-st-black dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors">{step.label}</Link>
+                    ) : step.action ? (
+                      <button onClick={step.action} className="font-medium text-st-black dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left">{step.label}</button>
+                    ) : (
+                      <span className={`font-medium ${step.done ? 'text-gray-500 dark:text-gray-500' : 'text-st-black dark:text-white'}`}>{step.label}</span>
+                    )}
+                    {step.detail && <span className="text-gray-400 dark:text-gray-500">{step.detail}</span>}
+                  </div>
+                  {step.links && (
+                    <div className="flex flex-wrap gap-x-2.5 gap-y-0.5 mt-1">
+                      {[
+                        { label: 'GTM', to: '/docs/platforms/google-tag-manager' },
+                        { label: 'Webflow', to: '/docs/platforms/webflow' },
+                        { label: 'WordPress', to: '/docs/platforms/wordpress' },
+                        { label: 'Framer', to: '/docs/platforms/framer' },
+                        { label: 'Shopify', to: '/docs/platforms/shopify' },
+                      ].map(p => (
+                        <Link key={p.label} to={p.to} className="text-blue-600 dark:text-blue-400 hover:underline">{p.label}</Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
       {/* 3-Step Guided Installation */}
       <div className="bg-white dark:bg-[#1A1D1D] rounded-xl border border-gray-200 dark:border-[#333838] shadow-sm p-6 space-y-6">
 
@@ -174,7 +255,7 @@ export default function Snippet() {
           </p>
           {site ? (
             <div className="pl-7">
-              <div className="bg-st-black rounded-lg p-3.5 relative border border-gray-800">
+            <div id="snippet-code" className="bg-st-black rounded-lg p-3.5 relative border border-gray-800">
                 <pre className="text-green-400 text-[11px] font-mono overflow-x-auto whitespace-pre-wrap pr-12 leading-relaxed select-all">{snippet}</pre>
                 <button
                   onClick={handleCopy}
@@ -266,6 +347,103 @@ export default function Snippet() {
               </div>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Test Conversion */}
+      <div className="bg-white dark:bg-[#1A1D1D] rounded-xl border border-gray-200 dark:border-[#333838] shadow-sm p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <Send className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+          <h3 className="text-sm font-semibold text-st-black dark:text-white">Send a test conversion</h3>
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Send a $0 test conversion from this dashboard to confirm SourceTrack can receive conversion events for this site.
+        </p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          This does not test your website install or real attribution. To test real attribution, install the tracker on your website, visit the site, then trigger a conversion from your website.
+        </p>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleTestConversion}
+            disabled={testConvLoading || !site}
+            className="px-3 py-1.5 bg-st-black dark:bg-white text-white dark:text-st-black rounded-lg text-xs font-semibold disabled:opacity-50 transition-colors flex items-center gap-1.5 hover:opacity-90"
+          >
+            {testConvLoading ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                Sending...
+              </>
+            ) : (
+              <>
+                <Send className="w-3.5 h-3.5" />
+                Send test conversion
+              </>
+            )}
+          </button>
+        </div>
+        {testConvResult && (
+          <div className={`rounded-lg px-3.5 py-2.5 text-xs ${
+            testConvResult.ok
+              ? 'bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border border-green-200 dark:border-green-900/35'
+              : 'bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900/35'
+          }`}>
+            {testConvResult.ok ? (
+              <div className="space-y-1.5">
+                <p className="font-medium">Test conversion sent. Check the{' '}
+                  <Link to="/debugger" className="font-semibold underline hover:no-underline">Event Debugger</Link>
+                  {' '}to confirm it arrived. Reports can take a few minutes to update.
+                </p>
+                <p>
+                  <Link to="/developers/conversions" className="font-semibold underline hover:no-underline">Next: test real attribution from your website →</Link>
+                </p>
+              </div>
+            ) : (
+              <p className="font-medium">{testConvResult.message}</p>
+            )}
+          </div>
+        )}
+        <div className="flex items-start gap-2 text-[11px] text-amber-600 dark:text-amber-400">
+          <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+          <p>Test conversions use type <code className="font-mono">test_conversion</code> and value <code className="font-mono">$0</code>. They may still appear in reports because there is no test-data filter yet.</p>
+        </div>
+      </div>
+
+      {/* Site Key */}
+      {site && (
+        <div className="bg-white dark:bg-[#1A1D1D] rounded-xl border border-gray-200 dark:border-[#333838] shadow-sm p-5">
+          <div className="flex items-center gap-2 mb-2">
+            <Key className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+            <h3 className="text-sm font-semibold text-st-black dark:text-white">Your Site Key</h3>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Use this key for server-side API calls and integrations.</p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 bg-gray-50 dark:bg-[#252929] border border-gray-200 dark:border-[#333838] rounded-lg px-3 py-2 text-sm font-mono text-st-black dark:text-white select-all">{site.site_key}</code>
+            <button
+              onClick={() => { navigator.clipboard.writeText(site.site_key).catch(() => {}) }}
+              className="p-2 bg-gray-100 dark:bg-[#252929] hover:bg-gray-200 dark:hover:bg-[#333838] rounded-lg transition-colors"
+              title="Copy site key"
+            >
+              <Copy className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Platform Docs Links */}
+      <div className="bg-gray-50 dark:bg-[#161919]/60 rounded-xl border border-gray-150 dark:border-gray-800/80 p-4">
+        <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Platform install guides</p>
+        <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+          {[
+            { label: 'Google Tag Manager', to: '/docs/platforms/google-tag-manager' },
+            { label: 'Webflow', to: '/docs/platforms/webflow' },
+            { label: 'WordPress', to: '/docs/platforms/wordpress' },
+            { label: 'Framer', to: '/docs/platforms/framer' },
+            { label: 'Shopify', to: '/docs/platforms/shopify' },
+          ].map(p => (
+            <Link key={p.label} to={p.to} className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline">
+              {p.label} <ExternalLink className="w-3 h-3" />
+            </Link>
+          ))}
         </div>
       </div>
 
@@ -464,6 +642,14 @@ Content-Type: application/json
             )}
           </div>
         )}
+      </div>
+
+      {/* Need Help Links */}
+      <div className="text-xs text-gray-500 dark:text-gray-400 flex flex-wrap items-center gap-x-4 gap-y-1">
+        <span className="font-medium text-gray-600 dark:text-gray-300">Need help?</span>
+        <Link to="/docs/install" className="text-blue-600 dark:text-blue-400 hover:underline">Installation guide</Link>
+        <Link to="/docs/troubleshooting" className="text-blue-600 dark:text-blue-400 hover:underline">Troubleshooting</Link>
+        <Link to="/developers/conversions" className="text-blue-600 dark:text-blue-400 hover:underline">Conversion tracking</Link>
       </div>
     </div>
   )

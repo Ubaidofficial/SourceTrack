@@ -681,6 +681,20 @@ export default function Onboarding() {
           </button>
         </div>
 
+        {/* Platform install guides */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs mt-3">
+          <span className="font-semibold text-[#6B7373] dark:text-gray-400">Platform guides:</span>
+          {[
+            { label: 'GTM', to: '/docs/platforms/google-tag-manager' },
+            { label: 'Webflow', to: '/docs/platforms/webflow' },
+            { label: 'WordPress', to: '/docs/platforms/wordpress' },
+            { label: 'Framer', to: '/docs/platforms/framer' },
+            { label: 'Shopify', to: '/docs/platforms/shopify' },
+          ].map(p => (
+            <a key={p.label} href={p.to} className="text-blue-600 dark:text-blue-400 hover:underline">{p.label}</a>
+          ))}
+        </div>
+
         <button
           onClick={async () => {
             await saveOnboardingState(5, { install_method: installMethod })

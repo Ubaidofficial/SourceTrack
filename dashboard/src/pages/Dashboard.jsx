@@ -672,12 +672,29 @@ export default function Dashboard() {
       ) : isEmpty ? (
         /* Empty state — no saved reports */
         <div className="max-w-2xl mx-auto py-12 text-center space-y-8">
+          {/* Setup prompt when tracker not yet verified */}
+          {(!healthData || healthData.status === 'pending' || healthData.status === 'never_seen') && (
+            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/30 rounded-xl p-5 text-left">
+              <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-1">Finish setting up</h4>
+              <p className="text-xs text-blue-700 dark:text-blue-400 mb-3">
+                SourceTrack hasn't received any data yet. Install the tracker snippet on your website to start seeing attribution reports.
+              </p>
+              <button
+                onClick={() => navigate('/snippet')}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors flex items-center gap-1.5"
+              >
+                <Zap className="w-3.5 h-3.5" /> Go to Install Guide
+              </button>
+            </div>
+          )}
+
           <div>
             <BarChart3 className="w-16 h-16 text-gray-200 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-st-black dark:text-white mb-2">No reports yet</h3>
             <p className="text-sm text-st-gray dark:text-gray-400 max-w-md mx-auto">
-              Your dashboard is empty because no reports have been created yet.
-              Build reports for the metrics and attribution views you care about.
+              {(!healthData || healthData.status === 'pending' || healthData.status === 'never_seen')
+                ? 'Install the tracker, then create reports to see your attribution data here.'
+                : 'Your dashboard is empty because no reports have been created yet. Build reports for the metrics and attribution views you care about.'}
             </p>
           </div>
 

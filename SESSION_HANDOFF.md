@@ -1,10 +1,34 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 129A — Self-Serve Server API Tokens. Completed production schema fixes, added integrations backend routes (GET, POST, DELETE /api-keys), implemented UI in Settings with plan gating (Growth/Scale required) and copy-once capability, updated dev docs, and verified successfully with end-to-end integration tests.
+> **Handoff:** Session 130 — Onboarding & Empty-State Polish. Added a setup checklist, precise test-conversion helper, standalone Site Key card, and platform docs links to the Snippet page. Added a "Finish setting up" banner and improved no-reports copy to the Dashboard empty state. Added a guided no-events empty state with install steps and troubleshooting links to the Event Debugger. Added platform install guide links to the Onboarding install step. No backend changes.
 >
 > **Next Task:** Proceed with the remaining self-serve paid beta roadmap items (e.g. GSC/CSV failure UX polishing, phase C, or phase D).
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 130 — Onboarding & Empty-State Polish
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+1. **Snippet Page Setup Checklist**: Added a 6-step setup checklist (create site → copy snippet → install → verify pageview → send test conversion → view report) with live status icons (CheckCircle / ArrowRight / Circle) driven by `copied`, `status?.status`, and `testConvResult?.ok` state. Step 3 inlines platform docs links (GTM, Webflow, WordPress, Framer, Shopify).
+2. **Test Conversion Helper — Precise Copy**: Added a "Send a test conversion" card that POSTs `conversion_type: 'test_conversion'`, `conversion_value: 0` to `/api/conversion`. Copy is explicit that this only proves the conversion endpoint can receive events for this site — NOT that the tracker is installed, that a real visitor journey exists, or that source-to-revenue attribution is working. Includes a "Next: test real attribution from your website →" link pointing to `/developers/conversions`, and a warning that test conversions may still appear in reports because there is no test-data filter yet.
+3. **Standalone Site Key Card**: Added a dedicated copyable Site Key card with a copy-to-clipboard button, separated from the snippet block for server-side API / integration use.
+4. **Platform Docs Links Block**: Added a footer block linking to per-platform install guides (Google Tag Manager, Webflow, WordPress, Framer, Shopify) with external-link icons.
+5. **Dashboard Empty State**: Added a blue "Finish setting up" banner that appears when `healthData` is absent / `pending` / `never_seen`, with a CTA button routing to `/snippet`. The "no reports yet" sub-copy now flips between an install-first message and the existing build-reports message based on tracker health.
+6. **Event Debugger Empty State**: Split the empty state into three branches — active filters (existing copy + clear hint), `never_seen` / no health (guided 3-step install flow with snippet + refresh + troubleshooting links), or no recent events (visit your site / trigger event copy). Also appended troubleshooting links to the `never_seen` and `silent_24h` hint lists.
+7. **Onboarding Platform Guides**: Added a "Platform guides:" inline link row (GTM / Webflow / WordPress / Framer / Shopify) under the install step.
+
+### Files changed
+- `dashboard/src/pages/Snippet.jsx`
+- `dashboard/src/pages/Dashboard.jsx`
+- `dashboard/src/pages/EventDebugger.jsx`
+- `dashboard/src/pages/Onboarding.jsx`
+
+### Notes
+- **No backend changes.** The test conversion uses the existing `/api/conversion` endpoint and the existing `test_conversion` type.
+- **Privacy / overclaim audit:** the new copy makes no Shopify-native / SOC2 / 100%-accurate / guaranteed claims, no references to `/api/collect`, and does not introduce cookies.
+
+---
 
 ## Session 129A — Self-Serve Server API Tokens
 **Date:** 2026-06-09 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
