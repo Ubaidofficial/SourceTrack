@@ -57,7 +57,7 @@ const HERO = {
   primaryCta: 'Start tracking free',
   secondaryCta: 'View product',
   secondaryHref: '/product',
-  proofs: ['Install with one script or GTM', 'Track 30 conversion source profiles free', 'Built for founders and marketers'],
+  proofs: ['Install with one script or GTM', 'Track 30 attributed conversions free', 'Built for founders and marketers'],
 }
 
 export default function Landing() {

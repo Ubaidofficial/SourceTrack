@@ -70,6 +70,45 @@ export default function DevelopersHome() {
           </h2>
           <DocsCardGrid items={DEV_SECTIONS} />
         </section>
+
+        {/* Developer Glossary Section */}
+        <section className="bg-gray-50 dark:bg-[#131515] border border-gray-150 dark:border-gray-850 rounded-2xl p-6 space-y-4">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            Developer Glossary: Concepts
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">HMAC Verification</h3>
+              <p className="text-xs text-gray-600 dark:text-gray-405 leading-relaxed">
+                A mechanism using cryptographic signatures to verify that incoming webhook request payloads originate from Stripe or Shopify and were not tampered with.
+              </p>
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">Idempotency Key</h3>
+              <p className="text-xs text-gray-600 dark:text-gray-405 leading-relaxed">
+                A unique value (like an <code>order_id</code>) submitted with an event to prevent processing or storing duplicate payloads (e.g. on page refresh).
+              </p>
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">Anonymous ID (st_aid)</h3>
+              <p className="text-xs text-gray-600 dark:text-gray-405 leading-relaxed">
+                The tracking cookie/localStorage identifier representing a visitor's browser session before a logged-in identity is registered.
+              </p>
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">User ID</h3>
+              <p className="text-xs text-gray-600 dark:text-gray-405 leading-relaxed">
+                A stable database identifier from your application backend that identifies a logged-in user. Stitching maps the <code>st_aid</code> to this ID.
+              </p>
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">Properties / Metadata</h3>
+              <p className="text-xs text-gray-600 dark:text-gray-405 leading-relaxed">
+                Structured key-value fields sent with tracking payloads (like <code>conversion_value</code>, <code>currency</code>, or custom user tags).
+              </p>
+            </div>
+          </div>
+        </section>
       </div>
     </DocsLayout>
   )

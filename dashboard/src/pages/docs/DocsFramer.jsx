@@ -1,4 +1,5 @@
 import { Helmet } from 'react-helmet-async'
+import { Link } from 'react-router-dom'
 import DocsLayout from '../../components/docs/DocsLayout'
 import DocsCodeBlock from '../../components/docs/DocsCodeBlock'
 import DocsCallout from '../../components/docs/DocsCallout'
@@ -22,52 +23,108 @@ export default function DocsFramer() {
           </p>
         </div>
 
+        {/* 1. Who this is for */}
+        <section className="space-y-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            Who This Is For
+          </h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            This guide is for startups, founders, and designers who build their marketing websites or landing pages on Framer, and want campaign attribution set up in minutes.
+          </p>
+        </section>
+
+        {/* Glossary Callout */}
+        <DocsCallout type="info">
+          <h4 className="font-extrabold text-blue-900 dark:text-blue-300 mb-1">Key Terms Defined:</h4>
+          <ul className="list-disc pl-5 space-y-1 text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
+            <li><strong>Start of &lt;head&gt;</strong> — a settings text field in Framer that inserts custom HTML scripts at the top of your page before it renders in the browser.</li>
+            <li><strong>Single Page Application (SPA)</strong> — a modern website structure (used by Framer) that changes pages instantly without full browser reloads.</li>
+          </ul>
+        </DocsCallout>
+
+        {/* 2. What you will set up */}
+        <section className="space-y-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            What You Will Set Up
+          </h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            You will add our pixel script code into the custom code head configuration of your Framer project settings and publish it to launch automatic pageview and referrer tracking.
+          </p>
+        </section>
+
+        {/* 3. Steps */}
         <section className="space-y-4">
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
-            Installation Steps
+            Steps: Framer Integration
           </h2>
           
           <ol className="list-decimal pl-5 space-y-4 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
             <li>
-              Log in to your <strong>Framer Dashboard</strong> and open your project.
+              Log in to your <strong>Framer Dashboard</strong> and open your target project.
             </li>
             <li>
-              Open the project settings panel (the gear icon on the top toolbar).
+              Click the gear icon in the top toolbar to open <strong>Project Settings</strong>.
             </li>
             <li>
-              Navigate to the <strong>General Settings &rarr; Custom Code</strong> card.
+              Go to the <strong>Custom Code</strong> section on the left sidebar.
             </li>
             <li>
-              Locate the <strong>Start of &lt;head&gt;</strong> section.
+              Locate the <strong>Start of &lt;head&gt;</strong> field.
             </li>
             <li>
-              Paste the standard tracking script:
-              <DocsCodeBlock lang="html">
-{`<!-- Paste in Framer Page Settings -> Custom Code -> Head tag -->
-<script async src="https://api.srctk.com/tracker/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`}
+              Paste the tracking code snippet into the box:
+              <DocsCodeBlock lang="html" replaceKey={true} pasteOnce={true}>
+{`<script async src="https://api.srctk.com/tracker/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`}
               </DocsCodeBlock>
             </li>
             <li>
-              Click <strong>Save</strong> or apply the changes.
+              Click <strong>Save</strong>.
             </li>
             <li>
-              Click <strong>Publish</strong> in the top right to deploy the updated custom code onto your domain.
+              Click <strong>Publish</strong> in the top right to deploy the code to your live domain.
             </li>
           </ol>
         </section>
 
+        {/* 4. How to verify it worked */}
         <section className="space-y-4">
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
-            Verifying Framer Pageviews
+            How to Verify It Worked
           </h2>
-          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            Visit your published Framer site, and trigger a few page views. Verify that they appear immediately in the <strong>Event Debugger</strong> in your SourceTrack workspace.
-          </p>
+          <ol className="list-decimal pl-5 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            <li>Visit your live published Framer website.</li>
+            <li>Open Developer Tools (right-click &rarr; Inspect), click <strong>Network</strong>, and filter by <code>track</code>.</li>
+            <li>Refresh the page. Verify a call to <code>POST /api/track</code> completes successfully.</li>
+            <li>Since Framer runs as a Single Page Application (SPA), click a navigation link. You should see another network call to <code>POST /api/track</code> trigger instantly without a full page reload.</li>
+            <li>Verify visits are recorded in real-time under the <strong>Event Debugger</strong> in your SourceTrack dashboard.</li>
+          </ol>
         </section>
 
-        <DocsCallout type="info">
-          Because Framer sites function as React Single Page Applications (SPAs), page changes without full browser reloads will still trigger pageview dispatches to <code>POST /api/collect</code> automatically.
-        </DocsCallout>
+        {/* 5. Common mistakes */}
+        <section className="space-y-4">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            Common Mistakes
+          </h2>
+          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-750 dark:text-gray-350">
+            <li>
+              <strong>Failing to Publish:</strong> Code changes inside Framer Settings do not take effect until you click <strong>Publish</strong>.
+            </li>
+            <li>
+              <strong>Pasting into Page-Specific Code instead of Project Settings:</strong> Ensure the script is placed inside the global <strong>Project Settings &rarr; Custom Code</strong> area so it tracks across all pages.
+            </li>
+          </ul>
+        </section>
+
+        {/* 6. Next step */}
+        <section className="space-y-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            Next Step
+          </h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            Now that basic pageview tracking is active, configure your conversion triggers for leads or signups by following our{' '}
+            <Link to="/developers/conversions" className="text-blue-600 dark:text-blue-400 font-bold hover:underline">Browser Conversions guide</Link>.
+          </p>
+        </section>
       </div>
     </DocsLayout>
   )

@@ -3,6 +3,45 @@ import DocsLayout from '../../components/docs/DocsLayout'
 import DocsCodeBlock from '../../components/docs/DocsCodeBlock'
 import DocsCallout from '../../components/docs/DocsCallout'
 
+function ParamTable({ params }) {
+  return (
+    <div className="overflow-x-auto my-4">
+      <table className="w-full text-sm border-collapse">
+        <thead>
+          <tr className="border-b border-gray-200 dark:border-gray-800">
+            <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 py-2 pr-4 w-40">Parameter</th>
+            <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 py-2 pr-4 w-24">Type</th>
+            <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 py-2 pr-4 w-20">Required</th>
+            <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 py-2">Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          {params.map((p, i) => (
+            <tr key={i} className="border-b border-gray-100 dark:border-gray-800/60 last:border-0">
+              <td className="py-2 pr-4 font-mono text-[13px] text-gray-800 dark:text-gray-200 align-top">{p.name}</td>
+              <td className="py-2 pr-4 text-[13px] text-[#00AA57] dark:text-green-400 font-mono align-top">{p.type}</td>
+              <td className="py-2 pr-4 align-top">
+                {p.required
+                  ? <span className="text-[11px] font-semibold text-red-600 dark:text-red-400">required</span>
+                  : <span className="text-[11px] text-gray-400">optional</span>}
+              </td>
+              <td className="py-2 text-[13px] text-gray-600 dark:text-gray-400 align-top">{p.desc}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function MethodSignature({ signature }) {
+  return (
+    <div className="bg-gray-50 dark:bg-[#1a1d1d] border border-gray-200 dark:border-[#2a2e2e] rounded-lg px-4 py-3 my-4">
+      <code className="text-sm font-mono text-gray-800 dark:text-gray-200 font-semibold">{signature}</code>
+    </div>
+  )
+}
+
 export default function DevelopersIdentify() {
   return (
     <DocsLayout isDeveloper={true}>
@@ -22,59 +61,82 @@ export default function DevelopersIdentify() {
           </p>
         </div>
 
-        <section className="space-y-4">
+        {/* Overview */}
+        <section className="space-y-2">
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
-            The Identify Concept
+            Overview
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            When a visitor lands on your site, they are assigned a random tracking ID (<code>st_aid</code>). When they sign up or log in, call the <code>identify</code> method. SourceTrack creates an internal alias link, mapping the anonymous tracking session with your internal user ID. This ensures that their complete pre-login marketing path (UTMs, referrers, campaigns) is stitched to future purchases or billing events.
+            When a visitor lands on your site, they are tracked via an anonymous identifier (<code>st_aid</code>). When they register or log in, use the <code>identify</code> method to link their anonymous click history to their permanent account user ID. This ensures historical campaign touchpoints (UTMs, referrers) are correctly associated with future purchases.
           </p>
         </section>
 
-        <section className="space-y-4">
+        {/* Method Signature */}
+        <section className="space-y-2">
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
-            JavaScript SDK Signature
+            Method Signature
           </h2>
-          <DocsCodeBlock lang="js">
-{`window.sourcetrack.identify(userId, traits);`}
-          </DocsCodeBlock>
-          <ul className="space-y-3 text-sm text-gray-750 dark:text-gray-350">
-            <li>
-              <strong>userId</strong> <span className="text-xs text-[#00AA57] font-mono">string</span> (required):
-              <p className="mt-0.5">
-                Your internal database user identifier (e.g. <code>usr_550e8400</code> or <code>12345</code>). This will serve as the primary key for future conversions and backend mapping.
-              </p>
-            </li>
-            <li>
-              <strong>traits</strong> <span className="text-xs text-[#00AA57] font-mono">object</span> (optional):
-              <p className="mt-0.5">
-                Key-value traits to attach to the user profile (e.g. <code>email</code>, <code>name</code>, <code>plan_type</code>).
-              </p>
-            </li>
-          </ul>
+          <MethodSignature signature="window.sourcetrack.identify(userId, traits)" />
         </section>
 
+        {/* Parameters */}
+        <section className="space-y-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            Parameters
+          </h2>
+          <ParamTable params={[
+            { name: 'userId', type: 'string', required: true, desc: 'Your internal database user ID (e.g. usr_10293) that represents this user.' },
+            { name: 'traits', type: 'object', required: false, desc: 'Key-value descriptors representing user details (e.g. plan_tier, signup_date, contact_email).' }
+          ]} />
+        </section>
+
+        {/* Copy-Paste Example */}
         <section className="space-y-4">
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
             Code Example
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            Invoke this call inside your registration or authentication success handlers:
+            Execute this call immediately following a successful login, registration, or form sign-up:
           </p>
           <DocsCodeBlock lang="js">
-{`// Call upon successful login or user registration
-if (window.sourcetrack) {
+{`if (window.sourcetrack) {
   window.sourcetrack.identify('usr_99283471', {
     email: 'user@domain.com',
     name: 'John Doe',
-    company: 'Acme Corp'
+    company: 'Acme Corp',
+    plan: 'trial'
   });
 }`}
           </DocsCodeBlock>
         </section>
 
+        {/* Common Errors */}
+        <section className="space-y-4">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-850 pb-2">
+            Common Errors
+          </h2>
+          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-750 dark:text-gray-350">
+            <li>
+              <strong>Calling identify before script load:</strong> Ensure the main pixel has loaded or verify that <code>window.sourcetrack</code> is defined before calling <code>identify</code>.
+            </li>
+            <li>
+              <strong>Passing null/empty strings:</strong> If <code>userId</code> is missing or empty, the alias will not register, preventing future server-side webhook stitching.
+            </li>
+          </ul>
+        </section>
+
+        {/* Security Note */}
+        <section className="space-y-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            Security Note
+          </h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            Do not supply sensitive parameters (like passwords or authorization keys) inside the user's <code>traits</code>. Standard user traits (such as email addresses) are automatically hashed or redacted if configured in your dashboard privacy rules.
+          </p>
+        </section>
+
         <DocsCallout type="info">
-          Stitching is retrospective. Once an identify link is created, all historical pageviews and acquisition touchpoints captured under the visitor\'s anonymous tracking ID will be associated with their user profile.
+          Stitching is retrospective. Once an identify link is created, all historical pageviews and acquisition touchpoints captured under the visitor's anonymous tracking ID will be associated with their user profile.
         </DocsCallout>
       </div>
     </DocsLayout>

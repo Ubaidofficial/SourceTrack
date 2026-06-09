@@ -102,7 +102,7 @@ const DATA = {
       },
       {
         q: 'How does pricing work for eCommerce stores?',
-        a: "You pay based on your conversion volume and tracked pageviews. A store with 150,000 tracked pageviews and up to 750 conversion source profiles fits on Growth.",
+        a: "You pay based on your conversion volume and tracked pageviews. A store with 150,000 tracked pageviews and up to 750 attributed conversions fits on Growth.",
       },
     ],
   },

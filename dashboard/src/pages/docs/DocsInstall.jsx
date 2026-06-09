@@ -23,50 +23,83 @@ export default function DocsInstall() {
           </p>
         </div>
 
-        <section className="space-y-4">
+        {/* 1. Who this is for */}
+        <section className="space-y-2">
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
-            Copy-Paste Installation
+            Who This Is For
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            The standard tracking script should be loaded on every page of your site. Paste the script tag in the <code>&lt;head&gt;</code> layout of your pages so it captures search referral signals before page transition scripts execute.
+            This guide is for website owners, founders, and marketers who want to capture visitor sources (like Google Ads clicks or AI chatbot referrals) and trace them all the way to customer actions. No deep programming experience is required.
           </p>
-          <DocsCodeBlock lang="html">
+        </section>
+
+        {/* Glossary Callout */}
+        <DocsCallout type="info">
+          <h4 className="font-extrabold text-blue-900 dark:text-blue-300 mb-1">Key Terms Defined:</h4>
+          <ul className="list-disc pl-5 space-y-1 text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
+            <li><strong>Tracker script</strong> — the small JavaScript code snippet SourceTrack uses to record visits.</li>
+            <li><strong>Site key</strong> — the public ID that tells SourceTrack which site the event belongs to.</li>
+            <li><strong>Pageview</strong> — an event recorded when a visitor loads or navigates to a page on your site.</li>
+          </ul>
+        </DocsCallout>
+
+        {/* 2. What you will set up */}
+        <section className="space-y-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            What You Will Set Up
+          </h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            You will paste our lightweight script into your site's HTML layout. Once installed, it automatically tracks pageviews (including page changes in Single Page Apps), UTM parameters, and ad click identifiers.
+          </p>
+        </section>
+
+        {/* 3. Steps */}
+        <section className="space-y-4">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            Steps: Copy-Paste Installation
+          </h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            Paste the tracking script inside the <code>&lt;head&gt;</code> element of your website layout so it executes before other scripts:
+          </p>
+          <DocsCodeBlock lang="html" replaceKey={true} pasteOnce={true}>
 {`<script async src="https://api.srctk.com/tracker/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`}
           </DocsCodeBlock>
         </section>
 
+        {/* What captures section */}
         <section className="space-y-4">
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
             What the Script Captures
           </h2>
-          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            Once loaded, the pixel script automatically records:
-          </p>
           <ul className="list-disc pl-5 space-y-1.5 text-sm text-gray-700 dark:text-gray-300">
-            <li><strong>Pageviews:</strong> Recorded on initial load and during subsequent history-based Single Page App (SPA) route changes.</li>
-            <li><strong>Acquisition parameters:</strong> UTM query parameters (<code>utm_source</code>, <code>utm_medium</code>, <code>utm_campaign</code>, <code>utm_term</code>, <code>utm_content</code>).</li>
-            <li><strong>Ad Click IDs:</strong> Google Click ID (<code>gclid</code>, <code>gbraid</code>, <code>wbraid</code>), Facebook Click ID (<code>fbclid</code>), Microsoft Click ID (<code>msclkid</code>), TikTok Click ID (<code>ttclid</code>), LinkedIn Click ID (<code>li_fat_id</code>), Twitter Click ID (<code>twclid</code>).</li>
+            <li><strong>Pageviews:</strong> Recorded on initial load and during subsequent Single Page App (SPA) route changes automatically.</li>
+            <li><strong>Acquisition parameters:</strong> UTM parameters (<code>utm_source</code>, <code>utm_medium</code>, <code>utm_campaign</code>, etc.).</li>
+            <li><strong>Ad Click IDs:</strong> Google Click ID (<code>gclid</code>, <code>gbraid</code>, <code>wbraid</code>), Facebook Click ID (<code>fbclid</code>), Microsoft Click ID (<code>msclkid</code>), TikTok Click ID (<code>ttclid</code>), LinkedIn Click ID (<code>li_fat_id</code>).</li>
             <li><strong>Referrer information:</strong> Captures the organic search engine, direct entry, or referring site domain.</li>
-            <li><strong>Device metadata:</strong> Browser name, operating system, layout viewport width/height, country (derived on the server from the IP address).</li>
+            <li><strong>Device metadata:</strong> Browser name, operating system, and country (derived safely on the server from the IP address).</li>
           </ul>
         </section>
 
+        {/* 4. How to verify it worked */}
         <section className="space-y-4">
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
-            How to Verify
+            How to Verify It Worked
           </h2>
-          <ol className="list-decimal pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
+          <ol className="list-decimal pl-5 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
             <li>Open your live website in a browser.</li>
             <li>Right-click and select <strong>Inspect</strong> to open Developer Tools, then go to the <strong>Network</strong> tab.</li>
-            <li>Filter requests by <code>collect</code> or <code>tracker</code>. You should see a successful network dispatch to <code>POST /api/collect</code> (returning a <code>{"{ success: true }"}</code> JSON body).</li>
+            <li>Filter requests by typing <code>track</code> in the filter box.</li>
+            <li>Refresh your page. You should see a network request named <code>track</code> go to <code>POST /api/track</code> (returning a <code>{"{ success: true }"}</code> response).</li>
+            <li>Go to the <strong>Event Debugger</strong> in your SourceTrack dashboard to see your visit log update in real-time.</li>
           </ol>
         </section>
 
+        {/* 5. Common mistakes */}
         <section className="space-y-4">
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
             Common Mistakes
           </h2>
-          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-750 dark:text-gray-300">
+          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-750 dark:text-gray-350">
             <li>
               <strong>Incorrect Site Key:</strong> Double-check that your key matches the exact string shown under Settings in your dashboard.
             </li>
@@ -74,15 +107,21 @@ export default function DocsInstall() {
               <strong>Failing to Replace the Placeholder:</strong> Make sure you have replaced <code>YOUR_SITE_KEY</code> with your real key in the script.
             </li>
             <li>
-              <strong>Ad Blockers / Privacy Settings:</strong> If you use a strict blocker during development, the network request to our analytics collection servers might be blocked. Configure exceptions or test in a clean browser profile.
+              <strong>Ad Blockers / Privacy Shields:</strong> Strict ad blockers during local development can block network requests to our servers. We recommend testing in a clean browser profile or temporary incognito tab without blockers active.
             </li>
           </ul>
         </section>
 
-        <DocsCallout type="info">
-          Want to track traffic without using client-side cookies or storage under GDPR regulations? Read our{' '}
-          <Link to="/developers/tracker" className="underline font-bold">Cookieless Mode documentation</Link>.
-        </DocsCallout>
+        {/* 6. Next step */}
+        <section className="space-y-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            Next Step
+          </h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            Now that the basic pageview tracker is installed, you are ready to configure conversion goals. Move on to the{' '}
+            <Link to="/developers/conversions" className="text-blue-600 dark:text-blue-400 font-bold hover:underline">Browser Conversions guide</Link> to track signups, purchases, and leads.
+          </p>
+        </section>
       </div>
     </DocsLayout>
   )

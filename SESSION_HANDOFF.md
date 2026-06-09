@@ -1210,3 +1210,36 @@ curl -i https://api.srctk.com/tracker/tracker.min.js
 - Open `/snippet` and verify it displays the simple 3-step install layout, that all advanced rows are collapsed under "Advanced setup", and that Stripe webhooks code and identify API references are hidden.
 - Verify the privacy reminder is small and calm, only expanding details when "Read privacy notes" is clicked.
 - Navigate to `/integrations` and click "Import CSV" to verify it redirects to `/campaigns`, opens the cost import modal, and clears the `?import=true` query param.
+
+---
+
+## Session 128G — Beginner-Friendly Docs Polish & Public Consistency Audit
+
+**Date:** 2026-06-09 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+1. **User Docs Beginner-Friendly Refactor:** Restructured user documentation pages (Quickstart, Install, Platforms, Troubleshooting) to adhere to the standardized structure: Who this is for, What you will set up, Steps, How to verify it worked, Common mistakes, Next step.
+2. **Developer Reference Portals:** Restructured developer documentation pages (API, Tracker, Conversions, Offline Conversions, Identify, Webhooks, Campaign Costs, Security) to follow the structured layout: Overview, Method Signature/Endpoint details, Parameters Table, Code Example, Common Errors, Security Note.
+3. **Endpoint Nomenclature Alignment:** Replaced references to the outdated `collect` endpoint with the production `track` (`POST /api/track`) endpoint across troubleshooting documentation, API references, and verification guides.
+4. **Copy Softening & Consistency Sweep:** Softened all references to unverified or prohibited claims across the public site (landing page, use cases, pricing cards, FAQs, and footer elements). Replaced occurrences of "conversion source profiles" with "attributed conversions" or "conversions", and ensured Shopify/Stripe integrations are described as manual webhook recipes.
+5. **No Auth/API Leakage:** Verified that no public documentation pages import authenticated context dependencies (`supabase`, `useAuth`, `axios`, etc.).
+6. **Whitespace Resolution:** Cleaned trailing spaces and EOF double-newlines.
+
+### Files changed
+- `dashboard/src/components/HeroSection.jsx`
+- `dashboard/src/components/MarketingFooter.jsx`
+- `dashboard/src/components/PricingCards.jsx`
+- `dashboard/src/pages/Landing.jsx`
+- `dashboard/src/pages/Pricing.jsx`
+- `dashboard/src/pages/SolutionEcommerce.jsx`
+- `dashboard/src/pages/SolutionPage.jsx`
+- `dashboard/src/pages/developers/*` (all files updated)
+- `dashboard/src/pages/docs/*` (all files updated)
+
+### Remaining QA (manual browser verification needed)
+- Open `/docs/quickstart` and check the 7 steps checklist (specifically that step 5 "Verify your First Pageview" is properly numbered).
+- Open `/docs/platforms/stripe` and verify it specifies only the supported `checkout.session.completed` event type and lists correct metadata parameters.
+- Open `/developers/api` and confirm the Common Errors and Security Note cards render at the bottom of the page.
+- Open `/pricing` and check the FAQ to verify that references to "conversion source profiles" are gone.
+- View the marketing site footer and ensure it says "up to 30 conversions free" instead of "30 conversion source profiles free".
+

@@ -1,4 +1,5 @@
 import { Helmet } from 'react-helmet-async'
+import { Link } from 'react-router-dom'
 import DocsLayout from '../../components/docs/DocsLayout'
 import DocsCallout from '../../components/docs/DocsCallout'
 
@@ -7,7 +8,7 @@ const TROUBLESHOOTING_ITEMS = [
     symptom: 'No pageviews are showing up in the dashboard',
     cause: 'The site key is incorrect, the script is not loading, or an ad blocker is suppressing the endpoint.',
     fix: 'Verify that the script tag exists in your HTML source and contains the exact Site Key from settings. Check the browser Console and Network tabs for blocks. Turn off strict ad blockers during testing.',
-    verify: 'Look for the "collect" network request returning a 200 success response.'
+    verify: 'Look for the "track" network request returning a 200 success response.'
   },
   {
     symptom: 'Missing conversion events',
@@ -60,27 +61,98 @@ export default function DocsTroubleshooting() {
           </p>
         </div>
 
-        <section className="space-y-6">
-          {TROUBLESHOOTING_ITEMS.map((item, idx) => (
-            <div key={idx} className="p-5 bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-gray-800 rounded-xl space-y-3">
-              <h3 className="text-sm font-extrabold text-[#E54545] flex items-start gap-1.5">
-                <span className="mt-0.5 shrink-0">Symptom:</span>
-                <span>{item.symptom}</span>
-              </h3>
-              
-              <div className="text-xs space-y-1.5 pl-6 text-gray-700 dark:text-gray-400">
-                <p><strong>Likely Cause:</strong> {item.cause}</p>
-                <p><strong>Fix:</strong> {item.fix}</p>
-                <p><strong>How to Verify:</strong> {item.verify}</p>
-              </div>
-            </div>
-          ))}
+        {/* 1. Who this is for */}
+        <section className="space-y-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            Who This Is For
+          </h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            This guide is for developers, founders, and marketers looking to diagnose issues with missing pageviews, unstitched conversions, or webhook errors.
+          </p>
         </section>
 
+        {/* Glossary Callout */}
         <DocsCallout type="info">
-          Still having issues? Contact our technical team at{' '}
-          <a href="mailto:support@sourcetrack.ai" className="underline font-bold">support@sourcetrack.ai</a> and provide your site domain and configuration snapshots.
+          <h4 className="font-extrabold text-blue-900 dark:text-blue-300 mb-1">Key Terms Defined:</h4>
+          <ul className="list-disc pl-5 space-y-1 text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
+            <li><strong>Developer Tools</strong> — the inspect panel inside modern browsers used to view console logs and inspect network payloads.</li>
+            <li><strong>Console</strong> — the command-line interface inside Developer Tools where errors are logged and manual code can be run.</li>
+            <li><strong>Event Debugger</strong> — the real-time event log inside the SourceTrack dashboard showing raw events as they hit our servers.</li>
+          </ul>
         </DocsCallout>
+
+        {/* 2. What you will set up */}
+        <section className="space-y-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            What You Will Diagnose
+          </h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            You will inspect your browser network logs, review dashboard event updates, verify API responses, and run quick browser tests to solve tracking discrepancies.
+          </p>
+        </section>
+
+        {/* 3. Steps / Symptom Checklist */}
+        <section className="space-y-6">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            Symptoms and Solutions
+          </h2>
+
+          <div className="space-y-6">
+            {TROUBLESHOOTING_ITEMS.map((item, idx) => (
+              <div key={idx} className="p-5 bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-gray-800 rounded-xl space-y-3">
+                <h3 className="text-sm font-extrabold text-[#E54545] flex items-start gap-1.5">
+                  <span className="mt-0.5 shrink-0">Symptom:</span>
+                  <span>{item.symptom}</span>
+                </h3>
+
+                <div className="text-xs space-y-1.5 pl-6 text-gray-700 dark:text-gray-400">
+                  <p><strong>Likely Cause:</strong> {item.cause}</p>
+                  <p><strong>Fix:</strong> {item.fix}</p>
+                  <p><strong>How to Verify:</strong> {item.verify}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* 4. How to verify it worked */}
+        <section className="space-y-4">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            How to Verify Success
+          </h2>
+          <ol className="list-decimal pl-5 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            <li>Make your target changes (updating theme files, clearing caching systems, or adjusting metadata configurations).</li>
+            <li>Clear your browser data or load the site inside an incognito/private tab to bypass local caches.</li>
+            <li>Open your browser Developer Tools (Network Tab) and filter for <code>track</code>.</li>
+            <li>Perform the action (loading a page, clicking a button) and verify the request exits successfully.</li>
+          </ol>
+        </section>
+
+        {/* 5. Common mistakes */}
+        <section className="space-y-4">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            Common Troubleshooting Mistakes
+          </h2>
+          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-750 dark:text-gray-350">
+            <li>
+              <strong>Testing behind active proxy profiles:</strong> VPNs or corporate firewalls can occasionally filter incoming analytic endpoints. Test on standard connections or home networks.
+            </li>
+            <li>
+              <strong>Ignoring CSS/Theme caches:</strong> Caching systems (like WordPress plugins, Shopify edge networks, or Cloudflare proxies) may hold onto outdated tracking scripts. Always clear caches after making script changes.
+            </li>
+          </ul>
+        </section>
+
+        {/* 6. Next step */}
+        <section className="space-y-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            Next Step
+          </h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            Troubleshooting resolved? Return to the{' '}
+            <Link to="/docs" className="text-blue-600 dark:text-blue-400 font-bold hover:underline">User Docs hub</Link> to configure additional platform integrations.
+          </p>
+        </section>
       </div>
     </DocsLayout>
   )

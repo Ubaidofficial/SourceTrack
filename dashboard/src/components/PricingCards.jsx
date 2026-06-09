@@ -4,27 +4,27 @@ const PLANS = [
   {
     key: 'free', name: 'Free', price: '$0', period: '',
     desc: 'Track where your next 30 signups or orders came from.',
-    features: ['1 site', '30 conversion source profiles/mo', '5,000 tracked pageviews/mo', '30-day history', 'SourceTrack logo on export'],
+    features: ['1 site', '30 attributed conversions/mo', '5,000 tracked pageviews/mo', '30-day history', 'SourceTrack logo on export'],
     cta: 'Start free', href: '/signup', featured: false,
   },
   {
     key: 'starter', name: 'Starter', price: '$19', period: '/mo',
     desc: 'Replace your lead-source spreadsheet.',
-    features: ['1 site', '150 conversion source profiles/mo', '50,000 tracked pageviews/mo', '90-day history', 'Manual status & revenue', 'Saved reports & CSV export', 'Clean report exports'],
+    features: ['1 site', '150 attributed conversions/mo', '50,000 tracked pageviews/mo', '90-day history', 'Manual status & revenue', 'Saved reports & CSV export', 'Clean report exports'],
     cta: 'Choose Starter', href: '/signup', featured: false,
     subprice: '$29/mo monthly',
   },
   {
     key: 'growth', name: 'Growth', price: '$49', period: '/mo',
     desc: 'Connect sources to revenue and ROI.',
-    features: ['3 sites', '750 conversion source profiles/mo', '150,000 tracked pageviews/mo', '1-year history', 'Revenue attribution models', 'Dashboard widgets', '3 users (seats)'],
+    features: ['3 sites', '750 attributed conversions/mo', '150,000 tracked pageviews/mo', '1-year history', 'Revenue attribution models', 'Dashboard widgets', '3 users (seats)'],
     cta: 'Choose Growth', href: '/signup', featured: true,
     subprice: '$79/mo monthly',
   },
   {
     key: 'scale', name: 'Scale', price: 'From $149', period: '/mo',
     desc: 'For agencies and high-volume teams.',
-    features: ['10+ sites', '2,500+ conversion source profiles/mo', '500,000+ tracked pageviews/mo', 'Multi-user seats (99 seats)', 'Priority onboarding support'],
+    features: ['10+ sites', '2,500+ attributed conversions/mo', '500,000+ tracked pageviews/mo', 'Multi-user seats (99 seats)', 'Priority onboarding support'],
     cta: 'Talk to sales', href: 'mailto:sales@sourcetrack.ai', featured: false,
   },
 ]

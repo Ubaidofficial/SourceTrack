@@ -55,7 +55,7 @@ export default function MarketingFooter() {
             <Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
             <Link to="/security" className="hover:text-white transition-colors">Security</Link>
           </div>
-          <span>Free conversion source tracker — 30 conversion source profiles free.</span>
+          <span>Free conversion source-to-revenue tracker — up to 30 conversions free.</span>
         </div>
       </div>
     </footer>

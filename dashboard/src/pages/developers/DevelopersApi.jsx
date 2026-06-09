@@ -155,6 +155,51 @@ export default function DevelopersApi() {
           </p>
         </section>
 
+        {/* Common Errors */}
+        <section className="space-y-4">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            Common Errors
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-800">
+                  <th className="text-left text-xs font-semibold text-gray-500 py-2 pr-4 w-24">Status</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 py-2 pr-4 w-40">Error Message</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 py-2">Typical Cause</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-gray-100 dark:border-gray-800/60">
+                  <td className="py-2 pr-4 font-mono text-xs text-red-600 dark:text-red-400">400 Bad Request</td>
+                  <td className="py-2 pr-4 font-mono text-xs text-gray-850 dark:text-gray-250">"Missing site_key" or "Invalid payload"</td>
+                  <td className="py-2 text-xs text-gray-650 dark:text-gray-405">The required request parameter or payload structure is invalid.</td>
+                </tr>
+                <tr className="border-b border-gray-100 dark:border-gray-800/60">
+                  <td className="py-2 pr-4 font-mono text-xs text-red-600 dark:text-red-400">404 Not Found</td>
+                  <td className="py-2 pr-4 font-mono text-xs text-gray-850 dark:text-gray-250">"Site not found"</td>
+                  <td className="py-2 text-xs text-gray-650 dark:text-gray-405">The public site key does not exist or has been deactivated.</td>
+                </tr>
+                <tr className="border-b border-gray-100 dark:border-gray-800/60">
+                  <td className="py-2 pr-4 font-mono text-xs text-red-600 dark:text-red-400">500 Server Error</td>
+                  <td className="py-2 pr-4 font-mono text-xs text-gray-850 dark:text-gray-250">"Track failed" or "Internal error"</td>
+                  <td className="py-2 text-xs text-gray-650 dark:text-gray-405">Temporary database disconnect or unexpected server exception.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* Security Note */}
+        <section className="space-y-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            Security Note
+          </h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            All public ingestion endpoints (<code>/api/track</code>, <code>/api/conversion</code>, <code>/api/identify</code>) execute in the public browser context and do not require secret API headers or tokens. Authentication is validated solely by checking the public <code>site_key</code>. Never place private dashboard credentials or database secrets inside front-end code.
+          </p>
+        </section>
+
         <DocsCallout type="info">
           All endpoints return a standardized JSON envelope: <code>{"{ success: boolean, data: object, error: string | null }"}</code>.
         </DocsCallout>

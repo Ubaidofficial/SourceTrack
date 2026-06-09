@@ -1,4 +1,5 @@
 import { Helmet } from 'react-helmet-async'
+import { Link } from 'react-router-dom'
 import DocsLayout from '../../components/docs/DocsLayout'
 import DocsCodeBlock from '../../components/docs/DocsCodeBlock'
 import DocsCallout from '../../components/docs/DocsCallout'
@@ -22,37 +23,70 @@ export default function DocsShopify() {
           </p>
         </div>
 
+        {/* 1. Who this is for */}
+        <section className="space-y-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            Who This Is For
+          </h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            This guide is for eCommerce developers and shop owners using Shopify who want to track marketing campaigns and attribute purchases back to click channels (like Google Ads or AI referrals) using custom code and Shopify webhook triggers.
+          </p>
+        </section>
+
+        {/* Glossary Callout */}
+        <DocsCallout type="info">
+          <h4 className="font-extrabold text-blue-900 dark:text-blue-300 mb-1">Key Terms Defined:</h4>
+          <ul className="list-disc pl-5 space-y-1 text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
+            <li><strong>Theme Liquid (theme.liquid)</strong> — the layout file in your Shopify theme that wraps all pages.</li>
+            <li><strong>Cart attributes</strong> — custom metadata fields stored on a Shopify cart. We use this to save the anonymous visitor ID (<code>st_aid</code>) so it flows into the final order.</li>
+            <li><strong>Webhook</strong> — an automatic server message sent by Shopify when an action occurs (like <code>orders/paid</code>).</li>
+            <li><strong>HMAC validation</strong> — a cryptographic handshake that confirms the webhook message was really sent by Shopify.</li>
+          </ul>
+        </DocsCallout>
+
+        {/* 2. What you will set up */}
+        <section className="space-y-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            What You Will Set Up
+          </h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            You will set up storefront visitor tracking by injecting our pixel, save the visitor ID as a cart attribute, and direct Shopify order webhooks to our processing endpoint to stitch conversions.
+          </p>
+        </section>
+
         <DocsCallout type="warning">
           <strong>Integration notice:</strong> This setup is a manual configuration recipe. SourceTrack does not offer a native Shopify integration or one-click automatic installation. All steps below must be performed manually in your Shopify store admin and theme code.
         </DocsCallout>
 
-        <section className="space-y-4">
+        {/* 3. Steps */}
+        <section className="space-y-6">
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
-            Step 1: Storefront Pixel Tracking
+            Steps: Shopify Integration
           </h2>
-          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            Add the standard SourceTrack pixel script to your storefront theme to log UTMs, referrers, and visitor sessions:
-          </p>
-          <ol className="list-decimal pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
-            <li>In your Shopify Admin, navigate to <strong>Online Store &rarr; Themes</strong>.</li>
-            <li>Click the action dropdown (the three dots) and select <strong>Edit Code</strong>.</li>
-            <li>Open the <code>layout/theme.liquid</code> file.</li>
-            <li>Paste the tracking script directly before the closing <code>&lt;/head&gt;</code> tag. Replace <code>YOUR_SITE_KEY</code> with your real key:</li>
-          </ol>
-          <DocsCodeBlock lang="html">
+
+          <div className="space-y-4">
+            <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">Step 1: Storefront Pixel Tracking</h3>
+            <p className="text-sm text-gray-750 dark:text-gray-350">
+              Add the standard SourceTrack pixel script to your storefront theme to log UTMs and referrers:
+            </p>
+            <ol className="list-decimal pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
+              <li>In your Shopify Admin, go to <strong>Online Store &rarr; Themes</strong>.</li>
+              <li>Click the action dropdown (the three dots) and select <strong>Edit Code</strong>.</li>
+              <li>Open the <code>layout/theme.liquid</code> file.</li>
+              <li>Paste the tracking script directly before the closing <code>&lt;/head&gt;</code> tag. Replace <code>YOUR_SITE_KEY</code>:</li>
+            </ol>
+            <DocsCodeBlock lang="html" replaceKey={true} pasteOnce={true}>
 {`<!-- Paste inside layout/theme.liquid before </head> -->
 <script async src="https://api.srctk.com/tracker/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`}
-          </DocsCodeBlock>
-        </section>
+            </DocsCodeBlock>
+          </div>
 
-        <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
-            Step 2: Capture Visitor ID in Shopify Cart
-          </h2>
-          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            To stitch checkout purchases with marketing sessions, you must store the anonymous visitor ID (<code>st_aid</code>) as a cart attribute. Add this Javascript snippet to your checkout or cart templates:
-          </p>
-          <DocsCodeBlock lang="js">
+          <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+            <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">Step 2: Capture Visitor ID in Shopify Cart</h3>
+            <p className="text-sm text-gray-750 dark:text-gray-350">
+              To link checkout purchases with marketing sessions, you must store the anonymous visitor ID (<code>st_aid</code>) as a cart attribute. Add this Javascript snippet to your checkout or cart templates:
+            </p>
+            <DocsCodeBlock lang="js">
 {`// Read st_aid from localStorage and forward as a cart attribute
 const visitorId = localStorage.getItem('st_aid');
 if (visitorId) {
@@ -68,43 +102,66 @@ if (visitorId) {
     })
   });
 }`}
-          </DocsCodeBlock>
+            </DocsCodeBlock>
+          </div>
+
+          <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+            <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">Step 3: Connect Order Webhooks</h3>
+            <p className="text-sm text-gray-750 dark:text-gray-350">
+              Configure a webhook inside Shopify to forward order details to your SourceTrack endpoint on purchase confirmation:
+            </p>
+            <ol className="list-decimal pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
+              <li>In your Shopify Admin, go to <strong>Settings &rarr; Notifications</strong>.</li>
+              <li>Scroll to the <strong>Webhooks</strong> section and click <strong>Create Webhook</strong>.</li>
+              <li>Configure the webhook details:
+                <ul className="list-disc pl-5 mt-1 space-y-1">
+                  <li><strong>Event:</strong> Order Creation (<code>orders/create</code>)</li>
+                  <li><strong>Format:</strong> JSON</li>
+                  <li><strong>URL:</strong> <code>https://api.srctk.com/api/webhooks/shopify/YOUR_SITE_KEY</code></li>
+                  <li><strong>API Version:</strong> Latest / stable</li>
+                </ul>
+              </li>
+              <li>Click <strong>Save</strong>.</li>
+            </ol>
+          </div>
         </section>
 
+        {/* 4. How to verify it worked */}
         <section className="space-y-4">
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
-            Step 3: Connect Order Webhooks
+            How to Verify It Worked
           </h2>
-          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            Configure a webhook inside Shopify to forward order details to your SourceTrack endpoint on purchase confirmation:
-          </p>
-          <ol className="list-decimal pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
-            <li>In your Shopify Admin, go to <strong>Settings &rarr; Notifications</strong>.</li>
-            <li>Scroll to the <strong>Webhooks</strong> section and click <strong>Create Webhook</strong>.</li>
-            <li>Configure the webhook details:
-              <ul className="list-disc pl-5 mt-1 space-y-1">
-                <li><strong>Event:</strong> Order Creation (<code>orders/create</code>)</li>
-                <li><strong>Format:</strong> JSON</li>
-                <li><strong>URL:</strong> <code>https://api.srctk.com/api/webhooks/shopify/YOUR_SITE_KEY</code></li>
-                <li><strong>API Version:</strong> Latest / stable</li>
-              </ul>
-            </li>
-            <li>Click <strong>Save</strong>. SourceTrack will securely ingest the webhook payload, verify the Shopify HMAC signature, map the <code>st_aid</code> cart attribute to stitch visitor paths, and attribute order revenue.</li>
+          <ol className="list-decimal pl-5 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            <li>Place a test order on your storefront theme using Shopify test checkout methods.</li>
+            <li>In the Shopify Admin webhook settings, click <strong>Send test notification</strong> on your created webhook to verify the connection.</li>
+            <li>Go to the SourceTrack dashboard <strong>Event Debugger</strong>. Verify that a success webhook event logs for the order, and the revenue appears in your overview graphs.</li>
           </ol>
         </section>
 
+        {/* 5. Common mistakes */}
         <section className="space-y-4">
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
-            Verification & Limitations
+            Common Mistakes
           </h2>
-          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-750 dark:text-gray-350">
             <li>
-              <strong>Deduplication:</strong> SourceTrack uses the Shopify <code>order_id</code> to deduplicate conversions, preventing double-counting of revenue.
+              <strong>Missing Cart Attribute:</strong> If you forget Step 2, Shopify won't store the visitor ID on the cart. Without it, the order webhook cannot stitch the purchase back to the acquisition source, and the conversion will show as unattributed.
             </li>
             <li>
-              <strong>Offline Limitations:</strong> Without a native app, storefront behavior like checkout initiation funnel steps are not tracked automatically. Only storefront pageviews and completed webhook orders are synced.
+              <strong>No Storefront Script:</strong> Ensure your storefront theme is loaded with the tracking pixel so the visitor ID gets generated and stored.
             </li>
           </ul>
+        </section>
+
+        {/* 6. Next step */}
+        <section className="space-y-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            Next Step
+          </h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            Your Shopify integration is complete! You can explore additional API options or customize dashboard views in our{' '}
+            <Link to="/developers" className="text-blue-600 dark:text-blue-400 font-bold hover:underline">Developer Portal</Link>.
+          </p>
         </section>
       </div>
     </DocsLayout>

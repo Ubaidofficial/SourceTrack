@@ -3,6 +3,31 @@ import DocsLayout from '../../components/docs/DocsLayout'
 import DocsCodeBlock from '../../components/docs/DocsCodeBlock'
 import DocsCallout from '../../components/docs/DocsCallout'
 
+function HeaderTable({ headers }) {
+  return (
+    <div className="overflow-x-auto my-4">
+      <table className="w-full text-sm border-collapse">
+        <thead>
+          <tr className="border-b border-gray-200 dark:border-gray-800">
+            <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 py-2 pr-4 w-56">Header</th>
+            <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 py-2 pr-4 w-24">Type</th>
+            <th className="text-left text-xs font-semibold text-gray-500 dark:text-gray-400 py-2">Purpose</th>
+          </tr>
+        </thead>
+        <tbody>
+          {headers.map((h, i) => (
+            <tr key={i} className="border-b border-gray-100 dark:border-gray-800/60 last:border-0">
+              <td className="py-2 pr-4 font-mono text-[13px] text-gray-800 dark:text-gray-200 align-top">{h.name}</td>
+              <td className="py-2 pr-4 text-[13px] text-[#00AA57] dark:text-green-400 font-mono align-top">{h.type}</td>
+              <td className="py-2 text-[13px] text-gray-600 dark:text-gray-400 align-top">{h.desc}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 export default function DevelopersWebhooks() {
   return (
     <DocsLayout isDeveloper={true}>
@@ -22,42 +47,62 @@ export default function DevelopersWebhooks() {
           </p>
         </div>
 
-        <section className="space-y-4">
+        {/* Overview */}
+        <section className="space-y-2">
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
-            Stripe Inbound Webhooks
+            Overview
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            Connect Stripe checkout events site-wide. Ensure you pass the anonymous tracking ID (<code>st_aid</code>) inside your Stripe checkout session metadata.
+            SourceTrack uses webhooks for two purposes: receiving billing events from payment platforms (Inbound) and dispatching real-time conversion updates to your external applications (Outbound).
           </p>
-          <p className="text-sm text-gray-700 dark:text-gray-300">
-            Set your webhook listener to receive events at:
-          </p>
-          <pre className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg text-xs font-mono text-gray-700 dark:text-gray-300">
-{`https://api.srctk.com/api/webhooks/stripe/YOUR_SITE_KEY`}
-          </pre>
         </section>
 
+        {/* Inbound Webhooks */}
         <section className="space-y-4">
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
-            Shopify Inbound Webhooks
+            Inbound Webhooks (Stripe & Shopify)
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            Configure order creation hooks under your Shopify Admin notifications panel. Forward the <code>st_aid</code> cart attribute value as a cart attribute payload.
+            To feed sales and subscriptions into SourceTrack, configure your payment platforms to send events to our receiver URLs:
           </p>
-          <p className="text-sm text-gray-700 dark:text-gray-300">
-            Set your webhook endpoint URL to:
-          </p>
-          <pre className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg text-xs font-mono text-gray-700 dark:text-gray-300">
-{`https://api.srctk.com/api/webhooks/shopify/YOUR_SITE_KEY`}
-          </pre>
+          <div className="space-y-3 pl-4 border-l-2 border-gray-200 dark:border-gray-800">
+            <div>
+              <h4 className="text-sm font-bold text-gray-900 dark:text-white">Stripe Checkout Webhook</h4>
+              <code className="text-xs font-mono block p-2 bg-gray-50 dark:bg-gray-800 rounded mt-1">
+                https://api.srctk.com/api/webhooks/stripe/YOUR_SITE_KEY
+              </code>
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-gray-900 dark:text-white">Shopify Paid Order Webhook</h4>
+              <code className="text-xs font-mono block p-2 bg-gray-50 dark:bg-gray-800 rounded mt-1">
+                https://api.srctk.com/api/webhooks/shopify/YOUR_SITE_KEY
+              </code>
+            </div>
+          </div>
         </section>
 
+        {/* Outbound Webhook Header Details */}
+        <section className="space-y-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            Outbound Webhook Headers
+          </h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            When a conversion is attributed, SourceTrack dispatches a POST request to your configured endpoint with these custom headers:
+          </p>
+          <HeaderTable headers={[
+            { name: 'Content-Type', type: 'string', desc: 'Will always be set to application/json.' },
+            { name: 'X-SourceTrack-Event', type: 'string', desc: 'The type of event triggered (e.g. conversion.created).' },
+            { name: 'X-SourceTrack-Signature', type: 'string', desc: 'The SHA-256 HMAC signature of the raw body payload, generated using your webhook secret.' }
+          ]} />
+        </section>
+
+        {/* Outbound Webhook Payload Schema */}
         <section className="space-y-4">
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
             Outbound Webhook Payload Schema
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            Outbound webhooks trigger a POST dispatch to your target systems (e.g. Make, Zapier, custom backend) on conversion validation.
+            The JSON body contains visitor session details, campaign touchpoints, conversion value, and classification:
           </p>
           <DocsCodeBlock lang="json">
 {`{
@@ -89,35 +134,62 @@ export default function DevelopersWebhooks() {
           </DocsCodeBlock>
         </section>
 
+        {/* Validating Outbound Webhook Signatures */}
         <section className="space-y-4">
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
             Validating Outbound Webhook Signatures
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            Verify webhook payloads by calculating the HMAC SHA-256 signature of the raw body using your webhook\'s signing secret (sent in the <code>X-SourceTrack-Signature</code> header):
+            To confirm that webhook payloads are legitimate, compute the SHA-256 HMAC of the raw request payload using your Outbound Webhook signing secret and compare it to the signature header:
           </p>
           <DocsCodeBlock lang="js">
-{`// Node.js Express verification example
+{`// Node.js Express signature verification example
 const crypto = require('crypto');
 
-app.post('/webhook-receiver', (req, res) => {
+app.post('/webhook-receiver', express.raw({ type: 'application/json' }), (req, res) => {
   const signature = req.headers['x-sourcetrack-signature'];
   const secret = 'YOUR_WEBHOOK_SIGNING_SECRET';
 
+  // Compute HMAC signature on the raw string/buffer body
   const expectedSignature = crypto
     .createHmac('sha256', secret)
-    .update(JSON.stringify(req.body))
+    .update(req.body)
     .digest('hex');
 
   if (signature === expectedSignature) {
-    // Request is verified and safe
+    // Verified and authentic
     res.sendStatus(200);
   } else {
-    // Unauthorized
+    // Signature mismatch
     res.sendStatus(401);
   }
 });`}
           </DocsCodeBlock>
+        </section>
+
+        {/* Common Errors */}
+        <section className="space-y-4">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-850 pb-2">
+            Common Errors
+          </h2>
+          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-750 dark:text-gray-350">
+            <li>
+              <strong>401 Unauthorized / Signature Mismatch:</strong> Occurs when checking req.body after JSON parsing. Verify signatures on the raw payload buffer before parser middleware edits it.
+            </li>
+            <li>
+              <strong>Webhook Timeout:</strong> SourceTrack webhook dispatches expire after a 5000ms threshold. Endpoints must return a quick status response (e.g. 200 OK) and process payloads asynchronously.
+            </li>
+          </ul>
+        </section>
+
+        {/* Security Note */}
+        <section className="space-y-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            Security Note
+          </h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            Signature validation is essential for outbound webhooks to prevent spoofing. Always transmit secrets securely via server environment variables, and verify that the destination URL enforces HTTPS configuration.
+          </p>
         </section>
 
         <DocsCallout type="info">

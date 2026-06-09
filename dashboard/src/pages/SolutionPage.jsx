@@ -146,7 +146,7 @@ export default function SolutionPage({ data }) {
               See pricing
             </Link>
           </div>
-          <p className="text-xs text-white/30 mt-4">Free conversion source tracker — 30 conversion source profiles free · Upgrade any time · Privacy-conscious tracking</p>
+          <p className="text-xs text-white/30 mt-4">Free attribution tracking — up to 30 conversions free · Upgrade any time · Privacy-conscious tracking</p>
         </div>
       </section>
 

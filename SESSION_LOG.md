@@ -897,3 +897,28 @@ curl -i https://api.srctk.com/tracker/tracker.min.js
 ### 3. Static Verification & Production Build
 - Ran static QA validator `npm run qa:static` and verified that it checks out perfectly.
 - Compiled the production dashboard build successfully. Verified that `/campaigns?import=true` works cleanly and cleans the URL params.
+
+---
+
+## Session 128G — Beginner-Friendly Docs Polish & Public Consistency Audit
+
+**Date:** 2026-06-09
+**Branch:** `main`
+**Build:** ✅ passing (Vite build + Node syntax check + QA pass)
+
+### 1. User & Developer Docs Restructuring
+- Restructured User Docs (`/docs/quickstart`, `/docs/install`, `/docs/platforms/*`, `/docs/troubleshooting`) to follow the standard beginner template layout (Who this is for, What you will set up, Steps, How to verify it worked, Common mistakes, Next step).
+- Formatted Developer Docs (`/developers/*`) with Method/Endpoint signature components, parameter tables, clear copy-paste code snippets, common error codes, and server security notes.
+- Corrected the tracking request endpoint from `collect` to `track` across troubleshooting guides and API reference specs.
+- Fixed the blank Docs page render crash by swapping invalid React `<H4>` tags with standard `<h4>` tags.
+
+### 2. Marketing Copy and Terms Audit
+- Audited the public website (landing, product, use cases, pricing, footer) to standardize terminology and soften overclaims.
+- Replaced the discouraged phrase "conversion source profiles" with "attributed conversions" or "conversions" across pricing cards, hero features, FAQs, and footer elements.
+- Ensured Shopify and Stripe integrations are presented strictly as "webhook and API recipes" instead of "one-click native/marketplace apps".
+- Cleaned up public-facing doc pages to confirm zero leaks of private authenticated modules (`fetchApi`, `useAuth`, `supabase`, `posthog-js`, `axios`).
+
+### 3. Verification & Whitespace Checks
+- Ran Node syntax checks and compiled frontend production bundle successfully.
+- Cleaned up trailing whitespace and resolved double-newlines at the end of files. Verified that static launch checks pass cleanly.
+
