@@ -1455,7 +1455,7 @@ window.location.href = decoratedUrl;`}</Code>
               Note: Automated nightly scheduling is currently in the backlog and costs must be refreshed manually.
             </p>
 
-            <H4>Google Ads Integration</H4>
+            <h4>Google Ads Integration</h4>
             <ul className="list-disc list-inside space-y-1.5 pl-1 text-sm text-gray-650 dark:text-gray-400">
               <li><strong>Developer Token:</strong> Synchronizing Google Ads requires a Google Ads Developer Token configured on the server. Approval or access reviews for these developer tokens can take time.</li>
               <li><strong>Customer ID:</strong> Set the Target Customer ID to the specific 10-digit Google Ads account ID.</li>
@@ -1463,7 +1463,7 @@ window.location.href = decoratedUrl;`}</Code>
               <li><strong>API Version:</strong> Google Ads API versions sunset periodically. Review the server's <code>GOOGLE_ADS_API_VERSION</code> env periodically to keep sync tasks running smoothly.</li>
             </ul>
 
-            <H4>Meta Ads Integration (Advanced Manual Token Setup)</H4>
+            <h4>Meta Ads Integration (Advanced Manual Token Setup)</h4>
             <p className="text-sm text-gray-650 dark:text-gray-400">
               To keep paid beta setups simple and secure, Meta Ads uses a manual, advanced token flow rather than full Meta Login:
             </p>
@@ -1473,7 +1473,7 @@ window.location.href = decoratedUrl;`}</Code>
               <li><strong>Ad Account ID:</strong> Provide the numeric ID of your target Facebook Ad Account (any leading <code>act_</code> prefix is stripped).</li>
             </ul>
 
-            <H4>Data Syncing & Calculations</H4>
+            <h4>Data Syncing & Calculations</h4>
             <ul className="list-disc list-inside space-y-1.5 pl-1 text-sm text-gray-650 dark:text-gray-400">
               <li><strong>Synced Data:</strong> Connected accounts can be refreshed from the Campaigns page. SourceTrack stores the synced daily campaign costs for ROI reporting.</li>
               <li><strong>Attribution Matching:</strong> Imported spend is matched directly with utm_campaign parameter values using campaign names or IDs.</li>
