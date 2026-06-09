@@ -290,7 +290,7 @@ export default function Admin() {
                     <td className="py-2.5 px-3 text-gray-600">{s.company_name || '—'}</td>
                     <td className="py-2.5 px-3">
                       <StatusBadge
-                        status={['starter','growth','business'].includes(s.plan) ? 'active' : ['trial','free'].includes(s.plan) ? 'pending' : 'error'}
+                        status={['starter','growth','scale'].includes(s.plan) ? 'active' : ['trial','free'].includes(s.plan) ? 'pending' : 'error'}
                         label={s.plan}
                       />
                     </td>
@@ -345,7 +345,7 @@ export default function Admin() {
               <DashboardCard title="Site Info" subtitle={`${siteDetail.site?.domain || siteDetail.site?.name || 'Unnamed'}`}>
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div><p className="text-xs text-st-gray">Site Key</p><p className="font-mono text-xs text-st-black dark:text-white truncate">{siteDetail.site?.site_key}</p></div>
-                  <div><p className="text-xs text-st-gray">Plan</p><StatusBadge status={['starter','growth','business'].includes(siteDetail.site?.plan) ? 'active' : ['trial','free'].includes(siteDetail.site?.plan) ? 'pending' : 'error'} label={siteDetail.site?.plan || 'unknown'} /></div>
+                  <div><p className="text-xs text-st-gray">Plan</p><StatusBadge status={['starter','growth','scale'].includes(siteDetail.site?.plan) ? 'active' : ['trial','free'].includes(siteDetail.site?.plan) ? 'pending' : 'error'} label={siteDetail.site?.plan || 'unknown'} /></div>
                   <div><p className="text-xs text-st-gray">Created</p><p className="text-st-black">{siteDetail.site?.created_at ? new Date(siteDetail.site.created_at).toLocaleDateString() : '—'}</p></div>
                   <div><p className="text-xs text-st-gray">Company</p><p className="text-st-black">{siteDetail.site?.company_name || '—'}</p></div>
                   <div><p className="text-xs text-st-gray">Owner Email</p><p className="text-st-black">{siteDetail.site?.owner_email || '—'}</p></div>

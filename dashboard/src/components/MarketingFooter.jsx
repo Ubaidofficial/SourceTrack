@@ -48,7 +48,7 @@ export default function MarketingFooter() {
             <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
             <Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
           </div>
-          <span>Free forever for up to 5,000 pageviews/mo.</span>
+          <span>Free conversion source tracker — 30 conversion source profiles free.</span>
         </div>
       </div>
     </footer>

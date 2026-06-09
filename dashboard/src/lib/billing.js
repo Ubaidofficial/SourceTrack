@@ -27,7 +27,7 @@ export function getPlanLabel(plan) {
     trial: 'Trial',
     starter: 'Starter',
     growth: 'Growth',
-    business: 'Business',
+    scale: 'Scale',
     inactive: 'Inactive',
     archived: 'Archived'
   }
@@ -35,6 +35,6 @@ export function getPlanLabel(plan) {
 }
 
 export function isPaidPlan(plan) {
-  const normalized = plan === 'pro' ? 'growth' : plan === 'agency' ? 'business' : plan
-  return ['starter', 'growth', 'business'].includes(normalized)
+  const normalized = plan === 'pro' ? 'growth' : plan === 'agency' ? 'scale' : plan === 'business' ? 'scale' : plan
+  return ['starter', 'growth', 'scale'].includes(normalized)
 }

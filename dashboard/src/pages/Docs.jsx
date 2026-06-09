@@ -2699,7 +2699,7 @@ fetch('/api/attribution?site_key=...&model=first_touch&...', {
 
             <h4 className="text-sm font-semibold mt-6 mb-2">Plan Requirements</h4>
             <p>
-              Page-path funnels require a paid plan (Trial, Starter, Growth, or Business). Free plan users will be prompted to upgrade to access funnel visualizations.
+              Page-path funnels require a paid plan (Trial, Starter, Growth, or Scale). Free plan users will be prompted to upgrade to access funnel visualizations.
             </p>
           </Section>
 

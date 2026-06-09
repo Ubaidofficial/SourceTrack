@@ -5,6 +5,7 @@ import geoip from 'geoip-lite'
 import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
 import { getSupabase } from '../lib/supabase.js'
+import { requireFeature } from '../lib/plan-features.js'
 
 const router = Router()
 
@@ -29,6 +30,21 @@ router.post('/event', async (req, res) => {
     }
 
     const siteId = apiKey.site_id
+    const { data: site, error: siteErr } = await getSupabase()
+      .from('sites')
+      .select('plan')
+      .eq('id', siteId)
+      .maybeSingle()
+
+    if (siteErr || !site) {
+      return res.status(401).json({ success: false, data: null, error: 'Invalid site associated with API key' })
+    }
+
+    const block = requireFeature(site.plan, 'api_access', 'API access')
+    if (block) {
+      return res.status(402).json(block)
+    }
+
     const customerIp = req.body.user_ip || req.headers['x-forwarded-for']?.split(',')[0]?.trim() || ''
     const customerUa = req.body.user_agent || req.headers['user-agent'] || ''
     const parser = new UAParser(customerUa)

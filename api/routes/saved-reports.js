@@ -216,6 +216,11 @@ router.patch('/saved/:id/dashboard', async (req, res) => {
       return res.status(400).json({ success: false, data: null, error: 'show_on_dashboard must be a boolean' })
     }
 
+    if (show_on_dashboard === true) {
+      const block = requireFeature(req.site?.plan, 'dashboard_widgets', 'Dashboard widgets')
+      if (block) return res.status(402).json(block)
+    }
+
     if (dashboard_size !== undefined && !['small', 'medium', 'large'].includes(dashboard_size)) {
       return res.status(400).json({ success: false, data: null, error: 'Invalid dashboard_size' })
     }

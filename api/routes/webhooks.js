@@ -3,10 +3,17 @@ import crypto from 'crypto'
 import { getSupabase } from '../lib/supabase.js'
 import { requireUserAuth } from '../middleware/user-auth.js'
 import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
+import { requireFeature } from '../lib/plan-features.js'
 import { redactPiiFromUrl } from '../lib/utils.js'
 import { sendTestWebhook } from '../lib/webhook.js'
 
 const router = Router()
+
+const enforceWebhookOutbound = (req, res, next) => {
+  const block = requireFeature(req.site?.plan, 'webhook_outbound', 'Outbound webhooks')
+  if (block) return res.status(402).json(block)
+  next()
+}
 
 // Mask utility for secrets
 function maskSecret(secret) {
@@ -99,7 +106,7 @@ router.get('/', requireUserAuth, validateSiteKey, requireSiteMembership, async (
 })
 
 // POST /api/webhooks?site_key=... (Create a webhook destination)
-router.post('/', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
+router.post('/', requireUserAuth, validateSiteKey, requireSiteMembership, enforceWebhookOutbound, async (req, res) => {
   try {
     const { url, active } = req.body
 
@@ -147,7 +154,7 @@ router.post('/', requireUserAuth, validateSiteKey, requireSiteMembership, async 
 })
 
 // PATCH /api/webhooks/:id?site_key=... (Update webhook url or active state)
-router.patch('/:id', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
+router.patch('/:id', requireUserAuth, validateSiteKey, requireSiteMembership, enforceWebhookOutbound, async (req, res) => {
   try {
     const { id } = req.params
     const { url, active } = req.body
@@ -207,7 +214,7 @@ router.patch('/:id', requireUserAuth, validateSiteKey, requireSiteMembership, as
 })
 
 // POST /api/webhooks/:id/test?site_key=... (Dispatch a test webhook)
-router.post('/:id/test', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
+router.post('/:id/test', requireUserAuth, validateSiteKey, requireSiteMembership, enforceWebhookOutbound, async (req, res) => {
   try {
     const { id } = req.params
     const supabase = getSupabase()
@@ -244,7 +251,7 @@ router.post('/:id/test', requireUserAuth, validateSiteKey, requireSiteMembership
 })
 
 // POST /api/webhooks/:id/regenerate-secret?site_key=... (Regenerate signing secret)
-router.post('/:id/regenerate-secret', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
+router.post('/:id/regenerate-secret', requireUserAuth, validateSiteKey, requireSiteMembership, enforceWebhookOutbound, async (req, res) => {
   try {
     const { id } = req.params
     const supabase = getSupabase()
@@ -281,7 +288,7 @@ router.post('/:id/regenerate-secret', requireUserAuth, validateSiteKey, requireS
 })
 
 // DELETE /api/webhooks/:id?site_key=... (Delete a webhook destination)
-router.delete('/:id', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
+router.delete('/:id', requireUserAuth, validateSiteKey, requireSiteMembership, enforceWebhookOutbound, async (req, res) => {
   try {
     const { id } = req.params
     const supabase = getSupabase()

@@ -3,15 +3,16 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { CreditCard, ExternalLink, Zap, CheckCircle2 } from 'lucide-react'
 import { normalizePlan } from '../lib/planFeatures'
+import { getPlanLabel } from '../lib/billing'
 import { createCheckout, getBillingPortal } from '../lib/api'
 
 // Default pageview limits per plan. The site's own pv_limit column takes precedence.
 const PLAN_DEFAULT_LIMITS = {
   free:     5000,
   trial:    10000,
-  starter:  10000,
-  growth:   50000,
-  business: 100000,
+  starter:  50000,
+  growth:   150000,
+  scale:    500000,
   inactive: 0,
   archived: 0,
 }
@@ -20,24 +21,26 @@ const PLANS = [
   {
     key: 'starter',
     name: 'Starter',
-    price: 'from $9',
-    limit: '10,000 pageviews/mo',
-    features: ['All 8 attribution models', 'AI traffic detection', 'Server-side webhook pipeline', 'Over-reporting detection'],
+    price: '$19/mo',
+    period: 'billed yearly ($29/mo monthly)',
+    limit: '50,000 tracked pageviews/mo',
+    highlight: false,
   },
   {
     key: 'growth',
     name: 'Growth',
-    price: 'from $19',
-    limit: '50,000 pageviews/mo',
+    price: '$49/mo',
+    period: 'billed yearly ($79/mo monthly)',
+    limit: '150,000 tracked pageviews/mo',
     highlight: true,
-    features: ['Everything in Starter', 'Cookieless tracking', 'Customer journey maps', 'Up to 5 sites', '3-year retention'],
   },
   {
-    key: 'business',
-    name: 'Business',
-    price: 'from $49',
-    limit: '100,000 pageviews/mo',
-    features: ['Everything in Growth', 'Unlimited sites', 'White-label reports', 'Multi-team management'],
+    key: 'scale',
+    name: 'Scale',
+    price: 'From $149/mo',
+    period: 'billed monthly',
+    limit: '500,000+ tracked pageviews/mo',
+    highlight: false,
   },
 ]
 
@@ -116,7 +119,7 @@ export default function Billing() {
   const usageColor = usagePct >= 95 ? 'bg-red-500' : usagePct >= 80 ? 'bg-amber-500' : 'bg-st-lime'
   const isTrial   = plan === 'trial'
   const isFree    = plan === 'free'
-  const isPaid    = ['starter', 'growth', 'business'].includes(plan)
+  const isPaid    = ['starter', 'growth', 'scale'].includes(plan)
 
   const daysLeft = (() => {
     if (!site?.trial_ends_at || !isTrial) return null
@@ -125,6 +128,7 @@ export default function Billing() {
   })()
 
   const upgradeCallout = isTrial && daysLeft !== null && daysLeft <= 3
+  const showUpgradePlans = isTrial || isFree
 
   if (loading) {
     return (
@@ -135,10 +139,10 @@ export default function Billing() {
   }
 
   return (
-    <div className="space-y-8 max-w-4xl">
+    <div className="max-w-4xl space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-st-black dark:text-white">Billing</h2>
-        <p className="text-sm text-st-gray dark:text-gray-400 mt-1">Manage your plan and subscription</p>
+        <p className="text-sm text-st-gray dark:text-gray-400 mt-0.5">Manage your plan, limits, and billing details</p>
       </div>
 
       {/* ── Trial expiry banner ───────────────────────────────────────────── */}
@@ -159,7 +163,7 @@ export default function Billing() {
         </div>
 
         <div className="flex items-baseline gap-3">
-          <span className="text-2xl font-black text-st-black dark:text-white capitalize">{plan}</span>
+          <span className="text-2xl font-black text-st-black dark:text-white capitalize">{getPlanLabel(plan)}</span>
           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
             isTrial ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400' :
             isPaid  ? 'bg-st-lime/15 text-green-700 dark:text-st-lime' :
@@ -201,37 +205,34 @@ export default function Billing() {
         )}
       </section>
 
-      {/* ── Upgrade Plans (trial only) ─────────────────────────────────────── */}
-      {isTrial && (
-        <section>
-          <h3 className="text-sm font-bold text-st-black dark:text-white mb-4">Choose a Plan</h3>
+      {/* ── Upgrade Plans (trial or free) ─────────────────────────────────────── */}
+      {showUpgradePlans && (
+        <section className="space-y-4">
+          <h3 className="text-sm font-bold text-st-black dark:text-white">Available Plans</h3>
           <div className="grid sm:grid-cols-3 gap-4">
             {PLANS.map(p => (
-              <div key={p.key} className={`rounded-xl border p-5 flex flex-col ${
+              <div key={p.key} className={`rounded-xl border p-5 flex flex-col justify-between ${
                 p.highlight
                   ? 'border-st-lime/40 dark:border-st-lime/40 bg-st-lime/5'
                   : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1C1C]'
               }`}>
-                {p.highlight && (
-                  <span className="text-[10px] font-bold uppercase tracking-wider bg-st-lime text-black px-2 py-0.5 rounded-full self-start mb-3">
-                    Most popular
-                  </span>
-                )}
-                <p className="text-base font-black text-st-black dark:text-white">{p.name}</p>
-                <p className="text-2xl font-black text-st-black dark:text-white mt-0.5">{p.price}<span className="text-sm font-normal text-st-gray dark:text-gray-400">/mo</span></p>
-                <p className="text-xs text-st-gray dark:text-gray-400 mb-4">{p.limit}</p>
-                <ul className="space-y-2 mb-5 flex-1">
-                  {p.features.map(f => (
-                    <li key={f} className="flex items-start gap-2 text-xs text-st-gray dark:text-gray-300">
-                      <CheckCircle2 className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${p.highlight ? 'text-st-lime' : 'text-gray-400 dark:text-gray-500'}`} />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-base font-black text-st-black dark:text-white">{p.name}</p>
+                    {p.highlight && (
+                      <span className="text-[9px] font-bold uppercase tracking-wider bg-st-lime text-black px-1.5 py-0.5 rounded-full">
+                        Popular
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-2xl font-black text-st-black dark:text-white mt-2">{p.price}</p>
+                  <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">{p.period}</p>
+                  <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mt-2">{p.limit}</p>
+                </div>
                 <button
                   onClick={() => handleUpgrade(p.key)}
                   disabled={upgradeLoading === p.key}
-                  className={`w-full text-sm font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60 ${
+                  className={`w-full text-xs font-semibold py-2.5 mt-4 rounded-lg transition-colors disabled:opacity-60 ${
                     p.highlight
                       ? 'bg-st-lime text-black hover:bg-st-lime/90'
                       : 'border border-gray-300 dark:border-gray-700 text-st-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
@@ -242,7 +243,6 @@ export default function Billing() {
               </div>
             ))}
           </div>
-          <p className="text-xs text-st-gray dark:text-gray-500 mt-4 text-center">14-day free trial included · Cancel any time · No credit card until trial ends</p>
         </section>
       )}
 

@@ -298,10 +298,10 @@ export default function Dashboard() {
     queryKey: ['dashboard-widgets', site?.site_key],
     queryFn: async () => {
       if (!site?.site_key) return []
-      if (!hasFeature(site?.plan, 'saved_reports')) return []
+      if (!hasFeature(site?.plan, 'dashboard_widgets')) return []
       return fetchApi(`/reports/saved?site_key=${encodeURIComponent(site.site_key)}&show_on_dashboard=true`)
     },
-    enabled: !!site?.site_key && !previewMode && hasFeature(site?.plan, 'saved_reports')
+    enabled: !!site?.site_key && !previewMode && hasFeature(site?.plan, 'dashboard_widgets')
   })
 
 
@@ -1077,7 +1077,7 @@ export default function Dashboard() {
           </div>
 
           {/* Pinned Reports widgets - isolated states, custom sizes, max 9 */}
-          {!previewMode && hasFeature(site?.plan, 'saved_reports') && (
+          {!previewMode && hasFeature(site?.plan, 'dashboard_widgets') && (
             <DashboardCard title="Pinned Reports"
               subtitle="Saved report widgets pinned to your dashboard — max 9"
               action={

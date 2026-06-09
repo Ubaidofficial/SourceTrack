@@ -73,7 +73,7 @@ export default function Terms() {
             <div>
               <h2 className="text-2xl font-black tracking-[-0.05em] text-st-black mb-4">6. Pricing & Billing</h2>
               <p>
-                Pricing plans are based on monthly pageview volumes. Accounts exceeding their monthly limits may experience paused ingestion or upgrade notifications. You may downgrade or cancel your subscription at any time via the Stripe customer billing portal.
+                Pricing plans are based on tracked pageview volumes, plan features, and conversion source profile allowances. Accounts exceeding their monthly limits may experience paused ingestion or upgrade notifications. You may downgrade or cancel your subscription at any time via the Stripe customer billing portal.
               </p>
             </div>
 

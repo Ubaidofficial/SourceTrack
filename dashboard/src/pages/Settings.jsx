@@ -457,8 +457,8 @@ export default function Settings() {
 
 
 
-  // `isPaid` covers any non-free, non-trial plan (starter/growth/business).
-  // Legacy 'pro'/'agency' are normalized to 'growth'/'business' upstream.
+  // `isPaid` covers any non-free, non-trial plan (starter/growth/scale).
+  // Legacy 'pro'/'agency'/'business' are normalized to 'growth'/'scale' upstream.
   const plan = site?.plan || 'free'
   const isPaid = isPaidPlan(plan)
   const isPro = isPaid // back-compat alias for any remaining references

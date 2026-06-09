@@ -3,7 +3,7 @@ import SolutionPage from './SolutionPage'
 const DATA = {
   slug: 'ecommerce-attribution',
   title: 'eCommerce Attribution Software — Track Shopify, WooCommerce & AI Traffic | SourceTrack',
-  description: 'Stop over-crediting paid ads. SourceTrack gives Shopify and WooCommerce stores full multi-touch attribution — including ChatGPT and AI traffic GA4 marks as direct. Traffic-based pricing from $49/mo.',
+  description: 'Stop over-crediting paid ads. SourceTrack gives Shopify and WooCommerce stores full multi-touch attribution — including ChatGPT and AI traffic GA4 marks as direct. Conversion-based pricing from $19/mo.',
   canonical: 'https://sourcetrack.ai/ecommerce-attribution',
   ogTitle: 'eCommerce Attribution — Track Every Sale Back to Its Source | SourceTrack',
   ogDescription: 'Multi-touch attribution for Shopify and WooCommerce. See which channels drive buyers — including AI referrals GA4 misses. Designed for privacy-conscious conversion tracking.',
@@ -101,8 +101,8 @@ const DATA = {
         a: "When you fire sourcetrack.conversion() with type: 'purchase', SourceTrack records the conversion event alongside the visitor's UTM parameters, click IDs, and referral history. This provides a unified history of what drove the sale, ready for export or webhook forwarding to downstream platforms.",
       },
       {
-        q: 'How does traffic-based pricing work for eCommerce stores?',
-        a: "You pay based on your monthly website visits — not per conversion. All plans include unlimited conversion and purchase tracking. A store with 40,000 monthly visits fits on the Starter plan at $49/mo. Unlimited conversions means you never pay more as your conversion rate improves.",
+        q: 'How does pricing work for eCommerce stores?',
+        a: "You pay based on your conversion volume and tracked pageviews. A store with 150,000 tracked pageviews and up to 750 conversion source profiles fits on Growth.",
       },
     ],
   },

@@ -263,6 +263,17 @@ export default function Leads() {
                             rejected: 'bg-red-50 text-red-500'
                           }
                           const cur = statusMap[lead.id] || lead.status || 'lead'
+                          const canEdit = hasFeature(site?.plan, 'manual_revenue_status')
+                          if (!canEdit) {
+                            return (
+                              <span
+                                title="Status editing available on Starter"
+                                className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLES[cur] || STATUS_STYLES.lead} opacity-80 whitespace-nowrap`}
+                              >
+                                🔒 {cur.toUpperCase()}
+                              </span>
+                            )
+                          }
                           return (
                             <select
                               value={cur}

@@ -3,6 +3,7 @@ import { validateSiteKey } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
 import { getSupabase } from '../lib/supabase.js'
 import { esc, toHogDate } from '../lib/utils.js'
+import { requireFeature } from '../lib/plan-features.js'
 
 const router = Router()
 
@@ -169,6 +170,9 @@ router.get('/:leadId', validateSiteKey, async (req, res) => {
 
 router.patch('/:leadId/qualify', validateSiteKey, async (req, res) => {
   try {
+    const block = requireFeature(req.site?.plan, 'manual_revenue_status', 'Lead status updates')
+    if (block) return res.status(402).json(block)
+
     const { leadId } = req.params
     const { status, notes } = req.body
     const VALID = ['lead', 'mql', 'sql', 'customer', 'rejected']

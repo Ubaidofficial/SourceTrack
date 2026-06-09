@@ -10,6 +10,9 @@ const router = express.Router()
 // GET /api/campaign-costs - Retrieve spend records for a site
 router.get('/', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
   try {
+    const block = requireFeature(req.site?.plan, 'manual_spend', 'Manual spend entry')
+    if (block) return res.status(402).json(block)
+
     const { date_from, date_to } = req.query
     const { data, error } = await getSupabase()
       .from('campaign_costs')
@@ -158,6 +161,9 @@ router.post('/import', requireUserAuth, validateSiteKey, requireSiteMembership, 
 // GET /api/campaign-costs/import-history - Retrieve recent import history logs
 router.get('/import-history', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
   try {
+    const block = requireFeature(req.site?.plan, 'manual_spend', 'Manual spend entry')
+    if (block) return res.status(402).json(block)
+
     const { data, error } = await getSupabase()
       .from('ad_sync_runs')
       .select('id, site_key, platform, source, sync_start, sync_end, status, records_synced, error_message, sync_type')

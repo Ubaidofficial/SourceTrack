@@ -201,7 +201,7 @@ const router = Router()
 
 /**
  * POST /api/billing/create-checkout
- * Body: { plan: 'starter'|'growth'|'business', successUrl, cancelUrl }
+ * Body: { plan: 'starter'|'growth'|'scale', successUrl, cancelUrl }
  * Auth: requireUserAuth middleware sets req.user; site resolved from user.
  */
 router.post('/create-checkout', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
@@ -220,9 +220,9 @@ router.post('/create-checkout', requireUserAuth, validateSiteKey, requireSiteMem
 
     // Pick the right price ID for the requested plan (new env names + legacy fallback)
     const PRICE_MAP = {
-      starter:  process.env.STRIPE_PRICE_ID_STARTER,
-      growth:   process.env.STRIPE_PRICE_ID_GROWTH  || process.env.STRIPE_PRICE_ID_PRO,
-      business: process.env.STRIPE_PRICE_ID_BUSINESS || process.env.STRIPE_PRICE_ID_AGENCY,
+      starter: process.env.STRIPE_PRICE_ID_STARTER,
+      growth:  process.env.STRIPE_PRICE_ID_GROWTH  || process.env.STRIPE_PRICE_ID_PRO,
+      scale:   process.env.STRIPE_PRICE_ID_SCALE   || process.env.STRIPE_PRICE_ID_BUSINESS || process.env.STRIPE_PRICE_ID_AGENCY,
     }
     const priceId = PRICE_MAP[plan] || process.env.STRIPE_PRICE_ID
     if (!priceId) {
@@ -313,9 +313,9 @@ router.get('/status', requireUserAuth, validateSiteKey, requireSiteMembership, a
         limit:      getPvLimit(plan, site.pv_limit),
         subscription,
         prices: {
-          starter:  process.env.STRIPE_PRICE_ID_STARTER  || null,
-          growth:   process.env.STRIPE_PRICE_ID_GROWTH   || process.env.STRIPE_PRICE_ID_PRO    || null,
-          business: process.env.STRIPE_PRICE_ID_BUSINESS || process.env.STRIPE_PRICE_ID_AGENCY || null,
+          starter: process.env.STRIPE_PRICE_ID_STARTER  || null,
+          growth:  process.env.STRIPE_PRICE_ID_GROWTH   || process.env.STRIPE_PRICE_ID_PRO    || null,
+          scale:   process.env.STRIPE_PRICE_ID_SCALE    || process.env.STRIPE_PRICE_ID_BUSINESS || process.env.STRIPE_PRICE_ID_AGENCY || null,
         }
       },
       error: null

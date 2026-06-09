@@ -102,7 +102,7 @@ const DATA = {
       },
       {
         q: "What's the best pricing plan for agencies?",
-        a: "The Scale plan ($199/mo) includes multi-site management, white-label report exports, and up to 1,000,000 monthly visits across all client sites. For agencies with higher traffic volumes across their client portfolio, the Enterprise plan offers custom pricing with unlimited visits.",
+        a: "The Scale plan (from $149/mo) includes multi-site management, white-label report exports, and up to 500,000+ monthly events across all client sites. For agencies with higher traffic volumes, contact sales for custom pricing.",
       },
     ],
   },
