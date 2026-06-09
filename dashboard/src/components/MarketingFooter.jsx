@@ -36,10 +36,14 @@ export default function MarketingFooter() {
             <Link to="/pricing" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Pricing</Link>
             <Link to="/login" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Log in</Link>
             <Link to="/signup" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Start free</Link>
-            <Link to="/docs" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">API docs</Link>
+            <Link to="/docs" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Docs</Link>
+            <Link to="/developers" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Developers</Link>
           </div>
           <div>
             <h4 className="mb-3 text-white text-[13px] uppercase tracking-[0.08em] font-bold">Resources</h4>
+            <Link to="/developers/api" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">API Reference</Link>
+            <Link to="/docs/troubleshooting" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Troubleshooting</Link>
+            <Link to="/security" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Security</Link>
             <a href="mailto:support@sourcetrack.ai" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Support</a>
             <a href="mailto:sales@sourcetrack.ai" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Contact sales</a>
           </div>

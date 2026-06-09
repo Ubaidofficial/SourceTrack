@@ -16,7 +16,7 @@ const HERO = {
   sub: 'Learn how to install the tracking script and configure webhook listener recipes to capture visitor touchpoints, AI search referrals, and order conversions.',
   primaryCta: 'Start free',
   secondaryCta: 'View API docs',
-  secondaryHref: '/docs',
+  secondaryHref: '/developers/api',
 }
 
 const CATEGORIES = [
@@ -95,7 +95,7 @@ export default function PublicIntegrations() {
               Our developer documentation details how to send conversion events directly from your server, database, or CRM using the offline conversion endpoints.
             </p>
             <div className="flex justify-center gap-4">
-              <Link to="/docs#payments-api" className="text-sm font-semibold bg-st-black text-white px-5 py-2.5 rounded-lg hover:bg-st-black/90 transition-colors">
+              <Link to="/developers/offline-conversions" className="text-sm font-semibold bg-st-black text-white px-5 py-2.5 rounded-lg hover:bg-st-black/90 transition-colors">
                 View API Setup Guides
               </Link>
             </div>

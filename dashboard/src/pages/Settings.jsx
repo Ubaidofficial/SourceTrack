@@ -776,7 +776,7 @@ export default function Settings() {
         )}
         <div className="text-right">
           <a
-            href="/docs#managed-first-party-proxy"
+            href="/developers/tracker"
             className="inline-flex items-center gap-1 text-xs font-medium text-st-gray hover:text-st-black dark:text-gray-400 dark:hover:text-white transition-colors"
           >
             Custom Domain Setup Guide

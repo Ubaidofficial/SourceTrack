@@ -28,7 +28,29 @@ import Integrations from './pages/Integrations'
 import Admin from './pages/Admin'
 import Analytics from './pages/Analytics'
 import AdminRoute from './components/AdminRoute'
-import Docs from './pages/Docs'
+// User Docs
+import DocsHome from './pages/docs/DocsHome'
+import DocsQuickstart from './pages/docs/DocsQuickstart'
+import DocsInstall from './pages/docs/DocsInstall'
+import DocsGTM from './pages/docs/DocsGTM'
+import DocsWebflow from './pages/docs/DocsWebflow'
+import DocsWordPress from './pages/docs/DocsWordPress'
+import DocsFramer from './pages/docs/DocsFramer'
+import DocsShopify from './pages/docs/DocsShopify'
+import DocsStripe from './pages/docs/DocsStripe'
+import DocsTroubleshooting from './pages/docs/DocsTroubleshooting'
+
+// Developer Docs
+import DevelopersHome from './pages/developers/DevelopersHome'
+import DevelopersApi from './pages/developers/DevelopersApi'
+import DevelopersTracker from './pages/developers/DevelopersTracker'
+import DevelopersConversions from './pages/developers/DevelopersConversions'
+import DevelopersOfflineConversions from './pages/developers/DevelopersOfflineConversions'
+import DevelopersIdentify from './pages/developers/DevelopersIdentify'
+import DevelopersWebhooks from './pages/developers/DevelopersWebhooks'
+import DevelopersCampaignCosts from './pages/developers/DevelopersCampaignCosts'
+import DevelopersSecurity from './pages/developers/DevelopersSecurity'
+
 import Landing from './pages/Landing'
 import Product from './pages/Product'
 import Attribution from './pages/Attribution'
@@ -166,7 +188,33 @@ export default function App() {
               {/* Auth callback — handles OAuth redirect flow */}
               <Route path="/auth/callback" element={<AuthCallback />} />
               {/* Public docs — no auth required */}
-              <Route path="/docs" element={<Docs />} />
+              <Route path="/docs" element={<DocsHome />} />
+              <Route path="/docs/quickstart" element={<DocsQuickstart />} />
+              <Route path="/docs/install" element={<DocsInstall />} />
+              <Route path="/docs/platforms/google-tag-manager" element={<DocsGTM />} />
+              <Route path="/docs/platforms/webflow" element={<DocsWebflow />} />
+              <Route path="/docs/platforms/wordpress" element={<DocsWordPress />} />
+              <Route path="/docs/platforms/framer" element={<DocsFramer />} />
+              <Route path="/docs/platforms/shopify" element={<DocsShopify />} />
+              <Route path="/docs/platforms/stripe" element={<DocsStripe />} />
+              <Route path="/docs/troubleshooting" element={<DocsTroubleshooting />} />
+
+              {/* Developer docs — no auth required */}
+              <Route path="/developers" element={<DevelopersHome />} />
+              <Route path="/developers/api" element={<DevelopersApi />} />
+              <Route path="/developers/tracker" element={<DevelopersTracker />} />
+              <Route path="/developers/conversions" element={<DevelopersConversions />} />
+              <Route path="/developers/offline-conversions" element={<DevelopersOfflineConversions />} />
+              <Route path="/developers/identify" element={<DevelopersIdentify />} />
+              <Route path="/developers/webhooks" element={<DevelopersWebhooks />} />
+              <Route path="/developers/campaign-costs" element={<DevelopersCampaignCosts />} />
+              <Route path="/developers/security" element={<DevelopersSecurity />} />
+
+              {/* Legacy redirects */}
+              <Route path="/docs/api" element={<Navigate to="/developers/api" replace />} />
+              <Route path="/docs/conversions" element={<Navigate to="/developers/conversions" replace />} />
+              <Route path="/docs/revenue" element={<Navigate to="/developers/offline-conversions" replace />} />
+
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
               {/* Public marketing pages — accessible to everyone */}

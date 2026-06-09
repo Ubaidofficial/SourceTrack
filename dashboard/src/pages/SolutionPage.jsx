@@ -280,7 +280,7 @@ export default function SolutionPage({ data }) {
           </Link>
           <div className="flex items-center gap-6 text-xs text-white/30">
             <Link to="/#pricing" className="hover:text-white transition-colors">Pricing</Link>
-            <Link to="/docs" className="hover:text-white transition-colors">API Docs</Link>
+            <Link to="/developers" className="hover:text-white transition-colors">API Docs</Link>
             <Link to="/#faq" className="hover:text-white transition-colors">FAQ</Link>
             <a href="mailto:support@sourcetrack.ai" className="hover:text-white transition-colors">Support</a>
             <span>© {new Date().getFullYear()} SourceTrack</span>
