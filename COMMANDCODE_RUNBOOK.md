@@ -446,3 +446,23 @@ Before starting production mail operations, ensure the sending domain is fully v
 ### 4. Support Escalation Controls
 - **Sole Admin Blocks:** If a user account deletion fails with `409 Conflict`, the user is the sole administrator of a shared workspace. Assist them in promoting another member to admin or manually remove the other members to unblock the account purge.
 - **Manual PostHog Wipe:** If a user requests deeper event removal, operators must verify available deletion options inside the PostHog console and document the outcome. Do not promise certified deletion unless a provider-backed deletion/export confirmation exists.
+
+---
+
+## Admin / Operator Support Controls
+
+### 1. Verification & Identity Guidelines
+- **Verify Requester Identity:** Before sharing workspace info or initiating deletion/purging requests, operators must verify that the incoming support request originates from the verified email address registered as the site's owner or active member.
+
+### 2. Database & SQL Operations Safety
+- **Never Use Production Service Role Casually:** The backend singleton Supabase client operates with service role privileges. Do not reuse the `SUPABASE_SERVICE_KEY` in local/staging scratch scripts or CLI databases connecting to production.
+- **Read-Only SQL First:** If investigating site status or resolving problems, always use read-only SQL SELECT queries (e.g. site onboarding status check or event volumes audit).
+- **Never Run Destructive SQL Without Written Approval:** Under no circumstances should raw database UPDATE or DELETE queries be run against production customer tables (such as `attributed_conversions`, `sites`, `company_members`) without a confirmed backup snapshot and written approval from the engineering lead.
+
+### 3. Third-Party Provider Consoles
+- **Stripe Billing Actions:** All customer billing adjustments, refunds, invoice overrides, plan adjustments, and subscription cancellations must be performed directly within the Stripe Merchant Dashboard. No application-level admin APIs modify subscription pricing.
+- **PostHog & Supabase Console Documentation:** If manual cleanup or custom event queries are required on the provider consoles, document the exact query, context, and timestamp in the support ticket.
+
+### 4. Impersonation & Audit Logging
+- **No Impersonation:** Do not swap user JWT tokens, modify cookies, or log in as a customer (no SUDO login). Only launch support dashboard previews via `/api/admin/preview`, which reads data as a super admin.
+- **Log Support Actions:** All administrative preview queries are automatically recorded in the database `admin_audit_log` table. Any manual adjustments or out-of-band operator actions must be logged manually in support records.

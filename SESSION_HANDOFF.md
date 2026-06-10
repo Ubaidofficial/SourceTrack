@@ -1,10 +1,33 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 133T — Data Deletion / Privacy Request Operational Drill. Audited and verified account deletion, visitor erasure, and retention purges database flows, Stripe/PostHog boundaries, shared workspace caveats, and operator checklists; created docs/privacy_request_operational_drill.md.
+> **Handoff:** Session 133U — Admin / Operator Access & Internal Support Controls Audit. Audited admin routes, role check guards, Supabase service-role usage, GDPR scoping, tenant boundaries, support procedures, and audit logging; answered 20 pre-beta audit questions; created docs/admin_operator_access_audit.md and updated runbooks.
 >
-> **Next Task:** Session 133U — Admin / Operator Access & Internal Support Controls Audit.
+> **Next Task:** Session 133V — Abuse / Rate-Limit / Anti-Spam Review.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 133U — Admin / Operator Access & Internal Support Controls Audit
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+
+1. **Internal Support Controls & Admin Access Audit:**
+   - Audited Express administration routes under `/api/admin` and validated global `super_admin` role restrictions (`requireRole`).
+   - Mapped all client instances of `getSupabase()` and administrative `auth.admin` APIs.
+   - Audited GDPR account and visitor deletion endpoints, verifying scopes and constraints.
+   - Audited tenant isolation logic and verified support-mode dashboard preview parameters.
+   - Addressed 20 pre-beta administrative audit questions regarding routes, tokens, billing, console boundaries, and security.
+2. **Documentation & Runbooks:**
+   - Updated [admin_operator_access_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/admin_operator_access_audit.md) with route inventories, checklists, risks, and audit question responses.
+   - Updated [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md) to append the "Admin / Operator Support Controls" section.
+
+### Files changed
+- [docs/admin_operator_access_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/admin_operator_access_audit.md)
+- [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md)
+- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
+- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
+- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
 
 ## Session 133T — Data Deletion / Privacy Request Operational Drill
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
