@@ -1,10 +1,47 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 132B — Attribution Accuracy Fixes. Closed the remaining P1 attribution-accuracy items from `SESSION_132_ATTRIBUTION_AUDIT.md`. Same-domain referrers no longer inflate the Referral channel — `channelFromEvent()` now neutralizes the referrer when `page_url` is on the same host, and every call site threads `page_url` through (webhook.js, attribution-engine touchpoint helper, dashboard live aggregator, nightly job touchpoint query + first/last/30d channel calls). Sessionization splits on acquisition-context change (`utm_source`/`utm_medium`/`utm_campaign` or any paid click ID) in addition to the 30-min inactivity window — internal navigation that carries no UTM still inherits. Both trackers now debounce auto-pageviews ~100ms so pushState bursts only fire once per final URL; minified bundles rebuilt via `npm run build:tracker`. `first_touch_timestamp` is captured by the tracker (already in localStorage as `st_ft_ts`) and now forwarded on every pageview + conversion payload — backend sanitizes to a canonical ISO string and stores in PostHog event properties. `/api/conversion` now claims `revenue_idempotency_keys(provider='browser_conversion', key_type='order_event', key_value=site:order:type)` whenever the client gave us an `order_id`; NodeCache stays as the fast path. user_id-only attribution stitching deferred (engine joins on raw `distinct_id`, no person-level HogQL fallback yet) — DevelopersOfflineConversions wording softened to recommend `anonymous_id`. `ai_platforms` model relabeled to "AI conversion source" in Dashboard + ConversionExplanationModal (matches ReportBuilder) with new copy that explicitly notes the model credits the conversion event's own ai_source, not journey-level AI touches.
+> **Handoff:** Session 132C — Identity Stitching + user_id Attribution Fallback. Implemented durable user_id ↔ anonymous_id identity link mapping store (`site_identity_links` table) and ingestion-layer resolution. Added `api/lib/identity-links.js` with `storeIdentityLink` (upserts mapping safely) and `resolveAnonymousId` (resolves user_id to the single most recently seen linked anonymous_id, using `ORDER BY last_seen_at DESC, created_at DESC LIMIT 1`). Modified `/api/identify` to save identity links on `$identify` aliases. Inverted priority in `/api/conversion-offline` and `/api/server/event` so `anonymous_id` takes precedence, storing identity links on incoming dual-ID events and synchronously resolving `user_id` to its linked `anonymous_id` on single-ID requests before ingestion to PostHog, ensuring attribution joins continue to work without HogQL changes. Softened retrospective overclaims in `DevelopersIdentify.jsx` and `DevelopersApi.jsx`.
 >
-> **Next Task:** Re-run `SESSION_132_ATTRIBUTION_AUDIT.md` (target ≥90/100). Two remaining follow-ups: (a) engine-level `user_id` person-merge resolution — currently `attribution-engine.js` HogQL joins on `distinct_id` strictly, so a conversion captured under `distinct_id = user_id` does not match prior pageviews under `distinct_id = anonymous_id` even after `ph.alias()`. Real fix requires HogQL person joins or a distinct_id OR list. (b) Optional journey-aware `ai_platforms` SQL — current model is "AI conversion source" (label adjusted) but if the team wants to credit upstream AI touches under that model name, follow the `last_touch` JOIN pattern.
+> **Next Task:** Re-run the attribution audit (target overall ≥90/100) and verify if the ingestion-layer stitching resolves the remaining attribution trust gaps. Move to saved widget cards (Phase C).
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 132C — Identity Stitching + user_id Attribution Fallback
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
+
+### Completed
+
+1. **Durable Identity Mapping Table (`site_identity_links`)**
+   - Created migration `supabase/migrations/20260610100000_add_site_identity_links.sql` creating table with unique constraint on `(site_id, user_id, anonymous_id)`, lookup index on `(site_id, user_id)`, and reverse lookup index. RLS is enabled with service-role access only. Updated `SUPABASE_SCHEMA.md`.
+
+2. **Deterministic Resolution Helper (`api/lib/identity-links.js`)**
+   - Implemented `storeIdentityLink` and `resolveAnonymousId`. Limits ID lengths to ≤256 characters, rejects self-links, logs warnings on failure using hashed representation (`getLogHash`), and enforces tenant isolation via `site_id`. `resolveAnonymousId` queries the database matching `ORDER BY last_seen_at DESC, created_at DESC LIMIT 1` for deterministic single-ID resolution.
+
+3. **Ingestion-Layer Storage & Resolution**
+   - `/api/identify`: Calls `storeIdentityLink` asynchronously on alias events.
+   - `/api/conversion-offline` and `/api/server/event`: Prioritize `anonymous_id` over `user_id`. When both are present, stores the mapping asynchronously. When only `user_id` is present, queries Supabase synchronously to resolve to a linked `anonymous_id`, ingesting the event under that resolved ID. Sets `resolved_anonymous_id` and `stitching_method: 'user_id_resolved'` on the event properties.
+   - `/api/conversion`: Stores browser-side identity links when both `user_id` and `anonymous_id` are provided.
+
+4. **Honest Copy & Documentation**
+   - Updated `dashboard/src/pages/developers/DevelopersIdentify.jsx` to clarify that conversions sent with `user_id` alone before any identify call cannot recover past anonymous sessions.
+   - Updated `dashboard/src/pages/developers/DevelopersApi.jsx` to rename "user stitching and identity lookup" to "user identification, and event tracking".
+
+### Files changed
+- `supabase/migrations/20260610100000_add_site_identity_links.sql` [NEW]
+- `api/lib/identity-links.js` [NEW]
+- `SUPABASE_SCHEMA.md`
+- `api/routes/identify.js`
+- `api/routes/conversion-offline.js`
+- `api/routes/server-events.js`
+- `api/routes/conversion.js`
+- `dashboard/src/pages/developers/DevelopersIdentify.jsx`
+- `dashboard/src/pages/developers/DevelopersApi.jsx`
+
+### Validation
+- `node --check api/index.js api/routes/*.js api/lib/*.js` → ✅ pass
+- `git diff --check` → ✅ pass
+- `cd dashboard && npm run build` → ✅ pass
+- Overclaim grep and identity-links references search → ✅ verified clean
 
 ## Session 132B — Attribution Accuracy Fixes
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean + tracker rebuild)

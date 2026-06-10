@@ -65,7 +65,7 @@ export default function DevelopersApi() {
             API Reference
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-2 text-base leading-relaxed">
-            Public endpoints for tracking, conversions, user stitching, and identity lookup.
+            Public endpoints for tracking, conversions, user identification, and event tracking.
           </p>
         </div>
 
@@ -132,8 +132,8 @@ export default function DevelopersApi() {
             POST /api/identify
           </h2>
           <Endpoint method="POST" path="/api/identify" description="No auth — validated by site_key" />
-          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            Alias an anonymous visitor to a logged-in user profile, ensuring historical journeys are stitched accurately.
+          <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+            Link an anonymous visitor's tracking ID with their user profile for future server-side attribution.
           </p>
 
           <h4 className="text-sm font-extrabold text-gray-900 dark:text-white">Request Body</h4>

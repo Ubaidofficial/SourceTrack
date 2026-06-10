@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
 import { getSupabase } from '../lib/supabase.js'
 import { requireFeature } from '../lib/plan-features.js'
+import { storeIdentityLink, resolveAnonymousId } from '../lib/identity-links.js'
 
 const router = Router()
 
@@ -55,13 +56,43 @@ router.post('/event', async (req, res) => {
       country = geo?.country || null
     }
 
+    const userId = typeof req.body.user_id === 'string' ? req.body.user_id.trim() : null
+    const anonymousId = typeof req.body.anonymous_id === 'string' ? req.body.anonymous_id.trim() : null
+
+    let distinctId
+    let resolvedAnonymousId = null
+    let stitchingMethod = 'none'
+
+    if (anonymousId) {
+      distinctId = anonymousId
+      stitchingMethod = 'anonymous_id'
+      if (userId && userId !== anonymousId) {
+        // Non-blocking storage
+        storeIdentityLink(siteId, userId, anonymousId, 'server_event')
+      }
+    } else if (userId) {
+      resolvedAnonymousId = await resolveAnonymousId(siteId, userId)
+      if (resolvedAnonymousId) {
+        distinctId = resolvedAnonymousId
+        stitchingMethod = 'user_id_resolved'
+      } else {
+        distinctId = userId
+        stitchingMethod = 'user_id'
+      }
+    } else {
+      distinctId = uuidv4()
+      stitchingMethod = 'none'
+    }
+
     ph.capture({
-      distinctId: req.body.anonymous_id || req.body.user_id || uuidv4(),
+      distinctId,
       event: req.body.event || '$pageview',
       properties: {
         site_id: siteId,
-        anonymous_id: req.body.anonymous_id || null,
-        user_id: req.body.user_id || null,
+        anonymous_id: anonymousId || resolvedAnonymousId || null,
+        user_id: userId || null,
+        has_resolved_anonymous_id: !!resolvedAnonymousId,
+        stitching_method: stitchingMethod,
         page_url: req.body.page_url || null,
         referrer: req.body.referrer || null,
         utm_source: req.body.utm_source || null,

@@ -7,6 +7,8 @@ import { getFirstTouchFields, redactPiiFromObject } from '../lib/utils.js'
 import { hasFeature } from '../lib/plan-features.js'
 import { claimIdempotencyKeys, logIngestionEvent } from '../lib/idempotency.js'
 
+import { storeIdentityLink, resolveAnonymousId } from '../lib/identity-links.js'
+
 // Alias kept for the CAPI block readability — same singleton underneath.
 const getCapiSupabase = getSupabase
 
@@ -114,10 +116,27 @@ export async function conversionOffline(req, res) {
     let distinctId
     let attributionStatus = undefined
     let stitchingMethod = 'none'
+    let resolvedAnonymousId = null
 
     if (hasIdentity) {
-      distinctId = userId || anonymousId
-      stitchingMethod = userId ? 'user_id' : 'anonymous_id'
+      if (anonymousId) {
+        distinctId = anonymousId
+        stitchingMethod = 'anonymous_id'
+        if (userId && userId !== anonymousId) {
+          // Store mapping in background
+          storeIdentityLink(req.site.id, userId, anonymousId, 'offline_conversion')
+        }
+      } else {
+        // Only userId is present
+        resolvedAnonymousId = await resolveAnonymousId(req.site.id, userId)
+        if (resolvedAnonymousId) {
+          distinctId = resolvedAnonymousId
+          stitchingMethod = 'user_id_resolved'
+        } else {
+          distinctId = userId
+          stitchingMethod = 'user_id'
+        }
+      }
     } else {
       distinctId = `${provider}_unattributed:${orderId || paymentId || idempotencyKey || providerEventId || uuidv4()}`
       attributionStatus = 'unattributed'
@@ -158,6 +177,12 @@ export async function conversionOffline(req, res) {
 
     if (userId) props.user_id = userId
     if (anonymousId) props.anonymous_id = anonymousId
+    if (resolvedAnonymousId) {
+      props.has_resolved_anonymous_id = true
+      if (!props.anonymous_id) {
+        props.anonymous_id = resolvedAnonymousId
+      }
+    }
     if (attributionStatus) props.attribution_status = attributionStatus
 
     if (typeof req.body.external_id === 'string' && req.body.external_id.trim()) {

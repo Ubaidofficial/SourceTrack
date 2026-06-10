@@ -10,6 +10,7 @@ import { normalizeUtm, getFirstTouchFields, redactPiiFromObject, isPathExcluded,
 import { hasFeature } from '../lib/plan-features.js'
 import { resolveClientIp } from '../lib/ip-resolver.js'
 import { claimIdempotencyKeys } from '../lib/idempotency.js'
+import { storeIdentityLink } from '../lib/identity-links.js'
 
 // In-memory dedup cache — 24h TTL. Fast path that catches the common case
 // (double-click, beacon retry) without a DB round-trip.
@@ -167,10 +168,19 @@ export async function conversion(req, res) {
 
     const enriched = enrich(req, clientIp)
 
+    const userId = typeof req.body.user_id === 'string' ? req.body.user_id.trim() : null
+    const anonymousId = typeof req.body.anonymous_id === 'string' ? req.body.anonymous_id.trim() : null
+
+    if (userId && anonymousId && userId !== anonymousId) {
+      // Non-blocking storage
+      storeIdentityLink(req.site.id, userId, anonymousId, 'browser_conversion')
+    }
+
     const props = {
       site_id: req.site.id,
       site_key: req.site.site_key,
-      anonymous_id: req.body.anonymous_id,
+      anonymous_id: anonymousId || null,
+      user_id: userId || null,
       is_conversion: true,
       conversion_value: req.body.conversion_value,
       ...getFirstTouchFields(req.body),

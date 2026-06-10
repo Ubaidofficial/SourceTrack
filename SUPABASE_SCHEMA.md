@@ -60,6 +60,7 @@ Live DB should include:
 - `admin_audit_log`
 - `qa_notes`
 - `api_keys`
+- `site_identity_links`
 
 ## `sites`
 
@@ -146,6 +147,27 @@ Expected policy:
 
 - `Owner access` (users can read/write own API keys)
 
+## `site_identity_links`
+
+Table:
+
+- `site_identity_links`
+
+Expected columns:
+
+- `id` (uuid, primary key)
+- `site_id` (uuid, foreign key to sites.id on delete cascade)
+- `user_id` (text, max 256, non-empty)
+- `anonymous_id` (text, max 256, non-empty)
+- `source` (text, one of: 'identify', 'browser_conversion', 'offline_conversion', 'server_event')
+- `first_seen_at` (timestamptz)
+- `last_seen_at` (timestamptz)
+- `created_at` (timestamptz)
+
+Expected policy:
+
+- Service role access only (RLS enabled, no policies).
+
 ## Dashboard widgets
 
 Table:
@@ -195,6 +217,7 @@ Current expected policies:
 - `saved_reports` -> Owner access
 - `sites` -> users can read own sites
 - `api_keys` -> Owner access
+- `site_identity_links` -> Service key access only
 
 `dashboard_widgets` may not have a policy yet. This is okay until dashboard widget persistence becomes active work.
 
@@ -214,7 +237,8 @@ Tables:
         'saved_reports',
         'dashboard_widgets',
         'admin_audit_log',
-        'qa_notes'
+        'qa_notes',
+        'site_identity_links'
       )
     order by table_name;
 
@@ -224,7 +248,7 @@ Columns:
     from information_schema.columns
     where table_schema = 'public'
       and (
-        table_name in ('companies', 'company_members', 'saved_reports', 'admin_audit_log', 'qa_notes')
+        table_name in ('companies', 'company_members', 'saved_reports', 'admin_audit_log', 'qa_notes', 'site_identity_links')
         or (table_name = 'sites' and column_name in (
           'id',
           'site_key',
@@ -251,7 +275,8 @@ Policies:
         'admin_audit_log',
         'qa_notes',
         'dashboard_widgets',
-        'sites'
+        'sites',
+        'site_identity_links'
       )
     order by tablename, policyname;
 

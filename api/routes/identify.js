@@ -1,5 +1,6 @@
 import { ph } from '../lib/posthog.js'
 import { redactPiiFromObject } from '../lib/utils.js'
+import { storeIdentityLink } from '../lib/identity-links.js'
 
 export async function identify(req, res) {
   try {
@@ -49,6 +50,8 @@ export async function identify(req, res) {
         distinctId: user_id,
         alias: anonymous_id
       })
+      // Non-blocking storage
+      storeIdentityLink(req.site.id, user_id, anonymous_id, 'identify')
     }
 
 

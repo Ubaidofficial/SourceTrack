@@ -1,12 +1,11 @@
-Session: 132B Attribution Accuracy Fixes
-Last Completed: Closed the remaining P1 attribution-accuracy items deferred from Session 132A. (P1-7) Channel classifier now strips same-domain/internal referrers before classifying as Referral — page_url is threaded through every caller (webhook, attribution-engine touchpoint helper, dashboard live aggregator, nightly job touchpoint query + channel calls). (P1-3) Sessionization splits on acquisition-context change (utm_source/medium/campaign or click ID) in addition to the 30-min inactivity window — internal nav still inherits. (P1-9) Both trackers now debounce auto-pageviews ~100ms so SPA pushState bursts only fire once per final URL; minified bundles rebuilt. (P1-8) Tracker forwards `first_touch_timestamp` (sanitized ISO) on every pageview + conversion; backend captures it in PostHog properties. (P1-5) `/api/conversion` now claims a row in `revenue_idempotency_keys` for any conversion that carries an order_id — dedupe survives process restart; NodeCache stays as fast path; failure mode is fail-open so revenue never drops on a DB hiccup. (P1-4) Verified that `user_id`-only attribution stitching cannot work without person-level HogQL joins — adjusted DevelopersOfflineConversions wording to recommend anonymous_id for accuracy. (P1-6) `ai_platforms` model relabeled to "AI conversion source" across Dashboard + ConversionExplanationModal with new copy that clarifies it credits the conversion event's own ai_source, not journey-level AI touches. No engine math silently changed.
-Next Task: Re-run the attribution audit (target overall ≥90/100). Outstanding follow-ups: (a) engine-level user_id person-merge resolution (deferred — requires HogQL person joins, can pair with the existing alias plumbing in `/api/identify`); (b) optional journey-aware `ai_platforms` SQL if the team wants to credit upstream AI touches under that model name.
+Session: 132C Identity Stitching + user_id Attribution Fallback
+Last Completed: Implemented durable identity link mapping table and ingestion-layer resolution. Synchronously resolves single-ID offline/server events to their linked anonymous_id to allow downstream attribution joins to work correctly without HogQL changes. Softened developer docs overclaims.
+Next Task: Re-run the attribution audit (target overall ≥90/100) to confirm ingestion-layer stitching resolves outstanding attribution trust gaps. Move to Phase C (Dashboard saved widget cards).
 Roadmap Queue:
 - Re-audit attribution trust score (target ≥90/100)
-- user_id person-merge resolution in attribution-engine.js (deferred from 132B)
 - Phase C (Dashboard saved widget cards)
 - Phase D (Campaigns AI Copilot)
-Build: ✅ passing (node --check, npm run qa:static, dashboard vite build, npm run build:tracker, required-grep clean)
+Build: ✅ passing (node --check, git diff --check, dashboard vite build, required-grep clean)
 Branch: main
 
 ⚠️ WARNING: Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.

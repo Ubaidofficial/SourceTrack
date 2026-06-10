@@ -136,7 +136,11 @@ export default function DevelopersIdentify() {
         </section>
 
         <DocsCallout type="info">
-          Stitching is retrospective. Once an identify link is created, all historical pageviews and acquisition touchpoints captured under the visitor's anonymous tracking ID will be associated with their user profile.
+          After identify is called, server-side conversions sent with user_id can be
+          attributed to the visitor's prior anonymous sessions. For best accuracy,
+          always send anonymous_id alongside user_id when available. Conversions sent
+          with user_id alone before any identify call was made cannot recover past
+          anonymous visits.
         </DocsCallout>
       </div>
     </DocsLayout>
