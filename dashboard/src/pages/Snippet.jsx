@@ -654,6 +654,7 @@ Content-Type: application/json
         <Link to="/docs/install" className="text-blue-600 dark:text-blue-400 hover:underline">Installation guide</Link>
         <Link to="/docs/troubleshooting" className="text-blue-600 dark:text-blue-400 hover:underline">Troubleshooting</Link>
         <Link to="/developers/conversions" className="text-blue-600 dark:text-blue-400 hover:underline">Conversion tracking</Link>
+        <a href="mailto:support@sourcetrack.ai" className="text-blue-600 dark:text-blue-400 hover:underline">Email Support</a>
       </div>
     </div>
   )

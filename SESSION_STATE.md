@@ -1,7 +1,8 @@
-Session: 133J — Docs Truth Audit
-Last Completed: Standardized tracker snippet paths across solution, setup, and help pages to canonical root paths. Updated Stripe env var `STRIPE_PRICE_ID_SCALE` as primary. Softened compliance language to "privacy-conscious" in developer docs. Added lightweight frontend gating for Google Search Console (GSC) connection card. Created `docs/docs_truth_audit.md` tracking all audit findings and corrected files.
-Next Task: Paid-beta launch readiness validation and production promotion.
+Session: 133K — Support Readiness
+Last Completed: Created support_readiness.md mapping, added support emails/troubleshooting links to Billing, Settings, Snippet, and Onboarding failure views without SLA/24-7 guarantees, and documented triage/escalation workflows.
+Next Task: Session 133L — Event Pipeline SLOs + Load Testing + Capacity Readiness.
 Roadmap Queue:
+- Session 133M — Pricing & Plan Limits Audit
 - Phase C (Dashboard saved widget cards)
 - Phase D (Campaigns AI Copilot)
 Build: ✅ passing (node --check, git diff --check, dashboard vite build, required-grep clean)

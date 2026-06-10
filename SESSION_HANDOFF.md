@@ -1,10 +1,57 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 133J — Docs Truth Audit. Standardized tracker snippet paths across solution, setup, and help pages to canonical root paths. Updated Stripe env var `STRIPE_PRICE_ID_SCALE` as primary. Softened compliance language to "privacy-conscious" in developer docs. Added lightweight frontend gating for Google Search Console (GSC) connection card. Created `docs/docs_truth_audit.md` tracking all audit findings and corrected files.
+> **Handoff:** Session 133K — Support Readiness. Created support_readiness.md mapping, added support email footer to Billing page, added "Support & Feedback" card to Settings, added "Email Support" link to Snippet, and added troubleshooting & support links to onboarding script verification failures. Documented triage/escalation operators workflow.
 >
-> **Next Task:** Paid-beta launch readiness validation and production promotion.
+> **Next Task:** Session 133L — Event Pipeline SLOs + Load Testing + Capacity Readiness (followed by Session 133M — Pricing & Plan Limits Audit).
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+## Session 133M — Pricing & Plan Limits Audit
+
+Audit current SourceTrack pricing, plan limits, feature gates, Stripe price IDs, billing UI, landing pricing, and competitor positioning before changing pricing.
+
+Do not adopt Usermaven-style generous event limits yet.
+
+Audit first:
+- Current Free/Starter/Growth/Scale prices
+- Current pageview/event/conversion limits
+- Stripe price ID mapping
+- Feature gates by plan
+- Billing page copy
+- Public pricing page copy
+- Whether limits are too tight for founder/agency momentum
+- Whether generous event limits create infrastructure risk before 133L load testing
+- Proposed launch pricing options with tradeoffs
+
+Decision after audit only.
+
+## Session 133K — Support Readiness
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+
+1. **Support Readiness Documentation**
+   - Created [support_readiness.md](file:///Users/ubaid/Desktop/trackiq/docs/support_readiness.md) detailing customer entry points, bug context, install/billing/privacy support checklists, operator triage and escalation workflows, and explicit prohibitions on SLA, 24-7, or refund promises.
+2. **Billing Support Footer**
+   - Added support email help section to the bottom of the Billing page (`Billing.jsx`) explaining billing, cancellation, or refund question guidelines.
+3. **Settings Support & Feedback Card**
+   - Appended a new "Support & Feedback" card directly above the Danger Zone on Settings (`Settings.jsx`), importing and utilizing `HelpCircle` icon.
+4. **Snippet Page Support Link**
+   - Integrated "Email Support" mailto link next to the help documentation links at the bottom of the snippet setup page (`Snippet.jsx`).
+5. **Onboarding Verification Failure Panel Links**
+   - Added Troubleshooting Guide and Contact Support links inside the failed script verification step card of Onboarding (`Onboarding.jsx` Step 6).
+6. **Roadmap Updates**
+   - Added `Session 133L — Event Pipeline SLOs + Load Testing + Capacity Readiness` to the roadmap in `PAID_BETA_SESSION_PLAN.md` and `SESSION_HANDOFF.md`.
+
+### Files changed
+- [docs/support_readiness.md](file:///Users/ubaid/Desktop/trackiq/docs/support_readiness.md) [NEW]
+- [dashboard/src/pages/Billing.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Billing.jsx)
+- [dashboard/src/pages/Settings.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Settings.jsx)
+- [dashboard/src/pages/Snippet.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Snippet.jsx)
+- [dashboard/src/pages/Onboarding.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Onboarding.jsx)
+- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
+- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
+- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
 
 ## Session 133J — Docs Truth Audit
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)

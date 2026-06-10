@@ -579,6 +579,17 @@ export default function Onboarding() {
                     <RefreshCw className="w-4 h-4" /> Try Again
                   </button>
                 </div>
+
+                <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 mt-4 pt-4 border-t border-gray-100 dark:border-white/5 text-xs text-st-gray dark:text-gray-400">
+                  <span>Need help?</span>
+                  <a href="/docs/troubleshooting" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">
+                    Troubleshooting Guide
+                  </a>
+                  <span>•</span>
+                  <a href="mailto:support@sourcetrack.ai" className="text-blue-600 dark:text-blue-400 hover:underline">
+                    Contact Support
+                  </a>
+                </div>
                 <button
                   type="button"
                   disabled={loading}

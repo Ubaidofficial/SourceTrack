@@ -163,3 +163,37 @@ The session order was re-prioritized to address the **Attribution and Tracking T
 * **Session 133H — Backup and Recovery Plan:** ✅ Complete. Audited data backups, recovery readiness, and outage paths. Created a detailed runbook (`docs/backup_recovery.md`) covering Supabase, PostHog, Stripe, and Railway rollback protocols, updated rollback verification instructions in `COMMANDCODE_RUNBOOK.md`, and added security warning comments for `ENCRYPTION_KEY` in `.env.example`.
 * **Session 133I — End-to-End Install QA:** ✅ Complete. Standardized canonical public tracker URLs to the root paths `/tracker.min.js` and `/tracker.cookieless.min.js`, leaving `/tracker/*` as backwards-compatible paths. Updated onboarding, snippet generation, settings, and install documentation to use the canonical root paths, added detailed verification boundaries and domain warnings, and created `docs/install_qa_map.md`.
 * **Session 133J — Docs Truth Audit:** ✅ Complete. Standardized tracker snippet paths across solution, setup, and help pages to canonical root paths. Updated Stripe env var `STRIPE_PRICE_ID_SCALE` as primary. Softened compliance language to "privacy-conscious" in developer docs. Added lightweight frontend gating for Google Search Console (GSC) connection card. Created `docs/docs_truth_audit.md` tracking all audit findings and corrected files. Verified all checks pass.
+* **Session 133K — Support Readiness:** ✅ Complete. Created support_readiness.md mapping, added support emails/troubleshooting links to Billing, Settings, Snippet, and Onboarding failure views without SLA/24-7 guarantees, and documented triage/escalation workflows. Verified all checks pass.
+
+---
+
+### Session 133L — Event Pipeline SLOs + Load Testing + Capacity Readiness
+* **Goal:** Define ingestion service-level objectives (SLOs) and build realistic k6 load tests to verify system headroom under spikes and bursts.
+* **Objectives:**
+  - Define ingestion SLOs for latency and error rates on `/api/track` and `/api/conversion`.
+  - Add k6 load testing scripts simulating 50–100M events/month capacity.
+  - Test realistic spikes of 200–500 events/sec.
+  - Test short burst headroom at 1,000 events/sec.
+  - Document failure modes, observability metrics, idempotency bounds, and kill-switch/throttling requirements.
+* **Constraints:** Do not rewrite in Rust. Do not overbuild queuing systems unless audit reveals bottleneck needs.
+
+---
+
+## Session 133M — Pricing & Plan Limits Audit
+
+Audit current SourceTrack pricing, plan limits, feature gates, Stripe price IDs, billing UI, landing pricing, and competitor positioning before changing pricing.
+
+Do not adopt Usermaven-style generous event limits yet.
+
+Audit first:
+- Current Free/Starter/Growth/Scale prices
+- Current pageview/event/conversion limits
+- Stripe price ID mapping
+- Feature gates by plan
+- Billing page copy
+- Public pricing page copy
+- Whether limits are too tight for founder/agency momentum
+- Whether generous event limits create infrastructure risk before 133L load testing
+- Proposed launch pricing options with tradeoffs
+
+Decision after audit only.

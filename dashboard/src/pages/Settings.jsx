@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useSite } from '../contexts/SiteContext'
 import { supabase } from '../lib/supabase'
 import { getBillingPortal, fetchApi } from '../lib/api'
-import { Copy, Check, ExternalLink, Globe, Link2, CreditCard, Link, ShieldCheck, Trash2, AlertTriangle, Clock, Key, X } from 'lucide-react'
+import { Copy, Check, ExternalLink, Globe, Link2, CreditCard, Link, ShieldCheck, Trash2, AlertTriangle, Clock, Key, X, HelpCircle } from 'lucide-react'
 import UTMBuilder from '../components/UTMBuilder'
 import { getTrialInfo, getPlanLabel, isPaidPlan } from '../lib/billing'
 import { hasFeature } from '../lib/planFeatures'
@@ -1261,6 +1261,21 @@ export default function Settings() {
             Security & Token Best Practices
           </a>
         </div>
+      </section>
+
+      {/* ── Support & Feedback ────────────────────────────────────────── */}
+      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-3">
+        <div className="flex items-center gap-2">
+          <HelpCircle className="w-4 h-4 text-st-gray dark:text-gray-400" />
+          <h3 className="text-sm font-bold text-st-black dark:text-white">Support & Feedback</h3>
+        </div>
+        <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
+          Need help setting up your tracking script, configuring integrations, or have questions? Email us at{' '}
+          <a href="mailto:support@sourcetrack.ai" className="text-blue-600 dark:text-blue-400 hover:underline font-semibold">
+            support@sourcetrack.ai
+          </a>
+          . Please include your domain name and site key for faster troubleshooting. We’ll review your message and reply as soon as possible.
+        </p>
       </section>
 
       {/* ── Danger Zone (Account Deletion) ────────────────────────────── */}

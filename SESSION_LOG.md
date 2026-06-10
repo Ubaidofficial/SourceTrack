@@ -5,6 +5,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 133K | 2026-06-10 | `main` | Support Readiness — Audited support flows, created support_readiness.md mapping, added support emails/troubleshooting links to Billing, Settings, Snippet, and Onboarding failure views without SLA/24-7 guarantees, and documented triage/escalation workflows. | ✅ | No |
 | 133J | 2026-06-10 | `main` | Docs Truth Audit — Audited all customer-facing and operator-facing docs/copy for truthfulness before paid beta. Standardized tracker snippet paths across solution, setup, and help pages to canonical root paths. Updated Stripe env var `STRIPE_PRICE_ID_SCALE` as primary. Softened compliance language to "privacy-conscious" in developer docs. Added lightweight frontend gating for Google Search Console (GSC) connection card. Created `docs/docs_truth_audit.md` tracking all audit findings and corrected files. | ✅ | No |
 | 133I | 2026-06-10 | `main` | End-to-End Install QA — Audited and verified customer installation flow and verification boundaries. Standardized canonical public tracker URLs to the root paths `/tracker.min.js` and `/tracker.cookieless.min.js`, leaving `/tracker/*` as backwards-compatible paths. Updated onboarding, snippet generation, settings, and install documentation to use the canonical root paths, added detailed verification boundaries and domain warnings, and created `docs/install_qa_map.md`. | ✅ | No |
 | 133H | 2026-06-10 | `main` | Backup and Recovery Plan — Audited data backups, recovery readiness, and outage paths. Created a detailed runbook (`docs/backup_recovery.md`) covering Supabase, PostHog, Stripe, and Railway rollback protocols, updated rollback verification instructions in `COMMANDCODE_RUNBOOK.md`, and added security warning comments for `ENCRYPTION_KEY` in `.env.example`. | ✅ | No |
@@ -1398,3 +1399,21 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 - Softened compliance language to "privacy-conscious" in developer docs.
 - Added lightweight frontend gating for Google Search Console (GSC) connection card on Growth and Scale plans using existing `hasFeature` helper.
 - Created `docs/docs_truth_audit.md` tracking all audit findings and corrected files.
+
+---
+
+## Session 133K — Support Readiness
+
+**Date:** 2026-06-10
+**Branch:** `main`
+**Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
+
+### 1. In-App Support Entry Points
+- Added Support email footnote section to the dashboard Billing page (`Billing.jsx`) explaining contact info for billing, cancellation, or refund questions, without any response-time or refund guarantees.
+- Added a "Support & Feedback" card to Settings (`Settings.jsx`) directing users to email `support@sourcetrack.ai` with domain/site key details, and imported `HelpCircle` icon.
+- Added "Email Support" mailto link to setup page (`Snippet.jsx`) help links row.
+- Added "Troubleshooting Guide" and "Contact Support" link actions to onboarding script verification failure panel (`Onboarding.jsx` step 6).
+
+### 2. Operational Docs & Future SLO Roadmap
+- Created `docs/support_readiness.md` detailing support contact channels, bug report context checklists, install/billing/privacy support checklists, operator triage and escalation workflows, and explicit prohibitions on making 24/7, SLA, or refund promises.
+- Added `Session 133L — Event Pipeline SLOs + Load Testing + Capacity Readiness` and `Session 133M — Pricing & Plan Limits Audit` to the roadmap in `PAID_BETA_SESSION_PLAN.md` and `SESSION_HANDOFF.md`.
