@@ -754,6 +754,7 @@ router.get('/recent-activity', validateSiteKey, requireSiteMembership, async (re
         utm_medium: utmMedium,
         utm_source: utmSource,
         referrer: referrer,
+        page_url: pageUrl,
         ai_source: aiSource,
         gclid,
         fbclid,

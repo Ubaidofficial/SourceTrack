@@ -1,10 +1,77 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 132A — Attribution Trust Surface Fixes. Closed the four highest-priority items from `SESSION_132_ATTRIBUTION_AUDIT.md`: P0-1 cookieless silent-fallback now warns in the browser console, in Settings, and in DocsTroubleshooting; P0-2 marketing "8 attribution models" copy reconciled to "9" across 9 marketing pages, and the API `_notice` field for nightly-dependent models is now surfaced inside Dashboard pinned report cards (ReportBuilder already had it); P0-3 attribution model badges added to Dashboard pinned report cards, ReportBuilder preview header, and Campaigns header (fixed to last_touch); P1-1 a new shared `DirectInfo` helper renders a tiny "i" tooltip next to any Direct / Direct&nbsp;/&nbsp;None / unknown row across Dashboard, ReportBuilder, and Campaigns. No attribution math changed.
+> **Handoff:** Session 132B — Attribution Accuracy Fixes. Closed the remaining P1 attribution-accuracy items from `SESSION_132_ATTRIBUTION_AUDIT.md`. Same-domain referrers no longer inflate the Referral channel — `channelFromEvent()` now neutralizes the referrer when `page_url` is on the same host, and every call site threads `page_url` through (webhook.js, attribution-engine touchpoint helper, dashboard live aggregator, nightly job touchpoint query + first/last/30d channel calls). Sessionization splits on acquisition-context change (`utm_source`/`utm_medium`/`utm_campaign` or any paid click ID) in addition to the 30-min inactivity window — internal navigation that carries no UTM still inherits. Both trackers now debounce auto-pageviews ~100ms so pushState bursts only fire once per final URL; minified bundles rebuilt via `npm run build:tracker`. `first_touch_timestamp` is captured by the tracker (already in localStorage as `st_ft_ts`) and now forwarded on every pageview + conversion payload — backend sanitizes to a canonical ISO string and stores in PostHog event properties. `/api/conversion` now claims `revenue_idempotency_keys(provider='browser_conversion', key_type='order_event', key_value=site:order:type)` whenever the client gave us an `order_id`; NodeCache stays as the fast path. user_id-only attribution stitching deferred (engine joins on raw `distinct_id`, no person-level HogQL fallback yet) — DevelopersOfflineConversions wording softened to recommend `anonymous_id`. `ai_platforms` model relabeled to "AI conversion source" in Dashboard + ConversionExplanationModal (matches ReportBuilder) with new copy that explicitly notes the model credits the conversion event's own ai_source, not journey-level AI touches.
 >
-> **Next Task:** Re-run the attribution audit (target overall ≥90/100) and proceed with Session 132B for the remaining P1 items (same-domain referrer stripping, sessionization on UTM change, `st_ft_ts` payload field, conversion-route dedupe persistence, SPA pushState debounce).
+> **Next Task:** Re-run `SESSION_132_ATTRIBUTION_AUDIT.md` (target ≥90/100). Two remaining follow-ups: (a) engine-level `user_id` person-merge resolution — currently `attribution-engine.js` HogQL joins on `distinct_id` strictly, so a conversion captured under `distinct_id = user_id` does not match prior pageviews under `distinct_id = anonymous_id` even after `ph.alias()`. Real fix requires HogQL person joins or a distinct_id OR list. (b) Optional journey-aware `ai_platforms` SQL — current model is "AI conversion source" (label adjusted) but if the team wants to credit upstream AI touches under that model name, follow the `last_touch` JOIN pattern.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 132B — Attribution Accuracy Fixes
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean + tracker rebuild)
+
+### Completed
+
+1. **P1-7 — Same-domain / internal referrer no longer inflates Referral.**
+   - [api/lib/channel-classifier.js](api/lib/channel-classifier.js): new `isSameDomainReferrer(referrer, pageUrl)` exported helper. `channelFromEvent()` now neutralizes the local `ref` to `''` when the referrer host matches the page host (exact or subdomain). UTMs, click IDs, AI referrers, and external referrals are unaffected because they run in higher-precedence branches.
+   - [api/lib/webhook.js](api/lib/webhook.js), [api/lib/attribution-engine.js](api/lib/attribution-engine.js) (touchpoint helper), [api/routes/dashboard.js](api/routes/dashboard.js) (live channel aggregator), [api/jobs/nightly-attribution.js](api/jobs/nightly-attribution.js) (first/last/30d channel calls): all threaded `page_url` through to the classifier.
+   - [api/jobs/nightly-attribution.js](api/jobs/nightly-attribution.js): touchpoint HogQL query now selects `properties.page_url` and maps it onto each touchpoint.
+   - Behavior: `example.com/page-a → example.com/page-b` no longer classifies as Referral (falls through to Direct). External referrers from `partner.com` still classify as Referral. Paid Search (`gclid`) wins over same-domain referrer. UTM source still wins when set.
+
+2. **P1-3 — Sessionization splits on acquisition-context change.**
+   - [api/lib/sessionization.js](api/lib/sessionization.js): new `acquisitionKey(event)` helper composes `utm_source|utm_medium|utm_campaign|<any click ID>`. `deriveSessions()` opens a new session when the current event's non-null acquisition key differs from the session's entry key (in addition to the 30-min inactivity rule). Path/title-only changes are intentionally NOT part of the key — internal navigation inherits.
+   - Behavior: Campaign A landing → same-site browsing = same session. Campaign A landing → Campaign B landing within 30 min = **new session**. Google organic → internal navigation = same session. Direct internal referrer → internal navigation = same session.
+
+3. **P1-9 — SPA pushState debounce in both trackers.**
+   - [tracker/tracker.js](tracker/tracker.js), [tracker/tracker.cookieless.js](tracker/tracker.cookieless.js): replaced the immediate `sendPageview()` on pushState/popstate with a `_schedulePv()` debounce that defers ~100ms; identical-URL repeat calls collapse to a single pageview. Manual `sourcetrack.track()` / `sourcetrack.conversion()` calls are unaffected. Initial page load still fires immediately.
+   - Rebuilt minified bundles via `npm run build:tracker` — `tracker/tracker.min.js` (9.1kB) and `tracker/tracker.cookieless.min.js` (6.1kB).
+
+4. **P1-8 — `first_touch_timestamp` payload field.**
+   - [tracker/tracker.js](tracker/tracker.js): `getFT()` now returns `first_touch_timestamp` from `localStorage['st_ft_ts']`. Sent on every pageview and conversion.
+   - [tracker/tracker.cookieless.js](tracker/tracker.cookieless.js): `deriveFirstTouch()` stamps `first_touch_timestamp: new Date().toISOString()` for parity (in-memory only — same trade-off as `first_touch_source`).
+   - [api/lib/utils.js](api/lib/utils.js): new `sanitizeClientTimestamp()` (length-bounded, `new Date()` parse, returns canonical ISO or null). `getFirstTouchFields()` now also returns `first_touch_timestamp` sanitized — automatically picked up by both [api/routes/conversion.js](api/routes/conversion.js) (browser conversions) and [api/routes/conversion-offline.js](api/routes/conversion-offline.js) (offline conversions) via their existing spread.
+   - [api/routes/track.js](api/routes/track.js): pageview capture explicitly includes `first_touch_timestamp` (sanitized).
+   - **Sent on pageviews?** Yes. **Sent on browser conversions?** Yes. **Stored where?** PostHog event `properties.first_touch_timestamp`. **Used by engine yet?** Not consumed at attribution time — preserved for future engine work or external reporting. **Never used for billing/security** — explicit doc comment in `sanitizeClientTimestamp`.
+
+5. **P1-5 — Persistent conversion dedupe (when order_id present).**
+   - [api/routes/conversion.js](api/routes/conversion.js): imports `claimIdempotencyKeys` from existing [api/lib/idempotency.js](api/lib/idempotency.js) and the existing `revenue_idempotency_keys` table from `supabase/migrations/20260606180000_revenue_foundation.sql`. NodeCache stays as the fast path. After cache miss, if the client gave us an `order_id`, we atomically claim `{provider:'browser_conversion', key_type:'order_event', key_value:'${site_id}:${order_id}:${conversion_type}'}` — matches the existing in-memory `external_event_id` key shape, so it dedupes at exactly the same granularity. Duplicate → 200 with `dedup_skipped:true, persistent:true`.
+   - Fail-open on DB error: we log and fall through rather than dropping legitimate revenue on a Supabase hiccup.
+   - Anonymous "button click" conversions without `order_id` are still **not** deduped — they have no stable key and merging them would silently drop real events.
+
+6. **P1-6 — `ai_platforms` model scope: label + copy adjusted, engine unchanged.**
+   - [dashboard/src/pages/Dashboard.jsx](dashboard/src/pages/Dashboard.jsx): MODELS entry renamed from "AI Platforms" → "AI conversion source" (matches existing ReportBuilder.jsx label). Comment explains the engine's actual scope and warns against broadening the label without first extending `aiPlatformAttribution()`.
+   - [dashboard/src/components/ConversionExplanationModal.jsx](dashboard/src/components/ConversionExplanationModal.jsx): `modelLabels.ai_platforms` updated to "AI conversion source". Both the generic and per-conversion explanation copy now explicitly say the model credits the AI referrer on the conversion event itself, not earlier AI touches, and points users to First Touch / multi-touch models for that.
+   - Current exact scope: `WHERE event = '$conversion' AND properties.ai_source IS NOT NULL AND properties.ai_source != ''`. No journey walk.
+
+### Verified / Deferred
+
+- **P1-4 — `user_id` fallback for attribution.** Verified: `/api/identify` does call `ph.alias({distinctId: user_id, alias: anonymous_id})` so PostHog merges the persons. But `attribution-engine.js` HogQL JOINs on raw `distinct_id`, so a conversion captured with `distinct_id = user_id` will NOT match prior pageviews under `distinct_id = anonymous_id` at query time. There is no safe one-line fix — proper work requires HogQL person-level joins or a `distinct_id IN (anonymous_id, user_id)` shape across ~5 queries. **Deferred.** [DevelopersOfflineConversions.jsx](dashboard/src/pages/developers/DevelopersOfflineConversions.jsx) wording softened: anonymous_id is now described as the "most reliable" stitching key, and the `user_id` description recommends `anonymous_id` for accurate attribution.
+
+### Files changed
+- `api/lib/channel-classifier.js`
+- `api/lib/sessionization.js`
+- `api/lib/utils.js`
+- `api/lib/webhook.js`
+- `api/lib/attribution-engine.js`
+- `api/routes/track.js`
+- `api/routes/conversion.js`
+- `api/routes/dashboard.js`
+- `api/jobs/nightly-attribution.js`
+- `tracker/tracker.js`
+- `tracker/tracker.cookieless.js`
+- `tracker/tracker.min.js` (rebuilt)
+- `tracker/tracker.cookieless.min.js` (rebuilt)
+- `dashboard/src/pages/Dashboard.jsx`
+- `dashboard/src/components/ConversionExplanationModal.jsx`
+- `dashboard/src/pages/developers/DevelopersOfflineConversions.jsx`
+
+### Validation
+- `node --check api/index.js api/routes/*.js api/lib/*.js` → ✅
+- `git diff --check` → ✅ (exit 0)
+- `npm run qa:static` → ✅ (forbidden copy/API grep, route mount, security/plan scoping all pass)
+- `cd dashboard && npm run build` → ✅ (2076 modules, 1,754kB bundle / 457kB gzip)
+- `npm run build:tracker` → ✅ (9.1kB standard, 6.1kB cookieless)
+- Required overclaim grep → 0 hits
+- Attribution required-term grep → all hits are intentional (page_url-aware `same-domain` helper, `first_touch_timestamp` plumbing, debounced `pushState` handler, `ai_platforms` model code)
 
 ## Session 132A — Attribution Trust Surface Fixes
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)

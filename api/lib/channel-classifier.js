@@ -16,16 +16,55 @@ export const AI_REFERRER_DOMAINS = [
   'chat.mistral.ai', 'mistral.ai', 'character.ai', 'pi.ai', 'inflection.ai'
 ]
 
+// Strip protocol, www., and lowercase. Returns null on malformed input.
+function extractHost(url) {
+  if (!url || typeof url !== 'string') return null
+  let s = url.trim()
+  if (!s) return null
+  if (!s.includes('://')) s = 'https://' + s
+  try {
+    return new URL(s).hostname.replace(/^www\./i, '').toLowerCase() || null
+  } catch (_) {
+    return null
+  }
+}
+
+/**
+ * True when the referrer and the page being viewed live on the same registrable
+ * domain. Used to skip the "Referral" branch so that internal navigation
+ * (e.g. example.com/blog → example.com/pricing) is NOT counted as external
+ * referral traffic, which would inflate Referral attribution.
+ *
+ * Treats a host as same-domain when either is an exact match or a subdomain
+ * of the other (so app.example.com → www.example.com is internal).
+ */
+export function isSameDomainReferrer(referrer, pageUrl) {
+  const refHost  = extractHost(referrer)
+  const pageHost = extractHost(pageUrl)
+  if (!refHost || !pageHost) return false
+  if (refHost === pageHost) return true
+  return refHost.endsWith('.' + pageHost) || pageHost.endsWith('.' + refHost)
+}
+
 export function channelFromEvent(props = {}) {
   const medium  = String(props.utm_medium  || props.medium  || '').toLowerCase().trim()
   const source  = String(props.utm_source  || props.source  || props.derived_source || '').toLowerCase().trim()
-  const ref     = String(props.referrer    || '').toLowerCase()
+  let   ref     = String(props.referrer    || '').toLowerCase()
   const aiSource = String(props.ai_source  || '').trim()
   const gclid   = props.gclid   || props.gbraid || props.wbraid
   const fbclid  = props.fbclid
   const msclkid = props.msclkid
   const ttclid  = props.ttclid
   const liclid  = props.li_fat_id
+
+  // Treat same-domain (internal) referrers as no referrer for classification.
+  // The classifier still credits UTMs / paid click IDs (which run BEFORE the
+  // AI referrer / Organic / Referral branches via their own checks) — we only
+  // neutralize the *referrer-based* branches so an internal blog→pricing link
+  // does not silently inflate the "Referral" or "Organic Search" channels.
+  if (ref && isSameDomainReferrer(ref, props.page_url)) {
+    ref = ''
+  }
 
   // 1. AI Search — explicit ai_source tag or referrer from known AI domain
   if (aiSource) return 'AI Search'

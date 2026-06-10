@@ -255,7 +255,8 @@ async function processConversion(site, conversion) {
       properties.gclid,
       properties.gbraid,
       properties.fbclid,
-      properties.msclkid
+      properties.msclkid,
+      properties.page_url
     FROM events
     WHERE event = '$pageview'
       AND distinct_id = '${conversion.distinct_id}'
@@ -265,7 +266,7 @@ async function processConversion(site, conversion) {
     ORDER BY timestamp ASC
     LIMIT 500
   `
-  
+
   let touchpointRows
   try {
     touchpointRows = await queryPostHog(touchpointsQuery)
@@ -273,7 +274,7 @@ async function processConversion(site, conversion) {
     logWarn(`Failed to fetch touchpoints for ${conversion.uuid}: ${error.message}`)
     touchpointRows = []
   }
-  
+
   const touchpoints = (touchpointRows || []).map(row => ({
     timestamp: row[0],
     utm_source: row[1] || null,
@@ -285,6 +286,7 @@ async function processConversion(site, conversion) {
     gbraid:   row[7]  || null,
     fbclid:   row[8]  || null,
     msclkid:  row[9]  || null,
+    page_url: row[10] || null,
     derived_source: row[1] || row[5] || (row[4] ? (() => { try { return new URL(row[4]).hostname.replace('www.', '') } catch (_e) { return null } })() : null) || 'direct'
   }))
   
@@ -297,6 +299,7 @@ async function processConversion(site, conversion) {
     utm_source:     firstTp.utm_source,
     utm_medium:     firstTp.utm_medium,
     referrer:       firstTp.referrer,
+    page_url:       firstTp.page_url,
     ai_source:      firstTp.ai_source,
     derived_source: firstTp.derived_source,
     gclid:          firstTp.gclid,
@@ -306,6 +309,7 @@ async function processConversion(site, conversion) {
     utm_source: lastTp.utm_source,
     utm_medium: lastTp.utm_medium,
     referrer:   lastTp.referrer,
+    page_url:   lastTp.page_url,
     ai_source:  lastTp.ai_source,
     gclid:      lastTp.gclid,
     fbclid:     lastTp.fbclid
@@ -319,6 +323,7 @@ async function processConversion(site, conversion) {
     utm_source:     first30.utm_source,
     utm_medium:     first30.utm_medium,
     referrer:       first30.referrer,
+    page_url:       first30.page_url,
     ai_source:      first30.ai_source,
     derived_source: first30.derived_source,
     gclid:          first30.gclid,
@@ -391,7 +396,8 @@ function calculateAttribution(touchpoints, conversionValue) {
   const tpCh = (tp) => channelFromEvent({
     utm_source: tp.utm_source, utm_medium: tp.utm_medium,
     ai_source: tp.ai_source, gclid: tp.gclid,
-    fbclid: tp.fbclid, msclkid: tp.msclkid, referrer: tp.referrer
+    fbclid: tp.fbclid, msclkid: tp.msclkid, referrer: tp.referrer,
+    page_url: tp.page_url
   })
   const tpBase = (tp) => ({
     source: tp.utm_source || null,

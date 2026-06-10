@@ -49,7 +49,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
     last_touch: 'Last Touch',
     first_touch_non_direct: 'First Touch (Non-Direct)',
     last_touch_non_direct: 'Last Touch (Non-Direct)',
-    ai_platforms: 'AI Platform',
+    ai_platforms: 'AI conversion source',
     linear: 'Linear',
     time_decay: 'Time Decay',
     u_shaped: 'U-Shaped',
@@ -109,7 +109,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                   <p>Last Touch (Non-Direct) finds the latest pageview with a non-empty, non-direct UTM source. Direct touches are skipped. If the visitor never had a non-direct pageview, it falls back to the conversion page UTM.</p>
                 )}
                 {model === 'ai_platforms' && (
-                  <p>AI Platform attribution detects the referrer at conversion time and matches it against known AI platform domains (ChatGPT, Claude, Perplexity, Gemini, Grok, Copilot, DeepSeek). Only conversions with a detected AI referrer receive credit.</p>
+                  <p>AI conversion source credits the AI referrer detected on the conversion event itself — for example, a visitor who lands from ChatGPT and converts in the same session. Earlier AI touches in the journey (visit from ChatGPT today, convert direct tomorrow) are not credited under this model; use First Touch or a multi-touch model to surface those.</p>
                 )}
                 {model === 'linear' && (
                   <p>Linear attribution distributes credit equally across all touchpoints in the visitor's journey. Each touchpoint receives an equal share of the conversion value.</p>
@@ -368,7 +368,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                   <p>Last Touch (Non-Direct) finds the latest pageview with a non-empty, non-direct UTM source. If the visitor never had such a pageview, it falls back to the conversion page UTM (which may be direct).</p>
                 )}
                 {data.model === 'ai_platforms' && (
-                  <p>AI Platform attribution detects the referrer at conversion time and matches it against known AI platform domains (ChatGPT, Claude, Perplexity, Gemini, Grok, Copilot, DeepSeek).</p>
+                  <p>AI conversion source credits the AI referrer on the conversion event itself, not earlier AI touches in the journey. If the visitor arrived from ChatGPT in an earlier session and converted later from a direct visit, this model will not credit ChatGPT — use First Touch or a multi-touch model for that.</p>
                 )}
                 {data.model === 'linear' && (
                   <p>Linear attribution distributes credit equally across all touchpoints in the visitor's journey. Each touchpoint receives an equal share of the conversion value.</p>

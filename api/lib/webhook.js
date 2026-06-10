@@ -147,6 +147,7 @@ export function dispatchWebhook(eventType, properties) {
           utm_medium: medium,
           utm_campaign: campaign,
           referrer: properties.referrer,
+          page_url: properties.page_url,
           ai_source: properties.ai_source,
           gclid: properties.gclid,
           fbclid: properties.fbclid,

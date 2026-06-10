@@ -9,14 +9,17 @@ import { getSupabase } from '../lib/supabase.js'
 import { normalizeUtm, getFirstTouchFields, redactPiiFromObject, isPathExcluded, extractCustomParams } from '../lib/utils.js'
 import { hasFeature } from '../lib/plan-features.js'
 import { resolveClientIp } from '../lib/ip-resolver.js'
+import { claimIdempotencyKeys } from '../lib/idempotency.js'
 
-// In-memory dedup cache — 24h TTL. Prevents duplicate conversions when:
-// - Form submits twice (double-click, retry)
-// - Beacon fires twice
+// In-memory dedup cache — 24h TTL. Fast path that catches the common case
+// (double-click, beacon retry) without a DB round-trip.
 // Keys: external_event_id (site_id:order_id:type) → true
-// Note: restarts lose the cache. For absolute dedup use a DB — this catches
-// the common case (same session, same minute) without a DB round-trip.
+// The in-memory cache resets on process restart, so we ALSO consult the
+// persistent `revenue_idempotency_keys` table (via claimIdempotencyKeys)
+// whenever a stable order_id is present — that catches duplicates that
+// straddle a Railway redeploy or container restart.
 const dedupCache = new NodeCache({ stdTTL: 86400, checkperiod: 3600 })
+const BROWSER_CONVERSION_PROVIDER = 'browser_conversion'
 
 // In-memory per-site dedupe log/map. Stores Timestamp + Key Type per site ID.
 // Structure: siteId (Number) -> Array of { timestamp: Number, keyType: String }
@@ -223,9 +226,16 @@ export async function conversion(req, res) {
       props.order_id = orderId
     }
 
-    // Deduplication — skip if this exact external_event_id was seen in the last 24h
+    // Deduplication — two layers, both keyed on (site, order_id, type):
+    //   1. In-memory NodeCache — fast path for the common double-click case.
+    //   2. Persistent revenue_idempotency_keys table — survives restarts and
+    //      catches duplicates whose first event predates the current process.
+    //
+    // Anonymous, no-order_id "button click" conversions are NOT deduped here
+    // — they have no stable key and merging them would silently drop real
+    // events. We only dedupe when the client gave us an order_id.
     if (externalEventId) {
-      if (dedupCache.get(externalEventId)) {
+      const recordDuplicate = () => {
         try {
           const siteId = req.site?.id
           if (siteId) {
@@ -233,7 +243,6 @@ export async function conversion(req, res) {
             const now = Date.now()
             const oneDayAgo = now - 24 * 60 * 60 * 1000
             const recentLog = log.filter(e => e.timestamp > oneDayAgo)
-
             const keyType = (req.body.order_id || req.body.orderId) ? 'order_id' : 'derived'
             recentLog.push({ timestamp: now, keyType })
             dedupeEventsLog.set(siteId, recentLog)
@@ -241,8 +250,40 @@ export async function conversion(req, res) {
         } catch (err) {
           console.error('[dedupe-stats] failed to log duplicate event:', err?.message)
         }
+      }
+
+      if (dedupCache.get(externalEventId)) {
+        recordDuplicate()
         return res.status(200).json({ success: true, data: { received: true, dedup_skipped: true }, error: null })
       }
+
+      // Persistent claim — fail-open on DB error: a Supabase/RPC failure
+      // falls through to "not a duplicate" so we never drop legitimate
+      // revenue on an outage. The fast cache is set only AFTER a successful
+      // claim so a duplicate can't poison the cache on a transient DB
+      // failure.
+      const siteKey = req.site?.site_key
+      if (siteKey && (req.body.order_id || req.body.orderId)) {
+        try {
+          const claim = await claimIdempotencyKeys(siteKey, BROWSER_CONVERSION_PROVIDER, [{
+            key_type: 'order_event',
+            key_value: externalEventId
+          }])
+          if (claim.duplicate) {
+            dedupCache.set(externalEventId, true)
+            recordDuplicate()
+            return res.status(200).json({
+              success: true,
+              data: { received: true, dedup_skipped: true, persistent: true },
+              error: null
+            })
+          }
+        } catch (err) {
+          console.error('[conversion-dedupe] persistent claim failed:', err?.message)
+          // Fall through — better to risk a duplicate than drop revenue on a DB hiccup.
+        }
+      }
+
       dedupCache.set(externalEventId, true)
     }
 

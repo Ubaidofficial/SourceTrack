@@ -2,7 +2,7 @@ import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
-import { normalizeUtm, redactPiiFromObject, isPathExcluded, extractCustomParams } from '../lib/utils.js'
+import { normalizeUtm, redactPiiFromObject, isPathExcluded, extractCustomParams, sanitizeClientTimestamp } from '../lib/utils.js'
 import { resolveClientIp } from '../lib/ip-resolver.js'
 
 
@@ -146,6 +146,9 @@ export async function track(req, res) {
         first_touch_source: normalizeUtm(req.body.first_touch_source),
         first_touch_medium: normalizeUtm(req.body.first_touch_medium),
         first_touch_campaign: normalizeUtm(req.body.first_touch_campaign),
+        // Attribution metadata only — sanitized to a canonical ISO string or
+        // dropped to null. Never used for billing/security decisions.
+        first_touch_timestamp: sanitizeClientTimestamp(req.body.first_touch_timestamp),
         gclid: req.body.gclid || null,
         gbraid: req.body.gbraid || null,
         wbraid: req.body.wbraid || null,

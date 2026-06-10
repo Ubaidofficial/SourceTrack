@@ -211,7 +211,15 @@
     ls('st_ft_ts',  new Date().toISOString())
   }
   function getFT() {
-    return { first_touch_source: ls('st_ft_src') || 'direct', first_touch_medium: ls('st_ft_med') || 'none', first_touch_campaign: ls('st_ft_cmp') || '' }
+    // first_touch_timestamp is written by storeFirstTouch() in localStorage as `st_ft_ts`.
+    // We forward it so the backend can preserve the original first-touch moment
+    // even when prior pageview events have rolled out of the attribution window.
+    return {
+      first_touch_source:    ls('st_ft_src') || 'direct',
+      first_touch_medium:    ls('st_ft_med') || 'none',
+      first_touch_campaign:  ls('st_ft_cmp') || '',
+      first_touch_timestamp: ls('st_ft_ts')  || null
+    }
   }
 
   // ─── Shared UTM + click-id field builder ───────────────────────────────────
@@ -251,14 +259,24 @@
   }
 
   // ─── SPA routing ───────────────────────────────────────────────────────────
+  // SPA frameworks (Next.js, Remix, SvelteKit, React Router) can fire several
+  // pushState calls in quick succession during animated transitions and
+  // programmatic redirects. We debounce auto-pageviews to ~100ms so only the
+  // final URL of a burst gets tracked. Manual sourcetrack.track()/.conversion()
+  // calls go through send() directly and are unaffected.
   var _lastUrl = location.href, _ps = history.pushState
+  var _pvTimer = null
+  function _schedulePv() {
+    if (location.href === _lastUrl) return
+    _lastUrl = location.href
+    if (_pvTimer) clearTimeout(_pvTimer)
+    _pvTimer = setTimeout(function () { _pvTimer = null; sendPageview() }, 100)
+  }
   history.pushState = function () {
     _ps.apply(this, arguments)
-    if (location.href !== _lastUrl) { _lastUrl = location.href; sendPageview() }
+    _schedulePv()
   }
-  addEventListener('popstate', function () {
-    if (location.href !== _lastUrl) { _lastUrl = location.href; sendPageview() }
-  })
+  addEventListener('popstate', _schedulePv)
 
   // ─── Consent management ───────────────────────────────────────────────────
   // When data-consent-required="true" is on the script tag, all tracking is

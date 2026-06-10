@@ -46,6 +46,24 @@ export function normalizeUtm(value) {
 }
 
 /**
+ * Coerce a client-provided ISO timestamp into a canonical form, or null if
+ * unparseable. We accept this as attribution METADATA only — never use it for
+ * billing, security, or rate-limiting decisions where a malicious client
+ * could backdate or forward-date events. Bounded length keeps unbounded input
+ * from feeding `new Date()`.
+ *
+ * @param {*} value
+ * @returns {string|null}
+ */
+export function sanitizeClientTimestamp(value) {
+  if (!value || typeof value !== 'string') return null
+  if (value.length > 40) return null
+  const d = new Date(value)
+  if (isNaN(d.getTime())) return null
+  return d.toISOString()
+}
+
+/**
  * Read first-touch fields from a conversion body, supporting all the
  * naming variants the tracker has shipped over time:
  *   - body.first_touch_source              (current canonical)
@@ -54,7 +72,7 @@ export function normalizeUtm(value) {
  *   - body.properties.firstTouchSource     (nested + camelCase)
  *
  * @param {object} body — req.body
- * @returns {{first_touch_source: string, first_touch_medium: string, first_touch_campaign: string}}
+ * @returns {{first_touch_source: string, first_touch_medium: string, first_touch_campaign: string, first_touch_timestamp: string|null}}
  */
 export function getFirstTouchFields(body = {}) {
   const props = body.properties || {}
@@ -67,7 +85,17 @@ export function getFirstTouchFields(body = {}) {
       props.first_touch_medium || props.firstTouchMedium || 'none',
     first_touch_campaign:
       body.first_touch_campaign || body.firstTouchCampaign ||
-      props.first_touch_campaign || props.firstTouchCampaign || ''
+      props.first_touch_campaign || props.firstTouchCampaign || '',
+    // first_touch_timestamp is forwarded as attribution metadata only. The
+    // tracker writes it to localStorage on the first visit and sends it on
+    // every pageview/conversion thereafter so reports can preserve the
+    // original first-touch moment even when prior pageview events have
+    // rolled out of the attribution window. We never trust it for
+    // billing/security — sanitize and accept ISO-only.
+    first_touch_timestamp: sanitizeClientTimestamp(
+      body.first_touch_timestamp || body.firstTouchTimestamp ||
+      props.first_touch_timestamp || props.firstTouchTimestamp
+    )
   }
 }
 

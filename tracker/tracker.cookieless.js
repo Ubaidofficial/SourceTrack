@@ -64,6 +64,9 @@
 
   // ─── First-touch derivation (in-memory only — no persistent storage) ───────
   // Cookieless trade-off: first-touch is session-scoped, not cross-session.
+  // We stamp a timestamp at derivation time so backends/reporting have a
+  // canonical first-touch moment for this session, even though it does not
+  // persist across page loads.
   function deriveFirstTouch(p, ref) {
     var src = p.utm_source || p.ref || p.source
       || (ref && (function () {
@@ -74,7 +77,12 @@
       || (p.gclid || p.gbraid || p.wbraid || p.msclkid ? 'cpc' : null)
       || (p.fbclid || p.ttclid ? 'paid_social' : null)
       || 'none'
-    return { first_touch_source: src, first_touch_medium: med, first_touch_campaign: p.utm_campaign || '' }
+    return {
+      first_touch_source: src,
+      first_touch_medium: med,
+      first_touch_campaign: p.utm_campaign || '',
+      first_touch_timestamp: new Date().toISOString()
+    }
   }
 
   // ─── Shared UTM + click-id field builder ───────────────────────────────────
@@ -159,14 +167,23 @@
   }
 
   // ─── SPA routing ───────────────────────────────────────────────────────────
+  // SPA frameworks can fire pushState in rapid bursts during transitions.
+  // Debounce auto-pageviews to ~100ms so a burst of pushState calls only
+  // produces one pageview for the final URL. Manual sourcetrack.track() calls
+  // bypass this and still fire immediately.
   var _lastUrl = location.href, _ps = history.pushState
+  var _pvTimer = null
+  function _schedulePv() {
+    if (location.href === _lastUrl) return
+    _lastUrl = location.href
+    if (_pvTimer) clearTimeout(_pvTimer)
+    _pvTimer = setTimeout(function () { _pvTimer = null; sendPageview() }, 100)
+  }
   history.pushState = function () {
     _ps.apply(this, arguments)
-    if (location.href !== _lastUrl) { _lastUrl = location.href; sendPageview() }
+    _schedulePv()
   }
-  addEventListener('popstate', function () {
-    if (location.href !== _lastUrl) { _lastUrl = location.href; sendPageview() }
-  })
+  addEventListener('popstate', _schedulePv)
 
   function base64urlEncode(str) {
     try {

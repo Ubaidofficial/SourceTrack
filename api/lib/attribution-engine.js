@@ -2388,7 +2388,8 @@ export function calculateAttribution(touchpoints, conversionValue) {
   const tpCh = (tp) => channelFromEvent({
     utm_source: tp.utm_source, utm_medium: tp.utm_medium,
     ai_source: tp.ai_source, gclid: tp.gclid,
-    fbclid: tp.fbclid, msclkid: tp.msclkid, referrer: tp.referrer
+    fbclid: tp.fbclid, msclkid: tp.msclkid, referrer: tp.referrer,
+    page_url: tp.page_url
   })
   const tpBase = (tp) => {
     const base = {

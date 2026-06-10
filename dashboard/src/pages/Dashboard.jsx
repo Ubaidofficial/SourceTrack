@@ -47,7 +47,11 @@ const MODELS = [
   { key: 'time_decay',             label: 'Time Decay' },
   { key: 'u_shaped',               label: 'U-Shaped' },
   { key: 'w_shaped',               label: 'W-Shaped' },
-  { key: 'ai_platforms',           label: 'AI Platforms' },
+  // Label matches ReportBuilder.jsx and reflects the engine's actual scope:
+  // we credit the AI referrer present on the conversion event itself, not
+  // any AI touch earlier in the journey. Don't broaden this without first
+  // extending api/lib/attribution-engine.js#aiPlatformAttribution.
+  { key: 'ai_platforms',           label: 'AI conversion source' },
 ]
 
 const AI_SOURCES = ['ChatGPT', 'Claude', 'Perplexity', 'Gemini', 'Grok', 'Copilot', 'DeepSeek', 'You.com AI', 'Phind', 'Kagi'] // matches ai-platform.js AI_HOST_MAP (11 platforms)

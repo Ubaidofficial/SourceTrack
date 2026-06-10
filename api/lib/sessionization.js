@@ -1,9 +1,32 @@
 // Sessionization utility — derives sessions from event arrays on read.
 // NOT materialized: sessions are computed at query time from raw pageview events.
 // Session definition (ATTRIBUTION.md P3): continuous visit period for a given identity,
-// separated by 30 minutes of inactivity or a new browser context.
+// separated by 30 minutes of inactivity OR a change in acquisition context
+// (utm_source/medium/campaign or a paid click ID). Internal navigation that
+// carries no UTM/click ID inherits the session's existing acquisition context,
+// so blog→pricing on the same campaign does NOT create a new session.
 
 const SESSION_TIMEOUT_MINUTES = 30
+
+/**
+ * Build an acquisition-context key for an event. Returns null when the event
+ * carries no acquisition signal — those events inherit the session's entry
+ * key instead of triggering a split.
+ *
+ * Path/title/page-URL changes are intentionally NOT part of the key: they
+ * represent internal navigation, not a new acquisition.
+ */
+function acquisitionKey(ev) {
+  const props = ev.properties || {}
+  const pick = (k) => ev[k] || props[k] || null
+  const src   = pick('utm_source')
+  const med   = pick('utm_medium')
+  const camp  = pick('utm_campaign')
+  const click = pick('gclid') || pick('gbraid') || pick('wbraid')
+    || pick('fbclid') || pick('msclkid') || pick('ttclid') || pick('li_fat_id')
+  if (!src && !med && !camp && !click) return null
+  return [src || '', med || '', camp || '', click || ''].join('|').toLowerCase()
+}
 
 /**
  * Derive sessions from a chronologically sorted array of events for a single visitor.
@@ -29,7 +52,15 @@ export function deriveSessions(events) {
     const prevTs = new Date(events[i - 1].timestamp).getTime()
     const gapMinutes = (ts - prevTs) / (1000 * 60)
 
-    if (gapMinutes > SESSION_TIMEOUT_MINUTES) {
+    // Acquisition-context split: a non-null acquisition key that differs from
+    // the session's entry key opens a new session. Internal navigation (no
+    // UTM/click ID) leaves the session intact. Without this, Campaign A
+    // landing → Campaign B landing within the 30-min window would collapse
+    // into one session and under-count distinct campaign touches.
+    const evAcqKey = acquisitionKey(ev)
+    const acquisitionChanged = evAcqKey !== null && evAcqKey !== currentSession.acquisition_key
+
+    if (gapMinutes > SESSION_TIMEOUT_MINUTES || acquisitionChanged) {
       finalizeSession(currentSession, events, i - 1)
       sessions.push(currentSession)
       currentSession = startSession(ev, ts, i)
@@ -66,6 +97,10 @@ function startSession(firstEvent, ts, index) {
     entry_source: firstEvent.utm_source || props.utm_source || null,
     entry_medium: firstEvent.utm_medium || props.utm_medium || null,
     entry_campaign: firstEvent.utm_campaign || props.utm_campaign || null,
+    // Acquisition key is recorded once at session start and compared against
+    // every subsequent event's key. Null means "session entered without any
+    // UTM/click ID" — a non-null follow-up event still triggers a split.
+    acquisition_key: acquisitionKey(firstEvent),
     is_direct_entry: isDirect(firstEvent.utm_source || props.utm_source),
     contains_conversion: firstEvent.event === '$conversion',
     conversion_value: firstEvent.event === '$conversion' ? Number(firstEvent.conversion_value || 0) : 0
