@@ -40,7 +40,7 @@ router.get('/snippet', async (req, res) => {
       process.env.FRONTEND_URL ||
       `http://localhost:${process.env.PORT || 3000}`
     )
-    const snippet = `<script async src="${trackerBaseUrl}/tracker/tracker.min.js" data-site-key="${site.site_key}"></script>`
+    const snippet = `<script async src="${trackerBaseUrl}/tracker.min.js" data-site-key="${site.site_key}"></script>`
 
     return res.status(200).json({
       success: true,

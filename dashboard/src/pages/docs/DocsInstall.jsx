@@ -62,7 +62,7 @@ export default function DocsInstall() {
             Paste the tracking script inside the <code>&lt;head&gt;</code> element of your website layout so it executes before other scripts:
           </p>
           <DocsCodeBlock lang="html" replaceKey={true} pasteOnce={true}>
-{`<script async src="https://api.srctk.com/tracker/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`}
+{`<script async src="https://api.srctk.com/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`}
           </DocsCodeBlock>
         </section>
 

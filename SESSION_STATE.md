@@ -1,5 +1,5 @@
-Session: 133H — Backup and Recovery Plan
-Last Completed: Audited data backups, recovery readiness, and outage paths. Created a detailed runbook (`docs/backup_recovery.md`) covering Supabase, PostHog, Stripe, and Railway rollback protocols, updated rollback verification instructions in `COMMANDCODE_RUNBOOK.md`, and added security warning comments for `ENCRYPTION_KEY` in `.env.example`.
+Session: 133I — End-to-End Install QA
+Last Completed: Audited and verified customer installation flow and verification boundaries. Standardized canonical public tracker URLs to the root paths `/tracker.min.js` and `/tracker.cookieless.min.js`, leaving `/tracker/*` as backwards-compatible paths. Updated onboarding, snippet generation, settings, and install documentation to use the canonical root paths, added detailed verification boundaries and domain warnings, and created `docs/install_qa_map.md`.
 Next Task: Alignment on Phase C planning / dashboard widgets (not executed yet).
 Roadmap Queue:
 - Phase C (Dashboard saved widget cards)

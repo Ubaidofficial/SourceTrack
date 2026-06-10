@@ -1,10 +1,34 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 133H — Backup and Recovery Plan. Audited data backups, recovery readiness, and outage paths. Created a detailed runbook (`docs/backup_recovery.md`) covering Supabase, PostHog, Stripe, and Railway rollback protocols, updated rollback verification instructions in `COMMANDCODE_RUNBOOK.md`, and added security warning comments for `ENCRYPTION_KEY` in `.env.example`.
+> **Handoff:** Session 133I — End-to-End Install QA. Audited and verified customer installation flow and verification boundaries. Standardized canonical public tracker URLs to the root paths `/tracker.min.js` and `/tracker.cookieless.min.js`, leaving `/tracker/*` as backwards-compatible paths. Updated onboarding, snippet generation, settings, and install documentation to use the canonical root paths, added detailed verification boundaries and domain warnings, and created `docs/install_qa_map.md`.
 >
 > **Next Task:** Alignment on Phase C planning / dashboard widgets (not executed yet).
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 133I — End-to-End Install QA
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+
+1. **Install QA Reality Map**
+   - Created [install_qa_map.md](file:///Users/ubaid/Desktop/trackiq/docs/install_qa_map.md) detailing publicly served tracker files, canonical snippets, backwards-compatible paths, endpoints, and the boundaries of the installation verification check.
+2. **Canonical Public Tracker URL Standardization**
+   - Standardized on the root paths `/tracker.min.js` and `/tracker.cookieless.min.js` as canonical tracker URLs across onboarding fallbacks, settings, snippet page code-blocks, dynamic script generators, and user help docs.
+   - Preserved `/tracker/tracker.min.js` and `/tracker/tracker.cookieless.min.js` as backwards-compatible paths.
+3. **Truthful Verification Copy and Warnings**
+   - Updated Onboarding and Snippet page verification blocks with copy detailing the scope of the verification checks (checking recent event ingestion for the site key, not proving all-page or conversion install, and warning on domain mismatches).
+
+### Files changed
+- [docs/install_qa_map.md](file:///Users/ubaid/Desktop/trackiq/docs/install_qa_map.md) [NEW]
+- [api/routes/install.js](file:///Users/ubaid/Desktop/trackiq/api/routes/install.js)
+- [dashboard/src/pages/Onboarding.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Onboarding.jsx)
+- [dashboard/src/pages/Snippet.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Snippet.jsx)
+- [dashboard/src/pages/docs/DocsInstall.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/docs/DocsInstall.jsx)
+- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
+- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
+- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
 
 ## Session 133H — Backup and Recovery Plan
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)

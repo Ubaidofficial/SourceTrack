@@ -138,7 +138,7 @@ export default function Onboarding() {
           if (data?.snippet) setSnippet(data.snippet)
         } catch (_err) {
           const trackerUrl = (import.meta.env.VITE_TRACKER_BASE_URL || import.meta.env.VITE_API_URL || window.location.origin).replace(/\/+$/, '')
-          setSnippet(`<script async src="${trackerUrl}/tracker/tracker.min.js" data-site-key="${site.site_key}"></script>`)
+          setSnippet(`<script async src="${trackerUrl}/tracker.min.js" data-site-key="${site.site_key}"></script>`)
         }
       }
     } catch (_err) {
@@ -230,7 +230,7 @@ export default function Onboarding() {
         if (data?.snippet) setSnippet(data.snippet)
       } catch {
         const trackerUrl = (import.meta.env.VITE_TRACKER_BASE_URL || import.meta.env.VITE_API_URL || window.location.origin).replace(/\/+$/, '')
-        setSnippet(`<script async src="${trackerUrl}/tracker/tracker.min.js" data-site-key="${siteKey}"></script>`)
+        setSnippet(`<script async src="${trackerUrl}/tracker.min.js" data-site-key="${siteKey}"></script>`)
       }
     }
     await saveOnboardingState(4, { install_method: method })
@@ -506,8 +506,8 @@ export default function Onboarding() {
             <p className="text-sm font-medium text-gray-700 dark:text-white mb-1">
               Let us Verify SourceTrack Script in {installMethod === 'gtm' ? 'GTM' : 'Your Site'}
             </p>
-            <p className="text-xs text-st-gray dark:text-gray-400 mb-4">
-              Click the button below to check if your tracking script is live and sending data.
+            <p className="text-xs text-st-gray dark:text-gray-400 mb-4 leading-normal">
+              Click the button below to check if SourceTrack has received a recent event for this site key. Note: This only verifies that at least one event was successfully ingested; it does not prove that the tracker is installed on every page, that conversion tracking is set up, or that attribution is fully configured. Domain mismatch warnings will show if events arrive from another domain.
             </p>
 
             {verificationState === 'idle' && (

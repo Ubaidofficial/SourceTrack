@@ -85,7 +85,7 @@ export default function Snippet() {
   function buildSnippet() {
     if (!site) return ''
     const trackerFile = site.cookieless_mode ? 'tracker.cookieless.min.js' : 'tracker.min.js'
-    const scriptSrc = proxyDomain ? `https://${proxyDomain}/${trackerFile}` : `${trackerBaseUrl}/tracker/${trackerFile}`
+    const scriptSrc = proxyDomain ? `https://${proxyDomain}/${trackerFile}` : `${trackerBaseUrl}/${trackerFile}`
     let attrs = ` async src="${scriptSrc}" data-site-key="${site.site_key}"`
     if (site.cross_domain_domains && site.cross_domain_domains.length > 0) {
       attrs += ` data-cross-domains="${site.cross_domain_domains.join(',')}"`
@@ -327,6 +327,10 @@ export default function Snippet() {
               </div>
             )}
           </div>
+
+          <p className="text-[11px] text-st-gray dark:text-gray-500 pl-7 mt-1 leading-normal">
+            <strong>Verification boundary:</strong> Verification only checks if SourceTrack received a recent event for this site key. It does not prove that every page is installed, that conversion tracking is working, or that attribution is fully configured. Domain mismatch warnings will show if events arrive from another domain.
+          </p>
 
           {/* Test feedback banner */}
           {testResult && (
@@ -573,7 +577,7 @@ Content-Type: application/json
                   To link attribution across multiple domains (e.g. landing page and app domain), add the <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[11px] font-mono">data-cross-domains</code> attribute to your tracking snippet.
                 </p>
                 <div className="bg-st-black rounded-lg p-3 relative mt-1 border border-gray-850">
-                  <pre className="text-green-400 text-[11px] font-mono overflow-x-auto whitespace-pre-wrap pr-8 leading-relaxed">{`<script async src="https://api.srctk.com/tracker/tracker.min.js"
+                  <pre className="text-green-400 text-[11px] font-mono overflow-x-auto whitespace-pre-wrap pr-8 leading-relaxed">{`<script async src="https://api.srctk.com/tracker.min.js"
         data-site-key="${site?.site_key || 'YOUR_SITE_KEY'}"
         data-cross-domains="app.yoursite.com, checkout.yoursite.com"></script>`}</pre>
                 </div>
