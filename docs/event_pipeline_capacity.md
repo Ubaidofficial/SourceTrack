@@ -123,7 +123,7 @@ graph TD
     A[Monitor Ingestion SLOs in Paid Beta] --> B{SLOs Met?}
     B -->|Yes| C[Keep Current Node/PostHog Stack]
     B -->|No| D{Bottleneck Location?}
-    
+
     D -->|PostHog Ingestion / Supabase Writes| E[1. Add Redis/BullMQ Ingestion Queue]
     D -->|PostHog Cost / HogQL Speed| F[2. Deploy ClickHouse Event Warehouse]
     D -->|Node.js Single-Thread CPU| G[3. Rewrite Capture Layer in Go or Rust]

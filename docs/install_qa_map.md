@@ -90,4 +90,3 @@ When a user clicks "Verify installation" in onboarding (Step 6) or on the Settin
 
 ### P2
 - Platform-specific install guides still depend on users following third-party UI steps correctly.
-

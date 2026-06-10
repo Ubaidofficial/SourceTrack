@@ -79,14 +79,14 @@ graph TD
     B -->|Install / Telemetry| C[Install Support Checklist]
     B -->|Billing / Payment| D[Billing Support Checklist]
     B -->|Privacy / Deletion| E[Privacy Support Checklist]
-    
+
     C --> F{Can resolve?}
     D --> F
     E --> F
-    
+
     F -->|Yes| G[Reply to Customer]
     F -->|No / Engine Bug| H[Escalate to Tech Lead]
-    
+
     H --> I[Analyze via Observability Runbook]
     I --> J[Apply Hotfix or DB Patch]
     J --> G
