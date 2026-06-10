@@ -205,6 +205,17 @@ You still need to disclose data collection in your privacy policy — the dashbo
 
 ---
 
+## Continuous Integration (CI)
+
+A lightweight CI regression pipeline runs automatically on every pull request and push to `main` via GitHub Actions (`.github/workflows/ci.yml`).
+
+### Core Pipeline Design & Boundaries:
+1. **Static & Build-Only:** The workflow executes checkout, sets up Node 20, runs separate installs (`npm ci` at root, `cd dashboard && npm ci`), checks JavaScript file syntax (`node --check`), scans git diff range for committed whitespace violations, runs static launch audits (`npm run qa:static`), and compiles the dashboard production build.
+2. **No DB/API Mutation or Live Service Checks:** Under no circumstances are live-service database QA, PostHog integrations, Stripe webhook scripts, or runtime smoke/edge tests allowed in the CI environment.
+3. **Staging is Mandatory:** CI only guards against obvious compilation and static syntax regressions. It does not replace staging database verification. Setting up full staging/production isolation remains a mandatory P0 launch blocker before paid beta release. Live-service QA tests must remain out of CI until a dedicated staging pipeline is established.
+
+---
+
 ## Documentation
 
 | File | Purpose |

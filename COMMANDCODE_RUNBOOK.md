@@ -43,22 +43,35 @@ python3 -m http.server 8080
 ## Standard Checks
 
 ```bash
-# Backend syntax
+# Backend & scripts syntax
 cd "$HOME/Desktop/trackiq"
-node --check api/index.js
-node --check api/routes/track.js
-node --check api/routes/conversion.js
-node --check api/routes/attribution.js
-node --check api/lib/attribution-engine.js
+node --check api/index.js api/routes/*.js api/lib/*.js scripts/*.js
+node --check scripts/*.mjs
 
-# Dashboard build
-cd "$HOME/Desktop/trackiq/dashboard"
-npm run build
+# Git diff/whitespace
+git diff --check
+
+# Static launch QA checks (verifies syntax, route mounts, security scoping, grep copy, and dashboard build)
+npm run qa:static
+
+# Manual dashboard build (explicitly checks dashboard compiler errors)
+cd dashboard && npm run build
 
 # Tracker build (only if tracker source changed)
 cd "$HOME/Desktop/trackiq"
 npm run build:tracker
 ```
+
+## CI Regression Pipeline
+
+A lightweight GitHub Actions CI pipeline is set up in `.github/workflows/ci.yml`.
+
+### Boundaries & Constraints:
+- **Static & Build-Only:** The CI regression pipeline runs static lint, syntax (`node --check`), git whitespace range checks, static QA audits (`npm run qa:static`), and the dashboard compilation build (`npm run build`).
+- **No Live DB or API QA in CI:** Under no circumstances should live-service QA, database/PostHog/Stripe mutation scripts (e.g., `qa:smoke`, `qa:edge`, `qa:attribution`), or webhook QA run in CI. Live-service testing requires active secrets and connections.
+- **No CI Secrets:** Do not add database keys, Stripe secrets, or PostHog personal API keys to GitHub repository secrets. If the dashboard or backend compilation requires config variables, use dummy environment variables in the workflow environment.
+- **Staging Separation Remains P0:** This lightweight pipeline does not replace local/staging verification. Full environment separation (Staging vs Production) remains a mandatory P0 launch blocker before paid beta release. Live-service QA scripts must stay out of CI until a dedicated staging environment exists.
+
 
 ## Health Checks (servers running)
 

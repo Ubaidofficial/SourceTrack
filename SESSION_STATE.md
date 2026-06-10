@@ -1,5 +1,5 @@
-Session: 133A.0 Minimum Production Safety Guardrails
-Last Completed: Implemented strict environment check in scripts/qa-guard.js and integrated it into all 17 database-interacting QA scripts. Allowed custom staging domains using the STAGING_HOSTS environment variable to bypass canonical redirects in dashboard/server.mjs. Added staging separation backlog task in PAID_BETA_SESSION_PLAN.md.
+Session: 133B Lightweight CI Regression Pipeline
+Last Completed: Created GitHub Actions workflow in .github/workflows/ci.yml with static-only checks (syntax, committed whitespace range, static QA checks, dashboard compilation) and dummy env vars. Updated README.md and COMMANDCODE_RUNBOOK.md documentation regarding boundaries.
 Next Task: Move to Phase C (Dashboard saved widget cards).
 Roadmap Queue:
 - Phase C (Dashboard saved widget cards)

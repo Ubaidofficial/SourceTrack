@@ -1,6 +1,6 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 132E — AI Journey Attribution Performance Hardening. Replaced the high-volume site-wide pageview query fallback in `getAiPlatformAttributionLive` with safer, visitor-scoped pageview batching (batch size 100) and pageview pagination (page size 5000) using a LIMIT/OFFSET loop. Updated QA script to import and verify query planning and batching helper.
+> **Handoff:** Session 133B — Lightweight CI Regression Pipeline. Implemented static-only, build-only GitHub Actions workflow `.github/workflows/ci.yml` running on push to `main` and on pull requests. Runs separate installs, syntax checks, range-aware git whitespace diff check, static QA check (`npm run qa:static`), and dashboard compile. Documented environment safety boundaries in README and runbook.
 >
 > **Next Task:** Move to Phase C (Dashboard saved widget cards).
 >
@@ -1616,3 +1616,26 @@ curl -i https://api.srctk.com/tracker/tracker.min.js
 ### Remaining QA (manual browser verification needed)
 - Deploy and verify that staging domain (e.g. staging-app.sourcetrack.ai) is not redirected to production when added to `STAGING_HOSTS`.
 - Ensure `dashboard/.env.local` remains untracked in git status.
+
+
+## Session 133B — Lightweight CI Regression Pipeline
+
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+
+1. **GitHub Actions CI Pipeline** — Created `.github/workflows/ci.yml` targeting Node 20, running separate installs (`npm ci` and `cd dashboard && npm ci`), verifying file syntax (`node --check`), executing range-aware git whitespace checking (differentiating between pull request base references and single/multi-commit pushes), running static QA checks (`npm run qa:static`), and building the dashboard.
+2. **Safety Boundaries Documented** — Documented static and build-only boundaries in `README.md` and `COMMANDCODE_RUNBOOK.md`. Emphasized that live-service QA scripts and secrets must remain out of CI until a dedicated staging environment exists.
+3. **Local checks passed** — Verified that all local tests (syntax checks, whitespace checks, static QA checks, and dashboard production builds) run cleanly.
+
+### Files changed
+- `.github/workflows/ci.yml` [NEW]
+- `COMMANDCODE_RUNBOOK.md`
+- `README.md`
+- `PAID_BETA_SESSION_PLAN.md`
+- `SESSION_STATE.md`
+- `SESSION_LOG.md`
+- `SESSION_HANDOFF.md`
+
+### Remaining QA (manual verification needed)
+- Push code to a PR on GitHub and verify the Actions workflow triggers and succeeds without secret dependencies or live service timeouts.
