@@ -48,7 +48,7 @@ Enforced automatically each night via the `nightly-attribution` cron job:
 
 ### PostHog Best-Effort Boundary
 - **Best-Effort API Calls:** Deleting a visitor's PostHog person and events is non-blocking. If the PostHog API is slow, rate-limited, or unreachable, the local database deletion still succeeds.
-- **No Cascade on Account Deletion:** Deleting a site or account in SourceTrack does NOT bulk-delete raw events or person profiles inside PostHog. Raw event data remains in PostHog until it naturally expires under the PostHog project retention settings.
+- **No Cascade on Account Deletion to PostHog:** Deleting a site or account in SourceTrack does NOT issue bulk event deletion commands to PostHog. Raw event data remains in PostHog. PostHog retention depends on the configured PostHog project settings and must be verified in the provider console.
 
 ### Stripe Retention Boundary
 - **Billing Records Decoupled:** SourceTrack does not propagate account or user deletion requests to the Stripe API. Stripe customer records, subscription history, payment methods, and invoices are kept indefinitely for tax, compliance, and auditing reasons.
@@ -64,7 +64,7 @@ When a customer submits a deletion, export, or privacy support request:
 - [ ] **Handle Sole Admin Conflicts:** If a user is blocked from account deletion due to the sole admin check:
   - Assist the user in promoting another member to `admin` in the dashboard, or
   - Manually remove the other members from the workspace (if requested and verified), allowing the account deletion to complete.
-- [ ] **PostHog Manual Wipes:** For sensitive GDPR/CCPA erasures where a customer demands verified deletion, log in to the PostHog Console to confirm that the person profile and associated raw events were successfully purged.
+- [ ] **PostHog Manual Wipes:** If a user requests deeper event removal, operators must verify available deletion options inside the PostHog console and document the outcome. Do not promise certified deletion unless a provider-backed deletion/export confirmation exists.
 - [ ] **Stripe Cancellation Check:** Confirm that the user's active Stripe subscriptions are marked as cancelled to prevent future charges.
 - [ ] **No Compliance Promises:** When replying to customer inquiries:
   - Do not promise complete deletion from Stripe billing logs.

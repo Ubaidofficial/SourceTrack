@@ -433,7 +433,7 @@ Before starting production mail operations, ensure the sending domain is fully v
   ```
 
 ### 2. Explain Provider Boundaries
-- **PostHog Telemetry Limits:** Deleting a visitor via the dashboard triggers a best-effort, non-blocking call to erase the PostHog person profile and events. Account/site deletion does **not** bulk-delete PostHog events; they expire naturally based on PostHog project retention settings.
+- **PostHog Telemetry Limits:** Deleting a visitor via the dashboard triggers a best-effort, non-blocking call to erase the PostHog person profile and events. Account/site deletion does **not** bulk-delete historical PostHog events. PostHog retention depends on the configured PostHog project settings and must be verified in the provider console.
 - **Stripe Billing Limits:** Customer payment, invoice, and subscription history records are retained indefinitely by Stripe for compliance and tax auditing and are never deleted.
 - **No Compliance Promises:** Do not promise complete GDPR, CCPA, or other framework compliance; state clearly that erasures outside the database are best-effort and billing logs are kept.
 
@@ -445,4 +445,4 @@ Before starting production mail operations, ensure the sending domain is fully v
 
 ### 4. Support Escalation Controls
 - **Sole Admin Blocks:** If a user account deletion fails with `409 Conflict`, the user is the sole administrator of a shared workspace. Assist them in promoting another member to admin or manually remove the other members to unblock the account purge.
-- **Manual PostHog Wipe:** If a user demands certified event removal, manually locate the person UUID inside the PostHog Console and select "Delete Person and all events".
+- **Manual PostHog Wipe:** If a user requests deeper event removal, operators must verify available deletion options inside the PostHog console and document the outcome. Do not promise certified deletion unless a provider-backed deletion/export confirmation exists.
