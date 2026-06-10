@@ -5,6 +5,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 133V | 2026-06-10 | `main` | Abuse / Rate-Limit / Anti-Spam Review — Audited in-memory layered rate limits, bot filtering, Stripe/Shopify webhook HMAC signatures, DB-backed webhook idempotency, and onboarding trigger abuse guards; created docs/abuse_rate_limit_spam_audit.md. | ✅ | No |
 | 133U | 2026-06-10 | `main` | Admin / Operator Access Audit — Audited admin routes, role check guards, Supabase service-role usage, GDPR scoping, tenant boundaries, support procedures, and audit logging; created docs/admin_operator_access_audit.md. | ✅ | No |
 | 133T | 2026-06-10 | `main` | Data Deletion & Privacy Request Operational Drill — Audited account deletion, visitor erasure, and data retention database flows, and mapped provider boundaries; created docs/privacy_request_operational_drill.md. | ✅ | No |
 | 133S | 2026-06-10 | `main` | Production Observability & Incident Response Drill — Verified liveness checks, stdout/stderr logging, severity metrics, and rollback checklists; created docs/production_observability_incident_response.md. | ✅ | No |
@@ -1593,3 +1594,40 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 ### 2. Runbook & Documentation Additions
 - Created `docs/privacy_request_operational_drill.md` mapping account deletion, visitor erasure, and retention purge flows, provider-console verification checklists, safe testing checklists, and support guidelines.
 - Updated `COMMANDCODE_RUNBOOK.md` with a detailed "Privacy Request Operations" section (request verification, site identification, PostHog/Stripe boundaries, staging testing, and support escalation).
+
+---
+
+## Session 133U — Admin / Operator Access & Internal Support Controls Audit
+
+**Date:** 2026-06-10
+**Branch:** `main`
+**Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
+
+### 1. Admin & Support Controls Audit
+- Audited Express admin routes, role constraints, service-role API references, GDPR scoping, tenant isolation boundaries, and logging capabilities.
+- Formulated precise answers for 20 pre-beta audit questionnaire items detailing admin routes, service role usage, membership validation, support verification controls, impersonation guidelines, and audit logs.
+- Maintained safety boundaries (no mutations, no new admin accounts).
+
+### 2. Runbook & Documentation Additions
+- Created `docs/admin_operator_access_audit.md` mapping admin APIs, support guidelines, questionnaire answers, and operator risk profiles.
+- Updated `COMMANDCODE_RUNBOOK.md` with a detailed "Admin / Operator Support Controls" section.
+
+---
+
+## Session 133V — Abuse / Rate-Limit / Anti-Spam Review
+
+**Date:** 2026-06-10
+**Branch:** `main`
+**Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
+
+### 1. Abuse & Rate Limit Audit
+- Audited in-memory layered rate limits, bot filtering, webhook signatures, webhook DB idempotency, and onboarding trigger abuse guards.
+- Mapped coverage for all 11 core endpoints/flows, detailing limiter status, in-memory constraints, signature/auth methods, and remaining abuse gaps.
+- Formulated precise answers for 20 required abuse pre-beta audit questions detailing rate limits, horizontal scaling risks, bot filtering, webhook verification, onboarding spam check gaps, and logging.
+- Documented single-instance in-memory limitation as the biggest risk (horizontal scaling requires shared cache store Redis/Upstash).
+- Documented lack of Express-level onboarding validation as a P1 follow-up gap (relying on DB trigger, causing generic 500 responses on registration attempts).
+- Maintained safety boundaries (no code/API/trigger/db mutations deployed).
+
+### 2. Runbook & Documentation Additions
+- Created `docs/abuse_rate_limit_spam_audit.md` mapping all endpoints/flows, audit answers, and risk mitigation profiles.
+- Updated `COMMANDCODE_RUNBOOK.md` with an "Abuse, Rate-Limiting, & Anti-Spam Operations" section.

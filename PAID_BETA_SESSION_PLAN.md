@@ -319,7 +319,14 @@ The session order was re-prioritized to address the **Attribution and Tracking T
 
 ---
 
-## Session 133V — Abuse / Rate-Limit / Anti-Spam Review [TODO]
+## Session 133V — Abuse / Rate-Limit / Anti-Spam Review [COMPLETE]
 
 *   **Goal:** Review and audit the application's protections against denial-of-service, crawler abuse, endpoint flooding, rate limits, and spam signups before public beta.
-*   **Constraints:** Audit-only. Do not deploy new blocks or rate-limits without review.
+*   **Objectives:**
+    *   [x] Map rate limiting layers, window configurations, and environment variables across 11 core endpoints/flows.
+    *   [x] Expose the onboarding PaaS subdomain check / disposable email gap.
+    *   [x] Analyze crawler/bot detection on public tracking routes.
+    *   [x] Document Stripe/Shopify webhook flood protection and timing-safe HMAC validation.
+    *   [x] Formulate answers to all 20 pre-beta audit questionnaire items.
+    *   [x] Create `docs/abuse_rate_limit_spam_audit.md` and update runbooks.
+*   **Constraints:** Audit-only. No backend rate limiter, trigger, database, or API code modifications deployed.

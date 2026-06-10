@@ -1,10 +1,33 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 133U — Admin / Operator Access & Internal Support Controls Audit. Audited admin routes, role check guards, Supabase service-role usage, GDPR scoping, tenant boundaries, support procedures, and audit logging; answered 20 pre-beta audit questions; created docs/admin_operator_access_audit.md and updated runbooks.
+> **Handoff:** Session 133V — Abuse / Rate-Limit / Anti-Spam Review. Mapped and audited rate limiting, bot/crawler filtering, webhook signature and idempotency verification, and onboarding spam/abuse guards; answered 20 pre-beta audit questions; created docs/abuse_rate_limit_spam_audit.md and updated runbooks.
 >
-> **Next Task:** Session 133V — Abuse / Rate-Limit / Anti-Spam Review.
+> **Next Task:** Session 133W — Review and queue subsequent pre-beta items.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 133V — Abuse / Rate-Limit / Anti-Spam Review
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+
+1. **Abuse & Rate-Limiting Audit:**
+   - Mapped and audited rate limiting configurations (layered visitor, IP, site, global IP) and environment overrides across all 11 core endpoints/flows.
+   - Audited crawler/bot detection (`BOT_UA_PATTERN`) and confirmed silent filtering.
+   - Audited Stripe and Shopify webhook HMAC signature validation and database-backed idempotency verification.
+   - Audited onboarding domain/disposable email spam checks and documented database trigger vs Express-level gaps.
+   - Answered all 20 pre-beta audit questions detailing limits, bot filtering, webhook safety, and logging.
+2. **Documentation & Runbooks:**
+   - Created [abuse_rate_limit_spam_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/abuse_rate_limit_spam_audit.md) detailing endpoint coverage, answers, and horizontal scaling risks.
+   - Updated [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md) to append "Abuse, Rate-Limiting, & Anti-Spam Operations".
+
+### Files changed
+- [docs/abuse_rate_limit_spam_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/abuse_rate_limit_spam_audit.md) [NEW]
+- [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md)
+- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
+- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
+- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
 
 ## Session 133U — Admin / Operator Access & Internal Support Controls Audit
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)

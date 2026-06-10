@@ -466,3 +466,34 @@ Before starting production mail operations, ensure the sending domain is fully v
 ### 4. Impersonation & Audit Logging
 - **No Impersonation:** Do not swap user JWT tokens, modify cookies, or log in as a customer (no SUDO login). Only launch support dashboard previews via `/api/admin/preview`, which reads data as a super admin.
 - **Log Support Actions:** All administrative preview queries are automatically recorded in the database `admin_audit_log` table. Any manual adjustments or out-of-band operator actions must be logged manually in support records.
+
+---
+
+## Abuse, Rate-Limiting, & Anti-Spam Operations
+
+### 1. Rate Limiting Configuration & Overrides
+Ingestion rate limits are configurable at startup using environment variables. Operators can override thresholds in the Railway console (default values are applied as fallbacks if variables are omitted or invalid):
+- `ST_RATE_TRACK_VISITOR_PER_MIN`: Individual visitor telemetry limit (default: 120/min)
+- `ST_RATE_TRACK_IP_PER_MIN`: Individual IP telemetry limit per site (default: 3000/min)
+- `ST_RATE_TRACK_SITE_PER_MIN`: Total telemetry limit per site (default: 10000/min)
+- `ST_RATE_TRACK_GLOBAL_IP_PER_MIN`: Global IP telemetry limit across all sites (default: 10000/min)
+- `ST_RATE_CONV_VISITOR_PER_MIN`: Individual visitor conversion limit (default: 30/min)
+- `ST_RATE_CONV_IP_PER_MIN`: Individual IP conversion limit per site (default: 600/min)
+- `ST_RATE_CONV_SITE_PER_MIN`: Total conversion limit per site (default: 3000/min)
+- `ST_RATE_CONV_GLOBAL_IP_PER_MIN`: Global IP conversion limit across all sites (default: 2000/min)
+
+> [!NOTE]
+> All rate limit counters are stored in container process memory. Restarting or redeploying the API container immediately clears all active limits and resets counters back to zero.
+
+### 2. Abuse Guard Configuration Reviews
+Document how to review disposable email and PaaS subdomain abuse guard configuration. Any production changes to blocklists/allowlists require written approval, a backup/snapshot check, and must be performed carefully through Supabase with a rollback note.
+
+To review or audit configured blocked domains and PaaS suffixes, run read-only queries in the Supabase SQL Editor:
+```sql
+-- View all blocked disposable email domains
+SELECT domain FROM disposable_email_domains ORDER BY domain ASC;
+
+-- View all blocked PaaS subdomain suffixes
+SELECT suffix FROM paas_subdomain_blocklist ORDER BY suffix ASC;
+```
+Any modifications to these tables must be logged in operator notes, verified in staging, and backed by a recovery snapshot before execution on production.
