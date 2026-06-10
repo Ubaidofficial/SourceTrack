@@ -70,6 +70,14 @@ router.post('/:site_key', async (req, res) => {
     return res.status(400).json({ error: 'Invalid HMAC signature' })
   }
 
+  // 5b. Block inactive / archived sites
+  if (site.plan === 'inactive' || site.plan === 'archived') {
+    const msg = site.plan === 'archived'
+      ? 'Site archived after 60 days of inactivity. Reactivate from your dashboard.'
+      : 'Subscription inactive'
+    return res.status(402).json({ success: false, data: null, error: msg })
+  }
+
   // 6. Parse JSON payload only after verification
   let payload
   try {

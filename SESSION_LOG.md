@@ -5,6 +5,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 133L | 2026-06-10 | `main` | Event Pipeline SLOs + Load Testing + Capacity Readiness — Added early plan gates to Stripe/Shopify webhooks; optimized PostHog SDK batching configuration with environment overrides; created capacity map docs and safe, production-shielded k6 stress testing scripts. | ✅ | No |
 | 133K | 2026-06-10 | `main` | Support Readiness — Audited support flows, created support_readiness.md mapping, added support emails/troubleshooting links to Billing, Settings, Snippet, and Onboarding failure views without SLA/24-7 guarantees, and documented triage/escalation workflows. | ✅ | No |
 | 133J | 2026-06-10 | `main` | Docs Truth Audit — Audited all customer-facing and operator-facing docs/copy for truthfulness before paid beta. Standardized tracker snippet paths across solution, setup, and help pages to canonical root paths. Updated Stripe env var `STRIPE_PRICE_ID_SCALE` as primary. Softened compliance language to "privacy-conscious" in developer docs. Added lightweight frontend gating for Google Search Console (GSC) connection card. Created `docs/docs_truth_audit.md` tracking all audit findings and corrected files. | ✅ | No |
 | 133I | 2026-06-10 | `main` | End-to-End Install QA — Audited and verified customer installation flow and verification boundaries. Standardized canonical public tracker URLs to the root paths `/tracker.min.js` and `/tracker.cookieless.min.js`, leaving `/tracker/*` as backwards-compatible paths. Updated onboarding, snippet generation, settings, and install documentation to use the canonical root paths, added detailed verification boundaries and domain warnings, and created `docs/install_qa_map.md`. | ✅ | No |
@@ -1417,3 +1418,21 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 ### 2. Operational Docs & Future SLO Roadmap
 - Created `docs/support_readiness.md` detailing support contact channels, bug report context checklists, install/billing/privacy support checklists, operator triage and escalation workflows, and explicit prohibitions on making 24/7, SLA, or refund promises.
 - Added `Session 133L — Event Pipeline SLOs + Load Testing + Capacity Readiness` and `Session 133M — Pricing & Plan Limits Audit` to the roadmap in `PAID_BETA_SESSION_PLAN.md` and `SESSION_HANDOFF.md`.
+
+---
+
+## Session 133L — Event Pipeline SLOs + Load Testing + Capacity Readiness
+
+**Date:** 2026-06-10
+**Branch:** `main`
+**Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
+
+### 1. Plan feature gates & Ingestion fixes
+- Implemented plan-based gating checks in `api/routes/stripe-webhook.js` and `api/routes/shopify-webhook.js` to early-reject requests with `402 Payment Required` if the site is `'inactive'` or `'archived'`, preventing database RPC calls for suspended sites.
+
+### 2. PostHog SDK Ingestion Batching
+- Refactored `api/lib/posthog.js` to support batching parameters `POSTHOG_FLUSH_AT` (default 20 in production/staging, 1 in dev/test) and `POSTHOG_FLUSH_INTERVAL_MS` (default 10000ms in production/staging, 0 in dev/test) to reduce socket pool overhead under burst load. Added configuration guides in `.env.example`.
+
+### 3. Load Testing Harness & Capacity Docs
+- Created `docs/event_pipeline_capacity.md` mapping ingestion endpoints, blocking DB calls, rate limit constraints, failure profiles, and the decision triggers queue/ClickHouse roadmap.
+- Created `scripts/load/k6-track.js`, `scripts/load/k6-conversion.js`, `scripts/load/k6-tracker-id.js`, and `scripts/load/README.md` defining load profile stages (smoke, 200 eps, 500 eps, 1000 eps burst) equipped with safety shields blocking accidental execution against production hosts.

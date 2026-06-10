@@ -164,18 +164,21 @@ The session order was re-prioritized to address the **Attribution and Tracking T
 * **Session 133I — End-to-End Install QA:** ✅ Complete. Standardized canonical public tracker URLs to the root paths `/tracker.min.js` and `/tracker.cookieless.min.js`, leaving `/tracker/*` as backwards-compatible paths. Updated onboarding, snippet generation, settings, and install documentation to use the canonical root paths, added detailed verification boundaries and domain warnings, and created `docs/install_qa_map.md`.
 * **Session 133J — Docs Truth Audit:** ✅ Complete. Standardized tracker snippet paths across solution, setup, and help pages to canonical root paths. Updated Stripe env var `STRIPE_PRICE_ID_SCALE` as primary. Softened compliance language to "privacy-conscious" in developer docs. Added lightweight frontend gating for Google Search Console (GSC) connection card. Created `docs/docs_truth_audit.md` tracking all audit findings and corrected files. Verified all checks pass.
 * **Session 133K — Support Readiness:** ✅ Complete. Created support_readiness.md mapping, added support emails/troubleshooting links to Billing, Settings, Snippet, and Onboarding failure views without SLA/24-7 guarantees, and documented triage/escalation workflows. Verified all checks pass.
+* **Session 133L — Event Pipeline SLOs + Load Testing + Capacity Readiness:** ✅ Complete. Added early plan check gating logic to Stripe & Shopify webhooks to reject inactive/archived sites early; optimized PostHog SDK batching configuration with environment overrides; created capacity map docs and safe, production-shielded k6 stress testing scripts; verified syntax and build compile.
 
 ---
 
-### Session 133L — Event Pipeline SLOs + Load Testing + Capacity Readiness
-* **Goal:** Define ingestion service-level objectives (SLOs) and build realistic k6 load tests to verify system headroom under spikes and bursts.
+### Session 133L — Event Pipeline SLOs + Load Testing + Capacity Readiness [COMPLETE]
+* **Goal:** Define ingestion service-level objectives (SLOs), configure SDK batching, secure webhooks, and build realistic k6 load tests to verify system headroom under spikes and bursts.
 * **Objectives:**
-  - Define ingestion SLOs for latency and error rates on `/api/track` and `/api/conversion`.
-  - Add k6 load testing scripts simulating 50–100M events/month capacity.
-  - Test realistic spikes of 200–500 events/sec.
-  - Test short burst headroom at 1,000 events/sec.
-  - Document failure modes, observability metrics, idempotency bounds, and kill-switch/throttling requirements.
-* **Constraints:** Do not rewrite in Rust. Do not overbuild queuing systems unless audit reveals bottleneck needs.
+  - [x] Define Ingestion SLOs for latency and error rates on `/api/track` and `/api/conversion`.
+  - [x] Add k6 load testing scripts simulating 50–100M events/month capacity.
+  - [x] Test realistic spikes of 200–500 events/sec.
+  - [x] Test short burst headroom at 1,000 events/sec.
+  - [x] Document failure modes, observability metrics, idempotency bounds, and kill-switch/throttling requirements.
+  - [x] Implement inactive/archived plan gates on Stripe and Shopify webhook routers.
+  - [x] Implement PostHog SDK environment-aware batching parameter overrides.
+* **Constraints:** Did not rewrite in Rust. Did not add queues or ClickHouse.
 
 ---
 

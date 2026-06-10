@@ -1,10 +1,43 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 133K — Support Readiness. Created support_readiness.md mapping, added support email footer to Billing page, added "Support & Feedback" card to Settings, added "Email Support" link to Snippet, and added troubleshooting & support links to onboarding script verification failures. Documented triage/escalation operators workflow.
+> **Handoff:** Session 133L — Event Pipeline SLOs + Load Testing + Capacity Readiness. Added early plan gating logic to Stripe & Shopify webhooks to reject inactive/archived sites early; optimized PostHog SDK batching configuration with environment overrides; created capacity map docs and safe, production-shielded k6 stress testing scripts; verified syntax and build compile.
 >
-> **Next Task:** Session 133L — Event Pipeline SLOs + Load Testing + Capacity Readiness (followed by Session 133M — Pricing & Plan Limits Audit).
+> **Next Task:** Session 133M — Pricing & Plan Limits Audit.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 133L — Event Pipeline SLOs + Load Testing + Capacity Readiness
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+
+1. **Stripe & Shopify Webhook plan-check gating:**
+   - Updated [stripe-webhook.js](file:///Users/ubaid/Desktop/trackiq/api/routes/stripe-webhook.js) and [shopify-webhook.js](file:///Users/ubaid/Desktop/trackiq/api/routes/shopify-webhook.js) to reject incoming webhook sync events with `402 Payment Required` if the associated site plan is `'inactive'` or `'archived'`, preventing database RPC execution on suspended accounts.
+2. **PostHog Ingestion SDK Batching:**
+   - Modified [posthog.js](file:///Users/ubaid/Desktop/trackiq/api/lib/posthog.js) to support environment-overridable batching parameters `POSTHOG_FLUSH_AT` (defaults to 20 in prod/staging, 1 in dev/test) and `POSTHOG_FLUSH_INTERVAL_MS` (defaults to 10000ms in prod/staging, 0 in dev/test) to reduce concurrent outbound network connection pressure.
+   - Updated [.env.example](file:///Users/ubaid/Desktop/trackiq/.env.example) to include instructions and variables.
+3. **Staging Load Test k6 Scripts:**
+   - Created safe k6 scripts [k6-track.js](file:///Users/ubaid/Desktop/trackiq/scripts/load/k6-track.js), [k6-conversion.js](file:///Users/ubaid/Desktop/trackiq/scripts/load/k6-conversion.js), and [k6-tracker-id.js](file:///Users/ubaid/Desktop/trackiq/scripts/load/k6-tracker-id.js) with test stages for smoke, 200 eps, 500 eps, and 1000 eps burst profiles.
+   - Added safety guards in each script blocking execution against production targets (`sourcetrack.ai`, `srctk.com`, or `railway.app`) unless overridden via `ALLOW_PRODUCTION_LOAD_TEST=true`.
+   - Created [README.md](file:///Users/ubaid/Desktop/trackiq/scripts/load/README.md) documenting k6 setup, script usage, safety requirements, and test targets.
+4. **Capacity Mapping:**
+   - Created [event_pipeline_capacity.md](file:///Users/ubaid/Desktop/trackiq/docs/event_pipeline_capacity.md) analyzing all ingestion paths, synchronous writes, rate limiting compatibility, observability, and future queues/ClickHouse decision gates.
+
+### Files changed
+- [api/routes/stripe-webhook.js](file:///Users/ubaid/Desktop/trackiq/api/routes/stripe-webhook.js)
+- [api/routes/shopify-webhook.js](file:///Users/ubaid/Desktop/trackiq/api/routes/shopify-webhook.js)
+- [api/lib/posthog.js](file:///Users/ubaid/Desktop/trackiq/api/lib/posthog.js)
+- [.env.example](file:///Users/ubaid/Desktop/trackiq/.env.example)
+- [docs/event_pipeline_capacity.md](file:///Users/ubaid/Desktop/trackiq/docs/event_pipeline_capacity.md) [NEW]
+- [scripts/load/k6-track.js](file:///Users/ubaid/Desktop/trackiq/scripts/load/k6-track.js) [NEW]
+- [scripts/load/k6-conversion.js](file:///Users/ubaid/Desktop/trackiq/scripts/load/k6-conversion.js) [NEW]
+- [scripts/load/k6-tracker-id.js](file:///Users/ubaid/Desktop/trackiq/scripts/load/k6-tracker-id.js) [NEW]
+- [scripts/load/README.md](file:///Users/ubaid/Desktop/trackiq/scripts/load/README.md) [NEW]
+- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
+- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
+- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+
 ## Session 133M — Pricing & Plan Limits Audit
 
 Audit current SourceTrack pricing, plan limits, feature gates, Stripe price IDs, billing UI, landing pricing, and competitor positioning before changing pricing.

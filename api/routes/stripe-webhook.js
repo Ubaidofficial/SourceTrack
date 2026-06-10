@@ -69,6 +69,14 @@ router.post('/:site_key', async (req, res) => {
     return res.status(400).json({ error: `Invalid webhook signature: ${err.message}` })
   }
 
+  // 4b. Block inactive / archived sites
+  if (site.plan === 'inactive' || site.plan === 'archived') {
+    const msg = site.plan === 'archived'
+      ? 'Site archived after 60 days of inactivity. Reactivate from your dashboard.'
+      : 'Subscription inactive'
+    return res.status(402).json({ success: false, data: null, error: msg })
+  }
+
   // 5. Support only explicit event types, ignore unsupported event types with safe 200 response
   if (event.type !== 'checkout.session.completed') {
     return res.status(200).json({ received: true, ignored: true, reason: `Event type ${event.type} ignored` })

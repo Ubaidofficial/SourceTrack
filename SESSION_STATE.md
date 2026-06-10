@@ -1,8 +1,7 @@
-Session: 133K — Support Readiness
-Last Completed: Created support_readiness.md mapping, added support emails/troubleshooting links to Billing, Settings, Snippet, and Onboarding failure views without SLA/24-7 guarantees, and documented triage/escalation workflows.
-Next Task: Session 133L — Event Pipeline SLOs + Load Testing + Capacity Readiness.
+Session: 133L — Event Pipeline SLOs + Load Testing + Capacity Readiness
+Last Completed: Added plan status gates to Stripe/Shopify webhooks; optimized PostHog SDK batching with environment overrides; created capacity map docs and safe k6 stress testing scripts.
+Next Task: Session 133M — Pricing & Plan Limits Audit.
 Roadmap Queue:
-- Session 133M — Pricing & Plan Limits Audit
 - Phase C (Dashboard saved widget cards)
 - Phase D (Campaigns AI Copilot)
 Build: ✅ passing (node --check, git diff --check, dashboard vite build, required-grep clean)

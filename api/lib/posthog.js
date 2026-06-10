@@ -1,9 +1,17 @@
 import { PostHog } from 'posthog-node'
 
+const flushAt = process.env.POSTHOG_FLUSH_AT
+  ? parseInt(process.env.POSTHOG_FLUSH_AT, 10)
+  : (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging' ? 20 : 1)
+
+const flushInterval = process.env.POSTHOG_FLUSH_INTERVAL_MS
+  ? parseInt(process.env.POSTHOG_FLUSH_INTERVAL_MS, 10)
+  : (process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'staging' ? 10000 : 0)
+
 export const ph = new PostHog(process.env.POSTHOG_API_KEY, {
   host: process.env.POSTHOG_HOST,
-  flushAt: 1,
-  flushInterval: 0
+  flushAt,
+  flushInterval
 })
 
 process.on('exit', () => ph.shutdown())
