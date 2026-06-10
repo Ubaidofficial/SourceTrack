@@ -167,6 +167,7 @@ The session order was re-prioritized to address the **Attribution and Tracking T
 * **Session 133L — Event Pipeline SLOs + Load Testing + Capacity Readiness:** ✅ Complete. Added early plan check gating logic to Stripe & Shopify webhooks to reject inactive/archived sites early; optimized PostHog SDK batching configuration with environment overrides; created capacity map docs and safe, production-shielded k6 stress testing scripts; verified syntax and build compile.
 * **Session 133O — Legal / Policy Readiness:** ✅ Complete. Created legal_policy_readiness.md, audited and documented legal disclaimers, data spec, sub-processor boundaries, deletion mechanics, cookie/cookieless warnings, and lawyer checklist.
 * **Session 133P — Transactional Email Readiness:** ✅ Complete. Created transactional_email_readiness.md, updated .env.example with Resend comments, updated COMMANDCODE_RUNBOOK.md with email operations guidelines, and verified setup.
+* **Session 133Q — Billing Checkout Verification & Stripe Test-Mode QA:** ✅ Complete. Verified Stripe test-mode billing configuration, price mappings, and webhook paths; created docs/billing_checkout_test_mode_qa.md and updated runbook.
 
 ---
 
@@ -244,7 +245,21 @@ The session order was re-prioritized to address the **Attribution and Tracking T
 
 ---
 
-## Session 133Q — Billing Checkout Verification & Stripe Test-Mode QA [TODO]
+## Session 133Q — Billing Checkout Verification & Stripe Test-Mode QA [COMPLETE]
 
 *   **Goal:** Verify and QA the Stripe test-mode billing integration and checkout workflows.
+*   **Objectives:**
+    *   [x] Audit and document billing routes, required environment variables, and price mappings.
+    *   [x] Map Stripe platform webhook vs customer conversion webhook path separation.
+    *   [x] Create manual test-mode checklists for checkout and portal flows.
+    *   [x] Address React.Fragment import in Pricing.jsx and 402 redirect target in api.js.
+    *   [x] Document mode-alignment safety requirements and price metadata rules.
+    *   [x] Create `docs/billing_checkout_test_mode_qa.md`.
 *   **Constraints:** Staging/Test-mode Stripe configurations only. No production billing actions, no real payments, and no live pricing changes.
+
+---
+
+## Session 133R — Staging / Production Separation Audit [TODO]
+
+*   **Goal:** Audit and verify environment isolation between staging and production across Supabase, PostHog, Stripe, and Railway services.
+*   **Constraints:** Audit-only. No deployment script updates or environment mutations.

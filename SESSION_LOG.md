@@ -1510,3 +1510,24 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 - Created `docs/transactional_email_readiness.md` mapping transactional vs billing email boundaries, Resend setup details, and operator guidelines.
 - Updated `.env.example` comments to clarify Resend usage and verification rules.
 - Updated `COMMANDCODE_RUNBOOK.md` with email operations triage checklists.
+
+---
+
+## Session 133Q — Billing Checkout Verification & Stripe Test-Mode QA
+
+**Date:** 2026-06-10
+**Branch:** `main`
+**Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
+
+### 1. Stripe Test-Mode Billing Audit
+- Audited billing checkout, portal, webhook mappings, plan limits, and environment variable requirements using test-mode safeguards.
+- Formulated precise answers for 19 required billing questions, mapping route inventories, Stripe variables, pricing alignments, and lifecycle behaviors.
+- Maintained safety boundaries (no production keys, no real payments, no price changes).
+
+### 2. Code Corrections
+- **Pricing.jsx React.Fragment bug:** Added `import React from 'react'` to prevent browser `ReferenceError` when using `React.Fragment`.
+- **api.js redirect target:** Fixed `fetchApi` 402 error handler to redirect users to `/billing` instead of onboarding.
+
+### 3. Documentation & Runbooks
+- Created `docs/billing_checkout_test_mode_qa.md` documenting routes, env vars, webhook path separation, test-mode checklists, return URL safety, and price metadata requirements.
+- Updated `COMMANDCODE_RUNBOOK.md` with a detailed "Stripe & Billing Operations" guidelines section (P0 mode alignment rules, webhook setup, portal configs, test card instructions).

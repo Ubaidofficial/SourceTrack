@@ -1,10 +1,35 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 133P — Transactional Email Readiness. Audited and prepared transactional email readiness; created docs/transactional_email_readiness.md.
+> **Handoff:** Session 133Q — Billing Checkout Verification & Stripe Test-Mode QA. Verified Stripe test-mode billing configuration, price mappings, and webhook paths; created docs/billing_checkout_test_mode_qa.md and updated runbook.
 >
-> **Next Task:** Session 133Q — Billing Checkout Verification & Stripe Test-Mode QA.
+> **Next Task:** Session 133R — Staging / Production Separation Audit.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 133Q — Billing Checkout Verification & Stripe Test-Mode QA
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+
+1.  **Stripe Test-Mode Billing Audit:**
+    *   Audited all checkout, portal, and webhook ingestion paths under test-mode specifications.
+    *   Formulated detailed answers for 19 required billing questions, establishing environment parameters, pricing matrix alignments, and safety boundaries.
+2.  **Code Corrections:**
+    *   *Pricing.jsx React.Fragment bug:* Imported `React` at the top of [Pricing.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Pricing.jsx) to eliminate potential browser reference errors when rendering comparison tables.
+    *   *api.js redirect target:* Adjusted [api.js](file:///Users/ubaid/Desktop/trackiq/dashboard/src/lib/api.js) `fetchApi` 402 handler to redirect users to `/billing` instead of onboarding.
+3.  **Documentation & Runbooks:**
+    *   Created [billing_checkout_test_mode_qa.md](file:///Users/ubaid/Desktop/trackiq/docs/billing_checkout_test_mode_qa.md) outlining billing routes, env vars, price mapping, path separation, manual QA checklists, return URL safety, and price metadata requirements.
+    *   Updated [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md) to add Stripe test-mode guidelines (P0 alignment warning, webhook paths, test cards, and portal domain config).
+
+### Files changed
+- [docs/billing_checkout_test_mode_qa.md](file:///Users/ubaid/Desktop/trackiq/docs/billing_checkout_test_mode_qa.md) [NEW]
+- [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md)
+- [dashboard/src/pages/Pricing.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Pricing.jsx)
+- [dashboard/src/lib/api.js](file:///Users/ubaid/Desktop/trackiq/dashboard/src/lib/api.js)
+- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
+- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
+- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
 
 ## Session 133P — Transactional Email Readiness
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)

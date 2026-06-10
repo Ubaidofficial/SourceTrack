@@ -356,3 +356,21 @@ Before starting production mail operations, ensure the sending domain is fully v
 ### 3. Stripe Billing Email Boundary
 - All subscription-related emails (invoices, receipts, subscription confirmations, renewal successes, and payment failures) are **exclusively owned and delivered by Stripe**.
 - Do not modify or write application-level templates or mail jobs for billing notifications; manage invoice email configurations directly inside the Stripe merchant dashboard.
+
+---
+
+## Stripe & Billing Operations
+
+### 1. Stripe Mode Alignment (P0 Safety Requirement)
+- **Stripe Mode Isolation:** There is no hardcoded live/test distinction in code; mode safety depends entirely on environment variables. Mode safety is critical: **never mix live Stripe credentials with test-mode configurations**.
+  - If `STRIPE_SECRET_KEY` starts with `sk_test_`, all price variables (`STRIPE_PRICE_ID_*`) and webhook secrets (`STRIPE_WEBHOOK_SECRET`) **must** belong to Stripe test mode.
+  - If `STRIPE_SECRET_KEY` starts with `sk_live_`, all price variables and webhook secrets **must** belong to Stripe production mode.
+  - Mixing credentials and resources between modes will trigger API failures and crash client checkouts.
+
+### 2. Webhook & Portal Path Verifications
+- **Path Isolation:** Ensure webhook endpoints are routed correctly:
+  - Platform subscription updates: Configure Stripe to forward events to `/api/billing/webhook`.
+  - Customer site conversions: Configure client Stripe accounts to forward events to `/api/webhooks/stripe/:site_key`.
+- **Secret Verification:** Confirm that the configured webhook secret in the Stripe Dashboard matches the exact endpoint environment variable (`STRIPE_WEBHOOK_SECRET` for platform billing).
+- **Billing Portal Config:** In the Stripe test mode dashboard, ensure the **Customer Portal Settings** are enabled and configured with the allowed redirect domains to prevent portal redirect blocks.
+- **No Real Payments:** Ensure that under no circumstances are production cards or live payments executed during test-mode QA or staging validation. Use Stripe test cards exclusively (e.g. `4242 4242 4242 4242`).

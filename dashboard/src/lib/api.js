@@ -43,7 +43,7 @@ export async function fetchApi(path, options = {}) {
   })
 
   if (res.status === 402) {
-    window.location.href = '/onboarding?upgrade=true'
+    window.location.href = '/billing'
     throw new Error('Subscription required')
   }
 
