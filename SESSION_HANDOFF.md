@@ -1,10 +1,35 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 132D — AI Journey Attribution + QA Harness. Implemented journey-based AI attribution (ai_platforms model) that credits the most recent prior AI touchpoint in the visitor's journey (or falls back to the conversion event itself if none) within the lookback window. Refactored the live engine calculation to use a safe 2-step retrieval and grouping, preventing double-counting and handling report-builder groupings gracefully. Re-labeled labels to "AI journey influence". Added ESM-based test harness verifying all 10 edge cases and created digital marketer test plan.
+> **Handoff:** Session 132E — AI Journey Attribution Performance Hardening. Replaced the high-volume site-wide pageview query fallback in `getAiPlatformAttributionLive` with safer, visitor-scoped pageview batching (batch size 100) and pageview pagination (page size 5000) using a LIMIT/OFFSET loop. Updated QA script to import and verify query planning and batching helper.
 >
 > **Next Task:** Move to Phase C (Dashboard saved widget cards).
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 132E — AI Journey Attribution Performance Hardening
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
+
+### Completed
+
+1. **AI Journey Attribution Hardening**
+   - Refactored `getAiPlatformAttributionLive` in [api/lib/attribution-engine.js](api/lib/attribution-engine.js) to query pageviews scoped strictly by visitor ID batches of size 100 (`AI_ATTRIBUTION_VISITOR_BATCH_SIZE`).
+   - Removed the site-wide pageview fallback that queried up to `LIMIT 100000` when converting visitor IDs >= 500.
+   - Implemented page-size pagination loop (`AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE = 5000`) with `OFFSET` support per batch to retrieve pageviews without silent truncation risk.
+   - Created and exported pure helper `chunkVisitorIds(uniqueIds, batchSize)` for robust visitor ID segment chunking.
+   - Documented the existing fallback/truncation risk in `getMultiTouchAttributionLive` as a remaining item.
+
+2. **Harness Updates**
+   - Modified [scripts/qa-ai-journey-attribution.js](scripts/qa-ai-journey-attribution.js) to import and assert `chunkVisitorIds` behaviors across boundary sizes: 0, 1, 99, 100, 101, 500, and 1200 visitor IDs.
+
+### Files changed
+- [api/lib/attribution-engine.js](api/lib/attribution-engine.js)
+- [scripts/qa-ai-journey-attribution.js](scripts/qa-ai-journey-attribution.js)
+
+### Validation
+- `node scripts/qa-ai-journey-attribution.js` → ✅ pass (17/17 cases)
+- `npm run qa:attribution` → ✅ pass
+- `npm run qa:static` → ✅ pass
+- `cd dashboard && npm run build` → ✅ pass
 
 ## Session 132D — AI Journey Attribution + QA Harness
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)

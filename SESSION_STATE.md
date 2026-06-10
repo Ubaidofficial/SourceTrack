@@ -1,5 +1,5 @@
-Session: 132D AI Journey Attribution + QA Harness
-Last Completed: Implemented journey-based AI attribution (ai_platforms model) that credits the most recent prior AI touchpoint in the visitor's journey (or falls back to the conversion event itself if none) within the lookback window. Refactored the live engine calculation to use a safe 2-step retrieval and grouping, preventing double-counting and handling report-builder groupings gracefully. Re-labeled labels to "AI journey influence". Added ESM-based test harness verifying all 10 edge cases and created digital marketer test plan.
+Session: 132E AI Journey Attribution Performance Hardening
+Last Completed: Hardened the AI journey attribution query behavior in getAiPlatformAttributionLive by removing the site-wide pageview fallback and introducing visitor distinct ID chunking (batch size 100) and pageview pagination (page size 5000) using a LIMIT/OFFSET loop. Updated the QA script to import and test the query planning and batching helper.
 Next Task: Move to Phase C (Dashboard saved widget cards).
 Roadmap Queue:
 - Phase C (Dashboard saved widget cards)

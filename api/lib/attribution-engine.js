@@ -316,6 +316,15 @@ export function selectAiTouchForConversion(touchpoints, conversion, windowDays) 
   return null
 }
 
+export function chunkVisitorIds(uniqueIds, batchSize = 100) {
+  const ids = [...new Set(uniqueIds)].filter(Boolean)
+  const batches = []
+  for (let i = 0; i < ids.length; i += batchSize) {
+    batches.push(ids.slice(i, i + batchSize))
+  }
+  return batches
+}
+
 export async function getAiPlatformAttributionLive({
   siteId,
   dateFrom,
@@ -412,74 +421,88 @@ export async function getAiPlatformAttributionLive({
   const lookbackDate = new Date(new Date(dateFrom).getTime() - windowDays * 24 * 60 * 60 * 1000)
   const lookbackStr = lookbackDate.toISOString().slice(0, 10)
 
-  // Query performance guardrail
-  let pvFilter = ''
-  const uniqueIds = [...new Set(conversions.map(c => c.distinct_id))]
-  if (uniqueIds.length > 0 && uniqueIds.length < 500) {
-    const escapedIds = uniqueIds.map(id => `'${esc(id)}'`)
-    pvFilter = `AND distinct_id IN (${escapedIds.join(',')})`
+  const uniqueIds = [...new Set(conversions.map(c => c.distinct_id))].filter(Boolean)
+  if (uniqueIds.length === 0) {
+    return []
   }
 
-  const pvSql = `
-    SELECT
-      distinct_id,
-      timestamp,
-      properties.utm_source AS utm_source,
-      properties.utm_medium AS utm_medium,
-      properties.utm_campaign AS utm_campaign,
-      properties.referrer AS referrer,
-      properties.ai_source AS ai_source,
-      properties.gclid AS gclid,
-      properties.gbraid AS gbraid,
-      properties.fbclid AS fbclid,
-      properties.msclkid AS msclkid,
-      properties.page_url AS page_url,
-      properties.utm_term AS utm_term
-    FROM events
-    WHERE properties.site_id = '${safeSite}'
-      AND event = '$pageview'
-      AND timestamp >= toDateTime('${lookbackStr}')
-      AND timestamp <= toDateTime('${toDate}')
-      ${pvFilter}
-    ORDER BY timestamp ASC
-    LIMIT 100000
-  `
-  const pvRows = await queryHogQL(pvSql, 'aiplatform_pageviews_live')
+  const AI_ATTRIBUTION_VISITOR_BATCH_SIZE = 100
+  const AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE = 5000
 
-  // Group pageviews by distinct_id
+  const batches = chunkVisitorIds(uniqueIds, AI_ATTRIBUTION_VISITOR_BATCH_SIZE)
   const pageviewsByVisitor = {}
-  for (const row of pvRows) {
-    const distinctId = row[0]
-    const timestamp = row[1]
-    const utmSource = row[2]
-    const utmMedium = row[3]
-    const utmCampaign = row[4]
-    const referrer = row[5]
-    const aiSource = row[6]
-    const gclid = row[7]
-    const gbraid = row[8]
-    const fbclid = row[9]
-    const msclkid = row[10]
-    const pageUrl = row[11]
-    const utmTerm = row[12]
 
-    const pvObj = {
-      timestamp,
-      utm_source: utmSource || null,
-      utm_medium: utmMedium || null,
-      utm_campaign: utmCampaign || null,
-      referrer: referrer || null,
-      ai_source: aiSource || null,
-      gclid: gclid || null,
-      gbraid: gbraid || null,
-      fbclid: fbclid || null,
-      msclkid: msclkid || null,
-      page_url: pageUrl || null,
-      utm_term: utmTerm || null
+  for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
+    const batchIds = batches[batchIdx]
+    const escapedIds = batchIds.map(id => `'${esc(id)}'`)
+
+    let offset = 0
+    while (true) {
+      const batchPvSql = `
+        SELECT
+          distinct_id,
+          timestamp,
+          properties.utm_source AS utm_source,
+          properties.utm_medium AS utm_medium,
+          properties.utm_campaign AS utm_campaign,
+          properties.referrer AS referrer,
+          properties.ai_source AS ai_source,
+          properties.gclid AS gclid,
+          properties.gbraid AS gbraid,
+          properties.fbclid AS fbclid,
+          properties.msclkid AS msclkid,
+          properties.page_url AS page_url,
+          properties.utm_term AS utm_term
+        FROM events
+        WHERE properties.site_id = '${safeSite}'
+          AND event = '$pageview'
+          AND timestamp >= toDateTime('${lookbackStr}')
+          AND timestamp <= toDateTime('${toDate}')
+          AND distinct_id IN (${escapedIds.join(',')})
+        ORDER BY timestamp ASC
+        LIMIT ${AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE} OFFSET ${offset}
+      `
+      const pvRows = await queryHogQL(batchPvSql, `aiplatform_pageviews_live_batch_${batchIdx}_page_${offset}`)
+
+      for (const row of pvRows) {
+        const distinctId = row[0]
+        const timestamp = row[1]
+        const utmSource = row[2]
+        const utmMedium = row[3]
+        const utmCampaign = row[4]
+        const referrer = row[5]
+        const aiSource = row[6]
+        const gclid = row[7]
+        const gbraid = row[8]
+        const fbclid = row[9]
+        const msclkid = row[10]
+        const pageUrl = row[11]
+        const utmTerm = row[12]
+
+        const pvObj = {
+          timestamp,
+          utm_source: utmSource || null,
+          utm_medium: utmMedium || null,
+          utm_campaign: utmCampaign || null,
+          referrer: referrer || null,
+          ai_source: aiSource || null,
+          gclid: gclid || null,
+          gbraid: gbraid || null,
+          fbclid: fbclid || null,
+          msclkid: msclkid || null,
+          page_url: pageUrl || null,
+          utm_term: utmTerm || null
+        }
+
+        if (!pageviewsByVisitor[distinctId]) pageviewsByVisitor[distinctId] = []
+        pageviewsByVisitor[distinctId].push(pvObj)
+      }
+
+      if (pvRows.length < AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE) {
+        break
+      }
+      offset += AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE
     }
-
-    if (!pageviewsByVisitor[distinctId]) pageviewsByVisitor[distinctId] = []
-    pageviewsByVisitor[distinctId].push(pvObj)
   }
 
   // 3. Match conversions to their AI platform touchpoint

@@ -1,5 +1,5 @@
 import 'dotenv/config'
-import { selectAiTouchForConversion } from '../api/lib/attribution-engine.js'
+import { selectAiTouchForConversion, chunkVisitorIds } from '../api/lib/attribution-engine.js'
 
 
 function runTests() {
@@ -108,6 +108,40 @@ function runTests() {
   const resolvedConv = { timestamp: now, conversion_value: 300 }
   const match10 = selectAiTouchForConversion(resolvedVisitorTouches, resolvedConv, 30)
   assert(match10 && match10.platform === 'DeepSeek', 'Resolved identity visitor is credited correctly')
+
+  // 11. Batching and query planning cases
+  // 0 IDs => 0 batches
+  const batch0 = chunkVisitorIds([], 100)
+  assert(batch0.length === 0, '0 IDs => 0 batches')
+
+  // 1 ID => 1 batch
+  const batch1 = chunkVisitorIds(['user_1'], 100)
+  assert(batch1.length === 1 && batch1[0].length === 1 && batch1[0][0] === 'user_1', '1 ID => 1 batch')
+
+  // 99 IDs => 1 batch
+  const ids99 = Array.from({ length: 99 }, (_, i) => `user_${i}`)
+  const batch99 = chunkVisitorIds(ids99, 100)
+  assert(batch99.length === 1 && batch99[0].length === 99, '99 IDs => 1 batch')
+
+  // 100 IDs => 1 batch
+  const ids100 = Array.from({ length: 100 }, (_, i) => `user_${i}`)
+  const batch100 = chunkVisitorIds(ids100, 100)
+  assert(batch100.length === 1 && batch100[0].length === 100, '100 IDs => 1 batch')
+
+  // 101 IDs => 2 batches
+  const ids101 = Array.from({ length: 101 }, (_, i) => `user_${i}`)
+  const batch101 = chunkVisitorIds(ids101, 100)
+  assert(batch101.length === 2 && batch101[0].length === 100 && batch101[1].length === 1, '101 IDs => 2 batches')
+
+  // 500 IDs => 5 batches
+  const ids500 = Array.from({ length: 500 }, (_, i) => `user_${i}`)
+  const batch500 = chunkVisitorIds(ids500, 100)
+  assert(batch500.length === 5 && batch500.every(b => b.length === 100), '500 IDs => 5 batches')
+
+  // 1200 IDs => 12 batches
+  const ids1200 = Array.from({ length: 1200 }, (_, i) => `user_${i}`)
+  const batch1200 = chunkVisitorIds(ids1200, 100)
+  assert(batch1200.length === 12 && batch1200.every(b => b.length === 100), '1200 IDs => 12 batches')
 
   console.log(`\nPASS ai_journey_attribution: ${passCount}/${totalTests}`)
   if (passCount !== totalTests) {
