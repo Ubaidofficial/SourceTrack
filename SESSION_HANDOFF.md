@@ -1,10 +1,30 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 133S — Production Observability Verification / Incident Response Drill. Verified process liveness check endpoint status, stdout/stderr logging, severity classifications, checklists, and rollback guidelines; created docs/production_observability_incident_response.md.
+> **Handoff:** Session 133T — Data Deletion / Privacy Request Operational Drill. Audited and verified account deletion, visitor erasure, and retention purges database flows, Stripe/PostHog boundaries, shared workspace caveats, and operator checklists; created docs/privacy_request_operational_drill.md.
 >
-> **Next Task:** Session 133T — Data Deletion / Privacy Request Operational Drill.
+> **Next Task:** Session 133U — Admin / Operator Access & Internal Support Controls Audit.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 133T — Data Deletion / Privacy Request Operational Drill
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+
+1.  **Data Deletion & Privacy Audit:**
+    *   Audited all routes, logic, and databases related to visitor deletion, account deletion, and data retention configurations.
+    *   Formulated precise answers for 20 required data deletion/privacy operational questions, mapping Supabase database deletions (`attributed_conversions`, `site_identity_links`), Stripe billing log boundaries, PostHog person API behaviors, shared workspace owner/admin blocking rules, and manual triage paths.
+2.  **Documentation & Runbooks:**
+    *   Created [privacy_request_operational_drill.md](file:///Users/ubaid/Desktop/trackiq/docs/privacy_request_operational_drill.md) mapping account deletion, visitor erasure, and retention purge flows, provider-console verification checklists, safe testing checklists, and support guidelines.
+    *   Updated [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md) to add a detailed "Privacy Request Operations" section (request verification, site identification, PostHog/Stripe boundaries, staging testing, and support escalation).
+
+### Files changed
+- [docs/privacy_request_operational_drill.md](file:///Users/ubaid/Desktop/trackiq/docs/privacy_request_operational_drill.md) [NEW]
+- [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md)
+- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
+- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
+- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
 
 ## Session 133S — Production Observability Verification / Incident Response Drill
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)

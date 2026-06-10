@@ -420,3 +420,29 @@ Before starting production mail operations, ensure the sending domain is fully v
 - **P0 Outages:** If the dashboard or API is completely offline, verify credentials/env variables in Railway and restart the service. If it is a recent deploy bug, perform an immediate rollback.
 - **Railway Rollback:** Select the affected service, click on the last known stable deploy container, and click the **Rollback** button.
 - **Customer Notifications:** If a P0 outage exceeds 30 minutes, draft a simple status email to active users informing them of the downtime without making SLA or compensation promises.
+
+---
+
+## Privacy Request Operations
+
+### 1. Request Verification & Identification
+- **Verify Email Address:** Confirm the requester is the registered owner of the site or account (matches `owner_id` or membership user details).
+- **Identify Site & Workspace:** Run a read-only SQL query in the Supabase Editor to resolve the site details safely:
+  ```sql
+  SELECT id, site_key, owner_id, company_id, plan FROM sites WHERE site_key = 'SITE_KEY_HERE';
+  ```
+
+### 2. Explain Provider Boundaries
+- **PostHog Telemetry Limits:** Deleting a visitor via the dashboard triggers a best-effort, non-blocking call to erase the PostHog person profile and events. Account/site deletion does **not** bulk-delete PostHog events; they expire naturally based on PostHog project retention settings.
+- **Stripe Billing Limits:** Customer payment, invoice, and subscription history records are retained indefinitely by Stripe for compliance and tax auditing and are never deleted.
+- **No Compliance Promises:** Do not promise complete GDPR, CCPA, or other framework compliance; state clearly that erasures outside the database are best-effort and billing logs are kept.
+
+### 3. Safe Deletion & Testing Policies
+- **No Production Tests:** Never test deletion endpoints (`DELETE /api/gdpr/visitor` or `/api/gdpr/account`) with production credentials or against live customer data.
+- **Staging Verification:** Run deletion checks on dummy staging databases. Verify that `attributed_conversions` and `site_identity_links` are cleared scoped to the deleted site ID.
+- **Verify Retention Gating:** Set `retention_days` updates in staging to verify plan limits. Free sites must reject extended retention with `402 Payment Required`.
+- **Monitor Nightly Purges:** Inspect the `job_runs` table in the database to verify nightly cron-driven retention purges (`runRetentionPurge`, `runFreeTierPageviewPurge`, and `runFreeTierAutoArchive`) executed successfully.
+
+### 4. Support Escalation Controls
+- **Sole Admin Blocks:** If a user account deletion fails with `409 Conflict`, the user is the sole administrator of a shared workspace. Assist them in promoting another member to admin or manually remove the other members to unblock the account purge.
+- **Manual PostHog Wipe:** If a user demands certified event removal, manually locate the person UUID inside the PostHog Console and select "Delete Person and all events".

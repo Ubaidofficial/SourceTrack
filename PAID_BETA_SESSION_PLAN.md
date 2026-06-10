@@ -170,6 +170,7 @@ The session order was re-prioritized to address the **Attribution and Tracking T
 * **Session 133Q — Billing Checkout Verification & Stripe Test-Mode QA:** ✅ Complete. Verified Stripe test-mode billing configuration, price mappings, and webhook paths; created docs/billing_checkout_test_mode_qa.md and updated runbook.
 * **Session 133R — Staging / Production Separation Audit:** ✅ Complete. Audited environment isolation between local, staging, and production across Supabase, PostHog, Stripe, Resend, Railway, and CORS settings; resolved hardcoded production URLs in email report and threshold alert jobs; created docs/staging_production_separation_audit.md.
 * **Session 133S — Production Observability Verification / Incident Response Drill:** ✅ Complete. Audited and verified process liveness `/health` checks, stdout/stderr logging, severity classifications, rollback checklist, and customer communication parameters; created docs/production_observability_incident_response.md.
+* **Session 133T — Data Deletion / Privacy Request Operational Drill:** ✅ Complete. Audited and verified account deletion, visitor erasure, and retention purges database flows, Stripe/PostHog boundaries, shared workspace caveats, and operator checklists; created docs/privacy_request_operational_drill.md.
 
 
 
@@ -292,7 +293,20 @@ The session order was re-prioritized to address the **Attribution and Tracking T
 
 ---
 
-## Session 133T — Data Deletion / Privacy Request Operational Drill [TODO]
+## Session 133T — Data Deletion / Privacy Request Operational Drill [COMPLETE]
 
 *   **Goal:** Drill and verify customer data deletion, visitor profile erasure, and workspace cancellation processes to ensure complete privacy compliance before public beta.
-*   **Constraints:** Drill-only. Do not run destructive scripts against the live production database.
+*   **Objectives:**
+    *   [x] Document account deletion, visitor erasure, and retention purge database flows.
+    *   [x] Map Stripe retention and PostHog best-effort API boundaries.
+    *   [x] Outline shared workspace deletion and sole admin blocking rules.
+    *   [x] Establish manual support escalation and provider console verification checklists.
+    *   [x] Created `docs/privacy_request_operational_drill.md`.
+*   **Constraints:** Drill-only. Do not run destructive scripts against the live production database or mutate production data.
+
+---
+
+## Session 133U — Admin / Operator Access & Internal Support Controls Audit [TODO]
+
+*   **Goal:** Audit internal administration controls, database role separation, administrative tools scope, and security of operator-facing APIs before paid beta launch.
+*   **Constraints:** Audit-only. Do not provision new production admin accounts or run mutating migrations.

@@ -5,6 +5,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 133T | 2026-06-10 | `main` | Data Deletion & Privacy Request Operational Drill — Audited account deletion, visitor erasure, and data retention database flows, and mapped provider boundaries; created docs/privacy_request_operational_drill.md. | ✅ | No |
 | 133S | 2026-06-10 | `main` | Production Observability & Incident Response Drill — Verified liveness checks, stdout/stderr logging, severity metrics, and rollback checklists; created docs/production_observability_incident_response.md. | ✅ | No |
 | 133R | 2026-06-10 | `main` | Staging / Production Separation Audit — Audited environment isolation across Supabase, PostHog, Stripe, Resend, Railway, and CORS; resolved hardcoded production links in email report and threshold alert jobs; created docs/staging_production_separation_audit.md. | ✅ | No |
 | 133Q | 2026-06-10 | `main` | Billing Checkout Verification & Stripe Test-Mode QA — Verified Stripe checkout, portal, webhook separation, and plan limits; fixed Pricing.jsx React.Fragment runtime error; redirected 402 responses to /billing; created docs/billing_checkout_test_mode_qa.md. | ✅ | No |
@@ -1574,3 +1575,20 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 ### 2. Runbook & Documentation Additions
 - Created `docs/production_observability_incident_response.md` mapping health endpoint status, log inventories, provider-console checklists, severity classifications, incident response workflows, and rollback procedures.
 - Updated `COMMANDCODE_RUNBOOK.md` with a detailed "Incident Response & Observability Guidelines" section (health verification, logs, cron checks, Stripe/Resend debugging, rollback, and customer communications).
+
+---
+
+## Session 133T — Data Deletion / Privacy Request Operational Drill
+
+**Date:** 2026-06-10
+**Branch:** `main`
+**Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
+
+### 1. Data Deletion & Privacy Audit
+- Audited visitor deletion, account deletion, and data retention configurations, verifying that all database queries are correctly scoped to tenant site IDs and memberships are validated.
+- Formulated precise answers for 20 required data deletion/privacy operational questions, mapping DB erasures, Stripe billing logs boundaries, PostHog person API behaviors, shared workspace owner/admin blocking rules, and manual triage paths.
+- Maintained safety boundaries (no deletions executed on production customer data, no SQL migrations applied, no Stripe checkout sessions or emails triggered).
+
+### 2. Runbook & Documentation Additions
+- Created `docs/privacy_request_operational_drill.md` mapping account deletion, visitor erasure, and retention purge flows, provider-console verification checklists, safe testing checklists, and support guidelines.
+- Updated `COMMANDCODE_RUNBOOK.md` with a detailed "Privacy Request Operations" section (request verification, site identification, PostHog/Stripe boundaries, staging testing, and support escalation).
