@@ -6,7 +6,7 @@ import { ph } from '../lib/posthog.js'
 import { dispatchWebhook } from '../lib/webhook.js'
 import { sendMetaCAPI, sendGoogleConversion, sendMicrosoftConversion, sendLinkedInConversion, sendTikTokConversion } from '../lib/conversion-sync.js'
 import { getSupabase } from '../lib/supabase.js'
-import { normalizeUtm, getFirstTouchFields, redactPiiFromObject, isPathExcluded, extractCustomParams } from '../lib/utils.js'
+import { normalizeUtm, getFirstTouchFields, redactPiiFromObject, isPathExcluded, extractCustomParams, sanitizeClientTimestamp } from '../lib/utils.js'
 import { hasFeature } from '../lib/plan-features.js'
 import { resolveClientIp } from '../lib/ip-resolver.js'
 import { claimIdempotencyKeys } from '../lib/idempotency.js'
@@ -297,9 +297,12 @@ export async function conversion(req, res) {
       dedupCache.set(externalEventId, true)
     }
 
+    const clientTimestamp = req.body?.timestamp ? sanitizeClientTimestamp(req.body.timestamp) : null
+
     ph.capture({
       distinctId: req.body.anonymous_id || uuidv4(),
       event: '$conversion',
+      timestamp: clientTimestamp ? new Date(clientTimestamp) : undefined,
       properties: props
     })
 

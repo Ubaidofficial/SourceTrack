@@ -1,10 +1,52 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 132C — Identity Stitching + user_id Attribution Fallback. Implemented durable user_id ↔ anonymous_id identity link mapping store (`site_identity_links` table) and ingestion-layer resolution. Added `api/lib/identity-links.js` with `storeIdentityLink` (upserts mapping safely) and `resolveAnonymousId` (resolves user_id to the single most recently seen linked anonymous_id, using `ORDER BY last_seen_at DESC, created_at DESC LIMIT 1`). Modified `/api/identify` to save identity links on `$identify` aliases. Inverted priority in `/api/conversion-offline` and `/api/server/event` so `anonymous_id` takes precedence, storing identity links on incoming dual-ID events and synchronously resolving `user_id` to its linked `anonymous_id` on single-ID requests before ingestion to PostHog, ensuring attribution joins continue to work without HogQL changes. Softened retrospective overclaims in `DevelopersIdentify.jsx` and `DevelopersApi.jsx`.
+> **Handoff:** Session 132D — AI Journey Attribution + QA Harness. Implemented journey-based AI attribution (ai_platforms model) that credits the most recent prior AI touchpoint in the visitor's journey (or falls back to the conversion event itself if none) within the lookback window. Refactored the live engine calculation to use a safe 2-step retrieval and grouping, preventing double-counting and handling report-builder groupings gracefully. Re-labeled labels to "AI journey influence". Added ESM-based test harness verifying all 10 edge cases and created digital marketer test plan.
 >
-> **Next Task:** Re-run the attribution audit (target overall ≥90/100) and verify if the ingestion-layer stitching resolves the remaining attribution trust gaps. Move to saved widget cards (Phase C).
+> **Next Task:** Move to Phase C (Dashboard saved widget cards).
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 132D — AI Journey Attribution + QA Harness
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
+
+### Completed
+
+1. **Backend AI Journey Attribution Engine**
+   - Refactored `ai_platforms` model calculations in [api/lib/attribution-engine.js](api/lib/attribution-engine.js) to walk the visitor journey, crediting the most recent prior AI touchpoint (or falling back to the conversion event itself if no prior touch exists) within the lookback window.
+   - Built a safe 2-step dynamic query in Node (conversions first, pageviews second) with strict performance guardrails: checks `distinct_id` list size; if >= 500, queries all pageviews for the site in the lookback window up to `LIMIT 100000` to prevent giant, failing SQL strings.
+   - Prevents double-counting of conversions and revenue by aggregating credit to exactly one matched platform per conversion event.
+   - Resolves all custom grouping dimensions in `getFlexibleReport`. Incompatible dimensions (e.g., Campaign, Medium) resolve to `'—'` gracefully rather than throwing errors.
+   - Refactored `/api/attribution/explain` (`getAttributionExplanation`) to perform the journey walk and return detailed attribution reasons with types `'journey_touchpoint'` or `'conversion_event'`.
+
+2. **Canonical Backend Classifier**
+   - Refactored [api/lib/channel-classifier.js](api/lib/channel-classifier.js) to define and export `detectAiPlatformFromEvent(props)` utilizing standard backend mappings for AI search domains and UTM source mappings.
+   - Refactored `channelFromEvent` to utilize this helper for the "AI Search" channel branch.
+
+3. **Frontend Label & Copy Alignment**
+   - Replaced `"AI conversion source"` with `"AI journey influence"` and updated the model explanation copy in [dashboard/src/components/ConversionExplanationModal.jsx](dashboard/src/components/ConversionExplanationModal.jsx) to describe the lookback window and journey walk.
+   - Updated the model labels in [dashboard/src/pages/Dashboard.jsx](dashboard/src/pages/Dashboard.jsx) and [dashboard/src/pages/ReportBuilder.jsx](dashboard/src/pages/ReportBuilder.jsx).
+
+4. **Deterministic QA Harness**
+   - Created [scripts/qa-ai-journey-attribution.js](scripts/qa-ai-journey-attribution.js), an ESM-based test harness that imports `selectAiTouchForConversion` directly from production code and asserts all 10 required edge cases (AI pageviews, intermediate organic touches, multiple AI touches, outside window, post-conversion touches, fallback, distinct-visitor isolation, and stitching method cases).
+
+5. **Marketer Test Plan**
+   - Created [SESSION_132D_MARKETER_TEST_PLAN.md](SESSION_132D_MARKETER_TEST_PLAN.md) detailing step-by-step instructions for product acceptance testing.
+
+### Files changed
+- [api/lib/attribution-engine.js](api/lib/attribution-engine.js)
+- [api/lib/channel-classifier.js](api/lib/channel-classifier.js)
+- [dashboard/src/components/ConversionExplanationModal.jsx](dashboard/src/components/ConversionExplanationModal.jsx)
+- [dashboard/src/pages/Dashboard.jsx](dashboard/src/pages/Dashboard.jsx)
+- [dashboard/src/pages/ReportBuilder.jsx](dashboard/src/pages/ReportBuilder.jsx)
+- [scripts/qa-ai-journey-attribution.js](scripts/qa-ai-journey-attribution.js) [NEW]
+- [SESSION_132D_MARKETER_TEST_PLAN.md](SESSION_132D_MARKETER_TEST_PLAN.md) [NEW]
+
+### Validation
+- `node --check api/index.js api/routes/*.js api/lib/*.js` → ✅ pass
+- `cd dashboard && npm run build` → ✅ pass
+- `git diff --check` → ✅ pass
+- `node scripts/qa-ai-journey-attribution.js` → ✅ pass
+- `npm run qa:static` → ✅ pass
 
 ## Session 132C — Identity Stitching + user_id Attribution Fallback
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)

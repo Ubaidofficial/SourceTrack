@@ -198,7 +198,12 @@ export async function conversionOffline(req, res) {
       }
     })
 
-    ph.capture({ distinctId, event: '$conversion', properties: props })
+    ph.capture({
+      distinctId,
+      event: '$conversion',
+      timestamp: new Date(occurredAt),
+      properties: props
+    })
 
     // Fire CAPI integrations async (keep original behavior, gated by plan)
     if (hasFeature(req.site?.plan, 'capi_server_side')) try {

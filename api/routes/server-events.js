@@ -84,9 +84,12 @@ router.post('/event', async (req, res) => {
       stitchingMethod = 'none'
     }
 
+    const eventTimeStr = req.body.timestamp || new Date().toISOString()
+
     ph.capture({
       distinctId,
       event: req.body.event || '$pageview',
+      timestamp: new Date(eventTimeStr),
       properties: {
         site_id: siteId,
         anonymous_id: anonymousId || resolvedAnonymousId || null,
@@ -104,7 +107,7 @@ router.post('/event', async (req, res) => {
         conversion_type: req.body.conversion_type || null,
         device_type: parser.getDevice().type || 'desktop',
         country,
-        server_timestamp: req.body.timestamp || new Date().toISOString(),
+        server_timestamp: eventTimeStr,
         ingestion_method: 'server_sdk',
         ...(req.body.properties || {})
       }

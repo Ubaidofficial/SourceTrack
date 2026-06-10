@@ -1,7 +1,7 @@
 import NodeCache from 'node-cache'
 import { queryHogQL } from './posthog.js'
 import { deriveSessions, annotateSessions } from './sessionization.js'
-import { channelFromEvent } from './channel-classifier.js'
+import { channelFromEvent, detectAiPlatformFromEvent } from './channel-classifier.js'
 import { getSupabase } from './supabase.js'
 import { esc, toHogDate } from './utils.js'
 
@@ -277,32 +277,337 @@ async function multiTouchAttributionHelper(siteId, model, dateFrom, dateTo) {
   }))
 }
 
-async function aiPlatformAttribution(siteId, dateFrom, dateTo) {
+export function selectAiTouchForConversion(touchpoints, conversion, windowDays) {
+  const windowMs = windowDays * 24 * 60 * 60 * 1000
+  const conversionTime = new Date(conversion.timestamp).getTime()
+
+  // Filter touchpoints (pageviews) that occurred before conversion and within lookback window
+  const inWindowPvs = touchpoints.filter(pv => {
+    const pvTime = new Date(pv.timestamp).getTime()
+    return pvTime <= conversionTime && pvTime >= conversionTime - windowMs
+  })
+
+  // Explicitly sort pageviews by timestamp ascending (earliest first)
+  const sortedPvs = [...inWindowPvs].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+
+  // Scan backwards to find the most recent AI touchpoint
+  for (let i = sortedPvs.length - 1; i >= 0; i--) {
+    const pv = sortedPvs[i]
+    const platform = detectAiPlatformFromEvent(pv)
+    if (platform) {
+      return {
+        touch: pv,
+        type: 'journey_touchpoint',
+        platform
+      }
+    }
+  }
+
+  // Fallback to conversion event itself
+  const convPlatform = detectAiPlatformFromEvent(conversion)
+  if (convPlatform) {
+    return {
+      touch: conversion,
+      type: 'conversion_event',
+      platform: convPlatform
+    }
+  }
+
+  return null
+}
+
+export async function getAiPlatformAttributionLive({
+  siteId,
+  dateFrom,
+  dateTo,
+  groupBy = 'source',
+  metric = 'revenue',
+  filters = {},
+  groupBy2 = null,
+  granularity = 'day',
+  attributionWindow = null,
+  attributeBy = 'conversion_date'
+}) {
   const fromDate = toHogDate(dateFrom)
   const toDate = toHogDate(dateTo) + " 23:59:59"
+  const safeSite = esc(siteId)
 
-  const sql = `
+  // 1. Fetch conversions
+  const convSql = `
     SELECT
-      properties.ai_source AS source,
-      count() AS conversions,
-      SUM(toFloatOrZero(toString(properties.conversion_value))) AS revenue
+      uuid,
+      distinct_id,
+      timestamp,
+      properties.conversion_type AS conversion_type,
+      toFloatOrZero(toString(properties.conversion_value)) AS conversion_value,
+      properties.utm_source AS utm_source,
+      properties.utm_medium AS utm_medium,
+      properties.utm_campaign AS utm_campaign,
+      properties.referrer AS referrer,
+      properties.ai_source AS ai_source,
+      properties.country AS country,
+      properties.device_type AS device_type,
+      properties.utm_term AS utm_term,
+      properties.provider AS provider,
+      properties.attribution_status AS attribution_status,
+      properties.stitching_method AS stitching_method,
+      properties.ingestion_method AS ingestion_method,
+      properties.browser_name AS browser_name,
+      properties.browser AS browser,
+      properties.page_url AS page_url
     FROM events
-    WHERE properties.site_id = '${esc(siteId)}'
+    WHERE properties.site_id = '${safeSite}'
       AND event = '$conversion'
-      AND properties.ai_source IS NOT NULL
-      AND properties.ai_source != ''
       AND timestamp >= toDateTime('${fromDate}')
       AND timestamp <= toDateTime('${toDate}')
-    GROUP BY source
-    ORDER BY revenue DESC
-    LIMIT 50000
+    ORDER BY timestamp DESC
+    LIMIT 10000
   `
+  const convRows = await queryHogQL(convSql, 'aiplatform_conversions_live')
 
-  const rows = await queryHogQL(sql, 'ai_platform_attribution')
-  return rows.map(([source, conversions, revenue]) => ({
-    source,
-    conversions: Number(conversions) || 0,
-    revenue: Number(revenue) || 0
+  const conversions = convRows.map(([
+    uuid, distinctId, timestamp, conversionType, conversionValue,
+    utmSource, utmMedium, utmCampaign, referrer, aiSource,
+    country, deviceType, utmTerm, rawProvider, rawAttrStatus,
+    rawStitchMethod, rawIngestionMethod, browserName, browser, pageUrl
+  ]) => {
+    const ingestionMethod = rawIngestionMethod || null
+    const provider = rawProvider || (ingestionMethod === 'server_routed' ? 'browser' : ingestionMethod === 'offline' ? 'payments_api' : 'unknown')
+    const stitchingMethod = rawStitchMethod || (ingestionMethod === 'server_routed' ? 'browser' : 'unknown')
+    let attributionStatus = rawAttrStatus || null
+    if (!attributionStatus) {
+      if (ingestionMethod === 'server_routed') attributionStatus = 'attributed'
+      else if (rawStitchMethod && rawStitchMethod !== '' && rawStitchMethod !== 'none') attributionStatus = 'attributed'
+      else if (rawStitchMethod === 'none') attributionStatus = 'unattributed'
+      else attributionStatus = 'unknown'
+    }
+    return {
+      uuid,
+      distinct_id: distinctId,
+      timestamp,
+      conversion_type: conversionType || null,
+      conversion_value: Number(conversionValue) || 0,
+      utm_source: utmSource || null,
+      utm_medium: utmMedium || null,
+      utm_campaign: utmCampaign || null,
+      referrer: referrer || null,
+      ai_source: aiSource || null,
+      country: country || null,
+      device_type: deviceType || null,
+      utm_term: utmTerm || null,
+      provider,
+      attribution_status: attributionStatus,
+      stitching_method: stitchingMethod,
+      browser_name: browserName || browser || 'unknown',
+      page_url: pageUrl || '/'
+    }
+  })
+
+  if (conversions.length === 0) {
+    return []
+  }
+
+  // 2. Fetch pageviews for lookback window
+  const windowDays = attributionWindow && attributionWindow !== 'ltv' && Number(attributionWindow) > 0 ? Number(attributionWindow) : 30
+  const lookbackDate = new Date(new Date(dateFrom).getTime() - windowDays * 24 * 60 * 60 * 1000)
+  const lookbackStr = lookbackDate.toISOString().slice(0, 10)
+
+  // Query performance guardrail
+  let pvFilter = ''
+  const uniqueIds = [...new Set(conversions.map(c => c.distinct_id))]
+  if (uniqueIds.length > 0 && uniqueIds.length < 500) {
+    const escapedIds = uniqueIds.map(id => `'${esc(id)}'`)
+    pvFilter = `AND distinct_id IN (${escapedIds.join(',')})`
+  }
+
+  const pvSql = `
+    SELECT
+      distinct_id,
+      timestamp,
+      properties.utm_source AS utm_source,
+      properties.utm_medium AS utm_medium,
+      properties.utm_campaign AS utm_campaign,
+      properties.referrer AS referrer,
+      properties.ai_source AS ai_source,
+      properties.gclid AS gclid,
+      properties.gbraid AS gbraid,
+      properties.fbclid AS fbclid,
+      properties.msclkid AS msclkid,
+      properties.page_url AS page_url,
+      properties.utm_term AS utm_term
+    FROM events
+    WHERE properties.site_id = '${safeSite}'
+      AND event = '$pageview'
+      AND timestamp >= toDateTime('${lookbackStr}')
+      AND timestamp <= toDateTime('${toDate}')
+      ${pvFilter}
+    ORDER BY timestamp ASC
+    LIMIT 100000
+  `
+  const pvRows = await queryHogQL(pvSql, 'aiplatform_pageviews_live')
+
+  // Group pageviews by distinct_id
+  const pageviewsByVisitor = {}
+  for (const row of pvRows) {
+    const distinctId = row[0]
+    const timestamp = row[1]
+    const utmSource = row[2]
+    const utmMedium = row[3]
+    const utmCampaign = row[4]
+    const referrer = row[5]
+    const aiSource = row[6]
+    const gclid = row[7]
+    const gbraid = row[8]
+    const fbclid = row[9]
+    const msclkid = row[10]
+    const pageUrl = row[11]
+    const utmTerm = row[12]
+
+    const pvObj = {
+      timestamp,
+      utm_source: utmSource || null,
+      utm_medium: utmMedium || null,
+      utm_campaign: utmCampaign || null,
+      referrer: referrer || null,
+      ai_source: aiSource || null,
+      gclid: gclid || null,
+      gbraid: gbraid || null,
+      fbclid: fbclid || null,
+      msclkid: msclkid || null,
+      page_url: pageUrl || null,
+      utm_term: utmTerm || null
+    }
+
+    if (!pageviewsByVisitor[distinctId]) pageviewsByVisitor[distinctId] = []
+    pageviewsByVisitor[distinctId].push(pvObj)
+  }
+
+  // 3. Match conversions to their AI platform touchpoint
+  const aggregated = {}
+
+  for (const conv of conversions) {
+    const visitorPvs = pageviewsByVisitor[conv.distinct_id] || []
+    const match = selectAiTouchForConversion(visitorPvs, conv, windowDays)
+
+    if (!match) continue
+
+    const creditedPlatform = match.platform
+
+    // Apply UTM / Platform filters if present
+    if (filters.source && creditedPlatform !== filters.source) continue
+    if (filters.ai_source && creditedPlatform !== filters.ai_source) continue
+    if (filters.country && conv.country !== filters.country) continue
+    if (filters.device_type && conv.device_type !== filters.device_type) continue
+    if (filters.conversion_type && conv.conversion_type !== filters.conversion_type) continue
+
+    // Grouping
+    let dimVal = 'unknown'
+    if (groupBy === 'source' || groupBy === 'ai_source') dimVal = creditedPlatform
+    else if (groupBy === 'channel') dimVal = 'AI Search'
+    else if (groupBy === 'conversion_type') dimVal = conv.conversion_type || 'untyped'
+    else if (groupBy === 'country') dimVal = conv.country || 'unknown'
+    else if (groupBy === 'device') dimVal = conv.device_type || 'unknown'
+    else if (groupBy === 'browser') dimVal = conv.browser_name || 'unknown'
+    else if (groupBy === 'provider') dimVal = conv.provider || 'unknown'
+    else if (groupBy === 'attribution_status') dimVal = conv.attribution_status || 'unknown'
+    else if (groupBy === 'stitching_method') dimVal = conv.stitching_method || 'unknown'
+    else if (groupBy === 'date') {
+      const refDate = new Date(attributeBy === 'first_seen_date' && visitorPvs[0] ? visitorPvs[0].timestamp : conv.timestamp)
+      if (granularity === 'quarter') {
+        const q = Math.floor(refDate.getMonth() / 3) + 1
+        dimVal = `${refDate.getFullYear()}-Q${q}`
+      } else if (granularity === 'month') {
+        dimVal = refDate.toISOString().slice(0, 7)
+      } else {
+        dimVal = refDate.toISOString().slice(0, 10)
+      }
+    } else {
+      dimVal = '—'
+    }
+
+    let dimVal2 = null
+    if (groupBy2) {
+      if (groupBy2 === 'source' || groupBy2 === 'ai_source') dimVal2 = creditedPlatform
+      else if (groupBy2 === 'channel') dimVal2 = 'AI Search'
+      else if (groupBy2 === 'conversion_type') dimVal2 = conv.conversion_type || 'untyped'
+      else if (groupBy2 === 'country') dimVal2 = conv.country || 'unknown'
+      else if (groupBy2 === 'device') dimVal2 = conv.device_type || 'unknown'
+      else if (groupBy2 === 'browser') dimVal2 = conv.browser_name || 'unknown'
+      else if (groupBy2 === 'provider') dimVal2 = conv.provider || 'unknown'
+      else if (groupBy2 === 'attribution_status') dimVal2 = conv.attribution_status || 'unknown'
+      else if (groupBy2 === 'stitching_method') dimVal2 = conv.stitching_method || 'unknown'
+      else if (groupBy2 === 'date') {
+        const refDate = new Date(attributeBy === 'first_seen_date' && visitorPvs[0] ? visitorPvs[0].timestamp : conv.timestamp)
+        if (granularity === 'quarter') {
+          const q = Math.floor(refDate.getMonth() / 3) + 1
+          dimVal2 = `${refDate.getFullYear()}-Q${q}`
+        } else if (granularity === 'month') {
+          dimVal2 = refDate.toISOString().slice(0, 7)
+        } else {
+          dimVal2 = refDate.toISOString().slice(0, 10)
+        }
+      } else {
+        dimVal2 = '—'
+      }
+    }
+
+    const groupKey = groupBy2 ? `${dimVal}||${dimVal2}` : dimVal
+    if (!aggregated[groupKey]) {
+      aggregated[groupKey] = { dim_value: dimVal, dim_value2: dimVal2, conversions: 0, revenue: 0 }
+    }
+    aggregated[groupKey].conversions += 1
+    aggregated[groupKey].revenue += conv.conversion_value
+  }
+
+  // Format results to match expected flexible report schema
+  const results = Object.values(aggregated).map(g => {
+    const item = {
+      dim_value: g.dim_value,
+      ...(groupBy2 ? { dim_value2: g.dim_value2 } : {}),
+      revenue: parseFloat(g.revenue.toFixed(2)),
+      conversions: g.conversions
+    }
+    // Also inject specific metric key to match getFlexibleReport's custom keys
+    if (metric !== 'revenue' && metric !== 'conversions') {
+      item[metric] = metric === 'avg_conversion_value'
+        ? g.conversions > 0 ? parseFloat((g.revenue / g.conversions).toFixed(2)) : 0
+        : g.conversions
+    }
+    return item
+  })
+
+  return results.sort((a, b) => b.revenue - a.revenue)
+}
+
+async function aiPlatformAttribution(siteId, dateFrom, dateTo) {
+  let windowDays = 30
+  try {
+    const supabase = getSupabase()
+    const { data } = await supabase
+      .from('sites')
+      .select('attribution_window_days')
+      .eq('id', siteId)
+      .single()
+    if (data?.attribution_window_days) {
+      windowDays = data.attribution_window_days
+    }
+  } catch (err) {
+    console.error('[aiPlatformAttribution] failed to fetch site window:', err)
+  }
+
+  const results = await getAiPlatformAttributionLive({
+    siteId,
+    dateFrom,
+    dateTo,
+    groupBy: 'source',
+    metric: 'revenue',
+    attributionWindow: String(windowDays)
+  })
+
+  return results.map(r => ({
+    source: r.dim_value,
+    conversions: r.conversions,
+    revenue: r.revenue
   }))
 }
 
@@ -785,11 +1090,25 @@ export async function getAttributionExplanation(siteId, model, distinctId) {
       break
     }
     case 'ai_platforms': {
-      explanation.attributed_to = { source: aiSrc || 'unknown', medium: '—', campaign: null }
-      explanation.reason = aiSrc
-        ? 'AI platform detected from referrer at conversion time'
-        : 'No AI source detected — attribution may be incomplete'
-      explanation.fallback = !aiSrc
+      const windowDays = 30
+      const match = selectAiTouchForConversion(touchpoints, conversion, windowDays)
+
+      if (match) {
+        explanation.attributed_to = {
+          source: match.platform,
+          medium: '—',
+          campaign: null,
+          type: match.type
+        }
+        explanation.reason = match.type === 'journey_touchpoint'
+          ? `Most recent AI platform touchpoint in journey: ${match.platform} (pageview)`
+          : `AI platform detected on the conversion event itself (fallback)`
+        explanation.fallback = false
+      } else {
+        explanation.attributed_to = { source: 'unknown', medium: '—', campaign: null }
+        explanation.reason = 'No AI platform touchpoint found in journey or at conversion time'
+        explanation.fallback = true
+      }
       break
     }
     case 'linear':
@@ -1269,6 +1588,28 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     const results = await getMultiTouchAttributionLive({
       siteId,
       model,
+      dateFrom,
+      dateTo,
+      groupBy,
+      metric,
+      filters,
+      groupBy2,
+      granularity,
+      attributionWindow,
+      attributeBy
+    })
+    const isTruncated = results.length >= 50000
+    const returnValue = isTruncated
+      ? { results, truncated: true, truncated_at: 50000 }
+      : results
+
+    cache.set(key, returnValue)
+    return returnValue
+  }
+
+  if (model === 'ai_platforms') {
+    const results = await getAiPlatformAttributionLive({
+      siteId,
       dateFrom,
       dateTo,
       groupBy,

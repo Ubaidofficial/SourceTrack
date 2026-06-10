@@ -126,10 +126,12 @@ export async function track(req, res) {
     }
 
     const enriched = enrich(req)
+    const clientTimestamp = req.body?.timestamp ? sanitizeClientTimestamp(req.body.timestamp) : null
 
     ph.capture({
       distinctId: req.body.anonymous_id || uuidv4(),
       event: req.body.event || '$pageview',
+      timestamp: clientTimestamp ? new Date(clientTimestamp) : undefined,
       properties: {
         site_id: req.site.id,
         anonymous_id: req.body.anonymous_id,

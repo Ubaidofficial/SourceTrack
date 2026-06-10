@@ -40,7 +40,7 @@ const MODELS = [
   { key: 'time_decay',             label: 'Time Decay (7-day half-life)' },
   { key: 'u_shaped',               label: 'U-Shaped (40/20/40)' },
   { key: 'w_shaped',               label: 'W-Shaped (30/30/30/10)' },
-  { key: 'ai_platforms',           label: 'AI conversion source' },
+  { key: 'ai_platforms',           label: 'AI journey influence' },
 ]
 
 const DIMENSIONS = [

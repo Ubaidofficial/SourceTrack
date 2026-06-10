@@ -46,6 +46,98 @@ export function isSameDomainReferrer(referrer, pageUrl) {
   return refHost.endsWith('.' + pageHost) || pageHost.endsWith('.' + refHost)
 }
 
+export const AI_DOMAINS_MAP = {
+  'chatgpt.com': 'ChatGPT',
+  'chat.openai.com': 'ChatGPT',
+  'openai.com': 'ChatGPT',
+  'claude.ai': 'Claude',
+  'anthropic.com': 'Claude',
+  'perplexity.ai': 'Perplexity',
+  'gemini.google.com': 'Gemini',
+  'bard.google.com': 'Gemini',
+  'aistudio.google.com': 'Gemini',
+  'grok.com': 'Grok',
+  'grok.x.com': 'Grok',
+  'deepseek.com': 'DeepSeek',
+  'copilot.microsoft.com': 'Copilot',
+  'poe.com': 'Poe',
+  'you.com': 'You.com',
+  'phind.com': 'Phind',
+  'kagi.com': 'Kagi',
+  'meta.ai': 'Meta AI',
+  'chat.mistral.ai': 'Mistral',
+  'mistral.ai': 'Mistral',
+  'character.ai': 'Character.ai',
+  'pi.ai': 'Pi',
+  'inflection.ai': 'Inflection AI'
+}
+
+export const AI_UTM_SOURCES_MAP = {
+  'chatgpt': 'ChatGPT',
+  'openai': 'ChatGPT',
+  'claude': 'Claude',
+  'anthropic': 'Claude',
+  'perplexity': 'Perplexity',
+  'gemini': 'Gemini',
+  'bard': 'Gemini',
+  'grok': 'Grok',
+  'xai': 'Grok',
+  'copilot': 'Copilot',
+  'deepseek': 'DeepSeek',
+  'you': 'You.com',
+  'phind': 'Phind',
+  'mistral': 'Mistral',
+  'poe': 'Poe',
+  'kagi': 'Kagi'
+}
+
+export function detectAiPlatformFromEvent(props = {}) {
+  let ref = String(props.referrer || '').toLowerCase().trim()
+  if (ref && isSameDomainReferrer(ref, props.page_url)) {
+    ref = ''
+  }
+
+  // 1. Check properties.ai_source or props.ai_source
+  const aiSource = String(props.ai_source || '').trim()
+  if (aiSource) return aiSource
+
+  // 2. Check utm_source / source / derived_source
+  const utmSource = String(props.utm_source || props.source || props.derived_source || '').toLowerCase().trim()
+  if (utmSource && AI_UTM_SOURCES_MAP[utmSource]) {
+    return AI_UTM_SOURCES_MAP[utmSource]
+  }
+
+  // 3. Check referrer
+  if (ref) {
+    try {
+      let refUrl = ref
+      if (!refUrl.includes('://')) refUrl = 'https://' + refUrl
+      const host = new URL(refUrl).hostname.replace(/^www\./i, '').toLowerCase() || ''
+      if (host === 'bing.com' && refUrl.indexOf('/chat') > -1) return 'Copilot'
+      if (host === 'x.com' && refUrl.indexOf('/i/grok') > -1) return 'Grok'
+
+      for (const [domain, name] of Object.entries(AI_DOMAINS_MAP)) {
+        if (host === domain || host.endsWith('.' + domain)) {
+          return name
+        }
+      }
+    } catch (_) {}
+  }
+
+  // 4. Check referrer_domain
+  const refDom = String(props.referrer_domain || '').toLowerCase().trim()
+  if (refDom) {
+    const host = refDom.replace(/^www\./i, '')
+    for (const [domain, name] of Object.entries(AI_DOMAINS_MAP)) {
+      if (host === domain || host.endsWith('.' + domain)) {
+        return name
+      }
+    }
+  }
+
+  return null
+}
+
 export function channelFromEvent(props = {}) {
   const medium  = String(props.utm_medium  || props.medium  || '').toLowerCase().trim()
   const source  = String(props.utm_source  || props.source  || props.derived_source || '').toLowerCase().trim()
@@ -67,8 +159,7 @@ export function channelFromEvent(props = {}) {
   }
 
   // 1. AI Search — explicit ai_source tag or referrer from known AI domain
-  if (aiSource) return 'AI Search'
-  if (AI_REFERRER_DOMAINS.some(d => ref.includes(d))) return 'AI Search'
+  if (detectAiPlatformFromEvent(props)) return 'AI Search'
 
   // 2. Paid Search
   const paidSearchMediums = ['cpc', 'ppc', 'paid', 'paid_search', 'paidsearch', 'sem']

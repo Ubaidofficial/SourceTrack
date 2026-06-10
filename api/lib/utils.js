@@ -60,6 +60,14 @@ export function sanitizeClientTimestamp(value) {
   if (value.length > 40) return null
   const d = new Date(value)
   if (isNaN(d.getTime())) return null
+
+  // Security/Abuse Protection: Block timestamp spoofing that pollutes reports.
+  // Must be within 90 days in the past and no more than 1 hour in the future (clock skew).
+  const time = d.getTime()
+  const now = Date.now()
+  if (time > now + 3600 * 1000) return null
+  if (time < now - 90 * 24 * 3600 * 1000) return null
+
   return d.toISOString()
 }
 
