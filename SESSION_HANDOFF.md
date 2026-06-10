@@ -1,10 +1,35 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 133V — Abuse / Rate-Limit / Anti-Spam Review. Mapped and audited rate limiting, bot/crawler filtering, webhook signature and idempotency verification, and onboarding spam/abuse guards; answered 20 pre-beta audit questions; created docs/abuse_rate_limit_spam_audit.md and updated runbooks.
+> **Handoff:** Session 133W — Customer-Facing Status / Incident Communication Plan. Audited status-page reality, customer support entry points, P0/P1/P2 severities, notification boundaries (P0 30-min threshold), target contact lists (read-only queries & Stripe), templates, wording disclaimers, console checks, and runbooks; created docs/customer_incident_communication_plan.md.
 >
-> **Next Task:** Session 133W — Review and queue subsequent pre-beta items.
+> **Next Task:** Session 134 — Queue subsequent pre-beta items.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 133W — Customer-Facing Status / Incident Communication Plan
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+
+1. **Incident & Outage Customer Communication Plan:**
+   - Audited the status-page reality, support entry points, and severity classifications.
+   - Answered all 20 required pre-beta incident communication audit questions.
+   - Established manual target contact list generation guidelines using read-only sources (Supabase/Stripe).
+   - Created detailed email templates for dashboard/API outages, ingestion delays, webhook delays, billing issues, and transactional email delays.
+   - Enforced strict wording disclaimers (no SLAs, no compensation, no 24/7 support promises).
+   - Created [customer_incident_communication_plan.md](file:///Users/ubaid/Desktop/trackiq/docs/customer_incident_communication_plan.md) mapping all procedures.
+2. **Runbook & Project Setup Updates:**
+   - Updated [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md) to reference the new plan.
+   - Appended Session 133W to [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md).
+   - Updated [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md) and [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md).
+
+### Files changed
+- [docs/customer_incident_communication_plan.md](file:///Users/ubaid/Desktop/trackiq/docs/customer_incident_communication_plan.md) [NEW]
+- [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md)
+- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
+- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
+- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
 
 ## Session 133V — Abuse / Rate-Limit / Anti-Spam Review
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)

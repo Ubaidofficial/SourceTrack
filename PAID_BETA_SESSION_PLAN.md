@@ -330,3 +330,17 @@ The session order was re-prioritized to address the **Attribution and Tracking T
     *   [x] Formulate answers to all 20 pre-beta audit questionnaire items.
     *   [x] Create `docs/abuse_rate_limit_spam_audit.md` and update runbooks.
 *   **Constraints:** Audit-only. No backend rate limiter, trigger, database, or API code modifications deployed.
+
+---
+
+## Session 133W — Customer-Facing Status / Incident Communication Plan [COMPLETE]
+
+*   **Goal:** Audit and document SourceTrack’s customer-facing incident communication process before paid beta.
+*   **Objectives:**
+    *   [x] Formulate answers to all 20 pre-beta status/incident communication audit questions.
+    *   [x] Document manual email update guidelines and the P0 30-minute notification boundary.
+    *   [x] Define customer contact list construction using read-only sources (Supabase/Stripe).
+    *   [x] Establish templates for dashboard outages, ingestion delays, webhook delays, billing issues, and transactional email delays.
+    *   [x] Establish strict wording boundaries (no SLAs, no compensation, no 24/7 support promises).
+    *   [x] Create `docs/customer_incident_communication_plan.md` and update runbooks.
+*   **Constraints:** Audit/documentation only. No real emails sent, no dashboard banner, and no status-page product added.

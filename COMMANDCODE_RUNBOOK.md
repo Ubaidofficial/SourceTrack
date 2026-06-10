@@ -419,7 +419,8 @@ Before starting production mail operations, ensure the sending domain is fully v
 ### 3. Incident Triage & Mitigation
 - **P0 Outages:** If the dashboard or API is completely offline, verify credentials/env variables in Railway and restart the service. If it is a recent deploy bug, perform an immediate rollback.
 - **Railway Rollback:** Select the affected service, click on the last known stable deploy container, and click the **Rollback** button.
-- **Customer Notifications:** If a P0 outage exceeds 30 minutes, draft a simple status email to active users informing them of the downtime without making SLA or compensation promises.
+- **Customer Notifications:** If a P0 outage exceeds 30 minutes, follow the manual notification process and templates documented in [customer_incident_communication_plan.md](file:///Users/ubaid/Desktop/trackiq/docs/customer_incident_communication_plan.md).
+- **Target Audience Queries:** Retrieve customer contact lists via read-only SQL queries or Stripe customer lists as specified in the plan. Never run mutating SQL or broad data exports to construct notification targets.
 
 ---
 
