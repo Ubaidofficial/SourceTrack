@@ -344,3 +344,21 @@ The session order was re-prioritized to address the **Attribution and Tracking T
     *   [x] Establish strict wording boundaries (no SLAs, no compensation, no 24/7 support promises).
     *   [x] Create `docs/customer_incident_communication_plan.md` and update runbooks.
 *   **Constraints:** Audit/documentation only. No real emails sent, no dashboard banner, and no status-page product added.
+
+---
+
+## Session 134 — Paid Beta Go/No-Go Master Audit [COMPLETE]
+
+*   **Goal:** Decide whether SourceTrack/TrackIQ is ready for a small controlled paid beta, verifying all 133B–133W readiness docs against the actual repo and code rather than trusting prior summaries.
+*   **Verdict:** **CONDITIONAL GO** — safe for a tiny (3–5, ceiling ~10) hand-picked, single-instance, manually-supported paid beta once P0 conditions are met. Not ready for broad self-serve, horizontal scaling, high-volume ecommerce, large Shopify stores, or compliance-sensitive customers.
+*   **Objectives:**
+    *   [x] Verify build/QA: `node --check`, `git diff --check`, `qa:static`, dashboard vite build — all green.
+    *   [x] Verify code claims directly: pageview cap enforced via `checkTierLimit` on track/collect/conversion; feature gates return 402; pricing copy matches `plan-features.js`; rate limits in-memory single-instance; webhook signatures timing-safe.
+    *   [x] Identify P0 blockers: Stripe test-mode evidence, provider-console separation, Supabase PITR, prod env secrets, beta legal disclosure.
+    *   [x] Identify P1 blockers: exception monitoring, onboarding 500→400, email suppression, PostHog bulk erase on account delete, Stripe webhook rate limiter.
+    *   [x] Build readiness matrix across 20 areas with repo-proven vs external-verification split.
+    *   [x] Deep review: 17-workflow readiness matrix, functional-test reality check, safe workflow test plan, principal-engineer code review, attribution-engine review, UX simplicity review, Top-10 code risks, Top-10 product risks.
+    *   [x] Explicit verdicts: Master CONDITIONAL GO; Attribution CONDITIONAL; UX YES; Code quality Messy-but-manageable.
+    *   [x] Recommend next 5 sessions (135–139), Phase C/D blocked until P0 closed.
+    *   [x] Create `docs/paid_beta_go_no_go_master_audit.md` (18 sections).
+*   **Constraints:** Audit-only. No app/backend feature code changed. No production data mutated, no production secrets, no production load testing, `ALLOW_PRODUCTION_QA_MUTATION` not set.

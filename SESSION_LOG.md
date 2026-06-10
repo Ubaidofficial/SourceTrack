@@ -1632,3 +1632,37 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 ### 2. Runbook & Documentation Additions
 - Created `docs/abuse_rate_limit_spam_audit.md` mapping all endpoints/flows, audit answers, and risk mitigation profiles.
 - Updated `COMMANDCODE_RUNBOOK.md` with an "Abuse, Rate-Limiting, & Anti-Spam Operations" section.
+
+---
+
+## Session 134 — Paid Beta Go/No-Go Master Audit
+
+**Date:** 2026-06-10
+**Branch:** `main`
+**Build:** ✅ passing (node --check all routes/lib/mjs, git diff --check clean, qa:static PASS, dashboard vite build, overclaim grep clean)
+**Verdict:** **CONDITIONAL GO** (tiny 3–5 customer, single-instance, manually-supported paid beta).
+
+### 1. Independent Verification (prior summaries treated as untrusted)
+- Re-verified 133B–133W readiness docs against actual repo/code.
+- Confirmed pageview cap **is** enforced (`checkTierLimit` mounted on /api/track, /api/collect, /api/conversion); feature gates return 402 via `requireFeature`; `Pricing.jsx` numbers match `plan-features.js` (5k/30, 50k/150, 150k/750, 500k+/2,500).
+- Confirmed rate limits are in-memory single-instance (`api/middleware/rate-limit.js`), webhook signatures timing-safe, Stripe webhook mounted before express.json with raw body.
+- Found referenced standalone docs `ci_/deployment_/observability_runbook.md` do **not** exist — content lives in `COMMANDCODE_RUNBOOK.md` (naming drift only).
+
+### 2. Blockers Classified
+- **P0 (before any paid customer):** Stripe test-mode checkout/webhook evidence; provider-console staging/prod separation; Supabase backups+PITR; prod env secrets + ST_IP_RESOLVER_MODE=railway; beta legal disclosure.
+- **P1 (before ~10 customers):** exception monitoring (no Sentry); onboarding 500→400; report-digest suppression/unsubscribe; account-delete does not bulk-erase PostHog; Stripe webhook has no rate limiter.
+- **P2:** conversion cap + sites/seats limits defined but not enforced backend; in-memory limits; CI doesn't run attribution/smoke/edge harnesses; no status page.
+
+### 3. Deep Code / Workflow / Attribution Review (expanded scope)
+- **Feature workflow matrix (17 workflows):** signup→billing→privacy→admin each given a beta verdict with file:line evidence.
+- **Functional test reality:** no automated test framework (no jest/vitest/playwright); the QA `scripts/*.mjs` harnesses are the de-facto suite but **not run by CI** (CI = node --check + qa:static + build only). Attribution regressions can ship green.
+- **Attribution engine (`attribution-engine.js`, 2,892 ln):** 9 models verified; `esc(siteId)` disciplined; **date params reach HogQL validated only at the route layer (isNaN), not esc()'d** — fragile. Multi-touch models are nightly-batch, not real-time.
+- **Code review:** clean ESM, strong security hygiene (HMAC log hashing, timing-safe webhooks, 23 triple-guarded routes, 1 TODO); debt = 2,892-line monolith, 5× duplicated group_by conditional in attribution.js, 1,500–2,700-line dashboard pages, 1.7 MB unsplit bundle.
+- **New finding:** `/api/jobs/attribution/status` (`job-status.js`) is authed but NOT tenant-scoped (`select('*')` on job_runs) — P2 boundary inconsistency.
+
+### 4. Verdicts
+- Master: CONDITIONAL GO. Attribution beta-safe: CONDITIONAL. UX beta-safe: YES. Code quality: Messy but manageable.
+
+### 5. Output
+- Created `docs/paid_beta_go_no_go_master_audit.md` (18 sections: verdict, P0/P1/P2 blockers, 20-area readiness matrix, repo-proven vs external split, harsh Project Orchestra review, 17-workflow matrix, functional-test reality, safe test plan, principal-engineer review, attribution review, UX review, Top-10 code + Top-10 product risks, explicit verdicts, next 5 sessions 135–139).
+- No app/backend feature code changed. No production mutation, secrets, or load testing.
