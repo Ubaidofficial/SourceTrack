@@ -1,5 +1,7 @@
 # SourceTrack Paid Beta Session Plan
 
+> **AUTHORITATIVE ROADMAP:** As of Session 138B, [`docs/development_workflow_master_plan.md`](docs/development_workflow_master_plan.md) is the authoritative engineering control roadmap for workflow, QA, release discipline, code quality, and paid-beta operational blockers. Where session ordering or gates here conflict with that document, the master plan wins. This file is retained for historical session detail.
+
 ## 1. Revised Session Order
 
 * **Session 102.1:** Snippet Installation Verification Assistant

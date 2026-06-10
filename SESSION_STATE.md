@@ -1,5 +1,9 @@
-Session: 138A — Safe Non-Mutating QA + Top-Priority Test Backlog
-Last Completed: Ran all safe non-mutating QA unit and integration tests (attribution math, GSC token/CTR math, timezone date bucketing, path exclusions, billing helper checks) and verified they all pass. Classified all 33 repository scripts by safety. Created docs/safe_qa_test_backlog.md and documented the gating conclusion.
+Session: 138B — Development Workflow Master Plan
+Last Completed: Verified repo ground truth and created docs/development_workflow_master_plan.md — the authoritative engineering control document (verdict, readiness grade, P0/P1/P2 matrix, ordered roadmap 138B→144H, AI-agent rules, release checklists, strategy chapters, refactor backlog, production-ready acceptance criteria). Planning-only; no app/backend code changed. Awaiting review before commit.
+Control Doc: docs/development_workflow_master_plan.md is now the source of truth for session ordering and gates.
+
+Prior Session: 138A — Safe Non-Mutating QA + Top-Priority Test Backlog
+Last Completed (138A): Ran all safe non-mutating QA unit and integration tests (attribution math, GSC token/CTR math, timezone date bucketing, path exclusions, billing helper checks) and verified they all pass. Classified all 33 repository scripts by safety. Created docs/safe_qa_test_backlog.md and documented the gating conclusion.
 P0-3 STATUS: REMAINS OPEN — backups and PITR verified disabled in console due to Free tier plan limitation.
 🚩 HEADLINE FINDING F6 (P0 staging blocker): No separate staging Supabase project exists. The local .env remains unsafe (wired to production DB zxjj…umvh). Session 135B remains BLOCKED until a staging database is created and wired.
 Prior findings still open: 135 F1 stale test prices; 136 F5 local .env points at production DB; 135 F3 pv_limit metadata; 135 F4 request-body redirect URLs.
