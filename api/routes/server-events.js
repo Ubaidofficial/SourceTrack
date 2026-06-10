@@ -7,10 +7,11 @@ import { ph } from '../lib/posthog.js'
 import { getSupabase } from '../lib/supabase.js'
 import { requireFeature } from '../lib/plan-features.js'
 import { storeIdentityLink, resolveAnonymousId } from '../lib/identity-links.js'
+import { trackGlobalIpLimit } from '../middleware/rate-limit.js'
 
 const router = Router()
 
-router.post('/event', async (req, res) => {
+router.post('/event', trackGlobalIpLimit, async (req, res) => {
   try {
     const authHeader = req.headers.authorization
     if (!authHeader || !authHeader.startsWith('Bearer ')) {

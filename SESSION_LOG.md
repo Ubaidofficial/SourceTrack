@@ -5,6 +5,9 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 133F | 2026-06-10 | `main` | Security Audit — Audited SourceTrack / TrackIQ for paid-beta security risks. Implemented rate limits on missing ingestion routes and gated inactive/archived plan access. | ✅ | No |
+| 133E | 2026-06-10 | `main` | Billing and Limits Enforcement Alignment — Dropped sites.plan constraint and recreated it supporting scale, and gated Google Search Console/SEO revenue routes by feature plan. | ✅ | No |
+| 133D | 2026-06-10 | `main` | Production Observability Audit — Audited logging, added process-level unhandled exception/rejection listeners, and expanded the observability runbook. | ✅ | No |
 | 133C | 2026-06-10 | `main` | Real Deployment Checklist + Rollback Runbook — Created production deployment checklist and emergency rollback runbook, verified env variables, and updated session log and handoff. | ✅ | No |
 | 133B | 2026-06-10 | `main` | Lightweight CI Regression Pipeline — Configured static & build-only GitHub Actions workflow checking syntax, committed whitespace, static QA, and dashboard compilation; documented boundaries. | ✅ | No |
 | 133A.0 | 2026-06-10 | `main` | Minimum Production Safety Guardrails — Added env-guard rails in `scripts/qa-guard.js` to block mutating QA scripts on production; allowed staging bypass for dashboard canonical checks. | ✅ | No |
@@ -1300,6 +1303,32 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 - `api/routes/pixel.js`
 - `api/routes/billing.js`
 - `dashboard/src/lib/billing.js`
+- `PAID_BETA_SESSION_PLAN.md`
+- `SESSION_STATE.md`
+- `SESSION_LOG.md`
+- `SESSION_HANDOFF.md`
+
+## Session 133F — Security Audit
+
+**Date:** 2026-06-10
+**Branch:** `main`
+**Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
+
+### 1. Ingestion Rate Limiting
+- Applied `defaultLimit` to `/api/conversion/offline` in `api/index.js`.
+- Applied `trackGlobalIpLimit` (API/server-safe, up to 10k req/min, resolves proxy IPs securely) to `/api/server/event` in `api/routes/server-events.js`.
+- Applied layered telemetry limiters (`trackVisitorLimit`, `trackIpLimit`, `trackSiteLimit`, `trackGlobalIpLimit`) to `/api/analytics/collect` in `api/routes/analytics.js`.
+- Applied `trackLimit` to `/api/webhooks/incoming/:api_key` in `api/index.js`.
+
+### 2. Plan Status Gating
+- Updated `/api/analytics/collect` to select `plan` and return clean `402` JSON error if the site plan is `'inactive'` or `'archived'`.
+- Updated `/api/webhooks/incoming/:api_key` (both POST receiver and GET test handler) to select `plan` and return clean `402` JSON if `'inactive'` or `'archived'`.
+
+### Files changed
+- `api/index.js`
+- `api/routes/server-events.js`
+- `api/routes/analytics.js`
+- `api/routes/webhook-incoming.js`
 - `PAID_BETA_SESSION_PLAN.md`
 - `SESSION_STATE.md`
 - `SESSION_LOG.md`

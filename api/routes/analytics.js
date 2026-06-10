@@ -5,6 +5,12 @@ import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { getSupabase } from '../lib/supabase.js'
 import { requireFeature } from '../lib/plan-features.js'
+import {
+  trackVisitorLimit,
+  trackIpLimit,
+  trackSiteLimit,
+  trackGlobalIpLimit
+} from '../middleware/rate-limit.js'
 
 const router = express.Router()
 
@@ -58,18 +64,30 @@ function applyPageviewFilters(query, filters) {
   return query
 }
 
-router.post('/collect', async (req, res) => {
-  try {
-    const { site_key, url, referrer, utm_source, utm_medium, utm_campaign, device, browser, session_id, duration_seconds, entry_page, exit_page, event_type, event_name, properties } = req.body
-    if (!site_key || !url) return res.status(400).json({ error: 'site_key and url required' })
+router.post('/collect',
+  trackVisitorLimit,
+  trackIpLimit,
+  trackSiteLimit,
+  trackGlobalIpLimit,
+  async (req, res) => {
+    try {
+      const { site_key, url, referrer, utm_source, utm_medium, utm_campaign, device, browser, session_id, duration_seconds, entry_page, exit_page, event_type, event_name, properties } = req.body
+      if (!site_key || !url) return res.status(400).json({ error: 'site_key and url required' })
 
-    // Bot filter — silent drop, 200 so crawlers don't retry
-    const ua = req.headers['user-agent'] || ''
-    if (!ua || BOT_UA_PATTERN.test(ua)) return res.json({ ok: true })
+      // Bot filter — silent drop, 200 so crawlers don't retry
+      const ua = req.headers['user-agent'] || ''
+      if (!ua || BOT_UA_PATTERN.test(ua)) return res.json({ ok: true })
 
-    const supabase = getSupabase()
-    const { data: site } = await supabase.from('sites').select('id').eq('site_key', site_key).single()
-    if (!site) return res.status(404).json({ error: 'Site not found' })
+      const supabase = getSupabase()
+      const { data: site } = await supabase.from('sites').select('id, plan').eq('site_key', site_key).single()
+      if (!site) return res.status(404).json({ error: 'Site not found' })
+
+      if (site.plan === 'inactive' || site.plan === 'archived') {
+        const msg = site.plan === 'archived'
+          ? 'Site archived after 60 days of inactivity. Reactivate from your dashboard.'
+          : 'Subscription inactive'
+        return res.status(402).json({ success: false, data: null, error: msg })
+      }
 
     // Handle outbound clicks and custom events
     if (event_type === 'outbound_click' || event_type === 'custom') {

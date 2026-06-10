@@ -1,10 +1,35 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 133E — Billing and Limits Enforcement Alignment. Audited pricing plans and enforced backend gates for Google Search Console/SEO revenue routes. Dropped sites.plan constraint and recreated it supporting scale and business plans, updated schema.sql and SUPABASE_SCHEMA.md. Avoided undefined keys in webhook pricing map. Added inactive site check to tracking pixel. Verified all checks pass.
+> **Handoff:** Session 133F — Security Audit. Audited SourceTrack / TrackIQ for paid-beta security risks. Implemented rate limits on missing ingestion routes (/api/conversion/offline, /api/server/event, /api/analytics/collect, and /api/webhooks/incoming) and gated inactive/archived plan access on /api/analytics/collect and /api/webhooks/incoming. Verified all checks pass.
 >
 > **Next Task:** Move to Phase C (Dashboard saved widget cards).
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 133F — Security Audit
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
+
+### Completed
+
+1. **Ingestion Rate Limiting**
+   - Applied `defaultLimit` to `/api/conversion/offline` in `api/index.js`.
+   - Applied `trackGlobalIpLimit` (API/server-safe, up to 10k req/min, resolves proxy IPs securely) to `/api/server/event` in `api/routes/server-events.js`.
+   - Applied layered telemetry limiters (`trackVisitorLimit`, `trackIpLimit`, `trackSiteLimit`, `trackGlobalIpLimit`) to `/api/analytics/collect` in `api/routes/analytics.js`.
+   - Applied `trackLimit` to `/api/webhooks/incoming/:api_key` in `api/index.js`.
+2. **Plan Status Gating**
+   - Updated `/api/analytics/collect` to select `plan` and return clean `402` JSON error if the site plan is `'inactive'` or `'archived'`.
+   - Updated `/api/webhooks/incoming/:api_key` (both POST receiver and GET test handler) to select `plan` and return clean `402` JSON if `'inactive'` or `'archived'`.
+
+### Files changed
+- [api/index.js](file:///Users/ubaid/Desktop/trackiq/api/index.js)
+- [api/routes/server-events.js](file:///Users/ubaid/Desktop/trackiq/api/routes/server-events.js)
+- [api/routes/analytics.js](file:///Users/ubaid/Desktop/trackiq/api/routes/analytics.js)
+- [api/routes/webhook-incoming.js](file:///Users/ubaid/Desktop/trackiq/api/routes/webhook-incoming.js)
+- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
+- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
+- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+
 
 ## Session 133E — Billing and Limits Enforcement Alignment
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)

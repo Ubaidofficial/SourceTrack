@@ -71,7 +71,7 @@ router.post('/:api_key', async (req, res) => {
     // Validate API key → get site
     let { data: site } = await supabase
       .from('sites')
-      .select('id, site_key, name')
+      .select('id, site_key, name, plan')
       .eq('api_key_hash', keyHash)
       .maybeSingle()
 
@@ -79,13 +79,20 @@ router.post('/:api_key', async (req, res) => {
       // Fallback check for plaintext api_key
       const { data: fallbackSite } = await supabase
         .from('sites')
-        .select('id, site_key, name')
+        .select('id, site_key, name, plan')
         .eq('api_key', api_key)
         .maybeSingle()
       site = fallbackSite
     }
 
     if (!site) return res.status(401).json({ error: 'Invalid API key' })
+
+    if (site.plan === 'inactive' || site.plan === 'archived') {
+      const msg = site.plan === 'archived'
+        ? 'Site archived after 60 days of inactivity. Reactivate from your dashboard.'
+        : 'Subscription inactive'
+      return res.status(402).json({ success: false, data: null, error: msg })
+    }
 
     const body = req.body || {}
     const fields = extractFields(body)
@@ -128,7 +135,7 @@ router.get('/test/:api_key', async (req, res) => {
     const keyHash = crypto.createHash('sha256').update(req.params.api_key).digest('hex')
     let { data: site } = await supabase
       .from('sites')
-      .select('id, name, site_key')
+      .select('id, name, site_key, plan')
       .eq('api_key_hash', keyHash)
       .maybeSingle()
 
@@ -136,13 +143,20 @@ router.get('/test/:api_key', async (req, res) => {
       // Fallback check for plaintext api_key
       const { data: fallbackSite } = await supabase
         .from('sites')
-        .select('id, name, site_key')
+        .select('id, name, site_key, plan')
         .eq('api_key', req.params.api_key)
         .maybeSingle()
       site = fallbackSite
     }
 
     if (!site) return res.status(401).json({ error: 'Invalid API key' })
+
+    if (site.plan === 'inactive' || site.plan === 'archived') {
+      const msg = site.plan === 'archived'
+        ? 'Site archived after 60 days of inactivity. Reactivate from your dashboard.'
+        : 'Subscription inactive'
+      return res.status(402).json({ success: false, data: null, error: msg })
+    }
     res.json({
       ok: true,
       site: site.name || site.site_key,

@@ -377,7 +377,7 @@ app.post('/api/conversion',
   detectAIPlatform,
   conversion
 )
-app.post('/api/conversion/offline', validateSiteKey, conversionOffline)
+app.post('/api/conversion/offline', defaultLimit, validateSiteKey, conversionOffline)
 app.get('/api/attribution', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, attribution)
 app.get('/api/attribution/explain', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, attributionExplain)
 app.get("/api/attribution/verdicts", requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, attributionVerdicts)
@@ -412,7 +412,7 @@ app.use('/api/jobs', requireUserAuth, jobStatusRouter)
 app.use('/api/live', requireUserAuth, validateSiteKey, requireSiteMembership, liveRouter)
 app.use("/api/analytics", analyticsRouter)
 app.use("/sp", proxyRouter)
-app.use("/api/webhooks/incoming", webhookIncomingRouter)
+app.use("/api/webhooks/incoming", trackLimit, webhookIncomingRouter)
 app.use("/api/webhooks", webhooksRouter)
 app.get('/api/sessions/overview', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, sessionsOverview)
 app.get('/api/sessions', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, visitorSessions)
