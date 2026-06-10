@@ -70,7 +70,7 @@ Important expected columns:
 - `site_key`
 - `owner_id`
 - `company_id`
-- `plan`
+- `plan` (CHECK constraint: 'free', 'trial', 'starter', 'growth', 'scale', 'business', 'inactive', 'archived')
 - `stripe_customer_id`
 - `onboarding_completed`
 - `onboarding_state`
@@ -82,6 +82,8 @@ Notes:
 - `site_key` is text after migration.
 - `company_id` links a site to a workspace/company.
 - `owner_id` remains useful for legacy fallback and ownership checks.
+- `plan` column CHECK constraint allows `'scale'` (canonical name) and legacy `'business'` (for backward compatibility).
+
 
 ## Workspaces
 

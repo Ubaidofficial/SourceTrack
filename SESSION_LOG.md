@@ -1268,3 +1268,39 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 - `SESSION_STATE.md`
 - `SESSION_LOG.md`
 - `SESSION_HANDOFF.md`
+
+## Session 133E — Billing and Limits Enforcement Alignment
+
+**Date:** 2026-06-10
+**Branch:** `main`
+**Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
+
+### 1. Database CHECK Constraint Migration
+- Created database migration `supabase/migrations/20260610120000_align_scale_plan.sql` to safely drop constraint on `sites.plan` (focusing specifically on CHECK constraints targeting the `plan` column of `sites` table) and recreate it supporting `'scale'` and legacy `'business'`.
+- Safe update query transitions existing `'business'` rows to `'scale'`.
+- Updated checked-in `supabase/schema.sql` and updated `SUPABASE_SCHEMA.md` documentation.
+
+### 2. Backend GSC & SEO Revenue Feature Gates
+- Implemented plan-feature gating middleware in `api/routes/google-search-console.js` for paid routes (`/auth-url`, `/properties`, `/select-property`, `/sync`), while intentionally leaving `/status` and `/disconnect` open for downgrade accessibility.
+- Integrated `requireFeature` plan features gating check on GET `/api/seo-revenue` data access endpoint.
+- Correctly returns `402` plan-required responses.
+
+### 3. Pixel Inactive/Archived Gates
+- Updated `/api/pixel` to select the `plan` column and return early if the site status is `'inactive'` or `'archived'`, remaining fail-open for monthly pageview limits as designed.
+
+### 4. Billing Webhook Price Normalization
+- Updated `getPriceMap()` in `api/routes/billing.js` to dynamically build mapping without undefined key insertions. Maps `STRIPE_PRICE_ID_SCALE` to `'scale'` and handles legacy price ID aliases cleanly.
+
+### Files changed
+- `supabase/migrations/20260610120000_align_scale_plan.sql`
+- `supabase/schema.sql`
+- `SUPABASE_SCHEMA.md`
+- `api/routes/google-search-console.js`
+- `api/routes/seo-revenue.js`
+- `api/routes/pixel.js`
+- `api/routes/billing.js`
+- `dashboard/src/lib/billing.js`
+- `PAID_BETA_SESSION_PLAN.md`
+- `SESSION_STATE.md`
+- `SESSION_LOG.md`
+- `SESSION_HANDOFF.md`

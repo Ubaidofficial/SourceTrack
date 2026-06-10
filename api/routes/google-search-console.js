@@ -13,6 +13,7 @@ import {
 import { requireUserAuth } from '../middleware/user-auth.js'
 import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import { normalizePath } from '../lib/url-normalization.js'
+import { requireFeature } from '../lib/plan-features.js'
 
 const router = express.Router()
 
@@ -171,8 +172,14 @@ router.get('/callback', async (req, res) => {
 // All routes below this require standard dashboard user auth, site key validation, and membership checks.
 router.use(requireUserAuth, validateSiteKey, requireSiteMembership)
 
+const gateGscFeature = (req, res, next) => {
+  const block = requireFeature(req.site?.plan, 'gsc_seo_revenue', 'Google Search Console')
+  if (block) return res.status(402).json(block)
+  next()
+}
+
 // 2. GET /auth-url: Get Google Consent Screen Redirect URL
-router.get('/auth-url', (req, res) => {
+router.get('/auth-url', gateGscFeature, (req, res) => {
   try {
     const siteKey = req.site.site_key
     const userId = req.user.id
@@ -218,7 +225,7 @@ router.get('/status', async (req, res) => {
 })
 
 // 4. GET /properties: Get verified properties for connection
-router.get('/properties', async (req, res) => {
+router.get('/properties', gateGscFeature, async (req, res) => {
   try {
     const siteKey = req.site.site_key
     const supabase = getSupabase()
@@ -244,7 +251,7 @@ router.get('/properties', async (req, res) => {
 })
 
 // 5. POST /select-property: Save selected GSC property URL
-router.post('/select-property', async (req, res) => {
+router.post('/select-property', gateGscFeature, async (req, res) => {
   const { property_url } = req.body
   const siteKey = req.site.site_key
 
@@ -335,7 +342,7 @@ router.post('/disconnect', async (req, res) => {
 })
 
 // 7. POST /sync: Trigger background synchronization (bounded daily performance rows)
-router.post('/sync', async (req, res) => {
+router.post('/sync', gateGscFeature, async (req, res) => {
   const siteKey = req.site.site_key
   const requestedDays = Number.parseInt(req.body.days, 10)
   const days = Math.max(1, Math.min(Number.isFinite(requestedDays) ? requestedDays : 30, 90))

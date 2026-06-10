@@ -20,15 +20,18 @@ const _seenStripeEvents = new NodeCache({ stdTTL: 86400, checkperiod: 3600 })
 // Legacy env vars STRIPE_PRICE_ID_PRO/AGENCY are still read but map to the
 // new canonical names (growth/business) via normalizePlan.
 function getPriceMap() {
-  return {
-    [process.env.STRIPE_PRICE_ID_STARTER]:  'starter',
-    [process.env.STRIPE_PRICE_ID_GROWTH]:   'growth',
-    [process.env.STRIPE_PRICE_ID_BUSINESS]: 'business',
-    // Legacy env vars — same values mapped to canonical names
-    [process.env.STRIPE_PRICE_ID_PRO]:      'growth',
-    [process.env.STRIPE_PRICE_ID_AGENCY]:   'business',
-    ...(process.env.STRIPE_PRICE_ID ? { [process.env.STRIPE_PRICE_ID]: 'growth' } : {}),
-  }
+  const map = {}
+  if (process.env.STRIPE_PRICE_ID_STARTER)  map[process.env.STRIPE_PRICE_ID_STARTER]  = 'starter'
+  if (process.env.STRIPE_PRICE_ID_GROWTH)   map[process.env.STRIPE_PRICE_ID_GROWTH]   = 'growth'
+  if (process.env.STRIPE_PRICE_ID_SCALE)    map[process.env.STRIPE_PRICE_ID_SCALE]    = 'scale'
+  if (process.env.STRIPE_PRICE_ID_BUSINESS) map[process.env.STRIPE_PRICE_ID_BUSINESS] = 'scale'
+
+  // Legacy env vars — preserved for backward compatibility
+  if (process.env.STRIPE_PRICE_ID_PRO)      map[process.env.STRIPE_PRICE_ID_PRO]      = 'growth'
+  if (process.env.STRIPE_PRICE_ID_AGENCY)   map[process.env.STRIPE_PRICE_ID_AGENCY]   = 'scale'
+  if (process.env.STRIPE_PRICE_ID)          map[process.env.STRIPE_PRICE_ID]          = 'growth'
+
+  return map
 }
 
 // Stripe price metadata may include `pv_limit` (e.g. "50000") so a single plan

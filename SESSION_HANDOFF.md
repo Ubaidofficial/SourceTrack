@@ -1,10 +1,39 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 133D — Production Observability Audit + Minimum Alerts Plan. Audited production observability, added process-level uncaughtException/unhandledRejection listeners to the API server, documented environment variable rules, and added a production observability & monitoring runbook covering logs, cron schedules, incident severity classifications, and known blind spots. Verified all checks pass.
+> **Handoff:** Session 133E — Billing and Limits Enforcement Alignment. Audited pricing plans and enforced backend gates for Google Search Console/SEO revenue routes. Dropped sites.plan constraint and recreated it supporting scale and business plans, updated schema.sql and SUPABASE_SCHEMA.md. Avoided undefined keys in webhook pricing map. Added inactive site check to tracking pixel. Verified all checks pass.
 >
 > **Next Task:** Move to Phase C (Dashboard saved widget cards).
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 133E — Billing and Limits Enforcement Alignment
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
+
+### Completed
+
+1. **Database CHECK Constraint Migration**
+   - Created database migration `supabase/migrations/20260610120000_align_scale_plan.sql` to safely drop the CHECK constraint on `sites.plan` specifically targeting the `plan` column of the `sites` table, and recreate it allowing both `'scale'` and legacy `'business'`.
+   - Safely updated existing `'business'` rows to `'scale'` in the database.
+   - Updated the inline CHECK constraint definition in `supabase/schema.sql` and documented it in `SUPABASE_SCHEMA.md`.
+2. **Backend GSC & SEO Revenue Feature Gates**
+   - Implemented plan-feature gating middleware in `api/routes/google-search-console.js` for paid routes (`/auth-url`, `/properties`, `/select-property`, `/sync`), while intentionally leaving `/status` and `/disconnect` open for downgrade accessibility.
+   - Added `requireFeature` plan feature gating check on GET `/api/seo-revenue` data access endpoint.
+   - Handled correctly returning 402 plan-required payloads.
+3. **Pixel Inactive/Archived Gates**
+   - Updated `/api/pixel` to select the `plan` column and return early if the site status is `'inactive'` or `'archived'`, remaining fail-open for monthly pageview limits as designed.
+4. **Billing Webhook Price Normalization**
+   - Updated `getPriceMap()` in `api/routes/billing.js` to dynamically build mapping without undefined key insertions. Maps `STRIPE_PRICE_ID_SCALE` to `'scale'` and legacy price ID aliases cleanly.
+
+### Files changed
+- [20260610120000_align_scale_plan.sql](file:///Users/ubaid/Desktop/trackiq/supabase/migrations/20260610120000_align_scale_plan.sql)
+- [schema.sql](file:///Users/ubaid/Desktop/trackiq/supabase/schema.sql)
+- [SUPABASE_SCHEMA.md](file:///Users/ubaid/Desktop/trackiq/SUPABASE_SCHEMA.md)
+- [api/routes/google-search-console.js](file:///Users/ubaid/Desktop/trackiq/api/routes/google-search-console.js)
+- [api/routes/seo-revenue.js](file:///Users/ubaid/Desktop/trackiq/api/routes/seo-revenue.js)
+- [api/routes/pixel.js](file:///Users/ubaid/Desktop/trackiq/api/routes/pixel.js)
+- [api/routes/billing.js](file:///Users/ubaid/Desktop/trackiq/api/routes/billing.js)
+- [dashboard/src/lib/billing.js](file:///Users/ubaid/Desktop/trackiq/dashboard/src/lib/billing.js)
+
 
 ## Session 133D — Production Observability Audit + Minimum Alerts Plan
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)

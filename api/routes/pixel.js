@@ -63,11 +63,17 @@ router.get('/', async (req, res) => {
     const supabase = getSupabase()
     const { data: site } = await supabase
       .from('sites')
-      .select('id, site_key')
+      .select('id, site_key, plan')
       .eq('site_key', siteKey)
       .maybeSingle()
 
     if (!site) return
+
+    // Ensure inactive/archived sites remain blocked. We do NOT check monthly pageview
+    // limits here (fail-open for email/telemetry data), but explicitly suspended sites are blocked.
+    if (site.plan === 'inactive' || site.plan === 'archived') {
+      return
+    }
 
     // Enrich
     const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || ''

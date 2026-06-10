@@ -28,6 +28,9 @@ export function getPlanLabel(plan) {
     starter: 'Starter',
     growth: 'Growth',
     scale: 'Scale',
+    business: 'Scale',
+    agency: 'Scale',
+    pro: 'Pro',
     inactive: 'Inactive',
     archived: 'Archived'
   }

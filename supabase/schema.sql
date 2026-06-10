@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS sites (
   owner_id uuid REFERENCES auth.users(id),
   name text NOT NULL,
   domain text,
-  plan text DEFAULT 'free' CHECK (plan IN ('free', 'trial', 'starter', 'growth', 'business', 'inactive', 'archived')),
+  plan text DEFAULT 'free' CHECK (plan IN ('free', 'trial', 'starter', 'growth', 'scale', 'business', 'inactive', 'archived')),
   pv_limit integer DEFAULT 5000,
   last_seen_at timestamptz,
   stripe_customer_id text,

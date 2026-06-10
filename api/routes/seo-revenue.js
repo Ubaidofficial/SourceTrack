@@ -3,11 +3,15 @@ import { getSupabase } from '../lib/supabase.js'
 import { queryHogQL } from '../lib/posthog.js'
 import { normalizePath } from '../lib/url-normalization.js'
 import { esc } from '../lib/utils.js'
+import { requireFeature } from '../lib/plan-features.js'
 
 const router = express.Router()
 
 // GET /api/seo-revenue: Generate Estimated SEO Revenue report
 router.get('/', async (req, res) => {
+  const block = requireFeature(req.site?.plan, 'gsc_seo_revenue', 'Google Search Console')
+  if (block) return res.status(402).json(block)
+
   const { from, to } = req.query
   const siteKey = req.site.site_key
   const siteId = req.site.id
