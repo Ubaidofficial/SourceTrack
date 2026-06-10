@@ -1,6 +1,6 @@
-Session: 133F Security Audit
-Last Completed: Audited SourceTrack / TrackIQ for paid-beta security risks. Implemented rate limiters on `/api/conversion/offline`, `/api/server/event`, `/api/analytics/collect`, and `/api/webhooks/incoming`. Gated `/api/analytics/collect` and `/api/webhooks/incoming` by site plan status to block inactive/archived plans.
-Next Task: Move to Phase C (Dashboard saved widget cards).
+Session: 133G — Data Deletion / Privacy Basics
+Last Completed: Audited and addressed data deletion and GDPR gaps. Restructured account deletion logic to prevent data loss in shared workspaces, prevented orphaning shared workspaces by admins, expanded visitor erasure to wipe `site_identity_links` records, created a privacy and data deletion map, and updated copy in settings, README, and developer docs to align with real capabilities.
+Next Task: Alignment on Phase C planning / dashboard widgets (not executed yet).
 Roadmap Queue:
 - Phase C (Dashboard saved widget cards)
 - Phase D (Campaigns AI Copilot)

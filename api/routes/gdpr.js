@@ -94,6 +94,31 @@ gdprRouter.delete('/visitor', async (req, res) => {
 
     if (dbErr) throw dbErr
 
+    // 1b. Resolve any linked user_ids for this anonymous_id on this site to delete their identity links too
+    const { data: resolvedLinks } = await supabase
+      .from('site_identity_links')
+      .select('user_id')
+      .eq('site_id', site.id)
+      .eq('anonymous_id', anonymous_id)
+
+    const linkedUserIds = (resolvedLinks || []).map(r => r.user_id).filter(Boolean)
+
+    // Delete identity links matching anonymous_id scoped strictly to this site
+    await supabase
+      .from('site_identity_links')
+      .delete()
+      .eq('site_id', site.id)
+      .eq('anonymous_id', anonymous_id)
+
+    // Delete identity links matching resolved user_id(s) scoped strictly to this site
+    if (linkedUserIds.length > 0) {
+      await supabase
+        .from('site_identity_links')
+        .delete()
+        .eq('site_id', site.id)
+        .in('user_id', linkedUserIds)
+    }
+
     // 2. Delete from PostHog (best-effort, don't fail the response)
     await deletePostHogPerson(anonymous_id, site.posthog_site_id)
 
@@ -123,27 +148,59 @@ gdprRouter.delete('/account', async (req, res) => {
     // 1. Find all sites owned by (or associated with) this user
     const { data: memberRow } = await supabase
       .from('company_members')
-      .select('company_id')
+      .select('company_id, role')
       .eq('user_id', userId)
       .maybeSingle()
 
-    const sitesQuery = supabase.from('sites').select('id, posthog_site_id')
-    if (memberRow?.company_id) sitesQuery.eq('company_id', memberRow.company_id)
-    else sitesQuery.eq('owner_id', userId)
+    let shouldDeleteSites = true
+    let isSoleMember = true
 
-    const { data: sites } = await sitesQuery
+    if (memberRow?.company_id) {
+      // Look up all members in the company
+      const { data: members, error: memErr } = await supabase
+        .from('company_members')
+        .select('user_id, role')
+        .eq('company_id', memberRow.company_id)
 
-    if (sites?.length) {
-      const siteIds = sites.map(s => s.id)
+      if (memErr) throw memErr
 
-      // 2. Delete attributed_conversions for all sites
-      await supabase
-        .from('attributed_conversions')
-        .delete()
-        .in('site_id', siteIds)
+      if (members && members.length > 1) {
+        isSoleMember = false
+        shouldDeleteSites = false
 
-      // 3. Delete sites
-      await supabase.from('sites').delete().in('id', siteIds)
+        // Check if the deleting user is the sole owner/admin
+        const isAdmin = memberRow.role === 'admin'
+        const otherAdmins = members.filter(m => m.role === 'admin' && m.user_id !== userId)
+
+        if (isAdmin && otherAdmins.length === 0) {
+          return res.status(409).json({
+            success: false,
+            error: 'Conflict',
+            message: 'You are the sole administrator of a shared workspace. Please transfer ownership or contact support before deleting your account.'
+          })
+        }
+      }
+    }
+
+    if (shouldDeleteSites) {
+      const sitesQuery = supabase.from('sites').select('id, posthog_site_id')
+      if (memberRow?.company_id) sitesQuery.eq('company_id', memberRow.company_id)
+      else sitesQuery.eq('owner_id', userId)
+
+      const { data: sites } = await sitesQuery
+
+      if (sites?.length) {
+        const siteIds = sites.map(s => s.id)
+
+        // 2. Delete attributed_conversions for all sites
+        await supabase
+          .from('attributed_conversions')
+          .delete()
+          .in('site_id', siteIds)
+
+        // 3. Delete sites
+        await supabase.from('sites').delete().in('id', siteIds)
+      }
     }
 
     // 4. Remove company membership
@@ -153,14 +210,16 @@ gdprRouter.delete('/account', async (req, res) => {
         .delete()
         .eq('user_id', userId)
 
-      // If no members left, delete the company too
-      const { count } = await supabase
-        .from('company_members')
-        .select('*', { count: 'exact', head: true })
-        .eq('company_id', memberRow.company_id)
+      // If no members left (and we are sole member), delete the company too
+      if (isSoleMember) {
+        const { count } = await supabase
+          .from('company_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('company_id', memberRow.company_id)
 
-      if (count === 0) {
-        await supabase.from('companies').delete().eq('id', memberRow.company_id)
+        if (count === 0) {
+          await supabase.from('companies').delete().eq('id', memberRow.company_id)
+        }
       }
     }
 

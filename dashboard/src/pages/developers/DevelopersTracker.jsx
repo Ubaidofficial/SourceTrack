@@ -118,7 +118,7 @@ export default function DevelopersTracker() {
             Cookieless Tracking Mode
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            For strict GDPR/ePrivacy compliance without consent banners, SourceTrack supports a cookieless script option. Load the cookieless variant:
+            For enhanced privacy and cookieless tracking without consent banners, SourceTrack supports a cookieless script option. Load the cookieless variant:
           </p>
           <DocsCodeBlock lang="html">
 {`<script async src="https://api.srctk.com/tracker/tracker.cookieless.js" data-site-key="YOUR_SITE_KEY"></script>`}

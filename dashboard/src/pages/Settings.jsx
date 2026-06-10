@@ -1104,9 +1104,13 @@ export default function Settings() {
         <div className="border-t border-gray-100 dark:border-gray-800 pt-4 space-y-2">
           <p className="text-xs font-semibold text-st-black dark:text-white">Erase Visitor Data (Right to Erasure)</p>
           <p className="text-xs text-st-gray dark:text-gray-400">
-            Enter a visitor's anonymous ID to permanently delete all attribution records and analytics events associated with them.
-            This action is immediate and permanent, and helps support visitor erasure workflows.
+            Enter a visitor's anonymous ID to permanently erase their data. This action is immediate and permanent.
           </p>
+          <div className="bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-lg p-3 text-[11px] text-amber-800 dark:text-amber-300 space-y-1 font-sans">
+            <p>• Database attribution records and stitched identity mappings will be permanently deleted from our database.</p>
+            <p>• Associated raw events and person profiles stored in PostHog will be queued for deletion (best-effort depending on external API availability).</p>
+            <p>• Third-party Stripe customer and billing records are not affected or queried during visitor data deletion.</p>
+          </div>
           <form onSubmit={handleVisitorDelete} className="flex items-center gap-3">
             <input
               type="text"
@@ -1265,9 +1269,16 @@ export default function Settings() {
           <AlertTriangle className="w-4 h-4 text-red-500" />
           <h3 className="text-sm font-bold text-red-600 dark:text-red-400">Danger Zone</h3>
         </div>
+        <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
+          Permanently delete your account. This action is irreversible.
+        </p>
+        <div className="bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-lg p-3 text-[11px] text-red-800 dark:text-red-300 space-y-1 font-sans">
+          <p>• If you are the only workspace member, your workspace and sites will be permanently deleted.</p>
+          <p>• If this is a shared workspace, your account and membership will be removed, leaving the shared sites active for other members.</p>
+          <p>• If you are the only administrator of a shared workspace, you must transfer ownership or remove other members before deleting your account.</p>
+        </div>
         <p className="text-xs text-st-gray dark:text-gray-400">
-          Permanently delete your account, all sites, and all attribution data. This action is irreversible.
-          Type <strong>DELETE</strong> to confirm.
+          Type <strong>DELETE</strong> below to confirm.
         </p>
         <div className="flex items-center gap-3">
           <input

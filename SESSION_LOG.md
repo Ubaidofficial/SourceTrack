@@ -5,6 +5,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 133G | 2026-06-10 | `main` | Data Deletion / Privacy Basics — Audited and addressed data deletion and GDPR gaps. Restructured account deletion logic to prevent data loss in shared workspaces, prevented orphaning shared workspaces by admins, expanded visitor erasure to wipe `site_identity_links` records, created a privacy and data deletion map, and updated copy in settings, README, and developer docs to align with real capabilities. | ✅ | No |
 | 133F | 2026-06-10 | `main` | Security Audit — Audited SourceTrack / TrackIQ for paid-beta security risks. Implemented rate limits on missing ingestion routes and gated inactive/archived plan access. | ✅ | No |
 | 133E | 2026-06-10 | `main` | Billing and Limits Enforcement Alignment — Dropped sites.plan constraint and recreated it supporting scale, and gated Google Search Console/SEO revenue routes by feature plan. | ✅ | No |
 | 133D | 2026-06-10 | `main` | Production Observability Audit — Audited logging, added process-level unhandled exception/rejection listeners, and expanded the observability runbook. | ✅ | No |

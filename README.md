@@ -198,7 +198,7 @@ SourceTrack is designed to be deployable without a cookie consent banner in most
 - IP addresses are used for GeoIP lookup at request time and **not stored** in any table
 - Anonymous IDs live in `localStorage` (per-origin, never cross-customer)
 - `navigator.doNotTrack === '1'` and `navigator.globalPrivacyControl === true` are honored before any storage or network
-- `/api/gdpr/visitor` endpoint exists for right-to-erasure deletion (anonymous_id → cascades pageviews + attributed_conversions + PostHog person)
+- `/api/gdpr/visitor` endpoint exists for right-to-erasure deletion (erases database attribution and stitched identity records, and triggers a best-effort PostHog person deletion)
 - Per-site `data_retention_days` configurable; nightly job purges older rows
 
 You still need to disclose data collection in your privacy policy — the dashboard's Install page shows a reminder.

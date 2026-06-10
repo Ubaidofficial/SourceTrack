@@ -1,35 +1,37 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 133F — Security Audit. Audited SourceTrack / TrackIQ for paid-beta security risks. Implemented rate limits on missing ingestion routes (/api/conversion/offline, /api/server/event, /api/analytics/collect, and /api/webhooks/incoming) and gated inactive/archived plan access on /api/analytics/collect and /api/webhooks/incoming. Verified all checks pass.
+> **Handoff:** Session 133G — Data Deletion / Privacy Basics. Audited and addressed data deletion and GDPR gaps. Restructured account deletion logic to prevent data loss in shared workspaces, prevented orphaning shared workspaces by admins, expanded visitor erasure to wipe `site_identity_links` records, created a privacy and data deletion map, and updated copy in settings, README, and developer docs to align with real capabilities.
 >
-> **Next Task:** Move to Phase C (Dashboard saved widget cards).
+> **Next Task:** Alignment on Phase C planning / dashboard widgets (not executed yet).
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
 
-## Session 133F — Security Audit
+## Session 133G — Data Deletion / Privacy Basics
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
 
 ### Completed
 
-1. **Ingestion Rate Limiting**
-   - Applied `defaultLimit` to `/api/conversion/offline` in `api/index.js`.
-   - Applied `trackGlobalIpLimit` (API/server-safe, up to 10k req/min, resolves proxy IPs securely) to `/api/server/event` in `api/routes/server-events.js`.
-   - Applied layered telemetry limiters (`trackVisitorLimit`, `trackIpLimit`, `trackSiteLimit`, `trackGlobalIpLimit`) to `/api/analytics/collect` in `api/routes/analytics.js`.
-   - Applied `trackLimit` to `/api/webhooks/incoming/:api_key` in `api/index.js`.
-2. **Plan Status Gating**
-   - Updated `/api/analytics/collect` to select `plan` and return clean `402` JSON error if the site plan is `'inactive'` or `'archived'`.
-   - Updated `/api/webhooks/incoming/:api_key` (both POST receiver and GET test handler) to select `plan` and return clean `402` JSON if `'inactive'` or `'archived'`.
+1. **Shared Workspace Account Deletion Protections**
+   - Updated `DELETE /api/gdpr/account` in `api/routes/gdpr.js` to count workspace members.
+   - If membership count > 1, site records are NOT deleted. If the deleting user is the sole owner/admin, returns a `409` conflict requesting ownership transfer or manual support. Otherwise, cleanly deletes only the membership mapping and the auth user, keeping workspace sites intact for remaining members.
+2. **Right-to-Erasure Database Completeness**
+   - Updated `DELETE /api/gdpr/visitor` in `api/routes/gdpr.js` to delete matching `site_identity_links` records (both anonymous_id and any resolved user_id links for that site), preventing identity mappings from remaining behind after visitor erasure.
+3. **Truthful Documentation and UI Copy**
+   - Created `docs/privacy_reality_map.md` detailing exact retention and erasure bounds across Supabase, PostHog, and Stripe.
+   - Replaced "For strict GDPR/ePrivacy compliance..." with "For enhanced privacy and cookieless tracking..." in `DevelopersTracker.jsx` and softened visitor deletion description in `README.md`.
+   - Updated `Settings.jsx` account deletion copy to outline sole owner deletion rules, shared workspace membership-only deletions, and sole administrator transfer requirements.
+   - Updated `Settings.jsx` visitor erasure copy to specify that database records are permanently deleted, PostHog erasure is best-effort, and Stripe billing records are unaffected.
 
 ### Files changed
-- [api/index.js](file:///Users/ubaid/Desktop/trackiq/api/index.js)
-- [api/routes/server-events.js](file:///Users/ubaid/Desktop/trackiq/api/routes/server-events.js)
-- [api/routes/analytics.js](file:///Users/ubaid/Desktop/trackiq/api/routes/analytics.js)
-- [api/routes/webhook-incoming.js](file:///Users/ubaid/Desktop/trackiq/api/routes/webhook-incoming.js)
+- [api/routes/gdpr.js](file:///Users/ubaid/Desktop/trackiq/api/routes/gdpr.js)
+- [dashboard/src/pages/Settings.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Settings.jsx)
+- [dashboard/src/pages/developers/DevelopersTracker.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/developers/DevelopersTracker.jsx)
+- [README.md](file:///Users/ubaid/Desktop/trackiq/README.md)
+- [docs/privacy_reality_map.md](file:///Users/ubaid/Desktop/trackiq/docs/privacy_reality_map.md) [NEW]
 - [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
 - [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
 - [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
 - [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
-
 
 ## Session 133E — Billing and Limits Enforcement Alignment
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
