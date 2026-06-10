@@ -1,6 +1,6 @@
-Session: 133I — End-to-End Install QA
-Last Completed: Audited and verified customer installation flow and verification boundaries. Standardized canonical public tracker URLs to the root paths `/tracker.min.js` and `/tracker.cookieless.min.js`, leaving `/tracker/*` as backwards-compatible paths. Updated onboarding, snippet generation, settings, and install documentation to use the canonical root paths, added detailed verification boundaries and domain warnings, and created `docs/install_qa_map.md`.
-Next Task: Alignment on Phase C planning / dashboard widgets (not executed yet).
+Session: 133J — Docs Truth Audit
+Last Completed: Standardized tracker snippet paths across solution, setup, and help pages to canonical root paths. Updated Stripe env var `STRIPE_PRICE_ID_SCALE` as primary. Softened compliance language to "privacy-conscious" in developer docs. Added lightweight frontend gating for Google Search Console (GSC) connection card. Created `docs/docs_truth_audit.md` tracking all audit findings and corrected files.
+Next Task: Paid-beta launch readiness validation and production promotion.
 Roadmap Queue:
 - Phase C (Dashboard saved widget cards)
 - Phase D (Campaigns AI Copilot)

@@ -911,7 +911,7 @@ export default function Integrations() {
   const issueCount = safeNumber(alerts.length, 0) + safeNumber(hygieneData?.total_issues, 0)
 
   const snippet = site?.site_key
-    ? `<script async src="${(import.meta.env.VITE_TRACKER_BASE_URL || '').replace(/\/+$/, '') || window.location.origin}/tracker/tracker.min.js" data-site-key="${site.site_key}"></script>`
+    ? `<script async src="${(import.meta.env.VITE_TRACKER_BASE_URL || '').replace(/\/+$/, '') || window.location.origin}/tracker.min.js" data-site-key="${site.site_key}"></script>`
     : ''
 
   const handleCopy = () => {
@@ -2037,22 +2037,32 @@ export default function Integrations() {
                   <Link to="/seo-revenue" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
                     Report
                   </Link>
-                  <button
-                    onClick={() => {
-                      if (!gscIntegData?.connected) {
-                        handleConnectGsc()
-                      } else {
-                        setActiveSection(activeSection === 'seo.gsc' ? null : 'seo.gsc')
-                      }
-                    }}
-                    className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
-                      gscIntegData?.connected
-                        ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700'
-                        : 'bg-st-green hover:opacity-90 text-white'
-                    }`}
-                  >
-                    {gscIntegData?.connected ? 'Manage' : 'Connect'}
-                  </button>
+                  {hasFeature(site?.plan, 'gsc_seo_revenue') ? (
+                    <button
+                      onClick={() => {
+                        if (!gscIntegData?.connected) {
+                          handleConnectGsc()
+                        } else {
+                          setActiveSection(activeSection === 'seo.gsc' ? null : 'seo.gsc')
+                        }
+                      }}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
+                        gscIntegData?.connected
+                          ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700'
+                          : 'bg-st-green hover:opacity-90 text-white'
+                      }`}
+                    >
+                      {gscIntegData?.connected ? 'Manage' : 'Connect'}
+                    </button>
+                  ) : (
+                    <Link
+                      to="/billing"
+                      className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-gray-300 text-st-gray hover:border-st-lime dark:border-gray-700 transition-colors"
+                      title="Google Search Console integration is available on Growth and Scale plans"
+                    >
+                      🔒 Connect · Upgrade
+                    </Link>
+                  )}
                 </div>
               }
               isExpanded={activeSection === 'seo.gsc'}

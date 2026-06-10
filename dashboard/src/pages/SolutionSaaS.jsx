@@ -64,7 +64,7 @@ const DATA = {
         number: '01',
         title: 'Add the snippet to your marketing site and app',
         body: "Add the lightweight tracker to both your marketing site and your in-app pages. This tracks the full journey — from first visit on your landing page to signup inside your product.",
-        code: `<script async\n  src="https://api.srctk.com/tracker/tracker.min.js"\n  data-site-key="YOUR_KEY">\n</script>`,
+        code: `<script async\n  src="https://api.srctk.com/tracker.min.js"\n  data-site-key="YOUR_KEY">\n</script>`,
       },
       {
         number: '02',

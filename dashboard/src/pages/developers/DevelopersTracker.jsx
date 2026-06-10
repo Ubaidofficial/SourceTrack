@@ -59,7 +59,7 @@ export default function DevelopersTracker() {
             Overview
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            The SourceTrack frontend SDK captures acquisition metadata (UTM tags, referrer URLs, and ad click identifiers) on page load and route changes. It is available in two modes: standard storage-based tracking (supporting multi-touch attribution) and a fully cookieless privacy-compliant mode.
+            The SourceTrack frontend SDK captures acquisition metadata (UTM tags, referrer URLs, and ad click identifiers) on page load and route changes. It is available in two modes: standard storage-based tracking (supporting multi-touch attribution) and a fully cookieless privacy-conscious mode.
           </p>
         </section>
 
@@ -121,7 +121,7 @@ export default function DevelopersTracker() {
             For enhanced privacy and cookieless tracking without consent banners, SourceTrack supports a cookieless script option. Load the cookieless variant:
           </p>
           <DocsCodeBlock lang="html">
-{`<script async src="https://api.srctk.com/tracker/tracker.cookieless.js" data-site-key="YOUR_SITE_KEY"></script>`}
+{`<script async src="https://api.srctk.com/tracker.cookieless.min.js" data-site-key="YOUR_SITE_KEY"></script>`}
           </DocsCodeBlock>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
             The cookieless script stores absolutely nothing in the visitor's browser. On loading, it requests <code>GET /api/tracker/id</code>, which returns a visitor hash calculated on the server from:
@@ -143,7 +143,7 @@ export default function DevelopersTracker() {
             To prevent the tracker from emitting pageview dispatches on admin, dashboard, or staging pages, use the <code>data-exclude</code> attribute directly on the script tag:
           </p>
           <DocsCodeBlock lang="html">
-{`<script async src="https://api.srctk.com/tracker/tracker.min.js"
+{`<script async src="https://api.srctk.com/tracker.min.js"
         data-site-key="YOUR_SITE_KEY"
         data-exclude="/admin/*, /checkout/success"></script>`}
           </DocsCodeBlock>

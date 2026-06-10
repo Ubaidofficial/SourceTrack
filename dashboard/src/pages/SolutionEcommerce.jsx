@@ -64,7 +64,7 @@ const DATA = {
         number: '01',
         title: 'Add to your Shopify theme or WooCommerce header',
         body: "Paste the lightweight tracking snippet into your theme's <head>. On Shopify, use Online Store → Themes → Edit code → theme.liquid. On WooCommerce, use the header snippet option.",
-        code: `<script async\n  src="https://api.srctk.com/tracker/tracker.min.js"\n  data-site-key="YOUR_KEY">\n</script>`,
+        code: `<script async\n  src="https://api.srctk.com/tracker.min.js"\n  data-site-key="YOUR_KEY">\n</script>`,
       },
       {
         number: '02',

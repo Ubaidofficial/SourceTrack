@@ -67,7 +67,7 @@ export default function DocsWordPress() {
               <li>Install and activate the plugin.</li>
               <li>Navigate to the plugin settings and paste this code snippet in the <strong>Header</strong> section:
                 <DocsCodeBlock lang="html" replaceKey={true} pasteOnce={true}>
-{`<script async src="https://api.srctk.com/tracker/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`}
+{`<script async src="https://api.srctk.com/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`}
                 </DocsCodeBlock>
               </li>
               <li>Click <strong>Save Changes</strong>.</li>
@@ -80,7 +80,7 @@ export default function DocsWordPress() {
               <li>Log in to your file manager or theme editor and open <code>wp-content/themes/your-active-theme/header.php</code>.</li>
               <li>Paste the script directly before the closing <code>&lt;/head&gt;</code> tag:
                 <DocsCodeBlock lang="php" replaceKey={true} pasteOnce={true}>
-{`<script async src="https://api.srctk.com/tracker/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`}
+{`<script async src="https://api.srctk.com/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`}
                 </DocsCodeBlock>
               </li>
               <li>Save the file.</li>

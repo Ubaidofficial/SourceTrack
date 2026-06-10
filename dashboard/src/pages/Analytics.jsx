@@ -408,9 +408,9 @@ export default function Analytics() {
   const bounceDelta   = delta(kpis.bounce_rate,     priorKpis.bounce_rate, true)
   const durationDelta = delta(kpis.avg_duration_seconds, priorKpis.avg_duration_seconds)
 
-  const trackerFile = site?.cookieless_mode ? 'tracker.cookieless.js' : 'tracker.min.js'
+  const trackerFile = site?.cookieless_mode ? 'tracker.cookieless.min.js' : 'tracker.min.js'
   const snippetUrl = site
-    ? `<script async src="${window.location.origin}/tracker/${trackerFile}" data-site-key="${site.site_key}"></script>`
+    ? `<script async src="${window.location.origin}/${trackerFile}" data-site-key="${site.site_key}"></script>`
     : ''
   function copySnippet() {
     navigator.clipboard.writeText(snippetUrl)

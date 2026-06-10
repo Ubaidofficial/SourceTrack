@@ -49,7 +49,7 @@ Production deploys on Railway — see [`AUDIT_PROD_READINESS_V2.md`](./AUDIT_PRO
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ Customer site                                                    │
-│   <script async src=".../tracker/tracker.min.js" ...>            │
+│   <script async src=".../tracker.min.js" ...>                    │
 │      │ pageview + first-touch + click-IDs + AI-source            │
 │      ▼                                                            │
 │ /api/track ──► PostHog (events) ──► nightly attribution job      │
@@ -115,7 +115,7 @@ All required at startup (`api/index.js` fails fast on missing vars):
 | `ENCRYPTION_KEY` | yes (prod) | Symmetric key used to encrypt customer Stripe/Shopify secrets. Use a 64-character hex string generated with the command below. Must be kept stable per environment. |
 | `STRIPE_SECRET_KEY` | yes (billing) | Stripe live or test secret |
 | `STRIPE_WEBHOOK_SECRET` | yes (billing) | Stripe webhook signing secret |
-| `STRIPE_PRICE_ID_STARTER`, `_GROWTH`, `_BUSINESS` | yes (billing) | Per-plan recurring price IDs. Legacy `_PRO` / `_AGENCY` are still read as fallbacks. Each Stripe price may carry a `pv_limit` metadata key to override the plan's default monthly pageview cap. |
+| `STRIPE_PRICE_ID_STARTER`, `_GROWTH`, `_SCALE` | yes (billing) | Per-plan recurring price IDs. Legacy `_BUSINESS` / `_PRO` / `_AGENCY` are still read as fallbacks. Each Stripe price may carry a `pv_limit` metadata key to override the plan's default monthly pageview cap. |
 | `RESEND_API_KEY` | optional | Email reports (weekly/monthly recap) |
 | `DEEPSEEK_API_KEY` | optional | AI chat + AI analytics features |
 | `SLACK_WEBHOOK_URL` | optional | Nightly job alert webhook |
@@ -159,7 +159,7 @@ Ensure the following variables are set in the Railway API service settings:
   - `POSTHOG_PROJECT_ID`: Required for dashboards/attribution querying.
   - `POSTHOG_PERSONAL_API_KEY`: Required for querying PostHog events via HogQL.
   - `STRIPE_SECRET_KEY` & `STRIPE_WEBHOOK_SECRET`: Required for user subscription handling.
-  - `STRIPE_PRICE_ID_STARTER`, `_GROWTH`, `_BUSINESS`: Stripe recurring price IDs.
+  - `STRIPE_PRICE_ID_STARTER`, `_GROWTH`, `_SCALE`: Stripe recurring price IDs. Legacy `_BUSINESS` / `_PRO` / `_AGENCY` are fallbacks.
   - `RESEND_API_KEY`: Required for daily/weekly recaptured email reports.
   - `ALLOWED_ORIGINS`: Comma-separated list of allowed frontend dashboard URLs (e.g. `https://app.sourcetrack.ai`).
 

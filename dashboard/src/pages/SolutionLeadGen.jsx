@@ -64,7 +64,7 @@ const DATA = {
         number: '01',
         title: 'Add the tracker to your site',
         body: "Paste the lightweight tracking snippet into your site's <head>. Captures all pageviews, UTM parameters, and AI referrer signals automatically.",
-        code: `<script async\n  src="https://api.srctk.com/tracker/tracker.min.js"\n  data-site-key="YOUR_KEY">\n</script>`,
+        code: `<script async\n  src="https://api.srctk.com/tracker.min.js"\n  data-site-key="YOUR_KEY">\n</script>`,
       },
       {
         number: '02',

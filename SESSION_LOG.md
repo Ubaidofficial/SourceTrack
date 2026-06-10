@@ -5,6 +5,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 133J | 2026-06-10 | `main` | Docs Truth Audit — Audited all customer-facing and operator-facing docs/copy for truthfulness before paid beta. Standardized tracker snippet paths across solution, setup, and help pages to canonical root paths. Updated Stripe env var `STRIPE_PRICE_ID_SCALE` as primary. Softened compliance language to "privacy-conscious" in developer docs. Added lightweight frontend gating for Google Search Console (GSC) connection card. Created `docs/docs_truth_audit.md` tracking all audit findings and corrected files. | ✅ | No |
 | 133I | 2026-06-10 | `main` | End-to-End Install QA — Audited and verified customer installation flow and verification boundaries. Standardized canonical public tracker URLs to the root paths `/tracker.min.js` and `/tracker.cookieless.min.js`, leaving `/tracker/*` as backwards-compatible paths. Updated onboarding, snippet generation, settings, and install documentation to use the canonical root paths, added detailed verification boundaries and domain warnings, and created `docs/install_qa_map.md`. | ✅ | No |
 | 133H | 2026-06-10 | `main` | Backup and Recovery Plan — Audited data backups, recovery readiness, and outage paths. Created a detailed runbook (`docs/backup_recovery.md`) covering Supabase, PostHog, Stripe, and Railway rollback protocols, updated rollback verification instructions in `COMMANDCODE_RUNBOOK.md`, and added security warning comments for `ENCRYPTION_KEY` in `.env.example`. | ✅ | No |
 | 133G | 2026-06-10 | `main` | Data Deletion / Privacy Basics — Audited and addressed data deletion and GDPR gaps. Restructured account deletion logic to prevent data loss in shared workspaces, prevented orphaning shared workspaces by admins, expanded visitor erasure to wipe `site_identity_links` records, created a privacy and data deletion map, and updated copy in settings, README, and developer docs to align with real capabilities. | ✅ | No |
@@ -1336,3 +1337,64 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 - `SESSION_STATE.md`
 - `SESSION_LOG.md`
 - `SESSION_HANDOFF.md`
+
+---
+
+## Session 133G — Data Deletion / Privacy Basics
+
+**Date:** 2026-06-10
+**Branch:** `main`
+**Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
+
+### 1. Data Deletion & Workspace Safety
+- Restructured account deletion logic to prevent data loss in shared workspaces.
+- Prevented orphaning shared workspaces by admin.
+- Expanded visitor erasure to wipe `site_identity_links` records.
+- Created a privacy and data deletion map.
+- Updated copy in settings, README, and developer docs to align with real capabilities.
+
+---
+
+## Session 133H — Backup and Recovery Plan
+
+**Date:** 2026-06-10
+**Branch:** `main`
+**Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
+
+### 1. Backup & Recovery Runbook
+- Audited data backups, recovery readiness, and outage paths.
+- Created a detailed runbook (`docs/backup_recovery.md`) covering Supabase, PostHog, Stripe, and Railway rollback protocols.
+- Updated rollback verification instructions in `COMMANDCODE_RUNBOOK.md`.
+- Added security warning comments for `ENCRYPTION_KEY` in `.env.example`.
+
+---
+
+## Session 133I — End-to-End Install QA
+
+**Date:** 2026-06-10
+**Branch:** `main`
+**Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
+
+### 1. Tracker Paths Standardization
+- Standardized canonical public tracker URLs to the root paths `/tracker.min.js` and `/tracker.cookieless.min.js`.
+- Maintained `/tracker/*` as backwards-compatible served paths only.
+- Updated onboarding, snippet generation, settings, and install documentation to use the canonical root paths.
+- Added detailed verification boundaries and domain warnings.
+- Created `docs/install_qa_map.md`.
+
+---
+
+## Session 133J — Docs Truth Audit
+
+**Date:** 2026-06-10
+**Branch:** `main`
+**Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
+
+### 1. Tracker Paths & Stripe Price IDs Alignment
+- Standardized tracker snippet paths across solution, setup, and help pages (`DocsFramer.jsx`, `DocsShopify.jsx`, `DocsWebflow.jsx`, `DocsWordPress.jsx`, `DocsGTM.jsx`, `DocsQuickstart.jsx`, `DevelopersTracker.jsx`, `README.md`) to canonical root paths.
+- Updated Stripe env var `STRIPE_PRICE_ID_SCALE` as primary in `.env.example` and `README.md`, leaving `STRIPE_PRICE_ID_BUSINESS` as legacy/backwards-compatible fallback.
+
+### 2. Software/Docs Compliance & GSC Frontend Gating
+- Softened compliance language to "privacy-conscious" in developer docs.
+- Added lightweight frontend gating for Google Search Console (GSC) connection card on Growth and Scale plans using existing `hasFeature` helper.
+- Created `docs/docs_truth_audit.md` tracking all audit findings and corrected files.

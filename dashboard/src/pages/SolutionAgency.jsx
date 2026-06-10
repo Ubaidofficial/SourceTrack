@@ -70,7 +70,7 @@ const DATA = {
         number: '02',
         title: 'Paste the snippet into the client site',
         body: "Share the tracking snippet with your client's developer or paste it directly if you have CMS access. Works with Shopify, WooCommerce, Webflow, WordPress, and any site that accepts a script tag.",
-        code: `<script async\n  src="https://api.srctk.com/tracker/tracker.min.js"\n  data-site-key="CLIENT_SITE_KEY">\n</script>`,
+        code: `<script async\n  src="https://api.srctk.com/tracker.min.js"\n  data-site-key="CLIENT_SITE_KEY">\n</script>`,
       },
       {
         number: '03',

@@ -695,7 +695,7 @@ export default function Settings() {
           <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-1">
             <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Use this snippet instead:</p>
             <code className="block text-xs text-gray-600 dark:text-gray-400 break-all">
-              {`<script async src="${typeof window !== 'undefined' ? window.location.origin : ''}/tracker/tracker.cookieless.js" data-site-key="${site?.site_key || 'YOUR_SITE_KEY'}"></script>`}
+              {`<script async src="${typeof window !== 'undefined' ? window.location.origin : ''}/tracker.cookieless.min.js" data-site-key="${site?.site_key || 'YOUR_SITE_KEY'}"></script>`}
             </code>
           </div>
         )}

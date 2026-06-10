@@ -81,7 +81,7 @@ export default function DocsGTM() {
   (function() {
     if (document.querySelector('script[data-site-key]')) return;
     var script = document.createElement('script');
-    script.src = 'https://api.srctk.com/tracker/tracker.min.js';
+    script.src = 'https://api.srctk.com/tracker.min.js';
     script.setAttribute('data-site-key', 'YOUR_SITE_KEY');
     script.async = true;
     document.head.appendChild(script);

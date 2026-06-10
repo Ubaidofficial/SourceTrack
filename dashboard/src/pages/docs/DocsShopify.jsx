@@ -77,7 +77,7 @@ export default function DocsShopify() {
             </ol>
             <DocsCodeBlock lang="html" replaceKey={true} pasteOnce={true}>
 {`<!-- Paste inside layout/theme.liquid before </head> -->
-<script async src="https://api.srctk.com/tracker/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`}
+<script async src="https://api.srctk.com/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`}
             </DocsCodeBlock>
           </div>
 

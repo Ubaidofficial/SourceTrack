@@ -74,7 +74,7 @@ export default function DocsFramer() {
             <li>
               Paste the tracking code snippet into the box:
               <DocsCodeBlock lang="html" replaceKey={true} pasteOnce={true}>
-{`<script async src="https://api.srctk.com/tracker/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`}
+{`<script async src="https://api.srctk.com/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`}
               </DocsCodeBlock>
             </li>
             <li>

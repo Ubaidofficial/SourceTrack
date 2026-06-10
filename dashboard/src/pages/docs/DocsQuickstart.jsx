@@ -81,7 +81,7 @@ export default function DocsQuickstart() {
                 Paste this code snippet before the closing <code>&lt;/head&gt;</code> tag of your website. Replace <code>YOUR_SITE_KEY</code> with your real key.
               </p>
               <DocsCodeBlock lang="html" replaceKey={true} pasteOnce={true}>
-{`<script async src="https://api.srctk.com/tracker/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`}
+{`<script async src="https://api.srctk.com/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`}
               </DocsCodeBlock>
             </li>
 

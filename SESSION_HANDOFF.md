@@ -1,10 +1,49 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 133I — End-to-End Install QA. Audited and verified customer installation flow and verification boundaries. Standardized canonical public tracker URLs to the root paths `/tracker.min.js` and `/tracker.cookieless.min.js`, leaving `/tracker/*` as backwards-compatible paths. Updated onboarding, snippet generation, settings, and install documentation to use the canonical root paths, added detailed verification boundaries and domain warnings, and created `docs/install_qa_map.md`.
+> **Handoff:** Session 133J — Docs Truth Audit. Standardized tracker snippet paths across solution, setup, and help pages to canonical root paths. Updated Stripe env var `STRIPE_PRICE_ID_SCALE` as primary. Softened compliance language to "privacy-conscious" in developer docs. Added lightweight frontend gating for Google Search Console (GSC) connection card. Created `docs/docs_truth_audit.md` tracking all audit findings and corrected files.
 >
-> **Next Task:** Alignment on Phase C planning / dashboard widgets (not executed yet).
+> **Next Task:** Paid-beta launch readiness validation and production promotion.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 133J — Docs Truth Audit
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+
+1. **Docs Truth Audit Map**
+   - Created [docs_truth_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/docs_truth_audit.md) outlining audited capability areas, corrected files, and remaining unsupported/future claims to avoid.
+2. **Canonical Tracker Paths Standardization**
+   - Standardized tracker snippet paths across solution, setup, and help pages (`DocsFramer.jsx`, `DocsShopify.jsx`, `DocsWebflow.jsx`, `DocsWordPress.jsx`, `DocsGTM.jsx`, `DocsQuickstart.jsx`, `DevelopersTracker.jsx`, `README.md`) to canonical root paths `/tracker.min.js` and `/tracker.cookieless.min.js`.
+3. **Stripe Environment Variables Sync**
+   - Updated Stripe environment variable `STRIPE_PRICE_ID_SCALE` as the primary configuration variable in `.env.example` and `README.md`, leaving `STRIPE_PRICE_ID_BUSINESS` documented strictly as legacy/backwards-compatible fallback.
+4. **Google Search Console Frontend Gating**
+   - Added lightweight frontend gating for GSC Connect/Manage actions using `hasFeature(site?.plan, 'gsc_seo_revenue')`, displaying a locked upgrade badge linking to `/billing` for unsupported tiers.
+5. **Soften Compliance Language**
+   - Replaced "privacy-compliant" with "privacy-conscious" in `DevelopersTracker.jsx`.
+
+### Files changed
+- [docs/docs_truth_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/docs_truth_audit.md) [NEW]
+- [.env.example](file:///Users/ubaid/Desktop/trackiq/.env.example)
+- [README.md](file:///Users/ubaid/Desktop/trackiq/README.md)
+- [dashboard/src/pages/Analytics.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Analytics.jsx)
+- [dashboard/src/pages/Integrations.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Integrations.jsx)
+- [dashboard/src/pages/Settings.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Settings.jsx)
+- [dashboard/src/pages/SolutionAgency.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/SolutionAgency.jsx)
+- [dashboard/src/pages/SolutionEcommerce.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/SolutionEcommerce.jsx)
+- [dashboard/src/pages/SolutionLeadGen.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/SolutionLeadGen.jsx)
+- [dashboard/src/pages/SolutionSaaS.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/SolutionSaaS.jsx)
+- [dashboard/src/pages/docs/DocsFramer.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/docs/DocsFramer.jsx)
+- [dashboard/src/pages/docs/DocsShopify.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/docs/DocsShopify.jsx)
+- [dashboard/src/pages/docs/DocsWebflow.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/docs/DocsWebflow.jsx)
+- [dashboard/src/pages/docs/DocsWordPress.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/docs/DocsWordPress.jsx)
+- [dashboard/src/pages/docs/DocsGTM.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/docs/DocsGTM.jsx)
+- [dashboard/src/pages/docs/DocsQuickstart.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/docs/DocsQuickstart.jsx)
+- [dashboard/src/pages/developers/DevelopersTracker.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/developers/DevelopersTracker.jsx)
+- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
+- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
+- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
 
 ## Session 133I — End-to-End Install QA
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)

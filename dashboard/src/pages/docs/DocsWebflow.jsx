@@ -68,7 +68,7 @@ export default function DocsWebflow() {
             <li>
               Scroll to the <strong>Head Code</strong> section and paste the following snippet:
               <DocsCodeBlock lang="html" replaceKey={true} pasteOnce={true}>
-{`<script async src="https://api.srctk.com/tracker/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`}
+{`<script async src="https://api.srctk.com/tracker.min.js" data-site-key="YOUR_SITE_KEY"></script>`}
               </DocsCodeBlock>
             </li>
             <li>
