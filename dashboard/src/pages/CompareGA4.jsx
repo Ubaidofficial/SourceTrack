@@ -38,7 +38,7 @@ export default function CompareGA4() {
           <div className="mt-[54px]">
             <ComparisonTable rows={[
               ['Feature', 'SourceTrack', 'GA4', 'Ad platforms'],
-              ['Multi-touch attribution', '8 models built in', 'Partial — last-click dominant', 'Platform-specific only'],
+              ['Multi-touch attribution', '9 models built in', 'Partial — last-click dominant', 'Platform-specific only'],
               ['AI referral tracking', '15 platforms detected', 'Limited — often labeled direct', 'Not available'],
               ['Full journey timeline', 'Every touchpoint per visitor', 'Hard to reconstruct', 'Not available'],
               ['Custom report builder', 'Blank canvas + save + pin', 'Complex — Explore only', 'Not available'],
@@ -65,7 +65,7 @@ export default function CompareGA4() {
           </div>
 
           <FeatureCards compact items={[
-            { icon: '①', title: 'You care about which channels produce revenue.', body: 'Track every campaign, channel, landing page, and AI source. Compare them across 8 attribution models in one workspace.' },
+            { icon: '①', title: 'You care about which channels produce revenue.', body: 'Track every campaign, channel, landing page, and AI source. Compare them across 9 attribution models in one workspace.' },
             { icon: '②', title: 'You want attribution that works in minutes.', body: 'Paste one script. Define your conversions. Start seeing attributed revenue on day one — no analytics implementation project required.' },
             { icon: '③', title: 'You need AI referral tracking that actually works.', body: '15 AI platforms detected automatically. No more AI-driven leads and purchases lost to the "direct" traffic bucket.' },
           ]} />

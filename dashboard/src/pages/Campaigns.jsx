@@ -12,6 +12,7 @@ import {
 import DashboardCard from '../components/DashboardCard'
 import MetricTile from '../components/MetricTile'
 import StatusBadge from '../components/StatusBadge'
+import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
 import { safeNumber, formatCurrency, formatCurrencyDecimal, formatNumber, formatMultiplier } from '../utils/numbers'
 import { hasFeature } from '../lib/planFeatures'
 import { Bar } from 'react-chartjs-2'
@@ -524,8 +525,16 @@ export default function Campaigns() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-st-black">Campaigns & Attribution</h2>
-          <p className="text-sm text-st-gray mt-0.5">Performance by marketing channel with real-time revenue and conversion data</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="text-2xl font-bold text-st-black">Campaigns & Attribution</h2>
+            <span
+              className="inline-flex items-center px-1.5 py-0.5 rounded bg-st-black/5 text-[10px] font-semibold text-st-black"
+              title="This page uses last-touch attribution. Revenue and conversions are credited to each visit's source at conversion time. To compare other models, open Report Builder."
+            >
+              Last Touch
+            </span>
+          </div>
+          <p className="text-sm text-st-gray mt-0.5">Performance by marketing channel — credited via last-touch attribution</p>
           {anyConnected && (
             <div className="text-[11px] text-st-gray mt-1 flex items-center gap-1.5 font-medium">
               <span className="inline-block w-2 h-2 rounded-full bg-[#d7f550] animate-pulse" />
@@ -768,7 +777,10 @@ export default function Campaigns() {
                     return (
                       <tr key={i} className="hover:bg-gray-50 transition-colors">
                         <td className="py-3 px-4">
-                          <p className="text-st-black font-medium">{r.name || 'unknown'}</p>
+                          <p className="text-st-black font-medium inline-flex items-center">
+                            {r.name || 'unknown'}
+                            {isDirectLabel(r.name) && <DirectInfo />}
+                          </p>
                           {r.platforms && r.platforms.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1">
                               {r.platforms.map(plat => (

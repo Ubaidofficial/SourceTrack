@@ -7,7 +7,7 @@ import HeroPreviewCard from '../components/HeroPreviewCard'
 
 const SEO = {
   title: 'Marketing Attribution Software — Track Which Sources Create Revenue | SourceTrack',
-  description: 'Track first touch, last touch, multi-touch journeys, campaign performance, landing pages, AI referrals, and revenue attribution across 8 models. Independent, neutral attribution for founders and marketers.',
+  description: 'Track first touch, last touch, multi-touch journeys, campaign performance, landing pages, AI referrals, and revenue attribution across 9 models. Independent, neutral attribution for founders and marketers.',
   canonical: 'https://sourcetrack.ai/attribution',
   ogTitle: 'Marketing Attribution Software — SourceTrack',
 }
@@ -15,7 +15,7 @@ const SEO = {
 const HERO = {
   kicker: 'Marketing attribution software',
   h1: 'Know the source behind every lead, trial, and purchase.',
-  sub: 'Track the complete path from first click to paying customer. Compare channels across 8 attribution models, prove the real ROI of your campaigns, and stop relying on biased ad-platform self-reporting.',
+  sub: 'Track the complete path from first click to paying customer. Compare channels across 9 attribution models, prove the real ROI of your campaigns, and stop relying on biased ad-platform self-reporting.',
   primaryCta: 'Start tracking free',
   secondaryCta: 'Compare with GA4',
   secondaryHref: '/compare/ga4',

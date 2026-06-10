@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import ConversionExplanationModal from '../components/ConversionExplanationModal'
 import { hasFeature } from '../lib/planFeatures'
+import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend)
 
@@ -1716,9 +1717,15 @@ export default function ReportBuilder() {
                   <div>
                     <h4 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Previewing</h4>
                     <p className="text-lg font-bold text-st-black truncate mt-0.5">{reportName || 'Untitled Report'}</p>
-                    <div className="mt-1 flex items-center gap-2">
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
                       <span className="text-xs font-bold text-lime-600 dark:text-lime-400">{metricFormat(total)}</span>
                       <span className="text-xs text-st-gray dark:text-gray-400">total {metricLabel}</span>
+                      <span
+                        className="inline-flex items-center px-1.5 py-0.5 rounded bg-st-black/5 dark:bg-white/10 text-[10px] font-semibold text-st-black dark:text-white"
+                        title={`Attribution model: ${MODELS.find(m => m.key === model)?.label || model}. The model determines which touch in the customer journey gets credit.`}
+                      >
+                        {MODELS.find(m => m.key === model)?.label || model}
+                      </span>
                     </div>
                   </div>
 
@@ -1818,7 +1825,10 @@ export default function ReportBuilder() {
                       return (
                         <div key={idx} className="space-y-1 text-xs">
                           <div className="flex justify-between items-center font-medium">
-                            <span className="text-gray-800 dark:text-gray-200 truncate">{r.dim_value || 'Direct / None'}</span>
+                            <span className="text-gray-800 dark:text-gray-200 truncate inline-flex items-center">
+                              <span className="truncate">{r.dim_value || 'Direct / None'}</span>
+                              {isDirectLabel(r.dim_value || 'Direct / None') && <DirectInfo />}
+                            </span>
                             <span className="font-bold text-gray-900 dark:text-white">{metricFormat(val)}</span>
                           </div>
                           <div className="h-3 bg-gray-100 dark:bg-[#242829] rounded-full overflow-hidden flex">
@@ -1996,7 +2006,12 @@ export default function ReportBuilder() {
                           const priorRow = priorRows.find(p => p.dim_value === r.dim_value)
                           return (
                             <tr key={i} className="border-b border-gray-50 dark:border-[#2A2E2E] hover:bg-gray-50 dark:hover:bg-[#252929]">
-                              <td className="py-2.5 px-4 text-st-black dark:text-gray-200 font-medium">{r.dim_value || 'Direct / None'}</td>
+                              <td className="py-2.5 px-4 text-st-black dark:text-gray-200 font-medium">
+                                <span className="inline-flex items-center">
+                                  {r.dim_value || 'Direct / None'}
+                                  {isDirectLabel(r.dim_value || 'Direct / None') && <DirectInfo />}
+                                </span>
+                              </td>
                               {groupBy2 && <td className="py-2.5 px-4 text-gray-600 dark:text-gray-400">{r.dim_value2}</td>}
                               {selectedMetrics.map(mk => {
                                 const mDef = METRICS.find(m => m.key === mk)

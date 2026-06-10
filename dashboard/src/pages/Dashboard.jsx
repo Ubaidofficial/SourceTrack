@@ -34,6 +34,7 @@ import FilterBar from '../components/FilterBar'
 import StatusBadge from '../components/StatusBadge'
 import SupportModeBanner from '../components/SupportModeBanner'
 import ConversionExplanationModal from '../components/ConversionExplanationModal'
+import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend)
 
@@ -910,12 +911,18 @@ export default function Dashboard() {
                         <div>
                           <div className="text-xs font-medium text-st-gray mb-1.5">Top Channels</div>
                           <div className="space-y-1">
-                            {recentActivity.top_channels.map((tc, idx) => (
-                              <div key={idx} className="flex justify-between items-center text-xs">
-                                <span className="text-gray-700 dark:text-gray-300 font-medium">{tc.name || 'Direct'}</span>
-                                <span className="text-st-gray">{tc.count} event{tc.count > 1 ? 's' : ''}</span>
-                              </div>
-                            ))}
+                            {recentActivity.top_channels.map((tc, idx) => {
+                              const label = tc.name || 'Direct'
+                              return (
+                                <div key={idx} className="flex justify-between items-center text-xs">
+                                  <span className="text-gray-700 dark:text-gray-300 font-medium inline-flex items-center">
+                                    {label}
+                                    {isDirectLabel(label) && <DirectInfo />}
+                                  </span>
+                                  <span className="text-st-gray">{tc.count} event{tc.count > 1 ? 's' : ''}</span>
+                                </div>
+                              )
+                            })}
                           </div>
                         </div>
                       )}
@@ -923,12 +930,18 @@ export default function Dashboard() {
                         <div className="pt-2">
                           <div className="text-xs font-medium text-st-gray mb-1.5">Top Referrers</div>
                           <div className="space-y-1">
-                            {recentActivity.top_referrers.map((tr, idx) => (
-                              <div key={idx} className="flex justify-between items-center text-xs">
-                                <span className="text-gray-700 dark:text-gray-300 truncate max-w-[200px]">{tr.name || 'Direct'}</span>
-                                <span className="text-st-gray">{tr.count} visit{tr.count > 1 ? 's' : ''}</span>
-                              </div>
-                            ))}
+                            {recentActivity.top_referrers.map((tr, idx) => {
+                              const label = tr.name || 'Direct'
+                              return (
+                                <div key={idx} className="flex justify-between items-center text-xs">
+                                  <span className="text-gray-700 dark:text-gray-300 truncate max-w-[200px] inline-flex items-center">
+                                    {label}
+                                    {isDirectLabel(label) && <DirectInfo />}
+                                  </span>
+                                  <span className="text-st-gray">{tr.count} visit{tr.count > 1 ? 's' : ''}</span>
+                                </div>
+                              )
+                            })}
                           </div>
                         </div>
                       )}
@@ -1640,6 +1653,7 @@ function DashboardWidgetCard({ report, site }) {
   })
 
   const results = data?.results || []
+  const nightlyNotice = data?._notice || null
   const total = results.reduce((s, r) => {
     const metricKey = cfg.metric || 'revenue'
     return s + (r[metricKey] || r.revenue || r.conversions || r.sessions || 0)
@@ -1663,8 +1677,13 @@ function DashboardWidgetCard({ report, site }) {
         <div className="flex items-start justify-between gap-2 border-b border-gray-100 dark:border-[#2A2E2E] pb-2">
           <div className="min-w-0">
             <h4 className="text-xs font-semibold text-st-black dark:text-white truncate" title={report.name}>{report.name}</h4>
-            <div className="flex flex-wrap gap-x-1.5 text-[9px] text-st-gray dark:text-gray-400 mt-0.5">
-              <span>{MODELS.find(m => m.key === cfg.model)?.label || cfg.model}</span>
+            <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[9px] text-st-gray dark:text-gray-400 mt-0.5">
+              <span
+                className="inline-flex items-center px-1.5 py-0.5 rounded bg-st-black/5 dark:bg-white/10 text-[9px] font-semibold text-st-black dark:text-white"
+                title={`Attribution model: ${MODELS.find(m => m.key === cfg.model)?.label || cfg.model}. The model determines which touch in the customer journey gets credit for this metric.`}
+              >
+                {MODELS.find(m => m.key === cfg.model)?.label || cfg.model}
+              </span>
               <span>•</span>
               <span className="truncate">{cfg.groupBy}</span>
               {cfg.isRolling && (
@@ -1701,7 +1720,14 @@ function DashboardWidgetCard({ report, site }) {
           </div>
         ) : results.length === 0 ? (
           <div className="h-28 flex items-center justify-center text-st-gray text-xs text-center p-4">
-            No data for this selection
+            {nightlyNotice ? (
+              <span>
+                <span className="block font-semibold text-amber-600 dark:text-amber-400 mb-1">Nightly calculation pending</span>
+                <span className="block text-[10px] leading-snug">This model needs processed attribution data. If your site is new or the nightly job hasn't run yet, this report will populate once it does.</span>
+              </span>
+            ) : (
+              <span>No data for this selection</span>
+            )}
           </div>
         ) : (
           <div className="mt-3 space-y-2">
@@ -1717,10 +1743,12 @@ function DashboardWidgetCard({ report, site }) {
                 const mk = cfg.metric || 'revenue'
                 const val = r[mk] || r.revenue || r.conversions || r.sessions || 0
                 const barW = maxVal > 0 ? (val / maxVal) * 100 : 0
+                const label = r.dim_value || '—'
                 return (
                   <div key={i} className="flex items-center gap-2">
-                    <span className="text-[10px] text-st-gray dark:text-gray-400 w-16 truncate flex-shrink-0" title={r.dim_value || '—'}>
-                      {r.dim_value || '—'}
+                    <span className="text-[10px] text-st-gray dark:text-gray-400 w-20 truncate flex-shrink-0 inline-flex items-center" title={label}>
+                      <span className="truncate">{label}</span>
+                      {isDirectLabel(label) && <DirectInfo />}
                     </span>
                     <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
                       <div className="h-full bg-st-black dark:bg-white rounded-full transition-all" style={{ width: `${barW}%` }} />

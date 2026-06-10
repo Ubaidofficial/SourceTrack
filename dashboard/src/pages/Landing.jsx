@@ -37,7 +37,7 @@ const SEO = {
       "name": "SourceTrack",
       "applicationCategory": "AnalyticsApplication",
       "operatingSystem": "Web",
-      "description": "Revenue attribution analytics for SaaS, lead-gen, and agency teams. Track campaigns, AI referrals, customer journeys, and conversions. Multi-touch attribution with 8 models.",
+      "description": "Revenue attribution analytics for SaaS, lead-gen, and agency teams. Track campaigns, AI referrals, customer journeys, and conversions. Multi-touch attribution with 9 models.",
       "url": "https://sourcetrack.ai",
       "offers": {
         "@type": "Offer",
@@ -77,7 +77,7 @@ export default function Landing() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             {[
               ['AI referral tracking', '15 AI platforms detected'],
-              ['Multi-touch journeys', '8 attribution models'],
+              ['Multi-touch journeys', '9 attribution models'],
               ['Revenue attribution', 'First to last touch'],
               ['Report builder', 'Pin your own dashboards'],
               ['Event tracking', 'Low-latency capture'],
@@ -107,7 +107,7 @@ export default function Landing() {
           </div>
 
           <FeatureCards items={[
-            { icon: '①', title: 'Attribution engine.', body: 'Track every campaign, UTM, referrer, landing page, and conversion event. Compare channels across 8 attribution models — first touch, last touch, linear, U-shaped, and more.' },
+            { icon: '①', title: 'Attribution engine.', body: 'Track every campaign, UTM, referrer, landing page, and conversion event. Compare channels across 9 attribution models — first touch, last touch, linear, U-shaped, and more.' },
             { icon: '②', title: 'AI referral tracking.', body: 'Reveal leads and revenue from ChatGPT, Claude, Gemini, Perplexity, and 15 AI platforms. Stop losing AI-driven conversions to direct traffic in your reports.' },
             { icon: '③', title: 'Report builder.', body: 'Start from a blank canvas. Choose the metric and dimension that matches your business, save the widget, and pin it to your dashboard.' },
           ]} />
@@ -185,7 +185,7 @@ export default function Landing() {
               ['Full customer journey timeline', 'Yes — every touchpoint', 'Hard to reconstruct', 'Not available'],
               ['AI referral tracking (15 platforms)', 'Built in', 'Limited — marked as direct', 'Not available'],
               ['Custom attribution reports', 'Drag and pin', 'Complex — Explore only', 'Biased toward their clicks'],
-              ['Revenue attribution per channel', 'Yes — all 8 models', 'Partial — last-click biased', 'Platform-biased'],
+              ['Revenue attribution per channel', 'Yes — all 9 models', 'Partial — last-click biased', 'Platform-biased'],
               ['Install speed', 'One script, minutes', 'Tag setup + configuration', 'Platform pixel only'],
             ]} />
           </div>

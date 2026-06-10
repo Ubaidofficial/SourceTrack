@@ -31,7 +31,7 @@ const COMPARISON_FEATURES = [
   { category: 'Reporting & Analytics', items: [
     { name: 'Traffic Sources & Pages', free: 'Yes', starter: 'Yes', growth: 'Yes', scale: 'Yes' },
     { name: 'AI Referral Detection', free: 'Yes', starter: 'Yes', growth: 'Yes', scale: 'Yes' },
-    { name: 'Attribution Models Supported', free: 'Last-touch only', freeLabel: 'Last-touch', starter: 'Last-touch only', growth: 'All 8 models', scale: 'All 8 models' },
+    { name: 'Attribution Models Supported', free: 'Last-touch only', freeLabel: 'Last-touch', starter: 'Last-touch only', growth: 'All 9 models', scale: 'All 9 models' },
     { name: 'Dashboard Widget Pinning', free: 'No', starter: 'No', growth: 'Yes', scale: 'Yes' },
     { name: 'CSV Report Exports', free: 'No', starter: 'Yes', growth: 'Yes', scale: 'Yes' },
   ]},
@@ -120,7 +120,7 @@ export default function Pricing() {
               { q: 'Does SourceTrack track AI referrals like ChatGPT traffic?', a: 'Yes — it is one of the core product features. SourceTrack detects 15 AI platforms and 22 domains, including ChatGPT, Claude, Gemini, and Perplexity, and attributes leads and revenue to the correct AI source instead of labeling them as direct traffic.' },
               { q: 'Do I need a data analyst to use SourceTrack?', a: 'No. The report builder is built for founders and marketers. Start from common attribution questions, choose the dimension, and pin widgets to your dashboard. No SQL, no Explore reports, no analytics team required.' },
               { q: 'How does the free plan work?', a: 'Free forever — see where your next 30 conversions came from. Includes 1 site, 5,000 tracked pageviews/mo, simple analytics, traffic sources, top pages, referrers, countries, devices, browsers, UTMs, AI source detection, and basic conversions. CSV export, saved reports, dashboard widgets, manual revenue/status, API/webhooks, and revenue attribution are available on paid plans.' },
-              { q: 'What attribution models does SourceTrack support?', a: 'All plans include last-touch. Paid plans add first touch, linear, time decay, U-shaped, W-shaped, and position-based models. Compare channels across all 8 models from a single dashboard.' },
+              { q: 'What attribution models does SourceTrack support?', a: 'All plans include last-touch. Paid plans add first touch, linear, time decay, U-shaped, W-shaped, and position-based models. Compare channels across all 9 models from a single dashboard.' },
               { q: 'Can I cancel anytime?', a: 'Yes. No annual contracts. Upgrade or downgrade as your traffic and attribution needs change.' },
             ]} />
           </div>

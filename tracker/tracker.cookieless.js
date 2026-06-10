@@ -110,15 +110,34 @@
   }
 
   // ─── Fetch server-generated visitor ID ─────────────────────────────────────
+  // If the server is unreachable or returns no visitor_id, we fall back to a
+  // session-scoped random id so the tracker keeps working — but cross-session
+  // attribution will not work for this visitor until the next successful fetch.
+  // We surface a console.warn so site owners debugging "why is everyone direct"
+  // can see the cause in DevTools without us silently dropping the request.
+  function warnFallback(reason) {
+    try {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('[SourceTrack] Cookieless visitor ID ' + reason + ' — using a session-only fallback id. Cross-session attribution may not work for this visitor. See https://sourcetrack.ai/docs/troubleshooting#cookieless')
+      }
+    } catch (_) {}
+  }
   function fetchId() {
     fetch(B + '/api/tracker/id?site_key=' + encodeURIComponent(K), { credentials: 'omit' })
       .then(function (r) { return r.ok ? r.json() : null })
       .then(function (j) {
-        AID = (j && j.visitor_id) || 'cl-' + Math.random().toString(36).slice(2) + Date.now().toString(36)
-        SID = (j && j.session_id) || AID
+        if (j && j.visitor_id) {
+          AID = j.visitor_id
+          SID = j.session_id || AID
+        } else {
+          warnFallback('request returned no id')
+          AID = 'cl-' + Math.random().toString(36).slice(2) + Date.now().toString(36)
+          SID = AID
+        }
         flush()
       })
       .catch(function () {
+        warnFallback('request failed (network or blocker)')
         AID = 'cl-' + Math.random().toString(36).slice(2) + Date.now().toString(36)
         SID = AID
         flush()

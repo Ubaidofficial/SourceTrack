@@ -143,6 +143,30 @@ export default function DocsTroubleshooting() {
           </ul>
         </section>
 
+        {/* 5b. Cookieless mode trade-offs */}
+        <section id="cookieless" className="space-y-3 scroll-mt-20">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            Cookieless Mode: Attribution Trade-offs
+          </h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            Cookieless mode is more privacy-friendly but less persistent than the standard tracker. Visitor IDs are derived server-side via a daily-rotating salted hash and are not stored in the browser at all.
+          </p>
+          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            <li>
+              <strong>Visitor ID request can be blocked.</strong> The cookieless tracker fetches its visitor id from <code>/api/tracker/id</code> on every page load. If an ad-blocker, corporate proxy, or transient network failure blocks that request, the tracker falls back to a session-only random id and writes a one-line warning to the browser DevTools console: <code>[SourceTrack] Cookieless visitor ID … using a session-only fallback id</code>.
+            </li>
+            <li>
+              <strong>Same-session only when the fallback fires.</strong> A visitor whose id resets cannot be connected across sessions. Their later conversion may be recorded as <em>direct</em> because no prior pageview is linked to the new id. Attribution may become same-session only or weaker depending on browser and network behavior.
+            </li>
+            <li>
+              <strong>First-touch is in-memory only.</strong> The cookieless tracker holds the first-touch source for the active page session only. It is not preserved across page reloads.
+            </li>
+          </ul>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            If you need full multi-session attribution, switch off cookieless mode in <Link to="/settings" className="text-blue-600 dark:text-blue-400 font-bold hover:underline">Settings</Link> and use the standard tracker, which stores a stable id in <code>localStorage</code>.
+          </p>
+        </section>
+
         {/* 6. Next step */}
         <section className="space-y-2">
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">

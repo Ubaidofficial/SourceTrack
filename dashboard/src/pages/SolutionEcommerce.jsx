@@ -36,7 +36,7 @@ const DATA = {
       {
         icon: '📊',
         title: 'True ROAS by channel',
-        body: "See revenue attributed to each source using 8 models — not just last-click. When U-Shaped attribution shows that 40% of a sale's credit goes to the ChatGPT session that started the journey, you can defend content investment with data.",
+        body: "See revenue attributed to each source using 9 models — not just last-click. When U-Shaped attribution shows that 40% of a sale's credit goes to the ChatGPT session that started the journey, you can defend content investment with data.",
       },
       {
         icon: '🔁',
@@ -75,7 +75,7 @@ const DATA = {
       {
         number: '03',
         title: 'See true ROAS and AI-driven revenue in your dashboard',
-        body: "Open your SourceTrack dashboard to see every order attributed to its real source — including the AI platform visits that GA4 was logging as direct. Switch between 8 attribution models to see how credit shifts when you look beyond last-click.",
+        body: "Open your SourceTrack dashboard to see every order attributed to its real source — including the AI platform visits that GA4 was logging as direct. Switch between 9 attribution models to see how credit shifts when you look beyond last-click.",
         code: null,
       },
     ],

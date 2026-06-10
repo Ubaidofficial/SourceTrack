@@ -1,10 +1,61 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 131 — Integration Setup Hardening. Hardened the Stripe/Shopify webhook recipes in Integrations.jsx with explicit event-type scope (Stripe: `checkout.session.completed` only; Shopify: `orders/paid` or paid-only `orders/create`) and stitching field guidance (Stripe `client_reference_id`/`metadata.anonymous_id`; Shopify `note_attributes._st_aid`). Added an inline "Recent webhook activity" log (last 5 events, status badges, 15s refetch when card open) backed by a new read-only `GET /api/integrations/ingestion-events` endpoint. Expanded the CSV import row with a column-schema table, YYYY-MM-DD format note, 1000-row batch cap, and inline sample CSV download. Added a public-Site-Key vs private-Server-Token auth callout with a deep-link to `/settings#api-tokens` from the Payments API row. Added an aggregate-data disclaimer inside the GSC card. Softened `PublicIntegrations.jsx`, `DocsShopify`, `DocsGTM`, and the misleading `Awaiting first automated sync` copy in `Campaigns.jsx`. One small backend addition: read-only ingestion-events endpoint.
+> **Handoff:** Session 132A — Attribution Trust Surface Fixes. Closed the four highest-priority items from `SESSION_132_ATTRIBUTION_AUDIT.md`: P0-1 cookieless silent-fallback now warns in the browser console, in Settings, and in DocsTroubleshooting; P0-2 marketing "8 attribution models" copy reconciled to "9" across 9 marketing pages, and the API `_notice` field for nightly-dependent models is now surfaced inside Dashboard pinned report cards (ReportBuilder already had it); P0-3 attribution model badges added to Dashboard pinned report cards, ReportBuilder preview header, and Campaigns header (fixed to last_touch); P1-1 a new shared `DirectInfo` helper renders a tiny "i" tooltip next to any Direct / Direct&nbsp;/&nbsp;None / unknown row across Dashboard, ReportBuilder, and Campaigns. No attribution math changed.
 >
-> **Next Task:** Proceed with the remaining self-serve paid beta roadmap items (e.g. phase C, phase D, or further integration polish).
+> **Next Task:** Re-run the attribution audit (target overall ≥90/100) and proceed with Session 132B for the remaining P1 items (same-domain referrer stripping, sessionization on UTM change, `st_ft_ts` payload field, conversion-route dedupe persistence, SPA pushState debounce).
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 132A — Attribution Trust Surface Fixes
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
+
+### Completed
+1. **P0-1 — Cookieless fallback visibility.**
+   - [tracker/tracker.cookieless.js](tracker/tracker.cookieless.js): rewrote `fetchId()` so the two random-id fallback paths (server returned no id; fetch failed/blocked) now invoke a `warnFallback(reason)` helper that writes `console.warn("[SourceTrack] Cookieless visitor ID … — using a session-only fallback id. Cross-session attribution may not work for this visitor. See https://sourcetrack.ai/docs/troubleshooting#cookieless")`. Tracker behavior otherwise unchanged. No tracking event is emitted for this — only DevTools console.
+   - [tracker/tracker.cookieless.min.js](tracker/tracker.cookieless.min.js): same warning inserted in minified form.
+   - [dashboard/src/pages/Settings.jsx](dashboard/src/pages/Settings.jsx): when cookieless mode is ON, the section now renders an amber callout explaining (a) cookieless rotates daily, (b) blocked `/api/tracker/id` falls back to a session-only id and the tracker logs a one-line warn, (c) attribution may become same-session only, (d) first-touch is in-memory only, and (e) standard tracker is the alternative.
+   - [dashboard/src/pages/docs/DocsTroubleshooting.jsx](dashboard/src/pages/docs/DocsTroubleshooting.jsx): new `id="cookieless"` section before "Next Step" explaining the same trade-offs in long form. Matches the URL the tracker links to from the console warning.
+
+2. **P0-2 — Marketing reconciliation + nightly-notice surfacing.**
+   - Replaced every "8 attribution models" / "with 8 models" / "all 8 models" / "8 models built in" / "all 8 models" / "across 8 attribution models" / "across 8 models" / "using 8 models" / "Switch between 8 attribution models" / "attribution across 8 models" / "All 8 models" across [Landing.jsx](dashboard/src/pages/Landing.jsx), [Signup.jsx](dashboard/src/pages/Signup.jsx), [SolutionEcommerce.jsx](dashboard/src/pages/SolutionEcommerce.jsx), [SolutionSaaS.jsx](dashboard/src/pages/SolutionSaaS.jsx), [CompareGA4.jsx](dashboard/src/pages/CompareGA4.jsx), [Product.jsx](dashboard/src/pages/Product.jsx), [Pricing.jsx](dashboard/src/pages/Pricing.jsx), [Attribution.jsx](dashboard/src/pages/Attribution.jsx), and [Demo.jsx](dashboard/src/pages/Demo.jsx) with the corresponding "9 …" phrasing to match `ALLOWED_MODELS` in [api/routes/attribution.js:4](api/routes/attribution.js:4) (which has 9 entries: `first_touch, last_touch, first_touch_non_direct, last_touch_non_direct, ai_platforms, linear, u_shaped, time_decay, w_shaped`).
+   - [dashboard/src/pages/Dashboard.jsx](dashboard/src/pages/Dashboard.jsx): pinned-report cards now extract `data._notice` from the attribution API response and render an in-card amber "Nightly calculation pending" empty state when results are missing AND notice is set. Replaces the generic "No data for this selection" message in that specific case. ReportBuilder.jsx already surfaced `_notice` at [line 1837](dashboard/src/pages/ReportBuilder.jsx:1837); this closes the gap for the Dashboard surface that customers see first.
+
+3. **P0-3 — Attribution model badges on report cards.**
+   - [dashboard/src/pages/Dashboard.jsx](dashboard/src/pages/Dashboard.jsx) pinned report card meta line: model label is now rendered as a small chip (`px-1.5 py-0.5 rounded bg-st-black/5`) with a `title` tooltip explaining what the model determines. Replaces the unstyled `<span>{label}</span>` that was easy to miss.
+   - [dashboard/src/pages/ReportBuilder.jsx](dashboard/src/pages/ReportBuilder.jsx) preview header ("Previewing" block): added the same model chip next to the total metric, so the preview clearly states which model the customer is looking at.
+   - [dashboard/src/pages/Campaigns.jsx](dashboard/src/pages/Campaigns.jsx) header: the page hard-codes `model=last_touch` in its query, so the page now wears a "Last Touch" chip in the title row with a tooltip directing users to Report Builder for other models. Subtitle softened to "Performance by marketing channel — credited via last-touch attribution".
+
+4. **P1-1 — Direct / unknown tooltip.**
+   - New shared component [dashboard/src/components/DirectInfo.jsx](dashboard/src/components/DirectInfo.jsx) exports:
+     - `DIRECT_TOOLTIP` constant — "Direct = SourceTrack did not receive a reliable campaign tag, click ID, or referrer for this visit. Common causes: app-to-app handoffs, HTTPS-to-HTTP downgrades, AI tools stripping the referrer, and bookmarks. Returning visitors whose anonymous ID is preserved are still tied to their earlier known source — not counted as direct."
+     - `isDirectLabel(name)` — true for `Direct`, `Direct / None`, `(none)`, `none`, `unknown` (case-insensitive), and any falsy value.
+     - `DirectInfo` — a 14px circular "i" badge with the tooltip as its `title` attribute.
+   - Imported in [Dashboard.jsx](dashboard/src/pages/Dashboard.jsx) (top channels, top referrers, pinned-report row labels), [ReportBuilder.jsx](dashboard/src/pages/ReportBuilder.jsx) (sparse-results card + main data table), and [Campaigns.jsx](dashboard/src/pages/Campaigns.jsx) (channel name column). All locations now show the badge only when the row label is actually direct/unknown — no clutter on real channels.
+
+### Files changed
+- `dashboard/src/components/DirectInfo.jsx` [NEW]
+- `dashboard/src/pages/Dashboard.jsx`
+- `dashboard/src/pages/ReportBuilder.jsx`
+- `dashboard/src/pages/Campaigns.jsx`
+- `dashboard/src/pages/Settings.jsx`
+- `dashboard/src/pages/docs/DocsTroubleshooting.jsx`
+- `dashboard/src/pages/Landing.jsx`, `Signup.jsx`, `SolutionEcommerce.jsx`, `SolutionSaaS.jsx`, `CompareGA4.jsx`, `Product.jsx`, `Pricing.jsx`, `Attribution.jsx`, `Demo.jsx` — `"8 …"` → `"9 …"`
+- `tracker/tracker.cookieless.js`, `tracker/tracker.cookieless.min.js`
+
+### Validation
+- `node --check api/index.js api/routes/*.js api/lib/*.js` → pass
+- `git diff --check` → exit 0
+- `npm run qa:static` → PASS
+- `cd dashboard && npm run build` → 3.13s, 2076 modules (up by 1, confirming DirectInfo.jsx is bundled)
+- Overclaim grep (`perfect attribution`, `100% accurate`, `guaranteed attribution`, `cross-device`, `identity graph`, `deterministic`) → 2 hits, both legitimate and pre-existing (`google-search-console.js:262` deterministic-hash comment; `admin.js:439` accurate "no cross-device sync" disclaimer about saved reports).
+- `8 attribution models` / `8 models` grep across `dashboard/src` → zero residual hits.
+- Model/direct grep returned 65 lines, all legitimate (model picker definitions, conversion-explanation modal copy, troubleshooting docs, the new badges).
+
+### Notes
+- **No engine changes.** Channel classifier, sessionization, attribution-engine, and nightly job all unchanged. The audit's overall trust score should now move from ~78/100 to closer to 90/100 once the surface fixes land.
+- **`first_touch_non_direct` / `last_touch_non_direct` are listed in the dropdown but not counted as "multi-touch" models.** The "9" count is the actual `ALLOWED_MODELS` set — verifiable by a customer counting items in the dropdown.
+
+---
 
 ## Session 131 — Integration Setup Hardening
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)

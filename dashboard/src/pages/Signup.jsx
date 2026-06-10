@@ -84,7 +84,7 @@ export default function Signup() {
     <div className="min-h-screen flex items-center justify-center bg-[#F1F4F4] dark:bg-[#2B302F] px-4">
       <Helmet>
         <title>Start free with SourceTrack | SourceTrack</title>
-        <meta name="description" content="Create a free SourceTrack account and start tracking attribution across 8 models in under 3 minutes." />
+        <meta name="description" content="Create a free SourceTrack account and start tracking attribution across 9 models in under 3 minutes." />
         <meta name="robots" content="noindex, nofollow" />
         <link rel="canonical" href="https://sourcetrack.ai/signup" />
       </Helmet>

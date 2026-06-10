@@ -945,6 +945,67 @@ curl -i https://api.srctk.com/tracker/tracker.min.js
 
 ---
 
+## Session 132A — Attribution Trust Surface Fixes
+
+**Date:** 2026-06-10
+**Branch:** `main`
+**Build:** ✅ passing (Vite build + Node syntax check + QA pass)
+
+Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.md](SESSION_132_ATTRIBUTION_AUDIT.md). No engine math changed. Trust surfaces only.
+
+### 1. P0-1 — Cookieless fallback visibility
+- **`tracker/tracker.cookieless.js#fetchId`**: refactored the two random-id fallback paths to call a new `warnFallback(reason)` helper that writes `console.warn('[SourceTrack] Cookieless visitor ID … — using a session-only fallback id. Cross-session attribution may not work for this visitor. See https://sourcetrack.ai/docs/troubleshooting#cookieless')`. Reasons: `request returned no id` and `request failed (network or blocker)`. Wrapped in `try/catch` so a missing `console` cannot break the tracker.
+- **`tracker/tracker.cookieless.min.js`**: same warning inserted into the minified bundle.
+- **`dashboard/src/pages/Settings.jsx`** cookieless section: when the toggle is ON, the card renders an amber callout with four bullets — daily rotation, `/api/tracker/id` blocked-fallback behavior, same-session-only impact, in-memory-only first-touch — plus a closing line pointing users to standard tracker mode if multi-session attribution is required.
+- **`dashboard/src/pages/docs/DocsTroubleshooting.jsx`**: new section with `id="cookieless"` (scroll-mt-20) matching the URL anchor the tracker logs to. Explains the trade-offs in long form for someone who clicks through from the console warning.
+
+### 2. P0-2 — Reconcile "8 models" + surface `_notice`
+- Replaced every "8 attribution models" / "8 models" / "all 8 models" / "All 8 models" variant across 9 marketing pages (Landing, Signup, SolutionEcommerce, SolutionSaaS, CompareGA4, Product, Pricing, Attribution, Demo) with "9 …" to match the actual `ALLOWED_MODELS` set in [api/routes/attribution.js:4](api/routes/attribution.js:4). 17 substitutions total. Engine has been at 9 models since `ai_platforms` and the two non-direct variants were added; the public copy was just stale.
+- **`dashboard/src/pages/Dashboard.jsx`** pinned-report card: now extracts `data._notice` (a `NIGHTLY_NOTICE` string from the API when multi-touch models have no pre-aggregated data) and renders an in-card amber "Nightly calculation pending" empty state. ReportBuilder.jsx already had the same surfacing at [line 1837](dashboard/src/pages/ReportBuilder.jsx:1837); this closes the gap on the customer's first-glance surface.
+
+### 3. P0-3 — Attribution model badges
+- **`dashboard/src/pages/Dashboard.jsx`** pinned-report card meta row: model label is now a small chip (`px-1.5 py-0.5 rounded bg-st-black/5 dark:bg-white/10`) with a `title` tooltip explaining what the model controls. Replaces the unstyled plain text that was easy to miss.
+- **`dashboard/src/pages/ReportBuilder.jsx`** preview "Previewing" header: same chip pattern added inline with the total-metric line, so a marketer always knows which model the preview is using.
+- **`dashboard/src/pages/Campaigns.jsx`** header: the page hard-codes `model=last_touch`, so it now wears a "Last Touch" chip in the page title with a tooltip pointing users to Report Builder for other models. Subtitle softened to "Performance by marketing channel — credited via last-touch attribution."
+
+### 4. P1-1 — Direct / unknown tooltip
+- **New shared component `dashboard/src/components/DirectInfo.jsx`** (19 lines):
+  - `DIRECT_TOOLTIP` — single source of truth for the explanation copy.
+  - `isDirectLabel(name)` — case-insensitive matcher for Direct, Direct / None, (none), none, unknown, and falsy.
+  - `DirectInfo` — 14px circular "i" badge that holds the tooltip in its `title` attribute. Accessible label provided via `aria-label`. Uses `cursor-help` and `select-none`.
+- **Wired into:**
+  - `Dashboard.jsx` top-channels rows, top-referrers rows, and pinned-report-card row labels.
+  - `ReportBuilder.jsx` sparse-results card row labels AND main data-table rows.
+  - `Campaigns.jsx` channel name column.
+- Badge only renders when `isDirectLabel(name)` is true — no clutter on real channel rows.
+
+### Files Changed
+- `dashboard/src/components/DirectInfo.jsx` (NEW, 27 lines)
+- `dashboard/src/pages/Dashboard.jsx` (+44 / −11)
+- `dashboard/src/pages/ReportBuilder.jsx` (+18 / −3)
+- `dashboard/src/pages/Campaigns.jsx` (+13 / −5)
+- `dashboard/src/pages/Settings.jsx` (+14 / −1)
+- `dashboard/src/pages/docs/DocsTroubleshooting.jsx` (+24)
+- `dashboard/src/pages/Landing.jsx`, `Signup.jsx`, `SolutionEcommerce.jsx`, `SolutionSaaS.jsx`, `CompareGA4.jsx`, `Product.jsx`, `Pricing.jsx`, `Attribution.jsx`, `Demo.jsx` — `"8 …"` → `"9 …"` (~40 lines net)
+- `tracker/tracker.cookieless.js` (+23 / −0)
+- `tracker/tracker.cookieless.min.js` (+1 / −1)
+
+### Validation
+- `node --check api/index.js api/routes/*.js api/lib/*.js` → ✅ pass
+- `git diff --check` → ✅ exit 0
+- `npm run qa:static` → ✅ PASS
+- `cd dashboard && npm run build` → ✅ pass (3.13s, 2076 modules — one more than Session 131, confirming `DirectInfo.jsx` is bundled)
+- Required overclaim grep (`perfect attribution`, `100% accurate`, `guaranteed attribution`, `cross-device`, `identity graph`, `deterministic`) → 2 hits, both legitimate and pre-existing (`google-search-console.js:262` deterministic-hash comment; `admin.js:439` "no cross-device sync" disclaimer about localStorage-only saved reports).
+- `8 attribution models` / `8 models` grep over `dashboard/src` → **zero residual hits**.
+- Model/direct grep (`8 attribution models|nine attribution models|direct traffic|last touch|first touch|multi-touch|linear attribution|_notice`) → 65 lines, all legitimate (model picker definitions, ConversionExplanationModal copy, troubleshooting docs, and the new badges/tooltips).
+
+### Notes
+- **No attribution engine changes.** Channel classifier, sessionization, attribution-engine, nightly job, and ingestion routes are all unchanged. Score improvement comes from honest surfacing, not new math.
+- **The "9 attribution models" count is now verifiable**: a customer who opens Report Builder's model dropdown will count 9 options matching the marketing claim.
+- **DocsTroubleshooting `#cookieless` anchor matches the tracker's console-log URL** so a developer who hits the warning has a one-click path to the explanation.
+
+---
+
 ## Session 131 — Integration Setup Hardening
 
 **Date:** 2026-06-10

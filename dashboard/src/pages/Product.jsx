@@ -36,14 +36,14 @@ export default function Product() {
               </h2>
             </div>
             <p className="self-end text-[#586464] text-lg leading-[1.55] tracking-[-0.02em] max-w-[480px]">
-              SourceTrack captures every source signal, connects touchpoints into a full customer journey, and attributes conversions using 8 models — so you know which channels create revenue, not just traffic.
+              SourceTrack captures every source signal, connects touchpoints into a full customer journey, and attributes conversions using 9 models — so you know which channels create revenue, not just traffic.
             </p>
           </div>
 
           <FeatureCards items={[
             { icon: '01', title: 'Capture visitor source.', body: 'Track campaign URL parameters, referring domain sources, search queries, and AI chatbot referrals in a single first-party pipeline.' },
             { icon: '02', title: 'Connect the journey.', body: 'See the full path each visitor takes — every page view, session, and touchpoint before a lead form submit or paid order conversion.' },
-            { icon: '03', title: 'Attribute the revenue.', body: 'Compare channels across 8 attribution models. Switch between first touch, last touch, linear, U-shaped, and W-shaped to see how credit shifts.' },
+            { icon: '03', title: 'Attribute the revenue.', body: 'Compare channels across 9 attribution models. Switch between first touch, last touch, linear, U-shaped, and W-shaped to see how credit shifts.' },
           ]} />
         </div>
       </section>

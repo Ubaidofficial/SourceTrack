@@ -67,7 +67,7 @@ export default function Demo() {
             <div className="flex flex-col">
               <strong className="text-xl font-black text-st-black tracking-tight">4. Attribution Modeling</strong>
               <p className="mt-3 text-[#586464] text-sm leading-relaxed">
-                Our database connects the conversion back to the journey using anonymous identifiers, instantly calculating revenue credits across 8 attribution models.
+                Our database connects the conversion back to the journey using anonymous identifiers, instantly calculating revenue credits across 9 attribution models.
               </p>
             </div>
           </div>

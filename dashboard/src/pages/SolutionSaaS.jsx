@@ -90,7 +90,7 @@ const DATA = {
       },
       {
         q: 'Can I track MRR by acquisition channel?',
-        a: "Yes. Pass your monthly recurring revenue as the value parameter on subscription conversion events. SourceTrack will attribute MRR to the channel that drove the original signup — across 8 attribution models. Use U-Shaped or W-Shaped attribution to give credit to both the first-touch that brought the trial and the last-touch that closed the upgrade.",
+        a: "Yes. Pass your monthly recurring revenue as the value parameter on subscription conversion events. SourceTrack will attribute MRR to the channel that drove the original signup — across 9 attribution models. Use U-Shaped or W-Shaped attribution to give credit to both the first-touch that brought the trial and the last-touch that closed the upgrade.",
       },
       {
         q: 'How does SourceTrack handle long SaaS sales cycles?',
@@ -102,7 +102,7 @@ const DATA = {
       },
       {
         q: 'Which attribution model should SaaS companies use?',
-        a: "For SaaS, U-Shaped (40% first touch, 40% last touch, 20% middle) is often the most meaningful — it gives credit to both the channel that created awareness and the one that closed the signup. For long enterprise cycles, W-Shaped (30/30/30/10) captures the key opportunity-creation milestone as well. SourceTrack pre-computes all 8 models so you can compare them instantly.",
+        a: "For SaaS, U-Shaped (40% first touch, 40% last touch, 20% middle) is often the most meaningful — it gives credit to both the channel that created awareness and the one that closed the signup. For long enterprise cycles, W-Shaped (30/30/30/10) captures the key opportunity-creation milestone as well. SourceTrack pre-computes all 9 models so you can compare them instantly.",
       },
     ],
   },
@@ -116,7 +116,7 @@ const DATA = {
     "mainEntity": [
       { "@type": "Question", "name": "How do I attribute trial starts and paid upgrades separately?", "acceptedAnswer": { "@type": "Answer", "text": "Fire sourcetrack.conversion({ type: 'trial_start' }) on free signup and sourcetrack.conversion({ type: 'subscription', value: mrr }) on upgrade. Your dashboard will show both attributed to their original source." } },
       { "@type": "Question", "name": "Can I track MRR by acquisition channel?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Pass monthly recurring revenue as the value parameter on subscription conversion events. SourceTrack attributes MRR to the channel that drove the original signup." } },
-      { "@type": "Question", "name": "Which attribution model should SaaS companies use?", "acceptedAnswer": { "@type": "Answer", "text": "U-Shaped (40/20/40) is often best for SaaS — credits both the first-touch channel that created awareness and the last-touch that closed the signup. SourceTrack pre-computes all 8 models." } },
+      { "@type": "Question", "name": "Which attribution model should SaaS companies use?", "acceptedAnswer": { "@type": "Answer", "text": "U-Shaped (40/20/40) is often best for SaaS — credits both the first-touch channel that created awareness and the last-touch that closed the signup. SourceTrack pre-computes all 9 models." } },
     ]
   },
 }

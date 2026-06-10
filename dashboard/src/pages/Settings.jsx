@@ -660,8 +660,21 @@ export default function Settings() {
         <p className="text-xs text-st-gray dark:text-gray-400">
           When enabled, the tracker uses a server-derived daily-rotating hash instead of localStorage or cookies.
           No personal data is stored in the browser — no cookies, no fingerprinting. Designed to reduce tracking risk and operate without a consent banner.
-          Note: first-touch attribution is limited to the current session in cookieless mode.
         </p>
+        {cookielessMode && (
+          <div className="rounded-lg border border-amber-200 dark:border-amber-900/40 bg-amber-50 dark:bg-amber-950/20 p-3 space-y-1.5">
+            <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">Attribution trade-offs in cookieless mode</p>
+            <ul className="text-[11px] text-amber-700 dark:text-amber-300/90 space-y-1 font-sans leading-relaxed">
+              <li>• Cookieless mode is more privacy-friendly but less persistent. Visitor IDs are derived server-side and rotate roughly once a day.</li>
+              <li>• If the visitor ID request to <code className="font-mono">/api/tracker/id</code> is blocked by an ad-blocker or fails on the network, SourceTrack falls back to a session-only id and writes a one-line <code className="font-mono">console.warn</code> in the browser DevTools.</li>
+              <li>• When that fallback fires, the visitor will not be connected across sessions and any later conversion may be recorded as <em>direct</em>. Attribution may become same-session only or weaker depending on browser/network behavior.</li>
+              <li>• First-touch source is held in memory for the active session only — it is not preserved across page reloads.</li>
+            </ul>
+            <p className="text-[11px] text-amber-700 dark:text-amber-300/90 leading-relaxed pt-1">
+              If you need full multi-session attribution, switch off cookieless mode and use the standard tracker, which stores a stable id in <code className="font-mono">localStorage</code>.
+            </p>
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-600 dark:text-gray-400">
             {cookielessMode ? 'Cookieless mode — no browser storage, privacy-friendly' : 'Standard mode — visitor IDs stored in localStorage'}
