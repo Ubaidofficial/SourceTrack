@@ -1182,3 +1182,89 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 - Documented warning guidelines and rules in `scripts/README_QA.md`.
 - Added placeholders for `STAGING_HOSTS` and `ALLOW_PRODUCTION_QA_MUTATION` in `.env.example`.
 - Appended a P0 session roadmap item for full database/service staging/prod separation in `PAID_BETA_SESSION_PLAN.md`.
+
+
+## Session 133B — Lightweight CI Regression Pipeline
+
+**Date:** 2026-06-10
+**Branch:** `main`
+**Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### 1. GitHub Actions CI Pipeline Implementation
+- Created `.github/workflows/ci.yml` targeting Node 20.
+- Runs separate installations (`npm ci` and `cd dashboard && npm ci`) to isolate root API and dashboard compilation zones.
+- Verifies codebase syntax via `node --check` and git diff whitespace checks.
+- Runs static QA test suite (`npm run qa:static`) and compiles the dashboard application.
+- Differentiates git checks between pull request base references (`git diff --check origin/${{ github.base_ref }}...HEAD`) and single/multi-commit pushes (`git diff --check HEAD~1..HEAD`).
+
+### 2. Safety Boundaries Documentation
+- Documented static and build-only boundaries in `README.md` and `COMMANDCODE_RUNBOOK.md`.
+- Emphasized that live-service QA scripts and active secrets must remain out of CI until a dedicated staging environment exists.
+
+### Files changed
+- `.github/workflows/ci.yml`
+- `COMMANDCODE_RUNBOOK.md`
+- `README.md`
+- `PAID_BETA_SESSION_PLAN.md`
+- `SESSION_STATE.md`
+- `SESSION_LOG.md`
+- `SESSION_HANDOFF.md`
+
+
+## Session 133C — Real Deployment Checklist + Rollback Runbook
+
+**Date:** 2026-06-10
+**Branch:** `main`
+**Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
+
+### 1. Production Deployment Checklist
+- Added comprehensive Phase 1-5 checklist to `COMMANDCODE_RUNBOOK.md` outlining syntax checks, git diff/whitespace verification, manual dashboard build, Supabase migration safety policies, env configurations verification in Railway console, deploy monitoring, and post-deploy smoke checks.
+- Documented database migration safety policy: database rollback is migration-specific. Destructive production migrations are forbidden before paid beta unless they include backup, rollback SQL, and explicit approval.
+
+### 2. Rollback Runbook
+- Documented standard emergency rollback flows in `COMMANDCODE_RUNBOOK.md` for:
+  - Application code regressions: Railway 1-click rollback (resolves in ~30 seconds).
+  - Database schema failures: preference for additive schema forward-fixes over generic rollback scripts.
+  - Webhook decryption failures: restoring matching stable `ENCRYPTION_KEY` values.
+
+### 3. Environment Variables Verification
+- Validated exact names and presence of Stripe, Supabase, PostHog, Resend, and proxy/IP resolver variables in `api/index.js` and `dashboard/src/lib/`.
+
+### Files changed
+- `COMMANDCODE_RUNBOOK.md`
+- `PAID_BETA_SESSION_PLAN.md`
+- `SESSION_STATE.md`
+- `SESSION_LOG.md`
+- `SESSION_HANDOFF.md`
+
+
+## Session 133D — Production Observability Audit + Minimum Alerts Plan
+
+**Date:** 2026-06-10
+**Branch:** `main`
+**Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
+
+### 1. Production Observability Audit
+- Conducted an audit of the current logging, health checks, cron monitoring, and alerts.
+- Documented findings and highlighted gaps (shallow health endpoints, database-only logging for secondary jobs, lack of frontend tracking, and lack of external uptime monitoring).
+
+### 2. Process-level Exception Handlers
+- Added listeners for `uncaughtException` and `unhandledRejection` in `api/index.js` to capture timestamps, event types, error messages, and stack traces.
+- Enforced security filters: handlers do NOT log `process.env`, secrets, authorization headers, cookies, payloads, webhook bodies, or PII.
+- Configured handlers to print to `console.error` and exit with failure code 1 to allow Railway to cleanly recycle the container on fatal errors.
+
+### 3. Security Guidelines & Env Documentation
+- Updated comments above `SLACK_WEBHOOK_URL` in `.env.example` documenting strict security constraints (alerts must NOT contain secrets, database URLs, auth headers, cookies, or PII) and marking Slack notifications as optional but recommended.
+
+### 4. Observability Runbook Section
+- Expanded `COMMANDCODE_RUNBOOK.md` with a "Production Observability & Monitoring Runbook" covering Railway server logs (console/CLI), GitHub Actions, Stripe logs, Supabase Postgres logs, PostHog live stream, background cron job monitoring index (schedules, visibility, behaviors), incident severity definitions (P0 vs P1), and known system blind spots (no frontend Sentry, no external uptime monitoring).
+- Updated deployment check and health check curl command checklists to verify public canonical tracker paths `/tracker.min.js` and `/tracker.cookieless.min.js` instead of outdated folder-based paths.
+
+### Files changed
+- `api/index.js`
+- `.env.example`
+- `COMMANDCODE_RUNBOOK.md`
+- `PAID_BETA_SESSION_PLAN.md`
+- `SESSION_STATE.md`
+- `SESSION_LOG.md`
+- `SESSION_HANDOFF.md`

@@ -505,3 +505,29 @@ function shutdown(signal) {
 }
 process.on('SIGTERM', () => shutdown('SIGTERM'))
 process.on('SIGINT',  () => shutdown('SIGINT'))
+
+// Process-level exception and rejection tracking. Log clean details and exit with failure.
+// Critical security: Do NOT log process.env, secrets, auth headers, cookies, payloads, or PII.
+process.on('uncaughtException', (err) => {
+  const timestamp = new Date().toISOString()
+  const errorMsg = err instanceof Error ? err.message : String(err)
+  const stackTrace = err instanceof Error ? err.stack : 'No stack trace available'
+
+  console.error(`[${timestamp}] FATAL: uncaughtException - Message: ${errorMsg}`)
+  if (err instanceof Error && err.stack) {
+    console.error(`[${timestamp}] FATAL: uncaughtException - Stack:\n${stackTrace}`)
+  }
+  process.exit(1)
+})
+
+process.on('unhandledRejection', (reason, promise) => {
+  const timestamp = new Date().toISOString()
+  const errorMsg = reason instanceof Error ? reason.message : String(reason)
+  const stackTrace = reason instanceof Error ? reason.stack : 'No stack trace available'
+
+  console.error(`[${timestamp}] FATAL: unhandledRejection - Reason: ${errorMsg}`)
+  if (reason instanceof Error && reason.stack) {
+    console.error(`[${timestamp}] FATAL: unhandledRejection - Stack:\n${stackTrace}`)
+  }
+  process.exit(1)
+})

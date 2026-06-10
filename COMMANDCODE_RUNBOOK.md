@@ -131,7 +131,9 @@ Verify these environment variables are set in the Railway console:
 
 ### Phase 5: Post-Deploy Smoke Checklist
 1. [ ] Verify API health endpoint: `curl -i https://api.sourcetrack.ai/health` returns 200.
-2. [ ] Verify tracker delivery: `curl -I https://api.sourcetrack.ai/tracker.min.js` returns 200.
+2. [ ] Verify tracker delivery:
+   - Standard: `curl -I https://api.sourcetrack.ai/tracker.min.js` returns 200.
+   - Cookieless: `curl -I https://api.sourcetrack.ai/tracker.cookieless.min.js` returns 200.
 3. [ ] Open `https://app.sourcetrack.ai` and verify that the dashboard loads.
 4. [ ] Verify that user login functions correctly.
 5. [ ] Confirm that the sites list loads successfully without errors.
@@ -159,11 +161,83 @@ If a release causes crashes or regressions:
   2. Restore the previous stable `ENCRYPTION_KEY` hex string in the Railway API service and restart the server.
 
 
+## Production Observability & Monitoring Runbook
+
+Use this guide to verify production health, investigate incidents, and monitor background sync jobs.
+
+### 1. Log Locations & Inspection
+
+#### Railway Server Logs (App & API)
+- **Web Console:** Open the Railway Project Dashboard, click the target service (`api` or `dashboard`), and navigate to the **Deployments -> View Logs** tab for real-time logs.
+- **Railway CLI:** Install the Railway CLI (`npm install -g @railway/cli`) and run:
+  - `railway logs -s api` (for the backend API service)
+  - `railway logs -s dashboard` (for the frontend dashboard service)
+
+#### GitHub Actions CI Logs
+- Navigate to the GitHub repository, click on the **Actions** tab, and select the latest run of the CI workflow to view build checks, whitespace validation, and static linting logs.
+
+#### Stripe Webhook Logs
+- Log in to the Stripe Dashboard, navigate to **Developers -> Webhooks**, select the SourceTrack endpoint (`https://api.sourcetrack.ai/api/webhooks/stripe` or `/api/billing/webhook`), and inspect the **Event history** list. Here you can view status codes, request bodies, and signature headers for every Stripe webhook event dispatched.
+
+#### Supabase Database Logs
+- Log in to the Supabase Console, select the project, and navigate to **Database -> Logs -> Postgres Logs** or **API Gateway** logs to debug query execution times, connection pools, and database error states.
+
+#### PostHog Ingestion & Events
+- Log in to your PostHog instance, navigate to the target project, and check the **Live Events** stream or use HogQL query tools under the **Product Analytics -> Query** tab to verify raw telemetry ingestion.
+
+---
+
+### 2. Cron & Job Monitoring Expectations
+
+The background sync cron jobs run on the backend API container. Monitor their execution status by querying the `job_runs` table in the production Supabase database:
+
+| Job Name | Schedule / Frequency | Expected Action | Error Visibility |
+| --- | --- | --- | --- |
+| `nightly-attribution` | Daily at ~01:00 UTC | Attributes visitor touchpoints to conversions for paid-plan sites | Slack alert sent via `SLACK_WEBHOOK_URL` on success/failure. Records status in `job_runs` table. |
+| `health-agent` | Hourly | Runs system-wide checks (Supabase, PostHog, `/health`, data flow) | Posts warnings or critical statuses directly to Slack via `SLACK_WEBHOOK_URL` |
+| `email-reports-weekly` | Weekly | Sends HTML attribution performance reports to site owners | Records status in `job_runs` table. Check database for logs. |
+| `email-reports-monthly` | Monthly | Sends monthly HTML attribution reports to site owners | Records status in `job_runs` table. Check database for logs. |
+| `usage-threshold-emails`| Daily at ~14:00 UTC | Audits pageview caps vs plans; sends emails at 50%, 80%, and 100% caps | Records status in `job_runs` table and records logs in `usage_email_log`. |
+| `data-quality-check` | Daily | Audits UTM coverage, duplicate conversion rates, and freshness | Records status in `job_runs`, `data_quality_reports`, and `data_quality_alerts` tables. |
+
+---
+
+### 3. Incident Severity Classifications
+
+When diagnosing problems, classify them as follows:
+
+#### P0 (Severe System Impact) — Immediate Alert & Action Required
+- **Definition:** Core ingestion or conversion pipelines are failing, or the user dashboard is completely offline.
+- **Examples:**
+  - Express API server crashes on startup or goes unresponsive (`/health` returns non-200 or connection times out).
+  - Stripe webhook signature verification fails globally (incoming payments ignored).
+  - Supabase database writes fail (cannot store session identity links, attributed conversions, or api keys).
+  - PostHog ingestion drops to zero or returns 401/403 credentials error.
+- **Action:** Initiate emergency rollback to the last stable container deploy or restore the correct stable env vars (`ENCRYPTION_KEY`, etc.).
+
+#### P1 (Operational Warning) — Investigate within 24 Hours
+- **Definition:** Background tasks, email queues, or secondary checks fail, but core tracker ingestion remains active.
+- **Examples:**
+  - A scheduled job (e.g., `nightly-attribution`, `email-reports`) fails or runs stale.
+  - A site's duplicate conversion rate warning is triggered (duplicate tracker pixel detected).
+  - The Resend API fails to deliver threshold alerts or weekly reports.
+- **Action:** Check `job_runs` and `data_quality_alerts` table details; run jobs manually in dev/staging environments to reproduce.
+
+---
+
+### 4. Known Monitoring Blind Spots
+
+Before paid-beta launch, be aware of the following system blind spots:
+1. **No Frontend Error Tracking:** There is currently no active Sentry or JS runtime tracking configured in the `dashboard` browser bundle. React/client-side failures will go unnoticed unless reported manually by a user.
+2. **No External Uptime Monitoring:** There is no external pinging monitor checking DNS, SSL, or server latency. Process crashes must be manually identified via Slack alert silence, Railway container logs, or dashboard loads.
+
+
 ## Health Checks (servers running)
 
 ```bash
 curl -i http://localhost:3000/health
-curl -I http://localhost:3000/tracker/tracker.min.js
+curl -I http://localhost:3000/tracker.min.js
+curl -I http://localhost:3000/tracker.cookieless.min.js
 curl -I http://localhost:8080/sourcetrack-test.html
 ```
 
