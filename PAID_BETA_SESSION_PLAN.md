@@ -182,21 +182,14 @@ The session order was re-prioritized to address the **Attribution and Tracking T
 
 ---
 
-## Session 133M — Pricing & Plan Limits Audit
+## Session 133M — Pricing & Plan Limits Audit [COMPLETE]
 
-Audit current SourceTrack pricing, plan limits, feature gates, Stripe price IDs, billing UI, landing pricing, and competitor positioning before changing pricing.
-
-Do not adopt Usermaven-style generous event limits yet.
-
-Audit first:
-- Current Free/Starter/Growth/Scale prices
-- Current pageview/event/conversion limits
-- Stripe price ID mapping
-- Feature gates by plan
-- Billing page copy
-- Public pricing page copy
-- Whether limits are too tight for founder/agency momentum
-- Whether generous event limits create infrastructure risk before 133L load testing
-- Proposed launch pricing options with tradeoffs
-
-Decision after audit only.
+*   **Goal:** Audit current pricing, limits, gates, Stripe mappings, UI, and competitor pricing options to design launch scenarios without coding changes.
+*   **Objectives:**
+    *   [x] Audit current marketing and UI plan limits against backend `FEATURE_MATRIX` and `PLAN_STRUCTURAL_LIMITS`.
+    *   [x] Document current pricing and detect plan mismatches (e.g. Free plan CSV export, Starter plan attribution models).
+    *   [x] Perform competitor-inspired scenario analysis (Conservative vs Usermaven vs Hybrid Attribution-First).
+    *   [x] Highlight missing backend plan checks (Ad cost sync, cohorts, funnels, retention).
+    *   [x] Define non-negotiables (load testing, gating) before changing pricing.
+    *   [x] Created `docs/pricing_plan_limits_audit.md`.
+*   **Constraints:** No pricing code changes, no limit changes, and no schema migrations executed.

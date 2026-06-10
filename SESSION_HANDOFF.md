@@ -1,10 +1,33 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 133L — Event Pipeline SLOs + Load Testing + Capacity Readiness. Added early plan gating logic to Stripe & Shopify webhooks to reject inactive/archived sites early; optimized PostHog SDK batching configuration with environment overrides; created capacity map docs and safe, production-shielded k6 stress testing scripts; verified syntax and build compile.
+> **Handoff:** Session 133M — Pricing & Plan Limits Audit. Audited marketing copy, billing UI, Stripe price mappings, and features gating logic; identified plan mismatches and unenforced backend gates; modeled competitor scenarios; created docs/pricing_plan_limits_audit.md.
 >
-> **Next Task:** Session 133M — Pricing & Plan Limits Audit.
+> **Next Task:** Session 133N — Pricing & limits implementation (Pending load tests & decision).
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 133M — Pricing & Plan Limits Audit
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+
+1.  **Pricing & Limits Gaps Audited:**
+    *   Found that the Free plan restricts CSV exports in the code, mismatching the pricing card promise of exports with a watermark.
+    *   Found that the Starter plan is gated in the marketing copy to Last-touch only, but the backend `FEATURE_MATRIX` allows full multi-touch attribution queries.
+    *   Found that limits in `PLAN_STRUCTURAL_LIMITS` (active sites, team members, conversion counts) are defined but **never enforced** in backend router gates.
+    *   Found that `ad_cost_sync` (Ad connection setup) and `/analytics/funnel` (page-path funnels) are fully open in the backend routers without checks.
+2.  **Competitor Scenario Modeling:**
+    *   Modelled three pricing trajectories: Scenario A (Conservative limits), Scenario B (Generous Usermaven replica), and Scenario C (Hybrid Attribution-First value pricing).
+    *   Recommended Hybrid Scenario C (10k Free sandbox, 100k Starter, 500k Growth) as it enables founder/agency momentum while protecting infrastructure before E2E load testing.
+3.  **Handoff Documentation:**
+    *   Created [pricing_plan_limits_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/pricing_plan_limits_audit.md) detailing the audit report, non-negotiables (133L load testing, backend route gates), and scenario analysis.
+
+### Files changed
+- [docs/pricing_plan_limits_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/pricing_plan_limits_audit.md) [NEW]
+- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
+- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
+- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
 
 ## Session 133L — Event Pipeline SLOs + Load Testing + Capacity Readiness
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
@@ -37,25 +60,6 @@
 - [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
 - [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
 - [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
-
-## Session 133M — Pricing & Plan Limits Audit
-
-Audit current SourceTrack pricing, plan limits, feature gates, Stripe price IDs, billing UI, landing pricing, and competitor positioning before changing pricing.
-
-Do not adopt Usermaven-style generous event limits yet.
-
-Audit first:
-- Current Free/Starter/Growth/Scale prices
-- Current pageview/event/conversion limits
-- Stripe price ID mapping
-- Feature gates by plan
-- Billing page copy
-- Public pricing page copy
-- Whether limits are too tight for founder/agency momentum
-- Whether generous event limits create infrastructure risk before 133L load testing
-- Proposed launch pricing options with tradeoffs
-
-Decision after audit only.
 
 ## Session 133K — Support Readiness
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
