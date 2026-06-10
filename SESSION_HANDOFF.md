@@ -1,12 +1,39 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 136 — Provider separation remains OPEN. Local `.env` points at the documented production Supabase project, so Session 135B remains blocked. Do not run webhook→DB mutation tests until a separate staging Supabase project is confirmed and wired. (Repo is fully env-parameterized and verified; provider consoles were not accessed. Headline finding F5: local `SUPABASE_URL` = production ref `zxjj…umvh` + real service-role key; `qa-guard.js` guards mutating QA scripts but the billing webhook handler is unguarded app code. Evidence in docs/staging_production_separation_audit.md.)
+> **Handoff:** Session 137 — Supabase Backup/PITR Verification + Rollback Rehearsal is complete. Checked Supabase via MCP Management API tools. Documented production project ref `zxjjjsipafojhzkkumvh` is correct, but because the organization is on the Free tier, backups are disabled and PITR is disabled/unavailable. Verified that no separate staging Supabase project exists. Session 135B remains blocked. Dev workstation env remains pointed at production. Railway rollback previously documented / not re-verified in this session. Appended findings to docs/backup_recovery.md.
 >
-> **Next Task:** Session 137 — Supabase Backup/PITR Verification + Rollback Rehearsal (P0, console-driven; also confirms separate staging Supabase project for P0-2 + unblocking 135B). An operator must verify provider-console separation (separate staging Supabase project, Railway/PostHog/Stripe/Resend) to close P0-2. Do NOT run Session 135B until a separate staging Supabase project is confirmed. Do NOT start Phase C/D until all P0 conditions are closed.
+> **Next Task:** Operator must upgrade production Supabase to a paid plan and configure a separate staging project before Session 135B or P0-2/P0-3 can be closed.
 >
-> ⚠️ **P0 CONDITIONS BEFORE FIRST PAID CUSTOMER:** (1) Stripe test-mode checkout/webhook evidence; (2) provider-console staging/prod separation verified (Supabase/PostHog/Stripe/Resend/Railway); (3) Supabase backups+PITR confirmed enabled; (4) prod env secrets set incl. ST_IP_RESOLVER_MODE=railway; (5) beta Terms/Privacy disclosed to each customer in writing.
+> ⚠️ **P0 CONDITIONS BEFORE FIRST PAID CUSTOMER:** (1) Stripe test-mode checkout/webhook evidence [PARTIAL - 135B blocked]; (2) provider-console separation verified [OPEN - no staging project, local .env is prod]; (3) Supabase backups+PITR confirmed enabled [OPEN - free tier is disabled]; (4) prod env secrets set incl. ST_IP_RESOLVER_MODE=railway; (5) beta Terms/Privacy disclosed in writing.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 137 — Supabase Backup/PITR Verification + Rollback Rehearsal
+**Date:** 2026-06-11 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build)
+**P0-3:** **REMAINS OPEN.**
+
+### Completed
+1. Verified documented production Supabase project `zxjjjsipafojhzkkumvh` exists and is healthy.
+2. Verified that backups and PITR are **disabled** in the console (due to the Free tier plan limitation for the organization).
+3. Verified that **no separate staging Supabase project exists** in the organization.
+4. Railway rollback previously documented / not re-verified in this session (redeploy via 1-Click Rollback is supported on Railway but not executed/verified this session).
+5. Appended verification results to `docs/backup_recovery.md`.
+
+### 🚩 Headline finding F6 (P0 staging blocker)
+No separate staging Supabase project exists. The local `.env` remains unsafe (wired to the production database `zxjj…umvh`). **Session 135B remains BLOCKED** until a staging project is created and wired to prevent test mutations from hitting production.
+
+### Other notes
+Stripe test prices remain stale (Session 135 F1). Local dev environment variables require rewiring once a staging project is available.
+
+### Files changed
+- [docs/backup_recovery.md](file:///Users/ubaid/Desktop/trackiq/docs/backup_recovery.md)
+- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
+- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
+- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+
+### Constraints honored
+Read-only console verification; no production data mutated; no destructive SQL run; no secrets/keys/connection strings printed or committed (project IDs redacted/prefixed); `ALLOW_PRODUCTION_QA_MUTATION` not set; no app/backend code changed; no Phase C/D work.
 
 ## Session 136 — Provider-Console Separation & Secrets Verification
 **Date:** 2026-06-11 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build)

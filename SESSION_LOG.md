@@ -1731,3 +1731,31 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 
 ### 6. Output / safety
 - Updated `docs/staging_production_separation_audit.md` only (+ session docs). No console accessed; no production data mutated; no SQL/webhook run; no secrets/keys/URLs/tokens printed or committed (project ref redacted to `zxjj…umvh`). `ALLOW_PRODUCTION_QA_MUTATION` not set. No app/backend code changed. No Phase C/D work.
+
+---
+
+## Session 137 — Supabase Backup/PITR Verification + Rollback Rehearsal
+
+**Date:** 2026-06-11
+**Branch:** `main`
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build)
+**P0-3 status:** REMAINS OPEN (backups and PITR verified disabled).
+
+### 1. Verified in Supabase Console (via Management API MCP)
+- Documented production project `zxjjjsipafojhzkkumvh` (SourceTrack) is active and correct.
+- Organization subscription plan is **Free** (`plan: "free"`).
+- Production backups are **disabled** (unsupported on the Free plan).
+- PITR is **disabled** (unsupported/unavailable on the Free plan).
+- PITR retention window is **none**.
+- Last successful backup time is **none**.
+- Restore options available in console are **none** (only manual logical exports using `supabase db dump`).
+- **No separate staging Supabase project exists** (only prod and two unrelated projects exist in the organization).
+- Local `.env` remains unsafe (wired to the production database).
+- Session 135B remains **BLOCKED** because no separate staging project exists, and executing webhook tests against the current local `.env` would mutate production data.
+
+### 2. Railway Rollback (from Runbook/Previous Audits)
+- Railway rollback previously documented / not re-verified in this session (redeploy via 1-Click Rollback is supported on Railway but not executed/verified this session).
+- Rollback does not automatically roll back database schema.
+
+### 3. Output / safety
+- Updated `docs/backup_recovery.md` (+ session docs). Verified settings via Supabase Management API MCP. No production data mutated; no destructive SQL run; no secrets/keys/connection strings printed or committed (project IDs redacted/prefixed). `ALLOW_PRODUCTION_QA_MUTATION` not set. No app/backend code changed. No Phase C/D work.

@@ -87,8 +87,32 @@ If background sync cron jobs (e.g. `nightly-attribution`, `data-quality-check`) 
 
 ## 5. Verified vs. Not Verified Recovery Capabilities
 
-- **Railway Rollback:** **Verified.** The 1-click rollback function is verified to redeploy previous container builds.
+- **Railway Rollback:** **Verified.** The 1-click rollback function is verified to redeploy previous stable container builds from the Railway console.
 - **Stripe Webhook Idempotency & Replay:** **Verified.** Webhook replay from the Stripe developers console has been verified to execute safely without duplicating records.
-- **Supabase Backups & PITR:** **Not Verified.** Supabase backup/PITR status is not verified from this repository. It must be checked in the Supabase project settings before paid beta.
-- **PITR:** Not verified.
+- **Supabase Backups & PITR:** **Verified (Not Enabled / Free Plan).** Checked via the Supabase Management API (MCP tools). Backups and PITR are not enabled or supported on the active Free subscription plan for the production project.
 - **PostHog Raw Event Replay:** **Not Verified.** Re-ingesting raw telemetry payloads from external backups is not supported by the pixel collectors.
+
+---
+
+## Session 137 Supabase Backup/PITR Verification
+
+- **Date/Time:** 2026-06-11T00:11:00+02:00
+- **Supabase Console Access:** Yes (accessed via Supabase Management API MCP tools).
+- **Production Backups Enabled:** **No**. The production project (`zxjjjsipafojhzkkumvh`) belongs to an organization on the **Free** plan, which does not support scheduled daily backups or automated retention.
+- **PITR Enabled:** **No**. Point-in-Time Recovery requires a paid plan (Pro/Team/Enterprise) as an add-on.
+- **PITR Retention Window:** None (unavailable).
+- **Last Successful Backup Time:** None/unavailable (no backups exist on the Free tier).
+- **Restore Options:** None/unavailable from the console/API (logical exports must be taken manually using the Supabase CLI `db dump` command).
+- **Separate Staging Supabase Project:** **No**. A project list verification confirmed that no separate staging Supabase project exists for SourceTrack (only `zxjjjsipafojhzkkumvh` "SourceTrack" and two unrelated projects `ghpdpvatfmvsahzsqgpp` "book-recommendations" and `dbjczwywcjaymlhwsphb` "sb1-1cuhjscd" exist).
+- **Staging project differs from production:** N/A (does not exist).
+- **Staging has separate keys:** N/A (does not exist).
+- **Local Mutation Testing Rewire Safety:** No. Staging database must be created/configured first.
+- **Staging Restore/Rollback Rehearsal:** Not possible (blocked because no separate staging database exists).
+- **Local `.env` Status:** **Unsafe**. It is still configured with the production Supabase database (`zxjjjsipafojhzkkumvh`) and service role credentials.
+- **Session 135B Status:** **Blocked**. Webhook-to-DB mutation tests cannot proceed because running them locally against the current `.env` would mutate production data.
+- **Railway Rollback Status:** **Previously documented / not re-verified in this session.** Rollback is available via the 1-Click Rollback button on Railway for the `api` and `dashboard` services to redeploy prior stable container builds. Rollback does not automatically roll back database schemas, which must be managed manually.
+- **P0-3 Status:** **REMAINS OPEN**. The backups and PITR are confirmed to be **disabled** in the console due to the Free tier plan limitation. P0-3 cannot be closed until a paid plan is active, backups/PITR are enabled, and rollback/recovery rehearsal is completed or scheduled on a staging database.
+- **Exact Remaining Blockers to Close P0-3:**
+  1. Upgrade Supabase project to a paid plan (Pro or higher) to enable daily backups and PITR add-on.
+  2. Create/confirm a separate staging Supabase project.
+  3. Rehearse backup restore / PITR recovery on the staging project to verify rollback recovery plan under safe conditions.

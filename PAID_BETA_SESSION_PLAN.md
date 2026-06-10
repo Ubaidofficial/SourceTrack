@@ -171,6 +171,9 @@ The session order was re-prioritized to address the **Attribution and Tracking T
 * **Session 133R — Staging / Production Separation Audit:** ✅ Complete. Audited environment isolation between local, staging, and production across Supabase, PostHog, Stripe, Resend, Railway, and CORS settings; resolved hardcoded production URLs in email report and threshold alert jobs; created docs/staging_production_separation_audit.md.
 * **Session 133S — Production Observability Verification / Incident Response Drill:** ✅ Complete. Audited and verified process liveness `/health` checks, stdout/stderr logging, severity classifications, rollback checklist, and customer communication parameters; created docs/production_observability_incident_response.md.
 * **Session 133T — Data Deletion / Privacy Request Operational Drill:** ✅ Complete. Audited and verified account deletion, visitor erasure, and retention purges database flows, Stripe/PostHog boundaries, shared workspace caveats, and operator checklists; created docs/privacy_request_operational_drill.md.
+* **Session 135 — Stripe Test-Mode Checkout & Webhook Evidence:** ⚠️ Partial. Price matrix aligned with price fallback, checkout sessions verified in test mode; E2E webhook→DB testing remains blocked.
+* **Session 136 — Provider-Console Separation & Secrets Verification:** ⚠️ Partial. Environment parameterization verified in repo; no console accessed; dev workstation env found pointed at production database (F5).
+* **Session 137 — Supabase Backup/PITR Verification + Rollback Rehearsal:** ⚠️ Partial. Accessed console via Supabase MCP. Production project zxjjjsipafojhzkkumvh is on Free plan: backups are disabled, PITR is disabled/unavailable. No separate staging project exists (blocking E2E testing).
 
 
 
@@ -394,3 +397,21 @@ The session order was re-prioritized to address the **Attribution and Tracking T
 *   **Other notes:** `ST_IP_RESOLVER_MODE` & `ST_LOG_HASH_SECRET` absent from `.env.example` (doc gap; `TRACKER_SALT` satisfies the prod log-hash boot check); `POSTHOG_HOST` host discrepancy (`us.posthog.com` vs doc's `us.i.posthog.com`); Session 135 F1 stale test prices still uncorrected.
 *   **Next order:** Session 137 (Supabase Backup/PITR + Rollback Rehearsal) is console-driven and overlaps the Supabase separation checks — run it next; it does not require 135B. An operator must confirm a separate staging Supabase project (and Railway/PostHog/Stripe/Resend separation) to close P0-2 and unblock 135B.
 *   **Constraints honored:** No provider console accessed in-session; no production data mutated; no SQL/webhook run; no secrets/keys/URLs/tokens printed or committed (project ref redacted to `zxjj…umvh`); `ALLOW_PRODUCTION_QA_MUTATION` not set; no app/backend code changed; no Phase C/D work.
+
+---
+
+## Session 137 — Supabase Backup/PITR Verification + Rollback Rehearsal [PARTIAL — P0-3 REMAINS OPEN]
+
+*   **Goal:** Close or honestly classify P0-3 — production Supabase backups + PITR confirmed enabled and recovery/rollback plan verified.
+*   **Outcome:** **P0-3 remains OPEN.** Accessed the Supabase Management API (MCP tools). The production project `zxjjjsipafojhzkkumvh` is on the **Free** tier plan: daily scheduled backups are disabled, and PITR is disabled and unavailable. No separate staging Supabase project exists, which blocks E2E mutation testing (Session 135B).
+*   **What was done (genuine):**
+    *   [x] Verified documented production Supabase project `zxjjjsipafojhzkkumvh` exists and is healthy.
+    *   [x] Confirmed the project's organization subscription plan is Free, meaning automated daily backups and PITR are disabled/unavailable.
+    *   [x] Verified that no separate staging Supabase project exists for SourceTrack (the only other active project is unrelated).
+    *   [x] Railway rollback previously documented / not re-verified in this session (redeploy via 1-Click Rollback is supported on Railway but not executed/verified this session).
+    *   [x] Appended "Session 137 Supabase Backup/PITR Verification" to `docs/backup_recovery.md`.
+*   **Next order:** The backups, PITR, staging isolation, and billing tests remain blocked until:
+    1. The production Supabase project is upgraded to a paid plan to enable backups/PITR.
+    2. A separate staging Supabase project is created and wired.
+    3. Stripe test prices are corrected (Session 135 F1).
+*   **Constraints honored:** Read-only console verification; no production data mutated; no destructive SQL run; no secrets/keys/connection strings printed or committed (project ref redacted); `ALLOW_PRODUCTION_QA_MUTATION` not set; no app/backend code changed; no Phase C/D work.
