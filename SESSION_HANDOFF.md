@@ -1,12 +1,37 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 135 — Partial Stripe Test-Mode Billing Evidence. Verified Stripe test-mode account, price lookup, plan mapping, fallback pv_limit behavior, and checkout-session creation only. P0-1 remains OPEN because hosted checkout completion, Stripe webhook delivery, DB mutation, portal cancellation, downgrade, and inactive enforcement were not verified. Key findings: stale test prices are P0 for billing E2E closure, missing pv_limit metadata is P2 config hygiene, and request-body checkout/portal return URLs are P1 billing hardening. Operator E2E checklist appended to docs/billing_checkout_test_mode_qa.md.
+> **Handoff:** Session 136 — Provider separation remains OPEN. Local `.env` points at the documented production Supabase project, so Session 135B remains blocked. Do not run webhook→DB mutation tests until a separate staging Supabase project is confirmed and wired. (Repo is fully env-parameterized and verified; provider consoles were not accessed. Headline finding F5: local `SUPABASE_URL` = production ref `zxjj…umvh` + real service-role key; `qa-guard.js` guards mutating QA scripts but the billing webhook handler is unguarded app code. Evidence in docs/staging_production_separation_audit.md.)
 >
-> **Next Task:** Session 136 — Provider-console separation & secrets verification (P0). Webhook→DB testing is BLOCKED until staging/prod separation is verified, so 136 runs BEFORE the Session 135B operator E2E that closes P0-1 (browser + Stripe CLI + confirmed staging DB; fix F1 stale test prices first). Do NOT start Phase C/D until all P0 conditions are closed.
+> **Next Task:** Session 137 — Supabase Backup/PITR Verification + Rollback Rehearsal (P0, console-driven; also confirms separate staging Supabase project for P0-2 + unblocking 135B). An operator must verify provider-console separation (separate staging Supabase project, Railway/PostHog/Stripe/Resend) to close P0-2. Do NOT run Session 135B until a separate staging Supabase project is confirmed. Do NOT start Phase C/D until all P0 conditions are closed.
 >
 > ⚠️ **P0 CONDITIONS BEFORE FIRST PAID CUSTOMER:** (1) Stripe test-mode checkout/webhook evidence; (2) provider-console staging/prod separation verified (Supabase/PostHog/Stripe/Resend/Railway); (3) Supabase backups+PITR confirmed enabled; (4) prod env secrets set incl. ST_IP_RESOLVER_MODE=railway; (5) beta Terms/Privacy disclosed to each customer in writing.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 136 — Provider-Console Separation & Secrets Verification
+**Date:** 2026-06-11 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build)
+**P0-2:** **REMAINS OPEN.**
+
+### Completed
+1. Verified repo is fully env-parameterized: `supabase.js`/`posthog.js`/`billing.js` env-driven; `railway.json` (api+dashboard) carry build/deploy only (no secrets); no hardcoded provider hosts in source; `qa-guard.js` prod-ref guard present.
+2. Ran no-secret local `.env` presence audit (key presence/mode only).
+3. No provider console accessed — all console-side separation remains operator-verified only.
+
+### 🚩 Headline finding F5 (P0 staging safety)
+Local `.env` `SUPABASE_URL` = production project ref `zxjj…umvh` + real service-role key → local dev wired to production DB. `qa-guard.js` blocks mutating QA scripts, but the billing webhook handler is unguarded app code, so **Session 135B run locally as-is would mutate production**. 135B BLOCKED until a confirmed separate staging Supabase project exists.
+
+### Other notes
+`ST_IP_RESOLVER_MODE` & `ST_LOG_HASH_SECRET` absent from `.env.example` (doc gap; `TRACKER_SALT` covers prod log-hash boot check). `POSTHOG_HOST` discrepancy (`us.posthog.com` vs doc `us.i.posthog.com`). Session 135 F1 stale test prices still uncorrected.
+
+### Files changed
+- [docs/staging_production_separation_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/staging_production_separation_audit.md)
+- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
+- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
+- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+
+### Constraints honored
+No console accessed; no production data mutated; no SQL/webhook run; no secrets/keys/URLs/tokens printed or committed (project ref redacted to `zxjj…umvh`); `ALLOW_PRODUCTION_QA_MUTATION` not set; no app/backend code changed; no Phase C/D work.
 
 ## Session 135 — Stripe Test-Mode Checkout & Webhook Evidence
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build)

@@ -139,3 +139,92 @@ Before launch, operators must log into provider consoles and verify:
 ### P2: Resend Sender Domain Block (Low Risk)
 - **Description:** Running staging email cron jobs using a production Resend key might trigger spam filters or domain blocks if test emails are sent to arbitrary non-team addresses.
 - **Mitigation:** Leave `RESEND_API_KEY` empty on staging so mail logs default safely to the console.
+
+---
+
+## Session 136 Provider-Console Verification
+
+**Date/time:** 2026-06-11 (session 136)
+**Environment:** Local dev workstation (`darwin`), repo `main` @ `b431f6a`. No provider consoles were reachable from this environment.
+**Method:** Repo inspection + a no-secret local `.env` presence audit (key presence/mode only; no values printed). Provider-console (Railway/Supabase/PostHog/Stripe/Resend) UIs were **not** accessed.
+
+### Verdict: P0-2 remains **OPEN**
+
+> **P0-2 remains OPEN — repo and local env are parameterized, but provider-console separation is not verified, and the local `.env` currently points at the production Supabase project.**
+
+The repository is correctly parameterized for environment separation (all provider clients are env-driven; `railway.json` files carry no secrets; CORS/`STAGING_HOSTS` are supported). However, **separation is a deployment-time/console concern that cannot be proven from the repo**, and the one piece of live config visible here (the local `.env`) shows the dev workstation is wired to the **production** Supabase project — not a separate staging project. No separate staging Supabase/PostHog/Stripe-live/Resend resources could be confirmed.
+
+### 🚩 Headline finding — F5 (P0 for staging safety / blocks 135B): local `.env` targets the production Supabase project
+
+- The no-secret audit resolved local `SUPABASE_URL` to host **`zxjj…umvh.supabase.co`** — the same project ref this document already labels as **production** (§2, §5). The local `.env` also carries a real `SUPABASE_SERVICE_KEY` (RLS-bypassing) and a real PostHog project + API key.
+- Local Stripe is test mode and `FRONTEND_URL`/`ALLOWED_ORIGINS` are `localhost:5173` (dev), **but the database target is production.** "Local dev" is therefore reading/writing against the production database.
+- **Mitigating control:** `scripts/qa-guard.js` `verifySafeEnvironment()` blocks *mutating QA scripts* when `SUPABASE_URL` contains `zxjj…umvh` (unless `ALLOW_PRODUCTION_QA_MUTATION=true`). This protects the `qa-*.mjs` scripts — but the **billing webhook handler is normal app code, not behind that guard**, so a Session 135B webhook→DB run on this machine with the current `.env` would mutate **production** `sites` rows.
+- **Consequence:** **Session 135B remains BLOCKED.** It must run only against a *confirmed separate staging Supabase project*, which does not exist / cannot be confirmed from here.
+
+### What was VERIFIED IN REPO ✅
+
+- **All provider clients are env-driven**, no hardcoded endpoints/secrets in source:
+  - `api/lib/supabase.js` — single service-role client from `SUPABASE_URL` + `SUPABASE_SERVICE_KEY`; comment explicitly forbids bundling into frontend; uses `realtime: { transport: WebSocket }`.
+  - `api/lib/posthog.js` — `POSTHOG_API_KEY`/`POSTHOG_HOST`/`POSTHOG_PROJECT_ID`/`POSTHOG_PERSONAL_API_KEY`; `flushAt`/`flushInterval` branch on `NODE_ENV`.
+  - `api/routes/billing.js` — Stripe client from `STRIPE_SECRET_KEY`; price→plan map from env (`getPriceMap()`).
+- **`railway.json` (api + dashboard) contain build/deploy config only — no env vars** (env is set per Railway service/environment in the console). So the repo cannot encode env separation; it can only be verified in Railway.
+- **No hardcoded provider hosts in source** — the only `sourcetrack.ai` literals are mailto/support addresses, email `from:` headers, a demo display string, and PaaS abuse-blocklists; no Supabase/PostHog endpoints baked in.
+- **`scripts/qa-guard.js`** production-ref guard is present and references `zxjj…umvh`.
+
+### What was VERIFIED FROM LOCAL `.env` (no secrets printed) 🔍
+
+| Key | Presence/mode | Note |
+|-----|---------------|------|
+| `NODE_ENV` | missing | → dev default (not `production`) |
+| `FRONTEND_URL` / `ALLOWED_ORIGINS` | `localhost:5173` | local dev origin |
+| `STAGING_HOSTS` | missing | no staging host configured locally |
+| `SUPABASE_URL` | host = **production ref `zxjj…umvh`** | 🚩 local points at production DB |
+| `SUPABASE_SERVICE_KEY` / `SUPABASE_ANON_KEY` | set | service-role present locally |
+| `POSTHOG_API_KEY` / `POSTHOG_PROJECT_ID` | set | real PostHog project |
+| `POSTHOG_HOST` | `us.posthog.com` | doc §2 lists `us.i.posthog.com` — minor host discrepancy to reconcile |
+| `STRIPE_SECRET_KEY` | `sk_test` (redacted) | test mode ✅ |
+| `STRIPE_WEBHOOK_SECRET` | set (redacted) | |
+| `STRIPE_PRICE_ID_STARTER` / `_PRO` / `_AGENCY` | set | legacy names (Session 135 stale-price F1 still open) |
+| `STRIPE_PRICE_ID_GROWTH` / `_SCALE` | missing | resolved via legacy fallback |
+| `RESEND_API_KEY` | missing | → emails log to console (safe locally) ✅ |
+| `ST_IP_RESOLVER_MODE` / `ST_LOG_HASH_SECRET` / `TRACKER_SALT` | missing | prod-required; absent locally (expected for dev). **Note:** `ST_IP_RESOLVER_MODE` and `ST_LOG_HASH_SECRET` are also absent from `.env.example` — doc gap (TRACKER_SALT does satisfy the prod log-hash boot check). |
+
+### What was VERIFIED IN PROVIDER CONSOLES
+
+- **None.** No Railway/Supabase/PostHog/Stripe/Resend console was accessed in this session. All console-side separation claims remain operator-verified only.
+
+### What remains UNVERIFIED / requires operator (console)
+
+| Provider | Unverified item |
+|----------|-----------------|
+| **Railway** | Separate staging vs production services/environments; production has `NODE_ENV=production`, `ST_IP_RESOLVER_MODE=railway`, `ST_LOG_HASH_SECRET`, `TRACKER_SALT`; `ALLOWED_ORIGINS`/`STAGING_HOSTS` correct per env; staging holds no live secrets; rollback available. |
+| **Supabase** | That a **separate staging project** exists (distinct from prod `zxjj…umvh`); that staging keys are unique; backups/PITR (→ Session 137); Auth provider settings per-env. |
+| **PostHog** | Separate staging vs production projects; staging events don't pollute production; event-volume/cost guardrails on production. |
+| **Stripe** | Live mode uses live price IDs only; test/live webhook secrets are environment-specific; **Session 135 F1 stale test prices not yet corrected**. |
+| **Resend** | Production sender domain verified (SPF/DKIM/DMARC); staging uses no production sender. |
+| **Domains** | `app`/`api`/`www`/tracker domains map to expected environments; production UI never serves a staging tracker snippet. |
+
+### BLOCKED
+
+- **Session 135B (full Stripe E2E with webhook→DB mutation)** is blocked until a **confirmed separate staging Supabase project** is wired into a staging env. With the current local `.env` (production project ref), a webhook→DB run would mutate production data and is therefore prohibited this session.
+
+### Blocker list (to close P0-2)
+
+1. Confirm in the **Supabase console** that a staging project exists separate from production `zxjj…umvh`, with its own keys. *(Hard blocker for 135B.)*
+2. Confirm in the **Railway console** that staging and production are separate services/environments with correctly scoped env vars (live keys only in prod; test keys only in staging) and that prod has `NODE_ENV=production` + `ST_IP_RESOLVER_MODE=railway` + log-hash/tracker secrets.
+3. Confirm **PostHog** project separation + production cost guardrails.
+4. Confirm **Stripe** live/test isolation and correct **production** price IDs; correct the Session 135 F1 stale **test** prices.
+5. Confirm **Resend** production domain verification and that staging does not use the production sender.
+6. Provide a non-production `.env` (or a staging env) for any future local mutation testing so the dev workstation is not pointed at production.
+
+### Next actions
+
+- Operator performs the §6 Provider-Console Verification Checklist (above) and records results (redacted) in a follow-up "Session 136B Console Evidence" subsection. Only then can P0-2 be marked CLOSED.
+- Proceed to **Session 137 (Supabase Backup/PITR Verification + Rollback Rehearsal)** which is also console-driven and overlaps the Supabase checks here — it does not require 135B and can run next.
+- **Do not** run Session 135B until blocker #1 (separate staging Supabase project) is confirmed.
+
+### Safety confirmation (this session)
+- ✅ No production data mutated; no SQL run; no webhook handler executed.
+- ✅ No secrets, full keys, full database URLs, tokens, or webhook secrets printed or committed (project ref redacted to `zxjj…umvh`; it also already appears in §2/§5 of this doc as a known production reference).
+- ✅ No live payments; no production load testing; `ALLOW_PRODUCTION_QA_MUTATION` not set.
+- ✅ No app/backend feature code changed.

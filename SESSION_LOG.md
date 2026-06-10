@@ -1699,3 +1699,35 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 
 ### 5. Output / safety
 - Updated `docs/billing_checkout_test_mode_qa.md` only (+ session docs). Temp Stripe scripts created outside VC and deleted; no secrets/keys/full IDs committed. No production data mutated. `ALLOW_PRODUCTION_QA_MUTATION` not set. No Phase C/D work.
+
+---
+
+## Session 136 — Provider-Console Separation & Secrets Verification
+
+**Date:** 2026-06-11
+**Branch:** `main`
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build)
+**P0-2 status:** REMAINS OPEN.
+
+### 1. Verified in repo
+- All provider clients env-driven: `api/lib/supabase.js` (service-role from `SUPABASE_URL`+`SUPABASE_SERVICE_KEY`, never bundled to frontend, `realtime: {transport: WebSocket}`), `api/lib/posthog.js` (env keys; flush tuned by NODE_ENV), `api/routes/billing.js` (Stripe key + env price map).
+- `api/railway.json` + `dashboard/railway.json` carry build/deploy config only — **no env/secrets** (env set per Railway environment in console). No hardcoded provider hosts in source (only mailto/`from:`/demo strings + PaaS abuse-blocklists). `scripts/qa-guard.js` production-ref guard present.
+
+### 2. Verified from local `.env` (no secrets printed)
+- Dev config (NODE_ENV unset, FRONTEND_URL/ALLOWED_ORIGINS=localhost:5173, Stripe `sk_test`, RESEND unset→console).
+- 🚩 **`SUPABASE_URL` host = production ref `zxjj…umvh`** with a real `SUPABASE_SERVICE_KEY` and real PostHog project → local dev is wired to the **production** database.
+- `ST_IP_RESOLVER_MODE`/`ST_LOG_HASH_SECRET`/`TRACKER_SALT` absent locally (expected for dev); first two also absent from `.env.example` (doc gap). `POSTHOG_HOST` = `us.posthog.com` vs doc's `us.i.posthog.com` (minor discrepancy). Stripe price IDs = legacy STARTER/PRO/AGENCY (135 F1 stale prices still open).
+
+### 3. Verified in provider consoles
+- **None** — no Railway/Supabase/PostHog/Stripe/Resend console accessed this session.
+
+### 4. Verdict & headline finding
+- **P0-2 remains OPEN** — repo/local parameterized, but console separation unverified.
+- **F5 (P0 staging safety):** local `.env` points at production Supabase. `qa-guard.js` blocks mutating QA scripts, but the billing webhook handler is unguarded app code → **Session 135B run locally as-is would mutate production**. **135B BLOCKED** until a confirmed separate staging Supabase project exists.
+
+### 5. Blockers / next
+- Operator must confirm (console): separate staging Supabase project (≠ prod `zxjj…umvh`); Railway staging/prod env separation (+ prod NODE_ENV/ST_IP_RESOLVER_MODE/secrets); PostHog project separation + cost guardrails; Stripe live/test isolation + correct prod prices; Resend domain verification.
+- Next: **Session 137 (Supabase Backup/PITR + Rollback Rehearsal)** — console-driven, overlaps Supabase separation checks, does not require 135B.
+
+### 6. Output / safety
+- Updated `docs/staging_production_separation_audit.md` only (+ session docs). No console accessed; no production data mutated; no SQL/webhook run; no secrets/keys/URLs/tokens printed or committed (project ref redacted to `zxjj…umvh`). `ALLOW_PRODUCTION_QA_MUTATION` not set. No app/backend code changed. No Phase C/D work.
