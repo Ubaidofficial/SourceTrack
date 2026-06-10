@@ -1,12 +1,42 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 134 — Paid Beta Go/No-Go Master Audit. Verified 133B–133W readiness docs against actual repo/code (prior summaries treated as untrusted). Verdict **CONDITIONAL GO** — safe for a tiny (3–5, ceiling ~10) hand-picked, single-instance, manually-supported paid beta once P0 conditions are met; not ready for broad self-serve, horizontal scaling, high-volume ecommerce, or compliance-sensitive customers. Created docs/paid_beta_go_no_go_master_audit.md. No app/backend code changed.
+> **Handoff:** Session 135 — Partial Stripe Test-Mode Billing Evidence. Verified Stripe test-mode account, price lookup, plan mapping, fallback pv_limit behavior, and checkout-session creation only. P0-1 remains OPEN because hosted checkout completion, Stripe webhook delivery, DB mutation, portal cancellation, downgrade, and inactive enforcement were not verified. Key findings: stale test prices are P0 for billing E2E closure, missing pv_limit metadata is P2 config hygiene, and request-body checkout/portal return URLs are P1 billing hardening. Operator E2E checklist appended to docs/billing_checkout_test_mode_qa.md.
 >
-> **Next Task:** Session 135 — Stripe test-mode checkout & webhook evidence (P0-1). Do NOT start Phase C/D until all P0 conditions are closed.
+> **Next Task:** Session 136 — Provider-console separation & secrets verification (P0). Webhook→DB testing is BLOCKED until staging/prod separation is verified, so 136 runs BEFORE the Session 135B operator E2E that closes P0-1 (browser + Stripe CLI + confirmed staging DB; fix F1 stale test prices first). Do NOT start Phase C/D until all P0 conditions are closed.
 >
 > ⚠️ **P0 CONDITIONS BEFORE FIRST PAID CUSTOMER:** (1) Stripe test-mode checkout/webhook evidence; (2) provider-console staging/prod separation verified (Supabase/PostHog/Stripe/Resend/Railway); (3) Supabase backups+PITR confirmed enabled; (4) prod env secrets set incl. ST_IP_RESOLVER_MODE=railway; (5) beta Terms/Privacy disclosed to each customer in writing.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 135 — Stripe Test-Mode Checkout & Webhook Evidence
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build)
+**P0-1:** **PARTIALLY VERIFIED — NOT CLOSED.**
+
+### Completed (genuine test-mode)
+1. Confirmed test-mode key (`sk_test`, account `acct_…ZEmw`, charges_enabled=false) — no live keys used.
+2. Read-only `prices.retrieve` on 3 configured price IDs — all exist & active. Amounts **$49 / $99 / $199 monthly** (stale vs advertised $29/$79/$149+). `pv_limit` price metadata **absent** on all.
+3. Test-mode `checkout.sessions.create` probe (Starter) — `cs_test_…`, subscription mode, `livemode=false`, hosted URL returned, `client_reference_id` echoed.
+4. Unit-checked plan mapping + `pv_limit` fallback (pro→growth, agency→scale; 50k/150k/500k defaults).
+5. Audited webhook signature verification, idempotency, lifecycle handlers, inactive enforcement, route auth.
+
+### Findings
+- **F1 (P0 for closing billing E2E):** stale test-price amounts vs advertised pricing ($49/$99/$199 vs $29/$79/$149+) — test dashboard must match public pricing before checkout evidence is meaningful.
+- **F2 (P2):** Stripe product names pre-rename (Pro/Agency).
+- **F3 (P2 config hygiene):** `pv_limit` price metadata absent (plan-default fallback verified correct; add metadata to match docs).
+- **F4 (P1 billing hardening):** checkout `success_url`/`cancel_url` + portal `returnUrl` accepted raw from request body — must be generated/allow-listed server-side from trusted origin (`billing.js:212,239-240,271`). Reported, **not fixed** — billing changes need review.
+
+### Not done (why) → operator path
+Hosted checkout completion (needs browser), Stripe-delivered webhooks (no Stripe CLI), webhook→DB writes (Supabase staging/prod unverified — must not mutate possibly-prod DB), portal session, live status/UI. **Webhook→DB testing is blocked until staging/prod separation is verified, so Session 136 runs before Session 135B (full E2E).** Full operator E2E checklist appended to `docs/billing_checkout_test_mode_qa.md`.
+
+### Files changed
+- [docs/billing_checkout_test_mode_qa.md](file:///Users/ubaid/Desktop/trackiq/docs/billing_checkout_test_mode_qa.md)
+- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
+- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
+- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+
+### Constraints honored
+Stripe test mode only; no live keys; no production data mutated; webhook handler never run against any DB; no secrets/keys/full IDs committed (temp scripts created outside VC and deleted); `ALLOW_PRODUCTION_QA_MUTATION` not set; no Phase C/D work.
 
 ## Session 134 — Paid Beta Go/No-Go Master Audit
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, overclaim grep clean)

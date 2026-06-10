@@ -1,11 +1,14 @@
-Session: 134 — Paid Beta Go/No-Go Master Audit
-Last Completed: Verified Sessions 133B–133W readiness docs against actual repo/code AND performed deep feature-workflow + attribution-engine + principal-engineer code review. Produced docs/paid_beta_go_no_go_master_audit.md (18 sections incl. 17-workflow readiness matrix, functional-test reality check, safe workflow test plan, attribution-engine review, UX review, Top-10 code/product risks, explicit verdicts). No app/backend code changed.
-Verdict: CONDITIONAL GO — safe for 3–5 hand-picked single-instance beta customers once P0 conditions met. Attribution beta-safe = CONDITIONAL (no attribution test in CI; multi-touch is nightly-batch). Code quality = Messy but manageable.
-Next Task: Session 135 — Stripe test-mode checkout & webhook evidence (P0-1). Do NOT start Phase C/D until P0 conditions are closed.
-P0 conditions before first paid customer: (1) Stripe test-mode checkout/webhook evidence, (2) provider-console staging/prod separation verified, (3) Supabase backups+PITR confirmed, (4) prod env secrets + ST_IP_RESOLVER_MODE=railway, (5) beta Terms/Privacy disclosed to each customer.
+Session: 135 — Stripe Test-Mode Checkout & Webhook Evidence
+Last Completed: Ran genuine Stripe TEST-mode read-only verification (account=test, 3 prices exist/active) + test-mode checkout-session creation probe + plan-mapping/pv_limit unit checks + full billing code-path audit. Appended "Session 135 Test-Mode Evidence" to docs/billing_checkout_test_mode_qa.md. NO webhook delivered, NO handler run against DB (Stripe CLI absent; Supabase staging/prod unverified — P0-2). No app/backend code changed.
+P0-1 STATUS: PARTIALLY VERIFIED — NOT CLOSED. Stripe-side config + code path verified; end-to-end checkout→webhook→DB→enforcement loop still requires operator run on confirmed staging (checklist in billing doc).
+Findings: F1(P0 for closing billing E2E) test prices stale ($49/$99/$199 vs advertised $29/$79/$149+) — Stripe test dashboard must match public pricing before checkout evidence is meaningful; F2(P2) product names pre-rename (Pro/Agency); F3(P2 config hygiene) pv_limit metadata absent on prices (plan-default fallback verified correct, but add metadata to match docs); F4(P1 billing hardening) checkout success/cancel/return URLs accepted raw from request body — must be generated/allow-listed server-side from trusted origin (reported, not fixed — needs review).
+Verdict (134): CONDITIONAL GO — safe for 3–5 hand-picked single-instance beta customers once P0 conditions met.
+Next Task: Session 136 — Provider-console separation & secrets verification (P0). Webhook→DB testing is BLOCKED until staging/prod separation is verified, so 136 runs BEFORE the Session 135B Stripe E2E closure. Do NOT start Phase C/D until P0 conditions are closed.
+P0 conditions before first paid customer: (1) Stripe test-mode checkout/webhook evidence [PARTIAL — 135B operator E2E pending, blocked on 136], (2) provider-console staging/prod separation verified, (3) Supabase backups+PITR confirmed, (4) prod env secrets + ST_IP_RESOLVER_MODE=railway, (5) beta Terms/Privacy disclosed to each customer.
 Roadmap Queue:
-- Session 135 — Stripe test-mode checkout/webhook evidence (P0)
-- Session 136 — Provider-console separation & secrets verification (P0)
+- Session 136 — Provider-console separation & secrets verification (P0) [NEXT — unblocks webhook DB testing]
+- Session 135B — Full Stripe test-mode E2E checkout/webhook/portal run (P0-1 closure) [blocked on 136 + Stripe CLI/reachable webhook endpoint; fix F1 test prices first]
+- Billing hardening mini-session — server-side generate/allow-list checkout & portal return URLs (F4, P1)
 - Session 137 — Supabase backup/PITR verification + rollback rehearsal (P0)
 - Session 138 — Lightweight exception monitoring / Sentry (P1)
 - Session 139 — Onboarding validation hardening + email suppression (P1)

@@ -362,3 +362,20 @@ The session order was re-prioritized to address the **Attribution and Tracking T
     *   [x] Recommend next 5 sessions (135–139), Phase C/D blocked until P0 closed.
     *   [x] Create `docs/paid_beta_go_no_go_master_audit.md` (18 sections).
 *   **Constraints:** Audit-only. No app/backend feature code changed. No production data mutated, no production secrets, no production load testing, `ALLOW_PRODUCTION_QA_MUTATION` not set.
+
+---
+
+## Session 135 — Stripe Test-Mode Checkout & Webhook Evidence [PARTIAL — P0-1 NOT CLOSED]
+
+*   **Goal:** Close P0-1 — prove the Stripe billing path works in test mode end-to-end before any paid beta customer.
+*   **Outcome:** **PARTIALLY VERIFIED — P0-1 remains OPEN.** Stripe-side configuration and the billing code path are verified with genuine test-mode calls; the end-to-end checkout→webhook→DB→enforcement loop is **not** verified (no Stripe CLI; Supabase staging/prod unverified per P0-2, so the webhook handler was not run against a possibly-production DB).
+*   **What was done (genuine):**
+    *   [x] Confirmed `STRIPE_SECRET_KEY` is **test mode** (`sk_test`, account `acct_…ZEmw`, charges_enabled=false).
+    *   [x] Read-only `prices.retrieve` on all 3 configured price IDs — exist & active.
+    *   [x] Test-mode `checkout.sessions.create` probe (Starter) — `cs_test_…`, subscription mode, `livemode=false`, hosted URL returned.
+    *   [x] Unit-checked plan mapping + `pv_limit` fallback (starter 50k / growth 150k / scale 500k).
+    *   [x] Audited webhook signature verification, idempotency, all lifecycle handlers, and inactive-plan enforcement.
+    *   [x] Appended "Session 135 Test-Mode Evidence" + operator E2E checklist to `docs/billing_checkout_test_mode_qa.md`.
+*   **Findings:** F1(**P0 for closing billing E2E**) test prices stale ($49/$99/$199 vs advertised $29/$79/$149+) — Stripe test dashboard must match public pricing before checkout evidence is meaningful; F2(P2) product names pre-rename; F3(P2 config hygiene) `pv_limit` price metadata absent (fallback verified correct, add metadata to match docs); F4(**P1 billing hardening**) checkout/portal redirect URLs accepted raw from request body — must be generated/allow-listed server-side from trusted origin — reported, not fixed.
+*   **Next order:** Session 136 (provider-console separation) runs **before** Session 135B (full E2E), because webhook→DB testing is blocked until staging/prod separation is verified. Then a billing-hardening mini-session for F4.
+*   **Constraints honored:** Stripe **test mode** only; no live keys; no production data mutated; webhook handler never executed against any DB; no secrets committed; `ALLOW_PRODUCTION_QA_MUTATION` not set; no Phase C/D work.

@@ -1666,3 +1666,36 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 ### 5. Output
 - Created `docs/paid_beta_go_no_go_master_audit.md` (18 sections: verdict, P0/P1/P2 blockers, 20-area readiness matrix, repo-proven vs external split, harsh Project Orchestra review, 17-workflow matrix, functional-test reality, safe test plan, principal-engineer review, attribution review, UX review, Top-10 code + Top-10 product risks, explicit verdicts, next 5 sessions 135–139).
 - No app/backend feature code changed. No production mutation, secrets, or load testing.
+
+---
+
+## Session 135 — Stripe Test-Mode Checkout & Webhook Evidence
+
+**Date:** 2026-06-10
+**Branch:** `main`
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build)
+**P0-1 status:** PARTIALLY VERIFIED — **NOT CLOSED**.
+
+### 1. Genuine test-mode verification (read-only + 1 ephemeral session)
+- Confirmed `STRIPE_SECRET_KEY` is **test mode** (`sk_test`; account `acct_…ZEmw`, ES, charges_enabled=false). No live keys touched.
+- `prices.retrieve` (read-only) on the 3 configured price IDs: all exist & active. Amounts: Starter **$49/mo**, PRO→growth **$99/mo**, AGENCY→scale **$199/mo**. `pv_limit` price metadata **absent** on all three.
+- `checkout.sessions.create` test-mode probe (Starter): `cs_test_…`, `mode=subscription`, `status=open`, `livemode=false`, hosted URL returned, `client_reference_id` echoed.
+- Unit-checked `normalizePlan`/`getPvLimit`: pro→growth, agency→scale; pv defaults starter 50k / growth 150k / scale 500k (the fallback path used when price metadata is absent — verified correct).
+
+### 2. Code-path audit
+- `billingWebhookHandler`: `constructEvent` w/ raw body + `stripe-signature`; in-memory `_seenStripeEvents` idempotency (24h, single-instance); handlers for checkout.session.completed, subscription.updated/deleted, invoice.payment_succeeded/failed.
+- Inactive/archived ingestion block via `middleware/tier-check.js` (402).
+- Routes `requireUserAuth + validateSiteKey + requireSiteMembership`.
+
+### 3. Findings (block P0-1 closure)
+- **F1 (P0 for closing billing E2E):** test-mode price amounts stale vs advertised pricing ($49/$99/$199 vs $29/$79/$149+). Does not block this documentation, but blocks any claim the Stripe test-mode checkout path is launch-ready — test dashboard must match public pricing before checkout evidence is meaningful.
+- **F2 (P2):** Stripe product names pre-rename (Pro/Agency).
+- **F3 (P2 config hygiene):** `pv_limit` metadata absent on prices (plan-default fallback verified correct; still add metadata so Stripe config matches docs).
+- **F4 (P1 billing hardening):** checkout `success_url`/`cancel_url` and portal `returnUrl` taken raw from request body without trusted-origin validation (`billing.js:212,239-240,271`) — must be generated/allow-listed server-side. Reported, **not fixed** — billing changes need review.
+
+### 4. Not tested (and why) + operator path
+- Hosted checkout completion (needs browser + test card), Stripe-delivered webhooks (no Stripe CLI), webhook→DB effects (Supabase staging/prod unverified — must not mutate possibly-prod DB), portal session, live status/UI. Full operator E2E checklist appended to `docs/billing_checkout_test_mode_qa.md` ("Session 135 Test-Mode Evidence").
+- **Webhook→DB testing is blocked until provider-console staging/prod separation is verified.** Next order: **Session 136 (provider-console separation) before Session 135B (full E2E)**, then a billing-hardening mini-session for F4.
+
+### 5. Output / safety
+- Updated `docs/billing_checkout_test_mode_qa.md` only (+ session docs). Temp Stripe scripts created outside VC and deleted; no secrets/keys/full IDs committed. No production data mutated. `ALLOW_PRODUCTION_QA_MUTATION` not set. No Phase C/D work.
