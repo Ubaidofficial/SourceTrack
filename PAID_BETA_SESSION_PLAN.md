@@ -165,6 +165,7 @@ The session order was re-prioritized to address the **Attribution and Tracking T
 * **Session 133J — Docs Truth Audit:** ✅ Complete. Standardized tracker snippet paths across solution, setup, and help pages to canonical root paths. Updated Stripe env var `STRIPE_PRICE_ID_SCALE` as primary. Softened compliance language to "privacy-conscious" in developer docs. Added lightweight frontend gating for Google Search Console (GSC) connection card. Created `docs/docs_truth_audit.md` tracking all audit findings and corrected files. Verified all checks pass.
 * **Session 133K — Support Readiness:** ✅ Complete. Created support_readiness.md mapping, added support emails/troubleshooting links to Billing, Settings, Snippet, and Onboarding failure views without SLA/24-7 guarantees, and documented triage/escalation workflows. Verified all checks pass.
 * **Session 133L — Event Pipeline SLOs + Load Testing + Capacity Readiness:** ✅ Complete. Added early plan check gating logic to Stripe & Shopify webhooks to reject inactive/archived sites early; optimized PostHog SDK batching configuration with environment overrides; created capacity map docs and safe, production-shielded k6 stress testing scripts; verified syntax and build compile.
+* **Session 133O — Legal / Policy Readiness:** ✅ Complete. Created legal_policy_readiness.md, audited and documented legal disclaimers, data spec, sub-processor boundaries, deletion mechanics, cookie/cookieless warnings, and lawyer checklist.
 
 ---
 
@@ -208,3 +209,24 @@ The session order was re-prioritized to address the **Attribution and Tracking T
     *   [x] Implement retention limit checks in `api/routes/gdpr.js` `/retention` endpoint scoping updates to allowed retention days (returning 402 if exceeded, preserving existing data without mutation).
     *   [x] Create `docs/plan_gate_enforcement_audit.md` documenting implemented gates and deferred structural limits.
 *   **Constraints:** No pricing changes, price adjustments, or Stripe ID changes. Structural limits (sites, seats, conversions) remain audit-only and deferred.
+
+---
+
+## Session 133O — Legal / Policy Readiness [COMPLETE]
+
+*   **Goal:** Audit and document legal disclaimers, data collection specifications, sub-processor boundaries, data deletion mechanics, cookie/cookieless warnings, and B2B DPA compliance requirements.
+*   **Objectives:**
+    *   [x] Document legal disclaimers (not legal advice, beta policies, lawyer review required, no compliance guarantees).
+    *   [x] Define customer responsibilities for cookie banners and legal consent.
+    *   [x] Map collected data and IP address boundaries with ingestion-level safety caveats.
+    *   [x] Outline Stripe retention boundaries and PostHog best-effort deletion mechanisms.
+    *   [x] Document visitor erasure, nightly purges, and shared workspace account deletion logic.
+    *   [x] Prepare lawyer review checklist and B2B DPA pre-launch gaps.
+    *   [x] Create `docs/legal_policy_readiness.md`.
+*   **Constraints:** No legal compliance guarantees, no new legal pages, and no changes to existing Terms/Privacy routing.
+
+---
+
+## Session 133P — Transactional Email Readiness [TODO]
+
+*   **Goal:** Prepare transactional email services, verification flows, templates, and boundaries for the paid beta launch.

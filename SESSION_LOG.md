@@ -1476,3 +1476,19 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 
 ### 3. Documentation
 - Created `docs/plan_gate_enforcement_audit.md` mapping implemented gates, copy alignment details, and documenting active site, team user seat, and conversion caps as deferred (audit-only) limits.
+
+---
+
+## Session 133O — Legal / Policy Readiness
+
+**Date:** 2026-06-10
+**Branch:** `main`
+**Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
+
+### 1. Legal & Policy Audit
+- Audited the codebase, documentation, settings, and billing routes for regulatory compliance, privacy statements, and refund policies.
+- Formulated precise answers for the 12 key legal/policy readiness questions covering Privacy/Terms links, support mailto links, data capture specifications, and sub-processor (PostHog/Stripe) boundaries.
+- Adhered to strict disclaimers (not legal advice, beta drafts, no compliance claims, customer consent banner obligations).
+
+### 2. Documentation
+- Created `docs/legal_policy_readiness.md` detailing the policy posture, collected metrics, PostHog best-effort API limits, Stripe record retention constraints, deletion/retention mechanics, cookieless realities/warnings, and the lawyer review checklist (DPAs, final terms, compliance validations).
