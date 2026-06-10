@@ -2,8 +2,16 @@ import { Router } from 'express'
 import { validateSiteKey } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
 import { esc } from '../lib/utils.js'
+import { requireFeature } from '../lib/plan-features.js'
 
 const router = Router()
+
+// Gate cohorts functionality on funnels_cohorts plan feature
+router.use((req, res, next) => {
+  const block = requireFeature(req.site?.plan, 'funnels_cohorts', 'Cohorts')
+  if (block) return res.status(402).json(block)
+  next()
+})
 
 router.get('/weekly', validateSiteKey, async (req, res) => {
   try {

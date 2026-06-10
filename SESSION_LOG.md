@@ -1455,3 +1455,24 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 - Modeled 3 launch plans: Scenario A (Conservative), Scenario B (Usermaven Copy), and Scenario C (Hybrid Attribution-First value pricing).
 - Recommended Hybrid Scenario C (10k Free, 100k Starter, 500k Growth) as the best fit for launch momentum and infrastructure protection.
 - Created `docs/pricing_plan_limits_audit.md` detailing the roadmap, gating rules, and non-negotiables before pricing implementation.
+
+---
+
+## Session 133N — Plan Gate Enforcement + Pricing Mismatch Fixes
+
+**Date:** 2026-06-10
+**Branch:** `main`
+**Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
+
+### 1. Marketing Plan Copy & Matrix Alignment
+- Aligned Free CSV export mismatch: updated `PricingCards.jsx` features list to state "No CSV export" and `Pricing.jsx` features table row under Free to "No".
+- Aligned Starter attribution model support mismatch: updated `Pricing.jsx` comparison table under Starter to "All 9 models" to match actual multi-touch attribution backend check.
+
+### 2. Backend Gating & GDPR Enforcement
+- Gated ad platform integrations (`api/routes/ad-platforms.js`) with `ad_cost_sync` check for write/sync endpoints (auth, save account, sync) while leaving status and disconnect open so downgraded tenants can disconnect.
+- Gated cohort queries (`api/routes/cohorts.js`) using `funnels_cohorts` check middleware.
+- Gated funnel analytics (`api/routes/analytics.js` `/funnel`) using `funnels_cohorts` check.
+- Gated GDPR data retention configuration (`api/routes/gdpr.js` `PUT /retention`) using plan structural limits (exceeded retention days or keep-forever settings return a 402 upgrade response; existing data is preserved without mutation).
+
+### 3. Documentation
+- Created `docs/plan_gate_enforcement_audit.md` mapping implemented gates, copy alignment details, and documenting active site, team user seat, and conversion caps as deferred (audit-only) limits.

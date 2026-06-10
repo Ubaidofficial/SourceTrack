@@ -31,7 +31,7 @@ const COMPARISON_FEATURES = [
   { category: 'Reporting & Analytics', items: [
     { name: 'Traffic Sources & Pages', free: 'Yes', starter: 'Yes', growth: 'Yes', scale: 'Yes' },
     { name: 'AI Referral Detection', free: 'Yes', starter: 'Yes', growth: 'Yes', scale: 'Yes' },
-    { name: 'Attribution Models Supported', free: 'Last-touch only', freeLabel: 'Last-touch', starter: 'Last-touch only', growth: 'All 9 models', scale: 'All 9 models' },
+    { name: 'Attribution Models Supported', free: 'Last-touch only', freeLabel: 'Last-touch', starter: 'All 9 models', growth: 'All 9 models', scale: 'All 9 models' },
     { name: 'Dashboard Widget Pinning', free: 'No', starter: 'No', growth: 'Yes', scale: 'Yes' },
     { name: 'CSV Report Exports', free: 'No', starter: 'Yes', growth: 'Yes', scale: 'Yes' },
   ]},

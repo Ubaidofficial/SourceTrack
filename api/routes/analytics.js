@@ -676,6 +676,9 @@ router.get('/os', requireUserAuth, validateSiteKey, requireSiteMembership, async
 })
 
 router.get('/funnel', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
+  const block = requireFeature(req.site?.plan, 'funnels_cohorts', 'Funnels')
+  if (block) return res.status(402).json(block)
+
   try {
     const siteId = String(req.site.id)
     const stepsRaw = req.query.steps || ''

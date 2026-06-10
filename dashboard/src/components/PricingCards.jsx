@@ -4,7 +4,7 @@ const PLANS = [
   {
     key: 'free', name: 'Free', price: '$0', period: '',
     desc: 'Track where your next 30 signups or orders came from.',
-    features: ['1 site', '30 attributed conversions/mo', '5,000 tracked pageviews/mo', '30-day history', 'SourceTrack logo on export'],
+    features: ['1 site', '30 attributed conversions/mo', '5,000 tracked pageviews/mo', '30-day history', 'No CSV export'],
     cta: 'Start free', href: '/signup', featured: false,
   },
   {

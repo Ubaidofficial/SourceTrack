@@ -1,10 +1,39 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 133M — Pricing & Plan Limits Audit. Audited marketing copy, billing UI, Stripe price mappings, and features gating logic; identified plan mismatches and unenforced backend gates; modeled competitor scenarios; created docs/pricing_plan_limits_audit.md.
+> **Handoff:** Session 133N — Plan Gate Enforcement + Pricing Mismatch Fixes. Aligned Free export and Starter attribution model copies; enforced ad platforms, cohorts, funnels, and retention plan gates in backend routers; documented deferred structural limits in docs/plan_gate_enforcement_audit.md.
 >
-> **Next Task:** Session 133N — Pricing & limits implementation (Pending load tests & decision).
+> **Next Task:** Session 133O — Launch Checklist Verification / Staging Checkout Tests.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 133N — Plan Gate Enforcement + Pricing Mismatch Fixes
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+
+1.  **Aligned Pricing/Marketing Copy:**
+    *   Updated Free plan pricing card features list to "No CSV export" and features table row under Free to "No".
+    *   Updated Starter plan features table row under Attribution Models Supported to "All 9 models" to match multi-touch attribution backend check.
+2.  **Enforced Backend Gates:**
+    *   Gated ad platform integrations (`api/routes/ad-platforms.js`) with `ad_cost_sync` check for connect/save/sync routes, while leaving status/read/disconnect routes open for downgraded users.
+    *   Gated weekly and AI cohorts routes (`api/routes/cohorts.js`) using `funnels_cohorts` check middleware.
+    *   Gated funnel analytics (`api/routes/analytics.js` `/funnel`) using `funnels_cohorts` check.
+    *   Gated GDPR data retention configuration (`api/routes/gdpr.js` `PUT /retention`) using plan structural limits (exceeded retention days or keep-forever settings return a 402 upgrade response; existing data is preserved without mutation).
+3.  **Handoff Documentation:**
+    *   Created [plan_gate_enforcement_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/plan_gate_enforcement_audit.md) outlining gates, copy alignment, and documenting active site, team user seat, and conversion caps as deferred (audit-only) limits.
+
+### Files changed
+- [docs/plan_gate_enforcement_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/plan_gate_enforcement_audit.md) [NEW]
+- [dashboard/src/components/PricingCards.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/components/PricingCards.jsx)
+- [dashboard/src/pages/Pricing.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Pricing.jsx)
+- [api/routes/ad-platforms.js](file:///Users/ubaid/Desktop/trackiq/api/routes/ad-platforms.js)
+- [api/routes/cohorts.js](file:///Users/ubaid/Desktop/trackiq/api/routes/cohorts.js)
+- [api/routes/analytics.js](file:///Users/ubaid/Desktop/trackiq/api/routes/analytics.js)
+- [api/routes/gdpr.js](file:///Users/ubaid/Desktop/trackiq/api/routes/gdpr.js)
+- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
+- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
+- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
 
 ## Session 133M — Pricing & Plan Limits Audit
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)

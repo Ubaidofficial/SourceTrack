@@ -11,6 +11,7 @@
 
 import { Router } from 'express'
 import { getSupabase } from '../lib/supabase.js'
+import { getStructuralLimits } from '../lib/plan-features.js'
 
 export const gdprRouter = Router()
 
@@ -24,7 +25,7 @@ async function getSiteForUser(supabase, userId, siteKey) {
 
   const query = supabase
     .from('sites')
-    .select('id, site_key, owner_id, company_id, posthog_site_id')
+    .select('id, site_key, owner_id, company_id, posthog_site_id, plan')
     .eq('site_key', siteKey)
     .limit(1)
 
@@ -259,6 +260,34 @@ gdprRouter.put('/retention', async (req, res) => {
     const site = await getSiteForUser(supabase, userId, site_key)
     if (!site) {
       return res.status(403).json({ success: false, error: 'Site not found or access denied' })
+    }
+
+    const limits = getStructuralLimits(site.plan)
+    if (days === 0 && limits.retention_days < 1825) {
+      return res.status(402).json({
+        success: false,
+        data: null,
+        error: 'Feature not available on your plan',
+        upgrade: {
+          current_plan: site.plan,
+          required_feature: 'keep_forever_retention',
+          message: `Keep forever data retention is not available on the ${site.plan} plan. Upgrade to Scale to unlock.`,
+          upgrade_url: '/billing',
+        }
+      })
+    }
+    if (days > limits.retention_days) {
+      return res.status(402).json({
+        success: false,
+        data: null,
+        error: 'Feature not available on your plan',
+        upgrade: {
+          current_plan: site.plan,
+          required_feature: 'extended_retention',
+          message: `Retention period of ${days} days exceeds the ${limits.retention_days}-day limit for the ${site.plan} plan. Upgrade to unlock.`,
+          upgrade_url: '/billing',
+        }
+      })
     }
 
     const { error } = await supabase

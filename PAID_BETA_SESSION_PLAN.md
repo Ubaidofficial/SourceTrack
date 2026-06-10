@@ -193,3 +193,18 @@ The session order was re-prioritized to address the **Attribution and Tracking T
     *   [x] Define non-negotiables (load testing, gating) before changing pricing.
     *   [x] Created `docs/pricing_plan_limits_audit.md`.
 *   **Constraints:** No pricing code changes, no limit changes, and no schema migrations executed.
+
+---
+
+## Session 133N — Plan Gate Enforcement + Pricing Mismatch Fixes [COMPLETE]
+
+*   **Goal:** Align pricing copy with feature matrices and enforce backend plan gates on routes that currently bypass limits without changing prices or Stripe IDs.
+*   **Objectives:**
+    *   [x] Fix Free plan CSV export mismatch (Marketing copy now states "No CSV export").
+    *   [x] Fix Starter plan attribution model mismatch (Marketing copy now states "All 9 models").
+    *   [x] Implement `ad_cost_sync` gates for ad platform connect/save/sync routes in `api/routes/ad-platforms.js` (while keeping read/status/disconnect routes open).
+    *   [x] Implement `funnels_cohorts` gates on cohort routes in `api/routes/cohorts.js`.
+    *   [x] Implement `funnels_cohorts` gate on `/funnel` route in `api/routes/analytics.js`.
+    *   [x] Implement retention limit checks in `api/routes/gdpr.js` `/retention` endpoint scoping updates to allowed retention days (returning 402 if exceeded, preserving existing data without mutation).
+    *   [x] Create `docs/plan_gate_enforcement_audit.md` documenting implemented gates and deferred structural limits.
+*   **Constraints:** No pricing changes, price adjustments, or Stripe ID changes. Structural limits (sites, seats, conversions) remain audit-only and deferred.

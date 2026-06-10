@@ -4,6 +4,7 @@ import { getSupabase } from '../lib/supabase.js'
 import { encryptSecret, decryptSecret } from '../lib/utils.js'
 import { requireUserAuth } from '../middleware/user-auth.js'
 import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
+import { requireFeature } from '../lib/plan-features.js'
 import {
   getAuthUrl,
   verifyStateToken,
@@ -141,6 +142,13 @@ router.get('/google/callback', async (req, res) => {
 // --- GATED PRIVATE ROUTES ---
 router.use(requireUserAuth, validateSiteKey, requireSiteMembership)
 
+const requireAdCostSync = (req, res, next) => {
+  const block = requireFeature(req.site?.plan, 'ad_cost_sync', 'Ad cost sync')
+  if (block) return res.status(402).json(block)
+  next()
+}
+
+
 // 2. GET `/status`: Returns status overview for all ad platform sync accounts
 router.get('/status', async (req, res) => {
   try {
@@ -199,7 +207,7 @@ router.get('/sync-history', async (req, res) => {
 })
 
 // 4. GET `/google/auth-url`: Retrieve Google Ads authorization redirect link
-router.get('/google/auth-url', (req, res) => {
+router.get('/google/auth-url', requireAdCostSync, (req, res) => {
   try {
     const siteKey = req.site.site_key
     const userId = req.user.id
@@ -217,7 +225,7 @@ router.get('/google/auth-url', (req, res) => {
 })
 
 // 5. POST `/google/save-account`: Connect ad customer ID to Google connection
-router.post('/google/save-account', async (req, res) => {
+router.post('/google/save-account', requireAdCostSync, async (req, res) => {
   const { customer_id, login_customer_id } = req.body
   const siteKey = req.site.site_key
 
@@ -271,7 +279,7 @@ router.post('/google/save-account', async (req, res) => {
 })
 
 // 6. POST `/google/sync`: Daily cost synchronization task for Google Ads
-router.post('/google/sync', async (req, res) => {
+router.post('/google/sync', requireAdCostSync, async (req, res) => {
   const siteKey = req.site.site_key
   const lockKey = `${siteKey}:google_ads`
 
@@ -323,7 +331,7 @@ router.post('/google/disconnect', async (req, res) => {
 })
 
 // 8. POST `/meta/connect`: Receives, encrypts, and validates manual access token details
-router.post('/meta/connect', async (req, res) => {
+router.post('/meta/connect', requireAdCostSync, async (req, res) => {
   const { access_token, ad_account_id } = req.body
   const siteKey = req.site.site_key
 
@@ -368,7 +376,7 @@ router.post('/meta/connect', async (req, res) => {
 })
 
 // 9. POST `/meta/sync`: Daily cost synchronization task for Meta Ads
-router.post('/meta/sync', async (req, res) => {
+router.post('/meta/sync', requireAdCostSync, async (req, res) => {
   const siteKey = req.site.site_key
   const lockKey = `${siteKey}:meta_ads`
 
