@@ -1,10 +1,30 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 133R — Staging / Production Separation Audit. Audited environment isolation across Supabase, PostHog, Stripe, Resend, Railway, and CORS; resolved hardcoded production links in email report and threshold alert jobs; created docs/staging_production_separation_audit.md.
+> **Handoff:** Session 133S — Production Observability Verification / Incident Response Drill. Verified process liveness check endpoint status, stdout/stderr logging, severity classifications, checklists, and rollback guidelines; created docs/production_observability_incident_response.md.
 >
-> **Next Task:** Session 133S — Production Observability Verification / Incident Response Drill.
+> **Next Task:** Session 133T — Data Deletion / Privacy Request Operational Drill.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 133S — Production Observability Verification / Incident Response Drill
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+
+1.  **Production Observability Audit:**
+    *   Audited Express liveness endpoint (`GET /health`), background dependency check cron agent (`api/jobs/health-agent.js`), console-based logging categories, webhook error visibility, rate limiting warnings, and process exception handlers.
+    *   Formulated detailed answers for 20 required observability and incident response questions, establishing health scopes, logging limits, and key alerting gaps.
+2.  **Documentation & Runbooks:**
+    *   Created [production_observability_incident_response.md](file:///Users/ubaid/Desktop/trackiq/docs/production_observability_incident_response.md) mapping health endpoints, log inventories, provider checklists (Railway, Supabase, PostHog, Stripe, Resend, CI), severity levels (P0, P1, P2), incident response checklists, rollback guidelines, and SLA disclaimers.
+    *   Updated [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md) to add Incident Response & Observability guidelines (process health checking, logs, cron checks, Stripe/Resend debugging, rollback, and customer communications).
+
+### Files changed
+- [docs/production_observability_incident_response.md](file:///Users/ubaid/Desktop/trackiq/docs/production_observability_incident_response.md) [NEW]
+- [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md)
+- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
+- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
+- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
 
 ## Session 133R — Staging / Production Separation Audit
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)

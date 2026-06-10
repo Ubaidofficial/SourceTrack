@@ -195,8 +195,8 @@ The background sync cron jobs run on the backend API container. Monitor their ex
 
 | Job Name | Schedule / Frequency | Expected Action | Error Visibility |
 | --- | --- | --- | --- |
-| `nightly-attribution` | Daily at ~01:00 UTC | Attributes visitor touchpoints to conversions for paid-plan sites | Slack alert sent via `SLACK_WEBHOOK_URL` on success/failure. Records status in `job_runs` table. |
-| `health-agent` | Hourly | Runs system-wide checks (Supabase, PostHog, `/health`, data flow) | Posts warnings or critical statuses directly to Slack via `SLACK_WEBHOOK_URL` |
+| `nightly-attribution` | Daily at ~01:00 UTC | Attributes visitor touchpoints to conversions for paid-plan sites | Slack alerts may be sent via `SLACK_WEBHOOK_URL` if configured/verified. Records status in `job_runs` table. |
+| `health-agent` | Hourly | Runs system-wide checks (Supabase, PostHog, `/health`, data flow) | May post warning/critical alerts to Slack if `SLACK_WEBHOOK_URL` is configured/verified. |
 | `email-reports-weekly` | Weekly | Sends HTML attribution performance reports to site owners | Records status in `job_runs` table. Check database for logs. |
 | `email-reports-monthly` | Monthly | Sends monthly HTML attribution reports to site owners | Records status in `job_runs` table. Check database for logs. |
 | `usage-threshold-emails`| Daily at ~14:00 UTC | Audits pageview caps vs plans; sends emails at 50%, 80%, and 100% caps | Records status in `job_runs` table and records logs in `usage_email_log`. |
@@ -232,6 +232,7 @@ When diagnosing problems, classify them as follows:
 Before paid-beta launch, be aware of the following system blind spots:
 1. **No Frontend Error Tracking:** There is currently no active Sentry or JS runtime tracking configured in the `dashboard` browser bundle. React/client-side failures will go unnoticed unless reported manually by a user.
 2. **No External Uptime Monitoring:** There is no external pinging monitor checking DNS, SSL, or server latency. Process crashes must be manually identified via Slack alert silence, Railway container logs, or dashboard loads.
+3. **Highest-Risk Observability Gap:** No real-time exception monitoring/alerting such as Sentry or equivalent, no structured logs, no public status page, and no automated incident paging. Current readiness is acceptable only for small paid beta with manual operator monitoring.
 
 
 ## Health Checks (servers running)
@@ -391,3 +392,31 @@ Before starting production mail operations, ensure the sending domain is fully v
 ### 3. Database Migration Safety
 - Never run database migration scripts automatically as part of build or deploy.
 - All migrations must be copy-pasted manually into the Supabase project SQL Editor, eliminating accidental CLI migration runs on production.
+
+---
+
+## Incident Response & Observability Guidelines
+
+### 1. Health Verification & Log Inspection
+- **Process Health Check:** Verify the Express server is running and responding by sending a request to `/health`.
+  ```bash
+  curl -i https://api.sourcetrack.ai/health
+  ```
+- **Inspect Application Logs:** Use the Railway Console or CLI to view container stdout/stderr. Trace uncaught exceptions or unhandled rejections:
+  ```bash
+  railway logs -s api
+  ```
+- **Inspect Database Status:** Monitor Postgres logs in the Supabase console under Database -> Logs.
+- **Check Cron Job Execution:** Query the `job_runs` table in the Supabase SQL editor to inspect recent run statuses and errors:
+  ```sql
+  SELECT job_name, status, details, ran_at FROM job_runs ORDER BY ran_at DESC LIMIT 10;
+  ```
+
+### 2. External Webhook & Email Inquiries
+- **Verify Stripe Webhooks:** Tracing webhook delivery failures or signature problems must be checked directly under Developers -> Webhooks inside the Stripe dashboard.
+- **Verify Resend Mail:** Review email delivery status, bounces, and domain DNS health inside the Resend console.
+
+### 3. Incident Triage & Mitigation
+- **P0 Outages:** If the dashboard or API is completely offline, verify credentials/env variables in Railway and restart the service. If it is a recent deploy bug, perform an immediate rollback.
+- **Railway Rollback:** Select the affected service, click on the last known stable deploy container, and click the **Rollback** button.
+- **Customer Notifications:** If a P0 outage exceeds 30 minutes, draft a simple status email to active users informing them of the downtime without making SLA or compensation promises.
