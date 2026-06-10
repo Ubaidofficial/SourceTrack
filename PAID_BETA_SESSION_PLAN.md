@@ -415,3 +415,33 @@ The session order was re-prioritized to address the **Attribution and Tracking T
     2. A separate staging Supabase project is created and wired.
     3. Stripe test prices are corrected (Session 135 F1).
 *   **Constraints honored:** Read-only console verification; no production data mutated; no destructive SQL run; no secrets/keys/connection strings printed or committed (project ref redacted); `ALLOW_PRODUCTION_QA_MUTATION` not set; no app/backend code changed; no Phase C/D work.
+
+---
+
+## Session 138A — Safe Non-Mutating QA + Top-Priority Test Backlog [COMPLETE]
+
+*   **Goal:** Run every safe non-mutating test we can run right now, and move every blocked/unsafe test into a top-priority backlog.
+*   **Outcome:** Checked and ran all safe non-mutating QA unit and integration tests (attribution math, GSC token/CTR math, timezone date bucketing, path exclusions, billing helper checks) and verified they all pass. Classified all 33 repository scripts by safety. Created `docs/safe_qa_test_backlog.md` and documented the gating conclusion.
+*   **What was done (genuine):**
+    *   [x] Inspected and classified all 33 repository QA scripts under the `scripts` folder.
+    *   [x] Executed baseline checks: `node --check` syntax, `git diff --check`, `npm run qa:static` (which builds the dashboard successfully).
+    *   [x] Ran only the verified safe, non-mutating tests: `qa-attribution-harness`, `qa-timezone`, `qa-ai-journey-attribution`, `qa-billing-helper`, `qa-path-exclusions`, and `qa-gsc-integration` (after fixing obsolete Docs.jsx redirect test expectation).
+    *   [x] Performed four static safety scans (production mutation, route guards, attribution, billing) to confirm structure and guard integrity.
+    *   [x] Generated a new test backlog document at `docs/safe_qa_test_backlog.md`.
+*   **Constraints honored:** No production data mutated; no Supabase writes run; no billing webhook tests run; no Stripe checkout completed; no real emails sent; no load tests run; `ALLOW_PRODUCTION_QA_MUTATION` was not set; no secrets printed or committed.
+
+## Top-Priority Blocked Test Backlog
+
+| Priority | Item | Why Blocked | Unblock Condition | Risk Level | Session | Gating Milestone |
+|---|---|---|---|---|---|---|
+| **P0** | Create separate staging Supabase project and rewire local/staging env away from production. | Local `.env` currently points to live production Supabase (`zxjjjsipafojhzkkumvh`), making local development of mutating code highly dangerous. | Provision separate staging Supabase project and update local/staging environment variables. | **CRITICAL** | Session 138B | Pre-Paid-Beta |
+| **P0** | Upgrade production Supabase to paid plan and enable backups/PITR. | Production Supabase is currently on the Free plan, which disables daily scheduled backups and PITR. | Operator upgrades the production database to a paid tier and enables backups and PITR. | **CRITICAL** | Session 138C | Pre-Paid-Beta |
+| **P0** | Full Stripe test-mode E2E after staging DB exists and Stripe test prices are corrected. | Staging database does not exist to receive webhook writes, and Stripe test-mode price amounts ($49/$99/$199) are stale compared to public ones ($29/$79/$149+). | Staging database is provisioned and Stripe test prices are aligned with the new price schema. | **HIGH** | Session 138D | Pre-Paid-Beta |
+| **P1** | Billing redirect hardening: generate/allow-list checkout success/cancel and portal return URLs server-side. | Currently checkout redirection parameters (`success_url`, `cancel_url`, `returnUrl`) are accepted raw from request bodies without server-side validation. | Implement server-side allow-list validation and URL generation for billing checkout and customer portal links. | **HIGH** | Session 139A | Pre-Paid-Beta |
+| **P1** | Exception monitoring/Sentry test. | Staging environment must verify Sentry exception routing and capturing logic before public release. | Integrate Sentry SDK and run active error-triggering smoke tests on staging. | **MEDIUM** | Session 139B | Pre-10-Customers |
+| **P1** | Add qa:attribution, qa:smoke, and qa:edge to CI or required pre-deploy gate. | Mutating tests cannot run in GitHub Actions due to lack of a test database, creating risk of unnoticed logic regressions. | Set up a staging database in the CI pipeline or require manual run gates prior to deploy. | **MEDIUM** | Session 139C | Pre-Paid-Beta |
+| **P1** | Onboarding validation hardening test: invalid/PaaS/disposable domains return clean 400. | Onboarding domain validation logic needs to reject disposable or temporary email/PaaS hosts with clean 400 client errors. | Implement domain parsing validation rules and add regression tests. | **LOW** | Session 140A | Pre-10-Customers |
+| **P1** | Report digest suppression/unsubscribe test. | Safe transactional emails are set up, but unsubscribe header logic and email suppression lists have not been verified. | Run end-to-end unsubscribe test using Resend mock sandbox. | **MEDIUM** | Session 140B | Pre-10-Customers |
+| **P2** | Conversion-cap enforcement or pricing-copy decision. | Monthly conversion limits are displayed in the dashboard but not actively blocked at the ingestion layer. | Implement conversion ingestion count checks or decide on non-blocking soft limit notifications. | **LOW** | Session 141A | Pre-Public-Launch |
+| **P2** | Redis/shared rate-limit test before horizontal scaling. | Current rate limiter is in-memory only, which is fine for single-instance paid beta but will fail under multiple instances. | Set up Redis/Upstash connection in staging and assert rate-limiting consistency. | **HIGH** | Session 141B | Pre-Public-Launch |
+| **P2** | Staging load tests before high-volume ecommerce. | High-volume ecommerce traffic spikes have not been tested against the synchronous database write paths. | Run k6 load scripts against the staging API connected to a staging database. | **HIGH** | Session 142 | Pre-Public-Launch |

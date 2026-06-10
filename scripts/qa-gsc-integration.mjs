@@ -164,7 +164,7 @@ function runCopyAudit() {
 
   const filesToAudit = [
     'dashboard/src/pages/SEORevenue.jsx',
-    'dashboard/src/pages/Docs.jsx',
+    'dashboard/src/pages/Integrations.jsx',
     'api/routes/seo-revenue.js',
     'api/lib/google-search-console.js'
   ]
@@ -191,8 +191,11 @@ function runCopyAudit() {
     }
 
     // Verify aggregate notice notice is in place
-    if (file === 'dashboard/src/pages/SEORevenue.jsx' || file === 'dashboard/src/pages/Docs.jsx') {
+    if (file === 'dashboard/src/pages/SEORevenue.jsx') {
       const targetNotice = 'aggregated query data, not user-level query-to-conversion identity'
+      assert(content.includes(targetNotice), `Required aggregate notice is present in ${file}`)
+    } else if (file === 'dashboard/src/pages/Integrations.jsx') {
+      const targetNotice = 'GSC provides aggregate query data, not user-level attribution'
       assert(content.includes(targetNotice), `Required aggregate notice is present in ${file}`)
     }
   }
