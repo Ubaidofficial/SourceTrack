@@ -1492,3 +1492,21 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 
 ### 2. Documentation
 - Created `docs/legal_policy_readiness.md` detailing the policy posture, collected metrics, PostHog best-effort API limits, Stripe record retention constraints, deletion/retention mechanics, cookieless realities/warnings, and the lawyer review checklist (DPAs, final terms, compliance validations).
+
+---
+
+## Session 133P — Transactional Email Readiness
+
+**Date:** 2026-06-10
+**Branch:** `main`
+**Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
+
+### 1. Transactional Email Audit
+- Audited the codebase, jobs, and config for Resend usage, DNS status, billing boundaries, and report opt-outs.
+- Formulated precise answers for 14 email readiness questions detailing email inventory, jobs, sender configurations, SPF/DKIM/DMARC checks, deduplication metrics, and suppression limitations.
+- Maintained strict disclaimers (no real emails sent, no production keys, DNS requires direct provider checking).
+
+### 2. Documentation & Runbooks
+- Created `docs/transactional_email_readiness.md` mapping transactional vs billing email boundaries, Resend setup details, and operator guidelines.
+- Updated `.env.example` comments to clarify Resend usage and verification rules.
+- Updated `COMMANDCODE_RUNBOOK.md` with email operations triage checklists.

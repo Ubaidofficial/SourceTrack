@@ -327,3 +327,32 @@ order by table_name;
 - Use `countIf()`, not `COUNT(CASE WHEN...)`
 - Qualify `distinct_id` in joins
 - Date format: `timestamp >= toDateTime('2024-01-01 00:00:00')`
+
+---
+
+## Resend & Transactional Email Operations
+
+### 1. Domain & DNS Configuration (Resend Dashboard)
+Before starting production mail operations, ensure the sending domain is fully verified:
+1. Log into the Resend Console and add `sourcetrack.ai` as a sending domain.
+2. Publish the generated **DKIM** CNAME records to the domain's DNS provider.
+3. Publish a valid **SPF** TXT record authorizing Resend's sending IPs.
+4. Publish a valid **DMARC** TXT record protecting the domain (e.g. `_dmarc.sourcetrack.ai`).
+
+> [!WARNING]
+> Resend domain verification and DNS records cannot be validated programmatically by the SourceTrack application. Operators must verify domain status directly within the Resend Dashboard.
+
+### 2. Operational Monitoring (Database & Resend Logs)
+- **Check Cron Job Runs:** Verify that `email-reports-weekly`, `email-reports-monthly`, and `usage-threshold-emails` jobs are executing successfully by inspecting the `job_runs` table:
+  ```sql
+  SELECT job_name, status, details, ran_at FROM job_runs ORDER BY ran_at DESC LIMIT 10;
+  ```
+- **Check Sent Usage Alerts:** Track monthly usage alerts sent to clients in the `usage_email_log` table:
+  ```sql
+  SELECT site_id, month, threshold, created_at FROM usage_email_log ORDER BY created_at DESC LIMIT 10;
+  ```
+- **Check Bounces and SMTP Errors:** Recipient-level bounces, spam complaints, and queue status must be reviewed directly in the **Resend Dashboard** logs under the emails section.
+
+### 3. Stripe Billing Email Boundary
+- All subscription-related emails (invoices, receipts, subscription confirmations, renewal successes, and payment failures) are **exclusively owned and delivered by Stripe**.
+- Do not modify or write application-level templates or mail jobs for billing notifications; manage invoice email configurations directly inside the Stripe merchant dashboard.

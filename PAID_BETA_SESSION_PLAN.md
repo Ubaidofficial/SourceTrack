@@ -166,6 +166,7 @@ The session order was re-prioritized to address the **Attribution and Tracking T
 * **Session 133K — Support Readiness:** ✅ Complete. Created support_readiness.md mapping, added support emails/troubleshooting links to Billing, Settings, Snippet, and Onboarding failure views without SLA/24-7 guarantees, and documented triage/escalation workflows. Verified all checks pass.
 * **Session 133L — Event Pipeline SLOs + Load Testing + Capacity Readiness:** ✅ Complete. Added early plan check gating logic to Stripe & Shopify webhooks to reject inactive/archived sites early; optimized PostHog SDK batching configuration with environment overrides; created capacity map docs and safe, production-shielded k6 stress testing scripts; verified syntax and build compile.
 * **Session 133O — Legal / Policy Readiness:** ✅ Complete. Created legal_policy_readiness.md, audited and documented legal disclaimers, data spec, sub-processor boundaries, deletion mechanics, cookie/cookieless warnings, and lawyer checklist.
+* **Session 133P — Transactional Email Readiness:** ✅ Complete. Created transactional_email_readiness.md, updated .env.example with Resend comments, updated COMMANDCODE_RUNBOOK.md with email operations guidelines, and verified setup.
 
 ---
 
@@ -227,6 +228,23 @@ The session order was re-prioritized to address the **Attribution and Tracking T
 
 ---
 
-## Session 133P — Transactional Email Readiness [TODO]
+## Session 133P — Transactional Email Readiness [COMPLETE]
 
-*   **Goal:** Prepare transactional email services, verification flows, templates, and boundaries for the paid beta launch.
+*   **Goal:** Audit and prepare SourceTrack transactional email readiness for the paid beta launch.
+*   **Objectives:**
+    *   [x] Document transactional email inventory and sending cron jobs.
+    *   [x] Establish boundaries between transactional alerts, Stripe billing emails, and digests.
+    *   [x] Detail Resend domain verification and SPF/DKIM/DMARC DNS checklists.
+    *   [x] Document usage limit email deduplication via `usage_email_log`.
+    *   [x] Outline report digest unsubscribe and opt-out suppression gaps.
+    *   [x] Update `.env.example` with Resend configuration expectations.
+    *   [x] Update `COMMANDCODE_RUNBOOK.md` with lightweight email operations.
+    *   [x] Create `docs/transactional_email_readiness.md`.
+*   **Constraints:** No real emails sent, no production Resend API keys used, and no additional email automation or marketing email integrations added.
+
+---
+
+## Session 133Q — Billing Checkout Verification & Stripe Test-Mode QA [TODO]
+
+*   **Goal:** Verify and QA the Stripe test-mode billing integration and checkout workflows.
+*   **Constraints:** Staging/Test-mode Stripe configurations only. No production billing actions, no real payments, and no live pricing changes.
