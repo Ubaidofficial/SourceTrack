@@ -5,6 +5,11 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 133R | 2026-06-10 | `main` | Staging / Production Separation Audit — Audited environment isolation across Supabase, PostHog, Stripe, Resend, Railway, and CORS; resolved hardcoded production links in email report and threshold alert jobs; created docs/staging_production_separation_audit.md. | ✅ | No |
+| 133Q | 2026-06-10 | `main` | Billing Checkout Verification & Stripe Test-Mode QA — Verified Stripe checkout, portal, webhook separation, and plan limits; fixed Pricing.jsx React.Fragment runtime error; redirected 402 responses to /billing; created docs/billing_checkout_test_mode_qa.md. | ✅ | No |
+| 133P | 2026-06-10 | `main` | Transactional Email Readiness — Audited Resend setup, sending cron jobs, and billing boundaries; created docs/transactional_email_readiness.md. | ✅ | No |
+| 133O | 2026-06-10 | `main` | Legal / Policy Readiness — Audited disclaimers, data collection boundaries, and deletion workflows; created docs/legal_policy_readiness.md. | ✅ | No |
+| 133N | 2026-06-10 | `main` | Plan Gate Enforcement + Pricing Mismatch Fixes — Aligned pricing copy with feature matrices and enforced backend plan gates; created docs/plan_gate_enforcement_audit.md. | ✅ | No |
 | 133M | 2026-06-10 | `main` | Pricing & Plan Limits Audit — Audited billing UI, marketing page, Stripe price mappings, and features gating logic; created docs/pricing_plan_limits_audit.md. | ✅ | No |
 | 133L | 2026-06-10 | `main` | Event Pipeline SLOs + Load Testing + Capacity Readiness — Added early plan gates to Stripe/Shopify webhooks; optimized PostHog SDK batching configuration with environment overrides; created capacity map docs and safe, production-shielded k6 stress testing scripts. | ✅ | No |
 | 133K | 2026-06-10 | `main` | Support Readiness — Audited support flows, created support_readiness.md mapping, added support emails/troubleshooting links to Billing, Settings, Snippet, and Onboarding failure views without SLA/24-7 guarantees, and documented triage/escalation workflows. | ✅ | No |
@@ -1531,3 +1536,23 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 ### 3. Documentation & Runbooks
 - Created `docs/billing_checkout_test_mode_qa.md` documenting routes, env vars, webhook path separation, test-mode checklists, return URL safety, and price metadata requirements.
 - Updated `COMMANDCODE_RUNBOOK.md` with a detailed "Stripe & Billing Operations" guidelines section (P0 mode alignment rules, webhook setup, portal configs, test card instructions).
+
+---
+
+## Session 133R — Staging / Production Separation Audit
+
+**Date:** 2026-06-10
+**Branch:** `main`
+**Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
+
+### 1. Staging/Production Isolation Audit
+- Audited environment configurations across Railway, Supabase, PostHog, Stripe, Resend, CORS setup, and CI pipelines.
+- Formulated precise answers for 19 required staging/production isolation questions, mapping environment definitions, deployment separation, webhook paths, and local safety rules.
+- Maintained safety boundaries (no deployments performed, no migrations applied, no DB mutations, no real Stripe payments/emails).
+
+### 2. Code Corrections
+- **Transactional email jobs:** Resolved hardcoded production app link (`https://app.sourcetrack.ai`) in `api/jobs/email-reports.js` and `api/jobs/usage-threshold-emails.js`, replacing it with dynamic `process.env.FRONTEND_URL` resolution with fallback.
+
+### 3. Documentation & Runbooks
+- Created `docs/staging_production_separation_audit.md` documenting current environment maps, env variable inventories, provider separation matrices, CORS settings, migration safety, local dev rules, and provider-console checklists.
+- Updated `COMMANDCODE_RUNBOOK.md` with a detailed "Staging & Production Separation Guidelines" section (isolation expectations, CORS configs, manual database migrations).

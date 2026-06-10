@@ -31,6 +31,7 @@ function buildEmailHtml({ domain, threshold, used, limit, plan }) {
   const subhead = isAtCap
     ? `Tracking on ${domain} has paused until your limit resets next month — or you upgrade.`
     : `${domain} has used ${used.toLocaleString()} of ${limit.toLocaleString()} pageviews this month.`
+  const dashboardUrl = (process.env.FRONTEND_URL || 'https://app.sourcetrack.ai').replace(/\/+$/, '')
 
   return `<!DOCTYPE html>
 <html><body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
@@ -57,7 +58,7 @@ function buildEmailHtml({ domain, threshold, used, limit, plan }) {
     <p style="margin:18px 0 0;font-size:13px;color:#6b7280">Current plan: <strong style="color:#111827;text-transform:capitalize">${plan}</strong></p>
   </td></tr>
   <tr><td style="padding:8px 40px 28px;text-align:center">
-    <a href="https://app.sourcetrack.ai/billing" style="display:inline-block;padding:12px 32px;background:#111827;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;border-radius:8px">${isAtCap ? 'Upgrade now' : 'Upgrade your plan'}</a>
+    <a href="${dashboardUrl}/billing" style="display:inline-block;padding:12px 32px;background:#111827;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;border-radius:8px">${isAtCap ? 'Upgrade now' : 'Upgrade your plan'}</a>
   </td></tr>
   <tr><td style="padding:14px 40px;background:#f9fafb;text-align:center">
     <p style="margin:0;font-size:11px;color:#9ca3af">SourceTrack usage alert · One email per threshold per month</p>

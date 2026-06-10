@@ -132,8 +132,8 @@ async function run() {
       const sortedAI = Object.entries(aiMap).sort((a, b) => b[1] - a[1])
       const topAI = sortedAI[0]?.[0] || null
       const totalAILeads = sortedAI.reduce((s, [, cnt]) => s + cnt, 0)
-
       const domain = site.domain || 'your site'
+      const dashboardUrl = (process.env.FRONTEND_URL || 'https://app.sourcetrack.ai').replace(/\/+$/, '')
 
       const html = `<!DOCTYPE html>
 <html>
@@ -141,53 +141,65 @@ async function run() {
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f5;padding:32px 0">
   <tr>
     <td align="center">
-      <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.06)">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden">
         <tr>
-          <td style="padding:32px 40px;border-bottom:1px solid #e5e7eb">
-            <h2 style="margin:0;font-size:20px;color:#111827">Your ${periodLabel} Attribution Report</h2>
-            <p style="margin:4px 0 0;font-size:13px;color:#6b7280">${domain} · ${from} to ${to}</p>
+          <td style="padding:32px 40px;border-bottom:1px solid #e5e7eb;text-align:center">
+            <h1 style="margin:0;font-size:20px;font-weight:700;color:#111827">SourceTrack</h1>
+            <p style="margin:4px 0 0;font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px">${periodLabel} Attribution Digest</p>
           </td>
         </tr>
         <tr>
-          <td style="padding:28px 40px">
-            <table width="100%" cellpadding="0" cellspacing="0">
+          <td style="padding:32px 40px">
+            <p style="margin:0 0 16px;font-size:14px;color:#374151">
+              Here is how <strong>${domain}</strong> performed over the last ${days} days:
+            </p>
+            <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb">
               <tr>
-                <td width="25%" style="padding:0 8px 16px 0;vertical-align:top">
-                  <p style="margin:0;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px">Total Revenue</p>
-                  <p style="margin:4px 0 0;font-size:22px;font-weight:700;color:#111827">${formatCurrency(totalRevenue)}</p>
+                <td style="padding:16px;width:50%;border-right:1px solid #e5e7eb">
+                  <span style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px">Attributed Revenue</span>
+                  <p style="margin:4px 0 0;font-size:20px;font-weight:700;color:#111827">${formatCurrency(totalRevenue)}</p>
                 </td>
-                <td width="25%" style="padding:0 8px 16px 0;vertical-align:top">
-                  <p style="margin:0;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px">Conversions</p>
-                  <p style="margin:4px 0 0;font-size:22px;font-weight:700;color:#111827">${totalConversions}</p>
+                <td style="padding:16px;width:50%">
+                  <span style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px">Attributed Conversions</span>
+                  <p style="margin:4px 0 0;font-size:20px;font-weight:700;color:#111827">${totalConversions.toLocaleString()}</p>
                 </td>
-                <td width="25%" style="padding:0 8px 16px 0;vertical-align:top">
-                  <p style="margin:0;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px">Top Channel</p>
-                  <p style="margin:4px 0 0;font-size:22px;font-weight:700;color:#111827">${topChannel}</p>
+              </tr>
+            </table>
+
+            <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:16px">
+              <tr>
+                <td style="padding:12px 0;border-bottom:1px solid #f3f4f6">
+                  <p style="margin:0;font-size:13px;color:#6b7280">Top Channel</p>
                 </td>
-                <td width="25%" style="padding:0 0 16px 0;vertical-align:top">
-                  <p style="margin:0;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px">vs Last ${periodLabel}</p>
-                  <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#111827">
+                <td style="padding:12px 0;border-bottom:1px solid #f3f4f6;text-align:right">
+                  <p style="margin:0;font-size:13px;font-weight:600;color:#111827">${topChannel}</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:12px 0">
+                  <p style="margin:0;font-size:13px;color:#6b7280">Performance vs Prior Period</p>
+                </td>
+                <td style="padding:12px 0;text-align:right">
+                  <p style="margin:0;font-size:13px;font-weight:600;color:#111827">
                     <span style="color:#374151">Rev:</span> ${pctChange(totalRevenue, prevRevenue)}<br/>
                     <span style="color:#374151">Conv:</span> ${pctChange(totalConversions, prevConvCount)}
                   </p>
                 </td>
               </tr>
-            </table>
             ${totalAILeads > 0 && topAI ? `
-            <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px">
               <tr>
-                <td style="padding:12px 16px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0">
+                <td colspan="2" style="padding:12px 16px;background:#f0fdf4;border-radius:8px;border:1px solid #bbf7d0">
                   <p style="margin:0;font-size:13px;color:#166534">
                     🤖 <strong>${totalAILeads}</strong> lead${totalAILeads === 1 ? '' : 's'} from <strong>${topAI}</strong>${sortedAI.length > 1 ? ' and ' + (sortedAI.length - 1) + ' other AI platform' + (sortedAI.length - 1 === 1 ? '' : 's') : ''} this ${isMonthly ? 'month' : 'week'}
                   </p>
                 </td>
-              </tr>
-            </table>` : ''}
+              </tr>` : ''}
+            </table>
           </td>
         </tr>
         <tr>
           <td style="padding:20px 40px 28px;text-align:center">
-            <a href="https://app.sourcetrack.ai/dashboard" style="display:inline-block;padding:12px 32px;background:#111827;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;border-radius:8px">View Full Dashboard</a>
+            <a href="${dashboardUrl}/dashboard" style="display:inline-block;padding:12px 32px;background:#111827;color:#ffffff;font-size:14px;font-weight:600;text-decoration:none;border-radius:8px">View Full Dashboard</a>
           </td>
         </tr>
         <tr>

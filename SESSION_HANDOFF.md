@@ -1,10 +1,34 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 133Q — Billing Checkout Verification & Stripe Test-Mode QA. Verified Stripe test-mode billing configuration, price mappings, and webhook paths; created docs/billing_checkout_test_mode_qa.md and updated runbook.
+> **Handoff:** Session 133R — Staging / Production Separation Audit. Audited environment isolation across Supabase, PostHog, Stripe, Resend, Railway, and CORS; resolved hardcoded production links in email report and threshold alert jobs; created docs/staging_production_separation_audit.md.
 >
-> **Next Task:** Session 133R — Staging / Production Separation Audit.
+> **Next Task:** Session 133S — Production Observability Verification / Incident Response Drill.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 133R — Staging / Production Separation Audit
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+
+1.  **Staging/Production Isolation Audit:**
+    *   Audited all environments, services, configurations, and variables across Railway, Supabase, PostHog, Stripe, Resend, CORS setup, and CI.
+    *   Formulated precise answers for 19 required staging/production isolation questions, mapping environment definitions, deployment separation, webhook paths, and local safety rules.
+2.  **Code Corrections:**
+    *   *Transactional email jobs:* Resolved hardcoded production app links (`https://app.sourcetrack.ai`) in [email-reports.js](file:///Users/ubaid/Desktop/trackiq/api/jobs/email-reports.js) and [usage-threshold-emails.js](file:///Users/ubaid/Desktop/trackiq/api/jobs/usage-threshold-emails.js), replacing them with dynamic `process.env.FRONTEND_URL` resolution with fallback.
+3.  **Documentation & Runbooks:**
+    *   Created [staging_production_separation_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/staging_production_separation_audit.md) mapping environments, env vars, provider matrices, CORS settings, migration safety, local dev rules, and provider-console checklists.
+    *   Updated [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md) to add environment separation guidelines (isolation expectations, CORS configs, manual database migrations).
+
+### Files changed
+- [docs/staging_production_separation_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/staging_production_separation_audit.md) [NEW]
+- [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md)
+- [api/jobs/email-reports.js](file:///Users/ubaid/Desktop/trackiq/api/jobs/email-reports.js)
+- [api/jobs/usage-threshold-emails.js](file:///Users/ubaid/Desktop/trackiq/api/jobs/usage-threshold-emails.js)
+- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
+- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
+- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
 
 ## Session 133Q — Billing Checkout Verification & Stripe Test-Mode QA
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)

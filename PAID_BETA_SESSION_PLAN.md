@@ -168,6 +168,8 @@ The session order was re-prioritized to address the **Attribution and Tracking T
 * **Session 133O — Legal / Policy Readiness:** ✅ Complete. Created legal_policy_readiness.md, audited and documented legal disclaimers, data spec, sub-processor boundaries, deletion mechanics, cookie/cookieless warnings, and lawyer checklist.
 * **Session 133P — Transactional Email Readiness:** ✅ Complete. Created transactional_email_readiness.md, updated .env.example with Resend comments, updated COMMANDCODE_RUNBOOK.md with email operations guidelines, and verified setup.
 * **Session 133Q — Billing Checkout Verification & Stripe Test-Mode QA:** ✅ Complete. Verified Stripe test-mode billing configuration, price mappings, and webhook paths; created docs/billing_checkout_test_mode_qa.md and updated runbook.
+* **Session 133R — Staging / Production Separation Audit:** ✅ Complete. Audited environment isolation between local, staging, and production across Supabase, PostHog, Stripe, Resend, Railway, and CORS settings; resolved hardcoded production URLs in email report and threshold alert jobs; created docs/staging_production_separation_audit.md.
+
 
 ---
 
@@ -259,7 +261,21 @@ The session order was re-prioritized to address the **Attribution and Tracking T
 
 ---
 
-## Session 133R — Staging / Production Separation Audit [TODO]
+## Session 133R — Staging / Production Separation Audit [COMPLETE]
 
 *   **Goal:** Audit and verify environment isolation between staging and production across Supabase, PostHog, Stripe, and Railway services.
+*   **Objectives:**
+    *   [x] Map execution environments (local, staging, preview, production).
+    *   [x] Document environment variables and create a detailed provider isolation matrix.
+    *   [x] Verify URL and webhook routing separation.
+    *   [x] Inspect and document CORS configs and staging host header redirects.
+    *   [x] Fix hardcoded production URLs in email report and threshold alert jobs to dynamically resolve via `FRONTEND_URL`.
+    *   [x] Created `docs/staging_production_separation_audit.md`.
 *   **Constraints:** Audit-only. No deployment script updates or environment mutations.
+
+---
+
+## Session 133S — Production Observability Verification / Incident Response Drill [TODO]
+
+*   **Goal:** Drill and verify production health checks, incident severity response times, logging detail, and backup recovery protocols.
+*   **Constraints:** Drill-only. Do not trigger real application outages or mutate live customer records.

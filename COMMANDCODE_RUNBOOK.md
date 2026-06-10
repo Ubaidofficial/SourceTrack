@@ -374,3 +374,20 @@ Before starting production mail operations, ensure the sending domain is fully v
 - **Secret Verification:** Confirm that the configured webhook secret in the Stripe Dashboard matches the exact endpoint environment variable (`STRIPE_WEBHOOK_SECRET` for platform billing).
 - **Billing Portal Config:** In the Stripe test mode dashboard, ensure the **Customer Portal Settings** are enabled and configured with the allowed redirect domains to prevent portal redirect blocks.
 - **No Real Payments:** Ensure that under no circumstances are production cards or live payments executed during test-mode QA or staging validation. Use Stripe test cards exclusively (e.g. `4242 4242 4242 4242`).
+
+---
+
+## Staging & Production Separation Guidelines
+
+### 1. Environment Isolation Expectations
+- **Supabase Isolation:** Staging database and production database (`zxjjjsipafojhzkkumvh`) must belong to separate projects.
+- **PostHog Isolation:** Staging and production telemetry must be routed to separate PostHog project IDs.
+- **Stripe Isolation:** Stripe Test Mode is strictly for local/staging, and Stripe Live Mode is strictly for production.
+- **Resend Isolation:** Leave `RESEND_API_KEY` blank in local/staging to log emails to the console, or use a dedicated test api key.
+
+### 2. Dashboard CORS Configuration
+- In staging environments, operators **must** add the staging dashboard domain (e.g., `https://staging-app.sourcetrack.ai`) to the API server's `ALLOWED_ORIGINS` environment variable. If omitted, dashboard actions will fail due to CORS.
+
+### 3. Database Migration Safety
+- Never run database migration scripts automatically as part of build or deploy.
+- All migrations must be copy-pasted manually into the Supabase project SQL Editor, eliminating accidental CLI migration runs on production.
