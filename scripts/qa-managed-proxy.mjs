@@ -1,6 +1,9 @@
 import dotenv from 'dotenv'
 dotenv.config()
 
+import { verifySafeEnvironment } from './qa-guard.js'
+verifySafeEnvironment()
+
 import assert from 'assert'
 import http from 'http'
 import { spawn } from 'child_process'

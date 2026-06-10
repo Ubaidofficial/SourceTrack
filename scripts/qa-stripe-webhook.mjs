@@ -1,4 +1,8 @@
 import 'dotenv/config'
+
+import { verifySafeEnvironment } from './qa-guard.js'
+verifySafeEnvironment()
+
 import express from 'express'
 import crypto from 'crypto'
 import fetch from 'node-fetch' // Node built-in fetch or node-fetch package. Wait, package.json does not import node-fetch, but Node 18+ has global fetch! We can use global fetch.

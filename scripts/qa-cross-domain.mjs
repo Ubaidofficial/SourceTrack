@@ -1,6 +1,9 @@
 import dotenv from 'dotenv'
 dotenv.config()
 
+import { verifySafeEnvironment } from './qa-guard.js'
+verifySafeEnvironment()
+
 import { getSupabase } from '../api/lib/supabase.js'
 import { validateCrossDomainSettings } from '../api/lib/cross-domain-validation.js'
 import assert from 'assert'

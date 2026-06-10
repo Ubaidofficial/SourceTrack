@@ -1,5 +1,5 @@
-Session: 132E AI Journey Attribution Performance Hardening
-Last Completed: Hardened the AI journey attribution query behavior in getAiPlatformAttributionLive by removing the site-wide pageview fallback and introducing visitor distinct ID chunking (batch size 100) and pageview pagination (page size 5000) using a LIMIT/OFFSET loop. Updated the QA script to import and test the query planning and batching helper.
+Session: 133A.0 Minimum Production Safety Guardrails
+Last Completed: Implemented strict environment check in scripts/qa-guard.js and integrated it into all 17 database-interacting QA scripts. Allowed custom staging domains using the STAGING_HOSTS environment variable to bypass canonical redirects in dashboard/server.mjs. Added staging separation backlog task in PAID_BETA_SESSION_PLAN.md.
 Next Task: Move to Phase C (Dashboard saved widget cards).
 Roadmap Queue:
 - Phase C (Dashboard saved widget cards)

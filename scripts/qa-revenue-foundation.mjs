@@ -1,5 +1,9 @@
 import dotenv from 'dotenv';
 dotenv.config();
+
+import { verifySafeEnvironment } from './qa-guard.js';
+verifySafeEnvironment();
+
 import crypto from 'crypto';
 import { getSupabase } from '../api/lib/supabase.js';
 import { encryptSecret, decryptSecret } from '../api/lib/utils.js';

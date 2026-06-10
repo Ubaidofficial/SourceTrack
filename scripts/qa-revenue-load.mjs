@@ -1,4 +1,8 @@
 import 'dotenv/config'
+
+import { verifySafeEnvironment } from './qa-guard.js'
+verifySafeEnvironment()
+
 import express from 'express'
 import crypto from 'crypto'
 import fetch from 'node-fetch'

@@ -1575,3 +1575,44 @@ curl -i https://api.srctk.com/tracker/tracker.min.js
 - Open `/pricing` and check the FAQ to verify that references to "conversion source profiles" are gone.
 - View the marketing site footer and ensure it says "up to 30 conversions free" instead of "30 conversion source profiles free".
 
+
+## Session 133A.0 — Minimum Production Safety Guardrails
+
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+
+1. **Backlog plan added** — Added Session 102.8 P0 task for full staging/prod environment separation to `PAID_BETA_SESSION_PLAN.md`.
+2. **Environment Safety Guard** — Implemented strict environment check in `scripts/qa-guard.js` checking `SUPABASE_URL` contains `zxjjjsipafojhzkkumvh`, `NODE_ENV === "production"`, `APP_ENV === "production"`, and `RAILWAY_ENVIRONMENT === "production"`.
+3. **Override bypass** — Custom override `ALLOW_PRODUCTION_QA_MUTATION=true` allows bypassing blocked QA scripts with loud risk warning message and triggers output.
+4. **Guard integrated in QA scripts** — Added `verifySafeEnvironment()` import and invocation to all 17 database-interacting scripts in `scripts/`.
+5. **Dashboard redirect bypass** — Updated `dashboard/server.mjs` to parse `STAGING_HOSTS` env variable and exempt matching staging hosts from canonical redirects to production.
+6. **Documentation and env examples** — Documented environment safety rules in `scripts/README_QA.md` and added placeholders for `STAGING_HOSTS` and `ALLOW_PRODUCTION_QA_MUTATION` in `.env.example`.
+
+### Files changed
+- `PAID_BETA_SESSION_PLAN.md`
+- `.env.example`
+- `dashboard/server.mjs`
+- `scripts/README_QA.md`
+- `scripts/qa-guard.js`
+- `scripts/qa-ad-cost-imports.mjs`
+- `scripts/qa-ad-platform-sync.mjs`
+- `scripts/qa-campaigns-drilldown.mjs`
+- `scripts/qa-cross-domain.mjs`
+- `scripts/qa-custom-params.mjs`
+- `scripts/qa-dashboard-widgets.mjs`
+- `scripts/qa-keyword-reporting.mjs`
+- `scripts/qa-managed-proxy.mjs`
+- `scripts/qa-referrer-domain-reporting.mjs`
+- `scripts/qa-report-security.mjs`
+- `scripts/qa-revenue-foundation.mjs`
+- `scripts/qa-revenue-load.mjs`
+- `scripts/qa-revenue-provider-reporting.mjs`
+- `scripts/qa-schema-readiness.mjs`
+- `scripts/qa-shopify-webhook.mjs`
+- `scripts/qa-stripe-webhook.mjs`
+- `scripts/verify-db-schema.mjs`
+
+### Remaining QA (manual browser verification needed)
+- Deploy and verify that staging domain (e.g. staging-app.sourcetrack.ai) is not redirected to production when added to `STAGING_HOSTS`.
+- Ensure `dashboard/.env.local` remains untracked in git status.

@@ -2,6 +2,14 @@
 
 This directory contains standalone, dependency-free verification scripts for validating the codebase state and checking live API deployment logic before launching publicly.
 
+> [!WARNING]
+> **CRITICAL ENVIRONMENT SAFETY WARNING**
+> - **Staging/Local Only by Default**: QA scripts are meant to run strictly against local or staging environments. Running them against production is blocked by default to prevent accidental data corruption or pollution.
+> - **Production Blocked**: Any script that connects to the database will automatically halt execution if it detects the production Supabase reference or a production/live environment variable.
+> - **Override Flag**: If you must run a script against production for diagnostic purposes, you must explicitly set `ALLOW_PRODUCTION_QA_MUTATION=true` in your environment.
+> - **PostHog Pollution Prevention**: Under no circumstances should synthetic QA events be sent to the production PostHog project.
+> - **Launch Readiness**: Fully separating the staging and production environments (different databases, PostHog, Stripe accounts, and deployment flows) remains a mandatory P0 blocker before the paid beta release.
+
 ## 1. Static Launch QA Check
 
 This script checks files recursively to identify syntax errors, forbidden marketing claims, unredacted tracking strings, missing plan-feature gates, correct router mounts, and git statuses.

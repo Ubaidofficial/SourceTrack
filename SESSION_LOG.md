@@ -1157,3 +1157,25 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 - Verified one-time modal reveal of private token on generate with clipboard copy button.
 - Verified Developers API reference page and Developers Security spec page explaining where to manage server tokens, Bearer authorization, secrecy rules, and instant revocation.
 
+
+## Session 133A.0 — Minimum Production Safety Guardrails
+
+**Date:** 2026-06-10
+**Branch:** `main`
+**Build:** ✅ passing (Vite build + Node syntax check + QA pass)
+
+### 1. Environment Safety Guard Implementation
+- Built a robust safety guard in `scripts/qa-guard.js` checking:
+  - `SUPABASE_URL` containing the production reference `zxjjjsipafojhzkkumvh`
+  - `NODE_ENV === "production"`
+  - `APP_ENV === "production"`
+  - `RAILWAY_ENVIRONMENT === "production"`
+- Overrides are strictly bound to `ALLOW_PRODUCTION_QA_MUTATION=true` with a highly visible risk warning block and triggers output.
+- Guard check successfully integrated at startup in all 17 database-interacting scripts in `scripts/`.
+- Verified default blocking behavior and override bypass via manual script testing.
+
+### 2. Dashboard Redirect & Documentation Polish
+- Updated `dashboard/server.mjs` to parse `STAGING_HOSTS` environment variable and bypass canonical redirects to production for staging domains exactly matching this list.
+- Documented warning guidelines and rules in `scripts/README_QA.md`.
+- Added placeholders for `STAGING_HOSTS` and `ALLOW_PRODUCTION_QA_MUTATION` in `.env.example`.
+- Appended a P0 session roadmap item for full database/service staging/prod separation in `PAID_BETA_SESSION_PLAN.md`.

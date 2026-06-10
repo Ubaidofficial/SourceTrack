@@ -7,6 +7,10 @@ const DIST = join(__dirname, 'dist')
 const PORT = process.env.PORT || 3000
 const CANONICAL_HOST = 'www.sourcetrack.ai'
 const APP_HOST = 'app.sourcetrack.ai'
+const STAGING_HOSTS = (process.env.STAGING_HOSTS || '')
+  .split(',')
+  .map(h => h.trim())
+  .filter(Boolean)
 
 const app = express()
 
@@ -17,7 +21,8 @@ app.use((req, res, next) => {
   const isInternal = host.startsWith('localhost') ||
                      host.startsWith('127.') ||
                      host.endsWith('.railway.app')
-  const isValidHost = host === CANONICAL_HOST || host === APP_HOST || isInternal
+  const isStaging = STAGING_HOSTS.includes(host)
+  const isValidHost = host === CANONICAL_HOST || host === APP_HOST || isInternal || isStaging
   if (host && !isValidHost) {
     return res.redirect(301, `https://${CANONICAL_HOST}${req.url}`)
   }

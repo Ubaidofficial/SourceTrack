@@ -1,6 +1,9 @@
 import dotenv from 'dotenv'
 dotenv.config()
 
+import { verifySafeEnvironment } from './qa-guard.js'
+verifySafeEnvironment()
+
 import { getSupabase } from '../api/lib/supabase.js'
 
 console.log('==================================================')

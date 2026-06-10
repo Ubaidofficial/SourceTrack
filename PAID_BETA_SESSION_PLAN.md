@@ -117,6 +117,19 @@ The session order was re-prioritized to address the **Attribution and Tracking T
 
 ---
 
+### Session 102.8 — [P0] Production and Staging Environment Separation
+* **Goal:** Fully separate the production and staging environments by provisioning independent Railway services, Supabase databases, PostHog projects, and Stripe accounts. Restructure settings so staging deployments read from staging credentials and point to staging ingestion endpoints. Implement a staging-first migrations verification process, and establish a clear production deployment promotion/rollback flow.
+* **Files likely involved:**
+  - `.env.example`
+  - `api/lib/supabase.js`
+  - `api/lib/posthog.js`
+  - `dashboard/src/lib/supabase.js`
+* **What not to touch:** Do not alter product logic or default production keys.
+* **Paid beta blocker:** Yes (P0 - critical to allow testing and onboarding safety).
+* **Public launch blocker:** Yes.
+
+---
+
 ## 4. Current Progress & Status
 
 * **Session 119B — Launch Audit Fixes:** ✅ Complete. Added encryption key in example env, removed IP address logging from payments API PostHog properties, and softened CAPI marketing claims in README. Verified all checks pass.
