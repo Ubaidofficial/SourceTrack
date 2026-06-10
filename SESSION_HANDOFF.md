@@ -1,10 +1,27 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 133B — Lightweight CI Regression Pipeline. Implemented static-only, build-only GitHub Actions workflow `.github/workflows/ci.yml` running on push to `main` and on pull requests. Runs separate installs, syntax checks, range-aware git whitespace diff check, static QA check (`npm run qa:static`), and dashboard compile. Documented environment safety boundaries in README and runbook.
+> **Handoff:** Session 133C — Real Deployment Checklist + Rollback Runbook. Created production deployment checklist and emergency rollback runbook, verified env variables, and updated session log and handoff.
 >
 > **Next Task:** Move to Phase C (Dashboard saved widget cards).
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 133C — Real Deployment Checklist + Rollback Runbook
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
+
+### Completed
+
+1. **Deployment Audit & Env-Var Verification**
+   - Conducted full audit of current deployment pipelines, environment variables, cron scheduling, and logging.
+   - Verified exact names of all variables (e.g. `ST_IP_RESOLVER_MODE`, `ENCRYPTION_KEY`, `POSTHOG_PERSONAL_API_KEY`) used in the Express backend and Vite dashboard codebases.
+2. **Deployment Checklist & Rollback Runbook**
+   - Generated the comprehensive deployment guide outlining pre-flight local checks, database migrations validation, environment configurations, git promotion, and post-deploy smoke checks.
+   - Documented exact manual SQL commands and console configurations to recover from application-level failures, schema regressions, or webhook decryption errors.
+
+### Files changed
+- None (Documentation only; created implementation plan)
+
+## Session 133B — Lightweight CI Regression Pipeline
 
 ## Session 132E — AI Journey Attribution Performance Hardening
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)

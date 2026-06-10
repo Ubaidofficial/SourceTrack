@@ -5,6 +5,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 133C | 2026-06-10 | `main` | Real Deployment Checklist + Rollback Runbook — Created production deployment checklist and emergency rollback runbook, verified env variables, and updated session log and handoff. | ✅ | No |
 | 133B | 2026-06-10 | `main` | Lightweight CI Regression Pipeline — Configured static & build-only GitHub Actions workflow checking syntax, committed whitespace, static QA, and dashboard compilation; documented boundaries. | ✅ | No |
 | 133A.0 | 2026-06-10 | `main` | Minimum Production Safety Guardrails — Added env-guard rails in `scripts/qa-guard.js` to block mutating QA scripts on production; allowed staging bypass for dashboard canonical checks. | ✅ | No |
 | 132E | 2026-06-10 | `main` | AI Journey Attribution Performance Hardening — Replaced the high-volume site-wide pageview query fallback in `getAiPlatformAttributionLive` with safer, visitor-scoped pageview batching (batch size 100) and pageview pagination (page size 5000) using a LIMIT/OFFSET loop. Updated QA script to import and verify query planning and batching helper. | ✅ | No |
