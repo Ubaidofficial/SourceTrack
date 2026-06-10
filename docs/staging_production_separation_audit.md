@@ -228,3 +228,27 @@ The repository is correctly parameterized for environment separation (all provid
 - ✅ No secrets, full keys, full database URLs, tokens, or webhook secrets printed or committed (project ref redacted to `zxjj…umvh`; it also already appears in §2/§5 of this doc as a known production reference).
 - ✅ No live payments; no production load testing; `ALLOW_PRODUCTION_QA_MUTATION` not set.
 - ✅ No app/backend feature code changed.
+
+---
+
+## Session 138C — Staging Supabase & Env Rewire Progress
+
+**Date/time:** 2026-06-11 (Session 138C)
+**Environment:** Local dev workstation (`darwin`), repo `main` @ `d0e68c5`.
+**Method:** MCP query + project creation.
+
+### Status Update:
+1. **Production Upgraded to Pro & Backups Verified:** Daily scheduled backups were manually verified in the Supabase dashboard by the operator. MCP did not independently expose/verify backup settings. Visible physical backups were shown for June 3 through June 10, with latest visible backup on June 10, 2026. No restore was run.
+2. **PITR Status:** PITR is not enabled / not accepted as enabled. Do not enable PITR without explicit cost approval. Daily backups are now verified; PITR remains an optional but strongly recommended paid add-on / accepted risk if left disabled.
+3. **Staging Project Created:** The staging Supabase project has been created successfully:
+   - **Name:** `sourcetrack-staging`
+   - **Project Ref:** `nrsvpwzekfrdrzkoecfk`
+   - **Region:** `eu-west-1`
+   - **Status:** `ACTIVE_HEALTHY`
+4. **Environment Isolation & Rewire:** Local `.env`, `.env.local`, and `.env.staging` now target the staging Supabase project ref for URL/publishable-key configuration, but `SUPABASE_SERVICE_KEY` remains a placeholder. Local backend mutation tests remain blocked until the real staging service-role key is manually added to gitignored local env files. No env files are tracked by git.
+5. **Stripe E2E Status:** Stripe E2E remains blocked until:
+   1. staging schema/bootstrap is completed safely
+   2. real staging service-role key is added locally/staging-only
+   3. local/dev production boot guard is added
+   4. Stripe test catalog is corrected
+   5. billing/webhook E2E runs only against staging

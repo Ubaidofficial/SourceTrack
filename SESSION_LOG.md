@@ -5,6 +5,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 138C | 2026-06-11 | `main` | Supabase Staging Project + Local/Staging Env Rewire — Created staging Supabase project `sourcetrack-staging` (`nrsvpwzekfrdrzkoecfk`) in region `eu-west-1`. Local env rewired to target staging ref, but `SUPABASE_SERVICE_KEY` remains placeholder. Daily scheduled backups were manually verified in the Supabase dashboard by the operator. PITR is not enabled. Stripe E2E remains blocked. | ✅ | No |
 | 138B | 2026-06-11 | `main` | Development Workflow Master Plan — Verified repo ground truth (job-status tenant gap, 5× duplicated group_by, raw HogQL date interpolation, no test framework, CI gates only qa:static, in-memory rate limits/idempotency). Created docs/development_workflow_master_plan.md as the authoritative engineering control document (27 sections: verdict, readiness grade, P0/P1/P2 matrix, ordered roadmap, gates, checklists, strategies, refactor backlog). Planning-only; no app/backend code changed. | ✅ | No |
 | 138A | 2026-06-11 | `main` | Safe Non-Mutating QA + Top-Priority Test Backlog — Inspected all 33 QA scripts; executed verified safe tests; performed safety scans; documented findings and gating conclusions; created docs/safe_qa_test_backlog.md. | ✅ | No |
 | 133W | 2026-06-10 | `main` | Customer-Facing Status / Incident Communication Plan — Audited status-page reality, customer support entry points, P0/P1/P2 severities, notification boundaries (P0 30-min threshold), target contact lists (read-only queries & Stripe), templates, wording disclaimers, console checks, and runbooks; created docs/customer_incident_communication_plan.md. | ✅ | No |
@@ -1788,16 +1789,59 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 
 ## Top-Priority Blocked Test Backlog
 
-| Priority | Item | Why Blocked | Unblock Condition | Risk Level | Session | Gating Milestone |
-|---|---|---|---|---|---|---|
-| **P0** | Create separate staging Supabase project and rewire local/staging env away from production. | Local `.env` currently points to live production Supabase (`zxjjjsipafojhzkkumvh`), making local development of mutating code highly dangerous. | Provision separate staging Supabase project and update local/staging environment variables. | **CRITICAL** | Session 138B | Pre-Paid-Beta |
-| **P0** | Upgrade production Supabase to paid plan and enable backups/PITR. | Production Supabase is currently on the Free plan, which disables daily scheduled backups and PITR. | Operator upgrades the production database to a paid tier and enables backups and PITR. | **CRITICAL** | Session 138C | Pre-Paid-Beta |
-| **P0** | Full Stripe test-mode E2E after staging DB exists and Stripe test prices are corrected. | Staging database does not exist to receive webhook writes, and Stripe test-mode price amounts ($49/$99/$199) are stale compared to public ones ($29/$79/$149+). | Staging database is provisioned and Stripe test prices are aligned with the new price schema. | **HIGH** | Session 138D | Pre-Paid-Beta |
-| **P1** | Billing redirect hardening: generate/allow-list checkout success/cancel and portal return URLs server-side. | Currently checkout redirection parameters (`success_url`, `cancel_url`, `returnUrl`) are accepted raw from request bodies without server-side validation. | Implement server-side allow-list validation and URL generation for billing checkout and customer portal links. | **HIGH** | Session 139A | Pre-Paid-Beta |
-| **P1** | Exception monitoring/Sentry test. | Staging environment must verify Sentry exception routing and capturing logic before public release. | Integrate Sentry SDK and run active error-triggering smoke tests on staging. | **MEDIUM** | Session 139B | Pre-10-Customers |
-| **P1** | Add qa:attribution, qa:smoke, and qa:edge to CI or required pre-deploy gate. | Mutating tests cannot run in GitHub Actions due to lack of a test database, creating risk of unnoticed logic regressions. | Set up a staging database in the CI pipeline or require manual run gates prior to deploy. | **MEDIUM** | Session 139C | Pre-Paid-Beta |
-| **P1** | Onboarding validation hardening test: invalid/PaaS/disposable domains return clean 400. | Onboarding domain validation logic needs to reject disposable or temporary email/PaaS hosts with clean 400 client errors. | Implement domain parsing validation rules and add regression tests. | **LOW** | Session 140A | Pre-10-Customers |
-| **P1** | Report digest suppression/unsubscribe test. | Safe transactional emails are set up, but unsubscribe header logic and email suppression lists have not been verified. | Run end-to-end unsubscribe test using Resend mock sandbox. | **MEDIUM** | Session 140B | Pre-10-Customers |
-| **P2** | Conversion-cap enforcement or pricing-copy decision. | Monthly conversion limits are displayed in the dashboard but not actively blocked at the ingestion layer. | Implement conversion ingestion count checks or decide on non-blocking soft limit notifications. | **LOW** | Session 141A | Pre-Public-Launch |
-| **P2** | Redis/shared rate-limit test before horizontal scaling. | Current rate limiter is in-memory only, which is fine for single-instance paid beta but will fail under multiple instances. | Set up Redis/Upstash connection in staging and assert rate-limiting consistency. | **HIGH** | Session 141B | Pre-Public-Launch |
-| **P2** | Staging load tests before high-volume ecommerce. | High-volume ecommerce traffic spikes have not been tested against the synchronous database write paths. | Run k6 load scripts against the staging API connected to a staging database. | **HIGH** | Session 142 | Pre-Public-Launch |
+| Priority | Item | Why Blocked | Unblock Condition | Risk Level | Session | Gating Milestone | Status |
+|---|---|---|---|---|---|---|---|
+| **P0** | Create separate staging Supabase project and rewire local/staging env away from production. | Local `.env` currently points to live production Supabase (`zxjjjsipafojhzkkumvh`), making local development of mutating code highly dangerous. | Provision separate staging Supabase project and update local/staging environment variables. | **CRITICAL** | Session 138C | Pre-Paid-Beta | **RESOLVED (Staging `nrsvpwzekfrdrzkoecfk` created. Local `.env`, `.env.local`, and `.env.staging` now target the staging Supabase project ref for URL/publishable-key configuration, but `SUPABASE_SERVICE_KEY` remains a placeholder. Local backend mutation tests remain blocked until the real staging service-role key is manually added to gitignored local env files. No env files are tracked by git.)** |
+| **P0** | Upgrade production Supabase to paid plan and enable backups/PITR. | Production Supabase is currently on the Free plan, which disables daily scheduled backups and PITR. | Operator upgrades the production database to a paid tier and enables backups and PITR. | **CRITICAL** | Session 138C | Pre-Paid-Beta | **RESOLVED (Daily scheduled backups were manually verified in the Supabase dashboard by the operator. MCP did not independently expose/verify backup settings. Visible physical backups were shown for June 3 through June 10, with latest visible backup on June 10, 2026. No restore was run. PITR is not enabled / not accepted as enabled. Do not enable PITR without explicit cost approval. Daily backups are now verified; PITR remains an optional but strongly recommended paid add-on / accepted risk if left disabled.)** |
+| **P0** | Full Stripe test-mode E2E after staging DB exists and Stripe test prices are corrected. | Staging database does not exist to receive webhook writes, and Stripe test-mode price amounts ($49/$99/$199) are stale compared to public ones ($29/$79/$149+). | Staging database is provisioned and Stripe test prices are aligned with the new price schema. | **HIGH** | Session 138D | Pre-Paid-Beta | **Stripe E2E remains blocked until: 1. staging schema/bootstrap is completed safely; 2. real staging service-role key is added locally/staging-only; 3. local/dev production boot guard is added; 4. Stripe test catalog is corrected; 5. billing/webhook E2E runs only against staging** |
+| **P1** | Billing redirect hardening: generate/allow-list checkout success/cancel and portal return URLs server-side. | Currently checkout redirection parameters (`success_url`, `cancel_url`, `returnUrl`) are accepted raw from request bodies without server-side validation. | Implement server-side allow-list validation and URL generation for billing checkout and customer portal links. | **HIGH** | Session 139A | Pre-Paid-Beta | **BLOCKED** |
+| **P1** | Exception monitoring/Sentry test. | Staging environment must verify Sentry exception routing and capturing logic before public release. | Integrate Sentry SDK and run active error-triggering smoke tests on staging. | **MEDIUM** | Session 139B | Pre-10-Customers | **BLOCKED** |
+| **P1** | Add qa:attribution, qa:smoke, and qa:edge to CI or required pre-deploy gate. | Mutating tests cannot run in GitHub Actions due to lack of a test database, creating risk of unnoticed logic regressions. | Set up a staging database in the CI pipeline or require manual run gates prior to deploy. | **MEDIUM** | Session 139C | Pre-Paid-Beta | **BLOCKED** |
+| **P1** | Onboarding validation hardening test: invalid/PaaS/disposable domains return clean 400. | Onboarding domain validation logic needs to reject disposable or temporary email/PaaS hosts with clean 400 client errors. | Implement domain parsing validation rules and add regression tests. | **LOW** | Session 140A | Pre-10-Customers | **BLOCKED** |
+| **P1** | Report digest suppression/unsubscribe test. | Safe transactional emails are set up, but unsubscribe header logic and email suppression lists have not been verified. | Run end-to-end unsubscribe test using Resend mock sandbox. | **MEDIUM** | Session 140B | Pre-10-Customers | **BLOCKED** |
+| **P2** | Conversion-cap enforcement or pricing-copy decision. | Monthly conversion limits are displayed in the dashboard but not actively blocked at the ingestion layer. | Implement conversion ingestion count checks or decide on non-blocking soft limit notifications. | **LOW** | Session 141A | Pre-Public-Launch | **BLOCKED** |
+| **P2** | Redis/shared rate-limit test before horizontal scaling. | Current rate limiter is in-memory only, which is fine for single-instance paid beta but will fail under multiple instances. | Set up Redis/Upstash connection in staging and assert rate-limiting consistency. | **HIGH** | Session 141B | Pre-Public-Launch | **BLOCKED** |
+| **P2** | Staging load tests before high-volume ecommerce. | High-volume ecommerce traffic spikes have not been tested against the synchronous database write paths. | Run k6 load scripts against the staging API connected to a staging database. | **HIGH** | Session 142 | Pre-Public-Launch | **BLOCKED** |
+
+---
+
+## Session 138B — Development Workflow Master Plan
+
+**Date:** 2026-06-11
+**Branch:** `main`
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build)
+**Status:** COMPLETE.
+
+### 1. Verified Repository Ground Truth
+- Discovered gaps: job-status tenant isolation, 5x duplicated group_by clauses in `attribution.js`, raw HogQL date parameter interpolation, missing test framework, rate-limit/idempotency memory stores.
+
+### 2. Created Workflow Master Plan
+- Authored `docs/development_workflow_master_plan.md` outlining the 138B->144H ordered roadmap, P0/P1/P2 operational blocker classification, release checklists, AI-agent rules, and code quality criteria.
+
+---
+
+## Session 138C — Supabase Staging Project + Local/Staging Env Rewire
+
+**Date:** 2026-06-11
+**Branch:** `main`
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build)
+**Status:** COMPLETE.
+
+### 1. Verified Production Backups & PITR Status
+- Daily scheduled backups were manually verified in the Supabase dashboard by the operator. MCP did not independently expose/verify backup settings. Visible physical backups were shown for June 3 through June 10, with latest visible backup on June 10, 2026. No restore was run.
+- PITR is not enabled / not accepted as enabled. Do not enable PITR without explicit cost approval. Daily backups are now verified; PITR remains an optional but strongly recommended paid add-on / accepted risk if left disabled.
+
+### 2. Created Staging Project
+- Provisioned the new staging Supabase project `sourcetrack-staging` (`nrsvpwzekfrdrzkoecfk`) in region `eu-west-1` via MCP. Cost of $10/month approved.
+
+### 3. Rewired Local/Staging Environments
+- Local `.env`, `.env.local`, and `.env.staging` now target the staging Supabase project ref for URL/publishable-key configuration, but `SUPABASE_SERVICE_KEY` remains a placeholder. Local backend mutation tests remain blocked until the real staging service-role key is manually added to gitignored local env files. No env files are tracked by git.
+
+### 4. Output / safety / Stripe E2E Blockers
+- Created `docs/staging_supabase_setup.md` documenting staging details. No production data was copied, and no keys or database secrets were printed or committed.
+- Stripe E2E remains blocked until:
+  1. staging schema/bootstrap is completed safely
+  2. real staging service-role key is added locally/staging-only
+  3. local/dev production boot guard is added
+  4. Stripe test catalog is corrected
+  5. billing/webhook E2E runs only against staging

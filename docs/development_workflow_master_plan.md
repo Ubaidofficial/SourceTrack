@@ -97,15 +97,16 @@ But the **operational foundation was built slower than the product**. The workfl
 
 > Use this sequence. Each session has its own acceptance criteria in §11 and the strategy chapter it belongs to. **Do not start a session until the prior phase's blockers are addressed or explicitly deferred with reasoning.** CI must be green before the next session begins.
 
-**The immediate next session is Session 138B.**
+**The immediate next session is Session 138D.**
 
 **No new feature work / Phase C-D work should begin while any P0 operational blocker remains open unless explicitly approved by the user.**
 
 **Phase 0 — Stop the bleeding (process + local safety)**
-- **138B** — Create/confirm separate staging Supabase project; rewire local `.env` away from production. *(DB safety unblocked; 135B still blocked on Stripe prices.)*
-- **138C** — Add local/dev boot guard refusing mutating workflows when `SUPABASE_URL` is production.
-- **138D** — Codify no-commit-before-review workflow into the AI-agent rules.
-- **138E** — Add the release checklist that blocks deploy unless staging/backups/secrets/CI are verified.
+- **138B** — Master workflow plan/control document *(Completed)*
+- **138C** — Create/confirm separate staging Supabase project; rewire local `.env` away from production. *(Completed)*
+- **138D** — Add local/dev boot guard refusing mutating workflows when `SUPABASE_URL` is production.
+- **138E** — Codify no-commit-before-review workflow into the AI-agent rules.
+- **138F** — Add the release checklist that blocks deploy unless staging/backups/secrets/CI are verified.
 
 **Phase 1 — Close paid-beta P0 blockers**
 - **139A** — Upgrade production Supabase; enable backups + PITR; document retention/restore.
@@ -305,10 +306,11 @@ event warehouse decision after beta data
 
 | Session | Acceptance criterion |
 |---|---|
-| 138B | Local and staging mutation workflows no longer point at production Supabase. 135B remains blocked on Stripe prices, but DB safety is unblocked. |
-| 138C | Local app cannot accidentally run mutation-capable workflows against production Supabase. |
-| 138D | Every future AI-agent session has enforced review-before-commit rules. |
-| 138E | Production deploy cannot happen by accident from an unreviewed AI-agent commit. |
+| 138B | Master workflow plan/control document created and committed. |
+| 138C | Local `.env`, `.env.local`, and `.env.staging` now target the staging Supabase project ref for URL/publishable-key configuration, but `SUPABASE_SERVICE_KEY` remains a placeholder. Local backend mutation tests remain blocked until the real staging service-role key is manually added to gitignored local env files. No env files are tracked by git. Stripe E2E remains blocked until: 1. staging schema/bootstrap is completed safely; 2. real staging service-role key is added locally/staging-only; 3. local/dev production boot guard is added; 4. Stripe test catalog is corrected; 5. billing/webhook E2E runs only against staging. |
+| 138D | Local app cannot accidentally run mutation-capable workflows against production Supabase. |
+| 138E | Every future AI-agent session has enforced review-before-commit rules. |
+| 138F | Production deploy cannot happen by accident from an unreviewed AI-agent commit. |
 | 139A | P0-3 closes only when backups/PITR are verified in console and documented. |
 | 139B | Restore/recovery has been rehearsed safely on staging, not just documented. |
 | 139C | P0-1 closes only after checkout → webhook → DB → portal → inactive enforcement is proven on staging. |
@@ -381,8 +383,8 @@ event warehouse decision after beta data
 
 **Target promotion flow:** local → staging → production, with **no path from a dev workstation to production data**.
 
-- **138B** creates a separate staging Supabase project (project ref must differ from `zxjjjsipafojhzkkumvh`), with its own anon/service keys; local `.env` is rewired to staging; safe-local-mutation rules documented.
-- **138C** adds an app boot/dev guard that refuses to boot a mutating local/dev server when `SUPABASE_URL` resolves to the production ref, unless an explicit, deliberate override is set — extending the QA-script-only protection in `verifySafeEnvironment()` to the application itself.
+- **138C** creates a separate staging Supabase project (project ref must differ from `zxjjjsipafojhzkkumvh`), with its own anon/service keys; local `.env` is rewired to staging; safe-local-mutation rules documented.
+- **138D** adds an app boot/dev guard that refuses to boot a mutating local/dev server when `SUPABASE_URL` resolves to the production ref, unless an explicit, deliberate override is set — extending the QA-script-only protection in `verifySafeEnvironment()` to the application itself.
 - **Railway:** confirm staging and production are separate services/environments (139D); production carries `NODE_ENV=production`, `ST_IP_RESOLVER_MODE=railway`, and the log-hash secret.
 - **PostHog / Stripe / Resend:** separate projects/keys/domains per environment, verified in console (139D).
 
@@ -502,10 +504,10 @@ event warehouse decision after beta data
 
 The workflow is **production-ready** (not the product — the *workflow*) when **all** of the following hold:
 
-1. A separate staging Supabase project exists; no local/dev/CI path mutates production. *(138B, 138C)*
+1. A separate staging Supabase project exists; no local/dev/CI path mutates production. *(138C, 138D)*
 2. Production has backups + PITR, and a restore has been rehearsed on staging. *(139A, 139B)*
-3. Branch protection + required review + required CI are enabled on `main`; no agent can commit/deploy unreviewed. *(138D, 140E)*
-4. The release checklist (§11) is enforced and blocks deploy on unmet conditions. *(138E)*
+3. Branch protection + required review + required CI are enabled on `main`; no agent can commit/deploy unreviewed. *(138E, 140E)*
+4. The release checklist (§11) is enforced and blocks deploy on unmet conditions. *(138F)*
 5. Exception monitoring is active with verified alert routing. *(140A, 140B)*
 6. CI gates `qa:attribution`/`qa:smoke`/`qa:edge` (or a documented mandatory pre-deploy gate runs them). *(140C)*
 7. A real test framework exists with attribution, billing, and cross-tenant coverage. *(141A–141D)*
