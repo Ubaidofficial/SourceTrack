@@ -1,10 +1,32 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 133G — Data Deletion / Privacy Basics. Audited and addressed data deletion and GDPR gaps. Restructured account deletion logic to prevent data loss in shared workspaces, prevented orphaning shared workspaces by admins, expanded visitor erasure to wipe `site_identity_links` records, created a privacy and data deletion map, and updated copy in settings, README, and developer docs to align with real capabilities.
+> **Handoff:** Session 133H — Backup and Recovery Plan. Audited data backups, recovery readiness, and outage paths. Created a detailed runbook (`docs/backup_recovery.md`) covering Supabase, PostHog, Stripe, and Railway rollback protocols, updated rollback verification instructions in `COMMANDCODE_RUNBOOK.md`, and added security warning comments for `ENCRYPTION_KEY` in `.env.example`.
 >
 > **Next Task:** Alignment on Phase C planning / dashboard widgets (not executed yet).
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying Session 124B/C to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+## Session 133H — Backup and Recovery Plan
+**Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
+
+### Completed
+
+1. **Backup and Recovery Runbook**
+   - Created [backup_recovery.md](file:///Users/ubaid/Desktop/trackiq/docs/backup_recovery.md) detailing the provider data ownership map, backup verification checklist, disaster recovery playbooks (bad deploy, bad migration, accidental deletion, Stripe missed webhooks, PostHog outage, cron/job failures), and the `ENCRYPTION_KEY` loss procedures.
+2. **CommandCode Runbook Link & Verification Update**
+   - Updated [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md) to link directly to `docs/backup_recovery.md`.
+   - Updated the Railway rollback Scenario A description to remove the "~30 seconds" duration claim and mandate verification of deployment status, logs, and health checks.
+3. **Encryption Key Warnings**
+   - Updated [.env.example](file:///Users/ubaid/Desktop/trackiq/.env.example) to warn developers that `ENCRYPTION_KEY` must remain stable, must be backed up securely, must never be committed, and that losing it breaks decryption of existing integration tokens.
+
+### Files changed
+- [docs/backup_recovery.md](file:///Users/ubaid/Desktop/trackiq/docs/backup_recovery.md) [NEW]
+- [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md)
+- [.env.example](file:///Users/ubaid/Desktop/trackiq/.env.example)
+- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
+- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
+- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
 
 ## Session 133G — Data Deletion / Privacy Basics
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)

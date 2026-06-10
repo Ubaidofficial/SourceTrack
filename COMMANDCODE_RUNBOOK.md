@@ -147,18 +147,20 @@ Verify these environment variables are set in the Railway console:
 
 ## Production Emergency Rollback Runbook
 
+For a comprehensive runbook of all database backups, recovery playbooks, outage protocols, and encryption key loss scenarios, see [backup_recovery.md](file:///Users/ubaid/Desktop/trackiq/docs/backup_recovery.md).
+
 ### Scenario A: Application Code Regression
 If a release causes crashes or regressions:
 1. Locate the last known stable commit SHA via `git log`.
-2. Roll back immediately using the **Railway 1-Click Rollback** button for the target service (`api` or `dashboard`) in the Railway console (resolves in ~30 seconds).
+2. Roll back immediately using the **Railway 1-Click Rollback** button for the target service (`api` or `dashboard`) in the Railway console. Railway rollback usually redeploys quickly, but completion must be verified from deployment status, logs, and health checks.
 
 ### Scenario B: Database Schema Failure
 - **Strict Database Rollback Policy:** Database rollback is migration-specific. Do not run schema rollback SQL unless the migration includes an explicit reviewed rollback section. For additive migrations, prefer forward-fix unless a safe rollback has been proven. Destructive production migrations are forbidden before paid beta unless they include backup, rollback SQL, and explicit approval.
 
 ### Scenario C: Webhook Decryption Failures
 - If integrations fail to decrypt webhook secrets on the backend (e.g. Meta/Stripe integration errors):
-  1. Confirm `ENCRYPTION_KEY` matches the previous deployment's key value.
-  2. Restore the previous stable `ENCRYPTION_KEY` hex string in the Railway API service and restart the server.
+1. Confirm `ENCRYPTION_KEY` matches the previous deployment's key value.
+2. Restore the previous stable `ENCRYPTION_KEY` hex string in the Railway API service and restart the server.
 
 
 ## Production Observability & Monitoring Runbook
