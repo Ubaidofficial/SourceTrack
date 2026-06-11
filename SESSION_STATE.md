@@ -1,8 +1,10 @@
-Session: 139M-1 — Public Site, Docs, Pricing, Signup Truthfulness QA
-Last Completed: Audited all 37 public and documentation pages; hard-grep findings were reviewed and documented, with signup/login database flows blocked and `/integrations` direct-hit behavior needing follow-up. Local environment safety remains active.
+Session: 139M-2 — Core Analytics + Dashboard Feature QA
+Last Completed: Verified redirects to `/login` for all 6 protected routes under non-authenticated states; verified that the public `/demo` route successfully renders mock analytics UI only. Core E2E analytics behavior and database writes remain blocked by missing local session/staging credentials.
 Control Doc: docs/development_workflow_master_plan.md is the source of truth for session ordering and gates.
 AI-Agent Workflow: AI-agent workflow rules are governed by docs/ai_agent_workflow_rules.md. No AI-agent may commit or push before raw diff review and explicit user approval.
 
+Prior Session: 139M-1 — Public Site, Docs, Pricing, Signup Truthfulness QA
+Last Completed (139M-1): Audited all 37 public and documentation pages; hard-grep findings were reviewed and documented, with signup/login database flows blocked and `/integrations` direct-hit behavior needing follow-up. Local environment safety remains active.
 Prior Session: 139I-B — Recover Base Schema Source of Truth
 Last Completed (139I-B): Recovered base schema SQL snapshot for the 5 missing core tables from production database metadata and saved it to supabase/schema_base_recovered.sql. Audited file for secrets and data payloads (passed). Updated staging bootstrap plan. Staging bootstrap execution did not run.
 Prior Session: 139I — Staging Schema Bootstrap / Safe Schema Setup
@@ -25,12 +27,12 @@ P0-3 STATUS: Daily backups are now verified; PITR remains an optional but strong
 🚩 HEADLINE FINDING F6 (P0 staging blocker): RESOLVED. Staging database exists (ref `nrsvpwzekfrdrzkoecfk`). Safety boot guard is active in local/dev API server.
 Prior findings still open: 135 F1 stale test prices; 135 F3 pv_limit metadata; 135 F4 request-body redirect URLs.
 Verdict (134): CONDITIONAL GO — safe for 3–5 hand-picked single-instance beta customers once remaining P0 conditions met.
-Next Task: Session 139M-2 — Core Analytics + Dashboard Feature QA. Staging Schema Bootstrap Execution (Session 139I-C) remains blocked pending staging DB connection credentials. Stripe E2E (Session 139J) remains blocked until 139I-C succeeds and is verified.
+Next Task: Session 139M-3 — Attribution + Revenue Attribution + AI Attribution QA. Staging Schema Bootstrap Execution (Session 139I-C) remains blocked pending staging DB connection credentials. Stripe E2E (Session 139J) remains blocked until 139I-C succeeds and is verified.
 Roadmap Queue:
 - Session 139I-C — Staging Schema Bootstrap Execution (Blocked).
 - Session 139J — Stripe Test Catalog Correction + Stripe E2E on Staging Only (Blocked).
 - Session 139L — Confirm beta Terms/Privacy disclosure flow before payment.
-- Session 139M-2 — Core Analytics + Dashboard Feature QA.
+- Session 139M-3 — Attribution + Revenue Attribution + AI Attribution QA.
 Build: ✅ passing (node --check, git diff --check, dashboard vite build, qa:static, required-grep clean)
 Branch: main
 

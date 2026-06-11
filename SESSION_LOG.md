@@ -7,6 +7,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 139M-2 | 2026-06-11 | `main` | Core Analytics + Dashboard Feature QA — Verified redirects to `/login` for all 6 protected routes under non-authenticated states; verified that the public `/demo` route successfully renders mock analytics UI only. Core E2E analytics behavior and database writes remain blocked by missing local session/staging credentials, saved under docs/qa/core_analytics_dashboard_feature_qa_139M-2.md. | ⚠️ | No |
 | 139M-1 | 2026-06-11 | `main` | Public Site, Docs, Pricing, Signup Truthfulness QA — Audited all 37 public and documentation pages; hard-grep findings were reviewed and documented, with signup/login database flows blocked and `/integrations` direct-hit behavior needing follow-up, saved under docs/qa/public_docs_pricing_signup_truthfulness_139M-1.md. | ✅ | No |
 | 139M-0 | 2026-06-11 | `main` | QA Inventory + Browser Test Harness — Conducted thorough file audit, grep analysis, and JSX inspection to build a complete route, button, CTA, modal, form, API endpoint, and operational block inventory, saved under docs/qa/app_route_feature_inventory_139M.md. | ✅ | No |
 | 139K | 2026-06-11 | `main` | Verify Production Env/Secrets, IP Resolver Mode, CORS, Tracker/API URLs — Audited environment variable requirements, IP resolution rules, CORS/allowed origin configuration, and tracker URL routing assumptions. Created docs/operations/production_env_verification.md detailing verification checklist. Production environment verification remains blocked pending operator console audit. Local safety guard is active. | ✅ | No |
@@ -2012,3 +2013,28 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 - Created `scripts/qa-release-readiness.mjs` verifying that `docs/release_checklist_gate.md` declares a blocked status and all blockers remain open.
 - Wired the checker script into the `qa:static` command chain in `package.json` to prevent accidental bypass.
 - Aligned session number and control document roadmap references.
+
+---
+
+## Session 139M-2 — Core Analytics + Dashboard Feature QA
+
+**Date:** 2026-06-11
+**Branch:** `main`
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa-release-readiness)
+**Status:** BLOCKED — core authenticated analytics not verified.
+
+### 1. Protected Route Audit
+- Executed Puppeteer-core audit script on protected routes (`/dashboard`, `/analytics`, `/data-quality`, `/debugger`, `/ai-analytics`, `/ai-chat`).
+- Verified that all protected routes redirect to `/login` when unauthorized.
+- Core E2E analytics behavior and database writes remain blocked by missing local session/staging credentials.
+
+### 2. Public Demo Verification
+- Verified that public `/demo` route successfully renders mock analytics UI only (Combined Traffic/Revenue Trend chart, primary metrics rows, demographics tabs, stitched visitor journeys timeline).
+- Listed demo limitations: does not verify real dashboard data, real analytics endpoints, real Data Quality checks, real Event Debugger behavior, real AI Analytics, real AI Chat, real export/download, real time-range API behavior, or real revenue/conversion metrics.
+
+### 3. Product & Design QA
+- Audited dashboard for DataFast Simplicity guidelines. Evaluated visual layouts, alignment, and hover states on `/demo`.
+- Marked route-level visual/product verdicts for protected pages as `BLOCKED — visual/product verdict limited`.
+
+### 4. Documentation
+- Created `docs/qa/core_analytics_dashboard_feature_qa_139M-2.md` detailing route redirection behaviors, core analytics coverage checks, design/product verdicts, and truthfulness posture.
