@@ -140,7 +140,7 @@ Every session maps back to the authoritative roadmap defined in `docs/developmen
 8. **139K** — Verify Production Env/Secrets, IP Resolver Mode, CORS, Tracker/API URLs (Completed)
 9. **139L** — Confirm beta Terms/Privacy disclosure flow before payment (Open)
 10. **139M-0** — QA Inventory + Browser Test Harness (Completed)
-11. **139M-1** — Public Site, Docs, Pricing, Signup Truthfulness QA (Open)
+11. **139M-1** — Public Site, Docs, Pricing, Signup Truthfulness QA (Completed)
 12. **139M-2** — Core Analytics + Dashboard Feature QA (Open)
 13. **139M-3** — Attribution + Revenue Attribution + AI Attribution QA (Open)
 14. **139M-4** — Report Builder + Saved Reports + Export QA (Open)

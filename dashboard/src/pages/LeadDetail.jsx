@@ -310,7 +310,7 @@ export default function LeadDetail() {
             </div>
             <div className="space-y-1">
               <p className="text-sm text-st-black">
-                This visitor discovered you through <span className="font-semibold text-lime-800">{lead.ai_source}</span> — an AI-powered search or assistant platform.
+                This visitor discovered you through <span className="font-semibold text-lime-800">{lead.ai_source}</span> — an AI search or assistant platform.
               </p>
               {lead.ai_source === 'ChatGPT' && (
                 <p className="text-xs text-st-gray">ChatGPT users often research products before buying. These leads typically have high intent.</p>

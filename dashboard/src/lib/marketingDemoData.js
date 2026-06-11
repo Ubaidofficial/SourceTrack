@@ -145,7 +145,7 @@ export const demoData = {
         status: 'Attributed (First Touch)',
         stitchingMethod: 'st_aid (Cookie Stitching)',
         conversionType: 'Trial Signup',
-        explanation: 'Attributed to Gemini AI. Visitor clicked a referral link on google.com AI-powered search results and signed up.',
+        explanation: 'Attributed to Gemini AI. Visitor clicked a referral link on google.com AI search results and signed up.',
         recommendedTemplate: 'AI referral revenue by landing page'
       },
       'Perplexity': {
@@ -567,7 +567,7 @@ export const demoData = {
         status: 'Attributed',
         stitchingMethod: 'st_aid (Cookie Stitching)',
         conversionType: 'Booked Meeting',
-        explanation: 'Attributed to Gemini AI. Visitor clicked referral link on google.com AI-powered search results.',
+        explanation: 'Attributed to Gemini AI. Visitor clicked referral link on google.com AI search results.',
         recommendedTemplate: 'AI referral revenue by landing page'
       },
       'Perplexity': {

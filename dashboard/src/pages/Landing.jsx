@@ -281,7 +281,7 @@ export default function Landing() {
 
           <FeatureCards compact items={[
             { icon: 'C', title: 'ChatGPT and Claude.', body: 'Measure traffic from AI chat platforms. See conversion rates, revenue per AI source, and compare AI-driven quality against paid, organic, and social.' },
-            { icon: 'G', title: 'Gemini and AI search.', body: 'Track visitors from AI-powered search results. Know which queries and pages AI surfaces are sending qualified traffic that converts.' },
+            { icon: 'G', title: 'Gemini and AI search.', body: 'Track visitors from AI search results. Know which queries and pages AI surfaces are sending qualified traffic that converts.' },
             { icon: 'P', title: 'Perplexity and answer engines.', body: 'Reveal answer-engine referrals that assist pipeline. Compare AI traffic quality against traditional channels — see the revenue, not just the visits.' },
           ]} />
 
