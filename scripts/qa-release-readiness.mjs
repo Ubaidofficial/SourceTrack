@@ -121,6 +121,34 @@ if (!fs.existsSync(RUNBOOK_PATH)) {
   }
 }
 
+
+// 5. Verify staging schema bootstrap plan exists and is clean of premature claims / secrets
+const PLAN_PATH = path.join(ROOT_DIR, 'docs/operations/staging_schema_bootstrap_plan.md');
+if (!fs.existsSync(PLAN_PATH)) {
+  console.error('❌ ERROR: docs/operations/staging_schema_bootstrap_plan.md does not exist.');
+  hasFailed = true;
+} else {
+  const planContent = fs.readFileSync(PLAN_PATH, 'utf8');
+  console.log('✅ Staging schema bootstrap plan docs/operations/staging_schema_bootstrap_plan.md exists.');
+
+  // Check for forbidden claims
+  const forbiddenPatterns = [
+    { pattern: /(?<!not\s+)(?<!not\s+\*\*)\bbootstrap\s+executed\b/i, message: 'Claims bootstrap executed' },
+    { pattern: /(?<!not\s+)(?<!not\s+\*\*)\bbootstrap\s+completed\b/i, message: 'Claims bootstrap completed' },
+    { pattern: /(?<!not\s+)(?<!not\s+\*\*)\bschema\s+setup\s+completed\b/i, message: 'Claims schema setup completed' },
+    { pattern: /zxjjjsipafojhzkkumvh.*(psql|-h|-U|postgres)/i, message: 'Targets production ref zxjjjsipafojhzkkumvh with db command' },
+    { pattern: /anonkey|service_role|sbp_|eyJhbGciOi/i, message: 'Possible raw secret exposed' }
+  ];
+
+  for (const { pattern, message } of forbiddenPatterns) {
+    if (pattern.test(planContent)) {
+      console.error(`❌ ERROR in Bootstrap Plan: ${message} (pattern matched: ${pattern}).`);
+      hasFailed = true;
+    }
+  }
+}
+
+
 console.log('\n==================================================');
 if (!hasFailed) {
   console.log('PASS — Release readiness checklist verified (all blockers open).');

@@ -1,4 +1,4 @@
-# SourceTrack Release Checklist Gate — Session 139H
+# SourceTrack Release Checklist Gate — Session 139I
 
 **Engineering Control Document**
 **Readiness Status:** 🚨 **NOT READY FOR PAID-BETA RELEASE** (Blocked by open P0/P1 items)
@@ -27,7 +27,7 @@ This checklist serves as the canonical release gate. No paid-beta launch, paid-b
 - [x] **Setup Doctor Diagnostic Chain**: Unified `SetupDoctorCard` console, API reachability ping, snippet-only `st_verify` live pageview test checks, and copy truth audits completed.
 
 ### Phase 1: Blocks the First Paying Beta Customer (P0 - CRITICAL)
-- [ ] **Staging Schema Bootstrap**: Complete database migrations and seeding on the staging project (`nrsvpwzekfrdrzkoecfk`).<br />*Status:* **BLOCKED**. Schema setup is incomplete on staging.
+- [ ] **Staging Schema Bootstrap**: Complete database migrations and seeding on the staging project (`nrsvpwzekfrdrzkoecfk`). Refer to [staging_schema_bootstrap_plan.md](operations/staging_schema_bootstrap_plan.md) for details.<br />*Status:* **BLOCKED**. Schema setup is incomplete on staging.
 - [ ] **Staging Service-Role Access**: Add the real staging service-role key to gitignored local/staging environment variables.<br />*Status:* **BLOCKED**. Only the placeholder exists.
 - [ ] **Stripe Test Catalog Alignment**: Correct and align Stripe test-mode price IDs ($29/$79/$149+) to prevent stale pricing schema mismatch.<br />*Status:* **BLOCKED**. Test catalog is stale.
 - [ ] **Stripe Test-Mode E2E Verification**: Run the full Stripe test-mode flow on staging: checkout → webhook → DB write → `pv_limit` applied → usage enforcement → portal cancel → downgrade to inactive.<br />*Status:* **BLOCKED**. No E2E Stripe webhook write tests have been run or logged in the repository.

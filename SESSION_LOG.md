@@ -3,10 +3,11 @@
 Running log of every session from Session 75 onward.  
 For detailed session history before Session 75, see `PROGRESS.md`.
 
-> **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](file:///Users/ubaid/Desktop/trackiq/docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
+> **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 139I | 2026-06-11 | `main` | Staging Schema Bootstrap / Safe Schema Setup — Reviewed staging schema bootstrap prerequisites, audited SQL migration risk patterns, identified core database table definitions tracking gap, and created docs/operations/staging_schema_bootstrap_plan.md. | ✅ | No |
 | 139H | 2026-06-11 | `main` | Production Supabase Backup/PITR Review + Staging Restore Drill Plan — Created a safe, truthful, operator-facing backup/PITR and staging restore drill runbook (docs/operations/supabase_backup_restore_runbook.md), updated the release checklist gate to reference the runbook, and extended QA checks to verify runbook compliance. | ✅ | No |
 | 139G | 2026-06-11 | `main` | Release Checklist Gate + Paid-Beta Operational Readiness Alignment — Added a real release checklist gate (docs/release_checklist_gate.md) and wired scripts/qa-release-readiness.mjs to verify that all paid-beta and public launch blockers are documented and open. | ✅ | No |
 | 139F | 2026-06-11 | `main` | Setup Doctor Docs + User Guidance Truth Audit — Audited setup docs/user guidance; updated DocsInstall, DocsTroubleshooting, and DocsQuickstart to reference Setup Doctor diagnostics (Freshness, Domain match, API Ping, st_verify token), added verification disclaimers, softened ad blocker copy. | ✅ | No |
