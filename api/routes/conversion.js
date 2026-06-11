@@ -6,7 +6,7 @@ import { ph } from '../lib/posthog.js'
 import { dispatchWebhook } from '../lib/webhook.js'
 import { sendMetaCAPI, sendGoogleConversion, sendMicrosoftConversion, sendLinkedInConversion, sendTikTokConversion } from '../lib/conversion-sync.js'
 import { getSupabase } from '../lib/supabase.js'
-import { normalizeUtm, getFirstTouchFields, redactPiiFromObject, isPathExcluded, extractCustomParams, sanitizeClientTimestamp } from '../lib/utils.js'
+import { normalizeUtm, getFirstTouchFields, redactPiiFromObject, isPathExcluded, extractCustomParams, sanitizeClientTimestamp, sanitizeValueTrack } from '../lib/utils.js'
 import { hasFeature } from '../lib/plan-features.js'
 import { resolveClientIp } from '../lib/ip-resolver.js'
 import { claimIdempotencyKeys } from '../lib/idempotency.js'
@@ -202,6 +202,14 @@ export async function conversion(req, res) {
       ttclid: req.body.ttclid || null,
       li_fat_id: req.body.li_fat_id || null,
       twclid: req.body.twclid || null,
+      utm_id: normalizeUtm(req.body.utm_id),
+      st_campaign_id: normalizeUtm(req.body.st_campaign_id),
+      st_adgroup_id: normalizeUtm(req.body.st_adgroup_id),
+      st_ad_id: normalizeUtm(req.body.st_ad_id),
+      st_target_id: normalizeUtm(req.body.st_target_id),
+      st_network: sanitizeValueTrack(req.body.st_network),
+      st_device: sanitizeValueTrack(req.body.st_device),
+      st_matchtype: sanitizeValueTrack(req.body.st_matchtype),
       ai_source: enriched.ai_source,
       device_type: enriched.device_type,
       browser_name: enriched.browser_name,

@@ -2,9 +2,9 @@
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](file:///Users/ubaid/Desktop/trackiq/docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
-> **Handoff:** Session 138E — Codify No-Commit-Before-Review AI-Agent Workflow is complete. Created `docs/ai_agent_workflow_rules.md` as the canonical AI-agent rules source. Added references/pointers to key control files. No application/backend code behavior changed.
+> **Handoff:** Session 139A — Paid Attribution Parameter Coverage + Google Ads Setup Checklist is complete. Added paid attribution parameter coverage (utm_id, st_campaign_id, st_adgroup_id, st_ad_id, st_target_id, st_network, st_device, st_matchtype) to trackers, ingestion routes, event debugger, and added a Google Ads setup checklist and docs page.
 >
-> **Prior handoff (Session 138D):** Session 138D — Local/Dev Boot Guard Against Production Supabase Mutation is complete. Created reusable environment safety guard (`api/lib/environment-safety.js`) and executed it early via the bootstrap entrypoint (`api/bootstrap.js`). Non-production API refuses to start when `SUPABASE_URL` contains production ref `zxjjjsipafojhzkkumvh`. Verified behavior via `scripts/qa-env-safety.mjs` (wired to `qa:static`).
+> **Prior handoff (Session 138E):** Session 138E — Codify No-Commit-Before-Review AI-Agent Workflow is complete. Created `docs/ai_agent_workflow_rules.md` as the canonical AI-agent rules source. Added references/pointers to key control files. No application/backend code behavior changed.
 >
 > **Next Task:** Add the release checklist that blocks deploy unless staging/backups/secrets/CI are verified (Session 138F).
 >

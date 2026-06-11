@@ -32,6 +32,7 @@ import AdminRoute from './components/AdminRoute'
 import DocsHome from './pages/docs/DocsHome'
 import DocsQuickstart from './pages/docs/DocsQuickstart'
 import DocsInstall from './pages/docs/DocsInstall'
+import DocsGoogleAds from './pages/docs/DocsGoogleAds'
 import DocsGTM from './pages/docs/DocsGTM'
 import DocsWebflow from './pages/docs/DocsWebflow'
 import DocsWordPress from './pages/docs/DocsWordPress'
@@ -191,6 +192,7 @@ export default function App() {
               <Route path="/docs" element={<DocsHome />} />
               <Route path="/docs/quickstart" element={<DocsQuickstart />} />
               <Route path="/docs/install" element={<DocsInstall />} />
+              <Route path="/docs/platforms/google-ads" element={<DocsGoogleAds />} />
               <Route path="/docs/platforms/google-tag-manager" element={<DocsGTM />} />
               <Route path="/docs/platforms/webflow" element={<DocsWebflow />} />
               <Route path="/docs/platforms/wordpress" element={<DocsWordPress />} />

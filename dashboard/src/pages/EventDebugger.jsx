@@ -524,7 +524,7 @@ export default function EventDebugger() {
                     <td className="py-2 px-4 text-gray-600 dark:text-gray-300 text-xs">{e.medium || '—'}</td>
                     <td className="py-2 px-4 text-gray-600 dark:text-gray-300 text-xs max-w-[160px] truncate">{e.campaign || '—'}</td>
                     <td className="py-2 px-4 text-gray-600 dark:text-gray-300 text-xs text-[10px]">
-                      {[e.gclid, e.fbclid, e.msclkid, e.ttclid].filter(Boolean).map(id => id.slice(0, 8)).join(", ") || "—"}
+                      {[e.gclid, e.gbraid, e.wbraid, e.fbclid, e.msclkid, e.ttclid, e.li_fat_id, e.twclid].filter(Boolean).map(id => String(id).slice(0, 8)).join(", ") || "—"}
                     </td>
                     <td className="py-2 px-4 text-gray-600 dark:text-gray-300 text-xs">{e.ai_source || '—'}</td>
                     <td className="py-2 px-4 text-gray-600 dark:text-gray-300 text-xs max-w-[200px] truncate">{formatPath(e.page_url)}</td>
@@ -571,6 +571,22 @@ export default function EventDebugger() {
                   ['Campaign', selectedEvent.campaign],
                   ['UTM Content', selectedEvent.utm_content],
                   ['UTM Term', selectedEvent.utm_term],
+                  ['UTM ID', selectedEvent.utm_id],
+                  ['ST Campaign ID', selectedEvent.st_campaign_id],
+                  ['ST Ad Group ID', selectedEvent.st_adgroup_id],
+                  ['ST Ad ID', selectedEvent.st_ad_id],
+                  ['ST Target ID', selectedEvent.st_target_id],
+                  ['ST Network', selectedEvent.st_network],
+                  ['ST Device', selectedEvent.st_device],
+                  ['ST Matchtype', selectedEvent.st_matchtype],
+                  ['Gclid', selectedEvent.gclid],
+                  ['Gbraid', selectedEvent.gbraid],
+                  ['Wbraid', selectedEvent.wbraid],
+                  ['Fbclid', selectedEvent.fbclid],
+                  ['Msclkid', selectedEvent.msclkid],
+                  ['Ttclid', selectedEvent.ttclid],
+                  ['Li Fat ID', selectedEvent.li_fat_id],
+                  ['Twclid', selectedEvent.twclid],
                   ['Ref Param', selectedEvent.ref_param],
                   ['Source Param', selectedEvent.source_param],
                   ['Via Param', selectedEvent.via_param],

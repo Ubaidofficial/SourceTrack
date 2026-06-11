@@ -55,7 +55,7 @@
   }
 
   // ─── URL params ────────────────────────────────────────────────────────────
-  var _pk = 'utm_source,utm_medium,utm_campaign,utm_content,utm_term,ref,source,via,gclid,gbraid,wbraid,fbclid,msclkid,ttclid,li_fat_id,twclid'.split(',')
+  var _pk = 'utm_source,utm_medium,utm_campaign,utm_content,utm_term,ref,source,via,gclid,gbraid,wbraid,fbclid,msclkid,ttclid,li_fat_id,twclid,utm_id,st_campaign_id,st_adgroup_id,st_ad_id,st_target_id,st_network,st_device,st_matchtype'.split(',')
   function params() {
     var p = new URLSearchParams(location.search), r = {}
     _pk.forEach(function (k) { r[k] = p.get(k) })
@@ -92,7 +92,10 @@
       utm_content: p.utm_content, utm_term: p.utm_term,
       gclid: p.gclid, gbraid: p.gbraid, wbraid: p.wbraid,
       fbclid: p.fbclid, msclkid: p.msclkid, ttclid: p.ttclid,
-      li_fat_id: p.li_fat_id, twclid: p.twclid
+      li_fat_id: p.li_fat_id, twclid: p.twclid,
+      utm_id: p.utm_id, st_campaign_id: p.st_campaign_id, st_adgroup_id: p.st_adgroup_id,
+      st_ad_id: p.st_ad_id, st_target_id: p.st_target_id, st_network: p.st_network,
+      st_device: p.st_device, st_matchtype: p.st_matchtype
     }
   }
 

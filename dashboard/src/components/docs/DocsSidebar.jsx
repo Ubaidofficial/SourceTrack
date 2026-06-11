@@ -12,6 +12,7 @@ const USER_DOCS_LINKS = [
   {
     title: 'Platform guides',
     links: [
+      { label: 'Google Ads', to: '/docs/platforms/google-ads' },
       { label: 'Google Tag Manager', to: '/docs/platforms/google-tag-manager' },
       { label: 'Webflow', to: '/docs/platforms/webflow' },
       { label: 'WordPress', to: '/docs/platforms/wordpress' },

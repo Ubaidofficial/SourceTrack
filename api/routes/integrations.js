@@ -270,6 +270,93 @@ router.get('/overview', async (req, res) => {
   }
 })
 
+// GET /api/integrations/google-ads/checklist — lightweight, authenticated, read-only setup checklist
+router.get('/google-ads/checklist', async (req, res) => {
+  try {
+    const siteKey = req.site?.site_key
+    const safeSite = esc(String(req.site.id))
+
+    const checklistSql = `
+      SELECT
+        count() AS total_events,
+        SUM(CASE WHEN (properties.utm_source IS NOT NULL AND properties.utm_source != '') OR (properties.utm_medium IS NOT NULL AND properties.utm_medium != '') THEN 1 ELSE 0 END) AS utms_detected_count,
+        SUM(CASE WHEN (properties.gclid IS NOT NULL AND properties.gclid != '') OR (properties.gbraid IS NOT NULL AND properties.gbraid != '') OR (properties.wbraid IS NOT NULL AND properties.wbraid != '') THEN 1 ELSE 0 END) AS click_id_detected_count,
+        SUM(CASE WHEN (properties.utm_id IS NOT NULL AND properties.utm_id != '') OR (properties.st_campaign_id IS NOT NULL AND properties.st_campaign_id != '') THEN 1 ELSE 0 END) AS campaign_id_detected_count,
+        SUM(CASE WHEN (properties.st_adgroup_id IS NOT NULL AND properties.st_adgroup_id != '') THEN 1 ELSE 0 END) AS adgroup_id_detected_count,
+        SUM(CASE WHEN (properties.st_ad_id IS NOT NULL AND properties.st_ad_id != '') OR (properties.utm_content IS NOT NULL AND properties.utm_content != '') THEN 1 ELSE 0 END) AS ad_id_detected_count,
+        MAX(CASE WHEN (properties.gclid IS NOT NULL AND properties.gclid != '') OR (properties.gbraid IS NOT NULL AND properties.gbraid != '') OR (properties.wbraid IS NOT NULL AND properties.wbraid != '') THEN timestamp ELSE null END) AS last_paid_click_seen,
+        MAX(CASE WHEN event = '$conversion' AND ((properties.gclid IS NOT NULL AND properties.gclid != '') OR (properties.gbraid IS NOT NULL AND properties.gbraid != '') OR (properties.wbraid IS NOT NULL AND properties.wbraid != '')) THEN timestamp ELSE null END) AS last_conversion_attributed
+      FROM events
+      WHERE properties.site_id = '${safeSite}'
+        AND timestamp >= now() - INTERVAL 30 DAY
+    `
+
+    const [rows, { data: connection, error: connError }] = await Promise.all([
+      queryHogQL(checklistSql, 'google_ads_checklist'),
+      getSupabase()
+        .from('ad_platform_connections')
+        .select('status')
+        .eq('site_key', siteKey)
+        .eq('platform', 'google_ads')
+        .maybeSingle()
+    ])
+
+    if (connError) throw connError
+
+    const row = rows?.[0] || [0, 0, 0, 0, 0, 0, null, null]
+    const totalEvents = Number(row[0]) || 0
+    const utmsDetectedCount = Number(row[1]) || 0
+    const clickIdDetectedCount = Number(row[2]) || 0
+    const campaignIdDetectedCount = Number(row[3]) || 0
+    const adgroupIdDetectedCount = Number(row[4]) || 0
+    const adIdDetectedCount = Number(row[5]) || 0
+    const lastPaidClickSeen = row[6] || null
+    const lastConversionAttributed = row[7] || null
+
+    const checklist = {
+      pixel_installed: totalEvents > 0,
+      utms_detected: utmsDetectedCount > 0,
+      click_id_detected: clickIdDetectedCount > 0,
+      campaign_id_detected: campaignIdDetectedCount > 0,
+      adgroup_id_detected: adgroupIdDetectedCount > 0,
+      ad_id_detected: adIdDetectedCount > 0,
+      last_paid_click_seen: lastPaidClickSeen,
+      last_conversion_attributed: lastConversionAttributed,
+      cost_connection_status: connection?.status || null
+    }
+
+    // Determine tracking quality label
+    let qualityLabel = 'Cost not connected'
+    if (!checklist.pixel_installed) {
+      qualityLabel = 'Missing pixel install'
+    } else if (!checklist.utms_detected) {
+      qualityLabel = 'Missing UTM source'
+    } else if (!checklist.click_id_detected) {
+      qualityLabel = 'Missing click ID'
+    } else if (!checklist.campaign_id_detected) {
+      qualityLabel = 'Missing campaign ID'
+    } else if (!checklist.adgroup_id_detected || !checklist.ad_id_detected) {
+      qualityLabel = 'Name-only attribution'
+    } else if (checklist.cost_connection_status !== 'active') {
+      qualityLabel = 'Cost not connected'
+    } else {
+      qualityLabel = 'Good tracking'
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        checklist,
+        quality_label: qualityLabel
+      },
+      error: null
+    })
+  } catch (err) {
+    console.error('[google-ads-checklist] GET error:', err?.message)
+    return res.status(500).json({ success: false, data: null, error: 'Failed to fetch Google Ads setup checklist' })
+  }
+})
+
 // GET /api/integrations/settings — fetch current site settings
 router.get('/settings', async (req, res) => {
   try {

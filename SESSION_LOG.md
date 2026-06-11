@@ -1868,3 +1868,50 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 
 ### 3. Updated Docs
 - Documented environment safety guard behaviors and override constraints in `docs/staging_supabase_setup.md`, `.env.example`, `docs/safe_qa_test_backlog.md`, `docs/staging_production_separation_audit.md`, and session documentation files. Stripe E2E remains blocked. RLS policies audit remains separate.
+
+---
+
+## Session 138E — Codify AI Agent Workflow Rules
+
+**Date:** 2026-06-11
+**Branch:** `main`
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety)
+**Status:** COMPLETE.
+
+### 1. Codified Rules
+- Created `docs/ai_agent_workflow_rules.md` documenting strict scope-control, code verification, safety policies, and raw-diff-based commit approvals.
+
+### 2. Control Document Updates
+- Added pointer references to the new workflow rules across all relevant control documents (`RULES.md`, `AGENTS.md`, `AGENT_BRIEF.md`, `SESSION_STATE.md`, etc.).
+
+---
+
+## Session 139A — Paid Attribution Parameter Coverage + Google Ads Setup Checklist
+
+**Date:** 2026-06-11
+**Branch:** `main`
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa-google-ads)
+**Status:** COMPLETE (Pending Commit Approval).
+
+### 1. Tracker Parameter Extraction
+- Expanded trackers (`tracker.js` and `tracker.cookieless.js`) to capture 8 additional parameters (`utm_id`, `st_campaign_id`, `st_adgroup_id`, `st_ad_id`, `st_target_id`, `st_network`, `st_device`, `st_matchtype`) and forward them via `utmFields`.
+- Compiled and minified trackers using `npm run build:tracker`.
+
+### 2. Backend Ingestion & Sanitization
+- Configured ingestion endpoints (`track.js` and `conversion.js`) to extract and capture the 8 new parameters.
+- Implemented robust ValueTrack sanitization helper `sanitizeValueTrack` to stringify, trim, cap to 100 characters, remove control characters, and drop empty values without destructive lowercase normalization.
+
+### 3. Event Debugger
+- Updated the events router (`events.js`) to query and return missing click IDs (`gbraid`, `wbraid`, `li_fat_id`, `twclid`) and the 8 new paid attribution parameters from HogQL.
+- Integrated these parameters into the Event Debugger table and side details drawer (`EventDebugger.jsx`).
+
+### 4. Setup Checklist API & UI
+- Implemented `/api/integrations/google-ads/checklist` within the authenticated integrations router with proper membership guards.
+- Created a founder-friendly **Google Ads Setup Checklist** card in `Integrations.jsx` that queries the checklist API, renders verified indicators, displays a setup quality badge, and supports a copyable tracking template block.
+
+### 5. Documentation
+- Created `DocsGoogleAds.jsx` containing platform instructions and the copyable tracking template.
+- Integrated the new documentation page in `DocsSidebar.jsx` and `App.jsx`.
+
+### 6. Verification
+- Created `scripts/qa-google-ads.mjs` verifying code presence and correctness. All static QA, env safety, and dashboard production builds passed successfully.

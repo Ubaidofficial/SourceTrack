@@ -7,7 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 import {
   Code, Bug, Copy, Check, ShieldCheck, AlertTriangle,
   ExternalLink, Globe, Tag, ShoppingCart, BarChart3, Plug, Mail, Radio, Trash, Play, RefreshCw,
-  ChevronDown, ChevronUp
+  ChevronDown, ChevronUp, XCircle
 } from 'lucide-react'
 import DashboardCard from '../components/DashboardCard'
 import StatusBadge from '../components/StatusBadge'
@@ -205,6 +205,21 @@ export default function Integrations() {
   const [shopifyMessage, setShopifyMessage] = useState('')
   const [shopifyError, setShopifyError] = useState('')
   const [copiedShopifyUrl, setCopiedShopifyUrl] = useState(false)
+
+  const { data: gadsChecklistData, isLoading: gadsChecklistLoading, refetch: refetchGadsChecklist } = useQuery({
+    queryKey: ['google-ads-checklist', site?.site_key],
+    queryFn: () => fetchApi(`/integrations/google-ads/checklist?site_key=${encodeURIComponent(site.site_key)}`),
+    enabled: !!site?.site_key,
+    refetchInterval: 30_000
+  })
+
+  const [copiedTemplate, setCopiedTemplate] = useState(false)
+  const handleCopyTemplate = () => {
+    const template = `{lpurl}?utm_source=google&utm_medium=cpc&utm_campaign={campaignid}&utm_id={campaignid}&utm_content={creative}&utm_term={keyword}&st_campaign_id={campaignid}&st_adgroup_id={adgroupid}&st_ad_id={creative}&st_target_id={targetid}&st_network={network}&st_device={device}&st_matchtype={matchtype}`
+    navigator.clipboard.writeText(template).catch(() => {})
+    setCopiedTemplate(true)
+    setTimeout(() => setCopiedTemplate(false), 2000)
+  }
 
   const stripeWebhookUrl = site?.site_key ? `${window.location.origin.includes('localhost') ? 'http://localhost:3000' : 'https://api.srctk.com'}/api/webhooks/stripe/${site.site_key}` : ''
 
@@ -1984,6 +1999,176 @@ export default function Integrations() {
                     </table>
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+        </DashboardCard>
+
+        {/* Google Ads Setup Checklist Card */}
+        <DashboardCard
+          title="Google Ads Setup Checklist"
+          subtitle="Ensure your Google Ads campaigns are configured for precise, first-party attribution and ROAS sync"
+          className="border-gray-150 dark:border-gray-800/80 shadow-none"
+          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-150 dark:border-gray-800/80"
+          bodyClassName="p-4 pt-3"
+        >
+          <div className="space-y-4">
+            {gadsChecklistLoading ? (
+              <div className="flex items-center gap-2 py-2 text-sm text-st-gray dark:text-gray-400">
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                Loading setup status...
+              </div>
+            ) : gadsChecklistData?.data?.checklist ? (
+              (() => {
+                const { checklist, quality_label } = gadsChecklistData.data
+                const statusStyles = {
+                  'Good tracking': 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400',
+                  'Cost not connected': 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400',
+                  'Name-only attribution': 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
+                }
+                const defaultStyle = 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
+                const badgeClass = statusStyles[quality_label] || defaultStyle
+
+                return (
+                  <div className="space-y-4 font-sans">
+                    <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-3">
+                      <div className="text-sm font-semibold text-st-black dark:text-white">
+                        Tracking Status
+                      </div>
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${badgeClass}`}>
+                        {quality_label}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-st-gray dark:text-gray-400">Pixel Installed</span>
+                          <span className="flex items-center gap-1">
+                            {checklist.pixel_installed ? (
+                              <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
+                            ) : (
+                              <XCircle className="w-4 h-4 text-red-500" />
+                            )}
+                            {checklist.pixel_installed ? 'Verified' : 'Not Detected'}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-st-gray dark:text-gray-400">UTM Parameters</span>
+                          <span className="flex items-center gap-1">
+                            {checklist.utms_detected ? (
+                              <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
+                            ) : (
+                              <XCircle className="w-4 h-4 text-red-500" />
+                            )}
+                            {checklist.utms_detected ? 'UTMs Seen' : 'Missing UTMs'}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-st-gray dark:text-gray-400">Google Click ID (GCLID/GBRAID/WBRAID)</span>
+                          <span className="flex items-center gap-1">
+                            {checklist.click_id_detected ? (
+                              <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
+                            ) : (
+                              <XCircle className="w-4 h-4 text-red-500" />
+                            )}
+                            {checklist.click_id_detected ? 'Active' : 'Missing'}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-st-gray dark:text-gray-400">Campaign ID</span>
+                          <span className="flex items-center gap-1">
+                            {checklist.campaign_id_detected ? (
+                              <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
+                            ) : (
+                              <XCircle className="w-4 h-4 text-red-500" />
+                            )}
+                            {checklist.campaign_id_detected ? 'Captured' : 'Missing'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-st-gray dark:text-gray-400">Ad Group ID</span>
+                          <span className="flex items-center gap-1">
+                            {checklist.adgroup_id_detected ? (
+                              <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
+                            ) : (
+                              <XCircle className="w-4 h-4 text-red-500" />
+                            )}
+                            {checklist.adgroup_id_detected ? 'Captured' : 'Missing'}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-st-gray dark:text-gray-400">Ad/Creative ID</span>
+                          <span className="flex items-center gap-1">
+                            {checklist.ad_id_detected ? (
+                              <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
+                            ) : (
+                              <XCircle className="w-4 h-4 text-red-500" />
+                            )}
+                            {checklist.ad_id_detected ? 'Captured' : 'Missing'}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-st-gray dark:text-gray-400">Cost Sync Connection</span>
+                          <span className="flex items-center gap-1">
+                            {checklist.cost_connection_status === 'active' ? (
+                              <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
+                            ) : (
+                              <XCircle className="w-4 h-4 text-red-500" />
+                            )}
+                            {checklist.cost_connection_status === 'active' ? 'Connected' : 'Disconnected'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-xs text-st-gray dark:text-gray-500 border-t border-gray-100 dark:border-gray-800">
+                      <div>
+                        Last Paid Click: <strong className="text-st-black dark:text-white font-sans">{checklist.last_paid_click_seen ? new Date(checklist.last_paid_click_seen).toLocaleString() : 'Never'}</strong>
+                      </div>
+                      <div>
+                        Last Conversion Attributed: <strong className="text-st-black dark:text-white font-sans">{checklist.last_conversion_attributed ? new Date(checklist.last_conversion_attributed).toLocaleString() : 'Never'}</strong>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleCopyTemplate}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors"
+                        >
+                          {copiedTemplate ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          {copiedTemplate ? 'Copied!' : 'Copy tracking template'}
+                        </button>
+                        <Link
+                          to="/docs/platforms/google-ads"
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-st-gray hover:text-st-black dark:text-gray-400 dark:hover:text-white hover:underline transition-colors"
+                        >
+                          Google Ads Docs <ExternalLink className="w-3 h-3" />
+                        </Link>
+                      </div>
+                      <button
+                        onClick={() => refetchGadsChecklist()}
+                        className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-gray-400 transition-colors"
+                        title="Refresh checklist"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )
+              })()
+            ) : (
+              <div className="text-sm text-st-gray dark:text-gray-400 py-2">
+                Unable to load Google Ads setup checklist.
               </div>
             )}
           </div>

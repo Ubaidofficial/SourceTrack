@@ -46,6 +46,24 @@ export function normalizeUtm(value) {
 }
 
 /**
+ * Sanitize Google ValueTrack parameters safely:
+ * - Stringify, trim, and remove control characters.
+ * - Cap length to 100 characters.
+ * - Return null for empty/whitespace-only values.
+ *
+ * @param {*} value
+ * @returns {string|null}
+ */
+export function sanitizeValueTrack(value) {
+  if (value === null || value === undefined) return null
+  const str = String(value).trim()
+  if (!str) return null
+  const clean = str.replace(/[\x00-\x1F\x7F]/g, '')
+  if (!clean) return null
+  return clean.slice(0, 100)
+}
+
+/**
  * Coerce a client-provided ISO timestamp into a canonical form, or null if
  * unparseable. We accept this as attribution METADATA only — never use it for
  * billing, security, or rate-limiting decisions where a malicious client

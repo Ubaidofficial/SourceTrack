@@ -1,8 +1,10 @@
-Session: 138E — Codify No-Commit-Before-Review AI-Agent Workflow
-Last Completed: Codified AI-agent workflow rules into docs/ai_agent_workflow_rules.md and added references to key control docs. (Session 138D safety boot guard is fully active).
+Session: 139A — Paid Attribution Parameter Coverage + Google Ads Setup Checklist
+Last Completed: Added paid attribution parameter coverage (utm_id, st_campaign_id, st_adgroup_id, st_ad_id, st_target_id, st_network, st_device, st_matchtype) to trackers, ingestion routes, event debugger, and added a Google Ads setup checklist and docs page.
 Control Doc: docs/development_workflow_master_plan.md is the source of truth for session ordering and gates.
 AI-Agent Workflow: AI-agent workflow rules are governed by docs/ai_agent_workflow_rules.md. No AI-agent may commit or push before raw diff review and explicit user approval.
 
+Prior Session: 138E — Codify No-Commit-Before-Review AI-Agent Workflow
+Last Completed (138E): Codified AI-agent workflow rules into docs/ai_agent_workflow_rules.md and added references to key control docs. (Session 138D safety boot guard is fully active).
 Prior Session: 138D — Local/Dev Boot Guard Against Production Supabase Mutation
 Last Completed (138D): Created reusable environment safety boot guard (`api/lib/environment-safety.js`) and executed it early via the bootstrap entrypoint (`api/bootstrap.js`). Non-production API refuses to start when `SUPABASE_URL` contains production ref `zxjjjsipafojhzkkumvh`. Verified behavior via `scripts/qa-env-safety.mjs` (wired to `qa:static`).
 Prior Session: 138C — Create Supabase staging project
@@ -14,9 +16,9 @@ Verdict (134): CONDITIONAL GO — safe for 3–5 hand-picked single-instance bet
 Next Task: Add release/deploy checklist gate (Session 138F).
 Roadmap Queue:
 - Session 138F — Add release/deploy checklist gate.
-- Session 139A — Staging schema bootstrap / safe schema setup.
-- Session 139B — Staging observability / exception monitoring.
-- Session 139C — Stripe test catalog correction + Stripe E2E on staging only.
+- Session 139B — Staging schema bootstrap / safe schema setup.
+- Session 139C — Staging observability / exception monitoring.
+- Session 139D — Stripe test catalog correction + Stripe E2E on staging only.
 Build: ✅ passing (node --check, git diff --check, dashboard vite build, qa:static, required-grep clean)
 Branch: main
 
