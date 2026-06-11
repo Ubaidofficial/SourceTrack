@@ -95,7 +95,7 @@ export default function DocsQuickstart() {
             <li>
               <h4 className="font-extrabold text-gray-900 dark:text-white inline-block">Verify your First Pageview</h4>
               <p className="mt-1">
-                Return to the SourceTrack dashboard. Go to the Event Debugger or Dashboard view. You should see your visit appear in real-time, showing which browser and country you came from.
+                Return to the SourceTrack dashboard. Use the <strong>Setup Doctor</strong> diagnostic check on the Snippet Code page to check whether your site is connected and sending events, or open the <strong>Event Debugger</strong> to see whether your visit appears.
               </p>
             </li>
 

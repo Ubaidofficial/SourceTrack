@@ -83,8 +83,36 @@ export default function DocsInstall() {
         {/* 4. How to verify it worked */}
         <section className="space-y-4">
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
-            How to Verify It Worked
+            How to Verify Setup
           </h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            You can verify your installation either automatically using the <strong>Setup Doctor</strong> in your dashboard, or manually via your browser's Developer Tools.
+          </p>
+
+          <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">Option 1: Setup Doctor (Recommended)</h3>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            Go to the <strong>Snippet Code</strong> page in your dashboard to view the Setup Doctor card.
+            The Setup Doctor helps confirm:
+          </p>
+          <ul className="list-disc pl-5 space-y-1.5 text-sm text-gray-700 dark:text-gray-300">
+            <li><strong>Event Freshness:</strong> Whether SourceTrack received tracking events from your site recently.</li>
+            <li><strong>Domain Match:</strong> Whether the domain sending events matches your registered production domain (or flags "test traffic" / "wrong domain" if misconfigured).</li>
+            <li><strong>Browser Connection Check:</strong> Whether your browser can reach the SourceTrack API successfully without being blocked by network firewalls.</li>
+            <li><strong>Live Pageview Verification:</strong> Generate a temporary test link with a unique <code>st_verify</code> token, then open it in a new tab to check whether a live pageview from your production domain is received.</li>
+            <li><strong>Paid Parameters & Conversions:</strong> Checks if UTM parameters or conversion events have been recorded in the last 30 days.</li>
+          </ul>
+
+          <DocsCallout type="warning">
+            <h4 className="font-extrabold text-amber-900 dark:text-amber-400 mb-1">What Setup Doctor Does Not Prove:</h4>
+            <ul className="list-disc pl-5 space-y-1 text-xs text-amber-800 dark:text-amber-450 leading-relaxed">
+              <li>It does not prove every single page on your website has the script installed.</li>
+              <li>It does not prove every custom conversion or event trigger is configured.</li>
+              <li>Setup Doctor does not validate attribution accuracy.</li>
+              <li>It does not prove checkout/revenue attribution is fully configured or running.</li>
+            </ul>
+          </DocsCallout>
+
+          <h3 className="text-sm font-extrabold text-gray-900 dark:text-white mt-4">Option 2: Manual Browser Inspection</h3>
           <ol className="list-decimal pl-5 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
             <li>Open your live website in a browser.</li>
             <li>Right-click and select <strong>Inspect</strong> to open Developer Tools, then go to the <strong>Network</strong> tab.</li>
@@ -107,7 +135,7 @@ export default function DocsInstall() {
               <strong>Failing to Replace the Placeholder:</strong> Make sure you have replaced <code>YOUR_SITE_KEY</code> with your real key in the script.
             </li>
             <li>
-              <strong>Ad Blockers / Privacy Shields:</strong> Strict ad blockers during local development can block network requests to our servers. We recommend testing in a clean browser profile or temporary incognito tab without blockers active.
+              <strong>Ad Blockers / Privacy Shields:</strong> Strict ad blockers or privacy shields during local development may block network requests to our servers, though they are not the only cause of missing events. We recommend testing in a clean browser profile or temporary incognito tab without blockers active.
             </li>
           </ul>
         </section>

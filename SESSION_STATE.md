@@ -1,14 +1,16 @@
-Session: 139A — Paid Attribution Parameter Coverage + Google Ads Setup Checklist
-Last Completed: Added paid attribution parameter coverage (utm_id, st_campaign_id, st_adgroup_id, st_ad_id, st_target_id, st_network, st_device, st_matchtype) to trackers, ingestion routes, event debugger, and added a Google Ads setup checklist and docs page.
+Session: 139F — Setup Doctor Docs + User Guidance Truth Audit
+Last Completed: Audited and updated setup docs and user-facing guidance to align with the new setup doctor architecture (Session 139C–139E), adding disclaimer callouts regarding verification scope, softening ad blocker statements, and documenting the browser connection check and st_verify token flow.
 Control Doc: docs/development_workflow_master_plan.md is the source of truth for session ordering and gates.
 AI-Agent Workflow: AI-agent workflow rules are governed by docs/ai_agent_workflow_rules.md. No AI-agent may commit or push before raw diff review and explicit user approval.
 
-Prior Session: 138E — Codify No-Commit-Before-Review AI-Agent Workflow
-Last Completed (138E): Codified AI-agent workflow rules into docs/ai_agent_workflow_rules.md and added references to key control docs. (Session 138D safety boot guard is fully active).
-Prior Session: 138D — Local/Dev Boot Guard Against Production Supabase Mutation
-Last Completed (138D): Created reusable environment safety boot guard (`api/lib/environment-safety.js`) and executed it early via the bootstrap entrypoint (`api/bootstrap.js`). Non-production API refuses to start when `SUPABASE_URL` contains production ref `zxjjjsipafojhzkkumvh`. Verified behavior via `scripts/qa-env-safety.mjs` (wired to `qa:static`).
-Prior Session: 138C — Create Supabase staging project
-Last Completed (138C): Created the separate staging Supabase project `sourcetrack-staging` (ref: `nrsvpwzekfrdrzkoecfk`). Local env rewired to target staging ref, but service-role key remains placeholder. Daily scheduled backups manually verified in the Supabase dashboard. PITR is not enabled.
+Prior Session: 139E — Setup Doctor Browser Diagnostics
+Last Completed (139E): Added browser diagnostics panel (API reachability /install/ping check) and st_verify token test link builder. Restricted verification token flow and browser reachability diagnostics to snippet mode, and prevented onboarding success from triggering on unsafe domains.
+Prior Session: 139D — Consolidate Setup Doctor UI
+Last Completed (139D): Consolidated tracking status UI across Dashboard, Snippet, and Onboarding pages into a unified SetupDoctorCard component.
+Prior Session: 139C — Add Setup Doctor backend API
+Last Completed (139C): Implemented GET /api/install/doctor backend diagnostic endpoint using HogQL queries. Added verification token check, domain match checks, and click parameter detection.
+Prior Session: 139A — Add paid attribution setup checklist
+Last Completed (139A): Added paid attribution parameter coverage (utm_id, st_campaign_id, st_adgroup_id, st_ad_id, st_target_id, st_network, st_device, st_matchtype) to trackers, ingestion routes, event debugger, and added a Google Ads setup checklist and docs page.
 P0-3 STATUS: Daily backups are now verified; PITR remains an optional but strongly recommended paid add-on / accepted risk if left disabled. PITR is not enabled / not accepted as enabled. Do not enable PITR without explicit cost approval.
 🚩 HEADLINE FINDING F6 (P0 staging blocker): RESOLVED. Staging database exists (ref `nrsvpwzekfrdrzkoecfk`). Safety boot guard is active in local/dev API server.
 Prior findings still open: 135 F1 stale test prices; 135 F3 pv_limit metadata; 135 F4 request-body redirect URLs.

@@ -7,6 +7,11 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 139F | 2026-06-11 | `main` | Setup Doctor Docs + User Guidance Truth Audit — Audited setup docs/user guidance; updated DocsInstall, DocsTroubleshooting, and DocsQuickstart to reference Setup Doctor diagnostics (Freshness, Domain match, API Ping, st_verify token), added verification disclaimers, softened ad blocker copy. | ✅ | No |
+| 139E | 2026-06-11 | `main` | Setup Doctor Browser Diagnostics — Added browser diagnostics check (install/ping) and automated st_verify token test link builder. Restricted verification token flow and browser reachability diagnostics to snippet mode, and prevented onboarding success from triggering on unsafe domains. | ✅ | No |
+| 139D | 2026-06-11 | `main` | Consolidate Setup Doctor UI — Consolidated user-facing status UI across Dashboard, Snippet, and Onboarding pages into a unified SetupDoctorCard component. | ✅ | No |
+| 139C | 2026-06-11 | `main` | Add Setup Doctor backend API — Implemented GET /api/install/doctor backend diagnostic endpoint using parallel HogQL queries (Freshness, domain match, click parameters, st_verify token verification). | ✅ | No |
+| 139A | 2026-06-11 | `main` | Paid Attribution Parameter Coverage + Google Ads Setup Checklist — Added paid attribution parameters (utm_id, st_campaign_id, st_adgroup_id, st_ad_id, st_target_id, st_network, st_device, st_matchtype) to trackers, ingestion routes, event debugger, and added Google Ads setup checklist. | ✅ | No |
 | 138E | 2026-06-11 | `main` | Codify No-Commit-Before-Review AI-Agent Workflow — Created docs/ai_agent_workflow_rules.md as the canonical workflow and safety rules source. Updated key control files with references. No app code or behavior modified. | ✅ | No |
 | 138D | 2026-06-11 | `main` | Local/Dev Boot Guard Against Production Supabase Mutation — Created reusable environment safety guard (`api/lib/environment-safety.js`) and executed it early via the bootstrap entrypoint (`api/bootstrap.js`). Refuses non-production API boot with production Supabase ref (`zxjjjsipafojhzkkumvh`). Added `scripts/qa-env-safety.mjs` (wired to `qa:static`). Stripe E2E remains blocked. | ✅ | No |
 | 138C | 2026-06-11 | `main` | Supabase Staging Project + Local/Staging Env Rewire — Created staging Supabase project `sourcetrack-staging` (`nrsvpwzekfrdrzkoecfk`) in region `eu-west-1`. Local env rewired to target staging ref, but `SUPABASE_SERVICE_KEY` remains placeholder. Daily scheduled backups were manually verified in the Supabase dashboard by the operator. PITR is not enabled. Stripe E2E remains blocked. | ✅ | No |
@@ -1915,3 +1920,70 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 
 ### 6. Verification
 - Created `scripts/qa-google-ads.mjs` verifying code presence and correctness. All static QA, env safety, and dashboard production builds passed successfully.
+
+---
+
+## Session 139C — Add Setup Doctor backend API
+
+**Date:** 2026-06-11
+**Branch:** `main`
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa-setup-doctor)
+**Status:** COMPLETE (Pending Commit Approval).
+
+### 1. Backend Diagnostics Endpoint
+- Implemented `/api/install/doctor` to perform parallel HogQL database checks.
+- Returns site metadata, last seen event name, event source domain, registered domain, and environment detection type (production, test_env, wrong_domain).
+
+### 2. Click Parameter and Conversion Check
+- HogQL queries verify if paid parameters or conversion events were detected in the last 30 days.
+
+### 3. Verification Token Checks
+- Compares supplied `st_verify` token with events from the last 15 minutes to verify real-time traffic connection.
+
+---
+
+## Session 139D — Consolidate Setup Doctor UI
+
+**Date:** 2026-06-11
+**Branch:** `main`
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa-setup-doctor)
+**Status:** COMPLETE (Pending Commit Approval).
+
+### 1. Unified SetupDoctorCard Component
+- Created a single reusable `SetupDoctorCard` component that makes queries to the new `/api/install/doctor` diagnostics endpoint.
+
+### 2. Consolidated UI Integration
+- Integrated `SetupDoctorCard` on `Dashboard.jsx`, `Snippet.jsx`, and `Onboarding.jsx` (Step 6), replacing custom tracking check UI code and simplifying the code footprint.
+
+---
+
+## Session 139E — Setup Doctor Browser Diagnostics
+
+**Date:** 2026-06-11
+**Branch:** `main`
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa-setup-doctor)
+**Status:** COMPLETE (Pending Commit Approval).
+
+### 1. Browser Connection Check
+- Added collapsible section that calls `/api/install/ping` directly from the client to determine if browser extensions or firewalls are blocking SourceTrack requests.
+
+### 2. Live Pageview Verification UX
+- Replaced manual token textbox input with an automated test link builder that appends `st_verify=<token>` to the registered domain.
+- Restricts test link generation on missing or unsafe domains (e.g. localhost, staging, dev, vercel.app, netlify.app) and prevents onboarding success triggers.
+
+---
+
+## Session 139F — Setup Doctor Docs + User Guidance Truth Audit
+
+**Date:** 2026-06-11
+**Branch:** `main`
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa-setup-doctor)
+**Status:** COMPLETE (Pending Commit Approval).
+
+### 1. Setup Doctor Documentation
+- Updated `DocsInstall.jsx` and `DocsTroubleshooting.jsx` to document the Setup Doctor's diagnostic capabilities (Freshness check, domain match, browser ping, and live pageview verification).
+- Added explicit disclaimers outlining the limits of verification (does not prove every page is installed, ad blocker detection is not definitive, Setup Doctor does not validate attribution accuracy).
+- Softened ad-blocker explanations inside troubleshooting items to avoid definitive claims.
+
+### 2. Quickstart Reference
+- Updated `DocsQuickstart.jsx` to refer users to the Setup Doctor utility without technical token details.

@@ -6,8 +6,8 @@ import DocsCallout from '../../components/docs/DocsCallout'
 const TROUBLESHOOTING_ITEMS = [
   {
     symptom: 'No pageviews are showing up in the dashboard',
-    cause: 'The site key is incorrect, the script is not loading, or an ad blocker is suppressing the endpoint.',
-    fix: 'Verify that the script tag exists in your HTML source and contains the exact Site Key from settings. Check the browser Console and Network tabs for blocks. Turn off strict ad blockers during testing.',
+    cause: 'The site key is incorrect, the script is not loading, or a browser/network extension may be suppressing the endpoint.',
+    fix: 'Verify that the script tag exists in your HTML source and contains the exact Site Key from settings. Check the browser Console and Network tabs for blocks. We recommend running the Browser Connection Check inside the Setup Doctor.',
     verify: 'Look for the "track" network request returning a 200 success response.'
   },
   {
@@ -165,6 +165,30 @@ export default function DocsTroubleshooting() {
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
             If you need full multi-session attribution, switch off cookieless mode in <Link to="/settings" className="text-blue-600 dark:text-blue-400 font-bold hover:underline">Settings</Link> and use the standard tracker, which stores a stable id in <code>localStorage</code>.
           </p>
+        </section>
+
+        {/* Setup Doctor Diagnostic Layer */}
+        <section className="space-y-3">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            Using Setup Doctor for Diagnostics
+          </h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            The <strong>Setup Doctor</strong> on your Snippet Code settings page helps identify connection and configuration issues.
+          </p>
+          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            <li>
+              <strong>Browser Connection Check:</strong> If analytics requests are not sending, open the Browser Connection Check disclosure. It tests if your browser can reach the backend liveness ping. If it fails, a browser extension, VPN, or network firewall may be blocking the SourceTrack API.
+            </li>
+            <li>
+              <strong>Live Pageview Verification:</strong> For production sites, use the "Verify a live pageview" test link generation. This adds a temporary <code>st_verify</code> token to the URL and checks whether SourceTrack receives a live pageview from your production domain. Note: Test links are blocked for unsafe/local test domains.
+            </li>
+            <li>
+              <strong>Wrong Domain / Test Traffic:</strong> If you receive warnings in the diagnostics panel, verify that the active domain matches your registered production domain. Setup Doctor does not treat localhost/staging traffic as onboarding success.
+            </li>
+          </ul>
+          <DocsCallout type="info">
+            <strong>Scope of Verification:</strong> Remember that a healthy Setup Doctor status helps confirm that events are being received from your site, but it does not prove that every page has the script installed. Setup Doctor does not validate attribution accuracy.
+          </DocsCallout>
         </section>
 
         {/* 6. Next step */}
