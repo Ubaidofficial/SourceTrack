@@ -105,15 +105,15 @@ But the **operational foundation was built slower than the product**. The workfl
 - **138B** — Master workflow plan/control document *(Completed)*
 - **138C** — Create/confirm separate staging Supabase project; rewire local `.env` away from production. *(Completed)*
 - **138D** — Add local/dev boot guard refusing non-production API startup when `SUPABASE_URL` targets the production Supabase ref. *(Completed)*
-- **138E** — Codify no-commit-before-review workflow into the AI-agent rules.
-- **138F** — Add the release checklist that blocks deploy unless staging/backups/secrets/CI are verified.
+- **138E** — Codify no-commit-before-review workflow into the AI-agent rules. *(Completed)*
+- **139G** — Release Checklist Gate + Paid-Beta Operational Readiness Alignment. Add/update the deploy checklist gate (docs/release_checklist_gate.md) so staging, backups, secrets, CI, and production-safety prerequisites are verified. *(Completed)*
 
 **Phase 1 — Close paid-beta P0 blockers**
-- **139A** — Upgrade production Supabase; enable backups + PITR; document retention/restore.
-- **139B** — Staging-only restore/recovery rehearsal.
-- **139C** — Fix Stripe test catalog; run full Stripe test-mode E2E on staging.
-- **139D** — Verify production env/secrets, IP resolver mode, CORS, tracker/API URLs in consoles.
-- **139E** — Confirm beta Terms/Privacy disclosure flow before payment.
+- **139H** — Production Supabase Backup/PITR Review + Staging Restore Drill Plan.
+- **139I** — Staging Schema Bootstrap / Safe Schema Setup.
+- **139J** — Stripe Test Catalog Correction + Stripe E2E on Staging Only.
+- **139K** — Verify Production Env/Secrets, IP Resolver Mode, CORS, Tracker/API URLs in consoles.
+- **139L** — Confirm beta Terms/Privacy disclosure flow before payment.
 
 **Phase 2 — Observability and release gates**
 - **140A** — Add Sentry (or equivalent) exception monitoring.
@@ -165,10 +165,10 @@ All P0 closed:
 - Staging Supabase exists; local/staging env no longer points at production (138B).
 - Local boot guard prevents accidental production mutation (138C).
 - Review-before-commit rule + release checklist enforced (138D, 138E).
-- Production backups + PITR enabled and restore rehearsed on staging (139A, 139B).
-- Stripe test-mode E2E complete on staging with event IDs and before/after rows (139C).
-- Production env/secrets verified in consoles (139D).
-- Beta Terms/Privacy disclosure shown before payment (139E).
+- Production backups + PITR enabled and restore rehearsed on staging (139H, 139I).
+- Stripe test-mode E2E complete on staging with event IDs and before/after rows (139J).
+- Production env/secrets verified in consoles (139K).
+- Beta Terms/Privacy disclosure shown before payment (139L).
 
 **No P0 open. No exceptions.** This is the §11 "Before paid beta" checklist.
 
@@ -314,12 +314,12 @@ event warehouse decision after beta data
 | 138C | Local `.env`, `.env.local`, and `.env.staging` now target the staging Supabase project ref for URL/publishable-key configuration, but `SUPABASE_SERVICE_KEY` remains a placeholder. Local backend mutation tests remain blocked until the real staging service-role key is manually added to gitignored local env files. No env files are tracked by git. Stripe E2E remains blocked until: 1. staging schema/bootstrap is completed safely; 2. real staging service-role key is added locally/staging-only; 3. local/dev production boot guard is added; 4. Stripe test catalog is corrected; 5. billing/webhook E2E runs only against staging. |
 | 138D | Local/dev API boot guard is implemented via api/bootstrap.js and blocks non-production startup when SUPABASE_URL targets production ref zxjjjsipafojhzkkumvh. Offline qa:env-safety is wired into qa:static. |
 | 138E | Every future AI-agent session has enforced review-before-commit rules. |
-| 138F | Production deploy cannot happen by accident from an unreviewed AI-agent commit. |
-| 139A | P0-3 closes only when backups/PITR are verified in console and documented. |
-| 139B | Restore/recovery has been rehearsed safely on staging, not just documented. |
-| 139C | P0-1 closes only after checkout → webhook → DB → portal → inactive enforcement is proven on staging. |
-| 139D | Production env safety verified in provider consoles, not assumed from repo. |
-| 139E | First paid beta customer sees/receives the beta legal disclosure before payment. |
+| 139G | Release checklist gate (docs/release_checklist_gate.md) created and verified by scripts/qa-release-readiness.mjs. |
+| 139H | P0-3 closes only when backups/PITR are verified in console and documented. |
+| 139I | Restore/recovery has been rehearsed safely on staging, not just documented. |
+| 139J | P0-1 closes only after checkout → webhook → DB → portal → inactive enforcement is proven on staging. |
+| 139K | Production env safety verified in provider consoles, not assumed from repo. |
+| 139L | First paid beta customer sees/receives the beta legal disclosure before payment. |
 | 140A | An unhandled staging error appears in the monitoring tool within seconds. |
 | 140B | Operators are alerted without waiting for customers to report failures. |
 | 140C | Attribution regressions cannot ship green without deterministic QA passing. |
@@ -509,9 +509,9 @@ event warehouse decision after beta data
 The workflow is **production-ready** (not the product — the *workflow*) when **all** of the following hold:
 
 1. A separate staging Supabase project exists; no local/dev/CI path mutates production. *(138C, 138D)*
-2. Production has backups + PITR, and a restore has been rehearsed on staging. *(139A, 139B)*
+2. Production has backups + PITR, and a restore has been rehearsed on staging. *(139H, 139I)*
 3. Branch protection + required review + required CI are enabled on `main`; no agent can commit/deploy unreviewed. *(138E, 140E)*
-4. The release checklist (§11) is enforced and blocks deploy on unmet conditions. *(138F)*
+4. The release checklist (docs/release_checklist_gate.md) is enforced and blocks deploy on unmet conditions. *(139G)*
 5. Exception monitoring is active with verified alert routing. *(140A, 140B)*
 6. CI gates `qa:attribution`/`qa:smoke`/`qa:edge` (or a documented mandatory pre-deploy gate runs them). *(140C)*
 7. A real test framework exists with attribution, billing, and cross-tenant coverage. *(141A–141D)*

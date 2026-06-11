@@ -7,6 +7,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 139G | 2026-06-11 | `main` | Release Checklist Gate + Paid-Beta Operational Readiness Alignment — Added a real release checklist gate (docs/release_checklist_gate.md) and wired scripts/qa-release-readiness.mjs to verify that all paid-beta and public launch blockers are documented and open. | ✅ | No |
 | 139F | 2026-06-11 | `main` | Setup Doctor Docs + User Guidance Truth Audit — Audited setup docs/user guidance; updated DocsInstall, DocsTroubleshooting, and DocsQuickstart to reference Setup Doctor diagnostics (Freshness, Domain match, API Ping, st_verify token), added verification disclaimers, softened ad blocker copy. | ✅ | No |
 | 139E | 2026-06-11 | `main` | Setup Doctor Browser Diagnostics — Added browser diagnostics check (install/ping) and automated st_verify token test link builder. Restricted verification token flow and browser reachability diagnostics to snippet mode, and prevented onboarding success from triggering on unsafe domains. | ✅ | No |
 | 139D | 2026-06-11 | `main` | Consolidate Setup Doctor UI — Consolidated user-facing status UI across Dashboard, Snippet, and Onboarding pages into a unified SetupDoctorCard component. | ✅ | No |
@@ -1987,3 +1988,21 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 
 ### 2. Quickstart Reference
 - Updated `DocsQuickstart.jsx` to refer users to the Setup Doctor utility without technical token details.
+
+---
+
+## Session 139G — Release Checklist Gate + Paid-Beta Operational Readiness Alignment
+
+**Date:** 2026-06-11
+**Branch:** `main`
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa-setup-doctor, qa-release-readiness)
+**Status:** COMPLETE (Pending Commit Approval).
+
+### 1. Canonical Release Checklist Gate
+- Created `docs/release_checklist_gate.md` serving as the canonical gate for release.
+- Documented verified (closed) foundations (staging project, local boot guard, no-commit rules, Setup Doctor UI/docs) vs open/blocked items (staging bootstrap, Stripe E2E webhook writes, PITR check, Railway secrets, exception monitoring, RLS scoping, rate limiters, etc.).
+
+### 2. Automated Release Readiness Checker
+- Created `scripts/qa-release-readiness.mjs` verifying that `docs/release_checklist_gate.md` declares a blocked status and all blockers remain open.
+- Wired the checker script into the `qa:static` command chain in `package.json` to prevent accidental bypass.
+- Aligned session number and control document roadmap references.

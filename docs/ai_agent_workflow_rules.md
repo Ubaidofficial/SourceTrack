@@ -130,11 +130,11 @@ The following actions are strictly prohibited in all circumstances:
 
 ## Current SourceTrack session order
 Every session maps back to the authoritative roadmap defined in `docs/development_workflow_master_plan.md`. The current ordering of Phase 0 and Phase 1 sessions is:
-1. **138E** — Codify no-commit-before-review AI-agent workflow (This Session)
-2. **138F** — Add release/deploy checklist gate
-3. **139A** — Staging schema bootstrap / safe schema setup
-4. **139B** — Staging observability / exception monitoring
-5. **139C** — Stripe test catalog correction + Stripe E2E on staging only
+1. **138E** — Codify no-commit-before-review AI-agent workflow (Completed)
+2. **139G** — Release Checklist Gate + Paid-Beta Operational Readiness Alignment (This Session)
+3. **139H** — Production Supabase Backup/PITR Review + Staging Restore Drill Plan (Open)
+4. **139I** — Staging Schema Bootstrap / Safe Schema Setup (Open)
+5. **139J** — Stripe Test Catalog Correction + Stripe E2E on Staging Only (Open)
 
 *Note: Do not reorder or alter this roadmap without explicit user approval.*
 
