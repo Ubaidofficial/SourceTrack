@@ -2,19 +2,39 @@
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
-> **Handoff:** Session 139I-C — Staging Schema Bootstrap Execution is complete. Bootstrapped Supabase staging schema with 14 core tables, set staging SUPABASE_SERVICE_KEY on 5 Railway services, resolved managed proxy block on staging API by adding staging URL to ST_PLATFORM_HOSTS, created migration file for sites.business_type schema drift. E2E authenticated signup, login, and onboarding API steps were verified on staging. Browser UI onboarding remains pending because Chrome DevTools MCP was unavailable. Saved under [authenticated_staging_onboarding_qa_139I-C.md](docs/qa/authenticated_staging_onboarding_qa_139I-C.md).
+> **Handoff:** Session 139J — Stripe Test Catalog Correction + Stripe E2E on Staging Only is complete. Corrected Stripe test catalog pricing to match public rates ($29/$79/$149) with pv_limit metadata. Verified E2E checkout session creation, redirection, webhook signature validation, database site plan/limit updates, and event deduplication cache on staging. Documented status endpoint stripe_customer_id bug. Saved under [stripe_staging_e2e_139J.md](docs/qa/stripe_staging_e2e_139J.md).
 >
-> **Prior handoff (Session 139M-5):** Session 139M-5 — Campaigns, Paid Acquisition, Costs, GSC/SEO Revenue QA is complete. Verified client-side redirects to `/login` for protected routes (`/campaigns`, `/app/integrations`, `/seo-revenue`) when unauthenticated. Audited campaigns overview and GSC daily performance queries, cost imports logic, and tenant isolations (`site_id` and `site_key` guards). Confirmed zero user-facing overclaims exist. All actual authenticated syncs and DB cost imports remain blocked by database credentials, saved under [campaigns_paid_costs_gsc_seo_qa_139M-5.md](docs/qa/campaigns_paid_costs_gsc_seo_qa_139M-5.md).
+> **Prior handoff (Session 139I-C):** Session 139I-C — Staging Schema Bootstrap Execution is complete. Bootstrapped Supabase staging schema with 14 core tables, set staging SUPABASE_SERVICE_KEY on 5 Railway services, resolved managed proxy block on staging API by adding staging URL to ST_PLATFORM_HOSTS, created migration file for sites.business_type schema drift. E2E authenticated signup, login, and onboarding API steps were verified on staging. Browser UI onboarding remains pending because Chrome DevTools MCP was unavailable. Saved under [authenticated_staging_onboarding_qa_139I-C.md](docs/qa/authenticated_staging_onboarding_qa_139I-C.md).
 >
-> **Prior handoff (Session 139M-4):** Session 139M-4 — Report Builder + Saved Reports + Export QA is complete. Verified redirects to `/login` for protected dashboard and analytics routes; verified that the public `/report-builder` route loads successfully, rendering `ReportBuilderMarketing` page and `ReportBuilderMock` static widgets. Audited saved reports API scoping checks (`site_id = req.site.id` and user-ownership guards) and export route scoping checks (`site_id` verification, internal database ID stripping). Fixed style syntax bug on the public report builder marketing page. All actual authenticated report building, saved reports, and CSV downloads remain blocked by database credentials, saved under [report_builder_saved_reports_export_qa_139M-4.md](docs/qa/report_builder_saved_reports_export_qa_139M-4.md).
+> **Next Task:** Session 139I-D — Fix Browser Onboarding UI Blockers.
 >
-> **Prior handoff (Session 139M-3):** Session 139M-3 — Attribution + Revenue Attribution + AI Attribution QA is complete. Verified redirects to `/login` for all 10 protected attribution-related routes; verified that public pages (`/attribution`, `/ai-referral-tracking`) and `/demo` load successfully, with `/demo` rendering mock metrics and timelines, saved under [attribution_revenue_ai_attribution_qa_139M-3.md](docs/qa/attribution_revenue_ai_attribution_qa_139M-3.md).
->
-> **Next Task:** Session 139J — Stripe Test Catalog Correction + Stripe E2E on Staging Only.
->
-> ⚠️ **P0 CONDITIONS BEFORE FIRST PAID CUSTOMER:** (1) Stripe test-mode checkout/webhook evidence [PARTIAL - Stripe E2E is now unblocked by staging DB/bootstrap (139I-C). Next block: 1. Stripe test catalog is corrected; 2. billing/webhook E2E runs only against staging]; (2) provider-console separation verified [CLOSED - staging project created, local env rewired, safety boot guard active]; (3) Supabase backups verified [PARTIAL - Daily scheduled backups manually verified. PITR is not enabled / not accepted as enabled. Daily backups are now verified; PITR remains an optional but strongly recommended paid add-on / accepted risk if left disabled. Do not enable PITR without explicit cost approval. Staging restore drill remains blocked/not run]; (4) prod env secrets set incl. ST_IP_RESOLVER_MODE=railway; (5) beta Terms/Privacy disclosed in writing.
+> ⚠️ **P0 CONDITIONS BEFORE FIRST PAID CUSTOMER:** (1) Stripe test-mode checkout/webhook evidence [PARTIAL — API/webhook E2E verified on staging; browser billing UI and billing status endpoint pending]; (2) provider-console separation verified [CLOSED - staging project created, local env rewired, safety boot guard active]; (3) Supabase backups verified [PARTIAL - Daily scheduled backups manually verified. PITR is not enabled / not accepted as enabled. Daily backups are now verified; PITR remains an optional but strongly recommended paid add-on / accepted risk if left disabled. Do not enable PITR without explicit cost approval. Staging restore drill remains blocked/not run]; (4) prod env secrets set incl. ST_IP_RESOLVER_MODE=railway; (5) beta Terms/Privacy disclosed in writing.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+
+## Session 139J — Stripe Test Catalog Correction + Stripe E2E on Staging Only
+**Date:** 2026-06-11 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build)
+**Status:** **PARTIAL / PASS WITH LIMITS.**
+
+### Completed
+1. Stripe Test Catalog Corrected: Programmatically created Starter Monthly ($29/mo, 50k pv limit), Growth Monthly ($79/mo, 150k pv limit), and Scale Monthly ($149/mo, 500k pv limit) prices in Stripe test mode.
+2. Railway Staging Configuration: Set Stripe API keys, webhook secrets, and new price IDs on staging `SourceTrack-Api`.
+3. Staging DB Schema Alignment: Applied missing migrations (`20260606180000_revenue_foundation.sql` and setting/trial columns) to staging database ref `nrsvpwzekfrdrzkoecfk` and reloaded PostgREST cache.
+4. E2E Checkout: Authenticated test user via GoTrue, created a Stripe checkout session, and verified success/cancel URLs point to staging and Growth plan is correctly selected.
+5. Webhook Validation: Simulated billing and conversion webhooks, verifying database plan updates, limit upgrades, customer ID mapping, and webhook idempotency deduplication.
+6. Bug Detection: Surfaced a remaining billing status bug where `/api/billing/status` returns `"subscription": null` due to `validateSiteKey` not selecting `stripe_customer_id`. Left unfixed per R10 (scope boundary), but tracked as pending before paid-beta billing readiness.
+7. QA Report: Documented all evidence under `docs/qa/stripe_staging_e2e_139J.md`.
+
+### Files changed
+- [docs/qa/stripe_staging_e2e_139J.md](docs/qa/stripe_staging_e2e_139J.md) [NEW]
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
+
+### Top-Priority Blocked Test Backlog
+The Stripe E2E item remains PARTIAL (API/webhook E2E verified on staging; browser billing UI and status endpoint verification pending).
+
 
 ## Session 138A — Safe Non-Mutating QA + Top-Priority Test Backlog
 **Date:** 2026-06-11 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build)

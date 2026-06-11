@@ -1,7 +1,8 @@
-Session: 139I-C — Staging Schema Bootstrap Execution
-Last Completed: Bootstrapped Supabase staging schema with 14 core tables, set staging SUPABASE_SERVICE_KEY on 5 Railway services, resolved managed proxy block on staging API by adding staging URL to ST_PLATFORM_HOSTS, created migration file for sites.business_type schema drift. E2E authenticated signup, login, and onboarding API steps were verified on staging. Browser UI onboarding remains pending because Chrome DevTools MCP was unavailable.
+Session: 139J — Stripe Test Catalog Correction + Stripe E2E on Staging Only
+Last Completed: Corrected Stripe test catalog pricing to align with public rates ($29/$79/$149), and verified E2E checkout session creation, redirection, webhook signature validation, database site plan/limit updates, and event deduplication cache on staging. Documented billing status query bug.
 Control Doc: docs/development_workflow_master_plan.md is the source of truth for session ordering and gates.
 AI-Agent Workflow: AI-agent workflow rules are governed by docs/ai_agent_workflow_rules.md. No AI-agent may commit or push before raw diff review and explicit user approval.
+
 
 Prior Session: 139M-5 — Campaigns, Paid Acquisition, Costs, GSC/SEO Revenue QA
 Last Completed (139M-5): Verified client-side redirects to `/login` for protected routes (`/campaigns`, `/app/integrations`, `/seo-revenue`) when unauthenticated. Audited campaigns overview and GSC daily performance queries, cost imports logic, and tenant isolations (`site_id` and `site_key` guards). Confirmed zero user-facing overclaims exist. All actual authenticated syncs and DB cost imports remain blocked by database credentials.
@@ -29,12 +30,11 @@ Prior Session: 139A — Add paid attribution setup checklist
 Last Completed (139A): Added paid attribution parameter coverage (utm_id, st_campaign_id, st_adgroup_id, st_ad_id, st_target_id, st_network, st_device, st_matchtype) to trackers, ingestion routes, event debugger, and added a Google Ads setup checklist and docs page.
 P0-3 STATUS: Daily backups are now verified; PITR remains an optional but strongly recommended paid add-on / accepted risk if left disabled. PITR is not enabled / not accepted as enabled. Do not enable PITR without explicit cost approval.
 🚩 HEADLINE FINDING F6 (P0 staging blocker): RESOLVED. Staging database exists (ref `nrsvpwzekfrdrzkoecfk`). Safety boot guard is active in local/dev API server.
-Prior findings still open: 135 F1 stale test prices; 135 F3 pv_limit metadata; 135 F4 request-body redirect URLs.
+Prior findings still open: 135 F4 request-body redirect URLs.
 Verdict (134): CONDITIONAL GO — safe for 3–5 hand-picked single-instance beta customers once remaining P0 conditions met.
-Next Task: Session 139J — Stripe Test Catalog Correction + Stripe E2E on Staging Only.
+Next Task: Session 139I-D — Fix Browser Onboarding UI Blockers.
 Roadmap Queue:
-- Session 139J — Stripe Test Catalog Correction + Stripe E2E on Staging Only.
-- Session 139M-6 — Team, Members, Invites, Admin Masquerade QA.
+- Session 139I-D — Fix Browser Onboarding UI Blockers.
 - Session 139L — Confirm beta Terms/Privacy disclosure flow before payment.
 Build: ✅ passing (node --check, git diff --check, dashboard vite build, qa:static, required-grep clean)
 Branch: main
@@ -44,9 +44,9 @@ Branch: main
 | Priority | Item | Why Blocked | Unblock Condition | Risk Level | Session | Gating Milestone | Status |
 |---|---|---|---|---|---|---|---|
 | **P0** | Create separate staging Supabase project and rewire local/staging env away from production. | Local `.env` currently points to live production Supabase (`zxjjjsipafojhzkkumvh`), making local development of mutating code highly dangerous. | Provision separate staging Supabase project and update local/staging environment variables. | **CRITICAL** | Session 138C | Pre-Paid-Beta | **RESOLVED (Staging `nrsvpwzekfrdrzkoecfk` created. Local env now targets the staging Supabase project ref. No secrets are committed.)** |
-| **P0** | Staging Schema Bootstrap Execution | Staging schema must be bootstrapped and verified. | DB connection and schema bootstrap. | **CRITICAL** | Session 139I-C | Pre-Paid-Beta | **RESOLVED (Staging bootstrapped with 14 tables. Staging API/dashboard running. E2E authenticated signup, login, and onboarding API steps were verified on staging. Browser UI onboarding remains pending because Chrome DevTools MCP was unavailable.)** |
+| **P0** | Staging Schema Bootstrap Execution | Staging schema must be bootstrapped and verified. | DB connection and schema bootstrap. | **CRITICAL** | Session 139I-C | Pre-Paid-Beta | **PARTIAL (Staging bootstrapped with 14 tables, staging API/dashboard running, and E2E authenticated API steps verified. Browser UI onboarding remains BLOCKED — onboarding UI failed due to install_method 400 error.)** |
 | **P0** | Review production Supabase backup/PITR status and document risk/path. | Production Supabase backups must be verified and risk documented. | Review production Supabase backup/PITR status, document current risk/cost requirements, and plan the staging restore drill. Do not upgrade production Supabase or enable PITR without explicit operator/cost approval. | **CRITICAL** | Session 138C | Pre-Paid-Beta | **PARTIAL (Daily backups were manually verified in the dashboard by the operator, but no restore drill has been run. PITR is not enabled and remains an open risk.)** |
-| **P0** | Full Stripe test-mode E2E after staging DB exists and Stripe test prices are corrected. | Staging database does not exist to receive webhook writes, and Stripe test-mode price amounts ($49/$99/$199) are stale compared to public ones ($29/$79/$149+). | Staging database is provisioned and Stripe test prices are aligned with the new price schema. | **HIGH** | Session 139J | Pre-Paid-Beta | **Stripe E2E is now unblocked by staging DB/bootstrap (139I-C). Next block: 1. Stripe test catalog is corrected; 2. billing/webhook E2E runs only against staging** |
+| **P0** | Full Stripe test-mode E2E after staging DB exists and Stripe test prices are corrected. | Staging database does not exist to receive webhook writes, and Stripe test-mode price amounts ($49/$99/$199) are stale compared to public ones ($29/$79/$149+). | Staging database is provisioned and Stripe test prices are aligned with the new price schema. | **HIGH** | Session 139J | Pre-Paid-Beta | **PARTIAL (Stripe test catalog corrected to $29/$79/$149, API/webhook E2E verified on staging; browser billing UI and billing status endpoint remain pending. Browser onboarding UI remains blocked.)** |
 | **P1** | Billing redirect hardening: generate/allow-list checkout success/cancel and portal return URLs server-side. | Currently checkout redirection parameters (`success_url`, `cancel_url`, `returnUrl`) are accepted raw from request bodies without server-side validation. | Implement server-side allow-list validation and URL generation for billing checkout and customer portal links. | **HIGH** | Session 140F | Pre-Paid-Beta | **BLOCKED** |
 | **P1** | Exception monitoring/Sentry test. | Staging environment must verify Sentry exception routing and capturing logic before public release. | Integrate Sentry SDK and run active error-triggering smoke tests on staging. | **MEDIUM** | Session 140A | Pre-10-Customers | **BLOCKED** |
 | **P1** | Add qa:attribution, qa:smoke, and qa:edge to CI or required pre-deploy gate. | Mutating tests cannot run in GitHub Actions due to lack of a test database, creating risk of unnoticed logic regressions. | Set up a staging database in the CI pipeline or require manual run gates prior to deploy. | **MEDIUM** | Session 140C | Pre-Paid-Beta | **BLOCKED** |
