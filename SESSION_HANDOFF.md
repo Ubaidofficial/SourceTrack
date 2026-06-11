@@ -2,11 +2,11 @@
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
-> **Handoff:** Session 139I-D — Fix Browser Onboarding UI Blockers is PARTIAL. Code/config fixes were implemented and programmatically verified, but real browser QA is still required before this can be closed. Created browser onboarding QA report, saved under [browser_onboarding_ui_qa_139I-D.md](docs/qa/browser_onboarding_ui_qa_139I-D.md).
+> **Handoff:** Session 139I-D — Browser Verification is PASS WITH LIMITS. Real browser QA confirmed onboarding now completes, Tracking Doctor behaves gracefully, the staging snippet URL is correct, Copy Code feedback works, Verify Later completes onboarding, and dashboard loads after completing the gate site. Remaining P2 bug: multi-site gate resolves the oldest site, so users with an older incomplete site can be bounced back after completing a newer site (`/onboarding/me` shares the same root issue). Paid-beta onboarding is NOT fully clean yet. Next task: Session 139I-E — Fix Multi-Site Onboarding Gate Edge Case. Browser verification appended to [browser_onboarding_ui_qa_139I-D.md](docs/qa/browser_onboarding_ui_qa_139I-D.md).
 >
 > **Prior handoff (Session 139J):** Session 139J — Stripe Test Catalog Correction + Stripe E2E on Staging Only is complete. Corrected Stripe test catalog pricing to match public rates ($29/$79/$149) with pv_limit metadata. Verified E2E checkout session creation, redirection, webhook signature validation, database site plan/limit updates, and event deduplication cache on staging. Documented status endpoint stripe_customer_id bug. Saved under [stripe_staging_e2e_139J.md](docs/qa/stripe_staging_e2e_139J.md).
 >
-> **Next Task:** Session 139I-D — Fix Browser Onboarding UI Blockers (Claude Browser Verification).
+> **Next Task:** Session 139I-E — Fix Multi-Site Onboarding Gate Edge Case (do NOT start 139L yet). Scope: (1) gate must not blindly choose the oldest site; (2) `/onboarding/me` must return the correct active/in-progress site; (3) Step 1 should resume an existing incomplete onboarding site instead of creating a second site; (4) deterministic site resolution — active selected site → latest incomplete onboarding site → latest site, avoiding the oldest-site trap; (5) browser QA for clean single-site user, older-incomplete + newer-complete user, direct `/dashboard`, and direct `/onboarding`.
 >
 > ⚠️ **P0 CONDITIONS BEFORE FIRST PAID CUSTOMER:** (1) Stripe test-mode checkout/webhook evidence [PARTIAL — API/webhook E2E verified on staging; browser billing UI and billing status endpoint pending]; (2) provider-console separation verified [CLOSED - staging project created, local env rewired, safety boot guard active]; (3) Supabase backups verified [PARTIAL - Daily scheduled backups manually verified. PITR is not enabled / not accepted as enabled. Daily backups are now verified; PITR remains an optional but strongly recommended paid add-on / accepted risk if left disabled. Do not enable PITR without explicit cost approval. Staging restore drill remains blocked/not run]; (4) prod env secrets set incl. ST_IP_RESOLVER_MODE=railway; (5) beta Terms/Privacy disclosed in writing.
 >
@@ -15,7 +15,7 @@
 
 ## Session 139I-D — Fix Browser Onboarding UI Blockers
 **Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa-release-readiness)
-**Status:** **PARTIAL / CODE FIXES READY FOR BROWSER QA.**
+**Status:** **PASS WITH LIMITS — browser-verified.** Code/config fixes implemented (deploy `c219db7`) and confirmed in a real Claude-in-Chrome run: Steps 1–6 persist (no `install_method` 400), snippet URL uses the staging API (not localhost), Copy Code shows "Copied!", Tracking Doctor returns a graceful pending state (200, not 401), Verify Later completes onboarding, and `/dashboard` loads after the gate site is completed (`onboarding_completed=true`, `current_step=6`, `business_type=ecommerce`). **Open P2:** multi-site gate resolves the oldest site → bounce-back risk; `/onboarding/me` shares the root issue. Paid-beta onboarding not fully clean yet. **Next: Session 139I-E — Fix Multi-Site Onboarding Gate Edge Case.**
 
 ### Completed
 1. Onboarding Backend Hardened: Treated `null` and `undefined` as not-provided for `install_method` in `validateStepData` instead of throwing 400. Strict validation remains active for invalid strings.

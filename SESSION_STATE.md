@@ -1,5 +1,5 @@
-Session: 139I-D — Fix Browser Onboarding UI Blockers
-Last Completed: Session 139J — Stripe Test Catalog Correction + Stripe E2E on Staging Only. Session 139I-D is PARTIAL (code fixes ready for browser QA).
+Session: 139I-D — Browser Verification (PASS WITH LIMITS)
+Last Completed: Session 139I-D — Browser Verification is PASS WITH LIMITS. Real browser QA confirmed onboarding now completes, Tracking Doctor behaves gracefully, the staging snippet URL is correct, Copy Code feedback works, Verify Later completes onboarding, and dashboard loads after completing the gate site. Remaining P2 bug: multi-site gate resolves the oldest site, so users with an older incomplete site can be bounced back after completing a newer site (`/onboarding/me` shares the same root issue). Paid-beta onboarding is NOT fully clean yet. Next task: Session 139I-E — Fix Multi-Site Onboarding Gate Edge Case.
 Control Doc: docs/development_workflow_master_plan.md is the source of truth for session ordering and gates.
 AI-Agent Workflow: AI-agent workflow rules are governed by docs/ai_agent_workflow_rules.md. No AI-agent may commit or push before raw diff review and explicit user approval.
 
@@ -32,9 +32,9 @@ P0-3 STATUS: Daily backups are now verified; PITR remains an optional but strong
 🚩 HEADLINE FINDING F6 (P0 staging blocker): RESOLVED. Staging database exists (ref `nrsvpwzekfrdrzkoecfk`). Safety boot guard is active in local/dev API server.
 Prior findings still open: 135 F4 request-body redirect URLs.
 Verdict (134): CONDITIONAL GO — safe for 3–5 hand-picked single-instance beta customers once remaining P0 conditions met.
-Next Task: Session 139I-D — Fix Browser Onboarding UI Blockers (Claude Browser Verification)
+Next Task: Session 139I-E — Fix Multi-Site Onboarding Gate Edge Case
 Roadmap Queue:
-- Session 139I-D — Fix Browser Onboarding UI Blockers (Claude Browser Verification)
+- Session 139I-E — Fix Multi-Site Onboarding Gate Edge Case (deterministic site resolution: active selected site → latest incomplete onboarding site → latest site; avoid oldest-site trap; fix `/onboarding/me`; resume existing incomplete site at Step 1 instead of creating a second site; browser QA for clean single-site, older-incomplete+newer-complete, direct `/dashboard`, direct `/onboarding`)
 - Session 139L — Confirm beta Terms/Privacy disclosure flow before payment.
 Build: ✅ passing (node --check, git diff --check, dashboard vite build, qa:static, required-grep clean)
 Branch: main
@@ -44,7 +44,7 @@ Branch: main
 | Priority | Item | Why Blocked | Unblock Condition | Risk Level | Session | Gating Milestone | Status |
 |---|---|---|---|---|---|---|---|
 | **P0** | Create separate staging Supabase project and rewire local/staging env away from production. | Local `.env` currently points to live production Supabase (`zxjjjsipafojhzkkumvh`), making local development of mutating code highly dangerous. | Provision separate staging Supabase project and update local/staging environment variables. | **CRITICAL** | Session 138C | Pre-Paid-Beta | **RESOLVED (Staging `nrsvpwzekfrdrzkoecfk` created. Local env now targets the staging Supabase project ref. No secrets are committed.)** |
-| **P0** | Staging Schema Bootstrap Execution | Staging schema must be bootstrapped and verified. | DB connection and schema bootstrap. | **CRITICAL** | Session 139I-C | Pre-Paid-Beta | **PARTIAL (Staging bootstrapped with 14 tables, staging API/dashboard running, and E2E authenticated API steps verified. Browser UI onboarding remains pending/blocked by unavailable browser tooling; code-level fixes ready for browser QA.)** |
+| **P0** | Staging Schema Bootstrap Execution | Staging schema must be bootstrapped and verified. | DB connection and schema bootstrap. | **CRITICAL** | Session 139I-C | Pre-Paid-Beta | **PARTIAL (Staging bootstrapped with 14 tables, staging API/dashboard running, E2E authenticated API steps verified. Browser onboarding verified PASS WITH LIMITS in 139I-D — completes end-to-end and reaches dashboard for the gate site. Remaining P2: multi-site gate resolves the oldest site → bounce-back risk; tracked as Session 139I-E. Paid-beta onboarding not fully clean yet.)** |
 | **P0** | Review production Supabase backup/PITR status and document risk/path. | Production Supabase backups must be verified and risk documented. | Review production Supabase backup/PITR status, document current risk/cost requirements, and plan the staging restore drill. Do not upgrade production Supabase or enable PITR without explicit operator/cost approval. | **CRITICAL** | Session 138C | Pre-Paid-Beta | **PARTIAL (Daily backups were manually verified in the dashboard by the operator, but no restore drill has been run. PITR is not enabled and remains an open risk.)** |
 | **P0** | Full Stripe test-mode E2E after staging DB exists and Stripe test prices are corrected. | Staging database does not exist to receive webhook writes, and Stripe test-mode price amounts ($49/$99/$199) are stale compared to public ones ($29/$79/$149+). | Staging database is provisioned and Stripe test prices are aligned with the new price schema. | **HIGH** | Session 139J | Pre-Paid-Beta | **PARTIAL (Stripe test catalog corrected to $29/$79/$149, API/webhook E2E verified on staging; browser billing UI and billing status endpoint remain pending.)** |
 | **P1** | Billing redirect hardening: generate/allow-list checkout success/cancel and portal return URLs server-side. | Currently checkout redirection parameters (`success_url`, `cancel_url`, `returnUrl`) are accepted raw from request bodies without server-side validation. | Implement server-side allow-list validation and URL generation for billing checkout and customer portal links. | **HIGH** | Session 140F | Pre-Paid-Beta | **BLOCKED** |

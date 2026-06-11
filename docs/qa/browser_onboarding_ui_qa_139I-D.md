@@ -6,6 +6,8 @@
 > Environment: **Staging only** — https://sourcetrack-dashboard-staging.up.railway.app + https://sourcetrack-api-staging.up.railway.app
 > Method: E2E code analysis and programmatic simulation verification
 > Verdict: **PARTIAL — code fixes implemented and programmatically verified; real browser QA still required**
+>
+> ⬇️ **UPDATE 2026-06-12 — real-browser verification completed. See the "Browser Verification Addendum" at the bottom. Browser verdict: PASS WITH LIMITS.**
 
 ---
 
@@ -134,3 +136,106 @@ $ git status --short          → M api/lib/setup-doctor.js ...
  A docs/qa/browser_onboarding_ui_qa_139I-D.md
 ```
 No secrets, tokens, JWTs, cookies, service keys, Stripe keys, or full site keys are exposed or saved in scratch files.
+
+---
+---
+
+# Browser Verification Addendum — Real Claude-in-Chrome run (2026-06-12)
+
+> This section is the actual browser QA the prep report above said was required. Real navigation, clicks, form fills, screenshots, and live network capture against staging on deploy `c219db7`. No commits/pushes. No secrets/full site keys exposed.
+
+## A1. Verdict
+
+**🟡 PASS WITH LIMITS — browser onboarding works but minor issues remain**
+
+Every 139I-D fix is verified in a real browser: onboarding completes end-to-end, persists, and reaches the authenticated dashboard. All 139I-C blockers (business-type `400`, localhost snippet, no copy feedback, Tracking Doctor 401/infinite-spinner, completion `400`, dashboard bounce) are resolved.
+
+**Limit:** the onboarding gate resolves a user's site via the **oldest** site (`sites?...order=created_at.asc&limit=1`). On the test account (which already had a prior incomplete `qa-139ic` site), completing a *newer* `qa-139id` site did **not** unblock the dashboard — it bounced to `/onboarding` until the oldest site was also completed. Once the gate site itself was onboarded, completion + dashboard worked. Not verified on a pristine brand-new account (operator reused an existing account carrying prior-run sites).
+
+## A2. Tool / Deploy
+
+- Tool: **Claude in Chrome** extension, Chrome/macOS "Browser 1". Operator-authenticated (`imubaid93@gmail.com`); no password/token entered or printed.
+- Deploy: `SourceTrack-Api` (4cd84fde) + `SourceTrack-Dashboard` (09b831ea) both **SUCCESS on `c219db7`**. CI green. Preflight passed.
+- DB: no Supabase MCP; backend state read via app's authenticated `/api/onboarding/me` + `/status`.
+
+## A3. Routes tested
+
+`/onboarding` (Steps 1–6) ✅ · `/dashboard` (pre-gate-complete) ⚠️ bounced to onboarding · `/dashboard` (post) ✅ Performance Overview · `/billing` ✅ authenticated · API `/onboarding/site` 200, `/onboarding/update` ×5 200, `/install/doctor` 200, `/onboarding/me|status` 200.
+
+## A4. Step-by-step (real browser)
+
+| Step | Action | UI | API | Persist |
+|---|---|---|---|---|
+| 1 Connect Domain | `qa-139id-browser.example.com` + Confirm | ✅ → Step 2, no CORS/Failed-to-fetch | `site` **200** | site created |
+| 2 Business Type | eCommerce | ✅ → Step 3 | `update` **200** (no install_method 400) | `business_type` ✅ |
+| 3 Install Method | SourceTrack Pixel | ✅ → Step 4 | `update` **200** | ✅ |
+| 4 Install Script | Copy Code + Continue | ✅ "Copied!"; → Step 5 | `update` **200** | ✅ |
+| 5 Customize | Sign Up (+Purchase) + Continue | ✅ → Step 6 | `update` **200** | conversions ✅ |
+| 6 Verification | Tracking Doctor "WAITING FOR FIRST EVENT"; Verify Later | ✅ completed | `doctor` **200**; complete **200** | `onboarding_completed=true` ✅ |
+| Final | — | ✅ authenticated dashboard | — | `current_step=6`, `business_type=ecommerce` ✅ |
+
+## A5. Console / Network
+
+- App console clean (only `chrome-extension://` noise). No raw 401/403/500 shown to user.
+- `/onboarding/update` ×5 → **200** (no `install_method must be one of…` regression). `/install/doctor` → **200** ×3 (was 401). Gate query `sites?...order=created_at.asc&limit=1` resolves the oldest site (root of A8 limit). No 5xx, no `Failed to fetch`.
+
+## A6. Snippet URL — ✅ FIXED
+
+`<script async src="https://sourcetrack-api-staging.up.railway.app/tracker.min.js" data-site-key="4d5889f5-…-5aedca4f346b"></script>` — `usesStagingApi:true, usesLocalhost:false` (was `localhost:8080`). Full site key redacted.
+
+## A7. Copy button — ✅ FIXED
+
+Copy Code shows visible **"Copied!"** confirmation; clipboard verified to hold the correct staging snippet.
+
+## A8. Tracking Doctor — ✅ FIXED (graceful)
+
+"WAITING FOR FIRST EVENT" badge, full diagnostics grid (tracker events / domain match / conversions / paid params all "none yet"), Recommended Action + Resolve Issue, Technical Diagnostics, Verify Now. No infinite spinner, no raw 401/403, `/install/doctor` 200, Verify Later available.
+
+## A9. DB / backend (via app API)
+
+`/onboarding/me` (gate site) → `{ current_step:6, business_type:"ecommerce", onboarding_completed:true, domain:"qa-139ic-browser.example.com" }`. `/onboarding/status`: gate `1abf1c9e…` completed:true; newer `ef2f0319…` (qa-139id) completed:true. All expected assertions met.
+
+## A10. Dashboard transition — ✅ (after gate site complete)
+
+`/dashboard` loads "Performance Overview" (Live), ACTIVE SITE qa-139ic-browser.example.com, "Recent visitors (5m):0", graceful "Finish setting up / Go to Install Guide" + "No reports yet". Full authenticated nav. No bounce once gate site complete.
+
+## A11. UX / DataFast parity
+
+Now genuinely usable for a non-technical founder: clear steps, correct snippet, copy confirmation, friendly verification, working dashboard with a clear "install snippet to see data" empty state. Gaps vs DataFast: manual verification (no auto-detect success path observed) and the multi-site gate edge case below.
+
+## A12. Remaining bugs / blockers
+
+| # | Sev | Issue |
+|---|---|---|
+| 1 | P2 (edge) | Multi-site gate uses **oldest** site (`order=created_at.asc&limit=1`); a user with a pre-existing incomplete site is bounced to onboarding after completing a newer one. Step 1 with a new domain creates a *new* site instead of resuming the existing incomplete one. |
+| 2 | P3 | `/onboarding/me` returns the oldest site, which can disagree with the site the step flow edits (same root cause). |
+| 3 | Coverage gap | Not verified on a pristine brand-new single-site account (operator reused an existing account). Single-site completion→dashboard was proven by completing the gate site. |
+
+No hard blockers; core onboarding completes and reaches the dashboard.
+
+## A13. Raw validation
+
+```
+npm run qa:env-safety → ✅ passed   ·   npm run qa:static → ✅ PASS
+git diff --check → clean (exit 0)   ·   gh run list → 139I-D CI green
+Screenshots: ss_63207ve3b Step1 · ss_3114lzv4z Step2 · ss_6594g93fr Step3 · ss_60557etdj Step4(staging snippet)
+  · ss_0747ae9kr "Copied!" · ss_26802kgsy Step5 · ss_3094bzham Step6 Doctor · ss_6126mmr2u first VerifyLater→bounce
+  · ss_0612iorg8 /dashboard→onboarding bounce · ss_9640gh8y6 /billing auth · ss_5161ggn10 /dashboard loaded
+```
+
+No commits. No pushes. No secrets, tokens, JWTs, cookies, service/Stripe/Supabase keys, webhook/encryption keys, Railway variable values, or full site keys exposed.
+
+## A14. Next task — Session 139I-E (multi-site gate fix)
+
+The remaining P2 multi-site gate bug is **not** a launch-killer for a clean first-time single-site user, but it **is a paid-beta support trap**. It is queued as an explicit next session (not a vague background task), and paid-beta onboarding must **not** be marked fully clean until it is fixed and re-verified.
+
+**Session 139I-E — Fix Multi-Site Onboarding Gate Edge Case**
+
+Scope:
+1. Dashboard/onboarding gate must not blindly choose the oldest site (`sites?...order=created_at.asc&limit=1`).
+2. `/api/onboarding/me` must return the correct **active/in-progress** site, not the oldest.
+3. Step 1 should **resume an existing incomplete onboarding site** where appropriate instead of accidentally creating a second site.
+4. Site resolution must be deterministic: **active selected site** if available → otherwise **latest incomplete onboarding site** → otherwise **latest site**; avoid the oldest-site trap.
+5. Add browser QA for: clean single-site user; user with an older incomplete + newer complete site; direct `/dashboard`; direct `/onboarding`.
+
+Do not start Session 139L until 139I-E is complete and re-verified.
