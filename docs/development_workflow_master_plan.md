@@ -218,6 +218,10 @@ All P0 closed:
 
 ## 10. Non-negotiable AI-agent rules
 
+> [!IMPORTANT]
+> AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](file:///Users/ubaid/Desktop/trackiq/docs/ai_agent_workflow_rules.md).
+> No AI-agent may commit or push before raw diff review and explicit user approval.
+
 ```
 No local mutation while .env points at production.
 No webhook-to-DB, billing E2E, restore rehearsal, or mutation testing may run until a separate staging Supabase project exists and local/staging envs no longer point at production.

@@ -42,6 +42,8 @@ Then use `DOCS_INDEX.md` to find task-specific docs.
 - Manual QA must be performed if applicable (mark in MANUAL_QA_BACKLOG.md)
 - Never commit `.env`, secrets, `.bak` files, or test artifacts
 - Commit message must use the HEREDOC format from AGENT_BRIEF.md
+- **AI-Agent Workflow**: AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](file:///Users/ubaid/Desktop/trackiq/docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
+
 
 ## Project Rules
 

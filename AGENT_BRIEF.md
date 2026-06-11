@@ -74,6 +74,10 @@ Session 77 added/verified:
 
 ## Core rules
 
+> [!IMPORTANT]
+> AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](file:///Users/ubaid/Desktop/trackiq/docs/ai_agent_workflow_rules.md).
+> No AI-agent may commit or push before raw diff review and explicit user approval.
+
 - Make surgical changes only.
 - Do not refactor unrelated code.
 - Verify before claiming fixed.

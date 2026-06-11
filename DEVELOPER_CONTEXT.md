@@ -75,6 +75,10 @@ We are finalizing features blocking our self-serve **Paid Beta launch**. The pri
 
 ## 6. Strict Scope Rules
 
+> [!IMPORTANT]
+> AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](file:///Users/ubaid/Desktop/trackiq/docs/ai_agent_workflow_rules.md).
+> No AI-agent may commit or push before raw diff review and explicit user approval.
+
 - **Surgical changes only**: Touch only the files relevant to the active session. Do not clean up adjacent formatting or rewrite files you are not asked to edit.
 - **No speculative features**: Do not write code for features planned in future sessions (e.g., do not add site switcher drop-downs during the health alerts session).
 - **Verify before committing**: Run global syntax verification (`node --check`) and compilation builds (`npm run build`) before declaring a session complete.

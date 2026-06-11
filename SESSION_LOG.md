@@ -3,8 +3,11 @@
 Running log of every session from Session 75 onward.  
 For detailed session history before Session 75, see `PROGRESS.md`.
 
+> **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](file:///Users/ubaid/Desktop/trackiq/docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
+
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 138E | 2026-06-11 | `main` | Codify No-Commit-Before-Review AI-Agent Workflow — Created docs/ai_agent_workflow_rules.md as the canonical workflow and safety rules source. Updated key control files with references. No app code or behavior modified. | ✅ | No |
 | 138D | 2026-06-11 | `main` | Local/Dev Boot Guard Against Production Supabase Mutation — Created reusable environment safety guard (`api/lib/environment-safety.js`) and executed it early via the bootstrap entrypoint (`api/bootstrap.js`). Refuses non-production API boot with production Supabase ref (`zxjjjsipafojhzkkumvh`). Added `scripts/qa-env-safety.mjs` (wired to `qa:static`). Stripe E2E remains blocked. | ✅ | No |
 | 138C | 2026-06-11 | `main` | Supabase Staging Project + Local/Staging Env Rewire — Created staging Supabase project `sourcetrack-staging` (`nrsvpwzekfrdrzkoecfk`) in region `eu-west-1`. Local env rewired to target staging ref, but `SUPABASE_SERVICE_KEY` remains placeholder. Daily scheduled backups were manually verified in the Supabase dashboard by the operator. PITR is not enabled. Stripe E2E remains blocked. | ✅ | No |
 | 138B | 2026-06-11 | `main` | Development Workflow Master Plan — Verified repo ground truth (job-status tenant gap, 5× duplicated group_by, raw HogQL date interpolation, no test framework, CI gates only qa:static, in-memory rate limits/idempotency). Created docs/development_workflow_master_plan.md as the authoritative engineering control document (27 sections: verdict, readiness grade, P0/P1/P2 matrix, ordered roadmap, gates, checklists, strategies, refactor backlog). Planning-only; no app/backend code changed. | ✅ | No |

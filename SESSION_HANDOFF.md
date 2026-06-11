@@ -1,10 +1,12 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 138D — Local/Dev Boot Guard Against Production Supabase Mutation is complete. Created reusable environment safety guard (`api/lib/environment-safety.js`) and executed it early via the bootstrap entrypoint (`api/bootstrap.js`). Non-production API refuses to start when `SUPABASE_URL` contains production ref `zxjjjsipafojhzkkumvh`. Verified behavior via `scripts/qa-env-safety.mjs` (wired to `qa:static`).
+> **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](file:///Users/ubaid/Desktop/trackiq/docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
-> **Prior handoff (Session 138C):** Session 138C — Create Supabase staging project is complete. Created staging Supabase project `sourcetrack-staging` (`nrsvpwzekfrdrzkoecfk`). Local env rewired to target staging ref, but service-role key remains placeholder. Daily scheduled backups manually verified in the Supabase dashboard.
+> **Handoff:** Session 138E — Codify No-Commit-Before-Review AI-Agent Workflow is complete. Created `docs/ai_agent_workflow_rules.md` as the canonical AI-agent rules source. Added references/pointers to key control files. No application/backend code behavior changed.
 >
-> **Next Task:** Codify no-commit-before-review workflow into the AI-agent rules (Session 138E).
+> **Prior handoff (Session 138D):** Session 138D — Local/Dev Boot Guard Against Production Supabase Mutation is complete. Created reusable environment safety guard (`api/lib/environment-safety.js`) and executed it early via the bootstrap entrypoint (`api/bootstrap.js`). Non-production API refuses to start when `SUPABASE_URL` contains production ref `zxjjjsipafojhzkkumvh`. Verified behavior via `scripts/qa-env-safety.mjs` (wired to `qa:static`).
+>
+> **Next Task:** Add the release checklist that blocks deploy unless staging/backups/secrets/CI are verified (Session 138F).
 >
 > ⚠️ **P0 CONDITIONS BEFORE FIRST PAID CUSTOMER:** (1) Stripe test-mode checkout/webhook evidence [PARTIAL - Stripe E2E remains blocked until: 1. staging schema/bootstrap is completed safely; 2. real staging service-role key is added locally/staging-only; 3. local/dev production boot guard is added (Completed in Session 138D via api/bootstrap.js); 4. Stripe test catalog is corrected; 5. billing/webhook E2E runs only against staging]; (2) provider-console separation verified [CLOSED - staging project created, local env rewired, safety boot guard active]; (3) Supabase backups verified [CLOSED - Daily scheduled backups manually verified. PITR is not enabled / not accepted as enabled. Daily backups are now verified; PITR remains an optional but strongly recommended paid add-on / accepted risk if left disabled. Do not enable PITR without explicit cost approval]; (4) prod env secrets set incl. ST_IP_RESOLVER_MODE=railway; (5) beta Terms/Privacy disclosed in writing.
 >

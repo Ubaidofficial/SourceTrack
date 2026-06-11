@@ -100,6 +100,10 @@ npm run build:tracker
 
 ## Guardrails
 
+> [!IMPORTANT]
+> AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](file:///Users/ubaid/Desktop/trackiq/docs/ai_agent_workflow_rules.md).
+> No AI-agent may commit or push before raw diff review and explicit user approval.
+
 - Make surgical changes only
 - Verify in code before claiming implemented
 - Do not treat `PROGRESS.md` or `DEEPSEEK.md` as proof of current implementation

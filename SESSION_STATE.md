@@ -1,19 +1,22 @@
-Session: 138D — Local/Dev Boot Guard Against Production Supabase Mutation
-Last Completed: Created reusable environment safety boot guard (`api/lib/environment-safety.js`) and executed it early via the bootstrap entrypoint (`api/bootstrap.js`). Non-production API refuses to start when `SUPABASE_URL` contains production ref `zxjjjsipafojhzkkumvh`. Verified behavior via `scripts/qa-env-safety.mjs` (wired to `qa:static`).
+Session: 138E — Codify No-Commit-Before-Review AI-Agent Workflow
+Last Completed: Codified AI-agent workflow rules into docs/ai_agent_workflow_rules.md and added references to key control docs. (Session 138D safety boot guard is fully active).
 Control Doc: docs/development_workflow_master_plan.md is the source of truth for session ordering and gates.
+AI-Agent Workflow: AI-agent workflow rules are governed by docs/ai_agent_workflow_rules.md. No AI-agent may commit or push before raw diff review and explicit user approval.
 
+Prior Session: 138D — Local/Dev Boot Guard Against Production Supabase Mutation
+Last Completed (138D): Created reusable environment safety boot guard (`api/lib/environment-safety.js`) and executed it early via the bootstrap entrypoint (`api/bootstrap.js`). Non-production API refuses to start when `SUPABASE_URL` contains production ref `zxjjjsipafojhzkkumvh`. Verified behavior via `scripts/qa-env-safety.mjs` (wired to `qa:static`).
 Prior Session: 138C — Create Supabase staging project
 Last Completed (138C): Created the separate staging Supabase project `sourcetrack-staging` (ref: `nrsvpwzekfrdrzkoecfk`). Local env rewired to target staging ref, but service-role key remains placeholder. Daily scheduled backups manually verified in the Supabase dashboard. PITR is not enabled.
 P0-3 STATUS: Daily backups are now verified; PITR remains an optional but strongly recommended paid add-on / accepted risk if left disabled. PITR is not enabled / not accepted as enabled. Do not enable PITR without explicit cost approval.
 🚩 HEADLINE FINDING F6 (P0 staging blocker): RESOLVED. Staging database exists (ref `nrsvpwzekfrdrzkoecfk`). Safety boot guard is active in local/dev API server.
 Prior findings still open: 135 F1 stale test prices; 135 F3 pv_limit metadata; 135 F4 request-body redirect URLs.
 Verdict (134): CONDITIONAL GO — safe for 3–5 hand-picked single-instance beta customers once remaining P0 conditions met.
-Next Task: Codify no-commit-before-review workflow into the AI-agent rules (Session 138E).
+Next Task: Add release/deploy checklist gate (Session 138F).
 Roadmap Queue:
-- Session 138E — Codify no-commit-before-review workflow into the AI-agent rules.
-- Session 138F — Add the release checklist that blocks deploy unless staging/backups/secrets/CI are verified.
-- Session 139A — Staging schema bootstrap.
-- Session 139C — Correct Stripe test catalog and run Stripe E2E checkout/webhook/portal on staging.
+- Session 138F — Add release/deploy checklist gate.
+- Session 139A — Staging schema bootstrap / safe schema setup.
+- Session 139B — Staging observability / exception monitoring.
+- Session 139C — Stripe test catalog correction + Stripe E2E on staging only.
 Build: ✅ passing (node --check, git diff --check, dashboard vite build, qa:static, required-grep clean)
 Branch: main
 

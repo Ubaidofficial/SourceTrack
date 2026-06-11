@@ -4,6 +4,10 @@ These rules apply to every session unless explicitly overridden.
 Bias: caution over speed on non-trivial work. Use judgment on trivial tasks.
 Read this file at the start of every session alongside system.md, progress.md, and deepseek.md.
 
+> [!IMPORTANT]
+> AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](file:///Users/ubaid/Desktop/trackiq/docs/ai_agent_workflow_rules.md).
+> No AI-agent may commit or push before raw diff review and explicit user approval.
+
 ---
 
 ## R1 — Think before coding

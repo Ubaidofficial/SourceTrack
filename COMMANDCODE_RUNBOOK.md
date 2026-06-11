@@ -276,6 +276,10 @@ http://localhost:8080/sourcetrack-test.html?source=newsletter&via=email
 
 ## Before Commit
 
+> [!IMPORTANT]
+> AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](file:///Users/ubaid/Desktop/trackiq/docs/ai_agent_workflow_rules.md).
+> No AI-agent may commit or push before raw diff review and explicit user approval.
+
 - All checks pass
 - Manual QA performed if applicable
 - No `.env`, secrets, `.bak` files, or test artifacts in diff

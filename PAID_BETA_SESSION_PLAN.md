@@ -1,6 +1,9 @@
 # SourceTrack Paid Beta Session Plan
 
 > **AUTHORITATIVE ROADMAP:** As of Session 138B, [`docs/development_workflow_master_plan.md`](docs/development_workflow_master_plan.md) is the authoritative engineering control roadmap for workflow, QA, release discipline, code quality, and paid-beta operational blockers. Where session ordering or gates here conflict with that document, the master plan wins. This file is retained for historical session detail.
+>
+> **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](file:///Users/ubaid/Desktop/trackiq/docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
+
 
 ## 1. Revised Session Order
 
