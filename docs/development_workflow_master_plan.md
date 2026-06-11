@@ -115,6 +115,15 @@ But the **operational foundation was built slower than the product**. The workfl
 - **139J** — Stripe Test Catalog Correction + Stripe E2E on Staging Only.
 - **139K** — Verify Production Env/Secrets, IP Resolver Mode, CORS, Tracker/API URLs in consoles. *(Completed)*
 - **139L** — Confirm beta Terms/Privacy disclosure flow before payment.
+- **139M-0** — QA Inventory + Browser Test Harness. *(Completed)*
+- **139M-1** — Public Site, Docs, Pricing, Signup Truthfulness QA.
+- **139M-2** — Core Analytics + Dashboard Feature QA.
+- **139M-3** — Attribution + Revenue Attribution + AI Attribution QA.
+- **139M-4** — Report Builder + Saved Reports + Export QA.
+- **139M-5** — Campaigns, Paid Acquisition, Costs, GSC/SEO Revenue QA.
+- **139M-6** — Journey, Sessions, Funnels QA.
+- **139M-7** — Setup Doctor, Snippet, Integrations, Billing, Team/API Tokens QA.
+- **139M-8** — Final Human-Like Marketer Regression + 2026 UI/UX Verdict.
 
 **Phase 2 — Observability and release gates**
 - **140A** — Add Sentry (or equivalent) exception monitoring.
