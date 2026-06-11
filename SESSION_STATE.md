@@ -1,8 +1,10 @@
-Session: 139I-B — Recover Base Schema Source of Truth
-Last Completed: Recovered base schema SQL snapshot for the 5 missing core tables from production database metadata and saved it to supabase/schema_base_recovered.sql. Audited file for secrets and data payloads (passed). Updated staging bootstrap plan. Staging bootstrap execution did not run.
+Session: 139K — Verify Production Env/Secrets, IP Resolver Mode, CORS, Tracker/API URLs
+Last Completed: Audited production and staging environment variable requirements, IP resolution rules, CORS/allowed origin configuration, and tracker URL routing assumptions. Created docs/operations/production_env_verification.md detailing verification checklist. Production environment verification remains blocked pending operator console audit. Local safety guard is active.
 Control Doc: docs/development_workflow_master_plan.md is the source of truth for session ordering and gates.
 AI-Agent Workflow: AI-agent workflow rules are governed by docs/ai_agent_workflow_rules.md. No AI-agent may commit or push before raw diff review and explicit user approval.
 
+Prior Session: 139I-B — Recover Base Schema Source of Truth
+Last Completed (139I-B): Recovered base schema SQL snapshot for the 5 missing core tables from production database metadata and saved it to supabase/schema_base_recovered.sql. Audited file for secrets and data payloads (passed). Updated staging bootstrap plan. Staging bootstrap execution did not run.
 Prior Session: 139I — Staging Schema Bootstrap / Safe Schema Setup
 Last Completed (139I): Reviewed staging schema bootstrap prerequisites, audited SQL migration risk patterns, identified core database table definitions tracking gap, and created docs/operations/staging_schema_bootstrap_plan.md.
 Prior Session: 139H — Production Supabase Backup/PITR Review + Staging Restore Drill Plan
@@ -23,11 +25,10 @@ P0-3 STATUS: Daily backups are now verified; PITR remains an optional but strong
 🚩 HEADLINE FINDING F6 (P0 staging blocker): RESOLVED. Staging database exists (ref `nrsvpwzekfrdrzkoecfk`). Safety boot guard is active in local/dev API server.
 Prior findings still open: 135 F1 stale test prices; 135 F3 pv_limit metadata; 135 F4 request-body redirect URLs.
 Verdict (134): CONDITIONAL GO — safe for 3–5 hand-picked single-instance beta customers once remaining P0 conditions met.
-Next Task: Session 139I-C — Staging Schema Bootstrap Execution (currently blocked pending staging DB connection credentials). Stripe E2E (Session 139J) remains blocked until 139I-C succeeds and is verified.
+Next Task: Session 139L — Confirm beta Terms/Privacy disclosure flow before payment. Staging Schema Bootstrap Execution (Session 139I-C) remains blocked pending staging DB connection credentials. Stripe E2E (Session 139J) remains blocked until 139I-C succeeds and is verified.
 Roadmap Queue:
-- Session 139I-C — Staging Schema Bootstrap Execution.
-- Session 139J — Stripe Test Catalog Correction + Stripe E2E on Staging Only.
-- Session 139K — Verify Production Env/Secrets, IP Resolver Mode, CORS, Tracker/API URLs in consoles.
+- Session 139I-C — Staging Schema Bootstrap Execution (Blocked).
+- Session 139J — Stripe Test Catalog Correction + Stripe E2E on Staging Only (Blocked).
 - Session 139L — Confirm beta Terms/Privacy disclosure flow before payment.
 Build: ✅ passing (node --check, git diff --check, dashboard vite build, qa:static, required-grep clean)
 Branch: main

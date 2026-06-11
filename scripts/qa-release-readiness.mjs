@@ -177,6 +177,36 @@ if (fs.existsSync(RECOVERED_SCHEMA_PATH)) {
 }
 
 
+// 7. Verify production env verification doc exists and is clean of obvious secret patterns
+const PROD_ENV_PATH = path.join(ROOT_DIR, 'docs/operations/production_env_verification.md');
+if (!fs.existsSync(PROD_ENV_PATH)) {
+  console.error('❌ ERROR: docs/operations/production_env_verification.md does not exist.');
+  hasFailed = true;
+} else {
+  const prodEnvContent = fs.readFileSync(PROD_ENV_PATH, 'utf8');
+  console.log('✅ Production env verification plan docs/operations/production_env_verification.md exists.');
+
+  const forbiddenPatterns = [
+    { pattern: /sk_live_/i, message: 'Contains sk_live_ secret key pattern' },
+    { pattern: /sk_test_/i, message: 'Contains sk_test_ secret key pattern' },
+    { pattern: /whsec_/i, message: 'Contains whsec_ webhook secret pattern' },
+    { pattern: /service_role/i, message: 'Contains service_role keyword (avoid printing service role key)' },
+    { pattern: /sbp_/i, message: 'Contains sbp_ key pattern' },
+    { pattern: /eyJhbGciOi/i, message: 'Contains JWT header pattern' },
+    { pattern: /postgres:\/\//i, message: 'Contains postgres connection URL' },
+    { pattern: /(?<!not\s+)(?<!not\s+\*\*)\bproduction\s+env\s+verified\b/i, message: 'Claims production env verified without operator action' }
+  ];
+
+  for (const { pattern, message } of forbiddenPatterns) {
+    if (pattern.test(prodEnvContent)) {
+      console.error(`❌ ERROR in Production Env Verification: ${message} (pattern matched: ${pattern}).`);
+      hasFailed = true;
+    }
+  }
+}
+
+
+
 
 console.log('\n==================================================');
 if (!hasFailed) {

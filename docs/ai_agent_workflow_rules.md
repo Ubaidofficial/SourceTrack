@@ -137,6 +137,8 @@ Every session maps back to the authoritative roadmap defined in `docs/developmen
 5. **139I-B** — Recover Base Schema Source of Truth (Completed)
 6. **139I-C** — Staging Schema Bootstrap Execution (Open)
 7. **139J** — Stripe Test Catalog Correction + Stripe E2E on Staging Only (Open)
+8. **139K** — Verify Production Env/Secrets, IP Resolver Mode, CORS, Tracker/API URLs (Completed)
+9. **139L** — Confirm beta Terms/Privacy disclosure flow before payment (Open)
 
 *Note: Do not reorder or alter this roadmap without explicit user approval.*
 
