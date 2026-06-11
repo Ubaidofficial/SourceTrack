@@ -249,6 +249,21 @@ The repository is correctly parameterized for environment separation (all provid
 5. **Stripe E2E Status:** Stripe E2E remains blocked until:
    1. staging schema/bootstrap is completed safely
    2. real staging service-role key is added locally/staging-only
-   3. local/dev production boot guard is added
+   3. local/dev production boot guard is added (Completed in Session 138D)
    4. Stripe test catalog is corrected
    5. billing/webhook E2E runs only against staging
+
+---
+
+## Session 138D — Local/Dev Boot Guard Against Production Supabase Mutation
+
+**Date/time:** 2026-06-11 (Session 138D)
+**Environment:** Local dev workstation (`darwin`), repo `main` @ `08d696a`.
+**Method:** Added reusable environment safety boot guard (`api/lib/environment-safety.js`) and executed it early via the bootstrap entrypoint (`api/bootstrap.js`) before (`api/index.js`) is evaluated.
+
+### Status Update:
+1. **Safety Boot Guard:** If `NODE_ENV !== 'production'`, the API refuses to start when `SUPABASE_URL` contains the production ref `zxjjjsipafojhzkkumvh`.
+2. **Emergency Override:** `ALLOW_PRODUCTION_SUPABASE_IN_NON_PROD=true` is supported for emergency overrides, but is strictly forbidden for normal development and is not set locally or in `.env.example`.
+3. **Verified Behavior:** Added offline test script `scripts/qa-env-safety.mjs` verifying development/test refusal of production ref, production allow behavior, staging allow behavior, and emergency override allow warnings. Wired into `qa:static`.
+4. **Stripe E2E Status:** Stripe E2E remains blocked until staging schema/bootstrap, real staging service-role key, local/dev production boot guard (completed), and Stripe test catalog are corrected.
+5. **RLS Policies:** The RLS policy audit remains separate.

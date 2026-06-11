@@ -53,7 +53,9 @@ console.log(gitLog.stdout);
 // B. Backend Syntax Checks
 console.log('--- B. Backend Syntax Checks ---');
 const backendFiles = [
+  'api/bootstrap.js',
   'api/index.js',
+  'api/lib/environment-safety.js',
   'api/middleware/auth.js',
   'api/middleware/user-auth.js',
   'api/lib/plan-features.js',

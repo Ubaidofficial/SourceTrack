@@ -40,10 +40,20 @@ Local `.env`, `.env.local`, and `.env.staging` now target the staging Supabase p
 
 ---
 
-## 4. Current Blockers / Next Steps
-Stripe E2E remains blocked until:
+## 4. Environment Safety Boot Guard (Session 138D)
+A reusable environment safety boot guard has been implemented in [api/lib/environment-safety.js](file:///Users/ubaid/Desktop/trackiq/api/lib/environment-safety.js) and executed early via the bootstrap entrypoint [api/bootstrap.js](file:///Users/ubaid/Desktop/trackiq/api/bootstrap.js) before [api/index.js](file:///Users/ubaid/Desktop/trackiq/api/index.js) is dynamically evaluated.
+
+* **Non-production Guard:** If `NODE_ENV !== 'production'`, the API refuses to start when `SUPABASE_URL` contains the production ref `zxjjjsipafojhzkkumvh` (triggering an exit code of `1` with a loud clear error message).
+* **Production Access:** Production deployments (`NODE_ENV=production`) remain unblocked and can connect to the production Supabase database ref.
+* **Emergency Override:** The environment variable `ALLOW_PRODUCTION_SUPABASE_IN_NON_PROD=true` is supported for emergency overrides, but is **strictly forbidden for normal development**. It must never be set in `.env.example`, must not be set locally, is restricted to emergency read-only operator debugging, and requires explicit user approval before use.
+* **RLS Policies:** The RLS policy audit remains separate.
+
+---
+
+## 5. Current Blockers / Next Steps
+The boot guard protects local dev environment connections, but does not replace the staging database schema setup. Stripe E2E remains blocked until:
 1. staging schema/bootstrap is completed safely
 2. real staging service-role key is added locally/staging-only
-3. local/dev production boot guard is added
+3. local/dev production boot guard is added (Completed in Session 138D)
 4. Stripe test catalog is corrected
 5. billing/webhook E2E runs only against staging

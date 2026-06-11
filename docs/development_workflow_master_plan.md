@@ -97,14 +97,14 @@ But the **operational foundation was built slower than the product**. The workfl
 
 > Use this sequence. Each session has its own acceptance criteria in §11 and the strategy chapter it belongs to. **Do not start a session until the prior phase's blockers are addressed or explicitly deferred with reasoning.** CI must be green before the next session begins.
 
-**The immediate next session is Session 138D.**
+**The immediate next session is Session 138E.**
 
 **No new feature work / Phase C-D work should begin while any P0 operational blocker remains open unless explicitly approved by the user.**
 
 **Phase 0 — Stop the bleeding (process + local safety)**
 - **138B** — Master workflow plan/control document *(Completed)*
 - **138C** — Create/confirm separate staging Supabase project; rewire local `.env` away from production. *(Completed)*
-- **138D** — Add local/dev boot guard refusing mutating workflows when `SUPABASE_URL` is production.
+- **138D** — Add local/dev boot guard refusing non-production API startup when `SUPABASE_URL` targets the production Supabase ref. *(Completed)*
 - **138E** — Codify no-commit-before-review workflow into the AI-agent rules.
 - **138F** — Add the release checklist that blocks deploy unless staging/backups/secrets/CI are verified.
 
@@ -308,7 +308,7 @@ event warehouse decision after beta data
 |---|---|
 | 138B | Master workflow plan/control document created and committed. |
 | 138C | Local `.env`, `.env.local`, and `.env.staging` now target the staging Supabase project ref for URL/publishable-key configuration, but `SUPABASE_SERVICE_KEY` remains a placeholder. Local backend mutation tests remain blocked until the real staging service-role key is manually added to gitignored local env files. No env files are tracked by git. Stripe E2E remains blocked until: 1. staging schema/bootstrap is completed safely; 2. real staging service-role key is added locally/staging-only; 3. local/dev production boot guard is added; 4. Stripe test catalog is corrected; 5. billing/webhook E2E runs only against staging. |
-| 138D | Local app cannot accidentally run mutation-capable workflows against production Supabase. |
+| 138D | Local/dev API boot guard is implemented via api/bootstrap.js and blocks non-production startup when SUPABASE_URL targets production ref zxjjjsipafojhzkkumvh. Offline qa:env-safety is wired into qa:static. |
 | 138E | Every future AI-agent session has enforced review-before-commit rules. |
 | 138F | Production deploy cannot happen by accident from an unreviewed AI-agent commit. |
 | 139A | P0-3 closes only when backups/PITR are verified in console and documented. |
@@ -384,7 +384,7 @@ event warehouse decision after beta data
 **Target promotion flow:** local → staging → production, with **no path from a dev workstation to production data**.
 
 - **138C** creates a separate staging Supabase project (project ref must differ from `zxjjjsipafojhzkkumvh`), with its own anon/service keys; local `.env` is rewired to staging; safe-local-mutation rules documented.
-- **138D** adds an app boot/dev guard that refuses to boot a mutating local/dev server when `SUPABASE_URL` resolves to the production ref, unless an explicit, deliberate override is set — extending the QA-script-only protection in `verifySafeEnvironment()` to the application itself.
+- **138D** adds an app boot/dev guard that refuses non-production API startup when `SUPABASE_URL` targets the production Supabase ref, unless an explicit, deliberate override is set — extending the QA-script-only protection in `verifySafeEnvironment()` to the application itself.
 - **Railway:** confirm staging and production are separate services/environments (139D); production carries `NODE_ENV=production`, `ST_IP_RESOLVER_MODE=railway`, and the log-hash secret.
 - **PostHog / Stripe / Resend:** separate projects/keys/domains per environment, verified in console (139D).
 

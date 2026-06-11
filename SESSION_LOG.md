@@ -5,6 +5,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 138D | 2026-06-11 | `main` | Local/Dev Boot Guard Against Production Supabase Mutation — Created reusable environment safety guard (`api/lib/environment-safety.js`) and executed it early via the bootstrap entrypoint (`api/bootstrap.js`). Refuses non-production API boot with production Supabase ref (`zxjjjsipafojhzkkumvh`). Added `scripts/qa-env-safety.mjs` (wired to `qa:static`). Stripe E2E remains blocked. | ✅ | No |
 | 138C | 2026-06-11 | `main` | Supabase Staging Project + Local/Staging Env Rewire — Created staging Supabase project `sourcetrack-staging` (`nrsvpwzekfrdrzkoecfk`) in region `eu-west-1`. Local env rewired to target staging ref, but `SUPABASE_SERVICE_KEY` remains placeholder. Daily scheduled backups were manually verified in the Supabase dashboard by the operator. PITR is not enabled. Stripe E2E remains blocked. | ✅ | No |
 | 138B | 2026-06-11 | `main` | Development Workflow Master Plan — Verified repo ground truth (job-status tenant gap, 5× duplicated group_by, raw HogQL date interpolation, no test framework, CI gates only qa:static, in-memory rate limits/idempotency). Created docs/development_workflow_master_plan.md as the authoritative engineering control document (27 sections: verdict, readiness grade, P0/P1/P2 matrix, ordered roadmap, gates, checklists, strategies, refactor backlog). Planning-only; no app/backend code changed. | ✅ | No |
 | 138A | 2026-06-11 | `main` | Safe Non-Mutating QA + Top-Priority Test Backlog — Inspected all 33 QA scripts; executed verified safe tests; performed safety scans; documented findings and gating conclusions; created docs/safe_qa_test_backlog.md. | ✅ | No |
@@ -1793,7 +1794,7 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 |---|---|---|---|---|---|---|---|
 | **P0** | Create separate staging Supabase project and rewire local/staging env away from production. | Local `.env` currently points to live production Supabase (`zxjjjsipafojhzkkumvh`), making local development of mutating code highly dangerous. | Provision separate staging Supabase project and update local/staging environment variables. | **CRITICAL** | Session 138C | Pre-Paid-Beta | **RESOLVED (Staging `nrsvpwzekfrdrzkoecfk` created. Local `.env`, `.env.local`, and `.env.staging` now target the staging Supabase project ref for URL/publishable-key configuration, but `SUPABASE_SERVICE_KEY` remains a placeholder. Local backend mutation tests remain blocked until the real staging service-role key is manually added to gitignored local env files. No env files are tracked by git.)** |
 | **P0** | Upgrade production Supabase to paid plan and enable backups/PITR. | Production Supabase is currently on the Free plan, which disables daily scheduled backups and PITR. | Operator upgrades the production database to a paid tier and enables backups and PITR. | **CRITICAL** | Session 138C | Pre-Paid-Beta | **RESOLVED (Daily scheduled backups were manually verified in the Supabase dashboard by the operator. MCP did not independently expose/verify backup settings. Visible physical backups were shown for June 3 through June 10, with latest visible backup on June 10, 2026. No restore was run. PITR is not enabled / not accepted as enabled. Do not enable PITR without explicit cost approval. Daily backups are now verified; PITR remains an optional but strongly recommended paid add-on / accepted risk if left disabled.)** |
-| **P0** | Full Stripe test-mode E2E after staging DB exists and Stripe test prices are corrected. | Staging database does not exist to receive webhook writes, and Stripe test-mode price amounts ($49/$99/$199) are stale compared to public ones ($29/$79/$149+). | Staging database is provisioned and Stripe test prices are aligned with the new price schema. | **HIGH** | Session 138D | Pre-Paid-Beta | **Stripe E2E remains blocked until: 1. staging schema/bootstrap is completed safely; 2. real staging service-role key is added locally/staging-only; 3. local/dev production boot guard is added; 4. Stripe test catalog is corrected; 5. billing/webhook E2E runs only against staging** |
+| **P0** | Full Stripe test-mode E2E after staging DB exists and Stripe test prices are corrected. | Staging database does not exist to receive webhook writes, and Stripe test-mode price amounts ($49/$99/$199) are stale compared to public ones ($29/$79/$149+). | Staging database is provisioned and Stripe test prices are aligned with the new price schema. | **HIGH** | Session 139C | Pre-Paid-Beta | **Stripe E2E remains blocked until: 1. staging schema/bootstrap is completed safely; 2. real staging service-role key is added locally/staging-only; 3. local/dev production boot guard is added (Completed in Session 138D); 4. Stripe test catalog is corrected; 5. billing/webhook E2E runs only against staging** |
 | **P1** | Billing redirect hardening: generate/allow-list checkout success/cancel and portal return URLs server-side. | Currently checkout redirection parameters (`success_url`, `cancel_url`, `returnUrl`) are accepted raw from request bodies without server-side validation. | Implement server-side allow-list validation and URL generation for billing checkout and customer portal links. | **HIGH** | Session 139A | Pre-Paid-Beta | **BLOCKED** |
 | **P1** | Exception monitoring/Sentry test. | Staging environment must verify Sentry exception routing and capturing logic before public release. | Integrate Sentry SDK and run active error-triggering smoke tests on staging. | **MEDIUM** | Session 139B | Pre-10-Customers | **BLOCKED** |
 | **P1** | Add qa:attribution, qa:smoke, and qa:edge to CI or required pre-deploy gate. | Mutating tests cannot run in GitHub Actions due to lack of a test database, creating risk of unnoticed logic regressions. | Set up a staging database in the CI pipeline or require manual run gates prior to deploy. | **MEDIUM** | Session 139C | Pre-Paid-Beta | **BLOCKED** |
@@ -1842,6 +1843,25 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 - Stripe E2E remains blocked until:
   1. staging schema/bootstrap is completed safely
   2. real staging service-role key is added locally/staging-only
-  3. local/dev production boot guard is added
+  3. local/dev production boot guard is added (Completed in Session 138D)
   4. Stripe test catalog is corrected
   5. billing/webhook E2E runs only against staging
+
+---
+
+## Session 138D — Local/Dev Boot Guard Against Production Supabase Mutation
+
+**Date:** 2026-06-11
+**Branch:** `main`
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety)
+**Status:** COMPLETE.
+
+### 1. Created Environment Safety Guard
+- Implemented reusable safety guard module in `api/lib/environment-safety.js`. If `NODE_ENV !== 'production'`, the API refuses to start when `SUPABASE_URL` contains the production database ref `zxjjjsipafojhzkkumvh`.
+- Executed the safety guard early via the bootstrap entrypoint `api/bootstrap.js` before `api/index.js` is dynamically imported.
+
+### 2. Created Offline QA Test Script
+- Authored `scripts/qa-env-safety.mjs` verifying development/test environment rejection, production access, staging access, and emergency override behaviors. Added `qa:env-safety` script to `package.json` and wired it into `qa:static`.
+
+### 3. Updated Docs
+- Documented environment safety guard behaviors and override constraints in `docs/staging_supabase_setup.md`, `.env.example`, `docs/safe_qa_test_backlog.md`, `docs/staging_production_separation_audit.md`, and session documentation files. Stripe E2E remains blocked. RLS policies audit remains separate.
