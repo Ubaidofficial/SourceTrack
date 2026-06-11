@@ -50,7 +50,9 @@ export async function fetchApi(path, options = {}) {
   const data = await res.json()
 
   if (!res.ok || !data.success) {
-    throw new Error(data.error || `Request failed with status ${res.status}`)
+    const err = new Error(data.error || `Request failed with status ${res.status}`)
+    err.status = res.status
+    throw err
   }
 
   return data.data !== undefined ? data.data : data

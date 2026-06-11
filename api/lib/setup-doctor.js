@@ -62,7 +62,10 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
       WHERE properties.site_id = '${esc(posthogSiteId)}'
         AND event = '$pageview'
         AND timestamp >= now() - INTERVAL 30 DAY
-    `, 'doctor_pageviews_30d'),
+    `, 'doctor_pageviews_30d').catch(err => {
+      console.warn('[setup-doctor] doctor_pageviews_30d query failed:', err?.message || err)
+      return null
+    }),
     // [1] Last conversion in the last 30 days
     queryHogQL(`
       SELECT timestamp, properties.conversion_type AS conversion_type
@@ -72,7 +75,10 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
         AND timestamp >= now() - INTERVAL 30 DAY
       ORDER BY timestamp DESC
       LIMIT 1
-    `, 'doctor_last_conversion'),
+    `, 'doctor_last_conversion').catch(err => {
+      console.warn('[setup-doctor] doctor_last_conversion query failed:', err?.message || err)
+      return null
+    }),
     // [2] Last event with click ID in the last 30 days
     queryHogQL(`
       SELECT properties.gclid, properties.gbraid, properties.wbraid, properties.fbclid, properties.msclkid, properties.ttclid, properties.twclid, properties.li_fat_id
@@ -91,7 +97,10 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
         )
       ORDER BY timestamp DESC
       LIMIT 1
-    `, 'doctor_last_click_id'),
+    `, 'doctor_last_click_id').catch(err => {
+      console.warn('[setup-doctor] doctor_last_click_id query failed:', err?.message || err)
+      return null
+    }),
     // [3] Check if any paid params were seen at all in the last 30 days
     queryHogQL(`
       SELECT count()
@@ -111,7 +120,10 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
           (properties.st_campaign_id != '' AND isNotNull(properties.st_campaign_id)) OR
           (properties.st_adgroup_id != '' AND isNotNull(properties.st_adgroup_id))
         )
-    `, 'doctor_paid_params_count')
+    `, 'doctor_paid_params_count').catch(err => {
+      console.warn('[setup-doctor] doctor_paid_params_count query failed:', err?.message || err)
+      return null
+    })
   ]
 
   // Optional Token Verification Check (HogQL query [4])
@@ -124,7 +136,10 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
       WHERE properties.site_id = '${esc(posthogSiteId)}'
         AND properties.st_verify = '${esc(sanitizedToken)}'
         AND timestamp >= now() - INTERVAL 15 MINUTE
-    `, 'doctor_token_verify')
+    `, 'doctor_token_verify').catch(err => {
+      console.warn('[setup-doctor] doctor_token_verify query failed:', err?.message || err)
+      return null
+    })
     queries.push(tokenPromise)
   }
 

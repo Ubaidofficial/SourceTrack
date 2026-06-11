@@ -61,7 +61,7 @@ function validateStepData(step, data) {
     return { valid: false, error: `business_type must be one of: ${VALID_BUSINESS_TYPES.join(', ')}` }
   }
 
-  if (data.install_method !== undefined && !VALID_INSTALL_METHODS.includes(data.install_method)) {
+  if (data.install_method !== undefined && data.install_method !== null && !VALID_INSTALL_METHODS.includes(data.install_method)) {
     return { valid: false, error: `install_method must be one of: ${VALID_INSTALL_METHODS.join(', ')}` }
   }
 

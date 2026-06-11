@@ -119,6 +119,8 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
     }
   }
 
+  const shouldPoll = mode === 'onboarding' || (mode === 'snippet' && testPageOpened)
+
   const { data: response, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ['setup-doctor', siteKey, verificationToken, testPageOpened],
     queryFn: async () => {
@@ -129,8 +131,19 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
       return fetchApi(`/install/doctor?${params}`)
     },
     enabled: !!siteKey,
-    refetchInterval: (mode === 'onboarding' || (mode === 'snippet' && testPageOpened)) ? 5000 : false
+    retry: false,
+    refetchInterval: (query) => {
+      const status =
+        query?.state?.error?.status ||
+        query?.state?.error?.response?.status ||
+        null
+
+      if (status === 401 || status === 403) return false
+      return shouldPoll ? 5000 : false
+    }
   })
+
+  const isAuthError = error?.status === 401 || error?.status === 403
 
   const diagnostics = response?.data ?? response ?? null
 
@@ -157,18 +170,26 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
   if (error || !diagnostics) {
     return (
       <div className="bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-5 shadow-sm">
-        <div className="flex items-start gap-3 text-red-600 dark:text-red-400">
-          <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 text-amber-600 dark:text-amber-450">
+          {isAuthError ? (
+            <Info className="w-5 h-5 flex-shrink-0 mt-0.5 text-amber-500" />
+          ) : (
+            <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          )}
           <div>
-            <h3 className="font-semibold">Diagnostics Unavailable</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              We encountered an error loading setup diagnostics: {error?.message || 'Check site key configuration.'}
+            <h3 className="font-semibold text-st-black dark:text-white">
+              {isAuthError ? 'Verification Pending' : 'Diagnostics Unavailable'}
+            </h3>
+            <p className="text-sm text-gray-650 dark:text-gray-400 mt-1 leading-normal">
+              {isAuthError
+                ? "We are waiting for your first tracking event. If you haven't installed the script yet, you can skip verification by clicking 'Verify Later' below and configure it in your settings."
+                : `We encountered an error loading setup diagnostics: ${error?.message || 'Check site key configuration.'}`}
             </p>
             <button
               onClick={() => refetch()}
-              className="mt-3 px-3 py-1.5 text-xs font-semibold bg-gray-100 dark:bg-[#252929] hover:bg-gray-200 dark:hover:bg-[#333838] rounded-lg transition-colors flex items-center gap-1.5 text-gray-700 dark:text-gray-200"
+              className="mt-3 px-3 py-1.5 text-xs font-semibold bg-gray-100 dark:bg-[#252929] hover:bg-gray-200 dark:hover:bg-[#333838] rounded-lg transition-colors flex items-center gap-1.5 text-gray-700 dark:text-gray-250"
             >
-              <RefreshCw className="w-3.5 h-3.5" /> Retry
+              <RefreshCw className="w-3.5 h-3.5" /> {isAuthError ? 'Check Again' : 'Retry'}
             </button>
           </div>
         </div>

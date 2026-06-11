@@ -87,14 +87,46 @@ export async function validateSiteKey(req, res, next) {
     // via Stripe; trial sign-ups also skip this until they convert. Only the
     // free tier requires a verified email before the tracker activates.
     if (data.plan === 'free' && data.owner_id) {
-      const { data: authUser } = await supabase.auth.admin.getUserById(data.owner_id)
-      if (!authUser?.user?.email_confirmed_at) {
-        return res.status(402).json({
-          success: false,
-          data: null,
-          error: 'Email not verified',
-          message: 'Please verify your email to activate tracking. Check your inbox for the verification link.'
-        })
+      try {
+        const { data: authUser, error: authUserErr } = await supabase.auth.admin.getUserById(data.owner_id)
+        if (authUserErr) {
+          console.warn('[validateSiteKey] getUserById returned error:', authUserErr.message || authUserErr)
+          // SECURITY BOUNDARY:
+          // 1. For public tracker ingestion endpoints (where req.user is undefined, e.g. /api/track, /track),
+          //    we must fail-closed with a 503 Service Unavailable so that unverified users cannot bypass
+          //    email confirmation enforcement during a temporary Supabase admin API lookup failure.
+          // 2. For authenticated dashboard routes (where req.user is defined), we allow the request to
+          //    continue with a warning so dashboard diagnostics and troubleshooting (e.g. Tracking Doctor)
+          //    remain accessible to the logged-in owner during temporary Supabase auth service outages.
+          if (!req.user) {
+            return res.status(503).json({
+              success: false,
+              data: null,
+              error: 'Service temporarily unavailable',
+              message: 'We are temporarily unable to verify your account status. Please try again shortly.'
+            })
+          }
+        } else if (authUser?.user && !authUser.user.email_confirmed_at) {
+          return res.status(402).json({
+            success: false,
+            data: null,
+            error: 'Email not verified',
+            message: 'Please verify your email to activate tracking. Check your inbox for the verification link.'
+          })
+        }
+      } catch (authErr) {
+        console.error('[validateSiteKey] Failed to check email verification status:', authErr?.message || authErr)
+        // SECURITY BOUNDARY:
+        // Fail-closed with 503 for public tracker ingestion if an unexpected error occurs during admin lookup.
+        // Bypass for authenticated dashboard routes to maintain user diagnostics accessibility.
+        if (!req.user) {
+          return res.status(503).json({
+            success: false,
+            data: null,
+            error: 'Service temporarily unavailable',
+            message: 'We are temporarily unable to verify your account status. Please try again shortly.'
+          })
+        }
       }
     }
 

@@ -36,11 +36,19 @@ router.get('/snippet', async (req, res) => {
       }
     }
 
-    const trackerBaseUrl = normalizeBaseUrl(
+    let trackerBaseUrl = normalizeBaseUrl(
       process.env.TRACKER_BASE_URL ||
-      process.env.FRONTEND_URL ||
-      `http://localhost:${process.env.PORT || 3000}`
+      process.env.FRONTEND_URL
     )
+    if (!trackerBaseUrl) {
+      const reqHost = req.get('host')
+      if (reqHost && !reqHost.includes('localhost') && !reqHost.includes('127.0.0.1')) {
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol
+        trackerBaseUrl = `${protocol}://${reqHost}`
+      } else {
+        trackerBaseUrl = `http://localhost:${process.env.PORT || 3000}`
+      }
+    }
     const snippet = `<script async src="${trackerBaseUrl}/tracker.min.js" data-site-key="${site.site_key}"></script>`
 
     return res.status(200).json({

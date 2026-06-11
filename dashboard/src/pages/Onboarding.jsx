@@ -75,6 +75,7 @@ export default function Onboarding() {
   const [selectedConversions, setSelectedConversions] = useState([])
   const [snippet, setSnippet] = useState('')
   const [verificationSuccess, setVerificationSuccess] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   const handleOnboardingVerified = useCallback((diagnostics) => {
     setVerificationSuccess(true)
@@ -153,14 +154,10 @@ export default function Onboarding() {
 
   async function saveOnboardingState(nextStep, extraData = {}) {
     if (!siteId) return
-    try {
-      await fetchApi('/onboarding/update', {
-        method: 'POST',
-        body: JSON.stringify({ site_id: siteId, step: nextStep, data: extraData })
-      })
-    } catch (_err) {
-      /* non-critical — state persists for next load */
-    }
+    await fetchApi('/onboarding/update', {
+      method: 'POST',
+      body: JSON.stringify({ site_id: siteId, step: nextStep, data: extraData })
+    })
   }
 
   async function saveOnboardingStateViaSite(id, nextStep, extraData = {}) {
@@ -216,30 +213,47 @@ export default function Onboarding() {
   }
 
   async function handleBusinessTypeSelect(type) {
-    setBusinessType(type)
+    setError('')
+    setLoading(true)
     const defaults = getDefaultConversions(type)
-    setSelectedConversions(defaults)
-    await saveOnboardingState(3, {
-      business_type: type,
-      install_method: null,
-      selected_conversions: defaults
-    })
-    setStep(3)
+    try {
+      await saveOnboardingState(3, {
+        business_type: type,
+        selected_conversions: defaults
+      })
+      setBusinessType(type)
+      setSelectedConversions(defaults)
+      setStep(3)
+    } catch (err) {
+      console.error('Failed to save business type onboarding state:', err.message || err)
+      setError('We encountered a problem saving your selection. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function handleInstallMethodSelect(method) {
-    setInstallMethod(method)
-    if (siteId) {
-      try {
-        const data = await fetchApi(`/install/snippet?site_id=${siteId}`)
-        if (data?.snippet) setSnippet(data.snippet)
-      } catch {
-        const trackerUrl = (import.meta.env.VITE_TRACKER_BASE_URL || import.meta.env.VITE_API_URL || window.location.origin).replace(/\/+$/, '')
-        setSnippet(`<script async src="${trackerUrl}/tracker.min.js" data-site-key="${siteKey}"></script>`)
+    setError('')
+    setLoading(true)
+    try {
+      await saveOnboardingState(4, { install_method: method })
+      setInstallMethod(method)
+      if (siteId) {
+        try {
+          const data = await fetchApi(`/install/snippet?site_id=${siteId}`)
+          if (data?.snippet) setSnippet(data.snippet)
+        } catch {
+          const trackerUrl = (import.meta.env.VITE_TRACKER_BASE_URL || import.meta.env.VITE_API_URL || window.location.origin).replace(/\/+$/, '')
+          setSnippet(`<script async src="${trackerUrl}/tracker.min.js" data-site-key="${siteKey}"></script>`)
+        }
       }
+      setStep(4)
+    } catch (err) {
+      console.error('Failed to save install method onboarding state:', err.message || err)
+      setError('We encountered a problem saving your selection. Please try again.')
+    } finally {
+      setLoading(false)
     }
-    await saveOnboardingState(4, { install_method: method })
-    setStep(4)
   }
 
   function toggleConversion(key) {
@@ -249,14 +263,27 @@ export default function Onboarding() {
   }
 
   async function handleConversionsContinue() {
-    await saveOnboardingState(6, { selected_conversions: selectedConversions })
-    setStep(6)
+    setError('')
+    setLoading(true)
+    try {
+      await saveOnboardingState(6, { selected_conversions: selectedConversions })
+      setStep(6)
+    } catch (err) {
+      console.error('Failed to save conversions onboarding state:', err.message || err)
+      setError('We encountered a problem saving your selection. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
-
 
   function handleCopySnippet() {
     if (snippet) {
-      navigator.clipboard.writeText(snippet).catch(() => {})
+      navigator.clipboard.writeText(snippet)
+        .then(() => {
+          setCopied(true)
+          setTimeout(() => setCopied(false), 2000)
+        })
+        .catch(() => {})
     }
   }
 
@@ -328,6 +355,7 @@ export default function Onboarding() {
                 )
               })}
             </div>
+            {error && <p className="text-sm text-red-500 mt-4 text-center font-medium">{error}</p>}
           </OnboardingCard>
         )
 
@@ -374,6 +402,7 @@ export default function Onboarding() {
                 )
               })}
             </div>
+            {error && <p className="text-sm text-red-500 mt-4 text-center font-medium">{error}</p>}
           </OnboardingCard>
         )
 
@@ -427,10 +456,12 @@ export default function Onboarding() {
             </div>
             <button
               onClick={handleConversionsContinue}
-              className="mt-6 w-full py-3 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90"
+              disabled={loading}
+              className="mt-6 w-full py-3 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90 disabled:opacity-50"
             >
-              Continue
+              {loading ? 'Saving...' : 'Continue'}
             </button>
+            {error && <p className="text-sm text-red-500 mt-4 text-center font-medium">{error}</p>}
           </OnboardingCard>
         )
 
@@ -461,23 +492,35 @@ export default function Onboarding() {
                 <p className="text-lg font-semibold text-st-black dark:text-white">Great! Script Verified Successfully</p>
                 <p className="text-xs text-st-gray dark:text-gray-400">Your site is connected and data is flowing.</p>
                 <button
+                  disabled={loading}
                   onClick={async () => {
-                    const completeRes = await fetchApi('/onboarding/complete', {
-                      method: 'POST',
-                      body: JSON.stringify({ site_id: siteId })
-                    })
-                    if (!completeRes || completeRes.success === false) {
-                      setError(completeRes?.error || 'Installation could not be verified. Please try again.')
+                    setError('')
+                    setLoading(true)
+                    try {
+                      const completeRes = await fetchApi('/onboarding/complete', {
+                        method: 'POST',
+                        body: JSON.stringify({ site_id: siteId })
+                      })
+                      if (!completeRes || !completeRes.completed) {
+                        setError('Installation could not be verified. Please try again.')
+                        setVerificationSuccess(false)
+                        return
+                      }
+                      seedReportsForBusiness(businessType, siteKey)
+                      navigate('/dashboard', { replace: true, state: { toast: 'Setup complete! Your dashboard is ready.' } })
+                    } catch (err) {
+                      console.error('Failed to complete onboarding:', err.message || err)
+                      setError('We encountered a problem verifying your installation. Please try again.')
                       setVerificationSuccess(false)
-                      return
+                    } finally {
+                      setLoading(false)
                     }
-                    seedReportsForBusiness(businessType, siteKey)
-                    navigate('/dashboard', { replace: true, state: { toast: 'Setup complete! Your dashboard is ready.' } })
                   }}
-                  className="px-6 py-3 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90 flex items-center gap-2 mx-auto"
+                  className="px-6 py-3 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90 flex items-center gap-2 mx-auto disabled:opacity-50"
                 >
-                  <ArrowRight className="w-4 h-4" /> Continue to Dashboard
+                  <ArrowRight className="w-4 h-4" /> {loading ? 'Saving...' : 'Continue to Dashboard'}
                 </button>
+                {error && <p className="text-sm text-red-500 mt-2 font-medium">{error}</p>}
               </div>
             ) : (
               <div className="space-y-4">
@@ -512,19 +555,20 @@ export default function Onboarding() {
                         method: 'POST',
                         body: JSON.stringify({ site_id: siteId })
                       })
-                      if (completeRes?.success) {
+                      if (completeRes?.completed) {
                         seedReportsForBusiness(businessType, siteKey)
                         navigate('/dashboard', { replace: true, state: { toast: 'Setup complete! Your dashboard is ready.' } })
                       } else {
-                        setError(completeRes?.error || 'Failed to complete onboarding')
+                        setError('Failed to complete onboarding')
                       }
                     } catch (err) {
-                      setError(err.message || 'Error saving setup.')
+                      console.error('Verify later failed:', err.message || err)
+                      setError('We encountered a problem skipping verification. Please try again.')
                     } finally {
                       setLoading(false)
                     }
                   }}
-                  className="w-full text-center text-xs font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-white transition-colors py-2"
+                  className="w-full text-center text-xs font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-white transition-colors py-2 disabled:opacity-50"
                 >
                   Verify Later (Skip for now)
                 </button>
@@ -587,7 +631,7 @@ export default function Onboarding() {
             onClick={handleCopySnippet}
             className="absolute top-3 right-3 px-3 py-1.5 bg-white dark:bg-white/10 text-[#1F2323] dark:text-white border border-gray-200 dark:border-white/10 text-xs rounded-lg hover:bg-gray-50 dark:hover:bg-white/15 flex items-center gap-1"
           >
-            <Copy className="w-3 h-3" /> Copy Code
+            <Copy className="w-3 h-3" /> {copied ? 'Copied!' : 'Copy Code'}
           </button>
         </div>
 
@@ -607,13 +651,24 @@ export default function Onboarding() {
 
         <button
           onClick={async () => {
-            await saveOnboardingState(5, { install_method: installMethod })
-            setStep(5)
+            setError('')
+            setLoading(true)
+            try {
+              await saveOnboardingState(5, { install_method: installMethod })
+              setStep(5)
+            } catch (err) {
+              console.error('Failed to save install script step onboarding state:', err.message || err)
+              setError('We encountered a problem saving your progress. Please try again.')
+            } finally {
+              setLoading(false)
+            }
           }}
-          className="mt-6 w-full py-3 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90"
+          disabled={loading}
+          className="mt-6 w-full py-3 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90 disabled:opacity-50"
         >
-          Continue
+          {loading ? 'Saving...' : 'Continue'}
         </button>
+        {error && <p className="text-sm text-red-500 mt-4 text-center font-medium">{error}</p>}
       </OnboardingCard>
     )
   }

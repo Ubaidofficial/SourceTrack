@@ -2,15 +2,43 @@
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
-> **Handoff:** Session 139J — Stripe Test Catalog Correction + Stripe E2E on Staging Only is complete. Corrected Stripe test catalog pricing to match public rates ($29/$79/$149) with pv_limit metadata. Verified E2E checkout session creation, redirection, webhook signature validation, database site plan/limit updates, and event deduplication cache on staging. Documented status endpoint stripe_customer_id bug. Saved under [stripe_staging_e2e_139J.md](docs/qa/stripe_staging_e2e_139J.md).
+> **Handoff:** Session 139I-D — Fix Browser Onboarding UI Blockers is PARTIAL. Code/config fixes were implemented and programmatically verified, but real browser QA is still required before this can be closed. Created browser onboarding QA report, saved under [browser_onboarding_ui_qa_139I-D.md](docs/qa/browser_onboarding_ui_qa_139I-D.md).
 >
-> **Prior handoff (Session 139I-C):** Session 139I-C — Staging Schema Bootstrap Execution is complete. Bootstrapped Supabase staging schema with 14 core tables, set staging SUPABASE_SERVICE_KEY on 5 Railway services, resolved managed proxy block on staging API by adding staging URL to ST_PLATFORM_HOSTS, created migration file for sites.business_type schema drift. E2E authenticated signup, login, and onboarding API steps were verified on staging. Browser UI onboarding remains pending because Chrome DevTools MCP was unavailable. Saved under [authenticated_staging_onboarding_qa_139I-C.md](docs/qa/authenticated_staging_onboarding_qa_139I-C.md).
+> **Prior handoff (Session 139J):** Session 139J — Stripe Test Catalog Correction + Stripe E2E on Staging Only is complete. Corrected Stripe test catalog pricing to match public rates ($29/$79/$149) with pv_limit metadata. Verified E2E checkout session creation, redirection, webhook signature validation, database site plan/limit updates, and event deduplication cache on staging. Documented status endpoint stripe_customer_id bug. Saved under [stripe_staging_e2e_139J.md](docs/qa/stripe_staging_e2e_139J.md).
 >
-> **Next Task:** Session 139I-D — Fix Browser Onboarding UI Blockers.
+> **Next Task:** Session 139I-D — Fix Browser Onboarding UI Blockers (Claude Browser Verification).
 >
 > ⚠️ **P0 CONDITIONS BEFORE FIRST PAID CUSTOMER:** (1) Stripe test-mode checkout/webhook evidence [PARTIAL — API/webhook E2E verified on staging; browser billing UI and billing status endpoint pending]; (2) provider-console separation verified [CLOSED - staging project created, local env rewired, safety boot guard active]; (3) Supabase backups verified [PARTIAL - Daily scheduled backups manually verified. PITR is not enabled / not accepted as enabled. Daily backups are now verified; PITR remains an optional but strongly recommended paid add-on / accepted risk if left disabled. Do not enable PITR without explicit cost approval. Staging restore drill remains blocked/not run]; (4) prod env secrets set incl. ST_IP_RESOLVER_MODE=railway; (5) beta Terms/Privacy disclosed in writing.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+
+## Session 139I-D — Fix Browser Onboarding UI Blockers
+**Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa-release-readiness)
+**Status:** **PARTIAL / CODE FIXES READY FOR BROWSER QA.**
+
+### Completed
+1. Onboarding Backend Hardened: Treated `null` and `undefined` as not-provided for `install_method` in `validateStepData` instead of throwing 400. Strict validation remains active for invalid strings.
+2. Onboarding Frontend Updated: Omitted the `install_method` field entirely from the step 2 (business type selection) payload.
+3. Try-Catch Stepper Error Handling: Added try-catch blocks to all onboarding stepper handler functions to clear button loading states, display friendly error cards, and block progression on failure instead of silently swallowing errors.
+4. Setup Doctor Resilience: Wrapped HogQL queries in `api/lib/setup-doctor.js` with catch blocks to return null on failure instead of throwing 500 when PostHog returns 502 Bad Gateway.
+5. validateSiteKey Hardening: Wrapped the email verification `getUserById` check inside `validateSiteKey` in a try-catch to prevent auth checks from returning 401 when the key is valid.
+6. Setup Doctor UI: Configured `SetupDoctorCard.jsx` to disable polling and show a friendly pending state on 401/403.
+7. Snippet URL Fallback: Hardened `api/routes/install.js` to dynamically fall back to the request origin protocol and host if `TRACKER_BASE_URL` is missing, preventing localhost fallbacks in deployed environments.
+8. QA Report: Created `docs/qa/browser_onboarding_ui_qa_139I-D.md` with the verdict `PARTIAL — code fixes implemented and programmatically verified; real browser QA still required`.
+
+### Files changed
+- [docs/qa/browser_onboarding_ui_qa_139I-D.md](docs/qa/browser_onboarding_ui_qa_139I-D.md) [NEW]
+- [api/lib/setup-doctor.js](api/lib/setup-doctor.js)
+- [api/middleware/auth.js](api/middleware/auth.js)
+- [api/routes/install.js](api/routes/install.js)
+- [api/routes/onboarding.js](api/routes/onboarding.js)
+- [dashboard/src/components/SetupDoctorCard.jsx](dashboard/src/components/SetupDoctorCard.jsx)
+- [dashboard/src/lib/api.js](dashboard/src/lib/api.js)
+- [dashboard/src/pages/Onboarding.jsx](dashboard/src/pages/Onboarding.jsx)
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
 
 
 ## Session 139J — Stripe Test Catalog Correction + Stripe E2E on Staging Only

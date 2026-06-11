@@ -7,6 +7,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 139I-D | 2026-06-12 | `main` | Fix Browser Onboarding UI Blockers — Hardened onboarding backend to accept null/undefined install_method, and updated Onboarding.jsx step 2 payload. Hardened Setup Doctor against PostHog 502/down gateway errors. Surface onboarding save errors to the UI and block progression. Dynamically fall back to request host protocol for snippet URL to avoid localhost in staging/prod. Created browser onboarding QA report, saved under docs/qa/browser_onboarding_ui_qa_139I-D.md. | ⚠️ | No |
 | 139J | 2026-06-11 | `main` | Stripe Test Catalog Correction + Stripe E2E on Staging Only — Corrected Stripe test catalog pricing to match public rates ($29/$79/$149) with pv_limit metadata. Verified E2E checkout session creation, redirection, webhook signature validation, database site plan/limit updates, and event deduplication cache on staging. Documented billing status query bug, saved under docs/qa/stripe_staging_e2e_139J.md. | ⚠️ | No |
 | 139I-C | 2026-06-11 | `main` | Staging Schema Bootstrap Execution — Bootstrapped Supabase staging schema with 14 core tables, set staging SUPABASE_SERVICE_KEY on 5 Railway services, resolved managed proxy block on staging API by adding staging URL to ST_PLATFORM_HOSTS, created migration file for sites.business_type schema drift. E2E authenticated signup, login, and onboarding API steps were verified on staging. Browser UI onboarding remains pending because Chrome DevTools MCP was unavailable. Saved under docs/qa/authenticated_staging_onboarding_qa_139I-C.md | ✅ | No |
 | 139M-2 | 2026-06-11 | `main` | Core Analytics + Dashboard Feature QA — Verified redirects to `/login` for all 6 protected routes under non-authenticated states; verified that the public `/demo` route successfully renders mock analytics UI only. Core E2E analytics behavior and database writes remain blocked by missing local session/staging credentials, saved under docs/qa/core_analytics_dashboard_feature_qa_139M-2.md. | ⚠️ | No |
@@ -2127,3 +2128,31 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 
 ### 5. Documentation
 - Created `docs/qa/campaigns_paid_costs_gsc_seo_qa_139M-5.md` detailing route redirection behaviors, matrices, tenant security findings, and validation outputs.
+
+---
+
+## Session 139I-D — Fix Browser Onboarding UI Blockers
+
+**Date:** 2026-06-12
+**Branch:** `main` (no commits, no pushes)
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa-release-readiness)
+**Status:** PARTIAL — browser tooling unavailable; code fixes ready for browser QA.
+
+### 1. Onboarding Backend Hardening
+- Hardened onboarding data validation in `api/routes/onboarding.js` to treat `null` or `undefined` for `install_method` as not-provided instead of throwing 400.
+- Preserved strict enum validation for invalid values (like `"manual"`, `"pixel"`, `"sourceTrack"`, `""`, and unknown strings) which still correctly fail.
+
+### 2. Onboarding Frontend Updates
+- Modified `dashboard/src/pages/Onboarding.jsx` to omit the `install_method` field entirely from the step 2 (business type selection) payload.
+- Added try-catch blocks to all onboarding stepper handler functions to prevent silent save failures. If saving fails, button loading states are cleared, progress is blocked, and a user-friendly error message is displayed.
+
+### 3. Setup Doctor Resilience
+- Wrapped HogQL queries in `api/lib/setup-doctor.js` with individual catch blocks to return null on failure instead of throwing 500 errors when PostHog returns 502 Bad Gateway or is down.
+- Hardened the `validateSiteKey` middleware by wrapping the email verification `getUserById` check in a try-catch to prevent auth check failures from returning a 401 when the site key itself is valid.
+- Configured the Setup Doctor UI card to disable polling and show a friendly pending state on 401/403.
+
+### 4. Snippet URL Fallback
+- Hardened `api/routes/install.js` to dynamically fall back to the request origin protocol and host if `TRACKER_BASE_URL` is missing, preventing localhost fallbacks in deployed environments.
+
+### 5. Documentation
+- Created `docs/qa/browser_onboarding_ui_qa_139I-D.md` with the verdict `PARTIAL — code fixes implemented and programmatically verified; real browser QA still required`.
