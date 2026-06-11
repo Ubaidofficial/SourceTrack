@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 
 import { getSupabase } from '../lib/supabase.js'
+import { getSetupDiagnostics, getBasicInstallStatus } from '../lib/setup-doctor.js'
 
 
 const normalizeBaseUrl = (value) => String(value || '').replace(/\/+$/, '');
@@ -66,59 +67,11 @@ router.get('/status', validateSiteKey, requireSiteMembership, async (req, res) =
       return res.status(404).json({ success: false, data: null, error: 'Site not found' })
     }
 
-    if (!site.last_seen_at) {
-      return res.status(200).json({
-        success: true,
-        data: {
-          verified: false,
-          status: 'pending',
-          message: 'Waiting for the first pageview event...',
-          last_seen_at: null,
-          domain: null
-        },
-        error: null
-      })
-    }
-
-    const state = site.onboarding_state || {}
-    const lastEventAt = site.last_seen_at
-    const lastEventName = state.last_event_name || '$pageview'
-    const lastEventUrl = state.last_event_url || ''
-    const lastEventDomain = state.last_event_domain || null
-
-    const normalizeDomain = (d) => String(d || '').trim().toLowerCase().replace(/^www\./i, '')
-    const registeredDomain = normalizeDomain(site.domain)
-    const eventDomain = normalizeDomain(lastEventDomain)
-
-    if (eventDomain && registeredDomain && eventDomain !== registeredDomain) {
-      return res.status(200).json({
-        success: true,
-        data: {
-          verified: false,
-          status: 'wrong_domain',
-          last_seen_at: lastEventAt,
-          last_event_name: lastEventName,
-          last_event_url: lastEventUrl,
-          site_key: site.site_key,
-          domain: lastEventDomain,
-          message: `We detected an event from '${lastEventDomain}', but this site is registered for '${site.domain}'.`
-        },
-        error: null
-      })
-    }
+    const statusData = getBasicInstallStatus(site)
 
     return res.status(200).json({
       success: true,
-      data: {
-        verified: true,
-        status: 'verified',
-        last_seen_at: lastEventAt,
-        last_event_name: lastEventName,
-        last_event_url: lastEventUrl,
-        site_key: site.site_key,
-        domain: lastEventDomain || site.domain,
-        message: 'Snippet verified successfully!'
-      },
+      data: statusData,
       error: null
     })
   } catch (_err) {
@@ -128,11 +81,39 @@ router.get('/status', validateSiteKey, requireSiteMembership, async (req, res) =
       data: {
         verified: false,
         status: 'error',
-        message: 'Verification check failed',
         last_seen_at: null,
-        domain: null
+        last_event_name: null,
+        last_event_url: null,
+        site_key: req.site?.site_key || null,
+        domain: null,
+        message: 'Verification check failed'
       },
       error: null
+    })
+  }
+})
+
+router.get('/ping', async (req, res) => {
+  return res.status(200).json({ success: true, service: 'install-ping' })
+})
+
+router.get('/doctor', validateSiteKey, requireSiteMembership, async (req, res) => {
+  try {
+    const site = req.site
+    const verificationToken = req.query.verification_token || null
+    const diagnostics = await getSetupDiagnostics({ site, verificationToken })
+
+    return res.status(200).json({
+      success: true,
+      data: diagnostics,
+      error: null
+    })
+  } catch (err) {
+    console.error('[install/doctor] failed:', err?.message || err)
+    return res.status(500).json({
+      success: false,
+      data: null,
+      error: 'Diagnostics check failed'
     })
   }
 })

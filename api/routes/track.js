@@ -1,7 +1,7 @@
 import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { v4 as uuidv4 } from 'uuid'
-import { normalizeUtm, redactPiiFromObject, isPathExcluded, extractCustomParams, sanitizeClientTimestamp, sanitizeValueTrack } from '../lib/utils.js'
+import { normalizeUtm, redactPiiFromObject, isPathExcluded, extractCustomParams, sanitizeClientTimestamp, sanitizeValueTrack, sanitizeVerificationToken } from '../lib/utils.js'
 import { resolveClientIp } from '../lib/ip-resolver.js'
 import { ph } from '../lib/posthog.js'
 
@@ -167,6 +167,7 @@ export async function track(req, res) {
         st_network: sanitizeValueTrack(req.body.st_network),
         st_device: sanitizeValueTrack(req.body.st_device),
         st_matchtype: sanitizeValueTrack(req.body.st_matchtype),
+        st_verify: sanitizeVerificationToken(req.body.st_verify),
         ai_source: enriched.ai_source,
         device_type: enriched.device_type,
         browser_name: enriched.browser_name,

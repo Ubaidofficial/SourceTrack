@@ -555,3 +555,25 @@ export function extractCustomParams(pageUrl, allowlist) {
 
   return customProps
 }
+
+/**
+ * Sanitizes a client-provided verification token:
+ * - Stringify and trim inputs.
+ * - Remove ASCII control characters ([\x00-\x1F\x7F]).
+ * - Cap length to maximum 100 characters.
+ * - Strip any characters except alphanumeric characters (a-zA-Z0-9), underscores (_), and hyphens (-).
+ * - Return null for empty or invalid values.
+ *
+ * @param {*} value
+ * @returns {string|null}
+ */
+export function sanitizeVerificationToken(value) {
+  if (value === null || value === undefined) return null
+  const str = String(value).trim()
+  if (!str) return null
+  const clean = str.replace(/[\x00-\x1F\x7F]/g, '')
+  if (!clean) return null
+  const sliced = clean.slice(0, 100)
+  const safe = sliced.replace(/[^a-zA-Z0-9_-]/g, '')
+  return safe || null
+}

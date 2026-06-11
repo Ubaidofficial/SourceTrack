@@ -4,6 +4,7 @@ import { queryHogQL } from '../lib/posthog.js'
 import { getSupabase as getSupabaseAdmin } from '../lib/supabase.js'
 import { esc, isValidTimezone, getLocalDateString, getPaddedUtcDateRange } from '../lib/utils.js'
 import { channelFromEvent } from '../lib/channel-classifier.js'
+import { getSetupDiagnostics } from '../lib/setup-doctor.js'
 
 
 const router = Router()
@@ -503,117 +504,21 @@ router.get('/tracking-health', validateSiteKey, requireSiteMembership, async (re
       throw new Error(error?.message || 'Site not found')
     }
 
-    const lastSeen = site.last_seen_at ? new Date(site.last_seen_at) : null
-    const registeredDomain = (site.domain || '').replace(/^www\./i, '')
-    const onboardingState = site.onboarding_state || {}
-
-    const lastEventAt = onboardingState.last_event_at
-    const lastEventName = onboardingState.last_event_name || null
-    const lastEventUrl = onboardingState.last_event_url || null
-    const lastEventDomain = onboardingState.last_event_domain || null
-
-    let status = 'pending'
-    let severity = 'info'
-    let message = 'We are waiting for your first tracking event.'
-    const checks = []
-
-    if (!lastSeen) {
-      // Pending state
-      checks.push({
-        label: 'Tracker events',
-        status: 'pending',
-        detail: 'No events have been received yet'
-      })
-      checks.push({
-        label: 'Domain match',
-        status: 'pending',
-        detail: 'Waiting for event domain telemetry'
-      })
-    } else {
-      const now = Date.now()
-      const diffMs = now - lastSeen.getTime()
-      const diffHours = diffMs / (1000 * 60 * 60)
-
-      let eventsPassed = false
-      let domainPassed = false
-
-      // Check 1: Event freshness
-      if (diffHours <= 24) {
-        checks.push({
-          label: 'Tracker events',
-          status: 'passed',
-          detail: 'Last event received recently'
-        })
-        eventsPassed = true
-      } else if (diffHours <= 48) {
-        checks.push({
-          label: 'Tracker events',
-          status: 'warning',
-          detail: `Last event received ${Math.round(diffHours)} hours ago`
-        })
-      } else {
-        checks.push({
-          label: 'Tracker events',
-          status: 'failed',
-          detail: 'No events received in over 48 hours'
-        })
-      }
-
-      // Check 2: Domain match
-      const eventDomain = (lastEventDomain || '').replace(/^www\./i, '')
-      if (registeredDomain && eventDomain) {
-        if (registeredDomain.toLowerCase() === eventDomain.toLowerCase()) {
-          checks.push({
-            label: 'Domain match',
-            status: 'passed',
-            detail: 'Events match registered domain'
-          })
-          domainPassed = true
-        } else {
-          checks.push({
-            label: 'Domain match',
-            status: 'warning',
-            detail: `Events received from a different domain: ${eventDomain}`
-          })
-        }
-      } else {
-        // If registered domain is missing but we have events, skip warning or label passed
-        checks.push({
-          label: 'Domain match',
-          status: 'passed',
-          detail: 'No registered domain to match against'
-        })
-        domainPassed = true
-      }
-
-      // Overall health logic
-      if (diffHours > 48) {
-        status = 'critical'
-        severity = 'error'
-        message = 'Tracking may be offline. We have not received an event in over 48 hours.'
-      } else if (diffHours > 24 || !domainPassed) {
-        status = 'warning'
-        severity = 'warning'
-        message = 'Tracking may need attention. Events are stale or coming from a different domain.'
-      } else {
-        status = 'healthy'
-        severity = 'success'
-        message = 'Tracking is healthy. We received an event recently.'
-      }
-    }
+    const diagnostics = await getSetupDiagnostics({ site })
 
     return res.status(200).json({
       success: true,
       data: {
-        status,
-        severity,
-        last_seen_at: site.last_seen_at,
-        last_event_name: lastEventName,
-        last_event_domain: lastEventDomain,
-        last_event_url: lastEventUrl,
-        registered_domain: site.domain,
-        message,
-        checks
+        status: diagnostics.status,
+        severity: diagnostics.severity,
+        last_seen_at: diagnostics.tracker_install.last_seen_at,
+        last_event_name: diagnostics.tracker_install.last_event_name,
+        last_event_domain: diagnostics.domain_match.event_domain,
+        last_event_url: diagnostics.domain_match.last_event_url,
+        registered_domain: diagnostics.domain_match.registered_domain,
+        message: diagnostics.message,
+        checks: diagnostics.checks,
+        ...diagnostics
       },
       error: null
     })
