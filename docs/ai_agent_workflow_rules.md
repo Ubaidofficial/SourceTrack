@@ -29,7 +29,7 @@ Every AI-agent session must strictly follow this sequence:
 ---
 
 ## No-commit-before-review protocol
-AI agents are strictly prohibited from committing code automatically after implementation. 
+AI agents are strictly prohibited from committing code automatically after implementation.
 When the work is complete and validated, the agent must stop and output:
 ```txt
 Please review. I will not commit until explicitly approved.
