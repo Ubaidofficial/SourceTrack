@@ -97,8 +97,7 @@ But the **operational foundation was built slower than the product**. The workfl
 
 > Use this sequence. Each session has its own acceptance criteria in §11 and the strategy chapter it belongs to. **Do not start a session until the prior phase's blockers are addressed or explicitly deferred with reasoning.** CI must be green before the next session begins.
 
-**The immediate next session is Session 139I-B.**
-
+**The immediate next session is Session 139I-C.**
 **No new feature work / Phase C-D work should begin while any P0 operational blocker remains open unless explicitly approved by the user.**
 
 **Phase 0 — Stop the bleeding (process + local safety)**
@@ -111,7 +110,8 @@ But the **operational foundation was built slower than the product**. The workfl
 **Phase 1 — Close paid-beta P0 blockers**
 - **139H** — Production Supabase Backup/PITR Review + Staging Restore Drill Plan. *(Completed)*
 - **139I** — Staging Schema Bootstrap / Safe Schema Setup. *(Completed planning/audit)*
-- **139I-B** — Recover Base Schema Source of Truth + Bootstrap Execution.
+- **139I-B** — Recover Base Schema Source of Truth. *(Completed)*
+- **139I-C** — Staging Schema Bootstrap Execution.
 - **139J** — Stripe Test Catalog Correction + Stripe E2E on Staging Only.
 - **139K** — Verify Production Env/Secrets, IP Resolver Mode, CORS, Tracker/API URLs in consoles.
 - **139L** — Confirm beta Terms/Privacy disclosure flow before payment.

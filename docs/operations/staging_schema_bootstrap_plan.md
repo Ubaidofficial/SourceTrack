@@ -12,7 +12,7 @@ This document defines the planning, risk audit, and proposed bootstrap commands 
 * **Execution Status:** Planning and audit are complete. No migration, seed, reset, or schema setup commands have been executed during Session 139I. Staging database remains unmutated. Staging schema bootstrap execution is currently **BLOCKED**.
 * **Access Status:** **BLOCKED**. Database connection credentials (host, port, user, password) for staging, as well as the staging service-role API key, are not configured locally. Actual execution is blocked until staging connection credentials are provided.
 * **Safety Verification:** Staging ref is confirmed in local env files. No production credentials or configurations are active in local development.
-* **Next Task:** **Session 139I-B — Recover Base Schema Source of Truth + Bootstrap Execution**. Session 139J (Stripe E2E) is blocked until the staging schema bootstrap is successfully executed and verified.
+* **Next Task:** **Session 139I-C — Staging Schema Bootstrap Execution**. Session 139J (Stripe E2E) remains blocked until Session 139I-C succeeds and is verified.
 
 ---
 
@@ -148,3 +148,15 @@ When the schema bootstrap is executed in a future session, the operator must com
   3. `SELECT count(*) FROM attributed_conversions;` -> [Count]
 * **Bootstrap Status:** [SUCCESS / FAILED]
 ```
+
+---
+
+## 12. Session 139I-B Recovery Findings
+
+* **Schema-Only Dump Created:** **Yes**. Reconstructed using production database schema metadata via the Supabase MCP metadata query tool.
+* **Missing Tables Recovered:** **Yes**. Core table base schemas (`pageviews`, `custom_events`, `attributed_conversions`, `campaign_costs`, `data_quality_reports`) have been recovered and are defined in [schema_base_recovered.sql](../../supabase/schema_base_recovered.sql).
+* **Data-Copy Patterns Absent:** **Yes**. Checked and verified that no `COPY` or `INSERT INTO` statements exist in the recovered schema file.
+* **Secret Patterns Absent:** **Yes**. Checked and verified that no passwords, tokens, keys, service role keys, or connection URLs are present in the recovered schema file.
+* **Staging DB Credentials Available:** **No**. Database connection credentials for staging are not configured locally.
+* **Staging Bootstrap Setup Run:** **No**. Execution remains **BLOCKED** pending database connection credentials.
+* **Exact Next Step:** The operator must provide database connection credentials (host, port, user, password) for the staging database (`nrsvpwzekfrdrzkoecfk`) to apply `supabase/schema_base_recovered.sql` and run newer migrations, or execute the bootstrap via the Supabase Console / CLI.

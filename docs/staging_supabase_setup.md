@@ -41,7 +41,7 @@ Local `.env`, `.env.local`, and `.env.staging` now target the staging Supabase p
 ---
 
 ## 4. Environment Safety Boot Guard (Session 138D)
-A reusable environment safety boot guard has been implemented in [api/lib/environment-safety.js](file:///Users/ubaid/Desktop/trackiq/api/lib/environment-safety.js) and executed early via the bootstrap entrypoint [api/bootstrap.js](file:///Users/ubaid/Desktop/trackiq/api/bootstrap.js) before [api/index.js](file:///Users/ubaid/Desktop/trackiq/api/index.js) is dynamically evaluated.
+A reusable environment safety boot guard has been implemented in [environment-safety.js](../api/lib/environment-safety.js) and executed early via the bootstrap entrypoint [bootstrap.js](../api/bootstrap.js) before [index.js](../api/index.js) is dynamically evaluated.
 
 * **Non-production Guard:** If `NODE_ENV !== 'production'`, the API refuses to start when `SUPABASE_URL` contains the production ref `zxjjjsipafojhzkkumvh` (triggering an exit code of `1` with a loud clear error message).
 * **Production Access:** Production deployments (`NODE_ENV=production`) remain unblocked and can connect to the production Supabase database ref.

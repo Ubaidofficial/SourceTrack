@@ -1,4 +1,4 @@
-# SourceTrack Release Checklist Gate — Session 139I
+# SourceTrack Release Checklist Gate — Session 139I-C
 
 **Engineering Control Document**
 **Readiness Status:** 🚨 **NOT READY FOR PAID-BETA RELEASE** (Blocked by open P0/P1 items)

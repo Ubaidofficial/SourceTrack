@@ -20,30 +20,30 @@ This document maps the findings of our paid-beta docs truthfulness audit, curren
 ## 2. Files Corrected
 
 ### Standardizing Tracker Paths to Canonical Root Paths:
-- **[README.md](file:///Users/ubaid/Desktop/trackiq/README.md)** (Updated architecture diagram and script paths)
-- **[dashboard/src/pages/Analytics.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Analytics.jsx)**
-- **[dashboard/src/pages/Integrations.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Integrations.jsx)**
-- **[dashboard/src/pages/Settings.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Settings.jsx)** (Standardized cookieless snippet to `/tracker.cookieless.min.js`)
-- **[dashboard/src/pages/SolutionLeadGen.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/SolutionLeadGen.jsx)**
-- **[dashboard/src/pages/SolutionEcommerce.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/SolutionEcommerce.jsx)**
-- **[dashboard/src/pages/SolutionAgency.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/SolutionAgency.jsx)**
-- **[dashboard/src/pages/SolutionSaaS.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/SolutionSaaS.jsx)**
-- **[dashboard/src/pages/docs/DocsFramer.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/docs/DocsFramer.jsx)**
-- **[dashboard/src/pages/docs/DocsShopify.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/docs/DocsShopify.jsx)**
-- **[dashboard/src/pages/docs/DocsWebflow.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/docs/DocsWebflow.jsx)**
-- **[dashboard/src/pages/docs/DocsWordPress.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/docs/DocsWordPress.jsx)**
-- **[dashboard/src/pages/docs/DocsGTM.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/docs/DocsGTM.jsx)**
-- **[dashboard/src/pages/docs/DocsQuickstart.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/docs/DocsQuickstart.jsx)**
-- **[dashboard/src/pages/developers/DevelopersTracker.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/developers/DevelopersTracker.jsx)**
+- **[README.md](../README.md)** (Updated architecture diagram and script paths)
+- **[Analytics.jsx](../dashboard/src/pages/Analytics.jsx)**
+- **[Integrations.jsx](../dashboard/src/pages/Integrations.jsx)**
+- **[Settings.jsx](../dashboard/src/pages/Settings.jsx)** (Standardized cookieless snippet to `/tracker.cookieless.min.js`)
+- **[SolutionLeadGen.jsx](../dashboard/src/pages/SolutionLeadGen.jsx)**
+- **[SolutionEcommerce.jsx](../dashboard/src/pages/SolutionEcommerce.jsx)**
+- **[SolutionAgency.jsx](../dashboard/src/pages/SolutionAgency.jsx)**
+- **[SolutionSaaS.jsx](../dashboard/src/pages/SolutionSaaS.jsx)**
+- **[DocsFramer.jsx](../dashboard/src/pages/docs/DocsFramer.jsx)**
+- **[DocsShopify.jsx](../dashboard/src/pages/docs/DocsShopify.jsx)**
+- **[DocsWebflow.jsx](../dashboard/src/pages/docs/DocsWebflow.jsx)**
+- **[DocsWordPress.jsx](../dashboard/src/pages/docs/DocsWordPress.jsx)**
+- **[DocsGTM.jsx](../dashboard/src/pages/docs/DocsGTM.jsx)**
+- **[DocsQuickstart.jsx](../dashboard/src/pages/docs/DocsQuickstart.jsx)**
+- **[DevelopersTracker.jsx](../dashboard/src/pages/developers/DevelopersTracker.jsx)**
 
 ### Software/Docs Compliance & Softening Copy:
-- **[dashboard/src/pages/developers/DevelopersTracker.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/developers/DevelopersTracker.jsx)** (Replaced "privacy-compliant" with "privacy-conscious")
+- **[DevelopersTracker.jsx](../dashboard/src/pages/developers/DevelopersTracker.jsx)** (Replaced "privacy-compliant" with "privacy-conscious")
 
 ### GSC Connection Frontend Gate:
-- **[dashboard/src/pages/Integrations.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Integrations.jsx)** (Added `hasFeature(site?.plan, 'gsc_seo_revenue')` gate to connect/manage GSC buttons, displaying lock state for Free/Starter plans)
+- **[Integrations.jsx](../dashboard/src/pages/Integrations.jsx)** (Added `hasFeature(site?.plan, 'gsc_seo_revenue')` gate to connect/manage GSC buttons, displaying lock state for Free/Starter plans)
 
 ### Pricing Environment Variable Alignment:
-- **[.env.example](file:///Users/ubaid/Desktop/trackiq/.env.example)** & **[README.md](file:///Users/ubaid/Desktop/trackiq/README.md)** (Updated `STRIPE_PRICE_ID_BUSINESS` references to modern canonical `STRIPE_PRICE_ID_SCALE` variable)
+- **[.env.example](../.env.example)** & **[README.md](../README.md)** (Updated `STRIPE_PRICE_ID_BUSINESS` references to modern canonical `STRIPE_PRICE_ID_SCALE` variable)
 
 ---
 

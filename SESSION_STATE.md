@@ -1,8 +1,10 @@
-Session: 139I — Staging Schema Bootstrap / Safe Schema Setup
-Last Completed: Reviewed staging schema bootstrap prerequisites, audited SQL migration risk patterns, identified core database table definitions tracking gap, and created docs/operations/staging_schema_bootstrap_plan.md.
+Session: 139I-B — Recover Base Schema Source of Truth
+Last Completed: Recovered base schema SQL snapshot for the 5 missing core tables from production database metadata and saved it to supabase/schema_base_recovered.sql. Audited file for secrets and data payloads (passed). Updated staging bootstrap plan. Staging bootstrap execution did not run.
 Control Doc: docs/development_workflow_master_plan.md is the source of truth for session ordering and gates.
 AI-Agent Workflow: AI-agent workflow rules are governed by docs/ai_agent_workflow_rules.md. No AI-agent may commit or push before raw diff review and explicit user approval.
 
+Prior Session: 139I — Staging Schema Bootstrap / Safe Schema Setup
+Last Completed (139I): Reviewed staging schema bootstrap prerequisites, audited SQL migration risk patterns, identified core database table definitions tracking gap, and created docs/operations/staging_schema_bootstrap_plan.md.
 Prior Session: 139H — Production Supabase Backup/PITR Review + Staging Restore Drill Plan
 Last Completed (139H): Created a safe, truthful, operator-facing backup/PITR and staging restore drill runbook (docs/operations/supabase_backup_restore_runbook.md), updated the release checklist gate to reference the runbook, and extended QA checks to verify runbook compliance.
 Prior Session: 139G — Release Checklist Gate + Paid-Beta Operational Readiness Alignment
@@ -20,9 +22,10 @@ Last Completed (139A): Added paid attribution parameter coverage (utm_id, st_cam
 P0-3 STATUS: Daily backups are now verified; PITR remains an optional but strongly recommended paid add-on / accepted risk if left disabled. PITR is not enabled / not accepted as enabled. Do not enable PITR without explicit cost approval.
 🚩 HEADLINE FINDING F6 (P0 staging blocker): RESOLVED. Staging database exists (ref `nrsvpwzekfrdrzkoecfk`). Safety boot guard is active in local/dev API server.
 Prior findings still open: 135 F1 stale test prices; 135 F3 pv_limit metadata; 135 F4 request-body redirect URLs.
-Next Task: Session 139I-B — Recover Base Schema Source of Truth + Bootstrap Execution. Recover core table schema base (pageviews, custom_events, attributed_conversions, campaign_costs) via schema-only dump, and execute the bootstrap sequence on staging. Stripe E2E (139J) is blocked until staging schema bootstrap is executed and verified.
+Verdict (134): CONDITIONAL GO — safe for 3–5 hand-picked single-instance beta customers once remaining P0 conditions met.
+Next Task: Session 139I-C — Staging Schema Bootstrap Execution (currently blocked pending staging DB connection credentials). Stripe E2E (Session 139J) remains blocked until 139I-C succeeds and is verified.
 Roadmap Queue:
-- Session 139I-B — Recover Base Schema Source of Truth + Bootstrap Execution.
+- Session 139I-C — Staging Schema Bootstrap Execution.
 - Session 139J — Stripe Test Catalog Correction + Stripe E2E on Staging Only.
 - Session 139K — Verify Production Env/Secrets, IP Resolver Mode, CORS, Tracker/API URLs in consoles.
 - Session 139L — Confirm beta Terms/Privacy disclosure flow before payment.

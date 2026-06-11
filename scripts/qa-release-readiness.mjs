@@ -149,6 +149,35 @@ if (!fs.existsSync(PLAN_PATH)) {
 }
 
 
+// 6. Verify recovered base schema is clean of data-copy / secrets if it exists
+const RECOVERED_SCHEMA_PATH = path.join(ROOT_DIR, 'supabase/schema_base_recovered.sql');
+if (fs.existsSync(RECOVERED_SCHEMA_PATH)) {
+  const schemaContent = fs.readFileSync(RECOVERED_SCHEMA_PATH, 'utf8');
+  console.log('✅ Recovered base schema supabase/schema_base_recovered.sql exists.');
+
+  const forbiddenSchemaPatterns = [
+    { pattern: /\bCOPY \b/i, message: 'Contains COPY command (data payload)' },
+    { pattern: /\bINSERT INTO\b/i, message: 'Contains INSERT INTO command (data payload)' },
+    { pattern: /\bPASSWORD\b/i, message: 'Contains PASSWORD keyword' },
+    { pattern: /\bSECRET\b/i, message: 'Contains SECRET keyword' },
+    { pattern: /\bTOKEN\b/i, message: 'Contains TOKEN keyword' },
+    { pattern: /\bSERVICE_ROLE\b/i, message: 'Contains SERVICE_ROLE keyword' },
+    { pattern: /\banonkey\b/i, message: 'Contains anonkey keyword' },
+    { pattern: /sbp_/i, message: 'Contains sbp_ keyword' },
+    { pattern: /eyJhbGciOi/i, message: 'Contains JWT header' },
+    { pattern: /postgres:\/\//i, message: 'Contains postgres connection URL' }
+  ];
+
+  for (const { pattern, message } of forbiddenSchemaPatterns) {
+    if (pattern.test(schemaContent)) {
+      console.error(`❌ ERROR in Recovered Base Schema: ${message} (pattern matched: ${pattern}).`);
+      hasFailed = true;
+    }
+  }
+}
+
+
+
 console.log('\n==================================================');
 if (!hasFailed) {
   console.log('PASS — Release readiness checklist verified (all blockers open).');
