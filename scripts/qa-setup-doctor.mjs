@@ -127,6 +127,13 @@ if (fs.existsSync(setupDoctorCardFile)) {
   const hasRawProperties = content.includes('raw_properties') || content.includes('rawProperties')
   const hasJsonStringifyEvent = /JSON\.stringify\(\s*selectedEvent|JSON\.stringify\(\s*.*properties/i.test(content)
   assertRule(!hasRawProperties && !hasJsonStringifyEvent, 'SetupDoctorCard does not render raw event properties JSON')
+
+  // Additional QA assertions for Session 139E
+  assertRule(!content.includes("fetch('/api/track") && !content.includes("fetchApi('/api/track"), 'SetupDoctorCard.jsx does not call /api/track')
+  assertRule(content.includes("fetchApi('/install/ping')"), 'SetupDoctorCard.jsx uses /install/ping only for browser reachability')
+  assertRule(content.includes("params.set('verification_token', verificationToken)"), 'SetupDoctorCard.jsx uses verification_token only with /install/doctor')
+  assertRule(!content.includes('tokenInput'), 'no manual raw st_verify Token input returns')
+  assertRule(!content.includes("status === 'healthy' || diagnostics.status === 'test_env'"), 'no test_env triggers onVerificationSuccess')
 }
 
 if (failures > 0) {
