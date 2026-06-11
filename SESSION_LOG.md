@@ -2097,3 +2097,31 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 
 ### 6. Documentation
 - Created `docs/qa/report_builder_saved_reports_export_qa_139M-4.md` detailing route redirection behaviors, matrices, tenant security findings, and validation outputs.
+
+---
+
+## Session 139M-5 — Campaigns, Paid Acquisition, Costs, GSC/SEO Revenue QA
+
+**Date:** 2026-06-11
+**Branch:** `main`
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa-release-readiness)
+**Status:** BLOCKED — campaign/cost/SEO attribution not verified.
+
+### 1. Verification of Route Redirections
+- Verified redirect behavior for protected routes (`/campaigns`, `/app/integrations`, `/seo-revenue`) to `/login` when unauthorized.
+- Verified that the public documentation page `/docs/platforms/google-ads` and developer guide `/developers/campaign-costs` are fully accessible.
+
+### 2. Campaigns, Cost Import, and GSC/SEO Audits
+- Audited campaigns overview endpoints (`api/routes/campaigns.js`) and Campaigns component (`Campaigns.jsx`) for UTM parameters, metric tiles, ROAS/CPA calculations, and warning tooltips for mixed currency spend.
+- Audited manual and CSV ad cost import endpoints (`api/routes/campaign-costs.js`) for validation helpers (`validateAdCostRows`), aggregation, and tenant scoping (`site_id = req.site.id` and `site_key = req.site.site_key`).
+- Audited GSC connection and SEO revenue allocation endpoints (`api/routes/google-search-console.js`, `api/routes/seo-revenue.js`) and organic query allocations dashboard (`SEORevenue.jsx`) for query mappings, click-share allocation, and GSC daily performance cache scoping.
+
+### 3. Truthfulness Audit
+- Performed a codebase-wide grep scan for automatic platform cost syncing, keyword revenue guarantees, or compliance certifications.
+- Confirmed zero user-facing overclaims exist.
+
+### 4. Design & Simplicity Audit
+- Assessed campaign and GSC pages against DataFast Simplicity guidelines.
+
+### 5. Documentation
+- Created `docs/qa/campaigns_paid_costs_gsc_seo_qa_139M-5.md` detailing route redirection behaviors, matrices, tenant security findings, and validation outputs.
