@@ -30,13 +30,21 @@ export function SiteProvider({ children }) {
 
       if (sitesList.length > 0) {
         const savedKey = window.localStorage.getItem('sourcetrack_active_site_key')
-        const matched = sitesList.find(s => s.site_key === savedKey)
-        if (matched) {
-          setActiveSite(matched)
+        const completedSites = sitesList.filter(s => s.onboarding_completed)
+        const incompleteSites = sitesList.filter(s => !s.onboarding_completed)
+
+        const savedSite = sitesList.find(s => s.site_key === savedKey)
+
+        const nextActiveSite = (savedSite && savedSite.onboarding_completed)
+          ? savedSite
+          : (completedSites[0] || incompleteSites[0] || null)
+
+        if (nextActiveSite) {
+          setActiveSite(nextActiveSite)
+          window.localStorage.setItem('sourcetrack_active_site_key', nextActiveSite.site_key)
         } else {
-          // Fallback to first site and save to localStorage
-          setActiveSite(sitesList[0])
-          window.localStorage.setItem('sourcetrack_active_site_key', sitesList[0].site_key)
+          setActiveSite(null)
+          window.localStorage.removeItem('sourcetrack_active_site_key')
         }
       } else {
         setActiveSite(null)

@@ -95,7 +95,9 @@ function ProtectedRoute({ children }) {
       }
 
       try {
-        const data = await fetchApi('/onboarding/me')
+        const savedKey = window.localStorage.getItem('sourcetrack_active_site_key')
+        const url = savedKey ? `/onboarding/me?site_key=${savedKey}` : '/onboarding/me'
+        const data = await fetchApi(url)
         if (!alive) return
         setOnboarding({
           loading: false,

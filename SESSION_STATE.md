@@ -1,5 +1,5 @@
-Session: 139I-D — Browser Verification (PASS WITH LIMITS)
-Last Completed: Session 139I-D — Browser Verification is PASS WITH LIMITS. Real browser QA confirmed onboarding now completes, Tracking Doctor behaves gracefully, the staging snippet URL is correct, Copy Code feedback works, Verify Later completes onboarding, and dashboard loads after completing the gate site. Remaining P2 bug: multi-site gate resolves the oldest site, so users with an older incomplete site can be bounced back after completing a newer site (`/onboarding/me` shares the same root issue). Paid-beta onboarding is NOT fully clean yet. Next task: Session 139I-E — Fix Multi-Site Onboarding Gate Edge Case.
+Session: 139I-E — Fix Multi-Site Onboarding Gate Edge Case (PARTIAL)
+Last Completed: Session 139I-E — Fix Multi-Site Onboarding Gate Edge Case is PARTIAL. Implemented deterministic site resolution using distinct Dashboard/App Gate and Onboarding policies. Fixed backend /api/onboarding/me and /api/onboarding/status, sorted /api/sites descending, and updated frontend App.jsx, Onboarding.jsx, and SiteContext.jsx to implement these policies. Syntactic validation, whitespace checks, and production build succeeded. Manual browser QA pending.
 Control Doc: docs/development_workflow_master_plan.md is the source of truth for session ordering and gates.
 AI-Agent Workflow: AI-agent workflow rules are governed by docs/ai_agent_workflow_rules.md. No AI-agent may commit or push before raw diff review and explicit user approval.
 
@@ -32,9 +32,9 @@ P0-3 STATUS: Daily backups are now verified; PITR remains an optional but strong
 🚩 HEADLINE FINDING F6 (P0 staging blocker): RESOLVED. Staging database exists (ref `nrsvpwzekfrdrzkoecfk`). Safety boot guard is active in local/dev API server.
 Prior findings still open: 135 F4 request-body redirect URLs.
 Verdict (134): CONDITIONAL GO — safe for 3–5 hand-picked single-instance beta customers once remaining P0 conditions met.
-Next Task: Session 139I-E — Fix Multi-Site Onboarding Gate Edge Case
+Next Task: Session 139I-E — Browser Verification
 Roadmap Queue:
-- Session 139I-E — Fix Multi-Site Onboarding Gate Edge Case (deterministic site resolution: active selected site → latest incomplete onboarding site → latest site; avoid oldest-site trap; fix `/onboarding/me`; resume existing incomplete site at Step 1 instead of creating a second site; browser QA for clean single-site, older-incomplete+newer-complete, direct `/dashboard`, direct `/onboarding`)
+- Session 139I-E — Browser Verification (E2E browser QA verification of multi-site onboarding gate scenarios on staging)
 - Session 139L — Confirm beta Terms/Privacy disclosure flow before payment.
 Build: ✅ passing (node --check, git diff --check, dashboard vite build, qa:static, required-grep clean)
 Branch: main

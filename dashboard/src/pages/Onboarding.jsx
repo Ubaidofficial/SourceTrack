@@ -87,34 +87,18 @@ export default function Onboarding() {
 
   async function loadOnboardingStatus() {
     try {
-      const { data: member } = await supabase
-        .from('company_members')
-        .select('company_id')
-        .eq('user_id', user.id)
-        .maybeSingle()
+      const savedKey = window.localStorage.getItem('sourcetrack_active_site_key')
+      const url = savedKey ? `/onboarding/me?mode=onboarding&site_key=${savedKey}` : '/onboarding/me?mode=onboarding'
+      const site = await fetchApi(url)
 
-      const query = supabase
-        .from('sites')
-        .select('id, site_key, onboarding_completed, onboarding_state, domain')
-        .order('created_at', { ascending: true })
-        .limit(1)
-
-      if (member?.company_id) {
-        query.eq('company_id', member.company_id)
-      } else {
-        query.eq('owner_id', user.id)
-      }
-      const { data: sites } = await query
-
-      const site = sites?.[0]
-      if (!site) return
+      if (!site || !site.has_site) return
 
       if (site.onboarding_completed) {
         navigate('/dashboard', { replace: true })
         return
       }
 
-      setSiteId(site.id)
+      setSiteId(site.site_id)
       setSiteKey(site.site_key)
 
       const state = site.onboarding_state || {}
@@ -122,7 +106,7 @@ export default function Onboarding() {
       if (state.current_step && state.current_step > 1) {
         stepToSet = state.current_step
         setStep(state.current_step)
-        setBusinessType(state.business_type || null)
+        setBusinessType(site.business_type || state.business_type || null)
         setInstallMethod(state.install_method || null)
         setSelectedConversions(state.selected_conversions || [])
       }
@@ -133,14 +117,14 @@ export default function Onboarding() {
           setStep(2)
         }
       }
-      if (state.business_type && stepToSet < 3) {
+      if ((site.business_type || state.business_type) && stepToSet < 3) {
         stepToSet = 2
         setStep(2)
       }
 
-      if (stepToSet >= 4 && site.id) {
+      if (stepToSet >= 4 && site.site_id) {
         try {
-          const data = await fetchApi(`/install/snippet?site_id=${site.id}`)
+          const data = await fetchApi(`/install/snippet?site_id=${site.site_id}`)
           if (data?.snippet) setSnippet(data.snippet)
         } catch (_err) {
           const trackerUrl = (import.meta.env.VITE_TRACKER_BASE_URL || import.meta.env.VITE_API_URL || window.location.origin).replace(/\/+$/, '')

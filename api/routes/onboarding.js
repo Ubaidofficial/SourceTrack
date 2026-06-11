@@ -21,23 +21,70 @@ function normalizeDomain(input) {
   }
 }
 
-async function getFirstUserSite(user) {
+async function getUserSitesSorted(user) {
   const query = getSupabase()
     .from('sites')
     .select('id, site_key, domain, name, business_type, onboarding_completed, onboarding_state, company_id, owner_id')
-    .order('created_at', { ascending: true })
-    .limit(1)
+    .order('created_at', { ascending: false })
 
   if (user.role === 'super_admin') {
     const { data } = await query
-    return data?.[0] || null
+    return data || []
   }
 
   if (user.company_id) query.eq('company_id', user.company_id)
   else query.eq('owner_id', user.id)
 
   const { data } = await query
-  return data?.[0] || null
+  return data || []
+}
+
+function resolveDashboardSite(user, req, sites) {
+  if (!sites || sites.length === 0) return null
+
+  const selectedKey = req.query?.site_key || req.headers?.['x-site-key'] || req.headers?.['x-active-site-key']
+  const selectedId = req.query?.site_id || req.headers?.['x-site-id']
+
+  if (selectedKey) {
+    const matched = sites.find(s => s.site_key === selectedKey)
+    if (matched && matched.onboarding_completed) return matched
+  }
+  if (selectedId) {
+    const matched = sites.find(s => String(s.id) === String(selectedId))
+    if (matched && matched.onboarding_completed) return matched
+  }
+
+  const completed = sites.find(s => s.onboarding_completed)
+  if (completed) return completed
+
+  const incomplete = sites.find(s => !s.onboarding_completed)
+  if (incomplete) return incomplete
+
+  return null
+}
+
+function resolveOnboardingSite(user, req, sites) {
+  if (!sites || sites.length === 0) return null
+
+  const selectedKey = req.query?.site_key || req.headers?.['x-site-key'] || req.headers?.['x-active-site-key']
+  const selectedId = req.query?.site_id || req.headers?.['x-site-id']
+
+  if (selectedKey) {
+    const matched = sites.find(s => s.site_key === selectedKey)
+    if (matched && !matched.onboarding_completed) return matched
+  }
+  if (selectedId) {
+    const matched = sites.find(s => String(s.id) === String(selectedId))
+    if (matched && !matched.onboarding_completed) return matched
+  }
+
+  const incomplete = sites.find(s => !s.onboarding_completed)
+  if (incomplete) return incomplete
+
+  const completed = sites.find(s => s.onboarding_completed)
+  if (completed) return completed
+
+  return null
 }
 
 function userCanAccessSite(user, site) {
@@ -83,7 +130,12 @@ function validateStepData(step, data) {
 // Used by the dashboard ProtectedRoute to decide whether to gate onto onboarding.
 router.get('/me', async (req, res) => {
   try {
-    const site = await getFirstUserSite(req.user)
+    const sites = await getUserSitesSorted(req.user)
+    const isOnboardingPage = req.query?.mode === 'onboarding'
+
+    const site = isOnboardingPage
+      ? resolveOnboardingSite(req.user, req, sites)
+      : resolveDashboardSite(req.user, req, sites)
 
     if (!site) {
       return res.status(200).json({
@@ -102,6 +154,7 @@ router.get('/me', async (req, res) => {
         domain: site.domain,
         business_type: site.business_type || site.onboarding_state?.business_type || null,
         onboarding_completed: !!site.onboarding_completed,
+        onboarding_state: site.onboarding_state || {},
         current_step: site.onboarding_state?.current_step || 1
       },
       error: null
@@ -134,6 +187,10 @@ router.post('/site', async (req, res) => {
     const { data: existing, error: existingErr } = await query.maybeSingle()
     if (existingErr) throw existingErr
 
+    // Step 1 Domain Policy:
+    // 1. If same-domain site exists and is incomplete, resume/update it.
+    // 2. If same-domain site exists and is completed, avoid accidental duplicate and guide/navigate to dashboard.
+    // 3. Different domain inserts a fresh site (no silent duplicate same-domain sites).
     if (existing) {
       if (!userCanAccessSite(req.user, existing)) {
         return res.status(403).json({ success: false, data: null, error: 'Access denied' })
@@ -205,28 +262,19 @@ router.post('/site', async (req, res) => {
 
 router.get('/status', async (req, res) => {
   try {
+    const sites = await getUserSitesSorted(req.user)
+    let site
     const siteId = req.query.site_id
-    if (!siteId) {
-      return res.status(400).json({ success: false, data: null, error: 'site_id is required' })
-    }
 
-    const { data: site, error } = await getSupabase()
-      .from('sites')
-      .select('id, site_key, onboarding_completed, onboarding_state, company_id, owner_id')
-      .eq('id', siteId)
-      .single()
-
-    if (error || !site) {
-      return res.status(404).json({ success: false, data: null, error: 'Site not found' })
-    }
-
-    // Verify user has access to this site
-    if (req.user.role !== 'super_admin') {
-      if (site.company_id && site.company_id !== req.user.company_id) {
-        return res.status(403).json({ success: false, data: null, error: 'Access denied' })
+    if (siteId) {
+      site = sites.find(s => String(s.id) === String(siteId))
+      if (!site) {
+        return res.status(404).json({ success: false, data: null, error: 'Site not found' })
       }
-      if (!site.company_id && site.owner_id !== req.user.id) {
-        return res.status(403).json({ success: false, data: null, error: 'Access denied' })
+    } else {
+      site = resolveOnboardingSite(req.user, req, sites)
+      if (!site) {
+        return res.status(404).json({ success: false, data: null, error: 'No site resolved' })
       }
     }
 
@@ -246,7 +294,7 @@ router.get('/status', async (req, res) => {
         current_step: state.current_step || 1,
         site_id: site.id,
         site_key: site.site_key,
-        business_type: state.business_type || null,
+        business_type: site.business_type || state.business_type || null,
         install_method: state.install_method || null,
         selected_conversions: state.selected_conversions || []
       },

@@ -2,15 +2,42 @@
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
-> **Handoff:** Session 139I-D — Browser Verification is PASS WITH LIMITS. Real browser QA confirmed onboarding now completes, Tracking Doctor behaves gracefully, the staging snippet URL is correct, Copy Code feedback works, Verify Later completes onboarding, and dashboard loads after completing the gate site. Remaining P2 bug: multi-site gate resolves the oldest site, so users with an older incomplete site can be bounced back after completing a newer site (`/onboarding/me` shares the same root issue). Paid-beta onboarding is NOT fully clean yet. Next task: Session 139I-E — Fix Multi-Site Onboarding Gate Edge Case. Browser verification appended to [browser_onboarding_ui_qa_139I-D.md](docs/qa/browser_onboarding_ui_qa_139I-D.md).
+> **Handoff:** Session 139I-E — Fix Multi-Site Onboarding Gate Edge Case is PARTIAL. Implemented deterministic site resolution using distinct Dashboard/App Gate and Onboarding policies on the backend and frontend. Fixed backend endpoints (/me, /status), changed sites list sorting to newest first, and updated App.jsx, Onboarding.jsx, and SiteContext.jsx. Static checks and build passed. Manual browser QA pending on staging. Saved under [multi_site_onboarding_gate_qa_139I-E.md](docs/qa/multi_site_onboarding_gate_qa_139I-E.md).
 >
-> **Prior handoff (Session 139J):** Session 139J — Stripe Test Catalog Correction + Stripe E2E on Staging Only is complete. Corrected Stripe test catalog pricing to match public rates ($29/$79/$149) with pv_limit metadata. Verified E2E checkout session creation, redirection, webhook signature validation, database site plan/limit updates, and event deduplication cache on staging. Documented status endpoint stripe_customer_id bug. Saved under [stripe_staging_e2e_139J.md](docs/qa/stripe_staging_e2e_139J.md).
+> **Prior handoff (Session 139I-D):** Session 139I-D — Browser Verification is PASS WITH LIMITS. Real browser QA confirmed onboarding now completes, Tracking Doctor behaves gracefully, the staging snippet URL is correct, Copy Code feedback works, Verify Later completes onboarding, and dashboard loads after completing the gate site. Next task: Session 139I-E.
 >
-> **Next Task:** Session 139I-E — Fix Multi-Site Onboarding Gate Edge Case (do NOT start 139L yet). Scope: (1) gate must not blindly choose the oldest site; (2) `/onboarding/me` must return the correct active/in-progress site; (3) Step 1 should resume an existing incomplete onboarding site instead of creating a second site; (4) deterministic site resolution — active selected site → latest incomplete onboarding site → latest site, avoiding the oldest-site trap; (5) browser QA for clean single-site user, older-incomplete + newer-complete user, direct `/dashboard`, and direct `/onboarding`.
+> **Next Task:** Session 139I-E — Browser Verification. Scope: E2E browser QA verification of multi-site onboarding gate scenarios on staging.
 >
 > ⚠️ **P0 CONDITIONS BEFORE FIRST PAID CUSTOMER:** (1) Stripe test-mode checkout/webhook evidence [PARTIAL — API/webhook E2E verified on staging; browser billing UI and billing status endpoint pending]; (2) provider-console separation verified [CLOSED - staging project created, local env rewired, safety boot guard active]; (3) Supabase backups verified [PARTIAL - Daily scheduled backups manually verified. PITR is not enabled / not accepted as enabled. Daily backups are now verified; PITR remains an optional but strongly recommended paid add-on / accepted risk if left disabled. Do not enable PITR without explicit cost approval. Staging restore drill remains blocked/not run]; (4) prod env secrets set incl. ST_IP_RESOLVER_MODE=railway; (5) beta Terms/Privacy disclosed in writing.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+
+
+
+## Session 139I-E — Fix Multi-Site Onboarding Gate Edge Case
+**Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety)
+**Status:** **PARTIAL — code-verified.**
+
+### Completed
+1. Centralized Site Resolution Policies: Added user sites loading `getUserSitesSorted` ordering by `created_at` descending. Implemented distinct `resolveDashboardSite` (Dashboard/App Gate policy) and `resolveOnboardingSite` (Onboarding policy) on the backend.
+2. Endpoint Hardening: Updated `/api/onboarding/me` to accept `mode=onboarding` to branch on site resolution policy. Checks explicit selections against authenticated user/company scope only to secure tenant boundaries.
+3. Onboarding Status Fallback: Updated `/api/onboarding/status` to securely fall back to the resolved onboarding site context if `site_id` is omitted.
+4. sites List Ordering: Modified `/api/sites` to return sites descending by `created_at`.
+5. Frontend App Gate Routing: Configured `App.jsx` to pass the local active site key to the `/onboarding/me` call.
+6. Frontend Onboarding Page Update: Replaced direct Supabase oldest-site query in `Onboarding.jsx` with `/api/onboarding/me?mode=onboarding` call, keeping stepper state hydrated reactive to user active site.
+7. Centralized SiteContext Switcher: Updated fallback logic in `SiteContext.jsx` to filter by completed sites first, avoiding onboarding gate traps when an older incomplete site exists.
+8. QA Scenarios Documented: Saved a thorough scenarized QA report under `docs/qa/multi_site_onboarding_gate_qa_139I-E.md`.
+
+### Files changed
+- [api/routes/onboarding.js](api/routes/onboarding.js)
+- [api/routes/sites.js](api/routes/sites.js)
+- [dashboard/src/App.jsx](dashboard/src/App.jsx)
+- [dashboard/src/contexts/SiteContext.jsx](dashboard/src/contexts/SiteContext.jsx)
+- [dashboard/src/pages/Onboarding.jsx](dashboard/src/pages/Onboarding.jsx)
+- [docs/qa/multi_site_onboarding_gate_qa_139I-E.md](docs/qa/multi_site_onboarding_gate_qa_139I-E.md) [NEW]
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
 
 
 ## Session 139I-D — Fix Browser Onboarding UI Blockers
