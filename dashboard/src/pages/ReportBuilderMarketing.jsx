@@ -25,7 +25,7 @@ export default function ReportBuilderMarketing() {
     <MarketingPage seo={SEO} hero={HERO} heroChildren={<ReportBuilderMock />}>
 
       {/* Why report builder matters */}
-      <section className="py-[96px] style={{ background: '#F7FAFA' }}">
+      <section className="py-[96px] bg-[#F7FAFA]">
         <div className="max-w-[1320px] mx-auto px-8">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-7 mb-[54px]">
             <div>

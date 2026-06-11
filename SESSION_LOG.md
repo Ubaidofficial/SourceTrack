@@ -2066,3 +2066,34 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 
 ### 5. Documentation
 - Created `docs/qa/attribution_revenue_ai_attribution_qa_139M-3.md` detailing route redirection behaviors, models matrices, design verdicts, and validation outputs.
+
+---
+
+## Session 139M-4 — Report Builder + Saved Reports + Export QA
+
+**Date:** 2026-06-11
+**Branch:** `main`
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa-release-readiness)
+**Status:** BLOCKED — report builder not verified.
+
+### 1. Verification of Route Redirections
+- Verified redirect behavior for protected routes (`/dashboard`, `/analytics`) to `/login` when unauthorized.
+- Verified that the public `/report-builder` route loads correctly, serving the unauthenticated `ReportBuilderMarketing` landing page and rendering the static `ReportBuilderMock` preview.
+
+### 2. Report Builder, Saved Reports, and CSV Export Audits
+- Audited custom report dimensions (16 parameters), metrics (15 parameters), presets, and templates within `ReportBuilder.jsx`.
+- Audited saved reports endpoints (`api/routes/saved-reports.js`) for tenant scoping, ownership checks (403/404 handling), and visibility flags.
+- Audited CSV export endpoints (`api/routes/export.js`) for column stripping logic, date/filter scoping, and empty-response handling.
+
+### 3. Truthfulness Audit
+- Performed a codebase-wide grep scan for unlimited exports, perfect reports, or GDPR-safe certification guarantees.
+- Confirmed zero user-facing overclaims exist.
+
+### 4. Design & Simplicity Audit
+- Assessed public and mock report surfaces against DataFast Simplicity guidelines.
+
+### 5. Code Fixes
+- Fixed style syntax bug in `ReportBuilderMarketing.jsx` (class string fix).
+
+### 6. Documentation
+- Created `docs/qa/report_builder_saved_reports_export_qa_139M-4.md` detailing route redirection behaviors, matrices, tenant security findings, and validation outputs.

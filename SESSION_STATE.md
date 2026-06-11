@@ -1,5 +1,5 @@
-Session: 139M-3 — Attribution + Revenue Attribution + AI Attribution QA
-Last Completed: Verified redirects to `/login` for all 10 protected attribution-related routes; verified that public marketing pages (`/attribution`, `/ai-referral-tracking`) and `/demo` load successfully, with `/demo` rendering mock metrics and stitched timelines. Checked deterministic test harness (passes 100% locally) and integration test harness (blocked by database credentials). Checked overclaim queries (clean).
+Session: 139M-4 — Report Builder + Saved Reports + Export QA
+Last Completed: Verified redirects to `/login` for protected dashboard and analytics routes; verified that the public `/report-builder` route loads successfully, rendering `ReportBuilderMarketing` page and `ReportBuilderMock` static widgets. Audited saved reports API scoping checks (`site_id = req.site.id` and user-ownership guards) and export route scoping checks (`site_id` verification, internal database ID stripping). Fixed style syntax bug on the public report builder marketing page. All actual authenticated report building, saved reports, and CSV downloads remain blocked by database credentials.
 Control Doc: docs/development_workflow_master_plan.md is the source of truth for session ordering and gates.
 AI-Agent Workflow: AI-agent workflow rules are governed by docs/ai_agent_workflow_rules.md. No AI-agent may commit or push before raw diff review and explicit user approval.
 
@@ -27,8 +27,9 @@ P0-3 STATUS: Daily backups are now verified; PITR remains an optional but strong
 🚩 HEADLINE FINDING F6 (P0 staging blocker): RESOLVED. Staging database exists (ref `nrsvpwzekfrdrzkoecfk`). Safety boot guard is active in local/dev API server.
 Prior findings still open: 135 F1 stale test prices; 135 F3 pv_limit metadata; 135 F4 request-body redirect URLs.
 Verdict (134): CONDITIONAL GO — safe for 3–5 hand-picked single-instance beta customers once remaining P0 conditions met.
-Next Task: Session 139I-C — Staging Schema Bootstrap Execution. Staging Schema Bootstrap Execution remains blocked pending staging DB connection credentials. Stripe E2E (Session 139J) remains blocked until 139I-C succeeds and is verified.
+Next Task: Session 139M-5 — Campaigns, Paid Acquisition, Costs, GSC/SEO Revenue QA. Staging Schema Bootstrap Execution (Session 139I-C) remains blocked pending staging DB connection credentials. Stripe E2E (Session 139J) remains blocked until 139I-C succeeds and is verified.
 Roadmap Queue:
+- Session 139M-5 — Campaigns, Paid Acquisition, Costs, GSC/SEO Revenue QA.
 - Session 139I-C — Staging Schema Bootstrap Execution (Blocked).
 - Session 139J — Stripe Test Catalog Correction + Stripe E2E on Staging Only (Blocked).
 - Session 139L — Confirm beta Terms/Privacy disclosure flow before payment.
