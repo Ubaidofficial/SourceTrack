@@ -27,6 +27,7 @@ import {
   MessageSquare, Zap, TrendingDown, Info, Flag, X, Pencil
 } from 'lucide-react'
 import MetricTile from '../components/MetricTile'
+import SetupDoctorCard from '../components/SetupDoctorCard'
 import DashboardCard from '../components/DashboardCard'
 import DashboardTable from '../components/DashboardTable'
 import EmptyState from '../components/EmptyState'
@@ -333,15 +334,6 @@ export default function Dashboard() {
   })
   const recentActivity = recentActivityQuery?.data ?? recentActivityQuery ?? null
 
-  const { data: healthQuery, refetch: refetchHealth, isLoading: isHealthLoading } = useQuery({
-    queryKey: ['tracking-health', site?.site_key],
-    queryFn: async () => {
-      if (!site?.site_key) return null
-      return fetchApi(`/dashboard/tracking-health?site_key=${encodeURIComponent(site.site_key)}`)
-    },
-    enabled: !!site?.site_key && !previewMode,
-  })
-  const healthData = healthQuery?.data ?? healthQuery ?? null
 
   const { data: cacData } = useQuery({
     queryKey: ['dashboard-cac', site?.site_key, overview?.date_from, overview?.date_to],
@@ -676,7 +668,7 @@ export default function Dashboard() {
         /* Empty state — no saved reports */
         <div className="max-w-2xl mx-auto py-12 text-center space-y-8">
           {/* Setup prompt when tracker not yet verified */}
-          {(!healthData || healthData.status === 'pending' || healthData.status === 'never_seen') && (
+          {!site?.last_seen_at && (
             <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/30 rounded-xl p-5 text-left">
               <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-1">Finish setting up</h4>
               <p className="text-xs text-blue-700 dark:text-blue-400 mb-3">
@@ -695,7 +687,7 @@ export default function Dashboard() {
             <BarChart3 className="w-16 h-16 text-gray-200 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-st-black dark:text-white mb-2">No reports yet</h3>
             <p className="text-sm text-st-gray dark:text-gray-400 max-w-md mx-auto">
-              {(!healthData || healthData.status === 'pending' || healthData.status === 'never_seen')
+              {!site?.last_seen_at
                 ? 'Install the tracker, then create reports to see your attribution data here.'
                 : 'Your dashboard is empty because no reports have been created yet. Build reports for the metrics and attribution views you care about.'}
             </p>
@@ -771,99 +763,8 @@ export default function Dashboard() {
           )}
 
           {/* SourceTrack Doctor Card */}
-          {!previewMode && healthData && (
-            <div className="bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-5 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <div className={`p-2.5 rounded-lg ${
-                    healthData.severity === 'success' ? 'bg-green-50 text-green-600 dark:bg-green-950/30 dark:text-green-400' :
-                    healthData.severity === 'warning' ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400' :
-                    healthData.severity === 'error' ? 'bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400' :
-                    'bg-blue-50 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400'
-                  }`}>
-                    {healthData.severity === 'success' && <Info className="w-5 h-5" />}
-                    {healthData.severity === 'warning' && <AlertTriangle className="w-5 h-5" />}
-                    {healthData.severity === 'error' && <AlertTriangle className="w-5 h-5" />}
-                    {healthData.severity === 'info' && <Info className="w-5 h-5" />}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-st-black dark:text-white">SourceTrack Doctor</h3>
-                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                        healthData.status === 'healthy' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' :
-                        healthData.status === 'warning' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' :
-                        healthData.status === 'critical' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400' :
-                        healthData.status === 'pending' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' :
-                        'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
-                      }`}>
-                        {healthData.status}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{healthData.message}</p>
-
-                    {/* Event metadata details */}
-                    {healthData.last_seen_at && (
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-st-gray dark:text-gray-500 mt-2">
-                        <span>Last Event: <strong className="text-gray-700 dark:text-gray-300">{healthData.last_event_name}</strong></span>
-                        <span>Seen At: <strong className="text-gray-700 dark:text-gray-300">{new Date(healthData.last_seen_at).toLocaleString()}</strong></span>
-                        {healthData.last_event_domain && (
-                          <span>Source Domain: <strong className="text-gray-700 dark:text-gray-300">{healthData.last_event_domain}</strong></span>
-                        )}
-                        {healthData.registered_domain && (
-                          <span>Registered Domain: <strong className="text-gray-700 dark:text-gray-300">{healthData.registered_domain}</strong></span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Actions */}
-                <div className="flex flex-wrap items-center gap-2 self-start sm:self-center shrink-0">
-                  <button
-                    onClick={() => navigate('/debugger')}
-                    className="px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-[#252929] hover:bg-gray-200 dark:hover:bg-[#333838] rounded-lg transition-colors flex items-center gap-1"
-                  >
-                    <FileText className="w-3.5 h-3.5" /> Event Logger
-                  </button>
-                  {site && (
-                    <button
-                      onClick={() => navigate('/snippet')}
-                      className="px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-[#252929] hover:bg-gray-200 dark:hover:bg-[#333838] rounded-lg transition-colors flex items-center gap-1"
-                    >
-                      <Zap className="w-3.5 h-3.5" /> View Snippet
-                    </button>
-                  )}
-                  <button
-                    onClick={() => refetchHealth()}
-                    disabled={isHealthLoading}
-                    className="px-3 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-[#252929] hover:bg-gray-200 dark:hover:bg-[#333838] rounded-lg transition-colors flex items-center gap-1 disabled:opacity-50"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isHealthLoading ? 'animate-spin' : ''}`} /> Try Again
-                  </button>
-                </div>
-              </div>
-
-              {/* Individual Checks Grid */}
-              {healthData.checks && healthData.checks.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 pt-4 border-t border-gray-100 dark:border-[#2A2E2E]">
-                  {healthData.checks.map((check, i) => (
-                    <div key={i} className="flex items-center justify-between text-xs p-2 rounded bg-gray-50 dark:bg-[#252929]/50">
-                      <span className="font-medium text-gray-600 dark:text-gray-400">{check.label}</span>
-                      <div className="flex items-center gap-1.5">
-                        <span className={`w-2 h-2 rounded-full ${
-                          check.status === 'passed' ? 'bg-green-500' :
-                          check.status === 'warning' ? 'bg-amber-500' :
-                          check.status === 'failed' ? 'bg-red-500' :
-                          check.status === 'pending' ? 'bg-blue-500' :
-                          'bg-gray-400'
-                        }`} />
-                        <span className="text-gray-500 dark:text-gray-400">{check.detail}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+          {!previewMode && site?.site_key && (
+            <SetupDoctorCard siteKey={site.site_key} mode="dashboard" />
           )}
 
           {/* ── Recent Activity Panel ── */}

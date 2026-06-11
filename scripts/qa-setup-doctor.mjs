@@ -99,6 +99,36 @@ if (fs.existsSync(installRouteFile)) {
   }
 }
 
+// 5. Verify SetupDoctorCard existence and usage across key files
+const setupDoctorCardFile = path.join(rootDir, 'dashboard/src/components/SetupDoctorCard.jsx')
+assertRule(fs.existsSync(setupDoctorCardFile), 'SetupDoctorCard.jsx exists')
+
+const dashboardFile = path.join(rootDir, 'dashboard/src/pages/Dashboard.jsx')
+if (fs.existsSync(dashboardFile)) {
+  const content = fs.readFileSync(dashboardFile, 'utf8')
+  assertRule(content.includes('SetupDoctorCard'), 'Dashboard.jsx imports/uses SetupDoctorCard')
+}
+
+const onboardingFile = path.join(rootDir, 'dashboard/src/pages/Onboarding.jsx')
+if (fs.existsSync(onboardingFile)) {
+  const content = fs.readFileSync(onboardingFile, 'utf8')
+  assertRule(content.includes('SetupDoctorCard'), 'Onboarding.jsx imports/uses SetupDoctorCard')
+}
+
+const snippetFile = path.join(rootDir, 'dashboard/src/pages/Snippet.jsx')
+if (fs.existsSync(snippetFile)) {
+  const content = fs.readFileSync(snippetFile, 'utf8')
+  assertRule(content.includes('SetupDoctorCard'), 'Snippet.jsx imports/uses SetupDoctorCard')
+  assertRule(!content.includes('onClick={handleTest}'), 'Snippet.jsx does not have a competing Verify installation button')
+}
+
+if (fs.existsSync(setupDoctorCardFile)) {
+  const content = fs.readFileSync(setupDoctorCardFile, 'utf8')
+  const hasRawProperties = content.includes('raw_properties') || content.includes('rawProperties')
+  const hasJsonStringifyEvent = /JSON\.stringify\(\s*selectedEvent|JSON\.stringify\(\s*.*properties/i.test(content)
+  assertRule(!hasRawProperties && !hasJsonStringifyEvent, 'SetupDoctorCard does not render raw event properties JSON')
+}
+
 if (failures > 0) {
   console.error(`\x1b[31mQA FAILED with ${failures} error(s)\x1b[0m`)
   process.exit(1)

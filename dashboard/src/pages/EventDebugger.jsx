@@ -187,6 +187,9 @@ export default function EventDebugger() {
   }
 
   const hints = []
+  if (health && health.status !== 'healthy') {
+    hints.push({ text: 'Tracking setup has issues. Run Setup Doctor to diagnose.', link: '/snippet' })
+  }
   if (health?.status === 'never_seen') {
     hints.push({ text: 'Check snippet — paste it in the <head> of your live site.', link: '/snippet' })
     hints.push({ text: 'Verify domain matches your Supabase site settings.', link: '/settings' })

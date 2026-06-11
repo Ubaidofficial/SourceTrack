@@ -9,6 +9,7 @@ import {
   Code, FileCode, Check, X, ArrowRight, ArrowLeft, Copy, RefreshCw, Play
 } from 'lucide-react'
 import OnboardingCard from '../components/OnboardingCard'
+import SetupDoctorCard from '../components/SetupDoctorCard'
 import { LogoFull, LogoFullDark } from '../components/Logo'
 
 const STEP_TITLES = {
@@ -73,7 +74,11 @@ export default function Onboarding() {
   const [installMethod, setInstallMethod] = useState('standard')
   const [selectedConversions, setSelectedConversions] = useState([])
   const [snippet, setSnippet] = useState('')
-  const [verificationState, setVerificationState] = useState('idle')
+  const [verificationSuccess, setVerificationSuccess] = useState(false)
+
+  const handleOnboardingVerified = useCallback((diagnostics) => {
+    setVerificationSuccess(true)
+  }, [])
 
   useEffect(() => {
     loadOnboardingStatus()
@@ -248,68 +253,6 @@ export default function Onboarding() {
     setStep(6)
   }
 
-  async function handleVerify() {
-    setError('')
-    setVerificationState('checking')
-    let attempts = 0
-    const maxAttempts = 6
-
-    async function poll() {
-      try {
-        const params = new URLSearchParams({ site_key: siteKey })
-        const installStatus = await fetchApi(`/install/status?${params}`)
-
-        if (installStatus?.status === 'verified') {
-          setVerificationState('success')
-          const completeRes = await fetchApi('/onboarding/complete', {
-            method: 'POST',
-            body: JSON.stringify({ site_id: siteId })
-          })
-          if (!completeRes || completeRes.success === false) {
-            setVerificationState('failed')
-            setError(completeRes?.error || 'Installation could not be verified. Please try again.')
-            return
-          }
-          seedReportsForBusiness(businessType, siteKey)
-          setTimeout(() => {
-            navigate('/dashboard', { replace: true, state: { toast: 'Setup complete! Your dashboard is ready.' } })
-          }, 1500)
-          return
-        }
-
-        if (installStatus?.status === 'wrong_domain') {
-          setVerificationState('wrong_domain')
-          setError(installStatus.message || 'Incorrect domain detected.')
-          return
-        }
-
-        if (installStatus?.status === 'error') {
-          setVerificationState('api_failed')
-          setError(installStatus.message || 'Verification check failed.')
-          return
-        }
-      } catch (err) {
-        const msg = err.message || ''
-        if (msg.includes('site_key') || msg.includes('unauthorized') || msg.includes('Invalid')) {
-          setVerificationState('wrong_site_key')
-          setError('Invalid site key detected. Please verify your snippet.')
-          return
-        }
-        setVerificationState('api_failed')
-        setError(msg || 'Network or API error occurred.')
-        return
-      }
-
-      attempts++
-      if (attempts < maxAttempts) {
-        setTimeout(poll, 5000)
-      } else {
-        setVerificationState(prev => (prev === 'checking' ? 'failed' : prev))
-      }
-    }
-
-    poll()
-  }
 
   function handleCopySnippet() {
     if (snippet) {
@@ -504,92 +447,48 @@ export default function Onboarding() {
               <ArrowLeft className="w-4 h-4" /> Back
             </button>
             <p className="text-sm font-medium text-gray-700 dark:text-white mb-1">
-              Let us Verify SourceTrack Script in {installMethod === 'gtm' ? 'GTM' : 'Your Site'}
+              Verify SourceTrack Script in {installMethod === 'gtm' ? 'GTM' : 'Your Site'}
             </p>
             <p className="text-xs text-st-gray dark:text-gray-400 mb-4 leading-normal">
-              Click the button below to check if SourceTrack has received a recent event for this site key. Note: This only verifies that at least one event was successfully ingested; it does not prove that the tracker is installed on every page, that conversion tracking is set up, or that attribution is fully configured. Domain mismatch warnings will show if events arrive from another domain.
+              Below is the Tracking Doctor checking if SourceTrack has received events for this site key.
             </p>
 
-            {verificationState === 'idle' && (
-              <button
-                onClick={handleVerify}
-                className="w-full py-3 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90 flex items-center justify-center gap-2"
-              >
-                <Play className="w-4 h-4" /> Run Verification
-              </button>
-            )}
-
-            {verificationState === 'checking' && (
-              <div className="text-center py-6">
-                <RefreshCw className="w-8 h-8 animate-spin text-st-gray dark:text-gray-400 mx-auto mb-3" />
-                <p className="text-sm text-gray-600 dark:text-gray-300">Checking installation...</p>
-                <p className="text-xs text-st-gray dark:text-gray-400 mt-1">This may take up to 30 seconds</p>
-              </div>
-            )}
-
-            {verificationState === 'success' && (
-              <div className="text-center py-6">
-                <div className="w-12 h-12 rounded-full bg-st-lime/10 dark:bg-st-lime/5 flex items-center justify-center mx-auto mb-3">
+            {verificationSuccess ? (
+              <div className="text-center py-6 space-y-4">
+                <div className="w-12 h-12 rounded-full bg-st-lime/10 dark:bg-st-lime/5 flex items-center justify-center mx-auto">
                   <Check className="w-6 h-6 text-st-lime" />
                 </div>
                 <p className="text-lg font-semibold text-st-black dark:text-white">Great! Script Verified Successfully</p>
+                <p className="text-xs text-st-gray dark:text-gray-400">Your site is connected and data is flowing.</p>
                 <button
-                  onClick={() => { seedReportsForBusiness(businessType, siteKey); navigate('/dashboard', { replace: true, state: { toast: 'Setup complete! Your dashboard is ready.' } }) }}
-                  className="mt-4 px-6 py-3 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90 flex items-center gap-2 mx-auto"
+                  onClick={async () => {
+                    const completeRes = await fetchApi('/onboarding/complete', {
+                      method: 'POST',
+                      body: JSON.stringify({ site_id: siteId })
+                    })
+                    if (!completeRes || completeRes.success === false) {
+                      setError(completeRes?.error || 'Installation could not be verified. Please try again.')
+                      setVerificationSuccess(false)
+                      return
+                    }
+                    seedReportsForBusiness(businessType, siteKey)
+                    navigate('/dashboard', { replace: true, state: { toast: 'Setup complete! Your dashboard is ready.' } })
+                  }}
+                  className="px-6 py-3 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90 flex items-center gap-2 mx-auto"
                 >
                   <ArrowRight className="w-4 h-4" /> Continue to Dashboard
                 </button>
               </div>
-            )}
+            ) : (
+              <div className="space-y-4">
+                <SetupDoctorCard
+                  siteKey={siteKey}
+                  mode="onboarding"
+                  onVerificationSuccess={handleOnboardingVerified}
+                />
 
-            {['failed', 'wrong_domain', 'wrong_site_key', 'api_failed'].includes(verificationState) && (
-              <div className="text-center py-6">
-                <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center mx-auto mb-3">
-                  <X className="w-6 h-6 text-amber-500" />
-                </div>
-                <p className="text-lg font-semibold text-st-black dark:text-white">
-                  {verificationState === 'wrong_domain' ? 'Incorrect domain detected' :
-                   verificationState === 'wrong_site_key' ? 'Invalid site key' :
-                   verificationState === 'api_failed' ? 'Verification check failed' :
-                   'Script not detected yet'}
-                </p>
-                <p className="text-sm text-st-gray dark:text-gray-400 mt-2">
-                  {verificationState === 'wrong_domain' ? 'We received an event, but it came from a different domain.' :
-                   verificationState === 'wrong_site_key' ? 'The site key used for verification is invalid.' :
-                   verificationState === 'api_failed' ? 'We encountered an error connecting to the verification server.' :
-                   'Setup saved. You can verify the script later from Integrations.'}
-                </p>
+                {error && <p className="text-sm text-red-500 mt-2 font-medium">{error}</p>}
 
-                {verificationState === 'failed' && (
-                  <ul className="text-sm text-st-gray dark:text-gray-400 mt-3 space-y-1">
-                    <li>Make sure the script is published on your live site</li>
-                    <li>It may take 1-2 minutes for the first event to appear</li>
-                  </ul>
-                )}
-
-                {error && <p className="text-sm text-red-500 mt-3 font-medium">{error}</p>}
-
-                <div className="flex items-center justify-center gap-3 mt-4">
-                  <a href="/debugger" className="text-sm text-st-black dark:text-white hover:underline">Open Event Logger</a>
-                  <button
-                    type="button"
-                    onClick={handleVerify}
-                    className="px-4 py-2 bg-white dark:bg-white/10 text-[#1F2323] dark:text-white border border-gray-200 dark:border-white/10 rounded-xl text-sm font-extrabold hover:bg-gray-50 dark:hover:bg-white/15 flex items-center gap-2"
-                  >
-                    <RefreshCw className="w-4 h-4" /> Try Again
-                  </button>
-                </div>
-
-                <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 mt-4 pt-4 border-t border-gray-100 dark:border-white/5 text-xs text-st-gray dark:text-gray-400">
-                  <span>Need help?</span>
-                  <a href="/docs/troubleshooting" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">
-                    Troubleshooting Guide
-                  </a>
-                  <span>•</span>
-                  <a href="mailto:support@sourcetrack.ai" className="text-blue-600 dark:text-blue-400 hover:underline">
-                    Contact Support
-                  </a>
-                </div>
                 <button
                   type="button"
                   disabled={loading}
@@ -609,25 +508,25 @@ export default function Onboarding() {
                           data: { business_type: businessType, install_method: installMethod }
                         })
                       })
-                      await fetchApi('/onboarding/complete', { method: 'POST', body: JSON.stringify({ site_id: siteId }) })
-                      seedReportsForBusiness(businessType, siteKey)
-                      navigate('/dashboard', { replace: true, state: { toast: 'Setup complete! Your dashboard is ready.' } })
+                      const completeRes = await fetchApi('/onboarding/complete', {
+                        method: 'POST',
+                        body: JSON.stringify({ site_id: siteId })
+                      })
+                      if (completeRes?.success) {
+                        seedReportsForBusiness(businessType, siteKey)
+                        navigate('/dashboard', { replace: true, state: { toast: 'Setup complete! Your dashboard is ready.' } })
+                      } else {
+                        setError(completeRes?.error || 'Failed to complete onboarding')
+                      }
                     } catch (err) {
+                      setError(err.message || 'Error saving setup.')
+                    } finally {
                       setLoading(false)
-                      setError(err.message || 'Failed to complete onboarding. Please try again.')
                     }
                   }}
-                  className="mt-4 w-full py-3 bg-[#1F2323] dark:bg-st-lime text-white dark:text-[#1F2323] rounded-xl text-sm font-extrabold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="w-full text-center text-xs font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-white transition-colors py-2"
                 >
-                  {loading ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" /> Completing setup...
-                    </>
-                  ) : (
-                    <>
-                      <ArrowRight className="w-4 h-4" /> Continue to Dashboard
-                    </>
-                  )}
+                  Verify Later (Skip for now)
                 </button>
               </div>
             )}

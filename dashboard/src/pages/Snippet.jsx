@@ -4,15 +4,21 @@ import { supabase } from '../lib/supabase'
 import { fetchApi } from '../lib/api'
 import { Copy, Check, Code, RefreshCw, ChevronDown, ChevronRight, Bug, Send, ExternalLink, Key, CheckCircle, Circle, ArrowRight, AlertTriangle } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import SetupDoctorCard from '../components/SetupDoctorCard'
 
 export default function Snippet() {
   const { user } = useAuth()
   const [site, setSite] = useState(null)
   const [copied, setCopied] = useState(false)
   const [status, setStatus] = useState(null)
+  const handleOnVerificationSuccess = useCallback((diagnostics) => {
+    setStatus({
+      status: 'verified',
+      last_event_name: diagnostics.tracker_install.last_event_name,
+      last_seen_at: diagnostics.tracker_install.last_seen_at
+    })
+  }, [])
   const [statusLoading, setStatusLoading] = useState(false)
-  const [testLoading, setTestLoading] = useState(false)
-  const [testResult, setTestResult] = useState(null)
   const [proxyDomain, setProxyDomain] = useState(null)
 
   const [showPrivacyNotes, setShowPrivacyNotes] = useState(false)
@@ -109,25 +115,6 @@ export default function Snippet() {
     }
   };
 
-  const handleTest = async () => {
-    if (!site) return
-    setTestLoading(true)
-    setTestResult(null)
-    try {
-      const params = new URLSearchParams({ site_key: site.site_key })
-      const data = await fetchApi(`/install/status?${params}`)
-      if (data.status === 'verified') {
-        setTestResult({ ok: true, message: 'Install verified. Events are being received.', domain: data.domain })
-        setStatus(data)
-      } else {
-        setTestResult({ ok: false, message: 'No events received yet. Paste the snippet and visit your site.' })
-      }
-    } catch (_err) {
-      setTestResult({ ok: false, message: 'Could not reach the server. Check your connection.' })
-    } finally {
-      setTestLoading(false)
-    }
-  }
 
   const handleTestConversion = async () => {
     if (!site) return
@@ -194,7 +181,7 @@ export default function Snippet() {
             { done: true, label: 'Create your site', detail: 'Done' },
             { done: copied, label: 'Copy tracker snippet', detail: copied ? 'Copied' : 'Copy below', action: () => document.getElementById('snippet-code')?.scrollIntoView({ behavior: 'smooth' }) },
             { done: false, label: 'Install on your website', detail: 'Paste before </head>', links: true },
-            { done: status?.status === 'verified', label: 'Verify first pageview', detail: status?.status === 'verified' ? `Verified — ${status.last_event_name || '$pageview'}` : 'Click Verify below' },
+            { done: status?.status === 'verified', label: 'Verify first pageview', detail: status?.status === 'verified' ? `Verified — ${status.last_event_name || '$pageview'}` : 'Verify via Setup Doctor below' },
             { done: testConvResult?.ok, label: 'Send a test conversion', detail: testConvResult?.ok ? 'Test sent' : 'Use button below' },
             { done: false, label: 'View your attribution report', detail: null, href: '/dashboard' },
           ].map((step, i) => {
@@ -286,69 +273,18 @@ export default function Snippet() {
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-450 text-xs font-bold">3</span>
-            <h3 className="font-semibold text-sm text-st-black dark:text-white">Visit site and verify</h3>
+            <h3 className="font-semibold text-sm text-st-black dark:text-white">Verify installation</h3>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 pl-7">
-            Open your website in a new browser tab to trigger a pageview event, then click verify.
+            Open your website in a new browser tab to trigger a pageview event, then verify setup diagnostics below.
           </p>
-          <div className="pl-7 flex flex-wrap items-center gap-3">
-            <button
-              onClick={handleTest}
-              disabled={testLoading || !site}
-              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-750 text-white rounded-lg text-xs font-semibold disabled:opacity-50 transition-colors flex items-center gap-1.5 shadow-sm"
-            >
-              {testLoading ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  Verifying...
-                </>
-              ) : (
-                <>
-                  <Check className="w-3.5 h-3.5" />
-                  Verify installation
-                </>
-              )}
-            </button>
-
-            {/* Verification status display */}
-            {status && (
-              <div className="flex items-center gap-2 text-xs font-medium">
-                <span className={`w-2 h-2 rounded-full ${
-                  status.status === 'verified' ? 'bg-green-500 animate-pulse' : 'bg-amber-500'
-                }`} />
-                <span className={status.status === 'verified' ? 'text-green-600 dark:text-green-450' : 'text-amber-600 dark:text-amber-450'}>
-                  {status.status === 'verified' ? 'Verified' : 'Pending'}
-                </span>
-                {status.status === 'verified' && status.last_seen_at && (
-                  <span className="text-gray-400 font-light font-sans pl-1">
-                    (Last event: {status.last_event_name || '$pageview'} at {new Date(status.last_seen_at).toLocaleTimeString()})
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-
-          <p className="text-[11px] text-st-gray dark:text-gray-500 pl-7 mt-1 leading-normal">
-            <strong>Verification boundary:</strong> Verification only checks if SourceTrack received a recent event for this site key. It does not prove that every page is installed, that conversion tracking is working, or that attribution is fully configured. Domain mismatch warnings will show if events arrive from another domain.
-          </p>
-
-          {/* Test feedback banner */}
-          {testResult && (
+          {site?.site_key && (
             <div className="pl-7">
-              <div className={`rounded-lg px-3.5 py-2.5 text-xs ${
-                testResult.ok
-                  ? 'bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border border-green-250 dark:border-green-900/35'
-                  : 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border border-amber-255 dark:border-amber-900/35'
-              }`}>
-                <p className="font-medium">{testResult.message}</p>
-                {testResult.ok && status?.status === 'verified' && (
-                  <div className="mt-1">
-                    <Link to="/debugger" className="inline-flex items-center gap-1 text-[11px] text-blue-600 dark:text-blue-450 hover:underline font-semibold">
-                      <Bug className="w-3 h-3" /> View live events in Event Logger
-                    </Link>
-                  </div>
-                )}
-              </div>
+              <SetupDoctorCard
+                siteKey={site.site_key}
+                mode="snippet"
+                onVerificationSuccess={handleOnVerificationSuccess}
+              />
             </div>
           )}
         </div>

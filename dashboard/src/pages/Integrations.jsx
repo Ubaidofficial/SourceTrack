@@ -1186,6 +1186,11 @@ export default function Integrations() {
                       <p className="text-xs text-amber-650 dark:text-amber-400 mt-1 font-light font-sans">
                         Paste the tracking script in your site's &lt;head&gt; tag and visit the site to trigger verification.
                       </p>
+                      <div className="mt-2 text-xs">
+                        <Link to="/snippet" className="text-blue-600 dark:text-blue-400 hover:underline font-semibold">
+                          Pixel problems? Run Setup Doctor &rarr;
+                        </Link>
+                      </div>
                     </div>
                   )}
 
