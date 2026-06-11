@@ -2038,3 +2038,31 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 
 ### 4. Documentation
 - Created `docs/qa/core_analytics_dashboard_feature_qa_139M-2.md` detailing route redirection behaviors, core analytics coverage checks, design/product verdicts, and truthfulness posture.
+
+---
+
+## Session 139M-3 — Attribution + Revenue Attribution + AI Attribution QA
+
+**Date:** 2026-06-11
+**Branch:** `main`
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa-release-readiness)
+**Status:** BLOCKED — attribution not verified.
+
+### 1. Verification of Route Redirections
+- Verified redirect behavior for all protected attribution-related routes (`/leads`, `/leads/:leadId`, `/journey`, `/campaigns`, `/ai-analytics`, `/ai-chat`, `/dashboard`, `/analytics`, `/debugger`, `/data-quality`) to `/login` when unauthorized.
+- Verified that public pages (`/attribution`, `/ai-referral-tracking`, `/report-builder`) and the `/demo` route load correctly, showcasing mock data and static explanations.
+
+### 2. Attribution, Revenue, and AI Attribution Audits
+- Conducted exhaustive audits of first-touch, last-touch, multi-touch, campaign, AI referral, and revenue attribution features across marketing pages and mock demo data.
+- Checked how direct traffic, fallback parameters, identity stitching, and conversion timelines are modeled in `/demo` and `/ai-referral-tracking`.
+- Verified that the offline deterministic test harness (`scripts/qa-attribution-harness.mjs`) passes 100% of its assertions. The integration test (`scripts/qa-attribution-integration.mjs`) failed with an invalid API key, proving live ingestion is blocked.
+
+### 3. Truthfulness Audit
+- Performed a codebase-wide grep scan for attribution guarantees, SOC2/GDPR compliance, or automated ad syncing claims.
+- Confirmed zero user-facing overclaims exist. All matches are restricted to historical logs, project checklists, terms disclaimers, or code comments.
+
+### 4. Design & Simplicity Audit
+- Assessed public and demo pages against DataFast Simplicity guidelines. Verified that SourceTrack presents clear, founder-friendly attribution mappings without GA4 complexity.
+
+### 5. Documentation
+- Created `docs/qa/attribution_revenue_ai_attribution_qa_139M-3.md` detailing route redirection behaviors, models matrices, design verdicts, and validation outputs.
