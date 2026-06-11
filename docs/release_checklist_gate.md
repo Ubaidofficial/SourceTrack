@@ -1,4 +1,4 @@
-# SourceTrack Release Checklist Gate — Session 139G
+# SourceTrack Release Checklist Gate — Session 139H
 
 **Engineering Control Document**
 **Readiness Status:** 🚨 **NOT READY FOR PAID-BETA RELEASE** (Blocked by open P0/P1 items)
@@ -31,12 +31,12 @@ This checklist serves as the canonical release gate. No paid-beta launch, paid-b
 - [ ] **Staging Service-Role Access**: Add the real staging service-role key to gitignored local/staging environment variables.<br />*Status:* **BLOCKED**. Only the placeholder exists.
 - [ ] **Stripe Test Catalog Alignment**: Correct and align Stripe test-mode price IDs ($29/$79/$149+) to prevent stale pricing schema mismatch.<br />*Status:* **BLOCKED**. Test catalog is stale.
 - [ ] **Stripe Test-Mode E2E Verification**: Run the full Stripe test-mode flow on staging: checkout → webhook → DB write → `pv_limit` applied → usage enforcement → portal cancel → downgrade to inactive.<br />*Status:* **BLOCKED**. No E2E Stripe webhook write tests have been run or logged in the repository.
-- [ ] **Supabase Backups & PITR Verification**: Confirm backup configuration in the Supabase console. PITR is NOT enabled on the production instance (`zxjjjsipafojhzkkumvh`). PITR is not enabled and remains an open risk unless explicitly accepted by the operator. Do not mark this gate closed without either enabling PITR with cost approval or documenting explicit operator acceptance. Daily backups are verified by the operator for June 3-10, 2026. A staging restore drill must be performed.<br />*Status:* **BLOCKED**. Staging restore drill not completed.
+- [ ] **Supabase Backups & PITR Verification**: Confirm backup configuration in the Supabase console. PITR is NOT enabled on the production instance (`zxjjjsipafojhzkkumvh`). PITR is not enabled and remains an open risk unless explicitly accepted by the operator. Do not mark this gate closed without either enabling PITR with cost approval or documenting explicit operator acceptance. Daily backups are verified by the operator for June 3-10, 2026. A staging restore drill must be performed. Refer to [supabase_backup_restore_runbook.md](operations/supabase_backup_restore_runbook.md) for details.<br />*Status:* **BLOCKED**. Staging restore drill not completed.
 - [ ] **Production Env/Secrets Verification**: Verify production environment variables (`NODE_ENV`, `ST_IP_RESOLVER_MODE=railway`, `ST_LOG_HASH_SECRET`, `TRACKER_SALT`, `ALLOWED_ORIGINS`) are set correctly in the Railway console.<br />*Status:* **BLOCKED**. Console secrets verification not performed.
 - [ ] **Billing/Limits Enforcement Audit**: Audit all billing/limit checking middleware to ensure free and active-tier users cannot exceed their monthly thresholds without payment.<br />*Status:* **BLOCKED**.
 - [ ] **Production Observability**: Confirm logging levels, dashboard alerts, and key telemetry paths are operational in production.<br />*Status:* **BLOCKED**.
 - [ ] **Data Deletion & Privacy Basics**: Ensure manual and automated user deletion routines purge associated personal data correctly from the database.<br />*Status:* **BLOCKED**.
-- [ ] **Backup/Recovery Drill**: Execute a dry-run database restore drill using staging to validate the recovery path and improve operational recoverability.<br />*Status:* **BLOCKED**.
+- [ ] **Backup/Recovery Drill**: Execute a dry-run database restore drill using staging to validate the recovery path and improve operational recoverability. Refer to [supabase_backup_restore_runbook.md](operations/supabase_backup_restore_runbook.md) for details.<br />*Status:* **BLOCKED**.
 - [ ] **End-to-End Install QA**: Manually test snippet installation and end-to-end visitor telemetry routing from a live non-localhost environment.<br />*Status:* **BLOCKED**.
 - [ ] **Full Docs Truth Audit**: Ensure all documentation, troubleshooting steps, and installation instructions accurately match the implemented API and UI features.<br />*Status:* **BLOCKED**.
 - [ ] **Support Readiness**: Establish support routing pipelines and triage protocols for incoming customer queries.<br />*Status:* **BLOCKED**.

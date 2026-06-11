@@ -96,6 +96,31 @@ for (const blocker of expectedOpenBlockers) {
 }
 
 
+// 4. Verify Supabase backup & restore runbook exists and is clean of premature claims
+const RUNBOOK_PATH = path.join(ROOT_DIR, 'docs/operations/supabase_backup_restore_runbook.md');
+if (!fs.existsSync(RUNBOOK_PATH)) {
+  console.error('❌ ERROR: docs/operations/supabase_backup_restore_runbook.md does not exist.');
+  hasFailed = true;
+} else {
+  const runbookContent = fs.readFileSync(RUNBOOK_PATH, 'utf8');
+  console.log('✅ Runbook docs/operations/supabase_backup_restore_runbook.md exists.');
+
+  // Check for forbidden claims
+  const forbiddenPatterns = [
+    { pattern: /(?<!not\s+)(?<!not\s+\*\*)\bpitr\s+enabled\b/i, message: 'Claims that PITR is enabled' },
+    { pattern: /(?<!not\s+)(?<!not\s+\*\*)\brestore\s+proven\b/i, message: 'Claims that restore is proven' },
+    { pattern: /\bbackup(s)?\s+guarantee(s)?\b/i, message: 'Claims backups guarantee recovery/safety' },
+    { pattern: /\bready\s+for\s+paid[-\s]+beta\b/i, message: 'Claims ready for paid beta' }
+  ];
+
+  for (const { pattern, message } of forbiddenPatterns) {
+    if (pattern.test(runbookContent)) {
+      console.error(`❌ ERROR in Runbook: ${message} (pattern matched: ${pattern}).`);
+      hasFailed = true;
+    }
+  }
+}
+
 console.log('\n==================================================');
 if (!hasFailed) {
   console.log('PASS — Release readiness checklist verified (all blockers open).');

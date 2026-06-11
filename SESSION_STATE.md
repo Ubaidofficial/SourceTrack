@@ -1,8 +1,10 @@
-Session: 139G — Release Checklist Gate + Paid-Beta Operational Readiness Alignment
-Last Completed: Added a real release checklist gate (docs/release_checklist_gate.md) and wired scripts/qa-release-readiness.mjs to verify that all paid-beta and public launch blockers are documented and open. Updated control docs and roadmaps to align on the operational checklist.
+Session: 139H — Production Supabase Backup/PITR Review + Staging Restore Drill Plan
+Last Completed: Created a safe, truthful, operator-facing backup/PITR and staging restore drill runbook (docs/operations/supabase_backup_restore_runbook.md), updated the release checklist gate to reference the runbook, and extended QA checks to verify runbook compliance.
 Control Doc: docs/development_workflow_master_plan.md is the source of truth for session ordering and gates.
 AI-Agent Workflow: AI-agent workflow rules are governed by docs/ai_agent_workflow_rules.md. No AI-agent may commit or push before raw diff review and explicit user approval.
 
+Prior Session: 139G — Release Checklist Gate + Paid-Beta Operational Readiness Alignment
+Last Completed (139G): Added a real release checklist gate (docs/release_checklist_gate.md) and wired scripts/qa-release-readiness.mjs to verify that all paid-beta and public launch blockers are documented and open. Updated control docs and roadmaps to align on the operational checklist.
 Prior Session: 139F — Setup Doctor Docs + User Guidance Truth Audit
 Last Completed (139F): Audited and updated setup docs and user-facing guidance to align with the new setup doctor architecture (Session 139C–139E), adding disclaimer callouts regarding verification scope, softening ad blocker statements, and documenting the browser connection check and st_verify token flow.
 Prior Session: 139E — Setup Doctor Browser Diagnostics
@@ -17,12 +19,12 @@ P0-3 STATUS: Daily backups are now verified; PITR remains an optional but strong
 🚩 HEADLINE FINDING F6 (P0 staging blocker): RESOLVED. Staging database exists (ref `nrsvpwzekfrdrzkoecfk`). Safety boot guard is active in local/dev API server.
 Prior findings still open: 135 F1 stale test prices; 135 F3 pv_limit metadata; 135 F4 request-body redirect URLs.
 Verdict (134): CONDITIONAL GO — safe for 3–5 hand-picked single-instance beta customers once remaining P0 conditions met.
-Next Task: Production Supabase Backup/PITR Review + Staging Restore Drill Plan (Session 139H). Review backup/PITR options, document current risk and approval requirements, and plan the staging restore drill. Do not upgrade production Supabase or enable PITR without explicit operator/cost approval.
+Next Task: Staging Schema Bootstrap / Safe Schema Setup (Session 139I). Complete migrations and seed files setup for staging. Do not run migrations or schema setups against the production database.
 Roadmap Queue:
-- Session 139H — Production Supabase Backup/PITR Review + Staging Restore Drill Plan.
 - Session 139I — Staging Schema Bootstrap / Safe Schema Setup.
 - Session 139J — Stripe Test Catalog Correction + Stripe E2E on Staging Only.
 - Session 139K — Verify Production Env/Secrets, IP Resolver Mode, CORS, Tracker/API URLs in consoles.
+- Session 139L — Confirm beta Terms/Privacy disclosure flow before payment.
 Build: ✅ passing (node --check, git diff --check, dashboard vite build, qa:static, required-grep clean)
 Branch: main
 

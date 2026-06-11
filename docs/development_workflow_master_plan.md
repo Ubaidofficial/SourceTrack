@@ -97,7 +97,7 @@ But the **operational foundation was built slower than the product**. The workfl
 
 > Use this sequence. Each session has its own acceptance criteria in §11 and the strategy chapter it belongs to. **Do not start a session until the prior phase's blockers are addressed or explicitly deferred with reasoning.** CI must be green before the next session begins.
 
-**The immediate next session is Session 138E.**
+**The immediate next session is Session 139I.**
 
 **No new feature work / Phase C-D work should begin while any P0 operational blocker remains open unless explicitly approved by the user.**
 
@@ -109,7 +109,7 @@ But the **operational foundation was built slower than the product**. The workfl
 - **139G** — Release Checklist Gate + Paid-Beta Operational Readiness Alignment. Add/update the deploy checklist gate (docs/release_checklist_gate.md) so staging, backups, secrets, CI, and production-safety prerequisites are verified. *(Completed)*
 
 **Phase 1 — Close paid-beta P0 blockers**
-- **139H** — Production Supabase Backup/PITR Review + Staging Restore Drill Plan.
+- **139H** — Production Supabase Backup/PITR Review + Staging Restore Drill Plan. *(Completed)*
 - **139I** — Staging Schema Bootstrap / Safe Schema Setup.
 - **139J** — Stripe Test Catalog Correction + Stripe E2E on Staging Only.
 - **139K** — Verify Production Env/Secrets, IP Resolver Mode, CORS, Tracker/API URLs in consoles.
@@ -219,7 +219,7 @@ All P0 closed:
 ## 10. Non-negotiable AI-agent rules
 
 > [!IMPORTANT]
-> AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](file:///Users/ubaid/Desktop/trackiq/docs/ai_agent_workflow_rules.md).
+> AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](ai_agent_workflow_rules.md).
 > No AI-agent may commit or push before raw diff review and explicit user approval.
 
 ```

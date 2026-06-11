@@ -7,6 +7,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 139H | 2026-06-11 | `main` | Production Supabase Backup/PITR Review + Staging Restore Drill Plan — Created a safe, truthful, operator-facing backup/PITR and staging restore drill runbook (docs/operations/supabase_backup_restore_runbook.md), updated the release checklist gate to reference the runbook, and extended QA checks to verify runbook compliance. | ✅ | No |
 | 139G | 2026-06-11 | `main` | Release Checklist Gate + Paid-Beta Operational Readiness Alignment — Added a real release checklist gate (docs/release_checklist_gate.md) and wired scripts/qa-release-readiness.mjs to verify that all paid-beta and public launch blockers are documented and open. | ✅ | No |
 | 139F | 2026-06-11 | `main` | Setup Doctor Docs + User Guidance Truth Audit — Audited setup docs/user guidance; updated DocsInstall, DocsTroubleshooting, and DocsQuickstart to reference Setup Doctor diagnostics (Freshness, Domain match, API Ping, st_verify token), added verification disclaimers, softened ad blocker copy. | ✅ | No |
 | 139E | 2026-06-11 | `main` | Setup Doctor Browser Diagnostics — Added browser diagnostics check (install/ping) and automated st_verify token test link builder. Restricted verification token flow and browser reachability diagnostics to snippet mode, and prevented onboarding success from triggering on unsafe domains. | ✅ | No |

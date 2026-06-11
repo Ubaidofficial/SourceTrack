@@ -1,14 +1,14 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](file:///Users/ubaid/Desktop/trackiq/docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
+> **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
-> **Handoff:** Session 139G — Release Checklist Gate + Paid-Beta Operational Readiness Alignment is complete. Added a real release checklist gate (docs/release_checklist_gate.md) and wired scripts/qa-release-readiness.mjs to verify that all paid-beta and public launch blockers are documented and open. Updated control docs and roadmaps to align on the operational checklist.
+> **Handoff:** Session 139H — Production Supabase Backup/PITR Review + Staging Restore Drill Plan is complete. Created a safe, truthful, operator-facing backup/PITR and staging restore drill runbook (docs/operations/supabase_backup_restore_runbook.md), updated the release checklist gate to reference the runbook, and extended QA checks to verify runbook compliance.
 >
-> **Prior handoff (Session 139F):** Session 139F — Setup Doctor Docs + User Guidance Truth Audit is complete. Audited and updated setup docs and user-facing guidance to align with the new setup doctor architecture (Session 139C–139E), adding disclaimer callouts regarding verification scope, softening ad blocker statements, and documenting the browser connection check and st_verify token flow.
+> **Prior handoff (Session 139G):** Session 139G — Release Checklist Gate + Paid-Beta Operational Readiness Alignment is complete. Added a real release checklist gate (docs/release_checklist_gate.md) and wired scripts/qa-release-readiness.mjs to verify that all paid-beta and public launch blockers are documented and open. Updated control docs and roadmaps to align on the operational checklist.
 >
-> **Next Task:** Session 139H — Production Supabase Backup/PITR Review + Staging Restore Drill Plan. Review production backup/PITR options, document current risk and cost/approval requirements, and plan the staging restore drill. Do not upgrade production Supabase or enable PITR without explicit operator approval.
+> **Next Task:** Session 139I — Staging Schema Bootstrap / Safe Schema Setup. Complete migrations and seed files setup for staging. Do not run migrations or schema setups against the production database.
 >
-> ⚠️ **P0 CONDITIONS BEFORE FIRST PAID CUSTOMER:** (1) Stripe test-mode checkout/webhook evidence [PARTIAL - Stripe E2E remains blocked until: 1. staging schema/bootstrap is completed safely; 2. real staging service-role key is added locally/staging-only; 3. local/dev production boot guard is added (Completed in Session 138D via api/bootstrap.js); 4. Stripe test catalog is corrected; 5. billing/webhook E2E runs only against staging]; (2) provider-console separation verified [CLOSED - staging project created, local env rewired, safety boot guard active]; (3) Supabase backups verified [CLOSED - Daily scheduled backups manually verified. PITR is not enabled / not accepted as enabled. Daily backups are now verified; PITR remains an optional but strongly recommended paid add-on / accepted risk if left disabled. Do not enable PITR without explicit cost approval]; (4) prod env secrets set incl. ST_IP_RESOLVER_MODE=railway; (5) beta Terms/Privacy disclosed in writing.
+> ⚠️ **P0 CONDITIONS BEFORE FIRST PAID CUSTOMER:** (1) Stripe test-mode checkout/webhook evidence [PARTIAL - Stripe E2E remains blocked until: 1. staging schema/bootstrap is completed safely; 2. real staging service-role key is added locally/staging-only; 3. local/dev production boot guard is added (Completed in Session 138D via api/bootstrap.js); 4. Stripe test catalog is corrected; 5. billing/webhook E2E runs only against staging]; (2) provider-console separation verified [CLOSED - staging project created, local env rewired, safety boot guard active]; (3) Supabase backups verified [PARTIAL - Daily scheduled backups manually verified. PITR is not enabled / not accepted as enabled. Daily backups are now verified; PITR remains an optional but strongly recommended paid add-on / accepted risk if left disabled. Do not enable PITR without explicit cost approval. Staging restore drill remains blocked/not run]; (4) prod env secrets set incl. ST_IP_RESOLVER_MODE=railway; (5) beta Terms/Privacy disclosed in writing.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
 
@@ -25,12 +25,12 @@
 6. Added the "Top-Priority Blocked Test Backlog" section detailing all P0/P1/P2 blocked items to `PAID_BETA_SESSION_PLAN.md`, `SESSION_STATE.md`, `SESSION_LOG.md`, and `SESSION_HANDOFF.md`.
 
 ### Files changed
-- [scripts/qa-gsc-integration.mjs](file:///Users/ubaid/Desktop/trackiq/scripts/qa-gsc-integration.mjs)
-- [docs/safe_qa_test_backlog.md](file:///Users/ubaid/Desktop/trackiq/docs/safe_qa_test_backlog.md)
-- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
-- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
-- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
-- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+- [scripts/qa-gsc-integration.mjs](scripts/qa-gsc-integration.mjs)
+- [docs/safe_qa_test_backlog.md](docs/safe_qa_test_backlog.md)
+- [PAID_BETA_SESSION_PLAN.md](PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
 
 ### Top-Priority Blocked Test Backlog
 
@@ -69,11 +69,11 @@ No separate staging Supabase project exists. The local `.env` remains unsafe (wi
 Stripe test prices remain stale (Session 135 F1). Local dev environment variables require rewiring once a staging project is available.
 
 ### Files changed
-- [docs/backup_recovery.md](file:///Users/ubaid/Desktop/trackiq/docs/backup_recovery.md)
-- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
-- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
-- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
-- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+- [docs/backup_recovery.md](docs/backup_recovery.md)
+- [PAID_BETA_SESSION_PLAN.md](PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
 
 ### Constraints honored
 Read-only console verification; no production data mutated; no destructive SQL run; no secrets/keys/connection strings printed or committed (project IDs redacted/prefixed); `ALLOW_PRODUCTION_QA_MUTATION` not set; no app/backend code changed; no Phase C/D work.
@@ -94,11 +94,11 @@ Local `.env` `SUPABASE_URL` = production project ref `zxjj…umvh` + real servic
 `ST_IP_RESOLVER_MODE` & `ST_LOG_HASH_SECRET` absent from `.env.example` (doc gap; `TRACKER_SALT` covers prod log-hash boot check). `POSTHOG_HOST` discrepancy (`us.posthog.com` vs doc `us.i.posthog.com`). Session 135 F1 stale test prices still uncorrected.
 
 ### Files changed
-- [docs/staging_production_separation_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/staging_production_separation_audit.md)
-- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
-- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
-- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
-- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+- [docs/staging_production_separation_audit.md](docs/staging_production_separation_audit.md)
+- [PAID_BETA_SESSION_PLAN.md](PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
 
 ### Constraints honored
 No console accessed; no production data mutated; no SQL/webhook run; no secrets/keys/URLs/tokens printed or committed (project ref redacted to `zxjj…umvh`); `ALLOW_PRODUCTION_QA_MUTATION` not set; no app/backend code changed; no Phase C/D work.
@@ -124,11 +124,11 @@ No console accessed; no production data mutated; no SQL/webhook run; no secrets/
 Hosted checkout completion (needs browser), Stripe-delivered webhooks (no Stripe CLI), webhook→DB writes (Supabase staging/prod unverified — must not mutate possibly-prod DB), portal session, live status/UI. **Webhook→DB testing is blocked until staging/prod separation is verified, so Session 136 runs before Session 135B (full E2E).** Full operator E2E checklist appended to `docs/billing_checkout_test_mode_qa.md`.
 
 ### Files changed
-- [docs/billing_checkout_test_mode_qa.md](file:///Users/ubaid/Desktop/trackiq/docs/billing_checkout_test_mode_qa.md)
-- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
-- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
-- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
-- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+- [docs/billing_checkout_test_mode_qa.md](docs/billing_checkout_test_mode_qa.md)
+- [PAID_BETA_SESSION_PLAN.md](PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
 
 ### Constraints honored
 Stripe test mode only; no live keys; no production data mutated; webhook handler never run against any DB; no secrets/keys/full IDs committed (temp scripts created outside VC and deleted); `ALLOW_PRODUCTION_QA_MUTATION` not set; no Phase C/D work.
@@ -147,14 +147,14 @@ Stripe test mode only; no live keys; no production data mutated; webhook handler
 3. **Deep code/workflow/attribution review:** 17-workflow readiness matrix; functional-test reality check (no CI-gated functional tests — QA harnesses run by hand only); attribution-engine review (9 models, esc-disciplined, but HogQL dates validated only at route layer; multi-touch is nightly-batch); principal-engineer code review (clean ESM + strong security hygiene vs 2,892-line monolith, 5× duplicated conditional, large dashboard pages); UX review; Top-10 code + Top-10 product risks. New finding: `/api/jobs/attribution/status` not tenant-scoped (P2).
 4. **Verdicts:** Master CONDITIONAL GO · Attribution CONDITIONAL · UX YES · Code quality Messy-but-manageable.
 5. **Recommended next 5 sessions (135–139)**; Phase C/D blocked until P0 closed.
-6. Created [paid_beta_go_no_go_master_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/paid_beta_go_no_go_master_audit.md) (18 sections).
+6. Created [paid_beta_go_no_go_master_audit.md](docs/paid_beta_go_no_go_master_audit.md) (18 sections).
 
 ### Files changed
-- [docs/paid_beta_go_no_go_master_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/paid_beta_go_no_go_master_audit.md) [NEW]
-- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
-- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
-- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
-- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+- [docs/paid_beta_go_no_go_master_audit.md](docs/paid_beta_go_no_go_master_audit.md) [NEW]
+- [PAID_BETA_SESSION_PLAN.md](PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
 
 ### Constraints honored
 - Audit-only. No app/backend feature code changed. No production data mutated, no production secrets used, no production load testing, `ALLOW_PRODUCTION_QA_MUTATION` not set.
@@ -170,19 +170,19 @@ Stripe test mode only; no live keys; no production data mutated; webhook handler
    - Established manual target contact list generation guidelines using read-only sources (Supabase/Stripe).
    - Created detailed email templates for dashboard/API outages, ingestion delays, webhook delays, billing issues, and transactional email delays.
    - Enforced strict wording disclaimers (no SLAs, no compensation, no 24/7 support promises).
-   - Created [customer_incident_communication_plan.md](file:///Users/ubaid/Desktop/trackiq/docs/customer_incident_communication_plan.md) mapping all procedures.
+   - Created [customer_incident_communication_plan.md](docs/customer_incident_communication_plan.md) mapping all procedures.
 2. **Runbook & Project Setup Updates:**
-   - Updated [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md) to reference the new plan.
-   - Appended Session 133W to [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md).
-   - Updated [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md) and [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md).
+   - Updated [COMMANDCODE_RUNBOOK.md](COMMANDCODE_RUNBOOK.md) to reference the new plan.
+   - Appended Session 133W to [PAID_BETA_SESSION_PLAN.md](PAID_BETA_SESSION_PLAN.md).
+   - Updated [SESSION_STATE.md](SESSION_STATE.md) and [SESSION_LOG.md](SESSION_LOG.md).
 
 ### Files changed
-- [docs/customer_incident_communication_plan.md](file:///Users/ubaid/Desktop/trackiq/docs/customer_incident_communication_plan.md) [NEW]
-- [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md)
-- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
-- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
-- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
-- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+- [docs/customer_incident_communication_plan.md](docs/customer_incident_communication_plan.md) [NEW]
+- [COMMANDCODE_RUNBOOK.md](COMMANDCODE_RUNBOOK.md)
+- [PAID_BETA_SESSION_PLAN.md](PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
 
 ## Session 133V — Abuse / Rate-Limit / Anti-Spam Review
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
@@ -196,16 +196,16 @@ Stripe test mode only; no live keys; no production data mutated; webhook handler
    - Audited onboarding domain/disposable email spam checks and documented database trigger vs Express-level gaps.
    - Answered all 20 pre-beta audit questions detailing limits, bot filtering, webhook safety, and logging.
 2. **Documentation & Runbooks:**
-   - Created [abuse_rate_limit_spam_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/abuse_rate_limit_spam_audit.md) detailing endpoint coverage, answers, and horizontal scaling risks.
-   - Updated [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md) to append "Abuse, Rate-Limiting, & Anti-Spam Operations".
+   - Created [abuse_rate_limit_spam_audit.md](docs/abuse_rate_limit_spam_audit.md) detailing endpoint coverage, answers, and horizontal scaling risks.
+   - Updated [COMMANDCODE_RUNBOOK.md](COMMANDCODE_RUNBOOK.md) to append "Abuse, Rate-Limiting, & Anti-Spam Operations".
 
 ### Files changed
-- [docs/abuse_rate_limit_spam_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/abuse_rate_limit_spam_audit.md) [NEW]
-- [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md)
-- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
-- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
-- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
-- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+- [docs/abuse_rate_limit_spam_audit.md](docs/abuse_rate_limit_spam_audit.md) [NEW]
+- [COMMANDCODE_RUNBOOK.md](COMMANDCODE_RUNBOOK.md)
+- [PAID_BETA_SESSION_PLAN.md](PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
 
 ## Session 133U — Admin / Operator Access & Internal Support Controls Audit
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
@@ -219,16 +219,16 @@ Stripe test mode only; no live keys; no production data mutated; webhook handler
    - Audited tenant isolation logic and verified support-mode dashboard preview parameters.
    - Addressed 20 pre-beta administrative audit questions regarding routes, tokens, billing, console boundaries, and security.
 2. **Documentation & Runbooks:**
-   - Updated [admin_operator_access_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/admin_operator_access_audit.md) with route inventories, checklists, risks, and audit question responses.
-   - Updated [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md) to append the "Admin / Operator Support Controls" section.
+   - Updated [admin_operator_access_audit.md](docs/admin_operator_access_audit.md) with route inventories, checklists, risks, and audit question responses.
+   - Updated [COMMANDCODE_RUNBOOK.md](COMMANDCODE_RUNBOOK.md) to append the "Admin / Operator Support Controls" section.
 
 ### Files changed
-- [docs/admin_operator_access_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/admin_operator_access_audit.md)
-- [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md)
-- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
-- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
-- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
-- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+- [docs/admin_operator_access_audit.md](docs/admin_operator_access_audit.md)
+- [COMMANDCODE_RUNBOOK.md](COMMANDCODE_RUNBOOK.md)
+- [PAID_BETA_SESSION_PLAN.md](PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
 
 ## Session 133T — Data Deletion / Privacy Request Operational Drill
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
@@ -239,16 +239,16 @@ Stripe test mode only; no live keys; no production data mutated; webhook handler
     *   Audited all routes, logic, and databases related to visitor deletion, account deletion, and data retention configurations.
     *   Formulated precise answers for 20 required data deletion/privacy operational questions, mapping Supabase database deletions (`attributed_conversions`, `site_identity_links`), Stripe billing log boundaries, PostHog person API behaviors, shared workspace owner/admin blocking rules, and manual triage paths.
 2.  **Documentation & Runbooks:**
-    *   Created [privacy_request_operational_drill.md](file:///Users/ubaid/Desktop/trackiq/docs/privacy_request_operational_drill.md) mapping account deletion, visitor erasure, and retention purge flows, provider-console verification checklists, safe testing checklists, and support guidelines.
-    *   Updated [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md) to add a detailed "Privacy Request Operations" section (request verification, site identification, PostHog/Stripe boundaries, staging testing, and support escalation).
+    *   Created [privacy_request_operational_drill.md](docs/privacy_request_operational_drill.md) mapping account deletion, visitor erasure, and retention purge flows, provider-console verification checklists, safe testing checklists, and support guidelines.
+    *   Updated [COMMANDCODE_RUNBOOK.md](COMMANDCODE_RUNBOOK.md) to add a detailed "Privacy Request Operations" section (request verification, site identification, PostHog/Stripe boundaries, staging testing, and support escalation).
 
 ### Files changed
-- [docs/privacy_request_operational_drill.md](file:///Users/ubaid/Desktop/trackiq/docs/privacy_request_operational_drill.md) [NEW]
-- [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md)
-- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
-- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
-- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
-- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+- [docs/privacy_request_operational_drill.md](docs/privacy_request_operational_drill.md) [NEW]
+- [COMMANDCODE_RUNBOOK.md](COMMANDCODE_RUNBOOK.md)
+- [PAID_BETA_SESSION_PLAN.md](PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
 
 ## Session 133S — Production Observability Verification / Incident Response Drill
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
@@ -259,16 +259,16 @@ Stripe test mode only; no live keys; no production data mutated; webhook handler
     *   Audited Express liveness endpoint (`GET /health`), background dependency check cron agent (`api/jobs/health-agent.js`), console-based logging categories, webhook error visibility, rate limiting warnings, and process exception handlers.
     *   Formulated detailed answers for 20 required observability and incident response questions, establishing health scopes, logging limits, and key alerting gaps.
 2.  **Documentation & Runbooks:**
-    *   Created [production_observability_incident_response.md](file:///Users/ubaid/Desktop/trackiq/docs/production_observability_incident_response.md) mapping health endpoints, log inventories, provider checklists (Railway, Supabase, PostHog, Stripe, Resend, CI), severity levels (P0, P1, P2), incident response checklists, rollback guidelines, and SLA disclaimers.
-    *   Updated [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md) to add Incident Response & Observability guidelines (process health checking, logs, cron checks, Stripe/Resend debugging, rollback, and customer communications).
+    *   Created [production_observability_incident_response.md](docs/production_observability_incident_response.md) mapping health endpoints, log inventories, provider checklists (Railway, Supabase, PostHog, Stripe, Resend, CI), severity levels (P0, P1, P2), incident response checklists, rollback guidelines, and SLA disclaimers.
+    *   Updated [COMMANDCODE_RUNBOOK.md](COMMANDCODE_RUNBOOK.md) to add Incident Response & Observability guidelines (process health checking, logs, cron checks, Stripe/Resend debugging, rollback, and customer communications).
 
 ### Files changed
-- [docs/production_observability_incident_response.md](file:///Users/ubaid/Desktop/trackiq/docs/production_observability_incident_response.md) [NEW]
-- [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md)
-- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
-- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
-- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
-- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+- [docs/production_observability_incident_response.md](docs/production_observability_incident_response.md) [NEW]
+- [COMMANDCODE_RUNBOOK.md](COMMANDCODE_RUNBOOK.md)
+- [PAID_BETA_SESSION_PLAN.md](PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
 
 ## Session 133R — Staging / Production Separation Audit
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
@@ -279,20 +279,20 @@ Stripe test mode only; no live keys; no production data mutated; webhook handler
     *   Audited all environments, services, configurations, and variables across Railway, Supabase, PostHog, Stripe, Resend, CORS setup, and CI.
     *   Formulated precise answers for 19 required staging/production isolation questions, mapping environment definitions, deployment separation, webhook paths, and local safety rules.
 2.  **Code Corrections:**
-    *   *Transactional email jobs:* Resolved hardcoded production app links (`https://app.sourcetrack.ai`) in [email-reports.js](file:///Users/ubaid/Desktop/trackiq/api/jobs/email-reports.js) and [usage-threshold-emails.js](file:///Users/ubaid/Desktop/trackiq/api/jobs/usage-threshold-emails.js), replacing them with dynamic `process.env.FRONTEND_URL` resolution with fallback.
+    *   *Transactional email jobs:* Resolved hardcoded production app links (`https://app.sourcetrack.ai`) in [email-reports.js](api/jobs/email-reports.js) and [usage-threshold-emails.js](api/jobs/usage-threshold-emails.js), replacing them with dynamic `process.env.FRONTEND_URL` resolution with fallback.
 3.  **Documentation & Runbooks:**
-    *   Created [staging_production_separation_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/staging_production_separation_audit.md) mapping environments, env vars, provider matrices, CORS settings, migration safety, local dev rules, and provider-console checklists.
-    *   Updated [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md) to add environment separation guidelines (isolation expectations, CORS configs, manual database migrations).
+    *   Created [staging_production_separation_audit.md](docs/staging_production_separation_audit.md) mapping environments, env vars, provider matrices, CORS settings, migration safety, local dev rules, and provider-console checklists.
+    *   Updated [COMMANDCODE_RUNBOOK.md](COMMANDCODE_RUNBOOK.md) to add environment separation guidelines (isolation expectations, CORS configs, manual database migrations).
 
 ### Files changed
-- [docs/staging_production_separation_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/staging_production_separation_audit.md) [NEW]
-- [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md)
-- [api/jobs/email-reports.js](file:///Users/ubaid/Desktop/trackiq/api/jobs/email-reports.js)
-- [api/jobs/usage-threshold-emails.js](file:///Users/ubaid/Desktop/trackiq/api/jobs/usage-threshold-emails.js)
-- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
-- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
-- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
-- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+- [docs/staging_production_separation_audit.md](docs/staging_production_separation_audit.md) [NEW]
+- [COMMANDCODE_RUNBOOK.md](COMMANDCODE_RUNBOOK.md)
+- [api/jobs/email-reports.js](api/jobs/email-reports.js)
+- [api/jobs/usage-threshold-emails.js](api/jobs/usage-threshold-emails.js)
+- [PAID_BETA_SESSION_PLAN.md](PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
 
 ## Session 133Q — Billing Checkout Verification & Stripe Test-Mode QA
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
@@ -303,21 +303,21 @@ Stripe test mode only; no live keys; no production data mutated; webhook handler
     *   Audited all checkout, portal, and webhook ingestion paths under test-mode specifications.
     *   Formulated detailed answers for 19 required billing questions, establishing environment parameters, pricing matrix alignments, and safety boundaries.
 2.  **Code Corrections:**
-    *   *Pricing.jsx React.Fragment bug:* Imported `React` at the top of [Pricing.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Pricing.jsx) to eliminate potential browser reference errors when rendering comparison tables.
-    *   *api.js redirect target:* Adjusted [api.js](file:///Users/ubaid/Desktop/trackiq/dashboard/src/lib/api.js) `fetchApi` 402 handler to redirect users to `/billing` instead of onboarding.
+    *   *Pricing.jsx React.Fragment bug:* Imported `React` at the top of [Pricing.jsx](dashboard/src/pages/Pricing.jsx) to eliminate potential browser reference errors when rendering comparison tables.
+    *   *api.js redirect target:* Adjusted [api.js](dashboard/src/lib/api.js) `fetchApi` 402 handler to redirect users to `/billing` instead of onboarding.
 3.  **Documentation & Runbooks:**
-    *   Created [billing_checkout_test_mode_qa.md](file:///Users/ubaid/Desktop/trackiq/docs/billing_checkout_test_mode_qa.md) outlining billing routes, env vars, price mapping, path separation, manual QA checklists, return URL safety, and price metadata requirements.
-    *   Updated [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md) to add Stripe test-mode guidelines (P0 alignment warning, webhook paths, test cards, and portal domain config).
+    *   Created [billing_checkout_test_mode_qa.md](docs/billing_checkout_test_mode_qa.md) outlining billing routes, env vars, price mapping, path separation, manual QA checklists, return URL safety, and price metadata requirements.
+    *   Updated [COMMANDCODE_RUNBOOK.md](COMMANDCODE_RUNBOOK.md) to add Stripe test-mode guidelines (P0 alignment warning, webhook paths, test cards, and portal domain config).
 
 ### Files changed
-- [docs/billing_checkout_test_mode_qa.md](file:///Users/ubaid/Desktop/trackiq/docs/billing_checkout_test_mode_qa.md) [NEW]
-- [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md)
-- [dashboard/src/pages/Pricing.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Pricing.jsx)
-- [dashboard/src/lib/api.js](file:///Users/ubaid/Desktop/trackiq/dashboard/src/lib/api.js)
-- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
-- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
-- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
-- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+- [docs/billing_checkout_test_mode_qa.md](docs/billing_checkout_test_mode_qa.md) [NEW]
+- [COMMANDCODE_RUNBOOK.md](COMMANDCODE_RUNBOOK.md)
+- [dashboard/src/pages/Pricing.jsx](dashboard/src/pages/Pricing.jsx)
+- [dashboard/src/lib/api.js](dashboard/src/lib/api.js)
+- [PAID_BETA_SESSION_PLAN.md](PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
 
 ## Session 133P — Transactional Email Readiness
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
@@ -328,18 +328,18 @@ Stripe test mode only; no live keys; no production data mutated; webhook handler
     *   Audited all codebases, cron jobs, and settings for Resend integration, DNS verification status, Stripe billing boundaries, and report opt-out flows.
     *   Formulated answers to email readiness questions, detailing the sending paths (`api/jobs/email-reports.js` and `api/jobs/usage-threshold-emails.js`), hardcoded sender addresses, SPF/DKIM/DMARC checklists, deduplication, and suppression gaps.
 2.  **Documentation & Runbooks:**
-    *   Created [transactional_email_readiness.md](file:///Users/ubaid/Desktop/trackiq/docs/transactional_email_readiness.md) mapping transactional email types, DNS checklists, Stripe boundaries, deduplication, and the report digest opt-out gap.
-    *   Updated [.env.example](file:///Users/ubaid/Desktop/trackiq/.env.example) to add comments for `RESEND_API_KEY`, SPF/DKIM/DMARC expectations, and no-secrets rules.
-    *   Updated [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md) with a dedicated "Resend & Transactional Email Operations" checklist.
+    *   Created [transactional_email_readiness.md](docs/transactional_email_readiness.md) mapping transactional email types, DNS checklists, Stripe boundaries, deduplication, and the report digest opt-out gap.
+    *   Updated [.env.example](.env.example) to add comments for `RESEND_API_KEY`, SPF/DKIM/DMARC expectations, and no-secrets rules.
+    *   Updated [COMMANDCODE_RUNBOOK.md](COMMANDCODE_RUNBOOK.md) with a dedicated "Resend & Transactional Email Operations" checklist.
 
 ### Files changed
-- [docs/transactional_email_readiness.md](file:///Users/ubaid/Desktop/trackiq/docs/transactional_email_readiness.md) [NEW]
-- [.env.example](file:///Users/ubaid/Desktop/trackiq/.env.example)
-- [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md)
-- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
-- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
-- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
-- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+- [docs/transactional_email_readiness.md](docs/transactional_email_readiness.md) [NEW]
+- [.env.example](.env.example)
+- [COMMANDCODE_RUNBOOK.md](COMMANDCODE_RUNBOOK.md)
+- [PAID_BETA_SESSION_PLAN.md](PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
 
 ## Session 133O — Legal / Policy Readiness
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
@@ -350,14 +350,14 @@ Stripe test mode only; no live keys; no production data mutated; webhook handler
     *   Formulated precise answers for 12 key legal/policy readiness questions covering Privacy/Terms links, support mailto URLs, data collection specifications, Stripe retention constraints, PostHog best-effort API limits, deletion/retention mechanics, and B2B DPA compliance requirements.
     *   Adhered to strict disclaimers (not legal advice, beta drafts, no compliance claims, customer consent banner obligations).
 2.  **Documentation:**
-    *   Created [legal_policy_readiness.md](file:///Users/ubaid/Desktop/trackiq/docs/legal_policy_readiness.md) mapping out regulatory status, collected metrics (with corrected IP address claim), sub-processing boundaries, deletion rules, cookieless realities, and the lawyer review checklist.
+    *   Created [legal_policy_readiness.md](docs/legal_policy_readiness.md) mapping out regulatory status, collected metrics (with corrected IP address claim), sub-processing boundaries, deletion rules, cookieless realities, and the lawyer review checklist.
 
 ### Files changed
-- [docs/legal_policy_readiness.md](file:///Users/ubaid/Desktop/trackiq/docs/legal_policy_readiness.md) [NEW]
-- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
-- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
-- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
-- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+- [docs/legal_policy_readiness.md](docs/legal_policy_readiness.md) [NEW]
+- [PAID_BETA_SESSION_PLAN.md](PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
 
 ## Session 133N — Plan Gate Enforcement + Pricing Mismatch Fixes
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
@@ -373,20 +373,20 @@ Stripe test mode only; no live keys; no production data mutated; webhook handler
     *   Gated funnel analytics (`api/routes/analytics.js` `/funnel`) using `funnels_cohorts` check.
     *   Gated GDPR data retention configuration (`api/routes/gdpr.js` `PUT /retention`) using plan structural limits (exceeded retention days or keep-forever settings return a 402 upgrade response; existing data is preserved without mutation).
 3.  **Handoff Documentation:**
-    *   Created [plan_gate_enforcement_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/plan_gate_enforcement_audit.md) outlining gates, copy alignment, and documenting active site, team user seat, and conversion caps as deferred (audit-only) limits.
+    *   Created [plan_gate_enforcement_audit.md](docs/plan_gate_enforcement_audit.md) outlining gates, copy alignment, and documenting active site, team user seat, and conversion caps as deferred (audit-only) limits.
 
 ### Files changed
-- [docs/plan_gate_enforcement_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/plan_gate_enforcement_audit.md) [NEW]
-- [dashboard/src/components/PricingCards.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/components/PricingCards.jsx)
-- [dashboard/src/pages/Pricing.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Pricing.jsx)
-- [api/routes/ad-platforms.js](file:///Users/ubaid/Desktop/trackiq/api/routes/ad-platforms.js)
-- [api/routes/cohorts.js](file:///Users/ubaid/Desktop/trackiq/api/routes/cohorts.js)
-- [api/routes/analytics.js](file:///Users/ubaid/Desktop/trackiq/api/routes/analytics.js)
-- [api/routes/gdpr.js](file:///Users/ubaid/Desktop/trackiq/api/routes/gdpr.js)
-- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
-- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
-- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
-- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+- [docs/plan_gate_enforcement_audit.md](docs/plan_gate_enforcement_audit.md) [NEW]
+- [dashboard/src/components/PricingCards.jsx](dashboard/src/components/PricingCards.jsx)
+- [dashboard/src/pages/Pricing.jsx](dashboard/src/pages/Pricing.jsx)
+- [api/routes/ad-platforms.js](api/routes/ad-platforms.js)
+- [api/routes/cohorts.js](api/routes/cohorts.js)
+- [api/routes/analytics.js](api/routes/analytics.js)
+- [api/routes/gdpr.js](api/routes/gdpr.js)
+- [PAID_BETA_SESSION_PLAN.md](PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
 
 ## Session 133M — Pricing & Plan Limits Audit
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
@@ -402,14 +402,14 @@ Stripe test mode only; no live keys; no production data mutated; webhook handler
     *   Modelled three pricing trajectories: Scenario A (Conservative limits), Scenario B (Generous Usermaven replica), and Scenario C (Hybrid Attribution-First value pricing).
     *   Recommended Hybrid Scenario C (10k Free sandbox, 100k Starter, 500k Growth) as it enables founder/agency momentum while protecting infrastructure before E2E load testing.
 3.  **Handoff Documentation:**
-    *   Created [pricing_plan_limits_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/pricing_plan_limits_audit.md) detailing the audit report, non-negotiables (133L load testing, backend route gates), and scenario analysis.
+    *   Created [pricing_plan_limits_audit.md](docs/pricing_plan_limits_audit.md) detailing the audit report, non-negotiables (133L load testing, backend route gates), and scenario analysis.
 
 ### Files changed
-- [docs/pricing_plan_limits_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/pricing_plan_limits_audit.md) [NEW]
-- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
-- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
-- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
-- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+- [docs/pricing_plan_limits_audit.md](docs/pricing_plan_limits_audit.md) [NEW]
+- [PAID_BETA_SESSION_PLAN.md](PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
 
 ## Session 133L — Event Pipeline SLOs + Load Testing + Capacity Readiness
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
@@ -417,31 +417,31 @@ Stripe test mode only; no live keys; no production data mutated; webhook handler
 ### Completed
 
 1. **Stripe & Shopify Webhook plan-check gating:**
-   - Updated [stripe-webhook.js](file:///Users/ubaid/Desktop/trackiq/api/routes/stripe-webhook.js) and [shopify-webhook.js](file:///Users/ubaid/Desktop/trackiq/api/routes/shopify-webhook.js) to reject incoming webhook sync events with `402 Payment Required` if the associated site plan is `'inactive'` or `'archived'`, preventing database RPC execution on suspended accounts.
+   - Updated [stripe-webhook.js](api/routes/stripe-webhook.js) and [shopify-webhook.js](api/routes/shopify-webhook.js) to reject incoming webhook sync events with `402 Payment Required` if the associated site plan is `'inactive'` or `'archived'`, preventing database RPC execution on suspended accounts.
 2. **PostHog Ingestion SDK Batching:**
-   - Modified [posthog.js](file:///Users/ubaid/Desktop/trackiq/api/lib/posthog.js) to support environment-overridable batching parameters `POSTHOG_FLUSH_AT` (defaults to 20 in prod/staging, 1 in dev/test) and `POSTHOG_FLUSH_INTERVAL_MS` (defaults to 10000ms in prod/staging, 0 in dev/test) to reduce concurrent outbound network connection pressure.
-   - Updated [.env.example](file:///Users/ubaid/Desktop/trackiq/.env.example) to include instructions and variables.
+   - Modified [posthog.js](api/lib/posthog.js) to support environment-overridable batching parameters `POSTHOG_FLUSH_AT` (defaults to 20 in prod/staging, 1 in dev/test) and `POSTHOG_FLUSH_INTERVAL_MS` (defaults to 10000ms in prod/staging, 0 in dev/test) to reduce concurrent outbound network connection pressure.
+   - Updated [.env.example](.env.example) to include instructions and variables.
 3. **Staging Load Test k6 Scripts:**
-   - Created safe k6 scripts [k6-track.js](file:///Users/ubaid/Desktop/trackiq/scripts/load/k6-track.js), [k6-conversion.js](file:///Users/ubaid/Desktop/trackiq/scripts/load/k6-conversion.js), and [k6-tracker-id.js](file:///Users/ubaid/Desktop/trackiq/scripts/load/k6-tracker-id.js) with test stages for smoke, 200 eps, 500 eps, and 1000 eps burst profiles.
+   - Created safe k6 scripts [k6-track.js](scripts/load/k6-track.js), [k6-conversion.js](scripts/load/k6-conversion.js), and [k6-tracker-id.js](scripts/load/k6-tracker-id.js) with test stages for smoke, 200 eps, 500 eps, and 1000 eps burst profiles.
    - Added safety guards in each script blocking execution against production targets (`sourcetrack.ai`, `srctk.com`, or `railway.app`) unless overridden via `ALLOW_PRODUCTION_LOAD_TEST=true`.
-   - Created [README.md](file:///Users/ubaid/Desktop/trackiq/scripts/load/README.md) documenting k6 setup, script usage, safety requirements, and test targets.
+   - Created [README.md](scripts/load/README.md) documenting k6 setup, script usage, safety requirements, and test targets.
 4. **Capacity Mapping:**
-   - Created [event_pipeline_capacity.md](file:///Users/ubaid/Desktop/trackiq/docs/event_pipeline_capacity.md) analyzing all ingestion paths, synchronous writes, rate limiting compatibility, observability, and future queues/ClickHouse decision gates.
+   - Created [event_pipeline_capacity.md](docs/event_pipeline_capacity.md) analyzing all ingestion paths, synchronous writes, rate limiting compatibility, observability, and future queues/ClickHouse decision gates.
 
 ### Files changed
-- [api/routes/stripe-webhook.js](file:///Users/ubaid/Desktop/trackiq/api/routes/stripe-webhook.js)
-- [api/routes/shopify-webhook.js](file:///Users/ubaid/Desktop/trackiq/api/routes/shopify-webhook.js)
-- [api/lib/posthog.js](file:///Users/ubaid/Desktop/trackiq/api/lib/posthog.js)
-- [.env.example](file:///Users/ubaid/Desktop/trackiq/.env.example)
-- [docs/event_pipeline_capacity.md](file:///Users/ubaid/Desktop/trackiq/docs/event_pipeline_capacity.md) [NEW]
-- [scripts/load/k6-track.js](file:///Users/ubaid/Desktop/trackiq/scripts/load/k6-track.js) [NEW]
-- [scripts/load/k6-conversion.js](file:///Users/ubaid/Desktop/trackiq/scripts/load/k6-conversion.js) [NEW]
-- [scripts/load/k6-tracker-id.js](file:///Users/ubaid/Desktop/trackiq/scripts/load/k6-tracker-id.js) [NEW]
-- [scripts/load/README.md](file:///Users/ubaid/Desktop/trackiq/scripts/load/README.md) [NEW]
-- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
-- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
-- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
-- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+- [api/routes/stripe-webhook.js](api/routes/stripe-webhook.js)
+- [api/routes/shopify-webhook.js](api/routes/shopify-webhook.js)
+- [api/lib/posthog.js](api/lib/posthog.js)
+- [.env.example](.env.example)
+- [docs/event_pipeline_capacity.md](docs/event_pipeline_capacity.md) [NEW]
+- [scripts/load/k6-track.js](scripts/load/k6-track.js) [NEW]
+- [scripts/load/k6-conversion.js](scripts/load/k6-conversion.js) [NEW]
+- [scripts/load/k6-tracker-id.js](scripts/load/k6-tracker-id.js) [NEW]
+- [scripts/load/README.md](scripts/load/README.md) [NEW]
+- [PAID_BETA_SESSION_PLAN.md](PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
 
 ## Session 133K — Support Readiness
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
@@ -449,7 +449,7 @@ Stripe test mode only; no live keys; no production data mutated; webhook handler
 ### Completed
 
 1. **Support Readiness Documentation**
-   - Created [support_readiness.md](file:///Users/ubaid/Desktop/trackiq/docs/support_readiness.md) detailing customer entry points, bug context, install/billing/privacy support checklists, operator triage and escalation workflows, and explicit prohibitions on SLA, 24-7, or refund promises.
+   - Created [support_readiness.md](docs/support_readiness.md) detailing customer entry points, bug context, install/billing/privacy support checklists, operator triage and escalation workflows, and explicit prohibitions on SLA, 24-7, or refund promises.
 2. **Billing Support Footer**
    - Added support email help section to the bottom of the Billing page (`Billing.jsx`) explaining billing, cancellation, or refund question guidelines.
 3. **Settings Support & Feedback Card**
@@ -462,15 +462,15 @@ Stripe test mode only; no live keys; no production data mutated; webhook handler
    - Added `Session 133L — Event Pipeline SLOs + Load Testing + Capacity Readiness` to the roadmap in `PAID_BETA_SESSION_PLAN.md` and `SESSION_HANDOFF.md`.
 
 ### Files changed
-- [docs/support_readiness.md](file:///Users/ubaid/Desktop/trackiq/docs/support_readiness.md) [NEW]
-- [dashboard/src/pages/Billing.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Billing.jsx)
-- [dashboard/src/pages/Settings.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Settings.jsx)
-- [dashboard/src/pages/Snippet.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Snippet.jsx)
-- [dashboard/src/pages/Onboarding.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Onboarding.jsx)
-- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
-- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
-- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
-- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+- [docs/support_readiness.md](docs/support_readiness.md) [NEW]
+- [dashboard/src/pages/Billing.jsx](dashboard/src/pages/Billing.jsx)
+- [dashboard/src/pages/Settings.jsx](dashboard/src/pages/Settings.jsx)
+- [dashboard/src/pages/Snippet.jsx](dashboard/src/pages/Snippet.jsx)
+- [dashboard/src/pages/Onboarding.jsx](dashboard/src/pages/Onboarding.jsx)
+- [PAID_BETA_SESSION_PLAN.md](PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
 
 ## Session 133J — Docs Truth Audit
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
@@ -478,7 +478,7 @@ Stripe test mode only; no live keys; no production data mutated; webhook handler
 ### Completed
 
 1. **Docs Truth Audit Map**
-   - Created [docs_truth_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/docs_truth_audit.md) outlining audited capability areas, corrected files, and remaining unsupported/future claims to avoid.
+   - Created [docs_truth_audit.md](docs/docs_truth_audit.md) outlining audited capability areas, corrected files, and remaining unsupported/future claims to avoid.
 2. **Canonical Tracker Paths Standardization**
    - Standardized tracker snippet paths across solution, setup, and help pages (`DocsFramer.jsx`, `DocsShopify.jsx`, `DocsWebflow.jsx`, `DocsWordPress.jsx`, `DocsGTM.jsx`, `DocsQuickstart.jsx`, `DevelopersTracker.jsx`, `README.md`) to canonical root paths `/tracker.min.js` and `/tracker.cookieless.min.js`.
 3. **Stripe Environment Variables Sync**
@@ -489,27 +489,27 @@ Stripe test mode only; no live keys; no production data mutated; webhook handler
    - Replaced "privacy-compliant" with "privacy-conscious" in `DevelopersTracker.jsx`.
 
 ### Files changed
-- [docs/docs_truth_audit.md](file:///Users/ubaid/Desktop/trackiq/docs/docs_truth_audit.md) [NEW]
-- [.env.example](file:///Users/ubaid/Desktop/trackiq/.env.example)
-- [README.md](file:///Users/ubaid/Desktop/trackiq/README.md)
-- [dashboard/src/pages/Analytics.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Analytics.jsx)
-- [dashboard/src/pages/Integrations.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Integrations.jsx)
-- [dashboard/src/pages/Settings.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Settings.jsx)
-- [dashboard/src/pages/SolutionAgency.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/SolutionAgency.jsx)
-- [dashboard/src/pages/SolutionEcommerce.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/SolutionEcommerce.jsx)
-- [dashboard/src/pages/SolutionLeadGen.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/SolutionLeadGen.jsx)
-- [dashboard/src/pages/SolutionSaaS.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/SolutionSaaS.jsx)
-- [dashboard/src/pages/docs/DocsFramer.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/docs/DocsFramer.jsx)
-- [dashboard/src/pages/docs/DocsShopify.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/docs/DocsShopify.jsx)
-- [dashboard/src/pages/docs/DocsWebflow.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/docs/DocsWebflow.jsx)
-- [dashboard/src/pages/docs/DocsWordPress.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/docs/DocsWordPress.jsx)
-- [dashboard/src/pages/docs/DocsGTM.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/docs/DocsGTM.jsx)
-- [dashboard/src/pages/docs/DocsQuickstart.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/docs/DocsQuickstart.jsx)
-- [dashboard/src/pages/developers/DevelopersTracker.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/developers/DevelopersTracker.jsx)
-- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
-- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
-- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
-- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+- [docs/docs_truth_audit.md](docs/docs_truth_audit.md) [NEW]
+- [.env.example](.env.example)
+- [README.md](README.md)
+- [dashboard/src/pages/Analytics.jsx](dashboard/src/pages/Analytics.jsx)
+- [dashboard/src/pages/Integrations.jsx](dashboard/src/pages/Integrations.jsx)
+- [dashboard/src/pages/Settings.jsx](dashboard/src/pages/Settings.jsx)
+- [dashboard/src/pages/SolutionAgency.jsx](dashboard/src/pages/SolutionAgency.jsx)
+- [dashboard/src/pages/SolutionEcommerce.jsx](dashboard/src/pages/SolutionEcommerce.jsx)
+- [dashboard/src/pages/SolutionLeadGen.jsx](dashboard/src/pages/SolutionLeadGen.jsx)
+- [dashboard/src/pages/SolutionSaaS.jsx](dashboard/src/pages/SolutionSaaS.jsx)
+- [dashboard/src/pages/docs/DocsFramer.jsx](dashboard/src/pages/docs/DocsFramer.jsx)
+- [dashboard/src/pages/docs/DocsShopify.jsx](dashboard/src/pages/docs/DocsShopify.jsx)
+- [dashboard/src/pages/docs/DocsWebflow.jsx](dashboard/src/pages/docs/DocsWebflow.jsx)
+- [dashboard/src/pages/docs/DocsWordPress.jsx](dashboard/src/pages/docs/DocsWordPress.jsx)
+- [dashboard/src/pages/docs/DocsGTM.jsx](dashboard/src/pages/docs/DocsGTM.jsx)
+- [dashboard/src/pages/docs/DocsQuickstart.jsx](dashboard/src/pages/docs/DocsQuickstart.jsx)
+- [dashboard/src/pages/developers/DevelopersTracker.jsx](dashboard/src/pages/developers/DevelopersTracker.jsx)
+- [PAID_BETA_SESSION_PLAN.md](PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
 
 ## Session 133I — End-to-End Install QA
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
@@ -517,7 +517,7 @@ Stripe test mode only; no live keys; no production data mutated; webhook handler
 ### Completed
 
 1. **Install QA Reality Map**
-   - Created [install_qa_map.md](file:///Users/ubaid/Desktop/trackiq/docs/install_qa_map.md) detailing publicly served tracker files, canonical snippets, backwards-compatible paths, endpoints, and the boundaries of the installation verification check.
+   - Created [install_qa_map.md](docs/install_qa_map.md) detailing publicly served tracker files, canonical snippets, backwards-compatible paths, endpoints, and the boundaries of the installation verification check.
 2. **Canonical Public Tracker URL Standardization**
    - Standardized on the root paths `/tracker.min.js` and `/tracker.cookieless.min.js` as canonical tracker URLs across onboarding fallbacks, settings, snippet page code-blocks, dynamic script generators, and user help docs.
    - Preserved `/tracker/tracker.min.js` and `/tracker/tracker.cookieless.min.js` as backwards-compatible paths.
@@ -525,15 +525,15 @@ Stripe test mode only; no live keys; no production data mutated; webhook handler
    - Updated Onboarding and Snippet page verification blocks with copy detailing the scope of the verification checks (checking recent event ingestion for the site key, not proving all-page or conversion install, and warning on domain mismatches).
 
 ### Files changed
-- [docs/install_qa_map.md](file:///Users/ubaid/Desktop/trackiq/docs/install_qa_map.md) [NEW]
-- [api/routes/install.js](file:///Users/ubaid/Desktop/trackiq/api/routes/install.js)
-- [dashboard/src/pages/Onboarding.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Onboarding.jsx)
-- [dashboard/src/pages/Snippet.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Snippet.jsx)
-- [dashboard/src/pages/docs/DocsInstall.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/docs/DocsInstall.jsx)
-- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
-- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
-- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
-- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+- [docs/install_qa_map.md](docs/install_qa_map.md) [NEW]
+- [api/routes/install.js](api/routes/install.js)
+- [dashboard/src/pages/Onboarding.jsx](dashboard/src/pages/Onboarding.jsx)
+- [dashboard/src/pages/Snippet.jsx](dashboard/src/pages/Snippet.jsx)
+- [dashboard/src/pages/docs/DocsInstall.jsx](dashboard/src/pages/docs/DocsInstall.jsx)
+- [PAID_BETA_SESSION_PLAN.md](PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
 
 ## Session 133H — Backup and Recovery Plan
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
@@ -541,21 +541,21 @@ Stripe test mode only; no live keys; no production data mutated; webhook handler
 ### Completed
 
 1. **Backup and Recovery Runbook**
-   - Created [backup_recovery.md](file:///Users/ubaid/Desktop/trackiq/docs/backup_recovery.md) detailing the provider data ownership map, backup verification checklist, disaster recovery playbooks (bad deploy, bad migration, accidental deletion, Stripe missed webhooks, PostHog outage, cron/job failures), and the `ENCRYPTION_KEY` loss procedures.
+   - Created [backup_recovery.md](docs/backup_recovery.md) detailing the provider data ownership map, backup verification checklist, disaster recovery playbooks (bad deploy, bad migration, accidental deletion, Stripe missed webhooks, PostHog outage, cron/job failures), and the `ENCRYPTION_KEY` loss procedures.
 2. **CommandCode Runbook Link & Verification Update**
-   - Updated [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md) to link directly to `docs/backup_recovery.md`.
+   - Updated [COMMANDCODE_RUNBOOK.md](COMMANDCODE_RUNBOOK.md) to link directly to `docs/backup_recovery.md`.
    - Updated the Railway rollback Scenario A description to remove the "~30 seconds" duration claim and mandate verification of deployment status, logs, and health checks.
 3. **Encryption Key Warnings**
-   - Updated [.env.example](file:///Users/ubaid/Desktop/trackiq/.env.example) to warn developers that `ENCRYPTION_KEY` must remain stable, must be backed up securely, must never be committed, and that losing it breaks decryption of existing integration tokens.
+   - Updated [.env.example](.env.example) to warn developers that `ENCRYPTION_KEY` must remain stable, must be backed up securely, must never be committed, and that losing it breaks decryption of existing integration tokens.
 
 ### Files changed
-- [docs/backup_recovery.md](file:///Users/ubaid/Desktop/trackiq/docs/backup_recovery.md) [NEW]
-- [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md)
-- [.env.example](file:///Users/ubaid/Desktop/trackiq/.env.example)
-- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
-- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
-- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
-- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+- [docs/backup_recovery.md](docs/backup_recovery.md) [NEW]
+- [COMMANDCODE_RUNBOOK.md](COMMANDCODE_RUNBOOK.md)
+- [.env.example](.env.example)
+- [PAID_BETA_SESSION_PLAN.md](PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
 
 ## Session 133G — Data Deletion / Privacy Basics
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
@@ -574,15 +574,15 @@ Stripe test mode only; no live keys; no production data mutated; webhook handler
    - Updated `Settings.jsx` visitor erasure copy to specify that database records are permanently deleted, PostHog erasure is best-effort, and Stripe billing records are unaffected.
 
 ### Files changed
-- [api/routes/gdpr.js](file:///Users/ubaid/Desktop/trackiq/api/routes/gdpr.js)
-- [dashboard/src/pages/Settings.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Settings.jsx)
-- [dashboard/src/pages/developers/DevelopersTracker.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/developers/DevelopersTracker.jsx)
-- [README.md](file:///Users/ubaid/Desktop/trackiq/README.md)
-- [docs/privacy_reality_map.md](file:///Users/ubaid/Desktop/trackiq/docs/privacy_reality_map.md) [NEW]
-- [PAID_BETA_SESSION_PLAN.md](file:///Users/ubaid/Desktop/trackiq/PAID_BETA_SESSION_PLAN.md)
-- [SESSION_STATE.md](file:///Users/ubaid/Desktop/trackiq/SESSION_STATE.md)
-- [SESSION_LOG.md](file:///Users/ubaid/Desktop/trackiq/SESSION_LOG.md)
-- [SESSION_HANDOFF.md](file:///Users/ubaid/Desktop/trackiq/SESSION_HANDOFF.md)
+- [api/routes/gdpr.js](api/routes/gdpr.js)
+- [dashboard/src/pages/Settings.jsx](dashboard/src/pages/Settings.jsx)
+- [dashboard/src/pages/developers/DevelopersTracker.jsx](dashboard/src/pages/developers/DevelopersTracker.jsx)
+- [README.md](README.md)
+- [docs/privacy_reality_map.md](docs/privacy_reality_map.md) [NEW]
+- [PAID_BETA_SESSION_PLAN.md](PAID_BETA_SESSION_PLAN.md)
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
 
 ## Session 133E — Billing and Limits Enforcement Alignment
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
@@ -603,14 +603,14 @@ Stripe test mode only; no live keys; no production data mutated; webhook handler
    - Updated `getPriceMap()` in `api/routes/billing.js` to dynamically build mapping without undefined key insertions. Maps `STRIPE_PRICE_ID_SCALE` to `'scale'` and legacy price ID aliases cleanly.
 
 ### Files changed
-- [20260610120000_align_scale_plan.sql](file:///Users/ubaid/Desktop/trackiq/supabase/migrations/20260610120000_align_scale_plan.sql)
-- [schema.sql](file:///Users/ubaid/Desktop/trackiq/supabase/schema.sql)
-- [SUPABASE_SCHEMA.md](file:///Users/ubaid/Desktop/trackiq/SUPABASE_SCHEMA.md)
-- [api/routes/google-search-console.js](file:///Users/ubaid/Desktop/trackiq/api/routes/google-search-console.js)
-- [api/routes/seo-revenue.js](file:///Users/ubaid/Desktop/trackiq/api/routes/seo-revenue.js)
-- [api/routes/pixel.js](file:///Users/ubaid/Desktop/trackiq/api/routes/pixel.js)
-- [api/routes/billing.js](file:///Users/ubaid/Desktop/trackiq/api/routes/billing.js)
-- [dashboard/src/lib/billing.js](file:///Users/ubaid/Desktop/trackiq/dashboard/src/lib/billing.js)
+- [20260610120000_align_scale_plan.sql](supabase/migrations/20260610120000_align_scale_plan.sql)
+- [schema.sql](supabase/schema.sql)
+- [SUPABASE_SCHEMA.md](SUPABASE_SCHEMA.md)
+- [api/routes/google-search-console.js](api/routes/google-search-console.js)
+- [api/routes/seo-revenue.js](api/routes/seo-revenue.js)
+- [api/routes/pixel.js](api/routes/pixel.js)
+- [api/routes/billing.js](api/routes/billing.js)
+- [dashboard/src/lib/billing.js](dashboard/src/lib/billing.js)
 
 
 ## Session 133D — Production Observability Audit + Minimum Alerts Plan
@@ -632,9 +632,9 @@ Stripe test mode only; no live keys; no production data mutated; webhook handler
    - Updated deployment check and health check curl command checklists to verify public canonical tracker paths `/tracker.min.js` and `/tracker.cookieless.min.js` instead of outdated folder-based paths.
 
 ### Files changed
-- [api/index.js](file:///Users/ubaid/Desktop/trackiq/api/index.js)
-- [.env.example](file:///Users/ubaid/Desktop/trackiq/.env.example)
-- [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md)
+- [api/index.js](api/index.js)
+- [.env.example](.env.example)
+- [COMMANDCODE_RUNBOOK.md](COMMANDCODE_RUNBOOK.md)
 
 ## Session 133C — Real Deployment Checklist + Rollback Runbook
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
@@ -650,7 +650,7 @@ Stripe test mode only; no live keys; no production data mutated; webhook handler
    - Documented standard emergency rollback flows in `COMMANDCODE_RUNBOOK.md` for application code regressions (Railway 1-click rollback), database schema failures (additive schema forward-fix preference), and webhook decryption secret mismatched values.
 
 ### Files changed
-- [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md)
+- [COMMANDCODE_RUNBOOK.md](COMMANDCODE_RUNBOOK.md)
 
 ## Session 133B — Lightweight CI Regression Pipeline
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass)
@@ -668,9 +668,9 @@ Stripe test mode only; no live keys; no production data mutated; webhook handler
    - Emphasized that live-service QA scripts and active secrets must remain out of CI until a dedicated staging environment exists.
 
 ### Files changed
-- [.github/workflows/ci.yml](file:///Users/ubaid/Desktop/trackiq/.github/workflows/ci.yml)
-- [COMMANDCODE_RUNBOOK.md](file:///Users/ubaid/Desktop/trackiq/COMMANDCODE_RUNBOOK.md)
-- [README.md](file:///Users/ubaid/Desktop/trackiq/README.md)
+- [.github/workflows/ci.yml](.github/workflows/ci.yml)
+- [COMMANDCODE_RUNBOOK.md](COMMANDCODE_RUNBOOK.md)
+- [README.md](README.md)
 
 ## Session 132E — AI Journey Attribution Performance Hardening
 **Date:** 2026-06-10 | **Branch:** `main` | **Build:** ✅ passing (Vite + Node syntax check + QA pass + required-grep clean)
@@ -1545,7 +1545,7 @@ ALLOW_ATTRIBUTION_E2E_TIMEOUT_WARN=1 node scripts/qa-referrer-domain-reporting.m
 
 ### Completed
 1. **Revenue Ingestion Audit:** Completed a detailed audit of standard conversions (`api/routes/conversion.js`), offline conversions (`api/routes/conversion-offline.js`), incoming webhooks (`api/routes/webhook-incoming.js`), outbound webhooks (`api/lib/webhook.js` and `api/routes/webhooks.js`), and pixel routes (`api/routes/pixel.js`).
-2. **Detailed Plan Created:** Created [revenue_ingestion_audit.md](file:///Users/ubaid/.gemini/antigravity/brain/77b33e63-5989-4fc8-99ee-bcd620aa29e4/revenue_ingestion_audit.md) outlining data fields, deduplication mapping gaps, security/privacy risks, UI/documentation status, and exact implementation plans for Stripe sync, Payments API, and Shopify webhooks.
+2. **Detailed Plan Created:** Created [revenue_ingestion_audit.md](~/.gemini/antigravity/brain/77b33e63-5989-4fc8-99ee-bcd620aa29e4/revenue_ingestion_audit.md) outlining data fields, deduplication mapping gaps, security/privacy risks, UI/documentation status, and exact implementation plans for Stripe sync, Payments API, and Shopify webhooks.
 3. **Static Launch Verification:** Executed `npm run qa:static` checking backend file syntaxes, production frontend compilation, git status, and plan/scoping gates. All checks passed with zero errors.
 
 ## Session 117C — Page-Path Funnel Presets
@@ -1636,7 +1636,7 @@ ALLOW_ATTRIBUTION_E2E_TIMEOUT_WARN=1 node scripts/qa-referrer-domain-reporting.m
 ## Session 109 — Brutal Competitive Feature Parity Audit
 **Date:** 2026-06-05 | **Branch:** `main` | **Build:** ✅ passing
 ### Completed
-1. **Competitive Audit Report:** Created [competitive_feature_parity_audit.md](file:///Users/ubaid/.gemini/antigravity/brain/62433705-749b-4885-9b11-c799464b11c9/competitive_feature_parity_audit.md) detailing positioning, matrices, and launch scorecards.
+1. **Competitive Audit Report:** Created [competitive_feature_parity_audit.md](~/.gemini/antigravity/brain/62433705-749b-4885-9b11-c799464b11c9/competitive_feature_parity_audit.md) detailing positioning, matrices, and launch scorecards.
 2. **Segment Readiness Check:** Verified SaaS and Lead-Gen segments are ready for immediate onboarding; eCommerce merchants should be deferred until automated ad spend ingestion is live.
 3. **Repository Sync:** Updated session log, plan state, and handoff files.
 
@@ -1645,26 +1645,26 @@ ALLOW_ATTRIBUTION_E2E_TIMEOUT_WARN=1 node scripts/qa-referrer-domain-reporting.m
 ## Session 108 — Public Trust Cleanup
 **Date:** 2026-06-05 | **Branch:** `main` | **Build:** ✅ passing
 ### Completed
-1. **ToS & Privacy Pages:** Created [Terms.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Terms.jsx) and [Privacy.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/Privacy.jsx) with clean legal copy.
-2. **Footer Wiring:** Connected footer link pathways in [MarketingFooter.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/components/MarketingFooter.jsx).
-3. **Dashboard Share indexability:** Injected `noindex` SEO headers in [ShareDashboard.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/pages/ShareDashboard.jsx) to prevent indexing.
+1. **ToS & Privacy Pages:** Created [Terms.jsx](dashboard/src/pages/Terms.jsx) and [Privacy.jsx](dashboard/src/pages/Privacy.jsx) with clean legal copy.
+2. **Footer Wiring:** Connected footer link pathways in [MarketingFooter.jsx](dashboard/src/components/MarketingFooter.jsx).
+3. **Dashboard Share indexability:** Injected `noindex` SEO headers in [ShareDashboard.jsx](dashboard/src/pages/ShareDashboard.jsx) to prevent indexing.
 
 ---
 
 ## Session 107 — Public Site Copy Polish
 **Date:** 2026-06-05 | **Branch:** `main` | **Build:** ✅ passing
 ### Completed
-1. **Button & Feature Aligner:** Standardized CTA buttons and pricing feature matrices in [PricingCards.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/components/PricingCards.jsx).
-2. **Sitemap validation:** Aligned modified dates in public [sitemap.xml](file:///Users/ubaid/Desktop/trackiq/dashboard/public/sitemap.xml).
+1. **Button & Feature Aligner:** Standardized CTA buttons and pricing feature matrices in [PricingCards.jsx](dashboard/src/components/PricingCards.jsx).
+2. **Sitemap validation:** Aligned modified dates in public [sitemap.xml](dashboard/public/sitemap.xml).
 
 ---
 
 ## Session 106 — Public Site SEO & Mobile UX Cleanup
 **Date:** 2026-06-04 | **Branch:** `main` | **Build:** ✅ passing
 ### Completed
-1. **SEO Headers:** Cleaned up HTML titles and description tags inside [index.html](file:///Users/ubaid/Desktop/trackiq/dashboard/index.html).
-2. **Robots rules:** Whitelisted `/report-builder` in [robots.txt](file:///Users/ubaid/Desktop/trackiq/dashboard/public/robots.txt).
-3. **Layout styles:** Hardened responsive container dimensions in [ComparisonTable.jsx](file:///Users/ubaid/Desktop/trackiq/dashboard/src/components/ComparisonTable.jsx).
+1. **SEO Headers:** Cleaned up HTML titles and description tags inside [index.html](dashboard/index.html).
+2. **Robots rules:** Whitelisted `/report-builder` in [robots.txt](dashboard/public/robots.txt).
+3. **Layout styles:** Hardened responsive container dimensions in [ComparisonTable.jsx](dashboard/src/components/ComparisonTable.jsx).
 
 ---
 
