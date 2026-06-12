@@ -8,6 +8,7 @@ process.env.SUPABASE_SERVICE_KEY = 'mock-service-role-key-value'
 
 import { getSupabase } from '../lib/supabase.js'
 import { validateSiteKey, siteCache } from '../middleware/auth.js'
+import { isValidRedirectUrl, getRedirectAllowlist, getDefaultBillingReturnUrl } from '../routes/billing.js'
 
 test('validateSiteKey Billing Customer Regression Tests', async (t) => {
   const client = getSupabase()
@@ -177,5 +178,106 @@ test('validateSiteKey Billing Customer Regression Tests', async (t) => {
     assert.strictEqual(nextCalledB, true)
     assert.ok(reqB.site, 'req.site must be populated')
     assert.strictEqual(reqB.site.stripe_customer_id, null, 'req.site.stripe_customer_id must default to null')
+  })
+})
+
+test('Billing Redirection Allowlist and Validation Tests', async (t) => {
+  const originalEnv = { ...process.env }
+
+  t.afterEach(() => {
+    process.env = { ...originalEnv }
+  })
+
+  await t.test('returns correct default allowlist when no env vars are defined', () => {
+    // Clear relevant environment variables
+    delete process.env.ALLOWED_ORIGINS
+    delete process.env.FRONTEND_URL
+    delete process.env.DASHBOARD_URL
+
+    const allowlist = getRedirectAllowlist()
+
+    // Check for hardcoded defaults
+    assert.ok(allowlist.includes('https://www.sourcetrack.ai'))
+    assert.ok(allowlist.includes('https://sourcetrack.ai'))
+    assert.ok(allowlist.includes('https://app.sourcetrack.ai'))
+    assert.ok(allowlist.includes('http://localhost:5173'))
+    assert.ok(allowlist.includes('http://localhost:8080'))
+  })
+
+  await t.test('correctly incorporates ALLOWED_ORIGINS, FRONTEND_URL, and DASHBOARD_URL', () => {
+    process.env.ALLOWED_ORIGINS = 'https://test.example.com/sub/route?foo=bar'
+    process.env.FRONTEND_URL = 'https://frontend.example.com/'
+    process.env.DASHBOARD_URL = 'https://dashboard.example.com'
+
+    const allowlist = getRedirectAllowlist()
+
+    // Full URL origin configurations with trailing slash and query params/paths
+    assert.ok(allowlist.includes('https://test.example.com'))
+    assert.ok(allowlist.includes('https://frontend.example.com'))
+    assert.ok(allowlist.includes('https://dashboard.example.com'))
+  })
+
+  await t.test('hostname-only ALLOWED_ORIGINS defaults to HTTPS only', () => {
+    process.env.ALLOWED_ORIGINS = 'staging.example.com'
+    const allowlist = getRedirectAllowlist()
+
+    assert.ok(allowlist.includes('https://staging.example.com'))
+    assert.strictEqual(allowlist.includes('http://staging.example.com'), false)
+  })
+
+  await t.test('explicit http://localhost / http://127.0.0.1 remains allowed', () => {
+    process.env.ALLOWED_ORIGINS = 'localhost:3000, 127.0.0.1:4000'
+    const allowlist = getRedirectAllowlist()
+
+    assert.ok(allowlist.includes('https://localhost:3000'))
+    assert.ok(allowlist.includes('http://localhost:3000'))
+    assert.ok(allowlist.includes('https://127.0.0.1:4000'))
+    assert.ok(allowlist.includes('http://127.0.0.1:4000'))
+  })
+
+  await t.test('arbitrary hostname-only config does not auto-allow HTTP', () => {
+    process.env.ALLOWED_ORIGINS = 'another-staging.com/path'
+    const allowlist = getRedirectAllowlist()
+
+    assert.ok(allowlist.includes('https://another-staging.com'))
+    assert.strictEqual(allowlist.includes('http://another-staging.com'), false)
+  })
+
+  await t.test('getDefaultBillingReturnUrl() validation and fallbacks', () => {
+    // 1. Returns default when no env vars are set
+    delete process.env.DASHBOARD_URL
+    delete process.env.FRONTEND_URL
+    assert.strictEqual(getDefaultBillingReturnUrl(), 'https://app.sourcetrack.ai/billing')
+
+    // 2. Normalizes DASHBOARD_URL with trailing slash/path/query to origin + /billing
+    process.env.ALLOWED_ORIGINS = 'dashboard.example.com'
+    process.env.DASHBOARD_URL = 'https://dashboard.example.com/some/path?query=123/'
+    assert.strictEqual(getDefaultBillingReturnUrl(), 'https://dashboard.example.com/billing')
+
+    // 3. Rejects unsafe/malformed DASHBOARD_URL and falls back
+    process.env.DASHBOARD_URL = 'https://evil.com/some/path'
+    assert.strictEqual(getDefaultBillingReturnUrl(), 'https://app.sourcetrack.ai/billing')
+  })
+
+  await t.test('isValidRedirectUrl identifies allowed vs disallowed targets', () => {
+    process.env.ALLOWED_ORIGINS = 'staging.example.com/some/path'
+    process.env.FRONTEND_URL = 'https://frontend.example.com/'
+
+    // Valid inputs
+    assert.strictEqual(isValidRedirectUrl('https://sourcetrack.ai/billing'), true)
+    assert.strictEqual(isValidRedirectUrl('http://localhost:5173/billing?upgrade=success'), true)
+    assert.strictEqual(isValidRedirectUrl('https://staging.example.com/billing'), true)
+    assert.strictEqual(isValidRedirectUrl('http://staging.example.com/billing'), false)
+    assert.strictEqual(isValidRedirectUrl('https://frontend.example.com/billing'), true)
+
+    // Invalid/disallowed inputs
+    assert.strictEqual(isValidRedirectUrl('https://evil.com'), false)
+    assert.strictEqual(isValidRedirectUrl('https://google.com/billing'), false)
+    assert.strictEqual(isValidRedirectUrl('https://app.sourcetrack.ai.evil.com/billing'), false) // mimicking subdomain suffix
+    assert.strictEqual(isValidRedirectUrl('http://localhost.evil.com:5173'), false)
+    assert.strictEqual(isValidRedirectUrl('relative/path'), false)
+    assert.strictEqual(isValidRedirectUrl(''), false)
+    assert.strictEqual(isValidRedirectUrl(null), false)
+    assert.strictEqual(isValidRedirectUrl({}), false)
   })
 })

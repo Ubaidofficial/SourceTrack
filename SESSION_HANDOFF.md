@@ -2,15 +2,18 @@
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
-> **Handoff:** Session 139J-C — Billing Middleware Regression Tests Only — **PASS — billing middleware regression tests protect stripe_customer_id selection and req.site propagation.**
-> - **Regression Tests:** Added focused automated regression tests under `api/tests/billing-middleware.test.js` validating that `validateSiteKey` select fields for primary and fallback queries contain `stripe_customer_id`, and that `req.site.stripe_customer_id` is set/defaulted correctly.
-> - **Scoping and Data Leakage Audit:** Audited `api/routes/billing.js` and confirmed billing routes consume `req.site.stripe_customer_id` cleanly without leaking it or serializing the full `req.site` to the client.
+> **Handoff:** Session 140F — Billing Redirect Hardening Code Audit/Fix — **PASS — billing redirect behavior is hardened; redirect targets are validated against allowlisted dashboard/frontend origins.**
+> - **Redirection Security Hardening:** Hardened `create-checkout` successUrl/cancelUrl and customer portal returnUrl to strictly validate target origins against allowlisted dashboard/frontend hostnames (derived from env variables and hardcoded defaults). Invalid checkout targets are rejected; invalid portal targets fall back to a safe default.
+> - **Regression Tests:** Added automated unit tests covering allowed vs disallowed target validation. All tests pass.
 > - **Staging Free-plan Billing UI browser verification:** PASS on the currently deployed staging build (page load, plan/usage display, empty/free state, Terms/Privacy gate, upgrade checkout CTA to Stripe test cs_test_ checkout).
 > - **Middleware fix live-on-staging verification:** PENDING / NOT RUN after deployment; browser/live API verification paused.
 > - **Paid-site billing portal flow:** NOT VERIFIED; requires a paid staging site/customer.
 > - **Production billing:** UNVERIFIED.
 > - **Paid beta:** BLOCKED.
-> - **Fix Details:** `api/middleware/auth.js` `validateSiteKey` now selects `stripe_customer_id` from the database in both SELECT paths and copies it to `req.site.stripe_customer_id`. This restores subscription status lookup, portal access, and customer reuse. Verified locally via audit + automated test suite; no secrets or credentials printed. QA: docs/qa/billing_middleware_regression_tests_139J-C.md.
+> - **Operational Caveats:** For non-canonical staging or production dashboard domains, `ALLOWED_ORIGINS` must include the deployed dashboard origin. `FRONTEND_URL` or `DASHBOARD_URL` can supply the fallback return target, but that target is only used if its origin is also allowlisted or is one of the canonical defaults. Browser/live Stripe redirect behavior remains unverified while browser QA is paused.
+> - **Fix Details:** `api/routes/billing.js` validates all user-controlled target URLs against the allowlist in `isValidRedirectUrl`. Verified locally via audit + automated test suite. Security & Credential Grep: Scanned workspace for live-key/JWT/local-path patterns. Hits, if any, were limited to known placeholders, masked webhook-secret examples, generated webhook-secret prefixes, and historical docs references; no real secrets or local file paths were introduced by 140F. QA: docs/qa/billing_redirect_hardening_140F.md.
+>
+> **Prior handoff (Session 139J-C):** Session 139J-C — Billing Middleware Regression Tests Only — **PASS**. Added focused automated regression tests under `api/tests/billing-middleware.test.js` validating that `validateSiteKey` select fields for primary and fallback queries contain `stripe_customer_id`, and that `req.site.stripe_customer_id` is set/defaulted correctly. QA: docs/qa/billing_middleware_regression_tests_139J-C.md.
 >
 > **Prior handoff (Session 139J-B):** Session 139J-B — Fix Billing Status validateSiteKey Select + Staging Billing UI Verification — **PASS**. Fixed the billing status endpoint bug in api/middleware/auth.js by selecting and exposing stripe_customer_id in validateSiteKey. Staging Free-plan Billing UI browser verification: PASS on the currently deployed staging build. Middleware fix live-on-staging verification: PENDING / NOT RUN after deployment; browser/live API verification paused. Paid-site billing portal flow: NOT VERIFIED. Production billing: UNVERIFIED. Paid beta: BLOCKED. QA: docs/qa/billing_status_fix_and_ui_139J-B.md.
 >
@@ -44,9 +47,26 @@
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
 >
-> ## Session 139J-C — Billing Middleware Regression Tests Only
+> ## Session 140F — Billing Redirect Hardening Code Audit/Fix
 > **Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, qa:identity:unit, qa:tracker:unit, qa:attribution:unit, qa:env-safety)
 > **Status:** **PASS — not committed.**
+>
+> ### Completed
+> 1. Hardened create-checkout successUrl/cancelUrl and customer portal returnUrl to strictly validate target origins against allowlisted dashboard/frontend hostnames (derived from env variables and hardcoded defaults).
+> 2. Rejected invalid checkout targets with `400 Bad Request`; ignored invalid portal targets and fell back to a safe default (`${dashboardBaseUrl}/billing`).
+> 3. Added automated unit tests covering allowed vs disallowed target validation.
+>
+> ### Files changed
+> - `api/routes/billing.js` — Hardened redirect targets and exported validation helpers
+> - `api/tests/billing-middleware.test.js` — Added unit test coverage for allowlist validation
+> - `docs/qa/billing_redirect_hardening_140F.md` — [NEW] QA report
+> - `docs/release_checklist_gate.md` — Marked Billing Redirect Hardening as PASS
+>
+> ---
+>
+> ## Session 139J-C — Billing Middleware Regression Tests Only
+> **Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, qa:identity:unit, qa:tracker:unit, qa:attribution:unit, qa:env-safety)
+> **Status:** **PASS — committed/pushed/CI green after whitespace fix.**
 >
 > ### Completed
 > 1. Added focused automated regression tests for billing middleware in `api/tests/billing-middleware.test.js`.

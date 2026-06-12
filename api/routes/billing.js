@@ -199,6 +199,78 @@ export async function billingWebhookHandler(req, res) {
   }
 }
 
+// Server-owned allowlisted frontend/dashboard origins for redirect validation
+export function getRedirectAllowlist(includeEnvUrls = true) {
+  const envOrigins = (process.env.ALLOWED_ORIGINS || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean)
+
+  const list = [
+    'https://www.sourcetrack.ai',
+    'https://sourcetrack.ai',
+    'https://app.sourcetrack.ai',
+    'http://localhost:5173',
+    'http://localhost:8080',
+    ...envOrigins
+  ]
+
+  if (includeEnvUrls) {
+    if (process.env.FRONTEND_URL) list.push(process.env.FRONTEND_URL.trim())
+    if (process.env.DASHBOARD_URL) list.push(process.env.DASHBOARD_URL.trim())
+  }
+
+  const origins = new Set()
+  for (const item of list) {
+    try {
+      let urlStr = item
+      if (!urlStr.includes('://')) {
+        urlStr = `https://${urlStr}`
+      }
+      const url = new URL(urlStr)
+      const origin = url.origin.toLowerCase()
+      origins.add(origin)
+
+      // HTTP can also be allowed for localhost / 127.0.0.1 dev defaults
+      const hostname = url.hostname.toLowerCase()
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        origins.add(origin.replace(/^https:/i, 'http:'))
+      }
+    } catch {
+      // Ignore invalid config
+    }
+  }
+  return Array.from(origins)
+}
+
+export function isValidRedirectUrl(urlStr) {
+  if (!urlStr || typeof urlStr !== 'string') return false
+  try {
+    const url = new URL(urlStr)
+    const allowed = getRedirectAllowlist()
+    return allowed.includes(url.origin.toLowerCase())
+  } catch {
+    return false
+  }
+}
+
+export function getDefaultBillingReturnUrl() {
+  const fallback = 'https://app.sourcetrack.ai'
+  const raw = process.env.DASHBOARD_URL || process.env.FRONTEND_URL || fallback
+
+  try {
+    const normalized = raw.includes('://') ? raw : `https://${raw}`
+    const url = new URL(normalized)
+
+    const strictAllowed = getRedirectAllowlist(false)
+    if (strictAllowed.includes(url.origin.toLowerCase())) {
+      return `${url.origin}/billing`
+    }
+  } catch {}
+
+  return `${fallback}/billing`
+}
+
 // ── Routes ────────────────────────────────────────────────────────────────────
 const router = Router()
 
@@ -222,6 +294,14 @@ router.post('/create-checkout', requireUserAuth, validateSiteKey, requireSiteMem
 
     if (!successUrl || !cancelUrl) {
       return res.status(400).json({ success: false, data: null, error: 'successUrl and cancelUrl are required' })
+    }
+
+    if (!isValidRedirectUrl(successUrl)) {
+      return res.status(400).json({ success: false, data: null, error: 'Invalid successUrl redirect target' })
+    }
+
+    if (!isValidRedirectUrl(cancelUrl)) {
+      return res.status(400).json({ success: false, data: null, error: 'Invalid cancelUrl redirect target' })
     }
 
     // Resolve site — prefer req.site (set by middleware), fallback to site_key lookup
@@ -276,7 +356,11 @@ router.post('/portal', requireUserAuth, validateSiteKey, requireSiteMembership, 
       return res.status(400).json({ success: false, data: null, error: 'No Stripe customer — subscribe first' })
     }
 
-    const returnUrl = req.body?.returnUrl || req.headers.origin || 'https://sourcetrack.ai/billing'
+    let returnUrl = req.body?.returnUrl || req.headers.origin
+    if (!returnUrl || !isValidRedirectUrl(returnUrl)) {
+      returnUrl = getDefaultBillingReturnUrl()
+    }
+
     const session = await stripe.billingPortal.sessions.create({
       customer: site.stripe_customer_id,
       return_url: returnUrl,
