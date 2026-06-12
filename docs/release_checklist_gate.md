@@ -44,6 +44,8 @@ This checklist serves as the canonical release gate. No paid-beta launch, paid-b
 - [ ] **Admin/Operator Access**: Audit and verify operator security credentials, database direct access access rules, and control panels.<br />*Status:* **BLOCKED**.
 - [ ] **Abuse/Rate-Limit Review**: Review and tune rate-limiting settings on high-volume ingress routes (/api/collect, login, registration) to mitigate automated abuse.<br />*Status:* **BLOCKED**.
 - [ ] **Customer-Facing Status/Incident Plan**: Document customer-facing incident communications protocol, service status reporting, and contact options.<br />*Status:* **BLOCKED**.
+- [ ] **Password Reset & Auth Flow Verification**: Implement and verify that forgot password, recovery link redirects, and password updates work correctly end-to-end. Configure and verify allowed redirect URLs and SMTP templates in the Supabase console.<br />*Status:* **BLOCKED**. Pages implemented but require recovery session verification.
+
 
 ### Phase 2: Blocks the First ~10 Customers / Public Launch (P1)
 - [ ] **Attribution Model Deterministic Test Fixtures**: Add deterministic test scenarios for the core attribution models (first-touch, last-touch, linear, U-shaped, W-shaped, time-decay) to protect against regressions.<br />*Status:* **PARTIAL** — deterministic `calculateAttribution` model math is covered by unit tests (`qa:attribution:unit`). Click ID capture/classification hardened for all 12 click IDs with `qa:tracker:unit` tests. Webhook routes now attempt user_id-to-anonymous_id resolution where prior identity links exist (`qa:identity:unit`). Real Stripe/webhook revenue attribution still requires staging E2E with seeded identify + checkout + webhook events.

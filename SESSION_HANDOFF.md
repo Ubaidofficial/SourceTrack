@@ -2,7 +2,9 @@
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
-> **Handoff:** Session 139N-4A — Webhook Identity Resolution Implementation is **PENDING REVIEW**. Implemented shared `resolveWebhookAnonymousId` helper, updated Stripe and generic incoming webhook routes to resolve `user_id` to `anonymous_id` via `site_identity_links` database queries where a prior identity link exists. Hardened generic webhook fallback (Option A) to route email-only/empty payloads to unattributed UUID distinct IDs, avoiding plaintext email leakage. Updated Guided Snippet UI instructions, and added Node unit tests. Not committed.
+> **Handoff:** Session 139N-4B — Auth Access + Password Reset Blocker Investigation is **PENDING REVIEW**. Audited login, password reset, and user deletion flow. Implemented ForgotPassword and ResetPassword components, registered routes in App.jsx, added forgot password link and improved error handling in Login.jsx, intercepted recovery flow in AuthCallback.jsx, added docs/qa/auth_password_reset_blocker_139N4B.md. Not committed.
+>
+> **Prior handoff (Session 139N-4A):** Session 139N-4A — Webhook Identity Resolution Implementation is **PASS / committed / CI green**. Implemented shared `resolveWebhookAnonymousId` helper, updated Stripe and generic incoming webhook routes to resolve `user_id` to `anonymous_id` via `site_identity_links` database queries where a prior identity link exists. Hardened generic webhook fallback (Option A) to route email-only/empty payloads to unattributed UUID distinct IDs, avoiding plaintext email leakage. Updated Guided Snippet UI instructions, and added Node unit tests. Committed.
 >
 > **Prior handoff (Session 139N-4):** Session 139N-4 — Identity Resolution + Analytics IDs Audit is **PASS**. Audited identity resolution and analytics ID stitching across trackers, ingestion routes, and the attribution engine. Identified and documented P0 stitching gaps for Stripe and incoming webhooks. Corrected Stripe webhook payload guidelines in Snippet UI (`Snippet.jsx`) to clarify the `anonymous_id` requirement, warn against fallback email/user_id-only stitching expectations, and advise against plaintext email ingestion.
 >
@@ -25,6 +27,46 @@
 > ⚠️ **P0 CONDITIONS BEFORE FIRST PAID CUSTOMER:** (1) Stripe test-mode checkout/webhook evidence [PARTIAL — API/webhook E2E verified on staging; browser billing UI and billing status endpoint pending]; (2) provider-console separation verified [CLOSED - staging project created, local env rewired, safety boot guard active]; (3) Supabase backups verified [PARTIAL - Daily scheduled backups manually verified. PITR is not enabled / not accepted as enabled. Staging restore drill remains blocked/not run]; (4) prod env secrets set incl. ST_IP_RESOLVER_MODE=railway; (5) beta Terms/Privacy disclosed in writing [CLOSED — Terms/Privacy checkout gate browser/API verified on staging in 139L (deploy cee2954); acceptance is enforced as a request gate, not persisted].
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+>
+> ## Session 139N-4B — Auth Access + Password Reset Blocker Investigation
+> **Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa:attribution:unit, qa:tracker:unit)
+> **Status:** **PENDING REVIEW — not committed.**
+>
+> ### Completed
+> 1. Audited login, password reset, and user deletion database constraint flows.
+> 2. Implemented `ForgotPassword.jsx` and `ResetPassword.jsx` components from scratch in the dashboard client.
+> 3. Configured React routes in `App.jsx` and updated `Login.jsx` to render a "Forgot password?" recovery link.
+> 4. Enhanced login error copy for better network/credentials troubleshooting.
+> 5. Configured `AuthCallback.jsx` to intercept recovery URLs and route users directly to `/reset-password`.
+> 6. Documented required Supabase Auth Redirect URLs, staging-only test user deletion SQL query sequence, and full findings report in `docs/qa/auth_password_reset_blocker_139N4B.md`.
+>
+> ### Files changed
+> - `dashboard/src/App.jsx` — Registered recovery/reset routes
+> - `dashboard/src/pages/Login.jsx` — Added forgot password link and improved error messages
+> - `dashboard/src/pages/AuthCallback.jsx` — Intercepted recovery flows
+> - `dashboard/src/pages/ForgotPassword.jsx` — [NEW] recovery email request UI
+> - `dashboard/src/pages/ResetPassword.jsx` — [NEW] PKCE/hash token recovery form UI
+> - `docs/qa/auth_password_reset_blocker_139N4B.md` — [NEW] QA Audit Report
+>
+> ---
+>
+> ## Session 139N-4A — Webhook Identity Resolution Implementation
+> **Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa:attribution:unit, qa:tracker:unit)
+> **Status:** **PASS / committed / CI green.**
+>
+> ### Completed
+> 1. Implemented shared `resolveWebhookAnonymousId` helper in `api/lib/identity-links.js`.
+> 2. Updated Stripe webhook (`api/routes/stripe-webhook.js`) and incoming webhook (`api/routes/webhook-incoming.js`) to resolve `user_id` to `anonymous_id`.
+> 3. Hardened generic webhook fallback (Option A) to use unattributed UUIDs for email-only/empty payloads.
+> 4. Updated Snippet UI instructions, and added Node unit tests (`api/tests/identity-resolution.test.js`).
+>
+> ### Files changed
+> - `api/lib/identity-links.js` — Shared helper
+> - `api/tests/identity-resolution.test.js` — Node unit tests
+> - `api/routes/stripe-webhook.js` — Stripe webhook implementation
+> - `api/routes/webhook-incoming.js` — Generic webhook implementation
+>
+> ---
 >
 > ## Session 139N-4 — Identity Resolution + Analytics IDs Audit
 > **Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa:attribution:unit, qa:tracker:unit)

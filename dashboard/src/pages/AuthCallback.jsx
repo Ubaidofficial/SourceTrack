@@ -9,10 +9,23 @@ export default function AuthCallback() {
 
   useEffect(() => {
     if (loading) return
+
+    const hash = window.location.hash || ''
+    const search = window.location.search || ''
+    const isRecovery = hash.includes('type=recovery') || search.includes('type=recovery')
+
     if (user) {
-      navigate('/dashboard', { replace: true })
+      if (isRecovery) {
+        navigate('/reset-password', { replace: true })
+      } else {
+        navigate('/dashboard', { replace: true })
+      }
     } else {
-      navigate('/login', { replace: true })
+      if (isRecovery) {
+        navigate(`/reset-password${search}${hash}`, { replace: true })
+      } else {
+        navigate('/login', { replace: true })
+      }
     }
   }, [user, loading, navigate])
 

@@ -34,7 +34,15 @@ export default function Login() {
       // /onboarding via /api/onboarding/me if their site isn't complete.
       navigate('/dashboard', { replace: true })
     } catch (err) {
-      setError(err.message)
+      let msg = err.message || 'An error occurred during sign in.'
+      if (msg.includes('Failed to fetch') || msg.toLowerCase().includes('network')) {
+        msg = 'Network error: Please verify your internet connection or check if the API is reachable.'
+      } else if (msg.toLowerCase().includes('email not confirmed')) {
+        msg = 'Your email address is not verified. Please check your inbox for the confirmation link.'
+      } else if (msg.toLowerCase().includes('invalid login credentials')) {
+        msg = 'Invalid email or password. Please verify your credentials and try again.'
+      }
+      setError(msg)
     } finally {
       setLoading(false)
     }
@@ -106,7 +114,12 @@ export default function Login() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Password</label>
+            <div className="flex justify-between items-center mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200">Password</label>
+              <Link to="/forgot-password" className="text-xs text-st-gray hover:text-[#1F2323] dark:hover:text-white hover:underline">
+                Forgot password?
+              </Link>
+            </div>
             <input
               type="password"
               required
