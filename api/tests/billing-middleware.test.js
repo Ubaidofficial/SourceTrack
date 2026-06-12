@@ -113,10 +113,10 @@ test('validateSiteKey Billing Customer Regression Tests', async (t) => {
 
     assert.strictEqual(nextCalled, true)
     assert.strictEqual(selectCallCount, 2)
-    
+
     const primarySelectFields = lastFieldsSelected[0]
     const fallbackSelectFields = lastFieldsSelected[1]
-    
+
     assert.ok(primarySelectFields.includes('stripe_customer_id'), 'Primary SELECT fields must include stripe_customer_id')
     assert.ok(fallbackSelectFields.includes('stripe_customer_id'), 'Fallback SELECT fields must include stripe_customer_id')
   })
