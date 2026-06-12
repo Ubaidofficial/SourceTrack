@@ -125,6 +125,7 @@ But the **operational foundation was built slower than the product**. The workfl
 - **139M-7** — Setup Doctor, Snippet, Integrations, Billing, Team/API Tokens QA.
 - **139M-8** — Final Human-Like Marketer Regression + 2026 UI/UX Verdict.
 - **139N-0** — Plurio Intake Tracker Parity Audit. *(Completed)*
+- **139N-2** — Attribution Model Deterministic Test Fixtures. *(Completed)*
 
 **Phase 2 — Observability and release gates**
 - **140A** — Add Sentry (or equivalent) exception monitoring.
@@ -135,7 +136,7 @@ But the **operational foundation was built slower than the product**. The workfl
 
 **Phase 3 — Testing foundation**
 - **141A** — Introduce Vitest for backend pure logic.
-- **141B** — Attribution-engine unit suite (all models + date serialization safety).
+- **141B** — Attribution-engine unit suite (all models + date serialization safety). *(Partially completed in 139N-2 for core model math)*
 - **141C** — Billing helper + plan-gate unit tests.
 - **141D** — Cross-tenant route regression tests (staging/test DB).
 - **141E** — Playwright smoke tests (core flows).

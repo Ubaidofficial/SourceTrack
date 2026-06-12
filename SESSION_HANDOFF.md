@@ -2,7 +2,9 @@
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
-> **Handoff:** Session 140C — PostHog Proxy + Event Routing Verification is **PASS**. Audited all PostHog references, mapped the E2E event routing path, verified the tracker's independent browser-side execution, and aligned environment variable configurations. Corrected swapped/invalid keys on the staging API service (POSTHOG_API_KEY project write key and POSTHOG_PERSONAL_API_KEY query key). Verified E2E event ingestion and dashboard overview HogQL querying successfully. QA: [posthog_telemetry_routing_verification_140C.md](docs/qa/posthog_telemetry_routing_verification_140C.md).
+> **Handoff:** Session 139N-2 — Attribution Model Deterministic Test Fixtures is **PASS**. Added deterministic automated unit test coverage for core attribution models (first-touch, last-touch, linear, U-shaped, W-shaped, time-decay) using Node's built-in node:test runner. Covered 8 test scenarios including credit conservation, empty/no-touch, and malformed inputs. Added qa:attribution:unit script to package.json. Fixed a date parsing NaN bug in the time_decay model under malformed inputs. QA report saved under [attribution_model_deterministic_tests_139N2.md](docs/qa/attribution_model_deterministic_tests_139N2.md).
+>
+> **Prior handoff (Session 140C):** Session 140C — PostHog Proxy + Event Routing Verification is **PASS**. Audited all PostHog references, mapped the E2E event routing path, verified the tracker's independent browser-side execution, and aligned environment variable configurations. Corrected swapped/invalid keys on the staging API service (POSTHOG_API_KEY project write key and POSTHOG_PERSONAL_API_KEY query key). Verified E2E event ingestion and dashboard overview HogQL querying successfully. QA: [posthog_telemetry_routing_verification_140C.md](docs/qa/posthog_telemetry_routing_verification_140C.md).
 >
 > **Prior handoff (Session 139N-0):** Session 139N-0 — Plurio Intake Tracker Parity Audit is **COMPLETE**. Performed a hard tracker-layer parity audit comparing SourceTrack tracker/attribution against Plurio Intake. Mapped UTMs, organic/referral detection, click IDs, attribution models, consent mode, cookieless behavior, identity resolution, dataLayer/GTM, and link decoration. Documented missing click IDs, lack of model tests, and CMP gaps. Saved under [plurio_intake_tracker_parity_audit_139N0.md](docs/qa/plurio_intake_tracker_parity_audit_139N0.md).
 >
@@ -15,6 +17,25 @@
 > ⚠️ **P0 CONDITIONS BEFORE FIRST PAID CUSTOMER:** (1) Stripe test-mode checkout/webhook evidence [PARTIAL — API/webhook E2E verified on staging; browser billing UI and billing status endpoint pending]; (2) provider-console separation verified [CLOSED - staging project created, local env rewired, safety boot guard active]; (3) Supabase backups verified [PARTIAL - Daily scheduled backups manually verified. PITR is not enabled / not accepted as enabled. Staging restore drill remains blocked/not run]; (4) prod env secrets set incl. ST_IP_RESOLVER_MODE=railway; (5) beta Terms/Privacy disclosed in writing [CLOSED — Terms/Privacy checkout gate browser/API verified on staging in 139L (deploy cee2954); acceptance is enforced as a request gate, not persisted].
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+## Session 139N-2 — Attribution Model Deterministic Test Fixtures
+**Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa:attribution:unit)
+**Status:** **PASS.**
+
+### Completed
+1. Created `api/tests/attribution.test.js` covering 8 deterministic unit test scenarios for core models (first-touch, last-touch, linear, U-shaped, W-shaped, time-decay) using Node's built-in `node:test` runner.
+2. Hardened the `time_decay` model timestamp parsing against malformed timestamps, resolving the date parsing `NaN` bug.
+3. Added the `"qa:attribution:unit"` script in `package.json` to execute unit tests.
+4. Created the attribution model deterministic tests QA report in `docs/qa/attribution_model_deterministic_tests_139N2.md`.
+
+### Files changed
+- [api/tests/attribution.test.js](api/tests/attribution.test.js) [NEW]
+- [docs/qa/attribution_model_deterministic_tests_139N2.md](docs/qa/attribution_model_deterministic_tests_139N2.md) [NEW]
+- [package.json](package.json)
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
+
+
 ## Session 140C — PostHog Proxy + Event Routing Verification
 **Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety)
 **Status:** **PASS.**

@@ -7,6 +7,7 @@
     "start": "node api/bootstrap.js",
     "dev": "nodemon api/bootstrap.js",
     "build:tracker": "esbuild tracker/tracker.js --bundle --minify --outfile=tracker/tracker.min.js && esbuild tracker/tracker.cookieless.js --bundle --minify --outfile=tracker/tracker.cookieless.min.js",
+    "qa:attribution:unit": "node --test api/tests/attribution.test.js",
     "qa:attribution": "node scripts/qa-attribution-harness.mjs && node scripts/qa-attribution-integration.mjs",
     "qa:env-safety": "node scripts/qa-env-safety.mjs",
     "qa:static": "npm run qa:env-safety && node scripts/qa-release-readiness.mjs && node scripts/qa-static-launch-check.mjs",

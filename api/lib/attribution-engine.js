@@ -2807,13 +2807,28 @@ export function calculateAttribution(touchpoints, conversionValue) {
   // ── Time Decay (7-day half-life) ─────────────────────────────────────────────
   const time_decay = (() => {
     const conversionTime = new Date(lastTouchpoint.timestamp).getTime()
+    const isConversionTimeValid = !isNaN(conversionTime)
+
+    // Check if any touchpoint has an invalid timestamp
+    let hasInvalid = !isConversionTimeValid
+    const tpTimes = touchpoints.map(tp => {
+      const t = new Date(tp.timestamp).getTime()
+      if (isNaN(t)) hasInvalid = true
+      return t
+    })
+
     const halfLifeDays = 7
     const halfLifeMs = halfLifeDays * 24 * 60 * 60 * 1000
-    const rawWeights = touchpoints.map(tp => {
-      const tpTime = new Date(tp.timestamp).getTime()
-      const daysBack = Math.max(0, (conversionTime - tpTime) / halfLifeMs)
+
+    const rawWeights = touchpoints.map((tp, i) => {
+      if (hasInvalid) {
+        // Fall back to equal decay weights when valid ordering/dates cannot be computed
+        return 1.0
+      }
+      const daysBack = Math.max(0, (conversionTime - tpTimes[i]) / halfLifeMs)
       return Math.pow(0.5, daysBack) // 0.5^(days/halfLife)
     })
+
     const totalWeight = rawWeights.reduce((s, w) => s + w, 0) || 1
     return touchpoints.map((tp, i) => {
       const frac = parseFloat((rawWeights[i] / totalWeight).toFixed(4))
