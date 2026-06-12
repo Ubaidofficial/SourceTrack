@@ -51,7 +51,13 @@ npm run qa:identity:unit && npm run qa:tracker:unit && npm run qa:attribution:un
 
 ## 6. Staging Browser Sanity Check
 * **Local/Static Verification**: PASS. Verified code parses URLs and outputs the expected key format correctly.
-* **Deployed Staging Verification**: **PENDING** until the code is committed, pushed, and deployed to staging. Post-deploy browser verification is required to confirm that the deployed staging dashboard uses `sb-nrsvpwzekfrdrzkoecfk-auth-token` in localStorage.
+* **Deployed Staging Verification**: **PASS** (post-deploy, 2026-06-12). Verified on the deployed staging dashboard (`https://sourcetrack-dashboard-staging.up.railway.app`):
+  * Clean browser context used — `localStorage.clear()` run before login; 0 keys / no `auth-token` keys present pre-login.
+  * Login and dashboard worked — operator logged in with the approved staging test account and landed on `/dashboard`.
+  * Observed auth storage key: `sb-nrsvpwzekfrdrzkoecfk-auth-token` (the staging project ref).
+  * Production key **absent** — `sb-zxjjjsipafojhzkkumvh-auth-token` was **not** present.
+  * No auth/storage console errors observed after page load.
+  * Limitation: load-time console logs were not captured (console tracking began after the page had loaded); the live dashboard showed no errors and functioned normally. Only key names were read — no values, tokens, or credentials were printed.
 
 ## 7. Remaining Production Blockers
 The following items remain open:
@@ -61,7 +67,9 @@ The following items remain open:
 ## 8. Verdict
 `PASS — code now derives Supabase auth storageKey from VITE_SUPABASE_URL/project ref.`
 
+> [!NOTE]
+> * Post-deploy staging browser verification **PASS** (2026-06-12) — deployed staging uses `sb-nrsvpwzekfrdrzkoecfk-auth-token`; production key absent (see §6).
+
 > [!CAUTION]
-> * Post-deploy browser verification still required to confirm deployed staging uses `sb-nrsvpwzekfrdrzkoecfk-auth-token`.
 > * Production/canonical-domain password reset E2E remains unverified.
 > * Paid beta remains blocked until production auth and remaining P0 blockers are verified.
