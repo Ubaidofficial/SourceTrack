@@ -3,9 +3,9 @@
 **Session:** 139I-F — Add Explicit Resume/Add-Site Onboarding Entry
 **Date:** 2026-06-12
 **Branch:** `main` (no commits, no pushes)
-**Verdict:** **PARTIAL — code implemented + dashboard build green; staging browser verification of the new UI pending deploy of this diff**
+**Verdict:** **✅ PASS — all browser scenarios (A–E) verified on staging** (deploy `9867714`).
 
-> Why PARTIAL: the change is frontend-only and is **not deployed** — staging currently runs `6629c5f` (139I-E). Uncommitted UI cannot be click-tested on the staging-deployed dashboard. The load-bearing **backend** behavior the new entry relies on (`/onboarding/me?mode=onboarding` resolving the latest incomplete site, and honoring an explicit `site_id`/`site_key` hint via `resolveOnboardingSite`) was already verified on the live staging API in **139I-E**. Full browser scenarios A–E should be run in a follow-up **139I-F — Browser Verification** session after this diff is reviewed, committed, and deployed. This mirrors the implement→verify split used for 139I-D and 139I-E.
+> The implementation section below was written when the diff was still local (PARTIAL). The diff was subsequently committed (`9867714`) and deployed to both staging services, and all browser scenarios were then verified against the deployed UI — see the **Browser Verification Addendum** at the bottom.
 
 ---
 
@@ -76,5 +76,53 @@ $ git status --short                →
 ## 8. Next step
 
 Review the raw diff → commit + deploy → run **Session 139I-F — Browser Verification** (scenarios A–E above) on staging. Do not mark PASS until the real browser scenarios are verified against the deployed UI.
+
+No commits. No pushes. No secrets, tokens, JWTs, cookies, Supabase/Stripe/webhook/service keys, Railway variable values, or full site keys exposed.
+
+---
+---
+
+# Browser Verification Addendum — Real Claude-in-Chrome run (2026-06-12, deploy `9867714`)
+
+> The staging browser QA the implementation section deferred. Real navigation, switcher interaction, "Resume setup" clicks, and live API probes against staging on deploy `9867714`. Operator-authenticated (`imubaid93@gmail.com`); no password/token/full-site-key exposed. No commits/pushes.
+
+## C0. Verdict
+
+**✅ PASS — all scenarios A–E browser-verified on staging.**
+
+The explicit Resume/Add-Site onboarding entry works end-to-end: multi-site users can resume an incomplete site, the dashboard gate is unchanged (still prefers completed sites, no bounce), and foreign/bad hints fall back safely.
+
+## C1. Preflight / deploy
+
+Both staging services on **`9867714`**: `SourceTrack-Dashboard` (cac3c355, SUCCESS @ 00:26 UTC) and `SourceTrack-Api` (2d7c973b, SUCCESS @ 00:26 UTC). CI green. Account state: 3 sites — **qa-139ie (incomplete, step 2)**, qa-139id (completed), qa-139ic (completed).
+
+## C2. Scenario results (real browser)
+
+| Scenario | Result | Evidence |
+|---|---|---|
+| **A — Completed-site dashboard stability** | ✅ **PASS** | Cleared active key → `/dashboard` stays on dashboard (no bounce); active resolves to **qa-139id (completed)**, not the incomplete qa-139ie. Card shows generic "Go to Install Guide" (no Resume CTA for a completed active site). `ss_455116ysm` |
+| **B — Incomplete site explicit resume from UI** | ✅ **PASS** | Selecting qa-139ie in the switcher surfaced **two** "Resume setup" actions — one under the Layout site switcher, one in the Dashboard "Finish setting up" card (which switched to the incomplete-variant copy). Clicking it navigated to `/onboarding?site_id=<redacted>&mode=onboarding` and the **Onboarding page loaded** (no dashboard redirect), resuming **qa-139ie at Step 2 (Business Type)**. `ss_19391n6qn`, `ss_3185caykk` |
+| **C — Direct explicit onboarding URL (cold load)** | ✅ **PASS** | Direct navigation to `/onboarding?site_id=<incomplete>&mode=onboarding` stayed on `/onboarding` (not redirected) and resumed qa-139ie at Step 2. Route guard respects explicit intent on a fresh load. `ss_5568v8wg6` |
+| **D — Completed-only / bare onboarding** | ✅ **PASS** | Bare `/onboarding` (no `site_id`/`site_key`/`mode`) with a completed site present → redirected to `/dashboard`. Completed users not trapped; dashboard gate unchanged. `ss_8313xle7g` |
+| **E — Security / bad hints** | ✅ **PASS** | `mode=onboarding` with a **foreign `site_id`**, a **foreign `site_key`**, and a **completed-site `site_id`** all resolved to the user's **own incomplete** site (qa-139ie, `is_own_site:true`), never a foreign site, and never reopened a completed site. Safe fallback. |
+
+## C3. Behavior confirmed
+
+- `ProtectedRoute` bypasses the `/onboarding`→`/dashboard` redirect **only** for explicit intent (`mode=onboarding`/`site_id`/`site_key`); bare `/onboarding` still redirects completed users to the dashboard (gate unchanged).
+- `Onboarding.jsx` passes the `site_id` hint into `/onboarding/me?mode=onboarding` and resumes the correct incomplete site at the correct step.
+- Resume-setup CTA renders in both preferred locations (Dashboard card + Layout switcher) and only when the active site is incomplete.
+- Same-domain duplicate prevention untouched (no `/onboarding/site` changes).
+
+## C4. Console / network
+
+App console clean (only `chrome-extension://` noise). No raw 4xx/5xx surfaced to the user during navigation. One in-page `eval` of `location.search` was harness-blocked (query-string guard) — the tab URL confirmed the `site_id`+`mode` params instead. Site identifiers shown are internal UUIDs (not site **keys**) and are redacted in this report.
+
+## C5. Minor observation (non-blocking)
+
+When the active site is a **completed** site and an incomplete site exists *elsewhere*, no proactive "finish your other site" nudge appears — the user must select the incomplete site in the switcher to surface "Resume setup". This matches the 139I-F spec ("if an incomplete site is selected or listed"; the switcher lists it) and the deliberate decision not to weaken the dashboard gate, so it is **by design**, not a defect. Noted only as a future discoverability consideration.
+
+## C6. Screenshots
+
+`ss_79468n4kh` (initial mixed-state dashboard) · `ss_455116ysm` (Scenario A) · `ss_19391n6qn` (Resume CTAs visible) · `ss_3185caykk` (Scenario B → onboarding resumed) · `ss_5568v8wg6` (Scenario C cold load) · `ss_8313xle7g` (Scenario D bare → dashboard).
 
 No commits. No pushes. No secrets, tokens, JWTs, cookies, Supabase/Stripe/webhook/service keys, Railway variable values, or full site keys exposed.
