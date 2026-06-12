@@ -2,13 +2,17 @@
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
-> **Handoff:** Session 140G-1 — Fix Webhook Downgrade Leak — **PASS — outbound webhooks are checked for plan permissions before background dispatching; skipped on free/downgraded tiers; validated via unit tests; paid beta remains blocked by other volume-enforcement gaps.**
+> **Handoff:** Session 140G-2 — Enforce Site Creation Limits — **PASS — plan-based active site limits are enforced on site creation via checkSiteCreationLimit helper; validated via unit tests; paid beta remains blocked by other volume-enforcement gaps.**
+> - **Active Site Limits Enforcement**: Implemented active site limit checking logic in `POST /api/onboarding/site` using a new `checkSiteCreationLimit` helper in `api/lib/site-limits.js`. Derives limit from the maximum structural limits of active site plans (plan != 'archived') scoped to the owner/company context. Returns 402 if limit is reached, fails closed (returns 500) on DB errors.
+> - **Site Creation Limit Tests**: Added 9 unit tests to `api/tests/billing-middleware.test.js` covering new users (0 sites), free users (1 site), growth users (below/at limits), scale users (unlimited), scope preferences, and fail-closed errors. All tests pass. QA: docs/qa/site_limit_enforcement_140G-2.md.
+> - **Paid-site billing portal flow:** NOT VERIFIED; requires a paid staging site/customer.
+> - **Production billing:** UNVERIFIED.
+> - **Paid beta:** BLOCKED because standard tracker pageview limits are bypassed, conversion caps are not enforced, and PostHog retention is not purged.
+>
+> **Prior handoff (Session 140G-1):** Session 140G-1 — Fix Webhook Downgrade Leak — **PASS — outbound webhooks are checked for plan permissions before background dispatching; skipped on free/downgraded tiers; validated via unit tests; paid beta remains blocked by other volume-enforcement gaps.**
 > - **Webhook Downgrade Leak Fix:** Modified `dispatchWebhook` in `api/lib/webhook.js` to query the `sites` table separately for `plan` and skip dispatching if the plan does not allow `webhook_outbound`.
 > - **Outbound Webhook Tests:** Added mock-based unit tests to `api/tests/billing-middleware.test.js` confirming dispatch logic on growth vs free tiers and fail-closed behavior on database errors or missing site data. All tests pass. QA: docs/qa/webhook_downgrade_leak_fix_140G-1.md.
 > - **Staging Billing UI browser verification:** PASS on the currently deployed staging build (free-plan UI verified in 139J-B; paid-site portal flow still unverified).
-> - **Paid-site billing portal flow:** NOT VERIFIED; requires a paid staging site/customer.
-> - **Production billing:** UNVERIFIED.
-> - **Paid beta:** BLOCKED because standard tracker pageview limits are bypassed, conversion caps are not enforced, site limits are not enforced, and PostHog retention is not purged.
 >
 > **Prior handoff (Session 140G):** Session 140G — Billing/Limits Enforcement Code Audit — **PARTIAL — billing limits and features audited; checkTierLimit middleware unit tests added; paid beta remains blocked by audited volume-enforcement gaps.** Audited all billing routes, ingestion routes, and checkTierLimit middleware. Found that volume-based plan limits are unenforced: (1) standard tracker pageview limits are bypassed (due to counting from the empty Supabase pageviews table instead of PostHog); (2) legacy collection endpoint has no tier-check middleware; (3) active webhooks leak on downgrade (resolved in 140G-1); (4) site limits are not enforced; (5) team limits are not enforced; (6) conversion caps are not enforced; (7) PostHog retention is not purged. Detailed findings in `docs/qa/billing_limits_enforcement_audit_140G.md`.
 >

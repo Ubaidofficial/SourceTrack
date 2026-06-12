@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { getSupabase } from '../lib/supabase.js'
+import { checkSiteCreationLimit } from '../lib/site-limits.js'
 
 const router = Router()
 
@@ -217,6 +218,29 @@ router.post('/site', async (req, res) => {
           resumed: true
         },
         error: null
+      })
+    }
+
+    // Enforce active site limits before creating a new site
+    const checkScope = req.user.company_id
+      ? { company_id: req.user.company_id }
+      : { owner_id: req.user.id }
+
+    try {
+      const limitCheck = await checkSiteCreationLimit(checkScope)
+      if (!limitCheck.allowed) {
+        return res.status(402).json({
+          success: false,
+          data: null,
+          error: 'Site limit reached for your plan'
+        })
+      }
+    } catch (limitErr) {
+      console.error('[onboarding] Site limit check failed:', limitErr.message || limitErr)
+      return res.status(500).json({
+        success: false,
+        data: null,
+        error: 'Database error while checking plan limits'
       })
     }
 

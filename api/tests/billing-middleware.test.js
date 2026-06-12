@@ -11,6 +11,7 @@ import { validateSiteKey, siteCache } from '../middleware/auth.js'
 import { isValidRedirectUrl, getRedirectAllowlist, getDefaultBillingReturnUrl } from '../routes/billing.js'
 import { checkTierLimit, bustTierCache } from '../middleware/tier-check.js'
 import { dispatchWebhook } from '../lib/webhook.js'
+import { checkSiteCreationLimit } from '../lib/site-limits.js'
 
 
 test('validateSiteKey Billing Customer Regression Tests', async (t) => {
@@ -551,5 +552,131 @@ test('dispatchWebhook plan limit enforcement', async (t) => {
 
     assert.strictEqual(fetchCalled, false)
     assert.strictEqual(insertCalled, false)
+  })
+})
+
+test('checkSiteCreationLimit - plan site limit enforcement helper', async (t) => {
+  const client = getSupabase()
+  const originalFrom = client.from
+  let mockSitesData = null
+  let mockSitesError = null
+  let lastQueryArgs = {}
+
+  client.from = (table) => {
+    if (table === 'sites') {
+      return {
+        select: (fields) => {
+          assert.strictEqual(fields, 'plan')
+          return {
+            neq: (neqCol, neqVal) => {
+              assert.strictEqual(neqCol, 'plan')
+              assert.strictEqual(neqVal, 'archived')
+              return {
+                eq: (scopeCol, scopeVal) => {
+                  lastQueryArgs[scopeCol] = scopeVal
+                  return (async () => {
+                    if (mockSitesError) {
+                      return { data: null, error: mockSitesError }
+                    }
+                    return { data: mockSitesData, error: null }
+                  })()
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    return originalFrom.call(client, table)
+  }
+
+  t.afterEach(() => {
+    mockSitesData = null
+    mockSitesError = null
+    lastQueryArgs = {}
+  })
+
+  t.after(() => {
+    client.from = originalFrom
+  })
+
+  await t.test('free/new user with 0 active sites can create first site', async () => {
+    mockSitesData = []
+    const result = await checkSiteCreationLimit({ owner_id: 'user-123' })
+    assert.strictEqual(result.allowed, true)
+    assert.strictEqual(result.count, 0)
+    assert.strictEqual(result.limit, 1)
+    assert.strictEqual(result.scopeType, 'owner')
+    assert.strictEqual(lastQueryArgs.owner_id, 'user-123')
+  })
+
+  await t.test('free user with 1 active site is blocked', async () => {
+    mockSitesData = [{ plan: 'free' }]
+    const result = await checkSiteCreationLimit({ owner_id: 'user-123' })
+    assert.strictEqual(result.allowed, false)
+    assert.strictEqual(result.count, 1)
+    assert.strictEqual(result.limit, 1)
+  })
+
+  await t.test('growth plan allows below limit', async () => {
+    mockSitesData = [{ plan: 'growth' }]
+    const result = await checkSiteCreationLimit({ company_id: 'company-123' })
+    assert.strictEqual(result.allowed, true)
+    assert.strictEqual(result.count, 1)
+    assert.strictEqual(result.limit, 3)
+    assert.strictEqual(result.scopeType, 'company')
+    assert.strictEqual(lastQueryArgs.company_id, 'company-123')
+  })
+
+  await t.test('growth plan blocks at limit', async () => {
+    mockSitesData = [{ plan: 'growth' }, { plan: 'free' }, { plan: 'free' }]
+    const result = await checkSiteCreationLimit({ company_id: 'company-123' })
+    assert.strictEqual(result.allowed, false)
+    assert.strictEqual(result.count, 3)
+    assert.strictEqual(result.limit, 3)
+  })
+
+  await t.test('scale/unlimited plan is not blocked', async () => {
+    mockSitesData = [{ plan: 'scale' }]
+    const result = await checkSiteCreationLimit({ owner_id: 'user-123' })
+    assert.strictEqual(result.allowed, true)
+    assert.strictEqual(result.count, 1)
+    assert.strictEqual(result.limit, Infinity)
+  })
+
+  await t.test('archived-plan sites are excluded if using plan != archived', async () => {
+    // Note: archived sites are filtered database-side using neq('plan', 'archived'),
+    // so our mock query returns 0 rows (representing archived sites excluded from the active list).
+    mockSitesData = []
+    const result = await checkSiteCreationLimit({ owner_id: 'user-123' })
+    assert.strictEqual(result.allowed, true)
+    assert.strictEqual(result.count, 0)
+    assert.strictEqual(result.limit, 1)
+  })
+
+  await t.test('company scope is preferred over owner scope', async () => {
+    mockSitesData = []
+    const result = await checkSiteCreationLimit({ company_id: 'company-123', owner_id: 'user-123' })
+    assert.strictEqual(result.scopeType, 'company')
+    assert.strictEqual(lastQueryArgs.company_id, 'company-123')
+    assert.strictEqual(lastQueryArgs.owner_id, undefined)
+  })
+
+  await t.test('owner scope works when company_id is missing', async () => {
+    mockSitesData = []
+    const result = await checkSiteCreationLimit({ owner_id: 'user-123' })
+    assert.strictEqual(result.scopeType, 'owner')
+    assert.strictEqual(lastQueryArgs.owner_id, 'user-123')
+    assert.strictEqual(lastQueryArgs.company_id, undefined)
+  })
+
+  await t.test('DB query error fails closed', async () => {
+    mockSitesError = new Error('Database connection failed')
+    await assert.rejects(
+      async () => {
+        await checkSiteCreationLimit({ owner_id: 'user-123' })
+      },
+      /Database connection failed/
+    )
   })
 })
