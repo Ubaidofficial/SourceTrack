@@ -9,11 +9,35 @@
 
 ## 1. Executive Verdict
 
-**🔴 FAIL — reset link redirects to a misconfigured Site URL (`http://localhost:3000`); Supabase Auth URL configuration must be fixed.**
+**🟢 PASS — staging password reset email E2E passed after Supabase Auth URL configuration fix.**
 
-The full chain works up to email delivery: the request submits, Supabase sends the recovery email, and it arrives. **But the recovery link redirects to `http://localhost:3000/` with a recovery URL-hash fragment** (token values redacted) — i.e. the Supabase project's dev-default **Site URL** — instead of the deployed `/reset-password`. On localhost (nothing running) the user gets **"Cannot GET /"**, so the reset cannot be completed. This is a **Supabase Auth configuration bug**, not an app-code bug (the app already passes the correct `redirectTo` — see §10). Password update / login-after-reset could not proceed.
+The flow initially **FAILED**: the request submitted and the Supabase recovery email arrived, but the recovery link redirected to `http://localhost:3000/` (the Supabase project's dev-default **Site URL**) instead of the deployed `/reset-password`, producing a dead "Cannot GET /" page. The root cause was **Supabase Auth URL configuration**, not app code (the app already passes the correct `redirectTo` — see §10).
 
-**Production password reset remains UNVERIFIED.** Paid beta is **not** ready.
+After the operator applied the staging Supabase Auth URL config fix (Site URL + Redirect URLs allowlist, see §16) and ran a fresh reset, the **full chain passed**: fresh reset email → link landed on staging `/reset-password` → password update → login with the new password → staging `/dashboard` loaded. This **final successful verification was performed manually by the operator** (screenshot evidence: staging dashboard at `https://sourcetrack-dashboard-staging.up.railway.app/dashboard`).
+
+**Scope:** staging only. **Production password reset remains UNVERIFIED.** Paid beta remains **blocked** until production/canonical-domain auth and the remaining P0 blockers are verified.
+
+### Evidence Summary
+
+```txt
+Initial failure:
+- Reset request submitted: PASS
+- Reset email delivered: PASS
+- Reset link initially redirected to localhost: FAIL
+- Root cause: staging Supabase Auth Site URL / Redirect URLs misconfigured
+
+Config fix:
+- Staging Supabase Site URL set to https://sourcetrack-dashboard-staging.up.railway.app
+- Staging redirect URLs include /reset-password, /auth/callback, /login, staging wildcard, and localhost dev wildcard
+- Staging and production Supabase project redirect URLs are kept separate
+
+Final operator manual verification:
+- Fresh reset email after config change: PASS
+- Fresh reset link landed on staging /reset-password: PASS
+- Password update: PASS
+- Login after reset: PASS
+- Dashboard route loaded: PASS
+```
 
 ---
 
@@ -53,7 +77,7 @@ Only `chrome-extension://` noise; zero app/Supabase/CORS errors, incl. after sub
 **✅ PASS.** Operator confirmed: a "Reset your password" email from **Supabase Auth `<noreply@mail.app.supabase.io>`** arrived within ~1 minute, with a "Reset password" link. (So Supabase's default email delivery works on staging.)
 
 ## 10. Reset Link Redirect Result
-**🔴 FAIL.** The reset link opens **`http://localhost:3000/`** with a recovery URL-hash fragment (the hash carried recovery token values — redacted, not reproduced) → on localhost (no server running) it shows **"Cannot GET /"**. It does **not** land on the deployed `/reset-password`.
+**Initially 🔴 FAIL → 🟢 PASS after config fix.** Before the fix, the reset link opened **`http://localhost:3000/`** with a recovery URL-hash fragment (the hash carried recovery token values — redacted, not reproduced) → on localhost (no server running) it showed **"Cannot GET /"**, not the deployed `/reset-password`. **After** the operator applied the staging Supabase Auth URL config (§16) and generated a fresh reset, the link landed correctly on staging `/reset-password` (operator-verified).
 
 **Root cause (config, not code):**
 - The app **already passes the correct redirect**: `ForgotPassword.jsx` calls `supabase.auth.resetPasswordForEmail(email, { redirectTo: \`${window.location.origin}/reset-password\` })` ([dashboard/src/pages/ForgotPassword.jsx:18-19]) — from staging that resolves to `https://sourcetrack-dashboard-staging.up.railway.app/reset-password`.
@@ -61,28 +85,28 @@ Only `chrome-extension://` noise; zero app/Supabase/CORS errors, incl. after sub
 - The recovery hash itself is well-formed (a recovery-type fragment carrying the token values), and the client has `detectSessionInUrl: true` with a recovery handler in `ResetPassword.jsx` — so once the redirect target is corrected and allowlisted, `/reset-password` will consume the hash and show the new-password form automatically. **No app-code change is required for the redirect.**
 
 ## 11. Password Update Result
-**🔴 BLOCKED by §10** — never reached a valid `/reset-password` recovery session.
+**🟢 PASS (operator manual verification, post-fix).** With the fresh link landing on staging `/reset-password`, the new-password form accepted the update successfully.
 
 ## 12. Login-After-Reset Result
-**🔴 BLOCKED by §10** — no new password set.
+**🟢 PASS (operator manual verification, post-fix).** Login with the new password succeeded.
 
 ## 13. Dashboard / Onboarding Route Result
-**Not reached** (blocked by §10).
+**🟢 PASS (operator manual verification, post-fix).** Post-login landed on staging `/dashboard` (screenshot evidence: `https://sourcetrack-dashboard-staging.up.railway.app/dashboard`).
 
 ## 14. Supabase Console / Auth URL / SMTP Verification
 - **SMTP/email:** ✅ working (Supabase default sender delivered the email — §9).
-- **Auth URL config:** ❌ **misconfigured** — inferred from observed behavior: **Site URL = `http://localhost:3000`** and the deployed `/reset-password` URLs are **missing from the Redirect URLs allowlist**. (Direct console read remains BLOCKED — no Supabase console/MCP; this is inferred from the redirect target, not read from the dashboard.)
+- **Auth URL config:** ✅ **fixed (operator-applied).** Was misconfigured (Site URL = `http://localhost:3000`, deployed `/reset-password` missing from the Redirect URLs allowlist). The operator updated the **staging** Supabase project's Site URL + Redirect URLs per §16; the subsequent fresh reset link landed on staging `/reset-password`, confirming the config now honors the app's `redirectTo`. (The change was applied in the Supabase console by the operator — no console/MCP access from the assistant; verified by observed post-fix behavior.)
 
 ## 15. UI/UX Simplicity Findings
 Auth pages remain clear/simple (login, forgot-password incl. success state, reset-password no-session). The failure is purely the post-email redirect target, which a non-technical user cannot recover from (dead localhost page, no guidance).
 
 ---
 
-## 16. 🐛 Bug Found + Required Fix
+## 16. 🐛 Bug Found + Fix (RESOLVED on staging)
 
-**Bug:** Password-reset (and any Supabase email-redirect) link points to `http://localhost:3000` instead of the deployed app, breaking the reset flow for all users.
+**Bug:** Password-reset (and any Supabase email-redirect) link pointed to `http://localhost:3000` instead of the deployed app, breaking the reset flow for all users.
 
-**Severity:** P0 for auth — password reset is unusable in any deployed environment until fixed. Paid-beta blocker.
+**Severity:** P0 for auth. **Status: RESOLVED on staging** (operator applied the config below; full E2E re-verified — see §1/§10–§13). **Production remains unverified** until the same per-project config is confirmed on the production Supabase project.
 
 **Fix — per Supabase project (operator action; no app deploy needed). Staging and production are SEPARATE Supabase projects; do NOT mix their redirect URLs.**
 
@@ -108,12 +132,12 @@ With these allowlisted, the app's existing `redirectTo` (`…/reset-password`) i
 ---
 
 ## 17. Remaining Blockers
-1. **Reset link redirect** (this report): Supabase Site URL + Redirect allowlist must be fixed (operator/console). Then re-run §10–§13.
-2. **Supabase console access**: still unavailable to the assistant (settings can't be changed here).
-3. **Production**: browser inspection still denied → production reset unverified.
+1. **Reset link redirect** (this report): ✅ **RESOLVED** on staging via the Supabase Auth URL config fix; full chain re-verified by the operator (§10–§13).
+2. **Production password reset**: still **UNVERIFIED** — browser inspection of the production domain remains denied, and the production Supabase project's Auth URL config has not been verified. The same per-project config (production URLs only in the production project) must be confirmed there.
+3. **Secondary latent bug** (§16): `dashboard/src/lib/supabase.js` hardcodes the auth `storageKey` to the production project ref — separate follow-up, not addressed in this session.
 
 ## 18. Production Status
-**Still NOT verified.** Staging-only; do not infer production behavior.
+**Still NOT verified.** Staging-only result; do not infer production behavior. Paid beta remains blocked until production/canonical-domain auth and the remaining P0 blockers are verified.
 
 ## 19. Final Git Status
-Docs-only. No code change (the fix is Supabase Auth config). No commit. No push. No reset link / password / token printed.
+Docs-only. No app code change (the fix was Supabase Auth config, applied in-console by the operator; final E2E verified manually by the operator). No commit. No push. No reset link / password / token printed.
