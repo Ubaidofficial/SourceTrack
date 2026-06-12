@@ -185,10 +185,16 @@
 
   // ─── URL params ────────────────────────────────────────────────────────────
   // All 16 tracked params built from a single array split — no per-key repetition
-  var _pk = 'utm_source,utm_medium,utm_campaign,utm_content,utm_term,ref,source,via,gclid,gbraid,wbraid,fbclid,msclkid,ttclid,li_fat_id,twclid,utm_id,st_campaign_id,st_adgroup_id,st_ad_id,st_target_id,st_network,st_device,st_matchtype,st_verify'.split(',')
+  var _pk = 'utm_source,utm_medium,utm_campaign,utm_content,utm_term,ref,source,via,gclid,gbraid,wbraid,fbclid,msclkid,ttclid,li_fat_id,li_fatid,twclid,dclid,snapclid,pclid,utm_id,st_campaign_id,st_adgroup_id,st_ad_id,st_target_id,st_network,st_device,st_matchtype,st_verify'.split(',')
   function params() {
     var p = new URLSearchParams(location.search), r = {}
     _pk.forEach(function (k) { r[k] = p.get(k) })
+
+    // Normalise LinkedIn click IDs client-side
+    var rawLiFatId = r.li_fat_id || ''
+    var rawLiFatid = r.li_fatid || ''
+    r.li_fat_id = (rawLiFatId.trim ? rawLiFatId.trim() : rawLiFatId) || (rawLiFatid.trim ? rawLiFatid.trim() : rawLiFatid) || null
+
     return r
   }
 
@@ -203,7 +209,8 @@
       || 'direct'
     var med = p.utm_medium
       || (p.gclid || p.gbraid || p.wbraid || p.msclkid ? 'cpc' : null)
-      || (p.fbclid || p.ttclid ? 'paid_social' : null)
+      || (p.fbclid || p.ttclid || p.li_fat_id || p.twclid || p.snapclid || p.pclid ? 'paid_social' : null)
+      || (p.dclid ? 'display' : null)
       || 'none'
     ls('st_ft_src', src)
     ls('st_ft_med', med)
@@ -230,7 +237,8 @@
       utm_content: p.utm_content, utm_term: p.utm_term,
       gclid: p.gclid, gbraid: p.gbraid, wbraid: p.wbraid,
       fbclid: p.fbclid, msclkid: p.msclkid, ttclid: p.ttclid,
-      li_fat_id: p.li_fat_id, twclid: p.twclid,
+      li_fat_id: p.li_fat_id, li_fatid: p.li_fatid, twclid: p.twclid,
+      dclid: p.dclid, snapclid: p.snapclid, pclid: p.pclid,
       utm_id: p.utm_id, st_campaign_id: p.st_campaign_id, st_adgroup_id: p.st_adgroup_id,
       st_ad_id: p.st_ad_id, st_target_id: p.st_target_id, st_network: p.st_network,
       st_device: p.st_device, st_matchtype: p.st_matchtype, st_verify: p.st_verify

@@ -81,7 +81,7 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
     }),
     // [2] Last event with click ID in the last 30 days
     queryHogQL(`
-      SELECT properties.gclid, properties.gbraid, properties.wbraid, properties.fbclid, properties.msclkid, properties.ttclid, properties.twclid, properties.li_fat_id
+      SELECT properties.gclid, properties.gbraid, properties.wbraid, properties.fbclid, properties.msclkid, properties.ttclid, properties.twclid, properties.li_fat_id, properties.li_fatid, properties.dclid, properties.snapclid, properties.pclid
       FROM events
       WHERE properties.site_id = '${esc(posthogSiteId)}'
         AND timestamp >= now() - INTERVAL 30 DAY
@@ -93,7 +93,11 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
           (properties.msclkid != '' AND isNotNull(properties.msclkid)) OR
           (properties.ttclid != '' AND isNotNull(properties.ttclid)) OR
           (properties.twclid != '' AND isNotNull(properties.twclid)) OR
-          (properties.li_fat_id != '' AND isNotNull(properties.li_fat_id))
+          (properties.li_fat_id != '' AND isNotNull(properties.li_fat_id)) OR
+          (properties.li_fatid != '' AND isNotNull(properties.li_fatid)) OR
+          (properties.dclid != '' AND isNotNull(properties.dclid)) OR
+          (properties.snapclid != '' AND isNotNull(properties.snapclid)) OR
+          (properties.pclid != '' AND isNotNull(properties.pclid))
         )
       ORDER BY timestamp DESC
       LIMIT 1
@@ -116,6 +120,10 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
           (properties.ttclid != '' AND isNotNull(properties.ttclid)) OR
           (properties.twclid != '' AND isNotNull(properties.twclid)) OR
           (properties.li_fat_id != '' AND isNotNull(properties.li_fat_id)) OR
+          (properties.li_fatid != '' AND isNotNull(properties.li_fatid)) OR
+          (properties.dclid != '' AND isNotNull(properties.dclid)) OR
+          (properties.snapclid != '' AND isNotNull(properties.snapclid)) OR
+          (properties.pclid != '' AND isNotNull(properties.pclid)) OR
           (properties.utm_id != '' AND isNotNull(properties.utm_id)) OR
           (properties.st_campaign_id != '' AND isNotNull(properties.st_campaign_id)) OR
           (properties.st_adgroup_id != '' AND isNotNull(properties.st_adgroup_id))
@@ -266,7 +274,7 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
   let lastClickIdType = null
 
   if (lastClickRow) {
-    const clickIdTypes = ['gclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid', 'ttclid', 'twclid', 'li_fat_id']
+    const clickIdTypes = ['gclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid', 'ttclid', 'twclid', 'li_fat_id', 'li_fatid', 'dclid', 'snapclid', 'pclid']
     for (let i = 0; i < clickIdTypes.length; i++) {
       if (lastClickRow[i] && lastClickRow[i] !== '') {
         clickIdSeen = true

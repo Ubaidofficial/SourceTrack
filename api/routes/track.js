@@ -1,7 +1,7 @@
 import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { v4 as uuidv4 } from 'uuid'
-import { normalizeUtm, redactPiiFromObject, isPathExcluded, extractCustomParams, sanitizeClientTimestamp, sanitizeValueTrack, sanitizeVerificationToken } from '../lib/utils.js'
+import { normalizeUtm, redactPiiFromObject, isPathExcluded, extractCustomParams, sanitizeClientTimestamp, sanitizeValueTrack, sanitizeVerificationToken, normalizeClickIds } from '../lib/utils.js'
 import { resolveClientIp } from '../lib/ip-resolver.js'
 import { ph } from '../lib/posthog.js'
 
@@ -148,17 +148,8 @@ export async function track(req, res) {
         first_touch_source: normalizeUtm(req.body.first_touch_source),
         first_touch_medium: normalizeUtm(req.body.first_touch_medium),
         first_touch_campaign: normalizeUtm(req.body.first_touch_campaign),
-        // Attribution metadata only — sanitized to a canonical ISO string or
-        // dropped to null. Never used for billing/security decisions.
         first_touch_timestamp: sanitizeClientTimestamp(req.body.first_touch_timestamp),
-        gclid: req.body.gclid || null,
-        gbraid: req.body.gbraid || null,
-        wbraid: req.body.wbraid || null,
-        fbclid: req.body.fbclid || null,
-        msclkid: req.body.msclkid || null,
-        ttclid: req.body.ttclid || null,
-        li_fat_id: req.body.li_fat_id || null,
-        twclid: req.body.twclid || null,
+        ...normalizeClickIds(req.body),
         utm_id: normalizeUtm(req.body.utm_id),
         st_campaign_id: normalizeUtm(req.body.st_campaign_id),
         st_adgroup_id: normalizeUtm(req.body.st_adgroup_id),

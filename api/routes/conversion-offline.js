@@ -3,7 +3,7 @@ import { ph } from '../lib/posthog.js'
 import { dispatchWebhook } from '../lib/webhook.js'
 import { sendMetaCAPI, sendGoogleConversion, sendMicrosoftConversion, sendLinkedInConversion, sendTikTokConversion } from '../lib/conversion-sync.js'
 import { getSupabase } from '../lib/supabase.js'
-import { getFirstTouchFields, redactPiiFromObject } from '../lib/utils.js'
+import { getFirstTouchFields, redactPiiFromObject, normalizeClickIds } from '../lib/utils.js'
 import { hasFeature } from '../lib/plan-features.js'
 import { claimIdempotencyKeys, logIngestionEvent } from '../lib/idempotency.js'
 
@@ -192,11 +192,14 @@ export async function conversionOffline(req, res) {
       props.form_name = req.body.form_name.trim().slice(0, 120).replace(/[^a-zA-Z0-9 _-]/g, '')
     }
     // UTM fields (passed through for attribution stitching)
-    ;['utm_source','utm_medium','utm_campaign','utm_content','utm_term','gclid','gbraid','wbraid','fbclid','msclkid','ttclid','li_fat_id'].forEach(k => {
+    ;['utm_source','utm_medium','utm_campaign','utm_content','utm_term','gclid','gbraid','wbraid','fbclid','msclkid','ttclid','li_fat_id','li_fatid','twclid','dclid','snapclid','pclid'].forEach(k => {
       if (typeof req.body[k] === 'string' && req.body[k].trim()) {
         props[k] = req.body[k].trim()
       }
     })
+
+    // Normalize click IDs and LinkedIn aliases
+    Object.assign(props, normalizeClickIds(props))
 
     ph.capture({
       distinctId,

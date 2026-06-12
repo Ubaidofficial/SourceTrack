@@ -254,8 +254,16 @@ async function processConversion(site, conversion) {
       properties.ai_source,
       properties.gclid,
       properties.gbraid,
+      properties.wbraid,
       properties.fbclid,
       properties.msclkid,
+      properties.ttclid,
+      properties.li_fat_id,
+      properties.li_fatid,
+      properties.twclid,
+      properties.dclid,
+      properties.snapclid,
+      properties.pclid,
       properties.page_url
     FROM events
     WHERE event = '$pageview'
@@ -282,12 +290,20 @@ async function processConversion(site, conversion) {
     utm_campaign: row[3] || null,
     referrer: row[4] || null,
     ai_source: row[5] || null,
-    gclid:    row[6]  || null,
-    gbraid:   row[7]  || null,
-    fbclid:   row[8]  || null,
-    msclkid:  row[9]  || null,
-    page_url: row[10] || null,
-    derived_source: row[1] || row[5] || (row[4] ? (() => { try { return new URL(row[4]).hostname.replace('www.', '') } catch (_e) { return null } })() : null) || 'direct'
+    gclid:     row[6]  || null,
+    gbraid:    row[7]  || null,
+    wbraid:    row[8]  || null,
+    fbclid:    row[9]  || null,
+    msclkid:   row[10] || null,
+    ttclid:    row[11] || null,
+    li_fat_id: row[12] || null,
+    li_fatid:  row[13] || null,
+    twclid:    row[14] || null,
+    dclid:     row[15] || null,
+    snapclid:  row[16] || null,
+    pclid:     row[17] || null,
+    page_url:  row[18] || null,
+    derived_source: row[1] || row[6] || (row[4] ? (() => { try { return new URL(row[4]).hostname.replace('www.', '') } catch (_e) { return null } })() : null) || 'direct'
   }))
   
   const attribution = calculateAttribution(touchpoints, convValue)
@@ -303,16 +319,37 @@ async function processConversion(site, conversion) {
     ai_source:      firstTp.ai_source,
     derived_source: firstTp.derived_source,
     gclid:          firstTp.gclid,
-    fbclid:         firstTp.fbclid
+    gbraid:         firstTp.gbraid,
+    wbraid:         firstTp.wbraid,
+    fbclid:         firstTp.fbclid,
+    msclkid:        firstTp.msclkid,
+    ttclid:         firstTp.ttclid,
+    li_fat_id:      firstTp.li_fat_id,
+    li_fatid:       firstTp.li_fatid,
+    twclid:         firstTp.twclid,
+    dclid:          firstTp.dclid,
+    snapclid:       firstTp.snapclid,
+    pclid:          firstTp.pclid
   })
   const lastTouchChannel = channelFromEvent({
-    utm_source: lastTp.utm_source,
-    utm_medium: lastTp.utm_medium,
-    referrer:   lastTp.referrer,
-    page_url:   lastTp.page_url,
-    ai_source:  lastTp.ai_source,
-    gclid:      lastTp.gclid,
-    fbclid:     lastTp.fbclid
+    utm_source:     lastTp.utm_source,
+    utm_medium:     lastTp.utm_medium,
+    referrer:       lastTp.referrer,
+    page_url:       lastTp.page_url,
+    ai_source:      lastTp.ai_source,
+    derived_source: lastTp.derived_source,
+    gclid:          lastTp.gclid,
+    gbraid:         lastTp.gbraid,
+    wbraid:         lastTp.wbraid,
+    fbclid:         lastTp.fbclid,
+    msclkid:        lastTp.msclkid,
+    ttclid:         lastTp.ttclid,
+    li_fat_id:      lastTp.li_fat_id,
+    li_fatid:       lastTp.li_fatid,
+    twclid:         lastTp.twclid,
+    dclid:          lastTp.dclid,
+    snapclid:       lastTp.snapclid,
+    pclid:          lastTp.pclid
   })
 
   const confidence = calculateConfidence(touchpoints, firstTouchChannel)
@@ -327,7 +364,17 @@ async function processConversion(site, conversion) {
     ai_source:      first30.ai_source,
     derived_source: first30.derived_source,
     gclid:          first30.gclid,
-    fbclid:         first30.fbclid
+    gbraid:         first30.gbraid,
+    wbraid:         first30.wbraid,
+    fbclid:         first30.fbclid,
+    msclkid:        first30.msclkid,
+    ttclid:         first30.ttclid,
+    li_fat_id:      first30.li_fat_id,
+    li_fatid:       first30.li_fatid,
+    twclid:         first30.twclid,
+    dclid:          first30.dclid,
+    snapclid:       first30.snapclid,
+    pclid:          first30.pclid
   }) : null
 
   const record = {
@@ -395,9 +442,11 @@ function calculateAttribution(touchpoints, conversionValue) {
 
   const tpCh = (tp) => channelFromEvent({
     utm_source: tp.utm_source, utm_medium: tp.utm_medium,
-    ai_source: tp.ai_source, gclid: tp.gclid,
-    fbclid: tp.fbclid, msclkid: tp.msclkid, referrer: tp.referrer,
-    page_url: tp.page_url
+    ai_source: tp.ai_source, gclid: tp.gclid, gbraid: tp.gbraid, wbraid: tp.wbraid,
+    fbclid: tp.fbclid, msclkid: tp.msclkid, ttclid: tp.ttclid,
+    li_fat_id: tp.li_fat_id, li_fatid: tp.li_fatid, twclid: tp.twclid,
+    dclid: tp.dclid, snapclid: tp.snapclid, pclid: tp.pclid,
+    referrer: tp.referrer, page_url: tp.page_url
   })
   const tpBase = (tp) => ({
     source: tp.utm_source || null,

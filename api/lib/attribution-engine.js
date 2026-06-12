@@ -449,8 +449,16 @@ export async function getAiPlatformAttributionLive({
           properties.ai_source AS ai_source,
           properties.gclid AS gclid,
           properties.gbraid AS gbraid,
+          properties.wbraid AS wbraid,
           properties.fbclid AS fbclid,
           properties.msclkid AS msclkid,
+          properties.ttclid AS ttclid,
+          properties.li_fat_id AS li_fat_id,
+          properties.li_fatid AS li_fatid,
+          properties.twclid AS twclid,
+          properties.dclid AS dclid,
+          properties.snapclid AS snapclid,
+          properties.pclid AS pclid,
           properties.page_url AS page_url,
           properties.utm_term AS utm_term
         FROM events
@@ -474,10 +482,18 @@ export async function getAiPlatformAttributionLive({
         const aiSource = row[6]
         const gclid = row[7]
         const gbraid = row[8]
-        const fbclid = row[9]
-        const msclkid = row[10]
-        const pageUrl = row[11]
-        const utmTerm = row[12]
+        const wbraid = row[9]
+        const fbclid = row[10]
+        const msclkid = row[11]
+        const ttclid = row[12]
+        const li_fat_id = row[13]
+        const li_fatid = row[14]
+        const twclid = row[15]
+        const dclid = row[16]
+        const snapclid = row[17]
+        const pclid = row[18]
+        const pageUrl = row[19]
+        const utmTerm = row[20]
 
         const pvObj = {
           timestamp,
@@ -488,8 +504,16 @@ export async function getAiPlatformAttributionLive({
           ai_source: aiSource || null,
           gclid: gclid || null,
           gbraid: gbraid || null,
+          wbraid: wbraid || null,
           fbclid: fbclid || null,
           msclkid: msclkid || null,
+          ttclid: ttclid || null,
+          li_fat_id: li_fat_id || null,
+          li_fatid: li_fatid || null,
+          twclid: twclid || null,
+          dclid: dclid || null,
+          snapclid: snapclid || null,
+          pclid: pclid || null,
           page_url: pageUrl || null,
           utm_term: utmTerm || null
         }
@@ -1427,8 +1451,16 @@ export async function getMultiTouchAttributionLive({
       properties.ai_source AS ai_source,
       properties.gclid AS gclid,
       properties.gbraid AS gbraid,
+      properties.wbraid AS wbraid,
       properties.fbclid AS fbclid,
       properties.msclkid AS msclkid,
+      properties.ttclid AS ttclid,
+      properties.li_fat_id AS li_fat_id,
+      properties.li_fatid AS li_fatid,
+      properties.twclid AS twclid,
+      properties.dclid AS dclid,
+      properties.snapclid AS snapclid,
+      properties.pclid AS pclid,
       properties.page_url AS page_url,
       properties.utm_term AS utm_term${customPvSelect}
     FROM events
@@ -1453,10 +1485,18 @@ export async function getMultiTouchAttributionLive({
     const aiSource = row[6]
     const gclid = row[7]
     const gbraid = row[8]
-    const fbclid = row[9]
-    const msclkid = row[10]
-    const pageUrl = row[11]
-    const utmTerm = row[12]
+    const wbraid = row[9]
+    const fbclid = row[10]
+    const msclkid = row[11]
+    const ttclid = row[12]
+    const li_fat_id = row[13]
+    const li_fatid = row[14]
+    const twclid = row[15]
+    const dclid = row[16]
+    const snapclid = row[17]
+    const pclid = row[18]
+    const pageUrl = row[19]
+    const utmTerm = row[20]
 
     const pvObj = {
       timestamp,
@@ -1467,15 +1507,23 @@ export async function getMultiTouchAttributionLive({
       ai_source: aiSource || null,
       gclid: gclid || null,
       gbraid: gbraid || null,
+      wbraid: wbraid || null,
       fbclid: fbclid || null,
       msclkid: msclkid || null,
+      ttclid: ttclid || null,
+      li_fat_id: li_fat_id || null,
+      li_fatid: li_fatid || null,
+      twclid: twclid || null,
+      dclid: dclid || null,
+      snapclid: snapclid || null,
+      pclid: pclid || null,
       page_url: pageUrl || null,
       utm_term: utmTerm || null,
       derived_source: utmSource || aiSource || (referrer ? (() => { try { return new URL(referrer).hostname.replace('www.', '') } catch (_) { return null } })() : null) || 'direct'
     }
 
-    if (custKey1) pvObj[`custom_${custKey1}`] = row[13]
-    if (custKey2) pvObj[`custom_${custKey2}`] = row[custKey1 && custKey1 !== custKey2 ? 14 : 13]
+    if (custKey1) pvObj[`custom_${custKey1}`] = row[21]
+    if (custKey2) pvObj[`custom_${custKey2}`] = row[custKey1 && custKey1 !== custKey2 ? 22 : 21]
 
     if (!pageviewsByVisitor[distinctId]) pageviewsByVisitor[distinctId] = []
     pageviewsByVisitor[distinctId].push(pvObj)
@@ -2751,9 +2799,11 @@ export function calculateAttribution(touchpoints, conversionValue) {
 
   const tpCh = (tp) => channelFromEvent({
     utm_source: tp.utm_source, utm_medium: tp.utm_medium,
-    ai_source: tp.ai_source, gclid: tp.gclid,
-    fbclid: tp.fbclid, msclkid: tp.msclkid, referrer: tp.referrer,
-    page_url: tp.page_url
+    ai_source: tp.ai_source, gclid: tp.gclid, gbraid: tp.gbraid, wbraid: tp.wbraid,
+    fbclid: tp.fbclid, msclkid: tp.msclkid, ttclid: tp.ttclid,
+    li_fat_id: tp.li_fat_id, li_fatid: tp.li_fatid, twclid: tp.twclid,
+    dclid: tp.dclid, snapclid: tp.snapclid, pclid: tp.pclid,
+    referrer: tp.referrer, page_url: tp.page_url
   })
   const tpBase = (tp) => {
     const base = {

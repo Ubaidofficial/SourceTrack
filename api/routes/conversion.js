@@ -6,7 +6,7 @@ import { ph } from '../lib/posthog.js'
 import { dispatchWebhook } from '../lib/webhook.js'
 import { sendMetaCAPI, sendGoogleConversion, sendMicrosoftConversion, sendLinkedInConversion, sendTikTokConversion } from '../lib/conversion-sync.js'
 import { getSupabase } from '../lib/supabase.js'
-import { normalizeUtm, getFirstTouchFields, redactPiiFromObject, isPathExcluded, extractCustomParams, sanitizeClientTimestamp, sanitizeValueTrack, sanitizeVerificationToken } from '../lib/utils.js'
+import { normalizeUtm, getFirstTouchFields, redactPiiFromObject, isPathExcluded, extractCustomParams, sanitizeClientTimestamp, sanitizeValueTrack, sanitizeVerificationToken, normalizeClickIds } from '../lib/utils.js'
 import { hasFeature } from '../lib/plan-features.js'
 import { resolveClientIp } from '../lib/ip-resolver.js'
 import { claimIdempotencyKeys } from '../lib/idempotency.js'
@@ -194,14 +194,7 @@ export async function conversion(req, res) {
       ref_param: normalizeUtm(req.body.ref_param || req.body.ref),
       source_param: normalizeUtm(req.body.source_param || req.body.source),
       via_param: normalizeUtm(req.body.via_param || req.body.via),
-      gclid: req.body.gclid || null,
-      gbraid: req.body.gbraid || null,
-      wbraid: req.body.wbraid || null,
-      fbclid: req.body.fbclid || null,
-      msclkid: req.body.msclkid || null,
-      ttclid: req.body.ttclid || null,
-      li_fat_id: req.body.li_fat_id || null,
-      twclid: req.body.twclid || null,
+      ...normalizeClickIds(req.body),
       utm_id: normalizeUtm(req.body.utm_id),
       st_campaign_id: normalizeUtm(req.body.st_campaign_id),
       st_adgroup_id: normalizeUtm(req.body.st_adgroup_id),

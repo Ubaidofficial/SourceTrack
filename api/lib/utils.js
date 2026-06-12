@@ -577,3 +577,45 @@ export function sanitizeVerificationToken(value) {
   const safe = sliced.replace(/[^a-zA-Z0-9_-]/g, '')
   return safe || null
 }
+
+/**
+ * Sanitize and normalize the 12 click IDs.
+ * Accepts both li_fat_id and li_fatid, storing preferred canonical li_fat_id.
+ * Preserves raw li_fatid if present.
+ *
+ * @param {object} props - Input properties
+ * @returns {object} Object with normalized click IDs
+ */
+export function normalizeClickIds(props = {}) {
+  const gclid = (typeof props.gclid === 'string' && props.gclid.trim()) || null
+  const gbraid = (typeof props.gbraid === 'string' && props.gbraid.trim()) || null
+  const wbraid = (typeof props.wbraid === 'string' && props.wbraid.trim()) || null
+  const fbclid = (typeof props.fbclid === 'string' && props.fbclid.trim()) || null
+  const msclkid = (typeof props.msclkid === 'string' && props.msclkid.trim()) || null
+  const ttclid = (typeof props.ttclid === 'string' && props.ttclid.trim()) || null
+  const twclid = (typeof props.twclid === 'string' && props.twclid.trim()) || null
+  const dclid = (typeof props.dclid === 'string' && props.dclid.trim()) || null
+  const snapclid = (typeof props.snapclid === 'string' && props.snapclid.trim()) || null
+  const pclid = (typeof props.pclid === 'string' && props.pclid.trim()) || null
+
+  const rawLiFatId = (typeof props.li_fat_id === 'string' && props.li_fat_id.trim()) || null
+  const rawLiFatid = (typeof props.li_fatid === 'string' && props.li_fatid.trim()) || null
+
+  const li_fat_id = rawLiFatId || rawLiFatid
+  const li_fatid = rawLiFatid
+
+  return {
+    gclid,
+    gbraid,
+    wbraid,
+    fbclid,
+    msclkid,
+    ttclid,
+    li_fat_id,
+    li_fatid,
+    twclid,
+    dclid,
+    snapclid,
+    pclid
+  }
+}
