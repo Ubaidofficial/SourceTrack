@@ -177,6 +177,17 @@ export default function Layout({ children }) {
               + Add New Site
             </button>
           )}
+          {activeSite && activeSite.onboarding_completed === false && activeSite.id && (
+            <button
+              onClick={() => {
+                setSidebarOpen(false)
+                navigate(`/onboarding?site_id=${activeSite.id}&mode=onboarding`)
+              }}
+              className="mt-2 w-full px-3 py-1.5 text-[11px] font-semibold text-center text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-950/40 transition-colors"
+            >
+              Resume setup
+            </button>
+          )}
         </div>
 
         <nav className="flex-1 p-3 overflow-y-auto space-y-4">

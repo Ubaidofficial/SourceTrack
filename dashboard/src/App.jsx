@@ -76,7 +76,7 @@ function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
   // Use react-router's useLocation so pathname is reactive — switching routes
   // within the SPA re-evaluates the gate without remounting the component.
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const [onboarding, setOnboarding] = useState({ loading: true, completed: false, hasSite: false })
 
   useEffect(() => {
@@ -135,11 +135,23 @@ function ProtectedRoute({ children }) {
     )
   }
 
+  // Explicit onboarding intent: a "Resume setup" entry navigates to
+  // /onboarding?site_id=<incomplete>&mode=onboarding. When that intent is
+  // present we must NOT bounce a user who also owns a completed site back to
+  // the dashboard — Onboarding.jsx resolves the hinted incomplete site itself
+  // via ?mode=onboarding. The dashboard gate is otherwise unchanged.
+  const onboardingParams = new URLSearchParams(search)
+  const explicitOnboardingIntent =
+    pathname === '/onboarding' &&
+    (onboardingParams.get('mode') === 'onboarding' ||
+      !!onboardingParams.get('site_id') ||
+      !!onboardingParams.get('site_key'))
+
   // Force incomplete users to /onboarding; completed users away from it.
   if (pathname !== '/onboarding' && !onboarding.completed) {
     return <Navigate to="/onboarding" replace />
   }
-  if (pathname === '/onboarding' && onboarding.completed) {
+  if (pathname === '/onboarding' && onboarding.completed && !explicitOnboardingIntent) {
     return <Navigate to="/dashboard" replace />
   }
 

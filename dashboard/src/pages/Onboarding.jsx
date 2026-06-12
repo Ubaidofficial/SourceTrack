@@ -87,9 +87,21 @@ export default function Onboarding() {
 
   async function loadOnboardingStatus() {
     try {
+      // Honor an explicit site hint from the URL — the "Resume setup" entry
+      // navigates to /onboarding?site_id=<incomplete>&mode=onboarding. Fall back
+      // to the saved active site key. Always ?mode=onboarding so the backend
+      // resolves the latest INCOMPLETE site (not a completed one).
+      const urlParams = new URLSearchParams(window.location.search)
+      const hintSiteId = urlParams.get('site_id')
+      const hintSiteKey = urlParams.get('site_key')
       const savedKey = window.localStorage.getItem('sourcetrack_active_site_key')
-      const url = savedKey ? `/onboarding/me?mode=onboarding&site_key=${savedKey}` : '/onboarding/me?mode=onboarding'
-      const site = await fetchApi(url)
+
+      const meParams = new URLSearchParams({ mode: 'onboarding' })
+      if (hintSiteId) meParams.set('site_id', hintSiteId)
+      else if (hintSiteKey) meParams.set('site_key', hintSiteKey)
+      else if (savedKey) meParams.set('site_key', savedKey)
+
+      const site = await fetchApi(`/onboarding/me?${meParams.toString()}`)
 
       if (!site || !site.has_site) return
 

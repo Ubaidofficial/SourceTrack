@@ -672,14 +672,26 @@ export default function Dashboard() {
             <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/30 rounded-xl p-5 text-left">
               <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-1">Finish setting up</h4>
               <p className="text-xs text-blue-700 dark:text-blue-400 mb-3">
-                SourceTrack hasn't received any data yet. Install the tracker snippet on your website to start seeing attribution reports.
+                {site && site.onboarding_completed === false
+                  ? "This site hasn't finished onboarding yet. Resume setup to add your tracking snippet and start seeing attribution reports."
+                  : "SourceTrack hasn't received any data yet. Install the tracker snippet on your website to start seeing attribution reports."}
               </p>
-              <button
-                onClick={() => navigate('/snippet')}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors flex items-center gap-1.5"
-              >
-                <Zap className="w-3.5 h-3.5" /> Go to Install Guide
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                {site && site.onboarding_completed === false && site.id && (
+                  <button
+                    onClick={() => navigate(`/onboarding?site_id=${site.id}&mode=onboarding`)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors flex items-center gap-1.5"
+                  >
+                    <Zap className="w-3.5 h-3.5" /> Resume setup
+                  </button>
+                )}
+                <button
+                  onClick={() => navigate('/snippet')}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors flex items-center gap-1.5"
+                >
+                  <Zap className="w-3.5 h-3.5" /> Go to Install Guide
+                </button>
+              </div>
             </div>
           )}
 

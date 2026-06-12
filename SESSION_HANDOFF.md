@@ -2,16 +2,38 @@
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
-> **Handoff:** Session 139I-E — Browser Verification is PASS WITH LIMITS (staging deploy `6629c5f`). Real browser QA confirmed the core multi-site gate fix: `/dashboard` deterministically resolves to a completed site (skips the newer incomplete site — no bounce to onboarding); only-completed users opening `/onboarding` are redirected to `/dashboard` (no trap); same-domain resubmission resumes the existing site with no duplicate (site count 3→3); foreign `site_key`/`site_id` are ignored/404 with no cross-tenant leak; `/api/sites` sorts newest-first. One 139I-E requirement still failed: **direct `/onboarding` with an incomplete site present does NOT resume it** — it redirects to `/dashboard` whenever a completed site coexists. Root cause: `ProtectedRoute` calls `/onboarding/me` **without** `mode=onboarding` for the `/onboarding` route, so it uses the Dashboard policy and redirects before `Onboarding.jsx` (which uses `?mode=onboarding`) can mount; compounded by `SiteContext` resetting the active site to a completed one. This is **not** a paid-beta blocker for clean first-time single-site users, but a real multi-site UX gap — tracked as **Session 139I-F**, not buried as a product decision. (Coverage: Scenario A not run on a pristine fresh single-site account; first-time flow verified in 139I-D.) Browser verification appended to [multi_site_onboarding_gate_qa_139I-E.md](docs/qa/multi_site_onboarding_gate_qa_139I-E.md). Next task: Session 139I-F.
+> **Handoff:** Session 139I-F — Add Explicit Resume/Add-Site Onboarding Entry is PARTIAL (code implemented, dashboard build green; staging browser QA pending deploy). Frontend-only, minimal: ProtectedRoute now bypasses the /onboarding→/dashboard redirect ONLY for explicit onboarding intent (URL has mode=onboarding/site_id/site_key) — the dashboard gate is otherwise unchanged; Onboarding.jsx honors a site_id/site_key URL hint in its existing /onboarding/me?mode=onboarding call; Dashboard "Finish setting up" card and Layout site-switcher show a "Resume setup" action button when the active site is incomplete. Staging browser verification is pending deploy. QA: [multi_site_resume_setup_qa_139I-F.md](docs/qa/multi_site_resume_setup_qa_139I-F.md).
 >
-> **Prior handoff (Session 139I-D):** Session 139I-D — Browser Verification is PASS WITH LIMITS. Real browser QA confirmed onboarding now completes, Tracking Doctor behaves gracefully, the staging snippet URL is correct, Copy Code feedback works, Verify Later completes onboarding, and dashboard loads after completing the gate site. Next task: Session 139I-E.
+> **Prior handoff (Session 139I-E):** Session 139I-E — Browser Verification is PASS WITH LIMITS (staging deploy `6629c5f`). Real browser QA confirmed the core multi-site gate fix: `/dashboard` deterministically resolves to a completed site (skips the newer incomplete site — no bounce to onboarding); only-completed users opening `/onboarding` are redirected to `/dashboard` (no trap); same-domain resubmission resumes the existing site with no duplicate (site count 3→3); foreign `site_key`/`site_id` are ignored/404 with no cross-tenant leak; `/api/sites` sorts newest-first.
 >
-> **Next Task:** Session 139I-F — Add Explicit Resume/Add-Site Onboarding Entry (NOT 139L yet). Tiny scope: give multi-site users an explicit "Resume setup" action (site switcher and/or dashboard "Finish setting up" card) that opens `/onboarding` for an incomplete site via an explicit site hint + forced onboarding mode, WITHOUT weakening the dashboard gate. Root cause to address: `ProtectedRoute` calls `/onboarding/me` without `mode=onboarding` for the `/onboarding` route. A one-line ProtectedRoute patch was scoped this session but deliberately not applied — folded into 139I-F. (139L — beta Terms/Privacy disclosure — remains queued after 139I-F.)
+> **Next Task:** Session 139I-F — Browser Verification (after deploy). Scope: Run staging browser scenarios A–E (completed-site dashboard stable; incomplete-site explicit resume; direct `/onboarding?site_id=<incomplete>&mode=onboarding` not bounced; completed-only bare `/onboarding` redirects; foreign site_id/key safe).
 >
 > ⚠️ **P0 CONDITIONS BEFORE FIRST PAID CUSTOMER:** (1) Stripe test-mode checkout/webhook evidence [PARTIAL — API/webhook E2E verified on staging; browser billing UI and billing status endpoint pending]; (2) provider-console separation verified [CLOSED - staging project created, local env rewired, safety boot guard active]; (3) Supabase backups verified [PARTIAL - Daily scheduled backups manually verified. PITR is not enabled / not accepted as enabled. Daily backups are now verified; PITR remains an optional but strongly recommended paid add-on / accepted risk if left disabled. Do not enable PITR without explicit cost approval. Staging restore drill remains blocked/not run]; (4) prod env secrets set incl. ST_IP_RESOLVER_MODE=railway; (5) beta Terms/Privacy disclosed in writing.
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
 
+
+
+## Session 139I-F — Add Explicit Resume/Add-Site Onboarding Entry
+**Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety)
+**Status:** **PARTIAL — code-verified.**
+
+### Completed
+1. App.jsx Route Gate Bypass: Detects explicit onboarding intent (URL search parameters mode=onboarding, site_id, or site_key) and bypasses the /onboarding→/dashboard redirect, preventing completed-site users from being bounced when intentionally resuming onboarding.
+2. Onboarding.jsx URL Hint Support: Updated loadOnboardingStatus to read site_id/site_key from the URL parameters and pass them to /api/onboarding/me?mode=onboarding, enabling correct resolution and resumption of the hinted site.
+3. Dashboard.jsx "Resume setup" Button: Added an explicit "Resume setup" CTA to the "Finish setting up" card on the empty-state Dashboard when the active site is incomplete.
+4. Layout.jsx "Resume setup" Switcher Link: Added a small "Resume setup" action button below the Layout site switcher when the active site is incomplete.
+5. QA Scenarios Documented: Saved a thorough scenarized QA report under docs/qa/multi_site_resume_setup_qa_139I-F.md.
+
+### Files changed
+- [dashboard/src/App.jsx](dashboard/src/App.jsx)
+- [dashboard/src/components/Layout.jsx](dashboard/src/components/Layout.jsx)
+- [dashboard/src/pages/Dashboard.jsx](dashboard/src/pages/Dashboard.jsx)
+- [dashboard/src/pages/Onboarding.jsx](dashboard/src/pages/Onboarding.jsx)
+- [docs/qa/multi_site_resume_setup_qa_139I-F.md](docs/qa/multi_site_resume_setup_qa_139I-F.md) [NEW]
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
 
 
 ## Session 139I-E — Fix Multi-Site Onboarding Gate Edge Case
