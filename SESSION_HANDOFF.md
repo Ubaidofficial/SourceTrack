@@ -2,7 +2,9 @@
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
-> **Handoff:** Session 139N-3 — Consent / Cookieless / URL Passthrough Audit is **PENDING REVIEW**. Audited standard storage, cookieless identity rotating visitor hashes, client-side URL decoration, and cross-domain tracking against Plurio Intake parity gaps. Documented findings in `docs/qa/consent_cookieless_url_passthrough_audit_139N3.md`. Softened privacy copy in Guided Snippet UI (`Snippet.jsx`) to align with legal neutrality. Not committed.
+> **Handoff:** Session 139N-4 — Identity Resolution + Analytics IDs Audit is **PENDING REVIEW**. Audited identity resolution and analytics ID stitching across trackers, ingestion routes, and the attribution engine. Identified and documented P0 stitching gaps for Stripe and incoming webhooks, raw distinct_id joins in HogQL queries, and visitor journey constraints. Corrected Stripe webhook payload guidelines in Snippet UI (`Snippet.jsx`) to clarify the `anonymous_id` requirement, warn against fallback email/user_id-only stitching expectations, and advise against plaintext email ingestion. Not committed.
+>
+> **Prior handoff (Session 139N-3):** Session 139N-3 — Consent / Cookieless / URL Passthrough Audit is **PASS**. Audited standard storage, cookieless identity rotating visitor hashes, client-side URL decoration, and cross-domain tracking against Plurio Intake parity gaps. Documented findings in `docs/qa/consent_cookieless_url_passthrough_audit_139N3.md`. Softened privacy copy in Guided Snippet UI (`Snippet.jsx`) to align with legal neutrality.
 >
 > **Prior handoff (Session 139N-1):** Session 139N-1 — Click ID + Source Taxonomy Hardening is **PASS**. Added 4 missing click IDs (dclid, snapclid, pclid, li_fatid), normalized LinkedIn aliases (li_fat_id/li_fatid) via shared `normalizeClickIds` helper, updated channel classifier (dclid→Display, twclid/snapclid/pclid→Paid Social), updated all ingestion routes, attribution engine/nightly job HogQL queries, setup doctor diagnostics, Event Debugger UI, and added `qa:tracker:unit` tests. Rebuilt minified trackers. All tests pass.
 >
@@ -22,18 +24,18 @@
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
 >
-> ## Session 139N-3 — Consent / Cookieless / URL Passthrough Audit
+> ## Session 139N-4 — Identity Resolution + Analytics IDs Audit
 > **Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa:attribution:unit, qa:tracker:unit)
 > **Status:** **PENDING REVIEW — not committed.**
 >
 > ### Completed
-> 1. Conducted audit of consent storage (cookies, `localStorage`, `sessionStorage`), Consent APIs, opt-in queueing, cookieless identity hashing via daily salt HMAC, first-touch persistence constraints, and link decoration behavior against Plurio Intake.
-> 2. Documented detailed findings in [consent_cookieless_url_passthrough_audit_139N3.md](docs/qa/consent_cookieless_url_passthrough_audit_139N3.md).
-> 3. Softened privacy and consent compliance copy in the Guided Snippet UI (`Snippet.jsx`) to align with legal neutrality.
+> 1. Conducted audit of identity resolution and analytics ID stitching across trackers, ingestion routes, and the attribution engine.
+> 2. Documented detailed findings in [identity_resolution_analytics_ids_audit_139N4.md](docs/qa/identity_resolution_analytics_ids_audit_139N4.md).
+> 3. Softened and corrected Stripe webhook payload guidelines in the Guided Snippet UI (`Snippet.jsx`) to enforce identity stitching prerequisites.
 >
 > ### Files changed
-> - `docs/qa/consent_cookieless_url_passthrough_audit_139N3.md` — New audit report
-> - `dashboard/src/pages/Snippet.jsx` — Softened privacy reminder copy
+> - `docs/qa/identity_resolution_analytics_ids_audit_139N4.md` — New audit report
+> - `dashboard/src/pages/Snippet.jsx` — Corrected Stripe webhook instructions
 >
 > ### Verification
 > - `npm run qa:tracker:unit` — ✅ pass
@@ -45,7 +47,7 @@
 >
 > ---
 >
-> ## Session 139N-1 — Click ID + Source Taxonomy Hardening
+> ## Session 139N-3 — Consent / Cookieless / URL Passthrough Audit
 > **Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa:attribution:unit, qa:tracker:unit)
 > **Status:** **PASS.**
 >

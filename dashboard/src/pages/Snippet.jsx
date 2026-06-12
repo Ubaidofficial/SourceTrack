@@ -458,7 +458,7 @@ useEffect(() => {
               'Attribute Stripe payments and recurring revenue (LTV) to campaigns',
               <>
                 <p>
-                  Forward Stripe <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[11px] font-mono">invoice.paid</code> events to attribute recurring invoice payments to the customer's original campaign source.
+                  Forward Stripe <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[11px] font-mono">invoice.paid</code> events to attribute recurring invoice payments to campaigns. <strong>Note:</strong> Reliable offline attribution currently requires passing the browser-generated <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[11px] font-mono">anonymous_id</code> in checkout/payment metadata. While <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[11px] font-mono">user_id</code> may be included for debugging and customer context, stitching based on user ID or email alone is a known gap until webhook identity resolution is implemented. Avoid sending plaintext email as an identifier unless you have a deliberate privacy or legal basis; prefer using an internal user ID or a hashed identifier.
                 </p>
                 <div className="bg-st-black rounded-lg p-3 relative mt-1 border border-gray-850">
                   <pre className="text-green-400 text-[11px] font-mono overflow-x-auto whitespace-pre-wrap pr-8 leading-relaxed">{`// In your Stripe webhook handler (Node.js example)
@@ -470,7 +470,9 @@ if (event.type === 'invoice.paid') {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       site_key: '${site?.site_key || 'YOUR_SITE_KEY'}',
-      user_id: customer.email,
+      anonymous_id: customer.metadata?.st_anonymous_id || null, // Map from checkout session (required for stitching)
+      user_id: customer.metadata?.user_id || null,             // Match the value passed to identify()
+      // Do not rely on email-only stitching in the current implementation.
       conversion_value: invoice.amount_paid / 100,
       conversion_type: 'recurring_payment',
       first_touch_source: customer.metadata?.st_first_touch_source || 'direct'
