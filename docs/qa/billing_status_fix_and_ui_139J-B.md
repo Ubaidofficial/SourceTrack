@@ -9,7 +9,7 @@
 
 ## 1. Verdict
 
-**PASS — local middleware fix validated; Free-plan staging Billing UI browser-verified; post-deploy middleware verification pending.**
+**PASS — local middleware fix validated; Free-plan staging Billing UI browser-verified; post-deploy middleware verification pending/not run.**
 
 The `validateSiteKey` fix (now selects and exposes `stripe_customer_id`) is validated **locally** by
 code audit and the automated QA suite. The staging **Free-plan** Billing UI was browser-verified on
@@ -23,7 +23,7 @@ without the fix (`customer: undefined` either way), so the passing CTA only conf
 checkout-session creation on the deployed build — not the fix's customer-resolution path.
 
 > Staging Free-plan Billing UI browser verification: PASS on the currently deployed staging build.
-> Middleware fix live-on-staging verification: PENDING until this commit is pushed/deployed.
+> Middleware fix live-on-staging verification: PENDING / NOT RUN after deployment; browser/live API verification paused.
 > Paid-site billing portal flow: NOT VERIFIED; requires a paid staging site/customer.
 > Production billing: UNVERIFIED.
 > Paid beta: BLOCKED.

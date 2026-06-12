@@ -2,13 +2,17 @@
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
-> **Handoff:** Session 139J-B — Fix Billing Status validateSiteKey Select + Staging Billing UI Verification — **PASS — local middleware fix validated; Free-plan staging Billing UI browser-verified; post-deploy middleware verification pending.**
+> **Handoff:** Session 139J-C — Billing Middleware Regression Tests Only — **PASS — billing middleware regression tests protect stripe_customer_id selection and req.site propagation.**
+> - **Regression Tests:** Added focused automated regression tests under `api/tests/billing-middleware.test.js` validating that `validateSiteKey` select fields for primary and fallback queries contain `stripe_customer_id`, and that `req.site.stripe_customer_id` is set/defaulted correctly.
+> - **Scoping and Data Leakage Audit:** Audited `api/routes/billing.js` and confirmed billing routes consume `req.site.stripe_customer_id` cleanly without leaking it or serializing the full `req.site` to the client.
 > - **Staging Free-plan Billing UI browser verification:** PASS on the currently deployed staging build (page load, plan/usage display, empty/free state, Terms/Privacy gate, upgrade checkout CTA to Stripe test cs_test_ checkout).
-> - **Middleware fix live-on-staging verification:** PENDING until this commit is pushed/deployed (the browser test ran against the pre-fix deployed build, so it does not prove the new middleware is live).
+> - **Middleware fix live-on-staging verification:** PENDING / NOT RUN after deployment; browser/live API verification paused.
 > - **Paid-site billing portal flow:** NOT VERIFIED; requires a paid staging site/customer.
 > - **Production billing:** UNVERIFIED.
 > - **Paid beta:** BLOCKED.
-> - **Fix Details:** `api/middleware/auth.js` `validateSiteKey` now selects `stripe_customer_id` from the database in both SELECT paths and copies it to `req.site.stripe_customer_id`. This restores subscription status lookup, portal access, and customer reuse. Verified locally via audit + automated test suite; no secrets or credentials printed. QA: docs/qa/billing_status_fix_and_ui_139J-B.md.
+> - **Fix Details:** `api/middleware/auth.js` `validateSiteKey` now selects `stripe_customer_id` from the database in both SELECT paths and copies it to `req.site.stripe_customer_id`. This restores subscription status lookup, portal access, and customer reuse. Verified locally via audit + automated test suite; no secrets or credentials printed. QA: docs/qa/billing_middleware_regression_tests_139J-C.md.
+>
+> **Prior handoff (Session 139J-B):** Session 139J-B — Fix Billing Status validateSiteKey Select + Staging Billing UI Verification — **PASS**. Fixed the billing status endpoint bug in api/middleware/auth.js by selecting and exposing stripe_customer_id in validateSiteKey. Staging Free-plan Billing UI browser verification: PASS on the currently deployed staging build. Middleware fix live-on-staging verification: PENDING / NOT RUN after deployment; browser/live API verification paused. Paid-site billing portal flow: NOT VERIFIED. Production billing: UNVERIFIED. Paid beta: BLOCKED. QA: docs/qa/billing_status_fix_and_ui_139J-B.md.
 >
 > **Prior handoff (Session 139N-4E):** Fix Supabase Auth StorageKey Env Collision — **PASS**. `dashboard/src/lib/supabase.js` now derives the localStorage `storageKey` from the `VITE_SUPABASE_URL` project ref (`sb-${projectRef}-auth-token`; neutral `sb-sourcetrack-auth-token` fallback). Post-deploy staging browser verification PASS (only `sb-nrsvpwzekfrdrzkoecfk-auth-token` present, prod key absent, no console errors). QA: docs/qa/auth_storage_key_env_collision_139N4E.md.
 >
@@ -34,11 +38,59 @@
 >
 > **Prior handoff (Session 140A):** Session 140A — Full Authenticated Staging End-to-End Browser QA Inventory is **BLOCKED / FAIL** (staging deploy `7a84ad3`). Audited all public and authenticated app routes on staging. Conducted a hybrid staging, API, and routing audit. Verified route-by-route behavior via API/source/routing inspection, but full real-Chrome browser E2E was blocked/not completed. Discovered critical staging environment and API blockers: (A) PostHog Reverse Proxy returns 502 Bad Gateway due to a malformed `POSTHOG_CLOUD_REGION=POSTHOG_CLOUD_REGION=us` setting, causing Nginx DNS failures and blocking all metrics queries; (B) GSC redirect URI `GOOGLE_GSC_REDIRECT_URI` points to production `api.srctk.com` instead of staging; (C) Billing status endpoint `/api/billing/status` returns null subscription because `validateSiteKey` middleware does not select `stripe_customer_id` from the database; (D) Custom CSV exports, funnels, alerts, and visitor timelines fail with HTTP 500/502 due to the proxy outage. Checked safety and verified zero credentials or overclaims exist in public pages. QA: [full_authenticated_app_e2e_qa_140A.md](docs/qa/full_authenticated_app_e2e_qa_140A.md).
 >
-> **Next Task:** Browser-verify the billing **portal (paid-site)** flow on staging (needs a paid staging test site → "Manage Subscription" → Stripe billing portal). Then the **production-auth backlog** (deferred to backlog, explicitly NOT closed): (1) production auth storage namespace verification; (2) production/canonical-domain password reset E2E; (3) production Supabase Auth Site URL / Redirect URL / SMTP verification; (4) canonical `www.sourcetrack.ai` auth route verification once domain routing is final. The **production** Supabase project (separate from staging) must get the same per-project Auth URL config (production URLs only — `https://www.sourcetrack.ai/**`), keeping staging and production redirect URLs **strictly separate** (do NOT mix). Other open items unchanged: align staging GOOGLE_GSC_REDIRECT_URI; Supabase staging restore drill + PITR decision; P1 attribution-model test fixtures. **RESOLVED:** billing status `validateSiteKey` select (139J-B, local fix validated, post-deploy verification pending); staging billing UI browser verification (139J-B, Free-plan UI verified on currently deployed build); Stripe API/webhook E2E (139J); auth storageKey env collision (139N-4E). Paid beta is NOT ready until all remaining P0/P1 conditions are met.
+> **Next Task:** Browser-verify the billing **portal (paid-site)** flow on staging (needs a paid staging test site → "Manage Subscription" → Stripe billing portal). Then the **production-auth backlog** (deferred to backlog, explicitly NOT closed): (1) production auth storage namespace verification; (2) production/canonical-domain password reset E2E; (3) production Supabase Auth Site URL / Redirect URL / SMTP verification; (4) canonical `www.sourcetrack.ai` auth route verification once domain routing is final. The **production** Supabase project (separate from staging) must get the same per-project Auth URL config (production URLs only — `https://www.sourcetrack.ai/**`), keeping staging and production redirect URLs **strictly separate** (do NOT mix). Other open items unchanged: align staging GOOGLE_GSC_REDIRECT_URI; Supabase staging restore drill + PITR decision; P1 attribution-model test fixtures. **RESOLVED:** billing status `validateSiteKey` select (139J-B, local fix validated, post-deploy verification pending/not run); staging billing UI browser verification (139J-B, Free-plan UI verified on currently deployed build); Stripe API/webhook E2E (139J); auth storageKey env collision (139N-4E). Paid beta is NOT ready until all remaining P0/P1 conditions are met.
 >
 > ⚠️ **P0 CONDITIONS BEFORE FIRST PAID CUSTOMER:** (1) Stripe test-mode checkout/webhook evidence [PARTIAL — API/webhook E2E verified on staging; browser billing UI and billing status endpoint pending]; (2) provider-console separation verified [CLOSED - staging project created, local env rewired, safety boot guard active]; (3) Supabase backups verified [PARTIAL - Daily scheduled backups manually verified. PITR is not enabled / not accepted as enabled. Staging restore drill remains blocked/not run]; (4) prod env secrets set incl. ST_IP_RESOLVER_MODE=railway; (5) beta Terms/Privacy disclosed in writing [CLOSED — Terms/Privacy checkout gate browser/API verified on staging in 139L (deploy cee2954); acceptance is enforced as a request gate, not persisted].
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+>
+> ## Session 139J-C — Billing Middleware Regression Tests Only
+> **Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, qa:identity:unit, qa:tracker:unit, qa:attribution:unit, qa:env-safety)
+> **Status:** **PASS — not committed.**
+>
+> ### Completed
+> 1. Added focused automated regression tests for billing middleware in `api/tests/billing-middleware.test.js`.
+> 2. Verified that primary and fallback `validateSiteKey` select fields include `stripe_customer_id`.
+> 3. Verified that `req.site.stripe_customer_id` is set correctly when returned from the database, and defaults to `null` when missing/null.
+> 4. Audited billing routes and confirmed clean consumption of `stripe_customer_id` with zero leaks or serialization of full `req.site`.
+> 5. Updated `package.json` to run both identity-resolution and billing-middleware tests under `qa:identity:unit`.
+>
+> ### Files changed
+> - `api/tests/billing-middleware.test.js` — [NEW] automated regression tests
+> - `package.json` — Updated `qa:identity:unit` script
+> - `docs/qa/billing_middleware_regression_tests_139J-C.md` — [NEW] QA report
+> - `docs/release_checklist_gate.md` — Updated Stripe Test-Mode E2E Verification status
+>
+> ---
+>
+> ## Session 139J-B — Fix Billing Status validateSiteKey Select + Staging Billing UI Verification
+> **Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety)
+> **Status:** **PASS — committed/pushed/CI green.**
+>
+> ### Completed
+> 1. Fixed the billing status endpoint bug in `api/middleware/auth.js` by selecting and exposing `stripe_customer_id` in `validateSiteKey`.
+> 2. Browser-verified staging Free-plan Billing UI (page load, plan/usage display, empty/free state, Terms/Privacy gate, upgrade checkout CTA to Stripe test cs_test_ checkout).
+> 3. Documented that middleware fix live-on-staging verification is pending deployment of the commit.
+>
+> ### Files changed
+> - `api/middleware/auth.js` — Selected and whitelisted `stripe_customer_id` in auth middleware
+> - `docs/qa/billing_status_fix_and_ui_139J-B.md` — [NEW] QA report
+>
+> ---
+>
+> ## Session 139N-4E — Fix Supabase Auth StorageKey Env Collision
+> **Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build)
+> **Status:** **PASS — committed/pushed/CI green.**
+>
+> ### Completed
+> 1. Modified `dashboard/src/lib/supabase.js` to dynamically derive the localStorage `storageKey` from the `VITE_SUPABASE_URL` project reference.
+> 2. Confirmed clean session separation between staging and production environments to prevent auth collisions.
+>
+> ### Files changed
+> - `dashboard/src/lib/supabase.js` — Derived storageKey dynamically
+> - `docs/qa/auth_storage_key_env_collision_139N4E.md` — [NEW] QA report
+>
+> ---
 >
 > ## Session 139N-4B — Auth Access + Password Reset Blocker Investigation
 > **Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa:attribution:unit, qa:tracker:unit)
