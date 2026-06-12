@@ -1,9 +1,9 @@
 # SourceTrack Hybrid Staging/API/Browser Readiness Audit (Session 140A)
 
-> **Date:** 2026-06-12  
-> **Session:** 140A — Full Authenticated Staging End-to-End Browser QA Inventory  
-> **Branch:** `main` (no commits made)  
-> **Build:** ✅ PASSING  
+> **Date:** 2026-06-12
+> **Session:** 140A — Full Authenticated Staging End-to-End Browser QA Inventory
+> **Branch:** `main` (no commits made)
+> **Build:** ✅ PASSING
 > **Overall Verdict:** **BLOCKED / FAIL — full real-Chrome browser E2E was not completed.**
 
 ---
@@ -19,7 +19,7 @@ Before running the audit, the staging environment was checked:
 5.  **Staging Supabase project in use:** `sourcetrack-staging` (reference `nrsvpwzekfrdrzkoecfk`)
 6.  **Authenticated staging user used:** `staging-test@sourcetrack.ai` (UUID: `2459145b-aac2-4d34-8663-5665fac59462`)
 7.  **Sites available on the account:** `staging-test.sourcetrack.ai` (Site Key: `29db6ab0-...-7d8640c5cbbc` [redacted])
-8.  **Seeded staging data:** 
+8.  **Seeded staging data:**
     *   **PostHog project `416017`** has 1,701 pageviews and 525 conversions seeded.
     *   **However, queries are currently BLOCKED** because the staging `PostHog Reverse Proxy` returns `502 Bad Gateway` (see Section 3).
 9.  **Stripe test mode configuration:** Present. Stripe API test keys (using standard placeholders `pk_test_...` and `sk_test_...` in environment) and webhook secrets are configured.
@@ -463,13 +463,13 @@ During testing, all analytics and attribution features that query ClickHouse eve
     ```txt
     2026/06/12 09:57:28 [error] 44#44: *5078 posthog_cloud_region=us.i.posthog.com could not be resolved (3: Host not found), client: 100.64.0.37, server: posthog-reverse-proxy-production-2b25.up.railway.app, request: "POST /api/projects/416017/query/ HTTP/1.1", host: "posthog-reverse-proxy-production-2b25.up.railway.app"
     ```
-*   **Analysis:** The Nginx proxy is misconfigured. It is attempting to route requests to `us.i.posthog.com`, which is not a valid DNS target for queries. 
+*   **Analysis:** The Nginx proxy is misconfigured. It is attempting to route requests to `us.i.posthog.com`, which is not a valid DNS target for queries.
 *   **Misconfiguration Discovered:** The Railway environment variables on the `PostHog Reverse Proxy` service in project `beneficial-solace` has the following setting:
     ```txt
     POSTHOG_CLOUD_REGION=POSTHOG_CLOUD_REGION=us
     ```
     This malformed string is causing the proxy's internal routing engine to construct the broken destination URL.
-*   **Impact:** 
+*   **Impact:**
     *   `/dashboard` overview KPIs and trend charts are empty (resiliently handled in the backend by returning `200` with `analytics_unavailable: true` instead of crashing).
     *   `/visitors`, `/journey`, `/leads` timelines, funnels, alerts, and CSV exports fail with HTTP `500/502` errors.
 
