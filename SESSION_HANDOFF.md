@@ -2,15 +2,43 @@
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
-> **Handoff:** Session 140B — Staging PostHog Reverse Proxy hotfix is **PASS WITH LIMITS** (staging deploy `7a84ad3`). Corrected the malformed environment variable (`POSTHOG_CLOUD_REGION=POSTHOG_CLOUD_REGION=us`) on the shared PostHog Reverse Proxy in project `beneficial-solace` to `us`. Redeployed the proxy successfully, resolving the Nginx DNS resolution errors and restoring connection forwarding to PostHog Cloud (verified via direct proxy queries). Staging API query endpoints no longer return 502 Bad Gateway; instead, they now fail with 403 Forbidden because the `POSTHOG_PERSONAL_API_KEY` environment variable configured on the `SourceTrack-Api` service is invalid (phx_wvj...). This represents a separate blocker that remains open. QA: [posthog_reverse_proxy_staging_fix_140B.md](docs/qa/posthog_reverse_proxy_staging_fix_140B.md).
+> **Handoff:** Session 140C — PostHog Proxy + Event Routing Verification is **PASS**. Audited all PostHog references, mapped the E2E event routing path, verified the tracker's independent browser-side execution, and aligned environment variable configurations. Corrected swapped/invalid keys on the staging API service (POSTHOG_API_KEY project write key and POSTHOG_PERSONAL_API_KEY query key). Verified E2E event ingestion and dashboard overview HogQL querying successfully. QA: [posthog_telemetry_routing_verification_140C.md](docs/qa/posthog_telemetry_routing_verification_140C.md).
+>
+> **Prior handoff (Session 139N-0):** Session 139N-0 — Plurio Intake Tracker Parity Audit is **COMPLETE**. Performed a hard tracker-layer parity audit comparing SourceTrack tracker/attribution against Plurio Intake. Mapped UTMs, organic/referral detection, click IDs, attribution models, consent mode, cookieless behavior, identity resolution, dataLayer/GTM, and link decoration. Documented missing click IDs, lack of model tests, and CMP gaps. Saved under [plurio_intake_tracker_parity_audit_139N0.md](docs/qa/plurio_intake_tracker_parity_audit_139N0.md).
+>
+> **Prior handoff (Session 140B):** Session 140B — Staging PostHog Reverse Proxy hotfix is **PASS WITH LIMITS** (staging deploy `7a84ad3`). Corrected the malformed environment variable (`POSTHOG_CLOUD_REGION=POSTHOG_CLOUD_REGION=us`) on the shared PostHog Reverse Proxy in project `beneficial-solace` to `us`. Redeployed the proxy successfully, resolving the Nginx DNS resolution errors and restoring connection forwarding to PostHog Cloud (verified via direct proxy queries). Staging API query endpoints no longer return 502 Bad Gateway; instead, they now fail with 403 Forbidden because the `POSTHOG_PERSONAL_API_KEY` environment variable configured on the SourceTrack-Api service is invalid (phx_wvj...). This represents a separate blocker that remains open. QA: [posthog_reverse_proxy_staging_fix_140B.md](docs/qa/posthog_reverse_proxy_staging_fix_140B.md).
 >
 > **Prior handoff (Session 140A):** Session 140A — Full Authenticated Staging End-to-End Browser QA Inventory is **BLOCKED / FAIL** (staging deploy `7a84ad3`). Audited all public and authenticated app routes on staging. Conducted a hybrid staging, API, and routing audit. Verified route-by-route behavior via API/source/routing inspection, but full real-Chrome browser E2E was blocked/not completed. Discovered critical staging environment and API blockers: (A) PostHog Reverse Proxy returns 502 Bad Gateway due to a malformed `POSTHOG_CLOUD_REGION=POSTHOG_CLOUD_REGION=us` setting, causing Nginx DNS failures and blocking all metrics queries; (B) GSC redirect URI `GOOGLE_GSC_REDIRECT_URI` points to production `api.srctk.com` instead of staging; (C) Billing status endpoint `/api/billing/status` returns null subscription because `validateSiteKey` middleware does not select `stripe_customer_id` from the database; (D) Custom CSV exports, funnels, alerts, and visitor timelines fail with HTTP 500/502 due to the proxy outage. Checked safety and verified zero credentials or overclaims exist in public pages. QA: [full_authenticated_app_e2e_qa_140A.md](docs/qa/full_authenticated_app_e2e_qa_140A.md).
 >
-> **Next Task:** Operator to resolve staging blockers before proceeding. Candidates: Fix staging POSTHOG_PERSONAL_API_KEY environment variable (P0 blocker); Fix billing status validateSiteKey database select (P0 blocker); Align staging GOOGLE_GSC_REDIRECT_URI; Supabase staging restore drill + PITR decision. Paid beta is NOT ready until these P0 conditions are met.
+> **Next Task:** Operator to resolve staging blockers before proceeding. Candidates: Fix billing status validateSiteKey database select (P0 blocker); Stripe browser billing UI verification (139J leftover); Align staging GOOGLE_GSC_REDIRECT_URI; Supabase staging restore drill + PITR decision; and implement P1 blocker test fixtures for attribution models. Paid beta is NOT ready until these P0/P1 conditions are met.
 >
 > ⚠️ **P0 CONDITIONS BEFORE FIRST PAID CUSTOMER:** (1) Stripe test-mode checkout/webhook evidence [PARTIAL — API/webhook E2E verified on staging; browser billing UI and billing status endpoint pending]; (2) provider-console separation verified [CLOSED - staging project created, local env rewired, safety boot guard active]; (3) Supabase backups verified [PARTIAL - Daily scheduled backups manually verified. PITR is not enabled / not accepted as enabled. Staging restore drill remains blocked/not run]; (4) prod env secrets set incl. ST_IP_RESOLVER_MODE=railway; (5) beta Terms/Privacy disclosed in writing [CLOSED — Terms/Privacy checkout gate browser/API verified on staging in 139L (deploy cee2954); acceptance is enforced as a request gate, not persisted].
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
+## Session 140C — PostHog Proxy + Event Routing Verification
+**Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety)
+**Status:** **PASS.**
+
+### Completed
+1. Verified all PostHog references in the codebase (no hardcoded credentials, all env-parameterized).
+2. Audited and mapped the E2E event routing path.
+3. Audited tracker scripts and verified zero browser dependencies on raw PostHog.
+4. Corrected environment variable configurations on Staging: aligned `POSTHOG_API_KEY` to `phc_yJyG...` and `POSTHOG_PERSONAL_API_KEY` to `phx_MfR...`.
+5. Verified E2E event ingestion on Staging by dispatching `qa_verification_event_140c_active` to `/api/track` and confirming receipt and proxy Nginx logs forwarding.
+6. Verified query execution via overview endpoint returning `success: true` and dynamic metrics instead of triggering resilient fallback catches.
+7. Created the PostHog Proxy & Event Routing Verification QA report.
+
+### Files changed
+- [docs/qa/posthog_telemetry_routing_verification_140C.md](docs/qa/posthog_telemetry_routing_verification_140C.md) [NEW]
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
+
+
+## Session 140A — Full Authenticated Staging End-to-End Browser QA Inventory
+**Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa-release-readiness)
+**Status:** **BLOCKED / FAIL.**
+
 ### Completed
 1. Run E2E Staging Preflight checks, verifying active services, deploy commits (Latest deployed commit 7a84ad3 on both frontend/backend), Supabase staging configuration (`nrsvpwzekfrdrzkoecfk`), and Stripe catalog correctness.
 2. Reset password and logged in to staging user `staging-test@sourcetrack.ai` to fetch a valid JWT token.

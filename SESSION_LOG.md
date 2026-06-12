@@ -7,6 +7,8 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 140C | 2026-06-12 | `main` | PostHog Proxy + Event Routing Verification — Audited all PostHog references, mapped the E2E event routing path, verified the tracker's independent browser-side execution, aligned environment variable configurations, and verified E2E event ingestion and dashboard overview HogQL querying on staging. Saved under docs/qa/posthog_telemetry_routing_verification_140C.md. | ✅ PASS | No |
+| 139N-0 | 2026-06-12 | `main` | Plurio Intake Tracker Parity Audit — Conducted a hard tracker-layer parity audit comparing SourceTrack tracker/attribution against Plurio Intake. Mapped UTMs, organic/referral detection, click IDs, attribution models, consent mode, cookieless behavior, identity resolution, dataLayer/GTM, and link decoration. Documented missing click IDs, lack of model tests, and CMP gaps. Saved under docs/qa/plurio_intake_tracker_parity_audit_139N0.md. | ✅ PASS | No |
 | 140B | 2026-06-12 | `main` | Fix Staging PostHog Query Path — Corrected malformed environment variable (POSTHOG_CLOUD_REGION=POSTHOG_CLOUD_REGION=us) on the shared PostHog Reverse Proxy to us. Fully restored Nginx DNS resolution and proxy query forwarding. Staging API endpoints no longer return 502 Bad Gateway; queries now fail with 403 Forbidden specifically because the POSTHOG_PERSONAL_API_KEY environment variable configured on the SourceTrack-Api service is invalid (phx_wvj...). | ⚠️ PASS WITH LIMITS | No |
 | 140A | 2026-06-12 | `main` | Full Authenticated Staging End-to-End Browser QA Inventory — Audited public and authenticated routes on staging. Discovered critical proxy DNS config issues, GSC redirect mismatches, and billing status middleware bugs, saved under docs/qa/full_authenticated_app_e2e_qa_140A.md. | ❌ FAIL | No |
 | 139L | 2026-06-12 | `main` | Beta Terms/Privacy Disclosure Gate — Browser/Staging Verification (PASS) — The terms/privacy checkout gate (acknowledgment checkbox above the plans grid disabling paid upgrade buttons until checked; createCheckout sends accepted_terms; backend POST /api/billing/create-checkout returns 400 unless accepted_terms===true) was verified end-to-end on staging (deploy `cee2954`). Scenarios A–G all PASS: checkbox renders + buttons disabled while unchecked; /terms + /privacy load with no 404 and no false compliance claims; checkbox toggles buttons both ways; checked + Upgrade → Stripe Checkout test mode (cs_test_); missing/false accepted_terms → 400 "Terms and Privacy acknowledgement is required before checkout."; accepted_terms:true → 200 normal Stripe path; POST /api/billing/portal NOT terms-gated (returns "No Stripe customer — subscribe first", no checkout). Limitation: acceptance is a request gate, not persisted. Closes the Terms/Privacy payment-disclosure gate ONLY — paid beta NOT marked ready (other P0s remain). Browser/Staging Verification Addendum appended to docs/qa/beta_terms_privacy_disclosure_qa_139L.md. | ✅ PASS | No |
@@ -2161,3 +2163,154 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 
 ### 5. Documentation
 - Created `docs/qa/browser_onboarding_ui_qa_139I-D.md` with the verdict `PARTIAL — code fixes implemented and programmatically verified; real browser QA still required`.
+
+---
+
+## Session 139I-E — Fix Multi-Site Onboarding Gate Edge Case
+
+**Date:** 2026-06-12
+**Branch:** `main`
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety)
+**Status:** PARTIAL — code-verified.
+
+### 1. Centralized Site Resolution Policies
+- Added user sites loading `getUserSitesSorted` ordering by `created_at` descending.
+- Implemented distinct `resolveDashboardSite` (Dashboard/App Gate policy) and `resolveOnboardingSite` (Onboarding policy) on the backend.
+
+### 2. Endpoint Hardening
+- Updated `/api/onboarding/me` to accept `mode=onboarding` to branch on site resolution policy. Checks explicit selections against authenticated user/company scope only to secure tenant boundaries.
+
+### 3. Onboarding Status Fallback
+- Updated `/api/onboarding/status` to securely fall back to the resolved onboarding site context if `site_id` is omitted.
+
+### 4. Frontend & Layout Updates
+- Configured `App.jsx` to pass the local active site key to the `/onboarding/me` call.
+- Replaced direct Supabase oldest-site query in `Onboarding.jsx` with `/api/onboarding/me?mode=onboarding` call, keeping stepper state hydrated reactive to user active site.
+- Centralized SiteContext Switcher: Updated fallback logic in `SiteContext.jsx` to filter by completed sites first, avoiding onboarding gate traps when an older incomplete site exists.
+
+### 5. Documentation
+- Created `docs/qa/multi_site_onboarding_gate_qa_139I-E.md` detailing scenario metrics, test scripts, and outcomes.
+
+---
+
+## Session 139I-F — Add Explicit Resume/Add-Site Onboarding Entry
+
+**Date:** 2026-06-12
+**Branch:** `main`
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety)
+**Status:** PASS — browser-verified.
+
+### 1. Route Gate Bypass
+- Detected explicit onboarding intent (URL search parameters mode=onboarding, site_id, or site_key) and bypassed the `/onboarding` -> `/dashboard` redirect, preventing completed-site users from being bounced when intentionally resuming onboarding.
+
+### 2. Onboarding Status Resumption
+- Updated `loadOnboardingStatus` in `Onboarding.jsx` to read site_id/site_key from URL parameters and pass them to the backend, enabling correct resolution and resumption of the hinted site.
+
+### 3. Frontend CTAs
+- Added "Resume setup" CTA to the empty-state Dashboard when the active site is incomplete.
+- Added "Resume setup" switcher link below the Layout site switcher when the active site is incomplete.
+
+### 4. Documentation
+- Created `docs/qa/multi_site_resume_setup_qa_139I-F.md` detailing scenarios A-E verification results.
+
+---
+
+## Session 139L — Confirm beta Terms/Privacy Disclosure Flow Before Payment
+
+**Date:** 2026-06-12
+**Branch:** `main`
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety)
+**Status:** PASS — browser-verified.
+
+### 1. Payment Checkout Hardening
+- Added a terms/privacy acknowledgment checkbox to `Billing.jsx` that disables paid upgrade buttons until checked.
+- Sent `accepted_terms` parameter in the `createCheckout()` payload.
+- Gated backend `POST /api/billing/create-checkout` to reject requests where `accepted_terms !== true` with a 400 Bad Request response.
+
+### 2. Documentation
+- Created `docs/qa/beta_terms_privacy_disclosure_qa_139L.md` documenting entry points, frontend/backend behavior, and isolation testing results.
+
+---
+
+## Session 140A — Full Authenticated Staging End-to-End Browser QA Inventory
+
+**Date:** 2026-06-12
+**Branch:** `main`
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa-release-readiness)
+**Status:** BLOCKED / FAIL — staging environment blockers.
+
+### 1. Staging Preflight Checks
+- Executed runtime smoke checks (`qa-runtime-smoke.mjs`) and edge-case tests (`qa-edge-cases.mjs`) against the staging API endpoint.
+- Audited route-by-route behavior across public and authenticated layers.
+
+### 2. Critical Blockers Discovered
+- **PostHog Reverse Proxy Outage:** Proxy service returned 502 Bad Gateway due to a malformed environment variable `POSTHOG_CLOUD_REGION=POSTHOG_CLOUD_REGION=us` causing Nginx DNS failures for target `us.i.posthog.com`.
+- **GSC Redirect URI Mismatch:** Staging environment has `GOOGLE_GSC_REDIRECT_URI` pointing to production (`api.srctk.com`) instead of staging.
+- **Billing Status Endpoint Bug:** `/api/billing/status` returns null subscription because `validateSiteKey` middleware does not select `stripe_customer_id` from the database.
+- **API Failures:** CSV exports, funnels, alerts, and visitor timelines fail with HTTP 500/502 due to the proxy outage.
+
+### 3. Documentation
+- Created `docs/qa/full_authenticated_app_e2e_qa_140A.md` detailing route redirection behaviors, matrices, tenant security findings, and validation outputs.
+
+---
+
+## Session 140B — Fix Staging PostHog Query Path
+
+**Date:** 2026-06-12
+**Branch:** `main`
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa-release-readiness)
+**Status:** PASS WITH LIMITS.
+
+### 1. Environment Correction
+- Corrected the malformed environment variable `POSTHOG_CLOUD_REGION` from `POSTHOG_CLOUD_REGION=us` to `us` on the shared proxy service in Railway.
+- Monitored the automatic redeployment in Railway and confirmed success.
+
+### 2. Verification
+- Confirmed Nginx successfully started and proxy logs no longer show `us.i.posthog.com could not be resolved`.
+- Ran scratch query script executing HogQL queries through the proxy.
+- Direct queries succeeded with a valid personal API key but staging API endpoints returned 403 Forbidden because `POSTHOG_PERSONAL_API_KEY` on `SourceTrack-Api` is invalid.
+
+### 3. Documentation
+- Created `docs/qa/posthog_reverse_proxy_staging_fix_140B.md` documenting root cause, env change, rollback plan, and endpoint outcomes.
+
+---
+
+## Session 139N-0 — Plurio Intake Tracker Parity Audit
+
+**Date:** 2026-06-12
+**Branch:** `main`
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build)
+**Status:** COMPLETE.
+
+### 1. Parity Matrix Audit
+- Benchmarked SourceTrack's tracker against Plurio Intake.
+- Verified support for UTM parsing, organic search detection, direct referrer classification, cookieless fallback, and outbound link decoration.
+- Identified click ID variations (LinkedIn, Snapchat) and Google Consent Mode v2 listeners as P2 gaps.
+
+### 2. Documentation
+- Created `docs/qa/plurio_intake_tracker_parity_audit_139N0.md` detailing the matrix and recommendations.
+
+---
+
+## Session 140C — PostHog Proxy + Event Routing Verification
+
+**Date:** 2026-06-12
+**Branch:** `main`
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety)
+**Status:** PASS.
+
+### 1. Configuration Realignment
+- Corrected staging `POSTHOG_API_KEY` to the project write key `phc_yJyG...`.
+- Corrected staging `POSTHOG_PERSONAL_API_KEY` to the project query key `phx_MfR...`.
+
+### 2. End-to-End Verification
+- Dispatched a test event (`qa_verification_event_140c_active`) and confirmed `200 OK` ingestion with `{"received":true}`.
+- Confirmed reverse proxy logs show successful batch ingestion forwarding (`POST /batch/ HTTP/1.1 200 15`).
+- Query validation succeeded against `/api/dashboard/overview`, returning `success: true` with dynamic analytics results, confirming the HogQL query path is fully restored.
+
+### 3. Codebase Audits
+- Confirmed the client-side tracker (`tracker.js` / `tracker.cookieless.js`) has no direct dependency on raw PostHog.
+- Verified staging vs production environment separation.
+
+### 4. Documentation
+- Created `docs/qa/posthog_telemetry_routing_verification_140C.md`.

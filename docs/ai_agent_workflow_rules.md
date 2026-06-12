@@ -148,6 +148,7 @@ Every session maps back to the authoritative roadmap defined in `docs/developmen
 16. **139M-6** — Journey, Sessions, Funnels QA (Open)
 17. **139M-7** — Setup Doctor, Snippet, Integrations, Billing, Team/API Tokens QA (Open)
 18. **139M-8** — Final Human-Like Marketer Regression + 2026 UI/UX Verdict (Open)
+19. **139N-0** — Plurio Intake Tracker Parity Audit (Completed)
 
 *Note: Do not reorder or alter this roadmap without explicit user approval.*
 

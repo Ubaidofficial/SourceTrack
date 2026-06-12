@@ -46,6 +46,7 @@ This checklist serves as the canonical release gate. No paid-beta launch, paid-b
 - [ ] **Customer-Facing Status/Incident Plan**: Document customer-facing incident communications protocol, service status reporting, and contact options.<br />*Status:* **BLOCKED**.
 
 ### Phase 2: Blocks the First ~10 Customers / Public Launch (P1)
+- [ ] **Attribution Model Deterministic Test Fixtures**: Install Vitest and write deterministic test scenarios for the core attribution models (first-touch, last-touch, linear, U-shaped, W-shaped, time-decay) to protect against regressions.<br />*Status:* **BLOCKED**. No unit tests exist for attribution models.
 - [ ] **Exception Monitoring**: Integrate Sentry (or equivalent) exception monitoring on staging and verify alert routing to Slack.<br />*Status:* **BLOCKED**.
 - [ ] **Mandatory CI/Pre-Deploy Test Gate**: Add `qa:attribution`, `qa:smoke`, and `qa:edge` to CI or enforce a mandatory local run gate prior to release.<br />*Status:* **BLOCKED**.
 - [ ] **Branch Protection & PR Review**: Enforce branch protection on `main` requiring at least one approved code review before merging.<br />*Status:* **BLOCKED**.

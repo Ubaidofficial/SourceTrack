@@ -124,6 +124,7 @@ But the **operational foundation was built slower than the product**. The workfl
 - **139M-6** — Journey, Sessions, Funnels QA.
 - **139M-7** — Setup Doctor, Snippet, Integrations, Billing, Team/API Tokens QA.
 - **139M-8** — Final Human-Like Marketer Regression + 2026 UI/UX Verdict.
+- **139N-0** — Plurio Intake Tracker Parity Audit. *(Completed)*
 
 **Phase 2 — Observability and release gates**
 - **140A** — Add Sentry (or equivalent) exception monitoring.
