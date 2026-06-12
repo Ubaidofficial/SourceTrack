@@ -2,7 +2,9 @@
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
-> **Handoff:** Session 139N-1 — Click ID + Source Taxonomy Hardening is **PENDING REVIEW**. Added 4 missing click IDs (dclid, snapclid, pclid, li_fatid), normalized LinkedIn aliases (li_fat_id/li_fatid) via shared `normalizeClickIds` helper, updated channel classifier (dclid→Display, twclid/snapclid/pclid→Paid Social), updated all ingestion routes, attribution engine/nightly job HogQL queries, setup doctor diagnostics, Event Debugger UI, and added `qa:tracker:unit` tests. Rebuilt minified trackers. All tests pass. Not committed — pending operator raw diff review and approval.
+> **Handoff:** Session 139N-3 — Consent / Cookieless / URL Passthrough Audit is **PENDING REVIEW**. Audited standard storage, cookieless identity rotating visitor hashes, client-side URL decoration, and cross-domain tracking against Plurio Intake parity gaps. Documented findings in `docs/qa/consent_cookieless_url_passthrough_audit_139N3.md`. Softened privacy copy in Guided Snippet UI (`Snippet.jsx`) to align with legal neutrality. Not committed.
+>
+> **Prior handoff (Session 139N-1):** Session 139N-1 — Click ID + Source Taxonomy Hardening is **PASS**. Added 4 missing click IDs (dclid, snapclid, pclid, li_fatid), normalized LinkedIn aliases (li_fat_id/li_fatid) via shared `normalizeClickIds` helper, updated channel classifier (dclid→Display, twclid/snapclid/pclid→Paid Social), updated all ingestion routes, attribution engine/nightly job HogQL queries, setup doctor diagnostics, Event Debugger UI, and added `qa:tracker:unit` tests. Rebuilt minified trackers. All tests pass.
 >
 > **Prior handoff (Session 139N-2):** Session 139N-2 — Attribution Model Deterministic Test Fixtures is **PASS**. Added deterministic automated unit test coverage for core attribution models (first-touch, last-touch, linear, U-shaped, W-shaped, time-decay) using Node's built-in node:test runner. Covered 8 test scenarios including credit conservation, empty/no-touch, and malformed inputs. Added qa:attribution:unit script to package.json. Fixed a date parsing NaN bug in the time_decay model under malformed inputs. QA report saved under [attribution_model_deterministic_tests_139N2.md](docs/qa/attribution_model_deterministic_tests_139N2.md).
 >
@@ -19,55 +21,79 @@
 > ⚠️ **P0 CONDITIONS BEFORE FIRST PAID CUSTOMER:** (1) Stripe test-mode checkout/webhook evidence [PARTIAL — API/webhook E2E verified on staging; browser billing UI and billing status endpoint pending]; (2) provider-console separation verified [CLOSED - staging project created, local env rewired, safety boot guard active]; (3) Supabase backups verified [PARTIAL - Daily scheduled backups manually verified. PITR is not enabled / not accepted as enabled. Staging restore drill remains blocked/not run]; (4) prod env secrets set incl. ST_IP_RESOLVER_MODE=railway; (5) beta Terms/Privacy disclosed in writing [CLOSED — Terms/Privacy checkout gate browser/API verified on staging in 139L (deploy cee2954); acceptance is enforced as a request gate, not persisted].
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
-## Session 139N-1 — Click ID + Source Taxonomy Hardening
-**Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa:attribution:unit, qa:tracker:unit)
-**Status:** **PENDING REVIEW — not committed.**
-
-### Completed
-1. Added `normalizeClickIds` shared helper in `api/lib/utils.js` — sanitizes and normalizes all 12 click IDs, maps `li_fatid` alias to canonical `li_fat_id` while preserving raw `li_fatid`.
-2. Updated both trackers (`tracker/tracker.js`, `tracker/tracker.cookieless.js`) to parse `li_fatid`, `dclid`, `snapclid`, `pclid` from URL params and perform client-side LinkedIn alias normalization.
-3. Updated ingestion routes (`api/routes/track.js`, `api/routes/conversion.js`, `api/routes/conversion-offline.js`) to import and apply `normalizeClickIds`.
-4. Updated channel classifier (`api/lib/channel-classifier.js`): `dclid` → Display, `twclid`/`snapclid`/`pclid` → Paid Social, both `li_fat_id` and `li_fatid` checked as Paid Social fallbacks.
-5. Updated attribution engine (`api/lib/attribution-engine.js`) and nightly job (`api/jobs/nightly-attribution.js`) HogQL pageview queries, row mapping, and `tpCh` function to select and pass all 12 click IDs to `channelFromEvent`.
-6. Updated setup doctor (`api/lib/setup-doctor.js`) HogQL queries and click ID type detection to include `dclid`, `snapclid`, `pclid`.
-7. Updated events route (`api/routes/events.js`) and Event Debugger UI (`dashboard/src/pages/EventDebugger.jsx`) to query and display the new click IDs.
-8. Added `qa:tracker:unit` test script and `api/tests/tracker-click-ids.test.js` with 8 passing tests covering `normalizeClickIds` edge cases and static tracker file parameter checks.
-9. Rebuilt minified trackers via `npm run build:tracker`.
-10. Updated `docs/release_checklist_gate.md` with PARTIAL wording for click ID capture/classification hardening.
-
-### Files changed
-- `api/lib/utils.js` — Added `normalizeClickIds` helper
-- `api/lib/channel-classifier.js` — Added dclid/twclid/snapclid/pclid classification
-- `api/lib/attribution-engine.js` — Extended HogQL queries + row mapping for 12 click IDs
-- `api/jobs/nightly-attribution.js` — Extended HogQL queries + row mapping for 12 click IDs
-- `api/lib/setup-doctor.js` — Extended click ID detection queries
-- `api/routes/track.js` — Use `normalizeClickIds` spread
-- `api/routes/conversion.js` — Use `normalizeClickIds` spread
-- `api/routes/conversion-offline.js` — Extended whitelist + apply `normalizeClickIds`
-- `api/routes/events.js` — Query and return new click IDs
-- `dashboard/src/pages/EventDebugger.jsx` — Display new click IDs in table/sidebar
-- `tracker/tracker.js` — Parse new click IDs + LinkedIn normalization
-- `tracker/tracker.cookieless.js` — Parse new click IDs + LinkedIn normalization
-- `tracker/tracker.min.js` — Rebuilt minified output
-- `tracker/tracker.cookieless.min.js` — Rebuilt minified output
-- `package.json` — Added `qa:tracker:unit` script
-- `docs/release_checklist_gate.md` — Updated PARTIAL wording
-- `api/tests/tracker-click-ids.test.js` — New test file (8 tests)
-
-### Verification
-- `npm run qa:tracker:unit` — 8/8 pass
-- `npm run qa:attribution:unit` — 9/9 pass
-- `npm run qa:env-safety` — ✅ pass
-- `npm run qa:static` — ✅ pass (after whitespace fixes)
-- `git diff --check` — ✅ clean
-- `grep -RIn` absolute local file URL pattern — ✅ no hits
-
-### What is NOT claimed
-- Real end-to-end attribution accuracy is NOT verified.
-- Paid beta is NOT ready.
-- Staging schema, Stripe E2E, identity stitching, seeded journeys, and webhook/E2E revenue attribution remain blocked.
-
----
+>
+> ## Session 139N-3 — Consent / Cookieless / URL Passthrough Audit
+> **Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa:attribution:unit, qa:tracker:unit)
+> **Status:** **PENDING REVIEW — not committed.**
+>
+> ### Completed
+> 1. Conducted audit of consent storage (cookies, `localStorage`, `sessionStorage`), Consent APIs, opt-in queueing, cookieless identity hashing via daily salt HMAC, first-touch persistence constraints, and link decoration behavior against Plurio Intake.
+> 2. Documented detailed findings in [consent_cookieless_url_passthrough_audit_139N3.md](docs/qa/consent_cookieless_url_passthrough_audit_139N3.md).
+> 3. Softened privacy and consent compliance copy in the Guided Snippet UI (`Snippet.jsx`) to align with legal neutrality.
+>
+> ### Files changed
+> - `docs/qa/consent_cookieless_url_passthrough_audit_139N3.md` — New audit report
+> - `dashboard/src/pages/Snippet.jsx` — Softened privacy reminder copy
+>
+> ### Verification
+> - `npm run qa:tracker:unit` — ✅ pass
+> - `npm run qa:attribution:unit` — ✅ pass
+> - `npm run qa:env-safety` — ✅ pass
+> - `npm run qa:static` — ✅ pass
+> - `git diff --check` — ✅ clean
+> - `grep -RIn` absolute local file URL pattern — ✅ no hits
+>
+> ---
+>
+> ## Session 139N-1 — Click ID + Source Taxonomy Hardening
+> **Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa:attribution:unit, qa:tracker:unit)
+> **Status:** **PASS.**
+>
+> ### Completed
+> 1. Added `normalizeClickIds` shared helper in `api/lib/utils.js` — sanitizes and normalizes all 12 click IDs, maps `li_fatid` alias to canonical `li_fat_id` while preserving raw `li_fatid`.
+> 2. Updated both trackers (`tracker/tracker.js`, `tracker/tracker.cookieless.js`) to parse `li_fatid`, `dclid`, `snapclid`, `pclid` from URL params and perform client-side LinkedIn alias normalization.
+> 3. Updated ingestion routes (`api/routes/track.js`, `api/routes/conversion.js`, `api/routes/conversion-offline.js`) to import and apply `normalizeClickIds`.
+> 4. Updated channel classifier (`api/lib/channel-classifier.js`): `dclid` → Display, `twclid`/`snapclid`/`pclid` → Paid Social, both `li_fat_id` and `li_fatid` checked as Paid Social fallbacks.
+> 5. Updated attribution engine (`api/lib/attribution-engine.js`) and nightly job (`api/jobs/nightly-attribution.js`) HogQL pageview queries, row mapping, and `tpCh` function to select and pass all 12 click IDs to `channelFromEvent`.
+> 6. Updated setup doctor (`api/lib/setup-doctor.js`) HogQL queries and click ID type detection to include `dclid`, `snapclid`, `pclid` and `li_fatid` (with matching SELECT order and `clickIdTypes` array index alignments).
+> 7. Updated events route (`api/routes/events.js`) and Event Debugger UI (`dashboard/src/pages/EventDebugger.jsx`) to query, display, and verify the new click IDs (including LinkedIn Alias `li_fatid` in table list and details sidebar).
+> 8. Added `qa:tracker:unit` test script and `api/tests/tracker-click-ids.test.js` with 11 passing tests covering `normalizeClickIds` edge cases, static tracker file parameter checks, and setup doctor/UI click ID key consistency audits.
+> 9. Rebuilt minified trackers via `npm run build:tracker`.
+> 10. Updated `docs/release_checklist_gate.md` with PARTIAL wording for click ID capture/classification hardening.
+>
+> ### Files changed
+> - `api/lib/utils.js` — Added `normalizeClickIds` helper
+> - `api/lib/channel-classifier.js` — Added dclid/twclid/snapclid/pclid classification
+> - `api/lib/attribution-engine.js` — Extended HogQL queries + row mapping for 12 click IDs
+> - `api/jobs/nightly-attribution.js` — Extended HogQL queries + row mapping for 12 click IDs
+> - `api/lib/setup-doctor.js` — Extended click ID detection queries
+> - `api/routes/track.js` — Use `normalizeClickIds` spread
+> - `api/routes/conversion.js` — Use `normalizeClickIds` spread
+> - `api/routes/conversion-offline.js` — Extended whitelist + apply `normalizeClickIds`
+> - `api/routes/events.js` — Query and return new click IDs
+> - `dashboard/src/pages/EventDebugger.jsx` — Display new click IDs in table/sidebar
+> - `tracker/tracker.js` — Parse new click IDs + LinkedIn normalization
+> - `tracker/tracker.cookieless.js` — Parse new click IDs + LinkedIn normalization
+> - `tracker/tracker.min.js` — Rebuilt minified output
+> - `tracker/tracker.cookieless.min.js` — Rebuilt minified output
+> - `package.json` — Added `qa:tracker:unit` script
+> - `docs/release_checklist_gate.md` — Updated PARTIAL wording
+> - `api/tests/tracker-click-ids.test.js` — New test file (11 tests)
+>
+> ### Verification
+> - `npm run qa:tracker:unit` — 11/11 pass
+> - `npm run qa:attribution:unit` — 9/9 pass
+> - `npm run qa:env-safety` — ✅ pass
+> - `npm run qa:static` — ✅ pass (after whitespace fixes)
+> - `git diff --check` — ✅ clean
+> - `grep -RIn` absolute local file URL pattern — ✅ no hits
+>
+> ### What is NOT claimed
+> - Real end-to-end attribution accuracy is NOT verified.
+> - Paid beta is NOT ready.
+> - Staging schema, Stripe E2E, identity stitching, seeded journeys, and webhook/E2E revenue attribution remain blocked.
+>
+>
 
 ## Session 139N-2 — Attribution Model Deterministic Test Fixtures
 **Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa:attribution:unit)

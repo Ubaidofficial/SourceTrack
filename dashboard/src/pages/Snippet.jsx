@@ -393,7 +393,7 @@ export default function Snippet() {
           <span className="text-gray-500 mt-0.5 text-sm">🔒</span>
           <div className="flex-1 text-xs text-st-gray dark:text-gray-400">
             <span className="font-semibold text-gray-700 dark:text-gray-300">Privacy reminder. </span>
-            SourceTrack is cookieless and does not fingerprint users. Update your privacy policy before production use.{' '}
+            SourceTrack is built with privacy-conscious features, including standard cookieless options. Update your privacy policy before production use.{' '}
             <button
               onClick={() => setShowPrivacyNotes(!showPrivacyNotes)}
               className="text-blue-600 dark:text-blue-400 font-semibold hover:underline ml-1"
@@ -401,8 +401,8 @@ export default function Snippet() {
               {showPrivacyNotes ? 'Hide notes' : 'Read privacy notes'}
             </button>
             {showPrivacyNotes && (
-              <p className="mt-2 text-xs text-gray-600 dark:text-gray-450 leading-relaxed pt-2 border-t border-gray-150 dark:border-gray-800/60">
-                Under GDPR, CCPA, and PECR regulations, you must disclose that you collect anonymous site metrics (referrers, UTM params, session length, and IP-derived location). No cookie consent banner is needed for the standard cookieless pixel.
+              <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 leading-relaxed pt-2 border-t border-gray-150 dark:border-gray-800/60">
+                Under GDPR, CCPA, and PECR regulations, you must disclose that you collect anonymous site metrics (referrers, UTM params, session length, and IP-derived location). While Cookieless Mode avoids writing browser cookies or localStorage keys, reading client headers (e.g., User-Agent, IP address) to generate visitor hashes may still require disclosure or explicit consent in certain jurisdictions. Customers are solely responsible for ensuring their tracking configurations comply with all regional regulations.
               </p>
             )}
           </div>
