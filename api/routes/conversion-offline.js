@@ -5,9 +5,11 @@ import { sendMetaCAPI, sendGoogleConversion, sendMicrosoftConversion, sendLinked
 import { getSupabase } from '../lib/supabase.js'
 import { getFirstTouchFields, redactPiiFromObject, normalizeClickIds } from '../lib/utils.js'
 import { hasFeature } from '../lib/plan-features.js'
-import { claimIdempotencyKeys, logIngestionEvent } from '../lib/idempotency.js'
+import { claimIdempotencyKeys, logIngestionEvent, rollbackIdempotencyKeys } from '../lib/idempotency.js'
 
 import { storeIdentityLink, resolveAnonymousId } from '../lib/identity-links.js'
+import { claimConversionUsage } from '../lib/conversion-limits.js'
+
 
 // Alias kept for the CAPI block readability — same singleton underneath.
 const getCapiSupabase = getSupabase
@@ -164,7 +166,7 @@ export async function conversionOffline(req, res) {
       ...getFirstTouchFields(req.body),
       ingestion_method: 'offline',
       server_timestamp: occurredAt,
-      user_agent: req.headers['user-agent'] || null,
+      user_agent: (req.headers && req.headers['user-agent']) || null,
       provider,
       provider_event_id: providerEventId,
       order_id: orderId,
@@ -204,6 +206,31 @@ export async function conversionOffline(req, res) {
 
     // Normalize click IDs and LinkedIn aliases
     Object.assign(props, normalizeClickIds(props))
+
+    // Enforce monthly conversion limits (fail-open on DB errors)
+    let limitCheckAllowed = true
+    try {
+      const limitCheck = await claimConversionUsage(req.site)
+      if (!limitCheck.allowed) {
+        limitCheckAllowed = false
+      }
+    } catch (limitErr) {
+      console.error('[conversion-offline] Conversion limit check failed, failing open:', limitErr.message || limitErr)
+    }
+
+    if (!limitCheckAllowed) {
+      if (keys.length > 0) {
+        try {
+          await rollbackIdempotencyKeys(req.site.site_key, provider, keys)
+        } catch (rollbackErr) {
+          console.error('[conversion-offline] Failed to rollback idempotency keys after conversion limit block:', rollbackErr.message || rollbackErr)
+        }
+      }
+      return res.status(402).json({
+        success: false,
+        error: 'Conversion limit reached for your plan'
+      })
+    }
 
     ph.capture({
       distinctId,

@@ -3,9 +3,11 @@ import { Router } from 'express'
 import { v4 as uuidv4 } from 'uuid'
 import { getSupabase } from '../lib/supabase.js'
 import { decryptSecret } from '../lib/utils.js'
-import { claimIdempotencyKeys, logIngestionEvent } from '../lib/idempotency.js'
+import { claimIdempotencyKeys, logIngestionEvent, rollbackIdempotencyKeys } from '../lib/idempotency.js'
 import { ph } from '../lib/posthog.js'
 import { resolveWebhookAnonymousId } from '../lib/identity-links.js'
+import { claimConversionUsage } from '../lib/conversion-limits.js'
+
 
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'fake_key_for_webhook_sync_construct', {
@@ -78,6 +80,7 @@ router.post('/:site_key', async (req, res) => {
       : 'Subscription inactive'
     return res.status(402).json({ success: false, data: null, error: msg })
   }
+
 
   // 5. Support only explicit event types, ignore unsupported event types with safe 200 response
   if (event.type !== 'checkout.session.completed') {
@@ -209,6 +212,31 @@ router.post('/:site_key', async (req, res) => {
 
     if (attributionStatus) {
       conversionProperties.attribution_status = attributionStatus
+    }
+
+    // Enforce monthly conversion limits (fail-open on DB errors)
+    let limitCheckAllowed = true
+    try {
+      const limitCheck = await claimConversionUsage(site)
+      if (!limitCheck.allowed) {
+        limitCheckAllowed = false
+      }
+    } catch (limitErr) {
+      console.error('[stripe-webhook] Conversion limit check failed, failing open:', limitErr.message || limitErr)
+    }
+
+    if (!limitCheckAllowed) {
+      try {
+        await rollbackIdempotencyKeys(siteKey, 'stripe', keys)
+      } catch (rollbackErr) {
+        console.error('[stripe-webhook] Failed to rollback idempotency keys after conversion limit block:', rollbackErr.message || rollbackErr)
+      }
+      return res.status(200).json({
+        success: false,
+        data: null,
+        error: 'Conversion limit reached for your plan',
+        ignored: true
+      })
     }
 
     await ph.capture({

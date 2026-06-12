@@ -10,6 +10,8 @@ import geoip from 'geoip-lite'
 import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
 import { getSupabase } from '../lib/supabase.js'
+import { claimConversionUsage } from '../lib/conversion-limits.js'
+
 
 const router = express.Router()
 
@@ -29,9 +31,10 @@ function getAiSource(referrer) {
 }
 
 function enrichFromRequest(req) {
-  const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim()
-    || req.headers['x-real-ip'] || ''
-  const ua = req.headers['user-agent'] || ''
+  const headers = req.headers || {}
+  const ip = (headers['x-forwarded-for'] || '').split(',')[0].trim()
+    || headers['x-real-ip'] || ''
+  const ua = headers['user-agent'] || ''
   const parser = new UAParser(ua)
   const geo = ip ? geoip.lookup(ip) : null
   return {
@@ -78,9 +81,22 @@ router.post('/c', async (req, res) => {
     const { site_key, anonymous_id, conversion_value, conversion_type, order_id, properties = {} } = req.body || {}
     if (!site_key) return
     const supabase = getSupabase()
-    const { data: site } = await supabase.from('sites').select('id').eq('site_key', site_key).single()
+    const { data: site } = await supabase.from('sites').select('id, plan').eq('site_key', site_key).single()
     if (!site) return
+
     const enriched = enrichFromRequest(req)
+
+    // Enforce monthly conversion limits (silently ignore if cap is reached; fail-open on DB error)
+    try {
+      const limitCheck = await claimConversionUsage(site)
+      if (!limitCheck.allowed) {
+        console.warn(`[proxy/c] Conversion limit reached for site ${site_key}, skipping capture`)
+        return
+      }
+    } catch (limitErr) {
+      console.error('[proxy/c] Conversion limit check failed, failing open:', limitErr.message || limitErr)
+    }
+
     await ph.capture({
       distinctId: anonymous_id || uuidv4(),
       event: '$conversion',

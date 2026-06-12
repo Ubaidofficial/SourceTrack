@@ -2,8 +2,10 @@ import crypto from 'crypto'
 import { Router } from 'express'
 import { getSupabase } from '../lib/supabase.js'
 import { decryptSecret } from '../lib/utils.js'
-import { claimIdempotencyKeys, logIngestionEvent } from '../lib/idempotency.js'
+import { claimIdempotencyKeys, logIngestionEvent, rollbackIdempotencyKeys } from '../lib/idempotency.js'
 import { ph } from '../lib/posthog.js'
+import { claimConversionUsage } from '../lib/conversion-limits.js'
+
 
 const router = Router()
 
@@ -77,6 +79,7 @@ router.post('/:site_key', async (req, res) => {
       : 'Subscription inactive'
     return res.status(402).json({ success: false, data: null, error: msg })
   }
+
 
   // 6. Parse JSON payload only after verification
   let payload
@@ -224,6 +227,31 @@ router.post('/:site_key', async (req, res) => {
 
     if (attributionStatus) {
       conversionProperties.attribution_status = attributionStatus
+    }
+
+    // Enforce monthly conversion limits (fail-open on DB errors)
+    let limitCheckAllowed = true
+    try {
+      const limitCheck = await claimConversionUsage(site)
+      if (!limitCheck.allowed) {
+        limitCheckAllowed = false
+      }
+    } catch (limitErr) {
+      console.error('[shopify-webhook] Conversion limit check failed, failing open:', limitErr.message || limitErr)
+    }
+
+    if (!limitCheckAllowed) {
+      try {
+        await rollbackIdempotencyKeys(siteKey, 'shopify', keys)
+      } catch (rollbackErr) {
+        console.error('[shopify-webhook] Failed to rollback idempotency keys after conversion limit block:', rollbackErr.message || rollbackErr)
+      }
+      return res.status(200).json({
+        success: false,
+        data: null,
+        error: 'Conversion limit reached for your plan',
+        ignored: true
+      })
     }
 
     await ph.capture({

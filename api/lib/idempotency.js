@@ -89,3 +89,42 @@ export async function logIngestionEvent(siteKey, provider, eventDetails) {
     return { success: false, error: err.message }
   }
 }
+
+/**
+ * Rolls back (deletes) previously claimed idempotency keys if conversion capture failed
+ * (for example, if the request was blocked by conversion plan limits).
+ *
+ * @param {string} siteKey - Plaintext identifier of the site (site_key)
+ * @param {string} provider - Provider name (e.g. 'stripe', 'shopify', 'payments_api')
+ * @param {Array<{key_type: string, key_value: string}>} keys - Array of key type and values to delete
+ * @returns {Promise<void>}
+ */
+export async function rollbackIdempotencyKeys(siteKey, provider, keys) {
+  if (!siteKey || !provider || !Array.isArray(keys) || keys.length === 0) {
+    return
+  }
+
+  const validKeys = keys.filter(k => k && k.key_type && k.key_value && k.key_type.trim() && k.key_value.trim())
+  if (validKeys.length === 0) {
+    return
+  }
+
+  try {
+    const supabase = getSupabase()
+    for (const key of validKeys) {
+      const { error } = await supabase
+        .from('revenue_idempotency_keys')
+        .delete()
+        .eq('site_key', siteKey)
+        .eq('provider', provider)
+        .eq('key_type', key.key_type)
+        .eq('key_value', key.key_value)
+
+      if (error) {
+        console.error('[idempotency] Failed to rollback/release idempotency key:', error.message || error)
+      }
+    }
+  } catch (err) {
+    console.error('[idempotency] Failed to rollback/release idempotency keys:', err?.message)
+  }
+}

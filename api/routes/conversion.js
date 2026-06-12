@@ -9,8 +9,10 @@ import { getSupabase } from '../lib/supabase.js'
 import { normalizeUtm, getFirstTouchFields, redactPiiFromObject, isPathExcluded, extractCustomParams, sanitizeClientTimestamp, sanitizeValueTrack, sanitizeVerificationToken, normalizeClickIds } from '../lib/utils.js'
 import { hasFeature } from '../lib/plan-features.js'
 import { resolveClientIp } from '../lib/ip-resolver.js'
-import { claimIdempotencyKeys } from '../lib/idempotency.js'
+import { claimIdempotencyKeys, rollbackIdempotencyKeys } from '../lib/idempotency.js'
 import { storeIdentityLink } from '../lib/identity-links.js'
+import { claimConversionUsage } from '../lib/conversion-limits.js'
+
 
 // In-memory dedup cache — 24h TTL. Fast path that catches the common case
 // (double-click, beacon retry) without a DB round-trip.
@@ -296,6 +298,38 @@ export async function conversion(req, res) {
         }
       }
 
+    }
+
+    // Enforce monthly conversion limits (fail-open on DB errors)
+    let limitCheckAllowed = true
+    try {
+      const limitCheck = await claimConversionUsage(req.site)
+      if (!limitCheck.allowed) {
+        limitCheckAllowed = false
+      }
+    } catch (limitErr) {
+      console.error('[conversion] Conversion limit check failed, failing open:', limitErr.message || limitErr)
+    }
+
+    if (!limitCheckAllowed) {
+      if (externalEventId && req.site?.site_key && (req.body.order_id || req.body.orderId)) {
+        try {
+          await rollbackIdempotencyKeys(req.site.site_key, BROWSER_CONVERSION_PROVIDER, [{
+            key_type: 'order_event',
+            key_value: externalEventId
+          }])
+        } catch (rollbackErr) {
+          console.error('[conversion] Failed to rollback idempotency keys after conversion limit block:', rollbackErr.message || rollbackErr)
+        }
+      }
+      return res.status(402).json({
+        success: false,
+        data: null,
+        error: 'Conversion limit reached for your plan'
+      })
+    }
+
+    if (externalEventId) {
       dedupCache.set(externalEventId, true)
     }
 
