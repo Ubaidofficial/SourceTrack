@@ -1,7 +1,7 @@
 # Webhook Downgrade Leak Fix Report (Session 140G-1)
 
-**Session:** 140G-1 — Fix Webhook Downgrade Leak  
-**Date:** 2026-06-12  
+**Session:** 140G-1 — Fix Webhook Downgrade Leak
+**Date:** 2026-06-12
 **Verdict:** PASS (Fix validated via unit tests; post-deploy staging verification pending)
 
 ---
