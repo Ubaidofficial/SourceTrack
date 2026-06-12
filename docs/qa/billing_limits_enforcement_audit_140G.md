@@ -1,7 +1,7 @@
 # Billing and Plan Limits Enforcement Audit Report
 
-**Session:** 140G — Billing/Limits Enforcement Code Audit  
-**Date:** 2026-06-12  
+**Session:** 140G — Billing/Limits Enforcement Code Audit
+**Date:** 2026-06-12
 **Brutal Verdict:** PARTIALLY ENFORCED / NOT ENFORCED (Volume-based limits bypassed; status-based gating active)
 
 ---
@@ -17,7 +17,7 @@ While **subscription status gates** (blocking inactive/archived accounts in `api
 ## 2. Audited Code Paths
 
 The following files and paths were audited:
-*   **Ingestion Handlers**: 
+*   **Ingestion Handlers**:
     *   `api/routes/track.js` (`POST /api/track` and `POST /track`)
     *   `api/routes/conversion.js` (`POST /api/conversion`)
     *   `api/routes/analytics.js` (`POST /api/analytics/collect`)
