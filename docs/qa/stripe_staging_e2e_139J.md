@@ -157,12 +157,12 @@ The staging DB was manually aligned using repo migrations (`20260606180000_reven
 
 ## 12. Blockers & Remaining Issues
 
-1. **Discovered Status Endpoint Bug:**
+1. **Discovered Status Endpoint Bug:** 🛠️ **FIX WRITTEN in Session 139J-B (local); post-deploy verification PENDING.**
    We observed that `/api/billing/status` returned `"subscription": null` even when the customer has an active subscription in Stripe test mode.
-   - **Root Cause:** The `validateSiteKey` middleware does not select `stripe_customer_id` from the database or copy it to the `req.site` context. When the `/status` route handler checks `if (site.stripe_customer_id)`, it evaluates to `undefined`, skipping the Stripe subscription query.
-   - **Decision:** Surfaced as a blocker for paid-beta billing status correctness. Left unfixed to prevent scope creep per `RULES.md` R10.
-2. **Browser Billing UI Not Verified:**
-   - **Status:** `BLOCKED — not verified`. No browser QA was performed to verify the billing UI.
+   - **Root Cause:** The `validateSiteKey` middleware does not select `stripe_customer_id` from the database or copy it to the `req.site` context. When the `/status` route handler checks `if (site.stripe_customer_id)`, it evaluates to `undefined`, skipping the Stripe subscription query. (Same omission also broke `/portal` and the customer-reuse path in `/create-checkout`.)
+   - **Fix (139J-B, local):** `api/middleware/auth.js` now selects `stripe_customer_id` (both SELECTs) and exposes it on `req.site`. Validated by audit + automated QA suite. **Live-on-staging verification is PENDING until this commit is pushed/deployed** (the browser test ran against the pre-fix deployed build). See `docs/qa/billing_status_fix_and_ui_139J-B.md`.
+2. **Browser Billing UI:** 🟢 **Free-plan staging UI browser-verified (on the currently deployed build) in Session 139J-B; portal flow NOT verified.**
+   - **Status:** Free-plan staging Billing UI browser-verified PASS on the currently deployed staging build (page load, plan/usage display, free/no-customer state, Terms/Privacy gate, upgrade→Stripe test checkout). This does NOT prove the new middleware is live. Paid-site billing **portal** flow is NOT verified (requires a paid staging site/customer). Production billing is UNVERIFIED. Paid beta is BLOCKED. See `docs/qa/billing_status_fix_and_ui_139J-B.md`.
 
 ---
 

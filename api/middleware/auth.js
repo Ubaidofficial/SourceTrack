@@ -44,7 +44,7 @@ export async function validateSiteKey(req, res, next) {
     const supabase = getSupabase()
     let { data, error } = await supabase
       .from('sites')
-      .select('id, site_key, plan, pv_limit, created_at, company_id, owner_id, business_type, trial_ends_at, attribution_window_days, onboarding_completed, last_seen_at, onboarding_state, domain, excluded_paths, timezone, custom_url_params, cross_domain_domains, cross_domain_cookie_domain')
+      .select('id, site_key, plan, pv_limit, created_at, company_id, owner_id, business_type, trial_ends_at, attribution_window_days, onboarding_completed, last_seen_at, onboarding_state, domain, excluded_paths, timezone, custom_url_params, cross_domain_domains, cross_domain_cookie_domain, stripe_customer_id')
       .eq('site_key', siteKey)
       .single()
 
@@ -57,7 +57,7 @@ export async function validateSiteKey(req, res, next) {
       console.warn('[validateSiteKey] LOUD WARNING: sites.attribution_window_days or cross-domain columns do not exist in database. Falling back to default values.')
       const retryResult = await supabase
         .from('sites')
-        .select('id, site_key, plan, pv_limit, created_at, company_id, owner_id, business_type, trial_ends_at, onboarding_completed, last_seen_at, onboarding_state, domain, excluded_paths, timezone, custom_url_params')
+        .select('id, site_key, plan, pv_limit, created_at, company_id, owner_id, business_type, trial_ends_at, onboarding_completed, last_seen_at, onboarding_state, domain, excluded_paths, timezone, custom_url_params, stripe_customer_id')
         .eq('site_key', siteKey)
         .single()
 
@@ -155,7 +155,8 @@ export async function validateSiteKey(req, res, next) {
       domain: data.domain || null,
       excluded_paths: data.excluded_paths || [],
       timezone: data.timezone || 'UTC',
-      custom_url_params: data.custom_url_params || []
+      custom_url_params: data.custom_url_params || [],
+      stripe_customer_id: data.stripe_customer_id || null
     }
 
 
