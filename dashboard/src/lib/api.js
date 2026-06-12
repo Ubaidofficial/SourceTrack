@@ -68,10 +68,10 @@ export async function getJourney(siteKey, visitorId) {
   return fetchApi(`/journey/${visitorId}?${params}`)
 }
 
-export async function createCheckout(siteKey, successUrl, cancelUrl, planKey = 'pro') {
+export async function createCheckout(siteKey, successUrl, cancelUrl, planKey = 'pro', acceptedTerms = false) {
   return fetchApi('/billing/create-checkout', {
     method: 'POST',
-    body: { site_key: siteKey, successUrl, cancelUrl, plan: planKey }
+    body: { site_key: siteKey, successUrl, cancelUrl, plan: planKey, accepted_terms: acceptedTerms }
   })
 }
 

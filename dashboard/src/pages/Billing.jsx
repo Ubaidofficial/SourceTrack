@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { CreditCard, ExternalLink, Zap, CheckCircle2 } from 'lucide-react'
@@ -51,6 +52,7 @@ export default function Billing() {
   const [loading, setLoading]       = useState(true)
   const [portalLoading, setPortalLoading] = useState(false)
   const [upgradeLoading, setUpgradeLoading] = useState(null)
+  const [acceptedTerms, setAcceptedTerms]   = useState(false)
 
   useEffect(() => { loadData() }, [user])
 
@@ -87,11 +89,12 @@ export default function Billing() {
   }
 
   async function handleUpgrade(planKey) {
+    if (!acceptedTerms) return
     setUpgradeLoading(planKey)
     try {
       const successUrl = `${window.location.origin}/billing?upgrade=success`
       const cancelUrl  = `${window.location.origin}/billing`
-      const data = await createCheckout(site?.site_key, successUrl, cancelUrl, planKey)
+      const data = await createCheckout(site?.site_key, successUrl, cancelUrl, planKey, acceptedTerms)
       if (data?.url) window.location.href = data.url
     } catch (_e) {
       /* silent */
@@ -209,6 +212,27 @@ export default function Billing() {
       {showUpgradePlans && (
         <section className="space-y-4">
           <h3 className="text-sm font-bold text-st-black dark:text-white">Available Plans</h3>
+
+          <div className="flex items-start gap-2.5 p-4 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-gray-800 rounded-xl max-w-xl">
+            <input
+              id="terms-checkbox"
+              type="checkbox"
+              checked={acceptedTerms}
+              onChange={(e) => setAcceptedTerms(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 dark:border-gray-700 text-st-lime focus:ring-st-lime focus:ring-offset-0 focus:outline-none bg-white dark:bg-gray-900"
+            />
+            <label htmlFor="terms-checkbox" className="text-xs text-st-gray dark:text-gray-400 leading-normal select-none">
+              I have read and agree to the SourceTrack{' '}
+              <Link to="/terms" className="text-st-black dark:text-white font-semibold hover:underline" target="_blank" rel="noopener noreferrer">
+                Terms
+              </Link>{' '}
+              and{' '}
+              <Link to="/privacy" className="text-st-black dark:text-white font-semibold hover:underline" target="_blank" rel="noopener noreferrer">
+                Privacy Policy
+              </Link>.
+            </label>
+          </div>
+
           <div className="grid sm:grid-cols-3 gap-4">
             {PLANS.map(p => (
               <div key={p.key} className={`rounded-xl border p-5 flex flex-col justify-between ${
@@ -231,7 +255,7 @@ export default function Billing() {
                 </div>
                 <button
                   onClick={() => handleUpgrade(p.key)}
-                  disabled={upgradeLoading === p.key}
+                  disabled={upgradeLoading === p.key || !acceptedTerms}
                   className={`w-full text-xs font-semibold py-2.5 mt-4 rounded-lg transition-colors disabled:opacity-60 ${
                     p.highlight
                       ? 'bg-st-lime text-black hover:bg-st-lime/90'

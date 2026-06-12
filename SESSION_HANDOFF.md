@@ -2,21 +2,41 @@
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
-> **Handoff:** Session 139I-F — Browser Verification is **PASS** (staging deploy `9867714`). The explicit Resume/Add-Site onboarding entry is verified end-to-end: selecting an incomplete site surfaces a "Resume setup" action in both the Layout switcher and the Dashboard "Finish setting up" card; clicking it opens `/onboarding?site_id=<incomplete>&mode=onboarding` and resumes the incomplete site at the correct step (no dashboard redirect). All scenarios A–E pass — (A) mixed-site `/dashboard` stays on dashboard with a completed active site (gate unchanged); (B) UI resume works; (C) direct explicit URL cold-load resumes; (D) bare `/onboarding` still redirects completed users to `/dashboard` (no trap); (E) foreign `site_id`/`site_key` and a completed-site id under `mode=onboarding` all fall back to the user's own incomplete site (no foreign resolution, no reopening completed). The 139I-E P3 multi-site resume gap is now RESOLVED. Minor by-design observation: no proactive nudge when active is completed but an incomplete site exists elsewhere (user selects it in the switcher). QA: [multi_site_resume_setup_qa_139I-F.md](docs/qa/multi_site_resume_setup_qa_139I-F.md) (Browser Verification Addendum).
+> **Handoff:** Session 139L — Confirm beta Terms/Privacy Disclosure Flow Before Payment is **PARTIAL** (local/static verified; staging verification pending). Added a terms/privacy acknowledgment checkbox directly above the plans grid on the Billing page, disabling the paid upgrade buttons until checked. Link routing to /terms and /privacy configured to open in a new tab. Updated createCheckout API helper to send accepted_terms flag. Modified backend POST /api/billing/create-checkout to strictly validate accepted_terms in payload and return 400 Bad Request if missing/false. Programmatic isolation verification completed. QA: [beta_terms_privacy_disclosure_qa_139L.md](docs/qa/beta_terms_privacy_disclosure_qa_139L.md).
 >
-> **Prior handoff (Session 139I-E):** Session 139I-E — Browser Verification is PASS WITH LIMITS (staging deploy `6629c5f`). Real browser QA confirmed the core multi-site gate fix: `/dashboard` deterministically resolves to a completed site (skips the newer incomplete site — no bounce to onboarding); only-completed users opening `/onboarding` are redirected to `/dashboard` (no trap); same-domain resubmission resumes the existing site with no duplicate (site count 3→3); foreign `site_key`/`site_id` are ignored/404 with no cross-tenant leak; `/api/sites` sorts newest-first.
+> **Prior handoff (Session 139I-F):** Session 139I-F — Browser Verification is **PASS** (staging deploy `9867714`). The explicit Resume/Add-Site onboarding entry is verified end-to-end: selecting an incomplete site surfaces a "Resume setup" action in both the Layout switcher and the Dashboard "Finish setting up" card; clicking it opens `/onboarding?site_id=<incomplete>&mode=onboarding` and resumes the incomplete site at the correct step (no dashboard redirect). All scenarios A–E pass — (A) mixed-site `/dashboard` stays on dashboard with a completed active site (gate unchanged); (B) UI resume works; (C) direct explicit URL cold-load resumes; (D) bare `/onboarding` still redirects completed users to `/dashboard` (no trap); (E) foreign `site_id`/`site_key` and a completed-site id under `mode=onboarding` all fall back to the user's own incomplete site (no foreign resolution, no reopening completed). The 139I-E P3 multi-site resume gap is now RESOLVED. Minor by-design observation: no proactive nudge when active is completed but an incomplete site exists elsewhere (user selects it in the switcher). QA: [multi_site_resume_setup_qa_139I-F.md](docs/qa/multi_site_resume_setup_qa_139I-F.md) (Browser Verification Addendum).
 >
-> **Next Task:** Session 139L — Confirm beta Terms/Privacy disclosure flow before payment. (139I-F browser-verified PASS; the multi-site onboarding gate + explicit resume work is complete. Optional non-blocking follow-up: a proactive "finish your other site" nudge when the active site is completed but an incomplete site exists elsewhere — noted by-design in 139I-F.)
+> **Next Task:** Session 139L — Browser/Staging Verification (139L code implemented; browser/staging verification pending).
 >
-> ⚠️ **P0 CONDITIONS BEFORE FIRST PAID CUSTOMER:** (1) Stripe test-mode checkout/webhook evidence [PARTIAL — API/webhook E2E verified on staging; browser billing UI and billing status endpoint pending]; (2) provider-console separation verified [CLOSED - staging project created, local env rewired, safety boot guard active]; (3) Supabase backups verified [PARTIAL - Daily scheduled backups manually verified. PITR is not enabled / not accepted as enabled. Daily backups are now verified; PITR remains an optional but strongly recommended paid add-on / accepted risk if left disabled. Do not enable PITR without explicit cost approval. Staging restore drill remains blocked/not run]; (4) prod env secrets set incl. ST_IP_RESOLVER_MODE=railway; (5) beta Terms/Privacy disclosed in writing.
+> ⚠️ **P0 CONDITIONS BEFORE FIRST PAID CUSTOMER:** (1) Stripe test-mode checkout/webhook evidence [PARTIAL — API/webhook E2E verified on staging; browser billing UI and billing status endpoint pending]; (2) provider-console separation verified [CLOSED - staging project created, local env rewired, safety boot guard active]; (3) Supabase backups verified [PARTIAL - Daily scheduled backups manually verified. PITR is not enabled / not accepted as enabled. Daily backups are now verified; PITR remains an optional but strongly recommended paid add-on / accepted risk if left disabled. Do not enable PITR without explicit cost approval. Staging restore drill remains blocked/not run]; (4) prod env secrets set incl. ST_IP_RESOLVER_MODE=railway; (5) beta Terms/Privacy disclosed in writing [PARTIAL — local code implementation completed; verification pending staging deployment].
 >
 > ⚠️ **IMPORTANT OPERATIONAL NOTE:** Before deploying to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.
 
 
 
-## Session 139I-F — Add Explicit Resume/Add-Site Onboarding Entry
+## Session 139L — Confirm beta Terms/Privacy Disclosure Flow Before Payment
 **Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety)
 **Status:** **PARTIAL — code-verified.**
+
+### Completed
+1. Billing page checkbox: Added "I have read and agree to the SourceTrack Terms and Privacy Policy." with relative links to `/terms` and `/privacy` opening in new tabs, disabling paid checkout buttons until checked.
+2. Frontend request: Updated `createCheckout()` helper in `api.js` to accept `acceptedTerms` and send it as `accepted_terms`.
+3. Backend validation: Modified `POST /api/billing/create-checkout` to reject requests where `accepted_terms !== true` with a 400 Bad Request response.
+4. QA Report: Created `docs/qa/beta_terms_privacy_disclosure_qa_139L.md` documenting entry points, frontend/backend behavior, and isolation testing results.
+
+### Files changed
+- [api/routes/billing.js](api/routes/billing.js)
+- [dashboard/src/lib/api.js](dashboard/src/lib/api.js)
+- [dashboard/src/pages/Billing.jsx](dashboard/src/pages/Billing.jsx)
+- [docs/qa/beta_terms_privacy_disclosure_qa_139L.md](docs/qa/beta_terms_privacy_disclosure_qa_139L.md) [NEW]
+- [SESSION_STATE.md](SESSION_STATE.md)
+- [SESSION_LOG.md](SESSION_LOG.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
+
+
+## Session 139I-F — Add Explicit Resume/Add-Site Onboarding Entry
+**Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety)
+**Status:** **PASS — browser-verified.**
 
 ### Completed
 1. App.jsx Route Gate Bypass: Detects explicit onboarding intent (URL search parameters mode=onboarding, site_id, or site_key) and bypasses the /onboarding→/dashboard redirect, preventing completed-site users from being bounced when intentionally resuming onboarding.

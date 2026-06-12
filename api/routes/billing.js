@@ -209,8 +209,16 @@ const router = Router()
  */
 router.post('/create-checkout', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
   try {
-    const { plan: rawPlan = 'growth', successUrl, cancelUrl, site_key } = req.body
+    const { plan: rawPlan = 'growth', successUrl, cancelUrl, site_key, accepted_terms } = req.body
     const plan = normalizePlan(rawPlan)
+
+    if (accepted_terms !== true) {
+      return res.status(400).json({
+        success: false,
+        data: null,
+        error: 'Terms and Privacy acknowledgement is required before checkout.'
+      })
+    }
 
     if (!successUrl || !cancelUrl) {
       return res.status(400).json({ success: false, data: null, error: 'successUrl and cancelUrl are required' })
