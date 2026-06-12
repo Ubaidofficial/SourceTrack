@@ -9,6 +9,7 @@ process.env.SUPABASE_SERVICE_KEY = 'mock-service-role-key-value'
 import { getSupabase } from '../lib/supabase.js'
 import { validateSiteKey, siteCache } from '../middleware/auth.js'
 import { isValidRedirectUrl, getRedirectAllowlist, getDefaultBillingReturnUrl } from '../routes/billing.js'
+import { checkTierLimit, bustTierCache } from '../middleware/tier-check.js'
 
 test('validateSiteKey Billing Customer Regression Tests', async (t) => {
   const client = getSupabase()
@@ -279,5 +280,125 @@ test('Billing Redirection Allowlist and Validation Tests', async (t) => {
     assert.strictEqual(isValidRedirectUrl(''), false)
     assert.strictEqual(isValidRedirectUrl(null), false)
     assert.strictEqual(isValidRedirectUrl({}), false)
+  })
+})
+
+test('checkTierLimit Middleware Tests', async (t) => {
+  const client = getSupabase()
+  let mockRpcResult = 0
+  let mockRpcError = null
+
+  const originalRpc = client.rpc
+  client.rpc = async (fn, args) => {
+    assert.strictEqual(fn, 'count_monthly_pageviews')
+    if (mockRpcError) return { data: null, error: mockRpcError }
+    return { data: mockRpcResult, error: null }
+  }
+
+  t.afterEach(() => {
+    mockRpcResult = 0
+    mockRpcError = null
+    bustTierCache('site-123')
+  })
+
+  t.after(() => {
+    client.rpc = originalRpc
+  })
+
+  await t.test('calls next() if plan has no pageview limit', async () => {
+    const req = { site: { plan: 'scale', pv_limit: 0, id: 'site-123' } }
+    const res = {}
+    let nextCalled = false
+    const next = () => { nextCalled = true }
+
+    await checkTierLimit(req, res, next)
+    assert.strictEqual(nextCalled, true)
+  })
+
+  await t.test('calls next() if plan is active and usage is below limit', async () => {
+    const req = { site: { plan: 'starter', pv_limit: 50000, id: 'site-123' } }
+    mockRpcResult = 1000
+    const res = {}
+    let nextCalled = false
+    const next = () => { nextCalled = true }
+
+    await checkTierLimit(req, res, next)
+    assert.strictEqual(nextCalled, true)
+  })
+
+  await t.test('returns 402 if monthly pageview limit is reached', async () => {
+    const req = { site: { plan: 'free', pv_limit: 5000, id: 'site-123' } }
+    mockRpcResult = 5000
+    let resStatus = null
+    let resJson = null
+    const res = {
+      status: (code) => {
+        resStatus = code
+        return {
+          json: (data) => { resJson = data }
+        }
+      }
+    }
+    let nextCalled = false
+    const next = () => { nextCalled = true }
+
+    await checkTierLimit(req, res, next)
+    assert.strictEqual(nextCalled, false)
+    assert.strictEqual(resStatus, 402)
+    assert.strictEqual(resJson.error, 'Monthly pageview limit reached')
+  })
+
+  await t.test('returns 402 if trial is expired', async () => {
+    const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const req = { site: { plan: 'trial', trial_ends_at: pastDate, id: 'site-123' } }
+    let resStatus = null
+    let resJson = null
+    const res = {
+      status: (code) => {
+        resStatus = code
+        return {
+          json: (data) => { resJson = data }
+        }
+      }
+    }
+    let nextCalled = false
+    const next = () => { nextCalled = true }
+
+    await checkTierLimit(req, res, next)
+    assert.strictEqual(nextCalled, false)
+    assert.strictEqual(resStatus, 402)
+    assert.strictEqual(resJson.error, 'Trial expired')
+  })
+
+  await t.test('returns 402 if subscription is inactive or archived', async () => {
+    const req = { site: { plan: 'inactive', id: 'site-123' } }
+    let resStatus = null
+    let resJson = null
+    const res = {
+      status: (code) => {
+        resStatus = code
+        return {
+          json: (data) => { resJson = data }
+        }
+      }
+    }
+    let nextCalled = false
+    const next = () => { nextCalled = true }
+
+    await checkTierLimit(req, res, next)
+    assert.strictEqual(nextCalled, false)
+    assert.strictEqual(resStatus, 402)
+    assert.strictEqual(resJson.error, 'Subscription inactive')
+  })
+
+  await t.test('fails open (calls next()) if RPC returns an error', async () => {
+    const req = { site: { plan: 'free', pv_limit: 5000, id: 'site-123' } }
+    mockRpcError = { message: 'Database connection failed' }
+    const res = {}
+    let nextCalled = false
+    const next = () => { nextCalled = true }
+
+    await checkTierLimit(req, res, next)
+    assert.strictEqual(nextCalled, true)
   })
 })
