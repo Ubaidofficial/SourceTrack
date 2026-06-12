@@ -10,6 +10,8 @@ import { getSupabase } from '../lib/supabase.js'
 import { validateSiteKey, siteCache } from '../middleware/auth.js'
 import { isValidRedirectUrl, getRedirectAllowlist, getDefaultBillingReturnUrl } from '../routes/billing.js'
 import { checkTierLimit, bustTierCache } from '../middleware/tier-check.js'
+import { dispatchWebhook } from '../lib/webhook.js'
+
 
 test('validateSiteKey Billing Customer Regression Tests', async (t) => {
   const client = getSupabase()
@@ -400,5 +402,154 @@ test('checkTierLimit Middleware Tests', async (t) => {
 
     await checkTierLimit(req, res, next)
     assert.strictEqual(nextCalled, true)
+  })
+})
+
+test('dispatchWebhook plan limit enforcement', async (t) => {
+  const client = getSupabase()
+  const originalFrom = client.from
+  let mockDestData = null
+  let mockDestError = null
+  let mockSiteData = null
+  let mockSiteError = null
+  let insertCalled = false
+  let fetchCalled = false
+  let fetchArgs = []
+
+  // Mock global fetch
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = async (url, options) => {
+    fetchCalled = true
+    fetchArgs.push({ url, options })
+    return { ok: true, status: 200 }
+  }
+
+  client.from = (table) => {
+    if (table === 'webhook_destinations') {
+      return {
+        select: (fields) => {
+          assert.strictEqual(fields, 'id, url, secret, active, site_key')
+          return {
+            eq: (col, val) => {
+              assert.strictEqual(col, 'site_key')
+              assert.strictEqual(val, 'site-key-123')
+              return {
+                eq: (col2, val2) => {
+                  assert.strictEqual(col2, 'active')
+                  assert.strictEqual(val2, true)
+                  return {
+                    maybeSingle: async () => {
+                      return { data: mockDestData, error: mockDestError }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    if (table === 'sites') {
+      return {
+        select: (fields) => {
+          assert.strictEqual(fields, 'plan')
+          return {
+            eq: (col, val) => {
+              assert.strictEqual(col, 'site_key')
+              assert.strictEqual(val, 'site-key-123')
+              return {
+                maybeSingle: async () => {
+                  return { data: mockSiteData, error: mockSiteError }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    if (table === 'webhook_deliveries') {
+      return {
+        insert: async (data) => {
+          insertCalled = true
+          return { error: null }
+        }
+      }
+    }
+    return originalFrom.call(client, table)
+  }
+
+  t.afterEach(() => {
+    mockDestData = null
+    mockDestError = null
+    mockSiteData = null
+    mockSiteError = null
+    insertCalled = false
+    fetchCalled = false
+    fetchArgs = []
+  })
+
+  t.after(() => {
+    client.from = originalFrom
+    globalThis.fetch = originalFetch
+  })
+
+  await t.test('dispatch is allowed for a plan with webhook_outbound', async () => {
+    mockDestData = {
+      id: 'dest-123',
+      url: 'https://example.com/webhook',
+      secret: 'whsec_secret123',
+      active: true,
+      site_key: 'site-key-123'
+    }
+    mockSiteData = { plan: 'growth' }
+
+    dispatchWebhook('conversion.created', { site_key: 'site-key-123' })
+
+    // Wait a tiny bit since dispatchWebhook runs inside an async Promise.resolve().then()
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    assert.strictEqual(fetchCalled, true)
+    assert.strictEqual(fetchArgs[0].url, 'https://example.com/webhook')
+    assert.strictEqual(insertCalled, true)
+  })
+
+  await t.test('dispatch is skipped for free/downgraded plan', async () => {
+    mockDestData = {
+      id: 'dest-123',
+      url: 'https://example.com/webhook',
+      secret: 'whsec_secret123',
+      active: true,
+      site_key: 'site-key-123'
+    }
+    mockSiteData = { plan: 'free' } // 'free' has webhook_outbound: false
+
+    dispatchWebhook('conversion.created', { site_key: 'site-key-123' })
+
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    assert.strictEqual(fetchCalled, false)
+    assert.strictEqual(insertCalled, false)
+  })
+
+  await t.test('missing site or DB error safely skips dispatch', async () => {
+    mockDestError = new Error('Database connection failed')
+
+    dispatchWebhook('conversion.created', { site_key: 'site-key-123' })
+
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    assert.strictEqual(fetchCalled, false)
+    assert.strictEqual(insertCalled, false)
+  })
+
+  await t.test('missing site/webhook destination safely skips dispatch', async () => {
+    mockDestData = null
+
+    dispatchWebhook('conversion.created', { site_key: 'site-key-123' })
+
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    assert.strictEqual(fetchCalled, false)
+    assert.strictEqual(insertCalled, false)
   })
 })

@@ -3,6 +3,7 @@ import crypto from 'crypto'
 import { getSupabase } from './supabase.js'
 import { redactPiiFromUrl } from './utils.js'
 import { channelFromEvent } from './channel-classifier.js'
+import { hasFeature } from './plan-features.js'
 
 const WEBHOOK_URL = process.env.WEBHOOK_URL || null
 const WEBHOOK_TIMEOUT_MS = 5000
@@ -136,6 +137,23 @@ export function dispatchWebhook(eventType, properties) {
       }
 
       if (dest) {
+        // Query owner site's plan features separately
+        const { data: site, error: siteErr } = await supabase
+          .from('sites')
+          .select('plan')
+          .eq('site_key', siteKey)
+          .maybeSingle()
+
+        if (siteErr) {
+          console.error('[webhooks] failed to query site plan:', siteErr.message)
+          return // Safe skip / fail closed
+        }
+
+        if (!site || !site.plan || !hasFeature(site.plan, 'webhook_outbound')) {
+          return // Silent skip: plan downgraded or missing site/plan
+        }
+
+
 
         // 2. Format attributed conversion payload
         const source = properties.first_touch_source !== 'direct' ? properties.first_touch_source : (properties.utm_source || 'direct')
