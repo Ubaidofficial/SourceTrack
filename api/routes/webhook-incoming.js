@@ -12,6 +12,7 @@ import crypto from 'crypto'
 import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
 import { getSupabase } from '../lib/supabase.js'
+import { resolveWebhookAnonymousId } from '../lib/identity-links.js'
 
 const router = express.Router()
 
@@ -97,12 +98,48 @@ router.post('/:api_key', async (req, res) => {
     const body = req.body || {}
     const fields = extractFields(body)
 
+    const parsedAnonymousId = body.anonymous_id || null
+    const parsedVisitorId   = body.visitor_id || null
+    const parsedUserId      = body.user_id || null
+    const parsedEmail       = fields.email || null
+    const parsedCustomerId  = body.customer_id || body.customerId || null
+
+    const resolved = await resolveWebhookAnonymousId({
+      siteId: site.id,
+      anonymousId: parsedAnonymousId,
+      visitorId: parsedVisitorId,
+      userId: parsedUserId,
+      email: parsedEmail,
+      customerId: parsedCustomerId
+    })
+
+    let distinctId
+    let stitchingMethod = 'none'
+
+    if (resolved.anonymousId) {
+      distinctId = resolved.anonymousId
+      stitchingMethod = resolved.source
+    } else {
+      // Fallback: use explicit browser/user IDs from the payload if present.
+      // Do NOT fall back to email as it leaks plaintext PII in distinct_id.
+      const fallbackId = parsedAnonymousId || parsedVisitorId || parsedUserId
+      if (fallbackId) {
+        distinctId = fallbackId
+        if (parsedAnonymousId) stitchingMethod = 'payload.anonymous_id'
+        else if (parsedVisitorId) stitchingMethod = 'payload.visitor_id'
+        else if (parsedUserId) stitchingMethod = 'payload.user_id'
+      } else {
+        distinctId = `webhook_unattributed:${uuidv4()}`
+        stitchingMethod = 'none'
+      }
+    }
+
     // Log raw payload for debugging
-    console.log(`[webhook-incoming] site=${site.site_key} type=${fields.conversionType} value=${fields.value} order=${fields.orderId}`)
+    console.log(`[webhook-incoming] site=${site.site_key} type=${fields.conversionType} value=${fields.value} order=${fields.orderId} resolved=${resolved.anonymousId ? 'yes' : 'no'}`)
 
     // Fire conversion event to PostHog
     await ph.capture({
-      distinctId: fields.anonymousId,
+      distinctId,
       event: '$conversion',
       properties: {
         site_id: site.id,
@@ -118,6 +155,11 @@ router.post('/:api_key', async (req, res) => {
         webhook_source: req.headers['user-agent'] || 'unknown',
         raw_payload: JSON.stringify(body).slice(0, 500), // store first 500 chars
         server_timestamp: new Date().toISOString(),
+        stitching_method: stitchingMethod,
+        webhook_user_id: parsedUserId,
+        webhook_email_present: !!fields.email,
+        identity_resolution_source: resolved.source,
+        identity_resolution_status: resolved.anonymousId ? 'resolved' : 'unresolved'
       }
     })
 

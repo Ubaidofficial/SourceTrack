@@ -137,3 +137,59 @@ export async function resolveAnonymousId(siteId, userId) {
     return null
   }
 }
+
+/**
+ * Resolve a webhook event to an anonymous_id, using explicit browser IDs first
+ * and falling back to resolving linked user_id.
+ *
+ * @param {Object} params
+ * @param {string} params.siteId
+ * @param {string} [params.anonymousId]
+ * @param {string} [params.visitorId]
+ * @param {string} [params.userId]
+ * @param {string} [params.email]
+ * @param {string} [params.emailHash]
+ * @param {string} [params.customerId]
+ * @returns {Promise<{ anonymousId: string|null, source: string, fallback: boolean }>}
+ */
+export async function resolveWebhookAnonymousId({ siteId, anonymousId, visitorId, userId, email, emailHash, customerId }) {
+  const aid = validateId(anonymousId)
+  if (aid) {
+    return {
+      anonymousId: aid,
+      source: 'anonymous_id',
+      fallback: false
+    }
+  }
+
+  const vid = validateId(visitorId)
+  if (vid) {
+    return {
+      anonymousId: vid,
+      source: 'visitor_id',
+      fallback: false
+    }
+  }
+
+  const uid = validateId(userId)
+  if (uid && siteId) {
+    const resolved = await resolveAnonymousId(siteId, uid)
+    if (resolved) {
+      return {
+        anonymousId: resolved,
+        source: 'user_id_resolved',
+        fallback: false
+      }
+    }
+  }
+
+  // Plaintext email or other identifiers are not stored in site_identity_links
+  // in a way that maps them back to anonymous_id. Therefore, email-only or
+  // customerId-only resolution is currently unsupported.
+
+  return {
+    anonymousId: null,
+    source: 'none',
+    fallback: true
+  }
+}

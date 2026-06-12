@@ -5,6 +5,8 @@ import { getSupabase } from '../lib/supabase.js'
 import { decryptSecret } from '../lib/utils.js'
 import { claimIdempotencyKeys, logIngestionEvent } from '../lib/idempotency.js'
 import { ph } from '../lib/posthog.js'
+import { resolveWebhookAnonymousId } from '../lib/identity-links.js'
+
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'fake_key_for_webhook_sync_construct', {
   apiVersion: '2024-06-20'
@@ -93,35 +95,49 @@ router.post('/:site_key', async (req, res) => {
 
   // 6. Metadata/client_reference_id stitching logic
   const metadata = session.metadata || {}
-  const stitchingId = session.client_reference_id ||
-    metadata.anonymous_id ||
-    metadata.visitor_id ||
-    metadata.sourcetrack_user_id ||
-    metadata.site_user_id ||
-    null
+  const resolved = await resolveWebhookAnonymousId({
+    siteId: site.id,
+    anonymousId: metadata.anonymous_id || null,
+    visitorId: metadata.visitor_id || null,
+    userId: metadata.sourcetrack_user_id || metadata.site_user_id || session.client_reference_id || null,
+    email: session.customer_details?.email || null,
+    customerId: session.customer || null
+  })
 
   let distinctId
   let attributionStatus = undefined
   let stitchingMethod = 'none'
 
-  if (stitchingId) {
-    distinctId = stitchingId
-    if (session.client_reference_id === stitchingId) {
-      stitchingMethod = 'client_reference_id'
-    } else if (metadata.anonymous_id === stitchingId) {
-      stitchingMethod = 'metadata.anonymous_id'
-    } else if (metadata.visitor_id === stitchingId) {
-      stitchingMethod = 'metadata.visitor_id'
-    } else if (metadata.sourcetrack_user_id === stitchingId) {
-      stitchingMethod = 'metadata.sourcetrack_user_id'
-    } else if (metadata.site_user_id === stitchingId) {
-      stitchingMethod = 'metadata.site_user_id'
-    }
+  if (resolved.anonymousId) {
+    distinctId = resolved.anonymousId
+    stitchingMethod = resolved.source
   } else {
-    // If no explicit metadata/client_reference_id exists, mark as unattributed
-    distinctId = `stripe_unattributed:${session.id || uuidv4()}`
-    attributionStatus = 'unattributed'
-    stitchingMethod = 'none'
+    const stitchingId = session.client_reference_id ||
+      metadata.anonymous_id ||
+      metadata.visitor_id ||
+      metadata.sourcetrack_user_id ||
+      metadata.site_user_id ||
+      null
+
+    if (stitchingId) {
+      distinctId = stitchingId
+      if (session.client_reference_id === stitchingId) {
+        stitchingMethod = 'client_reference_id'
+      } else if (metadata.anonymous_id === stitchingId) {
+        stitchingMethod = 'metadata.anonymous_id'
+      } else if (metadata.visitor_id === stitchingId) {
+        stitchingMethod = 'metadata.visitor_id'
+      } else if (metadata.sourcetrack_user_id === stitchingId) {
+        stitchingMethod = 'metadata.sourcetrack_user_id'
+      } else if (metadata.site_user_id === stitchingId) {
+        stitchingMethod = 'metadata.site_user_id'
+      }
+    } else {
+      // If no explicit metadata/client_reference_id exists, mark as unattributed
+      distinctId = `stripe_unattributed:${session.id || uuidv4()}`
+      attributionStatus = 'unattributed'
+      stitchingMethod = 'none'
+    }
   }
 
   // 7. Dedupe / Idempotency handling
@@ -183,7 +199,12 @@ router.post('/:site_key', async (req, res) => {
       utm_medium: 'webhook',
       utm_campaign: null,
       first_touch_source: 'stripe',
-      first_touch_medium: 'webhook'
+      first_touch_medium: 'webhook',
+      webhook_user_id: metadata.sourcetrack_user_id || metadata.site_user_id || session.client_reference_id || null,
+      webhook_customer_id: session.customer || null,
+      webhook_email_present: !!session.customer_details?.email,
+      identity_resolution_source: resolved.source,
+      identity_resolution_status: resolved.anonymousId ? 'resolved' : 'unresolved'
     }
 
     if (attributionStatus) {

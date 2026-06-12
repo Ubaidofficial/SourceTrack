@@ -172,7 +172,11 @@ export async function conversionOffline(req, res) {
       idempotency_key: idempotencyKey,
       conversion_type: conversionType,
       stitching_method: stitchingMethod,
-      external_event_id: orderId ? `${req.site.id}:${orderId}:${conversionType}` : null
+      external_event_id: orderId ? `${req.site.id}:${orderId}:${conversionType}` : null,
+      webhook_user_id: userId,
+      webhook_email_present: !!req.body.email,
+      identity_resolution_source: stitchingMethod,
+      identity_resolution_status: (stitchingMethod === 'anonymous_id' || stitchingMethod === 'user_id_resolved') ? 'resolved' : 'unresolved'
     }
 
     if (userId) props.user_id = userId
