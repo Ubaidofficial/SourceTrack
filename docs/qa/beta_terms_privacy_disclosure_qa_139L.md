@@ -80,4 +80,65 @@ Tested programmatically using sandbox verification script `test_checkout_enforce
 *   Validation check relies on checking if `accepted_terms === true` in request body. It does not record terms acceptance time/IP in the database since persistent storage of legal versions was excluded from this session's scope to keep the change lightweight and migration-free.
 
 ## 10. Verdict
-**PARTIAL** — UI controls and backend enforcement implemented and programmatically verified locally. Real browser QA and API validation on deployed staging remains pending.
+**PARTIAL** *(implementation-session verdict — superseded by the Browser/Staging Verification Addendum below)* — UI controls and backend enforcement implemented and programmatically verified locally. Real browser QA and API validation on deployed staging remains pending.
+
+> **UPDATE 2026-06-12 — real staging browser + API verification completed (deploy `cee2954`). Verdict: ✅ PASS. See the Browser/Staging Verification Addendum below.**
+
+---
+---
+
+# Browser/Staging Verification Addendum — Real Claude-in-Chrome run (2026-06-12)
+
+> Real navigation, checkbox toggling, a live "Upgrade" click, and authenticated API probes against staging on deploy `cee2954`. Operator-authenticated (`imubaid93@gmail.com`); no payment details entered, no secrets/tokens/full-site-keys exposed. No commits/pushes.
+
+## A0. Verdict
+
+**✅ PASS — staging UI + backend enforcement verified, and Terms/Privacy links work.**
+
+## A1. Preflight / deploy commit IDs
+
+| Service | Deployment | Status | Commit |
+|---|---|---|---|
+| `SourceTrack-Dashboard` | dc6d3bfb | SUCCESS @ 09:03:16 UTC | **`cee2954`** |
+| `SourceTrack-Api` | f2e6e51d | SUCCESS @ 09:03:15 UTC | **`cee2954`** |
+
+CI for `Session 139L — Add terms privacy checkout gate` = green. Both services on latest commit.
+
+## A2. Exact staging routes tested
+
+`/billing`, `/terms`, `/privacy`; APIs `POST /api/billing/create-checkout` and `POST /api/billing/portal`; Stripe-hosted `checkout.stripe.com` (test mode, observed only — no interaction).
+
+## A3. Scenario results
+
+| Scenario | Result | Evidence |
+|---|---|---|
+| **A — Billing page renders gate** | ✅ PASS | Acknowledgement checkbox renders **above** "Available Plans": *"I have read and agree to the SourceTrack Terms and Privacy Policy."* All three upgrade buttons (`Starter`/`Growth`/`Scale`) are `disabled` while unchecked. Links → `/terms` and `/privacy` (`target=_blank`, `rel=noopener noreferrer`). `ss_25061a69d` |
+| **B — Links work, no false claims** | ✅ PASS | `/terms` (title "Terms of Service — SourceTrack", h "Terms of Service") and `/privacy` (title "Privacy Policy Overview — SourceTrack", h "Privacy & Data Handling") both load (no 404). Page-text scan for the disallowed over-claim phrases (GDPR‑/SOC2‑compliance assertions, "fully‑compliant", "guaranteed‑privacy") returned **none**. |
+| **C — Checkbox toggles buttons** | ✅ PASS | Unchecked → buttons `[disabled,disabled,disabled]`; checked → `[enabled,enabled,enabled]`; unchecked again → `[disabled,disabled,disabled]`. `ss_2045gfvnd` |
+| **D — Checkout with acknowledgement** | ✅ PASS | With the box checked, clicking **Upgrade to Growth** redirected to **`https://checkout.stripe.com/c/pay/cs_test_…`** (tab title "SourceTrack sandbox") — confirming the frontend sent `accepted_terms:true`, the gate passed, and **Stripe test mode** is used (`cs_test_` session). No payment details entered; page intentionally not interacted with. |
+| **E — Backend negative (missing / false)** | ✅ PASS | `POST /api/billing/create-checkout` with **no** `accepted_terms` → **400** `{success:false, data:null, error:"Terms and Privacy acknowledgement is required before checkout."}`. With `accepted_terms:false` → identical **400**. |
+| **F — Backend positive shape** | ✅ PASS | Same endpoint with `accepted_terms:true` (+ `site_key`/`successUrl`/`cancelUrl`) → **200, success:true**, returns a `checkout.stripe.com` URL (test mode). Passed the terms gate to the normal Stripe path — **not** the terms error. |
+| **G — Portal unaffected** | ✅ PASS | `POST /api/billing/portal` → **400 "No Stripe customer — subscribe first"** (free-plan account). `is_terms_error:false`, no checkout created. Portal is not gated by the Terms/Privacy acknowledgement and remains billing-management only. (Code: `/portal` route has no `accepted_terms` check.) |
+
+## A4. Network / API findings
+
+- `create-checkout` (no/false `accepted_terms`) → **400** terms error (gate enforced server-side, before `successUrl`/Stripe logic).
+- `create-checkout` (`accepted_terms:true`, full body) → **200** + test-mode `cs_test_` checkout URL.
+- `portal` → **400** "No Stripe customer — subscribe first" (not terms-gated).
+- App console clean; no app 5xx. Stripe Checkout session ids are test-mode (`cs_test_…`) and are redacted in this report.
+
+## A5. Screenshots
+
+`ss_25061a69d` (billing gate, unchecked, buttons disabled) · `ss_2045gfvnd` (checked, buttons enabled). Stripe Checkout redirect confirmed via tab URL (`cs_test_…`); the hosted payment page is a blocked/no-interaction surface, so no screenshot was taken there.
+
+## A6. Limitations
+
+- Terms acceptance is enforced as a request gate (`accepted_terms === true`); it is **not persisted** (no timestamp/IP/version record) — by design this session (noted in §9), a candidate future enhancement.
+- Verified on the existing operator account (free plan, has a site); a brand-new pristine account was not separately exercised, but the gate is request-scoped and account-independent.
+- A few **test-mode** Stripe Checkout sessions were created during D/F (no payment completed). No production Stripe touched.
+
+## A7. Scope note
+
+This closes the **Terms/Privacy payment-disclosure gate** only. It does **not** mark paid beta ready — other P0 conditions (Stripe browser billing UI, backups/PITR drill, prod env secrets) remain open per SESSION_STATE.
+
+No commits. No pushes. No secrets, tokens, JWTs, cookies, Supabase/Stripe/webhook/service keys, Railway variable values, or full site keys exposed.
