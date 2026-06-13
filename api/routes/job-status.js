@@ -1,10 +1,10 @@
 import express from 'express'
-import { requireUserAuth } from '../middleware/user-auth.js'
+import { requireUserAuth, requireRole } from '../middleware/user-auth.js'
 import { getSupabase } from '../lib/supabase.js'
 
 const router = express.Router()
 
-router.get('/attribution/status', requireUserAuth, async (req, res) => {
+router.get('/attribution/status', requireUserAuth, requireRole('super_admin'), async (req, res) => {
   try {
     const { data, error } = await getSupabase()
       .from('job_runs')

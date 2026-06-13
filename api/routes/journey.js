@@ -129,23 +129,10 @@ export async function journey(req, res) {
 
     const aggregates = sessionAggregates(annotatedSessions)
 
-    let person = null
-    try {
-      const host = process.env.POSTHOG_HOST.replace(/\/$/, '')
-      const projectId = process.env.POSTHOG_PROJECT_ID
-      const url = `${host}/api/projects/${projectId}/persons/${visitorId}/`
-
-      const personRes = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${process.env.POSTHOG_PERSONAL_API_KEY}`
-        }
-      })
-
-      if (personRes.ok) {
-        person = await personRes.json()
-      }
-    } catch (_err) {
-      /* person data is best-effort */
+    const person = {
+      id: visitorId,
+      created_at: events[0]?.timestamp || null,
+      properties: userId ? { user_id: userId } : {}
     }
 
     res.status(200).json({

@@ -56,9 +56,56 @@ function parseAIResponse(text) {
   }
 }
 
-function validateHogQL(sql) {
-  if (!sql.includes('FROM events')) return false
-  if (!sql.includes('properties.site_id')) return false
+export function validateHogQL(sql, siteId) {
+  if (typeof sql !== 'string') return false
+
+  // 1. Must reject comments
+  if (sql.includes('--') || sql.includes('/*') || sql.includes('*/')) return false
+
+  // 2. Must reject multiple statements / semicolons (except trailing semicolon)
+  const trimmed = sql.trim()
+  const withoutTrailingSemicolon = trimmed.endsWith(';') ? trimmed.slice(0, -1) : trimmed
+  if (withoutTrailingSemicolon.includes(';')) return false
+
+  const upperSql = withoutTrailingSemicolon.toUpperCase()
+
+  // 3. Must start with SELECT (read-only query)
+  if (!upperSql.trim().startsWith('SELECT')) return false
+
+  // 4. Must query only FROM events
+  // Check that "FROM events" exists (case-insensitive and word-boundary safe)
+  if (!/\bFROM\s+events\b/i.test(withoutTrailingSemicolon)) return false
+
+  // Ensure there is only one "FROM" keyword in the query to avoid subqueries or additional table references
+  const fromMatches = upperSql.match(/\bFROM\b/g)
+  if (!fromMatches || fromMatches.length !== 1) return false
+
+  // 5. Must reject dangerous keywords
+  const dangerousKeywords = [
+    'UNION', 'JOIN', 'WITH', 'INSERT', 'UPDATE', 'DELETE',
+    'DROP', 'ALTER', 'TRUNCATE', 'CREATE', 'COPY', 'CALL', 'EXEC'
+  ]
+  for (const kw of dangerousKeywords) {
+    if (new RegExp(`\\b${kw}\\b`, 'i').test(withoutTrailingSemicolon)) return false
+  }
+
+  // 6. Must reject OR
+  if (/\bOR\b/i.test(withoutTrailingSemicolon)) return false
+
+  // 7. Must require a strict equality filter for the active site inside the WHERE clause.
+  const escapedSiteId = siteId.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')
+  const whereMatch = withoutTrailingSemicolon.match(/\bWHERE\b([\s\S]*)/i)
+  if (!whereMatch) return false
+
+  const whereClause = whereMatch[1].split(/\bGROUP\s+BY\b|\bORDER\s+BY\b|\bLIMIT\b|\bHAVING\b/i)[0]
+  const siteIdOccurrencesInQuery = withoutTrailingSemicolon.match(/properties\.site_id/gi)
+  const siteIdOccurrencesInWhere = whereClause.match(/properties\.site_id/gi)
+  if (!siteIdOccurrencesInQuery || !siteIdOccurrencesInWhere) return false
+  if (siteIdOccurrencesInQuery.length !== siteIdOccurrencesInWhere.length) return false
+
+  const strictMatches = whereClause.match(new RegExp(`properties\\.site_id\\s*=\\s*(['"])${escapedSiteId}\\1`, 'gi'))
+  if (!strictMatches || strictMatches.length !== siteIdOccurrencesInWhere.length) return false
+
   return true
 }
 
@@ -102,7 +149,7 @@ router.post('/', validateSiteKey, aiLimit, async (req, res) => {
       return res.status(500).json({ success: false, data: null, error: 'AI returned no query' })
     }
 
-    if (!validateHogQL(parsed.hogql)) {
+    if (!validateHogQL(parsed.hogql, req.site.id)) {
       return res.status(500).json({ success: false, data: null, error: 'AI returned invalid query' })
     }
 
