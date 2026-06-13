@@ -29,7 +29,7 @@ Audit and implement real-time monthly conversion cap enforcement at all backend 
    - Explicitly locks down the search path with `SET search_path = public, pg_temp` to prevent search path injection attacks.
 8. **Fail-Open Policy:** If the DB query or RPC fails (e.g., database timeout or RPC failure), the API fails open, allowing the conversion to be ingested to prevent data loss. This limitation is explicitly disclosed below.
 9. **No Overclaims:** Documentation explicitly states that real-time capped enforcement is subject to fail-open-on-counter-failure risk.
-10. **Paid Beta Blocked:** Paid beta remains blocked because pageview limits and PostHog retention remain unresolved.
+10. **Paid Beta Blocked:** Paid beta remains blocked by PostHog retention/purging and the remaining open release gates, including paid billing portal verification, production billing verification, production env/secrets verification, tenant isolation, privacy/deletion, observability, install QA, and docs truth audit.
 
 ---
 

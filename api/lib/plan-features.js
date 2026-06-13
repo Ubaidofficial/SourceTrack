@@ -73,6 +73,15 @@ export const PLAN_STRUCTURAL_LIMITS = {
 
 // Public API ────────────────────────────────────────────────────────────────
 
+export function isSiteStatusBlocked(site) {
+  const plan = normalizePlan(site?.plan || 'free')
+  if (plan === 'trial' && site?.trial_ends_at) {
+    return new Date(site.trial_ends_at) < new Date()
+  }
+  return plan === 'inactive' || plan === 'archived'
+}
+
+
 export function hasFeature(plan, featureKey) {
   const p = normalizePlan(plan)
   const row = FEATURE_MATRIX[featureKey]
@@ -81,7 +90,7 @@ export function hasFeature(plan, featureKey) {
 }
 
 export function getPvLimit(plan, perSiteOverride) {
-  if (perSiteOverride && Number.isFinite(perSiteOverride)) return perSiteOverride
+  if (perSiteOverride && (Number.isFinite(perSiteOverride) || perSiteOverride === Infinity)) return perSiteOverride
   return PLAN_DEFAULT_PV_LIMIT[normalizePlan(plan)] ?? 0
 }
 

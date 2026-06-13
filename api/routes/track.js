@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { normalizeUtm, redactPiiFromObject, isPathExcluded, extractCustomParams, sanitizeClientTimestamp, sanitizeValueTrack, sanitizeVerificationToken, normalizeClickIds } from '../lib/utils.js'
 import { resolveClientIp } from '../lib/ip-resolver.js'
 import { ph } from '../lib/posthog.js'
+import { claimPageviewUsage } from '../lib/pageview-limits.js'
 
 
 import { getSupabase } from '../lib/supabase.js'
@@ -127,6 +128,29 @@ export async function track(req, res) {
 
     const enriched = enrich(req)
     const clientTimestamp = req.body?.timestamp ? sanitizeClientTimestamp(req.body.timestamp) : null
+
+    // Pageview quota claim — 140G-4.
+    // Only true $pageview events consume monthly quota. Custom events, conversions,
+    // and outbound clicks are excluded. Claim happens here (after all filtering/validation)
+    // to avoid burning quota for events that would have been dropped.
+    // Fail-open on RPC/DB errors: a counter failure must never block tracking.
+    const eventName = req.body?.event || '$pageview'
+    if (eventName === '$pageview') {
+      try {
+        const pvCheck = await claimPageviewUsage(req.site)
+        if (!pvCheck.allowed) {
+          console.warn('[track] Pageview limit reached for site', req.site?.id, '— limit:', pvCheck.limit, '— skipping capture')
+          return res.status(402).json({
+            success: false,
+            data: { received: false, limit_reached: true },
+            error: 'Monthly pageview limit reached'
+          })
+        }
+      } catch (pvErr) {
+        // Fail open — DB/RPC error must not block tracking. Log clearly per 140G-4 tradeoff.
+        console.error('[track] Pageview limit check failed, failing open:', pvErr?.message, { site_id: req.site?.id })
+      }
+    }
 
     ph.capture({
       distinctId: req.body.anonymous_id || uuidv4(),

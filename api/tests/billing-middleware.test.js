@@ -12,12 +12,9 @@ process.env.ENCRYPTION_KEY = '00000000000000000000000000000000000000000000000000
 import { getSupabase } from '../lib/supabase.js'
 import { validateSiteKey, siteCache } from '../middleware/auth.js'
 import { isValidRedirectUrl, getRedirectAllowlist, getDefaultBillingReturnUrl } from '../routes/billing.js'
-import { checkTierLimit, bustTierCache } from '../middleware/tier-check.js'
+import { checkTierLimit } from '../middleware/tier-check.js'
 import { dispatchWebhook } from '../lib/webhook.js'
 import { checkSiteCreationLimit } from '../lib/site-limits.js'
-
-
-
 
 test('validateSiteKey Billing Customer Regression Tests', async (t) => {
   const client = getSupabase()
@@ -291,69 +288,40 @@ test('Billing Redirection Allowlist and Validation Tests', async (t) => {
   })
 })
 
-test('checkTierLimit Middleware Tests', async (t) => {
-  const client = getSupabase()
-  let mockRpcResult = 0
-  let mockRpcError = null
+test('checkTierLimit Middleware Tests — Status Gate Only (140G-4)', async (t) => {
+  // NOTE (140G-4): checkTierLimit now enforces ACCOUNT STATUS only (trial expiry,
+  // inactive, archived). Pageview QUOTA claiming was moved into each ingestion handler
+  // at the latest safe point. The old count_monthly_pageviews RPC mock is removed
+  // because that RPC is no longer called by checkTierLimit.
 
-  const originalRpc = client.rpc
-  client.rpc = async (fn, args) => {
-    assert.strictEqual(fn, 'count_monthly_pageviews')
-    if (mockRpcError) return { data: null, error: mockRpcError }
-    return { data: mockRpcResult, error: null }
-  }
-
-  t.afterEach(() => {
-    mockRpcResult = 0
-    mockRpcError = null
-    bustTierCache('site-123')
-  })
-
-  t.after(() => {
-    client.rpc = originalRpc
-  })
-
-  await t.test('calls next() if plan has no pageview limit', async () => {
-    const req = { site: { plan: 'scale', pv_limit: 0, id: 'site-123' } }
-    const res = {}
-    let nextCalled = false
-    const next = () => { nextCalled = true }
-
-    await checkTierLimit(req, res, next)
-    assert.strictEqual(nextCalled, true)
-  })
-
-  await t.test('calls next() if plan is active and usage is below limit', async () => {
-    const req = { site: { plan: 'starter', pv_limit: 50000, id: 'site-123' } }
-    mockRpcResult = 1000
-    const res = {}
-    let nextCalled = false
-    const next = () => { nextCalled = true }
-
-    await checkTierLimit(req, res, next)
-    assert.strictEqual(nextCalled, true)
-  })
-
-  await t.test('returns 402 if monthly pageview limit is reached', async () => {
+  await t.test('calls next() for an active free plan site', async () => {
     const req = { site: { plan: 'free', pv_limit: 5000, id: 'site-123' } }
-    mockRpcResult = 5000
-    let resStatus = null
-    let resJson = null
-    const res = {
-      status: (code) => {
-        resStatus = code
-        return {
-          json: (data) => { resJson = data }
-        }
-      }
-    }
+    const res = {}
     let nextCalled = false
     const next = () => { nextCalled = true }
 
     await checkTierLimit(req, res, next)
-    assert.strictEqual(nextCalled, false)
-    assert.strictEqual(resStatus, 402)
-    assert.strictEqual(resJson.error, 'Monthly pageview limit reached')
+    assert.strictEqual(nextCalled, true)
+  })
+
+  await t.test('calls next() for an active starter plan site', async () => {
+    const req = { site: { plan: 'starter', pv_limit: 50000, id: 'site-123' } }
+    const res = {}
+    let nextCalled = false
+    const next = () => { nextCalled = true }
+
+    await checkTierLimit(req, res, next)
+    assert.strictEqual(nextCalled, true)
+  })
+
+  await t.test('calls next() for a scale plan site (no volume limit blocks in middleware)', async () => {
+    const req = { site: { plan: 'scale', pv_limit: 500000, id: 'site-123' } }
+    const res = {}
+    let nextCalled = false
+    const next = () => { nextCalled = true }
+
+    await checkTierLimit(req, res, next)
+    assert.strictEqual(nextCalled, true)
   })
 
   await t.test('returns 402 if trial is expired', async () => {
@@ -364,9 +332,7 @@ test('checkTierLimit Middleware Tests', async (t) => {
     const res = {
       status: (code) => {
         resStatus = code
-        return {
-          json: (data) => { resJson = data }
-        }
+        return { json: (data) => { resJson = data } }
       }
     }
     let nextCalled = false
@@ -378,16 +344,25 @@ test('checkTierLimit Middleware Tests', async (t) => {
     assert.strictEqual(resJson.error, 'Trial expired')
   })
 
-  await t.test('returns 402 if subscription is inactive or archived', async () => {
+  await t.test('calls next() for a non-expired trial', async () => {
+    const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+    const req = { site: { plan: 'trial', trial_ends_at: futureDate, id: 'site-123' } }
+    const res = {}
+    let nextCalled = false
+    const next = () => { nextCalled = true }
+
+    await checkTierLimit(req, res, next)
+    assert.strictEqual(nextCalled, true)
+  })
+
+  await t.test('returns 402 if subscription is inactive', async () => {
     const req = { site: { plan: 'inactive', id: 'site-123' } }
     let resStatus = null
     let resJson = null
     const res = {
       status: (code) => {
         resStatus = code
-        return {
-          json: (data) => { resJson = data }
-        }
+        return { json: (data) => { resJson = data } }
       }
     }
     let nextCalled = false
@@ -399,9 +374,28 @@ test('checkTierLimit Middleware Tests', async (t) => {
     assert.strictEqual(resJson.error, 'Subscription inactive')
   })
 
-  await t.test('fails open (calls next()) if RPC returns an error', async () => {
-    const req = { site: { plan: 'free', pv_limit: 5000, id: 'site-123' } }
-    mockRpcError = { message: 'Database connection failed' }
+  await t.test('returns 402 if site is archived', async () => {
+    const req = { site: { plan: 'archived', id: 'site-123' } }
+    let resStatus = null
+    let resJson = null
+    const res = {
+      status: (code) => {
+        resStatus = code
+        return { json: (data) => { resJson = data } }
+      }
+    }
+    let nextCalled = false
+    const next = () => { nextCalled = true }
+
+    await checkTierLimit(req, res, next)
+    assert.strictEqual(nextCalled, false)
+    assert.strictEqual(resStatus, 402)
+    assert.strictEqual(resJson.error, 'Site archived due to inactivity')
+  })
+
+  await t.test('fails open (calls next()) on internal error', async () => {
+    // Simulate req.site being null/undefined so plan normalization might fail
+    const req = { site: null }
     const res = {}
     let nextCalled = false
     const next = () => { nextCalled = true }
@@ -1778,5 +1772,557 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
     } finally {
       client.from = originalFrom
     }
+  })
+})
+
+test('claimPageviewUsage — pageview limit enforcement helper (140G-4)', async (t) => {
+  const { claimPageviewUsage } = await import('../lib/pageview-limits.js')
+  const client = getSupabase()
+
+  const originalRpc = client.rpc
+  let mockRpcResult = null
+  let mockRpcError = null
+  let mockRpcFn = null
+  let rpcCallCount = 0
+  let lastRpcArgs = {}
+
+  client.rpc = async (fn, args) => {
+    if (fn === 'claim_site_pageview_usage') {
+      rpcCallCount++
+      lastRpcArgs = args
+      if (mockRpcFn) return mockRpcFn(args)
+      if (mockRpcError) return { data: null, error: mockRpcError }
+      return { data: mockRpcResult, error: null }
+    }
+    return originalRpc ? originalRpc.call(client, fn, args) : { data: null, error: null }
+  }
+
+  t.afterEach(() => {
+    mockRpcResult = null
+    mockRpcError = null
+    mockRpcFn = null
+    rpcCallCount = 0
+    lastRpcArgs = {}
+  })
+
+  t.after(() => {
+    client.rpc = originalRpc
+  })
+
+  await t.test('free plan below limit: allowed true, counter increments', async () => {
+    mockRpcResult = [{ allowed: true, current_count: 42 }]
+    const result = await claimPageviewUsage({ id: 'site-123', plan: 'free' })
+    assert.strictEqual(result.allowed, true)
+    assert.strictEqual(result.count, 42)
+    assert.strictEqual(result.limit, 5000) // PLAN_DEFAULT_PV_LIMIT.free
+    assert.strictEqual(lastRpcArgs.p_site_id, 'site-123')
+    assert.strictEqual(lastRpcArgs.p_limit, 5000)
+    assert.ok(lastRpcArgs.p_month.match(/^[0-9]{4}-[0-9]{2}$/), 'month must be YYYY-MM format')
+    assert.strictEqual(rpcCallCount, 1)
+  })
+
+  await t.test('free plan at limit: allowed false, does not increment', async () => {
+    mockRpcResult = [{ allowed: false, current_count: 5000 }]
+    const result = await claimPageviewUsage({ id: 'site-123', plan: 'free' })
+    assert.strictEqual(result.allowed, false)
+    assert.strictEqual(result.count, 5000)
+    assert.strictEqual(result.limit, 5000)
+    assert.strictEqual(rpcCallCount, 1)
+  })
+
+  await t.test('per-site pv_limit override is used over plan default', async () => {
+    mockRpcResult = [{ allowed: true, current_count: 1 }]
+    // starter plan default is 50000, but pv_limit override is 10000
+    const result = await claimPageviewUsage({ id: 'site-123', plan: 'starter', pv_limit: 10000 })
+    assert.strictEqual(result.limit, 10000)
+    assert.strictEqual(lastRpcArgs.p_limit, 10000)
+  })
+
+  await t.test('sequential claims reach then block at limit', async () => {
+    let mockCount = 4999
+    mockRpcFn = (args) => {
+      if (mockCount < args.p_limit) {
+        mockCount++
+        return { data: [{ allowed: true, current_count: mockCount }], error: null }
+      }
+      return { data: [{ allowed: false, current_count: mockCount }], error: null }
+    }
+
+    // Call 1: allowed (4999 -> 5000)
+    const res1 = await claimPageviewUsage({ id: 'site-123', plan: 'free' })
+    assert.strictEqual(res1.allowed, true)
+    assert.strictEqual(res1.count, 5000)
+
+    // Call 2: blocked (at 5000)
+    const res2 = await claimPageviewUsage({ id: 'site-123', plan: 'free' })
+    assert.strictEqual(res2.allowed, false)
+    assert.strictEqual(res2.count, 5000)
+    assert.strictEqual(rpcCallCount, 2)
+  })
+
+  await t.test('inactive plan (pv_limit=0): blocked without RPC call', async () => {
+    const result = await claimPageviewUsage({ id: 'site-123', plan: 'inactive' })
+    assert.strictEqual(result.allowed, false)
+    assert.strictEqual(result.limit, 0)
+    assert.strictEqual(rpcCallCount, 0, 'inactive plan must not call RPC')
+  })
+
+  await t.test('archived plan (pv_limit=0): blocked without RPC call', async () => {
+    const result = await claimPageviewUsage({ id: 'site-123', plan: 'archived' })
+    assert.strictEqual(result.allowed, false)
+    assert.strictEqual(result.limit, 0)
+    assert.strictEqual(rpcCallCount, 0, 'archived plan must not call RPC')
+  })
+
+  await t.test('site_id scoping: different site_ids use independent counters', async () => {
+    mockRpcResult = [{ allowed: true, current_count: 1 }]
+    await claimPageviewUsage({ id: 'site-aaa', plan: 'free' })
+    await claimPageviewUsage({ id: 'site-bbb', plan: 'free' })
+    assert.strictEqual(rpcCallCount, 2)
+    // Each call sends the correct site_id
+    assert.ok(lastRpcArgs.p_site_id === 'site-bbb')
+  })
+
+  await t.test('UTC month format is YYYY-MM', async () => {
+    mockRpcResult = [{ allowed: true, current_count: 1 }]
+    await claimPageviewUsage({ id: 'site-123', plan: 'free' })
+    const month = lastRpcArgs.p_month
+    assert.ok(typeof month === 'string' && /^[0-9]{4}-[0-9]{2}$/.test(month), `month "${month}" must be YYYY-MM`)
+  })
+
+  await t.test('RPC/DB error throws (caller is responsible for fail-open)', async () => {
+    mockRpcError = new Error('RPC pageview claim failed')
+    await assert.rejects(
+      async () => { await claimPageviewUsage({ id: 'site-123', plan: 'free' }) },
+      /RPC pageview claim failed/
+    )
+  })
+
+  await t.test('missing site.id throws immediately', async () => {
+    await assert.rejects(
+      async () => { await claimPageviewUsage({ plan: 'free' }) },
+      /id is required/
+    )
+    assert.strictEqual(rpcCallCount, 0)
+  })
+
+  await t.test('unlimited plan bypasses RPC and returns allowed true', async () => {
+    const result = await claimPageviewUsage({ id: 'site-123', plan: 'scale', pv_limit: Infinity })
+    assert.strictEqual(result.allowed, true)
+    assert.strictEqual(result.limit, Infinity)
+    assert.strictEqual(rpcCallCount, 0, 'unlimited plan must bypass database RPC')
+  })
+})
+
+test('track.js handler — pageview quota integration (140G-4)', async (t) => {
+  const { track } = await import('../routes/track.js')
+  const { ph } = await import('../lib/posthog.js')
+  const client = getSupabase()
+
+  const originalCapture = ph.capture
+  let captureCalled = false
+  let lastCaptureArgs = null
+  ph.capture = (args) => { captureCalled = true; lastCaptureArgs = args }
+
+  const originalRpc = client.rpc
+  let mockRpcResult = null
+  let mockRpcError = null
+  client.rpc = async (fn, args) => {
+    if (fn === 'claim_site_pageview_usage') {
+      if (mockRpcError) return { data: null, error: mockRpcError }
+      return { data: mockRpcResult, error: null }
+    }
+    return originalRpc ? originalRpc.call(client, fn, args) : { data: null, error: null }
+  }
+
+  // Mock supabase from() for sites (used by updateTelemetryMetadata)
+  const originalFrom = client.from
+  client.from = (table) => {
+    if (table === 'sites') {
+      return {
+        select: () => ({ eq: () => ({ single: async () => ({ data: null, error: null }) }) }),
+        update: () => ({ eq: () => Promise.resolve({ error: null }) })
+      }
+    }
+    return originalFrom ? originalFrom.call(client, table) : {}
+  }
+
+  t.afterEach(() => {
+    captureCalled = false
+    lastCaptureArgs = null
+    mockRpcResult = null
+    mockRpcError = null
+  })
+
+  t.after(() => {
+    ph.capture = originalCapture
+    client.rpc = originalRpc
+    client.from = originalFrom
+  })
+
+  function makeReq(event = '$pageview', overrides = {}) {
+    return {
+      body: { site_key: 'sk-test', event, anonymous_id: 'anon-1', page_url: 'https://example.com/page', ...overrides },
+      site: { id: 'site-123', plan: 'free', pv_limit: 5000, excluded_paths: [], custom_url_params: [] },
+      headers: { 'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
+      ...overrides._req
+    }
+  }
+
+  function makeRes() {
+    let statusCode = null
+    let jsonBody = null
+    return {
+      get statusCode() { return statusCode },
+      get json_body() { return jsonBody },
+      status: (code) => { statusCode = code; return { json: (b) => { jsonBody = b } } },
+      json: (b) => { jsonBody = b; return {} }
+    }
+  }
+
+  await t.test('$pageview below limit: captured and quota claimed', async () => {
+    mockRpcResult = [{ allowed: true, current_count: 100 }]
+    const req = makeReq('$pageview')
+    const res = makeRes()
+    await track(req, res)
+    assert.strictEqual(captureCalled, true, '$pageview should call ph.capture')
+  })
+
+  await t.test('$pageview at limit: 402 returned, ph.capture NOT called', async () => {
+    mockRpcResult = [{ allowed: false, current_count: 5000 }]
+    const req = makeReq('$pageview')
+    const res = makeRes()
+    await track(req, res)
+    assert.strictEqual(res.statusCode, 402, 'must return 402 when limit reached')
+    assert.strictEqual(captureCalled, false, 'ph.capture must NOT be called when limit reached')
+    assert.strictEqual(res.json_body.error, 'Monthly pageview limit reached')
+    assert.strictEqual(res.json_body.data.limit_reached, true)
+  })
+
+  await t.test('custom event (not $pageview): does not call RPC, capture proceeds', async () => {
+    let pvRpcCalled = false
+    const savedRpc = client.rpc
+    client.rpc = async (fn, args) => {
+      if (fn === 'claim_site_pageview_usage') pvRpcCalled = true
+      return { data: [{ allowed: true, current_count: 1 }], error: null }
+    }
+    const req = makeReq('button_clicked')
+    const res = makeRes()
+    await track(req, res)
+    assert.strictEqual(pvRpcCalled, false, 'custom event must NOT claim pageview quota')
+    assert.strictEqual(captureCalled, true, 'custom event must still be captured')
+    client.rpc = savedRpc
+  })
+
+  await t.test('bot UA: filtered before quota claim, no capture', async () => {
+    let pvRpcCalled = false
+    const savedRpc = client.rpc
+    client.rpc = async (fn, args) => {
+      if (fn === 'claim_site_pageview_usage') pvRpcCalled = true
+      return { data: [{ allowed: true, current_count: 1 }], error: null }
+    }
+    const req = makeReq('$pageview', { _req: { headers: { 'user-agent': 'Googlebot/2.1' } } })
+    req.headers = { 'user-agent': 'Googlebot/2.1 (+http://www.google.com/bot.html)' }
+    const res = makeRes()
+    await track(req, res)
+    assert.strictEqual(pvRpcCalled, false, 'bot must not claim quota')
+    assert.strictEqual(captureCalled, false, 'bot must not be captured')
+    client.rpc = savedRpc
+  })
+
+  await t.test('excluded path: filtered before quota claim, no capture', async () => {
+    let pvRpcCalled = false
+    const savedRpc = client.rpc
+    client.rpc = async (fn, args) => {
+      if (fn === 'claim_site_pageview_usage') pvRpcCalled = true
+      return { data: [{ allowed: true, current_count: 1 }], error: null }
+    }
+    const req = makeReq('$pageview')
+    req.site.excluded_paths = ['/admin/*']
+    req.body.page_url = 'https://example.com/admin/settings'
+    const res = makeRes()
+    await track(req, res)
+    assert.strictEqual(pvRpcCalled, false, 'excluded path must not claim quota')
+    assert.strictEqual(captureCalled, false, 'excluded path must not be captured')
+    client.rpc = savedRpc
+  })
+
+  await t.test('RPC failure on $pageview: fail-open (capture still proceeds)', async () => {
+    mockRpcError = new Error('DB connection failed')
+    const req = makeReq('$pageview')
+    const res = makeRes()
+    await track(req, res)
+    // Fail open: despite RPC error, capture must still proceed
+    assert.strictEqual(captureCalled, true, 'fail-open: ph.capture must proceed on RPC error')
+    assert.notStrictEqual(res.statusCode, 402, 'fail-open: must not return 402 on RPC error')
+  })
+})
+
+test('Proxy and Legacy Ingestion Quota & Status Enforcement Tests (140G-4)', async (t) => {
+  const { default: proxyRouter } = await import('../routes/proxy.js')
+  const { default: analyticsRouter } = await import('../routes/analytics.js')
+  const { ph } = await import('../lib/posthog.js')
+  const client = getSupabase()
+
+  // Mock PostHog capture
+  const originalCapture = ph.capture
+  let captureCalled = false
+  let lastCaptureArgs = null
+  ph.capture = (args) => { captureCalled = true; lastCaptureArgs = args }
+
+  // Mock Supabase client
+  const originalRpc = client.rpc
+  const originalFrom = client.from
+  let mockRpcResult = null
+  let mockRpcError = null
+  let rpcCalls = []
+  client.rpc = async (fn, args) => {
+    if (fn === 'claim_site_pageview_usage' || fn === 'claim_site_conversion_usage') {
+      rpcCalls.push({ fn, args })
+      if (mockRpcError) return { data: null, error: mockRpcError }
+      return { data: mockRpcResult, error: null }
+    }
+    return originalRpc ? originalRpc.call(client, fn, args) : { data: null, error: null }
+  }
+
+  let mockSitesData = null
+  let mockSitesError = null
+  let insertedPageviews = []
+  let insertedCustomEvents = []
+
+  client.from = (table) => {
+    if (table === 'sites') {
+      return {
+        select: (fields) => ({
+          eq: (col, val) => ({
+            single: async () => {
+              if (mockSitesError) return { data: null, error: mockSitesError }
+              return { data: mockSitesData, error: null }
+            }
+          })
+        }),
+        update: () => ({ eq: () => Promise.resolve({ error: null }) })
+      }
+    }
+    if (table === 'pageviews') {
+      return {
+        insert: async (data) => {
+          insertedPageviews.push(data)
+          return { error: null }
+        },
+        update: () => ({ eq: () => ({ eq: () => ({ eq: async () => ({ error: null }) }) }) })
+      }
+    }
+    if (table === 'custom_events') {
+      return {
+        insert: async (data) => {
+          insertedCustomEvents.push(data)
+          return { error: null }
+        }
+      }
+    }
+    return originalFrom ? originalFrom.call(client, table) : {}
+  }
+
+  t.afterEach(() => {
+    captureCalled = false
+    lastCaptureArgs = null
+    mockRpcResult = null
+    mockRpcError = null
+    rpcCalls = []
+    mockSitesData = null
+    mockSitesError = null
+    insertedPageviews = []
+    insertedCustomEvents = []
+  })
+
+  t.after(() => {
+    ph.capture = originalCapture
+    client.rpc = originalRpc
+    client.from = originalFrom
+  })
+
+  function makeMockRes() {
+    let statusCode = 200
+    let jsonBody = null
+    let ended = false
+    const res = {
+      get statusCode() { return statusCode },
+      get json_body() { return jsonBody },
+      get ended() { return ended },
+      status: (code) => { statusCode = code; return res },
+      json: (b) => { jsonBody = b; return res },
+      set: () => res,
+      end: () => { ended = true; return res }
+    }
+    return res
+  }
+
+  await t.test('proxy /sp/e $pageview: over limit skips ph.capture', async () => {
+    mockSitesData = { id: 'site-123', plan: 'free', pv_limit: 5000, trial_ends_at: null }
+    mockRpcResult = [{ allowed: false, current_count: 5000 }] // Over limit
+
+    const req = {
+      body: { site_key: 'sk-test', event: '$pageview', anonymous_id: 'anon-1' },
+      headers: { 'user-agent': 'Mozilla/5.0' }
+    }
+    const res = makeMockRes()
+
+    // Find the handler for POST /e in proxyRouter
+    const layer = proxyRouter.stack.find(s => s.route?.path === '/e' && s.route?.methods.post)
+    const handler = layer.route.stack[0].handle
+    await handler(req, res)
+
+    assert.strictEqual(captureCalled, false, 'over limit proxy pageview must skip PostHog capture')
+    assert.strictEqual(rpcCalls.length, 1, 'must attempt to claim quota')
+    assert.strictEqual(rpcCalls[0].fn, 'claim_site_pageview_usage')
+  })
+
+  await t.test('proxy /sp/e non-pageview: does not call claim_site_pageview_usage', async () => {
+    mockSitesData = { id: 'site-123', plan: 'free', pv_limit: 5000, trial_ends_at: null }
+
+    const req = {
+      body: { site_key: 'sk-test', event: 'custom_event', anonymous_id: 'anon-1' },
+      headers: { 'user-agent': 'Mozilla/5.0' }
+    }
+    const res = makeMockRes()
+
+    const layer = proxyRouter.stack.find(s => s.route?.path === '/e' && s.route?.methods.post)
+    const handler = layer.route.stack[0].handle
+    await handler(req, res)
+
+    assert.strictEqual(captureCalled, true, 'non-pageview event should be captured')
+    assert.strictEqual(rpcCalls.length, 0, 'must not call pageview quota RPC')
+  })
+
+  await t.test('proxy /sp/e: expired trial skips ph.capture safely', async () => {
+    const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    mockSitesData = { id: 'site-123', plan: 'trial', pv_limit: 10000, trial_ends_at: pastDate }
+
+    const req = {
+      body: { site_key: 'sk-test', event: '$pageview', anonymous_id: 'anon-1' },
+      headers: { 'user-agent': 'Mozilla/5.0' }
+    }
+    const res = makeMockRes()
+
+    const layer = proxyRouter.stack.find(s => s.route?.path === '/e' && s.route?.methods.post)
+    const handler = layer.route.stack[0].handle
+    await handler(req, res)
+
+    assert.strictEqual(captureCalled, false, 'expired trial site must skip capture')
+    assert.strictEqual(rpcCalls.length, 0, 'expired trial site must not write to counter DB')
+  })
+
+  await t.test('proxy /sp/pixel.gif: over limit skips ph.capture', async () => {
+    mockSitesData = { id: 'site-123', plan: 'free', pv_limit: 5000, trial_ends_at: null }
+    mockRpcResult = [{ allowed: false, current_count: 5000 }] // Over limit
+
+    const req = {
+      query: { site_key: 'sk-test', uid: 'anon-1' },
+      headers: { 'user-agent': 'Mozilla/5.0' }
+    }
+    const res = makeMockRes()
+
+    const layer = proxyRouter.stack.find(s => s.route?.path === '/pixel.gif' && s.route?.methods.get)
+    const handler = layer.route.stack[0].handle
+    await handler(req, res)
+
+    assert.strictEqual(res.ended, true)
+    assert.strictEqual(captureCalled, false, 'over limit pixel must skip capture')
+    assert.strictEqual(rpcCalls.length, 1)
+    assert.strictEqual(rpcCalls[0].fn, 'claim_site_pageview_usage')
+  })
+
+  await t.test('proxy /sp/pixel.gif: expired trial skips ph.capture safely', async () => {
+    const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    mockSitesData = { id: 'site-123', plan: 'trial', pv_limit: 10000, trial_ends_at: pastDate }
+
+    const req = {
+      query: { site_key: 'sk-test', uid: 'anon-1' },
+      headers: { 'user-agent': 'Mozilla/5.0' }
+    }
+    const res = makeMockRes()
+
+    const layer = proxyRouter.stack.find(s => s.route?.path === '/pixel.gif' && s.route?.methods.get)
+    const handler = layer.route.stack[0].handle
+    await handler(req, res)
+
+    assert.strictEqual(captureCalled, false, 'expired trial pixel must skip capture')
+    assert.strictEqual(rpcCalls.length, 0)
+  })
+
+  await t.test('legacy /api/analytics/collect pageview: over limit does not insert', async () => {
+    mockSitesData = { id: 'site-123', plan: 'free', pv_limit: 5000, trial_ends_at: null }
+    mockRpcResult = [{ allowed: false, current_count: 5000 }] // Over limit
+
+    const req = {
+      body: { site_key: 'sk-test', url: 'https://example.com' },
+      headers: { 'user-agent': 'Mozilla/5.0' }
+    }
+    const res = makeMockRes()
+
+    const layer = analyticsRouter.stack.find(s => s.route?.path === '/collect' && s.route?.methods.post)
+    const handler = layer.route.stack[layer.route.stack.length - 1].handle
+    await handler(req, res)
+
+    assert.strictEqual(res.statusCode, 402, 'must return 402')
+    assert.strictEqual(insertedPageviews.length, 0, 'must not insert pageview row')
+    assert.strictEqual(rpcCalls.length, 1)
+  })
+
+  await t.test('legacy /api/analytics/collect custom/outbound: does not call claim_site_pageview_usage', async () => {
+    mockSitesData = { id: 'site-123', plan: 'free', pv_limit: 5000, trial_ends_at: null }
+
+    const req = {
+      body: { site_key: 'sk-test', url: 'https://example.com', event_type: 'custom', event_name: 'click' },
+      headers: { 'user-agent': 'Mozilla/5.0' }
+    }
+    const res = makeMockRes()
+
+    const layer = analyticsRouter.stack.find(s => s.route?.path === '/collect' && s.route?.methods.post)
+    const handler = layer.route.stack[layer.route.stack.length - 1].handle
+    await handler(req, res)
+
+    assert.strictEqual(insertedCustomEvents.length, 1, 'must insert custom event row')
+    assert.strictEqual(rpcCalls.length, 0, 'custom/outbound events must not consume pageview quota')
+  })
+
+  await t.test('legacy /api/analytics/collect: RPC failure fails open and inserts', async () => {
+    mockSitesData = { id: 'site-123', plan: 'free', pv_limit: 5000, trial_ends_at: null }
+    mockRpcError = new Error('Database connection failed')
+
+    const req = {
+      body: { site_key: 'sk-test', url: 'https://example.com' },
+      headers: { 'user-agent': 'Mozilla/5.0' }
+    }
+    const res = makeMockRes()
+
+    const layer = analyticsRouter.stack.find(s => s.route?.path === '/collect' && s.route?.methods.post)
+    const handler = layer.route.stack[layer.route.stack.length - 1].handle
+    await handler(req, res)
+
+    assert.strictEqual(res.statusCode, 200, 'must return 200 on fail open')
+    assert.strictEqual(insertedPageviews.length, 1, 'must insert pageview row')
+    assert.strictEqual(rpcCalls.length, 1)
+  })
+
+  await t.test('legacy /api/analytics/collect: expired trial returns clean 402', async () => {
+    const pastDate = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    mockSitesData = { id: 'site-123', plan: 'trial', pv_limit: 10000, trial_ends_at: pastDate }
+
+    const req = {
+      body: { site_key: 'sk-test', url: 'https://example.com' },
+      headers: { 'user-agent': 'Mozilla/5.0' }
+    }
+    const res = makeMockRes()
+
+    const layer = analyticsRouter.stack.find(s => s.route?.path === '/collect' && s.route?.methods.post)
+    const handler = layer.route.stack[layer.route.stack.length - 1].handle
+    await handler(req, res)
+
+    assert.strictEqual(res.statusCode, 402, 'expired trial must return 402')
+    assert.strictEqual(res.json_body.error, 'Your 14-day trial has ended. Upgrade to continue tracking.')
+    assert.strictEqual(insertedPageviews.length, 0, 'must not insert pageview row')
+    assert.strictEqual(rpcCalls.length, 0, 'must not call RPC')
   })
 })

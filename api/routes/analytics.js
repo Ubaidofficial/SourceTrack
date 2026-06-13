@@ -4,7 +4,8 @@ import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { getSupabase } from '../lib/supabase.js'
-import { requireFeature } from '../lib/plan-features.js'
+import { requireFeature, isSiteStatusBlocked } from '../lib/plan-features.js'
+import { claimPageviewUsage } from '../lib/pageview-limits.js'
 import {
   trackVisitorLimit,
   trackIpLimit,
@@ -79,13 +80,19 @@ router.post('/collect',
       if (!ua || BOT_UA_PATTERN.test(ua)) return res.json({ ok: true })
 
       const supabase = getSupabase()
-      const { data: site } = await supabase.from('sites').select('id, plan').eq('site_key', site_key).single()
+      // LEGACY ROUTE: select pv_limit for quota enforcement (140G-4)
+      // This route (POST /api/analytics/collect) is a legacy Supabase-based ingestion path.
+      // Modern tracker uses POST /api/track (PostHog-only). This route is kept for backward
+      // compatibility with older tracker installs and will be deprecated in a future session.
+      const { data: site } = await supabase.from('sites').select('id, plan, pv_limit, trial_ends_at').eq('site_key', site_key).single()
       if (!site) return res.status(404).json({ error: 'Site not found' })
 
-      if (site.plan === 'inactive' || site.plan === 'archived') {
+      if (isSiteStatusBlocked(site)) {
         const msg = site.plan === 'archived'
           ? 'Site archived after 60 days of inactivity. Reactivate from your dashboard.'
-          : 'Subscription inactive'
+          : site.plan === 'trial'
+            ? 'Your 14-day trial has ended. Upgrade to continue tracking.'
+            : 'Subscription inactive'
         return res.status(402).json({ success: false, data: null, error: msg })
       }
 
@@ -111,6 +118,19 @@ router.post('/collect',
     if (duration_seconds > 0 && session_id) {
       await supabase.from('pageviews').update({ duration_seconds }).eq('site_id', site.id).eq('session_id', session_id).eq('url', url)
       return res.json({ ok: true })
+    }
+    // Pageview quota claim — 140G-4 (legacy route enforcement).
+    // outbound_click and custom events do not reach here (handled in the branch above).
+    // Only true pageview inserts consume quota. Fail-open on RPC/DB errors.
+    try {
+      const pvCheck = await claimPageviewUsage({ id: site.id, plan: site.plan, pv_limit: site.pv_limit })
+      if (!pvCheck.allowed) {
+        console.warn('[analytics/collect] Pageview limit reached for site', site_key)
+        return res.status(402).json({ ok: false, error: 'Monthly pageview limit reached' })
+      }
+    } catch (pvErr) {
+      // Fail open — DB/RPC error must not block legacy tracking
+      console.error('[analytics/collect] Pageview limit check failed, failing open:', pvErr?.message)
     }
     await supabase.from('pageviews').insert({ site_id: site.id, url, referrer: referrer || null, utm_source: utm_source || null, utm_medium: utm_medium || null, utm_campaign: utm_campaign || null, country, device: device || parser.getDevice().type || 'desktop', browser: browser || serverBrowser, os: req.body.os || serverOS, session_id: session_id || null, duration_seconds: 0, ai_source, entry_page: entry_page || url, exit_page: exit_page || null, timestamp: new Date().toISOString() })
     // Stamp last_seen_at — used by inactive-account auto-archive (free tier)

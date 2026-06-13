@@ -373,7 +373,6 @@ app.post('/api/conversion',
   conversionSiteLimit,
   conversionGlobalIpLimit,
   validateSiteKey,
-  checkTierLimit,
   detectAIPlatform,
   conversion
 )

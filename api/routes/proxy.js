@@ -11,6 +11,8 @@ import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
 import { getSupabase } from '../lib/supabase.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
+import { claimPageviewUsage } from '../lib/pageview-limits.js'
+import { isSiteStatusBlocked } from '../lib/plan-features.js'
 
 
 const router = express.Router()
@@ -47,13 +49,36 @@ function enrichFromRequest(req) {
 
 // POST /sp/e — proxied pageview / custom event
 router.post('/e', async (req, res) => {
+  console.log('[DEBUG proxy/e] Route called with body:', req.body)
   res.json({ ok: true })
   try {
     const { site_key, event, anonymous_id, properties = {} } = req.body || {}
     if (!site_key || !event) return
     const supabase = getSupabase()
-    const { data: site } = await supabase.from('sites').select('id').eq('site_key', site_key).single()
+    // Select plan + pv_limit so claimPageviewUsage can enforce quota
+    const { data: site } = await supabase.from('sites').select('id, plan, pv_limit, trial_ends_at').eq('site_key', site_key).single()
     if (!site) return
+
+    if (isSiteStatusBlocked(site)) {
+      console.warn('[proxy/e] Site status blocked (trial expired/inactive/archived) for site_key:', site_key)
+      return
+    }
+
+    // Pageview quota claim — 140G-4. Only $pageview events consume quota.
+    // Non-pageview custom events (e.g. button_clicked) pass through uncounted.
+    if (event === '$pageview') {
+      try {
+        const pvCheck = await claimPageviewUsage(site)
+        if (!pvCheck.allowed) {
+          console.warn('[proxy/e] Pageview limit reached for site', site_key, '— skipping capture')
+          return
+        }
+      } catch (pvErr) {
+        // Fail open — DB/RPC error must not block tracking
+        console.error('[proxy/e] Pageview limit check failed, failing open:', pvErr?.message)
+      }
+    }
+
     const enriched = enrichFromRequest(req)
     const referrer = properties.referrer || req.headers.referer || ''
     await ph.capture({
@@ -81,8 +106,13 @@ router.post('/c', async (req, res) => {
     const { site_key, anonymous_id, conversion_value, conversion_type, order_id, properties = {} } = req.body || {}
     if (!site_key) return
     const supabase = getSupabase()
-    const { data: site } = await supabase.from('sites').select('id, plan').eq('site_key', site_key).single()
+    const { data: site } = await supabase.from('sites').select('id, plan, trial_ends_at').eq('site_key', site_key).single()
     if (!site) return
+
+    if (isSiteStatusBlocked(site)) {
+      console.warn('[proxy/c] Site status blocked (trial expired/inactive/archived) for site_key:', site_key)
+      return
+    }
 
     const enriched = enrichFromRequest(req)
 
@@ -116,7 +146,7 @@ router.post('/c', async (req, res) => {
   } catch (err) { console.error('[proxy/c]', err.message) }
 })
 
-// GET /sp/pixel.gif — 1x1 pixel
+// GET /sp/pixel.gif — 1x1 pixel (always a $pageview; always consumes quota)
 router.get('/pixel.gif', async (req, res) => {
   const gif = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64')
   res.set({ 'Content-Type': 'image/gif', 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' })
@@ -125,8 +155,27 @@ router.get('/pixel.gif', async (req, res) => {
     const { site_key, uid } = req.query
     if (!site_key) return
     const supabase = getSupabase()
-    const { data: site } = await supabase.from('sites').select('id').eq('site_key', site_key).single()
+    // Select plan + pv_limit so claimPageviewUsage can enforce quota
+    const { data: site } = await supabase.from('sites').select('id, plan, pv_limit, trial_ends_at').eq('site_key', site_key).single()
     if (!site) return
+
+    if (isSiteStatusBlocked(site)) {
+      console.warn('[proxy/pixel] Site status blocked (trial expired/inactive/archived) for site_key:', site_key)
+      return
+    }
+
+    // Pageview quota claim — pixel always fires a $pageview, so always claim
+    try {
+      const pvCheck = await claimPageviewUsage(site)
+      if (!pvCheck.allowed) {
+        console.warn('[proxy/pixel] Pageview limit reached for site', site_key, '— skipping capture')
+        return
+      }
+    } catch (pvErr) {
+      // Fail open — DB/RPC error must not block tracking
+      console.error('[proxy/pixel] Pageview limit check failed, failing open:', pvErr?.message)
+    }
+
     const enriched = enrichFromRequest(req)
     await ph.capture({
       distinctId: uid || uuidv4(),

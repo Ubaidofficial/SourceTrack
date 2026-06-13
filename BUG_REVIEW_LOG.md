@@ -209,3 +209,22 @@ After Session 90.1 implementation, review for any new issues. B6 leads/conversio
 **Build:** ✅ `node --check` all API files clean, `npm run build` passes.
 
 **Remaining QA:** Manual browser verification of Continue to Dashboard flow, dashboard load, refresh redirect, and /api/onboarding/me response.
+
+### Session 140G-4 update — Pageview Limit Enforcement
+
+**Date:** 2026-06-13
+**Review type:** Code inspection & unit test execution.
+
+**Fixed:**
+
+| # | Issue | Root cause | Fix |
+|---|---|---|---|
+| PV-1 | Standard pageview limit bypass | `checkTierLimit` counted from empty Supabase `pageviews` table while tracker writes to PostHog | Implemented real-time atomic pageview counting on `site_usage_monthly` via a new PostgreSQL RPC `claim_site_pageview_usage` and `claimPageviewUsage` helper |
+| PV-2 | Legacy `/api/analytics/collect` bypassed limits | Route had no limits middleware | Added inline late-gated `claimPageviewUsage` check before Supabase table insert |
+| PV-3 | Proxy `/sp/e` and `/sp/pixel.gif` bypassed limits | Routes had no limits middleware | Added late-gated `claimPageviewUsage` check before PostHog capture |
+| PV-4 | `/api/conversion` double-counted pageview limits | Route had `checkTierLimit` middleware | Removed `checkTierLimit` from the conversion route stack |
+| PV-5 | Trial expired / status bypass on proxy and legacy collect routes | Proxy and legacy routes did not check trial ends date or active status | Exposed `trial_ends_at` and checked `isSiteStatusBlocked(site)` on proxy/legacy routes |
+
+**Build:** ✅ `node --check` all API files clean, `npm run build` passes. All 90 unit/integration tests in `billing-middleware.test.js` pass successfully.
+
+**Remaining QA:** Staging E2E browser and live webhook billing verification (canceled/downgraded tiers). Paid portal verification.

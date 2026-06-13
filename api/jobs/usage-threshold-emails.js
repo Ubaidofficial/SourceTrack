@@ -15,7 +15,9 @@ const RESEND_FROM = 'SourceTrack <usage@sourcetrack.ai>'
 
 function currentMonth() {
   const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const year = now.getUTCFullYear()
+  const month = String(now.getUTCMonth() + 1).padStart(2, '0')
+  return `${year}-${month}`
 }
 
 function monthStartISO() {
@@ -112,15 +114,19 @@ async function run() {
       const limit = getPvLimit(plan, site.pv_limit)
       if (!limit || limit <= 0) { skipped++; continue }
 
-      const { data: count, error: countErr } = await supabase
-        .rpc('count_monthly_pageviews', { p_site_id: site.id, p_month_start: monthStartISO() })
+      const { data: usageRow, error: countErr } = await supabase
+        .from('site_usage_monthly')
+        .select('pageview_count')
+        .eq('site_id', site.id)
+        .eq('month', month)
+        .maybeSingle()
       if (countErr) {
-        console.warn(`[usage-threshold-emails] count failed for ${site.site_key}: ${countErr.message}`)
+        console.warn(`[usage-threshold-emails] count query failed for ${site.site_key}: ${countErr.message}`)
         skipped++
         continue
       }
 
-      const used = Number(count) || 0
+      const used = usageRow?.pageview_count || 0
       const usagePct = (used / limit) * 100
 
       // Highest crossed threshold for this site
