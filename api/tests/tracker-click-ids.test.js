@@ -152,3 +152,42 @@ test('Setup Diagnostics & UI Consistency Checks', async (t) => {
     }
   })
 })
+
+test('Tracker Client Context Helper Static Checks', async (t) => {
+  const clickIdKeys = [
+    'gclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid', 'ttclid',
+    'li_fat_id', 'li_fatid', 'twclid', 'dclid', 'snapclid', 'pclid', 'sccid', 'ko_click_id'
+  ]
+
+  const checkGetContext = (fileName) => {
+    const filePath = path.join(rootDir, 'tracker', fileName)
+    assert.ok(fs.existsSync(filePath), `${fileName} must exist`)
+    const code = fs.readFileSync(filePath, 'utf8')
+
+    // 1. Verify getContext is defined
+    assert.ok(code.includes('getContext: function'), `${fileName} must implement getContext`)
+
+    // 2. Verify all click IDs are referenced inside getContext
+    const getContextStart = code.indexOf('getContext: function')
+    const getContextBody = code.slice(getContextStart, getContextStart + 3000)
+
+    for (const key of clickIdKeys) {
+      assert.ok(getContextBody.includes(key), `${fileName} getContext must contain reference to "${key}"`)
+    }
+
+    // 3. Verify no obvious PII fields are exposed in getContext
+    const piiKeys = ['email', 'phone', 'name', 'address']
+    for (const pii of piiKeys) {
+      const regex = new RegExp(`\\b${pii}\\s*:`)
+      assert.ok(!regex.test(getContextBody), `${fileName} getContext must NOT expose PII key "${pii}"`)
+    }
+  }
+
+  await t.test('standard tracker.js has getContext method and respects non-PII rules', () => {
+    checkGetContext('tracker.js')
+  })
+
+  await t.test('cookieless tracker.cookieless.js has getContext method and respects non-PII rules', () => {
+    checkGetContext('tracker.cookieless.js')
+  })
+})

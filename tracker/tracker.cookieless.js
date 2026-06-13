@@ -267,6 +267,37 @@
     track: function (event, properties) {
       var data = { site_key: K, event: event, anonymous_id: AID, session_id: SID, page_url: location.href, properties: properties || {} }
       AID ? send('/api/track', data) : _q.push({ ep: '/api/track', data: data })
+    },
+
+    getContext: function () {
+      var p = params(), ref = document.referrer || null
+      var ft = deriveFirstTouch(p, ref)
+      return {
+        anonymous_id: AID || null,
+        session_id: SID || null,
+        first_touch_source: ft.first_touch_source,
+        first_touch_medium: ft.first_touch_medium,
+        first_touch_campaign: ft.first_touch_campaign,
+        current_source: ft.first_touch_source,
+        current_medium: ft.first_touch_medium,
+        current_campaign: ft.first_touch_campaign,
+        click_ids: {
+          gclid: p.gclid || null,
+          gbraid: p.gbraid || null,
+          wbraid: p.wbraid || null,
+          fbclid: p.fbclid || null,
+          msclkid: p.msclkid || null,
+          ttclid: p.ttclid || null,
+          li_fat_id: p.li_fat_id || null,
+          li_fatid: p.li_fatid || null,
+          twclid: p.twclid || null,
+          dclid: p.dclid || null,
+          snapclid: p.snapclid || null,
+          pclid: p.pclid || null,
+          sccid: p.sccid || null,
+          ko_click_id: p.ko_click_id || null
+        }
+      }
     }
   }
 

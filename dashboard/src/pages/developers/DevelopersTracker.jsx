@@ -195,6 +195,10 @@ export default function DevelopersTracker() {
                   <td className="py-2 pr-4 font-mono text-xs text-gray-800 dark:text-gray-200">window.sourcetrack.hasConsent()</td>
                   <td className="py-2 text-xs text-gray-650 dark:text-gray-400">Returns <code>true</code> (opted in), <code>false</code> (opted out), or <code>null</code> (no decision yet).</td>
                 </tr>
+                <tr className="border-b border-gray-100 dark:border-gray-800/60">
+                  <td className="py-2 pr-4 font-mono text-xs text-gray-800 dark:text-gray-200">window.sourcetrack.getContext()</td>
+                  <td className="py-2 text-xs text-gray-650 dark:text-gray-400">Returns a non-PII object containing visitor IDs (<code>anonymous_id</code>, <code>session_id</code>), first-touch acquisition properties, current-touch acquisition properties, and active click IDs. In cookieless mode, IDs may be <code>null</code> until the ID request resolves.</td>
+                </tr>
               </tbody>
             </table>
           </div>

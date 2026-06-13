@@ -425,7 +425,50 @@
     optIn:  function () { window.sourcetrack.consent(true) },
 
     // sourcetrack.hasConsent() — returns true/false/null
-    hasConsent: function () { return _consentGiven }
+    hasConsent: function () { return _consentGiven },
+
+    // sourcetrack.getContext() — returns non-PII attribution context
+    getContext: function () {
+      var p = params(), ref = document.referrer || null
+      var currentSrc = p.utm_source || p.ref || p.source
+        || (ref && (function () {
+          try { var h = new URL(ref).hostname.replace('www.', ''); return h && h !== location.hostname ? h : null } catch (_) {}
+        })())
+        || 'direct'
+      var currentMed = p.utm_medium
+        || (p.gclid || p.gbraid || p.wbraid || p.msclkid ? 'cpc' : null)
+        || (p.fbclid || p.ttclid || p.li_fat_id || p.twclid || p.snapclid || p.pclid || p.sccid ? 'paid_social' : null)
+        || (p.dclid ? 'display' : null)
+        || 'none'
+      var currentCmp = p.utm_campaign || ''
+
+      return {
+        anonymous_id: AID || null,
+        session_id: SID || null,
+        first_touch_source: ls('st_ft_src') || 'direct',
+        first_touch_medium: ls('st_ft_med') || 'none',
+        first_touch_campaign: ls('st_ft_cmp') || '',
+        current_source: currentSrc,
+        current_medium: currentMed,
+        current_campaign: currentCmp,
+        click_ids: {
+          gclid: p.gclid || null,
+          gbraid: p.gbraid || null,
+          wbraid: p.wbraid || null,
+          fbclid: p.fbclid || null,
+          msclkid: p.msclkid || null,
+          ttclid: p.ttclid || null,
+          li_fat_id: p.li_fat_id || null,
+          li_fatid: p.li_fatid || null,
+          twclid: p.twclid || null,
+          dclid: p.dclid || null,
+          snapclid: p.snapclid || null,
+          pclid: p.pclid || null,
+          sccid: p.sccid || null,
+          ko_click_id: p.ko_click_id || null
+        }
+      }
+    }
   }
 
   // ─── Outbound Link Tracking ────────────────────────────────────────────────
