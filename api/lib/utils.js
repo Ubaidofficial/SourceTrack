@@ -148,20 +148,21 @@ export function redactPiiFromUrl(url) {
     }
 
     const piiKeys = new Set([
-      'email', 'e', 'user_email', 'customer_email',
-      'phone', 'tel', 'mobile',
-      'first_name', 'last_name', 'full_name', 'name',
+      'email', 'e-mail', 'e', 'user_email', 'customer_email', 'contact_email', 'billing_email', 'shipping_email',
+      'phone', 'tel', 'mobile', 'billing_phone', 'shipping_phone',
+      'first_name', 'last_name', 'full_name', 'name', 'customer_name', 'billing_name', 'shipping_name',
       'password', 'pass',
-      'token', 'access_token', 'refresh_token', 'auth',
-      'key', 'api_key', 'secret',
-      'checkout_id', 'session_id',
-      'invite', 'invite_code', 'auth_code', 'reset_code', 'verification_code', 'code_verifier'
+      'token', 'access_token', 'refresh_token', 'auth', 'authorization', 'secret',
+      'api_key', 'apikey', 'secret_key', 'private_key', 'key',
+      'ssn', 'dob', 'date_of_birth', 'address', 'street', 'zip', 'postal_code', 'postcode', 'street_address', 'address1', 'address2',
+      'invite', 'invite_code', 'auth_code', 'reset_code', 'verification_code', 'code_verifier',
+      'checkout_id', 'checkout_session_id', 'stripe_session_id', 'payment_session_id', 'session_id'
     ])
 
     let modified = false
     urlObj.searchParams.forEach((value, key) => {
       if (piiKeys.has(key.toLowerCase())) {
-        urlObj.searchParams.set(key, 'REDACTED')
+        urlObj.searchParams.set(key, '[REDACTED]')
         modified = true
       }
     })
@@ -182,32 +183,81 @@ export function redactPiiFromUrl(url) {
     // Conservative fallback regex redaction if parsing fails completely
     try {
       let redactedUrl = url
-      const keysRegex = /([?&])(email|e|user_email|customer_email|phone|tel|mobile|first_name|last_name|full_name|name|password|pass|token|access_token|refresh_token|auth|key|api_key|secret|checkout_id|session_id|invite|invite_code|auth_code|reset_code|verification_code|code_verifier)=([^&#]*)/ig
-      return redactedUrl.replace(keysRegex, '$1$2=REDACTED')
+      const keysRegex = /([?&])(email|e-mail|e|user_email|customer_email|contact_email|billing_email|shipping_email|phone|tel|mobile|billing_phone|shipping_phone|first_name|last_name|full_name|name|customer_name|billing_name|shipping_name|password|pass|token|access_token|refresh_token|auth|authorization|secret|api_key|apikey|secret_key|private_key|key|ssn|dob|date_of_birth|address|street|zip|postal_code|postcode|street_address|address1|address2|invite|invite_code|auth_code|reset_code|verification_code|code_verifier|checkout_id|checkout_session_id|stripe_session_id|payment_session_id|session_id)=([^&#]*)/ig
+      return redactedUrl.replace(keysRegex, '$1$2=[REDACTED]')
     } catch (fallbackErr) {
       return url
     }
   }
 }
 
+function isCustomContactKey(lowerKey) {
+  return /(^|[_-])(email|phone)$/.test(lowerKey)
+}
+
 /**
- * Scans an object shallowly for URL/referrer keys and redacts them.
+ * Scans an object recursively up to depth 5 for PII keys and redacts them.
  * Does not touch standard identity identifiers like user_id, customer_id, etc.
  *
  * @param {object} obj - Object containing properties or traits.
  * @returns {object} A sanitized copy of the object.
  */
-export function redactPiiFromObject(obj) {
+export function redactPiiFromObject(obj, depth = 0) {
+  if (depth > 5) return '[REDACTED]'
   if (!obj || typeof obj !== 'object') return obj
 
-  const newObj = { ...obj }
-  const urlFields = new Set(['page_url', 'referrer', 'landing_page', 'current_url', 'last_event_url', 'url', 'href', 'destination_url'])
+  if (Array.isArray(obj)) {
+    return obj.map(item => redactPiiFromObject(item, depth + 1))
+  }
 
-  for (const key of Object.keys(newObj)) {
-    if (urlFields.has(key.toLowerCase()) && typeof newObj[key] === 'string') {
-      newObj[key] = redactPiiFromUrl(newObj[key])
+  const newObj = {}
+
+  const bypassedKeys = new Set([
+    'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'utm_id',
+    'gclid', 'gbraid', 'wbraid', 'fbclid', 'ttclid', 'msclkid', 'li_fat_id', 'twclid', 'rdt_cid', 'epik', 'sccid',
+    'anonymous_id', 'distinct_id', 'site_id', 'site_key', 'event', 'session_id', 'key',
+    'source', 'referrer', 'page_url', 'current_url', 'url',
+    'conversion_type', 'value', 'currency', 'order_id', 'product_id', 'product_name', 'category'
+  ])
+
+  const exactPiiKeys = new Set([
+    'email', 'e-mail', 'user_email', 'customer_email', 'contact_email', 'billing_email', 'shipping_email',
+    'phone', 'tel', 'mobile', 'billing_phone', 'shipping_phone',
+    'name', 'first_name', 'last_name', 'full_name', 'customer_name', 'billing_name', 'shipping_name',
+    'password', 'pass',
+    'token', 'access_token', 'refresh_token', 'auth', 'authorization', 'secret',
+    'api_key', 'apikey', 'secret_key', 'private_key',
+    'ssn', 'dob', 'date_of_birth', 'address', 'street', 'zip', 'postal_code', 'postcode', 'street_address', 'address1', 'address2',
+    'invite', 'invite_code', 'auth_code', 'reset_code', 'verification_code', 'code_verifier',
+    'checkout_id', 'checkout_session_id', 'stripe_session_id', 'payment_session_id'
+  ])
+
+  const urlFields = new Set([
+    'page_url', 'referrer', 'landing_page', 'current_url',
+    'last_event_url', 'url', 'href', 'destination_url'
+  ])
+
+  for (const key of Object.keys(obj)) {
+    const value = obj[key]
+    const lowerKey = key.toLowerCase()
+
+    if (bypassedKeys.has(lowerKey)) {
+      if (urlFields.has(lowerKey) && typeof value === 'string') {
+        newObj[key] = redactPiiFromUrl(value)
+      } else {
+        newObj[key] = value
+      }
+    } else if (exactPiiKeys.has(lowerKey) || isCustomContactKey(lowerKey)) {
+      newObj[key] = '[REDACTED]'
+    } else if (urlFields.has(lowerKey) && typeof value === 'string') {
+      newObj[key] = redactPiiFromUrl(value)
+    } else if (value && typeof value === 'object') {
+      newObj[key] = redactPiiFromObject(value, depth + 1)
+    } else {
+      newObj[key] = value
     }
   }
+
   return newObj
 }
 

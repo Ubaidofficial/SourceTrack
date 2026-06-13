@@ -14,6 +14,7 @@ import { ph } from '../lib/posthog.js'
 import { getSupabase } from '../lib/supabase.js'
 import { resolveWebhookAnonymousId } from '../lib/identity-links.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
+import { redactPiiFromObject } from '../lib/utils.js'
 
 
 const router = express.Router()
@@ -155,29 +156,33 @@ router.post('/:api_key', async (req, res) => {
     }
 
     // Fire conversion event to PostHog
+    const propertiesObject = {
+      site_id: site.id,
+      site_key: site.site_key,
+      conversion_value: fields.value,
+      conversion_type: fields.conversionType,
+      conversion_event_id: fields.orderId || uuidv4(),
+      email: fields.email,
+      name: fields.name,
+      utm_source: fields.utmSource || 'webhook',
+      utm_medium: fields.utmMedium || 'webhook',
+      utm_campaign: fields.utmCampaign || null,
+      webhook_source: req.headers['user-agent'] || 'unknown',
+      raw_payload: JSON.stringify(redactPiiFromObject(body)).slice(0, 500), // store first 500 chars after sanitizing
+      server_timestamp: new Date().toISOString(),
+      stitching_method: stitchingMethod,
+      webhook_user_id: parsedUserId,
+      webhook_email_present: !!fields.email,
+      identity_resolution_source: resolved.source,
+      identity_resolution_status: resolved.anonymousId ? 'resolved' : 'unresolved'
+    }
+
+    const sanitizedProps = redactPiiFromObject(propertiesObject)
+
     await ph.capture({
       distinctId,
       event: '$conversion',
-      properties: {
-        site_id: site.id,
-        site_key: site.site_key,
-        conversion_value: fields.value,
-        conversion_type: fields.conversionType,
-        conversion_event_id: fields.orderId || uuidv4(),
-        email: fields.email,
-        name: fields.name,
-        utm_source: fields.utmSource || 'webhook',
-        utm_medium: fields.utmMedium || 'webhook',
-        utm_campaign: fields.utmCampaign || null,
-        webhook_source: req.headers['user-agent'] || 'unknown',
-        raw_payload: JSON.stringify(body).slice(0, 500), // store first 500 chars
-        server_timestamp: new Date().toISOString(),
-        stitching_method: stitchingMethod,
-        webhook_user_id: parsedUserId,
-        webhook_email_present: !!fields.email,
-        identity_resolution_source: resolved.source,
-        identity_resolution_status: resolved.anonymousId ? 'resolved' : 'unresolved'
-      }
+      properties: sanitizedProps
     })
 
     res.json({ ok: true, received: true, conversion_type: fields.conversionType, value: fields.value })

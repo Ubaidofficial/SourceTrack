@@ -4,6 +4,7 @@ import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { getSupabase } from '../lib/supabase.js'
+import { redactPiiFromUrl, redactPiiFromObject } from '../lib/utils.js'
 import { requireFeature, isSiteStatusBlocked } from '../lib/plan-features.js'
 import { claimPageviewUsage } from '../lib/pageview-limits.js'
 import {
@@ -96,12 +97,18 @@ router.post('/collect',
         return res.status(402).json({ success: false, data: null, error: msg })
       }
 
+    const sanitizedUrl = redactPiiFromUrl(url)
+    const sanitizedReferrer = referrer ? redactPiiFromUrl(referrer) : null
+    const sanitizedEntryPage = entry_page ? redactPiiFromUrl(entry_page) : null
+    const sanitizedExitPage = exit_page ? redactPiiFromUrl(exit_page) : null
+    const sanitizedProperties = properties ? redactPiiFromObject(properties) : {}
+
     // Handle outbound clicks and custom events
     if (event_type === 'outbound_click' || event_type === 'custom') {
       await supabase.from('custom_events').insert({
         site_id: site.id, event_type, event_name: event_name || event_type,
-        url: url || null, session_id: session_id || null,
-        properties: properties || {}, timestamp: new Date().toISOString()
+        url: sanitizedUrl || null, session_id: session_id || null,
+        properties: sanitizedProperties || {}, timestamp: new Date().toISOString()
       })
       return res.json({ ok: true })
     }
@@ -114,9 +121,9 @@ router.post('/collect',
     const serverOS = parser.getOS().name || 'unknown'
     const AI_DOMAINS = { 'chatgpt.com': 'ChatGPT', 'chat.openai.com': 'ChatGPT', 'claude.ai': 'Claude', 'perplexity.ai': 'Perplexity', 'gemini.google.com': 'Gemini', 'grok.com': 'Grok', 'copilot.microsoft.com': 'Copilot', 'deepseek.com': 'DeepSeek' }
     let ai_source = null
-    if (referrer) { try { const h = new URL(referrer).hostname.replace('www.', ''); ai_source = AI_DOMAINS[h] || null } catch (_e) {} }
+    if (sanitizedReferrer) { try { const h = new URL(sanitizedReferrer).hostname.replace('www.', ''); ai_source = AI_DOMAINS[h] || null } catch (_e) {} }
     if (duration_seconds > 0 && session_id) {
-      await supabase.from('pageviews').update({ duration_seconds }).eq('site_id', site.id).eq('session_id', session_id).eq('url', url)
+      await supabase.from('pageviews').update({ duration_seconds }).eq('site_id', site.id).eq('session_id', session_id).eq('url', sanitizedUrl)
       return res.json({ ok: true })
     }
     // Pageview quota claim — 140G-4 (legacy route enforcement).
@@ -132,7 +139,7 @@ router.post('/collect',
       // Fail open — DB/RPC error must not block legacy tracking
       console.error('[analytics/collect] Pageview limit check failed, failing open:', pvErr?.message)
     }
-    await supabase.from('pageviews').insert({ site_id: site.id, url, referrer: referrer || null, utm_source: utm_source || null, utm_medium: utm_medium || null, utm_campaign: utm_campaign || null, country, device: device || parser.getDevice().type || 'desktop', browser: browser || serverBrowser, os: req.body.os || serverOS, session_id: session_id || null, duration_seconds: 0, ai_source, entry_page: entry_page || url, exit_page: exit_page || null, timestamp: new Date().toISOString() })
+    await supabase.from('pageviews').insert({ site_id: site.id, url: sanitizedUrl, referrer: sanitizedReferrer || null, utm_source: utm_source || null, utm_medium: utm_medium || null, utm_campaign: utm_campaign || null, country, device: device || parser.getDevice().type || 'desktop', browser: browser || serverBrowser, os: req.body.os || serverOS, session_id: session_id || null, duration_seconds: 0, ai_source, entry_page: sanitizedEntryPage || sanitizedUrl, exit_page: sanitizedExitPage || null, timestamp: new Date().toISOString() })
     // Stamp last_seen_at — used by inactive-account auto-archive (free tier)
     supabase.from('sites').update({ last_seen_at: new Date().toISOString() }).eq('id', site.id).then(() => {}, () => {})
     res.json({ ok: true })

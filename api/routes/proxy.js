@@ -13,6 +13,7 @@ import { getSupabase } from '../lib/supabase.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
 import { claimPageviewUsage } from '../lib/pageview-limits.js'
 import { isSiteStatusBlocked } from '../lib/plan-features.js'
+import { redactPiiFromObject, redactPiiFromUrl } from '../lib/utils.js'
 
 
 const router = express.Router()
@@ -49,7 +50,6 @@ function enrichFromRequest(req) {
 
 // POST /sp/e — proxied pageview / custom event
 router.post('/e', async (req, res) => {
-  console.log('[DEBUG proxy/e] Route called with body:', req.body)
   res.json({ ok: true })
   try {
     const { site_key, event, anonymous_id, properties = {} } = req.body || {}
@@ -80,19 +80,23 @@ router.post('/e', async (req, res) => {
     }
 
     const enriched = enrichFromRequest(req)
-    const referrer = properties.referrer || req.headers.referer || ''
+    const rawReferrer = properties.referrer || req.headers.referer || ''
+    const sanitizedReferrer = rawReferrer ? redactPiiFromUrl(rawReferrer) : ''
+    const sanitizedProperties = redactPiiFromObject(properties || {})
+    sanitizedProperties.referrer = sanitizedReferrer
+
     await ph.capture({
       distinctId: anonymous_id || uuidv4(),
       event,
       properties: {
-        ...properties,
+        ...sanitizedProperties,
         site_id: site.id,
         site_key,
         country: enriched.country,
         device_type: enriched.device_type,
         browser: enriched.browser,
         server_timestamp: enriched.server_timestamp,
-        ai_source: getAiSource(referrer) || properties.ai_source || null,
+        ai_source: getAiSource(sanitizedReferrer) || sanitizedProperties.ai_source || null,
         proxy: true,
       }
     })
@@ -115,6 +119,10 @@ router.post('/c', async (req, res) => {
     }
 
     const enriched = enrichFromRequest(req)
+    const rawReferrer = properties.referrer || req.headers.referer || ''
+    const sanitizedReferrer = rawReferrer ? redactPiiFromUrl(rawReferrer) : ''
+    const sanitizedProperties = redactPiiFromObject(properties || {})
+    sanitizedProperties.referrer = sanitizedReferrer
 
     // Enforce monthly conversion limits (silently ignore if cap is reached; fail-open on DB error)
     try {
@@ -131,7 +139,7 @@ router.post('/c', async (req, res) => {
       distinctId: anonymous_id || uuidv4(),
       event: '$conversion',
       properties: {
-        ...properties,
+        ...sanitizedProperties,
         site_id: site.id,
         site_key,
         conversion_value: conversion_value || 0,
