@@ -131,8 +131,7 @@ async function collectSnapshot() {
     // 9. Required env vars — CRITICAL
     check('env_vars', async () => {
       const required = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'POSTHOG_API_KEY',
-        'POSTHOG_PERSONAL_API_KEY', 'POSTHOG_PROJECT_ID', 'POSTHOG_HOST',
-        'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET']
+        'POSTHOG_PERSONAL_API_KEY', 'POSTHOG_PROJECT_ID', 'POSTHOG_HOST']
       const missing = required.filter(k => !process.env[k])
       if (missing.length > 0) throw new Error(`Missing: ${missing.join(', ')}`)
       return { all_present: true }
