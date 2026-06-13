@@ -3,7 +3,9 @@ import { queryHogQL } from './posthog.js'
 import { deriveSessions, annotateSessions } from './sessionization.js'
 import { channelFromEvent, detectAiPlatformFromEvent } from './channel-classifier.js'
 import { getSupabase } from './supabase.js'
-import { esc, toHogDate } from './utils.js'
+import { esc } from './utils.js'
+import { serializeHogQLDateRange, serializeHogQLDateTime, buildHogQLTimestampFilter } from './hogql-date.js'
+
 
 const cache = new NodeCache({ stdTTL: 60, checkperiod: 30 })
 
@@ -43,8 +45,7 @@ function cacheKey(model, siteId, dateFrom, dateTo) {
 }
 
 async function firstTouchAttribution(siteId, dateFrom, dateTo) {
-  const fromDate = toHogDate(dateFrom)
-  const toDate = toHogDate(dateTo) + " 23:59:59"
+  const { from: fromDate, to: toDate } = serializeHogQLDateRange(dateFrom, dateTo)
 
   const sql = `
     SELECT
@@ -56,8 +57,8 @@ async function firstTouchAttribution(siteId, dateFrom, dateTo) {
     FROM events
     WHERE properties.site_id = '${esc(siteId)}'
       AND event = '$conversion'
-      AND timestamp >= toDateTime('${fromDate}')
-      AND timestamp <= toDateTime('${toDate}')
+      AND timestamp >= ${fromDate}
+      AND timestamp < ${toDate}
     GROUP BY source, medium, campaign
     ORDER BY revenue DESC
     LIMIT 50000
@@ -74,8 +75,7 @@ async function firstTouchAttribution(siteId, dateFrom, dateTo) {
 }
 
 async function lastTouchAttribution(siteId, dateFrom, dateTo) {
-  const fromDate = toHogDate(dateFrom)
-  const toDate = toHogDate(dateTo) + " 23:59:59"
+  const { from: fromDate, to: toDate } = serializeHogQLDateRange(dateFrom, dateTo)
 
   const sql = `
     SELECT
@@ -107,14 +107,14 @@ async function lastTouchAttribution(siteId, dateFrom, dateTo) {
         AND pv.timestamp <= e_inner.timestamp
       WHERE e_inner.properties.site_id = '${esc(siteId)}'
         AND e_inner.event = '$conversion'
-        AND e_inner.timestamp >= toDateTime('${fromDate}')
-        AND e_inner.timestamp <= toDateTime('${toDate}')
+        AND e_inner.timestamp >= ${fromDate}
+        AND e_inner.timestamp < ${toDate}
       GROUP BY conversion_uuid
     ) lt ON e.uuid = lt.conversion_uuid
     WHERE e.properties.site_id = '${esc(siteId)}'
       AND e.event = '$conversion'
-      AND e.timestamp >= toDateTime('${fromDate}')
-      AND e.timestamp <= toDateTime('${toDate}')
+      AND e.timestamp >= ${fromDate}
+      AND e.timestamp < ${toDate}
     GROUP BY source, medium, campaign
     ORDER BY revenue DESC
     LIMIT 50000
@@ -139,8 +139,7 @@ function isDirectCondition(tableAlias = 'events') {
 }
 
 async function firstTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
-  const fromDate = toHogDate(dateFrom)
-  const toDate = toHogDate(dateTo) + " 23:59:59"
+  const { from: fromDate, to: toDate } = serializeHogQLDateRange(dateFrom, dateTo)
 
   const sql = `
     SELECT
@@ -175,14 +174,14 @@ async function firstTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
         AND pv.timestamp <= e_inner.timestamp
       WHERE e_inner.properties.site_id = '${esc(siteId)}'
         AND e_inner.event = '$conversion'
-        AND e_inner.timestamp >= toDateTime('${fromDate}')
-        AND e_inner.timestamp <= toDateTime('${toDate}')
+        AND e_inner.timestamp >= ${fromDate}
+        AND e_inner.timestamp < ${toDate}
       GROUP BY conversion_uuid
     ) ft ON e.uuid = ft.conversion_uuid
     WHERE e.properties.site_id = '${esc(siteId)}'
       AND e.event = '$conversion'
-      AND e.timestamp >= toDateTime('${fromDate}')
-      AND e.timestamp <= toDateTime('${toDate}')
+      AND e.timestamp >= ${fromDate}
+      AND e.timestamp < ${toDate}
     GROUP BY source, medium, campaign
     ORDER BY revenue DESC
     LIMIT 50000
@@ -199,8 +198,7 @@ async function firstTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
 }
 
 async function lastTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
-  const fromDate = toHogDate(dateFrom)
-  const toDate = toHogDate(dateTo) + " 23:59:59"
+  const { from: fromDate, to: toDate } = serializeHogQLDateRange(dateFrom, dateTo)
 
   const sql = `
     SELECT
@@ -235,14 +233,14 @@ async function lastTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
         AND pv.timestamp <= e_inner.timestamp
       WHERE e_inner.properties.site_id = '${esc(siteId)}'
         AND e_inner.event = '$conversion'
-        AND e_inner.timestamp >= toDateTime('${fromDate}')
-        AND e_inner.timestamp <= toDateTime('${toDate}')
+        AND e_inner.timestamp >= ${fromDate}
+        AND e_inner.timestamp < ${toDate}
       GROUP BY conversion_uuid
     ) lt ON e.uuid = lt.conversion_uuid
     WHERE e.properties.site_id = '${esc(siteId)}'
       AND e.event = '$conversion'
-      AND e.timestamp >= toDateTime('${fromDate}')
-      AND e.timestamp <= toDateTime('${toDate}')
+      AND e.timestamp >= ${fromDate}
+      AND e.timestamp < ${toDate}
     GROUP BY source, medium, campaign
     ORDER BY revenue DESC
     LIMIT 50000
@@ -337,8 +335,7 @@ export async function getAiPlatformAttributionLive({
   attributionWindow = null,
   attributeBy = 'conversion_date'
 }) {
-  const fromDate = toHogDate(dateFrom)
-  const toDate = toHogDate(dateTo) + " 23:59:59"
+  const { from: fromDate, to: toDate } = serializeHogQLDateRange(dateFrom, dateTo)
   const safeSite = esc(siteId)
 
   // 1. Fetch conversions
@@ -367,8 +364,8 @@ export async function getAiPlatformAttributionLive({
     FROM events
     WHERE properties.site_id = '${safeSite}'
       AND event = '$conversion'
-      AND timestamp >= toDateTime('${fromDate}')
-      AND timestamp <= toDateTime('${toDate}')
+      AND timestamp >= ${fromDate}
+      AND timestamp < ${toDate}
     ORDER BY timestamp DESC
     LIMIT 10000
   `
@@ -418,8 +415,9 @@ export async function getAiPlatformAttributionLive({
 
   // 2. Fetch pageviews for lookback window
   const windowDays = attributionWindow && attributionWindow !== 'ltv' && Number(attributionWindow) > 0 ? Number(attributionWindow) : 30
-  const lookbackDate = new Date(new Date(dateFrom).getTime() - windowDays * 24 * 60 * 60 * 1000)
-  const lookbackStr = lookbackDate.toISOString().slice(0, 10)
+  const fromIso = fromDate.match(/'([^']+)'/)[1]
+  const lookbackDate = new Date(new Date(fromIso).getTime() - windowDays * 24 * 60 * 60 * 1000)
+  const lookbackStr = serializeHogQLDateTime(lookbackDate)
 
   const uniqueIds = [...new Set(conversions.map(c => c.distinct_id))].filter(Boolean)
   if (uniqueIds.length === 0) {
@@ -466,8 +464,8 @@ export async function getAiPlatformAttributionLive({
         FROM events
         WHERE properties.site_id = '${safeSite}'
           AND event = '$pageview'
-          AND timestamp >= toDateTime('${lookbackStr}')
-          AND timestamp <= toDateTime('${toDate}')
+          AND timestamp >= ${lookbackStr}
+          AND timestamp < ${toDate}
           AND distinct_id IN (${escapedIds.join(',')})
         ORDER BY timestamp ASC
         LIMIT ${AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE} OFFSET ${offset}
@@ -721,8 +719,7 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
   const cached = cache.get(key)
   if (cached) return cached
 
-  const fromDate = toHogDate(dateFrom)
-  const toDate = toHogDate(dateTo) + " 23:59:59"
+  const { from: fromDate, to: toDate } = serializeHogQLDateRange(dateFrom, dateTo)
   const safeSite = esc(siteId)
 
   // Build filter clauses (same pattern as getFlexibleReport)
@@ -790,8 +787,8 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
     FROM events
     WHERE properties.site_id = '${safeSite}'
       AND event = '$pageview'
-      AND timestamp >= toDateTime('${fromDate}')
-      AND timestamp <= toDateTime('${toDate}')${filterClauses}
+      AND timestamp >= ${fromDate}
+      AND timestamp < ${toDate}${filterClauses}
     ORDER BY distinct_id ASC, timestamp ASC
     LIMIT 50000
   `
@@ -806,8 +803,8 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
     FROM events
     WHERE properties.site_id = '${safeSite}'
       AND event = '$conversion'
-      AND timestamp >= toDateTime('${fromDate}')
-      AND timestamp <= toDateTime('${toDate}')${filterClauses}
+      AND timestamp >= ${fromDate}
+      AND timestamp < ${toDate}${filterClauses}
     ORDER BY distinct_id ASC, timestamp ASC
     LIMIT 50000
   `
@@ -1363,8 +1360,7 @@ export async function getMultiTouchAttributionLive({
   attributionWindow = null,
   attributeBy = 'conversion_date'
 }) {
-  const fromDate = toHogDate(dateFrom)
-  const toDate = toHogDate(dateTo) + " 23:59:59"
+  const { from: fromDate, to: toDate } = serializeHogQLDateRange(dateFrom, dateTo)
   const safeSite = esc(siteId)
 
   // 1. Fetch conversions
@@ -1390,8 +1386,8 @@ export async function getMultiTouchAttributionLive({
     FROM events
     WHERE properties.site_id = '${safeSite}'
       AND event = '$conversion'
-      AND timestamp >= toDateTime('${fromDate}')
-      AND timestamp <= toDateTime('${toDate}')
+      AND timestamp >= ${fromDate}
+      AND timestamp < ${toDate}
     ORDER BY timestamp DESC
     LIMIT 10000
   `
@@ -1434,8 +1430,9 @@ export async function getMultiTouchAttributionLive({
 
   // 2. Fetch pageviews for lookback window
   const windowDays = attributionWindow && attributionWindow !== 'ltv' && Number(attributionWindow) > 0 ? Number(attributionWindow) : 30
-  const lookbackDate = new Date(new Date(dateFrom).getTime() - windowDays * 24 * 60 * 60 * 1000)
-  const lookbackStr = lookbackDate.toISOString().slice(0, 10)
+  const fromIso = fromDate.match(/'([^']+)'/)[1]
+  const lookbackDate = new Date(new Date(fromIso).getTime() - windowDays * 24 * 60 * 60 * 1000)
+  const lookbackStr = serializeHogQLDateTime(lookbackDate)
 
   const getCustomKey = (dim) => dim && dim.startsWith('custom_param:') ? dim.split(':')[1] : null
   const custKey1 = getCustomKey(groupBy)
@@ -1474,8 +1471,8 @@ export async function getMultiTouchAttributionLive({
     FROM events
     WHERE properties.site_id = '${safeSite}'
       AND event = '$pageview'
-      AND timestamp >= toDateTime('${lookbackStr}')
-      AND timestamp <= toDateTime('${toDate}')
+      AND timestamp >= ${lookbackStr}
+      AND timestamp < ${toDate}
     ORDER BY timestamp ASC
     LIMIT 100000
   `
@@ -1712,8 +1709,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     return returnValue
   }
 
-  const fromDate = toHogDate(dateFrom)
-  const toDate = toHogDate(dateTo) + " 23:59:59"
+  const { from: fromDate, to: toDate } = serializeHogQLDateRange(dateFrom, dateTo)
   const safeSite = esc(siteId)
 
   // Linear attribution: legacy, dead code kept for safety / documentation
@@ -1751,8 +1747,8 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
           AND pv_inner.properties.utm_source != ''
         WHERE cv_inner.properties.site_id = '${safeSite}'
           AND cv_inner.event = '$conversion'
-          AND cv_inner.timestamp >= toDateTime('${fromDate}')
-          AND cv_inner.timestamp <= toDateTime('${toDate}')
+          AND cv_inner.timestamp >= ${fromDate}
+          AND cv_inner.timestamp < ${toDate}
         GROUP BY cv_inner.uuid
         HAVING touch_count > 0
       ) touch_counts ON touch_counts.conversion_uuid = cv.uuid
@@ -1765,8 +1761,8 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
         AND pv.properties.utm_source != ''
       WHERE cv.properties.site_id = '${safeSite}'
         AND cv.event = '$conversion'
-        AND cv.timestamp >= toDateTime('${fromDate}')
-        AND cv.timestamp <= toDateTime('${toDate}')
+        AND cv.timestamp >= ${fromDate}
+        AND cv.timestamp < ${toDate}
     )
     GROUP BY dim_value
     ORDER BY revenue DESC
@@ -1814,8 +1810,8 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
         AND pv.properties.utm_source != ''
       WHERE cv.properties.site_id = '${safeSite}'
         AND cv.event = '$conversion'
-        AND cv.timestamp >= toDateTime('${fromDate}')
-        AND cv.timestamp <= toDateTime('${toDate}')
+        AND cv.timestamp >= ${fromDate}
+        AND cv.timestamp < ${toDate}
       GROUP BY cv.uuid, cv.timestamp
       HAVING days_gap >= 0
     )
@@ -1866,8 +1862,8 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
         AND pv.timestamp <= cv.timestamp
       WHERE cv.properties.site_id = '${safeSite}'
         AND cv.event = '$conversion'
-        AND cv.timestamp >= toDateTime('${fromDate}')
-        AND cv.timestamp <= toDateTime('${toDate}')
+        AND cv.timestamp >= ${fromDate}
+        AND cv.timestamp < ${toDate}
       GROUP BY cv.uuid, cv.properties.utm_source
       HAVING touch_count > 0
     )
@@ -2145,8 +2141,8 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
         AND _pv.timestamp <= events.timestamp
       WHERE events.properties.site_id = '${safeSite}'
         AND events.event = '$conversion'
-        AND events.timestamp >= toDateTime('${fromDate}')
-        AND events.timestamp <= toDateTime('${toDate}')
+        AND events.timestamp >= ${fromDate}
+        AND events.timestamp < ${toDate}
       GROUP BY events.uuid
     ) _win ON events.uuid = _win._win_uuid`
 
@@ -2358,8 +2354,8 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
       FROM events${ltvJoin}${customJoin}
       WHERE properties.site_id = '${safeSite}'
         AND event = '$conversion'
-        AND timestamp >= toDateTime('${fromDate}')
-        AND timestamp <= toDateTime('${toDate}')
+        AND timestamp >= ${fromDate}
+        AND timestamp < ${toDate}
         ${uuidExclusion}${filterClauses}
       GROUP BY events.distinct_id
       HAVING total_revenue > 0
@@ -2399,8 +2395,8 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
       ${extraSelect}
     FROM events${refJoin}${qualifyingJoin}${windowJoin}${customJoin}
     WHERE properties.site_id = '${safeSite}'
-      AND timestamp >= toDateTime('${fromDate}')
-      AND timestamp <= toDateTime('${toDate}')
+      AND timestamp >= ${fromDate}
+      AND timestamp < ${toDate}
       ${eventFilter}${filterClauses}
     GROUP BY dim_value${effectiveDim2Expr ? ', dim_value2' : ''}
     ${havingClause}
@@ -2438,8 +2434,8 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
         FROM events${refJoin}${customJoin}
         WHERE properties.site_id = '${safeSite}'
           AND event = '$pageview'
-          AND timestamp >= toDateTime('${fromDate}')
-          AND timestamp <= toDateTime('${toDate}')${filterClauses}
+          AND timestamp >= ${fromDate}
+          AND timestamp < ${toDate}${filterClauses}
         GROUP BY dim_value${dim2Expr ? ', dim_value2' : ''}
         LIMIT 50000
       `
@@ -2466,8 +2462,8 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
         AND event = '$conversion'
         AND properties.ai_source IS NOT NULL
         AND properties.ai_source != ''
-        AND timestamp >= toDateTime('${fromDate}')
-        AND timestamp <= toDateTime('${toDate}')${filterClauses}
+        AND timestamp >= ${fromDate}
+        AND timestamp < ${toDate}${filterClauses}
       GROUP BY dim_value${dim2Expr ? ', dim_value2' : ''}
       LIMIT 50000
     `

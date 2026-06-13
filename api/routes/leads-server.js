@@ -2,8 +2,9 @@ import { Router } from 'express'
 import { validateSiteKey } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
 import { getSupabase } from '../lib/supabase.js'
-import { esc, toHogDate } from '../lib/utils.js'
+import { esc } from '../lib/utils.js'
 import { requireFeature } from '../lib/plan-features.js'
+import { serializeHogQLDateRange, buildHogQLTimestampFilter } from '../lib/hogql-date.js'
 
 const router = Router()
 
@@ -19,8 +20,21 @@ router.get('/', validateSiteKey, async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit) || 50, 200)
 
     let dateFilter = ''
-    if (dateFrom && dateTo) {
-      dateFilter = `AND timestamp >= toDateTime('${toHogDate(dateFrom)}') AND timestamp <= toDateTime('${toHogDate(dateTo)}')`
+    if (dateFrom || dateTo) {
+      if (!dateFrom || !dateTo) {
+        return res.status(400).json({
+          success: false,
+          data: null,
+          error: 'date_from and date_to must be provided together'
+        })
+      }
+
+      try {
+        const range = serializeHogQLDateRange(dateFrom, dateTo, { exclusiveEnd: true })
+        dateFilter = `AND ${buildHogQLTimestampFilter('timestamp', range)}`
+      } catch (err) {
+        return res.status(400).json({ success: false, data: null, error: err.message })
+      }
     }
 
     const sql = `

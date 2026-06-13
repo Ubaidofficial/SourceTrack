@@ -3,6 +3,7 @@ import { getFlexibleReport } from '../lib/attribution-engine.js'
 import { requireFeature } from '../lib/plan-features.js'
 import { getSupabase as getSupabaseAdmin } from '../lib/supabase.js'
 import { ALLOWED_MODELS, ALLOWED_GROUPS, ALLOWED_METRICS } from '../lib/report-config-validation.js'
+import { serializeHogQLDateRange } from '../lib/hogql-date.js'
 
 const router = Router()
 
@@ -44,6 +45,12 @@ router.get('/report', async (req, res) => {
 
     if (!model || !date_from || !date_to || !group_by || !metric) {
       return res.status(400).json({ success: false, data: null, error: 'model, date_from, date_to, group_by, metric are required' })
+    }
+
+    try {
+      serializeHogQLDateRange(date_from, date_to)
+    } catch (err) {
+      return res.status(400).json({ success: false, data: null, error: err.message })
     }
 
     // Validate parameters

@@ -1,6 +1,7 @@
 import { queryHogQL } from '../lib/posthog.js'
 import { deriveSessions, sessionAggregates, annotateSessions } from '../lib/sessionization.js'
-import { esc, toHogDate } from '../lib/utils.js'
+import { esc } from '../lib/utils.js'
+import { serializeHogQLDateRange, buildHogQLTimestampFilter } from '../lib/hogql-date.js'
 
 /**
  * GET /api/sessions/overview?site_key=X&date_from=Y&date_to=Z
@@ -15,8 +16,14 @@ export async function sessionsOverview(req, res) {
       return res.status(400).json({ success: false, data: null, error: 'date_from and date_to are required' })
     }
 
-    const fromDate = toHogDate(date_from)
-    const toDate = toHogDate(date_to)
+    let range
+    try {
+      range = serializeHogQLDateRange(date_from, date_to, { exclusiveEnd: true })
+    } catch (err) {
+      return res.status(400).json({ success: false, data: null, error: err.message })
+    }
+
+    const dateFilter = buildHogQLTimestampFilter('timestamp', range)
 
     // Query all pageviews in range for session derivation
     const pageviewSql = `
@@ -30,8 +37,7 @@ export async function sessionsOverview(req, res) {
       FROM events
       WHERE properties.site_id = '${esc(posthogSiteId)}'
         AND event = '$pageview'
-        AND timestamp >= toDateTime('${fromDate}')
-        AND timestamp <= toDateTime('${toDate}')
+        AND ${dateFilter}
       ORDER BY distinct_id ASC, timestamp ASC
       LIMIT 50000
     `
@@ -47,8 +53,7 @@ export async function sessionsOverview(req, res) {
       FROM events
       WHERE properties.site_id = '${esc(posthogSiteId)}'
         AND event = '$conversion'
-        AND timestamp >= toDateTime('${fromDate}')
-        AND timestamp <= toDateTime('${toDate}')
+        AND ${dateFilter}
       ORDER BY distinct_id ASC, timestamp ASC
       LIMIT 50000
     `

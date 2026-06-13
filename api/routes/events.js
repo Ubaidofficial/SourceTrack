@@ -3,6 +3,7 @@ import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
 import { esc } from '../lib/utils.js'
 import { getDedupeSummary } from './conversion.js'
+import { serializeHogQLDateTime } from '../lib/hogql-date.js'
 
 const router = Router()
 import NodeCache from 'node-cache'
@@ -45,12 +46,20 @@ router.get('/latest', validateSiteKey, async (req, res) => {
       )`)
     }
 
-    if (isValidDate(date_from)) {
-      where.push(`timestamp >= toDateTime('${esc(date_from)} 00:00:00')`)
+    if (date_from) {
+      try {
+        where.push(`timestamp >= ${serializeHogQLDateTime(date_from, { exclusiveEndForDateOnly: false })}`)
+      } catch (err) {
+        return res.status(400).json({ success: false, data: null, error: `Invalid date_from: ${err.message}` })
+      }
     }
 
-    if (isValidDate(date_to)) {
-      where.push(`timestamp <= toDateTime('${esc(date_to)} 23:59:59')`)
+    if (date_to) {
+      try {
+        where.push(`timestamp < ${serializeHogQLDateTime(date_to, { exclusiveEndForDateOnly: true })}`)
+      } catch (err) {
+        return res.status(400).json({ success: false, data: null, error: `Invalid date_to: ${err.message}` })
+      }
     }
 
     if (search) {

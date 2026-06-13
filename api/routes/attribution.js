@@ -1,5 +1,6 @@
 import { getAttribution, getFlexibleReport, getAttributionExplanation, getPreAggregatedAttribution, getLinearAttribution, getUShapedAttribution, getTimeDecayAttribution, getWShapedAttribution } from '../lib/attribution-engine.js'
 import { requireFeature } from '../lib/plan-features.js'
+import { serializeHogQLDateRange } from '../lib/hogql-date.js'
 
 const ALLOWED_MODELS = new Set(['first_touch', 'last_touch', 'first_touch_non_direct', 'last_touch_non_direct', 'ai_platforms', 'linear', 'u_shaped', 'time_decay', 'w_shaped'])
 const ALLOWED_GROUPS = new Set(['channel', 'source', 'medium', 'campaign', 'keyword', 'referrer_domain', 'ai_source', 'landing_page', 'country', 'device', 'browser', 'conversion_type', 'date', 'provider', 'attribution_status', 'stitching_method'])
@@ -40,22 +41,13 @@ export async function attribution(req, res) {
       })
     }
 
-    const fromDate = new Date(date_from)
-    const toDate = new Date(date_to)
-
-    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+    try {
+      serializeHogQLDateRange(date_from, date_to)
+    } catch (err) {
       return res.status(400).json({
         success: false,
         data: null,
-        error: 'Invalid date format. Use ISO 8601.'
-      })
-    }
-
-    if (fromDate > toDate) {
-      return res.status(400).json({
-        success: false,
-        data: null,
-        error: 'date_from must be before date_to'
+        error: err.message
       })
     }
 
