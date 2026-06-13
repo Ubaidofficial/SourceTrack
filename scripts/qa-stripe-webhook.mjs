@@ -35,7 +35,9 @@ async function runQa() {
     .maybeSingle()
 
   if (siteError || !site) {
-    console.error('❌ Failed to retrieve a test site from database. Ensure site seeds are present.')
+    console.error('❌ Failed to retrieve a test site from database.')
+    console.error('Please run the staging test site seed script to unblock this test:')
+    console.error('  npm run qa:seed:staging-test-site')
     process.exit(1)
   }
 
