@@ -458,3 +458,26 @@ export const identifyGlobalIpLimit = rateLimit({
   },
   handler: makeRateLimitHandler('global-ip')
 })
+
+// 5. Stripe webhook limiters
+export function createStripeWebhookLimit({ windowMs, max } = {}) {
+  const finalWindow = windowMs ?? getEnvInt('STRIPE_WEBHOOK_RATE_LIMIT_WINDOW_MS', 60_000)
+  const finalMax = max ?? getEnvInt('STRIPE_WEBHOOK_RATE_LIMIT_MAX', 60)
+
+  return rateLimit({
+    windowMs: finalWindow,
+    max: finalMax,
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: (req) => req.method === 'OPTIONS',
+    keyGenerator: (req) => {
+      const ip = resolveClientIp(req)
+      const key = `stripe-webhook:ip:${hashKeyPart(ip)}`
+      req.rateLimitKey = key
+      return key
+    },
+    handler: makeRateLimitHandler('stripe-webhook')
+  })
+}
+
+export const stripeWebhookLimit = createStripeWebhookLimit()

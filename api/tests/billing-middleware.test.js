@@ -2326,3 +2326,112 @@ test('Proxy and Legacy Ingestion Quota & Status Enforcement Tests (140G-4)', asy
     assert.strictEqual(rpcCalls.length, 0, 'must not call RPC')
   })
 })
+
+test('Stripe Webhook Rate Limiter Tests (Session 140G-15)', async (t) => {
+  const { createStripeWebhookLimit } = await import('../middleware/rate-limit.js')
+
+  const runLimiter = (limiter, req) => {
+    return new Promise((resolve, reject) => {
+      let nextCalled = false
+      let statusVal = null
+      let jsonVal = null
+
+      const res = {
+        status: (code) => {
+          statusVal = code
+          return {
+            json: (obj) => {
+              jsonVal = obj
+              resolve({ nextCalled: false, statusVal, jsonVal })
+            }
+          }
+        },
+        setHeader: () => {}
+      }
+
+      const next = (err) => {
+        if (err) {
+          reject(err)
+        } else {
+          nextCalled = true
+          resolve({ nextCalled: true, statusVal, jsonVal })
+        }
+      }
+
+      limiter(req, res, next)
+    })
+  }
+
+  await t.test('Normal webhook path passes through when under limit', async () => {
+    const limit = createStripeWebhookLimit({ windowMs: 60000, max: 2 })
+    const req = {
+      method: 'POST',
+      url: '/api/webhooks/stripe/sk-123',
+      headers: {
+        'x-forwarded-for': '1.2.3.4'
+      },
+      ip: '1.2.3.4'
+    }
+
+    const result = await runLimiter(limit, req)
+    assert.strictEqual(result.nextCalled, true, 'next() should be called')
+  })
+
+  await t.test('Excess requests return 429 and small safe JSON response', async () => {
+    const limit = createStripeWebhookLimit({ windowMs: 60000, max: 2 })
+    const req = {
+      method: 'POST',
+      url: '/api/webhooks/stripe/sk-123',
+      headers: {
+        'x-forwarded-for': '2.3.4.5'
+      },
+      ip: '2.3.4.5'
+    }
+
+    const originalWarn = console.warn
+    console.warn = () => {}
+
+    try {
+      // First request
+      const r1 = await runLimiter(limit, req)
+      assert.strictEqual(r1.nextCalled, true)
+      assert.strictEqual(r1.statusVal, null)
+
+      // Second request
+      const r2 = await runLimiter(limit, req)
+      assert.strictEqual(r2.nextCalled, true)
+      assert.strictEqual(r2.statusVal, null)
+
+      // Third request (should be rate-limited)
+      const r3 = await runLimiter(limit, req)
+      assert.strictEqual(r3.nextCalled, false, 'next() should not be called for the third request')
+      assert.strictEqual(r3.statusVal, 429)
+      assert.deepStrictEqual(r3.jsonVal, {
+        success: false,
+        data: null,
+        error: 'Too many requests',
+        message: 'Rate limit exceeded (stripe-webhook limit)'
+      })
+    } finally {
+      console.warn = originalWarn
+    }
+  })
+
+  await t.test('Limiter does not require auth or mutate req.body', async () => {
+    const limit = createStripeWebhookLimit({ windowMs: 60000, max: 10 })
+    const bodyBuffer = Buffer.from('{"id": "evt_123"}')
+    const req = {
+      method: 'POST',
+      url: '/api/webhooks/stripe/sk-123',
+      headers: {
+        'x-forwarded-for': '3.4.5.6'
+      },
+      body: bodyBuffer
+    }
+
+    const result = await runLimiter(limit, req)
+    assert.strictEqual(result.nextCalled, true)
+    assert.strictEqual(req.headers.authorization, undefined)
+    assert.strictEqual(req.body, bodyBuffer, 'body buffer must not be mutated or consumed')
+  })
+})

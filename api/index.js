@@ -20,7 +20,8 @@ import {
   identifyVisitorLimit,
   identifyIpLimit,
   identifySiteLimit,
-  identifyGlobalIpLimit
+  identifyGlobalIpLimit,
+  stripeWebhookLimit
 } from './middleware/rate-limit.js'
 import { validateSiteKey } from './middleware/auth.js'
 import { requireSiteMembership } from './middleware/auth.js'
@@ -298,8 +299,8 @@ app.use('/tracker', (req, res, next) => {
 app.use('/tracker', express.static('tracker'))
 
 // 2. Stripe webhook (MUST be before express.json)
-app.post('/api/billing/webhook', express.raw({ type: 'application/json' }), billingWebhookHandler)
-app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }), stripeWebhookRouter)
+app.post('/api/billing/webhook', stripeWebhookLimit, express.raw({ type: 'application/json' }), billingWebhookHandler)
+app.use('/api/webhooks/stripe', stripeWebhookLimit, express.raw({ type: 'application/json' }), stripeWebhookRouter)
 app.use('/api/webhooks/shopify', express.raw({ type: 'application/json' }), shopifyWebhookRouter)
 
 // 3. express.json
