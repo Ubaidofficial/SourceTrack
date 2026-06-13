@@ -1104,11 +1104,12 @@ export default function Settings() {
         <div className="border-t border-gray-100 dark:border-gray-800 pt-4 space-y-2">
           <p className="text-xs font-semibold text-st-black dark:text-white">Erase Visitor Data (Right to Erasure)</p>
           <p className="text-xs text-st-gray dark:text-gray-400">
-            Enter a visitor's anonymous ID to permanently erase their data. This action is immediate and permanent.
+            Enter a visitor's anonymous ID to erase matching SourceTrack app database records. This action is immediate for app database records and cannot be undone.
           </p>
-          <div className="bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-lg p-3 text-[11px] text-amber-800 dark:text-amber-300 space-y-1 font-sans">
-            <p>• Database attribution records and stitched identity mappings will be permanently deleted from our database.</p>
-            <p>• Associated raw events and person profiles stored in PostHog will be queued for deletion (best-effort depending on external API availability).</p>
+          <div className="bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-lg p-3 text-[11px] text-amber-800 dark:text-amber-300 space-y-1.5 font-sans">
+            <p>• Database attribution records and stitched identity mappings will be permanently deleted from our app database.</p>
+            <p>• <strong>PostHog Deletion Limitation:</strong> Visitor erasure sends a best-effort deletion request to our analytics backend where supported. However, this is not independently verified and full raw-event purge verification is still pending.</p>
+            <p>• <strong>Sanitization Note:</strong> Ingestion-side PII sanitization is locally implemented to filter sensitive keys, but live staging/production verification remains pending.</p>
             <p>• Third-party Stripe customer and billing records are not affected or queried during visitor data deletion.</p>
           </div>
           <form onSubmit={handleVisitorDelete} className="flex items-center gap-3">
@@ -1287,8 +1288,11 @@ export default function Settings() {
         <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
           Permanently delete your account. This action is irreversible.
         </p>
-        <div className="bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-lg p-3 text-[11px] text-red-800 dark:text-red-300 space-y-1 font-sans">
-          <p>• If you are the only workspace member, your workspace and sites will be permanently deleted.</p>
+        <div className="bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-lg p-3 text-[11px] text-red-800 dark:text-red-300 space-y-1.5 font-sans">
+          <p>• Account/workspace deletion removes SourceTrack workspace and app database records according to current code paths.</p>
+          <p>• <strong>PostHog Event Retention:</strong> Deleting your account does NOT delete historical raw analytics events already sent to our analytics backend (PostHog). These events may remain until separate retention or purge tooling is implemented.</p>
+          <p>• <strong>Paid Beta Blocker:</strong> Paid beta remains blocked by PostHog retention/deletion handling and live verification.</p>
+          <p>• If you are the only workspace member, your workspace and sites will be permanently deleted from our app database.</p>
           <p>• If this is a shared workspace, your account and membership will be removed, leaving the shared sites active for other members.</p>
           <p>• If you are the only administrator of a shared workspace, you must transfer ownership or remove other members before deleting your account.</p>
         </div>

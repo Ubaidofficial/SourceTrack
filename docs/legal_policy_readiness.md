@@ -42,7 +42,7 @@ SourceTrack collects website telemetry submitted by client-side scripts and serv
 
 - **Nightly Retention Purge:** Supabase database attribution records (`attributed_conversions`) older than the site's configured `data_retention_days` are purged automatically each night.
 - **Visitor Erasure:** Erasing a visitor permanently deletes their `attributed_conversions` and site-specific `site_identity_links` from Supabase immediately, and sends a best-effort delete request to PostHog.
-- **Account Deletion:** If a user is the sole member of a company workspace, account deletion cascades to permanently delete all sites, member associations, and database attribution records. In shared workspaces, the sites remain active and only the deleting user's membership and auth profile are removed. Sole administrators of shared workspaces are blocked from deletion until ownership is transferred.
+- **Account Deletion:** If a user is the sole member of a company workspace, account deletion cascades through SourceTrack app database records for sites, member associations, and database attribution records. Historical raw analytics events already sent to PostHog are not bulk-erased by account deletion and require separate retention/purge handling. Stripe billing records are handled separately. In shared workspaces, the sites remain active and only the deleting user's membership and auth profile are removed. Sole administrators of shared workspaces are blocked from deletion until ownership is transferred.
 
 ---
 
