@@ -1146,7 +1146,9 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
       json: (obj) => { jsonVal = obj }
     }
 
-    await proxyRouter(req, res, () => {})
+    const layer = proxyRouter.stack.find(s => s.route?.path === '/c' && s.route?.methods.post)
+    const handler = layer.route.stack[layer.route.stack.length - 1].handle
+    await handler(req, res)
     assert.strictEqual(jsonVal.ok, true)
 
     // Wait a tiny bit since proxy executes in the background
@@ -2170,7 +2172,7 @@ test('Proxy and Legacy Ingestion Quota & Status Enforcement Tests (140G-4)', asy
 
     // Find the handler for POST /e in proxyRouter
     const layer = proxyRouter.stack.find(s => s.route?.path === '/e' && s.route?.methods.post)
-    const handler = layer.route.stack[0].handle
+    const handler = layer.route.stack[layer.route.stack.length - 1].handle
     await handler(req, res)
 
     assert.strictEqual(captureCalled, false, 'over limit proxy pageview must skip PostHog capture')
@@ -2188,7 +2190,7 @@ test('Proxy and Legacy Ingestion Quota & Status Enforcement Tests (140G-4)', asy
     const res = makeMockRes()
 
     const layer = proxyRouter.stack.find(s => s.route?.path === '/e' && s.route?.methods.post)
-    const handler = layer.route.stack[0].handle
+    const handler = layer.route.stack[layer.route.stack.length - 1].handle
     await handler(req, res)
 
     assert.strictEqual(captureCalled, true, 'non-pageview event should be captured')
@@ -2206,7 +2208,7 @@ test('Proxy and Legacy Ingestion Quota & Status Enforcement Tests (140G-4)', asy
     const res = makeMockRes()
 
     const layer = proxyRouter.stack.find(s => s.route?.path === '/e' && s.route?.methods.post)
-    const handler = layer.route.stack[0].handle
+    const handler = layer.route.stack[layer.route.stack.length - 1].handle
     await handler(req, res)
 
     assert.strictEqual(captureCalled, false, 'expired trial site must skip capture')
@@ -2224,7 +2226,7 @@ test('Proxy and Legacy Ingestion Quota & Status Enforcement Tests (140G-4)', asy
     const res = makeMockRes()
 
     const layer = proxyRouter.stack.find(s => s.route?.path === '/pixel.gif' && s.route?.methods.get)
-    const handler = layer.route.stack[0].handle
+    const handler = layer.route.stack[layer.route.stack.length - 1].handle
     await handler(req, res)
 
     assert.strictEqual(res.ended, true)
@@ -2244,7 +2246,7 @@ test('Proxy and Legacy Ingestion Quota & Status Enforcement Tests (140G-4)', asy
     const res = makeMockRes()
 
     const layer = proxyRouter.stack.find(s => s.route?.path === '/pixel.gif' && s.route?.methods.get)
-    const handler = layer.route.stack[0].handle
+    const handler = layer.route.stack[layer.route.stack.length - 1].handle
     await handler(req, res)
 
     assert.strictEqual(captureCalled, false, 'expired trial pixel must skip capture')
@@ -2331,6 +2333,15 @@ test('Stripe Webhook Rate Limiter Tests (Session 140G-15)', async (t) => {
   const { createStripeWebhookLimit } = await import('../middleware/rate-limit.js')
 
   const runLimiter = (limiter, req) => {
+    const fullReq = {
+      ip: req.ip || '127.0.0.1',
+      app: { get: (name) => name === 'trust proxy' ? 'loopback' : undefined },
+      headers: req.headers || {},
+      method: req.method || 'GET',
+      url: req.url || '/',
+      body: req.body,
+      ...req
+    }
     return new Promise((resolve, reject) => {
       let nextCalled = false
       let statusVal = null
@@ -2358,7 +2369,7 @@ test('Stripe Webhook Rate Limiter Tests (Session 140G-15)', async (t) => {
         }
       }
 
-      limiter(req, res, next)
+      limiter(fullReq, res, next)
     })
   }
 
@@ -2433,5 +2444,173 @@ test('Stripe Webhook Rate Limiter Tests (Session 140G-15)', async (t) => {
     assert.strictEqual(result.nextCalled, true)
     assert.strictEqual(req.headers.authorization, undefined)
     assert.strictEqual(req.body, bodyBuffer, 'body buffer must not be mutated or consumed')
+  })
+})
+
+test('Public Dashboard Rate Limiter Tests (Session 140G-18)', async (t) => {
+  const {
+    publicDashboardLimit,
+    createPublicDashboardLimit,
+    trackVisitorLimit,
+    trackIpLimit,
+    trackSiteLimit,
+    trackGlobalIpLimit,
+    conversionVisitorLimit,
+    conversionIpLimit,
+    conversionSiteLimit,
+    conversionGlobalIpLimit
+  } = await import('../middleware/rate-limit.js')
+  const { default: proxyRouter } = await import('../routes/proxy.js')
+  const { publicDashboardRouter } = await import('../routes/public-dashboard.js')
+
+  const runLimiter = (limiter, req) => {
+    const fullReq = {
+      ip: req.ip || '127.0.0.1',
+      app: { get: (name) => name === 'trust proxy' ? 'loopback' : undefined },
+      headers: req.headers || {},
+      method: req.method || 'GET',
+      url: req.url || '/',
+      body: req.body,
+      ...req
+    }
+    return new Promise((resolve, reject) => {
+      let nextCalled = false
+      let statusVal = null
+      let jsonVal = null
+
+      const res = {
+        status: (code) => {
+          statusVal = code
+          return {
+            json: (obj) => {
+              jsonVal = obj
+              resolve({ nextCalled: false, statusVal, jsonVal })
+            }
+          }
+        },
+        setHeader: () => {}
+      }
+
+      const next = (err) => {
+        if (err) {
+          reject(err)
+        } else {
+          nextCalled = true
+          resolve({ nextCalled: true, statusVal, jsonVal })
+        }
+      }
+
+      limiter(fullReq, res, next)
+    })
+  }
+
+  await t.test('Normal public dashboard request passes when under limit', async () => {
+    const req = {
+      method: 'GET',
+      url: '/api/public/token123',
+      headers: {
+        'x-forwarded-for': '9.8.7.6'
+      },
+      ip: '9.8.7.6'
+    }
+
+    const result = await runLimiter(publicDashboardLimit, req)
+    assert.strictEqual(result.nextCalled, true, 'next() should be called')
+  })
+
+  await t.test('Public dashboard over limit returns 429 safe JSON', async () => {
+    const limit = createPublicDashboardLimit({ windowMs: 60000, max: 1 })
+    const req = {
+      method: 'GET',
+      url: '/api/public/token123',
+      headers: {
+        'x-forwarded-for': '9.8.7.8'
+      },
+      ip: '9.8.7.8'
+    }
+
+    const r1 = await runLimiter(limit, req)
+    assert.strictEqual(r1.nextCalled, true)
+
+    const r2 = await runLimiter(limit, req)
+    assert.strictEqual(r2.nextCalled, false)
+    assert.strictEqual(r2.statusVal, 429)
+    assert.deepStrictEqual(r2.jsonVal, {
+      success: false,
+      data: null,
+      error: 'Too many requests'
+    })
+  })
+
+  await t.test('Limiter does not require auth or mutate request body', async () => {
+    const limit = createPublicDashboardLimit({ windowMs: 60000, max: 10 })
+    const bodyObj = { some: 'data' }
+    const req = {
+      method: 'GET',
+      url: '/api/public/token123',
+      headers: {
+        'x-forwarded-for': '9.8.7.9'
+      },
+      body: bodyObj
+    }
+
+    const result = await runLimiter(limit, req)
+    assert.strictEqual(result.nextCalled, true)
+    assert.strictEqual(req.headers.authorization, undefined)
+    assert.strictEqual(req.body, bodyObj, 'body must not be mutated')
+  })
+
+  await t.test('Route stacks include correct rate limiters', async () => {
+    // 1. /sp/e route stack
+    const layerE = proxyRouter.stack.find(s => s.route?.path === '/e' && s.route?.methods.post)
+    assert.ok(layerE, 'POST /sp/e route should exist')
+    const handlersE = layerE.route.stack.map(s => s.handle)
+    assert.ok(handlersE.includes(trackVisitorLimit), 'POST /sp/e must include trackVisitorLimit')
+    assert.ok(handlersE.includes(trackIpLimit), 'POST /sp/e must include trackIpLimit')
+    assert.ok(handlersE.includes(trackSiteLimit), 'POST /sp/e must include trackSiteLimit')
+    assert.ok(handlersE.includes(trackGlobalIpLimit), 'POST /sp/e must include trackGlobalIpLimit')
+
+    // 2. /sp/c route stack
+    const layerC = proxyRouter.stack.find(s => s.route?.path === '/c' && s.route?.methods.post)
+    assert.ok(layerC, 'POST /sp/c route should exist')
+    const handlersC = layerC.route.stack.map(s => s.handle)
+    assert.ok(handlersC.includes(conversionVisitorLimit), 'POST /sp/c must include conversionVisitorLimit')
+    assert.ok(handlersC.includes(conversionIpLimit), 'POST /sp/c must include conversionIpLimit')
+    assert.ok(handlersC.includes(conversionSiteLimit), 'POST /sp/c must include conversionSiteLimit')
+    assert.ok(handlersC.includes(conversionGlobalIpLimit), 'POST /sp/c must include conversionGlobalIpLimit')
+
+    // 3. /sp/pixel.gif route stack
+    const layerPixel = proxyRouter.stack.find(s => s.route?.path === '/pixel.gif' && s.route?.methods.get)
+    assert.ok(layerPixel, 'GET /sp/pixel.gif route should exist')
+    const handlersPixel = layerPixel.route.stack.map(s => s.handle)
+    assert.ok(handlersPixel.includes(trackVisitorLimit), 'GET /sp/pixel.gif must include trackVisitorLimit')
+    assert.ok(handlersPixel.includes(trackIpLimit), 'GET /sp/pixel.gif must include trackIpLimit')
+    assert.ok(handlersPixel.includes(trackSiteLimit), 'GET /sp/pixel.gif must include trackSiteLimit')
+    assert.ok(handlersPixel.includes(trackGlobalIpLimit), 'GET /sp/pixel.gif must include trackGlobalIpLimit')
+
+    // 4. GET /api/public/:token route stack
+    const layerPublic = publicDashboardRouter.stack.find(s => s.route?.path === '/:token' && s.route?.methods.get)
+    assert.ok(layerPublic, 'GET /api/public/:token route should exist')
+    const handlersPublic = layerPublic.route.stack.map(s => s.handle)
+    assert.ok(handlersPublic.includes(publicDashboardLimit), 'GET /api/public/:token must include publicDashboardLimit')
+  })
+})
+
+test('Default Ingestion Rate Limiter Skip Tests (Session 140G-18)', async (t) => {
+  const { isIngestionPath } = await import('../middleware/rate-limit.js')
+
+  await t.test('skips /sp/e, /sp/c, /sp/pixel.gif, /api/pixel, /api/conversion/offline', async () => {
+    assert.strictEqual(isIngestionPath('/sp/e'), true)
+    assert.strictEqual(isIngestionPath('/sp/c'), true)
+    assert.strictEqual(isIngestionPath('/sp/pixel.gif'), true)
+    assert.strictEqual(isIngestionPath('/api/pixel'), true)
+    assert.strictEqual(isIngestionPath('/api/conversion/offline'), true)
+    assert.strictEqual(isIngestionPath('/api/track'), true)
+    assert.strictEqual(isIngestionPath('/track'), true)
+  })
+
+  await t.test('does not skip normal api paths', async () => {
+    assert.strictEqual(isIngestionPath('/api/attribution'), false)
+    assert.strictEqual(isIngestionPath('/api/sessions'), false)
   })
 })

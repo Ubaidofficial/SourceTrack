@@ -2,11 +2,12 @@ import express from 'express'
 import { getPreAggregatedAttribution } from '../lib/attribution-engine.js'
 import { requireUserAuth } from '../middleware/user-auth.js'
 import { getSupabase } from '../lib/supabase.js'
+import { publicDashboardLimit } from '../middleware/rate-limit.js'
 
 const router = express.Router()
 
 // GET /api/public/:token — no auth, returns dashboard data for public share
-router.get('/:token', async (req, res) => {
+router.get('/:token', publicDashboardLimit, async (req, res) => {
   try {
     if (
       req.query.site_key || req.query.site_id || req.query.siteKey || req.query.siteId ||

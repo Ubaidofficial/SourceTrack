@@ -330,7 +330,13 @@ app.post('/api/track',
   detectAIPlatform,
   track
 )
-app.get('/api/pixel', trackLimit, pixelRouter)  // 1×1 GIF — email & no-JS tracking
+app.get('/api/pixel',
+  trackVisitorLimit,
+  trackIpLimit,
+  trackSiteLimit,
+  trackGlobalIpLimit,
+  pixelRouter
+)  // 1×1 GIF — email & no-JS tracking
 app.post('/api/collect',
   (req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*')
@@ -377,7 +383,13 @@ app.post('/api/conversion',
   detectAIPlatform,
   conversion
 )
-app.post('/api/conversion/offline', defaultLimit, validateSiteKey, conversionOffline)
+app.post('/api/conversion/offline',
+  conversionIpLimit,
+  conversionSiteLimit,
+  conversionGlobalIpLimit,
+  validateSiteKey,
+  conversionOffline
+)
 app.get('/api/attribution', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, attribution)
 app.get('/api/attribution/explain', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, attributionExplain)
 app.get("/api/attribution/verdicts", requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, attributionVerdicts)

@@ -311,7 +311,7 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     setupMocks()
     const { default: proxyRouter } = await import('../routes/proxy.js')
     const layer = proxyRouter.stack.find(s => s.route?.path === '/e' && s.route?.methods.post)
-    const handler = layer.route.stack[0].handle
+    const handler = layer.route.stack[layer.route.stack.length - 1].handle
 
     const req = {
       body: {
@@ -344,7 +344,7 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     setupMocks()
     const { default: proxyRouter } = await import('../routes/proxy.js')
     const layer = proxyRouter.stack.find(s => s.route?.path === '/e' && s.route?.methods.post)
-    const handler = layer.route.stack[0].handle
+    const handler = layer.route.stack[layer.route.stack.length - 1].handle
 
     const req = {
       body: {
@@ -374,7 +374,7 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     setupMocks()
     const { default: proxyRouter } = await import('../routes/proxy.js')
     const layer = proxyRouter.stack.find(s => s.route?.path === '/c' && s.route?.methods.post)
-    const handler = layer.route.stack[0].handle
+    const handler = layer.route.stack[layer.route.stack.length - 1].handle
 
     const req = {
       body: {
@@ -406,7 +406,7 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     setupMocks()
     const { default: proxyRouter } = await import('../routes/proxy.js')
     const layer = proxyRouter.stack.find(s => s.route?.path === '/c' && s.route?.methods.post)
-    const handler = layer.route.stack[0].handle
+    const handler = layer.route.stack[layer.route.stack.length - 1].handle
 
     const req = {
       body: {
@@ -629,7 +629,7 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     setupMocks()
     const { default: proxyRouter } = await import('../routes/proxy.js')
     const layer = proxyRouter.stack.find(s => s.route?.path === '/e' && s.route?.methods.post)
-    const handler = layer.route.stack[0].handle
+    const handler = layer.route.stack[layer.route.stack.length - 1].handle
 
     const req = {
       body: {
@@ -655,7 +655,7 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     setupMocks()
     const { default: proxyRouter } = await import('../routes/proxy.js')
     const layer = proxyRouter.stack.find(s => s.route?.path === '/e' && s.route?.methods.post)
-    const handler = layer.route.stack[0].handle
+    const handler = layer.route.stack[layer.route.stack.length - 1].handle
 
     const req = {
       body: {
@@ -681,7 +681,7 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     setupMocks()
     const { default: proxyRouter } = await import('../routes/proxy.js')
     const layer = proxyRouter.stack.find(s => s.route?.path === '/e' && s.route?.methods.post)
-    const handler = layer.route.stack[0].handle
+    const handler = layer.route.stack[layer.route.stack.length - 1].handle
 
     const req = {
       body: {
@@ -709,7 +709,7 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     setupMocks()
     const { default: proxyRouter } = await import('../routes/proxy.js')
     const layer = proxyRouter.stack.find(s => s.route?.path === '/c' && s.route?.methods.post)
-    const handler = layer.route.stack[0].handle
+    const handler = layer.route.stack[layer.route.stack.length - 1].handle
 
     const req = {
       body: {
@@ -757,7 +757,7 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     setupMocks()
     const { default: proxyRouter } = await import('../routes/proxy.js')
     const layer = proxyRouter.stack.find(s => s.route?.path === '/e' && s.route?.methods.post)
-    const handler = layer.route.stack[0].handle
+    const handler = layer.route.stack[layer.route.stack.length - 1].handle
 
     const req = {
       body: {

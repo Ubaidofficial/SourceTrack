@@ -14,7 +14,16 @@ import { claimConversionUsage } from '../lib/conversion-limits.js'
 import { claimPageviewUsage } from '../lib/pageview-limits.js'
 import { isSiteStatusBlocked } from '../lib/plan-features.js'
 import { redactPiiFromObject, redactPiiFromUrl } from '../lib/utils.js'
-
+import {
+  trackVisitorLimit,
+  trackIpLimit,
+  trackSiteLimit,
+  trackGlobalIpLimit,
+  conversionVisitorLimit,
+  conversionIpLimit,
+  conversionSiteLimit,
+  conversionGlobalIpLimit
+} from '../middleware/rate-limit.js'
 
 const router = express.Router()
 
@@ -49,7 +58,12 @@ function enrichFromRequest(req) {
 }
 
 // POST /sp/e — proxied pageview / custom event
-router.post('/e', async (req, res) => {
+router.post('/e',
+  trackVisitorLimit,
+  trackIpLimit,
+  trackSiteLimit,
+  trackGlobalIpLimit,
+  async (req, res) => {
   res.json({ ok: true })
   try {
     const { site_key, event, anonymous_id, properties = {} } = req.body || {}
@@ -104,7 +118,12 @@ router.post('/e', async (req, res) => {
 })
 
 // POST /sp/c — proxied conversion
-router.post('/c', async (req, res) => {
+router.post('/c',
+  conversionVisitorLimit,
+  conversionIpLimit,
+  conversionSiteLimit,
+  conversionGlobalIpLimit,
+  async (req, res) => {
   res.json({ ok: true })
   try {
     const { site_key, anonymous_id, conversion_value, conversion_type, order_id, properties = {} } = req.body || {}
@@ -155,7 +174,12 @@ router.post('/c', async (req, res) => {
 })
 
 // GET /sp/pixel.gif — 1x1 pixel (always a $pageview; always consumes quota)
-router.get('/pixel.gif', async (req, res) => {
+router.get('/pixel.gif',
+  trackVisitorLimit,
+  trackIpLimit,
+  trackSiteLimit,
+  trackGlobalIpLimit,
+  async (req, res) => {
   const gif = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64')
   res.set({ 'Content-Type': 'image/gif', 'Cache-Control': 'no-cache, no-store', 'Pragma': 'no-cache' })
   res.end(gif)

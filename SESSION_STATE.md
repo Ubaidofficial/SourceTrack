@@ -1,5 +1,6 @@
-Session: 140G-17 — Enforce Mandatory CI Regression Gate (COMPLETE / implemented mandatory CI regression gate for static, identity/billing, tracker, and attribution unit suites; GitHub Actions verification remains pending until push. Paid beta remains blocked by the remaining open release gates, including Stripe test-mode E2E verification, staging schema seeding/bootstrap, PITR/backup restore drill, production env/secrets verification, observability, end-to-end install QA, docs truth audit, support readiness, legal/policy readiness, abuse/rate-limit review, status/incident readiness, transactional email/password reset verification, and final staging/production smoke verification.)
-Last Completed: Session 140G-17 — Enforce Mandatory CI Regression Gate. Added static, identity/billing, tracker, and attribution unit suites to CI or enforce a mandatory local run gate. Created `docs/qa/ci_regression_gate_hardening_140G-17.md`.
+Session: 140G-18 — Abuse / Rate-Limit Endpoint Review (COMPLETE / completed comprehensive endpoint-by-endpoint rate-limit and abuse inventory. Hardened proxy endpoints `/sp/e`, `/sp/c`, `/sp/pixel.gif`, `/api/pixel`, offline conversion endpoint `/api/conversion/offline`, and public sharing endpoint `GET /api/public/:token`. Created `docs/qa/abuse_rate_limit_endpoint_review_140G-18.md`. Added focused unit tests verifying the public dashboard rate limiter, over-limit behavior, non-mutation properties, and correct middleware route-stack mounts. Paid beta remains blocked by the remaining open release gates, including Stripe test-mode E2E verification, staging schema seeding/bootstrap, PITR/backup restore drill, production env/secrets verification, observability, end-to-end install QA, docs truth audit, support readiness, legal/policy readiness, status/incident readiness, transactional email/password reset verification, and final staging/production smoke verification.)
+Last Completed: Session 140G-18 — Abuse / Rate-Limit Endpoint Review. Hardened proxy endpoints, offline conversions, public sharing, and email tracking pixel. Created `docs/qa/abuse_rate_limit_endpoint_review_140G-18.md`.
+Prior Completed (140G-17): Session 140G-17 — Enforce Mandatory CI Regression Gate. Configured GitHub Actions CI workflow to enforce static launch checks, identity/billing unit tests, tracker unit tests, and attribution unit tests. Created `docs/qa/ci_regression_gate_hardening_140G-17.md`.
 Prior Completed (140G-16): Session 140G-16 — Staging Schema Bootstrap / Seeded Test Site Unblocker. Created safe, repeatable test site seeder for staging E2E QA, and guided developers to it on missing site errors. Created `docs/qa/staging_test_site_seed_unblocker_140G-16.md`.
 Prior Completed (140G-15): Session 140G-15 — Stripe Webhook Rate Limiting. Implemented and unit-tested IP-based webhook rate limiting. Created `docs/qa/stripe_webhook_rate_limiting_140G-15.md`.
 Prior Completed (140G-14): Session 140G-14 — HogQL Date Param Sanitization. Sanitized date/time params in the attribution engine and identified reporting endpoints. Added 7 unit tests in api/tests/hogql-date.test.js. Created docs/qa/hogql_date_param_sanitization_140G-14.md.
@@ -70,6 +71,25 @@ Roadmap Queue:
 - Tracker Packaging + Intake-Inspired Gap Audit
 Build: ✅ passing (node --check, git diff --check, dashboard vite build, qa:static, required-grep clean)
 Branch: main
+
+Blockers:
+- Stripe test-mode E2E verification
+- staging schema/service-role execution
+- Supabase backups/PITR verification
+- backup/restore drill
+- production env/secrets verification
+- production observability
+- data deletion/privacy basics
+- end-to-end install QA
+- docs truth audit
+- support readiness
+- legal/policy readiness
+- admin/operator access
+- customer-facing status/incident plan
+- transactional email/password reset production verification
+- final staging/production smoke verification
+- distributed/site-key-aware rate limiter for scaled production
+
 
 ## Top-Priority Blocked Test Backlog
 

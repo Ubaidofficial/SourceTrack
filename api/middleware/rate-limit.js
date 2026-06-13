@@ -107,7 +107,12 @@ const INGESTION_PATHS = new Set([
   '/track',
   '/api/conversion',
   '/api/tracker/id',
-  '/api/identify'
+  '/api/identify',
+  '/sp/e',
+  '/sp/c',
+  '/api/conversion/offline',
+  '/sp/pixel.gif',
+  '/api/pixel'
 ])
 
 export function isIngestionPath(path) {
@@ -158,7 +163,7 @@ function makeRateLimitHandler(layer) {
   }
 }
 
-// Keep trackLimit defined exactly as is for compatibility with /api/pixel
+// Keep trackLimit defined for legacy/simple public webhook-style routes (like /api/webhooks/incoming) that still use it.
 export const trackLimit = rateLimit({
   windowMs: 60_000,
   max: 120,
@@ -199,6 +204,25 @@ export const aiLimit = rateLimit({
     res.status(429).json({ success: false, data: null, error: 'Too many requests' })
   }
 })
+
+// Public dashboard sharing rate limiter (IP-based, moderate limit for database protection)
+export function createPublicDashboardLimit({ windowMs, max } = {}) {
+  const finalWindow = windowMs ?? getEnvInt('PUBLIC_DASHBOARD_RATE_LIMIT_WINDOW_MS', 60_000)
+  const finalMax = max ?? getEnvInt('PUBLIC_DASHBOARD_RATE_LIMIT_MAX', 30)
+
+  return rateLimit({
+    windowMs: finalWindow,
+    max: finalMax,
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: (req) => req.method === 'OPTIONS',
+    handler(_req, res) {
+      res.status(429).json({ success: false, data: null, error: 'Too many requests' })
+    }
+  })
+}
+
+export const publicDashboardLimit = createPublicDashboardLimit()
 
 // ─── Layered Ingestion Limiters ──────────────────────────────────────────────
 

@@ -2,7 +2,14 @@
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
-> **Handoff:** Session 140G-17 — Enforce Mandatory CI Regression Gate — **PASS — configured GitHub Actions CI workflow to enforce static launch checks, identity/billing unit tests, tracker unit tests, and attribution unit tests. Created `docs/qa/ci_regression_gate_hardening_140G-17.md`.**
+> **Handoff:** Session 140G-18 — Abuse / Rate-Limit Endpoint Review — **PARTIAL — completed comprehensive endpoint-by-endpoint rate-limit and abuse inventory. Hardened proxy endpoints `/sp/e`, `/sp/c`, `/sp/pixel.gif`, `/api/pixel`, offline conversions `/api/conversion/offline`, and public sharing `GET /api/public/:token`. Created `docs/qa/abuse_rate_limit_endpoint_review_140G-18.md`. Added focused unit tests verifying the public dashboard rate limiter, over-limit behavior, non-mutation properties, and correct middleware route-stack mounts.**
+> - **Abuse / Rate Limit Inventory**: Audited all unauthenticated/public routes and cataloged their rate limit protection states.
+> - **Endpoint Hardening**: Upgraded proxy event (`/sp/e`), proxy conversion (`/sp/c`), proxy pixel (`/sp/pixel.gif`), and public pixel (`/api/pixel`) routes to use the layered, site-key/visitor-aware rate limiters and bypassed global `defaultLimit` to prevent NAT traffic drops. Hardened offline conversions (`/api/conversion/offline`) to use site/IP-aware conversion limiters without visitor-level constraints.
+> - **Public Sharing Protection**: Implemented a dedicated `publicDashboardLimit` (30 req/min) on the unauthenticated public dashboard sharing endpoint (`/api/public/:token`) to shield the database from heavy queries.
+> - **Unit Tests**: Added focused test scenarios in `api/tests/billing-middleware.test.js` validating the public dashboard rate limiter (under/over limit, non-mutation) and asserting that all hardened routes have correct rate limiters in their route stacks.
+> - **Release Checklist Updated**: Marked the Abuse/Rate-Limit Review status in `docs/release_checklist_gate.md` as `PARTIAL` with honest wording.
+>
+> **Prior handoff (Session 140G-17):** Session 140G-17 — Enforce Mandatory CI Regression Gate — **PASS — configured GitHub Actions CI workflow to enforce static launch checks, identity/billing unit tests, tracker unit tests, and attribution unit tests. Created `docs/qa/ci_regression_gate_hardening_140G-17.md`.**
 > - **GitHub CI Hardening:** Configured `.github/workflows/ci.yml` to automatically run `qa:static`, `qa:identity:unit`, `qa:tracker:unit`, and `qa:attribution:unit` on all pushes and pull requests targeting the `main` branch.
 > - **Exclusions Justification:** Documented that credential-dependent and mutating scripts (`qa-stripe-webhook.mjs` and `seed-staging-test-site.mjs`) are explicitly excluded from the CI pipeline to prevent flakiness and security hazards.
 > - **Release Checklist Updated:** Marked the Mandatory CI/Pre-Deploy Test Gate status in `docs/release_checklist_gate.md` as `PARTIAL` with honest wording.
