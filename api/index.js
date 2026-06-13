@@ -21,7 +21,8 @@ import {
   identifyIpLimit,
   identifySiteLimit,
   identifyGlobalIpLimit,
-  stripeWebhookLimit
+  stripeWebhookLimit,
+  isIngestionPath
 } from './middleware/rate-limit.js'
 import { validateSiteKey } from './middleware/auth.js'
 import { requireSiteMembership } from './middleware/auth.js'
@@ -72,6 +73,8 @@ import { stripeWebhookRouter } from './routes/stripe-webhook.js'
 import { shopifyWebhookRouter } from './routes/shopify-webhook.js'
 import { inspectClientIp } from './lib/ip-resolver.js'
 import { managedProxyEarlyGate, bindManagedProxySiteKey } from './middleware/managed-proxy.js'
+import { requestIdMiddleware } from './middleware/request-id.js'
+import { logInfo, logError, sanitizeLogPath } from './lib/safe-logger.js'
 
 // Fail fast on missing required environment variables. Better to crash on
 // startup than to fail every request with a cryptic 500 later.
@@ -132,6 +135,34 @@ const app = express()
 
 // Stage 1 Early Managed Proxy Gate
 app.use(managedProxyEarlyGate)
+
+// Request ID assignment and sanitization
+app.use(requestIdMiddleware)
+
+// Request completion logging (only for API routes, skip static assets and high-volume ingestion)
+app.use((req, res, next) => {
+  const isApi = req.path.startsWith('/api') || req.path.startsWith('/sp') || req.path === '/track'
+  const isIngestion = isIngestionPath(req.path)
+
+  if (!isApi || isIngestion) {
+    return next()
+  }
+
+  const start = Date.now()
+
+  res.on('finish', () => {
+    const duration = Date.now() - start
+    logInfo('request_completed', {
+      request_id: req.requestId,
+      method: req.method,
+      path: sanitizeLogPath(req.path),
+      status: res.statusCode,
+      duration_ms: duration
+    })
+  })
+
+  next()
+})
 
 // ── Hardcoded dashboard origins (not customer domains, not in env var) ────────
 const HARDCODED_ALLOWED_ORIGINS = [
@@ -468,13 +499,36 @@ app.get('/health', (_req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    success: true,
+    data: {
+      status: 'ok',
+      service: 'api',
+      timestamp: new Date().toISOString(),
+      request_id: req.requestId
+    },
+    error: null
+  })
+})
+
 // 8. Global error handler
 app.use((err, req, res, next) => {
-  console.error('Global API error:', err)
-  return res.status(500).json({
+  const status = err.status || err.statusCode || 500
+
+  logError('request_failed', {
+    request_id: req.requestId,
+    method: req.method,
+    path: sanitizeLogPath(req.path),
+    status,
+    error: err
+  })
+
+  return res.status(status).json({
     success: false,
     data: null,
-    error: 'Internal server error'
+    error: err.publicMessage || (status >= 500 ? 'Internal server error' : 'Request failed'),
+    request_id: req.requestId
   })
 })
 

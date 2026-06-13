@@ -174,7 +174,7 @@ export const trackLimit = rateLimit({
   }
 })
 
-// Keep defaultLimit keyGenerator unchanged, but skip the six ingestion paths and OPTIONS requests
+// Keep defaultLimit keyGenerator unchanged, but skip the ingestion paths and OPTIONS requests
 export const defaultLimit = rateLimit({
   windowMs: 60_000,
   max: 100,
