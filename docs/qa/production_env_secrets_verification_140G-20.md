@@ -72,5 +72,5 @@ No private secret values are intentionally committed in this report. All observe
 ---
 
 ## Remaining Release Risk
-Paid-beta readiness remains **NOT READY** (Blocked). 
+Paid-beta readiness remains **NOT READY** (Blocked).
 The lack of production Stripe credentials, shared staging/production PostHog projects, and missing `TRACKER_SALT` are critical P0 blockers that must be resolved prior to launch.
