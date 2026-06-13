@@ -54,8 +54,17 @@ jobs:
             git diff --check HEAD~1..HEAD
           fi
 
-      - name: Run static launch QA checks
+      - name: Static launch QA
         run: npm run qa:static
+
+      - name: Identity and billing unit tests
+        run: npm run qa:identity:unit
+
+      - name: Tracker unit tests
+        run: npm run qa:tracker:unit
+
+      - name: Attribution unit tests
+        run: npm run qa:attribution:unit
 
       - name: Build dashboard production target
         run: |
