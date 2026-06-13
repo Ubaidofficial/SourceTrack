@@ -527,7 +527,7 @@ export default function EventDebugger() {
                     <td className="py-2 px-4 text-gray-600 dark:text-gray-300 text-xs">{e.medium || '—'}</td>
                     <td className="py-2 px-4 text-gray-600 dark:text-gray-300 text-xs max-w-[160px] truncate">{e.campaign || '—'}</td>
                     <td className="py-2 px-4 text-gray-600 dark:text-gray-300 text-xs text-[10px]">
-                      {[e.gclid, e.gbraid, e.wbraid, e.fbclid, e.msclkid, e.ttclid, e.li_fat_id, e.li_fatid, e.twclid, e.dclid, e.snapclid, e.pclid].filter(Boolean).map(id => String(id).slice(0, 8)).join(", ") || "—"}
+                      {[e.gclid, e.gbraid, e.wbraid, e.fbclid, e.msclkid, e.ttclid, e.li_fat_id, e.li_fatid, e.twclid, e.dclid, e.snapclid, e.pclid, e.sccid, e.ko_click_id].filter(Boolean).map(id => String(id).slice(0, 8)).join(", ") || "—"}
                     </td>
                     <td className="py-2 px-4 text-gray-600 dark:text-gray-300 text-xs">{e.ai_source || '—'}</td>
                     <td className="py-2 px-4 text-gray-600 dark:text-gray-300 text-xs max-w-[200px] truncate">{formatPath(e.page_url)}</td>
@@ -594,6 +594,8 @@ export default function EventDebugger() {
                   ['Dclid', selectedEvent.dclid],
                   ['Snapclid', selectedEvent.snapclid],
                   ['Pclid', selectedEvent.pclid],
+                  ['Sccid', selectedEvent.sccid],
+                  ['Ko Click ID', selectedEvent.ko_click_id],
                   ['Ref Param', selectedEvent.ref_param],
                   ['Source Param', selectedEvent.source_param],
                   ['Via Param', selectedEvent.via_param],

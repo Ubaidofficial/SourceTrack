@@ -152,6 +152,8 @@ export function channelFromEvent(props = {}) {
   const snapclid = props.snapclid
   const pclid   = props.pclid
   const dclid   = props.dclid
+  const sccid   = props.sccid
+  const ko_click_id = props.ko_click_id
 
   // Treat same-domain (internal) referrers as no referrer for classification.
   // The classifier still credits UTMs / paid click IDs (which run BEFORE the
@@ -172,7 +174,7 @@ export function channelFromEvent(props = {}) {
 
   // 3. Paid Social
   const paidSocialMediums = ['paid_social', 'paidsocial', 'social_paid']
-  if (fbclid || ttclid || liclid || twclid || snapclid || pclid) return 'Paid Social'
+  if (fbclid || ttclid || liclid || twclid || snapclid || pclid || sccid) return 'Paid Social'
   if (paidSocialMediums.includes(medium)) return 'Paid Social'
 
   // 4. Display / Retargeting

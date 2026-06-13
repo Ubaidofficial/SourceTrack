@@ -264,6 +264,8 @@ async function processConversion(site, conversion) {
       properties.dclid,
       properties.snapclid,
       properties.pclid,
+      properties.sccid,
+      properties.ko_click_id,
       properties.page_url
     FROM events
     WHERE event = '$pageview'
@@ -302,7 +304,9 @@ async function processConversion(site, conversion) {
     dclid:     row[15] || null,
     snapclid:  row[16] || null,
     pclid:     row[17] || null,
-    page_url:  row[18] || null,
+    sccid:     row[18] || null,
+    ko_click_id: row[19] || null,
+    page_url:  row[20] || null,
     derived_source: row[1] || row[6] || (row[4] ? (() => { try { return new URL(row[4]).hostname.replace('www.', '') } catch (_e) { return null } })() : null) || 'direct'
   }))
   
@@ -329,7 +333,9 @@ async function processConversion(site, conversion) {
     twclid:         firstTp.twclid,
     dclid:          firstTp.dclid,
     snapclid:       firstTp.snapclid,
-    pclid:          firstTp.pclid
+    pclid:          firstTp.pclid,
+    sccid:          firstTp.sccid,
+    ko_click_id:    firstTp.ko_click_id
   })
   const lastTouchChannel = channelFromEvent({
     utm_source:     lastTp.utm_source,
@@ -349,7 +355,9 @@ async function processConversion(site, conversion) {
     twclid:         lastTp.twclid,
     dclid:          lastTp.dclid,
     snapclid:       lastTp.snapclid,
-    pclid:          lastTp.pclid
+    pclid:          lastTp.pclid,
+    sccid:          lastTp.sccid,
+    ko_click_id:    lastTp.ko_click_id
   })
 
   const confidence = calculateConfidence(touchpoints, firstTouchChannel)
@@ -374,7 +382,9 @@ async function processConversion(site, conversion) {
     twclid:         first30.twclid,
     dclid:          first30.dclid,
     snapclid:       first30.snapclid,
-    pclid:          first30.pclid
+    pclid:          first30.pclid,
+    sccid:          first30.sccid,
+    ko_click_id:    first30.ko_click_id
   }) : null
 
   const record = {
@@ -446,6 +456,7 @@ function calculateAttribution(touchpoints, conversionValue) {
     fbclid: tp.fbclid, msclkid: tp.msclkid, ttclid: tp.ttclid,
     li_fat_id: tp.li_fat_id, li_fatid: tp.li_fatid, twclid: tp.twclid,
     dclid: tp.dclid, snapclid: tp.snapclid, pclid: tp.pclid,
+    sccid: tp.sccid, ko_click_id: tp.ko_click_id,
     referrer: tp.referrer, page_url: tp.page_url
   })
   const tpBase = (tp) => ({

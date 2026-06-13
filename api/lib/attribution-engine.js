@@ -459,6 +459,8 @@ export async function getAiPlatformAttributionLive({
           properties.dclid AS dclid,
           properties.snapclid AS snapclid,
           properties.pclid AS pclid,
+          properties.sccid AS sccid,
+          properties.ko_click_id AS ko_click_id,
           properties.page_url AS page_url,
           properties.utm_term AS utm_term
         FROM events
@@ -492,8 +494,10 @@ export async function getAiPlatformAttributionLive({
         const dclid = row[16]
         const snapclid = row[17]
         const pclid = row[18]
-        const pageUrl = row[19]
-        const utmTerm = row[20]
+        const sccid = row[19]
+        const ko_click_id = row[20]
+        const pageUrl = row[21]
+        const utmTerm = row[22]
 
         const pvObj = {
           timestamp,
@@ -514,6 +518,8 @@ export async function getAiPlatformAttributionLive({
           dclid: dclid || null,
           snapclid: snapclid || null,
           pclid: pclid || null,
+          sccid: sccid || null,
+          ko_click_id: ko_click_id || null,
           page_url: pageUrl || null,
           utm_term: utmTerm || null
         }
@@ -1461,6 +1467,8 @@ export async function getMultiTouchAttributionLive({
       properties.dclid AS dclid,
       properties.snapclid AS snapclid,
       properties.pclid AS pclid,
+      properties.sccid AS sccid,
+      properties.ko_click_id AS ko_click_id,
       properties.page_url AS page_url,
       properties.utm_term AS utm_term${customPvSelect}
     FROM events
@@ -1495,8 +1503,10 @@ export async function getMultiTouchAttributionLive({
     const dclid = row[16]
     const snapclid = row[17]
     const pclid = row[18]
-    const pageUrl = row[19]
-    const utmTerm = row[20]
+    const sccid = row[19]
+    const ko_click_id = row[20]
+    const pageUrl = row[21]
+    const utmTerm = row[22]
 
     const pvObj = {
       timestamp,
@@ -1517,13 +1527,15 @@ export async function getMultiTouchAttributionLive({
       dclid: dclid || null,
       snapclid: snapclid || null,
       pclid: pclid || null,
+      sccid: sccid || null,
+      ko_click_id: ko_click_id || null,
       page_url: pageUrl || null,
       utm_term: utmTerm || null,
       derived_source: utmSource || aiSource || (referrer ? (() => { try { return new URL(referrer).hostname.replace('www.', '') } catch (_) { return null } })() : null) || 'direct'
     }
 
-    if (custKey1) pvObj[`custom_${custKey1}`] = row[21]
-    if (custKey2) pvObj[`custom_${custKey2}`] = row[custKey1 && custKey1 !== custKey2 ? 22 : 21]
+    if (custKey1) pvObj[`custom_${custKey1}`] = row[23]
+    if (custKey2) pvObj[`custom_${custKey2}`] = row[custKey1 && custKey1 !== custKey2 ? 24 : 23]
 
     if (!pageviewsByVisitor[distinctId]) pageviewsByVisitor[distinctId] = []
     pageviewsByVisitor[distinctId].push(pvObj)
@@ -2803,6 +2815,7 @@ export function calculateAttribution(touchpoints, conversionValue) {
     fbclid: tp.fbclid, msclkid: tp.msclkid, ttclid: tp.ttclid,
     li_fat_id: tp.li_fat_id, li_fatid: tp.li_fatid, twclid: tp.twclid,
     dclid: tp.dclid, snapclid: tp.snapclid, pclid: tp.pclid,
+    sccid: tp.sccid, ko_click_id: tp.ko_click_id,
     referrer: tp.referrer, page_url: tp.page_url
   })
   const tpBase = (tp) => {

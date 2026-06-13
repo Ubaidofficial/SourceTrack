@@ -214,7 +214,7 @@ export function redactPiiFromObject(obj, depth = 0) {
 
   const bypassedKeys = new Set([
     'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'utm_id',
-    'gclid', 'gbraid', 'wbraid', 'fbclid', 'ttclid', 'msclkid', 'li_fat_id', 'twclid', 'rdt_cid', 'epik', 'sccid',
+    'gclid', 'gbraid', 'wbraid', 'fbclid', 'ttclid', 'msclkid', 'li_fat_id', 'twclid', 'rdt_cid', 'epik', 'sccid', 'ko_click_id',
     'anonymous_id', 'distinct_id', 'site_id', 'site_key', 'event', 'session_id', 'key',
     'source', 'referrer', 'page_url', 'current_url', 'url',
     'conversion_type', 'value', 'currency', 'order_id', 'product_id', 'product_name', 'category'
@@ -647,6 +647,8 @@ export function normalizeClickIds(props = {}) {
   const dclid = (typeof props.dclid === 'string' && props.dclid.trim()) || null
   const snapclid = (typeof props.snapclid === 'string' && props.snapclid.trim()) || null
   const pclid = (typeof props.pclid === 'string' && props.pclid.trim()) || null
+  const sccid = (typeof props.sccid === 'string' && props.sccid.trim()) || null
+  const ko_click_id = (typeof props.ko_click_id === 'string' && props.ko_click_id.trim()) || null
 
   const rawLiFatId = (typeof props.li_fat_id === 'string' && props.li_fat_id.trim()) || null
   const rawLiFatid = (typeof props.li_fatid === 'string' && props.li_fatid.trim()) || null
@@ -666,6 +668,8 @@ export function normalizeClickIds(props = {}) {
     twclid,
     dclid,
     snapclid,
-    pclid
+    pclid,
+    sccid,
+    ko_click_id
   }
 }

@@ -198,7 +198,7 @@ export async function conversionOffline(req, res) {
       props.form_name = req.body.form_name.trim().slice(0, 120).replace(/[^a-zA-Z0-9 _-]/g, '')
     }
     // UTM fields (passed through for attribution stitching)
-    ;['utm_source','utm_medium','utm_campaign','utm_content','utm_term','gclid','gbraid','wbraid','fbclid','msclkid','ttclid','li_fat_id','li_fatid','twclid','dclid','snapclid','pclid'].forEach(k => {
+    ;['utm_source','utm_medium','utm_campaign','utm_content','utm_term','gclid','gbraid','wbraid','fbclid','msclkid','ttclid','li_fat_id','li_fatid','twclid','dclid','snapclid','pclid','sccid','ko_click_id'].forEach(k => {
       if (typeof req.body[k] === 'string' && req.body[k].trim()) {
         props[k] = req.body[k].trim()
       }

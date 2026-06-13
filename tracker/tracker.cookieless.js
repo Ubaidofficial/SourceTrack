@@ -55,7 +55,7 @@
   }
 
   // ─── URL params ────────────────────────────────────────────────────────────
-  var _pk = 'utm_source,utm_medium,utm_campaign,utm_content,utm_term,ref,source,via,gclid,gbraid,wbraid,fbclid,msclkid,ttclid,li_fat_id,li_fatid,twclid,dclid,snapclid,pclid,utm_id,st_campaign_id,st_adgroup_id,st_ad_id,st_target_id,st_network,st_device,st_matchtype,st_verify'.split(',')
+  var _pk = 'utm_source,utm_medium,utm_campaign,utm_content,utm_term,ref,source,via,gclid,gbraid,wbraid,fbclid,msclkid,ttclid,li_fat_id,li_fatid,twclid,dclid,snapclid,pclid,sccid,ko_click_id,utm_id,st_campaign_id,st_adgroup_id,st_ad_id,st_target_id,st_network,st_device,st_matchtype,st_verify'.split(',')
   function params() {
     var p = new URLSearchParams(location.search), r = {}
     _pk.forEach(function (k) { r[k] = p.get(k) })
@@ -81,7 +81,7 @@
       || 'direct'
     var med = p.utm_medium
       || (p.gclid || p.gbraid || p.wbraid || p.msclkid ? 'cpc' : null)
-      || (p.fbclid || p.ttclid || p.li_fat_id || p.twclid || p.snapclid || p.pclid ? 'paid_social' : null)
+      || (p.fbclid || p.ttclid || p.li_fat_id || p.twclid || p.snapclid || p.pclid || p.sccid ? 'paid_social' : null)
       || (p.dclid ? 'display' : null)
       || 'none'
     return {
@@ -101,6 +101,7 @@
       fbclid: p.fbclid, msclkid: p.msclkid, ttclid: p.ttclid,
       li_fat_id: p.li_fat_id, li_fatid: p.li_fatid, twclid: p.twclid,
       dclid: p.dclid, snapclid: p.snapclid, pclid: p.pclid,
+      sccid: p.sccid, ko_click_id: p.ko_click_id,
       utm_id: p.utm_id, st_campaign_id: p.st_campaign_id, st_adgroup_id: p.st_adgroup_id,
       st_ad_id: p.st_ad_id, st_target_id: p.st_target_id, st_network: p.st_network,
       st_device: p.st_device, st_matchtype: p.st_matchtype, st_verify: p.st_verify

@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename)
 const rootDir = path.resolve(__dirname, '../..')
 
 test('Click ID Normalization Helper Unit Tests', async (t) => {
-  await t.test('returns all 12 click ID fields with null fallbacks when empty', () => {
+  await t.test('returns all 14 click ID fields with null fallbacks when empty', () => {
     const res = normalizeClickIds({})
     assert.strictEqual(res.gclid, null)
     assert.strictEqual(res.gbraid, null)
@@ -24,6 +24,8 @@ test('Click ID Normalization Helper Unit Tests', async (t) => {
     assert.strictEqual(res.dclid, null)
     assert.strictEqual(res.snapclid, null)
     assert.strictEqual(res.pclid, null)
+    assert.strictEqual(res.sccid, null)
+    assert.strictEqual(res.ko_click_id, null)
   })
 
   await t.test('correctly maps and trims valid click IDs', () => {
@@ -37,7 +39,9 @@ test('Click ID Normalization Helper Unit Tests', async (t) => {
       twclid: 'tw-jkl',
       dclid: 'dc-mno',
       snapclid: 'snap-pqr',
-      pclid: 'pc-stu'
+      pclid: 'pc-stu',
+      sccid: 'snap-xyz',
+      ko_click_id: 'ko-123'
     }
     const res = normalizeClickIds(input)
     assert.strictEqual(res.gclid, 'g-123')
@@ -50,6 +54,8 @@ test('Click ID Normalization Helper Unit Tests', async (t) => {
     assert.strictEqual(res.dclid, 'dc-mno')
     assert.strictEqual(res.snapclid, 'snap-pqr')
     assert.strictEqual(res.pclid, 'pc-stu')
+    assert.strictEqual(res.sccid, 'snap-xyz')
+    assert.strictEqual(res.ko_click_id, 'ko-123')
   })
 
   await t.test('normalizes LinkedIn aliases preferring li_fat_id', () => {
@@ -84,7 +90,7 @@ test('Click ID Normalization Helper Unit Tests', async (t) => {
 test('Tracker Source Files Static Checks', async (t) => {
   const clickIdKeys = [
     'gclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid', 'ttclid',
-    'li_fat_id', 'li_fatid', 'twclid', 'dclid', 'snapclid', 'pclid'
+    'li_fat_id', 'li_fatid', 'twclid', 'dclid', 'snapclid', 'pclid', 'sccid', 'ko_click_id'
   ]
 
   const checkTrackerFile = (fileName) => {
@@ -120,10 +126,10 @@ test('Tracker Source Files Static Checks', async (t) => {
 test('Setup Diagnostics & UI Consistency Checks', async (t) => {
   const clickIdKeys = [
     'gclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid', 'ttclid',
-    'li_fat_id', 'li_fatid', 'twclid', 'dclid', 'snapclid', 'pclid'
+    'li_fat_id', 'li_fatid', 'twclid', 'dclid', 'snapclid', 'pclid', 'sccid', 'ko_click_id'
   ]
 
-  await t.test('setup-doctor.js clickIdTypes has all 12 click IDs', () => {
+  await t.test('setup-doctor.js clickIdTypes has all 14 click IDs', () => {
     const filePath = path.join(rootDir, 'api/lib/setup-doctor.js')
     const code = fs.readFileSync(filePath, 'utf8')
     const match = code.match(/const clickIdTypes = \[(.*?)\]/)
@@ -134,7 +140,7 @@ test('Setup Diagnostics & UI Consistency Checks', async (t) => {
     }
   })
 
-  await t.test('EventDebugger.jsx contains references to all 12 click IDs', () => {
+  await t.test('EventDebugger.jsx contains references to all 14 click IDs', () => {
     const filePath = path.join(rootDir, 'dashboard/src/pages/EventDebugger.jsx')
     const code = fs.readFileSync(filePath, 'utf8')
     for (const key of clickIdKeys) {

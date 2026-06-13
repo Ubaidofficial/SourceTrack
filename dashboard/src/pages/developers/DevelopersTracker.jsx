@@ -149,6 +149,57 @@ export default function DevelopersTracker() {
           </DocsCodeBlock>
         </section>
 
+        {/* Consent & Privacy API */}
+        <section className="space-y-4">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            Consent & Privacy API
+          </h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            SourceTrack supports explicit consent management. You can configure the tracker to hold all events in queue until the visitor opts in (for example, via a cookie banner or Consent Management Platform).
+          </p>
+          <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">1. Require Consent by Default</h3>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            Add the <code>data-consent-required="true"</code> attribute to the tracker script tag. This blocks all pageviews and event transmissions on load:
+          </p>
+          <DocsCodeBlock lang="html">
+{`<script async src="https://api.srctk.com/tracker.min.js"
+        data-site-key="YOUR_SITE_KEY"
+        data-consent-required="true"></script>`}
+          </DocsCodeBlock>
+          <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">2. JavaScript API Methods</h3>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            Use the following global window functions to manage consent states dynamically:
+          </p>
+          <div className="overflow-x-auto my-3">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-800">
+                  <th className="text-left text-xs font-semibold text-gray-500 py-2 pr-4">Function</th>
+                  <th className="text-left text-xs font-semibold text-gray-500 py-2">Behavior</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-gray-100 dark:border-gray-800/60">
+                  <td className="py-2 pr-4 font-mono text-xs text-gray-800 dark:text-gray-200">window.sourcetrack.optIn()</td>
+                  <td className="py-2 text-xs text-gray-650 dark:text-gray-400">Grants consent, persists <code>"true"</code> in localStorage (<code>st_consent</code>), and flushes any queued pageview or conversion events.</td>
+                </tr>
+                <tr className="border-b border-gray-100 dark:border-gray-800/60">
+                  <td className="py-2 pr-4 font-mono text-xs text-gray-800 dark:text-gray-200">window.sourcetrack.optOut()</td>
+                  <td className="py-2 text-xs text-gray-650 dark:text-gray-400">Denies/revokes consent, persists <code>"false"</code> in localStorage, clears the queue, and blocks all future tracking.</td>
+                </tr>
+                <tr className="border-b border-gray-100 dark:border-gray-800/60">
+                  <td className="py-2 pr-4 font-mono text-xs text-gray-800 dark:text-gray-200">window.sourcetrack.consent(status)</td>
+                  <td className="py-2 text-xs text-gray-650 dark:text-gray-400">Updates consent status programmatically. Passing <code>true</code> enables tracking and flushes the queue; passing <code>false</code> blocks tracking and clears the queue.</td>
+                </tr>
+                <tr className="border-b border-gray-100 dark:border-gray-800/60">
+                  <td className="py-2 pr-4 font-mono text-xs text-gray-800 dark:text-gray-200">window.sourcetrack.hasConsent()</td>
+                  <td className="py-2 text-xs text-gray-650 dark:text-gray-400">Returns <code>true</code> (opted in), <code>false</code> (opted out), or <code>null</code> (no decision yet).</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         {/* Common Errors */}
         <section className="space-y-4">
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-850 pb-2">
