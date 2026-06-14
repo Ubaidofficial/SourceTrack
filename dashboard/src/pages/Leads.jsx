@@ -138,9 +138,9 @@ export default function Leads() {
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        <MetricTile label="Total Leads" value={formatNumber(totalLeads)} />
-        <MetricTile label="Total Conversions" value={formatNumber(totalConversions)} />
-        <MetricTile label="Total Revenue" value={formatCurrency(totalRevenue)} />
+        <MetricTile label="Total Leads" value={totalLeads} />
+        <MetricTile label="Total Conversions" value={totalConversions} />
+        <MetricTile label="Total Revenue" value={totalRevenue} format="currency" />
       </div>
 
       <div className="flex items-center gap-3">

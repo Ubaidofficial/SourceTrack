@@ -945,6 +945,11 @@ export default function Integrations() {
         block: 'start',
       })
     })
+  }
+  // For email and server tracking pixels, the endpoint must always default to the production URL
+  // (https://api.srctk.com) even when the dashboard is running on localhost or staging.
+  // This prevents copy-paste errors where local/staging domains would leak into customer emails/sites.
+  // This value is only used for UI code examples and does not affect staging integrations or API fetch calls.
   const apiBase = window.location.origin.includes('localhost') ? 'https://api.srctk.com' : 'https://api.srctk.com'
   const pixelBase = site?.site_key ? `${apiBase}/api/pixel?site_key=${site.site_key}` : ''
   const emailPixelExample = pixelBase ? `${pixelBase}&event=email_open&uid={{USER_ID}}&campaign={{CAMPAIGN_NAME}}` : ''
@@ -2864,5 +2869,4 @@ export default function Integrations() {
       </div>
     </div>
   )
-}
 }

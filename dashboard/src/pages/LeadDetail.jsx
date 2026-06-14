@@ -161,17 +161,16 @@ export default function LeadDetail() {
         )}
       </div>
 
-      {/* KPI Row */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <MetricTile label="Pageviews" value={(lead.pageviews || 0).toLocaleString()}
+        <MetricTile label="Pageviews" value={lead.pageviews || 0}
           icon={Globe} iconBg="bg-blue-100" iconColor="text-blue-600" />
-        <MetricTile label="Conversions" value={(lead.conversions || 0).toLocaleString()}
+        <MetricTile label="Conversions" value={lead.conversions || 0}
           icon={MousePointerClick} iconBg="bg-green-100" iconColor="text-green-600" />
-        <MetricTile label="Revenue" value={formatCurrency(lead.revenue)}
+        <MetricTile label="Revenue" value={lead.revenue} format="currency"
           icon={DollarSign} iconBg="bg-lime-100" iconColor="text-lime-700" />
-        <MetricTile label="Country" value={lead.country || '—'}
+        <MetricTile label="Country" value={lead.country || '—'} format="text"
           icon={MapPin} iconBg="bg-purple-100" iconColor="text-purple-600" />
-        <MetricTile label="AI Source" value={lead.ai_source || 'None'}
+        <MetricTile label="AI Source" value={lead.ai_source || 'None'} format="text"
           icon={Bot} iconBg={lead.ai_source ? 'bg-amber-100' : 'bg-gray-100'}
           iconColor={lead.ai_source ? 'text-amber-600' : 'text-st-gray'} />
       </div>

@@ -642,11 +642,11 @@ export default function Campaigns() {
 
       {/* KPI Tiles */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <MetricTile label="Total Visits"    value={formatNumber(kpis?.total_visits)} />
-        <MetricTile label="Total Leads"     value={formatNumber(kpis?.total_leads)} />
-        <MetricTile label="Conversions"     value={formatNumber(kpis?.total_conversions)} />
-        <MetricTile label="Total Revenue"   value={formatCurrency(kpis?.total_revenue)} />
-        <MetricTile label="Total Spend"     value={formatCurrency(kpis?.total_spend)} />
+        <MetricTile label="Total Visits"    value={kpis?.total_visits} />
+        <MetricTile label="Total Leads"     value={kpis?.total_leads} />
+        <MetricTile label="Conversions"     value={kpis?.total_conversions} />
+        <MetricTile label="Total Revenue"   value={kpis?.total_revenue} format="currency" />
+        <MetricTile label="Total Spend"     value={kpis?.total_spend} format="currency" />
         {(() => {
           const totalSpend = safeNumber(kpis?.total_spend, 0)
           const isOk = kpis?.currency_status === 'ok'

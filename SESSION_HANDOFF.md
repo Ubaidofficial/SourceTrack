@@ -2,7 +2,12 @@
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
-> **Handoff:** Session 140G-25 — Full SourceTrack Feature Browser QA Matrix — **PARTIAL — performed basic browser route QA and resolved database schema alignment gaps on staging, verified page loads and captured visual evidence, but full functional feature matrix testing remains pending. Created docs/qa/full_sourcetrack_feature_browser_qa_matrix_140G-25.md.**
+> **Handoff:** Session 140G-26 — Full Functional Feature Browser QA in Chrome Canary — **PARTIAL — verified auth onboarding, live event ingestion, leads lists, and Stripe portal E2E redirection in Chrome Canary; identified GSC redirect URI and rate-limiting horizontal scale blockers, and resolved Integrations blank screen and metric tile NaN display bugs; created docs/qa/full_functional_feature_browser_qa_140G-26.md.**
+> - **Functional Verification**: Verified login onboarding, live debugger ingestion pipeline (with new `$conversion` and `qa_test_event` telemetry writes to isolated staging project 469905), leads aggregation rendering, settings domain resume setup, and E2E Stripe billing portal redirect.
+> - **Surgical Bug Fixes**: Resolved blank screen on `/app/integrations` (brace mismatch), `/recent-activity` path 404 mismatch (`/dashboard/recent-activity`), and resolved `MetricTile` `NaN` display errors on Leads, Campaigns, and Lead Detail tabs.
+> - **Readiness Impact**: Paid beta remains **NOT READY** due to open P0 checklist items: PostHog event deletion/GDPR purging, Stripe E2E test payment confirmation, and staging GSC callback redirection alignment.
+>
+> **Prior handoff (Session 140G-25):** Session 140G-25 — Full SourceTrack Feature Browser QA Matrix — **PARTIAL — performed basic browser route QA and resolved database schema alignment gaps on staging, verified page loads and captured visual evidence, but full functional feature matrix testing remains pending. Created docs/qa/full_sourcetrack_feature_browser_qa_matrix_140G-25.md.**
 > - **Route Verification**: Major protected dashboard routes were browser-loaded in Chrome Canary and basic page/API load states were checked. Full feature workflows remain unverified.
 > - **Schema Gaps Repaired**: Several staging schema gaps were repaired during route QA. This is not a full schema parity certification.
 > - **Readiness Impact**: 140G-25 remains PARTIAL. Basic route QA improved confidence, but the full feature QA matrix remains open.

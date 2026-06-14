@@ -8,17 +8,17 @@ No AI-agent may commit or push before raw diff review and explicit user approval
 Copy and paste the prompt below into the chat to begin the next development session:
 
 ```markdown
-We are starting **Session 138F — Add release/deploy checklist gate**.
+We are starting **Session 140G-27 — SourceTrack vs DataFast Feature-Parity + Simplicity Audit**.
 
 Please perform the work for this session following the rules in docs/ai_agent_workflow_rules.md.
 
 ### Goal
-Add the release checklist that blocks deploy unless staging/backups/secrets/CI are verified.
+Audit SourceTrack feature capabilities against DataFast and identify ways to simplify or enhance existing telemetry/attribution workflows.
 
 ### Context & Baseline
-- We recently completed Session 138E where AI-agent workflow rules were codified.
-- The canonical AI-agent rules are codified in `docs/ai_agent_workflow_rules.md`.
-- Staging Supabase project exists and safety boot guards are fully active.
+- We just completed Session 140G-26 which was a full functional browser QA in Chrome Canary on staging.
+- Staging environment is running on Railway and isolated staging PostHog project 469905 is active.
+- Integrations blank screen and MetricTile NaN display bugs have been resolved.
 
 ### Verification
 - Run syntax and sanity checks before requesting review.

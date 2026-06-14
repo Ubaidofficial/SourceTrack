@@ -327,7 +327,7 @@ export default function Dashboard() {
     queryKey: ['recent-activity', site?.site_key],
     queryFn: async () => {
       if (!site?.site_key) return null
-      return fetchApi(`/recent-activity?site_key=${encodeURIComponent(site.site_key)}`)
+      return fetchApi(`/dashboard/recent-activity?site_key=${encodeURIComponent(site.site_key)}`)
     },
     enabled: !!site?.site_key && !previewMode,
     refetchInterval: 30000,
