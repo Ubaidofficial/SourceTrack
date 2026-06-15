@@ -28,7 +28,7 @@ export default function Setup() {
   useEffect(() => {
     async function load() {
       if (!user) return
-      
+
       let targetSite = activeSite
       if (!targetSite) {
         const { data: member } = await supabase
