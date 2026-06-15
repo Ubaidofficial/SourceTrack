@@ -56,7 +56,6 @@ const DIMENSIONS = [
   { key: 'attribution_status', label: 'Attribution Status' },
   { key: 'stitching_method', label: 'Stitching Method' },
   { key: 'conversion_type', label: 'Conversion Type' },
-  { key: 'ai_source', label: 'AI Source' },
   { key: 'landing_page', label: 'Landing Page' },
   { key: 'country', label: 'Country' },
   { key: 'device', label: 'Device' },
@@ -125,7 +124,6 @@ const PRESET_TEMPLATES = [
   // SaaS
   { id: 'saas_trials', name: 'Trials by Source', desc: 'Attributed trial signups by traffic source', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', filters: { conversion_type: 'trial' }, category: 'SaaS', requiredData: 'none' },
   { id: 'saas_demos', name: 'Demo Bookings by Source', desc: 'Demo bookings by traffic source', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', filters: { conversion_type: 'demo' }, category: 'SaaS', requiredData: 'none' },
-  { id: 'saas_ai_trials', name: 'AI-assisted Trials', desc: 'Trials influenced by AI search engines', model: 'last_touch', groupBy: 'ai_source', groupBy2: null, metric: 'ai_conversions', days: 30, chartType: 'bar', granularity: 'day', filters: { conversion_type: 'trial', has_ai_source: 'true' }, category: 'SaaS', requiredData: 'ai' },
   { id: 'saas_signups', name: 'Signup Landing Pages', desc: 'Landing pages where signup conversions occur', model: 'first_touch', groupBy: 'landing_page', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', filters: { conversion_type: 'signup' }, category: 'SaaS', requiredData: 'none' },
   { id: 'saas_mrr', name: 'MRR by Source', desc: 'Monthly Recurring Revenue by traffic source (Coming Soon)', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'revenue', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'SaaS', requiredData: 'revenue', isFuture: true },
   { id: 'saas_trial_paid', name: 'Trial-to-Paid Conversion', desc: 'Conversion rate from trial to paid status (Coming Soon)', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'conversion_rate', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'SaaS', requiredData: 'revenue', isFuture: true },
@@ -158,18 +156,7 @@ const COLORS = [
   'rgba(156, 163, 175, 0.85)'
 ]
 
-const SOURCE_GROUPS = [
-  { name: 'Organic Search', icon: '🔍', subs: ['Google Organic', 'Bing Organic', 'DuckDuckGo Organic'] },
-  { name: 'Paid Search', icon: '💰', subs: ['Google Ads'] },
-  { name: 'Paid Social', icon: '📢', subs: ['Facebook Ads', 'LinkedIn Ads'] },
-  { name: 'Organic Social', icon: '👥', subs: ['Facebook', 'Instagram', 'Twitter / X', 'LinkedIn'] },
-  { name: 'AI', icon: '✦', subs: ['ChatGPT', 'Claude', 'Gemini', 'Perplexity'] },
-  { name: 'Referral', icon: '🔗', subs: [] },
-  { name: 'Review Sites', icon: '⭐', subs: ['G2', 'Capterra', 'Trustpilot'] },
-  { name: 'Email', icon: '✉️', subs: [] },
-  { name: 'SMS', icon: '💬', subs: [] },
-  { name: 'Direct / None', icon: '🚪', subs: [] }
-]
+
 
 async function getFlexibleReport(siteKey, model, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null, granularity = 'day', attributionWindow = null, attributeBy = 'conversion_date') {
   const params = new URLSearchParams({ site_key: siteKey, model, date_from: dateFrom, date_to: dateTo, group_by: groupBy, metric })
@@ -181,14 +168,7 @@ async function getFlexibleReport(siteKey, model, dateFrom, dateTo, groupBy, metr
   if (filters.source) params.set('filter_source', filters.source)
   if (filters.medium) params.set('filter_medium', filters.medium)
   if (filters.campaign) params.set('filter_campaign', filters.campaign)
-  if (filters.ai_source) params.set('filter_ai_source', filters.ai_source)
-  if (filters.country) params.set('filter_country', filters.country)
-  if (filters.device_type) params.set('filter_device_type', filters.device_type)
-  if (filters.is_conversion) params.set('filter_is_conversion', filters.is_conversion)
   if (filters.conversion_type) params.set('filter_conversion_type', filters.conversion_type)
-  if (filters.has_ai_source) params.set('filter_has_ai_source', filters.has_ai_source)
-  if (filters.min_conversions) params.set('filter_min_conversions', filters.min_conversions)
-  if (filters.customer_type) params.set('filter_customer_type', filters.customer_type)
   return fetchApi(`/attribution?${params}`)
 }
 
@@ -467,11 +447,11 @@ export default function ReportBuilder() {
   const [site, setSite] = useState(null)
 
   // Report state
-  const [uiMode, setUiMode] = useState('hub') // 'hub' or 'builder'
+  const [uiMode, setUiMode] = useState('builder') // 'hub' or 'builder'
   const [activeTemplateId, setActiveTemplateId] = useState(null)
   const [isCustomMode, setIsCustomMode] = useState(false)
   const [reportName, setReportName] = useState('')
-  const [model, setModel] = useState('last_touch')
+  const [model, setModel] = useState('first_touch')
   const [groupBy, setGroupBy] = useState('channel')
   const [metric, setMetric] = useState('sessions')
   const [selectedMetrics, setSelectedMetrics] = useState(['sessions'])
@@ -502,6 +482,8 @@ export default function ReportBuilder() {
   const [showCompare, setShowCompare] = useState(false)
   const [explainModalOpen, setExplainModalOpen] = useState(false)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false)
+  const [isAttributionOpen, setIsAttributionOpen] = useState(false)
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false)
   const isMultiTouch = ['linear', 'time_decay', 'u_shaped', 'w_shaped'].includes(model)
 
   // UI state
@@ -780,138 +762,7 @@ export default function ReportBuilder() {
     })
   }
 
-  // Handle Marketer-friendly Source Filter Presets
-  const applySourceFilter = (groupName, subSourceName = null) => {
-    setFilters(prev => {
-      const next = { ...prev }
 
-      // Clear all related source tags
-      delete next.channel
-      delete next.source
-      delete next.medium
-      delete next.ai_source
-      delete next.has_ai_source
-
-      if (groupName === 'Organic Search') {
-        next.channel = 'Organic Search'
-        if (subSourceName === 'Google Organic') {
-          next.source = 'google'
-          next.medium = 'organic'
-        } else if (subSourceName === 'Bing Organic') {
-          next.source = 'bing'
-          next.medium = 'organic'
-        } else if (subSourceName === 'DuckDuckGo Organic') {
-          next.source = 'duckduckgo'
-          next.medium = 'organic'
-        }
-      } else if (groupName === 'Paid Search') {
-        next.channel = 'Paid Search'
-        if (subSourceName === 'Google Ads') {
-          next.source = 'google'
-          next.medium = 'cpc'
-        }
-      } else if (groupName === 'Paid Social') {
-        next.channel = 'Paid Social'
-        if (subSourceName === 'Facebook Ads') {
-          next.source = 'facebook'
-          next.medium = 'cpc'
-        } else if (subSourceName === 'LinkedIn Ads') {
-          next.source = 'linkedin'
-          next.medium = 'cpc'
-        }
-      } else if (groupName === 'Organic Social') {
-        next.channel = 'Organic Social'
-        if (subSourceName === 'Facebook') {
-          next.source = 'facebook'
-        } else if (subSourceName === 'Instagram') {
-          next.source = 'instagram'
-        } else if (subSourceName === 'Twitter / X') {
-          next.source = 'twitter'
-        } else if (subSourceName === 'LinkedIn') {
-          next.source = 'linkedin'
-        }
-      } else if (groupName === 'AI') {
-        next.channel = 'AI Search'
-        next.has_ai_source = 'true'
-        if (subSourceName === 'ChatGPT') {
-          next.ai_source = 'ChatGPT'
-        } else if (subSourceName === 'Claude') {
-          next.ai_source = 'Claude'
-        } else if (subSourceName === 'Gemini') {
-          next.ai_source = 'Gemini'
-        } else if (subSourceName === 'Perplexity') {
-          next.ai_source = 'Perplexity'
-        }
-      } else if (groupName === 'Referral') {
-        next.channel = 'Referral'
-      } else if (groupName === 'Review Sites') {
-        next.channel = 'Referral'
-        if (subSourceName === 'G2') {
-          next.source = 'g2.com'
-        } else if (subSourceName === 'Capterra') {
-          next.source = 'capterra.com'
-        } else if (subSourceName === 'Trustpilot') {
-          next.source = 'trustpilot.com'
-        }
-      } else if (groupName === 'Email') {
-        next.channel = 'Email'
-      } else if (groupName === 'SMS') {
-        next.medium = 'sms'
-      } else if (groupName === 'Direct / None') {
-        next.channel = 'Direct'
-      }
-
-      setFilterCount(Object.keys(next).length)
-      return next
-    })
-  }
-
-  const isSourceGroupActive = (groupName) => {
-    if (groupName === 'Organic Search') return filters.channel === 'Organic Search'
-    if (groupName === 'Paid Search') return filters.channel === 'Paid Search'
-    if (groupName === 'Paid Social') return filters.channel === 'Paid Social'
-    if (groupName === 'Organic Social') return filters.channel === 'Organic Social'
-    if (groupName === 'AI') return filters.channel === 'AI Search' && filters.has_ai_source === 'true'
-    if (groupName === 'Referral') return filters.channel === 'Referral' && !['g2.com', 'capterra.com', 'trustpilot.com'].includes(filters.source)
-    if (groupName === 'Review Sites') return filters.channel === 'Referral' && ['g2.com', 'capterra.com', 'trustpilot.com'].includes(filters.source)
-    if (groupName === 'Email') return filters.channel === 'Email'
-    if (groupName === 'SMS') return filters.medium === 'sms'
-    if (groupName === 'Direct / None') return filters.channel === 'Direct'
-    return false
-  }
-
-  const isSubSourceActive = (groupName, subName) => {
-    if (groupName === 'Organic Search') {
-      if (subName === 'Google Organic') return filters.source === 'google' && filters.medium === 'organic'
-      if (subName === 'Bing Organic') return filters.source === 'bing' && filters.medium === 'organic'
-      if (subName === 'DuckDuckGo Organic') return filters.source === 'duckduckgo' && filters.medium === 'organic'
-    }
-    if (groupName === 'Paid Search') {
-      if (subName === 'Google Ads') return filters.source === 'google' && filters.medium === 'cpc'
-    }
-    if (groupName === 'Paid Social') {
-      if (subName === 'Facebook Ads') return filters.source === 'facebook' && filters.medium === 'cpc'
-      if (subName === 'LinkedIn Ads') return filters.source === 'linkedin' && filters.medium === 'cpc'
-    }
-    if (groupName === 'Organic Social') {
-      if (subName === 'Facebook') return filters.source === 'facebook'
-      if (subName === 'Instagram') return filters.source === 'instagram'
-      if (subName === 'Twitter / X') return filters.source === 'twitter'
-      if (subName === 'LinkedIn') return filters.source === 'linkedin'
-    }
-    if (groupName === 'AI') {
-      if (subName === 'ChatGPT') return filters.ai_source === 'ChatGPT'
-      if (subName === 'Claude') return filters.ai_source === 'Claude'
-      if (subName === 'Gemini') return filters.ai_source === 'Gemini'
-      if (subName === 'Perplexity') return filters.ai_source === 'Perplexity'
-    }
-    if (groupName === 'Review Sites') {
-      if (subName === 'G2') return filters.source === 'g2.com'
-      if (subName === 'Capterra') return filters.source === 'capterra.com'
-      if (subName === 'Trustpilot') return filters.source === 'trustpilot.com'
-    }
-    return false
-  }
 
   const handleEdit = (report) => {
     const cfg = report.config || report
@@ -1056,13 +907,14 @@ export default function ReportBuilder() {
 
   const resetReport = () => {
     setActiveTemplateId(null)
-    setUiMode('hub')
+    setUiMode('builder')
     setIsCustomMode(false)
     setEditingId(null)
     setReportName('')
-    setModel('last_touch')
-    setGroupBy('source')
-    setMetric('revenue')
+    setModel('first_touch')
+    setGroupBy('channel')
+    setMetric('sessions')
+    setSelectedMetrics(['sessions'])
     setChartType('bar')
     setDatePreset(30)
     setDateFrom(format(subDays(new Date(), 30), 'yyyy-MM-dd'))
@@ -1102,12 +954,7 @@ export default function ReportBuilder() {
     if (filters.source) params.set('filter_source', filters.source)
     if (filters.medium) params.set('filter_medium', filters.medium)
     if (filters.campaign) params.set('filter_campaign', filters.campaign)
-    if (filters.ai_source) params.set('filter_ai_source', filters.ai_source)
-    if (filters.country) params.set('filter_country', filters.country)
-    if (filters.device_type) params.set('filter_device_type', filters.device_type)
-    if (filters.is_conversion) params.set('filter_is_conversion', filters.is_conversion)
-    if (filters.has_ai_source) params.set('filter_has_ai_source', filters.has_ai_source)
-    if (filters.min_conversions) params.set('filter_min_conversions', filters.min_conversions)
+    if (filters.conversion_type) params.set('filter_conversion_type', filters.conversion_type)
     window.open(`/api/export/report?${params}`, '_blank')
   }
 
@@ -1616,21 +1463,9 @@ export default function ReportBuilder() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Report Builder</h2>
-          <p className="text-sm text-st-gray dark:text-gray-400 mt-1">Choose a business question → configure → preview answer → save/pin</p>
+          <p className="text-sm text-st-gray dark:text-gray-400 mt-1">Configure your lightweight report and preview live results</p>
         </div>
         <div className="flex items-center gap-2">
-          {uiMode === 'builder' && (
-            <button
-              onClick={() => {
-                setUiMode('hub')
-                setActiveTemplateId(null)
-                setReportName('')
-              }}
-              className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-[#1A1D1D] border border-gray-300 dark:border-[#2A2E2E] rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] flex items-center gap-1.5 transition-all font-semibold shadow-sm"
-            >
-              Back to templates
-            </button>
-          )}
           <button
             onClick={() => setIsDrawerOpen(true)}
             className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-[#1A1D1D] border border-gray-300 dark:border-[#2A2E2E] rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] flex items-center gap-1.5 transition-all font-semibold shadow-sm"
@@ -1646,273 +1481,367 @@ export default function ReportBuilder() {
         </div>
       </div>
 
-      {uiMode === 'hub' ? (
-        renderTemplateHub()
-      ) : (
-        <>
-          {/* Active preset helper description */}
-          {(() => {
-            const activePreset = PRESET_TEMPLATES.find(p => reportName === p.name)
-            if (activePreset && activePreset.desc) {
-              return (
-                <div className="text-xs text-st-gray dark:text-gray-400 bg-lime-500/10 border border-lime-500/20 rounded-lg px-3 py-2 max-w-max">
-                  💡 <span className="font-semibold text-gray-900 dark:text-white">{activePreset.name}:</span> {activePreset.desc}
-                </div>
-              )
-            }
-            return null
-          })()}
+      {/* Active preset helper description */}
+      {(() => {
+        const activePreset = PRESET_TEMPLATES.find(p => reportName === p.name)
+        if (activePreset && activePreset.desc) {
+          return (
+            <div className="text-xs text-st-gray dark:text-gray-400 bg-lime-500/10 border border-lime-500/20 rounded-lg px-3 py-2 max-w-max">
+              💡 <span className="font-semibold text-gray-900 dark:text-white">{activePreset.name}:</span> {activePreset.desc}
+            </div>
+          )
+        }
+        return null
+      })()}
 
-      {/* Two-Panel Layout Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Two-Panel Layout */}
+      <div className="flex flex-col lg:flex-row gap-6">
 
         {/* Left Column: Configure Card */}
-        <div className="space-y-4">
+        <div className="w-full lg:w-[360px] flex-shrink-0 space-y-4">
           <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-5 space-y-4">
-            <h3 className="text-sm font-semibold text-gray-800 dark:text-white pb-3 border-b border-gray-100 dark:border-[#2A2E2E]">Configure Report</h3>
+            <h3 className="text-sm font-semibold text-gray-800 dark:text-white pb-2 border-b border-gray-100 dark:border-[#2A2E2E]">Configure Report</h3>
 
-            {/* 1. Report Name */}
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Report Name</label>
-              <input
-                type="text"
-                value={reportName}
-                onChange={(e) => setReportName(e.target.value)}
-                placeholder="e.g. Weekly Revenue by Source"
-                maxLength={60}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-1 focus:ring-lime-500 dark:bg-[#242829] dark:text-white"
-              />
-            </div>
-
-            {/* 2. Date Range */}
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Date Range</label>
-              <DateRangePopover
-                isRolling={isRolling}
-                setIsRolling={setIsRolling}
-                rollingDays={rollingDays}
-                setRollingDays={setRollingDays}
-                datePreset={datePreset}
-                setDatePreset={setDatePreset}
-                dateFrom={dateFrom}
-                setDateFrom={setDateFrom}
-                dateTo={dateTo}
-                setDateTo={setDateTo}
-                handleDatePreset={handleDatePreset}
-              />
-              {(groupBy === 'date' || groupBy2 === 'date') && (
-                <div className="pt-2">
-                  <label className="block text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">Granularity</label>
-                  <div className="flex flex-wrap gap-1">
-                    {GRANULARITY.map(g => (
-                      <button
-                        key={g.key}
-                        type="button"
-                        onClick={() => setGranularity(g.key)}
-                        className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
-                          granularity === g.key ? 'bg-lime-100 text-lime-800 dark:bg-lime-500/20 dark:text-lime-400 font-semibold' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
-                        }`}
-                      >
-                        {g.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+            {/* A. Recommended Templates Section */}
+            <div className="space-y-2 border-b border-gray-100 dark:border-[#2A2E2E] pb-3">
+              <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Recommended Templates</label>
+              {normalizedType === 'unknown' && (
+                <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium bg-amber-50 dark:bg-amber-950/20 px-2 py-1 rounded">
+                  Choose business type in Settings to personalize templates.
+                </p>
               )}
-            </div>
-
-            {/* 3. Metric Select */}
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Metric</label>
-              {selectedMetrics.length > 0 && (
-                <div className="flex flex-wrap gap-1 mb-1.5">
-                  {selectedMetrics.map(k => {
-                    const m = METRICS.find(x => x.key === k)
-                    return (
-                      <span key={k} className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] bg-lime-100 dark:bg-lime-950/30 text-lime-800 dark:text-lime-400 rounded-full font-medium">
-                        {m?.label || k}
-                        {selectedMetrics.length > 1 && (
-                          <button onClick={() => toggleMetric(k)} className="text-lime-600 hover:text-red-500 ml-0.5">&times;</button>
-                        )}
-                      </span>
-                    )
-                  })}
-                </div>
-              )}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setShowMetricDropdown(!showMetricDropdown)}
-                  className="w-full flex items-center justify-between px-3 py-2 text-sm bg-white dark:bg-[#242829] border border-gray-300 dark:border-[#2A2E2E] rounded-lg shadow-sm text-gray-700 dark:text-gray-200 text-left"
-                >
-                  <span className="truncate text-xs text-st-gray dark:text-gray-400">
-                    {selectedMetrics.length === 0 ? 'Select metrics...' : `+ Add metric (${selectedMetrics.length} selected)`}
-                  </span>
-                  <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                </button>
-                {showMetricDropdown && (
-                  <div className="absolute z-40 mt-1 w-full bg-white dark:bg-[#242829] border border-gray-200 dark:border-[#2A2E2E] rounded-lg shadow-lg max-h-72 overflow-auto">
-                    <div className="p-2 border-b border-gray-100 dark:border-[#2A2E2E] sticky top-0 bg-white dark:bg-[#242829]">
-                      <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 dark:bg-[#1A1D1D] rounded">
-                        <Search className="w-3.5 h-3.5 text-st-gray dark:text-gray-400" />
-                        <input
-                          type="text"
-                          value={metricSearch}
-                          onChange={(e) => setMetricSearch(e.target.value)}
-                          placeholder="Search metrics..."
-                          onClick={(e) => e.stopPropagation()}
-                          className="flex-1 bg-transparent text-sm outline-none"
-                        />
-                      </div>
-                      <p className="text-[10px] text-st-gray dark:text-gray-400 mt-1 px-1">Click to add/remove (up to 4 metrics).</p>
-                    </div>
-                    {['Core', 'Conversion', 'AI', 'LTV', 'Session'].map(group => {
-                      const groupMetrics = filteredMetrics.filter(m => m.group === group)
-                      if (groupMetrics.length === 0) return null
-                      return (
-                        <div key={group}>
-                          <div className="px-3 py-1 text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase bg-gray-50 dark:bg-[#252929]">{group}</div>
-                          {groupMetrics.map((m) => {
-                            const isSelected = selectedMetrics.includes(m.key)
-                            return (
-                              <button
-                                key={m.key}
-                                type="button"
-                                onClick={() => {
-                                  if (selectedMetrics.length < 4 || isSelected) toggleMetric(m.key)
-                                  if (selectedMetrics.length === 1 && !isSelected) setShowMetricDropdown(false)
-                                }}
-                                className={`w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-[#252929] transition-colors flex items-center gap-2 ${
-                                  isSelected ? 'bg-lime-50 text-lime-800 dark:bg-lime-950/20 dark:text-lime-400 font-semibold' : 'text-gray-700 dark:text-gray-300'
-                                }`}
-                              >
-                                <span className={`w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center text-[10px] ${isSelected ? 'bg-lime-500 border-lime-500 text-white' : 'border-gray-300'}`}>
-                                  {isSelected ? '✓' : ''}
-                                </span>
-                                <div>
-                                  <div className="flex items-center gap-1">
-                                    <span>{m.label}</span>
-                                    {isMetricGated(m.key) && (
-                                      <span className="text-[10px]" title="Required integration not fully connected or active">🔒</span>
-                                    )}
-                                  </div>
-                                </div>
-                              </button>
-                            )
-                          })}
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* 4. Group By */}
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Group By</label>
-              <CustomSelect
-                value={groupBy}
-                onChange={setGroupBy}
-                options={groupByOptions}
-              />
-            </div>
-
-            {/* 5. Group By 2 */}
-            {showGroupBy2 ? (
-              <div className="space-y-1 pt-1.5 border-t border-dashed border-gray-100 dark:border-[#2A2E2E]">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Group By 2</label>
-                  <button
-                    onClick={() => { setShowGroupBy2(false); setGroupBy2(null) }}
-                    className="text-xs text-red-500 hover:text-red-600"
-                  >
-                    Remove
-                  </button>
-                </div>
-                <CustomSelect
-                  value={groupBy2 || ''}
-                  onChange={(val) => setGroupBy2(val || null)}
-                  options={groupBy2Options}
-                />
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowGroupBy2(true)}
-                className="text-xs text-lime-600 hover:text-lime-700 font-semibold flex items-center gap-1 pt-1"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Add secondary Group By
-              </button>
-            )}
-
-            {/* Source Shortcut Chips */}
-            <div className="space-y-1.5 pt-1.5 border-t border-dashed border-gray-100 dark:border-[#2A2E2E]">
-              <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Filter by Traffic Source</label>
-              <div className="flex flex-wrap gap-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFilters(prev => {
-                      const next = { ...prev }
-                      delete next.channel
-                      delete next.source
-                      delete next.medium
-                      delete next.ai_source
-                      delete next.has_ai_source
-                      setFilterCount(Object.keys(next).length)
-                      return next
-                    })
-                  }}
-                  className={`px-2 py-0.5 rounded-full text-[10px] border transition-all ${
-                    !(filters.channel || filters.source || filters.medium || filters.ai_source || filters.has_ai_source)
-                      ? 'bg-lime-500 text-st-black border-lime-500 font-semibold'
-                      : 'bg-white dark:bg-gray-800 text-gray-750 dark:text-gray-400 border-gray-200 dark:border-gray-750 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  All Sources
-                </button>
-                {SOURCE_GROUPS.map((g) => {
-                  const isActive = isSourceGroupActive(g.name)
+              <div className="space-y-1 max-h-[160px] overflow-y-auto pr-1">
+                {recommendedTemplates.map((p) => {
+                  const isFuture = p.isFuture === true
+                  const isGated = isFuture ? 'future_template' : isTemplateGated(p, gates)
+                  const showLock = Boolean(isGated)
+                  const isActive = activeTemplateId === p.id
                   return (
                     <button
-                      key={g.name}
+                      key={p.id}
                       type="button"
-                      onClick={() => applySourceFilter(g.name)}
-                      className={`px-2 py-0.5 rounded-full text-[10px] border transition-all ${
+                      onClick={() => applyPreset(p)}
+                      className={`w-full text-left px-2.5 py-1.5 rounded-lg border text-xs transition-all flex flex-col gap-0.5 ${
                         isActive
-                          ? 'bg-lime-500 text-st-black border-lime-500 font-semibold'
-                          : 'bg-white dark:bg-gray-800 text-gray-750 dark:text-gray-400 border-gray-200 dark:border-gray-750 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          ? 'bg-lime-50 dark:bg-lime-950/20 border-lime-500 text-lime-800 dark:text-lime-400 font-semibold'
+                          : 'bg-white dark:bg-[#242829] border-gray-200 dark:border-[#2A2E2E] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#252929]'
                       }`}
                     >
-                      {g.name}
+                      <div className="flex items-center justify-between w-full gap-1">
+                        <span className="font-bold truncate">{p.name}</span>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          {showLock && (
+                            <span className="inline-flex items-center gap-0.5 px-1 py-0.2 bg-gray-150 dark:bg-gray-800 text-[9px] rounded text-gray-550 dark:text-gray-400 font-medium">
+                              <Lock className="w-2.5 h-2.5" />
+                              {isFuture ? 'Soon' : 'Locked'}
+                            </span>
+                          )}
+                          {p.shopifyBadge && (
+                            <span className="px-1 py-0.2 bg-blue-50 dark:bg-blue-950/20 text-[9px] text-blue-800 dark:text-blue-400 rounded font-medium">
+                              Webhook
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-[10px] text-st-gray dark:text-gray-400 truncate">{p.desc}</span>
                     </button>
                   )
                 })}
               </div>
+
+              {/* Disclosure for other categories */}
+              {otherCategories.length > 0 && (
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowOtherCategories(!showOtherCategories)}
+                    className="text-[10px] font-semibold text-lime-600 hover:text-lime-505 dark:text-lime-400 flex items-center gap-1 transition-all"
+                  >
+                    {showOtherCategories ? 'Hide other template types' : 'Show other template types'}
+                  </button>
+                  {showOtherCategories && (
+                    <div className="mt-2 space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                      {otherCategories.map(cat => {
+                        const catTemplates = PRESET_TEMPLATES.filter(p => p.category === cat)
+                        if (catTemplates.length === 0) return null
+                        return (
+                          <div key={cat} className="space-y-1">
+                            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block">{cat}</span>
+                            {catTemplates.map(p => {
+                              const isFuture = p.isFuture === true
+                              const isGated = isFuture ? 'future_template' : isTemplateGated(p, gates)
+                              const showLock = Boolean(isGated)
+                              const isActive = activeTemplateId === p.id
+                              return (
+                                <button
+                                  key={p.id}
+                                  type="button"
+                                  onClick={() => applyPreset(p)}
+                                  className={`w-full text-left px-2 py-1 rounded-lg border text-[11px] transition-all flex flex-col ${
+                                    isActive
+                                      ? 'bg-lime-50 dark:bg-lime-950/20 border-lime-500 text-lime-800 dark:text-lime-400 font-semibold'
+                                      : 'bg-white dark:bg-[#242829] border-gray-200 dark:border-[#2A2E2E] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#252929]'
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between w-full gap-1">
+                                    <span className="font-semibold truncate">{p.name}</span>
+                                    <div className="flex items-center gap-1 flex-shrink-0">
+                                      {showLock && (
+                                        <span className="inline-flex items-center gap-0.5 px-1 py-0.2 bg-gray-150 dark:bg-gray-800 text-[8px] rounded text-gray-500 dark:text-gray-400 font-medium">
+                                          <Lock className="w-1.5 h-1.5" />
+                                          {isFuture ? 'Soon' : 'Locked'}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
-            {/* Advanced Settings collapsible row */}
-            <div className="pt-2">
+            {/* B. Start Blank Button */}
+            <div className="pb-3 border-b border-gray-100 dark:border-[#2A2E2E]">
               <button
                 type="button"
-                onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
-                className="w-full flex items-center justify-between py-2 px-3 border border-gray-200 dark:border-[#2A2E2E] bg-gray-50/50 dark:bg-gray-800/20 hover:bg-gray-50 dark:hover:bg-[#252929] rounded-xl transition-all"
+                onClick={() => {
+                  setIsCustomMode(true)
+                  setActiveTemplateId(null)
+                  setReportName('')
+                  setModel('first_touch')
+                  setGroupBy('channel')
+                  setGroupBy2(null)
+                  setShowGroupBy2(false)
+                  setMetric('sessions')
+                  setSelectedMetrics(['sessions'])
+                  setChartType('bar')
+                  setFilters({})
+                  setFilterCount(0)
+                  setDatePreset(30)
+                  const range = getDefaultDateRange(30)
+                  setDateFrom(range.from)
+                  setDateTo(range.to)
+                  setIsRolling(false)
+                  setRollingDays(30)
+                  setEditingId(null)
+                }}
+                className="w-full py-1.5 bg-gray-150 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 border border-transparent rounded-lg flex items-center justify-center gap-1.5 font-bold transition-all text-xs"
               >
-                <div className="text-left">
-                  <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Advanced Settings</div>
-                  <div className="text-[10px] text-st-gray dark:text-gray-400 mt-0.5">Attribution · filters · comparison</div>
-                </div>
-                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isAdvancedOpen ? 'rotate-180' : ''}`} />
+                <Plus className="w-3.5 h-3.5" />
+                Start from blank (Advanced)
               </button>
+            </div>
 
-              {isAdvancedOpen && (
-                <div className="space-y-4 mt-3 pt-3 border-t border-gray-100 dark:border-[#2A2E2E] text-xs">
+            {/* C. Report Setup Section */}
+            <div className="space-y-4">
+              {/* 1. Report Name */}
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Report Name</label>
+                <input
+                  type="text"
+                  value={reportName}
+                  onChange={(e) => setReportName(e.target.value)}
+                  placeholder="e.g. Weekly Revenue by Source"
+                  maxLength={60}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-1 focus:ring-lime-500 dark:bg-[#242829] dark:text-white"
+                />
+              </div>
 
+              {/* 2. Chart Type */}
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Chart / Report Type</label>
+                <CustomSelect
+                  value={chartType}
+                  onChange={setChartType}
+                  options={chartTypeOptions}
+                />
+              </div>
+
+              {/* 3. Date Range */}
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Date Range</label>
+                <DateRangePopover
+                  isRolling={isRolling}
+                  setIsRolling={setIsRolling}
+                  rollingDays={rollingDays}
+                  setRollingDays={setRollingDays}
+                  datePreset={datePreset}
+                  setDatePreset={setDatePreset}
+                  dateFrom={dateFrom}
+                  setDateFrom={setDateFrom}
+                  dateTo={dateTo}
+                  setDateTo={setDateTo}
+                  handleDatePreset={handleDatePreset}
+                />
+                {(groupBy === 'date' || groupBy2 === 'date') && (
+                  <div className="pt-2">
+                    <label className="block text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">Granularity</label>
+                    <div className="flex flex-wrap gap-1">
+                      {GRANULARITY.map(g => (
+                        <button
+                          key={g.key}
+                          type="button"
+                          onClick={() => setGranularity(g.key)}
+                          className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
+                            granularity === g.key ? 'bg-lime-100 text-lime-800 dark:bg-lime-500/20 dark:text-lime-400 font-semibold' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                          }`}
+                        >
+                          {g.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 4. Metric Select */}
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Metric</label>
+                {selectedMetrics.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-1.5">
+                    {selectedMetrics.map(k => {
+                      const m = METRICS.find(x => x.key === k)
+                      return (
+                        <span key={k} className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] bg-lime-100 dark:bg-lime-950/30 text-lime-800 dark:text-lime-400 rounded-full font-medium">
+                          {m?.label || k}
+                          {selectedMetrics.length > 1 && (
+                            <button onClick={() => toggleMetric(k)} className="text-lime-600 hover:text-red-500 ml-0.5">&times;</button>
+                          )}
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowMetricDropdown(!showMetricDropdown)}
+                    className="w-full flex items-center justify-between px-3 py-2 text-sm bg-white dark:bg-[#242829] border border-gray-300 dark:border-[#2A2E2E] rounded-lg shadow-sm text-gray-700 dark:text-gray-200 text-left"
+                  >
+                    <span className="truncate text-xs text-st-gray dark:text-gray-400">
+                      {selectedMetrics.length === 0 ? 'Select metrics...' : `+ Add metric (${selectedMetrics.length} selected)`}
+                    </span>
+                    <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  </button>
+                  {showMetricDropdown && (
+                    <div className="absolute z-40 mt-1 w-full bg-white dark:bg-[#242829] border border-gray-200 dark:border-[#2A2E2E] rounded-lg shadow-lg max-h-72 overflow-auto">
+                      <div className="p-2 border-b border-gray-100 dark:border-[#2A2E2E] sticky top-0 bg-white dark:bg-[#242829]">
+                        <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 dark:bg-[#1A1D1D] rounded">
+                          <Search className="w-3.5 h-3.5 text-st-gray dark:text-gray-400" />
+                          <input
+                            type="text"
+                            value={metricSearch}
+                            onChange={(e) => setMetricSearch(e.target.value)}
+                            placeholder="Search metrics..."
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex-1 bg-transparent text-sm outline-none"
+                          />
+                        </div>
+                        <p className="text-[10px] text-st-gray dark:text-gray-400 mt-1 px-1">Click to add/remove (up to 4 metrics).</p>
+                      </div>
+                      {['Core', 'Conversion', 'AI', 'LTV', 'Session'].map(group => {
+                        const groupMetrics = filteredMetrics.filter(m => m.group === group)
+                        if (groupMetrics.length === 0) return null
+                        return (
+                          <div key={group}>
+                            <div className="px-3 py-1 text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase bg-gray-50 dark:bg-[#252929]">{group}</div>
+                            {groupMetrics.map((m) => {
+                              const isSelected = selectedMetrics.includes(m.key)
+                              return (
+                                <button
+                                  key={m.key}
+                                  type="button"
+                                  onClick={() => {
+                                    if (selectedMetrics.length < 4 || isSelected) toggleMetric(m.key)
+                                    if (selectedMetrics.length === 1 && !isSelected) setShowMetricDropdown(false)
+                                  }}
+                                  className={`w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-[#252929] transition-colors flex items-center gap-2 ${
+                                    isSelected ? 'bg-lime-50 text-lime-800 dark:bg-lime-950/20 dark:text-lime-400 font-semibold' : 'text-gray-700 dark:text-gray-300'
+                                  }`}
+                                >
+                                  <span className={`w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center text-[10px] ${isSelected ? 'bg-lime-500 border-lime-500 text-white' : 'border-gray-300'}`}>
+                                    {isSelected ? '✓' : ''}
+                                  </span>
+                                  <div>
+                                    <div className="flex items-center gap-1">
+                                      <span>{m.label}</span>
+                                      {isMetricGated(m.key) && (
+                                        <span className="text-[10px]" title="Required integration not fully connected or active">🔒</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 5. Group By */}
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Group By</label>
+                <CustomSelect
+                  value={groupBy}
+                  onChange={setGroupBy}
+                  options={groupByOptions}
+                />
+              </div>
+
+              {/* 6. Group By 2 */}
+              {showGroupBy2 ? (
+                <div className="space-y-1 pt-1.5 border-t border-dashed border-gray-100 dark:border-[#2A2E2E]">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Group By 2</label>
+                    <button
+                      onClick={() => { setShowGroupBy2(false); setGroupBy2(null) }}
+                      className="text-xs text-red-500 hover:text-red-650"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <CustomSelect
+                    value={groupBy2 || ''}
+                    onChange={(val) => setGroupBy2(val || null)}
+                    options={groupBy2Options}
+                  />
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowGroupBy2(true)}
+                  className="text-xs text-lime-600 hover:text-lime-700 font-semibold flex items-center gap-1 pt-1"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add secondary Group By
+                </button>
+              )}
+            </div>
+
+            {/* D. Attribution Collapsible Section */}
+            <div className="pt-2 border-t border-gray-100 dark:border-[#2A2E2E]">
+              <button
+                type="button"
+                onClick={() => setIsAttributionOpen(!isAttributionOpen)}
+                className="w-full flex items-center justify-between py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:text-lime-600 dark:hover:text-lime-400 transition-all"
+              >
+                <span>Attribution Settings</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isAttributionOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {isAttributionOpen && (
+                <div className="space-y-3 mt-2 pt-2 border-t border-dashed border-gray-100 dark:border-[#2A2E2E] text-xs animate-fade-in">
                   {/* Attribution Model */}
                   <div className="space-y-1">
-                    <label className="block text-xs font-medium text-st-gray dark:text-gray-400">Attribution Model</label>
+                    <label className="block text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Attribution Model</label>
                     <CustomSelect
                       value={model}
                       onChange={(next) => {
@@ -1934,14 +1863,14 @@ export default function ReportBuilder() {
                     )}
                     {!hasFeature(site?.plan, 'multi_touch_attribution') && (
                       <p className="text-[10px] text-st-gray dark:text-gray-400">
-                        🔒 Multi-touch models require an <a href="/billing" className="text-st-lime hover:underline font-semibold">Upgrade</a>.
+                        🔒 Multi-touch models require an Upgrade.
                       </p>
                     )}
                   </div>
 
-                  {/* Attribution Window */}
+                  {/* Lookback Window */}
                   <div className="space-y-1">
-                    <label className="block text-xs font-medium text-st-gray dark:text-gray-400">Attribution Lookback Window</label>
+                    <label className="block text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Lookback Window</label>
                     <CustomSelect
                       value={attributionWindow || ''}
                       onChange={(val) => setAttributionWindow(val || null)}
@@ -1950,234 +1879,107 @@ export default function ReportBuilder() {
                     <p className="text-[10px] text-st-gray dark:text-gray-400 mt-1">How far back from conversion to look for touchpoints.</p>
                   </div>
 
-                  {/* Attribute By */}
+                  {/* Attribute Anchored By */}
                   <div className="space-y-1">
-                    <label className="block text-xs font-medium text-st-gray dark:text-gray-400">Attribute Anchored By</label>
+                    <label className="block text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Attribute Anchored By</label>
                     <CustomSelect
                       value={attributeBy}
                       onChange={setAttributeBy}
                       options={attributeByOptions}
                     />
                   </div>
-
-                  {/* Chart Type */}
-                  <div className="space-y-1">
-                    <label className="block text-xs font-medium text-st-gray dark:text-gray-400">Chart Type</label>
-                    <CustomSelect
-                      value={chartType}
-                      onChange={setChartType}
-                      options={chartTypeOptions}
-                    />
-                  </div>
-
-                  {/* Sources filter grid */}
-                  <div className="space-y-2 border-t border-gray-100 dark:border-[#2A2E2E] pt-3">
-                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Traffic Sources</label>
-                    <p className="text-[10px] text-st-gray dark:text-gray-400">Filter report results by category or specific source.</p>
-
-                    <div className="grid grid-cols-2 gap-1.5">
-                      {SOURCE_GROUPS.map((g) => {
-                        const isGroupActive = isSourceGroupActive(g.name)
-                        return (
-                          <div key={g.name} className="space-y-1">
-                            <button
-                              type="button"
-                              onClick={() => applySourceFilter(g.name)}
-                              className={`w-full flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-left transition-all border ${
-                                isGroupActive
-                                  ? 'bg-lime-500/10 border-lime-500 text-lime-800 dark:text-lime-400 font-semibold'
-                                  : 'bg-gray-50 dark:bg-[#242829] border-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2A2E2E]'
-                              }`}
-                            >
-                              <span>{g.icon}</span>
-                              <span className="truncate">{g.name}</span>
-                            </button>
-                            {g.subs.length > 0 && isGroupActive && (
-                              <div className="pl-2 space-y-0.5">
-                                {g.subs.map((sub) => {
-                                  const isSubActive = isSubSourceActive(g.name, sub)
-                                  return (
-                                    <button
-                                      key={sub}
-                                      type="button"
-                                      onClick={() => applySourceFilter(g.name, sub)}
-                                      className={`w-full text-[10px] text-left px-2 py-0.5 rounded transition-all ${
-                                        isSubActive
-                                          ? 'bg-lime-500 text-st-black font-semibold'
-                                          : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'
-                                      }`}
-                                    >
-                                      {sub}
-                                    </button>
-                                  )}
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                    {(filters.channel || filters.source || filters.medium || filters.ai_source || filters.has_ai_source) && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setFilters(prev => {
-                            const next = { ...prev }
-                            delete next.channel
-                            delete next.source
-                            delete next.medium
-                            delete next.ai_source
-                            delete next.has_ai_source
-                            setFilterCount(Object.keys(next).length)
-                            return next
-                          })
-                        }}
-                        className="text-xs text-red-500 hover:text-red-600 block mt-1 font-semibold"
-                      >
-                        Clear source filters
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Other standard filter fields */}
-                  <div className="space-y-3 border-t border-gray-100 dark:border-[#2A2E2E] pt-3">
-                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">Other Filters</label>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      {/* Channel */}
-                      <div className="space-y-1">
-                        <label className="block text-[10px] text-gray-500">Channel Name</label>
-                        <input
-                          type="text"
-                          value={filters.channel || ''}
-                          onChange={(e) => applyFilter('channel', e.target.value || undefined)}
-                          placeholder="e.g. Organic Search"
-                          className="w-full px-2 py-1 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded text-st-black dark:text-white text-xs outline-none"
-                        />
-                      </div>
-
-                      {/* Source */}
-                      <div className="space-y-1">
-                        <label className="block text-[10px] text-gray-500">Source Name</label>
-                        <input
-                          type="text"
-                          value={filters.source || ''}
-                          onChange={(e) => applyFilter('source', e.target.value || undefined)}
-                          placeholder="e.g. google"
-                          className="w-full px-2 py-1 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded text-st-black dark:text-white text-xs outline-none"
-                        />
-                      </div>
-
-                      {/* Medium */}
-                      <div className="space-y-1">
-                        <label className="block text-[10px] text-gray-500">Medium</label>
-                        <input
-                          type="text"
-                          value={filters.medium || ''}
-                          onChange={(e) => applyFilter('medium', e.target.value || undefined)}
-                          placeholder="e.g. cpc"
-                          className="w-full px-2 py-1 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded text-st-black dark:text-white text-xs outline-none"
-                        />
-                      </div>
-
-                      {/* Campaign */}
-                      <div className="space-y-1">
-                        <label className="block text-[10px] text-gray-500">Campaign</label>
-                        <input
-                          type="text"
-                          value={filters.campaign || ''}
-                          onChange={(e) => applyFilter('campaign', e.target.value || undefined)}
-                          placeholder="e.g. summer_sale"
-                          className="w-full px-2 py-1 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded text-st-black dark:text-white text-xs outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Conversion Type */}
-                    <div className="space-y-1">
-                      <label className="block text-[10px] text-gray-500">Conversion Type</label>
-                      <input
-                        type="text"
-                        value={filters.conversion_type || ''}
-                        onChange={(e) => applyFilter('conversion_type', e.target.value || undefined)}
-                        placeholder="e.g. signup"
-                        className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded text-st-black dark:text-white"
-                      />
-                    </div>
-
-                    {/* Min Conversions */}
-                    <div className="space-y-1">
-                      <label className="block text-[10px] text-gray-500">Min Conversions (threshold)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={filters.min_conversions || ''}
-                        onChange={(e) => applyFilter('min_conversions', e.target.value || undefined)}
-                        placeholder="e.g. 5"
-                        className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded text-st-black dark:text-white"
-                      />
-                    </div>
-
-                    {/* Customer Type */}
-                    <div className="space-y-1">
-                      <label className="block text-[10px] text-gray-500">Customer Type</label>
-                      <CustomSelect
-                        value={filters.customer_type || ''}
-                        onChange={(val) => applyFilter('customer_type', val || undefined)}
-                        options={customerTypeFilterOptions}
-                      />
-                    </div>
-
-                    {/* Device */}
-                    <div className="space-y-1">
-                      <label className="block text-[10px] text-gray-500">Device</label>
-                      <CustomSelect
-                        value={filters.device_type || ''}
-                        onChange={(val) => applyFilter('device_type', val || undefined)}
-                        options={deviceOptions}
-                      />
-                    </div>
-
-                    {/* Country */}
-                    <div className="space-y-1">
-                      <label className="block text-[10px] text-gray-500">Country</label>
-                      <input
-                        type="text"
-                        value={filters.country || ''}
-                        onChange={(e) => applyFilter('country', e.target.value || undefined)}
-                        placeholder="e.g. US"
-                        className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded text-st-black dark:text-white"
-                      />
-                    </div>
-
-                    {/* Conversions only check */}
-                    <label className="flex items-center gap-2 cursor-pointer pt-1 font-medium text-gray-700 dark:text-gray-300">
-                      <input
-                        type="checkbox"
-                        checked={filters.is_conversion === 'true'}
-                        onChange={(e) => applyFilter('is_conversion', e.target.checked ? 'true' : undefined)}
-                        className="rounded border-gray-300 text-st-black focus:ring-lime-500"
-                      />
-                      Conversions only
-                    </label>
-
-                    {filterCount > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => { setFilters({}); setFilterCount(0) }}
-                        className="w-full py-1.5 border border-red-200 dark:border-red-950 text-red-500 hover:text-red-600 rounded transition-all font-semibold"
-                      >
-                        Clear all filters
-                      </button>
-                    )}
-
-                  </div>
-
                 </div>
               )}
             </div>
 
-            {/* Reset / New button */}
+            {/* E. Sources & Filters Collapsible Section */}
+            <div className="pt-2 border-t border-gray-100 dark:border-[#2A2E2E]">
+              <button
+                type="button"
+                onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+                className="w-full flex items-center justify-between py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 hover:text-lime-600 dark:hover:text-lime-400 transition-all"
+              >
+                <span>Sources & Filters</span>
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isFiltersOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {isFiltersOpen && (
+                <div className="space-y-3 mt-2 pt-2 border-t border-dashed border-gray-100 dark:border-[#2A2E2E] text-xs animate-fade-in">
+
+
+                  {/* Channel Filter */}
+                  <div className="space-y-1">
+                    <label className="block text-[10px] text-gray-500">Channel</label>
+                    <input
+                      type="text"
+                      value={filters.channel || ''}
+                      onChange={(e) => applyFilter('channel', e.target.value || undefined)}
+                      placeholder="e.g. Organic Search"
+                      className="w-full px-2 py-1 border border-gray-300 dark:border-[#2A2E2E] dark:bg-[#242829] rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-white"
+                    />
+                  </div>
+
+                  {/* Source Filter */}
+                  <div className="space-y-1">
+                    <label className="block text-[10px] text-gray-500">Source</label>
+                    <input
+                      type="text"
+                      value={filters.source || ''}
+                      onChange={(e) => applyFilter('source', e.target.value || undefined)}
+                      placeholder="e.g. google"
+                      className="w-full px-2 py-1 border border-gray-300 dark:border-[#2A2E2E] dark:bg-[#242829] rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-white"
+                    />
+                  </div>
+
+                  {/* Medium Filter */}
+                  <div className="space-y-1">
+                    <label className="block text-[10px] text-gray-500">Medium</label>
+                    <input
+                      type="text"
+                      value={filters.medium || ''}
+                      onChange={(e) => applyFilter('medium', e.target.value || undefined)}
+                      placeholder="e.g. cpc"
+                      className="w-full px-2 py-1 border border-gray-300 dark:border-[#2A2E2E] dark:bg-[#242829] rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-white"
+                    />
+                  </div>
+
+                  {/* Campaign Filter */}
+                  <div className="space-y-1">
+                    <label className="block text-[10px] text-gray-500">Campaign</label>
+                    <input
+                      type="text"
+                      value={filters.campaign || ''}
+                      onChange={(e) => applyFilter('campaign', e.target.value || undefined)}
+                      placeholder="e.g. summer_sale"
+                      className="w-full px-2 py-1 border border-gray-300 dark:border-[#2A2E2E] dark:bg-[#242829] rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-white"
+                    />
+                  </div>
+
+                  {/* Conversion Type Filter */}
+                  <div className="space-y-1">
+                    <label className="block text-[10px] text-gray-500">Conversion Type</label>
+                    <input
+                      type="text"
+                      value={filters.conversion_type || ''}
+                      onChange={(e) => applyFilter('conversion_type', e.target.value || undefined)}
+                      placeholder="e.g. signup"
+                      className="w-full px-2 py-1.5 border border-gray-300 dark:border-[#2A2E2E] dark:bg-[#242829] rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-white"
+                    />
+                  </div>
+
+                  {filterCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => { setFilters({}); setFilterCount(0) }}
+                      className="w-full py-1.5 border border-red-200 dark:border-red-950 text-red-500 hover:text-red-650 rounded transition-all font-semibold"
+                    >
+                      Clear all filters
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Reset Configuration */}
             <div className="pt-2 border-t border-gray-100 dark:border-[#2A2E2E]">
               <button
                 type="button"
@@ -2192,7 +1994,7 @@ export default function ReportBuilder() {
         </div>
 
         {/* Right Column: Live Preview Panel */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="flex-1 min-w-0 space-y-4">
           {!canPreview ? (
             <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-16 text-center">
               <ArrowRight className="w-10 h-10 text-gray-300 mx-auto mb-4" />
@@ -2509,7 +2311,7 @@ export default function ReportBuilder() {
                             <tr key={i} className="border-b border-gray-50 dark:border-[#2A2E2E] hover:bg-gray-50 dark:hover:bg-[#252929]">
                               <td className="py-2.5 px-4 text-st-black dark:text-gray-200 font-medium">
                                 <span className="inline-flex items-center">
-                                  {['source', 'ai_source', 'channel'].includes(groupBy) ? (
+                                  {['source', 'channel'].includes(groupBy) ? (
                                     <SourceChip source={r.dim_value || 'Direct / None'} />
                                   ) : (
                                     <>
@@ -2568,8 +2370,6 @@ export default function ReportBuilder() {
         </div>
 
       </div>
-        </>
-      )}
 
       {/* Slide-over Saved Reports Drawer */}
       {isDrawerOpen && (
