@@ -2,7 +2,14 @@
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
-> **Handoff:** Session 140G-29C — Deployed navigation browser QA — **PASS — deployed navigation architecture verified; Journey slide-over remains BLOCKED due to no lead rows; paid beta remains NOT READY.**
+> **Handoff:** Session 140I — Report Builder Template-First UI + Truth Gates — **PASS — implemented business-type personalized Template Hub; verified recommended templates grid, collapsible other categories section, gating logic, lock badges in metric dropdown, and SourceChip table cells; static checks and dashboard builds passed.**
+> - **Personalized Template Hub**: Shifted the default `/report-builder` page to render a personalized Template Hub that automatically recommends current business-type and Universal templates. Non-relevant categories are hidden behind a collapsible "Show other template types" disclosure section. Unknown business types fallback to Universal templates and display a settings personalization note.
+> - **Truth-Gating & Locked Empty States**: Locked templates replace standard workspace preview visualizations with `getLockedEmptyState(...)` panels explaining how to connect Stripe/Shopify/GSC or AI referrers to unlock data.
+> - **Lock Badges**: Displays `🔒` next to gated metrics in the "+ Add metric" selection dropdown.
+> - **SourceChip Table Cells**: Render `<SourceChip>` components for source, channel, and ai_source dimension values in the Data View table body.
+> - **QA & Validation**: Verified E2E local browser flow (saving, loading, pinning, and layout gating) using a verified local test user (`test-local@sourcetrack.ai`) on a Vite dev server. Passed all static checks (`npm run qa:static`).
+>
+> **Prior handoff (Session 140G-29C):** Session 140G-29C — Deployed navigation browser QA — **PASS — deployed navigation architecture verified; Journey slide-over remains BLOCKED due to no lead rows; paid beta remains NOT READY.**
 > - **Staging Browser E2E QA**: Opened and verified all required routes: `/dashboard`, `/analytics`, `/attribution`, `/leads`, `/campaigns`, `/report-builder`, `/app/integrations`, `/settings`.
 > - **Sidebar Order**: Confirmed sidebar strictly conforms to the correct 8-item order (Dashboard, Analytics, Attribution, All Leads, Campaigns, Report Builder, Integrations, Settings).
 > - **Redirects & Backwards Compatibility**: Verified `/journeys` redirects to `/leads` and `/ai-sources` redirects to `/attribution`.

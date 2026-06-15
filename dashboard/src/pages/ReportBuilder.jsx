@@ -21,11 +21,12 @@ import {
 import {
   RefreshCw, Bookmark, Trash2, Download, Copy,
   Search, ChevronDown, ArrowRight, Plus, HelpCircle,
-  BarChart3, X
+  BarChart3, X, Lock, Settings, Sparkles
 } from 'lucide-react'
 import ConversionExplanationModal from '../components/ConversionExplanationModal'
 import { hasFeature } from '../lib/planFeatures'
 import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
+import { SourceIcon, SourceChip } from '../components/SourceIcon'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend)
 
@@ -115,11 +116,35 @@ const GRANULARITY = [
 ]
 
 const PRESET_TEMPLATES = [
-  { name: 'AI sources', desc: 'See which AI platforms send converting visitors', model: 'last_touch', groupBy: 'ai_source', groupBy2: null, metric: 'sessions', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { has_ai_source: 'true' } },
-  { name: 'AI revenue', desc: 'Revenue generated from AI referral touchpoints', model: 'last_touch', groupBy: 'ai_source', groupBy2: null, metric: 'revenue', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { has_ai_source: 'true' } },
-  { name: 'AI landing pages', desc: 'Landing pages where AI visitors convert best', model: 'first_touch', groupBy: 'landing_page', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { has_ai_source: 'true' } },
-  { name: 'Campaign revenue', desc: 'Revenue performance across campaigns', model: 'last_touch', groupBy: 'campaign', groupBy2: null, metric: 'revenue', days: 90, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: { min_conversions: '5' } },
-  { name: 'Channel revenue', desc: 'Revenue grouped by high-level marketing channel', model: 'last_touch', groupBy: 'channel', groupBy2: null, metric: 'revenue', days: 30, chartType: 'bar', granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date', filters: {} },
+  // Universal
+  { id: 'univ_channel_rev', name: 'Channel revenue', desc: 'Revenue grouped by high-level marketing channel', model: 'last_touch', groupBy: 'channel', groupBy2: null, metric: 'revenue', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'Universal', requiredData: 'revenue' },
+  { id: 'univ_campaign_rev', name: 'Campaign revenue', desc: 'Revenue performance across campaigns', model: 'last_touch', groupBy: 'campaign', groupBy2: null, metric: 'revenue', days: 90, chartType: 'bar', granularity: 'day', filters: {}, category: 'Universal', requiredData: 'revenue' },
+  { id: 'univ_visitors', name: 'Unique Visitors by Channel', desc: 'Unique visitors across channels', model: 'first_touch', groupBy: 'channel', groupBy2: null, metric: 'sessions', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'Universal', requiredData: 'none' },
+  { id: 'univ_cvr', name: 'Conversion Rate by Channel', desc: 'Conversion rate across traffic channels', model: 'last_touch', groupBy: 'channel', groupBy2: null, metric: 'conversion_rate', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'Universal', requiredData: 'none' },
+
+  // SaaS
+  { id: 'saas_trials', name: 'Trials by Source', desc: 'Attributed trial signups by traffic source', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', filters: { conversion_type: 'trial' }, category: 'SaaS', requiredData: 'none' },
+  { id: 'saas_demos', name: 'Demo Bookings by Source', desc: 'Demo bookings by traffic source', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', filters: { conversion_type: 'demo' }, category: 'SaaS', requiredData: 'none' },
+  { id: 'saas_ai_trials', name: 'AI-assisted Trials', desc: 'Trials influenced by AI search engines', model: 'last_touch', groupBy: 'ai_source', groupBy2: null, metric: 'ai_conversions', days: 30, chartType: 'bar', granularity: 'day', filters: { conversion_type: 'trial', has_ai_source: 'true' }, category: 'SaaS', requiredData: 'ai' },
+  { id: 'saas_signups', name: 'Signup Landing Pages', desc: 'Landing pages where signup conversions occur', model: 'first_touch', groupBy: 'landing_page', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', filters: { conversion_type: 'signup' }, category: 'SaaS', requiredData: 'none' },
+  { id: 'saas_mrr', name: 'MRR by Source', desc: 'Monthly Recurring Revenue by traffic source (Coming Soon)', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'revenue', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'SaaS', requiredData: 'revenue', isFuture: true },
+  { id: 'saas_trial_paid', name: 'Trial-to-Paid Conversion', desc: 'Conversion rate from trial to paid status (Coming Soon)', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'conversion_rate', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'SaaS', requiredData: 'revenue', isFuture: true },
+
+  // Ecommerce
+  { id: 'ecom_orders', name: 'Orders by Source', desc: 'Attributed purchase orders by source (Manual webhook)', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', filters: { conversion_type: 'purchase' }, category: 'Ecommerce', requiredData: 'none', shopifyBadge: true },
+  { id: 'ecom_revenue', name: 'Revenue by Source', desc: 'Attributed revenue by traffic source', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'revenue', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'Ecommerce', requiredData: 'revenue' },
+  { id: 'ecom_aov', name: 'AOV by Campaign', desc: 'Average Order Value by campaign (Manual webhook)', model: 'last_touch', groupBy: 'campaign', groupBy2: null, metric: 'avg_conversion_value', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'Ecommerce', requiredData: 'revenue', shopifyBadge: true },
+  { id: 'ecom_shopify', name: 'Shopify Webhook Orders', desc: 'Attributed orders tracked via manual Shopify webhook (Manual webhook)', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', filters: { conversion_type: 'shopify_order' }, category: 'Ecommerce', requiredData: 'none', shopifyBadge: true },
+  { id: 'ecom_roas', name: 'Campaign ROAS', desc: 'Return on Ad Spend by campaign (Coming Soon)', model: 'last_touch', groupBy: 'campaign', groupBy2: null, metric: 'revenue', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'Ecommerce', requiredData: 'cost', isFuture: true },
+
+  // Lead Gen / Agency
+  { id: 'lead_leads', name: 'Leads by Source', desc: 'Attributed new leads by traffic source', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'leads', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'Lead Gen / Agency', requiredData: 'none' },
+  { id: 'lead_forms', name: 'Form Conversions by Landing Page', desc: 'Conversions driven by landing pages', model: 'first_touch', groupBy: 'landing_page', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', filters: { conversion_type: 'form' }, category: 'Lead Gen / Agency', requiredData: 'none' },
+  { id: 'lead_qualified', name: 'Qualified Leads by Source', desc: 'Attributed qualified leads by source (Coming Soon)', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'leads', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'Lead Gen / Agency', requiredData: 'lead_gen', isFuture: true },
+  { id: 'lead_mql_sql', name: 'MQL to SQL Rate by Campaign', desc: 'Marketing to Sales Qualified transition rate by campaign (Coming Soon)', model: 'last_touch', groupBy: 'campaign', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'Lead Gen / Agency', requiredData: 'lead_gen', isFuture: true },
+
+  // SEO / GSC
+  { id: 'seo_gsc', name: 'SEO Search Queries', desc: 'Google Search Console organic search keyword performance (Coming Soon)', model: 'last_touch', groupBy: 'keyword', groupBy2: null, metric: 'sessions', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'Universal', requiredData: 'gsc', isFuture: true }
 ]
 
 const COLORS = [
@@ -442,11 +467,14 @@ export default function ReportBuilder() {
   const [site, setSite] = useState(null)
 
   // Report state
+  const [uiMode, setUiMode] = useState('hub') // 'hub' or 'builder'
+  const [activeTemplateId, setActiveTemplateId] = useState(null)
+  const [isCustomMode, setIsCustomMode] = useState(false)
   const [reportName, setReportName] = useState('')
   const [model, setModel] = useState('last_touch')
-  const [groupBy, setGroupBy] = useState('source')
-  const [metric, setMetric] = useState('revenue')
-  const [selectedMetrics, setSelectedMetrics] = useState(['revenue'])
+  const [groupBy, setGroupBy] = useState('channel')
+  const [metric, setMetric] = useState('sessions')
+  const [selectedMetrics, setSelectedMetrics] = useState(['sessions'])
 
   const toggleMetric = (key) => {
     setSelectedMetrics(prev =>
@@ -481,6 +509,9 @@ export default function ReportBuilder() {
   const [metricSearch, setMetricSearch] = useState('')
   const [showMetricDropdown, setShowMetricDropdown] = useState(false)
 
+  // Personalization other categories disclosure state
+  const [showOtherCategories, setShowOtherCategories] = useState(false)
+
   useEffect(() => {
     async function load() {
       const { data: member } = await supabase
@@ -489,7 +520,7 @@ export default function ReportBuilder() {
         .eq('user_id', user.id)
         .maybeSingle()
 
-      const query = supabase.from('sites').select('site_key, name, plan, custom_url_params').limit(1)
+      const query = supabase.from('sites').select('site_key, name, plan, custom_url_params, business_type').limit(1)
       if (member?.company_id) {
         query.eq('company_id', member.company_id)
       } else {
@@ -501,6 +532,124 @@ export default function ReportBuilder() {
     load()
   }, [user])
 
+  // Gating status hooks
+  const { data: stripeStatus } = useQuery({
+    queryKey: ['stripe-status', site?.site_key],
+    queryFn: () => fetchApi(`/integrations/stripe?site_key=${site.site_key}`),
+    enabled: !!site?.site_key
+  })
+
+  const { data: shopifyStatus } = useQuery({
+    queryKey: ['shopify-status', site?.site_key],
+    queryFn: () => fetchApi(`/integrations/shopify?site_key=${site.site_key}`),
+    enabled: !!site?.site_key
+  })
+
+  const { data: adPlatStatus } = useQuery({
+    queryKey: ['ad-platforms-status', site?.site_key],
+    queryFn: () => fetchApi(`/integrations/ad-platforms/status?site_key=${site.site_key}`),
+    enabled: !!site?.site_key
+  })
+
+  const { data: gscStatus } = useQuery({
+    queryKey: ['gsc-status', site?.site_key],
+    queryFn: () => fetchApi(`/integrations/google-search-console/status?site_key=${site.site_key}`),
+    enabled: !!site?.site_key
+  })
+
+  const { data: dashboardOverview } = useQuery({
+    queryKey: ['dashboard-overview', site?.site_key],
+    queryFn: () => fetchApi(`/dashboard/overview?site_key=${site.site_key}&days=30`),
+    enabled: !!site?.site_key
+  })
+
+  const { data: campaignsOverview } = useQuery({
+    queryKey: ['campaigns-overview', site?.site_key],
+    queryFn: () => fetchApi(`/campaigns/overview?site_key=${site.site_key}&days=30`),
+    enabled: !!site?.site_key
+  })
+
+  // Derived gates
+  const totalRevenue = dashboardOverview?.data?.kpis?.revenue || 0
+  const hasRevenueData = totalRevenue > 0
+  const stripeConnected = stripeStatus?.data?.configured === true
+  const shopifyConnected = shopifyStatus?.data?.configured === true
+  const isRevenueConfigured = stripeConnected || shopifyConnected || hasRevenueData
+
+  const googleConnected = adPlatStatus?.data?.google_ads?.connected === true || adPlatStatus?.data?.google_ads?.status === 'connected'
+  const metaConnected = adPlatStatus?.data?.meta_ads?.connected === true || adPlatStatus?.data?.meta_ads?.status === 'connected'
+  const totalSpend = campaignsOverview?.kpis?.total_spend || 0
+  const hasCostData = totalSpend > 0
+  const isCostConfigured = googleConnected || metaConnected || hasCostData
+
+  const gates = {
+    hasRevenueData,
+    isRevenueConfigured,
+    hasCostData,
+    isCostConfigured,
+    isGscConnected: gscStatus?.connected === true,
+    isGscPropertySelected: !!gscStatus?.property_url,
+    hasAiSources: (dashboardOverview?.data?.ai_sources || []).length > 0
+  }
+
+  const isTemplateGated = (template, gates) => {
+    if (template.requiredData === 'revenue') {
+      return !gates.isRevenueConfigured ? 'revenue_unconfigured' : (!gates.hasRevenueData ? 'revenue_no_data' : null)
+    }
+    if (template.requiredData === 'cost') {
+      return !gates.isCostConfigured ? 'cost_unconfigured' : (!gates.hasCostData ? 'cost_no_data' : null)
+    }
+    if (template.requiredData === 'gsc') {
+      return !gates.isGscConnected ? 'gsc_unconfigured' : (!gates.isGscPropertySelected ? 'gsc_no_property' : null)
+    }
+    if (template.requiredData === 'ai') {
+      return !gates.hasAiSources ? 'ai_no_data' : null
+    }
+    if (template.requiredData === 'lead_gen') {
+      return 'lead_gen'
+    }
+    return null
+  }
+
+  const isMetricGated = (metricKey) => {
+    if (['revenue', 'avg_conversion_value', 'ai_revenue', 'ai_revenue_share', 'ltv_revenue'].includes(metricKey)) {
+      return !gates.isRevenueConfigured ? 'revenue_unconfigured' : (!gates.hasRevenueData ? 'revenue_no_data' : null)
+    }
+    if (['ai_conversions', 'ai_conversion_share'].includes(metricKey)) {
+      return !gates.hasAiSources ? 'ai_no_data' : null
+    }
+    return null
+  }
+
+  const selectedTemplate = PRESET_TEMPLATES.find(p => p.id === activeTemplateId)
+  const futureGateError = selectedTemplate?.isFuture === true ? 'future_template' : null
+  const templateGateError = selectedTemplate ? isTemplateGated(selectedTemplate, gates) : null
+  const metricGateError = isMetricGated(metric)
+  const activeGateError = futureGateError || templateGateError || metricGateError
+  const isTemplateFuture = selectedTemplate?.isFuture === true
+
+  const getNormalizedBusinessType = (type) => {
+    if (!type) return 'unknown'
+    const t = type.toLowerCase()
+    if (t === 'saas') return 'SaaS'
+    if (t === 'ecommerce' || t === 'e-commerce') return 'Ecommerce'
+    if (t === 'lead_gen' || t === 'lead generation' || t === 'agency') return 'Lead Gen / Agency'
+    return 'unknown'
+  }
+
+  const normalizedType = getNormalizedBusinessType(site?.business_type)
+
+  const recommendedTemplates = []
+  if (normalizedType !== 'unknown') {
+    recommendedTemplates.push(...PRESET_TEMPLATES.filter(p => p.category === normalizedType))
+    recommendedTemplates.push(...PRESET_TEMPLATES.filter(p => p.category === 'Universal'))
+  } else {
+    recommendedTemplates.push(...PRESET_TEMPLATES.filter(p => p.category === 'Universal'))
+  }
+
+  const allCategories = ['SaaS', 'Ecommerce', 'Lead Gen / Agency']
+  const otherCategories = allCategories.filter(cat => cat !== normalizedType)
+
   useEffect(() => {
     const editParam = searchParams.get('edit')
     if (!editParam) return
@@ -510,6 +659,7 @@ export default function ReportBuilder() {
     try { widget = JSON.parse(stored) } catch { return }
     if (!widget) return
     sessionStorage.removeItem('sourcetrack_edit_widget')
+    setActiveTemplateId(widget.templateId || null)
     setReportName(widget.name || '')
     setModel(widget.model || 'last_touch')
     setGroupBy(widget.groupBy || 'source')
@@ -528,6 +678,7 @@ export default function ReportBuilder() {
     setIsRolling(Boolean(widget.isRolling))
     setRollingDays(widget.rollingDays || 30)
     setEditingId(widget.id)
+    setUiMode('builder')
   }, [searchParams])
 
   const effectiveDateRange = isRolling ? getRollingDateRange(rollingDays) : { from: dateFrom, to: dateTo }
@@ -538,7 +689,7 @@ export default function ReportBuilder() {
   const { data, isLoading } = useQuery({
     queryKey: ['report', site?.site_key, model, groupBy, metric, effectiveDateFrom, effectiveDateTo, filterKey, groupBy2, granularity, attributionWindow, attributeBy],
     queryFn: () => getFlexibleReport(site?.site_key, model, effectiveDateFrom, effectiveDateTo, groupBy, metric, filters, groupBy2, granularity, attributionWindow, attributeBy),
-    enabled: !!site
+    enabled: !!site && !activeGateError
   })
 
   const { data: savedReports, isLoading: reportsLoading, refetch: refetchReports } = useQuery({
@@ -561,7 +712,7 @@ export default function ReportBuilder() {
   const { data: priorRes } = useQuery({
     queryKey: ['report-prior', site?.site_key, model, groupBy, metric, effectiveDateFrom, effectiveDateTo, filterKey, groupBy2, granularity, attributionWindow, attributeBy],
     queryFn: () => getFlexibleReport(site?.site_key, model, priorPeriod.date_from, priorPeriod.date_to, groupBy, metric, filters, groupBy2, granularity, attributionWindow, attributeBy),
-    enabled: !!site && !!priorPeriod && showCompare
+    enabled: !!site && !!priorPeriod && showCompare && !activeGateError
   })
 
   useEffect(() => {
@@ -585,12 +736,14 @@ export default function ReportBuilder() {
   )
 
   const applyPreset = useCallback((preset) => {
+    setActiveTemplateId(preset.id)
     setReportName(preset.name)
-    setModel(preset.model)
+    setModel(preset.model || 'last_touch')
     setGroupBy(preset.groupBy)
     setGroupBy2(preset.groupBy2 || null)
     setShowGroupBy2(!!preset.groupBy2)
     setMetric(preset.metric)
+    setSelectedMetrics([preset.metric])
     setChartType(preset.chartType || 'bar')
     setGranularity(preset.granularity || 'day')
     setAttributionWindow(preset.attributionWindow || null)
@@ -607,6 +760,7 @@ export default function ReportBuilder() {
     setIsRolling(false)
     setRollingDays(30)
     setEditingId(null)
+    setUiMode('builder')
   }, [])
 
   const handleDatePreset = (preset) => {
@@ -761,6 +915,8 @@ export default function ReportBuilder() {
 
   const handleEdit = (report) => {
     const cfg = report.config || report
+    const matchingTemplate = PRESET_TEMPLATES.find(p => p.metric === (cfg.metric || 'revenue') && p.groupBy === (cfg.groupBy || 'source'))
+    setActiveTemplateId(cfg.templateId || matchingTemplate?.id || null)
     setReportName(report.name || cfg.name)
     setModel(cfg.model || 'last_touch')
     setGroupBy(cfg.groupBy || 'source')
@@ -780,6 +936,7 @@ export default function ReportBuilder() {
     setIsRolling(Boolean(cfg.isRolling))
     setRollingDays(cfg.rollingDays || 30)
     setEditingId(report.id)
+    setUiMode('builder')
     queryClient.invalidateQueries({ queryKey: ['report'] })
   }
 
@@ -894,9 +1051,13 @@ export default function ReportBuilder() {
 
   const handleLoad = (report) => {
     handleEdit(report)
+    setUiMode('builder')
   }
 
   const resetReport = () => {
+    setActiveTemplateId(null)
+    setUiMode('hub')
+    setIsCustomMode(false)
     setEditingId(null)
     setReportName('')
     setModel('last_touch')
@@ -1112,62 +1273,395 @@ export default function ReportBuilder() {
     { value: 'returning', label: 'Returning Customers Only' }
   ]
 
+  const getLockedEmptyState = (gateError, templateName, isFuture) => {
+    const iconClass = "w-8 h-8 text-lime-600 dark:text-lime-400"
+    const containerClass = "bg-white dark:bg-[#1A1D1D] rounded-xl border border-gray-200 dark:border-[#2A2E2E] p-12 text-center max-w-2xl mx-auto my-8 shadow-sm flex flex-col items-center justify-center animate-fade-in"
+
+    if (isFuture) {
+      let title = "Feature Coming Soon"
+      let desc = "This advanced report requires metrics or dimensions that are currently under development. Stay tuned for updates!"
+      if (gateError === 'cost' || templateName?.toLowerCase().includes('roas') || templateName?.toLowerCase().includes('spend')) {
+        title = "ROAS & Spend Reports Coming Soon"
+        desc = "Cost-based attribution reports (Campaign ROAS, Spend, CAC, CPA) are coming soon. Ad platform integrations will sync ad spend cost metrics directly."
+      } else if (gateError === 'revenue' || templateName?.toLowerCase().includes('mrr') || templateName?.toLowerCase().includes('paid')) {
+        title = "SaaS Revenue Reports Coming Soon"
+        desc = "Subscription analytics like MRR and Trial-to-Paid conversion tracking are coming soon."
+      } else if (gateError === 'gsc' || templateName?.toLowerCase().includes('seo') || templateName?.toLowerCase().includes('gsc') || templateName?.toLowerCase().includes('queries')) {
+        title = "Google Search Console Keywords Coming Soon"
+        desc = "Google Search Console query dimensions and organic CTR/impressions reports are coming soon."
+      } else if (gateError === 'lead_gen' || templateName?.toLowerCase().includes('qualified') || templateName?.toLowerCase().includes('mql')) {
+        title = "CRM Pipeline Analytics Coming Soon"
+        desc = "Qualified lead metrics, MQL, SQL, and stage conversion rates are coming soon."
+      }
+
+      return (
+        <div className={containerClass}>
+          <div className="w-16 h-16 bg-lime-500/10 border border-lime-500/20 text-lime-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Lock className={iconClass} />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{title}</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">{desc}</p>
+        </div>
+      )
+    }
+
+    if (gateError === 'revenue_unconfigured') {
+      return (
+        <div className={containerClass}>
+          <div className="w-16 h-16 bg-lime-500/10 border border-lime-500/20 text-lime-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Lock className={iconClass} />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Revenue Tracking Required</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
+            This report requires revenue integration. Connect Stripe, Shopify manual webhook, or send Conversion API revenue events to start tracking sales.
+          </p>
+          <Link
+            to="/app/integrations"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-lime-500 text-st-black hover:bg-lime-400 rounded-lg text-sm font-bold transition-all shadow-sm"
+          >
+            <Settings className="w-4 h-4" />
+            Connect Revenue Sources
+          </Link>
+        </div>
+      )
+    }
+
+    if (gateError === 'revenue_no_data') {
+      return (
+        <div className={containerClass}>
+          <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Waiting for Revenue Data</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
+            Stripe/Shopify status is configured, but no revenue data has been recorded for this site yet.
+            Once a purchase or payment event occurs, revenue reports will populate automatically.
+          </p>
+          <Link
+            to="/app/integrations"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-150 dark:bg-gray-800 text-gray-750 dark:text-gray-350 hover:bg-gray-200 rounded-lg text-sm font-semibold transition-all"
+          >
+            <Settings className="w-4 h-4" />
+            Manage Integrations
+          </Link>
+        </div>
+      )
+    }
+
+    if (gateError === 'cost_unconfigured') {
+      return (
+        <div className={containerClass}>
+          <div className="w-16 h-16 bg-lime-500/10 border border-lime-500/20 text-lime-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Lock className={iconClass} />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Ad Integration Required</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
+            Connect Google Ads or Meta Ads in Integrations to track ad spend, campaigns, ROAS, CAC, and CPA.
+          </p>
+          <Link
+            to="/app/integrations"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-lime-500 text-st-black hover:bg-lime-400 rounded-lg text-sm font-bold transition-all shadow-sm"
+          >
+            <Settings className="w-4 h-4" />
+            Connect Ad Accounts
+          </Link>
+        </div>
+      )
+    }
+
+    if (gateError === 'cost_no_data') {
+      return (
+        <div className={containerClass}>
+          <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Waiting for Cost Data</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
+            Ad accounts are connected, but no ad spend cost data has been synced for this site yet. Cost data typically updates every few hours.
+          </p>
+          <Link
+            to="/app/integrations"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-150 dark:bg-gray-800 text-gray-750 dark:text-gray-350 hover:bg-gray-200 rounded-lg text-sm font-semibold transition-all"
+          >
+            <Settings className="w-4 h-4" />
+            Manage Integrations
+          </Link>
+        </div>
+      )
+    }
+
+    if (gateError === 'gsc_unconfigured') {
+      return (
+        <div className={containerClass}>
+          <div className="w-16 h-16 bg-lime-500/10 border border-lime-500/20 text-lime-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Lock className={iconClass} />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Google Search Console Required</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
+            Connect your Google Search Console account in Integrations to sync organic search queries.
+          </p>
+          <Link
+            to="/app/integrations"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-lime-500 text-st-black hover:bg-lime-400 rounded-lg text-sm font-bold transition-all shadow-sm"
+          >
+            <Settings className="w-4 h-4" />
+            Connect Search Console
+          </Link>
+        </div>
+      )
+    }
+
+    if (gateError === 'gsc_no_property') {
+      return (
+        <div className={containerClass}>
+          <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Lock className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Select Search Console Property</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
+            Google Search Console is connected, but no property is selected yet. Go to Integrations to select a property.
+          </p>
+          <Link
+            to="/app/integrations"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-150 dark:bg-gray-800 text-gray-750 dark:text-gray-350 hover:bg-gray-200 rounded-lg text-sm font-semibold transition-all"
+          >
+            <Settings className="w-4 h-4" />
+            Select Property
+          </Link>
+        </div>
+      )
+    }
+
+    if (gateError === 'ai_no_data') {
+      return (
+        <div className={containerClass}>
+          <div className="w-16 h-16 bg-lime-500/10 border border-lime-500/20 text-lime-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Sparkles className="w-8 h-8 text-lime-600 dark:text-lime-400" />
+          </div>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">No AI Referral Traffic Detected</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+            AI journey and trials templates populate automatically once visitors refer from platforms like ChatGPT, Claude, Gemini, or Perplexity.
+          </p>
+        </div>
+      )
+    }
+
+    return null
+  }
+
+  const renderTemplateHub = () => {
+    return (
+      <div className="bg-white dark:bg-[#1A1D1D] rounded-xl border border-gray-200 dark:border-[#2A2E2E] p-6 space-y-6 animate-fade-in">
+        <div className="border-b border-gray-100 dark:border-[#2A2E2E] pb-4">
+          <h3 className="text-lg font-bold text-gray-800 dark:text-white">
+            {normalizedType !== 'unknown'
+              ? `Recommended templates for ${normalizedType === 'Lead Gen / Agency' ? 'Lead Gen & Agency' : normalizedType}`
+              : 'Recommended templates'}
+          </h3>
+          {normalizedType === 'unknown' ? (
+            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1.5 font-medium bg-amber-50 dark:bg-amber-950/20 px-2.5 py-1 rounded inline-block">
+              Choose a business type in Settings to personalize templates.
+            </p>
+          ) : (
+            <p className="text-sm text-st-gray dark:text-gray-400 mt-1">
+              Preset templates tailored to your {normalizedType === 'Lead Gen / Agency' ? 'lead generation or agency' : normalizedType.toLowerCase()} business model and data availability.
+            </p>
+          )}
+        </div>
+
+        {/* Template Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {recommendedTemplates.map((p) => {
+            const isFuture = p.isFuture === true
+            const isGated = isFuture ? 'future_template' : isTemplateGated(p, gates)
+            const showLock = Boolean(isGated)
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => applyPreset(p)}
+                className="group relative flex flex-col text-left p-5 bg-gray-50 dark:bg-[#242829]/50 border border-gray-200 dark:border-[#2A2E2E] hover:border-lime-500 rounded-xl transition-all shadow-sm"
+              >
+                <div className="flex items-start justify-between gap-2 w-full">
+                  <span className="font-bold text-sm text-gray-900 dark:text-white group-hover:text-lime-600 dark:group-hover:text-lime-400">
+                    {p.name}
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {p.category && p.category !== 'Universal' && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-lime-50 dark:bg-lime-950/10 text-[9px] font-semibold text-lime-700 dark:text-lime-400 border border-lime-200 dark:border-lime-900">
+                        {p.category}
+                      </span>
+                    )}
+                    {showLock && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-800 text-[10px] font-semibold text-gray-550 dark:text-gray-400">
+                        <Lock className="w-2.5 h-2.5" />
+                        {isFuture ? 'Coming Soon' : 'Locked'}
+                      </span>
+                    )}
+                    {p.shopifyBadge && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/20 text-[10px] font-semibold text-blue-800 dark:text-blue-400">
+                        Manual webhook
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs text-st-gray dark:text-gray-400 mt-2 flex-grow">{p.desc}</p>
+                <div className="mt-3 pt-3 border-t border-gray-150 dark:border-gray-800 text-[10px] text-st-gray dark:text-gray-400 flex justify-between items-center w-full">
+                  <span>Metric: <strong className="text-gray-700 dark:text-gray-300">{METRICS.find(m => m.key === p.metric)?.label || p.metric}</strong></span>
+                  <span>Dimension: <strong className="text-gray-700 dark:text-gray-300">{getDimensionLabel(p.groupBy)}</strong></span>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Collapsible section for other business types */}
+        {otherCategories.length > 0 && (
+          <div className="pt-4 border-t border-gray-100 dark:border-[#2A2E2E]">
+            <button
+              type="button"
+              onClick={() => setShowOtherCategories(!showOtherCategories)}
+              className="text-xs font-semibold text-lime-600 hover:text-lime-500 dark:text-lime-400 dark:hover:text-lime-300 flex items-center gap-1 transition-all"
+            >
+              {showOtherCategories ? 'Hide other template types' : 'Show other template types'}
+            </button>
+            {showOtherCategories && (
+              <div className="mt-4 space-y-6 animate-fade-in p-5 bg-gray-50/50 dark:bg-[#242829]/20 rounded-xl border border-gray-150 dark:border-[#2A2E2E]">
+                <p className="text-xs text-st-gray dark:text-gray-400 font-medium">Templates from other business models (may not align with your current site setup):</p>
+                <div className="space-y-6">
+                  {otherCategories.map(cat => {
+                    const catTemplates = PRESET_TEMPLATES.filter(p => p.category === cat)
+                    if (catTemplates.length === 0) return null
+                    return (
+                      <div key={cat} className="space-y-2.5">
+                        <h4 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">{cat}</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {catTemplates.map(p => {
+                            const isFuture = p.isFuture === true
+                            const isGated = isFuture ? 'future_template' : isTemplateGated(p, gates)
+                            const showLock = Boolean(isGated)
+                            return (
+                              <button
+                                key={p.id}
+                                type="button"
+                                onClick={() => applyPreset(p)}
+                                className="group relative flex flex-col text-left p-4 bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] hover:border-lime-500 rounded-xl transition-all shadow-sm"
+                              >
+                                <div className="flex items-start justify-between gap-2 w-full">
+                                  <span className="font-bold text-xs text-gray-800 dark:text-white group-hover:text-lime-650 dark:group-hover:text-lime-400">
+                                    {p.name}
+                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    {showLock && (
+                                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-gray-150 dark:bg-gray-800 text-[9px] font-semibold text-gray-500 dark:text-gray-400">
+                                        <Lock className="w-2.5 h-2.5" />
+                                        {isFuture ? 'Soon' : 'Locked'}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <p className="text-[11px] text-st-gray dark:text-gray-400 mt-1.5 flex-grow">{p.desc}</p>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Start from Blank Footer */}
+        <div className="pt-6 border-t border-gray-100 dark:border-[#2A2E2E] flex justify-center">
+          <button
+            type="button"
+            onClick={() => {
+              setIsCustomMode(true)
+              setActiveTemplateId(null)
+              setReportName('')
+              setModel('first_touch')
+              setGroupBy('channel')
+              setGroupBy2(null)
+              setShowGroupBy2(false)
+              setMetric('sessions')
+              setSelectedMetrics(['sessions'])
+              setChartType('bar')
+              setFilters({})
+              setFilterCount(0)
+              setDatePreset(30)
+              const range = getDefaultDateRange(30)
+              setDateFrom(range.from)
+              setDateTo(range.to)
+              setIsRolling(false)
+              setRollingDays(30)
+              setEditingId(null)
+              setUiMode('builder')
+            }}
+            className="px-5 py-2.5 bg-st-black text-white hover:bg-gray-800 dark:bg-lime-500 dark:text-st-black dark:hover:bg-lime-400 rounded-lg flex items-center gap-1.5 font-bold transition-all shadow-sm text-sm"
+          >
+            <Plus className="w-4 h-4" />
+            Start from Blank (Advanced)
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Top Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Report Builder</h2>
-          <p className="text-sm text-st-gray dark:text-gray-400 mt-1">Choose a business question → lightly configure → preview answer → save/pin</p>
+          <p className="text-sm text-st-gray dark:text-gray-400 mt-1">Choose a business question → configure → preview answer → save/pin</p>
         </div>
-        <button
-          onClick={() => setIsDrawerOpen(true)}
-          className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-[#1A1D1D] border border-gray-300 dark:border-[#2A2E2E] rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] flex items-center gap-1.5 transition-all font-semibold shadow-sm"
-        >
-          <Bookmark className="w-4 h-4 text-lime-500" />
-          Saved Reports
-          {savedReports.length > 0 && (
-            <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-lime-500 text-st-black rounded-full font-bold">
-              {savedReports.length}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* Preset question pills */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Templates:</span>
-        {PRESET_TEMPLATES.map((p) => {
-          const isActive = reportName === p.name
-          return (
+        <div className="flex items-center gap-2">
+          {uiMode === 'builder' && (
             <button
-              key={p.name}
-              onClick={() => applyPreset(p)}
-              className={`px-3 py-1.5 text-xs rounded-full border transition-all ${
-                isActive
-                  ? 'bg-lime-500 text-st-black border-lime-500 font-semibold'
-                  : 'bg-white dark:bg-[#1A1D1D] text-gray-700 dark:text-gray-300 border-gray-200 dark:border-[#2A2E2E] hover:bg-gray-50 dark:hover:bg-[#252929]'
-              }`}
-              title={p.desc}
+              onClick={() => {
+                setUiMode('hub')
+                setActiveTemplateId(null)
+                setReportName('')
+              }}
+              className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-[#1A1D1D] border border-gray-300 dark:border-[#2A2E2E] rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] flex items-center gap-1.5 transition-all font-semibold shadow-sm"
             >
-              {p.name}
+              Back to templates
             </button>
-          )
-        })}
+          )}
+          <button
+            onClick={() => setIsDrawerOpen(true)}
+            className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-[#1A1D1D] border border-gray-300 dark:border-[#2A2E2E] rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] flex items-center gap-1.5 transition-all font-semibold shadow-sm"
+          >
+            <Bookmark className="w-4 h-4 text-lime-500" />
+            Saved Reports
+            {savedReports.length > 0 && (
+              <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-lime-500 text-st-black rounded-full font-bold">
+                {savedReports.length}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
-      {/* Active preset helper description */}
-      {(() => {
-        const activePreset = PRESET_TEMPLATES.find(p => reportName === p.name)
-        if (activePreset && activePreset.desc) {
-          return (
-            <div className="text-xs text-st-gray dark:text-gray-400 bg-lime-500/10 border border-lime-500/20 rounded-lg px-3 py-2 max-w-max">
-              💡 <span className="font-semibold text-gray-900 dark:text-white">{activePreset.name}:</span> {activePreset.desc}
-            </div>
-          )
-        }
-        return null
-      })()}
+      {uiMode === 'hub' ? (
+        renderTemplateHub()
+      ) : (
+        <>
+          {/* Active preset helper description */}
+          {(() => {
+            const activePreset = PRESET_TEMPLATES.find(p => reportName === p.name)
+            if (activePreset && activePreset.desc) {
+              return (
+                <div className="text-xs text-st-gray dark:text-gray-400 bg-lime-500/10 border border-lime-500/20 rounded-lg px-3 py-2 max-w-max">
+                  💡 <span className="font-semibold text-gray-900 dark:text-white">{activePreset.name}:</span> {activePreset.desc}
+                </div>
+              )
+            }
+            return null
+          })()}
 
       {/* Two-Panel Layout Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1296,7 +1790,12 @@ export default function ReportBuilder() {
                                   {isSelected ? '✓' : ''}
                                 </span>
                                 <div>
-                                  <div>{m.label}</div>
+                                  <div className="flex items-center gap-1">
+                                    <span>{m.label}</span>
+                                    {isMetricGated(m.key) && (
+                                      <span className="text-[10px]" title="Required integration not fully connected or active">🔒</span>
+                                    )}
+                                  </div>
                                 </div>
                               </button>
                             )
@@ -1702,6 +2201,8 @@ export default function ReportBuilder() {
                 Enter a report name, choose your date range, metric, and dimension to generate a real-time preview.
               </p>
             </div>
+          ) : activeGateError ? (
+            getLockedEmptyState(activeGateError, selectedTemplate?.name, isTemplateFuture)
           ) : (
             <>
               {data?.truncated && (
@@ -2008,8 +2509,14 @@ export default function ReportBuilder() {
                             <tr key={i} className="border-b border-gray-50 dark:border-[#2A2E2E] hover:bg-gray-50 dark:hover:bg-[#252929]">
                               <td className="py-2.5 px-4 text-st-black dark:text-gray-200 font-medium">
                                 <span className="inline-flex items-center">
-                                  {r.dim_value || 'Direct / None'}
-                                  {isDirectLabel(r.dim_value || 'Direct / None') && <DirectInfo />}
+                                  {['source', 'ai_source', 'channel'].includes(groupBy) ? (
+                                    <SourceChip source={r.dim_value || 'Direct / None'} />
+                                  ) : (
+                                    <>
+                                      {r.dim_value || 'Direct / None'}
+                                      {isDirectLabel(r.dim_value || 'Direct / None') && <DirectInfo />}
+                                    </>
+                                  )}
                                 </span>
                               </td>
                               {groupBy2 && <td className="py-2.5 px-4 text-gray-600 dark:text-gray-400">{r.dim_value2}</td>}
@@ -2061,6 +2568,8 @@ export default function ReportBuilder() {
         </div>
 
       </div>
+        </>
+      )}
 
       {/* Slide-over Saved Reports Drawer */}
       {isDrawerOpen && (
