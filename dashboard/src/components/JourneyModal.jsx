@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
-import { getJourney } from '../lib/api'
+import { getJourney, fetchApi } from '../lib/api'
 import {
   Clock, Globe, MousePointerClick, User, Bot, MapPin,
   Download, X, ChevronDown, ChevronRight, Zap, ArrowRight,
-  Timer, FileText, LogIn, LogOut, AlertCircle
+  Timer, LogIn, LogOut, AlertCircle
 } from 'lucide-react'
 import { safeNumber } from '../utils/numbers'
 
@@ -120,32 +120,52 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
   const shortId = shortIdentifier(summary.profileId || visitorId)
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-black/50 flex justify-end" onClick={onClose}>
       <div
-        className="bg-white dark:bg-[#1A1D1D] rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+        className="bg-white dark:bg-[#1A1D1D] shadow-2xl w-full md:max-w-2xl lg:max-w-3xl h-full overflow-hidden flex flex-col transform transition-transform duration-300 ease-in-out"
         onClick={e => e.stopPropagation()}
       >
         {/* ── Header ── */}
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-[#2A2E2E] flex items-center justify-between flex-shrink-0">
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-[#2A2E2E] flex items-center justify-between flex-shrink-0 bg-gray-50/50 dark:bg-[#151818]/50">
           <div>
             <h2 className="text-base font-bold text-st-black">Visitor Journey</h2>
             <p className="text-xs text-st-gray dark:text-gray-400 font-mono mt-0.5">{shortId}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button
               onClick={handleExport}
               className="px-3 py-1.5 text-xs text-st-gray dark:text-gray-400 border border-gray-200 dark:border-[#333838] rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] flex items-center gap-1"
             >
               <Download className="w-3.5 h-3.5" /> Export
             </button>
-            {onQualified && (
-              <button
-                onClick={onQualified}
-                className="px-3 py-1.5 text-xs bg-st-black text-white rounded-lg font-medium hover:bg-st-black/90"
+
+            <div className="flex items-center gap-1.5 mr-2">
+              <span className="text-xs text-st-gray dark:text-gray-400 font-medium">Status:</span>
+              <select
+                value={leadSummary?.status === 'lead' ? 'rejected' : (leadSummary?.status || 'rejected')}
+                onChange={async (e) => {
+                  const newStatus = e.target.value
+                  try {
+                    await fetchApi(`/leads/${visitorId}/qualify`, {
+                      method: 'PATCH',
+                      body: JSON.stringify({ status: newStatus })
+                    })
+                    if (onQualified) {
+                      onQualified(newStatus)
+                    }
+                  } catch (err) {
+                    console.error("Failed to update status from journey modal", err)
+                  }
+                }}
+                className="text-xs font-semibold px-2 py-1 rounded-lg border border-gray-300 dark:border-[#333838] bg-white dark:bg-[#252929] text-st-black dark:text-white cursor-pointer focus:outline-none"
               >
-                Mark Qualified
-              </button>
-            )}
+                <option value="rejected">Unqualified</option>
+                <option value="customer">Qualified</option>
+                <option value="mql">MQL</option>
+                <option value="sql">SQL</option>
+              </select>
+            </div>
+
             <button onClick={onClose} className="p-1.5 text-st-gray dark:text-gray-400 hover:text-st-black dark:text-white rounded-lg hover:bg-gray-100">
               <X className="w-4 h-4" />
             </button>
@@ -170,7 +190,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
             <div className="grid grid-cols-1 lg:grid-cols-5 h-full">
 
               {/* ── Left Panel — lime tint ── */}
-              <div className="lg:col-span-2 bg-st-lime/10 dark:bg-st-lime/5 p-6 space-y-5 border-r border-gray-100">
+              <div className="lg:col-span-2 bg-st-lime/10 dark:bg-st-lime/5 p-6 space-y-5 border-r border-gray-100 dark:border-[#2A2E2E] overflow-y-auto">
                 <div>
                   <p className="text-[10px] text-st-gray dark:text-gray-400 uppercase tracking-wide">Profile</p>
                   <h3 className="mt-1 text-lg font-bold text-st-black dark:text-white font-mono break-all">{shortId}</h3>
@@ -179,6 +199,24 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                       User ID: <span className="font-mono">{shortIdentifier(summary.userId)}</span>
                     </p>
                   )}
+                </div>
+
+                {/* AI Journey Summary Card */}
+                <div className="bg-purple-50 border border-purple-200 dark:bg-purple-950/20 dark:border-purple-900/30 rounded-xl p-4 space-y-2">
+                  <div className="flex items-center gap-1.5 text-purple-900 dark:text-purple-400 font-semibold text-xs">
+                    <Bot className="w-4 h-4 text-purple-500" />
+                    <span>AI Journey Summary</span>
+                  </div>
+                  <p className="text-xs text-purple-800 dark:text-purple-300 leading-normal font-sans">
+                    {summary.aiSource ? (
+                      <>Visitor arrived from <strong>{summary.aiSource}</strong>. The journey consists of {data?.session_count ?? summary.touchpoints} sessions with {summary.totalConversions} conversions over {summary.journeyDuration}.</>
+                    ) : (
+                      <>Visitor arrived via organic/direct navigation. No AI referral sources detected in this journey.</>
+                    )}
+                  </p>
+                  <p className="text-[10px] text-purple-500 dark:text-purple-400 italic">
+                    Generated from journey events and source data.
+                  </p>
                 </div>
 
                 {/* KPI row */}

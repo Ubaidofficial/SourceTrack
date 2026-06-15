@@ -1,12 +1,11 @@
-import { useState, useEffect, useRef } from 'react'
-import { useQuery, useQueries } from '@tanstack/react-query'
+import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
 import { fetchApi } from '../lib/api'
 import { format, subDays } from 'date-fns'
 import { useAuth } from '../contexts/AuthContext'
 import { useSite } from '../contexts/SiteContext'
-import { Line, Doughnut, Bar } from 'react-chartjs-2'
+import { Line } from 'react-chartjs-2'
 import { hasFeature } from '../lib/planFeatures'
 import {
   Chart as ChartJS,
@@ -21,10 +20,7 @@ import {
   Legend
 } from 'chart.js'
 import {
-  DollarSign, Users, Bot, TrendingUp,
-  ArrowRight, Download, ExternalLink, Sparkles, Bookmark,
-  FileText, BarChart3, Plus, AlertTriangle, RefreshCw,
-  MessageSquare, Zap, TrendingDown, Info, Flag, X, Pencil
+  Users, ArrowRight, Sparkles, RefreshCw, Zap, AlertTriangle
 } from 'lucide-react'
 import MetricTile from '../components/MetricTile'
 import SetupDoctorCard from '../components/SetupDoctorCard'
@@ -32,10 +28,10 @@ import DashboardCard from '../components/DashboardCard'
 import DashboardTable from '../components/DashboardTable'
 import EmptyState from '../components/EmptyState'
 import FilterBar from '../components/FilterBar'
-import StatusBadge from '../components/StatusBadge'
 import SupportModeBanner from '../components/SupportModeBanner'
 import ConversionExplanationModal from '../components/ConversionExplanationModal'
 import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
+import { SourceIcon, SourceChip } from '../components/SourceIcon'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend)
 
@@ -261,8 +257,8 @@ export default function Dashboard() {
   const [previewSiteName, setPreviewSiteName] = useState('')
   const [previewSiteDomain, setPreviewSiteDomain] = useState('')
   const [lastRefresh, setLastRefresh] = useState(new Date())
-  const [aiQuery, setAiQuery] = useState('')
   const freshnessLabel = useFreshnessLabel(lastRefresh)
+  const [activeTab, setActiveTab] = useState('overview')
 
   useEffect(() => {
     // Check for support-mode preview context
@@ -399,12 +395,6 @@ export default function Dashboard() {
     if (overview) setLastRefresh(new Date())
   }, [overview])
 
-  const handleAiQuery = (e) => {
-    e?.preventDefault()
-    if (!aiQuery.trim()) return
-    navigate(`/ai-chat?q=${encodeURIComponent(aiQuery.trim())}`)
-    setAiQuery('')
-  }
 
   const kpis = overview?.kpis || {}
   const businessType = overview?.business_type || site?.business_type || 'saas'
@@ -624,6 +614,10 @@ export default function Dashboard() {
 
   const isEmpty = !isLoading && dashboardReports.length === 0
 
+  const hasRevenue = totalRevenue > 0;
+  const hasCost = cacResults && cacResults.length > 0 && !cacUnavailable && avgCAC != null;
+  const isGscConnected = site?.gsc_connected || overview?.gsc_connected || false;
+
   return (
     <div className="st-container space-y-6">
       {previewMode && (
@@ -631,25 +625,21 @@ export default function Dashboard() {
       )}
 
       {/* Header Toolbar */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-st-black">Performance Overview</h2>
+          <h2 className="text-2xl font-bold text-st-black dark:text-white">Performance Overview</h2>
           {site && <p className="text-sm text-st-gray dark:text-gray-400 mt-0.5">{site.domain || site.name}</p>}
         </div>
         {!previewMode && (
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] text-st-gray text-xs">
-              <Users className="w-3.5 h-3.5 text-st-gray" />
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] text-st-gray dark:text-gray-300 text-xs">
+              <Users className="w-3.5 h-3.5" />
               Recent visitors (5m): {liveCount}
             </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] text-st-gray text-xs">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-gray-50 dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] text-st-gray dark:text-gray-300 text-xs">
               <RefreshCw className="w-3 h-3" />
               Updated {freshnessLabel}
             </div>
-            <button onClick={() => navigate('/report-builder')}
-              className="px-3 py-1.5 text-sm text-white bg-st-black rounded-lg hover:bg-st-black/90 flex items-center gap-1.5">
-              <Plus className="w-3.5 h-3.5" /> Create Report
-            </button>
             <FilterBar
               dateButtons={TIME_RANGES.map((tr) => ({ key: tr.days, label: tr.label }))}
               activeDate={timeRange}
@@ -660,841 +650,366 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-200 dark:border-dark-border">
+        <nav className="-mb-px flex space-x-6" aria-label="Tabs">
+          {[
+            { id: 'overview', name: 'Overview' },
+            { id: 'attribution', name: 'Attribution' },
+            { id: 'ai_sources', name: 'AI Sources' },
+            { id: 'journeys', name: 'Journeys' }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`
+                whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-all
+                ${activeTab === tab.id
+                  ? 'border-st-lime text-st-black dark:text-white font-semibold'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400'
+                }
+              `}
+            >
+              {tab.name}
+            </button>
+          ))}
+        </nav>
+      </div>
+
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black" />
-        </div>
-      ) : isEmpty ? (
-        /* Empty state — no saved reports */
-        <div className="max-w-2xl mx-auto py-12 text-center space-y-8">
-          {/* Setup prompt when tracker not yet verified */}
-          {!site?.last_seen_at && (
-            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/30 rounded-xl p-5 text-left">
-              <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-300 mb-1">Finish setting up</h4>
-              <p className="text-xs text-blue-700 dark:text-blue-400 mb-3">
-                {site && site.onboarding_completed === false
-                  ? "This site hasn't finished onboarding yet. Resume setup to add your tracking snippet and start seeing attribution reports."
-                  : "SourceTrack hasn't received any data yet. Install the tracker snippet on your website to start seeing attribution reports."}
-              </p>
-              <div className="flex flex-wrap items-center gap-2">
-                {site && site.onboarding_completed === false && site.id && (
-                  <button
-                    onClick={() => navigate(`/onboarding?site_id=${site.id}&mode=onboarding`)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors flex items-center gap-1.5"
-                  >
-                    <Zap className="w-3.5 h-3.5" /> Resume setup
-                  </button>
-                )}
-                <button
-                  onClick={() => navigate('/snippet')}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors flex items-center gap-1.5"
-                >
-                  <Zap className="w-3.5 h-3.5" /> Go to Install Guide
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div>
-            <BarChart3 className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-st-black dark:text-white mb-2">No reports yet</h3>
-            <p className="text-sm text-st-gray dark:text-gray-400 max-w-md mx-auto">
-              {!site?.last_seen_at
-                ? 'Install the tracker, then create reports to see your attribution data here.'
-                : 'Your dashboard is empty because no reports have been created yet. Build reports for the metrics and attribution views you care about.'}
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            <button
-              onClick={() => navigate('/report-builder')}
-              className="w-full max-w-sm py-3 bg-st-black text-white rounded-lg text-sm font-semibold hover:bg-st-black/90 flex items-center justify-center gap-2 mx-auto"
-            >
-              <Plus className="w-4 h-4" /> Create Report
-            </button>
-          </div>
-
-          <div>
-            <p className="text-xs text-st-gray dark:text-gray-400 mb-3">Or start with a template</p>
-            <div className="flex items-center justify-center gap-3">
-              <button
-                onClick={() => createStarterReport('sources')}
-                className="px-5 py-2.5 bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#333838] rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-[#252929] hover:border-gray-300 flex items-center gap-2"
-              >
-                <FileText className="w-4 h-4 text-st-gray" /> Sources
-              </button>
-              <button
-                onClick={() => createStarterReport('totals')}
-                className="px-5 py-2.5 bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#333838] rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-[#252929] hover:border-gray-300 flex items-center gap-2"
-              >
-                <BarChart3 className="w-4 h-4 text-st-gray" /> Totals
-              </button>
-              <button
-                onClick={() => createStarterReport('trend')}
-                className="px-5 py-2.5 bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#333838] rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-[#252929] hover:border-gray-300 flex items-center gap-2"
-              >
-                <TrendingUp className="w-4 h-4 text-st-gray" /> Conversion Trend
-              </button>
-            </div>
-          </div>
-
-          <p className="text-xs text-st-gray dark:text-gray-400 max-w-sm mx-auto">
-            Templates use live attribution data. Build reports in the Report Builder for more metric and filter options.
-          </p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black dark:border-white" />
         </div>
       ) : (
         <>
-          {/* ── AI Quick-Query Bar ──────────────────────────────────────── */}
-          {!previewMode && (
-            <div className="flex items-center gap-3 bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] rounded-xl px-4 py-2.5 shadow-sm">
-              <Sparkles className="w-4 h-4 text-st-gray shrink-0" />
-              <form onSubmit={handleAiQuery} className="flex-1 flex items-center gap-2 min-w-0">
-                <input
-                  value={aiQuery}
-                  onChange={e => setAiQuery(e.target.value)}
-                  placeholder='Ask about your data… e.g. "What is driving most revenue this week?"'
-                  className="flex-1 text-sm bg-transparent outline-none text-st-black dark:text-white placeholder:text-gray-400 min-w-0"
-                />
-                {aiQuery && (
-                  <button type="submit"
-                    className="shrink-0 px-3 py-1 bg-st-black dark:bg-white text-white dark:text-st-black text-xs rounded-lg font-semibold hover:bg-st-black/90 transition-colors">
-                    Ask →
-                  </button>
-                )}
-              </form>
-              <div className="hidden sm:flex items-center gap-1.5 shrink-0">
-                {['Best channel', 'AI traffic trend', 'What to scale?'].map(q => (
-                  <button key={q}
-                    onClick={() => navigate(`/ai-chat?q=${encodeURIComponent(q)}`)}
-                    className="text-xs px-2.5 py-1 rounded-full bg-gray-100 dark:bg-[#252929] text-st-gray hover:bg-gray-200 dark:hover:bg-[#333838] transition-colors whitespace-nowrap">
-                    {q}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          {/* Setup Doctor alerts if pixel not verified */}
+          {!previewMode && site?.site_key && <SetupDoctorCard siteKey={site.site_key} mode="dashboard" />}
 
-          {/* SourceTrack Doctor Card */}
-          {!previewMode && site?.site_key && (
-            <SetupDoctorCard siteKey={site.site_key} mode="dashboard" />
-          )}
-
-          {/* ── Recent Activity Panel ── */}
-          {!previewMode && (
-            <div className="bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-5 shadow-sm space-y-4">
-              <div className="flex items-center justify-between border-b border-gray-100 dark:border-[#2A2E2E] pb-3">
-                <div className="flex items-center gap-2">
-                  <RefreshCw className="w-3.5 h-3.5 text-st-gray" />
-                  <h3 className="font-semibold text-st-black dark:text-white text-sm sm:text-base">Recent Activity — Last 30 minutes</h3>
-                  <span className="text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-500 px-1.5 py-0.5 rounded font-normal">Auto-refreshes every 30s</span>
+          {/* Onboarding / Installation Alert Banner */}
+          {!isLoading && !previewMode && site && (!site.last_seen_at || site.onboarding_completed === false) && (
+            <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                 </div>
-                <button
-                  onClick={() => navigate('/debugger')}
-                  className="text-xs text-st-gray hover:text-st-black dark:hover:text-white font-medium flex items-center gap-1"
-                >
-                  View Event Debugger <ArrowRight className="w-3 h-3" />
-                </button>
-              </div>
-
-              {!recentActivity || (!recentActivity.pageviews && !recentActivity.visitors && !recentActivity.conversions && (!recentActivity.events || recentActivity.events.length === 0)) ? (
-                <div className="text-center py-6 text-sm text-st-gray dark:text-gray-400">
-                  No recent activity yet. Visit your site or trigger a test event.
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Stats Column */}
-                  <div className="space-y-4">
-                    <h4 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Metrics Summary</h4>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="bg-gray-50 dark:bg-[#252929]/50 p-3 rounded-lg border border-gray-100 dark:border-[#2A2E2E] text-center">
-                        <div className="text-xs text-st-gray mb-1">Visitors</div>
-                        <div className="text-lg font-bold text-st-black dark:text-white">{recentActivity.visitors || 0}</div>
-                      </div>
-                      <div className="bg-gray-50 dark:bg-[#252929]/50 p-3 rounded-lg border border-gray-100 dark:border-[#2A2E2E] text-center">
-                        <div className="text-xs text-st-gray mb-1">Pageviews</div>
-                        <div className="text-lg font-bold text-st-black dark:text-white">{recentActivity.pageviews || 0}</div>
-                      </div>
-                      <div className="bg-gray-50 dark:bg-[#252929]/50 p-3 rounded-lg border border-gray-100 dark:border-[#2A2E2E] text-center">
-                        <div className="text-xs text-st-gray mb-1">Conversions</div>
-                        <div className="text-lg font-bold text-st-black dark:text-white">{recentActivity.conversions || 0}</div>
-                      </div>
-                    </div>
-
-                    {/* Top Channels/Referrers breakdown inside the panel */}
-                    <div className="space-y-3 pt-2">
-                      {recentActivity.top_channels && recentActivity.top_channels.length > 0 && (
-                        <div>
-                          <div className="text-xs font-medium text-st-gray mb-1.5">Top Channels</div>
-                          <div className="space-y-1">
-                            {recentActivity.top_channels.map((tc, idx) => {
-                              const label = tc.name || 'Direct'
-                              return (
-                                <div key={idx} className="flex justify-between items-center text-xs">
-                                  <span className="text-gray-700 dark:text-gray-300 font-medium inline-flex items-center">
-                                    {label}
-                                    {isDirectLabel(label) && <DirectInfo />}
-                                  </span>
-                                  <span className="text-st-gray">{tc.count} event{tc.count > 1 ? 's' : ''}</span>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      )}
-                      {recentActivity.top_referrers && recentActivity.top_referrers.length > 0 && (
-                        <div className="pt-2">
-                          <div className="text-xs font-medium text-st-gray mb-1.5">Top Referrers</div>
-                          <div className="space-y-1">
-                            {recentActivity.top_referrers.map((tr, idx) => {
-                              const label = tr.name || 'Direct'
-                              return (
-                                <div key={idx} className="flex justify-between items-center text-xs">
-                                  <span className="text-gray-700 dark:text-gray-300 truncate max-w-[200px] inline-flex items-center">
-                                    {label}
-                                    {isDirectLabel(label) && <DirectInfo />}
-                                  </span>
-                                  <span className="text-st-gray">{tr.count} visit{tr.count > 1 ? 's' : ''}</span>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Top Pages Column */}
-                  <div className="space-y-3">
-                    <h4 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Top Pages (Last 30m)</h4>
-                    {recentActivity.top_pages && recentActivity.top_pages.length > 0 ? (
-                      <div className="space-y-2">
-                        {recentActivity.top_pages.map((tp, idx) => (
-                          <div key={idx} className="bg-gray-50 dark:bg-[#252929]/30 p-2.5 rounded-lg border border-gray-100 dark:border-[#2A2E2E] flex justify-between items-center text-xs">
-                            <span className="text-gray-700 dark:text-gray-300 font-mono truncate max-w-[180px] sm:max-w-[240px]">{tp.path || '/'}</span>
-                            <span className="bg-gray-200/60 dark:bg-[#333838] px-2 py-0.5 rounded text-st-black dark:text-white font-semibold">{tp.count} view{tp.count > 1 ? 's' : ''}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-xs text-st-gray py-4">No pageview events.</div>
-                    )}
-                  </div>
-
-                  {/* Recent Events List Column */}
-                  <div className="space-y-3">
-                    <h4 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Event Feed</h4>
-                    {recentActivity.events && recentActivity.events.length > 0 ? (
-                      <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-                        {recentActivity.events.map((evt, idx) => (
-                          <div key={idx} className="p-2 rounded-lg border border-gray-100 dark:border-[#2A2E2E] bg-gray-50 dark:bg-[#252929]/20 flex justify-between items-center text-xs gap-2">
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <span className={`w-1.5 h-1.5 rounded-full ${evt.event === '$conversion' ? 'bg-green-500' : 'bg-blue-400'}`} />
-                                <span className="font-semibold text-gray-800 dark:text-gray-200 truncate">
-                                  {evt.event === '$pageview' ? 'Pageview' : evt.event === '$conversion' ? 'Conversion' : evt.event}
-                                </span>
-                              </div>
-                              <div className="text-[10px] text-st-gray mt-0.5 truncate font-mono">
-                                {evt.page_path || '/'}
-                              </div>
-                            </div>
-                            <div className="text-right shrink-0">
-                              {evt.conversion_value != null && evt.conversion_value > 0 && (
-                                <span className="text-xs font-bold text-green-600 dark:text-green-400 block">${evt.conversion_value.toFixed(2)}</span>
-                              )}
-                              <span className="text-[10px] text-st-gray">
-                                {new Date(evt.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-xs text-st-gray py-4">No events found.</div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ── Priority Insights Board ─────────────────────────────────── */}
-          {allInsights.length > 0 && (
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <Zap className="w-3 h-3" /> Insights & Alerts
-                </p>
-                <span className="text-xs text-st-gray">{allInsights.length} item{allInsights.length > 1 ? 's' : ''}</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                {allInsights.slice(0, 6).map((insight, i) => {
-                  const priority = insight.severity || insight.priority || 'info'
-                  const isHigh = priority === 'high'
-                  const isMed  = priority === 'medium'
-                  const isOpp  = insight.type === 'opportunity'
-                  const bg   = isHigh ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-                               : isMed ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
-                               : isOpp ? 'bg-lime-50 dark:bg-lime-900/20 border-lime-200 dark:border-lime-800'
-                               : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-                  const dot  = isHigh ? 'bg-red-500' : isMed ? 'bg-amber-500' : isOpp ? 'bg-lime-500' : 'bg-blue-500'
-                  const tag  = isHigh ? 'bg-red-100 text-red-700' : isMed ? 'bg-amber-100 text-amber-700' : isOpp ? 'bg-lime-100 text-lime-700 dark:bg-lime-900/40 dark:text-lime-400' : 'bg-blue-100 text-blue-700'
-                  const tagLabel = isHigh ? 'HIGH' : isMed ? 'MED' : isOpp ? 'OPPORTUNITY' : 'INFO'
-                  const title = insight.metric || insight.title || 'Alert'
-                  const desc  = insight.message || insight.desc || ''
-                  return (
-                    <div key={i} className={`rounded-xl px-4 py-3 border flex items-start gap-3 ${bg}`}>
-                      <div className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${dot}`} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${tag}`}>
-                            {tagLabel}
-                          </span>
-                          <span className="text-xs font-semibold text-st-black dark:text-white truncate">{title}</span>
-                        </div>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{desc}</p>
-                        {insight.suggested_action && (
-                          <p className="text-[10px] text-st-gray dark:text-gray-500 mt-1">{insight.suggested_action}</p>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* KPI Strip — T2.1: business-type aware with deltas */}
-          <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
-            {kpiConfig.map((metric) => {
-              if (metric.key === 'best_rpv') {
-                const channel = enrichedKpis?.best_rpv_channel || '—'
-                const rpvValue = enrichedKpis?.best_rpv ?? null
-                return (
-                  <div key="best_rpv" className="metric-tile bg-white dark:bg-[#1A1D1D] rounded-xl p-5 shadow-sm border border-gray-100 dark:border-[#2A2E2E] flex flex-col gap-1">
-                    <p className="text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wide">Best Channel RPV</p>
-                    <p className="text-2xl font-semibold text-st-black dark:text-white tabular-nums truncate">{channel}</p>
-                    {rpvValue != null && (
-                      <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">
-                        ${rpvValue.toFixed(2)} per visitor
-                      </p>
-                    )}
-                  </div>
-                )
-              }
-              const rawValue  = enrichedKpis?.[metric.key] ?? null
-              const prevValue = enrichedKpis?.[metric.key + '_prev'] ?? null
-              // isEmpty: value is null AND there's a hint to show (setup instruction)
-              const isEmpty   = rawValue == null && !!metric.emptyHint
-              const delta = (!isEmpty && rawValue != null && prevValue != null && prevValue !== 0)
-                ? ((rawValue - prevValue) / Math.abs(prevValue)) * 100
-                : null
-              return (
-                <MetricTile
-                  key={metric.key}
-                  label={metric.label}
-                  value={isEmpty ? metric.emptyHint : rawValue}
-                  format={isEmpty ? 'text' : metric.format}
-                  trend={isEmpty ? null : delta}
-                />
-              )
-            })}
-            {/* Avg CAC KPI tile */}
-            <div className="metric-tile bg-white dark:bg-[#1A1D1D] rounded-xl p-5 shadow-sm border border-gray-100 dark:border-[#2A2E2E] flex flex-col gap-1">
-              <p className="text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wide">Avg CAC</p>
-              {cacUnavailable ? (
-                <>
-                  <p className="text-2xl font-semibold text-amber-500">Unavailable</p>
-                  <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">spend data unavailable</p>
-                </>
-              ) : avgCAC != null ? (
-                <>
-                  <p className="text-2xl font-semibold text-st-black dark:text-white tabular-nums">${avgCAC.toFixed(2)}</p>
-                  <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">cost per new customer</p>
-                </>
-              ) : (
-                <>
-                  <p className="text-2xl font-semibold text-st-gray dark:text-gray-400">Add spend data</p>
-                  <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">cost per new customer</p>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Pinned Reports widgets - isolated states, custom sizes, max 9 */}
-          {!previewMode && hasFeature(site?.plan, 'dashboard_widgets') && (
-            <DashboardCard title="Pinned Reports"
-              subtitle="Saved report widgets pinned to your dashboard — max 9"
-              action={
-                <button onClick={() => navigate('/report-builder')} className="text-xs text-st-black dark:text-white hover:text-gray-700 font-medium flex items-center gap-1">
-                  <Plus className="w-3 h-3" /> Manage Reports
-                </button>
-              }
-            >
-              {dashboardReports.length === 0 ? (
-                <div className="text-center py-8 bg-gray-50/50 dark:bg-[#111414]/30 rounded-lg border border-dashed border-gray-200 dark:border-[#2A2E2E] p-6">
-                  <Bookmark className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">No reports pinned to dashboard</p>
-                  <p className="text-xs text-st-gray dark:text-gray-500 mt-1 max-w-sm mx-auto mb-3">
-                    Pin your saved reports from the Report Builder to display them as widgets on your dashboard.
+                <div className="flex-1">
+                  <h4 className="text-sm font-bold text-amber-800 dark:text-amber-400">
+                    {site.onboarding_completed === false ? 'Onboarding incomplete' : 'No tracking data received yet'}
+                  </h4>
+                  <p className="text-xs text-amber-700 dark:text-amber-300 mt-1 max-w-2xl leading-relaxed">
+                    {site && site.onboarding_completed === false
+                      ? "This site hasn't finished onboarding yet. Resume setup to add your tracking snippet and start seeing attribution reports."
+                      : "SourceTrack hasn't received any data yet. Install the tracker snippet on your website to start seeing attribution reports."}
                   </p>
-                  <button onClick={() => navigate('/report-builder')} className="px-3 py-1.5 bg-st-black text-white rounded-lg text-xs font-bold hover:bg-gray-800">
-                    Go to Report Builder
+                  <div className="flex flex-wrap items-center gap-2 mt-3">
+                    {site && site.onboarding_completed === false && site.id && (
+                      <button
+                        onClick={() => navigate(`/onboarding?site_id=${site.id}&mode=onboarding`)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors flex items-center gap-1.5"
+                      >
+                        <Zap className="w-3.5 h-3.5" /> Resume setup
+                      </button>
+                    )}
+                    <button
+                      onClick={() => navigate('/snippet')}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors flex items-center gap-1.5"
+                    >
+                      <Zap className="w-3.5 h-3.5" /> Go to Install Guide
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ──────────────────────────────────────────────────────── */}
+          {/* TAB 1: OVERVIEW */}
+          {/* ──────────────────────────────────────────────────────── */}
+          {activeTab === 'overview' && (
+            <div className="space-y-6">
+              {activeResults.length === 0 ? (
+                <div className="bg-white dark:bg-[#1A1D1D] rounded-2xl border border-gray-150 dark:border-[#2A2E2E] p-12 text-center flex flex-col items-center justify-center space-y-6">
+                  <div>
+                    <Users className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-st-black dark:text-white mb-2">No attribution data yet</h3>
+                    <p className="text-sm text-st-gray dark:text-gray-400 max-w-md mx-auto">
+                      {!site?.last_seen_at
+                        ? 'Install the tracker on your website to start seeing traffic and attribution reports.'
+                        : 'Your dashboard is empty because no traffic or conversion data has been recorded for this date range.'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => navigate('/snippet')}
+                    className="px-4 py-2 bg-st-black text-white rounded-lg text-xs font-semibold hover:bg-st-black/90 transition-colors flex items-center gap-1.5"
+                  >
+                    <Zap className="w-3.5 h-3.5" /> Go to Install Guide
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {dashboardReports.map((report) => (
-                    <DashboardWidgetCard key={report.id} report={report} site={site} />
-                  ))}
+                <>
+                  {/* KPI Strip: strictly max 3 primary KPIs */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {hasRevenue ? (
+                  <>
+                    <MetricTile label="Revenue" value={totalRevenue} format="currency" trend={revenueDelta?.pct} />
+                    <MetricTile label="Conversions" value={totalConversions} />
+                    <MetricTile label="Conversion Rate" value={convRate} format="percent" />
+                  </>
+                ) : (
+                  <>
+                    <MetricTile label="Total Leads" value={totalLeads} trend={leadsDelta?.pct} />
+                    <MetricTile label="Conversions" value={totalConversions} />
+                    <MetricTile label="Conversion Rate" value={convRate} format="percent" />
+                  </>
+                )}
+              </div>
+
+              {/* AI Attribution Hero */}
+              <div className="bg-lime-50 border border-lime-200 dark:bg-lime-950/20 dark:border-lime-900/30 rounded-xl p-5 flex items-start gap-4">
+                <div className="p-2 rounded-lg bg-st-lime text-st-black shrink-0">
+                  <Sparkles className="w-5 h-5" />
                 </div>
-              )}
-            </DashboardCard>
-          )}
+                <div>
+                  <h3 className="text-sm font-semibold text-lime-900 dark:text-lime-400 mb-1">AI Referral Context</h3>
+                  <p className="text-xs text-lime-700 dark:text-lime-300 leading-relaxed">
+                    Detected AI-assisted entry themes and intent mappings. AI search engines like ChatGPT, Claude, Gemini, and Perplexity are analyzed using journey events and source data.
+                    {totalAIRevenue > 0 && ` AI platforms contributed $${totalAIRevenue.toLocaleString()} (${aiShareTotal.toFixed(1)}% of total revenue).`}
+                  </p>
+                </div>
+              </div>
 
-          {/* Row 1: Recent Leads + Revenue Trend */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <DashboardCard title="Recent Leads" subtitle="Latest attributed conversions by source"
-              action={!previewMode && (
-                <button onClick={() => navigate('/leads')} className="text-xs text-st-black dark:text-white hover:text-gray-700 font-medium flex items-center gap-1">
-                  View all <ArrowRight className="w-3 h-3" />
-                </button>
-              )}
-              className="lg:col-span-2"
-            >
-              {recentLeadsData.length === 0 ? (
-                <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">No recent leads yet. Data will appear as conversions flow in.</p>
-              ) : (
-                <DashboardTable
-                  columns={[
-                    { key: 'source', label: 'Source', render: (r) => (
-                      <span className="flex items-center gap-2">
-                        {r.source}
-                        {AI_SOURCES.includes(r.source) && <StatusBadge status="verified" label="AI" />}
-                      </span>
-                    )},
-                    { key: 'conversions', label: 'Conversions', render: (r) => r.conversions, cellClassName: 'text-right text-gray-600' },
-                    { key: 'revenue', label: 'Revenue', render: (r) => `$${r.revenue.toFixed(0)}`, cellClassName: 'text-right font-medium text-st-black' },
-                    { key: 'rpv', label: 'Rev/Conv', render: (r) => `$${(r.rpv || 0).toFixed(2)}`, cellClassName: 'text-right text-st-gray' },
-                    { key: 'cac', label: 'CAC', render: (r) => cacUnavailable ? 'Unavailable' : (r.cac != null ? `$${r.cac.toFixed(2)}` : 'No spend data'), cellClassName: 'text-right text-gray-600' },
-                    { key: 'payback', label: 'Payback', render: (r) => cacUnavailable ? 'Unavailable' : (r.payback_months != null ? `${r.payback_months.toFixed(1)} mo` : '—'), cellClassName: 'text-right text-st-gray' },
-                    { key: 'status', label: 'Status', render: () => <StatusBadge status="active" label="Active" />, cellClassName: 'text-right' }
-                  ]}
-                  rows={recentLeadsData}
-                  emptyMessage="No recent leads yet. Data will appear as conversions flow in."
-                />
-              )}
-            </DashboardCard>
+              {/* Performance Trend Chart */}
+              <DashboardCard title="Performance Trend" subtitle={`Last ${timeRange} days • ${site?.timezone || 'UTC'}`}>
+                <div className="h-64">
+                  <Line data={hasRevenue ? revTrendData : channelTrendData} options={chartOpts(hasRevenue ? '$' : '')} />
+                </div>
+              </DashboardCard>
 
-            <DashboardCard
-              title="Revenue Trend"
-              subtitle={`Last ${timeRange} days • ${site?.timezone || 'UTC'}`}
-              action={!previewMode && (
-                <button
-                  onClick={() => setAnnotationForm(f => ({ ...f, open: !f.open, date: format(new Date(), 'yyyy-MM-dd'), note: '' }))}
-                  className="flex items-center gap-1 text-xs text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white transition-colors"
+              {/* Top Sources & Recent Conversions */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <DashboardCard title="Top Sources" subtitle="Traffic and conversions by source">
+                  {activeResults.length === 0 ? (
+                    <p className="text-sm text-st-gray py-6 text-center">No traffic detected yet.</p>
+                  ) : (
+                    <DashboardTable
+                      columns={[
+                        { key: 'source', label: 'Source', render: (r) => <SourceChip source={r.dim_value || r.source || 'Direct'} /> },
+                        { key: 'conversions', label: 'Conversions', render: (r) => r.conversions },
+                        { key: 'revenue', label: 'Revenue', render: (r) => hasRevenue ? `$${(r.revenue || 0).toFixed(2)}` : '—' }
+                      ].filter(c => hasRevenue || c.key !== 'revenue')}
+                      rows={activeResults.slice(0, 5)}
+                    />
+                  )}
+                </DashboardCard>
+
+                <DashboardCard title="Recent Conversions" subtitle="Latest attributed conversions"
+                  action={
+                    <button onClick={() => navigate('/leads')} className="text-xs font-semibold text-st-black dark:text-white flex items-center gap-1">
+                      View Leads <ArrowRight className="w-3 h-3" />
+                    </button>
+                  }
                 >
-                  <Flag className="w-3 h-3" /> Annotate
-                </button>
+                  {!recentActivity || !recentActivity.events || recentActivity.events.length === 0 ? (
+                    <p className="text-sm text-st-gray py-6 text-center">No conversions in last 30 minutes.</p>
+                  ) : (
+                    <DashboardTable
+                      columns={[
+                        { key: 'source', label: 'Source', render: (r) => <SourceChip source={r.referrer || r.utm_source || 'Direct'} /> },
+                        { key: 'event', label: 'Event', render: (r) => r.event === '$conversion' ? 'Conversion' : r.event },
+                        { key: 'time', label: 'Time', render: (r) => new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
+                        { key: 'action', label: 'Action', render: (r) => (
+                          <button onClick={() => navigate('/leads')} className="text-xs text-st-black dark:text-white font-semibold hover:underline">
+                            View Journey
+                          </button>
+                        )}
+                      ]}
+                      rows={recentActivity.events.filter(e => e.event === '$conversion').slice(0, 5)}
+                    />
+                  )}
+                </DashboardCard>
+              </div>
+
+              {/* Pinned Reports Widgets - strictly below core cards */}
+              {hasFeature(site?.plan, 'dashboard_widgets') && (
+                <DashboardCard title="Pinned Reports" subtitle="Saved report widgets pinned to your dashboard">
+                  {dashboardReports.length === 0 ? (
+                    <div className="text-center py-6 border border-dashed border-gray-200 rounded-lg">
+                      <p className="text-sm text-st-gray">No pinned reports yet. Pin reports from the Report Builder.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {dashboardReports.map((report) => (
+                        <DashboardWidgetCard key={report.id} report={report} site={site} />
+                      ))}
+                    </div>
+                  )}
+                </DashboardCard>
               )}
-            >
-              {timeResults.length === 0 ? (
-                <EmptyState icon={TrendingUp} title="No data yet" description="Revenue trend data will appear as conversions flow in." />
-              ) : (
-                <div className="h-48">
-                  <Line data={revTrendData} options={chartOpts('$')} />
+            </>
+          )}
+        </div>
+      )}
+
+          {/* ──────────────────────────────────────────────────────── */}
+          {/* TAB 2: ATTRIBUTION */}
+          {/* ──────────────────────────────────────────────────────── */}
+          {activeTab === 'attribution' && (
+            <div className="space-y-6">
+              {/* 1. Source performance trend chart */}
+              <DashboardCard title="Source Performance Trend" subtitle="Conversions by source over time">
+                <div className="h-64">
+                  <Line data={channelTrendData} options={chartOpts('')} />
+                </div>
+              </DashboardCard>
+
+              {/* 2. SEO revenue attribution card only when GSC connected */}
+              {isGscConnected && (
+                <div className="bg-blue-50 border border-blue-200 dark:bg-blue-950/20 dark:border-blue-900/30 rounded-xl p-5">
+                  <h4 className="text-sm font-semibold text-blue-800 dark:text-blue-400 mb-1">Search Console Connected</h4>
+                  <p className="text-xs text-blue-700 dark:text-blue-300">Matched by landing page and date range. Query revenue is estimated.</p>
                 </div>
               )}
 
-              {/* Annotation add form */}
-              {annotationForm.open && !previewMode && (
-                <div className="mt-3 p-3 bg-gray-50 dark:bg-[#111414] rounded-lg border border-gray-200 dark:border-[#2A2E2E] space-y-2">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="date"
-                      value={annotationForm.date}
-                      onChange={e => setAnnotationForm(f => ({ ...f, date: e.target.value }))}
-                      className="px-2 py-1 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded text-xs focus:outline-none"
-                    />
-                    <select
-                      value={annotationForm.type}
-                      onChange={e => setAnnotationForm(f => ({ ...f, type: e.target.value }))}
-                      className="px-2 py-1 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded text-xs focus:outline-none"
-                    >
-                      <option value="note">Note</option>
-                      <option value="deploy">Deploy</option>
-                      <option value="campaign">Campaign</option>
-                      <option value="alert">Alert</option>
-                    </select>
-                  </div>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={annotationForm.note}
-                      onChange={e => setAnnotationForm(f => ({ ...f, note: e.target.value }))}
-                      placeholder="e.g. Launched new landing page"
-                      maxLength={280}
-                      className="flex-1 px-2 py-1 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded text-xs focus:outline-none"
-                      onKeyDown={e => e.key === 'Enter' && handleSaveAnnotation()}
-                    />
-                    <button
-                      onClick={handleSaveAnnotation}
-                      disabled={annotationSaving || !annotationForm.note.trim()}
-                      className="px-3 py-1 bg-st-black dark:bg-white text-white dark:text-st-black text-xs font-semibold rounded hover:opacity-90 disabled:opacity-40 transition-opacity"
-                    >
-                      {annotationSaving ? '…' : 'Add'}
-                    </button>
-                    <button
-                      onClick={() => setAnnotationForm(f => ({ ...f, open: false }))}
-                      className="p-1 text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+              {/* 3. Source Attribution table with switcher */}
+              <DashboardCard title="Source Attribution" subtitle="Detailed performance breakdown by model">
+                <div className="mb-4">
+                  <select
+                    value={explainModel || 'last_touch'}
+                    onChange={(e) => setExplainModel(e.target.value)}
+                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white text-st-black font-semibold outline-none"
+                  >
+                    {MODELS.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
+                  </select>
                 </div>
-              )}
-
-              {/* Existing annotations */}
-              {annotations.length > 0 && (
-                <div className="mt-3 space-y-1.5">
-                  {annotations.map(a => (
-                    <div key={a.id} className="flex items-start gap-2 group">
-                      <span className={`mt-0.5 w-1.5 h-1.5 rounded-full shrink-0 ${
-                        a.type === 'deploy'   ? 'bg-blue-400' :
-                        a.type === 'campaign' ? 'bg-green-400' :
-                        a.type === 'alert'    ? 'bg-red-400'  : 'bg-gray-400'
-                      }`} />
-                      <div className="flex-1 min-w-0">
-                        <span className="text-[10px] font-mono text-st-gray dark:text-gray-500 mr-1.5">{a.date}</span>
-                        <span className="text-xs text-st-black dark:text-white">{a.note}</span>
-                      </div>
-                      {!previewMode && (
-                        <button
-                          onClick={() => handleDeleteAnnotation(a.id)}
-                          className="opacity-0 group-hover:opacity-100 p-0.5 text-st-gray dark:text-gray-400 hover:text-red-500 transition-opacity"
-                        >
-                          <X className="w-3 h-3" />
+                <DashboardTable
+                  columns={
+                    hasRevenue ? [
+                      { key: 'source', label: 'Source', render: (r) => <SourceChip source={r.dim_value || r.source || 'Direct'} /> },
+                      { key: 'conversions', label: 'Conversions', render: (r) => r.conversions || 0 },
+                      { key: 'revenue', label: 'Revenue', render: (r) => `$${(r.revenue || 0).toFixed(2)}` },
+                      { key: 'details', label: 'Details', render: (r) => (
+                        <button onClick={() => { setExplainModel(explainModel || 'last_touch'); setExplainModalOpen(true) }} className="text-xs text-st-black dark:text-white font-semibold hover:underline">
+                          View details
                         </button>
                       )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </DashboardCard>
-          </div>
+                    ] : [
+                      { key: 'source', label: 'Source', render: (r) => <SourceChip source={r.dim_value || r.source || 'Direct'} /> },
+                      { key: 'conversions', label: 'Conversions', render: (r) => r.conversions || 0 },
+                      { key: 'cvr', label: 'CVR%', render: (r) => `${(r.cvr || 0).toFixed(1)}%` },
+                      { key: 'details', label: 'Details', render: (r) => (
+                        <button onClick={() => { setExplainModel(explainModel || 'last_touch'); setExplainModalOpen(true) }} className="text-xs text-st-black dark:text-white font-semibold hover:underline">
+                          View details
+                        </button>
+                      )}
+                    ]
+                  }
+                  rows={activeResults}
+                />
+              </DashboardCard>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <DashboardCard title="Leads From AI Search"
-              subtitle={aiRevResults.length > 0
-                ? `AI platforms drive ${aiShareTotal.toFixed(1)}% of revenue — ${aiRevResults.reduce((s,r) => s + (r.ai_leads||0), 0).toLocaleString()} leads this period`
-                : 'Leads, conversions and revenue from AI platforms'}
-              action={!previewMode && (
-                <button onClick={() => navigate('/report-builder')} className="text-xs text-st-black dark:text-white hover:text-gray-700 font-medium">
-                  Analyze
-                </button>
+              {/* 4. Landing Page Performance */}
+              <DashboardCard title="Landing Page Performance" subtitle="Traffic and conversions by landing page">
+                <DashboardTable
+                  columns={[
+                    { key: 'path', label: 'Landing Page', render: (r) => <span className="font-mono text-xs">{r.path || '/'}</span> },
+                    { key: 'views', label: 'Views', render: (r) => r.views }
+                  ]}
+                  rows={topPagesResults}
+                />
+              </DashboardCard>
+
+              {/* 5. Search Terms / SEO Queries */}
+              {isGscConnected && (
+                <DashboardCard title="Search Terms / SEO Queries" subtitle="Organic query performance estimate">
+                  <p className="text-xs text-st-gray dark:text-gray-400 mb-3">Matched by landing page and date range. Query revenue is estimated.</p>
+                  <p className="text-sm text-st-gray py-4 text-center">No search query data matches in this range.</p>
+                </DashboardCard>
               )}
-            >
+            </div>
+          )}
+
+          {/* ──────────────────────────────────────────────────────── */}
+          {/* TAB 3: AI SOURCES */}
+          {/* ──────────────────────────────────────────────────────── */}
+          {activeTab === 'ai_sources' && (
+            <div className="space-y-6">
               {aiRevResults.length === 0 ? (
                 <EmptyState
                   icon={Sparkles}
-                  title="Track AI-platform traffic to your site"
-                  description="When visitors arrive from ChatGPT, Claude, Perplexity, or other AI tools, they'll appear here with attribution data."
-                  action={{ label: 'Set up tracking', onClick: () => navigate('/snippet') }}
+                  title="No AI referrals detected yet"
+                  description="No AI referrals detected yet. When visitors arrive from ChatGPT, Perplexity, Claude, Gemini, or other AI tools, they’ll appear here."
                 />
               ) : (
                 <>
-                  {aiShareTotal > 0 && (
-                    <div className="mb-4 p-3 bg-lime-50 rounded-lg border border-lime-200">
-                      <p className="text-xs text-lime-800">
-                        <span className="font-semibold">{aiShareTotal.toFixed(1)}%</span> of your revenue comes from AI platforms.
-                        {aiShareTotal > 20 ? ' This is a significant channel — consider optimizing for AI visibility.' :
-                         aiShareTotal > 5 ? ' Growing steadily — AI is becoming a meaningful acquisition channel.' :
-                         ' Still emerging — track this trend as AI search adoption grows.'}
-                      </p>
-                    </div>
-                  )}
-                  <DashboardTable
-                    columns={[
-                      { key: 'aiSource', label: 'AI Platform', render: (r) => {
-                        const name = r.dim_value || 'Unknown'
-                        const c = getAIPlatformColor(name)
-                        return (
-                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold ${c.bg} ${c.text}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${c.dot}`} />
-                            {name}
-                          </span>
-                        )
-                      }},
-                      { key: 'aiLeads', label: 'Leads', render: (r) => (r.ai_leads || 0).toLocaleString(), cellClassName: 'text-right font-medium text-st-black' },
-                      { key: 'aiConversions', label: 'Conv.', render: (r) => (r.ai_conversions || 0).toLocaleString(), cellClassName: 'text-right text-st-gray' },
-                      { key: 'aiRevenue', label: 'Revenue', render: (r) => `$${(r.ai_revenue || 0).toFixed(0)}`, cellClassName: 'text-right font-semibold text-st-black' },
-                    ]}
-                    rows={aiRevResults}
-                  />
+                  {/* AI Source Summary Hero */}
+                  <div className="bg-lime-50 border border-lime-200 dark:bg-lime-950/20 dark:border-lime-900/30 rounded-xl p-5">
+                    <h3 className="text-sm font-semibold text-lime-900 dark:text-lime-400 mb-1 flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4" /> Detected AI-assisted Entry Themes
+                    </h3>
+                    <p className="text-xs text-lime-700 dark:text-lime-300">
+                      Generated from journey events and source data. No fake AI accuracy or scores.
+                    </p>
+                  </div>
+
+                  {/* AI Source Performance Table */}
+                  <DashboardCard title="AI Source Performance" subtitle="Traffic and conversions from AI engines">
+                    <DashboardTable
+                      columns={[
+                        { key: 'source', label: 'AI Platform', render: (r) => <SourceChip source={r.dim_value || r.source} /> },
+                        { key: 'leads', label: 'Leads', render: (r) => r.ai_leads || r.conversions || 0 },
+                        { key: 'revenue', label: 'Revenue', render: (r) => hasRevenue ? `$${(r.ai_revenue || 0).toFixed(2)}` : '—' }
+                      ].filter(c => hasRevenue || c.key !== 'revenue')}
+                      rows={aiRevResults}
+                    />
+                  </DashboardCard>
                 </>
               )}
-              {aiTrendResults.length > 0 && (
-                <div className="h-32 mt-4">
-                  <Line data={aiTrendChartData} options={{
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                      y: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { maxTicksLimit: 3 } },
-                      x: { display: false }
-                    }
-                  }} />
-                </div>
-              )}
-            </DashboardCard>
-
-          </div>
-
-          {/* AI Analytics promo — shown when AI share is meaningful */}
-          {aiShareTotal > 5 && !previewMode && (
-            <DashboardCard
-              title="AI Analytics"
-              subtitle={`AI-driven traffic accounts for ${aiShareTotal.toFixed(1)}% of your revenue — view AI Sources for deeper insights`}
-              action={
-                <button onClick={() => navigate('/analytics?tab=ai_source')} className="text-xs text-lime-800 hover:text-lime-700 font-medium flex items-center gap-1">
-                  View AI Sources <ArrowRight className="w-3 h-3" />
-                </button>
-              }
-            >
-              <div className="flex items-center gap-4">
-                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-lime-100 flex items-center justify-center">
-                  <Sparkles className="w-6 h-6 text-lime-600" />
-                </div>
-                <div className="flex-1">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <p className="text-xs text-st-gray">AI Revenue</p>
-                      <p className="text-lg font-semibold text-st-black">${totalAIRevenue.toFixed(0)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-st-gray">AI Share</p>
-                      <p className="text-lg font-semibold text-st-black">{aiShareTotal.toFixed(1)}%</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-st-gray">Platforms</p>
-                      <p className="text-lg font-semibold text-st-black">{aiRevResults.length}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </DashboardCard>
+            </div>
           )}
 
-          {/* T5.4 — Leads Over Time (Channel States) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <DashboardCard title="Leads Over Time" subtitle={`Daily lead trend — last ${timeRange} days • ${site?.timezone || 'UTC'}`}>
-              {channelTrendResults.length === 0 ? (
-                <EmptyState icon={TrendingUp} title="No lead data yet" description="Lead trend will appear as conversions flow in." />
-              ) : (
-                <div className="h-48">
-                  <Line data={channelTrendData} options={chartOpts('')} />
-                </div>
-              )}
-            </DashboardCard>
+          {/* ──────────────────────────────────────────────────────── */}
+          {/* TAB 4: JOURNEYS */}
+          {/* ──────────────────────────────────────────────────────── */}
+          {activeTab === 'journeys' && (
+            <div className="space-y-6">
+              <DashboardCard title="Conversions Activity Feed" subtitle="Chronological conversions list"
+                action={
+                  <button onClick={() => navigate('/leads')} className="text-xs font-semibold text-st-black dark:text-white flex items-center gap-1">
+                    All Leads <ArrowRight className="w-3 h-3" />
+                  </button>
+                }
+              >
+                {!recentActivity || !recentActivity.events ? (
+                  <p className="text-sm text-st-gray py-6 text-center">No conversion events tracked.</p>
+                ) : (
+                  <DashboardTable
+                    columns={[
+                      { key: 'source', label: 'Source', render: (r) => <SourceChip source={r.referrer || r.utm_source || 'Direct'} /> },
+                      { key: 'event', label: 'Event', render: (r) => r.event === '$conversion' ? 'Conversion' : r.event },
+                      { key: 'time', label: 'Time', render: (r) => new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
+                      { key: 'action', label: 'Action', render: (r) => (
+                        <button onClick={() => navigate('/leads')} className="text-xs text-st-black dark:text-white font-semibold hover:underline">
+                          View Details
+                        </button>
+                      )}
+                    ]}
+                    rows={recentActivity.events.filter(e => e.event === '$conversion')}
+                  />
+                )}
+              </DashboardCard>
 
-            {/* T5.5 — Leads by Campaign donut */}
-            <DashboardCard title="Revenue by Campaign"
-              subtitle={topCampaigns.length > 0 ? `Top ${topCampaigns.length} campaigns by revenue` : 'Campaign revenue distribution'}
-              action={!previewMode && (
-                <button onClick={() => navigate('/campaigns')} className="text-xs text-st-black dark:text-white hover:text-st-gray dark:text-gray-400 font-medium">
-                  View all
-                </button>
-              )}
-            >
-              {topCampaigns.length === 0 ? (
-                <EmptyState icon={BarChart3} title="No campaign data yet" description="Tag your URLs with UTM campaign parameters to see distribution here." />
-              ) : (
-                <div className="h-48">
-                  <Doughnut data={campaignDonutData} options={donutOpts} />
-                </div>
-              )}
-            </DashboardCard>
-          </div>
-
-          {/* T5.3 — Orders/Leads by Channels bar chart */}
-          {activeResults.length > 0 && (
-            <DashboardCard
-              title={businessType === 'ecommerce' ? 'Orders by Channel' : businessType === 'saas' ? 'Signups by Channel' : 'Leads by Channel'}
-              subtitle="Top 8 channels by conversion volume"
-            >
-              <div className="h-56">
-                <Bar data={channelBarData} options={channelBarOpts} />
-              </div>
-            </DashboardCard>
-          )}
-
-          {/* Row 3: Conversion Events + Landing Pages */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <DashboardCard title="Conversion Events"
-              subtitle={businessType === 'ecommerce' ? 'Orders, trials and signups' : businessType === 'saas' ? 'Trials, signups and meetings' : 'Leads, signups and meetings'}
-              action={!previewMode && (
-                <button onClick={() => navigate('/settings')} className="text-xs text-st-black dark:text-white hover:text-gray-700 font-medium">
-                  Configure
-                </button>
-              )}
-            >
-              {(() => {
-                // Priority events by business type
-                const priorityKeys = businessType === 'ecommerce'
-                  ? ['purchase', 'trial', 'signup', 'lead', 'meeting', 'booking']
-                  : businessType === 'saas'
-                  ? ['trial', 'signup', 'meeting', 'lead', 'purchase', 'booking']
-                  : ['lead', 'meeting', 'signup', 'trial', 'purchase', 'booking']
-                const convTypes = overview?.conversion_types || {}
-                const sorted = priorityKeys.filter(k => CONVERSION_LABELS[k])
-                return (
-                  <div className="grid grid-cols-2 gap-3">
-                    {sorted.map((key) => {
-                      const label = CONVERSION_LABELS[key]
-                      const typeData = convTypes[key]
-                      const hasData = typeData && typeData.count > 0
-                      return (
-                        <div key={key} className="bg-gray-50 dark:bg-[#111414] rounded-lg p-3">
-                          <p className="text-xs text-st-gray">{label}</p>
-                          <p className="text-lg font-semibold text-st-black dark:text-white mt-0.5">
-                            {hasData ? typeData.count.toLocaleString() : '—'}
-                          </p>
-                          <StatusBadge status={hasData ? 'active' : 'pending'} label={hasData ? 'Active' : 'Not tracking'} />
-                        </div>
-                      )
-                    })}
-                    {convTypes.untyped && convTypes.untyped.count > 0 && (
-                      <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 border border-amber-100">
-                        <p className="text-xs text-amber-700">Untagged</p>
-                        <p className="text-lg font-semibold text-amber-900 mt-0.5">
-                          {convTypes.untyped.count.toLocaleString()}
-                        </p>
-                        <StatusBadge status="warning" label="Needs type" />
-                      </div>
-                    )}
-                  </div>
-                )
-              })()}
-              {Object.values(overview?.conversion_types || {}).every(t => !t || t.count === 0) && (
-                <p className="text-xs text-st-gray dark:text-gray-400 mt-3">
-                  {businessType === 'ecommerce' ? 'Track purchases and checkouts by sending conversion events.' : businessType === 'saas' ? 'Track free trials and signups by sending conversion events.' : 'Track lead form submissions by sending conversion events.'}
-                </p>
-              )}
-            </DashboardCard>
-
-            <DashboardCard title="Top Pages"
-              subtitle="Most visited pages by pageviews"
-            >
-              {topPagesResults.length === 0 ? (
-                <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">No pageview data for this date range.</p>
-              ) : (
+              {/* Landing Page Performance expanded */}
+              <DashboardCard title="Landing Page Performance (Expanded)" subtitle="All pageviews by landing page path">
                 <DashboardTable
                   columns={[
-                    { key: 'path', label: 'Path', render: (r) => <span className="text-xs truncate max-w-[200px] block">{r.path || '/'}</span> },
-                    { key: 'views', label: 'Views', render: (r) => (r.views || 0).toLocaleString(), cellClassName: 'text-right font-medium text-st-black' }
+                    { key: 'path', label: 'Landing Page', render: (r) => <span className="font-mono text-xs">{r.path || '/'}</span> },
+                    { key: 'views', label: 'Views', render: (r) => r.views }
                   ]}
-                  rows={topPagesResults.slice(0, 5)}
-                  emptyMessage="No pageview data for this date range."
+                  rows={topPagesResults}
                 />
-              )}
-            </DashboardCard>
-          </div>
-
-          {/* Row 5: Model Attribution comparison */}
-          <DashboardCard title="Attribution Models"
-            subtitle="How revenue distributes across different attribution methods. Non-direct models ignore unbranded/direct traffic."
-          >
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-              {modelRevenues.map((m, i) => {
-                const maxRev = Math.max(...modelRevenues.map(x => x.total), 1)
-                const barWidth = maxRev > 0 ? (m.total / maxRev) * 100 : 0
-                return (
-                  <button
-                    key={m.model}
-                    onClick={() => { setExplainModel(m.model); setExplainModalOpen(true) }}
-                    className="bg-white dark:bg-[#1A1D1D] rounded-lg border border-gray-200 dark:border-[#333838] p-3 text-center hover:bg-gray-50 dark:hover:bg-[#252929] transition-colors text-left"
-                  >
-                    <p className="text-xs text-st-gray dark:text-gray-400 mb-1">{m.label}</p>
-                    <p className="text-base font-bold text-st-black" style={{ color: COLORS[i % COLORS.length] }}>
-                      ${m.total.toFixed(0)}
-                    </p>
-                    <div className="mt-2 h-1 bg-gray-100 dark:bg-[#252929] rounded-full overflow-hidden">
-                      <div className="h-full rounded-full transition-all" style={{
-                        width: `${barWidth}%`,
-                        backgroundColor: COLORS[i % COLORS.length].replace('0.85)', '1)')
-                      }} />
-                    </div>
-                  </button>
-                )
-              })}
+              </DashboardCard>
             </div>
-          </DashboardCard>
-
-          {/* T5.1 — Revenue/Leads Payback Analysis */}
-          {activeResults.length > 0 && (
-            <DashboardCard title="Channel Payback Analysis"
-              subtitle="Which channels to scale, pause, or cut — based on revenue vs conversions"
-            >
-              <div className="space-y-2">
-                {activeResults.slice(0, 6).map((r, i) => {
-                  const revenue = r.revenue || 0
-                  const convs   = r.conversions || 0
-                  const name    = r.dim_value || r.source || 'Unknown'
-                  const maxRev  = activeResults[0]?.revenue || 1
-                  const pct     = Math.round((revenue / maxRev) * 100)
-                  // Simple verdict: top 2 = Scale, middle = Watch, bottom = Pause
-                  const verdict = i === 0 ? { label: 'Scale', color: 'bg-st-lime text-st-black' }
-                    : i <= 1 ? { label: 'Scale', color: 'bg-st-lime text-st-black' }
-                    : i <= 3 ? { label: 'Watch', color: 'bg-amber-100 text-amber-700' }
-                    : { label: 'Pause', color: 'bg-gray-100 dark:bg-[#252929] text-st-gray' }
-                  return (
-                    <div key={i} className="flex items-center gap-3">
-                      <span className="text-xs text-st-gray dark:text-gray-400 w-28 truncate shrink-0">{name}</span>
-                      <div className="flex-1 h-2 bg-gray-100 dark:bg-[#252929] rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-st-black transition-all"
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      <span className="text-xs font-semibold text-st-black dark:text-white w-14 text-right shrink-0">
-                        ${revenue.toFixed(0)}
-                      </span>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${verdict.color}`}>
-                        {verdict.label}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-              <p className="text-[10px] text-st-gray dark:text-gray-400 mt-3">
-                Scale = top revenue drivers · Watch = mid-tier · Pause = low return. Add spend data in Campaigns for ROAS-based verdicts.
-              </p>
-            </DashboardCard>
           )}
-
-          {/* T7.5 — AI Forecast teaser card */}
-          {!previewMode && (
-            <DashboardCard
-              title="AI Revenue Forecast"
-              subtitle="7-day prediction powered by DeepSeek"
-              action={
-                <button onClick={() => navigate('/report-builder')} className="text-xs text-st-black dark:text-white hover:text-st-gray dark:text-gray-400 font-medium flex items-center gap-1">
-                  Create AI Report <ArrowRight className="w-3 h-3" />
-                </button>
-              }
-            >
-              <div className="flex items-center gap-4 py-2">
-                <div className="w-10 h-10 rounded-xl bg-st-lime/10 dark:bg-st-lime/5 flex items-center justify-center flex-shrink-0">
-                  <Sparkles className="w-5 h-5 text-st-black" />
-                </div>
-                <div>
-                  <p className="text-sm text-st-black dark:text-white font-medium">Predict next 7 days of revenue and leads</p>
-                  <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">DeepSeek analyzes your trend, weekly patterns, and momentum</p>
-                </div>
-              </div>
-            </DashboardCard>
-          )}
-
-
         </>
       )}
 

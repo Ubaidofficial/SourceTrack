@@ -2,7 +2,12 @@
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
-> **Handoff:** Session 140G-27 — SourceTrack vs DataFast Feature-Parity + Simplicity Audit — **PASS — audited SourceTrack capabilities against DataFast, verified alignment with Product V1.1 Design & Product Spec, identified key telemetry and ad-cost integration gaps, and documented workflow simplification recommendations; created docs/qa/sourcetrack_vs_datafast_parity_simplicity_audit_140G-27.md.**
+> **Handoff:** Session 140G-28 — Final V1 UI Implementation From Approved Designs — **PARTIAL — Final V1 UI first pass implemented; browser route QA BLOCKED / not verified.**
+> - **V1 UI Refresh**: Implemented App Layout cleanup, tabbed Dashboard foundation, Leads qualification options consolidation, Journey Modal slide-over and AI summary card, read-only Campaigns status and details panel, and resolved unused code imports.
+> - **Data & Setup States**: Restored the onboarding banner and empty Overview tab states to preserve first-run setup clarity when tracking is not detected.
+> - **Readiness Impact**: Browser QA remains **BLOCKED — browser route QA not verified in this session.** until browser routing and functional E2E tests are conducted.
+>
+> **Prior handoff (Session 140G-27):** Session 140G-27 — SourceTrack vs DataFast Feature-Parity + Simplicity Audit — **PASS — audited SourceTrack capabilities against DataFast, verified alignment with Product V1.1 Design & Product Spec, identified key telemetry and ad-cost integration gaps, and documented workflow simplification recommendations; created docs/qa/sourcetrack_vs_datafast_parity_simplicity_audit_140G-27.md.**
 > - **Capability Audits**: Benchmarked UTM/click-ID/AI referrer ingestion, attribution modeling engine, visitor journey logs, and ad network/payment platform cost integrations against DataFast standards.
 > - **Spec Verification**: Checked implementation against the V1.1 product and design specs, ensuring feature gating boundaries, GSC disclosures, and design tokens match.
 > - **Readiness Impact**: Paid beta remains **NOT READY** until core P0/P1 blockers (PostHog event purging, Stripe checkout validation, GSC staging redirect URI alignment, and ad spend integrations) are resolved.

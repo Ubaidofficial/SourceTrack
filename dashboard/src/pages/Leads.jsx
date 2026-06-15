@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { fetchApi } from '../lib/api'
 import { format, subDays } from 'date-fns'
 import { useAuth } from '../contexts/AuthContext'
-import { ArrowRight, Search, Download, User } from 'lucide-react'
+import { ArrowRight, Search, Download, User, AlertTriangle } from 'lucide-react'
 import DashboardCard from '../components/DashboardCard'
 import MetricTile from '../components/MetricTile'
 import StatusBadge from '../components/StatusBadge'
@@ -48,6 +48,7 @@ export default function Leads() {
   const [filterSource, setFilterSource] = useState('all')
   const [attributionModel, setAttributionModel] = useState('first_touch')
   const [journeyLead, setJourneyLead] = useState(null)
+  const [selectedLeads, setSelectedLeads] = useState(new Set())
 
   const dateFrom = format(subDays(new Date(), 30), 'yyyy-MM-dd')
   const dateTo = format(new Date(), 'yyyy-MM-dd')
@@ -82,7 +83,7 @@ export default function Leads() {
     return () => clearTimeout(timer)
   }, [search])
 
-  const { data: leadsData, isLoading } = useQuery({
+  const { data: leadsData, isLoading, refetch } = useQuery({
     queryKey: ['leads-page', site?.site_key, debouncedSearch, filterAI, filterSource, attributionModel, dateFrom, dateTo],
     queryFn: async () => {
       if (!site?.site_key) return null
@@ -114,11 +115,64 @@ export default function Leads() {
     setJourneyLead({ ...lead, id: visitorId })
   }
 
+  const handleBulkStatusChange = async (newStatus) => {
+    try {
+      await Promise.all(
+        Array.from(selectedLeads).map(leadId =>
+          fetchApi(`/leads/${leadId}/qualify`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: newStatus })
+          })
+        )
+      )
+      setStatusMap(prev => {
+        const next = { ...prev }
+        selectedLeads.forEach(leadId => {
+          next[leadId] = newStatus
+        })
+        return next
+      })
+      setSelectedLeads(new Set())
+    } catch (err) {
+      console.error("Bulk status change failed", err)
+    }
+  }
+
+  const handleExportSelected = () => {
+    const selectedObjects = leads.filter(l => selectedLeads.has(l.id))
+    const headers = ['Visitor ID', 'Source', 'Medium', 'Campaign', 'AI Source', 'Conversions', 'Revenue', 'Last Seen', 'Country']
+    const csvRows = [
+      headers.join(','),
+      ...selectedObjects.map(l => [
+        l.id,
+        l.source || 'direct',
+        l.medium || 'none',
+        l.campaign || '',
+        l.ai_source || '',
+        l.conversions || 0,
+        l.revenue || 0,
+        l.last_seen ? new Date(l.last_seen).toISOString() : '',
+        l.country || ''
+      ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+    ]
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.setAttribute('href', url)
+    link.setAttribute('download', 'selected_leads.csv')
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
+  const hasRevenue = totalRevenue > 0
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-st-black">Leads</h2>
+          <h2 className="text-2xl font-bold text-st-black dark:text-white">Leads</h2>
           <p className="text-sm text-st-gray mt-0.5">Individual visitors who have converted or engaged with your site</p>
         </div>
         {hasFeature(site?.plan, 'csv_export') ? (
@@ -137,10 +191,20 @@ export default function Leads() {
         )}
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      {!hasRevenue && !isLoading && (
+        <div className="p-4 bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/30 rounded-xl text-xs text-amber-850 dark:text-amber-300 leading-normal flex items-start gap-2.5">
+          <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500 mt-0.5" />
+          <div>
+            <p className="font-semibold">Revenue tracking not connected</p>
+            <p className="mt-0.5">Stripe integrations or conversion event values are not configured. Attributed revenue values will not be shown until values are sent via Pixel telemetry or Stripe webhook sync.</p>
+          </div>
+        </div>
+      )}
+
+      <div className={`grid gap-4 ${hasRevenue ? 'grid-cols-3' : 'grid-cols-2'}`}>
         <MetricTile label="Total Leads" value={totalLeads} />
         <MetricTile label="Total Conversions" value={totalConversions} />
-        <MetricTile label="Total Revenue" value={totalRevenue} format="currency" />
+        {hasRevenue && <MetricTile label="Total Revenue" value={totalRevenue} format="currency" />}
       </div>
 
       <div className="flex items-center gap-3">
@@ -179,11 +243,25 @@ export default function Leads() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100">
+                  <th className="py-3 px-3 text-left w-8">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300 text-st-black focus:ring-st-black cursor-pointer"
+                      checked={leads.length > 0 && selectedLeads.size === leads.length}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedLeads(new Set(leads.map(l => l.id)))
+                        } else {
+                          setSelectedLeads(new Set())
+                        }
+                      }}
+                    />
+                  </th>
                   <th className="text-left py-3 px-3 text-xs font-medium text-st-gray">Visitor</th>
                   <th className="text-left py-3 px-3 text-xs font-medium text-st-gray">Source</th>
                   <th className="text-left py-3 px-3 text-xs font-medium text-st-gray">Event Type</th>
                   <th className="text-right py-3 px-3 text-xs font-medium text-st-gray">Conversions</th>
-                  <th className="text-right py-3 px-3 text-xs font-medium text-st-gray">Revenue</th>
+                  {hasRevenue && <th className="text-right py-3 px-3 text-xs font-medium text-st-gray">Revenue</th>}
                   <th className="text-left py-3 px-3 text-xs font-medium text-st-gray">Last seen</th>
                   <th className="text-left py-3 px-3 text-xs font-medium text-st-gray">Status</th>
                   <th className="text-right py-3 px-3 text-xs font-medium text-st-gray">Country</th>
@@ -192,14 +270,32 @@ export default function Leads() {
               </thead>
               <tbody>
                 {leads.map((lead, i) => {
-                  const isAI = lead.ai_source && AI_SOURCES.includes(lead.ai_source)
+                  const isSelected = selectedLeads.has(lead.id)
                   const shortId = lead.id ? lead.id.slice(0, 8) : 'unknown'
                   return (
                     <tr
                       key={i}
                       onClick={() => openJourney(lead)}
-                      className="border-b border-gray-50 hover:bg-lime-50/60 transition-colors cursor-pointer"
+                      className={`border-b border-gray-50 hover:bg-lime-50/60 transition-colors cursor-pointer ${isSelected ? 'bg-lime-50/30' : ''}`}
                     >
+                      <td className="py-3 px-3 w-8" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          className="rounded border-gray-300 text-st-black focus:ring-st-black cursor-pointer"
+                          checked={isSelected}
+                          onChange={() => {
+                            setSelectedLeads(prev => {
+                              const next = new Set(prev)
+                              if (next.has(lead.id)) {
+                                next.delete(lead.id)
+                              } else {
+                                next.add(lead.id)
+                              }
+                              return next
+                            })
+                          }}
+                        />
+                      </td>
                       <td className="py-3 px-3 text-st-black font-mono text-xs">
                         <button
                           type="button"
@@ -244,19 +340,18 @@ export default function Leads() {
                         )}
                       </td>
                       <td className="py-3 px-3 text-right text-gray-600">{lead.conversions}</td>
-                      <td className="py-3 px-3 text-right font-medium text-st-black">
-                        {formatCurrency(lead.revenue)}
-                      </td>
+                      {hasRevenue && (
+                        <td className="py-3 px-3 text-right font-medium text-st-black">
+                          {formatCurrency(lead.revenue)}
+                        </td>
+                      )}
                       <td className="py-3 px-3 text-xs text-st-gray">
                         {lead.last_seen ? new Date(lead.last_seen).toLocaleDateString() : '—'}
-                      </td>
-                      <td className="py-3 px-3 text-right text-st-gray text-xs">
-                        {lead.country || '—'}
                       </td>
                       <td className="py-3 px-3">
                         {(() => {
                           const STATUS_STYLES = {
-                            lead:     'bg-gray-100 text-gray-600',
+                            lead:     'bg-red-50 text-red-500',
                             mql:      'bg-blue-50 text-blue-600',
                             sql:      'bg-purple-50 text-purple-600',
                             customer: 'bg-green-50 text-green-700',
@@ -268,15 +363,15 @@ export default function Leads() {
                             return (
                               <span
                                 title="Status editing available on Starter"
-                                className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLES[cur] || STATUS_STYLES.lead} opacity-80 whitespace-nowrap`}
+                                className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLES[cur] || STATUS_STYLES.rejected} opacity-80 whitespace-nowrap`}
                               >
-                                🔒 {cur.toUpperCase()}
+                                🔒 {cur === 'rejected' || cur === 'lead' ? 'UNQUALIFIED' : cur === 'customer' ? 'QUALIFIED' : cur.toUpperCase()}
                               </span>
                             )
                           }
                           return (
                             <select
-                              value={cur}
+                              value={cur === 'lead' ? 'rejected' : cur}
                               onClick={(e) => e.stopPropagation()}
                               onChange={async (e) => {
                                 const newStatus = e.target.value
@@ -286,16 +381,18 @@ export default function Leads() {
                                   body: JSON.stringify({ status: newStatus })
                                 })
                               }}
-                              className={`text-xs font-medium px-2 py-0.5 rounded-full border-0 cursor-pointer ${STATUS_STYLES[cur] || STATUS_STYLES.lead}`}
+                              className={`text-xs font-medium px-2 py-0.5 rounded-full border-0 cursor-pointer ${STATUS_STYLES[cur] || STATUS_STYLES.rejected}`}
                             >
-                              <option value="lead">Lead</option>
+                              <option value="rejected">Unqualified</option>
+                              <option value="customer">Qualified</option>
                               <option value="mql">MQL</option>
                               <option value="sql">SQL</option>
-                              <option value="customer">Customer</option>
-                              <option value="rejected">Rejected</option>
                             </select>
                           )
                         })()}
+                      </td>
+                      <td className="py-3 px-3 text-right text-st-gray text-xs">
+                        {lead.country || '—'}
                       </td>
                       <td className="py-3 px-3 text-right">
                         <div className="flex items-center justify-end gap-2">
@@ -323,13 +420,26 @@ export default function Leads() {
         )}
       </DashboardCard>
 
+      {selectedLeads.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-st-black text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-4 animate-fade-in text-xs font-medium">
+          <span>{selectedLeads.size} selected</span>
+          <div className="w-px h-4 bg-gray-700" />
+          <button onClick={() => handleBulkStatusChange('customer')} className="hover:text-st-lime transition-colors">Mark Qualified</button>
+          <button onClick={() => handleBulkStatusChange('mql')} className="hover:text-st-lime transition-colors">Mark MQL</button>
+          <button onClick={() => handleBulkStatusChange('sql')} className="hover:text-st-lime transition-colors">Mark SQL</button>
+          <button onClick={() => handleBulkStatusChange('rejected')} className="hover:text-st-lime transition-colors">Mark Unqualified</button>
+          <div className="w-px h-4 bg-gray-700" />
+          <button onClick={handleExportSelected} className="text-st-lime hover:underline">Export Selected CSV</button>
+        </div>
+      )}
+
       {journeyVisitorId && (
         <JourneyModal
           visitorId={journeyVisitorId}
           siteKey={site?.site_key}
           leadSummary={journeyLead}
           onClose={() => setJourneyLead(null)}
-          onQualified={async () => { try { await fetchApi(`/leads/${journeyVisitorId}/qualify`, { method: 'PATCH', body: JSON.stringify({ qualified: true }) }) } catch(e) { console.error('qualify failed', e) } setJourneyLead(null) }}
+          onQualified={refetch}
         />
       )}
     </div>

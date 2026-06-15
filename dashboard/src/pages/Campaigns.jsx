@@ -6,8 +6,8 @@ import { fetchApi } from '../lib/api'
 import { format, subDays } from 'date-fns'
 import { useAuth } from '../contexts/AuthContext'
 import {
-  Search, Download, TrendingUp, TrendingDown, Filter, Eye, Pencil, Check,
-  UploadCloud, AlertTriangle, History, HelpCircle, X, Loader2, RefreshCw
+  Search, Download, Filter, Pencil, Check,
+  UploadCloud, AlertTriangle, HelpCircle, X, Loader2, RefreshCw
 } from 'lucide-react'
 import DashboardCard from '../components/DashboardCard'
 import MetricTile from '../components/MetricTile'
@@ -50,6 +50,14 @@ function statusLabel(status) {
   if (status === 'low') return 'Low Volume'
   return 'No Activity'
 }
+
+const STATUS_BG_CLASSES = {
+  'Active': 'bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-300 border-green-200 dark:border-green-700/70',
+  'Paused': 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300 border-amber-200 dark:border-amber-700/70',
+  'Archived': 'bg-gray-50 text-gray-700 dark:bg-gray-900/40 dark:text-gray-200 border-gray-200 dark:border-gray-600',
+  'Draft / Tracking only': 'bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60'
+}
+
 
 // ─── CSV Parsing & Validation Helpers (Frontend equivalents of shared library) ───
 
@@ -223,6 +231,7 @@ export default function Campaigns() {
   const [dateRange, setDateRange] = useState(30)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [selectedCampaign, setSelectedCampaign] = useState(null)
 
   // ─── Cost Import Modal States ───
   const [importModalOpen, setImportModalOpen] = useState(false)
@@ -641,13 +650,13 @@ export default function Campaigns() {
       </div>
 
       {/* KPI Tiles */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className={`grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-${3 + (hasRevenue ? 1 : 0) + (hasCost ? 1 : 0) + (hasRevenue && hasCost ? 1 : 0)}`}>
         <MetricTile label="Total Visits"    value={kpis?.total_visits} />
         <MetricTile label="Total Leads"     value={kpis?.total_leads} />
         <MetricTile label="Conversions"     value={kpis?.total_conversions} />
-        <MetricTile label="Total Revenue"   value={kpis?.total_revenue} format="currency" />
-        <MetricTile label="Total Spend"     value={kpis?.total_spend} format="currency" />
-        {(() => {
+        {hasRevenue && <MetricTile label="Total Revenue"   value={kpis?.total_revenue} format="currency" />}
+        {hasCost && <MetricTile label="Total Spend"     value={kpis?.total_spend} format="currency" />}
+        {hasRevenue && hasCost && (() => {
           const totalSpend = safeNumber(kpis?.total_spend, 0)
           const isOk = kpis?.currency_status === 'ok'
           const roas = totalSpend > 0 && isOk && kpis?.avg_roas !== null ? `${kpis.avg_roas}x` : '—'
@@ -727,8 +736,19 @@ export default function Campaigns() {
                     <th className="text-left py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
                       {DIMENSIONS.find(d => d.key === activeDim)?.label || 'Name'}
                     </th>
+                    {activeDim === 'campaign' && (
+                      <th className="text-left py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                        Source / Medium
+                      </th>
+                    )}
                     <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
-                      Status
+                      <div className="flex items-center justify-end gap-1 group relative">
+                        <span>Status</span>
+                        <HelpCircle className="w-3.5 h-3.5 text-gray-400 cursor-help" />
+                        <div className="absolute bottom-full right-0 mb-1.5 hidden group-hover:block w-48 p-2 bg-gray-900 text-white text-[11px] rounded-lg shadow-lg z-30 leading-normal font-normal text-left">
+                          Campaign status is a SourceTrack label. It does not pause or change ads in external platforms.
+                        </div>
+                      </div>
                     </th>
                     <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
                       Visits
@@ -740,59 +760,98 @@ export default function Campaigns() {
                       Conversions
                     </th>
                     <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
-                      Revenue
+                      CVR%
                     </th>
+                    {hasRevenue && (
+                      <>
+                        <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                          Revenue
+                        </th>
+                        <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                          Avg Value
+                        </th>
+                      </>
+                    )}
+                    {hasCost && (
+                      <>
+                        <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                          Spend
+                        </th>
+                        <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                          Clicks
+                        </th>
+                        <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                          Impressions
+                        </th>
+                        <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                          CTR
+                        </th>
+                        <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                          CPC
+                        </th>
+                        <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                          CPA
+                        </th>
+                      </>
+                    )}
+                    {hasRevenue && hasCost && (
+                      <>
+                        <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                          ROAS
+                        </th>
+                        <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                          Net Profit
+                        </th>
+                      </>
+                    )}
                     <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
-                      Avg Value
-                    </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
-                      Spend ✏️
-                    </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
-                      Clicks
-                    </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
-                      Impressions
-                    </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
-                      CTR
-                    </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
-                      CPC
-                    </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
-                      CPA
-                    </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
-                      ROAS
-                    </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
-                      Trend
+                      Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {rows.map((r, i) => {
                     const isOk = r.currency_status === 'ok'
+                    const cvr = r.visits > 0 ? ((r.conversions / r.visits) * 100).toFixed(1) + '%' : '0.0%'
+                    const netProfit = r.revenue - (r.spend || 0)
+
+                    // Read-only status mapping
+                    const campaignStatus = r.status === 'active' ? 'Active' :
+                                           r.status === 'paused' ? 'Paused' :
+                                           r.status === 'archived' ? 'Archived' :
+                                           'Draft / Tracking only'
+
                     return (
-                      <tr key={i} className="hover:bg-gray-50 transition-colors">
+                      <tr key={i} className="hover:bg-gray-50 dark:hover:bg-dark-hover/50 transition-colors cursor-pointer" onClick={() => setSelectedCampaign(r)}>
                         <td className="py-3 px-4">
-                          <p className="text-st-black font-medium inline-flex items-center">
+                          <p className="text-st-black dark:text-white font-medium inline-flex items-center">
                             {r.name || 'unknown'}
                             {isDirectLabel(r.name) && <DirectInfo />}
                           </p>
                           {r.platforms && r.platforms.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1">
                               {r.platforms.map(plat => (
-                                <span key={plat} className="px-1.5 py-0.5 text-[9px] font-bold bg-gray-100 text-gray-500 rounded border border-gray-200 uppercase tracking-wider">
+                                <span key={plat} className="px-1.5 py-0.5 text-[9px] font-bold bg-gray-100 text-gray-500 rounded border border-gray-200 dark:border-dark-border dark:bg-dark-hover uppercase tracking-wider">
                                   {plat}
                                 </span>
                               ))}
                             </div>
                           )}
                         </td>
+                        {activeDim === 'campaign' && (
+                          <td className="py-3 px-4 text-xs font-mono text-st-gray">
+                            {r.source || 'direct'} / {r.medium || 'none'}
+                          </td>
+                        )}
                         <td className="py-3 px-4 text-right">
-                          <StatusBadge status={r.status} label={statusLabel(r.status)} />
+                          <div className="flex items-center justify-end gap-1.5 group relative" onClick={(e) => e.stopPropagation()}>
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${STATUS_BG_CLASSES[campaignStatus] || STATUS_BG_CLASSES['Draft / Tracking only']}`}>
+                              {campaignStatus}
+                            </span>
+                            <div className="absolute bottom-full right-0 mb-1.5 hidden group-hover:block w-48 p-2 bg-gray-900 text-white text-[11px] rounded-lg shadow-lg z-30 leading-normal font-normal text-left">
+                              Campaign status is a SourceTrack label. It does not pause or change ads in external platforms.
+                            </div>
+                          </div>
                         </td>
                         <td className="py-3 px-4 text-right text-gray-600">
                           {safeNumber(r.visits, 0)}
@@ -803,89 +862,100 @@ export default function Campaigns() {
                         <td className="py-3 px-4 text-right text-gray-600">
                           {safeNumber(r.conversions, 0)}
                         </td>
-                        <td className="py-3 px-4 text-right font-semibold text-st-black">
-                          {formatCurrency(r.revenue)}
+                        <td className="py-3 px-4 text-right text-gray-600">
+                          {cvr}
                         </td>
-                        <td className="py-3 px-4 text-right text-st-gray">
-                          {formatCurrencyDecimal(r.avg_value)}
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          {editingSpend === r.name ? (
-                            <div className="flex items-center justify-end gap-1">
-                              {savingState.campaign === r.name && savingState.status === 'saving' ? (
-                                <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-st-black" />
-                              ) : savingState.campaign === r.name && savingState.status === 'success' ? (
-                                <span className="text-green-600 text-xs font-medium">✓</span>
-                              ) : savingState.campaign === r.name && savingState.status === 'error' ? (
-                                <span className="text-red-500 text-[10px] font-medium">Error</span>
+                        {hasRevenue && (
+                          <>
+                            <td className="py-3 px-4 text-right font-semibold text-st-black dark:text-white">
+                              {formatCurrency(r.revenue)}
+                            </td>
+                            <td className="py-3 px-4 text-right text-st-gray">
+                              {formatCurrencyDecimal(r.avg_value)}
+                            </td>
+                          </>
+                        )}
+                        {hasCost && (
+                          <>
+                            <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                              {editingSpend === r.name ? (
+                                <div className="flex items-center justify-end gap-1">
+                                  {savingState.campaign === r.name && savingState.status === 'saving' ? (
+                                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-st-black" />
+                                  ) : savingState.campaign === r.name && savingState.status === 'success' ? (
+                                    <span className="text-green-600 text-xs font-medium">✓</span>
+                                  ) : savingState.campaign === r.name && savingState.status === 'error' ? (
+                                    <span className="text-red-500 text-[10px] font-medium">Error</span>
+                                  ) : (
+                                    <>
+                                      <input
+                                        type="number"
+                                        className="w-20 text-right border border-gray-300 rounded px-1 py-0.5 text-xs outline-none focus:ring-1 focus:ring-gray-900 dark:bg-dark-card dark:text-white"
+                                        value={spendInput}
+                                        onChange={e => setSpendInput(e.target.value)}
+                                        onKeyDown={e => e.key === 'Enter' && saveSpend(r.name)}
+                                        autoFocus
+                                      />
+                                      <button onClick={() => saveSpend(r.name)} className="text-green-600 hover:text-green-700">
+                                        <Check className="w-3.5 h-3.5" />
+                                      </button>
+                                      <button onClick={() => setEditingSpend(null)} className="text-st-gray hover:text-gray-600">
+                                        <span className="text-xs px-1">×</span>
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
                               ) : (
-                                <>
-                                  <input
-                                    type="number"
-                                    className="w-20 text-right border border-gray-300 rounded px-1 py-0.5 text-xs outline-none focus:ring-1 focus:ring-gray-900"
-                                    value={spendInput}
-                                    onChange={e => setSpendInput(e.target.value)}
-                                    onKeyDown={e => e.key === 'Enter' && saveSpend(r.name)}
-                                    autoFocus
-                                  />
-                                  <button onClick={() => saveSpend(r.name)} className="text-green-600 hover:text-green-700">
-                                    <Check className="w-3.5 h-3.5" />
+                                <div className="flex items-center justify-end gap-1 group">
+                                  <span className="text-gray-600">{r.spend ? formatCurrency(r.spend) : '—'}</span>
+                                  <button onClick={() => { setEditingSpend(r.name); setSpendInput(spendMap[r.name] || '') }} className="opacity-0 group-hover:opacity-100 text-st-gray hover:text-gray-600">
+                                    <Pencil className="w-3 h-3" />
                                   </button>
-                                  <button onClick={() => setEditingSpend(null)} className="text-st-gray hover:text-gray-600">
-                                    <span className="text-xs px-1">×</span>
-                                  </button>
-                                </>
+                                </div>
                               )}
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-end gap-1 group">
-                              <span className="text-gray-600">{r.spend ? formatCurrency(r.spend) : '—'}</span>
-                              <button onClick={() => { setEditingSpend(r.name); setSpendInput(spendMap[r.name] || '') }} className="opacity-0 group-hover:opacity-100 text-st-gray hover:text-gray-600">
-                                <Pencil className="w-3 h-3" />
-                              </button>
-                            </div>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-right text-gray-600">
-                          {r.clicks ? formatNumber(r.clicks) : '—'}
-                        </td>
-                        <td className="py-3 px-4 text-right text-gray-600">
-                          {r.impressions ? formatNumber(r.impressions) : '—'}
-                        </td>
-                        <td className="py-3 px-4 text-right text-gray-600">
-                          {r.ctr ? `${r.ctr}%` : '—'}
-                        </td>
-                        <td className="py-3 px-4 text-right text-gray-600">
-                          {r.cpc ? formatCurrencyDecimal(r.cpc) : '—'}
-                        </td>
-                        <td className="py-3 px-4 text-right text-gray-600">
-                          {!isOk && r.spend > 0 ? (
-                            <CurrencyWarning status={r.currency_status} spendCur={r.spend_currency} trackCur={r.tracked_currency} />
-                          ) : (
-                            r.cpl ? formatCurrency(r.cpl) : '—'
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-right text-gray-600">
-                          {!isOk && r.spend > 0 ? (
-                            <CurrencyWarning status={r.currency_status} spendCur={r.spend_currency} trackCur={r.tracked_currency} />
-                          ) : (
-                            r.roas ? <span className={r.roas >= 1.0 ? 'text-green-600 font-medium' : 'text-red-500'}>{r.roas}x</span> : '—'
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-right">
-                          {r.trend != null ? (
-                            <div className={`flex items-center justify-end gap-1 ${
-                              r.trend >= 0 ? 'text-green-600' : 'text-red-500'
-                            }`}>
-                              {r.trend >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                              <span className="text-xs font-medium">{safeNumber(Math.abs(safeNumber(r.trend, 0)), 0).toFixed(0)}%</span>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-end gap-1 text-st-gray">
-                              <Eye className="w-3.5 h-3.5" />
-                              <span className="text-xs">—</span>
-                            </div>
-                          )}
+                            </td>
+                            <td className="py-3 px-4 text-right text-gray-600">
+                              {r.clicks ? formatNumber(r.clicks) : '—'}
+                            </td>
+                            <td className="py-3 px-4 text-right text-gray-600">
+                              {r.impressions ? formatNumber(r.impressions) : '—'}
+                            </td>
+                            <td className="py-3 px-4 text-right text-gray-600">
+                              {r.ctr ? `${r.ctr}%` : '—'}
+                            </td>
+                            <td className="py-3 px-4 text-right text-gray-600">
+                              {r.cpc ? formatCurrencyDecimal(r.cpc) : '—'}
+                            </td>
+                            <td className="py-3 px-4 text-right text-gray-600">
+                              {!isOk && r.spend > 0 ? (
+                                <CurrencyWarning status={r.currency_status} spendCur={r.spend_currency} trackCur={r.tracked_currency} />
+                              ) : (
+                                r.cpl ? formatCurrency(r.cpl) : '—'
+                              )}
+                            </td>
+                          </>
+                        )}
+                        {hasRevenue && hasCost && (
+                          <>
+                            <td className="py-3 px-4 text-right text-gray-600">
+                              {!isOk && r.spend > 0 ? (
+                                <CurrencyWarning status={r.currency_status} spendCur={r.spend_currency} trackCur={r.tracked_currency} />
+                              ) : (
+                                r.roas ? <span className={r.roas >= 1.0 ? 'text-green-600 font-medium' : 'text-red-500'}>{r.roas}x</span> : '—'
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-right font-medium text-gray-700 dark:text-gray-300">
+                              {formatCurrency(netProfit)}
+                            </td>
+                          </>
+                        )}
+                        <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => setSelectedCampaign(r)}
+                            className="text-xs text-st-black dark:text-white font-semibold hover:underline"
+                          >
+                            Details
+                          </button>
                         </td>
                       </tr>
                     )
@@ -919,6 +989,82 @@ export default function Campaigns() {
           </DashboardCard>
         </div>
       </div>
+
+      {selectedCampaign && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex justify-end animate-fade-in" onClick={() => setSelectedCampaign(null)}>
+          <div
+            className="bg-white dark:bg-[#1A1D1D] shadow-2xl w-full md:max-w-2xl lg:max-w-3xl h-full overflow-hidden flex flex-col transform transition-transform duration-300 ease-in-out"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Slide-over Header */}
+            <div className="px-6 py-4 border-b border-gray-100 dark:border-[#2A2E2E] flex items-center justify-between flex-shrink-0 bg-gray-50/50 dark:bg-[#151818]/50">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold text-st-black dark:text-white">Campaign Details</h2>
+                  {(() => {
+                    const statusText = selectedCampaign.status === 'active' ? 'Active' :
+                                       selectedCampaign.status === 'paused' ? 'Paused' :
+                                       selectedCampaign.status === 'archived' ? 'Archived' :
+                                       'Draft / Tracking only'
+                    return (
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${STATUS_BG_CLASSES[statusText] || STATUS_BG_CLASSES['Draft / Tracking only']}`}>
+                        {statusText}
+                      </span>
+                    )
+                  })()}
+                </div>
+                <p className="text-xs text-st-gray dark:text-gray-400 font-mono mt-0.5">
+                  {selectedCampaign.name} • {selectedCampaign.source || 'direct'} / {selectedCampaign.medium || 'none'}
+                </p>
+              </div>
+              <button onClick={() => setSelectedCampaign(null)} className="p-1.5 text-st-gray dark:text-gray-400 hover:text-st-black dark:text-white rounded-lg hover:bg-gray-100">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Slide-over Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* KPI Strip */}
+              <div className="grid grid-cols-3 gap-4">
+                <MetricTile label="Visits" value={selectedCampaign.visits} />
+                <MetricTile label="Leads" value={selectedCampaign.leads} />
+                <MetricTile label="Conversions" value={selectedCampaign.conversions} />
+                {hasRevenue && <MetricTile label="Revenue" value={selectedCampaign.revenue} format="currency" />}
+                {hasCost && <MetricTile label="Spend" value={selectedCampaign.spend} format="currency" />}
+                {hasRevenue && hasCost && <MetricTile label="ROAS" value={selectedCampaign.roas ? `${selectedCampaign.roas}x` : '—'} />}
+              </div>
+
+              {/* UTM Details */}
+              <DashboardCard title="UTM Parameters" subtitle="Captured UTM metadata">
+                <div className="grid grid-cols-2 gap-4 text-xs font-mono">
+                  <div className="p-2 bg-gray-50 dark:bg-[#151818] rounded-lg">
+                    <span className="text-st-gray block">utm_source</span>
+                    <span className="text-st-black dark:text-white">{selectedCampaign.source || '—'}</span>
+                  </div>
+                  <div className="p-2 bg-gray-50 dark:bg-[#151818] rounded-lg">
+                    <span className="text-st-gray block">utm_medium</span>
+                    <span className="text-st-black dark:text-white">{selectedCampaign.medium || '—'}</span>
+                  </div>
+                  <div className="p-2 bg-gray-50 dark:bg-[#151818] rounded-lg col-span-2">
+                    <span className="text-st-gray block">utm_campaign</span>
+                    <span className="text-st-black dark:text-white">{selectedCampaign.name}</span>
+                  </div>
+                </div>
+              </DashboardCard>
+
+              {/* Top Landing Pages under Campaign */}
+              <DashboardCard title="Top Landing Pages" subtitle="Attributed URLs">
+                <CampaignLandingPages siteKey={site?.site_key} campaignName={selectedCampaign.name} dateFrom={dateFrom} dateTo={dateTo} />
+              </DashboardCard>
+
+              {/* Recent Leads */}
+              <DashboardCard title="Recent Leads" subtitle="Latest conversions under this campaign">
+                <CampaignRecentLeads siteKey={site?.site_key} campaignName={selectedCampaign.name} dateFrom={dateFrom} dateTo={dateTo} navigate={navigate} />
+              </DashboardCard>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ─── Premium Ad Spend Import Modal ─── */}
       {importModalOpen && (
@@ -1196,6 +1342,91 @@ export default function Campaigns() {
         </div>
       )}
 
+    </div>
+  )
+}
+
+function CampaignLandingPages({ siteKey, campaignName, dateFrom, dateTo }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['campaign-lp', siteKey, campaignName, dateFrom, dateTo],
+    queryFn: () => fetchApi(`/attribution?site_key=${siteKey}&date_from=${dateFrom}&date_to=${dateTo}&model=last_touch&group_by=landing_page&metric=conversions&filter_campaign=${encodeURIComponent(campaignName)}`),
+    enabled: !!siteKey && !!campaignName
+  })
+
+  const results = data?.results || []
+
+  if (isLoading) {
+    return <div className="text-xs text-st-gray py-4 text-center">Loading landing pages...</div>
+  }
+
+  if (results.length === 0) {
+    return <div className="text-xs text-st-gray py-4 text-center">No landing pages detected.</div>
+  }
+
+  return (
+    <div className="overflow-x-auto text-xs">
+      <table className="w-full">
+        <thead>
+          <tr className="border-b border-gray-100 text-left">
+            <th className="py-2 px-1 text-st-gray font-medium">Path</th>
+            <th className="py-2 px-1 text-right text-st-gray font-medium">Conversions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {results.slice(0, 5).map((r, i) => (
+            <tr key={i} className="border-b border-gray-50">
+              <td className="py-2 px-1 font-mono text-st-black dark:text-white truncate max-w-[200px]" title={r.dim_value}>{r.dim_value}</td>
+              <td className="py-2 px-1 text-right text-gray-700 dark:text-gray-300">{r.conversions}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function CampaignRecentLeads({ siteKey, campaignName, dateFrom, dateTo, navigate }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['campaign-leads', siteKey, campaignName, dateFrom, dateTo],
+    queryFn: () => fetchApi(`/leads?site_key=${siteKey}&date_from=${dateFrom}&date_to=${dateTo}&search=${encodeURIComponent(campaignName)}`),
+    enabled: !!siteKey && !!campaignName
+  })
+
+  const leads = data?.leads || []
+
+  if (isLoading) {
+    return <div className="text-xs text-st-gray py-4 text-center">Loading recent leads...</div>
+  }
+
+  if (leads.length === 0) {
+    return <div className="text-xs text-st-gray py-4 text-center">No conversions recorded.</div>
+  }
+
+  return (
+    <div className="overflow-x-auto text-xs">
+      <table className="w-full">
+        <thead>
+          <tr className="border-b border-gray-100 text-left">
+            <th className="py-2 px-1 text-st-gray font-medium">Lead ID</th>
+            <th className="py-2 px-1 text-right text-st-gray font-medium">Conversions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {leads.slice(0, 5).map((l, i) => (
+            <tr key={i} className="border-b border-gray-50">
+              <td className="py-2 px-1">
+                <button
+                  onClick={() => navigate('/leads')}
+                  className="font-mono text-blue-600 hover:underline text-[11px]"
+                >
+                  {l.id ? l.id.slice(0, 8) : 'unknown'}...
+                </button>
+              </td>
+              <td className="py-2 px-1 text-right text-gray-700 dark:text-gray-300">{l.conversions}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }
