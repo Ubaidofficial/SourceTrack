@@ -1,7 +1,14 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
-> **Handoff:** Session 139I-D — Apply Missing Staging Abuse-Guard Migrations — **PASS — successfully executed and verified migrations 20260522000002_free_tier_abuse_guards.sql and 20260522000003_usage_email_log.sql on staging database; staging schema parity is now complete for these objects; production database remained untouched; static checks and builds pass; paid beta remains NOT READY.**
+> **Handoff:** Session 139J — Stripe Billing + Checkout Staging E2E Verification — **PASS — verified Stripe checkout creation, hosted checkout test page payment flow, webhook signature validation and database update to Starter plan (pv_limit = 50,000), and Customer Billing Portal redirection E2E in test mode on staging; production database and keys remained untouched; static checks and builds pass; paid beta remains NOT READY.**
+> - **Checkout & Redirection**: Verified that checking the terms box and clicking upgrade redirects to `checkout.stripe.com` in test mode (`cs_test_` session). Successfully completed payment using the Stripe 4242 test card.
+> - **Webhook & Persistence**: Verified that sending a signed `checkout.session.completed` event to `POST /api/billing/webhook` processes cleanly with response 200, updating the site plan to `starter` and `pv_limit` to 50,000 in the database.
+> - **Customer Portal**: Verified that clicking "Open Billing Portal" generates a valid `billing.stripe.com` session redirect in test mode, and tested subscription cancellation which correctly schedules period-end termination.
+> - **Production Safety**: Verified that the production Supabase database ref `zxjjjsipafojhzkkumvh` and production Stripe credentials were not affected.
+> - **Verification**: Reloaded the billing dashboard and verified the updated plan status is accurately rendered.
+>
+> **Prior handoff (Session 139I-D):** Session 139I-D — Apply Missing Staging Abuse-Guard Migrations — **PASS — successfully executed and verified migrations 20260522000002_free_tier_abuse_guards.sql and 20260522000003_usage_email_log.sql on staging database; staging schema parity is now complete for these objects; production database remained untouched; static checks and builds pass; paid beta remains NOT READY.**
 > - **Staging Migration Application**: Applied the two migrations to the staging project (`nrsvpwzekfrdrzkoecfk`).
 > - **Staging Schema Parity**: Tables `disposable_email_domains` (49 rows), `paas_subdomain_blocklist` (31 rows), and `usage_email_log` (0 rows) successfully provisioned. Trigger function `enforce_free_tier_abuse_guards()` and its trigger `sites_free_tier_abuse_guards` are active.
 > - **Production Safety**: The production database ref `zxjjjsipafojhzkkumvh` was strictly excluded from all migration operations.
