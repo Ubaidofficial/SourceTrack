@@ -3,7 +3,7 @@ export default function DashboardTable({ columns = [], rows = [], onRowClick, em
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-gray-100 dark:border-[#2A2E2E] bg-gray-50">
+          <tr className="border-b border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-dark-hover">
             {columns.map((col, i) => (
               <th key={i} className={`text-left py-2 px-4 text-st-gray dark:text-gray-400 font-medium text-xs ${col.className || ''}`}>
                 {col.label}
@@ -26,7 +26,7 @@ export default function DashboardTable({ columns = [], rows = [], onRowClick, em
                 role={onRowClick ? 'button' : undefined}
                 onClick={() => onRowClick?.(row, i)}
                 onKeyDown={(e) => { if (onRowClick && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onRowClick(row, i) } }}
-                className={`border-b border-gray-50 hover:bg-gray-50 dark:hover:bg-[#252929] ${onRowClick ? 'cursor-pointer' : ''}`}
+                className={`border-b border-gray-50 dark:border-dark-border/40 hover:bg-gray-50 dark:hover:bg-dark-hover ${onRowClick ? 'cursor-pointer' : ''}`}
               >
                 {columns.map((col, j) => (
                   <td key={j} className={`py-2 px-4 text-gray-600 dark:text-gray-300 text-xs ${col.cellClassName || ''}`}>

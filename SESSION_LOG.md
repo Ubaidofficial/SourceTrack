@@ -6,6 +6,7 @@ For detailed session history before Session 75, see `PROGRESS.md`.
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 | Session | Date | Branch | Summary | QA Status | Merged |
 |---|---|---|---|---|---|
+| 140K | 2026-06-15 | `main` | Premium Dark Mode Foundation + Responsive Polish — **PASS**. Standardized the dark mode color system in `tailwind.config.js` and `index.css` to page: `#0F1212`, card: `#161919`, hover/subtle: `#1D2121`, border: `#242929`. Refactored `Layout.jsx` sidebar active state to use `bg-dark-hover` and `text-st-lime`. Updated `DashboardCard.jsx` and `MetricTile.jsx` surfaces. Resolved the `DashboardTable.jsx` header bg-gray-50 dark mode contrast bug. Aligned custom selects, modals (`JourneyModal.jsx`, `ConversionExplanationModal.jsx`), and Report Builder workspace settings/previews. Applied `xl:flex-row` layout stack to Report Builder for clean 1024px tablet landscape viewport rendering. Verified zero horizontal overflow across 1440, 1024, 768, and 390. | 🟢 PASS | No |
 | 140J | 2026-06-15 | `main` | Cometly-Inspired Two-Panel Report Builder — **PASS**. Converted Report Builder to a persistent two-panel layout (Left controls/templates, Right live preview). Exposed only verified filters: `channel`, `source`, `medium`, `campaign`, and `conversion_type`. Resolved filter leakage by removing unsupported `ai_source` and `has_ai_source` references. Preserved all 140I truth gates, future locks, and safe Start Blank/Reset defaults (`sessions`, `channel`, `first_touch`). Verified 6-chart-type E2E browser matrix using local mock data (caveat documented), cleaned test reports, and verified zero horizontal overflow/console errors. Passed static checks and dashboard build. | 🟢 PASS | No |
 | 140I | 2026-06-15 | `main` | Report Builder Template-First UI + Truth Gates — **PASS**. Shifted Report Builder to default to a personalized Template Hub that recommends current business type and Universal templates, hiding other business types in an expandable secondary disclosure section. Locked templates render honest getLockedEmptyState(...) views. Lock badges added to dropdown. SourceChip cells added to tables. Verified E2E locally. | 🟢 PASS | No |
 | 140G-29C | 2026-06-15 | `main` | Deployed navigation browser QA — **PASS**. Deployed navigation architecture verified; Journey slide-over remains BLOCKED due to no lead rows; paid beta remains NOT READY. Created `docs/qa/corrected_navigation_deployed_browser_qa_140G-29C.md`. | 🟢 PASS | No |
@@ -2360,3 +2361,30 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 
 ### 4. Documentation
 - Created `docs/qa/posthog_telemetry_routing_verification_140C.md`.
+
+---
+
+## Session 140K — Premium Dark Mode Foundation + Responsive Polish
+
+**Date:** 2026-06-15
+**Branch:** `main`
+**Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety)
+**Status:** PASS — verified text contrast, layout stacking, builds, and console safety.
+
+### 1. Unified Premium Dark Palette
+- Configured premium calming dark tokens in `tailwind.config.js` and `index.css`: Page background (`#0F1212` / `dark:bg-dark-bg`), Card surface (`#161919` / `dark:bg-dark-card`), Soft dark borders (`#242929` / `dark:border-dark-border`), Hover/subtle background states (`#1D2121` / `dark:bg-dark-hover`).
+- Aligned active navigation state in `Layout.jsx` sidebar to a clean, non-neon style (`dark:bg-dark-hover dark:text-st-lime`).
+- Updated `DashboardCard.jsx` and `MetricTile.jsx` surfaces to standard token classes.
+
+### 2. Contrast & Usability Hardening
+- Resolved `DashboardTable.jsx` header contrast bug (replaces light `bg-gray-50` with `dark:bg-dark-hover`).
+- Resolved contrast blockers inside `ConversionExplanationModal.jsx` and `JourneyModal.jsx`: stat cards, stat labels, session timeline details, "Why this attribution?" heading, and close button hover transitions now use appropriate `dark:` overrides (e.g. `dark:text-white`, `dark:text-gray-400`, `dark:text-gray-300`, `dark:hover:text-white`).
+- Polished report name title, disabled Pin button, and drawer loading indicators in `ReportBuilder.jsx`.
+- Verified custom select dropdown styling under dark mode.
+
+### 3. Responsive Breakpoint Polish
+- Switched the two-panel stacking breakpoint in `ReportBuilder.jsx` from `lg:` to `xl:`. On tablet landscape viewports (1024px), the layout now stacks vertically instead of crowding the live preview, ensuring zero horizontal scroll/overflow across desktop, tablet, and mobile (1440, 1024, 768, 390).
+
+### 4. Documentation & Validation
+- Corrected "Responsive Poland" ➜ "Responsive Polish" typo in `docs/qa/premium_dark_mode_responsive_polish_140K.md`.
+- Static validation, offline safety, and production build checks all pass.

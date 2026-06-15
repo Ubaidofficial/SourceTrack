@@ -122,19 +122,19 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex justify-end" onClick={onClose}>
       <div
-        className="bg-white dark:bg-[#1A1D1D] shadow-2xl w-full md:max-w-2xl lg:max-w-3xl h-full overflow-hidden flex flex-col transform transition-transform duration-300 ease-in-out"
+        className="bg-white dark:bg-dark-card shadow-2xl w-full md:max-w-2xl lg:max-w-3xl h-full overflow-hidden flex flex-col transform transition-transform duration-300 ease-in-out"
         onClick={e => e.stopPropagation()}
       >
         {/* ── Header ── */}
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-[#2A2E2E] flex items-center justify-between flex-shrink-0 bg-gray-50/50 dark:bg-[#151818]/50">
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-dark-border flex items-center justify-between flex-shrink-0 bg-gray-50/50 dark:bg-dark-bg/50">
           <div>
-            <h2 className="text-base font-bold text-st-black">Visitor Journey</h2>
+            <h2 className="text-base font-bold text-st-black dark:text-white">Visitor Journey</h2>
             <p className="text-xs text-st-gray dark:text-gray-400 font-mono mt-0.5">{shortId}</p>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={handleExport}
-              className="px-3 py-1.5 text-xs text-st-gray dark:text-gray-400 border border-gray-200 dark:border-[#333838] rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] flex items-center gap-1"
+              className="px-3 py-1.5 text-xs text-st-gray dark:text-gray-400 border border-gray-200 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-hover flex items-center gap-1"
             >
               <Download className="w-3.5 h-3.5" /> Export
             </button>
@@ -157,7 +157,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                     console.error("Failed to update status from journey modal", err)
                   }
                 }}
-                className="text-xs font-semibold px-2 py-1 rounded-lg border border-gray-300 dark:border-[#333838] bg-white dark:bg-[#252929] text-st-black dark:text-white cursor-pointer focus:outline-none"
+                className="text-xs font-semibold px-2 py-1 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-st-black dark:text-white cursor-pointer focus:outline-none"
               >
                 <option value="rejected">Unqualified</option>
                 <option value="customer">Qualified</option>
@@ -166,7 +166,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
               </select>
             </div>
 
-            <button onClick={onClose} className="p-1.5 text-st-gray dark:text-gray-400 hover:text-st-black dark:text-white rounded-lg hover:bg-gray-100">
+            <button onClick={onClose} className="p-1.5 text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-dark-hover">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -190,7 +190,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
             <div className="grid grid-cols-1 lg:grid-cols-5 h-full">
 
               {/* ── Left Panel — lime tint ── */}
-              <div className="lg:col-span-2 bg-st-lime/10 dark:bg-st-lime/5 p-6 space-y-5 border-r border-gray-100 dark:border-[#2A2E2E] overflow-y-auto">
+              <div className="lg:col-span-2 bg-st-lime/10 dark:bg-st-lime/5 p-6 space-y-5 border-r border-gray-100 dark:border-dark-border overflow-y-auto">
                 <div>
                   <p className="text-[10px] text-st-gray dark:text-gray-400 uppercase tracking-wide">Profile</p>
                   <h3 className="mt-1 text-lg font-bold text-st-black dark:text-white font-mono break-all">{shortId}</h3>
@@ -228,7 +228,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                 </div>
 
                 {/* Activity and attribution */}
-                <div className="bg-white dark:bg-[#1A1D1D] rounded-xl p-4 shadow-sm space-y-2">
+                <div className="bg-white dark:bg-dark-card rounded-xl p-4 shadow-sm space-y-2">
                   <p className="text-xs font-semibold text-st-black dark:text-white mb-2">Journey Summary</p>
                   <SummaryField label="Profile ID" value={shortIdentifier(summary.profileId)} />
                   <SummaryField label="First Seen" value={summary.firstSeen} />
@@ -247,7 +247,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                   )}
                 </div>
 
-                <div className="bg-white dark:bg-[#1A1D1D] rounded-xl p-4 shadow-sm space-y-2">
+                <div className="bg-white dark:bg-dark-card rounded-xl p-4 shadow-sm space-y-2">
                   <p className="text-xs font-semibold text-st-black dark:text-white mb-2">Environment</p>
                   <SummaryField label="Device" value={summary.device} />
                   <SummaryField label="Browser" value={summary.browser} />
@@ -257,12 +257,12 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
 
                 {/* Path preview */}
                 {summary.pathPreview.length > 1 && (
-                  <div className="bg-white dark:bg-[#1A1D1D] rounded-xl p-4 shadow-sm">
+                  <div className="bg-white dark:bg-dark-card rounded-xl p-4 shadow-sm">
                     <p className="text-xs font-semibold text-st-black dark:text-white mb-2">Page Path</p>
                     <div className="flex flex-wrap items-center gap-1">
                       {summary.pathPreview.map((p, i) => (
                         <span key={i} className="flex items-center gap-1">
-                          <span className="text-[10px] bg-gray-100 dark:bg-[#252929] text-st-gray dark:text-gray-400 px-1.5 py-0.5 rounded font-mono truncate max-w-[80px]">{p}</span>
+                          <span className="text-[10px] bg-gray-100 dark:bg-dark-hover text-st-gray dark:text-gray-400 px-1.5 py-0.5 rounded font-mono truncate max-w-[80px]">{p}</span>
                           {i < summary.pathPreview.length - 1 && <ArrowRight className="w-2.5 h-2.5 text-gray-300 flex-shrink-0" />}
                         </span>
                       ))}
@@ -286,7 +286,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                       className={`text-xs px-3 py-1 rounded-full font-medium transition-colors ${
                         filter === f.key
                           ? 'bg-st-black text-white'
-                          : 'bg-gray-100 dark:bg-[#252929] text-st-gray dark:text-gray-400 hover:bg-gray-200'
+                          : 'bg-gray-100 dark:bg-dark-hover text-st-gray dark:text-gray-400 hover:bg-gray-200'
                       }`}
                     >
                       {f.label}
@@ -317,7 +317,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                           className={`rounded-xl border transition-all ${
                             session.contains_conversion
                               ? 'bg-st-lime/10 dark:bg-st-lime/5 border-st-lime/40'
-                              : 'bg-white dark:bg-[#1A1D1D] border-gray-100 dark:border-[#2A2E2E] hover:border-gray-200'
+                              : 'bg-white dark:bg-dark-card border-gray-100 dark:border-dark-border hover:border-gray-200'
                           }`}
                         >
                           {/* Session header */}
@@ -327,7 +327,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                           >
                             {/* Session badge */}
                             <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-[10px] font-bold ${
-                              session.contains_conversion ? 'bg-st-lime text-st-black' : 'bg-gray-100 text-gray-600'
+                              session.contains_conversion ? 'bg-st-lime text-st-black' : 'bg-gray-100 text-gray-600 dark:bg-dark-hover dark:text-gray-300'
                             }`}>
                               #{session.session_index}
                             </div>
@@ -338,7 +338,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                                 <span className="text-xs font-semibold text-gray-800 dark:text-white">
                                   Session {session.session_index}
                                 </span>
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-[#252929] text-gray-500 font-medium truncate max-w-[120px]">
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-dark-hover text-gray-500 dark:text-gray-400 font-medium truncate max-w-[120px]">
                                   {session.source_label || 'Direct'}
                                 </span>
                                 {session.contains_conversion && (
@@ -384,7 +384,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
 
                           {/* Expanded events */}
                           {isOpen && (
-                            <div className="px-3 pb-3 ml-10 border-t border-gray-100 dark:border-[#2A2E2E]">
+                            <div className="px-3 pb-3 ml-10 border-t border-gray-100 dark:border-dark-border">
                               {filtered.length === 0 ? (
                                 <p className="text-xs text-gray-400 py-3 text-center">No matching events.</p>
                               ) : (
@@ -405,7 +405,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                                         className={`rounded-lg border transition-all ${
                                           isConversion
                                             ? 'bg-st-lime/10 dark:bg-st-lime/5 border-st-lime/40'
-                                            : 'bg-white dark:bg-[#1A1D1D] border-gray-100 dark:border-[#2A2E2E]'
+                                            : 'bg-white dark:bg-dark-card border-gray-100 dark:border-dark-border'
                                         }`}
                                       >
                                         <div
@@ -413,17 +413,17 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                                           onClick={() => toggleEvent(sIdx, eIdx)}
                                         >
                                           <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                                            isConversion ? 'bg-st-lime' : 'bg-gray-100'
+                                            isConversion ? 'bg-st-lime' : 'bg-gray-100 dark:bg-dark-hover'
                                           }`}>
                                             {isConversion
                                               ? <Zap className="w-2.5 h-2.5 text-st-black" />
-                                              : <Icon className="w-2.5 h-2.5 text-gray-500" />
+                                              : <Icon className="w-2.5 h-2.5 text-gray-500 dark:text-gray-400" />
                                             }
                                           </div>
                                           <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-1.5 flex-wrap">
                                               <span className={`text-[10px] font-semibold px-1 py-0.5 rounded ${
-                                                isConversion ? 'bg-st-lime text-st-black' : 'bg-gray-100 dark:bg-[#252929] text-gray-600'
+                                                isConversion ? 'bg-st-lime text-st-black' : 'bg-gray-100 dark:bg-dark-hover text-gray-600 dark:text-gray-300'
                                               }`}>
                                                 {label}
                                               </span>
@@ -433,7 +433,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                                                 </span>
                                               )}
                                               {e.conversion_value > 0 && (
-                                                <span className="text-[10px] font-semibold text-st-black">
+                                                <span className="text-[10px] font-semibold text-st-black dark:text-white">
                                                   ${safeNumber(e.conversion_value, 0).toFixed(0)}
                                                 </span>
                                               )}
@@ -454,7 +454,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
 
                                         {/* Expanded event detail */}
                                         {isEventOpen && (
-                                          <div className="px-2 pb-2 pt-0 ml-7 text-[10px] text-st-gray dark:text-gray-400 space-y-0.5 border-t border-gray-100">
+                                          <div className="px-2 pb-2 pt-0 ml-7 text-[10px] text-st-gray dark:text-gray-400 space-y-0.5 border-t border-gray-100 dark:border-dark-border">
                                             {e.utm_source && (
                                               <p>UTM: {[e.utm_source, e.utm_medium, e.utm_campaign].filter(Boolean).join(' / ')}</p>
                                             )}
@@ -499,7 +499,7 @@ function SummaryField({ label, value }) {
   if (value === null || value === undefined || value === '') return null
   return (
     <div className="flex items-center justify-between">
-      <p className="text-xs text-st-gray">{label}</p>
+      <p className="text-xs text-st-gray dark:text-gray-400">{label}</p>
       <p className="text-xs font-medium text-st-black dark:text-white truncate max-w-[120px]">{value}</p>
     </div>
   )
@@ -507,7 +507,7 @@ function SummaryField({ label, value }) {
 
 function JourneyStat({ label, value }) {
   return (
-    <div className="bg-white dark:bg-[#1A1D1D] rounded-xl p-3 text-center shadow-sm">
+    <div className="bg-white dark:bg-dark-card rounded-xl p-3 text-center shadow-sm border border-gray-100 dark:border-dark-border">
       <p className="text-lg font-bold text-st-black dark:text-white truncate">{value ?? '—'}</p>
       <p className="text-[10px] text-st-gray dark:text-gray-400 uppercase tracking-wide mt-0.5">{label}</p>
     </div>

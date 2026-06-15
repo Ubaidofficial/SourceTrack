@@ -223,14 +223,14 @@ function CustomSelect({ value, onChange, options, placeholder = 'Select option..
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-3 py-2 text-sm bg-white dark:bg-[#242829] border border-gray-300 dark:border-[#2A2E2E] rounded-lg shadow-sm focus:outline-none text-gray-700 dark:text-gray-200 text-left disabled:opacity-50"
+        className="w-full flex items-center justify-between px-3 py-2 text-sm bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border rounded-lg shadow-sm focus:outline-none text-gray-700 dark:text-gray-200 text-left disabled:opacity-50"
       >
         <span className="truncate">{displayLabel}</span>
         <ChevronDown className="w-4 h-4 ml-2 text-gray-400 flex-shrink-0" />
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-[#242829] border border-gray-200 dark:border-[#2A2E2E] rounded-lg shadow-xl max-h-60 overflow-y-auto">
+        <div className="absolute z-50 w-full mt-1 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-xl max-h-60 overflow-y-auto">
           {options.map((opt) => {
             const isSelected = opt.value === value
             const isDisabled = opt.disabled
@@ -246,7 +246,7 @@ function CustomSelect({ value, onChange, options, placeholder = 'Select option..
                 className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between transition-colors ${
                   isSelected
                     ? 'bg-lime-50 text-lime-800 dark:bg-lime-950/20 dark:text-lime-400 font-medium'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#252929]'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-hover'
                 } ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}`}
               >
                 <span className="truncate">{opt.label}</span>
@@ -322,15 +322,15 @@ function DateRangePopover({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-3 py-2 text-sm bg-white dark:bg-[#242829] border border-gray-300 dark:border-[#2A2E2E] rounded-lg shadow-sm focus:outline-none text-gray-700 dark:text-gray-200 text-left"
+        className="w-full flex items-center justify-between px-3 py-2 text-sm bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border rounded-lg shadow-sm focus:outline-none text-gray-700 dark:text-gray-200 text-left"
       >
         <span className="truncate">{displayLabel}</span>
         <ChevronDown className="w-4 h-4 ml-2 text-gray-400 flex-shrink-0" />
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 left-0 w-80 mt-1 bg-white dark:bg-[#242829] border border-gray-200 dark:border-[#2A2E2E] rounded-xl shadow-xl p-4 text-xs">
-          <div className="flex gap-2 mb-3 border-b border-gray-100 dark:border-[#2A2E2E] pb-2">
+        <div className="absolute z-50 left-0 w-80 mt-1 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl shadow-xl p-4 text-xs">
+          <div className="flex gap-2 mb-3 border-b border-gray-100 dark:border-dark-border pb-2">
             <button
               type="button"
               onClick={() => setIsRolling(true)}
@@ -361,7 +361,7 @@ function DateRangePopover({
                   </button>
                 ))}
               </div>
-              <div className="pt-2 border-t border-gray-100 dark:border-[#2A2E2E] flex items-center gap-2">
+              <div className="pt-2 border-t border-gray-100 dark:border-dark-border flex items-center gap-2">
                 <span className="text-gray-500">Last</span>
                 <input
                   type="number"
@@ -400,7 +400,7 @@ function DateRangePopover({
                   </button>
                 ))}
               </div>
-              <div className="pt-2 border-t border-gray-100 dark:border-[#2A2E2E]">
+              <div className="pt-2 border-t border-gray-100 dark:border-dark-border">
                 <button
                   type="button"
                   onClick={() => setDatePreset(0)}
@@ -1122,7 +1122,7 @@ export default function ReportBuilder() {
 
   const getLockedEmptyState = (gateError, templateName, isFuture) => {
     const iconClass = "w-8 h-8 text-lime-600 dark:text-lime-400"
-    const containerClass = "bg-white dark:bg-[#1A1D1D] rounded-xl border border-gray-200 dark:border-[#2A2E2E] p-12 text-center max-w-2xl mx-auto my-8 shadow-sm flex flex-col items-center justify-center animate-fade-in"
+    const containerClass = "bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border p-12 text-center max-w-2xl mx-auto my-8 shadow-sm flex flex-col items-center justify-center animate-fade-in"
 
     if (isFuture) {
       let title = "Feature Coming Soon"
@@ -1298,8 +1298,8 @@ export default function ReportBuilder() {
 
   const renderTemplateHub = () => {
     return (
-      <div className="bg-white dark:bg-[#1A1D1D] rounded-xl border border-gray-200 dark:border-[#2A2E2E] p-6 space-y-6 animate-fade-in">
-        <div className="border-b border-gray-100 dark:border-[#2A2E2E] pb-4">
+      <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border p-6 space-y-6 animate-fade-in">
+        <div className="border-b border-gray-100 dark:border-dark-border pb-4">
           <h3 className="text-lg font-bold text-gray-800 dark:text-white">
             {normalizedType !== 'unknown'
               ? `Recommended templates for ${normalizedType === 'Lead Gen / Agency' ? 'Lead Gen & Agency' : normalizedType}`
@@ -1327,7 +1327,7 @@ export default function ReportBuilder() {
                 key={p.id}
                 type="button"
                 onClick={() => applyPreset(p)}
-                className="group relative flex flex-col text-left p-5 bg-gray-50 dark:bg-[#242829]/50 border border-gray-200 dark:border-[#2A2E2E] hover:border-lime-500 rounded-xl transition-all shadow-sm"
+                className="group relative flex flex-col text-left p-5 bg-gray-50 dark:bg-dark-card/50 border border-gray-200 dark:border-dark-border hover:border-lime-500 rounded-xl transition-all shadow-sm"
               >
                 <div className="flex items-start justify-between gap-2 w-full">
                   <span className="font-bold text-sm text-gray-900 dark:text-white group-hover:text-lime-600 dark:group-hover:text-lime-400">
@@ -1364,7 +1364,7 @@ export default function ReportBuilder() {
 
         {/* Collapsible section for other business types */}
         {otherCategories.length > 0 && (
-          <div className="pt-4 border-t border-gray-100 dark:border-[#2A2E2E]">
+          <div className="pt-4 border-t border-gray-100 dark:border-dark-border">
             <button
               type="button"
               onClick={() => setShowOtherCategories(!showOtherCategories)}
@@ -1373,7 +1373,7 @@ export default function ReportBuilder() {
               {showOtherCategories ? 'Hide other template types' : 'Show other template types'}
             </button>
             {showOtherCategories && (
-              <div className="mt-4 space-y-6 animate-fade-in p-5 bg-gray-50/50 dark:bg-[#242829]/20 rounded-xl border border-gray-150 dark:border-[#2A2E2E]">
+              <div className="mt-4 space-y-6 animate-fade-in p-5 bg-gray-50/50 dark:bg-dark-card/20 rounded-xl border border-gray-150 dark:border-dark-border">
                 <p className="text-xs text-st-gray dark:text-gray-400 font-medium">Templates from other business models (may not align with your current site setup):</p>
                 <div className="space-y-6">
                   {otherCategories.map(cat => {
@@ -1392,7 +1392,7 @@ export default function ReportBuilder() {
                                 key={p.id}
                                 type="button"
                                 onClick={() => applyPreset(p)}
-                                className="group relative flex flex-col text-left p-4 bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] hover:border-lime-500 rounded-xl transition-all shadow-sm"
+                                className="group relative flex flex-col text-left p-4 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border hover:border-lime-500 rounded-xl transition-all shadow-sm"
                               >
                                 <div className="flex items-start justify-between gap-2 w-full">
                                   <span className="font-bold text-xs text-gray-800 dark:text-white group-hover:text-lime-650 dark:group-hover:text-lime-400">
@@ -1422,7 +1422,7 @@ export default function ReportBuilder() {
         )}
 
         {/* Start from Blank Footer */}
-        <div className="pt-6 border-t border-gray-100 dark:border-[#2A2E2E] flex justify-center">
+        <div className="pt-6 border-t border-gray-100 dark:border-dark-border flex justify-center">
           <button
             type="button"
             onClick={() => {
@@ -1468,7 +1468,7 @@ export default function ReportBuilder() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsDrawerOpen(true)}
-            className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-[#1A1D1D] border border-gray-300 dark:border-[#2A2E2E] rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] flex items-center gap-1.5 transition-all font-semibold shadow-sm"
+            className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-hover flex items-center gap-1.5 transition-all font-semibold shadow-sm"
           >
             <Bookmark className="w-4 h-4 text-lime-500" />
             Saved Reports
@@ -1495,15 +1495,15 @@ export default function ReportBuilder() {
       })()}
 
       {/* Two-Panel Layout */}
-      <div className="flex flex-col lg:flex-row gap-6">
+      <div className="flex flex-col xl:flex-row gap-6">
 
         {/* Left Column: Configure Card */}
-        <div className="w-full lg:w-[360px] flex-shrink-0 space-y-4">
-          <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-5 space-y-4">
-            <h3 className="text-sm font-semibold text-gray-800 dark:text-white pb-2 border-b border-gray-100 dark:border-[#2A2E2E]">Configure Report</h3>
+        <div className="w-full xl:w-[360px] flex-shrink-0 space-y-4">
+          <div className="bg-white dark:bg-dark-card rounded-xl shadow-sm border border-gray-200 dark:border-dark-border p-5 space-y-4">
+            <h3 className="text-sm font-semibold text-gray-800 dark:text-white pb-2 border-b border-gray-100 dark:border-dark-border">Configure Report</h3>
 
             {/* A. Recommended Templates Section */}
-            <div className="space-y-2 border-b border-gray-100 dark:border-[#2A2E2E] pb-3">
+            <div className="space-y-2 border-b border-gray-100 dark:border-dark-border pb-3">
               <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Recommended Templates</label>
               {normalizedType === 'unknown' && (
                 <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium bg-amber-50 dark:bg-amber-950/20 px-2 py-1 rounded">
@@ -1524,7 +1524,7 @@ export default function ReportBuilder() {
                       className={`w-full text-left px-2.5 py-1.5 rounded-lg border text-xs transition-all flex flex-col gap-0.5 ${
                         isActive
                           ? 'bg-lime-50 dark:bg-lime-950/20 border-lime-500 text-lime-800 dark:text-lime-400 font-semibold'
-                          : 'bg-white dark:bg-[#242829] border-gray-200 dark:border-[#2A2E2E] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#252929]'
+                          : 'bg-white dark:bg-dark-card border-gray-200 dark:border-dark-border text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-hover'
                       }`}
                     >
                       <div className="flex items-center justify-between w-full gap-1">
@@ -1580,7 +1580,7 @@ export default function ReportBuilder() {
                                   className={`w-full text-left px-2 py-1 rounded-lg border text-[11px] transition-all flex flex-col ${
                                     isActive
                                       ? 'bg-lime-50 dark:bg-lime-950/20 border-lime-500 text-lime-800 dark:text-lime-400 font-semibold'
-                                      : 'bg-white dark:bg-[#242829] border-gray-200 dark:border-[#2A2E2E] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#252929]'
+                                      : 'bg-white dark:bg-dark-card border-gray-200 dark:border-dark-border text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-dark-hover'
                                   }`}
                                 >
                                   <div className="flex items-center justify-between w-full gap-1">
@@ -1607,7 +1607,7 @@ export default function ReportBuilder() {
             </div>
 
             {/* B. Start Blank Button */}
-            <div className="pb-3 border-b border-gray-100 dark:border-[#2A2E2E]">
+            <div className="pb-3 border-b border-gray-100 dark:border-dark-border">
               <button
                 type="button"
                 onClick={() => {
@@ -1649,7 +1649,7 @@ export default function ReportBuilder() {
                   onChange={(e) => setReportName(e.target.value)}
                   placeholder="e.g. Weekly Revenue by Source"
                   maxLength={60}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-[#2A2E2E] rounded-lg text-sm outline-none focus:ring-1 focus:ring-lime-500 dark:bg-[#242829] dark:text-white"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg text-sm outline-none focus:ring-1 focus:ring-lime-500 dark:bg-dark-card dark:text-white"
                 />
               </div>
 
@@ -1722,7 +1722,7 @@ export default function ReportBuilder() {
                   <button
                     type="button"
                     onClick={() => setShowMetricDropdown(!showMetricDropdown)}
-                    className="w-full flex items-center justify-between px-3 py-2 text-sm bg-white dark:bg-[#242829] border border-gray-300 dark:border-[#2A2E2E] rounded-lg shadow-sm text-gray-700 dark:text-gray-200 text-left"
+                    className="w-full flex items-center justify-between px-3 py-2 text-sm bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border rounded-lg shadow-sm text-gray-700 dark:text-gray-200 text-left"
                   >
                     <span className="truncate text-xs text-st-gray dark:text-gray-400">
                       {selectedMetrics.length === 0 ? 'Select metrics...' : `+ Add metric (${selectedMetrics.length} selected)`}
@@ -1730,9 +1730,9 @@ export default function ReportBuilder() {
                     <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />
                   </button>
                   {showMetricDropdown && (
-                    <div className="absolute z-40 mt-1 w-full bg-white dark:bg-[#242829] border border-gray-200 dark:border-[#2A2E2E] rounded-lg shadow-lg max-h-72 overflow-auto">
-                      <div className="p-2 border-b border-gray-100 dark:border-[#2A2E2E] sticky top-0 bg-white dark:bg-[#242829]">
-                        <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 dark:bg-[#1A1D1D] rounded">
+                    <div className="absolute z-40 mt-1 w-full bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-lg max-h-72 overflow-auto">
+                      <div className="p-2 border-b border-gray-100 dark:border-dark-border sticky top-0 bg-white dark:bg-dark-card">
+                        <div className="flex items-center gap-1 px-2 py-1 bg-gray-50 dark:bg-dark-card rounded">
                           <Search className="w-3.5 h-3.5 text-st-gray dark:text-gray-400" />
                           <input
                             type="text"
@@ -1750,7 +1750,7 @@ export default function ReportBuilder() {
                         if (groupMetrics.length === 0) return null
                         return (
                           <div key={group}>
-                            <div className="px-3 py-1 text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase bg-gray-50 dark:bg-[#252929]">{group}</div>
+                            <div className="px-3 py-1 text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase bg-gray-50 dark:bg-dark-hover">{group}</div>
                             {groupMetrics.map((m) => {
                               const isSelected = selectedMetrics.includes(m.key)
                               return (
@@ -1761,7 +1761,7 @@ export default function ReportBuilder() {
                                     if (selectedMetrics.length < 4 || isSelected) toggleMetric(m.key)
                                     if (selectedMetrics.length === 1 && !isSelected) setShowMetricDropdown(false)
                                   }}
-                                  className={`w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-[#252929] transition-colors flex items-center gap-2 ${
+                                  className={`w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-dark-hover transition-colors flex items-center gap-2 ${
                                     isSelected ? 'bg-lime-50 text-lime-800 dark:bg-lime-950/20 dark:text-lime-400 font-semibold' : 'text-gray-700 dark:text-gray-300'
                                   }`}
                                 >
@@ -1799,7 +1799,7 @@ export default function ReportBuilder() {
 
               {/* 6. Group By 2 */}
               {showGroupBy2 ? (
-                <div className="space-y-1 pt-1.5 border-t border-dashed border-gray-100 dark:border-[#2A2E2E]">
+                <div className="space-y-1 pt-1.5 border-t border-dashed border-gray-100 dark:border-dark-border">
                   <div className="flex items-center justify-between">
                     <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Group By 2</label>
                     <button
@@ -1828,7 +1828,7 @@ export default function ReportBuilder() {
             </div>
 
             {/* D. Attribution Collapsible Section */}
-            <div className="pt-2 border-t border-gray-100 dark:border-[#2A2E2E]">
+            <div className="pt-2 border-t border-gray-100 dark:border-dark-border">
               <button
                 type="button"
                 onClick={() => setIsAttributionOpen(!isAttributionOpen)}
@@ -1838,7 +1838,7 @@ export default function ReportBuilder() {
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isAttributionOpen ? 'rotate-180' : ''}`} />
               </button>
               {isAttributionOpen && (
-                <div className="space-y-3 mt-2 pt-2 border-t border-dashed border-gray-100 dark:border-[#2A2E2E] text-xs animate-fade-in">
+                <div className="space-y-3 mt-2 pt-2 border-t border-dashed border-gray-100 dark:border-dark-border text-xs animate-fade-in">
                   {/* Attribution Model */}
                   <div className="space-y-1">
                     <label className="block text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Attribution Model</label>
@@ -1893,7 +1893,7 @@ export default function ReportBuilder() {
             </div>
 
             {/* E. Sources & Filters Collapsible Section */}
-            <div className="pt-2 border-t border-gray-100 dark:border-[#2A2E2E]">
+            <div className="pt-2 border-t border-gray-100 dark:border-dark-border">
               <button
                 type="button"
                 onClick={() => setIsFiltersOpen(!isFiltersOpen)}
@@ -1903,7 +1903,7 @@ export default function ReportBuilder() {
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isFiltersOpen ? 'rotate-180' : ''}`} />
               </button>
               {isFiltersOpen && (
-                <div className="space-y-3 mt-2 pt-2 border-t border-dashed border-gray-100 dark:border-[#2A2E2E] text-xs animate-fade-in">
+                <div className="space-y-3 mt-2 pt-2 border-t border-dashed border-gray-100 dark:border-dark-border text-xs animate-fade-in">
 
 
                   {/* Channel Filter */}
@@ -1914,7 +1914,7 @@ export default function ReportBuilder() {
                       value={filters.channel || ''}
                       onChange={(e) => applyFilter('channel', e.target.value || undefined)}
                       placeholder="e.g. Organic Search"
-                      className="w-full px-2 py-1 border border-gray-300 dark:border-[#2A2E2E] dark:bg-[#242829] rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-white"
+                      className="w-full px-2 py-1 border border-gray-300 dark:border-dark-border dark:bg-dark-card rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-white"
                     />
                   </div>
 
@@ -1926,7 +1926,7 @@ export default function ReportBuilder() {
                       value={filters.source || ''}
                       onChange={(e) => applyFilter('source', e.target.value || undefined)}
                       placeholder="e.g. google"
-                      className="w-full px-2 py-1 border border-gray-300 dark:border-[#2A2E2E] dark:bg-[#242829] rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-white"
+                      className="w-full px-2 py-1 border border-gray-300 dark:border-dark-border dark:bg-dark-card rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-white"
                     />
                   </div>
 
@@ -1938,7 +1938,7 @@ export default function ReportBuilder() {
                       value={filters.medium || ''}
                       onChange={(e) => applyFilter('medium', e.target.value || undefined)}
                       placeholder="e.g. cpc"
-                      className="w-full px-2 py-1 border border-gray-300 dark:border-[#2A2E2E] dark:bg-[#242829] rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-white"
+                      className="w-full px-2 py-1 border border-gray-300 dark:border-dark-border dark:bg-dark-card rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-white"
                     />
                   </div>
 
@@ -1950,7 +1950,7 @@ export default function ReportBuilder() {
                       value={filters.campaign || ''}
                       onChange={(e) => applyFilter('campaign', e.target.value || undefined)}
                       placeholder="e.g. summer_sale"
-                      className="w-full px-2 py-1 border border-gray-300 dark:border-[#2A2E2E] dark:bg-[#242829] rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-white"
+                      className="w-full px-2 py-1 border border-gray-300 dark:border-dark-border dark:bg-dark-card rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-white"
                     />
                   </div>
 
@@ -1962,7 +1962,7 @@ export default function ReportBuilder() {
                       value={filters.conversion_type || ''}
                       onChange={(e) => applyFilter('conversion_type', e.target.value || undefined)}
                       placeholder="e.g. signup"
-                      className="w-full px-2 py-1.5 border border-gray-300 dark:border-[#2A2E2E] dark:bg-[#242829] rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-white"
+                      className="w-full px-2 py-1.5 border border-gray-300 dark:border-dark-border dark:bg-dark-card rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-white"
                     />
                   </div>
 
@@ -1980,7 +1980,7 @@ export default function ReportBuilder() {
             </div>
 
             {/* Reset Configuration */}
-            <div className="pt-2 border-t border-gray-100 dark:border-[#2A2E2E]">
+            <div className="pt-2 border-t border-gray-100 dark:border-dark-border">
               <button
                 type="button"
                 onClick={resetReport}
@@ -1996,7 +1996,7 @@ export default function ReportBuilder() {
         {/* Right Column: Live Preview Panel */}
         <div className="flex-1 min-w-0 space-y-4">
           {!canPreview ? (
-            <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-16 text-center">
+            <div className="bg-white dark:bg-dark-card rounded-xl shadow-sm border border-gray-200 dark:border-dark-border p-16 text-center">
               <ArrowRight className="w-10 h-10 text-gray-300 mx-auto mb-4" />
               <p className="text-st-gray dark:text-gray-400 font-semibold text-lg">Build your report</p>
               <p className="text-sm text-st-gray dark:text-gray-400 mt-1 max-w-sm mx-auto">
@@ -2015,11 +2015,11 @@ export default function ReportBuilder() {
               )}
 
               {/* Summary and Header Actions Card */}
-              <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-5">
+              <div className="bg-white dark:bg-dark-card rounded-xl shadow-sm border border-gray-200 dark:border-dark-border p-5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
                     <h4 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Previewing</h4>
-                    <p className="text-lg font-bold text-st-black truncate mt-0.5">{reportName || 'Untitled Report'}</p>
+                    <p className="text-lg font-bold text-st-black dark:text-white truncate mt-0.5">{reportName || 'Untitled Report'}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-2">
                       <span className="text-xs font-bold text-lime-600 dark:text-lime-400">{metricFormat(total)}</span>
                       <span className="text-xs text-st-gray dark:text-gray-400">total {metricLabel}</span>
@@ -2063,7 +2063,7 @@ export default function ReportBuilder() {
                         ) : (
                           <button
                             onClick={() => navigate('/billing')}
-                            className="px-3 py-1.5 text-xs bg-gray-50 text-st-gray border border-gray-200 rounded-lg flex items-center gap-1.5 font-semibold opacity-70"
+                            className="px-3 py-1.5 text-xs bg-gray-50 dark:bg-dark-card text-st-gray dark:text-gray-400 border border-gray-200 dark:border-dark-border rounded-lg flex items-center gap-1.5 font-semibold opacity-70"
                             title="Pin to dashboard available on Growth"
                           >
                             🔒 Pin
@@ -2078,7 +2078,7 @@ export default function ReportBuilder() {
                     {hasFeature(site?.plan, 'csv_export') ? (
                       <button
                         onClick={handleExportCSV}
-                        className="px-3 py-1.5 text-xs bg-white dark:bg-[#242829] hover:bg-gray-50 dark:hover:bg-[#2A2E2E] text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-[#2A2E2E] rounded-lg flex items-center gap-1 font-semibold shadow-sm"
+                        className="px-3 py-1.5 text-xs bg-white dark:bg-dark-card hover:bg-gray-50 dark:hover:bg-dark-border text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-dark-border rounded-lg flex items-center gap-1 font-semibold shadow-sm"
                       >
                         <Download className="w-3.5 h-3.5" />
                         CSV
@@ -2086,7 +2086,7 @@ export default function ReportBuilder() {
                     ) : (
                       <a
                         href="/billing"
-                        className="px-3 py-1.5 text-xs bg-white dark:bg-[#242829] hover:border-st-lime text-gray-400 border border-gray-300 dark:border-[#2A2E2E] rounded-lg flex items-center gap-1 font-semibold shadow-sm opacity-70"
+                        className="px-3 py-1.5 text-xs bg-white dark:bg-dark-card hover:border-st-lime text-gray-400 border border-gray-300 dark:border-dark-border rounded-lg flex items-center gap-1 font-semibold shadow-sm opacity-70"
                         title="CSV export available on Starter"
                       >
                         🔒 CSV
@@ -2119,7 +2119,7 @@ export default function ReportBuilder() {
 
               {/* Data Visualization / Sparse results check */}
               {results.length > 0 && results.length < 3 && !isLoading ? (
-                <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-6 space-y-4">
+                <div className="bg-white dark:bg-dark-card rounded-xl shadow-sm border border-gray-200 dark:border-dark-border p-6 space-y-4">
                   <h4 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Sparse Result Overview</h4>
                   <div className="space-y-3.5">
                     {results.map((r, idx) => {
@@ -2134,7 +2134,7 @@ export default function ReportBuilder() {
                             </span>
                             <span className="font-bold text-gray-900 dark:text-white">{metricFormat(val)}</span>
                           </div>
-                          <div className="h-3 bg-gray-100 dark:bg-[#242829] rounded-full overflow-hidden flex">
+                          <div className="h-3 bg-gray-100 dark:bg-dark-card rounded-full overflow-hidden flex">
                             <div className="h-full bg-lime-500 rounded-full" style={{ width: `${percent}%` }} />
                           </div>
                         </div>
@@ -2146,7 +2146,7 @@ export default function ReportBuilder() {
               ) : (
                 /* Chart visual card */
                 (chartType === 'bar' || chartType === 'line' || chartType === 'area' || chartType === 'pie') && (
-                  <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-6">
+                  <div className="bg-white dark:bg-dark-card rounded-xl shadow-sm border border-gray-200 dark:border-dark-border p-6">
                     {nightlyNotice && results.length === 0 && !isLoading && (
                       <div className="mb-3 flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-2">
                         <span className="text-amber-500 mt-0.5">⏳</span>
@@ -2176,7 +2176,7 @@ export default function ReportBuilder() {
 
               {/* KPI view */}
               {chartType === 'kpi' && (
-                <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] p-6">
+                <div className="bg-white dark:bg-dark-card rounded-xl shadow-sm border border-gray-200 dark:border-dark-border p-6">
                   {isLoading ? (
                     <div className="flex flex-col items-center justify-center py-12 gap-2">
                       <RefreshCw className="w-6 h-6 animate-spin text-st-gray dark:text-gray-400" />
@@ -2210,8 +2210,8 @@ export default function ReportBuilder() {
               )}
 
               {/* Table Data list view */}
-              <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#2A2E2E] overflow-hidden">
-                <div className="p-4 border-b border-gray-100 dark:border-[#2A2E2E] flex items-center justify-between">
+              <div className="bg-white dark:bg-dark-card rounded-xl shadow-sm border border-gray-200 dark:border-dark-border overflow-hidden">
+                <div className="p-4 border-b border-gray-100 dark:border-dark-border flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Data View</h3>
                   <div className="flex items-center gap-2">
                     <button
@@ -2219,7 +2219,7 @@ export default function ReportBuilder() {
                       className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
                         showCompare
                           ? 'bg-st-black text-white border-st-black dark:bg-lime-500 dark:text-st-black'
-                          : 'bg-white dark:bg-[#242829] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-[#2A2E2E] hover:bg-gray-50 dark:hover:bg-[#252929]'
+                          : 'bg-white dark:bg-dark-card text-gray-600 dark:text-gray-300 border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-hover'
                       }`}
                     >
                       Compare period
@@ -2230,7 +2230,7 @@ export default function ReportBuilder() {
                         className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
                           showExplanation
                             ? 'bg-st-black text-white border-st-black dark:bg-lime-500 dark:text-st-black'
-                            : 'bg-white dark:bg-[#242829] text-gray-600 dark:text-gray-300 border-gray-200 dark:border-[#2A2E2E] hover:bg-gray-50 dark:hover:bg-[#252929]'
+                            : 'bg-white dark:bg-dark-card text-gray-600 dark:text-gray-300 border-gray-200 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-hover'
                         }`}
                       >
                         <HelpCircle className="w-3.5 h-3.5" />
@@ -2251,7 +2251,7 @@ export default function ReportBuilder() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-gray-100 dark:border-[#2A2E2E] bg-gray-50 dark:bg-[#242829]">
+                        <tr className="border-b border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-dark-card">
                           <th className="text-left py-2.5 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">
                             {getDimensionLabel(groupBy) || 'Dimension'}
                           </th>
@@ -2275,7 +2275,7 @@ export default function ReportBuilder() {
                           )}
                         </tr>
                         {/* Summary Row */}
-                        <tr className="border-b border-gray-200 dark:border-[#2A2E2E] bg-gray-100/50 dark:bg-[#252929]/50">
+                        <tr className="border-b border-gray-200 dark:border-dark-border bg-gray-100/50 dark:bg-dark-hover/50">
                           <td className="py-2.5 px-4 text-xs font-semibold text-gray-700 dark:text-gray-300">Summary Total</td>
                           {groupBy2 && <td />}
                           {selectedMetrics.map(mk => {
@@ -2308,7 +2308,7 @@ export default function ReportBuilder() {
                           const priorRows = priorReportData?.results || []
                           const priorRow = priorRows.find(p => p.dim_value === r.dim_value)
                           return (
-                            <tr key={i} className="border-b border-gray-50 dark:border-[#2A2E2E] hover:bg-gray-50 dark:hover:bg-[#252929]">
+                            <tr key={i} className="border-b border-gray-50 dark:border-dark-border/40 hover:bg-gray-50 dark:hover:bg-dark-hover">
                               <td className="py-2.5 px-4 text-st-black dark:text-gray-200 font-medium">
                                 <span className="inline-flex items-center">
                                   {['source', 'channel'].includes(groupBy) ? (
@@ -2376,8 +2376,8 @@ export default function ReportBuilder() {
         <div className="fixed inset-0 z-50 overflow-hidden">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => setIsDrawerOpen(false)} />
           <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
-            <div className="w-screen max-w-md bg-white dark:bg-[#1A1D1D] border-l border-gray-200 dark:border-[#2A2E2E] shadow-2xl flex flex-col">
-              <div className="px-6 py-5 border-b border-gray-100 dark:border-[#2A2E2E] flex items-center justify-between">
+            <div className="w-screen max-w-md bg-white dark:bg-dark-card border-l border-gray-200 dark:border-dark-border shadow-2xl flex flex-col">
+              <div className="px-6 py-5 border-b border-gray-100 dark:border-dark-border flex items-center justify-between">
                 <h3 className="text-lg font-bold text-gray-800 dark:text-white">Saved Reports</h3>
                 <button onClick={() => setIsDrawerOpen(false)} className="text-gray-400 hover:text-gray-500">
                   <X className="w-5 h-5" />
@@ -2385,7 +2385,7 @@ export default function ReportBuilder() {
               </div>
               <div className="flex-1 overflow-y-auto p-6 space-y-4">
                 {reportsLoading ? (
-                  <div className="flex items-center justify-center py-8 text-st-gray">
+                  <div className="flex items-center justify-center py-8 text-st-gray dark:text-gray-400">
                     <RefreshCw className="w-5 h-5 animate-spin mr-2" /> Loading...
                   </div>
                 ) : savedReports.length === 0 ? (
@@ -2396,7 +2396,7 @@ export default function ReportBuilder() {
                   savedReports.map((r) => {
                     const meta = getSavedReportMeta(r)
                     return (
-                      <div key={r.id} className="rounded-xl border border-gray-200 dark:border-[#2A2E2E] p-4 bg-gray-50/50 dark:bg-[#242829]/50 hover:bg-gray-50 dark:hover:bg-[#252929] transition-all">
+                      <div key={r.id} className="rounded-xl border border-gray-200 dark:border-dark-border p-4 bg-gray-50/50 dark:bg-dark-card/50 hover:bg-gray-50 dark:hover:bg-dark-hover transition-all">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{r.name}</p>
@@ -2412,7 +2412,7 @@ export default function ReportBuilder() {
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between border-t border-gray-100 dark:border-[#2A2E2E] mt-3 pt-3">
+                        <div className="flex items-center justify-between border-t border-gray-100 dark:border-dark-border mt-3 pt-3">
                           {hasFeature(site?.plan, 'dashboard_widgets') ? (
                             <button
                               onClick={() => handleListPinToggle(r)}
@@ -2437,7 +2437,7 @@ export default function ReportBuilder() {
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => { handleLoad(r); setIsDrawerOpen(false) }}
-                              className="px-2.5 py-1 text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-[#1A1D1D] hover:bg-gray-100 dark:hover:bg-[#252929] border border-gray-200 dark:border-[#2A2E2E] rounded transition-all font-semibold"
+                              className="px-2.5 py-1 text-xs text-gray-700 dark:text-gray-300 bg-white dark:bg-dark-card hover:bg-gray-100 dark:hover:bg-dark-hover border border-gray-200 dark:border-dark-border rounded transition-all font-semibold"
                             >
                               Load
                             </button>

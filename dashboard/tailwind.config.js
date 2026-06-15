@@ -19,10 +19,10 @@ export default {
         },
         // Enhanced dark mode colors
         dark: {
-          bg: '#1A1D1F',      // Main background (lighter than st-black)
-          card: '#242829',     // Card background (lighter than background)
-          border: '#2A2E31',   // Subtle borders
-          hover: '#2D3135'     // Hover states
+          bg: '#0F1212',      // Main background (premium calming dark)
+          card: '#161919',     // Card background (slightly lighter for elevation)
+          border: '#242929',   // Soft dark borders
+          hover: '#1D2121'     // Hover/subtle background states
         }
       }
     }

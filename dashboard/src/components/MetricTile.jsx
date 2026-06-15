@@ -63,7 +63,7 @@ const MetricTile = ({ label, value, format = 'number', isEmpty = false, trend = 
   const trendNegative = trend != null && trend < 0
 
   return (
-    <div className="metric-tile bg-white dark:bg-[#1A1D1D] rounded-xl p-5 shadow-sm border border-gray-100 dark:border-[#2A2E2E] flex flex-col gap-1 transition-all">
+    <div className="metric-tile bg-white dark:bg-dark-card rounded-xl p-5 shadow-sm border border-gray-100 dark:border-dark-border flex flex-col gap-1 transition-all">
       <p className="text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wide">{label}</p>
       {displayValue != null ? (
         <p className="text-2xl font-semibold text-st-black dark:text-white tabular-nums">{displayValue}</p>
