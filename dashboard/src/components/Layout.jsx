@@ -1,9 +1,11 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, FileBarChart, Settings, Users, BarChart3, Plug, LogOut, Menu, X, Shield,
-  Sun, Moon, ChevronDown, Megaphone
+  Sun, Moon, ChevronDown, Megaphone, ListChecks
 } from 'lucide-react'
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { fetchApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useSite } from '../contexts/SiteContext'
@@ -15,6 +17,7 @@ const NAV_GROUPS = [
   {
     label: null,
     items: [
+      { to: '/setup',         label: 'Setup',        icon: ListChecks },
       { to: '/dashboard',     label: 'Dashboard',    icon: LayoutDashboard },
       { to: '/analytics',     label: 'Analytics',    icon: BarChart3 },
       { to: '/attribution',   label: 'Attribution',  icon: FileBarChart },
@@ -28,6 +31,7 @@ const NAV_GROUPS = [
 ]
 
 const PAGE_TITLES = {
+  '/setup': 'Setup',
   '/dashboard': 'Dashboard',
   '/analytics': 'Analytics',
   '/attribution': 'Attribution',
@@ -50,6 +54,39 @@ export default function Layout({ children }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Query setup diagnostics for active site safely, silently, and without polling
+  const { data: doctorData } = useQuery({
+    queryKey: ['setup-doctor', activeSite?.site_key],
+    queryFn: async () => {
+      if (!activeSite?.site_key) return null
+      return fetchApi(`/install/doctor?site_key=${encodeURIComponent(activeSite.site_key)}`)
+    },
+    enabled: !!activeSite?.site_key,
+    staleTime: 30000,
+    retry: false,
+  })
+
+  // Calculate badge/dot setup state
+  let setupBadgeDot = null
+  if (activeSite) {
+    const diagnostics = doctorData?.data ?? doctorData ?? null
+    if (!diagnostics) {
+      if (!activeSite.last_seen_at || activeSite.onboarding_completed === false) {
+        setupBadgeDot = 'bg-amber-500'
+      }
+    } else {
+      const hasFirstEvent = !!activeSite.last_seen_at || !!diagnostics?.tracker_install?.last_seen_at
+      const hasVerifiedDomain = diagnostics?.domain_match?.status === 'passed' || diagnostics?.domain_match?.event_domain === diagnostics?.domain_match?.registered_domain
+      const hasConversion = diagnostics?.conversion_setup?.detected || !!diagnostics?.checks?.find(c => c.label === 'Conversion tracking' && c.status === 'passed')
+      const isHealthy = diagnostics?.status === 'healthy' && hasVerifiedDomain && hasConversion
+      if (isHealthy) {
+        setupBadgeDot = 'bg-green-500'
+      } else {
+        setupBadgeDot = 'bg-amber-500'
+      }
+    }
+  }
 
   if (location.pathname === '/onboarding') {
     return <>{children}</>
@@ -169,6 +206,9 @@ export default function Layout({ children }) {
                   >
                     <Icon className="w-4 h-4 flex-shrink-0" />
                     <span className="truncate">{label}</span>
+                    {label === 'Setup' && setupBadgeDot && (
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ml-auto ${setupBadgeDot}`} />
+                    )}
                   </NavLink>
                 ))}
               </div>

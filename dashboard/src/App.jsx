@@ -15,7 +15,7 @@ import Dashboard from './pages/Dashboard'
 import Journey from './pages/Journey'
 import AIChat from './pages/AIChat'
 import AIAnalytics from './pages/AIAnalytics'
-import Snippet from './pages/Snippet'
+import Setup from './pages/Setup'
 import Settings from './pages/Settings'
 import ShareDashboard from './pages/ShareDashboard'
 import Billing from './pages/Billing'
@@ -200,7 +200,8 @@ export default function App() {
               <Route path="/old-analytics" element={<Navigate to="/analytics" replace />} />
               <Route path="/ai-chat" element={<ProtectedRoute><AIChat /></ProtectedRoute>} />
               <Route path="/ai-analytics" element={<ProtectedRoute><AIAnalytics /></ProtectedRoute>} />
-              <Route path="/snippet" element={<ProtectedRoute><Snippet /></ProtectedRoute>} />
+              <Route path="/snippet" element={<Navigate to="/setup" replace />} />
+              <Route path="/setup" element={<ProtectedRoute><Setup /></ProtectedRoute>} />
               <Route path="/debugger" element={<ProtectedRoute><EventDebugger /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
