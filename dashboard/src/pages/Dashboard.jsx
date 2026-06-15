@@ -259,19 +259,7 @@ export default function Dashboard() {
   const [lastRefresh, setLastRefresh] = useState(new Date())
   const freshnessLabel = useFreshnessLabel(lastRefresh)
   const location = useLocation()
-  const activeTab = (() => {
-    if (location.pathname === '/attribution') return 'attribution'
-    if (location.pathname === '/ai-sources') return 'ai_sources'
-    if (location.pathname === '/journeys') return 'journeys'
-    return 'overview'
-  })()
-
-  const setActiveTab = (tabId) => {
-    if (tabId === 'overview') navigate('/analytics')
-    else if (tabId === 'attribution') navigate('/attribution')
-    else if (tabId === 'ai_sources') navigate('/ai-sources')
-    else if (tabId === 'journeys') navigate('/journeys')
-  }
+  const activeTab = location.pathname === '/attribution' ? 'attribution' : 'overview'
 
   useEffect(() => {
     // Check for support-mode preview context
@@ -640,7 +628,9 @@ export default function Dashboard() {
       {/* Header Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-st-black dark:text-white">Performance Overview</h2>
+          <h2 className="text-2xl font-bold text-st-black dark:text-white">
+            {location.pathname === '/attribution' ? 'Attribution' : 'Dashboard'}
+          </h2>
           {site && <p className="text-sm text-st-gray dark:text-gray-400 mt-0.5">{site.domain || site.name}</p>}
         </div>
         {!previewMode && (
@@ -661,32 +651,6 @@ export default function Dashboard() {
             />
           </div>
         )}
-      </div>
-
-      {/* Tab Navigation */}
-      <div className="border-b border-gray-200 dark:border-dark-border">
-        <nav className="-mb-px flex space-x-6" aria-label="Tabs">
-          {[
-            { id: 'overview', name: 'Overview' },
-            { id: 'attribution', name: 'Attribution' },
-            { id: 'ai_sources', name: 'AI Sources' },
-            { id: 'journeys', name: 'Journeys' }
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`
-                whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-all
-                ${activeTab === tab.id
-                  ? 'border-st-lime text-st-black dark:text-white font-semibold'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400'
-                }
-              `}
-            >
-              {tab.name}
-            </button>
-          ))}
-        </nav>
       </div>
 
       {isLoading ? (
@@ -842,6 +806,20 @@ export default function Dashboard() {
                 </DashboardCard>
               </div>
 
+              {/* AI Source Performance (Only if real data exists) */}
+              {aiRevResults.length > 0 && (
+                <DashboardCard title="AI Source Performance" subtitle="Traffic and conversions from AI engines">
+                  <DashboardTable
+                    columns={[
+                      { key: 'source', label: 'AI Platform', render: (r) => <SourceChip source={r.dim_value || r.source} /> },
+                      { key: 'leads', label: 'Leads', render: (r) => r.ai_leads || r.conversions || 0 },
+                      { key: 'revenue', label: 'Revenue', render: (r) => hasRevenue ? `$${(r.ai_revenue || 0).toFixed(2)}` : '—' }
+                    ].filter(c => hasRevenue || c.key !== 'revenue')}
+                    rows={aiRevResults}
+                  />
+                </DashboardCard>
+              )}
+
               {/* Pinned Reports Widgets - strictly below core cards */}
               {hasFeature(site?.plan, 'dashboard_widgets') && (
                 <DashboardCard title="Pinned Reports" subtitle="Saved report widgets pinned to your dashboard">
@@ -931,96 +909,29 @@ export default function Dashboard() {
                 />
               </DashboardCard>
 
-              {/* 5. Search Terms / SEO Queries */}
+              {/* 5. AI Source Performance */}
+              <DashboardCard title="AI Source Performance" subtitle="Traffic and conversions from AI engines">
+                {aiRevResults.length === 0 ? (
+                  <p className="text-sm text-st-gray py-6 text-center">No AI referrals detected yet.</p>
+                ) : (
+                  <DashboardTable
+                    columns={[
+                      { key: 'source', label: 'AI Platform', render: (r) => <SourceChip source={r.dim_value || r.source} /> },
+                      { key: 'leads', label: 'Leads', render: (r) => r.ai_leads || r.conversions || 0 },
+                      { key: 'revenue', label: 'Revenue', render: (r) => hasRevenue ? `$${(r.ai_revenue || 0).toFixed(2)}` : '—' }
+                    ].filter(c => hasRevenue || c.key !== 'revenue')}
+                    rows={aiRevResults}
+                  />
+                )}
+              </DashboardCard>
+
+              {/* 6. Search Terms / SEO Queries */}
               {isGscConnected && (
                 <DashboardCard title="Search Terms / SEO Queries" subtitle="Organic query performance estimate">
                   <p className="text-xs text-st-gray dark:text-gray-400 mb-3">Matched by landing page and date range. Query revenue is estimated.</p>
                   <p className="text-sm text-st-gray py-4 text-center">No search query data matches in this range.</p>
                 </DashboardCard>
               )}
-            </div>
-          )}
-
-          {/* ──────────────────────────────────────────────────────── */}
-          {/* TAB 3: AI SOURCES */}
-          {/* ──────────────────────────────────────────────────────── */}
-          {activeTab === 'ai_sources' && (
-            <div className="space-y-6">
-              {aiRevResults.length === 0 ? (
-                <EmptyState
-                  icon={Sparkles}
-                  title="No AI referrals detected yet"
-                  description="No AI referrals detected yet. When visitors arrive from ChatGPT, Perplexity, Claude, Gemini, or other AI tools, they’ll appear here."
-                />
-              ) : (
-                <>
-                  {/* AI Source Summary Hero */}
-                  <div className="bg-lime-50 border border-lime-200 dark:bg-lime-950/20 dark:border-lime-900/30 rounded-xl p-5">
-                    <h3 className="text-sm font-semibold text-lime-900 dark:text-lime-400 mb-1 flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4" /> Detected AI-assisted Entry Themes
-                    </h3>
-                    <p className="text-xs text-lime-700 dark:text-lime-300">
-                      Generated from journey events and source data. No fake AI accuracy or scores.
-                    </p>
-                  </div>
-
-                  {/* AI Source Performance Table */}
-                  <DashboardCard title="AI Source Performance" subtitle="Traffic and conversions from AI engines">
-                    <DashboardTable
-                      columns={[
-                        { key: 'source', label: 'AI Platform', render: (r) => <SourceChip source={r.dim_value || r.source} /> },
-                        { key: 'leads', label: 'Leads', render: (r) => r.ai_leads || r.conversions || 0 },
-                        { key: 'revenue', label: 'Revenue', render: (r) => hasRevenue ? `$${(r.ai_revenue || 0).toFixed(2)}` : '—' }
-                      ].filter(c => hasRevenue || c.key !== 'revenue')}
-                      rows={aiRevResults}
-                    />
-                  </DashboardCard>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* ──────────────────────────────────────────────────────── */}
-          {/* TAB 4: JOURNEYS */}
-          {/* ──────────────────────────────────────────────────────── */}
-          {activeTab === 'journeys' && (
-            <div className="space-y-6">
-              <DashboardCard title="Conversions Activity Feed" subtitle="Chronological conversions list"
-                action={
-                  <button onClick={() => navigate('/leads')} className="text-xs font-semibold text-st-black dark:text-white flex items-center gap-1">
-                    All Leads <ArrowRight className="w-3 h-3" />
-                  </button>
-                }
-              >
-                {!recentActivity || !recentActivity.events ? (
-                  <p className="text-sm text-st-gray py-6 text-center">No conversion events tracked.</p>
-                ) : (
-                  <DashboardTable
-                    columns={[
-                      { key: 'source', label: 'Source', render: (r) => <SourceChip source={r.referrer || r.utm_source || 'Direct'} /> },
-                      { key: 'event', label: 'Event', render: (r) => r.event === '$conversion' ? 'Conversion' : r.event },
-                      { key: 'time', label: 'Time', render: (r) => new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
-                      { key: 'action', label: 'Action', render: (r) => (
-                        <button onClick={() => navigate('/leads')} className="text-xs text-st-black dark:text-white font-semibold hover:underline">
-                          View Details
-                        </button>
-                      )}
-                    ]}
-                    rows={recentActivity.events.filter(e => e.event === '$conversion')}
-                  />
-                )}
-              </DashboardCard>
-
-              {/* Landing Page Performance expanded */}
-              <DashboardCard title="Landing Page Performance (Expanded)" subtitle="All pageviews by landing page path">
-                <DashboardTable
-                  columns={[
-                    { key: 'path', label: 'Landing Page', render: (r) => <span className="font-mono text-xs">{r.path || '/'}</span> },
-                    { key: 'views', label: 'Views', render: (r) => r.views }
-                  ]}
-                  rows={topPagesResults}
-                />
-              </DashboardCard>
             </div>
           )}
         </>

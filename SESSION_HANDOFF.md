@@ -2,7 +2,13 @@
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
-> **Handoff:** Session 140G-29 — Brutal Browser QA for Final V1 UI Refresh — **FAIL/PARTIAL — Browser QA found /campaigns staging crash; local fix prepared; Analytics-first navigation direction added; deploy + browser re-test required.**
+> **Handoff:** Session 140H — Report Builder Business-Type Audit + Template-First Plan — **PASS — report builder template and gating gaps audited against business-type groups (SaaS, Ecommerce, Lead Gen); staging browser screenshot and network calls verified; plan documented in docs/qa/report_builder_business_type_template_audit_140H.md.**
+> - **Report Builder Business-Type Template Audit**: Inspected `ReportBuilder.jsx` code and evaluated UX flow and data structures. Identified that templates are currently a flat uncategorized list and need to be grouped by SaaS, Ecommerce, Lead Gen, and Universal.
+> - **Gaps & Gating Analyzed**: Documented missing metrics (MRR, MQL/SQL counts, ad spend, ROAS, GSC metrics) and missing dimensions (exit page, qualification status). Identified lack of data truth gating for revenue/cost metrics.
+> - **Staging Browser QA**: Verified the `/report-builder` route loads successfully on staging with all console and network requests returning clean 200/304 statuses. Captured screenshot as visual evidence.
+> - **Readiness Impact**: Paid beta remains **NOT READY** until these template-first and gating changes are implemented.
+>
+> **Prior handoff (Session 140G-29B):** Session 140G-29B — Staging Browser Re-test After Campaigns Fix + Analytics Nav Deploy — **PARTIAL — campaigns crash fix verified; navigation corrected; deploy + browser re-test required.**
 > - **Staging campaigns crash fixed locally**: Discovered that `/campaigns` crashes on deployed staging with `ReferenceError: hasRevenue is not defined`. Applied a surgical fix in `dashboard/src/pages/Campaigns.jsx` to declare `hasRevenue` and `hasCost` variables. Passed all static/safety checks locally.
 > - **Analytics-First Navigation**: Restructured V1 navigation hierarchy to make Analytics a first-class sidebar item before Attribution. Updated `Layout.jsx` sidebar items, `App.jsx` routes, and `Dashboard.jsx` active tab logic so `/analytics`, `/attribution`, `/journeys`, and `/ai-sources` all mount the Dashboard component with the correct initial tab active.
 > - **Product spec created**: Documented the Analytics-first product direction in `docs/product/sourcetrack_navigation_analytics_first_class.md`.
