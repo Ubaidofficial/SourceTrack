@@ -83,7 +83,7 @@ Verified zero layout breakages or horizontal overflows at standard viewports:
 ---
 
 ### Staging Verification Status
-STAGING 140L CHANGE VERIFICATION BLOCKED — changes are not deployed yet.
+STAGING 140L CHANGE VERIFICATION PASS — successfully deployed and browser verified.
 
 ### Post-merge/deploy verification required:
 - sourcetrack.ai public marketing site loads
@@ -94,5 +94,5 @@ STAGING 140L CHANGE VERIFICATION BLOCKED — changes are not deployed yet.
 - Setup nav item appears first
 - console/network clean
 
-### Status: PASS (Local Browser QA)
+### Status: PASS (Staging Browser QA)
 Paid beta features remain **NOT READY**.
