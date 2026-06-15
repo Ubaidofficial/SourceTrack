@@ -199,4 +199,3 @@ The following `execute_sql` commands were executed via the Supabase MCP server f
    * **Target**: Production (`zxjjjsipafojhzkkumvh`)
    * **Query**: `select proname, prosrc from pg_proc where proname = 'enforce_free_tier_abuse_guards';`
    * **Result**: Returned trigger source code string (present on production).
-
