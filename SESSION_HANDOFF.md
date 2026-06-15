@@ -2,11 +2,12 @@
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
-> **Handoff:** Session 140H — Report Builder Business-Type Audit + Template-First Plan — **PASS — report builder template and gating gaps audited against business-type groups (SaaS, Ecommerce, Lead Gen); staging browser screenshot and network calls verified; plan documented in docs/qa/report_builder_business_type_template_audit_140H.md.**
-> - **Report Builder Business-Type Template Audit**: Inspected `ReportBuilder.jsx` code and evaluated UX flow and data structures. Identified that templates are currently a flat uncategorized list and need to be grouped by SaaS, Ecommerce, Lead Gen, and Universal.
-> - **Gaps & Gating Analyzed**: Documented missing metrics (MRR, MQL/SQL counts, ad spend, ROAS, GSC metrics) and missing dimensions (exit page, qualification status). Identified lack of data truth gating for revenue/cost metrics.
-> - **Staging Browser QA**: Verified the `/report-builder` route loads successfully on staging with all console and network requests returning clean 200/304 statuses. Captured screenshot as visual evidence.
-> - **Readiness Impact**: Paid beta remains **NOT READY** until these template-first and gating changes are implemented.
+> **Handoff:** Session 140G-29C — Deployed navigation browser QA — **PASS — deployed navigation architecture verified; Journey slide-over remains BLOCKED due to no lead rows; paid beta remains NOT READY.**
+> - **Staging Browser E2E QA**: Opened and verified all required routes: `/dashboard`, `/analytics`, `/attribution`, `/leads`, `/campaigns`, `/report-builder`, `/app/integrations`, `/settings`.
+> - **Sidebar Order**: Confirmed sidebar strictly conforms to the correct 8-item order (Dashboard, Analytics, Attribution, All Leads, Campaigns, Report Builder, Integrations, Settings).
+> - **Redirects & Backwards Compatibility**: Verified `/journeys` redirects to `/leads` and `/ai-sources` redirects to `/attribution`.
+> - **Console & Network**: Verified zero route-breaking console exceptions. Network requests to API endpoints returned clean `200` or `304` responses.
+> - **Readiness Impact**: Paid beta remains **NOT READY** (Journey slide-over remains BLOCKED due to empty lead rows; paid beta features pending staging/production credentials).
 >
 > **Prior handoff (Session 140G-29B):** Session 140G-29B — Staging Browser Re-test After Campaigns Fix + Analytics Nav Deploy — **PARTIAL — campaigns crash fix verified; navigation corrected; deploy + browser re-test required.**
 > - **Staging campaigns crash fixed locally**: Discovered that `/campaigns` crashes on deployed staging with `ReferenceError: hasRevenue is not defined`. Applied a surgical fix in `dashboard/src/pages/Campaigns.jsx` to declare `hasRevenue` and `hasCost` variables. Passed all static/safety checks locally.
