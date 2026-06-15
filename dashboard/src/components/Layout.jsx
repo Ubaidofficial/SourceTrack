@@ -1,7 +1,7 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, FileBarChart, Settings, Users, BarChart3, Plug, LogOut, Menu, X, Shield,
-  Sun, Moon, ChevronDown
+  Sun, Moon, ChevronDown, Map, Sparkles
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
@@ -15,7 +15,10 @@ const NAV_GROUPS = [
   {
     label: null,
     items: [
-      { to: '/dashboard',     label: 'Dashboard',    icon: LayoutDashboard },
+      { to: '/analytics',     label: 'Analytics',    icon: LayoutDashboard },
+      { to: '/attribution',   label: 'Attribution',  icon: FileBarChart },
+      { to: '/journeys',      label: 'Journeys',     icon: Map },
+      { to: '/ai-sources',    label: 'AI Sources',   icon: Sparkles },
       { to: '/leads',         label: 'All Leads',    icon: Users },
       { to: '/campaigns',     label: 'Campaigns',    icon: BarChart3 },
       { to: '/report-builder', label: 'Report Builder', icon: FileBarChart },
@@ -27,12 +30,15 @@ const NAV_GROUPS = [
 
 const PAGE_TITLES = {
   '/dashboard': 'Performance Overview',
+  '/analytics': 'Performance Overview',
+  '/attribution': 'Performance Overview',
+  '/journeys': 'Performance Overview',
+  '/ai-sources': 'Performance Overview',
   '/leads': 'Leads',
   '/campaigns': 'Campaigns & Attribution',
   '/report-builder': 'Report Builder',
   '/journey': 'Visitor Journeys',
   '/ai-analytics': 'AI Analytics',
-  '/analytics': 'Analytics',
   '/app/integrations': 'Integrations',
   '/snippet': 'Install Tracking',
   '/debugger': 'Live Events',

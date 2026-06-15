@@ -289,6 +289,8 @@ export default function Campaigns() {
 
   const kpis = overview?.kpis
   const rows = overview?.rows || []
+  const hasRevenue = (kpis?.total_revenue || 0) > 0
+  const hasCost = (kpis?.total_spend || 0) > 0
   const analyticsAvailable = overview?.analytics_available !== false
   const analyticsWarning = overview?.warning?.message || null
 

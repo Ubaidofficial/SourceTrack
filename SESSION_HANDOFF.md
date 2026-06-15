@@ -2,7 +2,13 @@
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
-> **Handoff:** Session 140G-28 — Final V1 UI Implementation From Approved Designs — **PARTIAL — Final V1 UI first pass implemented; browser route QA BLOCKED / not verified.**
+> **Handoff:** Session 140G-29 — Brutal Browser QA for Final V1 UI Refresh — **FAIL/PARTIAL — Browser QA found /campaigns staging crash; local fix prepared; Analytics-first navigation direction added; deploy + browser re-test required.**
+> - **Staging campaigns crash fixed locally**: Discovered that `/campaigns` crashes on deployed staging with `ReferenceError: hasRevenue is not defined`. Applied a surgical fix in `dashboard/src/pages/Campaigns.jsx` to declare `hasRevenue` and `hasCost` variables. Passed all static/safety checks locally.
+> - **Analytics-First Navigation**: Restructured V1 navigation hierarchy to make Analytics a first-class sidebar item before Attribution. Updated `Layout.jsx` sidebar items, `App.jsx` routes, and `Dashboard.jsx` active tab logic so `/analytics`, `/attribution`, `/journeys`, and `/ai-sources` all mount the Dashboard component with the correct initial tab active.
+> - **Product spec created**: Documented the Analytics-first product direction in `docs/product/sourcetrack_navigation_analytics_first_class.md`.
+> - **Readiness Impact**: Paid beta remains **NOT READY** until this Campaigns route fix and Analytics-first layout are deployed and browser re-tested on staging.
+>
+> **Prior handoff (Session 140G-28):** Session 140G-28 — Final V1 UI Implementation From Approved Designs — **PARTIAL — Final V1 UI first pass implemented; browser route QA BLOCKED / not verified.**
 > - **V1 UI Refresh**: Implemented App Layout cleanup, tabbed Dashboard foundation, Leads qualification options consolidation, Journey Modal slide-over and AI summary card, read-only Campaigns status and details panel, and resolved unused code imports.
 > - **Data & Setup States**: Restored the onboarding banner and empty Overview tab states to preserve first-run setup clarity when tracking is not detected.
 > - **Readiness Impact**: Browser QA remains **BLOCKED — browser route QA not verified in this session.** until browser routing and functional E2E tests are conducted.

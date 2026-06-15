@@ -154,7 +154,7 @@ function ProtectedRoute({ children }) {
     return <Navigate to="/onboarding" replace />
   }
   if (pathname === '/onboarding' && onboarding.completed && !explicitOnboardingIntent) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to="/analytics" replace />
   }
 
   return <Layout>{children}</Layout>
@@ -164,7 +164,7 @@ function PublicRoute({ children }) {
   const { user, loading } = useAuth()
 
   if (loading) return null
-  if (user) return <Navigate to="/dashboard" replace />
+  if (user) return <Navigate to="/analytics" replace />
   return children
 }
 
@@ -182,7 +182,11 @@ export default function App() {
               <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
               <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/dashboard" element={<Navigate to="/analytics" replace />} />
+              <Route path="/analytics" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/attribution" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/journeys" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/ai-sources" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
               <Route path="/leads/:leadId" element={<ProtectedRoute><LeadDetail /></ProtectedRoute>} />
               <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
@@ -193,7 +197,7 @@ export default function App() {
               <Route path="/report-builder" element={<ReportBuilderGate />} />
               <Route path="/journey" element={<ProtectedRoute><Journey /></ProtectedRoute>} />
               <Route path="/seo-revenue" element={<ProtectedRoute><SEORevenue /></ProtectedRoute>} />
-              <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+              <Route path="/old-analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
               <Route path="/ai-chat" element={<ProtectedRoute><AIChat /></ProtectedRoute>} />
               <Route path="/ai-analytics" element={<ProtectedRoute><AIAnalytics /></ProtectedRoute>} />
               <Route path="/snippet" element={<ProtectedRoute><Snippet /></ProtectedRoute>} />

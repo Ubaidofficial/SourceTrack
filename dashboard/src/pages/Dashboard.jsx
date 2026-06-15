@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { fetchApi } from '../lib/api'
 import { format, subDays } from 'date-fns'
 import { useAuth } from '../contexts/AuthContext'
@@ -258,7 +258,20 @@ export default function Dashboard() {
   const [previewSiteDomain, setPreviewSiteDomain] = useState('')
   const [lastRefresh, setLastRefresh] = useState(new Date())
   const freshnessLabel = useFreshnessLabel(lastRefresh)
-  const [activeTab, setActiveTab] = useState('overview')
+  const location = useLocation()
+  const activeTab = (() => {
+    if (location.pathname === '/attribution') return 'attribution'
+    if (location.pathname === '/ai-sources') return 'ai_sources'
+    if (location.pathname === '/journeys') return 'journeys'
+    return 'overview'
+  })()
+
+  const setActiveTab = (tabId) => {
+    if (tabId === 'overview') navigate('/analytics')
+    else if (tabId === 'attribution') navigate('/attribution')
+    else if (tabId === 'ai_sources') navigate('/ai-sources')
+    else if (tabId === 'journeys') navigate('/journeys')
+  }
 
   useEffect(() => {
     // Check for support-mode preview context
