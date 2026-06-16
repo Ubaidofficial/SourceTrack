@@ -56,7 +56,7 @@ Our audit of the codebase yielded the following details on how attribution is ca
 
 ## 4. Gaps & Brutal Truth Reality Check
 
-1.  **No Automations:** There is zero automatic capture of native contact forms, Webflow forms, Framer elements, WordPress forms, or scheduling tool integrations. 
+1.  **No Automations:** There is zero automatic capture of native contact forms, Webflow forms, Framer elements, WordPress forms, or scheduling tool integrations.
 2.  **API Key Mismatch:** The previous claim in `PROGRESS.md` that Calendly v1 integration (Session 41) was active in `Snippet.jsx` is false. No Calendly reference exists in the dashboard UI.
 3.  **Stray Identify Payload Redaction:** In `api/routes/identify.js`, `req.body = redactPiiFromObject(req.body)` is invoked *before* extraction of properties. This means if a user sends `contact_email` or `email` traits, they are immediately overwritten with `[REDACTED]`, preventing the database from registering actual lead emails. This must be addressed in the next coding session by introducing exceptions in `redactPiiFromObject` for explicit identifiers during `$identify` API calls.
 4.  **Iframe Isolation Blockers:** Third-party embeds (Jotform, TidyCal, and generic cross-origin iframe booking links) run inside sandboxed documents that restrict parent access and fail to emit postMessage events. There is no browser-based method to guarantee scheduled call tracking for these tools. This reality must be highlighted clearly in documentation.
