@@ -2,17 +2,17 @@
 
 ## Verdict
 
-🟡 **FAIL before fix / PASS after fix** (Retested & Verified on 2026-06-16)
+🟢 **PASS** (Post-Push Deployed Staging Smoke Verified on 2026-06-16)
 
-*We have successfully verified the entire E2E path from signup/login to first event ingestion and dashboard reporting on the live staging environment. Initially, the onboarding flow failed because a newly registered free-tier user completing onboarding triggered `seedReportsForBusiness`, which sent requests to `/api/reports/saved` that failed with 402 Payment Required, globally redirecting the user to `/billing` instead of landing them on `/dashboard`. After implementing the fix (adding `skipBillingRedirect: true` to `fetchApi` options in the seeding module to catch 402 errors locally), onboarding now completes cleanly and lands on the dashboard. Additionally, the 5-minute site cache latency inside the auth middleware has been bypassed specifically for `/install/doctor` requests, allowing the Setup Doctor to verify the script and show `HEALTHY` instantly. All tests were performed with real script-load execution in headless Chrome.*
+*We have successfully verified the entire E2E path from signup/login to first event ingestion and dashboard reporting on the live deployed staging environment. Initially, the onboarding flow failed because a newly registered free-tier user completing onboarding triggered `seedReportsForBusiness`, which sent requests to `/api/reports/saved` that failed with 402 Payment Required, globally redirecting the user to `/billing` instead of landing them on `/dashboard`. After implementing and pushing the fix (adding `skipBillingRedirect: true` to `fetchApi` options in the seeding module to catch 402 errors locally), onboarding now completes cleanly and lands on the dashboard. Additionally, the 5-minute site cache latency inside the auth middleware has been bypassed specifically for `/install/doctor` requests, allowing the Setup Doctor to verify the script and show `HEALTHY` instantly. All tests were performed with real script-load execution in headless Chrome on the live deployed environment.*
 
 Paid beta remains **NOT READY** (pending production-auth SMTP redirects validation, backup physical restore drills, and final production smoke verification).
 
 ## Scope
 
 *   **Staging Database Project**: `nrsvpwzekfrdrzkoecfk`
-*   **Staging Dashboard Host**: `http://localhost:5173` (Local Dev) / `https://sourcetrack-dashboard-staging.up.railway.app` (Staging Deployed)
-*   **Staging API Endpoint**: `http://localhost:3000` (Local Dev) / `https://sourcetrack-api-staging.up.railway.app` (Staging Deployed)
+*   **Staging Dashboard Host**: `https://sourcetrack-dashboard-staging.up.railway.app` (Staging Deployed)
+*   **Staging API Endpoint**: `https://sourcetrack-api-staging.up.railway.app` (Staging Deployed)
 *   **Staging PostHog Project**: `469905` (Isolated from production `416017`)
 *   **Production DB/Project**: `zxjjjsipafojhzkkumvh` (Strictly Excluded / Untouched)
 
@@ -26,8 +26,8 @@ Paid beta remains **NOT READY** (pending production-auth SMTP redirects validati
 ## Baseline git/CI state
 
 *   **Active branch**: `main`
-*   **HEAD commit**: `a835a05` ("Session 139K-B4-R — Verify deployed billing cache and UI")
-*   **Working tree status**: modified (contains staging fixes for the 402 redirect bug and the setup doctor cache delay)
+*   **HEAD commit**: `2602e64` ("Session 139K-C — Fix onboarding billing redirect and setup doctor cache lag")
+*   **Working tree status**: modified (contains staging verification documentation updates only)
 *   **CI status**: Green (GitHub Actions CI workflow passing on main)
 
 ## Code audit findings
@@ -43,110 +43,111 @@ Paid beta remains **NOT READY** (pending production-auth SMTP redirects validati
 ## Browser method
 
 *   **Browser/tool used**: Headless Chrome (via `chrome-devtools-mcp`)
-*   **Staging/Local URL**: `http://localhost:5173`
-*   **User path**: `/login` ➔ `/onboarding` ➔ `/dashboard` ➔ `/setup`
-*   **Site ID**: `f1d74d8c-272f-48c9-9bc9-29228674bd59`
-*   **Site key**: `e85ff342-ec07-40a3-9978-47d466d9366a`
+*   **Staging URL**: `https://sourcetrack-dashboard-staging.up.railway.app`
+*   **User path**: `/signup` ➔ `/login` ➔ `/onboarding` ➔ `/dashboard` ➔ `/setup`
+*   **Site ID**: `a7c5c528-3bb6-4c3b-87e6-f043d5dd84e8`
+*   **Site key**: `918186e5-96b0-4675-ae3f-ed9c132c569d`
 
 ## Routes tested
 
 | Route | Result | Console | Network | Notes |
 |---|---|---|---|---|
-| `/signup` | ⚠️ Bypassed | - | - | Supabase auth signup rate limits hit; verified via database-pre-confirmed user login |
-| `/login` | ✅ PASS | clean | 200 | Authenticated user `local-e2e-16june-1904@sourcetrack.ai` |
-| `/onboarding` | ✅ PASS | clean | 200 | Connect Domain ➔ Business Type ➔ Install Script ➔ Customize |
+| `/signup` | ✅ PASS | clean | 200 | Sign up successful; email confirmation bypassed via staging SQL |
+| `/login` | ✅ PASS | clean | 200 | Authenticated user `staging-smoke-16june-1930@sourcetrack.ai` |
+| `/onboarding` | ✅ PASS | clean | 200 | Connect Domain ➔ Business Type ➔ Install Script ➔ Customize ➔ Verify |
 | `/dashboard` | ✅ PASS | clean | 200 | Onboarding completed cleanly; landed on dashboard without billing redirect |
-| `/setup` | ✅ PASS | clean | 200 | Setup guide loads, shows staging script URL and site key |
+| `/setup` | ✅ PASS | clean | 200 | Setup guide loads, shows staging script URL, site key, and HEALTHY status |
 
 ## Buttons/forms/modals tested
 
 | Surface | Action | Result |
 |---|---|---|
+| Signup form | Fill Email/Password & click "Create account" | Account created; verified via DB confirmation update |
 | Login form | Fill Email/Password & click "Sign in" | Successfully logged in, redirected to `/onboarding` |
-| Connect Domain step | Fill Website Domain & click "Confirm Domain" | Progressed to step 2; domain saved |
+| Connect Domain step | Fill Website Domain & click "Confirm Domain" | Progressed to step 2; domain `smoke-test-16june-1930.com` saved |
 | Business Type step | Click "SaaS" button | Progressed to step 3; type saved |
 | Install Method step | Click "SourceTrack Pixel" button | Progressed to step 4; method saved |
 | Install Script step | Click "Copy Code" & click "Continue" | Snippet copied, progressed to step 5 |
-| Customize step | Select "Sign Up" and "Free Trial" & click "Continue" | Progressed to step 6; conversions saved |
-| Run Verification step | Click "Verify Now" | Checked active tracking telemetry |
+| Customize step | Select "Sign Up" and "Purchase" & click "Continue" | Progressed to step 6; conversions saved |
+| Run Verification step | Click "Verify Now" / Auto-poll detection | Checked active tracking telemetry; verified HEALTHY instantly |
 | Success screen | Click "Continue to Dashboard" | Onboarding complete, navigated to `/dashboard` |
 | Sidebar menu | Click "/setup" and "/dashboard" | Smooth client-side SPA navigation |
 
 ## Onboarding flow evidence
 
-A pre-registered user `local-e2e-16june-1904@sourcetrack.ai` was used. Direct SQL update was used to bypass email confirmation:
+A fresh test user `staging-smoke-16june-1930@sourcetrack.ai` was signed up. Direct SQL update was used to bypass email confirmation:
 ```sql
-UPDATE auth.users SET email_confirmed_at = now() WHERE email = 'local-e2e-16june-1904@sourcetrack.ai';
+UPDATE auth.users SET email_confirmed_at = now() WHERE email = 'staging-smoke-16june-1930@sourcetrack.ai';
 ```
 No full email confirmation delivery E2E is claimed for this session.
 
 The onboarding wizard was completed step-by-step:
-1.  **Domain**: `local-test-16june-1904.com`
+1.  **Domain**: `smoke-test-16june-1930.com`
 2.  **Business Type**: SaaS
 3.  **Install Method**: Standard (SourceTrack Pixel)
 4.  **Install Script**: Visual script tag successfully generated.
-5.  **Conversions**: Sign Up and Free Trial configured.
+5.  **Conversions**: Sign Up and Purchase configured.
 
 ## Setup/snippet evidence
 
-Copy snippet copies the correct tracking script pointing to the local/staging API:
+Copy snippet copies the correct tracking script pointing to the live staging API:
 ```html
-<script async src="http://localhost:3000/tracker.min.js" data-site-key="e85ff342-ec07-40a3-9978-47d466d9366a"></script>
+<script async src="https://sourcetrack-api-staging.up.railway.app/tracker.min.js" data-site-key="918186e5-96b0-4675-ae3f-ed9c132c569d"></script>
 ```
 
 ## Script load evidence
 
-Instead of simulated fetch calls, a real HTML test page `test-onboarding.html` containing the copied tracking snippet was created and loaded in headless Chrome.
+Instead of simulated fetch calls, a real HTML test page containing the copied tracking snippet was loaded in headless Chrome.
 The network logs confirmed:
-- `GET http://localhost:3000/tracker.min.js` ➔ `200 OK` (Tracker script successfully loaded)
-- `POST http://localhost:3000/api/track` ➔ `200 OK` (Pageview event successfully sent from the loaded script)
-- `POST http://localhost:3000/api/conversion` ➔ `200 OK` (Conversion event successfully sent from the loaded script)
+- `GET https://sourcetrack-api-staging.up.railway.app/tracker.min.js` ➔ `200 OK` (Tracker script successfully loaded)
+- `POST https://sourcetrack-api-staging.up.railway.app/api/track` ➔ `200 OK` (Pageview event successfully sent from the loaded script)
+- `POST https://sourcetrack-api-staging.up.railway.app/api/conversion` ➔ `200 OK` (Conversion event successfully sent from the loaded script)
 
 ## First event ingestion evidence
 
 *   **Pageview Event request**:
-    `POST http://localhost:3000/api/track`
+    `POST https://sourcetrack-api-staging.up.railway.app/api/track`
     `Payload`:
     ```json
     {
-      "site_key": "e85ff342-ec07-40a3-9978-47d466d9366a",
+      "site_key": "918186e5-96b0-4675-ae3f-ed9c132c569d",
       "event": "$pageview",
-      "page_url": "https://local-test-16june-1904.com/",
+      "page_url": "https://smoke-test-16june-1930.com/?utm_source=google&utm_medium=cpc&utm_campaign=smoke_test_campaign&gclid=gclid-smoke-999",
       "referrer": "https://www.google.com/",
-      "anonymous_id": "qa-anon-id-99999",
+      "anonymous_id": "qa-anon-id-staging-9999",
       "utm_source": "google",
       "utm_medium": "cpc",
-      "utm_campaign": "qa_test",
-      "gclid": "test123"
+      "utm_campaign": "smoke_test_campaign",
+      "gclid": "gclid-smoke-999"
     }
     ```
     `Response`:
     `200 OK` (`{"success":true,"data":{"received":true},"error":null}`)
 
 *   **Conversion Event request**:
-    `POST http://localhost:3000/api/conversion`
+    `POST https://sourcetrack-api-staging.up.railway.app/api/conversion`
     `Payload`:
     ```json
     {
-      "site_key": "e85ff342-ec07-40a3-9978-47d466d9366a",
+      "site_key": "918186e5-96b0-4675-ae3f-ed9c132c569d",
       "conversion_type": "purchase",
-      "value": 99.99,
+      "value": 149.99,
       "currency": "USD",
-      "order_id": "local-order-12345",
-      "anonymous_id": "qa-anon-id-99999",
+      "order_id": "smoke-order-12345",
+      "anonymous_id": "qa-anon-id-staging-9999",
       "properties": {
-        "page_url": "https://local-test-16june-1904.com/checkout/success"
+        "page_url": "https://smoke-test-16june-1930.com/checkout/success"
       }
     }
     ```
     `Response`:
-    `200 OK` (`{"success":true,"data":{"received":true},"dedup_skipped":true,"persistent":true},"error":null}`)
+    `200 OK` (`{"success":true,"data":{"received":true},"error":null}`)
 
 ## Tracking Doctor / setup health evidence
 
 *   **Bypassed Cache Delay**: The Express API maintains a 5-minute site key cache (`stdTTL: 300`) inside the auth middleware. By default, this causes the Setup Doctor to display cached data.
 *   **Resolution**: We modified the `validateSiteKey` middleware in `api/middleware/auth.js` to bypass the cache hit for `/install/doctor` requests.
-*   **Verdict**: The Tracking Doctor successfully resolved the fresh database telemetry record instantly and updated the UI to show `HEALTHY` and `Great! Script Verified Successfully`.
+*   **Verdict**: The Tracking Doctor successfully resolved the fresh database telemetry record instantly on deployed staging and updated the UI to show `HEALTHY` and `Great! Script Verified Successfully`.
 
 ## Dashboard first-event evidence
 
@@ -170,7 +171,7 @@ Staging dashboard console was completely clean:
 ## Bugs found & fixed
 
 1.  **saved_reports free plan gate blocking onboarding completion seeding**:
-    - **Symptom**: When a new free-plan site completed onboarding, the seeding script called `/api/reports/saved` which returned `402`, triggering the global `fetchApi` redirect to `/billing` instead of landing on the dashboard.
+    - **Symptom**: When a new free-plan site completed onboarding, the seeding script called `/api/reports/saved` which returned `402 Payment Required`, triggering the global `fetchApi` redirect to `/billing` instead of landing on the dashboard.
     - **Fix**: Added `skipBillingRedirect: true` to the options object in `fetchApi` (`dashboard/src/lib/api.js`) and passed it to the `/reports/saved` POST request inside `seedReportsForBusiness` (`dashboard/src/lib/seedReports.js`).
 2.  **Tracking Doctor cache delay (5 minutes)**:
     - **Symptom**: The Setup Doctor displayed stale data for up to 5 minutes due to the `siteCache` TTL.
@@ -178,8 +179,8 @@ Staging dashboard console was completely clean:
 
 ## Before/after evidence
 
-*   **Before Fix**: Onboarding completes ➔ Seeding starts ➔ `POST /reports/saved` returns 402 ➔ `fetchApi` redirects browser to `/billing` ➔ User is blocked from dashboard.
-*   **After Fix**: Onboarding completes ➔ Seeding starts ➔ `POST /reports/saved` returns 402 (gracefully caught) ➔ Browser navigates to `/dashboard` ➔ Onboarding completes cleanly.
+*   **Before Fix**: Onboarding completes ➔ Seeding starts ➔ `POST /reports/saved` returns 402 Payment Required ➔ `fetchApi` redirects browser to `/billing` ➔ User is blocked from dashboard.
+*   **After Fix**: Onboarding completes ➔ Seeding starts ➔ `POST /reports/saved` returns 402 Payment Required (gracefully caught) ➔ Browser navigates to `/dashboard` ➔ Onboarding completes cleanly.
 
 ## Remaining blockers
 
@@ -189,21 +190,20 @@ None for this session.
 
 *   **Setup page snapshot**:
     ```text
-    uid=43_0 RootWebArea "SourceTrack — Revenue Attribution Analytics for SaaS, Lead Gen, and Agencies" url="http://localhost:5173/setup"
-      uid=46_0 heading "Tracking Doctor" level="3"
-      uid=46_1 StaticText "HEALTHY"
-      uid=46_2 StaticText "Tracking is healthy. We received an event recently."
-      uid=46_5 StaticText "Last event received recently"
-      uid=46_7 StaticText "Events match registered domain"
+    uid=86_0 RootWebArea "SourceTrack — Revenue Attribution Analytics for SaaS, Lead Gen, and Agencies" url="https://sourcetrack-dashboard-staging.up.railway.app/setup"
+      uid=87_0 heading "Setup Guide" level="2"
+      uid=87_10 StaticText "smoke-test-16june-1930.com"
+      uid=87_13 StaticText "<script async src="https://sourcetrack-api-staging.up.railway.app/tracker.min.js" data-site-key="918186e5-96b0-4675-ae3f-ed9c132c569d"></script>"
+      uid=88_0 heading "Tracking Doctor" level="3"
+      uid=88_1 StaticText "HEALTHY"
+      uid=88_2 StaticText "Tracking is healthy. We received an event recently."
+      uid=88_7 StaticText "Events match registered domain"
     ```
 
 ## Git status
 
 ```text
- M api/middleware/auth.js
- M dashboard/src/lib/api.js
- M dashboard/src/lib/seedReports.js
- A docs/qa/onboarding_script_first_event_e2e_139K-C.md
+ M docs/qa/onboarding_script_first_event_e2e_139K-C.md
 ```
 
 ## Final verdict
