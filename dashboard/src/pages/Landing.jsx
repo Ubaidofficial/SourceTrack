@@ -8,10 +8,10 @@ import SectionKicker from '../components/SectionKicker'
 import HeroPreviewCard from '../components/HeroPreviewCard'
 
 const SEO = {
-  title: 'SourceTrack — Revenue Attribution Analytics for SaaS, Lead Gen, and Agencies',
-  description: 'SourceTrack helps SaaS, lead-gen, and agency teams track which sources, campaigns, AI referrals, and customer journeys turn into conversions and revenue. Multi-touch attribution with a lightweight install.',
+  title: 'SourceTrack — Simple Revenue Attribution Software',
+  description: 'SourceTrack is simple revenue attribution software for founders, marketers, ecommerce stores, agencies, and lead-gen teams. See which campaigns, AI referrals, and customer journeys create revenue.',
   canonical: 'https://sourcetrack.ai/',
-  ogTitle: 'SourceTrack — Know which sources actually create revenue',
+  ogTitle: 'SourceTrack — Simple Revenue Attribution Software',
   jsonLd: [
     {
       "@context": "https://schema.org",
@@ -50,10 +50,10 @@ const SEO = {
 }
 
 const HERO = {
-  kicker: 'Revenue attribution for modern marketing teams',
+  kicker: 'Simple revenue attribution software',
   h1: 'Know which sources actually',
   h1Gradient: 'create revenue.',
-  sub: 'Stop guessing which campaigns drive sales. SourceTrack connects the entire customer journey — from first click to paying customer — so you can stop relying on biased ad-platform self-reporting and scale what actually converts.',
+  sub: 'SourceTrack is simple revenue attribution software for founders, marketers, ecommerce stores, agencies, and lead-gen teams. See which campaigns, AI referrals, search terms, forms, bookings, and customer journeys turn into leads and revenue — without a heavy analytics stack.',
   primaryCta: 'Start tracking free',
   secondaryCta: 'View product',
   secondaryHref: '/product',
@@ -76,9 +76,9 @@ export default function Landing() {
         <div className="max-w-[1320px] mx-auto px-8">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
             {[
-              ['AI referral tracking', '15 AI platforms detected'],
+              ['AI referral tracking', 'ChatGPT, Claude, & more'],
               ['Multi-touch journeys', '9 attribution models'],
-              ['Revenue attribution', 'First to last touch'],
+              ['Revenue attribution', 'Campaign-to-cash visibility'],
               ['Report builder', 'Pin your own dashboards'],
               ['Event tracking', 'Low-latency capture'],
             ].map(([label, desc]) => (
@@ -98,18 +98,18 @@ export default function Landing() {
             <div>
               <SectionKicker label="The platform" />
               <h2 className="mt-5 text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black text-st-black">
-                One workspace for source, journey, conversion, and revenue clarity.
+                Revenue clarity without the BI bloat.
               </h2>
             </div>
             <p className="self-end text-[#586464] text-lg leading-[1.55] tracking-[-0.02em] max-w-[480px]">
-              SourceTrack captures every visitor touchpoint, connects the full customer journey, and attributes revenue back to the channels that actually created it — not just the last click.
+              SourceTrack is founder-friendly attribution software that connects the entire visitor timeline. Get campaign-to-cash visibility and see which channels actually create revenue — not just clicks.
             </p>
           </div>
 
           <FeatureCards items={[
-            { icon: '①', title: 'Attribution engine.', body: 'Track every campaign, UTM, referrer, landing page, and conversion event. Compare channels across 9 attribution models — first touch, last touch, linear, U-shaped, and more.' },
-            { icon: '②', title: 'AI referral tracking.', body: 'Reveal leads and revenue from ChatGPT, Claude, Gemini, Perplexity, and 15 AI platforms. Stop losing AI-driven conversions to direct traffic in your reports.' },
-            { icon: '③', title: 'Report builder.', body: 'Start from a blank canvas. Choose the metric and dimension that matches your business, save the widget, and pin it to your dashboard.' },
+            { icon: '①', title: 'Attribution engine.', body: 'Track every campaign, UTM referrer, landing page, and conversion event. Compare channels across 9 attribution models to establish your source of truth for revenue.' },
+            { icon: '②', title: 'AI-aware attribution.', body: 'Identify referring traffic from ChatGPT, Claude, Gemini, and Perplexity. Stop losing AI-driven conversions to direct traffic in your reports.' },
+            { icon: '③', title: 'No BI bloat.', body: 'Create custom widgets and dashboards tailored to your business metrics. Focus on simple revenue attribution without complex analytics setups.' },
           ]} />
         </div>
       </section>
@@ -127,10 +127,10 @@ export default function Landing() {
 
           <div className="mt-[54px]">
             <HowItWorksSteps steps={[
-              { title: 'Install the tracker', body: 'Add one script directly or through Google Tag Manager. Works on any website, Shopify store, or Webflow site.' },
-              { title: 'Capture the source', body: 'Every UTM, referrer, AI platform, landing page, and click ID is preserved — automatically.' },
-              { title: 'Track conversions', body: 'Fire events for purchases, trials, demos, forms, signups, or any custom business outcome.' },
-              { title: 'Build reports', body: 'Create and pin dashboards around the metrics your team actually uses to make budget decisions.' },
+              { title: 'Install the tracker', body: 'Paste our lightweight JavaScript snippet directly or deploy via Google Tag Manager. Works on custom sites, Webflow, Framer, and Shopify themes when installed via snippet or Google Tag Manager.' },
+              { title: 'Capture the source', body: 'Every UTM, referring domain, major AI referrer, and ad click ID signal is preserved — automatically.' },
+              { title: 'Track conversions', body: 'Trigger events on form submits, trial signups, booked meetings, or custom pipeline events.' },
+              { title: 'Build reports', body: 'Review multi-touch journeys and campaign performance on clean, pre-built or custom dashboard widgets.' },
             ]} />
           </div>
         </div>
@@ -171,11 +171,11 @@ export default function Landing() {
         <div className="max-w-[1320px] mx-auto px-8 text-center">
           <SectionKicker label="Why SourceTrack vs GA4 + ad platforms" />
           <h2 className="mt-5 text-[clamp(32px,4.5vw,58px)] leading-[0.92] tracking-[-0.07em] font-black text-st-black">
-            GA4 gives you pageviews. Ad platforms give you clicks.<br />
-            <span className="text-st-black">SourceTrack gives you the source that created the customer.</span>
+            GA4 gives you pageviews. Ad platforms claim credit.<br />
+            <span className="text-st-black">SourceTrack shows the source that created the customer.</span>
           </h2>
           <p className="mt-5 max-w-[620px] mx-auto text-[#586464] text-lg leading-[1.55]">
-            GA4 is built to track pageviews, not customer journeys. Ad platforms are built to favor their own ads, leading to duplicate conversion reports and wasted spend. SourceTrack gives you full-funnel attribution clarity. Track every touchpoint independently, prove the real ROI of your marketing, and double down on what actually works.
+            GA4 is complex and built for product event tracking, not marketing attribution. Ad platforms report in silos, leading to duplicate conversions and inflated ROI. SourceTrack provides a simple, founder-friendly attribution source of truth so you can see the true campaign-to-cash journey.
           </p>
 
           <div className="mt-[54px]">
@@ -183,7 +183,7 @@ export default function Landing() {
               ['Capability', 'SourceTrack', 'GA4', 'Ad platforms'],
               ['Multi-touch attribution setup', 'Install and go', 'Config-heavy', 'Platform-specific only'],
               ['Full customer journey timeline', 'Yes — every touchpoint', 'Hard to reconstruct', 'Not available'],
-              ['AI referral tracking (15 platforms)', 'Built in', 'Limited — marked as direct', 'Not available'],
+              ['AI referral tracking (ChatGPT/Claude)', 'Built in', 'Limited — marked as direct', 'Not available'],
               ['Custom attribution reports', 'Drag and pin', 'Complex — Explore only', 'Biased toward their clicks'],
               ['Revenue attribution per channel', 'Yes — all 9 models', 'Partial — last-click biased', 'Platform-biased'],
               ['Install speed', 'One script, minutes', 'Tag setup + configuration', 'Platform pixel only'],
@@ -211,11 +211,11 @@ export default function Landing() {
               { title: 'WordPress', desc: 'Insert script using headers/footers manager' },
               { title: 'Framer', desc: 'Add tracking code block to site settings' },
               { title: 'Custom Script', desc: 'Direct browser pixel placement' },
-              { title: 'Stripe Webhook', desc: 'Connect billing events via webhook recipes' },
-              { title: 'Shopify Webhook', desc: 'Ingest orders with signature verification' },
+              { title: 'Stripe Webhook', desc: 'Connect billing events via webhook recipes (Developer Beta)' },
+              { title: 'Shopify Webhook', desc: 'Ingest orders via webhook/custom script recipes' },
               { title: 'GSC Queries', desc: 'Query performance integration' },
               { title: 'CSV Cost Imports', desc: 'Upload spreadsheet campaign spend' },
-              { title: 'Custom API', desc: 'Developer HTTP offline ingestion route' },
+              { title: 'Custom API', desc: 'Developer HTTP ingestion endpoints (Beta)' },
             ].map((item) => (
               <div key={item.title} className="p-4 rounded-xl bg-white border border-[rgba(31,35,35,.08)] shadow-[0_4px_12px_rgba(31,35,35,.015)]">
                 <strong className="block text-st-black text-sm tracking-tight">{item.title}</strong>
@@ -249,7 +249,7 @@ export default function Landing() {
               </Link>
               <Link to="/use-cases/ecommerce" className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] hover:-translate-y-1 transition-all hover:shadow-[0_18px_52px_rgba(31,35,35,.09)]">
                 <strong className="text-lg tracking-[-0.04em]">Ecommerce</strong>
-                <p className="mt-1.5 text-[#586464] text-[15px]">Purchases, revenue, AOV, ROAS per campaign, and landing page purchase attribution.</p>
+                <p className="mt-1.5 text-[#586464] text-[15px]">Purchases, revenue, AOV, ROAS per campaign, and custom script purchase attribution.</p>
               </Link>
               <Link to="/use-cases/lead-generation" className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] hover:-translate-y-1 transition-all hover:shadow-[0_18px_52px_rgba(31,35,35,.09)]">
                 <strong className="text-lg tracking-[-0.04em]">Lead generation</strong>
@@ -257,7 +257,7 @@ export default function Landing() {
               </Link>
               <Link to="/use-cases/agencies" className="flex flex-col p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.12)] shadow-[0_12px_38px_rgba(31,35,35,.055)] hover:-translate-y-1 transition-all hover:shadow-[0_18px_52px_rgba(31,35,35,.09)]">
                 <strong className="text-lg tracking-[-0.04em]">Agencies</strong>
-                <p className="mt-1.5 text-[#586464] text-[15px]">Client reporting, source-of-truth attribution, campaign optimization, and client-safe report exports.</p>
+                <p className="mt-1.5 text-[#586464] text-[15px]">Client reporting, source-of-truth attribution, campaign optimization, and dashboard templates.</p>
               </Link>
             </div>
           </div>
