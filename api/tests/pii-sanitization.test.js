@@ -201,6 +201,7 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
   let insertedCustomEvents = []
   let updatedSites = []
   let rpcCalls = []
+  let identityLinkUpserts = []
 
   const setupMocks = () => {
     captureCalled = false
@@ -209,6 +210,7 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     insertedCustomEvents = []
     updatedSites = []
     rpcCalls = []
+    identityLinkUpserts = []
 
     ph.capture = (args) => {
       captureCalled = true
@@ -275,6 +277,14 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
         return {
           insert: async (data) => {
             insertedCustomEvents.push(data)
+            return { error: null }
+          }
+        }
+      }
+      if (table === 'site_identity_links') {
+        return {
+          upsert: async (data) => {
+            identityLinkUpserts.push(data)
             return { error: null }
           }
         }
@@ -776,6 +786,338 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     assert.strictEqual(captureCalled, true)
     const capturedProps = lastCaptureArgs.properties
     assert.strictEqual(capturedProps.ai_source, 'ChatGPT')
+    restoreMocks()
+  })
+
+  await t.test('/api/identify processes allowed identity fields, prevents raw contact_email leak, preserves email_hash, and rejects unsafe user_ids', async () => {
+    setupMocks()
+    const { identify } = await import('../routes/identify.js')
+    const { createHash } = await import('crypto')
+
+    // Test case 1: Happy path with safe allowed fields, external_id, and unsafe traits to redact
+    const req = {
+      site: { id: 'site-123' },
+      body: {
+        user_id: 'safe-user-123',
+        anonymous_id: 'anon-abc',
+        visitor_id: 'visitor-xyz',
+        external_id: 'ext-999',
+        contact_email: 'Test@Example.Com',
+        traits: {
+          custom_trait: 'val',
+          phone: '123-456-7890',
+          password: 'supersecretpassword',
+          address: '123 Main St'
+        }
+      }
+    }
+    const res = makeMockRes()
+    await identify(req, res)
+
+    assert.strictEqual(captureCalled, true)
+    const capturedProps = lastCaptureArgs.properties
+    assert.strictEqual(lastCaptureArgs.distinctId, 'anon-abc')
+    assert.strictEqual(capturedProps.site_id, 'site-123')
+
+    // Check that raw contact_email is NOT in the PostHog properties by default
+    assert.strictEqual(capturedProps.contact_email, undefined)
+    assert.strictEqual(capturedProps.$set.contact_email, undefined)
+
+    // Check that email_hash was derived and forwarded
+    const expectedHash = createHash('sha256').update('test@example.com').digest('hex')
+    assert.strictEqual(capturedProps.$set.email_hash, expectedHash)
+
+    // Check allowed identifiers
+    assert.strictEqual(capturedProps.$set.user_id, 'safe-user-123')
+    assert.strictEqual(capturedProps.$set.anonymous_id, 'anon-abc')
+    assert.strictEqual(capturedProps.$set.visitor_id, 'visitor-xyz')
+    assert.strictEqual(capturedProps.$set.external_id, 'ext-999')
+
+    // Check custom trait is preserved
+    assert.strictEqual(capturedProps.$set.custom_trait, 'val')
+
+    // Check other unsafe PII is redacted
+    assert.strictEqual(capturedProps.$set.phone, '[REDACTED]')
+    assert.strictEqual(capturedProps.$set.password, '[REDACTED]')
+    assert.strictEqual(capturedProps.$set.address, '[REDACTED]')
+
+    // Check database identity-link storage assertions
+    assert.strictEqual(identityLinkUpserts.length, 1)
+    const upsertData = identityLinkUpserts[0]
+    assert.strictEqual(upsertData.site_id, 'site-123')
+    assert.strictEqual(upsertData.user_id, 'safe-user-123')
+    assert.strictEqual(upsertData.anonymous_id, 'anon-abc')
+    assert.strictEqual(upsertData.source, 'identify')
+
+    restoreMocks()
+  })
+
+  await t.test('/api/identify rejects/sanitizes unsafe user_ids and external_ids', async () => {
+    setupMocks()
+    const { identify } = await import('../routes/identify.js')
+
+    const unsafeIds = [
+      'user@domain.com',
+      '+123456789',
+      'ghp_abcdefghijklmnop',
+      'a'.repeat(32), // hex-like token if hex
+      'secret_token_123',
+      'sk_live_123',
+      'pk_test_456'
+    ]
+
+    for (const unsafeId of unsafeIds) {
+      captureCalled = false
+      identityLinkUpserts = []
+      const req = {
+        site: { id: 'site-123' },
+        body: {
+          user_id: unsafeId,
+          anonymous_id: 'anon-abc',
+          external_id: unsafeId
+        }
+      }
+      const res = makeMockRes()
+      await identify(req, res)
+      assert.strictEqual(captureCalled, true)
+
+      // Since user_id and external_id were unsafe, they must not be present
+      assert.strictEqual(lastCaptureArgs.properties.$set.user_id, undefined)
+      assert.strictEqual(lastCaptureArgs.properties.$set.external_id, undefined)
+
+      // Since user_id is unsafe/null, no database identity link upsert must occur
+      assert.strictEqual(identityLinkUpserts.length, 0)
+    }
+
+    restoreMocks()
+  })
+
+  await t.test('/api/identify validates anonymous_id and visitor_id using the safety gate', async () => {
+    setupMocks()
+    const { identify } = await import('../routes/identify.js')
+
+    const unsafeIds = [
+      'user@domain.com',
+      '+123456789',
+      'ghp_abc',
+      'sk_123'
+    ]
+
+    for (const unsafeId of unsafeIds) {
+      captureCalled = false
+      identityLinkUpserts = []
+      const req = {
+        site: { id: 'site-123' },
+        body: {
+          user_id: 'safe-user',
+          anonymous_id: unsafeId,
+          visitor_id: unsafeId
+        }
+      }
+      const res = makeMockRes()
+      await identify(req, res)
+      assert.strictEqual(captureCalled, true)
+
+      // Since anonymous_id and visitor_id were unsafe, they must not be present
+      assert.strictEqual(lastCaptureArgs.properties.$set.anonymous_id, undefined)
+      assert.strictEqual(lastCaptureArgs.properties.$set.visitor_id, undefined)
+
+      // Since anonymous_id is null/unsafe, no database identity link upsert must occur
+      assert.strictEqual(identityLinkUpserts.length, 0)
+    }
+
+    restoreMocks()
+  })
+
+  await t.test('contact_email and traits.email validation and hashing behavior', async () => {
+    setupMocks()
+    const { identify } = await import('../routes/identify.js')
+    const { createHash } = await import('crypto')
+
+    // 1. contact_email: "Lead@Example.Com" derives the expected SHA-256 hash, never forwarded raw, does not create DB link
+    {
+      captureCalled = false
+      identityLinkUpserts = []
+      const req = {
+        site: { id: 'site-123' },
+        body: {
+          contact_email: 'Lead@Example.Com',
+          anonymous_id: 'anon-abc'
+        }
+      }
+      const res = makeMockRes()
+      await identify(req, res)
+
+      assert.strictEqual(captureCalled, true)
+      const capturedProps = lastCaptureArgs.properties
+      assert.strictEqual(capturedProps.$set.user_id, undefined)
+      assert.strictEqual(capturedProps.contact_email, undefined)
+      assert.strictEqual(capturedProps.$set.contact_email, undefined)
+
+      const expectedHash = createHash('sha256').update('lead@example.com').digest('hex')
+      assert.strictEqual(capturedProps.$set.email_hash, expectedHash)
+      assert.strictEqual(identityLinkUpserts.length, 0)
+    }
+
+    // 2. contact_email: "not-an-email" does not derive/forward email_hash
+    {
+      captureCalled = false
+      const req = {
+        site: { id: 'site-123' },
+        body: {
+          contact_email: 'not-an-email',
+          anonymous_id: 'anon-abc'
+        }
+      }
+      const res = makeMockRes()
+      await identify(req, res)
+      assert.strictEqual(captureCalled, true)
+      assert.strictEqual(lastCaptureArgs.properties.$set.email_hash, undefined)
+    }
+
+    // 3. contact_email: "+1234567890" does not derive/forward email_hash
+    {
+      captureCalled = false
+      const req = {
+        site: { id: 'site-123' },
+        body: {
+          contact_email: '+1234567890',
+          anonymous_id: 'anon-abc'
+        }
+      }
+      const res = makeMockRes()
+      await identify(req, res)
+      assert.strictEqual(captureCalled, true)
+      assert.strictEqual(lastCaptureArgs.properties.$set.email_hash, undefined)
+    }
+
+    // 4. contact_email: "my password is abc123" does not derive/forward email_hash
+    {
+      captureCalled = false
+      const req = {
+        site: { id: 'site-123' },
+        body: {
+          contact_email: 'my password is abc123',
+          anonymous_id: 'anon-abc'
+        }
+      }
+      const res = makeMockRes()
+      await identify(req, res)
+      assert.strictEqual(captureCalled, true)
+      assert.strictEqual(lastCaptureArgs.properties.$set.email_hash, undefined)
+    }
+
+    // 5. traits.email with an invalid email does not derive/forward email_hash
+    {
+      captureCalled = false
+      const req = {
+        site: { id: 'site-123' },
+        body: {
+          anonymous_id: 'anon-abc',
+          traits: {
+            email: 'invalid-email-address'
+          }
+        }
+      }
+      const res = makeMockRes()
+      await identify(req, res)
+      assert.strictEqual(captureCalled, true)
+      assert.strictEqual(lastCaptureArgs.properties.$set.email_hash, undefined)
+    }
+
+    // 6. Valid traits.email derives the expected hash
+    {
+      captureCalled = false
+      const req = {
+        site: { id: 'site-123' },
+        body: {
+          anonymous_id: 'anon-abc',
+          traits: {
+            email: 'ValidTraits@Example.Com'
+          }
+        }
+      }
+      const res = makeMockRes()
+      await identify(req, res)
+      assert.strictEqual(captureCalled, true)
+      const expectedHash = createHash('sha256').update('validtraits@example.com').digest('hex')
+      assert.strictEqual(lastCaptureArgs.properties.$set.email_hash, expectedHash)
+    }
+
+    restoreMocks()
+  })
+
+  await t.test('/api/identify email_hash strict validation rules', async () => {
+    setupMocks()
+    const { identify } = await import('../routes/identify.js')
+    const { createHash } = await import('crypto')
+
+    // 1. email_hash: "Lead@Example.com" is not forwarded
+    {
+      captureCalled = false
+      const req = {
+        site: { id: 'site-123' },
+        body: {
+          email_hash: 'Lead@Example.com',
+          anonymous_id: 'anon-abc'
+        }
+      }
+      const res = makeMockRes()
+      await identify(req, res)
+      assert.strictEqual(captureCalled, true)
+      assert.strictEqual(lastCaptureArgs.properties.$set.email_hash, undefined)
+    }
+
+    // 2. email_hash: "not-a-hash" is not forwarded
+    {
+      captureCalled = false
+      const req = {
+        site: { id: 'site-123' },
+        body: {
+          email_hash: 'not-a-hash',
+          anonymous_id: 'anon-abc'
+        }
+      }
+      const res = makeMockRes()
+      await identify(req, res)
+      assert.strictEqual(captureCalled, true)
+      assert.strictEqual(lastCaptureArgs.properties.$set.email_hash, undefined)
+    }
+
+    // 3. email_hash: "a".repeat(64) is forwarded
+    {
+      captureCalled = false
+      const req = {
+        site: { id: 'site-123' },
+        body: {
+          email_hash: 'a'.repeat(64),
+          anonymous_id: 'anon-abc'
+        }
+      }
+      const res = makeMockRes()
+      await identify(req, res)
+      assert.strictEqual(captureCalled, true)
+      assert.strictEqual(lastCaptureArgs.properties.$set.email_hash, 'a'.repeat(64))
+    }
+
+    // 4. If both contact_email and invalid email_hash are present, derived SHA-256 hash is used
+    {
+      captureCalled = false
+      const req = {
+        site: { id: 'site-123' },
+        body: {
+          contact_email: 'Lead@Example.Com',
+          email_hash: 'invalid-hash-here',
+          anonymous_id: 'anon-abc'
+        }
+      }
+      const res = makeMockRes()
+      await identify(req, res)
+      assert.strictEqual(captureCalled, true)
+      const expectedHash = createHash('sha256').update('lead@example.com').digest('hex')
+      assert.strictEqual(lastCaptureArgs.properties.$set.email_hash, expectedHash)
+    }
+
     restoreMocks()
   })
 
