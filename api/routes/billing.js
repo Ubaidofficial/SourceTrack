@@ -4,7 +4,7 @@ import NodeCache from 'node-cache'
 import { getSupabase } from '../lib/supabase.js'
 import { normalizePlan, getPvLimit } from '../lib/plan-features.js'
 import { requireUserAuth } from '../middleware/user-auth.js'
-import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
+import { validateSiteKey, requireSiteMembership, clearSiteCache, clearSiteCacheForKeys } from '../middleware/auth.js'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2024-06-20'
@@ -66,6 +66,42 @@ async function getSiteByCustomerId(customerId) {
   return data
 }
 
+async function invalidateCacheByCustomerId(customerId, sb) {
+  if (!customerId) return
+  try {
+    const { data: sites, error } = await sb
+      .from('sites')
+      .select('id, site_key, domain')
+      .eq('stripe_customer_id', customerId)
+
+    if (error || !sites || sites.length === 0) return
+    const siteKeys = sites.map(s => s.site_key).filter(Boolean)
+    const count = clearSiteCacheForKeys(siteKeys)
+    console.log(`billing cache invalidated for affected staging/production site row count: ${count}`)
+  } catch (err) {
+    console.error('[billing cache] failed to invalidate by customerId:', err.message)
+  }
+}
+
+async function invalidateCacheBySiteId(siteId, sb) {
+  if (!siteId) return
+  try {
+    const { data: site, error } = await sb
+      .from('sites')
+      .select('id, site_key, domain')
+      .eq('id', siteId)
+      .maybeSingle()
+
+    if (error || !site || !site.site_key) return
+    const cleared = clearSiteCache(site.site_key)
+    if (cleared) {
+      console.log('billing cache invalidated for affected staging/production site row count: 1')
+    }
+  } catch (err) {
+    console.error('[billing cache] failed to invalidate by siteId:', err.message)
+  }
+}
+
 // ── Webhook handler ───────────────────────────────────────────────────────────
 export async function billingWebhookHandler(req, res) {
   const sig = req.headers['stripe-signature']
@@ -114,12 +150,19 @@ export async function billingWebhookHandler(req, res) {
           pvLimit = pvLimitFromPrice(price, plan)
         }
 
-        await sb.from('sites').update({
+        const { error } = await sb.from('sites').update({
           plan,
           pv_limit: pvLimit,
           stripe_customer_id: customerId,
           stripe_subscription_id: subId || null,
         }).eq('id', siteId)
+
+        if (error) {
+          console.error('[billing] failed to update subscription state:', error.message)
+          throw error
+        }
+
+        await invalidateCacheBySiteId(siteId, sb)
 
         console.log(`[billing] checkout complete — site ${siteId} → plan ${plan}`)
         break
@@ -135,11 +178,18 @@ export async function billingWebhookHandler(req, res) {
         const plan       = isActive ? planFromPriceId(price?.id) : 'inactive'
         const pvLimit    = isActive ? pvLimitFromPrice(price, plan) : 0
 
-        await sb.from('sites').update({
+        const { error } = await sb.from('sites').update({
           plan,
           pv_limit: pvLimit,
           stripe_subscription_id: sub.id,
         }).eq('stripe_customer_id', customerId)
+
+        if (error) {
+          console.error('[billing] failed to update subscription state:', error.message)
+          throw error
+        }
+
+        await invalidateCacheByCustomerId(customerId, sb)
 
         console.log(`[billing] subscription updated — customer ${customerId} → plan ${plan} (${status})`)
         break
@@ -148,7 +198,14 @@ export async function billingWebhookHandler(req, res) {
       // ── Subscription cancelled ─────────────────────────────────────────────
       case 'customer.subscription.deleted': {
         const customerId = event.data.object.customer
-        await sb.from('sites').update({ plan: 'inactive', pv_limit: 0 }).eq('stripe_customer_id', customerId)
+        const { error } = await sb.from('sites').update({ plan: 'inactive', pv_limit: 0 }).eq('stripe_customer_id', customerId)
+
+        if (error) {
+          console.error('[billing] failed to update subscription state:', error.message)
+          throw error
+        }
+
+        await invalidateCacheByCustomerId(customerId, sb)
         console.log(`[billing] subscription cancelled — customer ${customerId}`)
         break
       }
@@ -166,7 +223,14 @@ export async function billingWebhookHandler(req, res) {
             const price = subs.data[0]?.items?.data?.[0]?.price
             const plan = planFromPriceId(price?.id)
             const pvLimit = pvLimitFromPrice(price, plan)
-            await sb.from('sites').update({ plan, pv_limit: pvLimit }).eq('stripe_customer_id', customerId)
+            const { error } = await sb.from('sites').update({ plan, pv_limit: pvLimit }).eq('stripe_customer_id', customerId)
+
+            if (error) {
+              console.error('[billing] failed to update subscription state:', error.message)
+              throw error
+            }
+
+            await invalidateCacheByCustomerId(customerId, sb)
             console.log(`[billing] payment succeeded — reactivated ${customerId} → ${plan}`)
           }
         }
@@ -179,7 +243,14 @@ export async function billingWebhookHandler(req, res) {
         const attempt    = event.data.object.attempt_count
         // Only suspend after 3rd failed attempt — Stripe retries by default
         if (attempt >= 3) {
-          await sb.from('sites').update({ plan: 'inactive', pv_limit: 0 }).eq('stripe_customer_id', customerId)
+          const { error } = await sb.from('sites').update({ plan: 'inactive', pv_limit: 0 }).eq('stripe_customer_id', customerId)
+
+          if (error) {
+            console.error('[billing] failed to update subscription state:', error.message)
+            throw error
+          }
+
+          await invalidateCacheByCustomerId(customerId, sb)
           console.warn(`[billing] payment failed x${attempt} — suspended ${customerId}`)
         } else {
           console.warn(`[billing] payment failed x${attempt} for ${customerId} — waiting for retry`)

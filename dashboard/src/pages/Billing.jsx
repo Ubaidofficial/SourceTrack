@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { CreditCard, ExternalLink, Zap, CheckCircle2 } from 'lucide-react'
 import { normalizePlan } from '../lib/planFeatures'
 import { getPlanLabel } from '../lib/billing'
-import { createCheckout, getBillingPortal } from '../lib/api'
+import { createCheckout, getBillingPortal, getBillingStatus } from '../lib/api'
 
 // Default pageview limits per plan. The site's own pv_limit column takes precedence.
 const PLAN_DEFAULT_LIMITS = {
@@ -48,6 +48,7 @@ const PLANS = [
 export default function Billing() {
   const { user } = useAuth()
   const [site, setSite]             = useState(null)
+  const [billingStatus, setBillingStatus] = useState(null)
   const [usage, setUsage]           = useState(0)
   const [loading, setLoading]       = useState(true)
   const [portalLoading, setPortalLoading] = useState(false)
@@ -72,6 +73,13 @@ export default function Billing() {
       setSite(data)
 
       if (data) {
+        try {
+          const statusData = await getBillingStatus(data.site_key)
+          setBillingStatus(statusData)
+        } catch (statusErr) {
+          console.error('[Billing] Failed to fetch billing status:', statusErr)
+        }
+
         const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
         const { count } = await supabase
           .from('pageviews')
@@ -116,13 +124,31 @@ export default function Billing() {
     }
   }
 
-  const plan      = normalizePlan(site?.plan || 'free')
-  const limit     = (site?.pv_limit && Number.isFinite(site.pv_limit)) ? site.pv_limit : (PLAN_DEFAULT_LIMITS[plan] || 0)
-  const usagePct  = limit > 0 ? Math.min(100, Math.round((usage / limit) * 100)) : 0
-  const usageColor = usagePct >= 95 ? 'bg-red-500' : usagePct >= 80 ? 'bg-amber-500' : 'bg-st-lime'
+  const plan      = normalizePlan(billingStatus?.plan || site?.plan || 'free')
+
+  const finiteNumberOrNull = (value) => {
+    if (value === null || value === undefined || value === '') return null
+    const numericValue = Number(value)
+    return Number.isFinite(numericValue) ? numericValue : null
+  }
+
+  const billingLimit = finiteNumberOrNull(billingStatus?.limit)
+  const siteLimit = finiteNumberOrNull(site?.pv_limit)
+
+  const limit = billingLimit !== null
+    ? billingLimit
+    : siteLimit !== null
+      ? siteLimit
+      : (PLAN_DEFAULT_LIMITS[plan] || 0)
+
+  const usagePct  = limit > 0 ? Math.min(100, Math.round((usage / limit) * 100)) : 100
+  const usageColor = limit === 0 ? 'bg-red-500' : (usagePct >= 95 ? 'bg-red-500' : usagePct >= 80 ? 'bg-amber-500' : 'bg-st-lime')
   const isTrial   = plan === 'trial'
   const isFree    = plan === 'free'
   const isPaid    = ['starter', 'growth', 'scale'].includes(plan)
+  const subscription = billingStatus?.subscription
+  const isCanceledAtPeriodEnd = !!subscription?.cancel_at_period_end
+  const currentPeriodEnd = subscription?.current_period_end
 
   const daysLeft = (() => {
     if (!site?.trial_ends_at || !isTrial) return null
@@ -158,6 +184,22 @@ export default function Billing() {
         </div>
       )}
 
+      {/* ── Cancellation warning banner ────────────────────────────────────── */}
+      {isCanceledAtPeriodEnd && (
+        <div className="flex items-center gap-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl px-5 py-4">
+          <Zap className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
+          <p className="text-sm text-amber-800 dark:text-amber-300 font-medium">
+            {currentPeriodEnd
+              ? `Your ${getPlanLabel(plan)} plan remains active until ${new Date(currentPeriodEnd * 1000).toLocaleDateString(undefined, {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}.`
+              : `Your ${getPlanLabel(plan)} plan remains active until the end of the current billing period.`}
+          </p>
+        </div>
+      )}
+
       {/* ── Current Plan Card ─────────────────────────────────────────────── */}
       <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-2">
@@ -169,10 +211,11 @@ export default function Billing() {
           <span className="text-2xl font-black text-st-black dark:text-white capitalize">{getPlanLabel(plan)}</span>
           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
             isTrial ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400' :
+            isCanceledAtPeriodEnd ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400' :
             isPaid  ? 'bg-st-lime/15 text-green-700 dark:text-st-lime' :
                       'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
           }`}>
-            {isTrial ? 'Free Trial' : isFree ? 'Free Forever' : 'Active'}
+            {isTrial ? 'Free Trial' : isFree ? 'Free Forever' : isCanceledAtPeriodEnd ? 'Cancels soon' : 'Active'}
           </span>
         </div>
 
@@ -185,8 +228,14 @@ export default function Billing() {
         {/* Usage meter */}
         <div className="space-y-1.5">
           <div className="flex justify-between text-xs text-st-gray dark:text-gray-400">
-            <span>{usage.toLocaleString()} of {limit.toLocaleString()} pageviews used this month</span>
-            <span className={usagePct >= 80 ? 'text-amber-600 dark:text-amber-400 font-semibold' : ''}>{usagePct}%</span>
+            <span>
+              {limit === 0
+                ? '0 pageviews allocated (suspended/inactive)'
+                : `${usage.toLocaleString()} of ${limit.toLocaleString()} pageviews used this month`}
+            </span>
+            <span className={limit === 0 || usagePct >= 80 ? 'text-red-500 dark:text-red-400 font-semibold' : ''}>
+              {limit === 0 ? 'Suspended' : `${usagePct}%`}
+            </span>
           </div>
           <div className="w-full h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
             <div className={`h-full ${usageColor} rounded-full transition-all duration-500`} style={{ width: `${usagePct}%` }} />

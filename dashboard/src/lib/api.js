@@ -82,6 +82,11 @@ export async function getBillingPortal(siteKey, returnUrl) {
   })
 }
 
+export async function getBillingStatus(siteKey) {
+  const params = new URLSearchParams({ site_key: siteKey })
+  return fetchApi(`/billing/status?${params}`)
+}
+
 export async function getLatestEvents(siteKey) {
   const params = new URLSearchParams({ site_key: siteKey })
   return fetchApi(`/events/latest?${params}`)

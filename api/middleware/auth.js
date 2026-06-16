@@ -197,3 +197,16 @@ export function requireSiteMembership(req, res, next) {
 
   next()
 }
+
+export function clearSiteCache(siteKey) {
+  if (!siteKey) return false;
+  return siteCache.del(siteKey);
+}
+
+export function clearSiteCacheForKeys(siteKeys = []) {
+  let cleared = 0;
+  for (const siteKey of siteKeys) {
+    if (siteKey && siteCache.del(siteKey)) cleared += 1;
+  }
+  return cleared;
+}
