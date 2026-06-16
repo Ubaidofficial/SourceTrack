@@ -542,6 +542,116 @@
   addEventListener('mousedown', handleCrossDomainClick)
   addEventListener('touchstart', handleCrossDomainClick)
 
+  // ─── Booking UTM Passthrough ────────────────────────────────────────────────
+  // Appends safe attribution params to supported booking provider URLs before
+  // navigation. Never captures input values, never reads form fields.
+  // sourcetrack_landing_page and sourcetrack_referrer are deferred: the tracker
+  // does not yet have a safe, deduplicated path sanitizer suitable for URL-valued
+  // passthrough params; adding them here without that gate risks forwarding raw
+  // page URLs (with query strings) into booking provider sessions.
+  var BOOKING_HOSTS = [
+    'calendly.com',
+    'cal.com',
+    'tidycal.com',
+    'savvycal.com',
+    'zcal.co',
+    'oncehub.com',
+    'youcanbook.me'
+  ]
+
+  function isBookingHost(hostname) {
+    var h = hostname.toLowerCase().split(':')[0]
+    for (var i = 0; i < BOOKING_HOSTS.length; i++) {
+      var bh = BOOKING_HOSTS[i]
+      if (h === bh || h.slice(-(bh.length + 1)) === '.' + bh) return true
+    }
+    return false
+  }
+
+  // Light sanitizer for ref/source/via values — only pass short safe strings
+  function sanitizeBookingParam(val) {
+    if (typeof val !== 'string') return null
+    var cleaned = val.trim()
+    if (cleaned.length === 0 || cleaned.length > 80) return null
+    var lower = cleaned.toLowerCase()
+    // Reject emails
+    if (lower.indexOf('@') !== -1) return null
+    // Reject phone-like strings (6+ digits)
+    if ((lower.match(/\d/g) || []).length >= 6) return null
+    // Reject URL-like strings
+    if (lower.indexOf('http://') !== -1 || lower.indexOf('https://') !== -1 || lower.indexOf('//') === 0) return null
+    // Reject token/secret-like prefixes
+    if (
+      lower.indexOf('sk_') === 0 || lower.indexOf('pk_') === 0 ||
+      lower.indexOf('rk_') === 0 || lower.indexOf('key_') === 0 ||
+      lower.indexOf('api_') === 0 || lower.indexOf('token') === 0 ||
+      lower.indexOf('secret') === 0
+    ) return null
+    // Reject JWT-like values (two dots with base64 sections)
+    if (/^[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+$/.test(cleaned)) return null
+    return cleaned
+  }
+
+  function handleBookingPassthrough(e) {
+    if (e.button === 2) return // skip right clicks
+    if (_consentGiven === false) return // opt-out
+
+    var a = e.target
+    while (a && a.nodeName !== 'A') a = a.parentNode
+    if (!a) return
+
+    var href = a.getAttribute('href')
+    if (!href) return
+
+    try {
+      var url = new URL(href, location.href)
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') return
+      if (!isBookingHost(url.hostname)) return
+
+      var p = params()
+
+      // Mapping of passthrough params: key in booking URL → value from current context
+      // Only appended if not already present in the booking URL
+      var candidates = [
+        ['utm_source',   p.utm_source],
+        ['utm_medium',   p.utm_medium],
+        ['utm_campaign', p.utm_campaign],
+        ['utm_term',     p.utm_term],
+        ['utm_content',  p.utm_content],
+        ['gclid',        p.gclid],
+        ['gbraid',       p.gbraid],
+        ['wbraid',       p.wbraid],
+        ['fbclid',       p.fbclid],
+        ['msclkid',      p.msclkid],
+        ['ttclid',       p.ttclid],
+        ['li_fat_id',    p.li_fat_id],
+        ['twclid',       p.twclid],
+        ['ref',          sanitizeBookingParam(p.ref)],
+        ['source',       sanitizeBookingParam(p.source)],
+        ['via',          sanitizeBookingParam(p.via)],
+        ['sourcetrack_source',   p.utm_source],
+        ['sourcetrack_medium',   p.utm_medium],
+        ['sourcetrack_campaign', p.utm_campaign]
+      ]
+
+      var mutated = false
+      for (var i = 0; i < candidates.length; i++) {
+        var key = candidates[i][0]
+        var val = candidates[i][1]
+        if (val && typeof val === 'string' && val.trim() && !url.searchParams.has(key)) {
+          url.searchParams.set(key, val.trim())
+          mutated = true
+        }
+      }
+
+      if (mutated) {
+        a.setAttribute('href', url.toString())
+      }
+    } catch (_) {}
+  }
+  addEventListener('mousedown', handleBookingPassthrough)
+  addEventListener('touchstart', handleBookingPassthrough)
+
   // ─── Automatic Form Submit Tracking ────────────────────────────────────────
   var lastSubmits = typeof WeakMap !== 'undefined' ? new WeakMap() : null
 
