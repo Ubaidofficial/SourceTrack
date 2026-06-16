@@ -1,7 +1,15 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
-> **Handoff:** Session 139K-B-R2 — Verify Staging Supabase Secret Key Type + Rotation Requirement — **PASS — Verified local and Railway staging Supabase service key formats are both modern sb_secret_... Secret API keys; confirmed manual rotation runbook; publishable key rotation is not required; production untouched; billing enforcement QA remains blocked; paid beta remains NOT READY.**
+> **Handoff:** Session 139K-B-R3 — Verify Rotated Staging Supabase Secret Key + Unblock Sensitive Staging QA — **PASS — Verified manual key rotation completed, old exposed key revoked, local/Railway environment keys updated to modern Secret API keys, staging API/DB connectivity verified, and sensitive staging QA unblocked; production remains untouched; paid beta remains NOT READY.**
+> - **Rotation Verification**: PASS. Staging Supabase Secret API key has been rotated by the operator, and the old compromised key is confirmed deleted/revoked.
+> - **Environment Verification**: Both local gitignored env files and Railway staging variables have been verified to have the `modern_supabase_secret_key` format.
+> - **Connectivity & Health**: Staging API is online and healthy. Database connectivity has been successfully verified via a harmless, read-only query using the rotated staging key.
+> - **Secret Hygiene**: Ran targeted grep for secrets; verified no usable staging credentials, JWTs, or secrets are present in tracked code files or committed QA reports.
+> - **Unblocked Status**: Sensitive staging E2E QA and mutation tests are now fully unblocked. Paid beta remains NOT READY.
+> - **Production Safety**: Verified that the production Supabase database ref `zxjjjsipafojhzkkumvh` and production environments remain untouched.
+>
+> **Prior handoff (Session 139K-B-R2):** Session 139K-B-R2 — Verify Staging Supabase Secret Key Type + Rotation Requirement — **PASS — Verified local and Railway staging Supabase service key formats are both modern sb_secret_... Secret API keys; confirmed manual rotation runbook; publishable key rotation is not required; production untouched; billing enforcement QA remains blocked; paid beta remains NOT READY.**
 > - **Verification Status**: PASS. Local gitignored environment files and Railway staging API variables both use `modern_supabase_secret_key` format keys (beginning with `sb_secret_`).
 > - **Required Action**: Targeted manual rotation of the compromised Secret API key from Supabase Dashboard settings. No JWT secret reset or publishable key rotation is required.
 > - **Secret Hygiene**: Ran targeted grep for secrets; verified no usable staging credentials, JWTs, or secrets are present in tracked code files or committed QA reports.
