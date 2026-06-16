@@ -26,14 +26,14 @@ const TEXT_EXTENSIONS = [
 // Helper to check if a string contains explicit safe placeholders, mock test variables, or dynamic code expressions
 function isPlaceholder(val) {
   if (!val) return true;
-  
+
   // Return true immediately for common ellipsis/asterisks placeholders
   if (val.includes('...') || val.includes('***')) {
     return true;
   }
 
   const lower = val.toLowerCase().trim();
-  
+
   // 1. Bracketed documentation placeholders (e.g. <actual secret>, [redacted], <new_rotated_service_role_key>)
   if (lower.startsWith('<') || lower.startsWith('[')) {
     return true;
@@ -79,9 +79,9 @@ function isPlaceholder(val) {
   if (STRICT_PLACEHOLDERS.includes(cleanLower)) {
     return true;
   }
-  
+
   // 3. Strict mock keys and patterns for unit tests
-  const isMockTestKey = 
+  const isMockTestKey =
     /^[a-z0-9_.-]+@example.com$/i.test(cleanLower) || // Mock emails
     /^sk_live_(testsite123|site123|abc123|mock123)$/.test(cleanLower) ||
     /^sk_test_(123|secret123|abcdef123456789|secretkey|secret)$/.test(cleanLower) ||
@@ -92,7 +92,7 @@ function isPlaceholder(val) {
     cleanLower.startsWith('mock-') || // Any mock prefix
     cleanLower.includes('<redacted>') ||
     cleanLower.includes('[redacted]');
-    
+
   if (isMockTestKey) {
     return true;
   }
@@ -110,7 +110,7 @@ function isPlaceholder(val) {
 
   // 5. Short pattern/grep/regex protection
   if (
-    cleanLower.includes('sb_secret_') && 
+    cleanLower.includes('sb_secret_') &&
     (cleanLower.length < 25 || cleanLower.includes('*') || cleanLower.includes('[') || cleanLower.includes('\\'))
   ) {
     return true;
@@ -287,7 +287,7 @@ function scanFile(filePath, relativePath) {
     for (const pattern of PATTERNS) {
       // Reset regex index for safety
       pattern.regex.lastIndex = 0;
-      
+
       let match;
       while ((match = pattern.regex.exec(line)) !== null) {
         const matchedText = match[0];
@@ -319,7 +319,7 @@ function scanDirRecursive(dirPath, filesList = []) {
       if (IGNORED_FILES.includes(file)) continue;
       if (file.startsWith('.env') && file !== '.env.example') continue;
       if (file === 'check-secret-safety.js') continue; // Exclude scanner itself
-      
+
       const ext = path.extname(file);
       if (TEXT_EXTENSIONS.includes(ext) || file.startsWith('.')) {
         filesList.push({ filePath, relativePath });

@@ -119,4 +119,3 @@ PASS — No active credentials or secrets detected in repository files.
 * **Recommended Next Session**: `140H — Universal Forms + Booking Attribution Audit`
 * **Session Scope**: Universal contact-form UTM/source capture audit, booking attribution audit for Calendly, Cal.com, TidyCal, SavvyCal, and generic booking embeds, privacy-safe defaults, provider support matrix. No implementation code will be written yet.
 * **Migration Deferral**: Session `139K-H3-B` (Branded Auth Domain) remains deferred until the final paid-beta gate because `auth.sourcetrack.ai` requires the Supabase custom-domain add-on cost.
-
