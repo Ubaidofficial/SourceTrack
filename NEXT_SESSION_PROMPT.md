@@ -8,64 +8,33 @@ No AI-agent may commit or push before raw diff review and explicit user approval
 Copy and paste the prompt below into the chat to begin the next development session:
 
 ```markdown
-We are starting **Session 139K-H3 — Branded Supabase Auth Domain + Google OAuth Trust Polish**.
+We are starting **Session 140H — Universal Forms + Booking Attribution Audit**.
 
 Please perform the work for this session following the rules in docs/ai_agent_workflow_rules.md.
 
 ### Problem Statement
-During Google login/signup, users currently see the raw production Supabase project domain (`zxjjjsipafojhzkkumvh.supabase.co`) in the Google account chooser. This looks unpolished and hurts signup trust. We need a branded Supabase Auth custom domain, preferably `auth.sourcetrack.ai`, plus matching Google OAuth provider configuration.
+We need to support tracking lead conversions that happen through embedded third-party booking widgets (e.g. Calendly, Cal.com, TidyCal, SavvyCal) and generic HTML forms, without introducing privacy risks or unnecessary code complexity. Before writing code, we must audit the existing capture mechanisms and plan the architecture.
 
 ### Goal
-Audit current Supabase Auth, Google OAuth, frontend redirect, and domain configuration. Produce a safe implementation plan and manual operator checklist for moving production OAuth to a branded auth domain (`auth.sourcetrack.ai`) without exposing secrets or breaking login/signup. Do not mutate production Supabase, DNS, or Google OAuth settings without explicit approval.
+Audit universal contact-form UTM/source capture and booking attribution options for Calendly, Cal.com, TidyCal, SavvyCal, and generic booking embeds. Propose privacy-safe defaults, provider support matrix, and execution steps. Do not write implementation code.
+
+Note: Session 139K-H3-B (Branded Auth Domain) remains deferred until final paid-beta gate because auth.sourcetrack.ai requires Supabase custom-domain add-on cost. Paid beta remains NOT READY.
 
 ### Hard Production Safety Rules
-- Do not print OAuth client secrets.
-- Do not print Supabase service keys.
-- Do not print provider secrets.
-- Do not mutate production Supabase Auth settings without explicit approval.
-- Do not mutate DNS without explicit approval.
-- Do not mutate Google Cloud OAuth settings without explicit approval.
+- Strict [Secret Handling Rules](file:///Users/ubaid/Desktop/trackiq/docs/ai_agent_workflow_rules.md#secret-handling-rules) apply: no inline environment secret assignments (e.g. `SUPABASE_SERVICE_KEY=...` is banned).
+- Do not print, inspect, or retrieve private service role keys or secrets.
+- Use `railway run --service ...` when a command or script requires managed environment variables.
+- Stop immediately and report if any secret is exposed in logs, outputs, or transcripts.
 - No localhost as final QA evidence.
-- Production user-facing QA must use:
-  - https://app.sourcetrack.ai
-  - https://sourcetrack.ai
-  - https://www.sourcetrack.ai
 
 ### Required Audit Targets
-- current Supabase Auth Site URL
-- current allowed redirect URLs
-- current Google OAuth callback URL
-- current frontend `signInWithOAuth` usage
-- current `redirectTo` behavior
-- current staging vs production Supabase URLs
-- current app domain root behavior
-- current Google OAuth app branding/domain verification requirements
+- Existing form-capture listener in `tracker/tracker.js`
+- Standard cross-origin messaging patterns (postMessage) used by Calendly and others
+- Privacy implications (avoiding PII leakage in attributes)
+- Support capability matrix for: Calendly, Cal.com, TidyCal, SavvyCal
 
-### Expected Target Configuration
-- Supabase Auth custom domain: `auth.sourcetrack.ai` (Note: `app.sourcetrack.ai` is reserved for the React app domain)
-- Supabase Site URL: `https://app.sourcetrack.ai`
-- Google OAuth callback to add: `https://auth.sourcetrack.ai/auth/v1/callback` (Keep existing Supabase callback temporarily during migration if needed)
-- Allowed production redirect URLs should include: `https://app.sourcetrack.ai/*`
-- Staging must remain isolated from production.
-
-### Required Output Report
-Create `docs/qa/branded_auth_domain_google_oauth_139K-H3.md` with:
-- current problem screenshot description
-- current observed OAuth domain
-- target branded auth domain
-- current auth config audit
-- frontend auth call-site audit
-- Google OAuth config checklist
-- Supabase custom domain checklist
-- DNS checklist
-- staging/prod separation risks
-- manual operator steps
-- rollout plan
-- rollback plan
-- verification checklist
-- exact production QA routes to verify later
-- validation output
-- git status
+### Expected Output Report
+Create `docs/qa/universal_forms_booking_attribution_audit_140H.md` detailing findings, proposed event schemas, privacy-safe defaults, support matrix, and implementation tasks.
 
 ### Validation Commands
 Run and include the output of:

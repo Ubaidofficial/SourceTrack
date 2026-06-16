@@ -282,7 +282,7 @@ http://localhost:8080/sourcetrack-test.html?source=newsletter&via=email
 
 - All checks pass
 - Manual QA performed if applicable
-- No `.env`, secrets, `.bak` files, or test artifacts in diff
+- No `.env`, secrets, `.bak` files, or test artifacts in diff (see [Secret Handling Rules](file:///Users/ubaid/Desktop/trackiq/docs/ai_agent_workflow_rules.md#secret-handling-rules))
 - Commit message format (HEREDOC):
 ```bash
 git commit -F - <<'EOF'

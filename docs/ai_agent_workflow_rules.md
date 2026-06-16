@@ -95,6 +95,18 @@ To prevent accidental mutation of the production environment, the following rule
 
 ---
 
+## Secret Handling Rules
+To ensure strict security hygiene and prevent any credentials leak in transcripts, code, or logs:
+- **No pasting secrets**: Never paste secrets (API keys, service keys, tokens, etc.) into ChatGPT, Antigravity, Claude, Gemini, terminal transcripts, docs, or screenshots.
+- **No inline env secret commands**: Never run inline env secret commands (e.g., `SUPABASE_SERVICE_KEY=sb_secret_... node ...`).
+- **Use managed env injection**: Use Railway/Supabase dashboards or managed env injection (e.g., `railway run --service <service> <command>`).
+- **Immediate rotation on exposure**: If a secret appears in any command output, log, or transcript, treat it as compromised immediately and rotate it.
+- **Verify with managed variables**: After key rotation, verify database connectivity and health using managed environment variables only.
+- **Value masking in reports**: Reports must state "rotated and verified" without showing any secret values, prefixes, or suffixes.
+- **No reuse of exposed keys**: Old exposed keys must never be reused for testing.
+
+---
+
 ## Provider/MCP protocol
 For all cloud and service providers (Supabase, Stripe, Railway, PostHog, Resend, Google, GitHub, etc.):
 1. **Read-Only by Default**: Read-only inspection of provider resources is allowed when necessary.

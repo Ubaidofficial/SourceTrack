@@ -83,4 +83,4 @@ We are finalizing features blocking our self-serve **Paid Beta launch**. The pri
 - **No speculative features**: Do not write code for features planned in future sessions (e.g., do not add site switcher drop-downs during the health alerts session).
 - **Verify before committing**: Run global syntax verification (`node --check`) and compilation builds (`npm run build`) before declaring a session complete.
 - **Tracker updates**: If modifying `tracker/tracker.js`, you must run `npm run build:tracker` to compile `tracker/tracker.min.js`.
-- **Do not commit secrets**: Ensure `.env` is ignored and no local developer keys are stored in source files.
+- **Do not commit secrets**: Ensure `.env` is ignored and no local developer keys are stored in source files (see [Secret Handling Rules](file:///Users/ubaid/Desktop/trackiq/docs/ai_agent_workflow_rules.md#secret-handling-rules)).

@@ -6,6 +6,7 @@ Read this file at the start of every session alongside system.md, progress.md, a
 
 > [!IMPORTANT]
 > AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](file:///Users/ubaid/Desktop/trackiq/docs/ai_agent_workflow_rules.md).
+> Strict [Secret Handling Rules](file:///Users/ubaid/Desktop/trackiq/docs/ai_agent_workflow_rules.md#secret-handling-rules) must be followed without exception.
 > No AI-agent may commit or push before raw diff review and explicit user approval.
 
 ---
