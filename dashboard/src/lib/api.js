@@ -43,8 +43,12 @@ export async function fetchApi(path, options = {}) {
   })
 
   if (res.status === 402) {
-    window.location.href = '/billing'
-    throw new Error('Subscription required')
+    if (!options.skipBillingRedirect) {
+      window.location.href = '/billing'
+    }
+    const err = new Error('Subscription required')
+    err.status = 402
+    throw err
   }
 
   const data = await res.json()

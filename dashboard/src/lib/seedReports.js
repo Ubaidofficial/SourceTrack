@@ -49,6 +49,7 @@ export async function seedReportsForBusiness(businessType, siteKey) {
       try {
         await fetchApi('/reports/saved', {
           method: 'POST',
+          skipBillingRedirect: true,
           body: JSON.stringify({
             site_key: siteKey,
             name: seed.name,

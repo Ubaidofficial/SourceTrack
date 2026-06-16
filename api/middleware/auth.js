@@ -20,8 +20,9 @@ export async function validateSiteKey(req, res, next) {
       return res.status(401).json({ success: false, data: null, error: 'Missing site_key' })
     }
 
-    // Cache hit — skip DB call entirely
-    const cached = siteCache.get(siteKey)
+    // Cache hit — skip DB call entirely (except for diagnostics/doctor endpoint to prevent cache lag)
+    const isDoctor = req.path === '/doctor' || req.originalUrl?.includes('/install/doctor')
+    const cached = isDoctor ? null : siteCache.get(siteKey)
     if (cached) {
       // Trial re-check still needed (TTL is 5min, trial could expire within that window)
       if (cached.plan === 'trial') {
