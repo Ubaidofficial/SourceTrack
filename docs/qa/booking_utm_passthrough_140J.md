@@ -1,8 +1,8 @@
 # Session 140J — Booking UTM Passthrough QA Report
 
-**Session:** 140J  
-**Date:** 2026-06-17  
-**Status:** Implementation complete. Awaiting raw diff review and user commit approval.  
+**Session:** 140J
+**Date:** 2026-06-17
+**Status:** Implementation complete. Awaiting raw diff review and user commit approval.
 **Paid-beta status:** NOT READY (unchanged)
 
 ---
@@ -131,7 +131,7 @@ Never overwritten — `url.searchParams.has(key)` check before every `set()`.
 
 ## Tests Added
 
-**File:** `api/tests/tracker-booking-passthrough.test.js`  
+**File:** `api/tests/tracker-booking-passthrough.test.js`
 **Test count:** 27 total (20 tracker.js + 7 cookieless)
 
 | # | Test | Result |
