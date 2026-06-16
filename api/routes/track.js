@@ -129,6 +129,104 @@ export async function track(req, res) {
     const enriched = enrich(req)
     const clientTimestamp = req.body?.timestamp ? sanitizeClientTimestamp(req.body.timestamp) : null
 
+    // Ingest-side sanitization for form submit metadata
+    let form_provider = null
+    let form_id = null
+    let form_name = null
+    let form_action_host = null
+    let form_action_path = null
+    let page_path = null
+
+    if (req.body?.event === 'form_submit') {
+      const p = req.body.properties || {}
+
+      if (typeof p.form_provider === 'string') {
+        const fp = p.form_provider.trim().toLowerCase()
+        if (['native', 'webflow', 'wordpress', 'unknown'].includes(fp)) {
+          form_provider = fp
+        }
+      }
+      if (!form_provider) form_provider = 'unknown'
+
+      const validateFormMetadata = (val) => {
+        if (typeof val !== 'string') return null
+        const cleaned = val.trim()
+        if (cleaned.length === 0 || cleaned.length > 120) return null
+        const lower = cleaned.toLowerCase()
+        if (lower.includes('@')) return null
+        const digitCount = (lower.match(/\d/g) || []).length
+        if (digitCount >= 6) return null
+        if (
+          lower.includes('sk_') ||
+          lower.includes('pk_') ||
+          lower.includes('token') ||
+          lower.includes('secret') ||
+          lower.includes('auth') ||
+          lower.includes('key') ||
+          lower.includes('pass') ||
+          lower.includes('card') ||
+          lower.includes('cc_')
+        ) {
+          return null
+        }
+        if (lower.includes('http://') || lower.includes('https://')) return null
+        return cleaned
+      }
+
+      const validateFormActionHost = (val) => {
+        if (typeof val !== 'string') return null
+        const cleaned = val.trim().toLowerCase()
+        if (cleaned.length === 0 || cleaned.length > 100) return null
+        if (cleaned.includes('@')) return null
+        if (cleaned.includes('/') || cleaned.includes('?') || cleaned.includes('#')) return null
+        if (cleaned.startsWith('javascript:')) return null
+        if (!/^[a-z0-9.-]+$/.test(cleaned)) return null
+        return cleaned
+      }
+
+      const validatePathname = (val) => {
+        if (typeof val !== 'string') return null
+        let cleaned = val.trim()
+        if (cleaned.length === 0 || cleaned.length > 200) return null
+
+        // Strip query and hash first so we don't reject @ in query params
+        const qIdx = cleaned.indexOf('?')
+        if (qIdx > -1) cleaned = cleaned.substring(0, qIdx)
+        const hIdx = cleaned.indexOf('#')
+        if (hIdx > -1) cleaned = cleaned.substring(0, hIdx)
+
+        const lower = cleaned.toLowerCase()
+        if (lower.includes('@')) return null
+        if (lower.startsWith('javascript:')) return null
+
+        // Keep pathname only
+        if (lower.indexOf('http://') !== -1 || lower.indexOf('https://') !== -1) {
+          try {
+            const u = new URL(cleaned)
+            cleaned = u.pathname
+          } catch (_) {
+            return null
+          }
+        }
+
+        // Ensure starts with '/'
+        if (cleaned.length === 0) return null
+        if (cleaned.charAt(0) !== '/') {
+          cleaned = '/' + cleaned
+        }
+
+        // Final check on clean pathname
+        if (cleaned.toLowerCase().includes('@')) return null
+        return cleaned
+      }
+
+      form_id = validateFormMetadata(p.form_id || req.body.form_id)
+      form_name = validateFormMetadata(p.form_name || req.body.form_name)
+      form_action_host = validateFormActionHost(p.form_action_host)
+      form_action_path = validatePathname(p.form_action_path)
+      page_path = validatePathname(p.page_path)
+    }
+
     // Pageview quota claim — 140G-4.
     // Only true $pageview events consume monthly quota. Custom events, conversions,
     // and outbound clicks are excluded. Claim happens here (after all filtering/validation)
@@ -192,10 +290,21 @@ export async function track(req, res) {
         country: enriched.country,
         server_timestamp: enriched.server_timestamp,
         ingestion_method: 'server_routed',
+        ...(req.body?.event === 'form_submit' ? {
+          event_type: 'form_submit',
+          form_provider: form_provider,
+          form_id: form_id,
+          form_name: form_name,
+          form_action_host: form_action_host,
+          form_action_path: form_action_path,
+          page_path: page_path
+        } : {}),
         // Feature: custom event properties — any object passed as `properties` is spread
-        ...(req.body.properties && typeof req.body.properties === 'object' && !Array.isArray(req.body.properties)
-          ? { custom_properties: req.body.properties }
-          : {}),
+        ...(req.body?.event === 'form_submit'
+          ? {}
+          : req.body.properties && typeof req.body.properties === 'object' && !Array.isArray(req.body.properties)
+            ? { custom_properties: req.body.properties }
+            : {}),
         ...customParams
       }
     })

@@ -542,5 +542,134 @@
   addEventListener('mousedown', handleCrossDomainClick)
   addEventListener('touchstart', handleCrossDomainClick)
 
+  // ─── Automatic Form Submit Tracking ────────────────────────────────────────
+  var lastSubmits = typeof WeakMap !== 'undefined' ? new WeakMap() : null
+
+  function sanitizeFormMetadata(val) {
+    if (typeof val !== 'string') return null
+    var cleaned = val.trim()
+    if (cleaned.length === 0) return null
+    if (cleaned.length > 120) cleaned = cleaned.slice(0, 120)
+
+    var lower = cleaned.toLowerCase()
+
+    // 1. Email check
+    if (lower.indexOf('@') !== -1) return null
+
+    // 2. Phone check (6+ digits)
+    var digitCount = (lower.match(/\d/g) || []).length
+    if (digitCount >= 6) return null
+
+    // 3. Secrets, tokens, keys, passwords, credentials
+    if (
+      lower.indexOf('sk_') !== -1 ||
+      lower.indexOf('pk_') !== -1 ||
+      lower.indexOf('token') !== -1 ||
+      lower.indexOf('secret') !== -1 ||
+      lower.indexOf('auth') !== -1 ||
+      lower.indexOf('key') !== -1 ||
+      lower.indexOf('pass') !== -1 ||
+      lower.indexOf('card') !== -1 ||
+      lower.indexOf('cc_') !== -1
+    ) {
+      return null
+    }
+
+    // 4. URL check
+    if (lower.indexOf('http://') !== -1 || lower.indexOf('https://') !== -1) return null
+
+    return cleaned
+  }
+
+  function handleFormSubmit(e) {
+    var form = e.target
+    if (!form || form.nodeName !== 'FORM') return
+
+    try {
+      if (_consentGiven === false) return
+
+      var now = new Date().getTime()
+      if (lastSubmits) {
+        var lastTime = lastSubmits.get(form)
+        if (lastTime && (now - lastTime < 2000)) return
+        lastSubmits.set(form, now)
+      } else {
+        if (form._stLastSubmit && (now - form._stLastSubmit < 2000)) return
+        form._stLastSubmit = now
+      }
+
+      var provider = 'native'
+      var idAttr = form.getAttribute('id') || ''
+      var classAttr = form.getAttribute('class') || ''
+      var nameAttr = form.getAttribute('name') || ''
+
+      if (
+        form.getAttribute('data-wf-form') ||
+        form.getAttribute('data-wf-page-id') ||
+        classAttr.indexOf('w-form') !== -1 ||
+        (form.parentNode && form.parentNode.getAttribute('class') && form.parentNode.getAttribute('class').indexOf('w-form') !== -1)
+      ) {
+        provider = 'webflow'
+      } else if (
+        classAttr.indexOf('wpcf7') !== -1 ||
+        classAttr.indexOf('wpforms') !== -1 ||
+        classAttr.indexOf('gform') !== -1 ||
+        classAttr.indexOf('elementor-form') !== -1 ||
+        idAttr.indexOf('wpcf7') === 0 ||
+        idAttr.indexOf('gform_') === 0
+      ) {
+        provider = 'wordpress'
+      }
+
+      var sanitizedId = sanitizeFormMetadata(idAttr)
+      var sanitizedName = sanitizeFormMetadata(nameAttr)
+
+      var actionHost = null
+      var actionPath = null
+      var action = typeof form.action === 'string' ? form.action : form.getAttribute('action')
+      if (action && action.trim()) {
+        var trimmedAction = action.trim()
+        if (trimmedAction.toLowerCase().indexOf('javascript:') !== 0) {
+          try {
+            var parsedUrl = new URL(trimmedAction, location.href)
+            if (parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:') {
+              actionHost = parsedUrl.hostname
+              actionPath = parsedUrl.pathname
+            }
+          } catch (_) {}
+        }
+      }
+
+      var p = params(), ref = document.referrer || null
+      var f = getFT(), u = utmFields(p)
+
+      send('/api/track', Object.assign(
+        {
+          site_key: K,
+          event: 'form_submit',
+          anonymous_id: AID,
+          session_id: SID,
+          page_url: location.href,
+          referrer: ref,
+          properties: {
+            event_type: 'form_submit',
+            form_provider: provider,
+            form_id: sanitizedId,
+            form_name: sanitizedName,
+            form_action_host: actionHost,
+            form_action_path: actionPath,
+            page_url: location.href,
+            page_path: location.pathname
+          }
+        },
+        u,
+        { ref_param: p.ref, source_param: p.source, via_param: p.via },
+        f,
+        { ai_source: aiSrc(ref, p.utm_source) }
+      ))
+    } catch (_) {}
+  }
+  addEventListener('submit', handleFormSubmit, true)
+
   sendPageview()
 })()
