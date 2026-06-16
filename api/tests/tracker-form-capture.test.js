@@ -23,14 +23,14 @@ const cookielessCode = fs.readFileSync(path.join(rootDir, 'tracker/tracker.cooki
 function runTrackerInVm(code, isCookieless = false, customGlobals = {}) {
   const payloads = []
   const listeners = {}
-  
+
   const locationMock = {
     href: 'https://example.com/contact?utm_source=google&gclid=g-123',
     pathname: '/contact',
     search: '?utm_source=google&gclid=g-123',
     origin: 'https://example.com'
   }
-  
+
   const documentMock = {
     referrer: 'https://referrer.com',
     cookie: '',
@@ -158,7 +158,7 @@ function runTrackerInVm(code, isCookieless = false, customGlobals = {}) {
 test('Form Capture Client-Side Unit Tests', async (t) => {
   await t.test('1. Native form submit creates a privacy-safe form_submit analytics event', () => {
     const { triggerSubmit, MockForm, payloads } = runTrackerInVm(trackerCode)
-    
+
     // Clear pageview payload to isolate form submit event
     payloads.length = 0
 
@@ -333,7 +333,7 @@ test('Form Capture Client-Side Unit Tests', async (t) => {
 test('Form Capture Cookieless Tracker Unit Tests', async (t) => {
   await t.test('Cookieless tracker queues and sends form_submit events cleanly', async () => {
     const { triggerSubmit, MockForm, payloads } = runTrackerInVm(cookielessCode, true)
-    
+
     // Cookieless fetches visitor_id asynchronously. Queue it before resolution.
     const form = new MockForm({ id: 'form-cookie-free' })
     triggerSubmit(form)
@@ -346,7 +346,7 @@ test('Form Capture Cookieless Tracker Unit Tests', async (t) => {
 
     // After fetch resolves, queued pageview + form_submit should be flushed
     assert.strictEqual(payloads.length, 2)
-    
+
     const pageviewData = payloads[0].body
     assert.strictEqual(pageviewData.event, '$pageview')
 
@@ -360,7 +360,7 @@ test('Form Capture Cookieless Tracker Unit Tests', async (t) => {
 test('Form Ingestion Backend Route Integration Tests', async (t) => {
   await t.test('15. Backend PII sanitization remains intact', async () => {
     const { track } = await import('../routes/track.js')
-    
+
     // Mock the Express request and response object
     const siteMock = {
       id: 99,
@@ -463,7 +463,7 @@ test('Form Ingestion Backend Route Integration Tests', async (t) => {
       const props = captureCalls[0].properties
       assert.strictEqual(props.form_id, null)
       assert.strictEqual(props.form_name, null)
-      
+
       // Assert custom_properties is entirely absent/not forwarded
       assert.strictEqual(props.custom_properties, undefined)
     } finally {
