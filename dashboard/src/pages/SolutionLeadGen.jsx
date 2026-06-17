@@ -104,6 +104,10 @@ const DATA = {
         q: "Does SourceTrack integrate with HubSpot or Salesforce?",
         a: "Not natively. SourceTrack provides a REST API for offline conversions. When a deal closes in your CRM, your backend sends a POST request with the deal value and any identifiers to /api/conversion/offline. SourceTrack will match it to the original attribution session. There is no native CRM connector — integration is via your backend code or a webhook handler.",
       },
+      {
+        q: "Which form tools are automatically detected? What about booking tools?",
+        a: "Browser form submit detection works automatically for native HTML forms, Webflow-style forms, and WordPress/CF7-style forms. Typeform, Tally, HubSpot Forms, Jotform, and Google Forms are not auto-detected — for those, pass attribution context as hidden fields or URL parameters using window.sourcetrack.getContext(), then forward it via your backend or a webhook. For booking tools, UTM parameters are passed through automatically when visitors click links to Calendly, Cal.com, TidyCal, and SavvyCal. Additional host allowlist entries such as zcal.co, OnceHub, and YouCanBookMe exist in the tracker, but they were not individually browser-verified in 140M. Confirmed booking detection (firing a booking_scheduled event after the visitor completes a booking) is supported for Calendly and Cal.com embeds only. TidyCal and SavvyCal are passthrough-only — use their webhook to POST a server-side conversion event for booking confirmation.",
+      },
     ],
   },
 

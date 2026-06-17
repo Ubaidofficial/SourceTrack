@@ -1,5 +1,7 @@
 # Form and Checkout Source Handoff Guide
 
+> **Looking for which form and booking tools are auto-detected vs. need setup?** See the [Forms and Booking Support Matrix](forms-and-booking-support.md).
+
 This guide explains how to pass SourceTrack visitor and campaign context (like anonymous IDs, session IDs, UTM parameters, and ad click IDs) into your signup forms, CRM hidden fields, Stripe checkouts, or custom webhook payloads.
 
 ---
