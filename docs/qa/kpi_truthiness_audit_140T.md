@@ -1,6 +1,6 @@
 # KPI Truthiness Audit — Session 140T
-**Date:** 2026-06-17  
-**Scope:** All authenticated app pages (`dashboard/src/pages/`) and shared-dashboard page  
+**Date:** 2026-06-17
+**Scope:** All authenticated app pages (`dashboard/src/pages/`) and shared-dashboard page
 **Rule set:** 10 truth rules (revenue/cost/ROAS gating, GSC gating, AI gating, CVR dash rule, etc.)
 
 ---
@@ -45,27 +45,27 @@ Each hit reviewed against 10 truth rules. Findings categorised as:
 
 ### 1. `ShareDashboard.jsx` — Wrong metric name "Avg CPL"
 
-**File:** `dashboard/src/pages/ShareDashboard.jsx`  
-**Rule:** Metric labels must be accurate.  
+**File:** `dashboard/src/pages/ShareDashboard.jsx`
+**Rule:** Metric labels must be accurate.
 **Before:**
 ```js
 const avgCPL = totalConversions > 0 ? totalRevenue / totalConversions : 0
 { label: 'Avg CPL', value: `$${avgCPL.toLocaleString(...)}` }
 ```
-CPL = cost ÷ leads. This formula computed average conversion value (revenue ÷ conversions), not cost-per-lead.  
+CPL = cost ÷ leads. This formula computed average conversion value (revenue ÷ conversions), not cost-per-lead.
 **Fix:** Renamed variable to `avgConversionValue`, renamed card label to `"Avg Conversion Value"`. Changed display logic from positivity checks to data-presence checks: `avgConversionValue` is `null` unless `totalConversions > 0 && hasRevenueData`.
 
 ---
 
 ### 2. `ShareDashboard.jsx` — "Total Revenue" KPI tile unconditionally formatted `$0`
 
-**File:** `dashboard/src/pages/ShareDashboard.jsx`  
-**Rule:** Revenue should display when revenue data is present; `—` when data is absent.  
+**File:** `dashboard/src/pages/ShareDashboard.jsx`
+**Rule:** Revenue should display when revenue data is present; `—` when data is absent.
 **Before:**
 ```jsx
 { label: 'Total Revenue', value: `$${totalRevenue.toLocaleString(...)}` }
 ```
-When no revenue field was present in the API response, `totalRevenue` was forced to `0` by `kpis?.total_revenue || 0`, producing `$0`.  
+When no revenue field was present in the API response, `totalRevenue` was forced to `0` by `kpis?.total_revenue || 0`, producing `$0`.
 **Fix:** Changed display logic from positivity checks to data-presence checks:
 - `rawRevenue = kpis?.total_revenue` (preserves `null` / `undefined`)
 - `totalRevenue = rawRevenue ?? 0` (numeric, for calculations only)
@@ -76,8 +76,8 @@ When no revenue field was present in the API response, `totalRevenue` was forced
 
 ### 3. `ShareDashboard.jsx` — Channel table "Revenue" column showed `$0` per row
 
-**File:** `dashboard/src/pages/ShareDashboard.jsx` (channel table)  
-**Rule:** Revenue cells must show `—` when revenue data is absent.  
+**File:** `dashboard/src/pages/ShareDashboard.jsx` (channel table)
+**Rule:** Revenue cells must show `—` when revenue data is absent.
 **Before:**
 ```jsx
 <td>${((ch.revenue || 0).toFixed(0))}</td>
@@ -92,8 +92,8 @@ A `ch.revenue` of `0` now displays as `$0` (truthful). A `ch.revenue` of `null` 
 
 ### 4. `ShareDashboard.jsx` — "% of Total" column showed `0%` when no conversions
 
-**File:** `dashboard/src/pages/ShareDashboard.jsx` (channel table)  
-**Rule:** Rate/share metrics must use `—` when the denominator is zero (making the percentage undefined, not zero).  
+**File:** `dashboard/src/pages/ShareDashboard.jsx` (channel table)
+**Rule:** Rate/share metrics must use `—` when the denominator is zero (making the percentage undefined, not zero).
 **Before:**
 ```jsx
 {totalConversions > 0 ? `${...}%` : '0%'}
@@ -104,8 +104,8 @@ A `ch.revenue` of `0` now displays as `$0` (truthful). A `ch.revenue` of `null` 
 
 ### 5. `ShareDashboard.jsx` — AI table "Revenue" column showed `$0` per row
 
-**File:** `dashboard/src/pages/ShareDashboard.jsx` (AI search table)  
-**Rule:** Revenue cells must show `—` when revenue data is absent.  
+**File:** `dashboard/src/pages/ShareDashboard.jsx` (AI search table)
+**Rule:** Revenue cells must show `—` when revenue data is absent.
 **Before:**
 ```jsx
 <td>${((ai.revenue || 0).toFixed(0))}</td>
@@ -119,13 +119,13 @@ A `ch.revenue` of `0` now displays as `$0` (truthful). A `ch.revenue` of `null` 
 
 ### 6. `LeadDetail.jsx:169` — MetricTile "Revenue" tile showed `$0.00` when `lead.revenue` is `null`
 
-**File:** `dashboard/src/pages/LeadDetail.jsx:169`  
-**Rule:** Revenue tile must show `—` when revenue data is absent.  
+**File:** `dashboard/src/pages/LeadDetail.jsx:169`
+**Rule:** Revenue tile must show `—` when revenue data is absent.
 **Before:**
 ```jsx
 <MetricTile label="Revenue" value={lead.revenue} format="currency" ... />
 ```
-`MetricTile` gates on `value == null`, but `lead.revenue = null` was being passed directly (safe) while `lead.revenue = 0` would show `$0.00`. More critically, if the API omits the field, `lead.revenue` is `undefined` which `MetricTile` treats as absent — but there was no explicit presence check.  
+`MetricTile` gates on `value == null`, but `lead.revenue = null` was being passed directly (safe) while `lead.revenue = 0` would show `$0.00`. More critically, if the API omits the field, `lead.revenue` is `undefined` which `MetricTile` treats as absent — but there was no explicit presence check.
 **Fix:** Added `hasLeadRevenueValue` presence flag using `hasOwnProperty` + `!= null`:
 ```js
 const hasLeadRevenueValue =
@@ -141,13 +141,13 @@ Known zero (`lead.revenue = 0`) now shows `$0.00` (truthful). Missing field show
 
 ### 7. `LeadDetail.jsx:234` — Activity Summary "Total Revenue" showed `$0.00` for absent revenue
 
-**File:** `dashboard/src/pages/LeadDetail.jsx:234`  
-**Rule:** Revenue must show `—` when data is absent.  
+**File:** `dashboard/src/pages/LeadDetail.jsx:234`
+**Rule:** Revenue must show `—` when data is absent.
 **Before:**
 ```jsx
 <p>{formatCurrencyDecimal(lead.revenue)}</p>
 ```
-`formatCurrencyDecimal(null)` and `formatCurrencyDecimal(0)` both return `$0.00` (default `fallback = 0` in `numbers.js`).  
+`formatCurrencyDecimal(null)` and `formatCurrencyDecimal(0)` both return `$0.00` (default `fallback = 0` in `numbers.js`).
 **Fix:** Changed display logic from positivity checks to data-presence checks:
 ```jsx
 {hasLeadRevenueValue ? formatCurrencyDecimal(Number(lead.revenue || 0)) : '—'}
@@ -157,8 +157,8 @@ Known zero (`lead.revenue = 0`) now shows `$0.00` (truthful). Missing field show
 
 ### 8. `LeadDetail.jsx:334` — AI narrative "Revenue from AI" guard reviewed
 
-**File:** `dashboard/src/pages/LeadDetail.jsx:334`  
-**Finding:** The narrative sentence `Revenue from AI: {formatCurrency(lead.revenue)}` was previously guarded by `lead.revenue > 0 && lead.conversions > 0`. This is a `> 0` check rather than a presence check.  
+**File:** `dashboard/src/pages/LeadDetail.jsx:334`
+**Finding:** The narrative sentence `Revenue from AI: {formatCurrency(lead.revenue)}` was previously guarded by `lead.revenue > 0 && lead.conversions > 0`. This is a `> 0` check rather than a presence check.
 **Assessment:** For this specific context, showing "Revenue from AI: $0" is semantically meaningless (the sentence only makes sense when an amount contributed). The `> 0` positivity check is *contextually justified* here. However, it was updated to use the presence flag as the outer gate to be consistent:
 ```jsx
 {(hasLeadRevenueValue && Number(lead.revenue || 0) > 0 && lead.conversions > 0) && (
