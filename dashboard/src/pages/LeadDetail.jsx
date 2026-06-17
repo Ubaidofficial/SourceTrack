@@ -64,6 +64,8 @@ export default function LeadDetail() {
   })
 
   const isAI = lead?.ai_source && AI_SOURCES.includes(lead.ai_source)
+  const hasLeadRevenueValue =
+    Object.prototype.hasOwnProperty.call(lead || {}, 'revenue') && lead.revenue != null
 
   const handleCopyId = () => {
     if (leadId) {
@@ -166,7 +168,7 @@ export default function LeadDetail() {
           icon={Globe} iconBg="bg-blue-100" iconColor="text-blue-600" />
         <MetricTile label="Conversions" value={lead.conversions || 0}
           icon={MousePointerClick} iconBg="bg-green-100" iconColor="text-green-600" />
-        <MetricTile label="Revenue" value={lead.revenue} format="currency"
+        <MetricTile label="Revenue" value={hasLeadRevenueValue ? Number(lead.revenue || 0) : null} format="currency"
           icon={DollarSign} iconBg="bg-lime-100" iconColor="text-lime-700" />
         <MetricTile label="Country" value={lead.country || '—'} format="text"
           icon={MapPin} iconBg="bg-purple-100" iconColor="text-purple-600" />
@@ -231,7 +233,7 @@ export default function LeadDetail() {
               </div>
               <div className="col-span-2">
                 <p className="text-xs text-st-gray font-medium uppercase tracking-wider mb-0.5">Total Revenue</p>
-                <p className="text-lg font-semibold text-st-black">{formatCurrencyDecimal(lead.revenue)}</p>
+                <p className="text-lg font-semibold text-st-black">{hasLeadRevenueValue ? formatCurrencyDecimal(Number(lead.revenue || 0)) : '—'}</p>
               </div>
             </div>
           </div>
@@ -329,7 +331,7 @@ export default function LeadDetail() {
               {lead.ai_source === 'Gemini' && (
                 <p className="text-xs text-st-gray">Gemini users span a broad audience — from casual searchers to deep researchers in the Google ecosystem.</p>
               )}
-              {(lead.revenue > 0 && lead.conversions > 0) && (
+              {(hasLeadRevenueValue && Number(lead.revenue || 0) > 0 && lead.conversions > 0) && (
                 <p className="text-xs text-gray-700 mt-1 font-medium">
                   Revenue from AI: {formatCurrency(lead.revenue)} across {lead.conversions} conversion{lead.conversions === 1 ? '' : 's'}.
                 </p>

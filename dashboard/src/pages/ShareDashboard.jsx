@@ -62,13 +62,28 @@ export default function ShareDashboard() {
   }
 
   const { kpis, top_channels, top_sources, date_from, date_to, days } = data
-  const totalRevenue = kpis?.total_revenue || 0
+  const rawRevenue = kpis?.total_revenue
+  const totalRevenue = rawRevenue ?? 0
   const totalConversions = kpis?.total_conversions || 0
   const channels = top_channels || []
   const sources = top_sources || []
 
+  const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj || {}, key)
+  const hasRevenueData =
+    rawRevenue != null ||
+    channels.some(ch => hasOwn(ch, 'revenue') && ch.revenue != null) ||
+    sources.some(s => hasOwn(s, 'revenue') && s.revenue != null)
+
+  const formatWholeCurrencyOrDash = (value) =>
+    value != null
+      ? `$${Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`
+      : '—'
+
   const topChannel = channels.length > 0 ? channels[0]?.dim_value || 'N/A' : 'N/A'
-  const avgCPL = totalConversions > 0 ? totalRevenue / totalConversions : 0
+  const avgConversionValue =
+    totalConversions > 0 && hasRevenueData
+      ? Number(totalRevenue || 0) / totalConversions
+      : null
 
   const aiSources = sources.filter(s => {
     const dim = (s.dim_value || '').toLowerCase()
@@ -79,10 +94,10 @@ export default function ShareDashboard() {
   })
 
   const kpiCards = [
-    { label: 'Total Revenue', value: `$${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, icon: DollarSign },
+    { label: 'Total Revenue', value: hasRevenueData ? formatWholeCurrencyOrDash(totalRevenue) : null, icon: DollarSign },
     { label: 'Total Conversions', value: totalConversions.toLocaleString(), icon: MousePointerClick },
     { label: 'Top Channel', value: topChannel, icon: BarChart3 },
-    { label: 'Avg CPL', value: `$${avgCPL.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, icon: TrendingUp }
+    { label: 'Avg Conversion Value', value: avgConversionValue != null ? `$${avgConversionValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : null, icon: TrendingUp }
   ]
 
   return (
@@ -114,7 +129,7 @@ export default function ShareDashboard() {
                 <Icon className="w-4 h-4 text-st-gray dark:text-gray-400" />
                 <span className="text-xs text-st-gray dark:text-gray-400">{label}</span>
               </div>
-              <span className="text-xl font-bold text-st-black dark:text-white">{value}</span>
+              <span className="text-xl font-bold text-st-black dark:text-white">{value ?? '—'}</span>
             </div>
           ))}
         </div>
@@ -143,9 +158,11 @@ export default function ShareDashboard() {
                   <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
                     <td className="px-4 py-2.5 font-medium text-st-black dark:text-white">{ch.dim_value || 'Unknown'}</td>
                     <td className="px-4 py-2.5 text-right text-st-gray dark:text-gray-400">{ch.conversions || 0}</td>
-                    <td className="px-4 py-2.5 text-right text-st-gray dark:text-gray-400">${((ch.revenue || 0).toFixed(0))}</td>
                     <td className="px-4 py-2.5 text-right text-st-gray dark:text-gray-400">
-                      {totalConversions > 0 ? `${Math.round(((ch.conversions || 0) / totalConversions) * 100)}%` : '0%'}
+                      {ch.revenue != null ? formatWholeCurrencyOrDash(ch.revenue) : '—'}
+                    </td>
+                    <td className="px-4 py-2.5 text-right text-st-gray dark:text-gray-400">
+                      {totalConversions > 0 ? `${Math.round(((ch.conversions || 0) / totalConversions) * 100)}%` : '—'}
                     </td>
                   </tr>
                 ))}
@@ -180,7 +197,9 @@ export default function ShareDashboard() {
                   <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
                     <td className="px-4 py-2.5 font-medium text-st-black dark:text-white">{ai.dim_value || 'Unknown'}</td>
                     <td className="px-4 py-2.5 text-right text-st-gray dark:text-gray-400">{ai.conversions || 0}</td>
-                    <td className="px-4 py-2.5 text-right text-st-gray dark:text-gray-400">${((ai.revenue || 0).toFixed(0))}</td>
+                    <td className="px-4 py-2.5 text-right text-st-gray dark:text-gray-400">
+                      {ai.revenue != null ? formatWholeCurrencyOrDash(ai.revenue) : '—'}
+                    </td>
                   </tr>
                 ))}
               </tbody>
