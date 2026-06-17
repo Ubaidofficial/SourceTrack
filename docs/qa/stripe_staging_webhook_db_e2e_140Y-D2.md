@@ -1,11 +1,11 @@
 # Session 140Y-D2 — Stripe Staging Webhook + Database E2E Verification Report
 
-**Date:** 2026-06-18  
-**Session:** 140Y-D2  
-**Branch:** `main`  
-**Stripe mode:** sandbox/test only  
-**Staging API:** `https://sourcetrack-api-staging.up.railway.app`  
-**Staging Dashboard:** `https://sourcetrack-dashboard-staging.up.railway.app`  
+**Date:** 2026-06-18
+**Session:** 140Y-D2
+**Branch:** `main`
+**Stripe mode:** sandbox/test only
+**Staging API:** `https://sourcetrack-api-staging.up.railway.app`
+**Staging Dashboard:** `https://sourcetrack-dashboard-staging.up.railway.app`
 
 ---
 
