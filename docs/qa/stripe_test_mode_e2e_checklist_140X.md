@@ -1,8 +1,8 @@
 # Stripe Test-Mode E2E Checklist — Session 140X
 
-**Status:** READY TO RUN — staging prerequisites met  
-**Date:** 2026-06-17  
-**Session:** 140X  
+**Status:** READY TO RUN — staging prerequisites met
+**Date:** 2026-06-17
+**Session:** 140X
 **Supersedes:** `billing_checkout_test_mode_qa.md` operator checklist section
 
 ---

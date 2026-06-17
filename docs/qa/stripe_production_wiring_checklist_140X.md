@@ -1,8 +1,8 @@
 # Stripe Production Wiring Checklist — Session 140X
 
-**Status:** OPERATOR-BLOCKED — no production Stripe credentials set  
-**Date:** 2026-06-17  
-**Session:** 140X  
+**Status:** OPERATOR-BLOCKED — no production Stripe credentials set
+**Date:** 2026-06-17
+**Session:** 140X
 **Supersedes:** Parts of `stripe_public_beta_pricing_truth_140W.md` (kept for history)
 
 ---
