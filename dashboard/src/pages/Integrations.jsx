@@ -15,14 +15,6 @@ import MetricTile from '../components/MetricTile'
 import { safeNumber, formatNumber } from '../utils/numbers'
 import { hasFeature } from '../lib/planFeatures'
 
-const FUTURE_INTEGRATIONS = [
-  { key: 'google-ads', label: 'Google Ads', icon: BarChart3, desc: 'Import campaign spend and sync attribution data' },
-  { key: 'facebook', label: 'Facebook Ads', icon: BarChart3, desc: 'Track Facebook campaign performance' },
-  { key: 'shopify', label: 'Shopify', icon: ShoppingCart, desc: 'Pull order data and revenue tracking' },
-  { key: 'google-analytics', label: 'Google Analytics', icon: Globe, desc: 'Compare SourceTrack with GA attribution' },
-  { key: 'hubspot', label: 'HubSpot', icon: Tag, desc: 'Sync leads and CRM data' }
-]
-
 const IngestionActivityLog = ({ events, providerLabel }) => {
   const list = events?.data?.events || events?.events || []
   if (!list.length) {
@@ -1337,7 +1329,7 @@ export default function Integrations() {
                       disabled={stripeSubmitting || !stripeSecret.trim()}
                       className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 disabled:opacity-50 transition-colors"
                     >
-                      {stripeSubmitting ? 'Saving...' : 'Connect Stripe'}
+                      {stripeSubmitting ? 'Saving...' : 'Save signing secret'}
                     </button>
                   </form>
                 )}
@@ -1463,7 +1455,7 @@ export default function Integrations() {
                       disabled={shopifySubmitting || !shopifySecret.trim()}
                       className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 disabled:opacity-50 transition-colors"
                     >
-                      {shopifySubmitting ? 'Saving...' : 'Connect Shopify'}
+                      {shopifySubmitting ? 'Saving...' : 'Save signing secret'}
                     </button>
                   </form>
                 )}
@@ -2493,8 +2485,8 @@ export default function Integrations() {
                     icon={Radio}
                     title="Payments API"
                     subtitle="Trigger server-side checkout conversions from backend applications"
-                    status="verified"
-                    badgeLabel="Active"
+                    status="success"
+                    badgeLabel="Available"
                     isExpanded={activeSection === 'developer.payments_api'}
                     onToggle={() => setActiveSection(activeSection === 'developer.payments_api' ? 'developer' : 'developer.payments_api')}
                     actionButton={
