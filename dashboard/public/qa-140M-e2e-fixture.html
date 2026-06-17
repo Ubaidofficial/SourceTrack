@@ -172,6 +172,16 @@
     var logEl = document.getElementById('log');
     var networkCalls = [];
 
+    // Pre-install window.Cal stub so the tracker's _tryRegisterCalCom() finds it
+    // on its first retry rather than timing out. mockCalcomEmbedBoot() fires the
+    // callbacks registered here.
+    window._calCallbacks = [];
+    window.Cal = function(action, opts) {
+      if (action === 'on' && opts && typeof opts.callback === 'function') {
+        window._calCallbacks.push({ action: opts.action, cb: opts.callback });
+      }
+    };
+
     // Patch fetch/sendBeacon to intercept and log tracker calls
     var _origFetch = window.fetch;
     window.fetch = function(url, opts) {
@@ -293,19 +303,16 @@
 
     // ── Mock: Cal.com Embed API ──────────────────────────────────────────────
     function mockCalcomEmbedBoot() {
-      log('🔵 [MOCK] Installing window.Cal stub and firing bookingSuccessfulV2');
-      var callbackRegistry = [];
-      window.Cal = function(action, opts) {
-        if (action === 'on' && opts && opts.action === 'bookingSuccessfulV2') {
-          callbackRegistry.push(opts.callback);
-          log('ℹ️  Cal() on handler registered by tracker');
-          // Fire callback immediately to simulate booking success
-          setTimeout(function() {
-            callbackRegistry.forEach(function(cb) { try { cb({}); } catch(_) {} });
-          }, 100);
-        }
-      };
-      log('ℹ️  window.Cal stub installed — waiting for tracker to register...');
+      log('🔵 [MOCK] Firing bookingSuccessfulV2 to tracker-registered Cal() callbacks');
+      var cbs = (window._calCallbacks || []).filter(function(c) { return c.action === 'bookingSuccessfulV2'; });
+      if (!cbs.length) {
+        log('⚠️  No bookingSuccessfulV2 callbacks registered — tracker Cal.com detection may not have initialised');
+        return;
+      }
+      log('ℹ️  Firing ' + cbs.length + ' registered callback(s)');
+      setTimeout(function() {
+        cbs.forEach(function(c) { try { c.cb({}); } catch(_) {} });
+      }, 100);
     }
 
     function mockCalcomAbsent() {

@@ -1,273 +1,175 @@
-# Session 140M — Deployed Browser E2E: Forms + Booking Attribution
+# QA Report — Session 140M: Deployed Browser E2E — Forms & Booking
 
 **Date:** 2026-06-17
-**Session:** 140M
-**Scope:** Sessions 140I-B through 140L — form_submit ingestion, booking_scheduled ingestion,
-provider/fallback logic, UTM passthrough, confirmed booking detection
-**Tester:** AI agent (curl probes + Chrome DevTools MCP — deployed domains only)
-**Localhost used:** NO
+**Branch:** `main`
+**Baseline commit:** `4260864 Session 140M-A — Add deployed browser E2E fixture`
+**Fixture URL:** `https://sourcetrack-dashboard-staging.up.railway.app/qa-140M-e2e-fixture.html?utm_source=google&utm_medium=cpc&utm_campaign=qa_140M&utm_term=form_test&utm_content=e2e`
 
 ---
 
-## Overall Status
+## 1. Goal
 
-**PARTIAL — deployed API/public-domain smoke passed, but deployed browser E2E for tracker form
-capture, booking link mutation, mocked provider browser events, and unsupported-provider browser
-behavior remains BLOCKED/not verified.**
-
-Reason: The QA fixture (`dashboard/public/qa-140M-e2e-fixture.html`) is untracked and was never
-committed. The staging Railway deployment does not contain it. The path
-`https://sourcetrack-dashboard-staging.up.railway.app/qa-140M-e2e-fixture.html` returns the
-SPA shell (React index.html), not the fixture. Browser E2E is blocked until the fixture is
-committed and deployed (Option B — see section below).
+Run the deployed browser E2E against the live staging fixture to verify:
+- Form submit capture (native / webflow / wordpress) — correct `form_provider`, no PII
+- Booking UTM passthrough — correct link mutation for booking hosts, non-booking links untouched
+- Confirmed booking detection — Calendly embed emits correctly; bad events / bad origins are silent; Cal.com (see §C4)
+- Unsupported providers — never emit `booking_scheduled`
+- API routing — all events go to `/api/track`, never `/api/conversion`
+- Production smoke — all three production hosts respond
 
 ---
 
-## Raw Validation Evidence
+## 2. Baseline Status
 
-```
-git status --short --untracked-files=all
-?? dashboard/public/qa-140M-e2e-fixture.html
-?? docs/qa/deployed_forms_booking_e2e_140M.md
-
-git diff --check
-(no output — OK)
-
-git diff --stat
-(no output — no tracked changes)
-
-git diff -- dashboard/public/qa-140M-e2e-fixture.html
-(no output — file is untracked, not in git)
-
-git diff -- docs/qa/deployed_forms_booking_e2e_140M.md
-(no output — file is untracked, not in git)
-
-npm run qa:secrets
-PASS — No active credentials, secrets, or tracked env files detected.
-
-npm run qa:env-safety
-PASS — All offline environment safety tests passed successfully.
-
-npm run qa:static
-PASS — static launch QA passed
-
-npm run qa:tracker:unit
-tests 217 | pass 217 | fail 0
-
-npm run qa:identity:unit
-tests 131 | pass 131 | fail 0
-
-npm run qa:attribution:unit
-tests (all pass) | fail 0
-
-node --check api/index.js api/routes/*.js api/lib/*.js
-SYNTAX OK
-
-git status
-?? dashboard/public/qa-140M-e2e-fixture.html
-?? docs/qa/deployed_forms_booking_e2e_140M.md
-```
-
----
-
-## Section 1 — Staging Deployed API Smoke
-
-All probes below used `https://sourcetrack-api-staging.up.railway.app`.
-No real site_key used. No production data mutated.
-
-### A. Staging API health
-```
-GET https://sourcetrack-api-staging.up.railway.app/api/health
-→ HTTP 200
-{"success":true,"data":{"status":"ok","service":"api","timestamp":"2026-06-17T09:21:24.717Z","request_id":"68edc3fb-49af-418e-b270-286e8cfcd3d5"},"error":null}
-```
-**PASS**
-
-### B. /api/track — missing site_key guard
-```
-POST https://sourcetrack-api-staging.up.railway.app/api/track
-Body: {"event":"form_submit","url":"https://qa-probe.internal"}
-→ {"success":false,"data":null,"error":"Missing site_key"}
-```
-**PASS** — route is live, correctly guards with no crash and proper JSON error shape.
-
-### C. /api/track — form_submit with invalid site_key
-```
-POST https://sourcetrack-api-staging.up.railway.app/api/track
-Body: {
-  "site_key": "QA_PROBE_INVALID",
-  "event": "form_submit",
-  "url": "https://qa-probe.internal",
-  "properties": {"form_provider":"typeform","form_id":"qa-probe-form"}
-}
-→ {"success":false,"data":null,"error":"Invalid site_key"}
-```
-**PASS** — form_submit event reaches the route parser without crashing; rejected at validateSiteKey.
-Proves: server-side form_submit branch exists and runs on staging.
-
-### D. /api/track — booking_scheduled with invalid site_key
-```
-POST https://sourcetrack-api-staging.up.railway.app/api/track
-Body: {
-  "site_key": "QA_PROBE_INVALID",
-  "event": "booking_scheduled",
-  "url": "https://qa-probe.internal",
-  "properties": {
-    "booking_provider": "calendly",
-    "booking_detection_method": "browser_embed_event",
-    "booking_event_type": "event_scheduled"
-  }
-}
-→ {"success":false,"data":null,"error":"Invalid site_key"}
-```
-**PASS** — booking_scheduled event reaches the route parser; booking_provider, booking_detection_method,
-booking_event_type fields are parsed without crash. Rejected at validateSiteKey.
-Proves: server-side booking_scheduled branch exists and runs on staging.
-
-### E. Staging tracker.min.js delivery
-```
-GET https://sourcetrack-api-staging.up.railway.app/tracker.min.js
-→ HTTP 200, Content-Type: application/javascript; charset=utf-8
-```
-**PASS** — Deployed tracker file served correctly over HTTPS from staging API.
-
----
-
-## Section 2 — Staging Deployed Browser E2E
-
-### Fixture Status
-
-**BLOCKED — fixture not deployed to staging.**
-
-- Fixture file: `dashboard/public/qa-140M-e2e-fixture.html`
-- Git status: untracked (never committed)
-- `git ls-files dashboard/public/` does NOT include the fixture
-- The staging Railway build does not contain the file
-- `curl https://sourcetrack-dashboard-staging.up.railway.app/qa-140M-e2e-fixture.html`
-  returns HTTP 200 but body is the SPA shell (React index.html), not the fixture
-- Chrome DevTools MCP confirmed: navigating to the URL loads the React SPA,
-  not the fixture (title = "SourceTrack — Simple Revenue Attribution Software",
-  location.href redirected to https://sourcetrack-dashboard-staging.up.railway.app/)
-- Root cause: Railway serves SPA fallback for unknown paths; the fixture was never
-  committed so it was never included in the deployed build
-
-### Option B Required
-
-The fixture must be committed and deployed before browser E2E can run:
-1. Review and approve fixture + report commit
-2. Push → CI green → Railway redeploys staging dashboard
-3. Verify fixture loads at deployed URL (not SPA shell)
-4. Run browser E2E against deployed fixture URL
-
-### Blocked Browser E2E Flows (pending Option B deployment)
-
-For each flow below, record when tested:
-```
-Exact URL:
-Browser:
-Action performed:
-Console findings:
-Network request observed:
-Request URL:
-Request method:
-Event payload sample (PII redacted):
-Expected result:
-Actual result:
-PASS/BLOCKED:
-```
-
-| # | Flow | Status |
-|---|---|---|
-| 1 | Native form submit emits /api/track form_submit | BLOCKED — fixture not deployed |
-| 2 | Webflow form emits form_submit with form_provider=webflow | BLOCKED |
-| 3 | WordPress/CF7 form emits form_submit with form_provider=wordpress | BLOCKED |
-| 4 | Form fields (email/name/phone/message/password) absent from network payload | BLOCKED |
-| 5 | Calendly link gets UTM passthrough in deployed browser | BLOCKED |
-| 6 | Cal.com link gets UTM passthrough in deployed browser | BLOCKED |
-| 7 | TidyCal link gets UTM passthrough only | BLOCKED |
-| 8 | SavvyCal link gets UTM passthrough only | BLOCKED |
-| 9 | Non-booking links (example.com) not mutated | BLOCKED |
-| 10 | Calendly mocked event_scheduled emits booking_scheduled | BLOCKED |
-| 11 | Cal.com mocked bookingSuccessfulV2 emits booking_scheduled | BLOCKED |
-| 12 | Unsupported provider postMessages do not emit booking_scheduled | BLOCKED |
-| 13 | No /api/conversion calls | BLOCKED |
-| 14 | Browser console/network clean (no PII, no unexpected errors) | BLOCKED |
-
----
-
-## Section 3 — Production Public-Domain Smoke (Read-Only)
-
-No mutations. No site_key. No form submissions. No bookings.
-
-```
-GET https://sourcetrack.ai           → HTTP 301 → https://www.sourcetrack.ai/  PASS
-GET https://www.sourcetrack.ai       → HTTP 200                                 PASS
-GET https://app.sourcetrack.ai       → HTTP 200                                 PASS
-GET https://app.sourcetrack.ai/login → HTTP 200                                 PASS
-```
-All three production-domain surfaces are reachable. Canonical redirect confirmed.
-
----
-
-## Section 4 — Production Blocked Safety Cases
-
-| Action | Status |
+| Check | Result |
 |---|---|
-| Production API health | PASS — HTTP 200, {"status":"ok"} |
-| Production /api/track missing site_key guard | PASS — {"error":"Missing site_key"} |
-| Production tracker.min.js delivery | PASS — HTTP 200, application/javascript |
-| Real form submissions on production | BLOCKED — production safety rule |
-| Real booking creation on production | BLOCKED — production safety rule |
-| Real payment / checkout | BLOCKED — not in scope |
-| PII sent to production | NO — all probes used qa-probe.internal URL |
-| Authenticated browser E2E on production | BLOCKED — production safety / isolation |
+| Git branch at session start | `main` @ `4260864` |
+| Staging dashboard service | ✅ responding (fixture served from `sourcetrack-dashboard-staging.up.railway.app`) |
+| Staging API service | ✅ 200 (503 cold-start resolved at session open) |
+| Tracker minified build | ✅ served at `/tracker.min.js` (fixture loads it `async`) |
 
 ---
 
-## Route Architecture Note
+## 3. Test Methodology
 
-`/api/forms/submit` and `/api/booking/confirmed` do NOT exist as separate routes.
-All form and booking attribution flows go through `POST /api/track` with
-`event: "form_submit"` or `event: "booking_scheduled"`.
-This is consistent with Sessions 140I-B through 140L which modified `api/routes/track.js`.
+- Browser: Chrome via MCP, tab `1625638185`
+- Beacon interception: JS injection — `window.Blob` constructor patched to stash `._src`; `navigator.sendBeacon` wrapped to parse `._src` and persist to `localStorage['qa140M_beacons']`
+- Form navigation prevention: `target="_blank"` set on all forms before any submit; new tabs open per submit, fixture tab survives
+- All results read from `localStorage['qa140M_beacons']` via `JSON.parse`; properties from `body.properties`
+
+> **Privacy note:** No form field values were entered. Fields submitted empty. No PII input. No real bookings, leads, or checkout flows created.
 
 ---
 
-## Summary Table
+## 4. Flow A — Form Submit Capture
 
-| Area | Status |
+**Source of truth:** `localStorage['qa140M_beacons']` after clicking A1, A2, A3 submit buttons (physical click via MCP `computer left_click`).
+
+| Test | Expected `form_provider` | Observed | `form_name` | PII in `properties` | Route |
+|---|---|---|---|---|---|
+| A1 Native form | `native` | `native` ✅ | `qa-native-form` | none ✅ | `/api/track` ✅ |
+| A2 Webflow-style form | `webflow` | `webflow` ✅ | `wf-contact` | none ✅ | `/api/track` ✅ |
+| A3 WordPress/CF7 form | `wordpress` | `wordpress` ✅ | `cf7-contact` | none ✅ | `/api/track` ✅ |
+
+**PII check:** `properties` scanned for email regex (`/@[a-z0-9.-]+\.[a-z]{2,}/i`). All clear — no leak.
+
+`booking_provider` for all form submits: not set ✅
+
+---
+
+## 5. Flow B — Booking UTM Passthrough
+
+**Source of truth:** `element.getAttribute('href')` read directly from DOM after fixture auto-fires `mousedown` passthrough (2 s after load).
+
+| Link | ID | `utm_source` appended | `sourcetrack_source` appended | Notes |
+|---|---|---|---|---|
+| Calendly (B1) | `link-calendly` | ✅ | ✅ | — |
+| Cal.com (B2) | `link-calcom` | ✅ | ✅ | — |
+| TidyCal (B3) | `link-tidycal` | ✅ | ✅ | — |
+| SavvyCal (B4) | `link-savvycal` | ✅ | ✅ | — |
+| Calendly — existing params (B5) | `link-existing-params` | `utm_source=existing` preserved ✅ | ✅ | NOT overwritten with `google` ✅; hash `#week=4` preserved ✅ |
+| Non-booking external (B6) | `link-non-booking` | NOT mutated ✅ | NOT mutated ✅ | href stays `https://www.example.com/` |
+| Typeform link (D6) | `link-typeform` | NOT mutated ✅ | NOT mutated ✅ | unsupported host — correct |
+| Tally link (D7) | `link-tally` | NOT mutated ✅ | NOT mutated ✅ | unsupported host — correct |
+
+---
+
+## 6. Flow C — Confirmed Booking Mock Events
+
+**Source of truth:** `localStorage['qa140M_beacons']` after clicking C1–C5 buttons.
+
+| Test | Action | Expected | Observed |
+|---|---|---|---|
+| C1 | `calendly.event_scheduled` from `calendly.com` | emit `booking_scheduled` | ✅ `booking_provider: "calendly"`, `booking_detection_method: "browser_embed_event"`, `booking_event_type: "event_scheduled"` → `/api/track` |
+| C2 | `calendly.date_and_time_selected` from `calendly.com` | NO emit | ✅ 0 beacons |
+| C3 | `calendly.event_scheduled` from `https://evil.com` | NO emit | ✅ 0 beacons |
+| C4 | Cal.com `bookingSuccessfulV2` via embed API | emit `booking_scheduled` | BLOCKED — fixture timing bug found; fixture updated but not yet deployed/retested |
+| C5 | `window.Cal` absent — no throw | NO emit, no exception | ✅ 0 beacons, no JS errors |
+
+### 6a — C4: Cal.com Embed Booking (Fixture Timing Limitation)
+
+The tracker's `_tryRegisterCalCom()` polls for `window.Cal` at 500ms intervals up to 10 times (5 s) from tracker init. Because the staging tracker is cached, it executes within ~100–200ms of page load. The MCP JS injection occurs at +1 s or later — after several retries have already run. Once the retry budget is exhausted, any subsequently injected `window.Cal` is never found.
+
+**Impact:** C4 browser E2E verification was not possible in this session with the original fixture.
+
+**Mitigations:**
+1. **Unit test coverage:** `api/tests/provider-truth-audit.test.js` §E (E1–E2) proves Cal.com `bookingSuccessfulV2` emits `booking_scheduled` with `booking_provider: "calcom"` in the Node VM harness. This is the authoritative correctness proof.
+2. **Fixture fix included in this session diff:** `dashboard/public/qa-140M-e2e-fixture.html` now pre-installs `window._calCallbacks` and a `window.Cal` stub in the synchronous inline `<script>` block (runs before the async tracker script). `mockCalcomEmbedBoot()` is updated to fire the callbacks the tracker registered at init time. A redeploy is needed before this can be browser-verified.
+
+---
+
+## 7. Flow D — Unsupported Provider Silence
+
+**Source of truth:** `localStorage['qa140M_beacons']` after clicking D1–D5 (all 5 unsupported postMessage dispatches; 2 s settle time).
+
+| Test | Origin | Event name | `booking_scheduled` emitted? |
+|---|---|---|---|
+| D1 | `typeform.com` | `form_response` | NO ✅ |
+| D2 | `tally.so` | `Tally.FormSubmitted` | NO ✅ |
+| D3 | `app.hubspot.com` | `hsFormCallback` | NO ✅ |
+| D4 | `jotform.com` | `JotFormEvent` | NO ✅ |
+| D5 | `docs.google.com` | `formSubmit` | NO ✅ |
+
+Total beacons from D1–D5: **0**. Total `booking_scheduled` events: **0** ✅
+
+---
+
+## 8. Flow E — Network Payload Privacy + /api/track Verification
+
+| Test | Event name | Route | `/api/conversion` called? |
+|---|---|---|---|
+| E1 Baseline (`fireBaselineTrackEvent`) | `qa_140M_e2e_baseline` | `/api/track` ✅ | NO ✅ |
+
+`/api/conversion` call count across all flows: **0** ✅
+
+---
+
+## 9. Production Smoke Check
+
+| Host | Result |
 |---|---|
-| Staging API reachability | ✅ PASS |
-| Staging API health | ✅ PASS |
-| Staging form_submit route guard | ✅ PASS |
-| Staging booking_scheduled route guard | ✅ PASS |
-| Staging tracker.min.js delivery | ✅ PASS |
-| Staging browser E2E — all 14 flows | ❌ BLOCKED — fixture not deployed |
-| Production domain smoke (3 surfaces) | ✅ PASS |
-| Production API health | ✅ PASS |
-| Production API guard (form_submit) | ✅ PASS |
-| Production tracker.min.js delivery | ✅ PASS |
-| Production authenticated E2E | BLOCKED — safety rule |
-| Unit tests (tracker/identity/attribution) | ✅ PASS — 0 failures |
-| Static QA | ✅ PASS |
-| Node syntax check | ✅ PASS |
-| Secrets / env safety | ✅ PASS |
-| git diff --check | ✅ PASS — no whitespace issues |
+| `https://sourcetrack.ai` | ✅ loads — "SourceTrack — Revenue Attribution Analytics for SaaS, Lead Gen, and Agencies" |
+| `https://www.sourcetrack.ai` | ✅ loads — same title |
+| `https://app.sourcetrack.ai` | ✅ loads |
+
+No form submissions, no account creation, no booking, no checkout performed.
+
+---
+
+## 10. Files Changed This Session
+
+| File | Change |
+|---|---|
+| `dashboard/public/qa-140M-e2e-fixture.html` | Pre-install `window.Cal` stub + fix `mockCalcomEmbedBoot()` for C4 (see §6a) |
+| `docs/qa/deployed_forms_booking_e2e_140M.md` | This report |
+
+No tracker (`tracker/`) or backend (`api/`) files changed.
+
+---
+
+## 11. Known Limitations
+
+| Limitation | Status |
+|---|---|
+| **Server-accepted event capture BLOCKED** — site_key `qa-140m-fixture-key-staging-only` is intentionally invalid; staging API rejects events with invalid keys | By design — browser-side dispatch and payload privacy only |
+| **C4 Cal.com browser E2E pending redeploy** — tracker retry window exhausted before JS injection; unit test proves correctness; fixture fix in this diff | Pending redeploy |
+
+> **Server-accepted event capture with a valid staging site_key remains BLOCKED — not verified.**
+
+---
+
+## 12. Overall Result
+
+**Overall: PARTIAL PASS — deployed browser E2E verified for form capture, booking UTM passthrough, Calendly mock, unsupported-provider safety, and no /api/conversion. Cal.com deployed browser E2E remains BLOCKED pending deployment of the updated fixture. Server-accepted event persistence with a valid staging site_key remains BLOCKED.**
+
+| Flow | Status |
+|---|---|
+| A — Form submit capture (native / webflow / wordpress) | ✅ PASS |
+| B — Booking UTM passthrough | ✅ PASS |
+| C1–C3, C5 — Calendly confirmed booking / silence | ✅ PASS |
+| C4 — Cal.com `bookingSuccessfulV2` | BLOCKED — fixture timing bug found; fixture updated but not yet deployed/retested |
+| D — Unsupported provider silence | ✅ PASS |
+| E — API routing / no PII / no `/api/conversion` | ✅ PASS |
+| Production smoke (3 hosts) | ✅ PASS |
+| Server-accepted event persistence (valid site_key) | BLOCKED — by design (invalid key fixture) |
 | Paid beta readiness | NOT READY |
-
-**Overall: PARTIAL — deployed API/public-domain smoke passed, but deployed browser E2E for
-tracker form capture, booking link mutation, mocked provider browser events, and
-unsupported-provider browser behavior remains BLOCKED/not verified.**
-
----
-
-## Next Required Step (Option B)
-
-1. Operator reviews fixture (`dashboard/public/qa-140M-e2e-fixture.html`) and this report
-2. Operator approves commit of fixture + report
-3. Push to main → CI green → Railway staging dashboard redeploys
-4. Verify fixture is served at:
-   `https://sourcetrack-dashboard-staging.up.railway.app/qa-140M-e2e-fixture.html`
-   (body must be the fixture HTML, not the SPA shell)
-5. Run all 14 browser E2E flows against the deployed fixture URL
-6. Update this report with real deployed browser evidence
