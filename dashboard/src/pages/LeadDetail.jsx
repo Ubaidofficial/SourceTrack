@@ -14,6 +14,7 @@ import MetricTile from '../components/MetricTile'
 import StatusBadge from '../components/StatusBadge'
 import JourneyModal from '../components/JourneyModal'
 import { formatCurrency, formatCurrencyDecimal } from '../utils/numbers'
+import { SourceChip } from '../components/SourceIcon'
 
 const AI_SOURCES = ['ChatGPT', 'Claude', 'Perplexity', 'Gemini', 'Grok', 'Copilot', 'DeepSeek', 'You.com AI', 'Phind', 'Kagi']
 
@@ -179,31 +180,32 @@ export default function LeadDetail() {
 
       {/* Detail Cards Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Attribution / Acquisition */}
-        <DashboardCard title="Attribution" subtitle="First-touch acquisition data">
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-xs text-st-gray font-medium uppercase tracking-wider mb-0.5">First-Touch Source</p>
-                <p className="text-sm text-st-black">{lead.first_touch_source || '—'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-st-gray font-medium uppercase tracking-wider mb-0.5">First-Touch Medium</p>
-                <p className="text-sm text-st-black">{lead.first_touch_medium || '—'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-st-gray font-medium uppercase tracking-wider mb-0.5">First-Touch Campaign</p>
-                <p className="text-sm text-st-black">{lead.campaign || '—'}</p>
-              </div>
-              <div>
-                <p className="text-xs text-st-gray font-medium uppercase tracking-wider mb-0.5">First Page URL</p>
-                <p className="text-sm text-st-black truncate" title={lead.first_page_url}>
-                  {lead.first_page_url ? (() => {
-                    try { return new URL(lead.first_page_url).pathname } catch { return lead.first_page_url }
-                  })() : '—'}
-                </p>
-              </div>
+        {/* Lead Source Data */}
+        <DashboardCard title="Lead Source Data" subtitle="Attribution and device context">
+          <div className="space-y-2.5">
+            <SourceDataRow label="Channel" value={
+              (lead.medium && lead.medium !== 'none') ? lead.medium
+              : (lead.first_touch_medium && lead.first_touch_medium !== 'none') ? lead.first_touch_medium
+              : null
+            } />
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-st-gray font-medium uppercase tracking-wider">Source</p>
+              {(lead.source || lead.first_touch_source) ? (
+                <SourceChip source={lead.source || lead.first_touch_source} />
+              ) : (
+                <p className="text-xs text-st-black dark:text-white">—</p>
+              )}
             </div>
+            <SourceDataRow label="Campaign" value={lead.campaign && lead.campaign !== 'none' ? lead.campaign : null} />
+            <SourceDataRow label="Term" value={lead.term || null} />
+            <SourceDataRow label="Content" value={lead.content || null} />
+            <SourceDataRow label="Landing Page" value={lead.first_page_url ? (() => {
+              try { return new URL(lead.first_page_url).pathname } catch { return lead.first_page_url }
+            })() : null} />
+            <SourceDataRow label="Device" value={lead.device_type || null} />
+            <SourceDataRow label="Captured" value={lead.first_seen ? new Date(lead.first_seen).toLocaleString() : null} />
+            <SourceDataRow label="Conversion Type" value={lead.last_conversion_type || null} />
+            <SourceDataRow label="Revenue" value={hasLeadRevenueValue ? formatCurrencyDecimal(Number(lead.revenue || 0)) : null} />
           </div>
         </DashboardCard>
 
@@ -405,6 +407,15 @@ export default function LeadDetail() {
           }}
         />
       )}
+    </div>
+  )
+}
+
+function SourceDataRow({ label, value }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <p className="text-xs text-st-gray dark:text-gray-400 font-medium uppercase tracking-wider shrink-0">{label}</p>
+      <p className="text-xs text-st-black dark:text-white text-right break-all">{value ?? '—'}</p>
     </div>
   )
 }

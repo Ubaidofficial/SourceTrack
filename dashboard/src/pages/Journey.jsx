@@ -10,6 +10,7 @@ import {
   Timer, FileText, LogIn, LogOut
 } from 'lucide-react'
 import { formatCurrencyDecimal } from '../utils/numbers'
+import { SourceIcon } from '../components/SourceIcon'
 
 const FILTERS = [
   { key: 'all', label: 'All Events' },
@@ -185,6 +186,14 @@ export default function Journey() {
         </div>
       </form>
 
+      {/* No search yet */}
+      {!searchId && !isLoading && !data && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 py-12 text-center space-y-2">
+          <p className="text-sm font-medium text-st-black">Search for a visitor</p>
+          <p className="text-xs text-st-gray max-w-xs mx-auto">Enter a visitor ID from the Leads table to see pageviews, conversions, and source data for their full journey.</p>
+        </div>
+      )}
+
       {/* Loading */}
       {isLoading && (
         <div className="flex items-center justify-center py-20">
@@ -242,7 +251,7 @@ export default function Journey() {
                 <AggregateStat label="Avg Duration" value={formatDuration(data.session_aggregates.avg_duration_seconds)} />
                 <AggregateStat label="Avg Pages/Session" value={data.session_aggregates.avg_pageviews_per_session} />
                 <AggregateStat label="Converting Sessions" value={data.session_aggregates.conversion_sessions} />
-                <AggregateStat label="Total Revenue" value={data.session_aggregates.total_conversion_value > 0 ? formatCurrencyDecimal(data.session_aggregates.total_conversion_value) : '—'} />
+                <AggregateStat label="Total Revenue" value={data.session_aggregates.total_conversion_value != null ? formatCurrencyDecimal(data.session_aggregates.total_conversion_value) : '—'} />
               </div>
             )}
           </div>
@@ -280,8 +289,9 @@ export default function Journey() {
 
           {/* Session cards */}
           {sessions.length === 0 ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
-              <p className="text-sm text-st-gray">No events found for this visitor.</p>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center space-y-1">
+              <p className="text-sm font-medium text-st-black">No journey events yet</p>
+              <p className="text-xs text-st-gray">Journey events appear after the tracking script records pageviews, conversions, or booking and form events for this visitor.</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -324,8 +334,9 @@ export default function Journey() {
                             Session {session.session_index}
                           </span>
                           {/* Source badge */}
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium truncate max-w-[140px]">
-                            {session.source_label || 'Direct'}
+                          <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium max-w-[160px]">
+                            <SourceIcon source={session.source_label || 'direct'} className="w-3 h-3 flex-shrink-0" />
+                            <span className="truncate">{session.source_label || 'Direct'}</span>
                           </span>
                           {session.contains_conversion && (
                             <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-lime-100 text-lime-800 font-medium">
@@ -405,7 +416,12 @@ export default function Journey() {
                                       <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
                                         e.is_conversion ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
                                       }`}>
-                                        {e.event === 'outbound_click' ? 'Outbound Click' : e.event}
+                                        {e.event === '$pageview' ? 'Pageview'
+                                          : e.event === '$conversion' ? 'Conversion'
+                                          : e.event === '$identify' ? 'Identify'
+                                          : e.event === 'outbound_click' ? 'Outbound Click'
+                                          : e.event === 'install_verified' ? 'Install Verified'
+                                          : e.event}
                                       </span>
                                       {e.ai_source && (
                                         <span className="flex items-center gap-1 text-xs text-purple-600">

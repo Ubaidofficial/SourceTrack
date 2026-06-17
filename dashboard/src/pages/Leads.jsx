@@ -5,14 +5,13 @@ import { supabase } from '../lib/supabase'
 import { fetchApi } from '../lib/api'
 import { format, subDays } from 'date-fns'
 import { useAuth } from '../contexts/AuthContext'
-import { ArrowRight, Search, Download, User, AlertTriangle } from 'lucide-react'
+import { ArrowRight, Search, Download, AlertTriangle } from 'lucide-react'
 import DashboardCard from '../components/DashboardCard'
 import MetricTile from '../components/MetricTile'
-import StatusBadge from '../components/StatusBadge'
-import { safeNumber, formatCurrency, formatNumber } from '../utils/numbers'
+import JourneyModal from '../components/JourneyModal'
+import { SourceChip } from '../components/SourceIcon'
+import { safeNumber, formatCurrency } from '../utils/numbers'
 import { hasFeature } from '../lib/planFeatures'
-
-const AI_SOURCES = ['ChatGPT', 'Claude', 'Perplexity', 'Gemini', 'Grok', 'Copilot', 'DeepSeek', 'You.com AI', 'Phind', 'Kagi']
 
 const CONVERSION_TYPE_BADGE = {
   purchase: { bg: 'bg-green-100', text: 'text-green-800', label: 'Purchase' },
@@ -23,31 +22,16 @@ const CONVERSION_TYPE_BADGE = {
   booking: { bg: 'bg-indigo-100', text: 'text-indigo-800', label: 'Booking' }
 }
 
-// Source channel classification + badge colors
-function classifySource(source, medium) {
-  const s = (source || '').toLowerCase()
-  const m = (medium || '').toLowerCase()
-  if (!s || s === 'direct' || s === '(direct)') return { label: 'Direct', color: 'bg-gray-100 text-gray-600', dot: 'bg-gray-400' }
-  if (['cpc','ppc','paid','paid_search','paid_social'].includes(m)) return { label: 'Paid', color: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500' }
-  if (['email','newsletter'].includes(m)) return { label: 'Email', color: 'bg-purple-100 text-purple-700', dot: 'bg-purple-500' }
-  if (AI_SOURCES.map(a => a.toLowerCase()).includes(s)) return { label: 'AI Search', color: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500' }
-  if (['google','bing','yahoo','duckduckgo','baidu'].some(se => s.includes(se))) return { label: 'Organic', color: 'bg-green-100 text-green-700', dot: 'bg-green-500' }
-  if (['facebook','instagram','linkedin','twitter','x.com','tiktok','reddit'].some(sn => s.includes(sn))) return { label: 'Social', color: 'bg-pink-100 text-pink-700', dot: 'bg-pink-500' }
-  if (m === 'referral' || (!m && s)) return { label: 'Referral', color: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500' }
-  return { label: source, color: 'bg-gray-100 text-gray-600', dot: 'bg-gray-400' }
-}
-
 export default function Leads() {
   const { user } = useAuth()
-  const [statusMap, setStatusMap] = useState({})
   const navigate = useNavigate()
   const [site, setSite] = useState(null)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [filterAI, setFilterAI]         = useState('all')
-  const [filterSource, setFilterSource] = useState('all')
+  const [filterAI, setFilterAI] = useState('all')
   const [attributionModel, setAttributionModel] = useState('first_touch')
   const [journeyLead, setJourneyLead] = useState(null)
+  const [statusMap, setStatusMap] = useState({})
   const [selectedLeads, setSelectedLeads] = useState(new Set())
 
   const dateFrom = format(subDays(new Date(), 30), 'yyyy-MM-dd')
@@ -84,7 +68,7 @@ export default function Leads() {
   }, [search])
 
   const { data: leadsData, isLoading, refetch } = useQuery({
-    queryKey: ['leads-page', site?.site_key, debouncedSearch, filterAI, filterSource, attributionModel, dateFrom, dateTo],
+    queryKey: ['leads-page', site?.site_key, debouncedSearch, filterAI, attributionModel, dateFrom, dateTo],
     queryFn: async () => {
       if (!site?.site_key) return null
       const params = new URLSearchParams({
@@ -96,7 +80,6 @@ export default function Leads() {
       })
       if (debouncedSearch) params.set('search', debouncedSearch)
       if (filterAI !== 'all') params.set('ai', filterAI)
-      if (filterSource !== 'all') params.set('source_type', filterSource)
       return fetchApi(`/leads?${params}`)
     },
     enabled: !!site?.site_key
@@ -127,14 +110,12 @@ export default function Leads() {
       )
       setStatusMap(prev => {
         const next = { ...prev }
-        selectedLeads.forEach(leadId => {
-          next[leadId] = newStatus
-        })
+        selectedLeads.forEach(leadId => { next[leadId] = newStatus })
         return next
       })
       setSelectedLeads(new Set())
     } catch (err) {
-      console.error("Bulk status change failed", err)
+      console.error('Bulk status change failed', err)
     }
   }
 
@@ -164,6 +145,14 @@ export default function Leads() {
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
+  }
+
+  const STATUS_CHIP = {
+    lead:     { bg: 'bg-gray-100 text-gray-500', label: 'Unqualified' },
+    rejected: { bg: 'bg-gray-100 text-gray-500', label: 'Unqualified' },
+    mql:      { bg: 'bg-blue-50 text-blue-600',  label: 'MQL' },
+    sql:      { bg: 'bg-purple-50 text-purple-600', label: 'SQL' },
+    customer: { bg: 'bg-green-50 text-green-700', label: 'Qualified' }
   }
 
   const hasRevenue = totalRevenue > 0
@@ -235,25 +224,33 @@ export default function Leads() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black mx-auto" />
           </div>
         ) : leads.length === 0 ? (
-          <div className="py-12 text-center text-sm text-st-gray">
-            {search || filterAI !== 'all' ? 'No leads match your filters.' : 'No leads yet. Visitors will appear here after they engage with your site.'}
+          <div className="py-12 text-center space-y-2">
+            {search || filterAI !== 'all' ? (
+              <p className="text-sm text-st-gray">No leads match your filters.</p>
+            ) : (
+              <>
+                <p className="text-sm font-medium text-st-black dark:text-white">No leads yet</p>
+                <p className="text-xs text-st-gray max-w-xs mx-auto">Leads appear after visitors submit a form, book a meeting, or trigger a conversion event.</p>
+                <div className="flex items-center justify-center gap-4 mt-3">
+                  <a href="/setup" className="text-xs text-st-black dark:text-white underline underline-offset-2 hover:opacity-70">View install guide</a>
+                  <a href="/docs/conversions" className="text-xs text-st-black dark:text-white underline underline-offset-2 hover:opacity-70">Open conversion docs</a>
+                </div>
+              </>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100">
-                  <th className="py-3 px-3 text-left w-8">
+                  <th className="py-3 px-3 w-8">
                     <input
                       type="checkbox"
                       className="rounded border-gray-300 text-st-black focus:ring-st-black cursor-pointer"
                       checked={leads.length > 0 && selectedLeads.size === leads.length}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedLeads(new Set(leads.map(l => l.id)))
-                        } else {
-                          setSelectedLeads(new Set())
-                        }
+                      onChange={e => {
+                        if (e.target.checked) setSelectedLeads(new Set(leads.map(l => l.id)))
+                        else setSelectedLeads(new Set())
                       }}
                     />
                   </th>
@@ -270,15 +267,17 @@ export default function Leads() {
               </thead>
               <tbody>
                 {leads.map((lead, i) => {
-                  const isSelected = selectedLeads.has(lead.id)
                   const shortId = lead.id ? lead.id.slice(0, 8) : 'unknown'
+                  const isSelected = selectedLeads.has(lead.id)
+                  const curStatus = statusMap[lead.id] || lead.status || 'lead'
+                  const statusStyle = STATUS_CHIP[curStatus] || STATUS_CHIP.lead
                   return (
                     <tr
                       key={i}
                       onClick={() => openJourney(lead)}
-                      className={`border-b border-gray-50 hover:bg-lime-50/60 transition-colors cursor-pointer ${isSelected ? 'bg-lime-50/30' : ''}`}
+                      className={`border-b border-gray-50 hover:bg-lime-50/60 transition-colors cursor-pointer${isSelected ? ' bg-lime-50/30' : ''}`}
                     >
-                      <td className="py-3 px-3 w-8" onClick={(e) => e.stopPropagation()}>
+                      <td className="py-3 px-3 w-8" onClick={e => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           className="rounded border-gray-300 text-st-black focus:ring-st-black cursor-pointer"
@@ -286,11 +285,8 @@ export default function Leads() {
                           onChange={() => {
                             setSelectedLeads(prev => {
                               const next = new Set(prev)
-                              if (next.has(lead.id)) {
-                                next.delete(lead.id)
-                              } else {
-                                next.add(lead.id)
-                              }
+                              if (next.has(lead.id)) next.delete(lead.id)
+                              else next.add(lead.id)
                               return next
                             })
                           }}
@@ -307,20 +303,12 @@ export default function Leads() {
                         </button>
                       </td>
                       <td className="py-3 px-3">
-                        {(() => {
-                          const cls = classifySource(lead.source, lead.medium)
-                          return (
-                            <div className="flex flex-col gap-0.5">
-                              <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded-full w-fit ${cls.color}`}>
-                                <span className={`w-1.5 h-1.5 rounded-full ${cls.dot}`} />
-                                {lead.ai_source || lead.source || 'Direct'}
-                              </span>
-                              {lead.campaign && lead.campaign !== 'none' && (
-                                <span className="text-[10px] text-st-gray truncate max-w-[120px]">{lead.campaign}</span>
-                              )}
-                            </div>
-                          )
-                        })()}
+                        <div className="flex flex-col gap-0.5">
+                          <SourceChip source={lead.ai_source || lead.source || 'direct'} />
+                          {lead.campaign && lead.campaign !== 'none' && (
+                            <span className="text-[10px] text-st-gray truncate max-w-[140px]">{lead.campaign}</span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 px-3">
                         {lead.last_conversion_type ? (() => {
@@ -342,54 +330,16 @@ export default function Leads() {
                       <td className="py-3 px-3 text-right text-gray-600">{lead.conversions}</td>
                       {hasRevenue && (
                         <td className="py-3 px-3 text-right font-medium text-st-black">
-                          {formatCurrency(lead.revenue)}
+                          {lead.revenue != null ? formatCurrency(lead.revenue) : '—'}
                         </td>
                       )}
                       <td className="py-3 px-3 text-xs text-st-gray">
                         {lead.last_seen ? new Date(lead.last_seen).toLocaleDateString() : '—'}
                       </td>
-                      <td className="py-3 px-3">
-                        {(() => {
-                          const STATUS_STYLES = {
-                            lead:     'bg-red-50 text-red-500',
-                            mql:      'bg-blue-50 text-blue-600',
-                            sql:      'bg-purple-50 text-purple-600',
-                            customer: 'bg-green-50 text-green-700',
-                            rejected: 'bg-red-50 text-red-500'
-                          }
-                          const cur = statusMap[lead.id] || lead.status || 'lead'
-                          const canEdit = hasFeature(site?.plan, 'manual_revenue_status')
-                          if (!canEdit) {
-                            return (
-                              <span
-                                title="Status editing available on Starter"
-                                className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLES[cur] || STATUS_STYLES.rejected} opacity-80 whitespace-nowrap`}
-                              >
-                                🔒 {cur === 'rejected' || cur === 'lead' ? 'UNQUALIFIED' : cur === 'customer' ? 'QUALIFIED' : cur.toUpperCase()}
-                              </span>
-                            )
-                          }
-                          return (
-                            <select
-                              value={cur === 'lead' ? 'rejected' : cur}
-                              onClick={(e) => e.stopPropagation()}
-                              onChange={async (e) => {
-                                const newStatus = e.target.value
-                                setStatusMap(prev => ({ ...prev, [lead.id]: newStatus }))
-                                await fetchApi(`/leads/${lead.id}/qualify`, {
-                                  method: 'PATCH',
-                                  body: JSON.stringify({ status: newStatus })
-                                })
-                              }}
-                              className={`text-xs font-medium px-2 py-0.5 rounded-full border-0 cursor-pointer ${STATUS_STYLES[cur] || STATUS_STYLES.rejected}`}
-                            >
-                              <option value="rejected">Unqualified</option>
-                              <option value="customer">Qualified</option>
-                              <option value="mql">MQL</option>
-                              <option value="sql">SQL</option>
-                            </select>
-                          )
-                        })()}
+                      <td className="py-3 px-3" onClick={e => e.stopPropagation()}>
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${statusStyle.bg}`}>
+                          {statusStyle.label}
+                        </span>
                       </td>
                       <td className="py-3 px-3 text-right text-st-gray text-xs">
                         {lead.country || '—'}
@@ -398,9 +348,8 @@ export default function Leads() {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={(e) => { e.stopPropagation(); navigate(`/leads/${encodeURIComponent(lead.id)}`) }}
-                            className="text-xs text-gray-600 hover:text-st-black font-medium flex items-center gap-1"
+                            className="text-xs text-gray-600 hover:text-st-black font-medium"
                           >
-                            <User className="w-3 h-3" />
                             View
                           </button>
                           <button
@@ -421,7 +370,7 @@ export default function Leads() {
       </DashboardCard>
 
       {selectedLeads.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-st-black text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-4 animate-fade-in text-xs font-medium">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-st-black text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-4 text-xs font-medium">
           <span>{selectedLeads.size} selected</span>
           <div className="w-px h-4 bg-gray-700" />
           <button onClick={() => handleBulkStatusChange('customer')} className="hover:text-st-lime transition-colors">Mark Qualified</button>
@@ -429,7 +378,7 @@ export default function Leads() {
           <button onClick={() => handleBulkStatusChange('sql')} className="hover:text-st-lime transition-colors">Mark SQL</button>
           <button onClick={() => handleBulkStatusChange('rejected')} className="hover:text-st-lime transition-colors">Mark Unqualified</button>
           <div className="w-px h-4 bg-gray-700" />
-          <button onClick={handleExportSelected} className="text-st-lime hover:underline">Export Selected CSV</button>
+          <button onClick={handleExportSelected} className="text-st-lime hover:underline">Export CSV</button>
         </div>
       )}
 
@@ -439,7 +388,12 @@ export default function Leads() {
           siteKey={site?.site_key}
           leadSummary={journeyLead}
           onClose={() => setJourneyLead(null)}
-          onQualified={refetch}
+          onQualified={(newStatus) => {
+            if (journeyLead?.id && newStatus) {
+              setStatusMap(prev => ({ ...prev, [journeyLead.id]: newStatus }))
+            }
+            refetch()
+          }}
         />
       )}
     </div>
