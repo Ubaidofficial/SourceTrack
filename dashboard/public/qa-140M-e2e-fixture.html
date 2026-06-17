@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SourceTrack 140M E2E Fixture — Staging QA Only</title>
+  <meta name="robots" content="noindex, nofollow" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 40px auto; padding: 24px; color: #1F2323; background: #F7FAFA; }
+    h1 { font-size: 22px; font-weight: 900; letter-spacing: -0.03em; margin-bottom: 6px; }
+    .banner { background: #FFF3CD; border: 1px solid #E6C44D; border-radius: 10px; padding: 12px 16px; font-size: 12px; font-weight: 700; color: #664D00; margin-bottom: 20px; }
+    h2 { font-size: 14px; font-weight: 800; margin: 20px 0 8px; color: #333; text-transform: uppercase; letter-spacing: 0.04em; }
+    .section { border: 1px solid #dce5e5; border-radius: 10px; padding: 16px; margin-bottom: 16px; background: #fff; }
+    form { display: flex; flex-direction: column; gap: 8px; }
+    input, textarea { border: 1px solid #ccc; border-radius: 6px; padding: 8px 10px; font-size: 13px; width: 100%; }
+    .form-row { display: flex; gap: 8px; }
+    .form-row input { flex: 1; }
+    button { padding: 10px 16px; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; background: #1F2323; color: #fff; }
+    button:hover { opacity: 0.85; }
+    .links { display: flex; flex-wrap: wrap; gap: 8px; }
+    .links a { display: inline-block; padding: 8px 14px; background: #E5ECEC; border-radius: 8px; font-size: 13px; font-weight: 600; color: #1F2323; text-decoration: none; }
+    .links a:hover { background: #CCF03F; }
+    .links a.unsafe { background: #fee2e2; color: #991b1b; }
+    pre { background: #0D1010; color: #CCF03F; border-radius: 10px; padding: 14px; font-size: 11px; min-height: 80px; max-height: 320px; overflow: auto; white-space: pre-wrap; word-break: break-all; margin-top: 12px; }
+    .mock-btn { background: #6366f1; }
+    .mock-btn:hover { background: #4f46e5; }
+    .unsupported-btn { background: #6b7280; }
+    .tag { display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 4px; font-weight: 700; margin-left: 6px; }
+    .tag.real { background: #dcfce7; color: #166534; }
+    .tag.mock { background: #dbeafe; color: #1e40af; }
+    .tag.passthrough { background: #fef9c3; color: #713f12; }
+    .tag.unsupported { background: #fee2e2; color: #991b1b; }
+  </style>
+</head>
+<body>
+  <h1>SourceTrack 140M — E2E Fixture Page <span style="font-size:13px;font-weight:400;color:#888">(Staging QA Only)</span></h1>
+  <div class="banner">
+    ⚠️ STAGING QA FIXTURE — Not linked in production navigation. No secrets. No real customer data.
+    This page loads the deployed tracker from <code id="trackerOrigin">…</code> and provides safe surfaces
+    for form submit, booking link, and confirmed booking detection tests.
+  </div>
+
+  <!-- ─── Section A: Form Submit ───────────────────────────────────────────── -->
+  <h2>A. Form Submit Capture <span class="tag real">deployed browser</span></h2>
+
+  <div class="section">
+    <strong>A1. Native Form</strong>
+    <form id="native-form-1" name="qa-native-form" action="/qa-form-submit-target" method="post">
+      <div class="form-row">
+        <input type="text" placeholder="First name" aria-label="first name" />
+        <input type="text" placeholder="Last name" aria-label="last name" />
+      </div>
+      <input type="email" placeholder="Email address" aria-label="email" />
+      <textarea placeholder="Your message" rows="2" aria-label="message"></textarea>
+      <button type="submit">Submit Native Form (A1)</button>
+    </form>
+  </div>
+
+  <div class="section">
+    <strong>A2. Webflow-Style Form</strong>
+    <!-- Webflow markup signal: data-wf-page-id attribute on form -->
+    <div class="w-form">
+      <form id="wf-form-2" name="wf-contact" data-wf-page-id="qa-page-001" data-wf-form="true" action="#" method="post">
+        <input type="text" placeholder="Your name" aria-label="name" />
+        <input type="email" placeholder="Email" aria-label="email" />
+        <button type="submit">Submit Webflow Form (A2)</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="section">
+    <strong>A3. WordPress/CF7-Style Form</strong>
+    <!-- WordPress signal: class containing wpcf7 -->
+    <form id="wpcf7-form-3" class="wpcf7-form" name="cf7-contact" action="#" method="post">
+      <input type="text" placeholder="Your name" aria-label="name" />
+      <input type="email" placeholder="Email" aria-label="email" />
+      <button type="submit">Submit WordPress Form (A3)</button>
+    </form>
+  </div>
+
+  <!-- ─── Section B: Booking UTM Passthrough ───────────────────────────────── -->
+  <h2>B. Booking UTM Passthrough Links <span class="tag passthrough">link rewrite</span></h2>
+
+  <div class="section">
+    <p style="font-size:12px;color:#666;margin-bottom:10px">
+      Load this page with <code>?utm_source=google&amp;utm_medium=cpc&amp;utm_campaign=qa_140M</code> to verify passthrough.
+      Right-click any link → "Inspect" → check href after mousedown to see params appended.
+    </p>
+    <div class="links" id="booking-links">
+      <a href="https://calendly.com/qa-test/30min" id="link-calendly">Calendly Link (B1)</a>
+      <a href="https://cal.com/qa-test/30min" id="link-calcom">Cal.com Link (B2)</a>
+      <a href="https://tidycal.com/qa-test/30min" id="link-tidycal">TidyCal Link (B3)</a>
+      <a href="https://savvycal.com/qa-test/30min" id="link-savvycal">SavvyCal Link (B4)</a>
+      <a href="https://calendly.com/already-tagged/30min?utm_source=existing&amp;utm_medium=email#week=4" id="link-existing-params">Calendly with Existing Params + Hash (B5)</a>
+      <a href="https://www.example.com/" id="link-non-booking">Non-booking External (B6 — must NOT mutate)</a>
+    </div>
+    <button onclick="checkBookingLinks()" style="margin-top:12px;font-size:12px;padding:8px 12px;">🔍 Check Link HREFs Now (B-check)</button>
+  </div>
+
+  <!-- ─── Section C: Confirmed Booking Detection — Mock ────────────────────── -->
+  <h2>C. Confirmed Booking Detection <span class="tag mock">mock / fixture event</span></h2>
+
+  <div class="section">
+    <p style="font-size:12px;color:#666;margin-bottom:10px">
+      <strong>MOCK EVENTS ONLY.</strong> These buttons dispatch simulated provider browser events to the tracker.
+      No real provider booking is completed. These are fixture-safe hooks for E2E verification only.
+    </p>
+
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      <button class="mock-btn" onclick="mockCalendlyScheduled()" id="btn-calendly-mock">
+        Dispatch calendly.event_scheduled (C1)
+      </button>
+      <button class="mock-btn" onclick="mockCalendlyNonScheduled()" id="btn-calendly-non-scheduled">
+        Dispatch calendly.date_and_time_selected (C2 — must NOT emit)
+      </button>
+      <button class="mock-btn" onclick="mockCalendlyBadOrigin()" id="btn-calendly-bad-origin">
+        Dispatch from bad origin (C3 — must NOT emit)
+      </button>
+      <button class="mock-btn" onclick="mockCalcomEmbedBoot()" id="btn-calcom-mock">
+        Stub Cal() + fire bookingSuccessfulV2 (C4)
+      </button>
+      <button class="mock-btn" onclick="mockCalcomAbsent()" id="btn-calcom-absent">
+        No Cal() present — verify no throw (C5)
+      </button>
+    </div>
+  </div>
+
+  <!-- ─── Section D: Unsupported Providers ─────────────────────────────────── -->
+  <h2>D. Unsupported Providers <span class="tag unsupported">must NOT emit booking_scheduled</span></h2>
+
+  <div class="section">
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+      <button class="unsupported-btn" onclick="mockUnsupportedProvider('typeform.com', 'form_response')">Typeform postMessage (D1)</button>
+      <button class="unsupported-btn" onclick="mockUnsupportedProvider('tally.so', 'Tally.FormSubmitted')">Tally postMessage (D2)</button>
+      <button class="unsupported-btn" onclick="mockUnsupportedProvider('app.hubspot.com', 'hsFormCallback')">HubSpot postMessage (D3)</button>
+      <button class="unsupported-btn" onclick="mockUnsupportedProvider('jotform.com', 'JotFormEvent')">Jotform postMessage (D4)</button>
+      <button class="unsupported-btn" onclick="mockUnsupportedProvider('docs.google.com', 'formSubmit')">Google Forms postMessage (D5)</button>
+    </div>
+    <p style="font-size:11px;color:#888">Each button dispatches a window.postMessage from the named origin. The tracker MUST NOT emit booking_scheduled for any of these.</p>
+    <div class="links" style="margin-top:8px">
+      <a href="https://typeform.com/to/qa-fixture" class="unsafe" id="link-typeform">Typeform link (D6 — NOT mutated)</a>
+      <a href="https://tally.so/r/qa-fixture" class="unsafe" id="link-tally">Tally link (D7 — NOT mutated)</a>
+    </div>
+  </div>
+
+  <!-- ─── Section E: Network / API Privacy Check ───────────────────────────── -->
+  <h2>E. Network Payload Privacy + /api/track Verification</h2>
+  <div class="section">
+    <p style="font-size:12px;color:#666;margin-bottom:10px">
+      Open DevTools → Network → filter <code>/api/track</code> to observe events. Verify no form field values,
+      no PII, no /api/conversion calls appear. Click the button to force a custom track event for baseline.
+    </p>
+    <button onclick="fireBaselineTrackEvent()" style="background:#059669;">Fire Baseline /api/track Event (E1)</button>
+  </div>
+
+  <!-- ─── Event Log ─────────────────────────────────────────────────────────── -->
+  <h2>Event Log (live)</h2>
+  <pre id="log">Initializing fixture… waiting for tracker to load.</pre>
+
+  <!-- ─── Tracker Script ───────────────────────────────────────────────────── -->
+  <!--
+    STAGING QA FIXTURE — tracker points to staging API, not production.
+    Site key is intentionally invalid (qa-140m-fixture-key-staging-only).
+    This proves browser-side dispatch and payload privacy only.
+    Server-accepted event capture with a valid staging site_key remains BLOCKED.
+    Not linked from production navigation. No real customer data.
+  -->
+  <script async src="https://sourcetrack-api-staging.up.railway.app/tracker.min.js" data-site-key="qa-140m-fixture-key-staging-only"></script>
+
+  <script>
+    var logEl = document.getElementById('log');
+    var networkCalls = [];
+
+    // Patch fetch/sendBeacon to intercept and log tracker calls
+    var _origFetch = window.fetch;
+    window.fetch = function(url, opts) {
+      if (typeof url === 'string' && (url.includes('/api/track') || url.includes('/api/conversion'))) {
+        var body = (opts && opts.body) ? (opts.body instanceof Blob ? '[Blob]' : opts.body) : '{}';
+        try { var parsed = JSON.parse(typeof body === 'string' ? body : '{}'); networkCalls.push({ url: url, payload: parsed }); log('🌐 fetch: ' + url + ' event=' + (parsed.event || '?') + ' provider=' + ((parsed.properties && parsed.properties.booking_provider) || (parsed.properties && parsed.properties.form_provider) || 'n/a')); } catch(_) {}
+      }
+      return _origFetch.apply(this, arguments);
+    };
+
+    var _origBeacon = navigator.sendBeacon.bind(navigator);
+    navigator.sendBeacon = function(url, data) {
+      if (typeof url === 'string' && (url.includes('/api/track') || url.includes('/api/conversion'))) {
+        try {
+          var text = data instanceof Blob ? '[Blob]' : data;
+          var parsed = typeof text === 'string' ? JSON.parse(text) : {};
+          networkCalls.push({ url: url, payload: parsed });
+          var hasConversion = url.includes('/api/conversion');
+          log((hasConversion ? '❌ /api/conversion CALLED (unexpected!): ' : '✅ beacon /api/track: ') + url + ' event=' + (parsed.event || '?') + ' provider=' + ((parsed.properties && parsed.properties.booking_provider) || (parsed.properties && parsed.properties.form_provider) || 'n/a'));
+          checkPIILeak(parsed);
+        } catch(_) {}
+      }
+      return _origBeacon(url, data);
+    };
+
+    function checkPIILeak(payload) {
+      var s = JSON.stringify(payload);
+      var piiPatterns = [/@[a-z0-9.-]+\.[a-z]{2,}/i, /\+?[\d\s\-().]{7,}/];
+      for (var i = 0; i < piiPatterns.length; i++) {
+        if (piiPatterns[i].test(s)) {
+          log('⚠️ PII LEAK DETECTED in payload: ' + s.slice(0, 120));
+        }
+      }
+    }
+
+    function log(msg) {
+      logEl.textContent += '\n' + new Date().toISOString().slice(11, 23) + '  ' + msg;
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // Show tracker origin
+    setTimeout(function() {
+      var s = document.querySelector('script[data-site-key]');
+      document.getElementById('trackerOrigin').textContent = s ? new URL(s.src).origin : 'unknown';
+      log('ℹ️  Tracker src: ' + (s ? s.src : 'not found'));
+    }, 1500);
+
+    // ── Booking Link Checker ─────────────────────────────────────────────────
+    function checkBookingLinks() {
+      var links = document.querySelectorAll('#booking-links a');
+      links.forEach(function(a) {
+        var href = a.getAttribute('href');
+        var hasUtm = href.includes('utm_source') || href.includes('sourcetrack_source');
+        log((hasUtm ? '✅' : '⚠️ ') + ' ' + a.id + ' href: ' + href.slice(0, 120));
+      });
+      // Check that non-booking link was NOT mutated
+      var nonBooking = document.getElementById('link-non-booking');
+      var nb = nonBooking.getAttribute('href');
+      if (nb === 'https://www.example.com/' || nb === 'https://www.example.com') {
+        log('✅ B6 non-booking link not mutated: ' + nb);
+      } else {
+        log('❌ B6 non-booking link was mutated unexpectedly: ' + nb);
+      }
+      // Check Calendly with existing params
+      var existing = document.getElementById('link-existing-params');
+      var ep = existing.getAttribute('href');
+      if (ep.includes('utm_source=existing')) {
+        log('✅ B5 existing utm_source preserved (not overwritten): ' + ep.slice(0, 100));
+      } else {
+        log('⚠️ B5 could not verify existing param preservation: ' + ep.slice(0, 100));
+      }
+      // Check hash preserved
+      if (ep.includes('#week=4')) {
+        log('✅ B5 hash fragment preserved: ' + ep.slice(ep.indexOf('#')));
+      } else {
+        log('⚠️ B5 hash fragment may have been lost: ' + ep);
+      }
+    }
+
+    // Trigger mousedown on all booking links to fire passthrough handler
+    function triggerPassthrough(id) {
+      var a = document.getElementById(id);
+      if (!a) { log('❌ Link not found: ' + id); return; }
+      var evt = new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 });
+      a.dispatchEvent(evt);
+    }
+
+    // ── Mock: Calendly postMessage ───────────────────────────────────────────
+    function mockCalendlyScheduled() {
+      log('🔵 [MOCK] Dispatching calendly.event_scheduled from calendly.com');
+      var data = {
+        event: 'calendly.event_scheduled',
+        payload: {
+          event: { uri: 'https://api.calendly.com/scheduled_events/MOCK-UUID' },
+          invitee: { uri: 'https://api.calendly.com/scheduled_events/MOCK-UUID/invitees/MOCK-INVITEE' }
+        }
+      };
+      window.dispatchEvent(new MessageEvent('message', {
+        data: data,
+        origin: 'https://calendly.com'
+      }));
+    }
+
+    function mockCalendlyNonScheduled() {
+      log('🔵 [MOCK] Dispatching calendly.date_and_time_selected (should NOT emit)');
+      window.dispatchEvent(new MessageEvent('message', {
+        data: { event: 'calendly.date_and_time_selected', payload: {} },
+        origin: 'https://calendly.com'
+      }));
+    }
+
+    function mockCalendlyBadOrigin() {
+      log('🔵 [MOCK] Dispatching from bad origin https://evil.com (should NOT emit)');
+      window.dispatchEvent(new MessageEvent('message', {
+        data: { event: 'calendly.event_scheduled', payload: {} },
+        origin: 'https://evil.com'
+      }));
+    }
+
+    // ── Mock: Cal.com Embed API ──────────────────────────────────────────────
+    function mockCalcomEmbedBoot() {
+      log('🔵 [MOCK] Installing window.Cal stub and firing bookingSuccessfulV2');
+      var callbackRegistry = [];
+      window.Cal = function(action, opts) {
+        if (action === 'on' && opts && opts.action === 'bookingSuccessfulV2') {
+          callbackRegistry.push(opts.callback);
+          log('ℹ️  Cal() on handler registered by tracker');
+          // Fire callback immediately to simulate booking success
+          setTimeout(function() {
+            callbackRegistry.forEach(function(cb) { try { cb({}); } catch(_) {} });
+          }, 100);
+        }
+      };
+      log('ℹ️  window.Cal stub installed — waiting for tracker to register...');
+    }
+
+    function mockCalcomAbsent() {
+      log('🔵 [MOCK] Removing window.Cal (absent case — should produce no events)');
+      delete window.Cal;
+      log('ℹ️  window.Cal removed — verify no booking_scheduled event fires');
+    }
+
+    // ── Mock: Unsupported provider postMessage ───────────────────────────────
+    function mockUnsupportedProvider(origin, eventName) {
+      log('🔵 [MOCK] Dispatching ' + eventName + ' from ' + origin + ' (must NOT emit booking_scheduled)');
+      var prevCount = networkCalls.filter(function(c) { return c.payload && c.payload.event === 'booking_scheduled'; }).length;
+      window.dispatchEvent(new MessageEvent('message', {
+        data: { event: eventName, type: eventName, payload: {} },
+        origin: 'https://' + origin
+      }));
+      setTimeout(function() {
+        var afterCount = networkCalls.filter(function(c) { return c.payload && c.payload.event === 'booking_scheduled'; }).length;
+        if (afterCount === prevCount) {
+          log('✅ ' + origin + ' ' + eventName + ' — correctly NOT emitted booking_scheduled');
+        } else {
+          log('❌ FAIL: ' + origin + ' ' + eventName + ' — unexpectedly emitted booking_scheduled!');
+        }
+      }, 500);
+    }
+
+    // ── Baseline /api/track Event ────────────────────────────────────────────
+    function fireBaselineTrackEvent() {
+      if (!window.sourcetrack || !window.sourcetrack.track) {
+        log('⚠️ sourcetrack not loaded yet — try again in a moment');
+        return;
+      }
+      window.sourcetrack.track('qa_140M_e2e_baseline', { fixture: 'qa-140M', session: '140M-deployed-e2e', timestamp: new Date().toISOString() });
+      log('✅ Fired qa_140M_e2e_baseline via sourcetrack.track()');
+    }
+
+    // ── Auto-trigger passthrough checks after short delay ───────────────────
+    setTimeout(function() {
+      log('ℹ️  Auto-triggering mousedown on booking links to test passthrough…');
+      ['link-calendly', 'link-calcom', 'link-tidycal', 'link-savvycal', 'link-existing-params', 'link-non-booking'].forEach(triggerPassthrough);
+      setTimeout(checkBookingLinks, 200);
+    }, 2000);
+
+    // Check link-typeform and link-tally are NOT mutated
+    setTimeout(function() {
+      ['link-typeform', 'link-tally'].forEach(function(id) {
+        var a = document.getElementById(id);
+        if (!a) return;
+        var orig = a.getAttribute('href');
+        var evt = new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 0 });
+        a.dispatchEvent(evt);
+        setTimeout(function() {
+          var after = a.getAttribute('href');
+          if (after === orig) {
+            log('✅ ' + id + ' unsupported link NOT mutated: ' + after);
+          } else {
+            log('❌ FAIL: ' + id + ' unsupported link was mutated: ' + after);
+          }
+        }, 100);
+      });
+    }, 2500);
+
+    log('Fixture loaded. URL: ' + window.location.href);
+  </script>
+</body>
+</html>
