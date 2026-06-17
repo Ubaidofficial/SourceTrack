@@ -110,11 +110,12 @@ In the Stripe Dashboard → Developers → Webhooks (live mode):
 1. Add endpoint: `https://api.srctk.com/api/billing/webhook`
 2. Select events to listen for:
    - `checkout.session.completed`
-   - `customer.subscription.created`
    - `customer.subscription.updated`
    - `customer.subscription.deleted`
    - `invoice.payment_succeeded`
    - `invoice.payment_failed`
+
+   Note: `customer.subscription.created` is **not** in this list. The billing handler does not process it — initial subscription activation is handled entirely via `checkout.session.completed`. Registering it is harmless but generates unnecessary webhook traffic.
 3. After saving, reveal and copy the **signing secret** (`whsec_...`).
 4. Set `STRIPE_WEBHOOK_SECRET` in Railway production to this value.
 
