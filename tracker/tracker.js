@@ -781,5 +781,95 @@
   }
   addEventListener('submit', handleFormSubmit, true)
 
+  // ─── Confirmed Booking Detection ───────────────────────────────────────────
+  // Emits booking_scheduled through /api/track (NOT /api/conversion).
+  // No raw invitee email / name / phone / address / URIs are forwarded.
+  //
+  // Calendly: raw window.message from embedded iframe.
+  //   Fires only for calendly.event_scheduled. Origin validated to calendly.com
+  //   or *.calendly.com. All other Calendly events are silently ignored.
+  //
+  // Cal.com: best-effort Cal embed API detection.
+  //   Hooks into window.Cal('on', 'bookingSuccessfulV2') only when the Cal.com
+  //   embed snippet is present on the page. Retries up to 10 times at 500ms
+  //   intervals (max 5 s), then stops. Does NOT intercept raw Cal.com postMessage
+  //   (internal format, not a public API). Cal.com link-only flows remain
+  //   UTM passthrough only.
+
+  // In-memory dedupe: fires at most once per provider+eventType+pathname per 5s
+  var _bookingDedupeMap = {}
+  function _dedupeBookingEvent(provider, eventType) {
+    var key = provider + ':' + eventType + ':' + location.pathname
+    var now = Date.now()
+    if (_bookingDedupeMap[key] && now - _bookingDedupeMap[key] < 5000) return false
+    _bookingDedupeMap[key] = now
+    return true
+  }
+
+  function _isCalendlyOrigin(origin) {
+    if (typeof origin !== 'string') return false
+    try {
+      var h = new URL(origin).hostname.toLowerCase()
+      return h === 'calendly.com' || h.slice(-(13)) === '.calendly.com'
+    } catch (_) { return false }
+  }
+
+  function _sendBookingScheduled(provider, eventType) {
+    send('/api/track', {
+      site_key: K,
+      event: 'booking_scheduled',
+      anonymous_id: AID,
+      session_id: SID,
+      page_url: location.href,
+      properties: {
+        event_type: 'booking_scheduled',
+        booking_provider: provider,
+        booking_detection_method: 'browser_embed_event',
+        booking_event_type: eventType,
+        page_url: location.href,
+        page_path: location.pathname
+      }
+    })
+  }
+
+  // ── Calendly ────────────────────────────────────────────────────────────────
+  addEventListener('message', function (e) {
+    if (_consentGiven === false) return
+    if (isExcluded()) return
+    if (!_isCalendlyOrigin(e.origin)) return
+    if (!e.data || typeof e.data !== 'object') return
+    if (e.data.event !== 'calendly.event_scheduled') return
+    if (!_dedupeBookingEvent('calendly', 'event_scheduled')) return
+    _sendBookingScheduled('calendly', 'event_scheduled')
+  })
+
+  // ── Cal.com — best-effort embed API detection ────────────────────────────
+  // Requires window.Cal to be loaded on the page. Retries at 500ms intervals,
+  // up to 10 times (5 s), then gives up. Cal.com absent → UTM passthrough only.
+  var _calRetries = 0
+  var _calMaxRetries = 10
+  function _tryRegisterCalCom() {
+    if (typeof window.Cal === 'function') {
+      try {
+        window.Cal('on', {
+          action: 'bookingSuccessfulV2',
+          callback: function () {
+            if (_consentGiven === false) return
+            if (isExcluded()) return
+            if (!_dedupeBookingEvent('calcom', 'bookingSuccessfulV2')) return
+            _sendBookingScheduled('calcom', 'bookingSuccessfulV2')
+          }
+        })
+      } catch (_) {}
+      return
+    }
+    _calRetries++
+    if (_calRetries < _calMaxRetries) {
+      setTimeout(_tryRegisterCalCom, 500)
+    }
+    // Retry budget exhausted — Cal.com embed not present; UTM passthrough only
+  }
+  _tryRegisterCalCom()
+
   sendPageview()
 })()

@@ -562,6 +562,91 @@
   }
   addEventListener('submit', handleFormSubmit, true)
 
+  // ─── Confirmed Booking Detection ───────────────────────────────────────────
+  // Emits booking_scheduled through /api/track (NOT /api/conversion).
+  // No raw invitee email / name / phone / address / URIs are forwarded.
+  //
+  // Calendly: raw window.message from embedded iframe.
+  //   Fires only for calendly.event_scheduled. Origin validated to calendly.com
+  //   or *.calendly.com. All other Calendly events are silently ignored.
+  //
+  // Cal.com: best-effort Cal embed API detection.
+  //   Requires window.Cal to be loaded. Does NOT intercept raw Cal.com postMessage
+  //   (internal format, undocumented). Retries up to 10 times at 500ms (max 5 s).
+  //   Cookieless note: AID may be null at hook-registration time if fetchId() has
+  //   not resolved yet; events are queued via _q and sent once AID is available.
+
+  var _bookingDedupeMap = {}
+  function _dedupeBookingEvent(provider, eventType) {
+    var key = provider + ':' + eventType + ':' + location.pathname
+    var now = Date.now()
+    if (_bookingDedupeMap[key] && now - _bookingDedupeMap[key] < 5000) return false
+    _bookingDedupeMap[key] = now
+    return true
+  }
+
+  function _isCalendlyOrigin(origin) {
+    if (typeof origin !== 'string') return false
+    try {
+      var h = new URL(origin).hostname.toLowerCase()
+      return h === 'calendly.com' || h.slice(-(13)) === '.calendly.com'
+    } catch (_) { return false }
+  }
+
+  function _sendBookingScheduled(provider, eventType) {
+    var data = {
+      site_key: K,
+      event: 'booking_scheduled',
+      anonymous_id: AID,
+      session_id: SID,
+      page_url: location.href,
+      cookieless: true,
+      properties: {
+        event_type: 'booking_scheduled',
+        booking_provider: provider,
+        booking_detection_method: 'browser_embed_event',
+        booking_event_type: eventType,
+        page_url: location.href,
+        page_path: location.pathname
+      }
+    }
+    AID ? send('/api/track', data) : _q.push({ ep: '/api/track', data: data })
+  }
+
+  // ── Calendly ────────────────────────────────────────────────────────────────
+  addEventListener('message', function (e) {
+    if (isExcluded()) return
+    if (!_isCalendlyOrigin(e.origin)) return
+    if (!e.data || typeof e.data !== 'object') return
+    if (e.data.event !== 'calendly.event_scheduled') return
+    if (!_dedupeBookingEvent('calendly', 'event_scheduled')) return
+    _sendBookingScheduled('calendly', 'event_scheduled')
+  })
+
+  // ── Cal.com — best-effort embed API detection ────────────────────────────
+  var _calRetries = 0
+  var _calMaxRetries = 10
+  function _tryRegisterCalCom() {
+    if (typeof window.Cal === 'function') {
+      try {
+        window.Cal('on', {
+          action: 'bookingSuccessfulV2',
+          callback: function () {
+            if (isExcluded()) return
+            if (!_dedupeBookingEvent('calcom', 'bookingSuccessfulV2')) return
+            _sendBookingScheduled('calcom', 'bookingSuccessfulV2')
+          }
+        })
+      } catch (_) {}
+      return
+    }
+    _calRetries++
+    if (_calRetries < _calMaxRetries) {
+      setTimeout(_tryRegisterCalCom, 500)
+    }
+  }
+  _tryRegisterCalCom()
+
   sendPageview()  // queued until fetchId() resolves
   fetchId()
 })()
