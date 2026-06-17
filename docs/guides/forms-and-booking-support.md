@@ -15,11 +15,11 @@ The tracker listens for native browser `submit` events. It classifies the form p
 | Plain HTML forms | ✅ Yes | `native` | Install tracker — detected automatically |
 | Webflow forms | ✅ Yes | `webflow` | Install tracker — detected via `data-wf-form` or `w-form` class |
 | WordPress / CF7 | ✅ Yes | `wordpress` | Install tracker — detected via `wpcf7`, `wpforms`, `gform`, or `elementor-form` class |
-| Typeform | ❌ No | — | Hidden fields via `getContext()` + redirect URL; or webhook → `/api/conversion/offline` |
-| Tally | ❌ No | — | Hidden fields via `getContext()` + redirect URL; or webhook → `/api/conversion/offline` |
-| HubSpot Forms | ❌ No | — | Hidden fields via `getContext()` in the form JS embed; or backend webhook |
-| Jotform | ❌ No | — | URL parameters via `getContext()` on submit redirect; or Jotform webhook |
-| Google Forms | ❌ No | — | URL parameter on redirect; or manual `/api/conversion/offline` from your backend |
+| Typeform | ❌ No | — | `decorateUrl()` or `getHandoffParams()` on the redirect URL; or webhook → `/api/conversion/offline` |
+| Tally | ❌ No | — | `decorateUrl()` or `getHandoffParams()` on the redirect URL; or webhook → `/api/conversion/offline` |
+| HubSpot Forms | ❌ No | — | `fillHiddenFields()` in the form JS embed; or backend webhook |
+| Jotform | ❌ No | — | `decorateUrl()` or `getHandoffParams()` on submit redirect; or Jotform webhook |
+| Google Forms | ❌ No | — | `decorateUrl()` or `getHandoffParams()` on redirect URL; or manual `/api/conversion/offline` |
 
 **What "auto-detected" means:** When a visitor submits a detected form, the tracker fires a `form_submit` event to `/api/track` containing the form provider, an anonymised form name, and attribution context. No entered field values (email, name, phone, message) are captured or forwarded.
 

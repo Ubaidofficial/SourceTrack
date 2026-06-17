@@ -281,6 +281,17 @@
         current_source: ft.first_touch_source,
         current_medium: ft.first_touch_medium,
         current_campaign: ft.first_touch_campaign,
+        last_touch_source: ft.first_touch_source,
+        last_touch_medium: ft.first_touch_medium,
+        last_touch_campaign: ft.first_touch_campaign,
+        utm_source: p.utm_source || null,
+        utm_medium: p.utm_medium || null,
+        utm_campaign: p.utm_campaign || null,
+        utm_term: p.utm_term || null,
+        utm_content: p.utm_content || null,
+        referrer: ref || null,
+        referrer_host: (function () { try { return ref ? new URL(ref).hostname || null : null } catch (_) { return null } })(),
+        landing_page_path: location.pathname || null,
         click_ids: {
           gclid: p.gclid || null,
           gbraid: p.gbraid || null,
@@ -298,6 +309,86 @@
           ko_click_id: p.ko_click_id || null
         }
       }
+    },
+
+    // sourcetrack.getHandoffParams({ prefix: 'st_' }) — flat key/value object of safe
+    // attribution context. Suitable for hidden fields, URL params, or POST bodies.
+    // Omits null/undefined values. No raw full URL or query string.
+    // Note: in cookieless mode, anonymous_id may be null until server ID resolves.
+    // Raw referrer is excluded by default — use includeReferrer: true only when you
+    // intentionally want to forward the full referrer URL to a third-party tool.
+    getHandoffParams: function (opts) {
+      opts = opts || {}
+      var prefix = typeof opts.prefix === 'string' ? opts.prefix : 'st_'
+      var ctx = window.sourcetrack.getContext()
+      var out = {}
+      var safe = [
+        'anonymous_id', 'session_id',
+        'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+        'referrer_host', 'landing_page_path',
+        'first_touch_source', 'first_touch_medium', 'first_touch_campaign',
+        'last_touch_source', 'last_touch_medium', 'last_touch_campaign'
+      ]
+      for (var i = 0; i < safe.length; i++) {
+        var k = safe[i]
+        if (ctx[k] !== null && ctx[k] !== undefined) {
+          out[prefix + k] = String(ctx[k])
+        }
+      }
+      if (opts.includeReferrer && ctx.referrer !== null && ctx.referrer !== undefined) {
+        out[prefix + 'referrer'] = String(ctx.referrer)
+      }
+      var cids = ctx.click_ids || {}
+      var cidKeys = Object.keys(cids)
+      for (var j = 0; j < cidKeys.length; j++) {
+        var ck = cidKeys[j]
+        if (cids[ck] !== null && cids[ck] !== undefined) {
+          out[prefix + ck] = String(cids[ck])
+        }
+      }
+      return out
+    },
+
+    // sourcetrack.fillHiddenFields({ selector, fields, createMissing }) — fills
+    // pre-existing input[type=hidden] elements with attribution context values.
+    // Explicit call required — no automatic injection. Never reads visible inputs.
+    // Note: in cookieless mode, call on form submit to avoid null anonymous_id.
+    fillHiddenFields: function (opts) {
+      opts = opts || {}
+      var selector     = typeof opts.selector === 'string' ? opts.selector : 'form'
+      var fieldMap     = opts.fields && typeof opts.fields === 'object' ? opts.fields : {}
+      var createMissing = !!opts.createMissing
+      var ctx = window.sourcetrack.getContext()
+
+      function resolve(key) {
+        if (Object.prototype.hasOwnProperty.call(ctx, key)) return ctx[key]
+        if (ctx.click_ids && Object.prototype.hasOwnProperty.call(ctx.click_ids, key)) return ctx.click_ids[key]
+        return null
+      }
+
+      try {
+        var forms = document.querySelectorAll(selector)
+        for (var fi = 0; fi < forms.length; fi++) {
+          var form = forms[fi]
+          var keys = Object.keys(fieldMap)
+          for (var ki = 0; ki < keys.length; ki++) {
+            var inputName = keys[ki]
+            var ctxKey    = fieldMap[inputName]
+            var val       = resolve(ctxKey)
+            if (val === null || val === undefined) continue
+            var input = form.querySelector('input[type=hidden][name="' + inputName + '"]')
+            if (!input && createMissing) {
+              input = document.createElement('input')
+              input.type = 'hidden'
+              input.name = inputName
+              form.appendChild(input)
+            }
+            if (input) {
+              input.value = String(val)
+            }
+          }
+        }
+      } catch (_) {}
     }
   }
 
