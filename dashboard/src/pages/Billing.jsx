@@ -22,16 +22,16 @@ const PLANS = [
   {
     key: 'starter',
     name: 'Starter',
-    price: '$19/mo',
-    period: 'billed yearly ($29/mo monthly)',
+    price: '$29/mo',
+    period: 'billed monthly',
     limit: '50,000 tracked pageviews/mo',
     highlight: false,
   },
   {
     key: 'growth',
     name: 'Growth',
-    price: '$49/mo',
-    period: 'billed yearly ($79/mo monthly)',
+    price: '$79/mo',
+    period: 'billed monthly',
     limit: '150,000 tracked pageviews/mo',
     highlight: true,
   },
@@ -261,6 +261,9 @@ export default function Billing() {
       {showUpgradePlans && (
         <section className="space-y-4">
           <h3 className="text-sm font-bold text-st-black dark:text-white">Available Plans</h3>
+          <p className="text-xs text-st-gray dark:text-gray-400 -mt-2">
+            Plans are billed monthly during public beta. Annual billing will be added after the beta billing flow is fully verified.
+          </p>
 
           <div className="flex items-start gap-2.5 p-4 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-gray-800 rounded-xl max-w-xl">
             <input
