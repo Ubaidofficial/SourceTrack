@@ -11,16 +11,14 @@ import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
-  BarElement,
   PointElement,
   LineElement,
-  ArcElement,
   Title,
   Tooltip,
   Legend
 } from 'chart.js'
 import {
-  Users, ArrowRight, Sparkles, RefreshCw, Zap, AlertTriangle
+  Users, ArrowRight, RefreshCw, Zap, AlertTriangle
 } from 'lucide-react'
 import MetricTile from '../components/MetricTile'
 import DashboardCard from '../components/DashboardCard'
@@ -32,7 +30,7 @@ import ConversionExplanationModal from '../components/ConversionExplanationModal
 import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
 import { SourceIcon, SourceChip } from '../components/SourceIcon'
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend)
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
 
 const MODELS = [
   { key: 'first_touch',            label: 'First Touch' },
@@ -48,29 +46,6 @@ const MODELS = [
   { key: 'ai_platforms',           label: 'AI journey influence' },
 ]
 
-const AI_SOURCES = ['ChatGPT', 'Claude', 'Perplexity', 'Gemini', 'Grok', 'Copilot', 'DeepSeek', 'You.com AI', 'Phind', 'Kagi'] // matches ai-platform.js AI_HOST_MAP (11 platforms)
-
-// Platform accent colors for AI source table badges
-const AI_PLATFORM_COLORS = {
-  'ChatGPT':    { bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500' },
-  'Claude':     { bg: 'bg-orange-100',  text: 'text-orange-700',  dot: 'bg-orange-500' },
-  'Perplexity': { bg: 'bg-purple-100',  text: 'text-purple-700',  dot: 'bg-purple-500' },
-  'Gemini':     { bg: 'bg-blue-100',    text: 'text-blue-700',    dot: 'bg-blue-500' },
-  'Grok':       { bg: 'bg-gray-100',    text: 'text-gray-700',    dot: 'bg-gray-500' },
-  'Copilot':    { bg: 'bg-sky-100',     text: 'text-sky-700',     dot: 'bg-sky-500' },
-  'DeepSeek':   { bg: 'bg-cyan-100',    text: 'text-cyan-700',    dot: 'bg-cyan-500' },
-}
-const getAIPlatformColor = (name) => AI_PLATFORM_COLORS[name] || { bg: 'bg-gray-100', text: 'text-gray-600', dot: 'bg-gray-400' }
-const CONVERSION_LABELS = {
-  purchase: 'Purchase', trial: 'Free Trial', lead: 'Lead Form',
-  signup: 'Sign Up', meeting: 'Meeting', booking: 'Booking'
-}
-
-const STAGE_LABELS = {
-  lead_created: 'Lead Created', qualified: 'Qualified',
-  opportunity: 'Opportunity', closed_won: 'Closed Won'
-}
-
 const METRIC_DEFS = {
   revenue: { label: 'Revenue', format: (v) => `$${v.toFixed(2)}` },
   conversions: { label: 'Conversions', format: (v) => v.toLocaleString() },
@@ -84,16 +59,6 @@ const METRIC_DEFS = {
   ai_revenue_share: { label: 'AI Rev Share', format: (v) => `${v.toFixed(1)}%` },
   ltv_revenue: { label: 'LTV Revenue', format: (v) => `$${v.toFixed(2)}` }
 }
-
-const COLORS = [
-  'rgba(17, 24, 39, 0.85)',
-  'rgba(215, 245, 80, 0.85)',
-  'rgba(107, 114, 128, 0.85)',
-  'rgba(55, 65, 81, 0.85)',
-  'rgba(209, 213, 219, 0.85)',
-  'rgba(31, 41, 55, 0.85)',
-  'rgba(180, 195, 60, 0.85)'
-]
 
 const TIME_RANGES = [
   { label: '24h', days: 1 },
@@ -118,84 +83,6 @@ function getRollingDateRange(days) {
   }
 }
 
-// ─── T3.4: KPI Config by business_type ─────────────────────────────────────
-const getKpiConfig = (businessType) => {
-  switch (businessType) {
-    case 'saas': return [
-      { key: 'revenue',       label: 'Revenue',       format: 'currency' },
-      { key: 'mrr_estimate',  label: 'MRR (est.)',    format: 'currency' },
-      { key: 'ai_revenue',    label: 'AI Revenue',    format: 'currency' },
-      { key: 'trial_to_paid', label: 'Trial → Paid',  format: 'percent',
-        emptyHint: "Track trial starts with sourcetrack.track('trial_start') to see conversion rate." },
-      { key: 'best_rpv',      label: 'Best Channel RPV', format: 'currency' },
-    ]
-    case 'ecommerce': return [
-      { key: 'revenue',    label: 'Total Revenue', format: 'currency' },
-      { key: 'aov',        label: 'AOV',           format: 'currency' },
-      { key: 'orders',     label: 'Orders',        format: 'number' },
-      { key: 'ai_roas',    label: 'AI ROAS',       format: 'number' },
-      { key: 'best_rpv',   label: 'Best Channel RPV', format: 'currency' },
-    ]
-    case 'leadgen': return [
-      { key: 'total_leads', label: 'Total Leads', format: 'number' },
-      { key: 'lead_growth', label: 'Lead Growth', format: 'percent' },
-      { key: 'ai_leads',    label: 'AI Leads',    format: 'number' },
-      { key: 'sql_percent', label: 'SQL %',        format: 'percent',
-        emptyHint: "Send conversion_type='sql' or 'qualified_lead' to see SQL conversion rate." },
-      { key: 'best_rpv',    label: 'Best Channel RPV', format: 'currency' },
-    ]
-    default: return [
-      { key: 'revenue',     label: 'Revenue',     format: 'currency' },
-      { key: 'top_channel', label: 'Top Channel', format: 'text' },
-      { key: 'conversion',  label: 'Conversion',  format: 'percent' },
-      { key: 'cpc',         label: 'CPC',         format: 'currency' },
-      { key: 'best_rpv',    label: 'Best Channel RPV', format: 'currency' },
-    ]
-  }
-}
-const computeMrrEstimate = (d) => {
-  if (!d?.revenue) return null
-  const days = new Date().getDate()
-  return days < 3 ? null : (d.revenue / days) * 30
-}
-const computeAov = (d) => (!d?.revenue || !d?.orders || d.orders === 0) ? null : d.revenue / d.orders
-const enrichKpis = (kpis, businessType) => {
-  const mrrNow  = kpis.mrr_estimate  ?? (businessType === 'saas'      ? computeMrrEstimate(kpis) : null)
-  const aovNow  = kpis.aov           ?? (businessType === 'ecommerce' ? computeAov(kpis)         : null)
-  const mrrPrev = kpis.mrr_estimate_prev ?? (businessType === 'saas' && kpis.revenue_prev
-    ? (kpis.revenue_prev / (new Date().getDate() || 30)) * 30
-    : null)
-
-  // trial_to_paid: computed from conversion_types map.
-  // Looks for trial/trial_start events vs paid conversions in the same period.
-  // Returns null if no trial data, letting the emptyHint show.
-  const ctMap = kpis.conversion_types || {}
-  const trialCount = (ctMap['trial'] || 0) + (ctMap['trial_start'] || 0)
-  const paidCount  = (ctMap['purchase'] || 0) + (ctMap['subscription'] || 0) + (ctMap['subscribe'] || 0)
-  const trialToPaid = trialCount > 0 ? parseFloat(((paidCount / trialCount) * 100).toFixed(1)) : null
-
-  // sql_percent: already returned by the API dashboard route from attributed_conversions
-  const sqlPct = kpis.sql_percent ?? null
-
-  return {
-    ...kpis,
-    mrr_estimate:      mrrNow,
-    mrr_estimate_prev: mrrPrev,
-    aov:               aovNow,
-    trial_to_paid:     trialToPaid,
-    sql_percent:       sqlPct,
-    revenue_prev:      kpis.revenue_prev      ?? null,
-    leads_prev:        kpis.leads_prev        ?? null,
-    ai_revenue_prev:   kpis.ai_revenue_prev   ?? null,
-    conversions_prev:  kpis.conversions_prev  ?? null,
-    sessions_prev:     kpis.sessions_prev     ?? null,
-    total_leads_prev:  kpis.leads_prev        ?? null,
-    best_rpv_channel:  kpis.best_rpv_channel  ?? '—',
-    best_rpv:          kpis.best_rpv          ?? null,
-  }
-}
-// ─────────────────────────────────────────────────────────────────────────────
-
 function useFreshnessLabel(ts) {
   const [label, setLabel] = useState('just now')
   useEffect(() => {
@@ -210,38 +97,6 @@ function useFreshnessLabel(ts) {
     return () => clearInterval(id)
   }, [ts])
   return label
-}
-
-function buildDerivedInsights(kpis, aiShareTotal, aiRevResults, activeResults, businessType) {
-  const insights = []
-  if (aiShareTotal > 20) {
-    insights.push({
-      type: 'opportunity', priority: 'opportunity',
-      title: 'AI is a major channel',
-      desc: `${aiShareTotal.toFixed(1)}% of revenue comes from AI platforms. Consider creating AI-optimised landing pages to capture more of this traffic.`
-    })
-  } else if (aiShareTotal > 5) {
-    insights.push({
-      type: 'opportunity', priority: 'opportunity',
-      title: 'AI traffic growing',
-      desc: `${aiShareTotal.toFixed(1)}% AI revenue share. Trending up — monitor ChatGPT and Perplexity as acquisition channels.`
-    })
-  }
-  if (kpis.conversion_rate != null && kpis.conversion_rate > 0 && kpis.conversion_rate < 1) {
-    insights.push({
-      type: 'info', priority: 'info',
-      title: 'Low conversion rate',
-      desc: `${kpis.conversion_rate.toFixed(2)}% conversion rate detected. Review your landing pages and CTA copy.`
-    })
-  }
-  if (activeResults.length > 0 && !activeResults.some(r => r.cac != null)) {
-    insights.push({
-      type: 'info', priority: 'info',
-      title: 'Add spend data for ROAS',
-      desc: 'No ad spend data found. Add campaign costs in the Campaigns page to unlock CAC and payback analysis.'
-    })
-  }
-  return insights
 }
 
 export default function Dashboard() {
@@ -331,65 +186,6 @@ export default function Dashboard() {
   const recentActivity = recentActivityQuery?.data ?? recentActivityQuery ?? null
 
 
-  const { data: cacData } = useQuery({
-    queryKey: ['dashboard-cac', site?.site_key, overview?.date_from, overview?.date_to],
-    queryFn: async () => {
-      if (!site?.site_key) return []
-      const params = new URLSearchParams({ site_key: site.site_key })
-      if (overview?.date_from) params.set('date_from', overview.date_from)
-      if (overview?.date_to) params.set('date_to', overview.date_to)
-      return fetchApi(`/dashboard/cac?${params}`)
-    },
-    enabled: !!site?.site_key && !!overview
-  })
-  const cacResults = Array.isArray(cacData) ? cacData : (cacData?.results || [])
-  const cacUnavailable = cacData?.cac_unavailable || false
-  const avgCAC = (() => {
-    const withSpend = cacResults.filter(r => r.cac != null)
-    if (withSpend.length === 0) return null
-    return withSpend.reduce((s, r) => s + r.cac, 0) / withSpend.length
-  })()
-
-  // ── Annotations ──────────────────────────────────────────────────────────
-  const [annotationForm, setAnnotationForm] = useState({ open: false, date: format(new Date(), 'yyyy-MM-dd'), note: '', type: 'note' })
-  const [annotationSaving, setAnnotationSaving] = useState(false)
-
-  const dateFrom = format(subDays(new Date(), timeRange), 'yyyy-MM-dd')
-  const dateTo   = format(new Date(), 'yyyy-MM-dd')
-
-  const { data: annotationsData, refetch: refetchAnnotations } = useQuery({
-    queryKey: ['annotations', site?.site_key, dateFrom, dateTo],
-    queryFn: () => fetchApi(`/annotations?site_key=${site.site_key}&date_from=${dateFrom}&date_to=${dateTo}`),
-    enabled: !!site?.site_key && !previewMode,
-    staleTime: 60_000
-  })
-  const annotations = Array.isArray(annotationsData) ? annotationsData : []
-
-  const handleSaveAnnotation = async () => {
-    if (!site?.site_key || !annotationForm.note.trim()) return
-    setAnnotationSaving(true)
-    try {
-      await fetchApi(`/annotations?site_key=${site.site_key}`, {
-        method: 'POST',
-        body: JSON.stringify({ date: annotationForm.date, note: annotationForm.note.trim(), type: annotationForm.type })
-      })
-      setAnnotationForm(f => ({ ...f, open: false, note: '' }))
-      await refetchAnnotations()
-    } catch (_err) {
-      // Table may not exist yet — silently fail rather than crashing the dashboard
-    } finally {
-      setAnnotationSaving(false)
-    }
-  }
-
-  const handleDeleteAnnotation = async (id) => {
-    if (!site?.site_key) return
-    try {
-      await fetchApi(`/annotations/${id}?site_key=${site.site_key}`, { method: 'DELETE' })
-      await refetchAnnotations()
-    } catch (_err) { /* swallow */ }
-  }
-
   // Update freshness timestamp whenever new overview data arrives
   useEffect(() => {
     if (overview) setLastRefresh(new Date())
@@ -397,56 +193,19 @@ export default function Dashboard() {
 
 
   const kpis = overview?.kpis || {}
-  const businessType = overview?.business_type || site?.business_type || 'saas'
-  const kpiConfig    = getKpiConfig(businessType)
-  const enrichedKpis = enrichKpis(kpis, businessType)
 
   const totalRevenue = kpis.revenue || 0
   const totalConversions = kpis.conversions || 0
-  const totalSessions = kpis.sessions || 0
   const totalLeads = kpis.leads || 0
   const convRate = kpis.conversion_rate || 0
-  const avgValue = kpis.avg_value || 0
-  const totalAIRevenue = kpis.ai_revenue || 0
 
   const revenueDelta = formatDeltaVal(kpis.revenue, kpis.revenue_prev)
   const leadsDelta = formatDeltaVal(kpis.leads, kpis.leads_prev)
 
   const aiRevResults = overview?.ai_sources || []
-  const aiTrendResults = overview?.ai_trend || []
-  const aiShareTotal = kpis.ai_revenue_share || 0
-  const aiDelta = null
-
   const activeResults = overview?.sources || []
   const topPagesResults = overview?.top_pages || []
-  const campaignResults = overview?.campaigns || []
   const timeResults = overview?.revenue_trend || []
-  const installData = overview?.install
-  const alerts = overview?.alerts || []
-  const derivedInsights = buildDerivedInsights(kpis, aiShareTotal, aiRevResults, activeResults, businessType)
-  const isAnalyticsUnavailable = overview?.analytics_unavailable || false
-  const allInsights = [
-    ...(isAnalyticsUnavailable ? [{
-      id: 'analytics_unavailable',
-      type: 'alert',
-      priority: 'high',
-      severity: 'high',
-      title: 'Analytics unavailable',
-      desc: 'Analytics are temporarily unavailable. Showing safe fallback data.',
-      suggested_action: 'Please refresh the page in a few minutes.'
-    }] : []),
-    ...(cacUnavailable ? [{
-      id: 'cac_unavailable',
-      type: 'alert',
-      priority: 'medium',
-      severity: 'medium',
-      title: 'Spend data unavailable',
-      desc: 'Spend data is temporarily unavailable.',
-      suggested_action: 'Please check back in a few minutes.'
-    }] : []),
-    ...alerts.map(a => ({ ...a, type: 'alert' })),
-    ...derivedInsights
-  ]
 
   const models = overview?.models || {}
   // Hide multi-touch model rows on free plan — the nightly job doesn't compute
@@ -456,15 +215,6 @@ export default function Dashboard() {
   const modelRevenues = MODELS
     .filter(m => canMultiTouch || !MULTI_TOUCH.has(m.key))
     .map(m => ({ model: m.key, label: m.label, total: models[m.key] || 0 }))
-
-  const aiTrendChartData = {
-    labels: aiTrendResults.map(r => r.dim_value || ''),
-    datasets: [{
-      label: 'AI Revenue', data: aiTrendResults.map(r => r.ai_revenue || 0),
-      borderColor: '#D7F550', backgroundColor: 'rgba(215, 245, 80, 0.08)',
-      fill: true, tension: 0.3, pointRadius: 2, borderWidth: 2
-    }]
-  }
 
   const revTrendData = {
     labels: timeResults.map(r => r.dim_value || ''),
@@ -491,53 +241,6 @@ export default function Dashboard() {
     }]
   }
 
-  // T5.3 — Orders/Leads by Channels bar chart
-  const channelBarData = {
-    labels: activeResults.slice(0, 8).map(r => r.dim_value || r.source || 'Unknown'),
-    datasets: [
-      {
-        label: businessType === 'ecommerce' ? 'Orders' : 'Leads',
-        data: activeResults.slice(0, 8).map(r => r.conversions || 0),
-        backgroundColor: activeResults.slice(0, 8).map((_, i) =>
-          i === 0 ? 'rgba(17,24,39,0.85)' : i === 1 ? 'rgba(204,240,63,0.85)' : 'rgba(107,114,128,0.6)'
-        ),
-        borderRadius: 6,
-        borderSkipped: false
-      }
-    ]
-  }
-  const channelBarOpts = {
-    responsive: true, maintainAspectRatio: false, indexAxis: 'y',
-    plugins: { legend: { display: false } },
-    scales: {
-      x: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { maxTicksLimit: 5 } },
-      y: { grid: { display: false }, ticks: { font: { size: 12 } } }
-    }
-  }
-
-  // T5.5 — Leads by Campaign donut
-  const topCampaigns = campaignResults.slice(0, 6)
-  const donutColors = [
-    'rgba(17,24,39,0.85)', 'rgba(215,245,80,0.9)', 'rgba(107,114,128,0.8)',
-    'rgba(55,65,81,0.8)', 'rgba(180,195,60,0.8)', 'rgba(209,213,219,0.9)'
-  ]
-  const campaignDonutData = {
-    labels: topCampaigns.map(r => r.dim_value || 'unknown'),
-    datasets: [{
-      data: topCampaigns.map(r => r.revenue || 0),
-      backgroundColor: donutColors,
-      borderWidth: 0,
-      hoverOffset: 4
-    }]
-  }
-  const donutOpts = {
-    responsive: true, maintainAspectRatio: false, cutout: '68%',
-    plugins: {
-      legend: { position: 'right', labels: { boxWidth: 10, padding: 12, font: { size: 11 } } },
-      tooltip: { callbacks: { label: (ctx) => ` $${(ctx.raw || 0).toFixed(0)}` } }
-    }
-  }
-
   const chartOpts = (prefix = '$') => {
     const isDark = document.documentElement.classList.contains('dark')
     const gridColor = isDark ? '#2A2E2E' : '#f3f4f6'
@@ -552,19 +255,6 @@ export default function Dashboard() {
     }
   }
 
-  const recentLeadsData = activeResults.slice(0, 10).map(r => {
-    const source = (r.dim_value || r.source || 'unknown').toLowerCase()
-    const cacRow = cacResults.find(c => c.channel === source)
-    return {
-      source: r.dim_value || r.source || 'unknown',
-      conversions: r.conversions || 0,
-      revenue: r.revenue || 0,
-      rpv: r.rpv || 0,
-      cac: cacRow?.cac ?? null,
-      payback_months: cacRow?.payback_months ?? null
-    }
-  })
-
   const handleExport = () => {
     if (!site) return
     const params = new URLSearchParams({
@@ -576,47 +266,8 @@ export default function Dashboard() {
     window.open(`/api/export/report?${params}`, '_blank')
   }
 
-  const createStarterReport = async (template) => {
-    if (!site?.site_key) return
-    const today = format(new Date(), 'yyyy-MM-dd')
-    const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd')
-    const configs = {
-      sources: {
-        name: 'Sources', metric: 'revenue', groupBy: 'source', model: 'last_touch',
-        chartType: 'bar', dateFrom: thirtyDaysAgo, dateTo: today, filters: {}
-      },
-      totals: {
-        name: 'Totals', metric: 'conversions', groupBy: 'date', model: 'last_touch',
-        chartType: 'line', dateFrom: thirtyDaysAgo, dateTo: today, filters: {}
-      },
-      trend: {
-        name: 'Conversion Trend', metric: 'conversions', groupBy: 'date', model: 'last_touch',
-        chartType: 'line', dateFrom: thirtyDaysAgo, dateTo: today, filters: {}
-      }
-    }
-    const cfg = configs[template]
-    if (!cfg) return
-    await fetchApi('/reports/saved', {
-      method: 'POST',
-      body: JSON.stringify({
-        site_key: site.site_key,
-        name: cfg.name,
-        config: {
-          model: cfg.model, groupBy: cfg.groupBy, groupBy2: null, metric: cfg.metric,
-          chartType: cfg.chartType, datePreset: 30, dateFrom: cfg.dateFrom, dateTo: cfg.dateTo,
-          granularity: 'day', attributionWindow: null, attributeBy: 'conversion_date',
-          filters: cfg.filters
-        }
-      })
-    })
-    window.location.reload()
-  }
-
-  const isEmpty = !isLoading && dashboardReports.length === 0
-
-  const hasRevenue = totalRevenue > 0;
-  const hasCost = cacResults && cacResults.length > 0 && !cacUnavailable && avgCAC != null;
-  const isGscConnected = site?.gsc_connected || overview?.gsc_connected || false;
+  const hasRevenue = totalRevenue > 0
+  const isGscConnected = site?.gsc_connected || overview?.gsc_connected || false
 
   return (
     <div className="st-container space-y-6">
@@ -708,29 +359,23 @@ export default function Dashboard() {
                   <>
                     <MetricTile label="Revenue" value={totalRevenue} format="currency" trend={revenueDelta?.pct} />
                     <MetricTile label="Conversions" value={totalConversions} />
-                    <MetricTile label="Conversion Rate" value={convRate} format="percent" />
+                    <MetricTile label="Conversion Rate" value={totalConversions > 0 ? convRate : null} format="percent" isEmpty={totalConversions === 0} />
                   </>
                 ) : (
                   <>
                     <MetricTile label="Total Leads" value={totalLeads} trend={leadsDelta?.pct} />
                     <MetricTile label="Conversions" value={totalConversions} />
-                    <MetricTile label="Conversion Rate" value={convRate} format="percent" />
+                    <MetricTile label="Conversion Rate" value={totalConversions > 0 ? convRate : null} format="percent" isEmpty={totalConversions === 0} />
                   </>
                 )}
               </div>
 
-              {/* AI Attribution Hero */}
-              <div className="bg-lime-50 border border-lime-200 dark:bg-lime-950/20 dark:border-lime-900/30 rounded-xl p-5 flex items-start gap-4">
-                <div className="p-2 rounded-lg bg-st-lime text-st-black shrink-0">
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-lime-900 dark:text-lime-400 mb-1">AI Referral Context</h3>
-                  <p className="text-xs text-lime-700 dark:text-lime-300 leading-relaxed">
-                    Detected AI-assisted entry themes and intent mappings. AI search engines like ChatGPT, Claude, Gemini, and Perplexity are analyzed using journey events and source data.
-                    {totalAIRevenue > 0 && ` AI platforms contributed $${totalAIRevenue.toLocaleString()} (${aiShareTotal.toFixed(1)}% of total revenue).`}
-                  </p>
-                </div>
+              {/* Command Center Nav */}
+              <div className="flex flex-wrap gap-2">
+                <button onClick={() => navigate('/analytics')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-white hover:border-st-black dark:hover:border-white transition-colors">Analytics <ArrowRight className="w-3 h-3" /></button>
+                <button onClick={() => navigate('/attribution')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-white hover:border-st-black dark:hover:border-white transition-colors">Attribution <ArrowRight className="w-3 h-3" /></button>
+                <button onClick={() => navigate('/leads')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-white hover:border-st-black dark:hover:border-white transition-colors">Leads <ArrowRight className="w-3 h-3" /></button>
+                <button onClick={() => navigate('/app/integrations')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-white hover:border-st-black dark:hover:border-white transition-colors">Integrations <ArrowRight className="w-3 h-3" /></button>
               </div>
 
               {/* Performance Trend Chart */}
