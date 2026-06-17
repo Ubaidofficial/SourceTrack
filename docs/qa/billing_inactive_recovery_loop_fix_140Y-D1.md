@@ -1,8 +1,8 @@
 # QA Report: Billing Inactive Recovery Loop Fix — 140Y-D1
 
-**Date:** 2026-06-18  
-**Session/Task:** 140Y-D1  
-**Status:** LOCAL ONLY — deployed staging not verified yet  
+**Date:** 2026-06-18
+**Session/Task:** 140Y-D1
+**Status:** LOCAL ONLY — deployed staging not verified yet
 
 ---
 
