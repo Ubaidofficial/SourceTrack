@@ -43,7 +43,8 @@ export async function fetchApi(path, options = {}) {
   })
 
   if (res.status === 402) {
-    if (!options.skipBillingRedirect) {
+    const alreadyOnBilling = window.location.pathname === '/billing'
+    if (!options.skipBillingRedirect && !alreadyOnBilling) {
       window.location.href = '/billing'
     }
     const err = new Error('Subscription required')

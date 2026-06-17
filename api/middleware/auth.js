@@ -10,6 +10,15 @@ const TRIAL_DAYS = 14
 // Supabase downtime is still a risk but the blast radius is much smaller.
 export const siteCache = new NodeCache({ stdTTL: 300, checkperiod: 60 })
 
+function isInactiveBillingRecoveryRoute(req) {
+  const path = req.originalUrl || ''
+  return (
+    path.includes('/api/billing/status') ||
+    path.includes('/api/billing/create-checkout') ||
+    path.includes('/api/billing/portal')
+  )
+}
+
 export async function validateSiteKey(req, res, next) {
   try {
     if (req.method === 'OPTIONS') return next()
@@ -34,7 +43,8 @@ export async function validateSiteKey(req, res, next) {
           return res.status(402).json({ success: false, data: null, error: 'Trial expired' })
         }
       }
-      if (cached.plan === 'inactive') {
+      const allowInactiveBillingRecovery = isInactiveBillingRecoveryRoute(req)
+      if (cached.plan === 'inactive' && !allowInactiveBillingRecovery) {
         return res.status(402).json({ success: false, data: null, error: 'Subscription inactive' })
       }
       req.site = cached.site
@@ -77,10 +87,13 @@ export async function validateSiteKey(req, res, next) {
       return res.status(401).json({ success: false, data: null, error: 'Invalid site_key' })
     }
 
-    if (data.plan === 'inactive' || data.plan === 'archived') {
-      const msg = data.plan === 'archived'
-        ? 'Site archived after 60 days of inactivity. Reactivate from your dashboard.'
-        : 'Subscription inactive'
+    const allowInactiveBillingRecovery = isInactiveBillingRecoveryRoute(req)
+    if (data.plan === 'inactive' && !allowInactiveBillingRecovery) {
+      return res.status(402).json({ success: false, data: null, error: 'Subscription inactive' })
+    }
+
+    if (data.plan === 'archived') {
+      const msg = 'Site archived after 60 days of inactivity. Reactivate from your dashboard.'
       return res.status(402).json({ success: false, data: null, error: msg })
     }
 
