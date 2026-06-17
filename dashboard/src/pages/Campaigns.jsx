@@ -814,7 +814,7 @@ export default function Campaigns() {
                 <tbody className="divide-y divide-gray-100">
                   {rows.map((r, i) => {
                     const isOk = r.currency_status === 'ok'
-                    const cvr = r.visits > 0 ? ((r.conversions / r.visits) * 100).toFixed(1) + '%' : '0.0%'
+                    const cvr = r.visits > 0 ? ((r.conversions / r.visits) * 100).toFixed(1) + '%' : '—'
                     const netProfit = r.revenue - (r.spend || 0)
 
                     // Read-only status mapping
@@ -978,6 +978,11 @@ export default function Campaigns() {
             ) : isError || !analyticsAvailable ? (
               <div className="h-64 flex items-center justify-center text-sm text-gray-400">
                 Revenue chart unavailable
+              </div>
+            ) : !hasRevenue ? (
+              <div className="h-64 flex flex-col items-center justify-center text-center px-6 gap-2">
+                <p className="text-sm font-medium text-st-black dark:text-white">No revenue in this period</p>
+                <p className="text-xs text-st-gray max-w-xs">Revenue appears after Stripe, Shopify, or a conversion event sends a purchase value. <a href="/app/integrations" className="underline hover:text-st-black">Open Integrations</a> to set up revenue tracking.</p>
               </div>
             ) : rows.length === 0 ? (
               <div className="h-64 flex items-center justify-center text-sm text-st-gray">

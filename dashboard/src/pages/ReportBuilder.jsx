@@ -125,24 +125,18 @@ const PRESET_TEMPLATES = [
   { id: 'saas_trials', name: 'Trials by Source', desc: 'Attributed trial signups by traffic source', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', filters: { conversion_type: 'trial' }, category: 'SaaS', requiredData: 'none' },
   { id: 'saas_demos', name: 'Demo Bookings by Source', desc: 'Demo bookings by traffic source', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', filters: { conversion_type: 'demo' }, category: 'SaaS', requiredData: 'none' },
   { id: 'saas_signups', name: 'Signup Landing Pages', desc: 'Landing pages where signup conversions occur', model: 'first_touch', groupBy: 'landing_page', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', filters: { conversion_type: 'signup' }, category: 'SaaS', requiredData: 'none' },
-  { id: 'saas_mrr', name: 'MRR by Source', desc: 'Monthly Recurring Revenue by traffic source (Coming Soon)', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'revenue', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'SaaS', requiredData: 'revenue', isFuture: true },
-  { id: 'saas_trial_paid', name: 'Trial-to-Paid Conversion', desc: 'Conversion rate from trial to paid status (Coming Soon)', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'conversion_rate', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'SaaS', requiredData: 'revenue', isFuture: true },
 
   // Ecommerce
   { id: 'ecom_orders', name: 'Orders by Source', desc: 'Attributed purchase orders by source (Manual webhook)', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', filters: { conversion_type: 'purchase' }, category: 'Ecommerce', requiredData: 'none', shopifyBadge: true },
   { id: 'ecom_revenue', name: 'Revenue by Source', desc: 'Attributed revenue by traffic source', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'revenue', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'Ecommerce', requiredData: 'revenue' },
   { id: 'ecom_aov', name: 'AOV by Campaign', desc: 'Average Order Value by campaign (Manual webhook)', model: 'last_touch', groupBy: 'campaign', groupBy2: null, metric: 'avg_conversion_value', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'Ecommerce', requiredData: 'revenue', shopifyBadge: true },
   { id: 'ecom_shopify', name: 'Shopify Webhook Orders', desc: 'Attributed orders tracked via manual Shopify webhook (Manual webhook)', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', filters: { conversion_type: 'shopify_order' }, category: 'Ecommerce', requiredData: 'none', shopifyBadge: true },
-  { id: 'ecom_roas', name: 'Campaign ROAS', desc: 'Return on Ad Spend by campaign (Coming Soon)', model: 'last_touch', groupBy: 'campaign', groupBy2: null, metric: 'revenue', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'Ecommerce', requiredData: 'cost', isFuture: true },
 
   // Lead Gen / Agency
   { id: 'lead_leads', name: 'Leads by Source', desc: 'Attributed new leads by traffic source', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'leads', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'Lead Gen / Agency', requiredData: 'none' },
   { id: 'lead_forms', name: 'Form Conversions by Landing Page', desc: 'Conversions driven by landing pages', model: 'first_touch', groupBy: 'landing_page', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', filters: { conversion_type: 'form' }, category: 'Lead Gen / Agency', requiredData: 'none' },
-  { id: 'lead_qualified', name: 'Qualified Leads by Source', desc: 'Attributed qualified leads by source (Coming Soon)', model: 'last_touch', groupBy: 'source', groupBy2: null, metric: 'leads', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'Lead Gen / Agency', requiredData: 'lead_gen', isFuture: true },
-  { id: 'lead_mql_sql', name: 'MQL to SQL Rate by Campaign', desc: 'Marketing to Sales Qualified transition rate by campaign (Coming Soon)', model: 'last_touch', groupBy: 'campaign', groupBy2: null, metric: 'conversions', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'Lead Gen / Agency', requiredData: 'lead_gen', isFuture: true },
 
   // SEO / GSC
-  { id: 'seo_gsc', name: 'SEO Search Queries', desc: 'Google Search Console organic search keyword performance (Coming Soon)', model: 'last_touch', groupBy: 'keyword', groupBy2: null, metric: 'sessions', days: 30, chartType: 'bar', granularity: 'day', filters: {}, category: 'Universal', requiredData: 'gsc', isFuture: true }
 ]
 
 const COLORS = [
@@ -604,11 +598,9 @@ export default function ReportBuilder() {
   }
 
   const selectedTemplate = PRESET_TEMPLATES.find(p => p.id === activeTemplateId)
-  const futureGateError = selectedTemplate?.isFuture === true ? 'future_template' : null
   const templateGateError = selectedTemplate ? isTemplateGated(selectedTemplate, gates) : null
   const metricGateError = isMetricGated(metric)
-  const activeGateError = futureGateError || templateGateError || metricGateError
-  const isTemplateFuture = selectedTemplate?.isFuture === true
+  const activeGateError = templateGateError || metricGateError
 
   const getNormalizedBusinessType = (type) => {
     if (!type) return 'unknown'
@@ -1120,37 +1112,9 @@ export default function ReportBuilder() {
     { value: 'returning', label: 'Returning Customers Only' }
   ]
 
-  const getLockedEmptyState = (gateError, templateName, isFuture) => {
+  const getLockedEmptyState = (gateError, templateName) => {
     const iconClass = "w-8 h-8 text-lime-600 dark:text-lime-400"
     const containerClass = "bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border p-12 text-center max-w-2xl mx-auto my-8 shadow-sm flex flex-col items-center justify-center animate-fade-in"
-
-    if (isFuture) {
-      let title = "Feature Coming Soon"
-      let desc = "This advanced report requires metrics or dimensions that are currently under development. Stay tuned for updates!"
-      if (gateError === 'cost' || templateName?.toLowerCase().includes('roas') || templateName?.toLowerCase().includes('spend')) {
-        title = "ROAS & Spend Reports Coming Soon"
-        desc = "Cost-based attribution reports (Campaign ROAS, Spend, CAC, CPA) are coming soon. Ad platform integrations will sync ad spend cost metrics directly."
-      } else if (gateError === 'revenue' || templateName?.toLowerCase().includes('mrr') || templateName?.toLowerCase().includes('paid')) {
-        title = "SaaS Revenue Reports Coming Soon"
-        desc = "Subscription analytics like MRR and Trial-to-Paid conversion tracking are coming soon."
-      } else if (gateError === 'gsc' || templateName?.toLowerCase().includes('seo') || templateName?.toLowerCase().includes('gsc') || templateName?.toLowerCase().includes('queries')) {
-        title = "Google Search Console Keywords Coming Soon"
-        desc = "Google Search Console query dimensions and organic CTR/impressions reports are coming soon."
-      } else if (gateError === 'lead_gen' || templateName?.toLowerCase().includes('qualified') || templateName?.toLowerCase().includes('mql')) {
-        title = "CRM Pipeline Analytics Coming Soon"
-        desc = "Qualified lead metrics, MQL, SQL, and stage conversion rates are coming soon."
-      }
-
-      return (
-        <div className={containerClass}>
-          <div className="w-16 h-16 bg-lime-500/10 border border-lime-500/20 text-lime-500 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Lock className={iconClass} />
-          </div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{title}</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">{desc}</p>
-        </div>
-      )
-    }
 
     if (gateError === 'revenue_unconfigured') {
       return (
@@ -1319,8 +1283,7 @@ export default function ReportBuilder() {
         {/* Template Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {recommendedTemplates.map((p) => {
-            const isFuture = p.isFuture === true
-            const isGated = isFuture ? 'future_template' : isTemplateGated(p, gates)
+            const isGated = isTemplateGated(p, gates)
             const showLock = Boolean(isGated)
             return (
               <button
@@ -1342,7 +1305,7 @@ export default function ReportBuilder() {
                     {showLock && (
                       <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-800 text-[10px] font-semibold text-gray-550 dark:text-gray-400">
                         <Lock className="w-2.5 h-2.5" />
-                        {isFuture ? 'Coming Soon' : 'Locked'}
+                        Locked
                       </span>
                     )}
                     {p.shopifyBadge && (
@@ -1384,8 +1347,7 @@ export default function ReportBuilder() {
                         <h4 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">{cat}</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {catTemplates.map(p => {
-                            const isFuture = p.isFuture === true
-                            const isGated = isFuture ? 'future_template' : isTemplateGated(p, gates)
+                            const isGated = isTemplateGated(p, gates)
                             const showLock = Boolean(isGated)
                             return (
                               <button
@@ -1402,7 +1364,7 @@ export default function ReportBuilder() {
                                     {showLock && (
                                       <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-gray-150 dark:bg-gray-800 text-[9px] font-semibold text-gray-500 dark:text-gray-400">
                                         <Lock className="w-2.5 h-2.5" />
-                                        {isFuture ? 'Soon' : 'Locked'}
+                                        Locked
                                       </span>
                                     )}
                                   </div>
@@ -1512,8 +1474,7 @@ export default function ReportBuilder() {
               )}
               <div className="space-y-1 max-h-[160px] overflow-y-auto pr-1">
                 {recommendedTemplates.map((p) => {
-                  const isFuture = p.isFuture === true
-                  const isGated = isFuture ? 'future_template' : isTemplateGated(p, gates)
+                  const isGated = isTemplateGated(p, gates)
                   const showLock = Boolean(isGated)
                   const isActive = activeTemplateId === p.id
                   return (
@@ -1533,7 +1494,7 @@ export default function ReportBuilder() {
                           {showLock && (
                             <span className="inline-flex items-center gap-0.5 px-1 py-0.2 bg-gray-150 dark:bg-gray-800 text-[9px] rounded text-gray-550 dark:text-gray-400 font-medium">
                               <Lock className="w-2.5 h-2.5" />
-                              {isFuture ? 'Soon' : 'Locked'}
+                              Locked
                             </span>
                           )}
                           {p.shopifyBadge && (
@@ -1568,8 +1529,7 @@ export default function ReportBuilder() {
                           <div key={cat} className="space-y-1">
                             <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider block">{cat}</span>
                             {catTemplates.map(p => {
-                              const isFuture = p.isFuture === true
-                              const isGated = isFuture ? 'future_template' : isTemplateGated(p, gates)
+                              const isGated = isTemplateGated(p, gates)
                               const showLock = Boolean(isGated)
                               const isActive = activeTemplateId === p.id
                               return (
@@ -1589,7 +1549,7 @@ export default function ReportBuilder() {
                                       {showLock && (
                                         <span className="inline-flex items-center gap-0.5 px-1 py-0.2 bg-gray-150 dark:bg-gray-800 text-[8px] rounded text-gray-500 dark:text-gray-400 font-medium">
                                           <Lock className="w-1.5 h-1.5" />
-                                          {isFuture ? 'Soon' : 'Locked'}
+                                          Locked
                                         </span>
                                       )}
                                     </div>
@@ -2004,7 +1964,7 @@ export default function ReportBuilder() {
               </p>
             </div>
           ) : activeGateError ? (
-            getLockedEmptyState(activeGateError, selectedTemplate?.name, isTemplateFuture)
+            getLockedEmptyState(activeGateError, selectedTemplate?.name)
           ) : (
             <>
               {data?.truncated && (

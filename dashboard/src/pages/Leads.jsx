@@ -195,8 +195,8 @@ export default function Leads() {
         <div className="p-4 bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/30 rounded-xl text-xs text-amber-850 dark:text-amber-300 leading-normal flex items-start gap-2.5">
           <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500 mt-0.5" />
           <div>
-            <p className="font-semibold">Revenue tracking not connected</p>
-            <p className="mt-0.5">Stripe integrations or conversion event values are not configured. Attributed revenue values will not be shown until values are sent via Pixel telemetry or Stripe webhook sync.</p>
+            <p className="font-semibold">No revenue in this period</p>
+            <p className="mt-0.5">Revenue appears after Stripe, Shopify, or a conversion event sends a purchase value. <a href="/app/integrations" className="underline hover:text-amber-700">Open Integrations</a> to connect revenue tracking.</p>
           </div>
         </div>
       )}

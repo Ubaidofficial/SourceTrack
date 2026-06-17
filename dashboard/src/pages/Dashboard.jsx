@@ -509,7 +509,7 @@ export default function Dashboard() {
                     ] : [
                       { key: 'source', label: 'Source', render: (r) => <SourceChip source={r.dim_value || r.source || 'Direct'} /> },
                       { key: 'conversions', label: 'Conversions', render: (r) => r.conversions || 0 },
-                      { key: 'cvr', label: 'CVR%', render: (r) => `${(r.cvr || 0).toFixed(1)}%` },
+                      { key: 'cvr', label: 'CVR%', render: (r) => r.cvr > 0 ? `${r.cvr.toFixed(1)}%` : '—' },
                       { key: 'details', label: 'Details', render: (r) => (
                         <button onClick={() => { setExplainModel(explainModel || 'last_touch'); setExplainModalOpen(true) }} className="text-xs text-st-black dark:text-white font-semibold hover:underline">
                           View details
