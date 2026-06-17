@@ -158,11 +158,11 @@ No tracker (`tracker/`) or backend (`api/`) files changed.
 
 ---
 
-## 12. Overall Result
+## 12. Overall Result (140M-B)
 
-**Overall: PARTIAL PASS — deployed browser E2E verified for form capture, booking UTM passthrough, Calendly mock, unsupported-provider safety, and no /api/conversion. Cal.com deployed browser E2E remains BLOCKED pending deployment of the updated fixture. Server-accepted event persistence with a valid staging site_key remains BLOCKED.**
+**PARTIAL PASS** — C4 Cal.com blocked; fixture fix committed but not yet deployed/retested.
 
-| Flow | Status |
+| Flow | 140M-B Status |
 |---|---|
 | A — Form submit capture (native / webflow / wordpress) | ✅ PASS |
 | B — Booking UTM passthrough | ✅ PASS |
@@ -172,4 +172,84 @@ No tracker (`tracker/`) or backend (`api/`) files changed.
 | E — API routing / no PII / no `/api/conversion` | ✅ PASS |
 | Production smoke (3 hosts) | ✅ PASS |
 | Server-accepted event persistence (valid site_key) | BLOCKED — by design (invalid key fixture) |
+| Paid beta readiness | NOT READY |
+
+---
+
+## 13. Session 140M-C — Cal.com Deployed Browser E2E Closeout
+
+**Date:** 2026-06-17
+**Baseline commit:** `5ed9c2a Session 140M-B — Record deployed browser E2E partial and fix Cal.com fixture`
+**CI:** green (1m25s)
+**Working tree at session start:** clean
+
+### Fixture verification
+
+| Check | Result |
+|---|---|
+| Page title | `SourceTrack 140M E2E Fixture — Staging QA Only` ✅ |
+| QA banner visible | ✅ (staging-only warning present) |
+| Tracker origin | `https://sourcetrack-api-staging.up.railway.app` ✅ |
+| `window.Cal` is function | `true` ✅ — pre-installed by updated inline stub |
+| `window._calCallbacks` exists | `true` ✅ — 140M-B fix deployed |
+| `window._calCallbacks.length` | `1` ✅ — tracker registered its `bookingSuccessfulV2` callback at init |
+| `window.sourcetrack` loaded | `true` ✅ |
+
+The updated fixture (140M-B) is confirmed deployed. The tracker's `_tryRegisterCalCom()` found `window.Cal` at init and registered its callback before the retry window started.
+
+### C4 — Cal.com `bookingSuccessfulV2` Browser Evidence
+
+```
+Exact URL:     https://sourcetrack-dashboard-staging.up.railway.app/qa-140M-e2e-fixture.html
+               ?utm_source=google&utm_medium=cpc&utm_campaign=qa_140M&utm_term=form_test&utm_content=e2e
+Browser:       Chrome (MCP tab 1625638185)
+Action:        Clicked "Stub Cal() + fire bookingSuccessfulV2 (C4)" button via JS .click()
+               mockCalcomEmbedBoot() fired — 1 registered bookingSuccessfulV2 callback invoked
+
+Network request observed:
+  Request URL:    https://sourcetrack-api-staging.up.railway.app/api/track
+  Request method: POST (sendBeacon)
+  Event payload (PII-free):
+    event:                        "booking_scheduled"
+    properties.booking_provider:  "calcom"
+    properties.booking_detection_method: "browser_embed_event"
+    properties.booking_event_type: "bookingSuccessfulV2"
+    properties.pii_check (email): [] — no email addresses in properties
+    to_conversion:                false
+
+Expected result: booking_scheduled → /api/track, booking_provider=calcom
+Actual result:   booking_scheduled → /api/track, booking_provider=calcom ✅
+PASS/BLOCKED:    PASS
+```
+
+`/api/conversion` called: NO ✅
+
+### Regression Spot-Check (on updated fixture)
+
+| Test | Expected | Result |
+|---|---|---|
+| C1 Calendly `event_scheduled` | emit `booking_scheduled`, `booking_provider: "calendly"` | ✅ PASS |
+| C2 `date_and_time_selected` | silent | ✅ PASS (0 beacons) |
+| C3 bad origin | silent | ✅ PASS (0 beacons) |
+| D1–D5 unsupported providers | all silent | ✅ PASS (0 beacons) |
+| `/api/conversion` across all regression flows | 0 calls | ✅ PASS |
+
+Total beacons from C1 + C2 + C3 + D1–D5: **1** (C1 only) ✅
+
+---
+
+## 14. Overall Result (140M-C final)
+
+**BROWSER E2E PASS WITH LIMITATION — deployed browser dispatch/privacy behavior verified for forms, booking UTM passthrough, Calendly, Cal.com, unsupported-provider safety, and no /api/conversion. Server-accepted event persistence with a valid staging site_key remains BLOCKED.**
+
+| Flow | Final Status |
+|---|---|
+| A — Form submit capture (native / webflow / wordpress) | ✅ PASS |
+| B — Booking UTM passthrough | ✅ PASS |
+| C1–C3, C5 — Calendly confirmed booking / silence | ✅ PASS |
+| C4 — Cal.com `bookingSuccessfulV2` | ✅ PASS (verified on deployed 140M-B fixture) |
+| D — Unsupported provider silence | ✅ PASS |
+| E — API routing / no PII / no `/api/conversion` | ✅ PASS |
+| Production smoke (3 hosts) | ✅ PASS |
+| Server-accepted event persistence (valid site_key) | BLOCKED — not tested (invalid key fixture by design) |
 | Paid beta readiness | NOT READY |
