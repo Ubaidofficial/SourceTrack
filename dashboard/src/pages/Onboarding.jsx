@@ -68,6 +68,10 @@ export default function Onboarding() {
   const [siteKey, setSiteKey] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  // statusLoading shields the page render until loadOnboardingStatus() has
+  // resolved. Without this shield, Step 1 (Connect Domain) flashes for every
+  // returning user before their saved progress is hydrated from the API.
+  const [statusLoading, setStatusLoading] = useState(true)
 
   const [domain, setDomain] = useState('')
   const [businessType, setBusinessType] = useState(null)
@@ -114,13 +118,19 @@ export default function Onboarding() {
       setSiteKey(site.site_key)
 
       const state = site.onboarding_state || {}
+
+      // Always hydrate business type and install method from site data, not just
+      // when current_step > 1. This ensures the 'Verify Later' guard in step 6
+      // has the values it needs after a page reload, even if the user navigated
+      // back to an earlier step in a previous session.
+      setBusinessType(site.business_type || state.business_type || null)
+      setInstallMethod(state.install_method || 'standard')
+      setSelectedConversions(state.selected_conversions || [])
+
       let stepToSet = 1
       if (state.current_step && state.current_step > 1) {
         stepToSet = state.current_step
         setStep(state.current_step)
-        setBusinessType(site.business_type || state.business_type || null)
-        setInstallMethod(state.install_method || null)
-        setSelectedConversions(state.selected_conversions || [])
       }
       if (site.domain) {
         setDomain(site.domain)
@@ -128,10 +138,6 @@ export default function Onboarding() {
           stepToSet = 2
           setStep(2)
         }
-      }
-      if ((site.business_type || state.business_type) && stepToSet < 3) {
-        stepToSet = 2
-        setStep(2)
       }
 
       if (stepToSet >= 4 && site.site_id) {
@@ -144,7 +150,10 @@ export default function Onboarding() {
         }
       }
     } catch (_err) {
-      /* ignore */
+      /* ignore — user stays on step 1 if we cannot resolve their state */
+    } finally {
+      // Always clear the mount shield so the page renders regardless of outcome.
+      setStatusLoading(false)
     }
   }
 
@@ -666,6 +675,17 @@ export default function Onboarding() {
         </button>
         {error && <p className="text-sm text-red-500 mt-4 text-center font-medium">{error}</p>}
       </OnboardingCard>
+    )
+  }
+
+  // Shield the page render until the mount status check resolves.
+  // Without this, Step 1 (Connect Domain) always flashes first for returning
+  // users, even when they are mid-setup or already complete.
+  if (statusLoading) {
+    return (
+      <div className="min-h-screen bg-[#F1F4F4] dark:bg-[#2B302F] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black dark:border-st-lime" />
+      </div>
     )
   }
 
