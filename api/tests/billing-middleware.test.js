@@ -2617,7 +2617,7 @@ test('Default Ingestion Rate Limiter Skip Tests (Session 140G-18)', async (t) =>
 
 // ── Early Bird Annual checkout plan resolution (Session 140Z-E) ───────────────
 
-test('resolveCheckoutPrice — plan key validation', (t) => {
+test('resolveCheckoutPrice — plan key validation', async (t) => {
   const saved = {
     STRIPE_PRICE_ID_STARTER:           process.env.STRIPE_PRICE_ID_STARTER,
     STRIPE_PRICE_ID_GROWTH:            process.env.STRIPE_PRICE_ID_GROWTH,
@@ -2633,26 +2633,26 @@ test('resolveCheckoutPrice — plan key validation', (t) => {
     }
   })
 
-  t.test('invalid plan key is rejected with 400', () => {
+  await t.test('invalid plan key is rejected with 400', () => {
     const result = resolveCheckoutPrice('free')
     assert.strictEqual(result.status, 400)
     assert.ok(result.error.includes('Invalid plan'))
     assert.strictEqual(result.priceId, null)
   })
 
-  t.test('unknown plan key is rejected with 400', () => {
+  await t.test('unknown plan key is rejected with 400', () => {
     const result = resolveCheckoutPrice('hacker_plan')
     assert.strictEqual(result.status, 400)
     assert.ok(result.error.includes('Invalid plan'))
   })
 
-  t.test('null / empty plan key is rejected with 400', () => {
+  await t.test('null / empty plan key is rejected with 400', () => {
     assert.strictEqual(resolveCheckoutPrice(null).status, 400)
     assert.strictEqual(resolveCheckoutPrice('').status, 400)
     assert.strictEqual(resolveCheckoutPrice(undefined).status, 400)
   })
 
-  t.test('early_bird_annual with price ID configured resolves priceId', () => {
+  await t.test('early_bird_annual with price ID configured resolves priceId', () => {
     process.env.STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID = 'price_test_early_bird_annual_123'
     const result = resolveCheckoutPrice('early_bird_annual')
     assert.strictEqual(result.error, null)
@@ -2661,7 +2661,7 @@ test('resolveCheckoutPrice — plan key validation', (t) => {
     assert.strictEqual(result.status, null)
   })
 
-  t.test('early_bird_annual without price ID returns 500 with safe error (no silent fallback)', () => {
+  await t.test('early_bird_annual without price ID returns 500 with safe error (no silent fallback)', () => {
     delete process.env.STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID
     // Even if legacy STRIPE_PRICE_ID is set, early_bird_annual must NOT use it
     process.env.STRIPE_PRICE_ID = 'price_legacy_growth_123'
@@ -2673,7 +2673,7 @@ test('resolveCheckoutPrice — plan key validation', (t) => {
     assert.notStrictEqual(result.priceId, 'price_legacy_growth_123')
   })
 
-  t.test('starter resolves to STRIPE_PRICE_ID_STARTER', () => {
+  await t.test('starter resolves to STRIPE_PRICE_ID_STARTER', () => {
     process.env.STRIPE_PRICE_ID_STARTER = 'price_test_starter_456'
     const result = resolveCheckoutPrice('starter')
     assert.strictEqual(result.error, null)
@@ -2681,14 +2681,14 @@ test('resolveCheckoutPrice — plan key validation', (t) => {
     assert.strictEqual(result.plan, 'starter')
   })
 
-  t.test('growth resolves to STRIPE_PRICE_ID_GROWTH', () => {
+  await t.test('growth resolves to STRIPE_PRICE_ID_GROWTH', () => {
     process.env.STRIPE_PRICE_ID_GROWTH = 'price_test_growth_789'
     const result = resolveCheckoutPrice('growth')
     assert.strictEqual(result.error, null)
     assert.strictEqual(result.priceId, 'price_test_growth_789')
   })
 
-  t.test('pro (legacy alias) resolves to Growth price and returns plan growth', () => {
+  await t.test('pro (legacy alias) resolves to Growth price and returns plan growth', () => {
     process.env.STRIPE_PRICE_ID_GROWTH = 'price_test_growth_789'
     const result = resolveCheckoutPrice('pro')
     assert.strictEqual(result.error, null)
@@ -2696,7 +2696,7 @@ test('resolveCheckoutPrice — plan key validation', (t) => {
     assert.strictEqual(result.priceId, 'price_test_growth_789')
   })
 
-  t.test('business (legacy alias) resolves to Scale price and returns plan scale', () => {
+  await t.test('business (legacy alias) resolves to Scale price and returns plan scale', () => {
     process.env.STRIPE_PRICE_ID_SCALE = 'price_test_scale_abc'
     const result = resolveCheckoutPrice('business')
     assert.strictEqual(result.error, null)
@@ -2704,7 +2704,7 @@ test('resolveCheckoutPrice — plan key validation', (t) => {
     assert.strictEqual(result.priceId, 'price_test_scale_abc')
   })
 
-  t.test('agency (legacy alias) resolves to Scale price and returns plan scale', () => {
+  await t.test('agency (legacy alias) resolves to Scale price and returns plan scale', () => {
     process.env.STRIPE_PRICE_ID_SCALE = 'price_test_scale_abc'
     const result = resolveCheckoutPrice('agency')
     assert.strictEqual(result.error, null)
@@ -2713,7 +2713,7 @@ test('resolveCheckoutPrice — plan key validation', (t) => {
   })
 })
 
-test('getPriceMap — early bird annual price ID maps to starter entitlements', (t) => {
+test('getPriceMap — early bird annual price ID maps to starter entitlements', async (t) => {
   const savedEarlyBird = process.env.STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID
 
   t.after(() => {
@@ -2721,14 +2721,14 @@ test('getPriceMap — early bird annual price ID maps to starter entitlements', 
     else process.env.STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID = savedEarlyBird
   })
 
-  t.test('early_bird price ID present in map and maps to starter', () => {
+  await t.test('early_bird price ID present in map and maps to starter', () => {
     process.env.STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID = 'price_test_early_bird_abc'
     const map = getPriceMap()
     assert.strictEqual(map['price_test_early_bird_abc'], 'starter',
       'Early Bird annual price ID must map to starter entitlements in webhook handler')
   })
 
-  t.test('early_bird price ID absent — not in map, does not default to growth', () => {
+  await t.test('early_bird price ID absent — not in map, does not default to growth', () => {
     delete process.env.STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID
     const map = getPriceMap()
     assert.strictEqual(map['price_test_early_bird_abc'], undefined,
