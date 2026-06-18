@@ -54,7 +54,8 @@ const expectedOpenBlockers = [
   'Billing Redirect Hardening',
   'Account Deletion PostHog Erase',
   'Onboarding Validation Hardening',
-  'Transactional Email Opt-Out'
+  'Transactional Email Opt-Out',
+  'Attribution Accuracy + Signal Reliability Hardening'
 ];
 
 const lines = content.split('\n');
