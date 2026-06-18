@@ -1,10 +1,10 @@
 # QA Report: Staging Onboarding, Dashboard Journey, & Demo Readiness (Session 140Z-G3-B)
 
-**Date:** 2026-06-18  
-**Tested URL:** [Onboarding Page](https://sourcetrack-dashboard-staging.up.railway.app/onboarding) & [Dashboard Page](https://sourcetrack-dashboard-staging.up.railway.app/dashboard)  
-**Auth Account:** `local-e2e-16june-1904@sourcetrack.ai` (Staging Supabase password reverted to a secure random string)  
-**Browser / Viewport:** Chrome 149.0 / Desktop (1280x800)  
-**Overall Demo-Data Readiness Verdict:** **PARTIAL**  
+**Date:** 2026-06-18
+**Tested URL:** [Onboarding Page](https://sourcetrack-dashboard-staging.up.railway.app/onboarding) & [Dashboard Page](https://sourcetrack-dashboard-staging.up.railway.app/dashboard)
+**Auth Account:** `local-e2e-16june-1904@sourcetrack.ai` (Staging Supabase password reverted to a secure random string)
+**Browser / Viewport:** Chrome 149.0 / Desktop (1280x800)
+**Overall Demo-Data Readiness Verdict:** **PARTIAL**
 **Paid Beta Verdict:** **NOT READY**
 
 ---
@@ -85,17 +85,17 @@ We analyzed the API latency and server concerns raised in previous logs:
 
 ## 5. Part E: Brutal Product Verdict
 
-- **Does onboarding feel simple enough for a non-technical founder?**  
+- **Does onboarding feel simple enough for a non-technical founder?**
   **No.** The client-side routing loop is a hard blocker. Wording is too technical, and there is no guidance on where to copy-paste the snippet if they use popular platforms like Webflow or Shopify inside the onboarding wizard itself.
-- **Does the dashboard explain "which sources actually make you money" within 5 seconds?**  
+- **Does the dashboard explain "which sources actually make you money" within 5 seconds?**
   **Yes**, provided there is data. The "Top Sources" and "Recent Conversions" tables make it instantly clear where conversions originate.
-- **Does staging look demo-ready?**  
+- **Does staging look demo-ready?**
   **No.** Staging dashboard appears empty out-of-the-box until events are fired and the nightly attribution runner is triggered. It requires a permanent seed mode.
-- **Does it feel lighter than PostHog/Usermaven/Cometly?**  
+- **Does it feel lighter than PostHog/Usermaven/Cometly?**
   **Yes.** It is clean, focused solely on revenue attribution, and has zero bloated configuration panels.
-- **Does it feel more attribution-focused than DataFast?**  
+- **Does it feel more attribution-focused than DataFast?**
   **Yes.** The visitor journey modal maps out full-funnel multi-touch pathways rather than just simple analytics cards.
-- **Would a founder/CMO trust this enough to pay?**  
+- **Would a founder/CMO trust this enough to pay?**
   **Not yet.** The routing bugs and empty staging states undermine the polished feel of the dashboard.
 - **Single Biggest Blocker:** Onboarding client-side routing loop bug.
 
