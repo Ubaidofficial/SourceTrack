@@ -19,19 +19,53 @@ const _seenStripeEvents = new NodeCache({ stdTTL: 86400, checkperiod: 3600 })
 // Populated from env vars so production and test keys both work.
 // Legacy env vars STRIPE_PRICE_ID_PRO/AGENCY are still read but map to the
 // new canonical names (growth/business) via normalizePlan.
-function getPriceMap() {
+// Early Bird Annual maps to 'starter' entitlements — same limits, annual billing interval.
+export function getPriceMap() {
   const map = {}
-  if (process.env.STRIPE_PRICE_ID_STARTER)  map[process.env.STRIPE_PRICE_ID_STARTER]  = 'starter'
-  if (process.env.STRIPE_PRICE_ID_GROWTH)   map[process.env.STRIPE_PRICE_ID_GROWTH]   = 'growth'
-  if (process.env.STRIPE_PRICE_ID_SCALE)    map[process.env.STRIPE_PRICE_ID_SCALE]    = 'scale'
-  if (process.env.STRIPE_PRICE_ID_BUSINESS) map[process.env.STRIPE_PRICE_ID_BUSINESS] = 'scale'
+  if (process.env.STRIPE_PRICE_ID_STARTER)          map[process.env.STRIPE_PRICE_ID_STARTER]          = 'starter'
+  if (process.env.STRIPE_PRICE_ID_GROWTH)           map[process.env.STRIPE_PRICE_ID_GROWTH]           = 'growth'
+  if (process.env.STRIPE_PRICE_ID_SCALE)            map[process.env.STRIPE_PRICE_ID_SCALE]            = 'scale'
+  if (process.env.STRIPE_PRICE_ID_BUSINESS)         map[process.env.STRIPE_PRICE_ID_BUSINESS]         = 'scale'
+  if (process.env.STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID) map[process.env.STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID] = 'starter'
 
   // Legacy env vars — preserved for backward compatibility
-  if (process.env.STRIPE_PRICE_ID_PRO)      map[process.env.STRIPE_PRICE_ID_PRO]      = 'growth'
-  if (process.env.STRIPE_PRICE_ID_AGENCY)   map[process.env.STRIPE_PRICE_ID_AGENCY]   = 'scale'
-  if (process.env.STRIPE_PRICE_ID)          map[process.env.STRIPE_PRICE_ID]          = 'growth'
+  if (process.env.STRIPE_PRICE_ID_PRO)    map[process.env.STRIPE_PRICE_ID_PRO]    = 'growth'
+  if (process.env.STRIPE_PRICE_ID_AGENCY) map[process.env.STRIPE_PRICE_ID_AGENCY] = 'scale'
+  if (process.env.STRIPE_PRICE_ID)        map[process.env.STRIPE_PRICE_ID]        = 'growth'
 
   return map
+}
+
+// Resolves the Stripe price ID for a checkout plan key.
+// Returns { priceId, plan, error, status } — error/status non-null means fail.
+// early_bird_annual never falls back to the legacy STRIPE_PRICE_ID; charging
+// the wrong price (monthly growth) is worse than a clear failure message.
+export function resolveCheckoutPrice(rawPlan) {
+  const VALID_PLAN_KEYS = ['starter', 'growth', 'scale', 'pro', 'business', 'agency', 'early_bird_annual']
+  if (!rawPlan || !VALID_PLAN_KEYS.includes(rawPlan)) {
+    return { priceId: null, plan: null, error: `Invalid plan: ${rawPlan}`, status: 400 }
+  }
+  const plan = rawPlan === 'early_bird_annual' ? 'early_bird_annual' : normalizePlan(rawPlan)
+  const PRICE_MAP = {
+    starter:           process.env.STRIPE_PRICE_ID_STARTER,
+    growth:            process.env.STRIPE_PRICE_ID_GROWTH  || process.env.STRIPE_PRICE_ID_PRO,
+    scale:             process.env.STRIPE_PRICE_ID_SCALE   || process.env.STRIPE_PRICE_ID_BUSINESS || process.env.STRIPE_PRICE_ID_AGENCY,
+    early_bird_annual: process.env.STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID,
+  }
+  const priceId = plan === 'early_bird_annual'
+    ? PRICE_MAP['early_bird_annual']
+    : (PRICE_MAP[plan] || process.env.STRIPE_PRICE_ID)
+  if (!priceId) {
+    return {
+      priceId: null,
+      plan,
+      error: plan === 'early_bird_annual'
+        ? 'Early bird annual checkout is not yet configured. Email support@sourcetrack.ai to claim your founding price.'
+        : `No price configured for plan: ${plan}`,
+      status: 500
+    }
+  }
+  return { priceId, plan, error: null, status: null }
 }
 
 // Stripe price metadata may include `pv_limit` (e.g. "50000") so a single plan
@@ -347,13 +381,18 @@ const router = Router()
 
 /**
  * POST /api/billing/create-checkout
- * Body: { plan: 'starter'|'growth'|'scale', successUrl, cancelUrl }
+ * Body: { plan: 'starter'|'growth'|'scale'|'early_bird_annual', successUrl, cancelUrl }
  * Auth: requireUserAuth middleware sets req.user; site resolved from user.
  */
 router.post('/create-checkout', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
   try {
     const { plan: rawPlan = 'growth', successUrl, cancelUrl, site_key, accepted_terms } = req.body
-    const plan = normalizePlan(rawPlan)
+
+    // Validate plan key and resolve price ID — fail fast on invalid/unconfigured plan
+    const priceResolution = resolveCheckoutPrice(rawPlan)
+    if (priceResolution.status === 400) {
+      return res.status(400).json({ success: false, data: null, error: priceResolution.error })
+    }
 
     if (accepted_terms !== true) {
       return res.status(400).json({
@@ -380,16 +419,11 @@ router.post('/create-checkout', requireUserAuth, validateSiteKey, requireSiteMem
     if (!site && site_key) site = await getSiteByKey(site_key)
     if (!site) return res.status(401).json({ success: false, data: null, error: 'Site not found' })
 
-    // Pick the right price ID for the requested plan (new env names + legacy fallback)
-    const PRICE_MAP = {
-      starter: process.env.STRIPE_PRICE_ID_STARTER,
-      growth:  process.env.STRIPE_PRICE_ID_GROWTH  || process.env.STRIPE_PRICE_ID_PRO,
-      scale:   process.env.STRIPE_PRICE_ID_SCALE   || process.env.STRIPE_PRICE_ID_BUSINESS || process.env.STRIPE_PRICE_ID_AGENCY,
+    // Fail if price ID is missing (e.g. early_bird_annual not yet configured in env)
+    if (!priceResolution.priceId) {
+      return res.status(priceResolution.status).json({ success: false, data: null, error: priceResolution.error })
     }
-    const priceId = PRICE_MAP[plan] || process.env.STRIPE_PRICE_ID
-    if (!priceId) {
-      return res.status(500).json({ success: false, data: null, error: `No price configured for plan: ${plan}` })
-    }
+    const { plan, priceId } = priceResolution
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -479,9 +513,10 @@ router.get('/status', requireUserAuth, validateSiteKey, requireSiteMembership, a
         limit:      getPvLimit(plan, site.pv_limit),
         subscription,
         prices: {
-          starter: process.env.STRIPE_PRICE_ID_STARTER  || null,
-          growth:  process.env.STRIPE_PRICE_ID_GROWTH   || process.env.STRIPE_PRICE_ID_PRO    || null,
-          scale:   process.env.STRIPE_PRICE_ID_SCALE    || process.env.STRIPE_PRICE_ID_BUSINESS || process.env.STRIPE_PRICE_ID_AGENCY || null,
+          starter:           process.env.STRIPE_PRICE_ID_STARTER  || null,
+          growth:            process.env.STRIPE_PRICE_ID_GROWTH   || process.env.STRIPE_PRICE_ID_PRO    || null,
+          scale:             process.env.STRIPE_PRICE_ID_SCALE    || process.env.STRIPE_PRICE_ID_BUSINESS || process.env.STRIPE_PRICE_ID_AGENCY || null,
+          early_bird_annual: process.env.STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID || null,
         }
       },
       error: null

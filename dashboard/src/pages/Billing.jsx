@@ -158,6 +158,7 @@ export default function Billing() {
 
   const upgradeCallout = isTrial && daysLeft !== null && daysLeft <= 3
   const showUpgradePlans = isTrial || isFree
+  const earlyBirdPriceId = billingStatus?.prices?.early_bird_annual || null
 
   if (loading) {
     return (
@@ -262,7 +263,9 @@ export default function Billing() {
         <section className="space-y-4">
           <h3 className="text-sm font-bold text-st-black dark:text-white">Available Plans</h3>
           <p className="text-xs text-st-gray dark:text-gray-400 -mt-2">
-            Plans are billed monthly during public beta. Annual billing will be added after the beta billing flow is fully verified.
+            {earlyBirdPriceId
+              ? 'Standard plans are billed monthly. Annual billing is available for the founding Early Bird offer.'
+              : 'Standard plans are billed monthly. Early Bird annual checkout is being configured.'}
           </p>
 
           <div className="flex items-start gap-2.5 p-4 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-gray-800 rounded-xl max-w-xl">
@@ -283,6 +286,36 @@ export default function Billing() {
                 Privacy Policy
               </Link>.
             </label>
+          </div>
+
+          {/* ── Early Bird Founding Offer ──────────────────────────────────── */}
+          <div className={`rounded-xl border p-5 ${earlyBirdPriceId ? 'border-st-lime/40 dark:border-st-lime/30 bg-st-lime/5' : 'border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1A1C1C]'}`}>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-[9px] font-bold uppercase tracking-wider bg-st-lime text-black px-1.5 py-0.5 rounded-full">
+                Founding Offer
+              </span>
+            </div>
+            <p className="text-base font-black text-st-black dark:text-white">Early Bird Annual</p>
+            <p className="text-2xl font-black text-st-black dark:text-white mt-1">$99<span className="text-sm font-normal text-st-gray dark:text-gray-400">/year</span></p>
+            <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">Annual billing · first 10 public seats</p>
+            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mt-2">First month free, then $99/year · Starter-level access</p>
+            {earlyBirdPriceId ? (
+              <button
+                onClick={() => handleUpgrade('early_bird_annual')}
+                disabled={upgradeLoading === 'early_bird_annual' || !acceptedTerms}
+                className="w-full text-xs font-semibold py-2.5 mt-4 rounded-lg transition-colors disabled:opacity-60 bg-st-lime text-black hover:bg-st-lime/90"
+              >
+                {upgradeLoading === 'early_bird_annual' ? 'Redirecting…' : 'Claim founding price — $99/year'}
+              </button>
+            ) : (
+              <p className="text-xs text-st-gray dark:text-gray-400 mt-4">
+                Annual checkout is being configured.{' '}
+                <a href="mailto:support@sourcetrack.ai?subject=Early%20Bird%20Annual%20Founding%20Offer" className="text-blue-600 dark:text-blue-400 hover:underline font-semibold">
+                  Email support@sourcetrack.ai
+                </a>{' '}
+                to claim your $99/year founding price.
+              </p>
+            )}
           </div>
 
           <div className="grid sm:grid-cols-3 gap-4">

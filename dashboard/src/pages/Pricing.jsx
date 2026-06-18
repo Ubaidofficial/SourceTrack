@@ -58,10 +58,10 @@ function FoundingEarlyBirdCard() {
           <p className="text-[11px] text-[#8A9B9B] mb-5">Annual billing configured during checkout. Standard price is $29/mo after this offer closes.</p>
 
           <Link
-            to="/signup"
+            to="/signup?plan=early_bird_annual"
             className="inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full bg-st-lime text-st-black text-[15px] font-extrabold tracking-[-0.025em] shadow-[0_18px_52px_rgba(204,240,63,0.28)] hover:bg-[#D9FA64] transition-all hover:-translate-y-px w-full"
           >
-            Claim early bird price
+            Start signup to claim early bird
           </Link>
         </div>
       </div>

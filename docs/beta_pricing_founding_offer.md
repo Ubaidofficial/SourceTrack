@@ -1,7 +1,7 @@
 # SourceTrack Early Bird Price Offer
 
-**Status:** Locked — Early Bird Price offer ($99/year) live in UI. Stripe annual price ID not yet configured.
-**Last updated:** 2026-06-18 (Session 140Z-D, updated 140Z-D+3)
+**Status:** Backend wired — checkout route, webhook mapping, and Billing UI all support `early_bird_annual`. Stripe annual price ID not yet created.
+**Last updated:** 2026-06-18 (Session 140Z-E)
 
 ---
 
@@ -48,15 +48,18 @@ These are the prices wired to active Stripe price IDs. The public marketing card
 | Growth | $79/mo | 100,000 | 3 sites |
 | Scale | From $149/mo | 500,000+ | 10+ sites |
 
-The Early Bird Price offer ($99/year) requires a new Stripe annual price ID before automatic checkout can honor it. Until that ID is configured, the CTA routes to `/signup` (free trial).
+The Early Bird Price offer ($99/year) requires a new Stripe annual price ID to be created in the Stripe dashboard before automatic checkout can process payments. Until `STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID` is set in the Railway environment, clicking "Claim founding price" in the Billing page shows a manual contact fallback instead of a Stripe checkout redirect.
+
+The CTA on the public pricing page routes to `/signup?plan=early_bird_annual` with label "Start signup to claim early bird". The query param signals Early Bird intent but Signup does not yet auto-launch checkout. After completing signup, the user claims Early Bird from the Billing page. If `STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID` is configured, Billing shows the checkout button; otherwise Billing shows the manual email fallback. Direct post-signup checkout auto-launch is out of scope for 140Z-E.
 
 ---
 
 ## What the Early Bird Offer Includes
 
-- **Month 1:** First month free — basic analytics and lead source tracking, AI referral detection, basic conversions. No journey timeline, no exports, no alerts.
+- **Month 1:** First month free — basic analytics and lead source tracking, AI referral detection, and basic conversions. No journey timeline, no exports, no alerts.
 - **Year 1:** Early bird annual price of $99/year (~$8.25/mo) — includes everything in Starter: leads + journey timeline, revenue attribution, CSV export, saved reports, 1 site, 25,000 tracked visits/mo.
-- **Annual checkout:** Requires a Stripe annual price ID to be created before a working checkout button can be offered. The CTA routes to `/signup` (free trial); annual billing is configured during or after onboarding.
+- **Internal plan mapping:** After checkout completes, the Stripe webhook maps the early_bird_annual price ID to `'starter'` in the database (`sites.plan = 'starter'`). No separate internal plan type exists — the user receives Starter-level entitlements at annual billing cadence.
+- **Annual checkout:** Requires `STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID` to be set. If missing, checkout fails with a safe public error — no silent fallback to the legacy monthly price.
 
 ---
 
@@ -69,20 +72,23 @@ The Early Bird Price offer ($99/year) requires a new Stripe annual price ID befo
 
 ---
 
-## Current Stripe State (as of 140Z-D+2)
+## Current Stripe State (as of 140Z-E)
 
-Standard catalog prices ($29/$79/From $149) are displayed on both the public marketing pricing cards and the authenticated Billing page — these are aligned with active Stripe price IDs.
+Standard catalog prices ($29/$79/From $149) are displayed on both the public marketing pricing cards and the authenticated Billing page — aligned with active Stripe price IDs.
 
-The Early Bird Price card shows $99/year as the headline price. The CTA routes to `/signup` (free trial), not a Stripe annual checkout. No Stripe annual price ID exists yet.
+The Early Bird Price card shows $99/year on the public pricing page. The CTA routes to `/signup?plan=early_bird_annual`. The backend checkout route and webhook mapping are now wired and tested. The Billing page shows the Early Bird offer when `STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID` is set; otherwise shows a manual email fallback.
 
-### Required Stripe work (future session)
+**No Stripe annual price ID exists yet** — checkout redirects are not live.
+
+### Required Stripe work (next session)
 
 1. Create Stripe annual price: $99.00/year for Early Bird offer
-   - `pv_limit` metadata = `"25000"`
-2. Update env with `STRIPE_PRICE_ID_STARTER_ANNUAL` (or equivalent) in Railway
-3. Wire early-bird annual checkout CTA to the new annual price ID
-4. Verify checkout → webhook → plan-update flow in staging
-5. Update `Billing.jsx` PLANS array prices once Stripe catalog prices are confirmed in production
+   - Set `pv_limit` metadata = `"25000"` on the price
+   - Use `interval: year` with `interval_count: 1`
+2. Set `STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID=price_XXXX` in Railway (test-mode first)
+3. Verify checkout → webhook → `plan = 'starter'` DB update in staging
+4. Browser-verify Billing page shows "Claim founding price" button (not fallback text)
+5. E2E verify: complete checkout → confirm `sites.plan = 'starter'`, `pv_limit = 25000`
 
 ---
 
