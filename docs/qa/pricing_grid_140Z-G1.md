@@ -11,8 +11,8 @@
 
 `dashboard/src/components/PricingCards.jsx` line 26 declared a `lg:grid-cols-4` Tailwind class on the pricing plan grid. The `PLANS` array contains exactly 3 plan objects (Starter, Growth, Scale). At the `lg:` breakpoint (≥1024px) this produced a 4-column grid with an empty fourth column on every desktop viewport — visible to every prospect who visits `/pricing`.
 
-**Bug class:** Visual / layout  
-**Severity:** High — visible to 100% of desktop visitors on the pricing page  
+**Bug class:** Visual / layout
+**Severity:** High — visible to 100% of desktop visitors on the pricing page
 **Effort:** XS (one token changed)
 
 ---
