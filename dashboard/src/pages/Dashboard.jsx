@@ -27,6 +27,7 @@ import EmptyState from '../components/EmptyState'
 import FilterBar from '../components/FilterBar'
 import SupportModeBanner from '../components/SupportModeBanner'
 import ConversionExplanationModal from '../components/ConversionExplanationModal'
+import JourneyModal from '../components/JourneyModal'
 import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
 import { SourceIcon, SourceChip } from '../components/SourceIcon'
 
@@ -108,6 +109,7 @@ export default function Dashboard() {
   const [previewMode, setPreviewMode] = useState(false)
   const [explainModalOpen, setExplainModalOpen] = useState(false)
   const [explainModel, setExplainModel] = useState(null)
+  const [journeyLead, setJourneyLead] = useState(null)
   const [previewSiteName, setPreviewSiteName] = useState('')
   const [previewSiteDomain, setPreviewSiteDomain] = useState('')
   const [lastRefresh, setLastRefresh] = useState(new Date())
@@ -417,10 +419,17 @@ export default function Dashboard() {
                         { key: 'source', label: 'Source', render: (r) => <SourceChip source={r.referrer || r.utm_source || 'Direct'} /> },
                         { key: 'event', label: 'Event', render: (r) => r.event === '$conversion' ? 'Conversion' : r.event },
                         { key: 'time', label: 'Time', render: (r) => new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) },
-                        { key: 'action', label: 'Action', render: (r) => (
-                          <button onClick={() => navigate('/leads')} className="text-xs text-st-black dark:text-white font-semibold hover:underline">
-                            View Journey
-                          </button>
+                        { key: 'action', label: '', render: (r) => (
+                          r.visitor_id ? (
+                            <button
+                              onClick={() => setJourneyLead(r)}
+                              className="text-xs text-st-black dark:text-white font-semibold hover:underline"
+                            >
+                              View journey
+                            </button>
+                          ) : (
+                            <span className="text-xs text-st-gray">—</span>
+                          )
                         )}
                       ]}
                       rows={recentActivity.events.filter(e => e.event === '$conversion').slice(0, 5)}
@@ -558,6 +567,16 @@ export default function Dashboard() {
             </div>
           )}
         </>
+      )}
+
+      {journeyLead?.visitor_id && (
+        <JourneyModal
+          visitorId={journeyLead.visitor_id}
+          siteKey={site?.site_key}
+          leadSummary={{ id: journeyLead.visitor_id }}
+          onClose={() => setJourneyLead(null)}
+          onQualified={() => setJourneyLead(null)}
+        />
       )}
 
       <ConversionExplanationModal

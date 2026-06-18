@@ -686,7 +686,8 @@ router.get('/recent-activity', validateSiteKey, requireSiteMembership, async (re
         page_path: normPath,
         referrer_domain: normReferrer,
         channel,
-        conversion_value: conversionValue ? Number(conversionValue) || 0 : null
+        conversion_value: conversionValue ? Number(conversionValue) || 0 : null,
+        visitor_id: visitorId || null
       })
     }
 
