@@ -1,7 +1,7 @@
 # Attribution Accuracy + Signal Reliability Hardening
 
-**Status:** BACKLOG — Pre-paid-beta. Not started. Do not implement until explicitly requested.  
-**Added:** 2026-06-18 (Session 140Z-G3)  
+**Status:** BACKLOG — Pre-paid-beta. Not started. Do not implement until explicitly requested.
+**Added:** 2026-06-18 (Session 140Z-G3)
 **Release gate:** Blocks paid beta until audit is completed **or** operator explicitly defers with documented rationale.
 
 ---
