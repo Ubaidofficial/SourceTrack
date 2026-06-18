@@ -1,8 +1,8 @@
 # QA Report — View Journey Fix (Session 140Z-G3)
 
-**Date:** 2026-06-18  
-**Session:** 140Z-G3  
-**Scope:** Dashboard Recent Conversions → specific journey access  
+**Date:** 2026-06-18
+**Session:** 140Z-G3
+**Scope:** Dashboard Recent Conversions → specific journey access
 **Status:** IMPLEMENTED — NOT COMMITTED
 
 ---
