@@ -110,7 +110,7 @@ export default function Onboarding() {
       if (!site || !site.has_site) return
 
       if (site.onboarding_completed) {
-        navigate('/dashboard', { replace: true })
+        window.location.href = '/dashboard'
         return
       }
 
@@ -199,7 +199,7 @@ export default function Onboarding() {
       })
 
       if (site.onboarding_completed) {
-        navigate('/dashboard', { replace: true })
+        window.location.href = '/dashboard'
         return
       }
 
@@ -512,7 +512,7 @@ export default function Onboarding() {
                         return
                       }
                       seedReportsForBusiness(businessType, siteKey)
-                      navigate('/dashboard', { replace: true, state: { toast: 'Setup complete! Your dashboard is ready.' } })
+                      window.location.href = '/dashboard'
                     } catch (err) {
                       console.error('Failed to complete onboarding:', err.message || err)
                       setError('We encountered a problem verifying your installation. Please try again.')
@@ -562,7 +562,7 @@ export default function Onboarding() {
                       })
                       if (completeRes?.completed) {
                         seedReportsForBusiness(businessType, siteKey)
-                        navigate('/dashboard', { replace: true, state: { toast: 'Setup complete! Your dashboard is ready.' } })
+                        window.location.href = '/dashboard'
                       } else {
                         setError('Failed to complete onboarding')
                       }
