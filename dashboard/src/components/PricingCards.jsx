@@ -23,7 +23,7 @@ const PLANS = [
 
 export default function PricingCards() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
       {PLANS.map((p, i) => (
         <article key={p.key} className={`relative p-7 rounded-[32px] border flex flex-col min-h-0 sm:min-h-[460px] ${
           p.featured
