@@ -26,9 +26,9 @@ The route was correctly protected by `requireUserAuth + validateSiteKey + requir
 
 ```diff
 +import { requireFeature } from '../lib/plan-features.js'
- 
+
  const router = Router()
- 
+
 +const requireAlertsFeature = (req, res, next) => {
 +  const block = requireFeature(req.site?.plan, 'alerts', 'Alerts')
 +  if (block) return res.status(block.status ?? 402).json(block)
@@ -153,9 +153,9 @@ diff --git a/api/routes/alerts.js b/api/routes/alerts.js
  import { queryHogQL } from '../lib/posthog.js'
  import { esc } from '../lib/utils.js'
 +import { requireFeature } from '../lib/plan-features.js'
- 
+
  const router = Router()
- 
+
 -router.get('/', validateSiteKey, async (req, res) => {
 +const requireAlertsFeature = (req, res, next) => {
 +  const block = requireFeature(req.site?.plan, 'alerts', 'Alerts')
