@@ -215,7 +215,7 @@ export default function Billing() {
             isPaid  ? 'bg-st-lime/15 text-green-700 dark:text-st-lime' :
                       'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
           }`}>
-            {isTrial ? 'Free Trial' : isFree ? 'Free Forever' : isCanceledAtPeriodEnd ? 'Cancels soon' : 'Active'}
+            {isTrial ? 'Trial' : isFree ? 'Free' : isCanceledAtPeriodEnd ? 'Cancels soon' : 'Active'}
           </span>
         </div>
 

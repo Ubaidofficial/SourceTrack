@@ -2,29 +2,21 @@ import { Link } from 'react-router-dom'
 
 const PLANS = [
   {
-    key: 'free', name: 'Free', price: '$0', period: '',
-    desc: 'Track where your next 30 signups or orders came from.',
-    features: ['1 site', '30 attributed conversions/mo', '5,000 tracked pageviews/mo', '30-day history', 'No CSV export'],
-    cta: 'Start free', href: '/signup', featured: false,
+    key: 'starter', name: 'Starter', price: '$29', period: '/mo',
+    desc: 'For founders, SaaS, and ecommerce teams.',
+    features: ['1 site', '25,000 tracked visits/mo', 'Leads + journey timeline', 'Revenue attribution', 'CSV export + saved reports'],
+    cta: 'Get Starter', href: '/signup', featured: false,
   },
   {
-    key: 'starter', name: 'Starter', price: '$19', period: '/mo',
-    desc: 'Replace your lead-source spreadsheet.',
-    features: ['1 site', '150 attributed conversions/mo', '50,000 tracked pageviews/mo', '90-day history', 'Manual status & revenue', 'Saved reports & CSV export', 'Clean report exports'],
-    cta: 'Choose Starter', href: '/signup', featured: false,
-    subprice: '$29/mo monthly',
-  },
-  {
-    key: 'growth', name: 'Growth', price: '$49', period: '/mo',
-    desc: 'Connect sources to revenue and ROI.',
-    features: ['3 sites', '750 attributed conversions/mo', '150,000 tracked pageviews/mo', '1-year history', 'Revenue attribution models', 'Dashboard widgets', '3 users (seats)'],
-    cta: 'Choose Growth', href: '/signup', featured: true,
-    subprice: '$79/mo monthly',
+    key: 'growth', name: 'Growth', price: '$79', period: '/mo',
+    desc: 'For teams actively spending on campaigns.',
+    features: ['3 sites', '100,000 tracked visits/mo', 'Alerts + saved reports', 'Campaign cost imports', 'GSC + ad cost features', '3 users'],
+    cta: 'Get Growth', href: '/signup', featured: true,
   },
   {
     key: 'scale', name: 'Scale', price: 'From $149', period: '/mo',
     desc: 'For agencies and high-volume teams.',
-    features: ['10+ sites', '2,500+ attributed conversions/mo', '500,000+ tracked pageviews/mo', 'Multi-user seats (99 seats)', 'Priority onboarding support'],
+    features: ['10+ sites', '500,000+ tracked visits/mo', 'Agency workflows', 'Higher limits', 'Priority support'],
     cta: 'Talk to sales', href: 'mailto:sales@sourcetrack.ai', featured: false,
   },
 ]
@@ -47,9 +39,6 @@ export default function PricingCards() {
           <div className="mt-[18px] mb-2 text-[52px] leading-none font-black tracking-[-0.07em]">
             {p.price}<span className={`text-[15px] tracking-[-0.02em] ${p.featured ? 'text-[#CBD4D4]' : 'text-[#6E7979]'}`}>{p.period}</span>
           </div>
-          {p.subprice && (
-            <p className={`text-[13px] -mt-1 mb-2 font-bold ${p.featured ? 'text-[#CBD4D4]' : 'text-[#6E7979]'}`}>{p.subprice}</p>
-          )}
           <p className={p.featured ? 'text-[#CBD4D4]' : 'text-[#657070]'}>{p.desc}</p>
           <ul className="mt-6 mb-6 grid gap-3 flex-1 list-none p-0">
             {p.features.map((f, j) => (

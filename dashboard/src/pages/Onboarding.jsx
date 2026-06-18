@@ -43,7 +43,7 @@ const INSTALL_METHODS = [
 
 const CONVERSIONS = [
   { key: 'purchase', label: 'Purchase', desc: 'Completed checkout or payment' },
-  { key: 'trial', label: 'Free Trial', desc: 'Started a free trial' },
+  { key: 'trial', label: 'Trial', desc: 'Started a trial' },
   { key: 'lead', label: 'Lead Form Submission', desc: 'Submitted a contact or lead form' },
   { key: 'signup', label: 'Sign Up', desc: 'Created a new account' },
   { key: 'meeting', label: 'Schedule a Meeting', desc: 'Booked a meeting or demo' },

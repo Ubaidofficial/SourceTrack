@@ -43,7 +43,7 @@ const SEO = {
         "@type": "Offer",
         "price": "0",
         "priceCurrency": "USD",
-        "description": "Free plan available"
+        "description": "First month free available. Early bird annual pricing is $99/year for approved founding customers."
       }
     }
   ],
@@ -52,12 +52,12 @@ const SEO = {
 const HERO = {
   kicker: 'Simple revenue attribution software',
   h1: 'Know which sources actually',
-  h1Gradient: 'create revenue.',
-  sub: 'SourceTrack is simple revenue attribution software for founders, marketers, ecommerce stores, agencies, and lead-gen teams. See which campaigns, AI referrals, search terms, forms, bookings, and customer journeys turn into leads and revenue — without a heavy analytics stack.',
-  primaryCta: 'Start tracking free',
-  secondaryCta: 'View product',
+  h1Gradient: 'make you money.',
+  sub: 'SourceTrack connects leads and revenue back to campaigns, AI referrals, SEO pages, search queries, forms, bookings, and customer journeys — so you can stop guessing and scale the right channels.',
+  primaryCta: 'Find my best sources',
+  secondaryCta: 'See where to spend next',
   secondaryHref: '/product',
-  proofs: ['Install with one script or GTM', 'Track 30 attributed conversions free', 'Built for founders and marketers'],
+  proofs: ['Install with one script or GTM', 'First month free — founding offer', 'Built for founders and marketers'],
 }
 
 export default function Landing() {

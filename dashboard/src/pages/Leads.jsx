@@ -15,7 +15,7 @@ import { hasFeature } from '../lib/planFeatures'
 
 const CONVERSION_TYPE_BADGE = {
   purchase: { bg: 'bg-green-100', text: 'text-green-800', label: 'Purchase' },
-  trial: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Free Trial' },
+  trial: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Trial' },
   lead: { bg: 'bg-amber-100', text: 'text-amber-800', label: 'Lead Form' },
   signup: { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Sign Up' },
   meeting: { bg: 'bg-sky-100', text: 'text-sky-800', label: 'Meeting' },
