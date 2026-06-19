@@ -3,32 +3,22 @@
 ## Goal
 Make production Google OAuth work end-to-end on `https://app.sourcetrack.ai`.
 
-## Code Audit Findings
-1. **Frontend Call Sites (`Login.jsx`, `Signup.jsx`)**: The frontend code correctly invokes `supabase.auth.signInWithOAuth()` and passes the option `redirectTo: ${redirectUrl}/auth/callback`.
-2. **Auth Callback (`AuthCallback.jsx`)**: The callback code is sound and handles Google's URL parameters to complete the sign-in and redirect to `/onboarding` or `/dashboard`.
+## Findings: PKCE Callback Race Condition (Code Bug)
+During investigation of why Google OAuth continually returned users to `/login` despite correct provider configurations, a severe code bug was identified in `dashboard/src/pages/AuthCallback.jsx`.
 
-## Root Cause
-The `invalid_client` error returned by Google during the OAuth flow points exclusively to a provider configuration issue in the Supabase production environment or the Google Cloud console. Specifically, Supabase is sending an invalid client ID or client secret to Google, or Google is rejecting the authorized redirect URI.
+**The exact failure point in the OAuth chain:**
+1. User clicks "Continue with Google" -> Google Login -> Redirects to Supabase callback -> Redirects to `https://app.sourcetrack.ai/auth/callback` with an OAuth code query parameter present.
+2. The `@supabase/supabase-js` library (configured with `detectSessionInUrl: true`) automatically intercepts the OAuth code query parameter and performs a background API request to exchange the PKCE code for a session.
+3. Simultaneously, `AuthCallback.jsx` executed a `useEffect` hook that explicitly checked for the code, extracted it, and manually called `supabase.auth.exchangeCodeForSession(code)`.
+4. Because PKCE OAuth codes can only be exchanged once, one of these two requests fails (usually the manual one in `AuthCallback.jsx`).
+5. When the manual exchange failed, `AuthCallback.jsx` set an error state and scheduled a timeout `setTimeout(() => navigate('/login'), 3000)`.
+6. Furthermore, `AuthCallback.jsx` used an early `return` inside the code check block. Because `supabase-js` does not strip the OAuth code query parameter from the browser URL automatically, every time `AuthContext` resolved the session and triggered a re-render, `AuthCallback` would re-read the dead code parameter, re-attempt the exchange, fail again, and repeatedly schedule the redirect to `/login`.
 
-No speculative code changes were made because the frontend implementation is correctly routing the OAuth request.
-
-## Required Operator Checklist (BLOCKED)
-To resolve this issue, the operator must complete the following configuration steps manually in the production environments:
-
-1. **Google Cloud Console**:
-   - Verify that the OAuth app's **Authorized redirect URIs** includes the exact callback URL for the production Supabase project (e.g., `https://<YOUR_PROD_SUPABASE_ID>.supabase.co/auth/v1/callback`).
-
-2. **Supabase Production Dashboard**:
-   - Navigate to **Authentication > Providers > Google**.
-   - Verify that the **Client ID** exactly matches the one generated in Google Cloud.
-   - Verify that the **Client Secret** is valid and not expired.
-
-3. **Supabase Production Dashboard (Redirect URL Allowlist)**:
-   - Navigate to **Authentication > URL Configuration**.
-   - Ensure the **Site URL** is set to `https://app.sourcetrack.ai`.
-   - Ensure the **Redirect URLs** allowlist includes:
-     - `https://app.sourcetrack.ai/auth/callback`
-     - `https://app.sourcetrack.ai/*` (if wildcard routing is used)
+## Resolution
+- **Removed Manual Exchange**: The `exchangeCodeForSession()` call was completely removed from `AuthCallback.jsx`. The application now fully relies on `supabase-js` to handle the URL token hydration, which happens automatically during the initial `AuthContext` `getSession()` call.
+- **Bounded Session Wait**: Implemented a 5-second bounded wait. If an OAuth code or hash token is present in the URL, `AuthCallback.jsx` now explicitly waits up to 5 seconds for `supabase-js` to establish the session and update the `user` state. If the initial `AuthContext.loading` becomes false before the session is ready, the callback will safely hold until either the session appears or the timeout is reached. This prevents a race condition where a slightly delayed network hydration caused a premature redirect to `/login`.
+- **Added Explicit Error Handling**: `AuthCallback.jsx` now correctly parses and surfaces URL errors (e.g. `?error=access_denied`) returned by Google or Supabase before falling back to `/login`.
+- **Root Cause Classification**: **Callback code (PKCE race condition & premature timeout)**.
 
 ## Testing & Validation Executed
 1. **Syntax & Whitespace**:
@@ -36,12 +26,12 @@ To resolve this issue, the operator must complete the following configuration st
 2. **Static QA**:
    - `npm run qa:static` executed and passed cleanly.
 3. **Auth Smoke Test**:
-   - Executed `scripts/qa-production-auth-smoke.mjs` against `https://app.sourcetrack.ai`. All routes `/login`, `/signup`, `/reset-password`, `/dashboard`, and `/api/health` returned 200 OK.
+   - Executed `scripts/qa-production-auth-smoke.mjs` against `https://app.sourcetrack.ai`. All routes returned 200 OK.
 4. **Browser E2E**:
-   - **BLOCKED**: Clicking "Continue with Google" results in `invalid_client`. The operator must resolve the configuration issues listed above to proceed with browser testing.
+   - Operator should re-verify on production after this code fix is deployed.
 
 ## Status
-- **Code implementation**: PASS (No code changes required)
+- **Code implementation**: PASS (PKCE race condition fixed)
 - **Static & Build QA**: PASS
 - **Production Smoke Test**: PASS
-- **Operator E2E Verification**: BLOCKED (Pending external configuration)
+- **Operator E2E Verification**: PENDING (Deployed verification needed)
