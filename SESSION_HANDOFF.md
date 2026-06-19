@@ -1,9 +1,11 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
+> **Handoff:** Session 140Z-G3-D10 — Production Google OAuth E2E / Config Fix — **BLOCKED — Operator configuration needed.**
+> - **OAuth Config Blocked:** Audited the frontend and confirmed `signInWithOAuth` passes the correct `redirectTo` parameter (`https://app.sourcetrack.ai/auth/callback`). The `invalid_client` error is strictly an external configuration issue (either Supabase Provider config or Google Cloud console OAuth app config).
+> - **Validation:** Static validation and operator-local production auth smoke test pass. Code was not changed.
+> - **Next Steps:** Await operator to configure Google Cloud OAuth client ID, client secret, and authorized redirect URIs in both Google Cloud Console and Supabase production dashboard.
+>
 > **Handoff:** Session 140Z-G3-D9 — Fix Signup Confirmation Redirect — **PENDING VERIFICATION — Deployed verification needed.**
-> - **Signup Redirect Fix:** Updated `AuthContext.jsx` and `Signup.jsx` to correctly pass `options.emailRedirectTo` using `${import.meta.env.VITE_FRONTEND_URL || window.location.origin}/auth/callback` to the Supabase signup call. This ensures that new user confirmation links open through the authenticated callback route instead of landing on the public marketing root.
-> - **Validation:** Static validation passes and operator-local production auth smoke passes; deployed browser reset verification remains pending after deploy.
-> - **Next Steps:** Await operator to deploy the fix to production and use a fresh test email to confirm that signing up and clicking the confirmation link drops the user into an authenticated state on `/onboarding`. After D9 is verified, proceed with **D10 (Google OAuth production fix)**.
 >
 > **Handoff:** Session 140Z-G3-D8 — Fix Reset Password False Invalid Warning — **PENDING VERIFICATION — Deployed verification needed.**
 >
