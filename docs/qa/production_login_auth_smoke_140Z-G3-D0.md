@@ -77,3 +77,15 @@ Once the operator has updated the Supabase settings:
 - [ ] Submit a password reset request on `https://app.sourcetrack.ai/forgot-password` and verify that the delivered email link redirects to `https://app.sourcetrack.ai/reset-password`.
 - [ ] Complete the password update flow and confirm that the user is correctly logged in on `https://app.sourcetrack.ai`.
 - [ ] Test Google OAuth login by clicking "Continue with Google" on `https://app.sourcetrack.ai/login` and verify that it redirects back to `/auth/callback` and onto `/dashboard` on the canonical domain.
+
+---
+
+## 7. Operator Config Verification
+
+- **MCP Write Available**: No (Supabase MCP server does not expose management endpoints or write actions for Authentication URL configuration).
+- **Current Config Before Change**: Unretrievable via MCP (requires Supabase browser console access).
+- **Config Applied**: None by MCP; manual operator configuration change is required.
+- **Config After Change**: Blocked pending manual operator execution.
+- **Password Reset E2E Result**: 🚨 **BLOCKED / UNVERIFIED** (Requires manual Supabase Auth URL config updates and verification using a safe test account/email inbox).
+- **Google OAuth E2E Result**: 🚨 **BLOCKED / UNVERIFIED** (Requires manual Supabase Auth URL config updates to correctly route callbacks to the canonical domain).
+- **Final Verdict**: 🚨 **BLOCKED**
