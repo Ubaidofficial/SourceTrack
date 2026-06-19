@@ -1,9 +1,9 @@
 # Production Auth Route and Redirect Smoke Verification QA Report
-## Session: 140Z-G3-D0-A
+## Session: 140Z-G3-D0-A4
 
 **Date:** 2026-06-19
 **Branch:** main
-**Status:** BLOCKED (production auth route and redirect smoke verification Blocker Active)
+**Status:** BLOCKED — route smoke PASS; password reset E2E blocked by missing production test user; Google OAuth FAIL due invalid production OAuth secret
 **Target Domain:** `https://app.sourcetrack.ai`
 
 ---
@@ -12,12 +12,10 @@
 
 - **Route Availability & Asset/API Health**: 🟢 **PASS**
   - All four authentication page routes serve their React SPA container and resolve compiled assets cleanly. The backend API health endpoint is online and reachable from the browser origin without CORS failures.
-- **Supabase Redirect-Based Auth Flows**: 🚨 **BLOCKED / UNVERIFIED**
-  - The following flows remain unverified and blocked due to domain migration mismatch:
-    - password reset email recovery link
-    - Google OAuth callback
-    - `/auth/callback` token handling
-    - valid user login on production, unless a dedicated production test user is safely available and approved
+- **Supabase Redirect-Based Auth Flows**: 🔴 **FAIL / BLOCKED**
+  - Password Reset E2E: 🟡 **BLOCKED / NOT DISPATCHED** (Recovery request returns 200 and uses canonical redirect, but the tested email does not exist in production auth.users, so Supabase does not dispatch a recovery email. This is expected anti-enumeration behavior, not proof of SMTP failure.)
+  - Google OAuth: 🔴 **FAIL** (Google OAuth production provider config fails with `invalid_client` / invalid client secret configured in the production Supabase dashboard).
+  - redirect_to parameter: 🟢 **PASS** (Correctly uses the canonical `https://app.sourcetrack.ai/reset-password` URL).
 
 ---
 
@@ -106,3 +104,27 @@ Once the operator has updated the Supabase settings:
   - `/login`, `/signup`, `/reset-password` load assets and React DOM correctly with zero console/network/CORS errors when hit via the canonical domain.
   - Clicking "Continue with Google" redirects to Google's sign-in gateway with the correct callback redirect parameter pointing back to canonical `app.sourcetrack.ai/auth/callback` (no IP overrides or TLS-bypass methods used).
 - **Final Verdict**: 🚨 **BLOCKED**
+
+---
+
+## 9. Production Password Reset Email Delivery Audit
+
+- **Reset Form Route**: 🟢 **PASS**
+  - Navigating to `https://app.sourcetrack.ai/forgot-password` loads the reset form correctly. Entering the email and clicking "Send reset link" displays the correct success message: *"Check your inbox for a password reset link."*
+- **Recovery Request Network Status**: 🟢 **PASS**
+  - XHR POST request is successfully sent to `https://zxjjjsipafojhzkkumvh.supabase.co/auth/v1/recover?redirect_to=https%3A%2F%2Fapp.sourcetrack.ai%2Freset-password` and returns HTTP status code `200`.
+- **Redirect_to Used**: 🟢 **PASS (Canonical)**
+  - The request payload includes the correct, canonical redirect parameter: `redirect_to=https://app.sourcetrack.ai/reset-password`. No localhost/Railway placeholders remain.
+- **Email Received**: 🟡 **NOT DISPATCHED / BLOCKED**
+  - No recovery email was received in the target Gmail inbox.
+- **Likely Root Cause**:
+  - **User Non-existence on Production**: Querying the production Supabase database via SQL confirms that the test email `[operator-test-email]` does not exist in the `auth.users` table of the production project (`zxjjjsipafojhzkkumvh`). It only exists in the staging database (`nrsvpwzekfrdrzkoecfk`).
+  - To prevent user enumeration attacks, Supabase Auth returns a silent `200 OK` success response on `/recover` requests even if the user does not exist, but no email is dispatched.
+  - **Google OAuth Config Error**: Audit of the production Supabase auth logs also revealed that Google OAuth logins are failing with: `oauth2: "invalid_client" "The provided client secret is invalid."` (HTTP 500 when exchanging external code).
+- **Operator Action Required**:
+  - Create or sign up a safe production test/operator account using `app.sourcetrack.ai`.
+  - Confirm the account appears in production Supabase `auth.users`.
+  - Re-run password reset request and verify email delivery/link.
+  - Fix Google provider secret in production Supabase: Authentication → Providers → Google.
+  - Re-test Google OAuth callback to `app.sourcetrack.ai/auth/callback`.
+- **Final Verdict**: 🔴 **BLOCKED / PARTIAL FAIL** (Password reset cannot be completed until a safe production test user exists; Google OAuth fails due invalid production Google client secret.)
