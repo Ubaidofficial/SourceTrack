@@ -45,7 +45,10 @@ export default function Signup() {
     }
     setLoading(true)
     try {
-      await signUp(email, password)
+      const redirectUrl = import.meta.env.VITE_FRONTEND_URL || window.location.origin
+      await signUp(email, password, {
+        emailRedirectTo: `${redirectUrl}/auth/callback`
+      })
 
       // If Supabase requires email confirmation there's no session yet — tell
       // the user instead of routing them straight to onboarding.

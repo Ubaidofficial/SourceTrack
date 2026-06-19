@@ -1,9 +1,11 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 140Z-G3-D8 — Fix Reset Password False Invalid Warning — **PENDING VERIFICATION — Deployed verification needed.**
-> - **Reset UI Bug Fix:** Implemented a fix in `ResetPassword.jsx` by properly clearing the 3000ms fallback timeout using a `sessionFound` tracker flag. This prevents the false "invalid or expired" warning while still guarding against truly invalid sessions.
+> **Handoff:** Session 140Z-G3-D9 — Fix Signup Confirmation Redirect — **PENDING VERIFICATION — Deployed verification needed.**
+> - **Signup Redirect Fix:** Updated `AuthContext.jsx` and `Signup.jsx` to correctly pass `options.emailRedirectTo` using `${import.meta.env.VITE_FRONTEND_URL || window.location.origin}/auth/callback` to the Supabase signup call. This ensures that new user confirmation links open through the authenticated callback route instead of landing on the public marketing root.
 > - **Validation:** Static validation passes and operator-local production auth smoke passes; deployed browser reset verification remains pending after deploy.
-> - **Next Steps:** Await operator to verify the fix on deployed production with a fresh forgot-password link. After D8 is verified, proceed with **D9 (Fix signup confirmation redirect)** and **D10 (Google OAuth production fix)**.
+> - **Next Steps:** Await operator to deploy the fix to production and use a fresh test email to confirm that signing up and clicking the confirmation link drops the user into an authenticated state on `/onboarding`. After D9 is verified, proceed with **D10 (Google OAuth production fix)**.
+>
+> **Handoff:** Session 140Z-G3-D8 — Fix Reset Password False Invalid Warning — **PENDING VERIFICATION — Deployed verification needed.**
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
