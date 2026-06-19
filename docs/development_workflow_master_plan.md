@@ -64,6 +64,7 @@ But the **operational foundation was built slower than the product**. The workfl
 | **P0-3** | Production Supabase on Free tier — backups + PITR disabled; no rehearsed restore. | `docs/backup_recovery.md`; Session 137. | 139A + 139B |
 | **P0-4** | Production env/secrets unverified in console (`NODE_ENV`, `ST_IP_RESOLVER_MODE=railway`, `ST_LOG_HASH_SECRET`/`TRACKER_SALT`, `ALLOWED_ORIGINS`). | `api/middleware/rate-limit.js:55-59` boot check; route-level CORS. | 139D |
 | **P0-5** | No review-before-commit gate; agents committed unreviewed in Session 137. | SESSION_HANDOFF Session 137. | 138D |
+| **P0-6** | Production Auth Route Smoke Test: Deployed production auth routes, redirects, and assets not fully verified on canonical domain `https://app.sourcetrack.ai`. | User reports production login issues; redirected oauth/reset URLs likely mismatch canonical domain. | 140Z-G3-D0-A |
 
 ### P1 — blocks the first ~10 customers / public launch readiness
 
@@ -127,6 +128,7 @@ But the **operational foundation was built slower than the product**. The workfl
 - **139N-0** — Plurio Intake Tracker Parity Audit. *(Completed)*
 - **139N-2** — Attribution Model Deterministic Test Fixtures. *(Completed)*
 - **140Z-G3-F** — Piqo-Inspired Simplicity + Setup Value Enhancements (Onboarding, docs, demo data, aha moment dashboard layout).
+- **140Z-G3-D0-A** — Production Auth Route Smoke Test (Verification of deployed routes, redirects, and assets on canonical domain).
 
 **Phase 2 — Observability and release gates**
 - **140A** — Add Sentry (or equivalent) exception monitoring.

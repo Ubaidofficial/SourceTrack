@@ -451,6 +451,7 @@ The session order was re-prioritized to address the **Attribution and Tracking T
 | **P2** | Redis/shared rate-limit test before horizontal scaling. | Current rate limiter is in-memory only, which is fine for single-instance paid beta but will fail under multiple instances. | Set up Redis/Upstash connection in staging and assert rate-limiting consistency. | **HIGH** | Session 141B | Pre-Public-Launch |
 | **P2** | Staging load tests before high-volume ecommerce. | High-volume ecommerce traffic spikes have not been tested against the synchronous database write paths. | Run k6 load scripts against the staging API connected to a staging database. | **HIGH** | Session 142 | Pre-Public-Launch |
 | **P0** | Piqo-Inspired Simplicity + Setup Value Enhancements | Onboarding/install flow, tracker docs, demo data, and dashboard "aha" layouts need simplicity audit integration. | Complete the Phase 1 components of the Piqo simplicity roadmap. | **MEDIUM** | Session 140Z-G3-F | Pre-Paid-Beta | **BLOCKED (roadmap item added; implementation pending)** |
+| **P0** | Production Auth Route Smoke Test | Deployed production auth routes, redirects, and assets must be verified on canonical domain. | Document operator Supabase config settings and run non-mutating smoke script. | **CRITICAL** | Session 140Z-G3-D0-A | Pre-Paid-Beta | **BLOCKED (production Supabase Auth URL config not verified)** |
 
 ---
 
@@ -459,3 +460,10 @@ The session order was re-prioritized to address the **Attribution and Tracking T
 *   **Goal:** Address core onboarding/install simplicity, tracker/API docs clarity, demo/staging data readiness, and dashboard "aha" moment.
 *   **Backlog details:** See the dedicated doc at `docs/piqo_simplicity_setup_value_enhancements.md`.
 *   **Paid beta blocker:** Yes (Phase 1 components are hard blockers: onboarding/install simplicity, tracker/API docs clarity, demo/staging data readiness, and dashboard aha moment; Phase 2 components are post-paid-beta/phased).
+
+## Session 140Z-G3-D0-A — Production Auth Route Smoke Test [BLOCKED]
+
+*   **Goal:** Verify deployed production authentication routes, redirects, and assets, and document required Supabase Auth Redirect URL settings.
+*   **Files involved:** `docs/qa/production_login_auth_smoke_140Z-G3-D0.md`, `scripts/qa-production-auth-smoke.mjs`, `docs/release_checklist_gate.md`, `scripts/qa-release-readiness.mjs`.
+*   **Paid beta blocker:** Yes.
+*   **Verification:** Run `node scripts/qa-production-auth-smoke.mjs`.
