@@ -8,7 +8,10 @@
 >
 > **Handoff:** Session 140Z-G3-D9 — Fix Signup Confirmation Redirect — **PENDING VERIFICATION — Deployed verification needed.**
 >
-> **Handoff:** Session 140Z-G3-D8 — Fix Reset Password False Invalid Warning — **PENDING VERIFICATION — Deployed verification needed.**
+> **Handoff:** Session 140Z-G3-D8 — Fix Reset Password False Invalid Warning — **PARTIAL PASS — Email link verification needed.**
+> - **Direct Visit:** Verified via MCP that navigating directly to `/reset-password` correctly displays the 'No active password reset session found' warning.
+> - **Note:** Operator submitted an unedited verification template (e.g. 'passed / failed'), leaving the email link flow unverified.
+> - **Next Steps:** Operator must submit real verification results for the test email link.
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >

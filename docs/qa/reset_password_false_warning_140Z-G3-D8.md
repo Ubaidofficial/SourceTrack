@@ -1,6 +1,6 @@
 # Fix Reset Password False Invalid Warning (D8)
 
-**Verdict:** `PENDING VERIFICATION`
+**Verdict:** `PARTIAL PASS`
 
 ## 1. Problem Statement
 During D7 production E2E testing, the password reset flow was functionally working (users could successfully update their password and login). However, a false warning reading "This password reset link is invalid or has expired" was incorrectly displayed at the top of the form. This bug undermines user trust by presenting an error state while the application is in a valid recovery session.
@@ -32,4 +32,6 @@ Operator to verify on deployed production:
 - [ ] Update password.
 - [ ] Log in with new password.
 - [ ] Confirm authenticated app loads.
-- [ ] Test direct `/reset-password` without recovery session and confirm invalid/expired warning **still appears**.
+- [x] Test direct `/reset-password` without recovery session and confirm invalid/expired warning **still appears**. (Verified via MCP).
+
+> **Note:** Operator submitted an unedited verification template (e.g. "passed / failed"), so the email link flow remains unverified. Status is PARTIAL PASS.
