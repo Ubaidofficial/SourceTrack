@@ -1,11 +1,9 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 140Z-G3-D7 — Production Email/Password Auth E2E Verification — **PARTIAL PASS — Functional flow works but UI bug exists.**
-> - **Login Flow:** PASS — Operator logged in and reached `/onboarding` (new account behavior).
-> - **Authenticated App/Session:** PASS — Session persists on refresh at `/onboarding`.
-> - **Sign-Out:** PASS — Operator verified log out from `/onboarding`, confirmed logged-out state, and verified auth guards block unauthenticated access to `/dashboard` and `/onboarding`.
-> - **Password Reset Flow:** PASS (Functional) / FAIL (UI Bug) — Password update and login-after-reset succeed. However, `ResetPassword.jsx` contains a bug where a 3000ms fallback timeout triggers a false "invalid or expired" warning because it does not clear `timerId` upon successful `onAuthStateChange`.
-> - **Next Steps:** Address the `ResetPassword.jsx` UI bug, the `Signup.jsx` redirect bug, and the Google OAuth invalid_client blocker.
+> **Handoff:** Session 140Z-G3-D8 — Fix Reset Password False Invalid Warning — **PENDING VERIFICATION — Deployed verification needed.**
+> - **Reset UI Bug Fix:** Implemented a fix in `ResetPassword.jsx` by properly clearing the 3000ms fallback timeout using a `sessionFound` tracker flag. This prevents the false "invalid or expired" warning while still guarding against truly invalid sessions.
+> - **Validation:** Static validation passes and operator-local production auth smoke passes; deployed browser reset verification remains pending after deploy.
+> - **Next Steps:** Await operator to verify the fix on deployed production with a fresh forgot-password link. After D8 is verified, proceed with **D9 (Fix signup confirmation redirect)** and **D10 (Google OAuth production fix)**.
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >

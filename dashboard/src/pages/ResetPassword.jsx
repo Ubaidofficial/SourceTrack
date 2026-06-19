@@ -18,6 +18,7 @@ export default function ResetPassword() {
     let active = true
     let authSubscription = null
     let timerId = null
+    let sessionFound = false
 
     const searchParams = new URLSearchParams(window.location.search)
     const code = searchParams.get('code')
@@ -27,25 +28,32 @@ export default function ResetPassword() {
     if (hash.includes('access_token=') || hash.includes('type=recovery')) {
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
         if (session && active) {
+          sessionFound = true
           setHasSession(true)
           setLoading(false)
+          setError('')
           if (authSubscription) {
             authSubscription.unsubscribe()
+          }
+          if (timerId) {
+            clearTimeout(timerId)
           }
         }
       })
       authSubscription = subscription
 
       // Fallback timeout in case parsing fails
-      timerId = setTimeout(() => {
-        if (authSubscription) {
-          authSubscription.unsubscribe()
-        }
-        if (active) {
-          setError('This password reset link is invalid or has expired.')
-          setLoading(false)
-        }
-      }, 3000)
+      if (!sessionFound) {
+        timerId = setTimeout(() => {
+          if (authSubscription) {
+            authSubscription.unsubscribe()
+          }
+          if (active && !sessionFound) {
+            setError('This password reset link is invalid or has expired.')
+            setLoading(false)
+          }
+        }, 3000)
+      }
     }
 
     async function handleRecovery() {
@@ -55,8 +63,10 @@ export default function ResetPassword() {
           const { error: exchangeErr } = await supabase.auth.exchangeCodeForSession(code)
           if (exchangeErr) throw exchangeErr
           if (active) {
+            sessionFound = true
             setHasSession(true)
             setLoading(false)
+            setError('')
           }
         } catch (err) {
           if (active) {
@@ -77,8 +87,10 @@ export default function ResetPassword() {
         const { data: { session } } = await supabase.auth.getSession()
         if (session) {
           if (active) {
+            sessionFound = true
             setHasSession(true)
             setLoading(false)
+            setError('')
           }
           return
         }
@@ -87,7 +99,7 @@ export default function ResetPassword() {
       }
 
       // 4. No recovery parameters and no session
-      if (active) {
+      if (active && !sessionFound) {
         setError('No active password reset session found. Please request a new link.')
         setLoading(false)
       }
