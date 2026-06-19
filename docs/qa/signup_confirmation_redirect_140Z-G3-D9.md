@@ -31,4 +31,4 @@ Fix signup confirmation redirect so a new user confirmation link routes through 
 - **Code implementation**: PASS
 - **Static & Build QA**: PASS
 - **Production Smoke Test**: PASS
-- **Operator E2E Verification**: PENDING (Deployed-verification pending status)
+- **Operator E2E Verification**: PARTIAL PASS (AI agent cannot access an operator-controlled test email inbox. Operator must complete verification of the email confirmation link flow).

@@ -6,7 +6,9 @@
 > - **Validation (PASS):** Browser E2E verified successfully. User clicks Continue with Google, auth completes, callback hydrates session, and app lands on `/onboarding` successfully. Session refreshes correctly, and sign out is verified.
 > - **Next Steps:** Proceed to remaining pending auth fixes (D8/D9 E2E verification).
 >
-> **Handoff:** Session 140Z-G3-D9 — Fix Signup Confirmation Redirect — **PENDING VERIFICATION — Deployed verification needed.**
+> **Handoff:** Session 140Z-G3-D9 — Fix Signup Confirmation Redirect — **PARTIAL PASS — Email link verification needed.**
+> - **Note:** As an AI agent, I cannot access an operator-controlled test email inbox to complete the signup confirmation link verification.
+> - **Next Steps:** Operator must submit a test email, open the confirmation link, and verify it lands correctly on `/auth/callback` -> `/onboarding`.
 >
 > **Handoff:** Session 140Z-G3-D8 — Fix Reset Password False Invalid Warning — **PARTIAL PASS — Email link verification needed.**
 > - **Direct Visit:** Verified via MCP that navigating directly to `/reset-password` correctly displays the 'No active password reset session found' warning.
