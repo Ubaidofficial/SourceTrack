@@ -16,7 +16,9 @@
     "qa:static": "npm run qa:env-safety && node scripts/qa-release-readiness.mjs && node scripts/qa-static-launch-check.mjs",
     "qa:smoke": "node scripts/qa-runtime-smoke.mjs",
     "qa:edge": "node scripts/qa-edge-cases.mjs",
-    "qa:seed:staging-test-site": "node scripts/seed-staging-test-site.mjs"
+    "qa:seed:staging-test-site": "node scripts/seed-staging-test-site.mjs",
+    "qa:e2e": "playwright test",
+    "qa:staging-e2e": "node scripts/qa-staging-e2e.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.96.0",
@@ -38,6 +40,7 @@
     "ws": "^8.20.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.61.0",
     "esbuild": "^0.24.0",
     "nodemon": "^3.1.4"
   }

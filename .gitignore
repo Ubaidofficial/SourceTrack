@@ -22,3 +22,7 @@ dist/
 dashboard/dist/
 sourcetrack-test.html
 logs/
+
+# Playwright reports & results
+playwright-report/
+test-results/
