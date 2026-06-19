@@ -126,6 +126,7 @@ But the **operational foundation was built slower than the product**. The workfl
 - **139M-8** — Final Human-Like Marketer Regression + 2026 UI/UX Verdict.
 - **139N-0** — Plurio Intake Tracker Parity Audit. *(Completed)*
 - **139N-2** — Attribution Model Deterministic Test Fixtures. *(Completed)*
+- **140Z-G3-F** — Piqo-Inspired Simplicity + Setup Value Enhancements (Onboarding, docs, demo data, aha moment dashboard layout).
 
 **Phase 2 — Observability and release gates**
 - **140A** — Add Sentry (or equivalent) exception monitoring.

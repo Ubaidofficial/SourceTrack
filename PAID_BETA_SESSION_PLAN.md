@@ -450,3 +450,12 @@ The session order was re-prioritized to address the **Attribution and Tracking T
 | **P2** | Conversion-cap enforcement or pricing-copy decision. | Monthly conversion limits are displayed in the dashboard but not actively blocked at the ingestion layer. | Implement conversion ingestion count checks or decide on non-blocking soft limit notifications. | **LOW** | Session 141A | Pre-Public-Launch |
 | **P2** | Redis/shared rate-limit test before horizontal scaling. | Current rate limiter is in-memory only, which is fine for single-instance paid beta but will fail under multiple instances. | Set up Redis/Upstash connection in staging and assert rate-limiting consistency. | **HIGH** | Session 141B | Pre-Public-Launch |
 | **P2** | Staging load tests before high-volume ecommerce. | High-volume ecommerce traffic spikes have not been tested against the synchronous database write paths. | Run k6 load scripts against the staging API connected to a staging database. | **HIGH** | Session 142 | Pre-Public-Launch |
+| **P0** | Piqo-Inspired Simplicity + Setup Value Enhancements | Onboarding/install flow, tracker docs, demo data, and dashboard "aha" layouts need simplicity audit integration. | Complete the Phase 1 components of the Piqo simplicity roadmap. | **MEDIUM** | Session 140Z-G3-F | Pre-Paid-Beta | **BLOCKED (roadmap item added; implementation pending)** |
+
+---
+
+## Session 140Z-G3-F — Piqo-Inspired Simplicity + Setup Value Enhancements [BLOCKED]
+
+*   **Goal:** Address core onboarding/install simplicity, tracker/API docs clarity, demo/staging data readiness, and dashboard "aha" moment.
+*   **Backlog details:** See the dedicated doc at `docs/piqo_simplicity_setup_value_enhancements.md`.
+*   **Paid beta blocker:** Yes (Phase 1 components are hard blockers: onboarding/install simplicity, tracker/API docs clarity, demo/staging data readiness, and dashboard aha moment; Phase 2 components are post-paid-beta/phased).

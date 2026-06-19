@@ -88,6 +88,7 @@ Roadmap Queue:
 - (Pre-Paid-Beta P0, open) Supabase staging restore drill; PITR enable/accept decision.
 - (Pre-Paid-Beta P1, open) Align staging GOOGLE_GSC_REDIRECT_URI.
 - (Pre-Paid-Beta P0, open) Production env secrets set incl. ST_IP_RESOLVER_MODE=railway.
+- (Pre-Paid-Beta P0, open) Piqo-Inspired Simplicity + Setup Value Enhancements (Onboarding, docs, demo data, aha moment dashboard layout).
 - (Optional, non-blocking) Multi-site discoverability: consider a proactive "finish your other site" nudge when the active site is completed but an incomplete site exists elsewhere (139I-F noted this as by-design, deferred).
 - Tracker Packaging + Intake-Inspired Gap Audit
 Build: ✅ passing (node --check, git diff --check, dashboard vite build, qa:static, required-grep clean)
@@ -108,6 +109,7 @@ Blockers:
 - legal/policy readiness
 - admin/operator access
 - customer-facing status/incident plan
+- Piqo-Inspired Simplicity + Setup Value Enhancements (Onboarding, docs, demo data, aha moment dashboard layout)
 - transactional email/password reset production verification
 - final staging/production smoke verification
 - distributed/site-key-aware rate limiter for scaled production
@@ -129,5 +131,6 @@ Blockers:
 | **P2** | Conversion-cap enforcement or pricing-copy decision. | Monthly conversion limits are displayed in the dashboard but not actively blocked at the ingestion layer. | Implement conversion ingestion count checks or decide on non-blocking soft limit notifications. | **LOW** | Session 140G-3 | Pre-Public-Launch | **RESOLVED (Monthly conversion caps checked atomically at all ingestion points via a real-time site_usage_monthly counter and claim_site_conversion_usage RPC, late-gated after all validations and deduplication; over-limit blocked events roll back DB idempotency keys and do not poison dedupCache to support clean retries; verified via 15 unit/integration tests; paid beta remains blocked by PostHog retention/purging and the remaining open release gates, including paid billing portal verification, production billing verification, production env/secrets verification, tenant isolation, privacy/deletion, observability, install QA, and docs truth audit.)** |
 | **P2** | Redis/shared rate-limit test before horizontal scaling. | Current rate limiter is in-memory only, which is fine for single-instance paid beta but will fail under multiple instances. | Set up Redis/Upstash connection in staging and assert rate-limiting consistency. | **HIGH** | Session 141B | Pre-Public-Launch | **BLOCKED** |
 | **P2** | Staging load tests before high-volume ecommerce. | High-volume ecommerce traffic spikes have not been tested against the synchronous database write paths. | Run k6 load scripts against the staging API connected to a staging database. | **HIGH** | Session 142 | Pre-Public-Launch | **BLOCKED** |
+| **P0** | Piqo-Inspired Simplicity + Setup Value Enhancements | Onboarding/install flow, tracker docs, demo data, and dashboard "aha" layouts need simplicity audit integration. | Complete the Phase 1 components of the Piqo simplicity roadmap. | **MEDIUM** | Session 140Z-G3-F | Pre-Paid-Beta | **BLOCKED (roadmap item added; implementation pending)** |
 
 ⚠️ WARNING: Before deploying to production, set ST_IP_RESOLVER_MODE=railway on the SourceTrack-Api Railway service. In-memory rate limits are acceptable only for the current single-instance paid-beta deployment (resets on deploy/restart), and a shared store (like Redis/Upstash) is strictly required before horizontally scaling to a multi-instance production environment.

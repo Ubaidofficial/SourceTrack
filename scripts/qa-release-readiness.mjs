@@ -45,6 +45,7 @@ const expectedOpenBlockers = [
   'Admin/Operator Access',
   'Abuse/Rate-Limit Review',
   'Customer-Facing Status/Incident Plan',
+  'Piqo-Inspired Simplicity + Setup Value Enhancements',
   'Exception Monitoring',
   'Mandatory CI/Pre-Deploy Test Gate',
   'Branch Protection & PR Review',
