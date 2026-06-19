@@ -2,12 +2,14 @@
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
-> **Handoff:** Session 140Z-G3-D6 — Deployed Production Auth E2E Browser Verification — **BLOCKED — Password reset request returned 200, but Production Auth user lookup found no matching existing user for the submitted operator email, so no reset-email delivery conclusion can be drawn. Operator must create a test account via Sign Up first. Google OAuth remains blocked by provider configuration.**
+> **Handoff:** Session 140Z-G3-D6 — Deployed Production Auth E2E Browser Verification — **BLOCKED — Signup confirmation redirects to the public root page without a persisted auth session because `emailRedirectTo` is missing in `Signup.jsx`. Operator test account exists and is confirmed; login and password-reset E2E remain pending.**
 > - **Preflight Checks:** PASS — D5 commit is deployed and CI is green.
-> - **Account Existence Check:** ❌ Production Auth user lookup found no matching existing user for the submitted operator email.
-> - **Email Delivery:** BLOCKED — Supabase silently accepts recovery requests for nonexistent users (returning 200 OK) to prevent enumeration, meaning this does not prove a true delivery failure.
+> - **Account Existence Check:** PASS — The operator test account is successfully created and confirmed.
+> - **Signup Redirect UX Bug:** ❌ `Signup.jsx` must be fixed to pass `emailRedirectTo` so the callback parses the session. Currently, the confirmation link drops users on the unauthenticated marketing landing page.
+> - **Email Delivery:** Pending rerun of "forgot password" on the newly created, known-existing account.
+> - **Login Flow:** Pending — Operator needs to test login with the confirmed account.
 > - **Google OAuth Fix:** BLOCKED — Production Google OAuth cannot be verified until a valid Google OAuth client secret is configured in Supabase.
-> - **Next Steps:** Operator needs to create a safe production test account (Sign Up) first so that the password reset email can actually be dispatched to a known-existing user.
+> - **Next Steps:** Operator to manually log into `https://app.sourcetrack.ai/login` with the new credentials. If successful, submit a forgot password request and verify reset delivery and completion.
 >
 > **Handoff:** Session 140Z-G3-D5 — Production Auth Session + Redirect Root Cause Fix — **PARTIAL PASS — Fixed root cause of `/login` redirect loops for password-reset login and Google OAuth callback flows by eagerly updating auth context and explicitly awaiting PKCE code exchange. Route structure is sound. Production E2E verification remains blocked by missing operator actions (DNS records, Google OAuth client secret). Operator reports reset password email delivery is working.**
 > - **Root Cause Fixed:** AuthCallback now waits for `exchangeCodeForSession` before redirecting. `AuthContext` now eagerly updates state on `signInWithPassword`/`signUp` to avoid routing race conditions.
