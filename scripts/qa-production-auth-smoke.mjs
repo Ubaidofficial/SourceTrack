@@ -50,7 +50,18 @@ async function checkRoute(route) {
     }
   } catch (err) {
     clearTimeout(timeoutId);
-    console.error(`❌ GET ${route} failed with error: ${err.message}`);
+    console.error(`❌ GET ${route} failed with error:`);
+    console.error(`   Name:    ${err.name}`);
+    console.error(`   Message: ${err.message}`);
+    if (err.cause) {
+      console.error(`   Cause Code:     ${err.cause.code || 'N/A'}`);
+      console.error(`   Cause Hostname: ${err.cause.hostname || 'N/A'}`);
+    }
+    console.error(`   Suggestion: If this is a DNS cache issue, try running:`);
+    console.error(`     dscacheutil -q host -a name app.sourcetrack.ai`);
+    console.error(`     sudo dscacheutil -flushcache`);
+    console.error(`     sudo killall -HUP mDNSResponder`);
+    console.error(`     curl -Iv https://app.sourcetrack.ai/login`);
     hasFailures = true;
   }
 }

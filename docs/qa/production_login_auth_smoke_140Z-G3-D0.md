@@ -85,7 +85,24 @@ Once the operator has updated the Supabase settings:
 - **MCP Write Available**: No (Supabase MCP server does not expose management endpoints or write actions for Authentication URL configuration).
 - **Current Config Before Change**: Unretrievable via MCP (requires Supabase browser console access).
 - **Config Applied**: None by MCP; manual operator configuration change is required.
-- **Config After Change**: Blocked pending manual operator execution.
+- **Config After Change**: Site URL set to `https://app.sourcetrack.ai` and Redirect URLs configured to include canonical patterns (manually verified by operator).
 - **Password Reset E2E Result**: 🚨 **BLOCKED / UNVERIFIED** (Requires manual Supabase Auth URL config updates and verification using a safe test account/email inbox).
 - **Google OAuth E2E Result**: 🚨 **BLOCKED / UNVERIFIED** (Requires manual Supabase Auth URL config updates to correctly route callbacks to the canonical domain).
+- **Final Verdict**: 🚨 **BLOCKED**
+
+---
+
+## 8. Production Auth Redirect E2E Verification
+
+- **Supabase Auth URL Config Operator-Confirmed**: Yes (Operator manually updated settings in production Supabase project `zxjjjsipafojhzkkumvh` to target `https://app.sourcetrack.ai`).
+- **Route Smoke After DNS Flush**: 🟢 **PASS** (Verified using the canonical domain `https://app.sourcetrack.ai` after local DNS cache flush resolved local environment DNS resolution issues).
+- **Password Reset Request**: 🚨 **BLOCKED — inbox access required** (Reset submission successfully sends request, but E2E link retrieval is blocked by lack of mailbox access).
+- **Reset Email Link Canonical Landing**: 🚨 **BLOCKED — inbox access required**
+- **Password Update**: 🚨 **BLOCKED — inbox access required**
+- **Login After Reset**: 🚨 **BLOCKED — inbox access required**
+- **Google OAuth Callback Canonical Domain**: 🚨 **BLOCKED — Google account interaction required** (Client initiates request and correctly builds the target callback parameter `redirect_to=https://app.sourcetrack.ai/auth/callback` in the Google accounts landing page URL, but E2E login completion requires manual Google account interaction).
+- **Final URL Domain**: 🚨 **BLOCKED — Google account interaction required**
+- **Console/Network Findings**:
+  - `/login`, `/signup`, `/reset-password` load assets and React DOM correctly with zero console/network/CORS errors when hit via the canonical domain.
+  - Clicking "Continue with Google" redirects to Google's sign-in gateway with the correct callback redirect parameter pointing back to canonical `app.sourcetrack.ai/auth/callback` (no IP overrides or TLS-bypass methods used).
 - **Final Verdict**: 🚨 **BLOCKED**
