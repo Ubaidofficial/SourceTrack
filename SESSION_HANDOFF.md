@@ -2,9 +2,16 @@
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
+> **Handoff:** Session 140Z-G3-D4 — Production Auth Operator Configuration + Verification — **BLOCKED — DNS records for transactional email (SPF/DKIM/DMARC) are missing, Supabase custom SMTP/Auth config remains unverified, and a safe operator-controlled inbox does not exist for real password reset E2E testing. Production Google OAuth access is still missing to fix the `invalid_client` issue. Paid beta remains NOT READY.**
+> - **Smoke Test:** PASS — `node scripts/qa-production-auth-smoke.mjs` confirmed `/login`, `/signup`, `/reset-password`, `/dashboard`, and `/api/health` load successfully with 200 OK on `https://app.sourcetrack.ai`.
+> - **DNS/Email Verification:** BLOCKED / NOT CONFIGURED — `dig TXT sourcetrack.ai` and `dig TXT _dmarc.sourcetrack.ai` show no SPF (`v=spf1`) or DMARC records. Custom SMTP provider configuration (Postmark/Resend) cannot be verified without Supabase config access.
+> - **Production Auth E2E:** BLOCKED — Production password reset E2E is blocked until the operator provides or creates a safe production test account with a real operator-controlled inbox. Human inbox access is required to verify email delivery, reset link behavior, password update, and login.
+> - **Google OAuth Fix:** BLOCKED — Production Google OAuth cannot be verified until a valid Google OAuth client secret and configuration access is provided.
+> - **Validation & Static Checks:** PASS — All static checks (`npm run qa:static`) and git commands execute cleanly. No app code changes were made.
+>
 > **Handoff:** Session 140Z-G3-D3 — Transactional Email Readiness + Production Operator Account Flow — **BLOCKED — Transactional email readiness, DNS records, and email/password auth flow remain unverified and blocked due to missing operator access and incomplete DNS configuration. No SPF/DMARC records found for sourcetrack.ai. Supabase SMTP and custom Auth URL configuration cannot be verified without operator access. No app code changed; paid beta remains NOT READY.**
 > - **Smoke Test:** PASS — `node scripts/qa-production-auth-smoke.mjs` confirmed `/login`, `/signup`, `/reset-password`, `/dashboard`, and `/api/health` load successfully with 200 OK on `https://app.sourcetrack.ai`.
-> - **DNS/Email Verification:** BLOCKED/FAIL — `dig TXT sourcetrack.ai` and `dig TXT _dmarc.sourcetrack.ai` show no SPF (`v=spf1`) or DMARC records. Custom SMTP provider configuration (Postmark/Resend) cannot be verified without Supabase config access.
+> - **DNS/Email Verification:** BLOCKED / NOT CONFIGURED — `dig TXT sourcetrack.ai` and `dig TXT _dmarc.sourcetrack.ai` show no SPF (`v=spf1`) or DMARC records. Custom SMTP provider configuration (Postmark/Resend) cannot be verified without Supabase config access.
 > - **Production Auth E2E:** BLOCKED — Production password reset E2E is blocked until the operator provides or creates a safe production test account with a real operator-controlled inbox. Human inbox access is required to verify email delivery, reset link behavior, password update, and login.
 > - **Google OAuth Fix:** BLOCKED — Production Google OAuth cannot be verified until a valid Google OAuth client secret and configuration access is provided.
 > - **Validation & Static Checks:** PASS — All static checks (`npm run qa:static`) and git commands execute cleanly. No app code changes were made.
