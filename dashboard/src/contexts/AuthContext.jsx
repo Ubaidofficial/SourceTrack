@@ -50,13 +50,19 @@ export function AuthProvider({ children }) {
   }, [user])
 
   const signIn = useCallback(async (email, password) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) throw error
+    if (data?.session?.user) {
+      setUser(data.session.user)
+    }
   }, [])
 
   const signUp = useCallback(async (email, password) => {
-    const { error } = await supabase.auth.signUp({ email, password })
+    const { data, error } = await supabase.auth.signUp({ email, password })
     if (error) throw error
+    if (data?.session?.user) {
+      setUser(data.session.user)
+    }
   }, [])
 
   const signOut = useCallback(async () => {

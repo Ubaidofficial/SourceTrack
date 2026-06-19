@@ -2,6 +2,13 @@
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
+> **Handoff:** Session 140Z-G3-D5 — Production Auth Session + Redirect Root Cause Fix — **PARTIAL PASS — Fixed root cause of `/login` redirect loops for password-reset login and Google OAuth callback flows by eagerly updating auth context and explicitly awaiting PKCE code exchange. Route structure is sound. Production E2E verification remains blocked by missing operator actions (DNS records, Google OAuth client secret). Operator reports reset password email delivery is working.**
+> - **Root Cause Fixed:** AuthCallback now waits for `exchangeCodeForSession` before redirecting. `AuthContext` now eagerly updates state on `signInWithPassword`/`signUp` to avoid routing race conditions.
+> - **Smoke Test:** PASS — `node scripts/qa-production-auth-smoke.mjs` passed on `https://app.sourcetrack.ai`. Local builds and static checks pass.
+> - **Production Auth E2E:** BLOCKED — Operator reports reset password email delivery is working. Production login-after-reset remains unverified on the deployed fixed build until commit, deploy, and browser E2E verification.
+> - **Google OAuth Fix:** BLOCKED — Production Google OAuth cannot be verified until a valid Google OAuth client secret is configured in Supabase.
+> - **DNS/Email Verification:** BLOCKED — SPF/DKIM/DMARC records are still missing on `sourcetrack.ai`.
+>
 > **Handoff:** Session 140Z-G3-D4 — Production Auth Operator Configuration + Verification — **BLOCKED — DNS records for transactional email (SPF/DKIM/DMARC) are missing, Supabase custom SMTP/Auth config remains unverified, and a safe operator-controlled inbox does not exist for real password reset E2E testing. Production Google OAuth access is still missing to fix the `invalid_client` issue. Paid beta remains NOT READY.**
 > - **Smoke Test:** PASS — `node scripts/qa-production-auth-smoke.mjs` confirmed `/login`, `/signup`, `/reset-password`, `/dashboard`, and `/api/health` load successfully with 200 OK on `https://app.sourcetrack.ai`.
 > - **DNS/Email Verification:** BLOCKED / NOT CONFIGURED — `dig TXT sourcetrack.ai` and `dig TXT _dmarc.sourcetrack.ai` show no SPF (`v=spf1`) or DMARC records. Custom SMTP provider configuration (Postmark/Resend) cannot be verified without Supabase config access.
