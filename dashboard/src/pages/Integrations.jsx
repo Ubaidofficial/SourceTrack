@@ -1008,9 +1008,11 @@ export default function Integrations() {
               conversion counts. Upgrade to keep your ad platform numbers honest.
             </p>
           </div>
-          <a href="/billing" className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg bg-st-lime text-black hover:bg-st-lime/90">
-            Upgrade
-          </a>
+          {!isPreview && (
+            <a href="/billing" className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg bg-st-lime text-black hover:bg-st-lime/90">
+              Upgrade
+            </a>
+          )}
         </div>
       )}
 
@@ -1520,15 +1522,19 @@ export default function Integrations() {
               status="success"
               badgeLabel="Available"
               actionButton={
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveSection(activeSection === 'revenue.email' ? null : 'revenue.email');
-                  }}
-                  className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-150 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors"
-                >
-                  {activeSection === 'revenue.email' ? 'Close' : 'Setup'}
-                </button>
+                <div className="flex items-center gap-2">
+                  {!isPreview && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveSection(activeSection === 'revenue.email' ? null : 'revenue.email');
+                      }}
+                      className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-150 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors"
+                    >
+                      {activeSection === 'revenue.email' ? 'Close' : 'Setup'}
+                    </button>
+                  )}
+                </div>
               }
               isExpanded={activeSection === 'revenue.email'}
               onToggle={() => setActiveSection(activeSection === 'revenue.email' ? null : 'revenue.email')}
@@ -2290,13 +2296,15 @@ export default function Integrations() {
                       </button>
                     )
                   ) : (
-                    <Link
-                      to="/billing"
-                      className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-gray-300 text-st-gray hover:border-st-lime dark:border-gray-700 transition-colors"
-                      title="Google Search Console integration is available on Growth and Scale plans"
-                    >
-                      🔒 Connect · Upgrade
-                    </Link>
+                    !isPreview && (
+                      <Link
+                        to="/billing"
+                        className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-gray-300 text-st-gray hover:border-st-lime dark:border-gray-700 transition-colors"
+                        title="Google Search Console integration is available on Growth and Scale plans"
+                      >
+                        🔒 Connect · Upgrade
+                      </Link>
+                    )
                   )}
                 </div>
               }

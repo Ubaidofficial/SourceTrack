@@ -613,13 +613,17 @@ export default function Settings() {
               placeholder="yoursite.com"
             />
           </div>
-          <button
-            type="submit"
-            disabled={saving || isPreview}
-            className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {saving ? 'Saving…' : 'Save Changes'}
-          </button>
+          {isPreview ? (
+            <div className="text-xs text-st-gray italic">Setting changes are hidden in Support Preview</div>
+          ) : (
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {saving ? 'Saving…' : 'Save Changes'}
+            </button>
+          )}
         </form>
       </section>
 
@@ -632,17 +636,21 @@ export default function Settings() {
         <p className="text-xs text-st-gray dark:text-gray-400">Share a read-only view of your analytics — no login required.</p>
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-600 dark:text-gray-400">{shareEnabled ? 'Sharing enabled' : 'Sharing disabled'}</span>
-          <button
-            onClick={handleShareToggle}
-            disabled={shareLoading || isPreview}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
-              shareEnabled ? 'bg-st-black dark:bg-white' : 'bg-gray-200 dark:bg-gray-800'
-            }`}
-          >
-            <span className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-st-black shadow transition-transform ${
-              shareEnabled ? 'translate-x-6' : 'translate-x-1'
-            }`} />
-          </button>
+          {!isPreview ? (
+            <button
+              onClick={handleShareToggle}
+              disabled={shareLoading}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
+                shareEnabled ? 'bg-st-black dark:bg-white' : 'bg-gray-200 dark:bg-gray-800'
+              }`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-st-black shadow transition-transform ${
+                shareEnabled ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </button>
+          ) : (
+            <span className="text-xs text-st-gray italic">Hidden in Support Preview</span>
+          )}
         </div>
         {shareEnabled && shareToken && (
           <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 flex items-center gap-2">
@@ -692,17 +700,21 @@ export default function Settings() {
           <span className="text-sm text-gray-600 dark:text-gray-400">
             {cookielessMode ? 'Cookieless mode — no browser storage, privacy-friendly' : 'Standard mode — visitor IDs stored in localStorage'}
           </span>
-          <button
-            onClick={handleCookielessToggle}
-            disabled={cookielessLoading || isPreview}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
-              cookielessMode ? 'bg-st-black dark:bg-white' : 'bg-gray-200 dark:bg-gray-800'
-            }`}
-          >
-            <span className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-st-black shadow transition-transform ${
-              cookielessMode ? 'translate-x-6' : 'translate-x-1'
-            }`} />
-          </button>
+          {!isPreview ? (
+            <button
+              onClick={handleCookielessToggle}
+              disabled={cookielessLoading}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
+                cookielessMode ? 'bg-st-black dark:bg-white' : 'bg-gray-200 dark:bg-gray-800'
+              }`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-st-black shadow transition-transform ${
+                cookielessMode ? 'translate-x-6' : 'translate-x-1'
+              }`} />
+            </button>
+          ) : (
+            <span className="text-xs text-st-gray italic">Hidden in Support Preview</span>
+          )}
         </div>
         {cookielessMode && (
           <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-1">
@@ -779,13 +791,17 @@ export default function Settings() {
                 disabled={proxyLoading || isPreview}
                 className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
               />
-              <button
-                type="submit"
-                disabled={proxyLoading || isPreview}
-                className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {proxyLoading ? 'Saving...' : 'Set Domain'}
-              </button>
+              {isPreview ? (
+                <span className="text-xs text-st-gray italic self-center">Hidden in Support Preview</span>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={proxyLoading}
+                  className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {proxyLoading ? 'Saving...' : 'Set Domain'}
+                </button>
+              )}
             </div>
           </form>
         ) : (
@@ -822,24 +838,28 @@ export default function Settings() {
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={handleVerifyProxy}
-                disabled={proxyLoading || isPreview}
-                className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
-              >
-                {proxyLoading ? 'Checking...' : 'Check CNAME Status'}
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteProxy}
-                disabled={proxyLoading || isPreview}
-                className="px-4 py-2 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 text-sm font-semibold rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Remove Custom Domain
-              </button>
-            </div>
+            {isPreview ? (
+              <div className="text-xs text-st-gray italic">Domain mutation controls are hidden in Support Preview</div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={handleVerifyProxy}
+                  disabled={proxyLoading}
+                  className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+                >
+                  {proxyLoading ? 'Checking...' : 'Check CNAME Status'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteProxy}
+                  disabled={proxyLoading}
+                  className="px-4 py-2 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 text-sm font-semibold rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Remove Custom Domain
+                </button>
+              </div>
+            )}
 
             {proxyConfig.status === 'active' && (
               <div className="bg-gray-50 dark:bg-[#202222] border border-gray-100 dark:border-gray-800 rounded-xl p-4 space-y-2">
@@ -902,13 +922,17 @@ export default function Settings() {
             <option value={60}>60 days</option>
             <option value={90}>90 days</option>
           </select>
-          <button
-            onClick={handleAttrWindowSave}
-            disabled={attrWindowSaving || isPreview}
-            className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {attrWindowSaving ? 'Saving…' : 'Save'}
-          </button>
+          {isPreview ? (
+            <span className="text-xs text-st-gray italic self-center">Hidden in Support Preview</span>
+          ) : (
+            <button
+              onClick={handleAttrWindowSave}
+              disabled={attrWindowSaving}
+              className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {attrWindowSaving ? 'Saving…' : 'Save'}
+            </button>
+          )}
         </div>
         <p className="text-xs text-st-gray dark:text-gray-400">
           This window applies to all attribution reports unless overridden per-query in the Report Builder.
@@ -965,13 +989,17 @@ export default function Settings() {
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={settingsSaving || isPreview}
-            className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {settingsSaving ? 'Saving…' : 'Save Site Settings'}
-          </button>
+          {isPreview ? (
+            <div className="text-xs text-st-gray italic">Setting changes are hidden in Support Preview</div>
+          ) : (
+            <button
+              type="submit"
+              disabled={settingsSaving}
+              className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {settingsSaving ? 'Saving…' : 'Save Site Settings'}
+            </button>
+          )}
         </form>
       </section>
 
@@ -995,13 +1023,15 @@ export default function Settings() {
             className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
             disabled={customParamsSaving || isPreview}
           />
-          <button
-            type="submit"
-            disabled={customParamsSaving || !newParam.trim() || isPreview}
-            className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            Add
-          </button>
+          {!isPreview && (
+            <button
+              type="submit"
+              disabled={customParamsSaving || !newParam.trim()}
+              className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Add
+            </button>
+          )}
         </form>
 
         {customParams.length > 0 ? (
@@ -1009,14 +1039,16 @@ export default function Settings() {
             {customParams.map(param => (
               <div key={param} className="flex items-center justify-between p-3">
                 <span className="text-sm font-mono text-st-black dark:text-white">{param}</span>
-                <button
-                  onClick={() => handleRemoveParam(param)}
-                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 text-red-500 rounded disabled:opacity-50"
-                  disabled={customParamsSaving || isPreview}
-                  title="Remove parameter"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {!isPreview && (
+                  <button
+                    onClick={() => handleRemoveParam(param)}
+                    className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 text-red-500 rounded disabled:opacity-50"
+                    disabled={customParamsSaving}
+                    title="Remove parameter"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -1071,13 +1103,17 @@ export default function Settings() {
             </p>
           </div>
 
-          <button
-            type="submit"
-            disabled={crossDomainSaving || isPreview}
-            className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {crossDomainSaving ? 'Saving…' : 'Save Cross-Domain Settings'}
-          </button>
+          {isPreview ? (
+            <div className="text-xs text-st-gray italic">Setting changes are hidden in Support Preview</div>
+          ) : (
+            <button
+              type="submit"
+              disabled={crossDomainSaving}
+              className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {crossDomainSaving ? 'Saving…' : 'Save Cross-Domain Settings'}
+            </button>
+          )}
         </form>
       </section>
 
@@ -1109,13 +1145,17 @@ export default function Settings() {
               <option value={180}>180 days</option>
               <option value={365}>1 year</option>
             </select>
-            <button
-              onClick={handleRetentionSave}
-              disabled={retentionSaving || isPreview}
-              className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {retentionSaving ? 'Saving…' : 'Save'}
-            </button>
+            {isPreview ? (
+              <span className="text-xs text-st-gray italic self-center">Hidden in Support Preview</span>
+            ) : (
+              <button
+                onClick={handleRetentionSave}
+                disabled={retentionSaving}
+                className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {retentionSaving ? 'Saving…' : 'Save'}
+              </button>
+            )}
           </div>
         </div>
 
