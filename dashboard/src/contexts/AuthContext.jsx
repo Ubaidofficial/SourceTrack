@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
+import { getAuthAppRole } from '../utils/authRole'
 
 const AuthContext = createContext(null)
 
@@ -29,7 +30,7 @@ export function AuthProvider({ children }) {
     }
 
     // Check for super_admin in app_metadata or raw_app_meta_data
-    const metaRole = user.app_metadata?.role || user.raw_app_meta_data?.role
+    const metaRole = getAuthAppRole(user)
     if (metaRole === 'super_admin') {
       setRole('super_admin')
       return

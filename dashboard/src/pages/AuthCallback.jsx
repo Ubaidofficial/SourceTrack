@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import { getAuthAppRole } from '../utils/authRole'
 
 export default function AuthCallback() {
   const navigate = useNavigate()
@@ -59,7 +60,12 @@ export default function AuthCallback() {
       if (isRecovery) {
         navigate('/reset-password', { replace: true })
       } else {
-        navigate('/dashboard', { replace: true })
+        const metaRole = getAuthAppRole(user)
+        if (metaRole === 'super_admin') {
+          navigate('/ops', { replace: true })
+        } else {
+          navigate('/dashboard', { replace: true })
+        }
       }
       return
     }

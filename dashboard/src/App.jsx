@@ -30,6 +30,7 @@ import Integrations from './pages/Integrations'
 import Admin from './pages/Admin'
 import Analytics from './pages/Analytics'
 import AdminRoute from './components/AdminRoute'
+import { getAuthAppRole } from './utils/authRole'
 // User Docs
 import DocsHome from './pages/docs/DocsHome'
 import DocsQuickstart from './pages/docs/DocsQuickstart'
@@ -113,7 +114,7 @@ function ProtectedRoute({ children }) {
     }
 
     // Super admins bypass the onboarding gate — they may not own a site directly.
-    if (user.app_metadata?.role === 'super_admin' || user.raw_app_meta_data?.role === 'super_admin') {
+    if (getAuthAppRole(user) === 'super_admin') {
       if (aliveRef.current) setOnboarding({ loading: false, completed: true, hasSite: true, errorKind: null })
       return
     }
@@ -267,7 +268,12 @@ function PublicRoute({ children }) {
   const { user, loading } = useAuth()
 
   if (loading) return null
-  if (user) return <Navigate to="/dashboard" replace />
+  if (user) {
+    if (getAuthAppRole(user) === 'super_admin') {
+      return <Navigate to="/ops" replace />
+    }
+    return <Navigate to="/dashboard" replace />
+  }
   return children
 }
 

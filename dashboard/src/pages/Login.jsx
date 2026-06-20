@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { LogoMark } from '../components/Logo'
+import { getAuthAppRole } from '../utils/authRole'
 
 export default function Login() {
   const { signIn } = useAuth()
@@ -24,7 +25,7 @@ export default function Login() {
       const authUser = session?.user
 
       // Super admins go straight to the ops console — they may not own sites directly.
-      const metaRole = authUser?.app_metadata?.role || authUser?.raw_app_meta_data?.role
+      const metaRole = getAuthAppRole(authUser)
       if (metaRole === 'super_admin') {
         navigate('/ops', { replace: true })
         return
