@@ -5,7 +5,7 @@
 
 ## 2. Production operator account verification status
 - **Requirement:** Confirm a real production operator user exists in Supabase Auth with `raw_app_meta_data.role = "super_admin"`.
-- **Status:** **PENDING MANUAL VERIFICATION**. 
+- **Status:** **PENDING MANUAL VERIFICATION**.
 
 ## 3. `/ops` access result for super admin
 - **Requirement:** Confirm login at `https://app.sourcetrack.ai/login` as super admin redirects to `/ops` and successfully renders the Ops Console.
