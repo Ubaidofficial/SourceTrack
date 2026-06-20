@@ -31,4 +31,4 @@ Fix signup confirmation redirect so a new user confirmation link routes through 
 - **Code implementation**: PASS
 - **Static & Build QA**: PASS
 - **Production Smoke Test**: PASS
-- **Operator E2E Verification**: PARTIAL PASS (AI agent cannot access an operator-controlled test email inbox. Operator must complete verification of the email confirmation link flow).
+- **Operator E2E Verification**: PASS (Operator explicitly verified confirmation link flow successfully lands on `/auth/callback` and establishes session).

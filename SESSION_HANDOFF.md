@@ -1,19 +1,10 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 140Z-G3-D10 — Production Google OAuth E2E / Config Fix — **PASS — Verified Working.**
-> - **OAuth PKCE Race & Wait Fix:** Removed the manual `supabase.auth.exchangeCodeForSession` call in `AuthCallback.jsx` which was racing with `supabase-js`'s built-in `detectSessionInUrl: true` handler. Added a 5-second bounded wait to ensure the component does not prematurely redirect to `/login` if `AuthContext.loading` finishes a split-second before the network hydration resolves the user session. Added explicit URL error handling to capture Google/Supabase provider errors.
-> - **Provider Config Typo:** Operator corrected the Google Cloud Authorized redirect URI, which was missing a 'k' (`zxjjjsipafojhzkkumvh.supabase.co`).
-> - **Validation (PASS):** Browser E2E verified successfully. User clicks Continue with Google, auth completes, callback hydrates session, and app lands on `/onboarding` successfully. Session refreshes correctly, and sign out is verified.
-> - **Next Steps:** Proceed to remaining pending auth fixes (D8/D9 E2E verification).
->
-> **Handoff:** Session 140Z-G3-D9 — Fix Signup Confirmation Redirect — **PARTIAL PASS — Email link verification needed.**
-> - **Note:** As an AI agent, I cannot access an operator-controlled test email inbox to complete the signup confirmation link verification.
-> - **Next Steps:** Operator must submit a test email, open the confirmation link, and verify it lands correctly on `/auth/callback` -> `/onboarding`.
->
-> **Handoff:** Session 140Z-G3-D8 — Fix Reset Password False Invalid Warning — **PARTIAL PASS — Email link verification needed.**
-> - **Direct Visit:** Verified via MCP that navigating directly to `/reset-password` correctly displays the 'No active password reset session found' warning.
-> - **Note:** Operator submitted an unedited verification template (e.g. 'passed / failed'), leaving the email link flow unverified.
-> - **Next Steps:** Operator must submit real verification results for the test email link.
+> **Handoff:** Session 140Z-G3-D11 — Production Auth & Onboarding Closeout Matrix — **PASS.**
+> - **Core auth matrix completed:** D9 and D10 verified PASS.
+> - **Blocker 1 (Password Reset Verification):** D8 valid reset email-link flow remains PARTIAL.
+> - **Blocker 2 (Transactional Email Readiness):** Transactional email/custom SMTP remains skipped and still a readiness blocker.
+> - **Next Steps:** Operator to explicitly verify the valid password reset email link flow, and eventually resolve the transactional email blocker.
 >
 > **AI-AGENT WORKFLOW:** AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
 >
