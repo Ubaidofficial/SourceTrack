@@ -14,9 +14,7 @@ router.get('/', async (req, res) => {
       .order('created_at', { ascending: false })
 
     if (req.user.role === 'super_admin') {
-      const { data: sites, error } = await query
-      if (error) throw error
-      return res.json({ success: true, data: { sites }, error: null })
+      return res.json({ success: true, data: { sites: [] }, error: null })
     }
 
     if (req.user.company_id) {

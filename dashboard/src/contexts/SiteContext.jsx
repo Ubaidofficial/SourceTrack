@@ -25,7 +25,27 @@ export function SiteProvider({ children }) {
     setError(null)
     try {
       const data = await fetchApi('/sites')
-      const sitesList = data?.sites || []
+      let sitesList = data?.sites || []
+
+      // If support preview is active, force the app context to strictly use the preview site
+      const previewRaw = window.sessionStorage.getItem('sourcetrack_admin_preview')
+      if (previewRaw) {
+        try {
+          const previewSite = JSON.parse(previewRaw)
+          if (previewSite && previewSite.site_id) {
+            // Assume previewed site has completed onboarding for shell layout purposes
+            sitesList = [{
+              id: previewSite.site_id,
+              name: previewSite.site_name || previewSite.site_domain || 'Preview site',
+              domain: previewSite.site_domain || null,
+              onboarding_completed: true,
+              support_preview: true
+            }]
+          }
+        } catch (e) {
+          // invalid preview data, ignore
+        }
+      }
       setSites(sitesList)
 
       if (sitesList.length > 0) {
