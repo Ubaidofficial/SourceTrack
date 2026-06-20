@@ -92,12 +92,21 @@ export default function Admin() {
   }
 
   async function handlePreview(site) {
-    sessionStorage.setItem('sourcetrack_admin_preview', JSON.stringify({
-      site_name: site.name || site.domain,
-      site_domain: site.domain,
-      site_id: site.id
-    }))
-    window.location.href = `/dashboard?preview=${site.id}`
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token
+      const headers = { Authorization: `Bearer ${token}` }
+      const data = await fetchApi(`/admin/preview/${encodeURIComponent(site.id)}`, { headers })
+
+      sessionStorage.setItem('sourcetrack_admin_preview', JSON.stringify({
+        site_name: data.site_name || site.name || site.domain,
+        site_domain: data.site_domain || site.domain,
+        site_id: site.id,
+        site_key: data.site_key
+      }))
+      window.location.href = `/dashboard?preview=${site.id}`
+    } catch (err) {
+      setPageError(err.message || 'Failed to load preview payload.')
+    }
   }
 
   async function loadSiteDetail() {
