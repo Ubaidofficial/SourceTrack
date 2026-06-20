@@ -6,7 +6,7 @@ export default function SupportModeBanner({ siteName, siteDomain }) {
 
   function handleExit() {
     sessionStorage.removeItem('sourcetrack_admin_preview')
-    navigate('/admin')
+    navigate('/ops')
   }
 
   return (

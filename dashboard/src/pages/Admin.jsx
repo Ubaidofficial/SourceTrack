@@ -227,10 +227,10 @@ export default function Admin() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-st-black">Super Admin</h2>
+          <h2 className="text-2xl font-bold text-st-black dark:text-white">Ops Console</h2>
           <p className="text-sm text-st-gray dark:text-gray-400 mt-0.5">Internal workspace overview</p>
         </div>
-        <StatusBadge status="verified" label="Super Admin" />
+        <StatusBadge status="verified" label="Ops" />
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

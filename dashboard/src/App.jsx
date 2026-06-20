@@ -310,7 +310,7 @@ export default function App() {
               <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
               <Route path="/data-quality" element={<ProtectedRoute><DataQuality /></ProtectedRoute>} />
               <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-              <Route path="/admin" element={<AdminRoute><Layout><Admin /></Layout></AdminRoute>} />
+              <Route path="/ops" element={<AdminRoute><Layout><Admin /></Layout></AdminRoute>} />
               <Route path="/share/:token" element={<ShareDashboard />} />
               {/* Auth callback — handles OAuth redirect flow */}
               <Route path="/auth/callback" element={<AuthCallback />} />

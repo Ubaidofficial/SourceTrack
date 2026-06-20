@@ -23,10 +23,10 @@ export default function Login() {
       const { data: { session } } = await supabase.auth.getSession()
       const authUser = session?.user
 
-      // Super admins go straight to the admin panel — they may not own sites directly.
+      // Super admins go straight to the ops console — they may not own sites directly.
       const metaRole = authUser?.raw_app_meta_data?.role
       if (metaRole === 'super_admin') {
-        navigate('/admin', { replace: true })
+        navigate('/ops', { replace: true })
         return
       }
 

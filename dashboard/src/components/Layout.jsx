@@ -44,7 +44,7 @@ const PAGE_TITLES = {
   '/snippet': 'Install Tracking',
   '/debugger': 'Live Events',
   '/settings': 'Settings',
-  '/admin': 'Super Admin'
+  '/ops': 'Ops Console'
 }
 
 export default function Layout({ children }) {
@@ -217,10 +217,10 @@ export default function Layout({ children }) {
           {role === 'super_admin' && (
             <div>
               <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-600 select-none">
-                Super Admin
+                Internal
               </p>
               <NavLink
-                to="/admin"
+                to="/ops"
                 onClick={() => setSidebarOpen(false)}
                 className={({ isActive }) =>
                   `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
@@ -231,7 +231,7 @@ export default function Layout({ children }) {
                 }
               >
                 <Shield className="w-4 h-4 flex-shrink-0" />
-                <span className="truncate">Admin</span>
+                <span className="truncate">Ops Console</span>
               </NavLink>
             </div>
           )}
