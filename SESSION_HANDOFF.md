@@ -1,5 +1,11 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
+> **Handoff:** Session 140Z-G3-D12 — Minimum Production Operator Readiness — **PASS.**
+> - **Audit:** Existing operator UI and super_admin role-based access audited as production-safe based on code review.
+> - **Access Model:** Safe operator checklist created. Role assignment uses robust Supabase raw_app_meta_data.
+> - **Security:** No customer JWT impersonation path was found; support/preview mode preserves super_admin identity. No secret/token exposure.
+> - **Deliverable:** Created docs/qa/operator_readiness_140Z-G3-D12.md with the operator runbook.
+>
 > **Handoff:** Session 140Z-G3-D11 — Production Auth & Onboarding Closeout Matrix — **PASS.**
 > - **Core auth matrix completed:** D9 and D10 verified PASS.
 > - **Blocker 1 (Password Reset Verification):** D8 valid reset email-link flow remains PARTIAL.
