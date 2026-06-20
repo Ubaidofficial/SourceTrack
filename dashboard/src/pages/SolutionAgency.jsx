@@ -90,7 +90,7 @@ const DATA = {
       },
       {
         q: 'Can I white-label the attribution reports?',
-        a: "All CSV data exports contain no formatting, styling, or SourceTrack branding markers, letting you load the raw data directly into your own client-facing presentation templates. White-label dashboard sharing is supported on the Scale plan.",
+        a: "All CSV data exports contain no formatting, styling, or SourceTrack branding markers, letting you load the raw data directly into your own client-facing presentation templates.",
       },
       {
         q: "How do I explain AI attribution as a value-add to clients?",
@@ -115,7 +115,7 @@ const DATA = {
     "@type": "FAQPage",
     "mainEntity": [
       { "@type": "Question", "name": "How does multi-site management work for agencies?", "acceptedAnswer": { "@type": "Answer", "text": "Each client site has its own isolated workspace — separate tracking key, database records, and attribution settings. All managed from one SourceTrack account." } },
-      { "@type": "Question", "name": "Can I white-label the attribution reports?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. All CSV and report exports contain no SourceTrack branding. Export any date range and attribution model and present it as your own proprietary reporting." } },
+      { "@type": "Question", "name": "Can I white-label the attribution reports?", "acceptedAnswer": { "@type": "Answer", "text": "CSV exports contain no SourceTrack branding — raw data only. Load them into your own client templates." } },
       { "@type": "Question", "name": "How do I explain AI attribution as a value-add to clients?", "acceptedAnswer": { "@type": "Answer", "text": "Show clients their GA4 direct traffic, then show the same period in SourceTrack where a portion is identified as ChatGPT, Perplexity, and other AI referrals. The AI-attributed revenue that was called 'direct' becomes a new insight most agencies can't provide." } },
     ]
   },

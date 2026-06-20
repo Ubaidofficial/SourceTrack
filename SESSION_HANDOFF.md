@@ -1,5 +1,11 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
+> **Handoff:** Session 140Z-G3-D19-D — Pricing Truth Pass 1 + White-label Cleanup — **COMPLETE. Awaiting commit approval.**
+> - **Pass 1 (Pricing Alignment):** Aligned pricing page tracked-visit numbers to code enforcement defaults (Starter 25K→50K/mo, Growth 100K→150K/mo; Scale 500K+ unchanged). Growth price updated $79→$99. Founder $49 future-intent anchor added to Starter card desc. "Alerts for source and conversion changes" relabeled to "Source and conversion change detection" (on-demand panel, not proactive push). "Unlimited sites" relabeled to "Up to 99 sites". "White-label reporting" relabeled to "Unbranded CSV export". FAQ answer corrected: only pageviews count toward monthly tracked-visit limit; conversions have a separate cap.
+> - **Pass 1b (White-label Cleanup):** `white_label` matrix flag flipped `scale: true → false` in both `dashboard/src/lib/planFeatures.js` and `api/lib/plan-features.js` — feature is vapor (flag was never read by any gate or component). `FEATURE_LABELS['white_label']` relabeled to `'Unbranded CSV export'`. False white-label sharing claim removed from `SolutionAgency.jsx` FAQ answer (line 93). JSON-LD structured data answer rewritten to factual-only (no "present as your own proprietary reporting").
+> - **Files changed:** `dashboard/src/components/PricingCards.jsx`, `dashboard/src/pages/Pricing.jsx`, `dashboard/src/lib/planFeatures.js`, `dashboard/src/pages/SolutionAgency.jsx`, `api/lib/plan-features.js`, `SESSION_HANDOFF.md`
+> - **Not touched:** enforcement code, Stripe config, Railway env, any API route logic, migration files, Billing.jsx.
+>
 > **Handoff:** Session 140Z-G3-D17 — Billing / Stripe Production Readiness Audit — **PARTIAL PASS / BLOCKED.**
 > - **Audit:** Audited billing and Stripe readiness. Verified secure checkout creation, accurate pricing/plan mapping, and webhook idempotency.
 > - **Blocker:** Missing operator Stripe configurations for live endpoints and price IDs. Test vs live mode isolation depends strictly on operator config. Paid beta remains NOT READY.

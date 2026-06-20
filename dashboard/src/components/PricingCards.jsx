@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 const PLANS = [
   {
     key: 'starter', name: 'Starter', price: '$29', period: '/mo',
-    desc: 'Best for founders proving which sources create customers.',
+    desc: 'Founder pricing locked at $29/mo — rises to $49 when founding closes.',
     features: [
       'Track visits, leads, and conversions by source',
       'Detect AI referrals from ChatGPT, Claude, and Perplexity',
@@ -12,22 +12,22 @@ const PLANS = [
       'Manual conversion and event tracking',
       'Saved reports and CSV export',
       '1 site',
-      '25,000 tracked visits/mo',
+      '50,000 tracked visits/mo',
     ],
     cta: 'Get Starter', href: '/signup', featured: false,
   },
   {
-    key: 'growth', name: 'Growth', price: '$79', period: '/mo',
+    key: 'growth', name: 'Growth', price: '$99', period: '/mo',
     desc: 'Best for teams scaling campaigns, SEO, and AI referrals.',
     features: [
       'Everything in Starter',
       'Stripe revenue tracking (webhook recipe)',
       'Google Search Console visibility',
       'Campaign cost imports',
-      'Alerts for source and conversion changes',
+      'Source and conversion change detection',
       'Advanced report builder and dashboard widgets',
       '3 sites · 3 users',
-      '100,000 tracked visits/mo',
+      '150,000 tracked visits/mo',
     ],
     cta: 'Get Growth', href: '/signup', featured: true,
   },
@@ -36,8 +36,8 @@ const PLANS = [
     desc: 'Best for agencies and high-volume teams needing more sites, volume, and support.',
     features: [
       'Everything in Growth',
-      'Unlimited sites · up to 99 team members',
-      'White-label reporting',
+      'Up to 99 sites · up to 99 team members',
+      'Unbranded CSV export',
       '5-year data history',
       'Higher conversion event limits',
       'Priority support and setup guidance',

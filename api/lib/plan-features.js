@@ -40,7 +40,7 @@ const FEATURE_MATRIX = {
   api_access:              { free: false, trial: true,  starter: false, growth: true,  scale: true },
   multi_user:              { free: false, trial: true,  starter: true,  growth: true,  scale: true },
   cookieless_mode:         { free: false, trial: true,  starter: false, growth: true,  scale: true },
-  white_label:             { free: false, trial: false, starter: false, growth: false, scale: true },
+  white_label:             { free: false, trial: false, starter: false, growth: false, scale: false },
   manual_spend:            { free: false, trial: true,  starter: false, growth: true,  scale: true },
   manual_revenue_status:    { free: false, trial: true,  starter: true,  growth: true,  scale: true },
   ai_analytics:            { free: false, trial: true,  starter: true,  growth: true,  scale: true },

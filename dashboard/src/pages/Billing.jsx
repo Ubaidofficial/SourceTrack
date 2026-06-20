@@ -30,7 +30,7 @@ const PLANS = [
   {
     key: 'growth',
     name: 'Growth',
-    price: '$79/mo',
+    price: '$99/mo',
     period: 'billed monthly',
     limit: '150,000 tracked pageviews/mo',
     highlight: true,

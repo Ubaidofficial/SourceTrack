@@ -109,7 +109,7 @@ export default function Pricing() {
 
           <div className="mt-[54px]">
             <FAQSection faqs={[
-              { q: 'What counts as a tracked visit?', a: 'A tracked visit is one pageview — each time a visitor loads a page on your site. A visitor who views 5 pages in one session counts as 5 tracked visits, not 1. Conversion and custom events also count toward your monthly limit.' },
+              { q: 'What counts as a tracked visit?', a: 'A tracked visit is one pageview — each time a visitor loads a page on your site. A visitor who views 5 pages in one session counts as 5 tracked visits, not 1. Only pageviews count toward your monthly tracked-visit limit. Conversion events have their own separate monthly cap.' },
               { q: 'What happens if I reach my plan limit?', a: 'When you hit your monthly tracked-visit limit, new visits stop being recorded until the limit resets the following month. There are no overage charges — tracking simply pauses until the next cycle.' },
               { q: 'How do I install SourceTrack?', a: 'Paste one lightweight script tag into your site or add it through Google Tag Manager. Works on any website, Shopify store, Webflow site, or WordPress site. Setup takes about 5 minutes.' },
               { q: 'Does SourceTrack track AI referrals like ChatGPT traffic?', a: 'Yes — SourceTrack detects 22 AI domains including ChatGPT, Claude, Gemini, and Perplexity, and correctly attributes leads and revenue to the AI source instead of labeling them as direct traffic.' },
