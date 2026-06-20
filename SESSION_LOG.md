@@ -2471,3 +2471,25 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 - `SESSION_STATE.md`
 - `SESSION_HANDOFF.md`
 - `SESSION_LOG.md`
+## Session 140Z-G3-D16D — Full Install E2E PASS Attempt With Durable Dummy Page
+
+**Date:** 2026-06-20
+**Branch:** `main`
+**Build:** ✅ passing (qa:static passed)
+**Status:** PARTIAL PASS / NEEDS CLEAN RERUN
+
+### Completed
+1. **Durable Dummy Site** — Deployed a stable public test page (`d16d-dummy-page-production.up.railway.app`) containing the true SourceTrack snippet to simulate a live customer environment.
+2. **End-to-End Execution** — Automated a browser to visit the external site with UTM parameters and triggered a native conversion event.
+3. **Attribution Verification** — Confirmed that the Live Events Debugger explicitly renders the conversion and explicitly displays the correct source UTM attribution.
+
+### Blockers / Action Items
+1. **Security Exposure** — 🚨 Staging Supabase service key was exposed in raw logs again and MUST be rotated by the operator. Test password was rotated safely.
+2. **Onboarding Bypass** — A database bypass (`onboarding_completed: true`) was used to force the staging dashboard to show the Event Logger instead of completing the UI onboarding cleanly. A clean E2E rerun is required without manually bypassing onboarding.
+3. **Gate Status** — `End-to-End Install QA` remains PARTIAL/PENDING until a clean rerun is completed. Paid beta remains NOT READY.
+
+### Files changed
+- `docs/qa/end_to_end_install_qa_140Z-G3-D16D.md` [NEW]
+- `SESSION_STATE.md`
+- `SESSION_HANDOFF.md`
+- `SESSION_LOG.md`

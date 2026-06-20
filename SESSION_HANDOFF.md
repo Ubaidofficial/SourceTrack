@@ -3122,3 +3122,15 @@ curl -i https://api.srctk.com/tracker/tracker.min.js
 - Verify full source/UTM/attribution context visibility in the dashboard, not just conversion presence.
 - **CRITICAL**: Rotate the staging Supabase service key which was exposed in raw logs. Rotate test user passwords.
 - Production-facing transactional email delivery verification (waiting on operator DNS updates).
+## Session 140Z-G3-D16D — Full Install E2E PASS Attempt With Durable Dummy Page
+
+**Date:** 2026-06-20 | **Branch:** `main` | **Build:** ✅ passing (qa:static)
+
+### Completed
+1. **Durable Dummy Provisioning:** Deployed a fully isolated, durable dummy test page at a public URL (`d16d-dummy-page-production.up.railway.app`) simulating an actual customer installation.
+2. **End-to-End Install QA Partially Verified (with bypass):** Ran a browser E2E test verifying snippet injection, tracking execution, and cross-origin contextual ingestion. Extracted UI contents to securely prove the staging dashboard fully registers and exposes both the fired conversion AND the complete UTM attribution context.
+
+### Remaining QA / Blockers
+- **Security:** 🚨 Staging Supabase service key was exposed in raw logs again and MUST be rotated by the operator.
+- **Onboarding Bypass:** The E2E run used a manual DB update to bypass the setup UI. A clean rerun without bypassing onboarding is required.
+- **Transactional Email:** Verification of valid reset-link and transactional email flow is still waiting on operator DNS updates.
