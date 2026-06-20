@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import SetupDoctorCard from '../components/SetupDoctorCard'
-import { isSupportPreviewActive } from '../utils/supportPreview'
+
 
 export default function Setup() {
   const { user } = useAuth()
@@ -247,7 +247,7 @@ export default function Setup() {
                   <span className="flex items-center justify-center w-5 h-5 rounded-full bg-st-lime text-st-black text-xs font-extrabold">A</span>
                   <h4 className="font-semibold text-sm text-st-black dark:text-white">Copy your snippet</h4>
                 </div>
-                {isSupportPreviewActive() ? (
+                {activeSite?.support_preview ? (
                   <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/30 rounded-lg p-4 text-center text-sm text-amber-800 dark:text-amber-400">
                     Install snippet is hidden in support preview. Use Ops Console / Site Inspector for setup diagnostics.
                   </div>
@@ -352,7 +352,7 @@ export default function Setup() {
                 <div className="flex items-center gap-3">
                   <button
                     onClick={handleTestConversion}
-                    disabled={testConvLoading || !site || isSupportPreviewActive()}
+                    disabled={testConvLoading || !site || activeSite?.support_preview}
                     className="px-3 py-1.5 bg-st-black dark:bg-white text-white dark:text-st-black rounded-lg text-xs font-semibold disabled:opacity-50 transition-colors flex items-center gap-1.5 hover:opacity-90"
                   >
                     {testConvLoading ? (

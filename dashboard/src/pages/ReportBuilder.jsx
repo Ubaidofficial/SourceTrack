@@ -25,7 +25,7 @@ import {
 } from 'lucide-react'
 import ConversionExplanationModal from '../components/ConversionExplanationModal'
 import { hasFeature } from '../lib/planFeatures'
-import { isSupportPreviewActive } from '../utils/supportPreview'
+import { useSite } from '../contexts/SiteContext'
 import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
 import { SourceIcon, SourceChip } from '../components/SourceIcon'
 
@@ -439,7 +439,8 @@ export default function ReportBuilder() {
   const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const isPreview = isSupportPreviewActive()
+  const { activeSite } = useSite()
+  const isPreview = activeSite?.support_preview || false
   const [site, setSite] = useState(null)
 
   // Report state

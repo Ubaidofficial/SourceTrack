@@ -4,12 +4,13 @@ import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { fetchApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
+import { useSite } from '../contexts/SiteContext'
 import {
   Code, Bug, Copy, Check, ShieldCheck, AlertTriangle,
   ExternalLink, Globe, Tag, ShoppingCart, BarChart3, Plug, Mail, Radio, Trash, Play, RefreshCw,
   ChevronDown, ChevronUp, XCircle
 } from 'lucide-react'
-import { isSupportPreviewActive } from "../utils/supportPreview";
+
 import DashboardCard from '../components/DashboardCard'
 import StatusBadge from '../components/StatusBadge'
 import MetricTile from '../components/MetricTile'
@@ -126,7 +127,8 @@ const CollapsibleRow = ({
 export default function Integrations() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const isPreview = isSupportPreviewActive()
+  const { activeSite } = useSite()
+  const isPreview = activeSite?.support_preview || false
   const [site, setSite] = useState(null)
   const [copied, setCopied] = useState(false)
   const [copiedPixel, setCopiedPixel] = useState(false)

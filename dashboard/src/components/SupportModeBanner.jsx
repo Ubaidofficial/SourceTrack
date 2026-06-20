@@ -1,12 +1,9 @@
 import { Shield, X } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
 
 export default function SupportModeBanner({ siteName, siteDomain }) {
-  const navigate = useNavigate()
-
   function handleExit() {
     sessionStorage.removeItem('sourcetrack_admin_preview')
-    navigate('/ops')
+    window.location.href = '/ops'
   }
 
   const displayName = siteName || siteDomain || 'Site'

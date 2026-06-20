@@ -10,7 +10,6 @@ import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useSite } from '../contexts/SiteContext'
 import { LogoFull, LogoFullDark } from './Logo'
-import { isSupportPreviewActive, getSupportPreviewSite } from '../utils/supportPreview'
 import SupportModeBanner from './SupportModeBanner'
 
 // "Install" removed: Integrations already surfaces the snippet + "Full Setup Guide" link,
@@ -56,6 +55,7 @@ export default function Layout({ children }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const isPreview = activeSite?.support_preview || false
 
   // Query setup diagnostics for active site safely, silently, and without polling
   const { data: doctorData } = useQuery({
@@ -184,7 +184,7 @@ export default function Layout({ children }) {
               </button>
             )}
           </div>
-        ) : isSupportPreviewActive() ? (
+        ) : isPreview ? (
           <div className="px-4 py-3 border-b border-gray-200 dark:border-dark-border bg-slate-50 dark:bg-slate-900/30">
             <div className="flex items-center justify-between mb-1 select-none">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
@@ -202,7 +202,7 @@ export default function Layout({ children }) {
         ) : null}
 
         <nav className="flex-1 p-3 overflow-y-auto space-y-4">
-          {role !== 'super_admin' || isSupportPreviewActive() ? NAV_GROUPS.map((group, gi) => (
+          {role !== 'super_admin' || isPreview ? NAV_GROUPS.map((group, gi) => (
             <div key={gi}>
               {group.label && (
                 <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-600 select-none">
@@ -301,10 +301,10 @@ export default function Layout({ children }) {
           </div>
         </header>
 
-        {isSupportPreviewActive() && (
+        {isPreview && (
           <SupportModeBanner
-            siteName={getSupportPreviewSite()?.site_name}
-            siteDomain={getSupportPreviewSite()?.site_domain}
+            siteName={activeSite?.name}
+            siteDomain={activeSite?.domain}
           />
         )}
 

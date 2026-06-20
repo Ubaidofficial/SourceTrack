@@ -9,8 +9,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { Eye, RefreshCw, Copy, Check, BarChart3 } from 'lucide-react'
 import { safeNumber } from '../utils/numbers'
 import { SourceIcon } from '../components/SourceIcon'
-import { isSupportPreviewActive } from '../utils/supportPreview'
-
+import { useSite } from '../contexts/SiteContext'
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Filler)
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -102,6 +101,7 @@ function KPITile({ label, value, delta, sub }) {
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function Analytics() {
   const { user } = useAuth()
+  const { activeSite } = useSite()
   const [searchParams, setSearchParams] = useSearchParams()
   const [days, setDays] = useState(30)
   const [filters, setFilters] = useState([])
@@ -268,7 +268,7 @@ export default function Analytics() {
   }
 
   const hasData = safeNumber(kpis.pageviews, 0) > 0
-  const isPreview = isSupportPreviewActive()
+  const isPreview = activeSite?.support_preview || false
 
   if (!site) {
     if (isPreview) {

@@ -7,12 +7,12 @@ import { Copy, Check, ExternalLink, Globe, Link2, CreditCard, Link, ShieldCheck,
 import UTMBuilder from '../components/UTMBuilder'
 import { getTrialInfo, getPlanLabel, isPaidPlan } from '../lib/billing'
 import { hasFeature } from '../lib/planFeatures'
-import { isSupportPreviewActive } from '../utils/supportPreview'
+
 
 export default function Settings() {
   const { user } = useAuth()
   const { activeSite } = useSite()
-  const isPreview = isSupportPreviewActive()
+  const isPreview = activeSite?.support_preview || false
   const displaySiteKey = isPreview ? 'HIDDEN_IN_PREVIEW' : (activeSite?.site_key || 'YOUR_SITE_KEY')
 
   const [site, setSite]                 = useState(null)

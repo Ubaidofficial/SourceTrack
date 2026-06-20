@@ -97,7 +97,7 @@ export default function Admin() {
       site_domain: site.domain,
       site_id: site.id
     }))
-    navigate(`/dashboard?preview=${site.id}`)
+    window.location.href = `/dashboard?preview=${site.id}`
   }
 
   async function loadSiteDetail() {

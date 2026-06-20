@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { fetchApi } from '../lib/api'
 import { format, subDays } from 'date-fns'
 import { useAuth } from '../contexts/AuthContext'
+import { useSite } from '../contexts/SiteContext'
 import {
   Search, Download, Filter, Pencil, Check,
   UploadCloud, AlertTriangle, HelpCircle, X, Loader2, RefreshCw
@@ -14,7 +15,7 @@ import MetricTile from '../components/MetricTile'
 import StatusBadge from '../components/StatusBadge'
 import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
 import { safeNumber, formatCurrency, formatCurrencyDecimal, formatNumber, formatMultiplier } from '../utils/numbers'
-import { isSupportPreviewActive } from "../utils/supportPreview";
+
 import { hasFeature } from '../lib/planFeatures'
 import { Bar } from 'react-chartjs-2'
 import {
@@ -223,7 +224,8 @@ function CurrencyWarning({ status, spendCur, trackCur }) {
 export default function Campaigns() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const isPreview = isSupportPreviewActive()
+  const { activeSite } = useSite()
+  const isPreview = activeSite?.support_preview || false
   const [spendMap, setSpendMap] = useState({}) // { campaignName: spend }
   const [editingSpend, setEditingSpend] = useState(null)
   const [spendInput, setSpendInput] = useState('')
@@ -279,7 +281,7 @@ export default function Campaigns() {
       const search = params.toString()
       const nextUrl = window.location.pathname + (search ? `?${search}` : '')
       window.history.replaceState({}, document.title, nextUrl)
-      if (!isSupportPreviewActive()) {
+      if (!isPreview) {
         setImportModalOpen(true)
       }
     }
