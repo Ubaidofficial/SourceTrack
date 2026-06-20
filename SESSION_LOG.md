@@ -2425,3 +2425,24 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 ### 4. Documentation & Validation
 - Corrected "Responsive Poland" ➜ "Responsive Polish" typo in `docs/qa/premium_dark_mode_responsive_polish_140K.md`.
 - Static validation, offline safety, and production build checks all pass.
+
+## Session 140Z-G3-D16B — Provision and Execute Safe Install E2E Fixture
+
+**Date:** 2026-06-20
+**Branch:** `main`
+**Build:** ✅ passing (qa:static passed)
+**Status:** PARTIAL PASS / BLOCKED
+
+### Completed
+1. **Staging Fixture Provisioned** — Wrote and executed `scripts/seed-staging-fixture.mjs` to safely create a test user, test company, and test site on the staging database (`nrsvpwzekfrdrzkoecfk`) using the staging service key.
+2. **Environment Separation Validated** — The staging-seeded `site_key` was correctly rejected by the production API (`api.srctk.com`), confirming production is isolated from the staging database.
+3. **End-to-End Install Blocked** — The full browser-side E2E install flow and attribution integration verification remain blocked due to:
+   * Missing dummy site static hosting (e.g. Vercel/Netlify) to embed the cross-origin tracker.
+   * Staging API backend (`staging-api.sourcetrack.ai`) failing DNS resolution (NXDOMAIN).
+
+### Files changed
+- `docs/qa/end_to_end_install_qa_140Z-G3-D16B.md` [NEW]
+- Temporary local staging fixture helper was used and deleted before commit.
+- `SESSION_STATE.md`
+- `SESSION_HANDOFF.md`
+- `SESSION_LOG.md`

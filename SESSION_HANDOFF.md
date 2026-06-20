@@ -3096,3 +3096,15 @@ curl -i https://api.srctk.com/tracker/tracker.min.js
 
 ### Remaining QA (manual verification needed)
 - Push code to a PR on GitHub and verify the Actions workflow triggers and succeeds without secret dependencies or live service timeouts.
+
+## Session 140Z-G3-D16B — Provision and Execute Safe Install E2E Fixture
+
+**Date:** 2026-06-20 | **Branch:** `main` | **Build:** ✅ passing (qa:static)
+
+### Completed
+1. **Staging Fixture Provisioned** — Programmatically created a safe staging fixture using a temporary local helper script that was deleted before commit.
+2. **Verified DB Isolation** — Confirmed the production tracker API safely rejects the staging `site_key`.
+
+### Remaining QA (manual verification needed)
+- Provision a staging backend deploy for `staging-api.sourcetrack.ai`.
+- Host a dummy HTML test page to execute the actual E2E tracking script cross-origin flow.
