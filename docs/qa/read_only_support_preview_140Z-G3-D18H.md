@@ -40,7 +40,7 @@ The codebase successfully enforces read-only support preview at both the UI and 
 - Does not expose the customer navigation, "Add New Site", or "activeSite.site_key".
 
 ## Backend Preview Mutation Guard Behavior
-The middleware in `api/index.js` explicitly blocks all mutation methods (anything other than `GET`, `HEAD`, `OPTIONS`) that carry the `X-Sourcetrack-Support-Preview: true` header, responding with `403 Forbidden: Support preview is read-only`. Administrative routes (`/api/admin/*`) bypass this block to ensure the operator can still function from the Ops Console. 
+The middleware in `api/index.js` explicitly blocks all mutation methods (anything other than `GET`, `HEAD`, `OPTIONS`) that carry the `X-Sourcetrack-Support-Preview: true` header, responding with `403 Forbidden: Support preview is read-only`. Administrative routes (`/api/admin/*`) bypass this block to ensure the operator can still function from the Ops Console.
 
 The frontend wrapper in `dashboard/src/lib/api.js` automatically injects `X-Sourcetrack-Support-Preview: true` on all backend API requests if `isSupportPreviewActive()` resolves to true.
 
