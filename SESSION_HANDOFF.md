@@ -1,5 +1,11 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
+> **Handoff:** Session 140Z-G3-D14 — Attribution Accuracy + Signal Reliability Audit — **PARTIAL PASS.**
+> - **Audit:** Audited tracker and attribution engine code.
+> - **Tests:** Local deterministic tests pass, but live deployed E2E attribution testing remains BLOCKED.
+> - **Truthfulness:** No fake claims (e.g. "100% accurate") found in UI or docs.
+> - **Deliverable:** Created docs/qa/attribution_accuracy_signal_reliability_140Z-G3-D14.md.
+>
 > **Handoff:** Session 140Z-G3-D13 — Team/User Account Foundation Audit — **PASS.**
 > - **Audit:** Existing companies/company_members database schema and backend middleware audited.
 > - **Tenant Isolation:** Current single-workspace limitation combined with requireSiteMembership middleware securely isolates tenant data.
