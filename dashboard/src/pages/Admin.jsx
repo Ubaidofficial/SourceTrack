@@ -285,7 +285,7 @@ export default function Admin() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricTile label="Companies" value={totalCompanies.toLocaleString()}
           icon={Building2} iconBg="bg-lime-100" iconColor="text-lime-700" />
-        <MetricTile label="Users" value={totalUsers.toLocaleString()}
+        <MetricTile label="Members" value={totalUsers.toLocaleString()}
           icon={Users} iconBg="bg-blue-100" iconColor="text-blue-600" />
         <MetricTile label="Sites" value={totalSites.toLocaleString()}
           icon={Globe} iconBg="bg-green-100" iconColor="text-green-600" />
@@ -293,15 +293,15 @@ export default function Admin() {
           icon={Shield} iconBg="bg-purple-100" iconColor="text-purple-600" />
       </div>
 
-      <div className="flex gap-2 border-b border-gray-200">
+      <div className="flex gap-2 border-b border-gray-200 dark:border-[#252929]">
         {['companies', 'users', 'sites', 'site_inspector', 'feature_status', 'qa_notes', 'audit_log'].map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === tab
-                ? 'border-st-black text-st-black'
-                : 'border-transparent text-st-gray dark:text-gray-400 hover:text-gray-700'
+                ? 'border-st-black text-st-black dark:border-white dark:text-white'
+                : 'border-transparent text-st-gray dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
             }`}>
-            {tab === 'site_inspector' ? 'Site Inspector' : tab === 'feature_status' ? 'Features' : tab === 'qa_notes' ? 'QA Notes' : tab === 'audit_log' ? 'Audit Log' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {tab === 'site_inspector' ? 'Site Inspector' : tab === 'feature_status' ? 'Features' : tab === 'qa_notes' ? 'QA Notes' : tab === 'audit_log' ? 'Audit Log' : tab === 'users' ? 'Members' : tab.charAt(0).toUpperCase() + tab.slice(1)}
           </button>
         ))}
       </div>
@@ -316,19 +316,19 @@ export default function Admin() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Name</th>
-                    <th className="text-right py-2.5 px-3 text-xs font-medium text-st-gray">Members</th>
-                    <th className="text-right py-2.5 px-3 text-xs font-medium text-st-gray">Sites</th>
-                    <th className="text-right py-2.5 px-3 text-xs font-medium text-st-gray">Created</th>
+                  <tr className="border-b border-gray-100 dark:border-[#252929]">
+                    <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray dark:text-gray-400">Name</th>
+                    <th className="text-right py-2.5 px-3 text-xs font-medium text-st-gray dark:text-gray-400">Members</th>
+                    <th className="text-right py-2.5 px-3 text-xs font-medium text-st-gray dark:text-gray-400">Sites</th>
+                    <th className="text-right py-2.5 px-3 text-xs font-medium text-st-gray dark:text-gray-400">Created</th>
                   </tr>
                 </thead>
                 <tbody>
                   {companies.map((c) => (
-                    <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50">
+                    <tr key={c.id} className="border-b border-gray-50 dark:border-[#1A1D1D] hover:bg-gray-50 dark:hover:bg-[#1A1D1D]">
                       <td className="py-2.5 px-3 text-st-black dark:text-white font-medium">{c.name}</td>
-                      <td className="py-2.5 px-3 text-right text-gray-600">{c.member_count}</td>
-                      <td className="py-2.5 px-3 text-right text-gray-600">{c.site_count}</td>
+                      <td className="py-2.5 px-3 text-right text-gray-600 dark:text-gray-300">{c.member_count}</td>
+                      <td className="py-2.5 px-3 text-right text-gray-600 dark:text-gray-300">{c.site_count}</td>
                       <td className="py-2.5 px-3 text-right text-st-gray dark:text-gray-400 text-xs">
                         {new Date(c.created_at).toLocaleDateString()}
                       </td>
@@ -342,7 +342,7 @@ export default function Admin() {
       )}
 
       {activeTab === 'users' && (
-        <DashboardCard title="Users">
+        <DashboardCard title="Workspace Members">
           {loadErrors.users ? (
             <p className="text-sm text-red-500 py-4">{loadErrors.users}</p>
           ) : totalUsers === 0 ? (
@@ -351,18 +351,18 @@ export default function Admin() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Email</th>
-                    <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Company</th>
-                    <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Role</th>
-                    <th className="text-right py-2.5 px-3 text-xs font-medium text-st-gray">Joined</th>
+                  <tr className="border-b border-gray-100 dark:border-[#252929]">
+                    <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray dark:text-gray-400">Email</th>
+                    <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray dark:text-gray-400">Company</th>
+                    <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray dark:text-gray-400">Role</th>
+                    <th className="text-right py-2.5 px-3 text-xs font-medium text-st-gray dark:text-gray-400">Joined</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.map((u) => (
-                    <tr key={u.id} className="border-b border-gray-50 hover:bg-gray-50">
-                      <td className="py-2.5 px-3 text-st-black">{u.email}</td>
-                      <td className="py-2.5 px-3 text-gray-600">{u.company_name || '—'}</td>
+                    <tr key={u.id} className="border-b border-gray-50 dark:border-[#1A1D1D] hover:bg-gray-50 dark:hover:bg-[#1A1D1D]">
+                      <td className="py-2.5 px-3 text-st-black dark:text-white">{u.email}</td>
+                      <td className="py-2.5 px-3 text-gray-600 dark:text-gray-300">{u.company_name || '—'}</td>
                       <td className="py-2.5 px-3">
                         <StatusBadge status={u.role === 'admin' ? 'active' : 'pending'} label={u.role || 'none'} />
                       </td>
@@ -388,19 +388,19 @@ export default function Admin() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Domain</th>
-                    <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Company</th>
-                    <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Plan</th>
-                    <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Onboarding</th>
-                    <th className="text-right py-2.5 px-3 text-xs font-medium text-st-gray">Actions</th>
+                  <tr className="border-b border-gray-100 dark:border-[#252929]">
+                    <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray dark:text-gray-400">Domain</th>
+                    <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray dark:text-gray-400">Company</th>
+                    <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray dark:text-gray-400">Plan</th>
+                    <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray dark:text-gray-400">Onboarding</th>
+                    <th className="text-right py-2.5 px-3 text-xs font-medium text-st-gray dark:text-gray-400">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {sites.map((s) => (
-                    <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50">
+                    <tr key={s.id} className="border-b border-gray-50 dark:border-[#1A1D1D] hover:bg-gray-50 dark:hover:bg-[#1A1D1D]">
                       <td className="py-2.5 px-3 text-st-black dark:text-white truncate max-w-[200px]">{s.domain || s.name}</td>
-                      <td className="py-2.5 px-3 text-gray-600">{s.company_name || '—'}</td>
+                      <td className="py-2.5 px-3 text-gray-600 dark:text-gray-300">{s.company_name || '—'}</td>
                       <td className="py-2.5 px-3">
                         <StatusBadge
                           status={['starter','growth','scale'].includes(s.plan) ? 'active' : ['trial','free'].includes(s.plan) ? 'pending' : 'error'}

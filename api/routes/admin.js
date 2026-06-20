@@ -69,27 +69,50 @@ router.get('/users', async (_req, res) => {
   try {
     const { data: members, error } = await getSupabase()
       .from('company_members')
-      .select('id, company_id, user_id, role, created_at, companies (name)')
+      .select('id, company_id, user_id, role, created_at')
+      .order('created_at', { ascending: false })
 
     if (error) throw error
 
+    // Collect distinct non-null company_ids
+    const companyIds = [...new Set((members || []).map(m => m.company_id).filter(Boolean))]
+
+    const companyMap = {}
+    if (companyIds.length > 0) {
+      const { data: companies, error: compErr } = await getSupabase()
+        .from('companies')
+        .select('id, name')
+        .in('id', companyIds)
+
+      if (!compErr && companies) {
+        for (const c of companies) {
+          companyMap[c.id] = c.name
+        }
+      }
+    }
+
     // Fetch user emails from auth
     const enriched = await Promise.all((members || []).map(async (m) => {
+      let email = m.user_id
       try {
-        const { data: { user } } = await getSupabase().auth.admin.getUserById(m.user_id)
-        return {
-          ...m,
-          email: user?.email || m.user_id,
-          company_name: m.companies?.name || null
+        const { data: { user }, error: authErr } = await getSupabase().auth.admin.getUserById(m.user_id)
+        if (!authErr && user) {
+          email = user.email || m.user_id
         }
       } catch {
-        return { ...m, email: m.user_id, company_name: m.companies?.name || null }
+        /* best effort */
+      }
+
+      return {
+        ...m,
+        email,
+        company_name: m.company_id ? companyMap[m.company_id] || null : null
       }
     }))
 
     return res.json({ success: true, data: enriched, error: null })
   } catch (_err) {
-    console.error(_err)
+    console.error('[Admin /users Error]', _err.code || 'UNKNOWN_CODE', _err.message || _err)
     return res.status(500).json({ success: false, data: null, error: 'Failed to list users' })
   }
 })
