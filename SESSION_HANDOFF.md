@@ -1,5 +1,11 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
+> **Handoff:** Session 140Z-G3-D13 — Team/User Account Foundation Audit — **PASS.**
+> - **Audit:** Existing companies/company_members database schema and backend middleware audited.
+> - **Tenant Isolation:** Current single-workspace limitation combined with requireSiteMembership middleware securely isolates tenant data.
+> - **Security:** No code changes needed. Explicitly no broad enterprise RBAC, multi-tenant agency tools, or client-switching UI built.
+> - **Deliverable:** Created docs/qa/team_user_account_foundation_140Z-G3-D13.md.
+>
 > **Handoff:** Session 140Z-G3-D12 — Minimum Production Operator Readiness — **PASS.**
 > - **Audit:** Existing operator UI and super_admin role-based access audited as production-safe based on code review.
 > - **Access Model:** Safe operator checklist created. Role assignment uses robust Supabase raw_app_meta_data.
