@@ -1,5 +1,10 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
+> **Handoff:** Session 140Z-G3-D14B — Live Attribution E2E Closeout — **PARTIAL PASS / BLOCKED.**
+> - **Audit:** Investigated `site_key=1` test failure. Fixed stale hardcoded ID by updating script to read `SOURCETRACK_SITE_KEY` env var.
+> - **Tests:** Integration test properly fails when env var is missing. Live E2E testing remains BLOCKED until operator seeds a staging test fixture.
+> - **Deliverable:** Created `docs/qa/attribution_live_e2e_closeout_140Z-G3-D14B.md`.
+>
 > **Handoff:** Session 140Z-G3-D14 — Attribution Accuracy + Signal Reliability Audit — **PARTIAL PASS.**
 > - **Audit:** Audited tracker and attribution engine code.
 > - **Tests:** Local deterministic tests pass, but live deployed E2E attribution testing remains BLOCKED.

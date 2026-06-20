@@ -8,8 +8,14 @@ import { getSupabase } from '../api/lib/supabase.js';
 import assert from 'assert';
 
 const SOURCETRACK_API_URL = process.env.SOURCETRACK_API_URL || 'http://localhost:3000';
-const siteKey = '1';
+const siteKey = process.env.SOURCETRACK_SITE_KEY;
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+if (!siteKey || siteKey === '1' || !uuidPattern.test(siteKey)) {
+  console.error('❌ Integration test failed: SOURCETRACK_SITE_KEY environment variable is not set or is invalid.');
+  console.error('Operator action required: Seed a safe test fixture site on the staging database, then provide its UUID via SOURCETRACK_SITE_KEY to execute live E2E tracking and attribution flows.');
+  process.exit(1);
+}
 console.log('==================================================');
 console.log('    Controlled API/Integration Attribution Test');
 console.log('==================================================\n');
