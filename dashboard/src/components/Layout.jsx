@@ -10,6 +10,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useSite } from '../contexts/SiteContext'
 import { LogoFull, LogoFullDark } from './Logo'
+import { isSupportPreviewActive } from '../utils/supportPreview'
 
 // "Install" removed: Integrations already surfaces the snippet + "Full Setup Guide" link,
 // making a separate top-level Install entry redundant.
@@ -125,65 +126,82 @@ export default function Layout({ children }) {
         </div>
 
         {/* Site Switcher */}
-        <div className="px-4 py-3 border-b border-gray-200 dark:border-dark-border bg-gray-50/30 dark:bg-dark-hover/10">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-600 mb-1 select-none">
-            Active Site
-          </p>
-          {sitesLoading ? (
-            <div className="h-9 animate-pulse bg-gray-200 dark:bg-dark-hover rounded-lg" />
-          ) : sites.length > 1 ? (
-            <div className="relative group">
-              <select
-                value={activeSite?.site_key || ''}
-                onChange={(e) => setActiveSiteKey(e.target.value)}
-                className="w-full pl-3 pr-8 py-1.5 text-xs font-semibold text-st-black dark:text-white bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-sm hover:border-st-lime dark:hover:border-st-lime focus:outline-none focus:ring-1 focus:ring-st-lime transition-all appearance-none cursor-pointer font-sans"
+        {role !== 'super_admin' ? (
+          <div className="px-4 py-3 border-b border-gray-200 dark:border-dark-border bg-gray-50/30 dark:bg-dark-hover/10">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-600 mb-1 select-none">
+              Active Site
+            </p>
+            {sitesLoading ? (
+              <div className="h-9 animate-pulse bg-gray-200 dark:bg-dark-hover rounded-lg" />
+            ) : sites.length > 1 ? (
+              <div className="relative group">
+                <select
+                  value={activeSite?.site_key || ''}
+                  onChange={(e) => setActiveSiteKey(e.target.value)}
+                  className="w-full pl-3 pr-8 py-1.5 text-xs font-semibold text-st-black dark:text-white bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-sm hover:border-st-lime dark:hover:border-st-lime focus:outline-none focus:ring-1 focus:ring-st-lime transition-all appearance-none cursor-pointer font-sans"
+                >
+                  {sites.map((s) => (
+                    <option key={s.site_key || s.id} value={s.site_key || s.id}>
+                      {s.name || s.domain}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none">
+                  <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-gray-600 group-hover:text-st-lime transition-colors" />
+                </div>
+              </div>
+            ) : sites.length === 1 ? (
+              <div className="flex items-center justify-between px-3 py-1.5 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-sm">
+                <div className="min-w-0 flex-1 pr-2">
+                  <p className="text-xs font-semibold text-st-black dark:text-white truncate">{activeSite?.name || activeSite?.domain}</p>
+                  <p className="text-[9px] font-mono text-st-gray dark:text-gray-500 truncate">{activeSite?.site_key}</p>
+                </div>
+                {activeSite?.last_seen_at && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-st-lime animate-pulse shrink-0 ml-2" title="Active telemetry detected" />
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={() => {
+                  setSidebarOpen(false)
+                  navigate('/onboarding')
+                }}
+                className="w-full px-3 py-1.5 text-xs font-semibold text-center text-st-black bg-st-lime hover:bg-st-lime/90 rounded-lg shadow-sm transition-colors"
               >
-                {sites.map((s) => (
-                  <option key={s.site_key} value={s.site_key}>
-                    {s.name || s.domain}
-                  </option>
-                ))}
-              </select>
-              <div className="absolute inset-y-0 right-0 flex items-center pr-2.5 pointer-events-none">
-                <ChevronDown className="w-3.5 h-3.5 text-gray-400 dark:text-gray-600 group-hover:text-st-lime transition-colors" />
-              </div>
+                + Add New Site
+              </button>
+            )}
+            {activeSite && activeSite.onboarding_completed === false && activeSite.id && (
+              <button
+                onClick={() => {
+                  setSidebarOpen(false)
+                  navigate(`/onboarding?site_id=${activeSite.id}&mode=onboarding`)
+                }}
+                className="mt-2 w-full px-3 py-1.5 text-[11px] font-semibold text-center text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-950/40 transition-colors"
+              >
+                Resume setup
+              </button>
+            )}
+          </div>
+        ) : isSupportPreviewActive() ? (
+          <div className="px-4 py-3 border-b border-gray-200 dark:border-dark-border bg-amber-50/50 dark:bg-amber-950/20">
+            <div className="flex items-center justify-between mb-1 select-none">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                Active Site
+              </p>
+              <span className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-widest">Preview</span>
             </div>
-          ) : sites.length === 1 ? (
-            <div className="flex items-center justify-between px-3 py-1.5 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-sm">
+            <div className="flex items-center justify-between px-3 py-1.5 bg-white dark:bg-dark-card border border-amber-200 dark:border-amber-900/30 rounded-lg shadow-sm">
               <div className="min-w-0 flex-1 pr-2">
-                <p className="text-xs font-semibold text-st-black dark:text-white truncate">{activeSite?.name || activeSite?.domain}</p>
-                <p className="text-[9px] font-mono text-st-gray dark:text-gray-500 truncate">{activeSite?.site_key}</p>
+                <p className="text-xs font-semibold text-st-black dark:text-white truncate">{activeSite?.name || activeSite?.domain || 'Preview Site'}</p>
+                {activeSite?.domain && <p className="text-[9px] font-mono text-st-gray dark:text-gray-500 truncate">{activeSite?.domain}</p>}
               </div>
-              {activeSite?.last_seen_at && (
-                <span className="w-1.5 h-1.5 rounded-full bg-st-lime animate-pulse shrink-0 ml-2" title="Active telemetry detected" />
-              )}
             </div>
-          ) : (
-            <button
-              onClick={() => {
-                setSidebarOpen(false)
-                navigate('/onboarding')
-              }}
-              className="w-full px-3 py-1.5 text-xs font-semibold text-center text-st-black bg-st-lime hover:bg-st-lime/90 rounded-lg shadow-sm transition-colors"
-            >
-              + Add New Site
-            </button>
-          )}
-          {activeSite && activeSite.onboarding_completed === false && activeSite.id && (
-            <button
-              onClick={() => {
-                setSidebarOpen(false)
-                navigate(`/onboarding?site_id=${activeSite.id}&mode=onboarding`)
-              }}
-              className="mt-2 w-full px-3 py-1.5 text-[11px] font-semibold text-center text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-950/40 transition-colors"
-            >
-              Resume setup
-            </button>
-          )}
-        </div>
+          </div>
+        ) : null}
 
         <nav className="flex-1 p-3 overflow-y-auto space-y-4">
-          {NAV_GROUPS.map((group, gi) => (
+          {role !== 'super_admin' || isSupportPreviewActive() ? NAV_GROUPS.map((group, gi) => (
             <div key={gi}>
               {group.label && (
                 <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-600 select-none">
@@ -213,7 +231,7 @@ export default function Layout({ children }) {
                 ))}
               </div>
             </div>
-          ))}
+          )) : null}
           {role === 'super_admin' && (
             <div>
               <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-600 select-none">

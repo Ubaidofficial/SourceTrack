@@ -16,6 +16,7 @@ export default function Admin() {
   const [sites, setSites] = useState([])
   const [activeTab, setActiveTab] = useState('companies')
   const [loading, setLoading] = useState(true)
+  const [pageError, setPageError] = useState(null)
   const [siteDetailKey, setSiteDetailKey] = useState('')
   const [siteDetail, setSiteDetail] = useState(null)
   const [siteDetailLoading, setSiteDetailLoading] = useState(false)
@@ -40,21 +41,31 @@ export default function Admin() {
 
   async function loadData() {
     setLoading(true)
-    const token = (await supabase.auth.getSession()).data.session?.access_token
-    if (!token) return
+    setPageError(null)
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token
+      if (!token) {
+        setPageError('No active session.')
+        setLoading(false)
+        return
+      }
 
-    const headers = { Authorization: `Bearer ${token}` }
+      const headers = { Authorization: `Bearer ${token}` }
 
-    const [compRes, userRes, siteRes] = await Promise.all([
-      fetchApi('/admin/companies', { headers }),
-      fetchApi('/admin/users', { headers }),
-      fetchApi('/admin/sites', { headers })
-    ])
+      const [compRes, userRes, siteRes] = await Promise.all([
+        fetchApi('/admin/companies', { headers }),
+        fetchApi('/admin/users', { headers }),
+        fetchApi('/admin/sites', { headers })
+      ])
 
-    if (compRes) setCompanies(compRes)
-    if (userRes) setUsers(userRes)
-    if (siteRes) setSites(siteRes)
-    setLoading(false)
+      if (compRes) setCompanies(compRes)
+      if (userRes) setUsers(userRes)
+      if (siteRes) setSites(siteRes)
+    } catch (err) {
+      setPageError(err.message || 'Failed to load ops console data.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function handlePreview(site) {
@@ -213,7 +224,22 @@ export default function Admin() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black dark:border-white" />
+      </div>
+    )
+  }
+
+  if (pageError) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <div className="max-w-md w-full bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-xl p-6 text-center">
+          <Shield className="w-8 h-8 text-red-500 mx-auto mb-3" />
+          <h3 className="text-lg font-bold text-red-700 dark:text-red-400 mb-1">Access Denied or Failed</h3>
+          <p className="text-sm text-red-600 dark:text-red-300 mb-4">{pageError}</p>
+          <button onClick={loadData} className="px-4 py-2 bg-red-100 dark:bg-red-900/40 hover:bg-red-200 dark:hover:bg-red-900/60 text-red-700 dark:text-red-300 rounded-lg text-sm font-semibold transition-colors">
+            Retry
+          </button>
+        </div>
       </div>
     )
   }

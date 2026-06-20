@@ -31,6 +31,7 @@ import Admin from './pages/Admin'
 import Analytics from './pages/Analytics'
 import AdminRoute from './components/AdminRoute'
 import { getAuthAppRole } from './utils/authRole'
+import { isSupportPreviewActive } from './utils/supportPreview'
 // User Docs
 import DocsHome from './pages/docs/DocsHome'
 import DocsQuickstart from './pages/docs/DocsQuickstart'
@@ -186,6 +187,11 @@ function ProtectedRoute({ children }) {
   }
 
   if (!user) return <Navigate to="/login" replace />
+
+  // Enforce operator shell isolation: super admins cannot access customer shell without explicit preview
+  if (getAuthAppRole(user) === 'super_admin' && !isSupportPreviewActive() && pathname !== '/ops') {
+    return <Navigate to="/ops" replace />
+  }
 
   // ── Phase 2: onboarding/me in-flight ──────────────────────────────────────
   if (onboarding.loading) {
