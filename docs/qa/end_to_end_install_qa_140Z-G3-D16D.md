@@ -9,7 +9,7 @@ Verify the End-to-End install flow (snippet injection, tracking, conversion, and
 ## 1. Security Cleanup
 **PARTIAL**
 - **Staging Key Exposure:** 🚨 SECURITY NOTE: The staging Supabase service key was exposed in raw logs again and MUST be rotated.
-- **Test Password Rotation:** The password for the staging test user account used in D16C was rotated. 
+- **Test Password Rotation:** The password for the staging test user account used in D16C was rotated.
 - No new secrets were embedded in this document, but raw logs contain sensitive data.
 
 ## 2. Durable Dummy Page Status
@@ -45,7 +45,7 @@ Verify the End-to-End install flow (snippet injection, tracking, conversion, and
 
 ## 8. Console & Network Errors
 - No script syntax errors or CORS errors occurred.
-- The `tracker.min.js` loaded and bound to the conversion trigger natively. 
+- The `tracker.min.js` loaded and bound to the conversion trigger natively.
 
 ## 9. Data Safety
 - **Production Data:** No production customer data was touched or mutated.
