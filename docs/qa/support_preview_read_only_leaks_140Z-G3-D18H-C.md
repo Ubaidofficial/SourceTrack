@@ -1,9 +1,9 @@
 # Support Preview Read-Only Leaks - 140Z-G3-D18H-C
 
 ## Overview
-This document logs the fixes for the remaining read-only state leaks in the Support Preview feature discovered via production screenshots following the D18H-B runtime fix. 
+This document logs the fixes for the remaining read-only state leaks in the Support Preview feature discovered via production screenshots following the D18H-B runtime fix.
 
-**Current verdict:** PARTIAL PASS / LOCAL ONLY  
+**Current verdict:** PARTIAL PASS / LOCAL ONLY
 *Production retest after deploy is still pending. Paid beta remains NOT READY.*
 
 ## Issue Context
@@ -23,7 +23,7 @@ Production validation found that while the Support Preview runtime errors were r
 
 ### 2. Integrations (`/app/integrations`)
 - **Root Cause:** Webhook secrets were rendered directly in the DOM. Certain nested connection forms and API token links were not properly hidden.
-- **Fix:** 
+- **Fix:**
   - **Hidden:** Webhook signing secret (now displays `HIDDEN_IN_PREVIEW`), all "Save Configuration" / "Sync Now" / "Connect" forms and action buttons in Support Preview (Google Ads, Meta Ads, Search Console, Webhooks) are wrapped in `!isPreview` or replaced by read-only placeholders. The "Manage Server API Tokens" link is hidden.
   - **Allowed:** Docs links, status badges, read-only Details copy, and explanatory descriptions.
 
