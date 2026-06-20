@@ -19,6 +19,10 @@ export default function Admin() {
   const [siteDetailKey, setSiteDetailKey] = useState('')
   const [siteDetail, setSiteDetail] = useState(null)
   const [siteDetailLoading, setSiteDetailLoading] = useState(false)
+  const [siteNotes, setSiteNotes] = useState([])
+  const [newNote, setNewNote] = useState('')
+  const [repairForm, setRepairForm] = useState({ name: '', domain: '', reason: '' })
+  const [repairing, setRepairing] = useState(false)
   const [featureStatus, setFeatureStatus] = useState(null)
   const [featureLoading, setFeatureLoading] = useState(false)
   const [rechecking, setRechecking] = useState(false)
@@ -55,12 +59,11 @@ export default function Admin() {
 
   async function handlePreview(site) {
     sessionStorage.setItem('sourcetrack_admin_preview', JSON.stringify({
-      site_key: site.site_key,
       site_name: site.name || site.domain,
       site_domain: site.domain,
       site_id: site.id
     }))
-    navigate(`/dashboard?preview=${site.site_key}`)
+    navigate(`/dashboard?preview=${site.id}`)
   }
 
   async function loadSiteDetail() {
@@ -71,8 +74,58 @@ export default function Admin() {
       const headers = { Authorization: `Bearer ${token}` }
       const data = await fetchApi(`/admin/site-detail?site_key=${encodeURIComponent(siteDetailKey)}`, { headers })
       setSiteDetail(data)
+      if (data && data.site && data.site.id) {
+        setRepairForm({ name: data.site.name || '', domain: data.site.domain || '', reason: '' })
+        loadSiteNotes(data.site.id)
+      }
     } catch { setSiteDetail({ error: 'Failed to load site detail' }) }
     finally { setSiteDetailLoading(false) }
+  }
+
+  async function loadSiteNotes(siteId) {
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token
+      const headers = { Authorization: `Bearer ${token}` }
+      const data = await fetchApi(`/admin/site-notes/${siteId}`, { headers })
+      setSiteNotes(data || [])
+    } catch { /* */ }
+  }
+
+  async function handleAddNote() {
+    if (!newNote.trim() || !siteDetail?.site?.id) return
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token
+      const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+      await fetchApi('/admin/site-notes', {
+        method: 'POST',
+        headers,
+        body: { site_id: siteDetail.site.id, note: newNote }
+      })
+      setNewNote('')
+      loadSiteNotes(siteDetail.site.id)
+    } catch { /* */ }
+  }
+
+  async function handleRepair() {
+    if (!repairForm.reason.trim() || !siteDetail?.site?.id) return
+    setRepairing(true)
+    try {
+      const token = (await supabase.auth.getSession()).data.session?.access_token
+      const headers = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+      const data = await fetchApi('/admin/site-detail', {
+        method: 'PUT',
+        headers,
+        body: { site_id: siteDetail.site.id, name: repairForm.name, domain: repairForm.domain, reason: repairForm.reason }
+      })
+      if (data && data.success !== false) {
+        setSiteDetail(prev => ({
+          ...prev,
+          site: { ...prev.site, name: data.name, domain: data.domain }
+        }))
+        setRepairForm(prev => ({ ...prev, reason: '' }))
+      }
+    } catch { /* */ }
+    finally { setRepairing(false) }
   }
 
   async function loadFeatureStatus() {
@@ -322,7 +375,7 @@ export default function Admin() {
                 type="text"
                 value={siteDetailKey}
                 onChange={(e) => setSiteDetailKey(e.target.value)}
-                placeholder="Site key (e.g., a1b2c3d4-...)"
+                placeholder="Site key or ID (e.g. 123456...)"
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
                 onKeyDown={(e) => e.key === 'Enter' && loadSiteDetail()}
               />
@@ -344,7 +397,7 @@ export default function Admin() {
             <div className="space-y-4">
               <DashboardCard title="Site Info" subtitle={`${siteDetail.site?.domain || siteDetail.site?.name || 'Unnamed'}`}>
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div><p className="text-xs text-st-gray">Site Key</p><p className="font-mono text-xs text-st-black dark:text-white truncate">{siteDetail.site?.site_key}</p></div>
+                  <div><p className="text-xs text-st-gray">Site Key</p><p className="font-mono text-xs text-st-black dark:text-white truncate">{siteDetail.site?.site_key_redacted || 'Redacted'}</p></div>
                   <div><p className="text-xs text-st-gray">Plan</p><StatusBadge status={['starter','growth','scale'].includes(siteDetail.site?.plan) ? 'active' : ['trial','free'].includes(siteDetail.site?.plan) ? 'pending' : 'error'} label={siteDetail.site?.plan || 'unknown'} /></div>
                   <div><p className="text-xs text-st-gray">Created</p><p className="text-st-black">{siteDetail.site?.created_at ? new Date(siteDetail.site.created_at).toLocaleDateString() : '—'}</p></div>
                   <div><p className="text-xs text-st-gray">Company</p><p className="text-st-black">{siteDetail.site?.company_name || '—'}</p></div>
@@ -353,34 +406,69 @@ export default function Admin() {
                 </div>
               </DashboardCard>
 
-              <DashboardCard title="Onboarding" subtitle={`Step: ${siteDetail.onboarding?.state?.current_step || 1} · Completed: ${siteDetail.onboarding?.completed ? 'Yes' : 'No'}`}>
+              <DashboardCard title="Onboarding & Setup Status" subtitle={`Step: ${siteDetail.onboarding?.state?.current_step || 1} · Completed: ${siteDetail.onboarding?.completed ? 'Yes' : 'No'}`}>
                 <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div><p className="text-xs text-st-gray">Setup Status</p><p className="font-medium text-st-black">{siteDetail.setup_status_plain || 'Unknown'}</p></div>
                   <div><p className="text-xs text-st-gray">Business Type</p><p className="text-st-black">{siteDetail.onboarding?.state?.business_type || '—'}</p></div>
-                  <div><p className="text-xs text-st-gray">Install Method</p><p className="text-st-black">{siteDetail.onboarding?.state?.install_method || '—'}</p></div>
                   <div className="col-span-2"><p className="text-xs text-st-gray">Selected Conversions</p><p className="text-st-black">{(siteDetail.onboarding?.state?.selected_conversions || []).join(', ') || '—'}</p></div>
-                  <div><p className="text-xs text-st-gray">Completed</p><StatusBadge status={siteDetail.onboarding?.completed ? 'verified' : 'pending'} label={siteDetail.onboarding?.completed ? 'Yes' : 'No'} /></div>
+                  <div><p className="text-xs text-st-gray">Install Status</p><StatusBadge status={siteDetail.install?.status === 'verified' ? 'verified' : siteDetail.install?.status === 'not_installed' ? 'pending' : 'error'} label={siteDetail.install?.status || 'unknown'} /></div>
+                  <div><p className="text-xs text-st-gray">Last Event</p><p className="text-st-black">{siteDetail.install?.last_event_type || '—'}</p></div>
+                  <div><p className="text-xs text-st-gray">Last Event At</p><p className="text-st-black">{siteDetail.install?.last_event_timestamp ? new Date(siteDetail.install.last_event_timestamp).toLocaleString() : '—'}</p></div>
+                  <div><p className="text-xs text-st-gray">Event Domain</p><p className="text-st-black">{siteDetail.install?.domain || '—'}</p></div>
                 </div>
               </DashboardCard>
 
-              <DashboardCard title="Install Verification" subtitle="Live tracking status from telemetry">
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div><p className="text-xs text-st-gray">Status</p><StatusBadge status={siteDetail.install?.status === 'verified' ? 'verified' : siteDetail.install?.status === 'not_installed' ? 'pending' : 'error'} label={siteDetail.install?.status || 'unknown'} /></div>
-                  <div><p className="text-xs text-st-gray">Last Event Type</p><p className="text-st-black">{siteDetail.install?.last_event_type || '—'}</p></div>
-                  <div><p className="text-xs text-st-gray">Last Event At</p><p className="text-st-black">{siteDetail.install?.last_event_timestamp ? new Date(siteDetail.install.last_event_timestamp).toLocaleString() : '—'}</p></div>
-                  <div><p className="text-xs text-st-gray">Domain</p><p className="text-st-black">{siteDetail.install?.domain || '—'}</p></div>
+              <DashboardCard title="Internal Support Notes" subtitle="Private operator notes">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    {siteNotes.length === 0 ? (
+                      <p className="text-xs text-st-gray italic">No support notes for this site.</p>
+                    ) : (
+                      siteNotes.map(note => (
+                        <div key={note.id} className="bg-gray-50 dark:bg-[#1A1D1D] p-3 rounded-lg border border-gray-100 dark:border-[#252929]">
+                          <p className="text-xs text-st-gray mb-1">{note.admin_email} · {new Date(note.created_at).toLocaleString()}</p>
+                          <p className="text-sm text-st-black dark:text-white whitespace-pre-wrap">{note.note}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <input type="text" value={newNote} onChange={(e) => setNewNote(e.target.value)} placeholder="Add a new note..." className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none" />
+                    <button onClick={handleAddNote} disabled={!newNote.trim()} className="px-4 py-2 bg-[#1F2323] hover:bg-[#171B1B] text-white rounded-lg text-sm disabled:opacity-50">Add</button>
+                  </div>
+                  <p className="text-[10px] text-st-gray mt-2 font-medium">⚠️ WARNING: Do not paste passwords, raw tokens, full site keys, webhook secrets, reset links, or private customer PII in these notes.</p>
+                </div>
+              </DashboardCard>
+
+              <DashboardCard title="Repair Actions" subtitle="Modifying actions are securely logged">
+                <div className="space-y-4 max-w-lg">
+                  <div>
+                    <label className="block text-xs font-medium text-st-gray mb-1">Display Name</label>
+                    <input type="text" value={repairForm.name} onChange={(e) => setRepairForm({...repairForm, name: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-st-gray mb-1">Domain</label>
+                    <input type="text" value={repairForm.domain} onChange={(e) => setRepairForm({...repairForm, domain: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-st-gray mb-1">Reason for change (required)</label>
+                    <input type="text" value={repairForm.reason} onChange={(e) => setRepairForm({...repairForm, reason: e.target.value})} placeholder="e.g. Customer requested domain typo fix" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                  </div>
+                  <button onClick={handleRepair} disabled={repairing || !repairForm.reason.trim()} className="px-4 py-2 bg-amber-100 text-amber-800 rounded-lg text-sm font-medium hover:bg-amber-200 disabled:opacity-50">
+                    {repairing ? 'Saving...' : 'Execute Repair'}
+                  </button>
                 </div>
               </DashboardCard>
 
               <div className="flex justify-end">
                 <button
                   onClick={() => {
-                    sessionStorage.setItem('sourcetrack_admin_preview', JSON.stringify({
-                      site_key: siteDetail.site?.site_key,
-                      site_name: siteDetail.site?.name || siteDetail.site?.domain,
-                      site_domain: siteDetail.site?.domain,
-                      site_id: siteDetail.site?.id
-                    }))
-                    navigate(`/dashboard?preview=${siteDetail.site?.site_key}`)
+                    handlePreview({
+                      id: siteDetail.site?.id,
+                      site_key: siteDetail.site?.site_key_redacted,
+                      name: siteDetail.site?.name,
+                      domain: siteDetail.site?.domain
+                    })
                   }}
                   className="px-4 py-2 bg-amber-100 text-amber-800 rounded-lg text-sm font-medium hover:bg-amber-200 flex items-center gap-2"
                 >

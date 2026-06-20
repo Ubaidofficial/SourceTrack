@@ -107,13 +107,23 @@ router.get('/sites', async (_req, res) => {
     const enriched = await Promise.all((sites || []).map(async (s) => {
       try {
         const { data: { user } } = await getSupabase().auth.admin.getUserById(s.owner_id)
+        const redactedKey = s.site_key ? s.site_key.substring(0, 8) + '...' : null
+        delete s.site_key
         return {
           ...s,
+          site_key_redacted: redactedKey,
           owner_email: user?.email || s.owner_id,
           company_name: s.companies?.name || null
         }
       } catch {
-        return { ...s, owner_email: s.owner_id, company_name: s.companies?.name || null }
+        const redactedKey = s.site_key ? s.site_key.substring(0, 8) + '...' : null
+        delete s.site_key
+        return {
+          ...s,
+          site_key_redacted: redactedKey,
+          owner_email: s.owner_id,
+          company_name: s.companies?.name || null
+        }
       }
     }))
 
@@ -208,23 +218,29 @@ router.post('/preview', async (req, res) => {
   }
 })
 
-// GET /api/admin/preview/:siteKey — aggregated dashboard data for support-mode preview
-// Returns KPI summary, top sources, and conversion count filtered by siteKey.
+// GET /api/admin/preview/:siteKeyOrId — aggregated dashboard data for support-mode preview
 // Uses PostHog HogQL — admin stays authenticated as super_admin, no identity switch.
-router.get('/preview/:siteKey', async (req, res) => {
+router.get('/preview/:siteKeyOrId', async (req, res) => {
   const logAction = makeAuditLogger(req)
   try {
-    const siteKey = req.params.siteKey
-    if (!siteKey) {
-      return res.status(400).json({ success: false, data: null, error: 'site_key is required' })
+    const keyOrId = req.params.siteKeyOrId
+    if (!keyOrId) {
+      return res.status(400).json({ success: false, data: null, error: 'site identifier is required' })
     }
 
-    // Look up site metadata
-    const { data: site, error: siteErr } = await getSupabase()
+    // Look up site metadata by ID or Site Key
+    let siteQuery = getSupabase()
       .from('sites')
       .select('id, site_key, name, domain, plan, created_at, onboarding_completed, onboarding_state')
-      .eq('site_key', siteKey)
-      .single()
+
+    // Check if UUID
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(keyOrId)) {
+      siteQuery = siteQuery.eq('id', keyOrId)
+    } else {
+      siteQuery = siteQuery.eq('site_key', keyOrId)
+    }
+
+    const { data: site, error: siteErr } = await siteQuery.single()
 
     if (siteErr || !site) {
       return res.status(404).json({ success: false, data: null, error: 'Site not found' })
@@ -329,16 +345,23 @@ router.get('/preview/:siteKey', async (req, res) => {
 router.get('/site-detail', async (req, res) => {
   const logAction = makeAuditLogger(req)
   try {
-    const siteKey = req.query.site_key
-    if (!siteKey) {
+    const siteKeyOrId = req.query.site_key
+    if (!siteKeyOrId) {
       return res.status(400).json({ success: false, data: null, error: 'site_key is required' })
     }
 
-    const { data: site, error } = await getSupabase()
+    let siteQuery = getSupabase()
       .from('sites')
       .select('id, site_key, name, domain, plan, created_at, onboarding_completed, onboarding_state, company_id, owner_id, companies(name)')
-      .eq('site_key', siteKey)
-      .single()
+
+    // Check if UUID
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(siteKeyOrId)) {
+      siteQuery = siteQuery.eq('id', siteKeyOrId)
+    } else {
+      siteQuery = siteQuery.eq('site_key', siteKeyOrId)
+    }
+
+    const { data: site, error } = await siteQuery.single()
 
     if (error || !site) {
       return res.status(404).json({ success: false, data: null, error: 'Site not found' })
@@ -360,31 +383,51 @@ router.get('/site-detail', async (req, res) => {
         FROM events
         WHERE properties.site_id = '${String(site.id).replace(/'/g, "''")}'
         ORDER BY timestamp DESC
-        LIMIT 1
+        LIMIT 50
       `, 'admin_site_detail')
+
+      let hasPageview = false
+      let hasConversion = false
+      let latestEvent = null
+
       if (rows && rows.length > 0) {
-        const [event, timestamp, pageUrl] = rows[0]
+        latestEvent = { event: rows[0][0], timestamp: rows[0][1], pageUrl: rows[0][2] }
+        for (const [event] of rows) {
+          if (event === '$pageview') hasPageview = true
+          if (event === '$conversion') hasConversion = true
+        }
+
         let domain = null
-        try { if (pageUrl) domain = new URL(pageUrl).hostname } catch { /* */ }
+        try { if (latestEvent.pageUrl) domain = new URL(latestEvent.pageUrl).hostname } catch { /* */ }
         installStatus = {
           status: 'verified',
-          last_event_type: event,
-          last_event_timestamp: timestamp,
-          domain
+          last_event_type: latestEvent.event,
+          last_event_timestamp: latestEvent.timestamp,
+          domain,
+          has_pageview: hasPageview,
+          has_conversion: hasConversion
         }
       } else {
-        installStatus = { status: 'not_installed', last_event_type: null, last_event_timestamp: null, domain: null }
+        installStatus = { status: 'not_installed', last_event_type: null, last_event_timestamp: null, domain: null, has_pageview: false, has_conversion: false }
       }
-    } catch { installStatus = { status: 'error', last_event_type: null, last_event_timestamp: null, domain: null } }
+    } catch { installStatus = { status: 'error', last_event_type: null, last_event_timestamp: null, domain: null, has_pageview: false, has_conversion: false } }
 
-    logAction('view_site_detail', 'site', siteKey)
+    let setupStatus = 'Needs help'
+    if (!site.domain) setupStatus = 'No site yet'
+    else if (installStatus.status === 'not_installed') setupStatus = 'Snippet not seen'
+    else if (installStatus.has_pageview && !installStatus.has_conversion) setupStatus = 'Conversion not seen'
+    else if (installStatus.has_pageview && installStatus.has_conversion) setupStatus = 'Setup looks healthy'
+    else if (installStatus.status === 'verified') setupStatus = 'Pageview seen'
+
+    logAction('view_site_detail', 'site', site.id)
 
     return res.json({
       success: true,
       data: {
         site: {
           id: site.id,
-          site_key: site.site_key,
+          site_key_redacted: site.site_key ? site.site_key.substring(0, 8) + '...' : null,
+          full_site_key_hidden: true,
           name: site.name,
           domain: site.domain,
           plan: site.plan,
@@ -398,13 +441,110 @@ router.get('/site-detail', async (req, res) => {
           completed: site.onboarding_completed,
           state: site.onboarding_state || null
         },
-        install: installStatus
+        install: installStatus,
+        setup_status_plain: setupStatus
       },
       error: null
     })
   } catch (_err) {
     console.error(_err)
     return res.status(500).json({ success: false, data: null, error: 'Site detail query failed' })
+  }
+})
+
+// PUT /api/admin/site-detail — safe repair actions (name, domain)
+router.put('/site-detail', async (req, res) => {
+  const logAction = makeAuditLogger(req)
+  try {
+    const { site_id, name, domain, reason } = req.body
+    if (!site_id || !reason) {
+      return res.status(400).json({ success: false, error: 'site_id and reason are required' })
+    }
+
+    const updates = {}
+    if (name !== undefined) updates.name = name.trim()
+    if (domain !== undefined) updates.domain = domain.trim()
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ success: false, error: 'Nothing to update' })
+    }
+
+    const { data: updated, error } = await getSupabase()
+      .from('sites')
+      .update(updates)
+      .eq('id', site_id)
+      .select('id, site_key, name, domain')
+      .single()
+
+    if (error || !updated) {
+      return res.status(404).json({ success: false, error: 'Site update failed' })
+    }
+
+    logAction('update_site_details', 'site', updated.id, { updates, reason })
+
+    const updatedData = { ...updated, site_key_redacted: updated.site_key.substring(0, 8) + '...' }
+    delete updatedData.site_key
+
+    return res.json({ success: true, data: updatedData, error: null })
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Update failed' })
+  }
+})
+
+// GET /api/admin/site-notes/:siteId — get internal support notes
+router.get('/site-notes/:siteId', async (req, res) => {
+  try {
+    const { data, error } = await getSupabase()
+      .from('site_support_notes')
+      .select('*, admin_user_id')
+      .eq('site_id', req.params.siteId)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      // Table might not exist if migration didn't run, fail safely
+      return res.json({ success: true, data: [], error: null })
+    }
+
+    // Attempt to resolve emails
+    const enriched = await Promise.all((data || []).map(async (n) => {
+      try {
+        const { data: { user } } = await getSupabase().auth.admin.getUserById(n.admin_user_id)
+        return { ...n, admin_email: user?.email || n.admin_user_id }
+      } catch { return { ...n, admin_email: n.admin_user_id } }
+    }))
+
+    return res.json({ success: true, data: enriched, error: null })
+  } catch {
+    return res.json({ success: true, data: [], error: null })
+  }
+})
+
+// POST /api/admin/site-notes — add a support note
+router.post('/site-notes', async (req, res) => {
+  const logAction = makeAuditLogger(req)
+  try {
+    const { site_id, note } = req.body
+    if (!site_id || typeof note !== 'string' || !note.trim()) {
+      return res.status(400).json({ success: false, error: 'site_id and note are required' })
+    }
+    const cleanNote = note.trim()
+    if (cleanNote.length > 5000) {
+      return res.status(400).json({ success: false, error: 'Note exceeds maximum length of 5000 characters' })
+    }
+
+    const { data, error } = await getSupabase()
+      .from('site_support_notes')
+      .insert({ site_id, admin_user_id: req.user.id, note: cleanNote })
+      .select()
+      .single()
+
+    if (error) throw error
+
+    logAction('add_support_note', 'site', site_id, { note_length: cleanNote.length })
+
+    return res.json({ success: true, data, error: null })
+  } catch (err) {
+    return res.status(500).json({ success: false, error: 'Failed to add note' })
   }
 })
 
