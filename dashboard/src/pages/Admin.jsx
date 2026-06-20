@@ -17,6 +17,7 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState('companies')
   const [loading, setLoading] = useState(true)
   const [pageError, setPageError] = useState(null)
+  const [loadErrors, setLoadErrors] = useState({})
   const [siteDetailKey, setSiteDetailKey] = useState('')
   const [siteDetail, setSiteDetail] = useState(null)
   const [siteDetailLoading, setSiteDetailLoading] = useState(false)
@@ -42,6 +43,7 @@ export default function Admin() {
   async function loadData() {
     setLoading(true)
     setPageError(null)
+    setLoadErrors({})
     try {
       const token = (await supabase.auth.getSession()).data.session?.access_token
       if (!token) {
@@ -52,15 +54,36 @@ export default function Admin() {
 
       const headers = { Authorization: `Bearer ${token}` }
 
-      const [compRes, userRes, siteRes] = await Promise.all([
+      const [compRes, userRes, siteRes] = await Promise.allSettled([
         fetchApi('/admin/companies', { headers }),
         fetchApi('/admin/users', { headers }),
         fetchApi('/admin/sites', { headers })
       ])
 
-      if (compRes) setCompanies(compRes)
-      if (userRes) setUsers(userRes)
-      if (siteRes) setSites(siteRes)
+      const newErrors = {}
+
+      if (compRes.status === 'fulfilled' && compRes.value) {
+        setCompanies(compRes.value)
+      } else {
+        setCompanies([])
+        newErrors.companies = 'Failed to load companies.'
+      }
+
+      if (userRes.status === 'fulfilled' && userRes.value) {
+        setUsers(userRes.value)
+      } else {
+        setUsers([])
+        newErrors.users = 'Failed to load users.'
+      }
+
+      if (siteRes.status === 'fulfilled' && siteRes.value) {
+        setSites(siteRes.value)
+      } else {
+        setSites([])
+        newErrors.sites = 'Failed to load sites.'
+      }
+
+      setLoadErrors(newErrors)
     } catch (err) {
       setPageError(err.message || 'Failed to load ops console data.')
     } finally {
@@ -284,111 +307,123 @@ export default function Admin() {
       </div>
 
       {activeTab === 'companies' && (
-        <DashboardCard title="Companies" subtitle={`${totalCompanies} total`}>
-          {companies.length === 0 ? (
-            <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">No companies yet.</p>
+        <DashboardCard title="Companies">
+          {loadErrors.companies ? (
+            <p className="text-sm text-red-500 py-4">{loadErrors.companies}</p>
+          ) : totalCompanies === 0 ? (
+            <p className="text-sm text-st-gray dark:text-gray-400 py-4">No companies found.</p>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Name</th>
-                  <th className="text-right py-2.5 px-3 text-xs font-medium text-st-gray">Members</th>
-                  <th className="text-right py-2.5 px-3 text-xs font-medium text-st-gray">Sites</th>
-                  <th className="text-right py-2.5 px-3 text-xs font-medium text-st-gray">Created</th>
-                </tr>
-              </thead>
-              <tbody>
-                {companies.map((c) => (
-                  <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="py-2.5 px-3 text-st-black dark:text-white font-medium">{c.name}</td>
-                    <td className="py-2.5 px-3 text-right text-gray-600">{c.member_count}</td>
-                    <td className="py-2.5 px-3 text-right text-gray-600">{c.site_count}</td>
-                    <td className="py-2.5 px-3 text-right text-st-gray dark:text-gray-400 text-xs">
-                      {new Date(c.created_at).toLocaleDateString()}
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Name</th>
+                    <th className="text-right py-2.5 px-3 text-xs font-medium text-st-gray">Members</th>
+                    <th className="text-right py-2.5 px-3 text-xs font-medium text-st-gray">Sites</th>
+                    <th className="text-right py-2.5 px-3 text-xs font-medium text-st-gray">Created</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {companies.map((c) => (
+                    <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50">
+                      <td className="py-2.5 px-3 text-st-black dark:text-white font-medium">{c.name}</td>
+                      <td className="py-2.5 px-3 text-right text-gray-600">{c.member_count}</td>
+                      <td className="py-2.5 px-3 text-right text-gray-600">{c.site_count}</td>
+                      <td className="py-2.5 px-3 text-right text-st-gray dark:text-gray-400 text-xs">
+                        {new Date(c.created_at).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </DashboardCard>
       )}
 
       {activeTab === 'users' && (
-        <DashboardCard title="Users" subtitle={`${totalUsers} total`}>
-          {users.length === 0 ? (
+        <DashboardCard title="Users">
+          {loadErrors.users ? (
+            <p className="text-sm text-red-500 py-4">{loadErrors.users}</p>
+          ) : totalUsers === 0 ? (
             <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">No users yet.</p>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Email</th>
-                  <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Company</th>
-                  <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Role</th>
-                  <th className="text-right py-2.5 px-3 text-xs font-medium text-st-gray">Joined</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((u) => (
-                  <tr key={u.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="py-2.5 px-3 text-st-black">{u.email}</td>
-                    <td className="py-2.5 px-3 text-gray-600">{u.company_name || '—'}</td>
-                    <td className="py-2.5 px-3">
-                      <StatusBadge status={u.role === 'admin' ? 'active' : 'pending'} label={u.role || 'none'} />
-                    </td>
-                    <td className="py-2.5 px-3 text-right text-st-gray dark:text-gray-400 text-xs">
-                      {new Date(u.created_at).toLocaleDateString()}
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Email</th>
+                    <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Company</th>
+                    <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Role</th>
+                    <th className="text-right py-2.5 px-3 text-xs font-medium text-st-gray">Joined</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {users.map((u) => (
+                    <tr key={u.id} className="border-b border-gray-50 hover:bg-gray-50">
+                      <td className="py-2.5 px-3 text-st-black">{u.email}</td>
+                      <td className="py-2.5 px-3 text-gray-600">{u.company_name || '—'}</td>
+                      <td className="py-2.5 px-3">
+                        <StatusBadge status={u.role === 'admin' ? 'active' : 'pending'} label={u.role || 'none'} />
+                      </td>
+                      <td className="py-2.5 px-3 text-right text-st-gray dark:text-gray-400 text-xs">
+                        {new Date(u.created_at).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </DashboardCard>
       )}
 
       {activeTab === 'sites' && (
-        <DashboardCard title="Sites" subtitle={`${totalSites} total · ${verifiedSites} verified`}>
-          {sites.length === 0 ? (
+        <DashboardCard title="Sites">
+          {loadErrors.sites ? (
+            <p className="text-sm text-red-500 py-4">{loadErrors.sites}</p>
+          ) : totalSites === 0 ? (
             <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">No sites yet.</p>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Domain</th>
-                  <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Company</th>
-                  <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Plan</th>
-                  <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Onboarding</th>
-                  <th className="text-right py-2.5 px-3 text-xs font-medium text-st-gray">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sites.map((s) => (
-                  <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="py-2.5 px-3 text-st-black dark:text-white truncate max-w-[200px]">{s.domain || s.name}</td>
-                    <td className="py-2.5 px-3 text-gray-600">{s.company_name || '—'}</td>
-                    <td className="py-2.5 px-3">
-                      <StatusBadge
-                        status={['starter','growth','scale'].includes(s.plan) ? 'active' : ['trial','free'].includes(s.plan) ? 'pending' : 'error'}
-                        label={s.plan}
-                      />
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <StatusBadge
-                        status={s.onboarding_completed ? 'verified' : 'pending'}
-                        label={s.onboarding_completed ? 'Complete' : 'In progress'}
-                      />
-                    </td>
-                    <td className="py-2.5 px-3 text-right">
-                      <button onClick={() => handlePreview(s)}
-                        className="text-xs text-st-black dark:text-white hover:text-gray-700 font-medium flex items-center gap-1 ml-auto">
-                        <ExternalLink className="w-3 h-3" /> Preview
-                      </button>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Domain</th>
+                    <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Company</th>
+                    <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Plan</th>
+                    <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Onboarding</th>
+                    <th className="text-right py-2.5 px-3 text-xs font-medium text-st-gray">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {sites.map((s) => (
+                    <tr key={s.id} className="border-b border-gray-50 hover:bg-gray-50">
+                      <td className="py-2.5 px-3 text-st-black dark:text-white truncate max-w-[200px]">{s.domain || s.name}</td>
+                      <td className="py-2.5 px-3 text-gray-600">{s.company_name || '—'}</td>
+                      <td className="py-2.5 px-3">
+                        <StatusBadge
+                          status={['starter','growth','scale'].includes(s.plan) ? 'active' : ['trial','free'].includes(s.plan) ? 'pending' : 'error'}
+                          label={s.plan}
+                        />
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <StatusBadge
+                          status={s.onboarding_completed ? 'verified' : 'pending'}
+                          label={s.onboarding_completed ? 'Complete' : 'In progress'}
+                        />
+                      </td>
+                      <td className="py-2.5 px-3 text-right">
+                        <button onClick={() => handlePreview(s)}
+                          className="text-xs text-st-black dark:text-white hover:text-gray-700 font-medium flex items-center gap-1 ml-auto">
+                          <ExternalLink className="w-3 h-3" /> Preview
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </DashboardCard>
       )}

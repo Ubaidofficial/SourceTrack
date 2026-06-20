@@ -99,37 +99,56 @@ router.get('/sites', async (_req, res) => {
   try {
     const { data: sites, error } = await getSupabase()
       .from('sites')
-      .select('id, site_key, name, domain, plan, created_at, onboarding_completed, company_id, owner_id, companies (name)')
+      .select('id, site_key, name, domain, plan, created_at, onboarding_completed, company_id, owner_id')
       .order('created_at', { ascending: false })
 
     if (error) throw error
 
+    // Collect distinct non-null company_ids
+    const companyIds = [...new Set((sites || []).map(s => s.company_id).filter(Boolean))]
+
+    // Fetch companies map separately to avoid relation errors
+    const companyMap = {}
+    if (companyIds.length > 0) {
+      const { data: companies, error: compErr } = await getSupabase()
+        .from('companies')
+        .select('id, name')
+        .in('id', companyIds)
+
+      if (!compErr && companies) {
+        for (const c of companies) {
+          companyMap[c.id] = c.name
+        }
+      }
+    }
+
     const enriched = await Promise.all((sites || []).map(async (s) => {
+      let ownerEmail = s.owner_id
       try {
-        const { data: { user } } = await getSupabase().auth.admin.getUserById(s.owner_id)
-        const redactedKey = s.site_key ? s.site_key.substring(0, 8) + '...' : null
-        delete s.site_key
-        return {
-          ...s,
-          site_key_redacted: redactedKey,
-          owner_email: user?.email || s.owner_id,
-          company_name: s.companies?.name || null
+        if (s.owner_id) {
+          const { data: { user }, error: authErr } = await getSupabase().auth.admin.getUserById(s.owner_id)
+          if (!authErr && user) {
+            ownerEmail = user.email || s.owner_id
+          }
         }
-      } catch {
-        const redactedKey = s.site_key ? s.site_key.substring(0, 8) + '...' : null
-        delete s.site_key
-        return {
-          ...s,
-          site_key_redacted: redactedKey,
-          owner_email: s.owner_id,
-          company_name: s.companies?.name || null
-        }
+      } catch (e) {
+        /* best-effort fallback */
+      }
+
+      const redactedKey = s.site_key ? s.site_key.substring(0, 8) + '...' : null
+      delete s.site_key
+
+      return {
+        ...s,
+        site_key_redacted: redactedKey,
+        owner_email: ownerEmail,
+        company_name: s.company_id ? companyMap[s.company_id] || null : null
       }
     }))
 
     return res.json({ success: true, data: enriched, error: null })
   } catch (_err) {
-    console.error(_err)
+    console.error('[Admin /sites Error]', _err.code || 'UNKNOWN_CODE', _err.message || _err)
     return res.status(500).json({ success: false, data: null, error: 'Failed to list sites' })
   }
 })
