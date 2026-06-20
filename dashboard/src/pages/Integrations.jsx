@@ -1309,14 +1309,16 @@ export default function Integrations() {
                           {stripeMaskedSecret}
                         </code>
                       </div>
-                      <button
-                        type="button"
-                        onClick={handleDeleteStripe}
-                        disabled={isPreview || stripeSubmitting}
-                        className="px-3 py-1.5 border border-red-200 text-red-655 rounded-lg text-xs font-semibold hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-50"
-                      >
-                        Disconnect
-                      </button>
+                      {!isPreview && (
+                        <button
+                          type="button"
+                          onClick={handleDeleteStripe}
+                          disabled={stripeSubmitting}
+                          className="px-3 py-1.5 border border-red-200 text-red-655 rounded-lg text-xs font-semibold hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-50"
+                        >
+                          Disconnect
+                        </button>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -1437,14 +1439,16 @@ export default function Integrations() {
                           {shopifyMaskedSecret}
                         </code>
                       </div>
-                      <button
-                        type="button"
-                        onClick={handleDeleteShopify}
-                        disabled={isPreview || shopifySubmitting}
-                        className="px-3 py-1.5 border border-red-200 text-red-655 rounded-lg text-xs font-semibold hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-50"
-                      >
-                        Disconnect
-                      </button>
+                      {!isPreview && (
+                        <button
+                          type="button"
+                          onClick={handleDeleteShopify}
+                          disabled={shopifySubmitting}
+                          className="px-3 py-1.5 border border-red-200 text-red-655 rounded-lg text-xs font-semibold hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-50"
+                        >
+                          Disconnect
+                        </button>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -1668,9 +1672,11 @@ export default function Integrations() {
                   >
                     Details
                   </button>
-                  <Link to="/campaigns?import=true" className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-150 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors">
-                    Import
-                  </Link>
+                  {!isPreview && (
+                    <Link to="/campaigns?import=true" className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-150 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors">
+                      Import
+                    </Link>
+                  )}
                 </div>
               }
               isExpanded={activeSection === 'ad.csv'}
@@ -1752,7 +1758,7 @@ export default function Integrations() {
                   <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
                     Docs
                   </a>
-                  {adPlatformData.google_ads?.env_configured && (
+                  {adPlatformData.google_ads?.env_configured && !isPreview && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1787,37 +1793,45 @@ export default function Integrations() {
                 {adPlatformData.google_ads?.env_configured ? (
                   <div className="flex flex-wrap gap-2">
                     {!googleAdsConnected ? (
-                      <button
-                        type="button"
-                        onClick={handleConnectGoogleAds}
-                        className="px-3 py-1.5 bg-st-green hover:opacity-90 text-white text-xs font-semibold rounded-lg transition-colors"
-                      >
-                        Connect Google Ads
-                      </button>
+                      !isPreview && (
+                        <button
+                          type="button"
+                          onClick={handleConnectGoogleAds}
+                          className="px-3 py-1.5 bg-st-green hover:opacity-90 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50"
+                        >
+                          Connect Google Ads
+                        </button>
+                      )
                     ) : (
                       <>
-                        <button
-                          type="button"
-                          onClick={handleSyncGoogleAds}
-                          disabled={isPreview || syncingGads}
-                          className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1"
-                        >
-                          {syncingGads ? 'Syncing...' : 'Sync Now'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setShowGoogleAdvanced(!showGoogleAdvanced)}
-                          className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-xs font-semibold rounded-lg transition-colors"
-                        >
-                          {showGoogleAdvanced ? 'Hide Settings' : 'Configure Account'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleDisconnectGoogleAds}
-                          className="px-3 py-1.5 border border-red-250 text-red-650 hover:bg-red-50 dark:hover:bg-red-955/20 text-xs font-semibold rounded-lg transition-colors"
-                        >
-                          Disconnect
-                        </button>
+                        {!isPreview && (
+                          <button
+                            type="button"
+                            onClick={handleSyncGoogleAds}
+                            disabled={syncingGads}
+                            className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1 disabled:opacity-50"
+                          >
+                            {syncingGads ? 'Syncing...' : 'Sync Now'}
+                          </button>
+                        )}
+                        {!isPreview && (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setShowGoogleAdvanced(!showGoogleAdvanced)}
+                              className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-xs font-semibold rounded-lg transition-colors"
+                            >
+                              {showGoogleAdvanced ? 'Hide Settings' : 'Configure Account'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleDisconnectGoogleAds}
+                              className="px-3 py-1.5 border border-red-250 text-red-650 hover:bg-red-50 dark:hover:bg-red-955/20 text-xs font-semibold rounded-lg transition-colors"
+                            >
+                              Disconnect
+                            </button>
+                          </>
+                        )}
                       </>
                     )}
                   </div>
@@ -1828,43 +1842,47 @@ export default function Integrations() {
                 )}
 
                 {showGoogleAdvanced && googleAdsConnected && (
-                  <form onSubmit={handleSaveGoogleAccount} className="bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 rounded-lg p-4 space-y-3">
-                    <p className="text-xs font-semibold text-st-black dark:text-white uppercase tracking-wider">Account ID Selection</p>
-                    <div>
-                      <label className="block text-[11px] font-medium text-st-gray dark:text-gray-400 mb-1">
-                        Target Customer ID (10 digits, e.g. 1234567890)
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        disabled={isPreview}
-                        value={googleCustomerId}
-                        onChange={e => setGoogleCustomerId(e.target.value)}
-                        placeholder="1234567890"
-                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-800 text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
-                      />
+                  isPreview ? (
+                    <div className="bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 rounded-lg p-4">
+                      <p className="text-xs text-st-gray italic">Account configuration is hidden in Support Preview.</p>
                     </div>
-                    <div>
-                      <label className="block text-[11px] font-medium text-st-gray dark:text-gray-400 mb-1">
-                        Login Customer ID (Optional manager account ID link)
-                      </label>
-                      <input
-                        type="text"
-                        disabled={isPreview}
-                        value={googleLoginCustomerId}
-                        onChange={e => setGoogleLoginCustomerId(e.target.value)}
-                        placeholder="9876543210"
-                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-800 text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      disabled={isPreview || gadsSaving}
-                      className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 transition-colors"
-                    >
-                      {gadsSaving ? 'Saving...' : 'Save Configuration'}
-                    </button>
-                  </form>
+                  ) : (
+                    <form onSubmit={handleSaveGoogleAccount} className="bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 rounded-lg p-4 space-y-3">
+                      <p className="text-xs font-semibold text-st-black dark:text-white uppercase tracking-wider">Account ID Selection</p>
+                      <div>
+                        <label className="block text-[11px] font-medium text-st-gray dark:text-gray-400 mb-1">
+                          Target Customer ID (10 digits, e.g. 1234567890)
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={googleCustomerId}
+                          onChange={e => setGoogleCustomerId(e.target.value)}
+                          placeholder="1234567890"
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-800 text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-medium text-st-gray dark:text-gray-400 mb-1">
+                          Login Customer ID (Optional manager account ID link)
+                        </label>
+                        <input
+                          type="text"
+                          value={googleLoginCustomerId}
+                          onChange={e => setGoogleLoginCustomerId(e.target.value)}
+                          placeholder="9876543210"
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-800 text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={gadsSaving}
+                        className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 transition-colors"
+                      >
+                        {gadsSaving ? 'Saving...' : 'Save Configuration'}
+                      </button>
+                    </form>
+                  )
                 )}
               </div>
             </CollapsibleRow>
@@ -1905,74 +1923,84 @@ export default function Integrations() {
                       {adPlatformData.meta_ads.last_synced_at && ` · Last synced: ${new Date(adPlatformData.meta_ads.last_synced_at).toLocaleString()}`}
                     </p>
                     <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={handleSyncMetaAds}
-                        disabled={isPreview || syncingMeta}
-                        className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 text-xs font-semibold rounded-lg transition-colors"
-                      >
-                        {syncingMeta ? 'Syncing...' : 'Sync Now'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setShowMetaAdvanced(!showMetaAdvanced)}
-                        className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-xs font-semibold rounded-lg transition-colors"
-                      >
-                        Configure
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleDisconnectMetaAds}
-                        className="px-3 py-1.5 border border-red-200 text-red-650 hover:bg-red-50 text-xs font-semibold rounded-lg transition-colors"
-                      >
-                        Disconnect
-                      </button>
+                      {!isPreview && (
+                        <button
+                          type="button"
+                          onClick={handleSyncMetaAds}
+                          disabled={syncingMeta}
+                          className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 text-xs font-semibold rounded-lg transition-colors disabled:opacity-50"
+                        >
+                          {syncingMeta ? 'Syncing...' : 'Sync Now'}
+                        </button>
+                      )}
+                      {!isPreview && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setShowMetaAdvanced(!showMetaAdvanced)}
+                            className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 text-xs font-semibold rounded-lg transition-colors"
+                          >
+                            Configure
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleDisconnectMetaAds}
+                            className="px-3 py-1.5 border border-red-200 text-red-650 hover:bg-red-50 text-xs font-semibold rounded-lg transition-colors"
+                          >
+                            Disconnect
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 )}
 
                 {(!metaAdsConnected || showMetaAdvanced) && (
-                  <form onSubmit={handleConnectMetaAds} className="bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 rounded-lg p-4 space-y-3">
-                    <h4 className="text-xs font-bold text-st-black dark:text-white">Meta Ads — Advanced manual token setup</h4>
-                    <p className="text-[11px] text-st-gray dark:text-gray-400 leading-normal font-sans font-light">
-                      Paste a Meta access token and ad account ID. This is a beta setup for syncing spend only.
-                    </p>
-                    <div>
-                      <label className="block text-[11px] font-medium text-st-gray dark:text-gray-400 mb-1">
-                        Meta Access Token
-                      </label>
-                      <input
-                        type="password"
-                        required
-                        disabled={isPreview}
-                        value={metaAccessToken}
-                        onChange={e => setMetaAccessToken(e.target.value)}
-                        placeholder="EAA..."
-                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-800 text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
-                      />
+                  isPreview ? (
+                    <div className="bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 rounded-lg p-4">
+                      <p className="text-xs text-st-gray italic">Account configuration is hidden in Support Preview.</p>
                     </div>
-                    <div>
-                      <label className="block text-[11px] font-medium text-st-gray dark:text-gray-400 mb-1">
-                        Ad Account ID (act_123 or 123)
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        disabled={isPreview}
-                        value={metaAdAccountId}
-                        onChange={e => setMetaAdAccountId(e.target.value)}
-                        placeholder="123456789"
-                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-800 text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      disabled={isPreview || metaConnecting}
-                      className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 transition-colors"
-                    >
-                      {metaConnecting ? 'Saving...' : 'Connect Meta Ads'}
-                    </button>
-                  </form>
+                  ) : (
+                    <form onSubmit={handleConnectMetaAds} className="bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 rounded-lg p-4 space-y-3">
+                      <h4 className="text-xs font-bold text-st-black dark:text-white">Meta Ads — Advanced manual token setup</h4>
+                      <p className="text-[11px] text-st-gray dark:text-gray-400 leading-normal font-sans font-light">
+                        Paste a Meta access token and ad account ID. This is a beta setup for syncing spend only.
+                      </p>
+                      <div>
+                        <label className="block text-[11px] font-medium text-st-gray dark:text-gray-400 mb-1">
+                          Meta Access Token
+                        </label>
+                        <input
+                          type="password"
+                          required
+                          value={metaAccessToken}
+                          onChange={e => setMetaAccessToken(e.target.value)}
+                          placeholder="EAA..."
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-800 text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-medium text-st-gray dark:text-gray-400 mb-1">
+                          Ad Account ID (act_123 or 123)
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={metaAdAccountId}
+                          onChange={e => setMetaAdAccountId(e.target.value)}
+                          placeholder="123456789"
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-800 text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
+                        />
+                      </div>
+                      <button
+                        type="submit"
+                        disabled={metaConnecting}
+                        className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 transition-colors"
+                      >
+                        {metaConnecting ? 'Saving...' : 'Connect Meta Ads'}
+                      </button>
+                    </form>
+                  )
                 )}
               </div>
             </CollapsibleRow>
@@ -2243,22 +2271,24 @@ export default function Integrations() {
                     Report
                   </Link>
                   {hasFeature(site?.plan, 'gsc_seo_revenue') ? (
-                    <button
-                      onClick={() => {
-                        if (!gscIntegData?.connected) {
-                          handleConnectGsc()
-                        } else {
-                          setActiveSection(activeSection === 'seo.gsc' ? null : 'seo.gsc')
-                        }
-                      }}
-                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
-                        gscIntegData?.connected
-                          ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700'
-                          : 'bg-st-green hover:opacity-90 text-white'
-                      }`}
-                    >
-                      {gscIntegData?.connected ? 'Manage' : 'Connect'}
-                    </button>
+                    !isPreview && (
+                      <button
+                        onClick={() => {
+                          if (!gscIntegData?.connected) {
+                            handleConnectGsc()
+                          } else {
+                            setActiveSection(activeSection === 'seo.gsc' ? null : 'seo.gsc')
+                          }
+                        }}
+                        className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
+                          gscIntegData?.connected
+                            ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700'
+                            : 'bg-st-green hover:opacity-90 text-white'
+                        }`}
+                      >
+                        {gscIntegData?.connected ? 'Manage' : 'Connect'}
+                      </button>
+                    )
                   ) : (
                     <Link
                       to="/billing"
@@ -2284,51 +2314,58 @@ export default function Integrations() {
                 </div>
                 {!gscIntegData?.connected ? (
                   <div className="space-y-3">
-                    <button
-                      type="button"
-                      onClick={handleConnectGsc}
-                      className="px-4 py-2 bg-st-green hover:opacity-90 text-white text-xs font-semibold rounded-lg transition-colors"
-                    >
-                      Connect Google Search Console
-                    </button>
+                    {!isPreview && (
+                      <button
+                        type="button"
+                        onClick={handleConnectGsc}
+                        disabled={isPreview}
+                        className="px-4 py-2 bg-st-green hover:opacity-90 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        Connect Google Search Console
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {!gscIntegData.property_selected ? (
-                      <form onSubmit={handleSelectProperty} className="space-y-3">
-                        <div>
-                          <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">
-                            Select Search Console Property
-                          </label>
-                          {gscPropertiesData?.properties && gscPropertiesData.properties.length > 0 ? (
-                            <select
-                              value={selectedProperty}
-                              onChange={e => setSelectedProperty(e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-250 bg-white text-st-black dark:text-white rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-st-black/20"
-                            >
-                              <option value="">-- Choose verified property URL --</option>
-                              {gscPropertiesData.properties.map(p => (
-                                <option key={p.siteUrl} value={p.siteUrl}>
-                                  {p.siteUrl} ({p.permissionLevel})
-                                </option>
-                              ))}
-                            </select>
-                          ) : (
-                            <p className="text-xs text-st-gray dark:text-gray-400 py-2 font-sans font-light">
-                              {gscPropertiesData?.properties
-                                ? 'No verified properties found in your Google Search Console account.'
-                                : 'Loading verified GSC properties...'}
-                            </p>
-                          )}
-                        </div>
-                        <button
-                          type="submit"
-                          disabled={isPreview || selectingProperty || !selectedProperty}
-                          className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 disabled:opacity-50 transition-colors"
-                        >
-                          {selectingProperty ? 'Saving...' : 'Confirm Property Selection'}
-                        </button>
-                      </form>
+                      isPreview ? (
+                        <p className="text-xs text-st-gray italic">Property selection is hidden in Support Preview.</p>
+                      ) : (
+                        <form onSubmit={handleSelectProperty} className="space-y-3">
+                          <div>
+                            <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">
+                              Select Search Console Property
+                            </label>
+                            {gscPropertiesData?.properties && gscPropertiesData.properties.length > 0 ? (
+                              <select
+                                value={selectedProperty}
+                                onChange={e => setSelectedProperty(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-250 bg-white text-st-black dark:text-white rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-st-black/20"
+                              >
+                                <option value="">-- Choose verified property URL --</option>
+                                {gscPropertiesData.properties.map(p => (
+                                  <option key={p.siteUrl} value={p.siteUrl}>
+                                    {p.siteUrl} ({p.permissionLevel})
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <p className="text-xs text-st-gray dark:text-gray-400 py-2 font-sans font-light">
+                                {gscPropertiesData?.properties
+                                  ? 'No verified properties found in your Google Search Console account.'
+                                  : 'Loading verified GSC properties...'}
+                              </p>
+                            )}
+                          </div>
+                          <button
+                            type="submit"
+                            disabled={selectingProperty || !selectedProperty}
+                            className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 disabled:opacity-50 transition-colors"
+                          >
+                            {selectingProperty ? 'Saving...' : 'Confirm Property Selection'}
+                          </button>
+                        </form>
+                      )
                     ) : (
                       <div className="space-y-3 bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 rounded-lg p-4">
                         <div className="space-y-2 font-sans">
@@ -2350,14 +2387,16 @@ export default function Integrations() {
 
                         <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-200 dark:border-gray-850/60 justify-between items-center">
                           <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={handleSyncGsc}
-                              disabled={isPreview || syncingGsc}
-                              className="px-3 py-1.5 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 disabled:opacity-50 transition-colors"
-                            >
-                              {syncingGsc ? 'Syncing...' : 'Sync Search Analytics'}
-                            </button>
+                            {!isPreview && (
+                              <button
+                                type="button"
+                                onClick={handleSyncGsc}
+                                disabled={syncingGsc}
+                                className="px-3 py-1.5 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 disabled:opacity-50 transition-colors"
+                              >
+                                {syncingGsc ? 'Syncing...' : 'Sync Search Analytics'}
+                              </button>
+                            )}
                             <Link
                               to="/seo-revenue"
                               className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors inline-flex items-center"
@@ -2365,14 +2404,16 @@ export default function Integrations() {
                               View Report
                             </Link>
                           </div>
-                          <button
-                            type="button"
-                            onClick={handleDisconnectGsc}
-                            disabled={isPreview || disconnectingGsc}
-                            className="px-3 py-1.5 border border-red-205 text-red-655 rounded-lg text-xs font-semibold hover:bg-red-55 dark:hover:bg-red-955/20 transition-colors disabled:opacity-50"
-                          >
-                            Disconnect
-                          </button>
+                          {!isPreview && (
+                            <button
+                              type="button"
+                              onClick={handleDisconnectGsc}
+                              disabled={disconnectingGsc}
+                              className="px-3 py-1.5 border border-red-205 text-red-655 rounded-lg text-xs font-semibold hover:bg-red-55 dark:hover:bg-red-955/20 transition-colors disabled:opacity-50"
+                            >
+                              Disconnect
+                            </button>
+                          )}
                         </div>
                       </div>
                     )}
@@ -2538,9 +2579,11 @@ export default function Integrations() {
                           <li><strong>Private Server API Token</strong> — sent as <code className="font-mono">Authorization: Bearer st_live_…</code>. <em>Server-only — never ship this in browser code.</em> Used by <code className="font-mono">/api/server/event</code> for backend-originated events.</li>
                         </ul>
                         <div className="pt-1 flex flex-wrap gap-3">
-                          <Link to="/settings#api-tokens" className="text-[11px] font-semibold text-blue-700 dark:text-blue-300 hover:underline inline-flex items-center gap-0.5">
-                            Manage Server API Tokens →
-                          </Link>
+                          {!isPreview && (
+                            <Link to="/settings#api-tokens" className="text-[11px] font-semibold text-blue-700 dark:text-blue-300 hover:underline inline-flex items-center gap-0.5">
+                              Manage Server API Tokens →
+                            </Link>
+                          )}
                           <Link to="/developers/api" className="text-[11px] font-semibold text-blue-700 dark:text-blue-300 hover:underline inline-flex items-center gap-0.5">
                             API reference →
                           </Link>
@@ -2644,9 +2687,14 @@ export default function Integrations() {
                     }
                   >
                     <div className="space-y-4">
-                      <form onSubmit={handleSaveWebhook} className="space-y-4">
-                        <div>
-                          <label className="block text-xs font-semibold text-st-gray uppercase tracking-wider mb-1">Webhook URL</label>
+                      {isPreview ? (
+                        <div className="bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-800 rounded-lg p-4">
+                          <p className="text-xs text-st-gray italic font-sans">Webhook configuration is hidden in Support Preview.</p>
+                        </div>
+                      ) : (
+                        <form onSubmit={handleSaveWebhook} className="space-y-4">
+                          <div>
+                            <label className="block text-xs font-semibold text-st-gray uppercase tracking-wider mb-1">Webhook URL</label>
                           <input
                             type="text"
                             placeholder="https://your-endpoint.com/webhook"
@@ -2685,15 +2733,17 @@ export default function Integrations() {
                                 </div>
                               ) : (
                                 <div className="flex items-center justify-between gap-2">
-                                  <code className="text-xs font-mono text-gray-700 select-all">{webhookData.webhook.secret}</code>
-                                  <button
-                                    type="button"
-                                    onClick={handleRegenerateSecret}
-                                    disabled={isPreview || submitting}
-                                    className="text-[10px] text-gray-500 hover:text-st-black font-semibold flex items-center gap-1 transition-colors font-sans"
-                                  >
-                                    <RefreshCw className="w-3 h-3" /> Regenerate
-                                  </button>
+                                  <code className="text-xs font-mono text-gray-700 select-all">{isPreview ? 'HIDDEN_IN_PREVIEW' : webhookData.webhook.secret}</code>
+                                  {!isPreview && (
+                                    <button
+                                      type="button"
+                                      onClick={handleRegenerateSecret}
+                                      disabled={isPreview || submitting}
+                                      className="text-[10px] text-gray-500 hover:text-st-black font-semibold flex items-center gap-1 transition-colors font-sans"
+                                    >
+                                      <RefreshCw className="w-3 h-3" /> Regenerate
+                                    </button>
+                                  )}
                                 </div>
                               )}
                               <p className="text-[10px] text-st-gray mt-1 font-sans">
@@ -2742,15 +2792,17 @@ export default function Integrations() {
 
                         <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
                           <div className="flex items-center gap-2 font-sans">
-                            <button
-                              type="submit"
-                              disabled={isPreview || submitting}
-                              className="px-4 py-2 bg-st-black text-white text-xs font-semibold rounded-lg hover:bg-st-black/90 disabled:opacity-50 transition-colors"
-                            >
-                              {submitting ? 'Saving...' : 'Save Configuration'}
-                            </button>
+                            {!isPreview && (
+                              <button
+                                type="submit"
+                                disabled={isPreview || submitting}
+                                className="px-4 py-2 bg-st-black text-white text-xs font-semibold rounded-lg hover:bg-st-black/90 disabled:opacity-50 transition-colors"
+                              >
+                                {submitting ? 'Saving...' : 'Save Configuration'}
+                              </button>
+                            )}
 
-                            {webhookData?.webhook && (
+                            {webhookData?.webhook && !isPreview && (
                               <button
                                 type="button"
                                 onClick={handleTestWebhook}
@@ -2762,18 +2814,19 @@ export default function Integrations() {
                             )}
                           </div>
 
-                          {webhookData?.webhook && (
+                          {webhookData?.webhook && !isPreview && (
                             <button
                               type="button"
                               onClick={handleDeleteWebhook}
-                              disabled={isPreview || submitting}
+                              disabled={submitting}
                               className="text-xs text-red-655 hover:text-red-850 font-semibold flex items-center gap-1 transition-colors font-sans"
                             >
                               <Trash className="w-3.5 h-3.5" /> Delete
                             </button>
-                          )}
-                        </div>
-                      </form>
+                            )}
+                          </div>
+                        </form>
+                      )}
 
                       {testResult && (
                         <div className={`p-3 text-xs rounded-lg border font-sans ${testResult.success ? 'bg-green-50 text-green-800 border-green-200' : 'bg-red-50 text-red-800 border-red-200'}`}>

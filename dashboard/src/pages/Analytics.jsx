@@ -6,9 +6,10 @@ import { Line } from 'react-chartjs-2'
 import { fetchApi } from '../lib/api'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import { Eye, RefreshCw, Copy, Check } from 'lucide-react'
+import { Eye, RefreshCw, Copy, Check, BarChart3 } from 'lucide-react'
 import { safeNumber } from '../utils/numbers'
 import { SourceIcon } from '../components/SourceIcon'
+import { isSupportPreviewActive } from '../utils/supportPreview'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Filler)
 
@@ -267,8 +268,28 @@ export default function Analytics() {
   }
 
   const hasData = safeNumber(kpis.pageviews, 0) > 0
+  const isPreview = isSupportPreviewActive()
 
-  if (!site) return null
+  if (!site) {
+    if (isPreview) {
+      return (
+        <div className="st-container py-24 text-center">
+          <div className="max-w-md mx-auto space-y-4">
+            <div className="w-12 h-12 rounded-full bg-[#1A1D1D] border border-[#2A2E2E] flex items-center justify-center mx-auto">
+              <BarChart3 className="w-5 h-5 text-st-gray" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-white mb-1">Analytics View Disabled</h2>
+              <p className="text-xs text-st-gray/80 leading-relaxed">
+                Analytics is not available in Support Preview. Use Dashboard and Attribution for read-only customer context.
+              </p>
+            </div>
+          </div>
+        </div>
+      )
+    }
+    return null
+  }
 
   return (
     <div className="st-container space-y-4">

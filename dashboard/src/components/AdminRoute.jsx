@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { isSupportPreviewActive } from '../utils/supportPreview'
 
 export default function AdminRoute({ children }) {
   const { user, role, loading } = useAuth()
@@ -14,6 +15,12 @@ export default function AdminRoute({ children }) {
 
   if (!user) return <Navigate to="/login" replace />
   if (role !== 'super_admin') return <Navigate to="/dashboard" replace />
+
+  if (isSupportPreviewActive()) {
+    window.sessionStorage.removeItem('sourcetrack_admin_preview')
+    window.location.href = '/ops'
+    return null
+  }
 
   return children
 }

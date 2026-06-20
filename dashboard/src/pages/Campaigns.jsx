@@ -275,11 +275,13 @@ export default function Campaigns() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     if (params.get('import') === 'true') {
-      setImportModalOpen(true)
       params.delete('import')
       const search = params.toString()
       const nextUrl = window.location.pathname + (search ? `?${search}` : '')
       window.history.replaceState({}, document.title, nextUrl)
+      if (!isSupportPreviewActive()) {
+        setImportModalOpen(true)
+      }
     }
   }, [])
 
@@ -493,6 +495,7 @@ export default function Campaigns() {
   }, [importModalOpen, importTab, site])
 
   const executeImport = async () => {
+    if (isPreview) return
     if (parsedRows.length === 0) return
     const invalidCount = parsedRows.filter(r => r.error).length
     if (invalidCount > 0) {
@@ -702,11 +705,15 @@ export default function Campaigns() {
           ) : isError ? (
             <div className="py-12 text-center px-4">
               <p className="text-sm text-gray-500">Campaign data is temporarily unavailable.</p>
-              <p className="text-xs text-st-gray mt-1">Imported costs can still be managed below.</p>
-              <button onClick={() => setImportModalOpen(true)}
-                className="mt-4 px-4 py-2 text-sm text-st-black bg-[#d7f550] hover:bg-[#c4df45] rounded-lg transition-colors font-medium inline-flex items-center gap-1.5">
-                <UploadCloud className="w-4 h-4" /> Import Costs
-              </button>
+              {!isPreview && (
+                <>
+                  <p className="text-xs text-st-gray mt-1">Imported costs can still be managed below.</p>
+                  <button onClick={() => setImportModalOpen(true)}
+                    className="mt-4 px-4 py-2 text-sm text-st-black bg-[#d7f550] hover:bg-[#c4df45] rounded-lg transition-colors font-medium inline-flex items-center gap-1.5">
+                    <UploadCloud className="w-4 h-4" /> Import Costs
+                  </button>
+                </>
+              )}
             </div>
           ) : rows.length === 0 ? (
             <div className="py-12 text-center px-4">
@@ -715,22 +722,28 @@ export default function Campaigns() {
               ) : (
                 <>
                   <p className="text-base font-semibold text-st-black">No campaign data yet</p>
-                  <p className="text-sm text-st-gray mt-1">Import ad costs or wait for tracked campaign traffic.</p>
-                  <div className="flex items-center justify-center gap-3 mt-4">
-                    <button onClick={() => setImportModalOpen(true)}
-                      className="px-4 py-2 text-sm text-st-black bg-[#d7f550] hover:bg-[#c4df45] rounded-lg transition-colors font-medium inline-flex items-center gap-1.5">
-                      <UploadCloud className="w-4 h-4" /> Import Costs
-                    </button>
-                    <a
-                      href={`data:text/csv;charset=utf-8,${encodeURIComponent(
-                        "date,platform,campaign_name,campaign_id,spend,currency,clicks,impressions\n2026-06-08,facebook,Summer Sale,12345,45.50,USD,40,1200\n"
-                      )}`}
-                      download="sourcetrack_ad_spend_template.csv"
-                      className="text-xs text-gray-500 hover:text-gray-700 hover:underline font-medium"
-                    >
-                      Download CSV template
-                    </a>
-                  </div>
+                  {isPreview ? (
+                    <p className="text-sm text-st-gray mt-1">Import actions are hidden in support preview.</p>
+                  ) : (
+                    <>
+                      <p className="text-sm text-st-gray mt-1">Import ad costs or wait for tracked campaign traffic.</p>
+                      <div className="flex items-center justify-center gap-3 mt-4">
+                        <button onClick={() => setImportModalOpen(true)}
+                          className="px-4 py-2 text-sm text-st-black bg-[#d7f550] hover:bg-[#c4df45] rounded-lg transition-colors font-medium inline-flex items-center gap-1.5">
+                          <UploadCloud className="w-4 h-4" /> Import Costs
+                        </button>
+                        <a
+                          href={`data:text/csv;charset=utf-8,${encodeURIComponent(
+                            "date,platform,campaign_name,campaign_id,spend,currency,clicks,impressions\n2026-06-08,facebook,Summer Sale,12345,45.50,USD,40,1200\n"
+                          )}`}
+                          download="sourcetrack_ad_spend_template.csv"
+                          className="text-xs text-gray-500 hover:text-gray-700 hover:underline font-medium"
+                        >
+                          Download CSV template
+                        </a>
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -914,9 +927,11 @@ export default function Campaigns() {
                               ) : (
                                 <div className="flex items-center justify-end gap-1 group">
                                   <span className="text-gray-600">{r.spend ? formatCurrency(r.spend) : '—'}</span>
-                                  <button onClick={() => { setEditingSpend(r.name); setSpendInput(spendMap[r.name] || '') }} className="opacity-0 group-hover:opacity-100 text-st-gray hover:text-gray-600">
-                                    <Pencil className="w-3 h-3" />
-                                  </button>
+                                  {!isPreview && (
+                                    <button onClick={() => { setEditingSpend(r.name); setSpendInput(spendMap[r.name] || '') }} className="opacity-0 group-hover:opacity-100 text-st-gray hover:text-gray-600">
+                                      <Pencil className="w-3 h-3" />
+                                    </button>
+                                  )}
                                 </div>
                               )}
                             </td>
@@ -1077,8 +1092,8 @@ export default function Campaigns() {
         </div>
       )}
 
-      {/* ─── Premium Ad Spend Import Modal ─── */}
-      {importModalOpen && (
+      {/* ─── Premium Import Modal */}
+      {!isPreview && importModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-300 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden transform transition-all duration-300 scale-100">
 
