@@ -439,6 +439,7 @@ export default function ReportBuilder() {
   const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+  const isPreview = isSupportPreviewActive()
   const [site, setSite] = useState(null)
 
   // Report state

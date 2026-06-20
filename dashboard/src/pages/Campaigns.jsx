@@ -223,6 +223,7 @@ function CurrencyWarning({ status, spendCur, trackCur }) {
 export default function Campaigns() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const isPreview = isSupportPreviewActive()
   const [spendMap, setSpendMap] = useState({}) // { campaignName: spend }
   const [editingSpend, setEditingSpend] = useState(null)
   const [spendInput, setSpendInput] = useState('')

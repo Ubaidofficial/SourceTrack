@@ -126,6 +126,7 @@ const CollapsibleRow = ({
 export default function Integrations() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const isPreview = isSupportPreviewActive()
   const [site, setSite] = useState(null)
   const [copied, setCopied] = useState(false)
   const [copiedPixel, setCopiedPixel] = useState(false)
