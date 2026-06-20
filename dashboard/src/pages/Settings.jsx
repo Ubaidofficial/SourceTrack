@@ -317,7 +317,7 @@ export default function Settings() {
   }
 
   const handleShareCopy = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/public/${shareToken}`)
+    navigator.clipboard.writeText(`${window.location.origin}/share/${shareToken}`)
     setShareCopied(true)
     setTimeout(() => setShareCopied(false), 2000)
   }
@@ -656,13 +656,13 @@ export default function Settings() {
           <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 flex items-center gap-2">
             <Link2 className="w-4 h-4 text-st-gray dark:text-gray-400 shrink-0" />
             <span className="text-xs text-st-gray dark:text-gray-400 truncate flex-1">
-              {`${window.location.origin}/public/${shareToken}`}
+              {`${window.location.origin}/share/${shareToken}`}
             </span>
             <button onClick={handleShareCopy} className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
               {shareCopied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 text-st-gray dark:text-gray-400" />}
             </button>
             <a
-              href={`${window.location.origin}/public/${shareToken}`}
+              href={`${window.location.origin}/share/${shareToken}`}
               target="_blank" rel="noopener noreferrer"
               className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
             >

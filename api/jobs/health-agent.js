@@ -1,8 +1,7 @@
+import 'dotenv/config'
 import WebSocket from 'ws'
 import OpenAI from 'openai'
-import dotenv from 'dotenv'
 import { getSupabase } from '../lib/supabase.js'
-dotenv.config()
 
 const deepseek = new OpenAI({ baseURL: 'https://api.deepseek.com', apiKey: process.env.DEEPSEEK_API_KEY })
 const SLACK = process.env.SLACK_WEBHOOK_URL

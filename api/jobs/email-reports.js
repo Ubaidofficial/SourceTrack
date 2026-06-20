@@ -1,8 +1,6 @@
+import 'dotenv/config'
 import WebSocket from 'ws'
-import dotenv from 'dotenv'
 import { getSupabase } from '../lib/supabase.js'
-dotenv.config()
-
 const isMonthly = process.argv.includes('--monthly')
 const periodLabel = isMonthly ? 'Monthly' : 'Weekly'
 const days = isMonthly ? 30 : 7
@@ -57,8 +55,12 @@ async function run() {
 
   for (const site of sites) {
     try {
-      const isActive = site.plan !== 'trial' ||
-        (site.trial_ends_at && new Date(site.trial_ends_at) > new Date())
+      // Conservative eligibility:
+      // - Free, inactive, and archived sites must not receive scheduled reports.
+      // - Explicitly allow only active trials and known paid tiers.
+      const isPaidPlan = ['starter', 'growth', 'scale', 'business'].includes(site.plan)
+      const isActiveTrial = site.plan === 'trial' && site.trial_ends_at && new Date(site.trial_ends_at) > new Date()
+      const isActive = isPaidPlan || isActiveTrial
 
       if (!isActive) {
         console.log(`[email-reports] Skipping ${site.site_key}: trial expired or inactive`)
