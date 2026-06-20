@@ -28,8 +28,8 @@ export function AuthProvider({ children }) {
       return
     }
 
-    // Check for super_admin in raw_app_meta_data
-    const metaRole = user.raw_app_meta_data?.role
+    // Check for super_admin in app_metadata or raw_app_meta_data
+    const metaRole = user.app_metadata?.role || user.raw_app_meta_data?.role
     if (metaRole === 'super_admin') {
       setRole('super_admin')
       return

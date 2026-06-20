@@ -24,7 +24,7 @@ export default function Login() {
       const authUser = session?.user
 
       // Super admins go straight to the ops console — they may not own sites directly.
-      const metaRole = authUser?.raw_app_meta_data?.role
+      const metaRole = authUser?.app_metadata?.role || authUser?.raw_app_meta_data?.role
       if (metaRole === 'super_admin') {
         navigate('/ops', { replace: true })
         return

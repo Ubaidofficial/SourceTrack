@@ -3,7 +3,7 @@ import { getSupabase } from '../lib/supabase.js'
 // requireUserAuth — validates Supabase JWT and extracts user + role + company.
 // Sets req.user = { id, email, role, company_id }
 // Role is determined by:
-//   1. raw_app_meta_data.role === 'super_admin' → role = 'super_admin'
+//   1. app_metadata.role === 'super_admin' or raw_app_meta_data.role === 'super_admin' → role = 'super_admin'
 //   2. company_members lookup → role = 'admin' or 'user'
 //   3. fallback → role = null (no workspace membership)
 export async function requireUserAuth(req, res, next) {
@@ -22,7 +22,7 @@ export async function requireUserAuth(req, res, next) {
       return res.status(401).json({ success: false, data: null, error: 'Invalid or expired token' })
     }
 
-    const metaRole = user.raw_app_meta_data?.role
+    const metaRole = user.app_metadata?.role || user.raw_app_meta_data?.role
 
     if (metaRole === 'super_admin') {
       req.user = { id: user.id, email: user.email, role: 'super_admin', company_id: null }

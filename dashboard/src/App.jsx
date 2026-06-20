@@ -113,7 +113,7 @@ function ProtectedRoute({ children }) {
     }
 
     // Super admins bypass the onboarding gate — they may not own a site directly.
-    if (user.raw_app_meta_data?.role === 'super_admin') {
+    if (user.app_metadata?.role === 'super_admin' || user.raw_app_meta_data?.role === 'super_admin') {
       if (aliveRef.current) setOnboarding({ loading: false, completed: true, hasSite: true, errorKind: null })
       return
     }
