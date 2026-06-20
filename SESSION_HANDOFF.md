@@ -1,5 +1,10 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
+> **Handoff:** Session 140Z-G3-D16 — End-to-End Install QA — **BLOCKED.**
+> - **Audit:** Attempted to perform the full onboarding, install, and attribution visibility user flow on the deployed environment.
+> - **Blocker:** Missing safe operator test credentials and an external live dummy site to install the tracking snippet. Release gate remains open.
+> - **Deliverable:** Created `docs/qa/end_to_end_install_qa_140Z-G3-D16.md`.
+>
 > **Handoff:** Session 140Z-G3-D15 — Production Observability Readiness Audit — **PARTIAL PASS.**
 > - **Audit:** Reviewed backend request tracing, frontend monitoring, and log safety. Backend logging is secure and strips PII/secrets. Frontend error tracking and proactive alerts are missing.
 > - **Deliverable:** Created `docs/qa/production_observability_140Z-G3-D15.md`.
