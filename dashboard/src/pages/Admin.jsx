@@ -293,7 +293,7 @@ export default function Admin() {
           icon={Shield} iconBg="bg-purple-100" iconColor="text-purple-600" />
       </div>
 
-      <div className="flex gap-2 border-b border-gray-200 dark:border-[#252929]">
+      <div className="flex gap-2 border-b border-gray-200 dark:border-dark-border">
         {['companies', 'users', 'sites', 'site_inspector', 'feature_status', 'qa_notes', 'audit_log'].map(tab => (
           <button key={tab} onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
@@ -316,7 +316,7 @@ export default function Admin() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100 dark:border-[#252929]">
+                  <tr className="border-b border-gray-100 dark:border-dark-border">
                     <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray dark:text-gray-400">Name</th>
                     <th className="text-right py-2.5 px-3 text-xs font-medium text-st-gray dark:text-gray-400">Members</th>
                     <th className="text-right py-2.5 px-3 text-xs font-medium text-st-gray dark:text-gray-400">Sites</th>
@@ -325,7 +325,7 @@ export default function Admin() {
                 </thead>
                 <tbody>
                   {companies.map((c) => (
-                    <tr key={c.id} className="border-b border-gray-50 dark:border-[#1A1D1D] hover:bg-gray-50 dark:hover:bg-[#1A1D1D]">
+                    <tr key={c.id} className="border-b border-gray-50 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-hover">
                       <td className="py-2.5 px-3 text-st-black dark:text-white font-medium">{c.name}</td>
                       <td className="py-2.5 px-3 text-right text-gray-600 dark:text-gray-300">{c.member_count}</td>
                       <td className="py-2.5 px-3 text-right text-gray-600 dark:text-gray-300">{c.site_count}</td>
@@ -351,7 +351,7 @@ export default function Admin() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100 dark:border-[#252929]">
+                  <tr className="border-b border-gray-100 dark:border-dark-border">
                     <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray dark:text-gray-400">Email</th>
                     <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray dark:text-gray-400">Company</th>
                     <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray dark:text-gray-400">Role</th>
@@ -360,7 +360,7 @@ export default function Admin() {
                 </thead>
                 <tbody>
                   {users.map((u) => (
-                    <tr key={u.id} className="border-b border-gray-50 dark:border-[#1A1D1D] hover:bg-gray-50 dark:hover:bg-[#1A1D1D]">
+                    <tr key={u.id} className="border-b border-gray-50 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-hover">
                       <td className="py-2.5 px-3 text-st-black dark:text-white">{u.email}</td>
                       <td className="py-2.5 px-3 text-gray-600 dark:text-gray-300">{u.company_name || '—'}</td>
                       <td className="py-2.5 px-3">
@@ -388,7 +388,7 @@ export default function Admin() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100 dark:border-[#252929]">
+                  <tr className="border-b border-gray-100 dark:border-dark-border">
                     <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray dark:text-gray-400">Domain</th>
                     <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray dark:text-gray-400">Company</th>
                     <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray dark:text-gray-400">Plan</th>
@@ -398,7 +398,7 @@ export default function Admin() {
                 </thead>
                 <tbody>
                   {sites.map((s) => (
-                    <tr key={s.id} className="border-b border-gray-50 dark:border-[#1A1D1D] hover:bg-gray-50 dark:hover:bg-[#1A1D1D]">
+                    <tr key={s.id} className="border-b border-gray-50 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-hover">
                       <td className="py-2.5 px-3 text-st-black dark:text-white truncate max-w-[200px]">{s.domain || s.name}</td>
                       <td className="py-2.5 px-3 text-gray-600 dark:text-gray-300">{s.company_name || '—'}</td>
                       <td className="py-2.5 px-3">
@@ -442,7 +442,7 @@ export default function Admin() {
               />
               <button onClick={loadSiteDetail}
                 disabled={siteDetailLoading || !siteDetailKey}
-                className="px-4 py-2 bg-[#1F2323] hover:bg-[#171B1B] dark:bg-[#CCF03F] dark:hover:bg-[#D9FA64] text-white dark:text-[#1F2323] rounded-lg text-sm font-medium disabled:opacity-50 flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-[#CCF03F]">
+                className="px-4 py-2 bg-[#1F2323] hover:bg-[#171B1B] dark:bg-st-lime dark:hover:bg-st-lime-dark text-white dark:text-st-black rounded-lg text-sm font-medium disabled:opacity-50 flex items-center gap-2 focus-visible:ring-2 focus-visible:ring-st-lime">
                 <Search className="w-4 h-4" /> Lookup
               </button>
             </div>
@@ -486,9 +486,9 @@ export default function Admin() {
                       <p className="text-xs text-st-gray italic">No support notes for this site.</p>
                     ) : (
                       siteNotes.map(note => (
-                        <div key={note.id} className="bg-gray-50 dark:bg-[#1A1D1D] p-3 rounded-lg border border-gray-100 dark:border-[#252929]">
-                          <p className="text-xs text-st-gray mb-1">{note.admin_email} · {new Date(note.created_at).toLocaleString()}</p>
-                          <p className="text-sm text-st-black dark:text-white whitespace-pre-wrap">{note.note}</p>
+                      <div key={note.id} className="bg-gray-50 dark:bg-dark-hover p-3 rounded-lg border border-gray-100 dark:border-dark-border">
+                        <p className="text-xs text-st-gray mb-1">{note.admin_email} · {new Date(note.created_at).toLocaleString()}</p>
+                        <p className="text-sm text-st-black dark:text-white whitespace-pre-wrap">{note.note}</p>
                         </div>
                       ))
                     )}
@@ -557,11 +557,11 @@ export default function Admin() {
                 </span>
               ) : 'Loading provenance...'}
             </p>
-            <button
-              onClick={handleRecheck}
-              disabled={rechecking}
-              className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-[#1A1D1D] border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] flex items-center gap-1.5 disabled:opacity-50"
-            >
+              <button
+                onClick={handleRecheck}
+                disabled={rechecking}
+                className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-hover flex items-center gap-1.5 disabled:opacity-50"
+              >
               <RefreshCw className={`w-3.5 h-3.5 ${rechecking ? 'animate-spin' : ''}`} />
               {rechecking ? 'Rechecking...' : 'Recheck All Features'}
             </button>
@@ -588,7 +588,7 @@ export default function Admin() {
             <DashboardCard title="Feature Status" subtitle="Internal truth panel — current implementation state">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-100">
+                  <tr className="border-b border-gray-100 dark:border-dark-border">
                     <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Feature</th>
                     <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Status</th>
                     <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Method</th>
@@ -597,7 +597,7 @@ export default function Admin() {
                 </thead>
                 <tbody>
                   {featureStatus.features.map((f) => (
-                    <tr key={f.name} className="border-b border-gray-50">
+                    <tr key={f.name} className="border-b border-gray-50 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-hover">
                       <td className="py-2.5 px-3 text-st-black dark:text-white font-medium">{f.name}</td>
                       <td className="py-2.5 px-3">
                         <StatusBadge
@@ -625,10 +625,10 @@ export default function Admin() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-xs text-st-gray">Editable truthfulness notes — persisted to database</p>
-            <button
-              onClick={() => { setQaFormMode('create'); setQaFormData({ feature_key: '', note_type: 'watch', note_text: '' }) }}
-              className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-[#1A1D1D] border border-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-[#252929] flex items-center gap-1.5"
-            >
+              <button
+                onClick={() => { setQaFormMode('create'); setQaFormData({ feature_key: '', note_type: 'watch', note_text: '' }) }}
+                className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-hover flex items-center gap-1.5"
+              >
               <Plus className="w-3.5 h-3.5" /> Add Note
             </button>
           </div>
@@ -669,10 +669,10 @@ export default function Admin() {
                   />
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={handleQaSave} className="px-4 py-2 bg-[#1F2323] hover:bg-[#171B1B] dark:bg-[#CCF03F] dark:hover:bg-[#D9FA64] text-white dark:text-[#1F2323] rounded-lg text-sm focus-visible:ring-2 focus-visible:ring-[#CCF03F]">
+                  <button onClick={handleQaSave} className="px-4 py-2 bg-[#1F2323] hover:bg-[#171B1B] dark:bg-st-lime dark:hover:bg-st-lime-dark text-white dark:text-st-black rounded-lg text-sm focus-visible:ring-2 focus-visible:ring-st-lime">
                     Save
                   </button>
-                  <button onClick={() => setQaFormMode(null)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-[#252929] rounded-lg hover:bg-gray-200">
+                  <button onClick={() => setQaFormMode(null)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-dark-border rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
                     Cancel
                   </button>
                 </div>
@@ -700,7 +700,7 @@ export default function Admin() {
                   </thead>
                   <tbody>
                     {qaNotes.map((n) => (
-                      <tr key={n.id} className="border-b border-gray-50 hover:bg-gray-50">
+                      <tr key={n.id} className="border-b border-gray-50 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-hover">
                         <td className="py-2.5 px-3 text-st-black dark:text-white font-medium">{n.feature_key}</td>
                         <td className="py-2.5 px-3">
                           <StatusBadge
@@ -750,7 +750,7 @@ export default function Admin() {
               ) : (
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-100">
+                    <tr className="border-b border-gray-100 dark:border-dark-border">
                       <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Time</th>
                       <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Admin</th>
                       <th className="text-left py-2.5 px-3 text-xs font-medium text-st-gray">Action</th>
@@ -759,11 +759,11 @@ export default function Admin() {
                   </thead>
                   <tbody>
                     {auditLog.map((entry) => (
-                      <tr key={entry.id} className="border-b border-gray-50 hover:bg-gray-50">
+                      <tr key={entry.id} className="border-b border-gray-50 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-hover">
                         <td className="py-2.5 px-3 text-st-gray dark:text-gray-400 text-xs whitespace-nowrap">
                           {new Date(entry.created_at).toLocaleString()}
                         </td>
-                        <td className="py-2.5 px-3 text-st-black">{entry.admin_email || entry.admin_user_id?.slice(0, 8) || '—'}</td>
+                        <td className="py-2.5 px-3 text-st-black dark:text-white">{entry.admin_email || entry.admin_user_id?.slice(0, 8) || '—'}</td>
                         <td className="py-2.5 px-3">
                           <StatusBadge
                             status={entry.action === 'recheck_features' ? 'warning' : 'active'}

@@ -185,14 +185,14 @@ export default function Layout({ children }) {
             )}
           </div>
         ) : isSupportPreviewActive() ? (
-          <div className="px-4 py-3 border-b border-gray-200 dark:border-dark-border bg-amber-50/50 dark:bg-amber-950/20">
+          <div className="px-4 py-3 border-b border-gray-200 dark:border-dark-border bg-slate-50 dark:bg-slate-900/30">
             <div className="flex items-center justify-between mb-1 select-none">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                 Active Site
               </p>
-              <span className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-widest">Preview</span>
+              <span className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-widest">Preview</span>
             </div>
-            <div className="flex items-center justify-between px-3 py-1.5 bg-white dark:bg-dark-card border border-amber-200 dark:border-amber-900/30 rounded-lg shadow-sm">
+            <div className="flex items-center justify-between px-3 py-1.5 bg-white dark:bg-dark-card border border-emerald-100 dark:border-emerald-900/30 rounded-lg shadow-sm">
               <div className="min-w-0 flex-1 pr-2">
                 <p className="text-xs font-semibold text-st-black dark:text-white truncate">{activeSite?.name || activeSite?.domain || 'Preview Site'}</p>
                 {activeSite?.domain && <p className="text-[9px] font-mono text-st-gray dark:text-gray-500 truncate">{activeSite?.domain}</p>}

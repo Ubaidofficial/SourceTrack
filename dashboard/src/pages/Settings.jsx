@@ -13,6 +13,7 @@ export default function Settings() {
   const { user } = useAuth()
   const { activeSite } = useSite()
   const isPreview = isSupportPreviewActive()
+  const displaySiteKey = isPreview ? 'HIDDEN_IN_PREVIEW' : (activeSite?.site_key || 'YOUR_SITE_KEY')
 
   const [site, setSite]                 = useState(null)
   const [name, setName]                 = useState('')
@@ -596,7 +597,8 @@ export default function Settings() {
               type="text"
               value={name}
               onChange={e => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
+              disabled={isPreview}
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
               placeholder="My Website"
             />
           </div>
@@ -606,14 +608,15 @@ export default function Settings() {
               type="text"
               value={domain}
               onChange={e => setDomain(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
+              disabled={isPreview}
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
               placeholder="yoursite.com"
             />
           </div>
           <button
             type="submit"
             disabled={saving || isPreview}
-            className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {saving ? 'Saving…' : 'Save Changes'}
           </button>
@@ -632,8 +635,8 @@ export default function Settings() {
           <button
             onClick={handleShareToggle}
             disabled={shareLoading || isPreview}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${
-              shareEnabled ? 'bg-st-black dark:bg-white' : 'bg-gray-200 dark:bg-gray-700'
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
+              shareEnabled ? 'bg-st-black dark:bg-white' : 'bg-gray-200 dark:bg-gray-800'
             }`}
           >
             <span className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-st-black shadow transition-transform ${
@@ -692,8 +695,8 @@ export default function Settings() {
           <button
             onClick={handleCookielessToggle}
             disabled={cookielessLoading || isPreview}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${
-              cookielessMode ? 'bg-st-black dark:bg-white' : 'bg-gray-200 dark:bg-gray-700'
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
+              cookielessMode ? 'bg-st-black dark:bg-white' : 'bg-gray-200 dark:bg-gray-800'
             }`}
           >
             <span className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-st-black shadow transition-transform ${
@@ -705,7 +708,7 @@ export default function Settings() {
           <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-1">
             <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Use this snippet instead:</p>
             <code className="block text-xs text-gray-600 dark:text-gray-400 break-all">
-              {`<script async src="${typeof window !== 'undefined' ? window.location.origin : ''}/tracker.cookieless.min.js" data-site-key="${site?.site_key || 'YOUR_SITE_KEY'}"></script>`}
+              {`<script async src="${typeof window !== 'undefined' ? window.location.origin : ''}/tracker.cookieless.min.js" data-site-key="${displaySiteKey}"></script>`}
             </code>
           </div>
         )}
@@ -773,13 +776,13 @@ export default function Settings() {
                 value={proxyDomain}
                 onChange={e => setProxyDomain(e.target.value)}
                 placeholder="track.yourdomain.com"
-                disabled={proxyLoading}
-                className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-50"
+                disabled={proxyLoading || isPreview}
+                className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
               />
               <button
                 type="submit"
                 disabled={proxyLoading || isPreview}
-                className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors"
+                className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {proxyLoading ? 'Saving...' : 'Set Domain'}
               </button>
@@ -824,7 +827,7 @@ export default function Settings() {
                 type="button"
                 onClick={handleVerifyProxy}
                 disabled={proxyLoading || isPreview}
-                className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+                className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
               >
                 {proxyLoading ? 'Checking...' : 'Check CNAME Status'}
               </button>
@@ -832,7 +835,7 @@ export default function Settings() {
                 type="button"
                 onClick={handleDeleteProxy}
                 disabled={proxyLoading || isPreview}
-                className="px-4 py-2 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 text-sm font-semibold rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 disabled:opacity-50 transition-colors"
+                className="px-4 py-2 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 text-sm font-semibold rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Remove Custom Domain
               </button>
@@ -843,12 +846,12 @@ export default function Settings() {
                 <span className="block text-xs font-semibold text-st-black dark:text-white">Your first-party tracking snippet:</span>
                 <div className="flex items-center gap-2 bg-gray-200 dark:bg-gray-700 rounded-lg p-2">
                   <code className="font-mono text-xs text-st-black dark:text-white break-all flex-1 select-all">
-                    {`<script async src="https://${proxyConfig.domain}/${site?.cookieless_mode ? 'tracker.cookieless.min.js' : 'tracker.min.js'}" data-site-key="${site?.site_key || 'YOUR_SITE_KEY'}"></script>`}
+                    {`<script async src="https://${proxyConfig.domain}/${site?.cookieless_mode ? 'tracker.cookieless.min.js' : 'tracker.min.js'}" data-site-key="${displaySiteKey}"></script>`}
                   </code>
                   <button
                     onClick={async () => {
                       try {
-                        const snippetText = `<script async src="https://${proxyConfig.domain}/${site?.cookieless_mode ? 'tracker.cookieless.min.js' : 'tracker.min.js'}" data-site-key="${site?.site_key || 'YOUR_SITE_KEY'}"></script>`
+                        const snippetText = `<script async src="https://${proxyConfig.domain}/${site?.cookieless_mode ? 'tracker.cookieless.min.js' : 'tracker.min.js'}" data-site-key="${displaySiteKey}"></script>`
                         await navigator.clipboard.writeText(snippetText)
                         setProxyCopied(true)
                         setTimeout(() => setProxyCopied(false), 2000)
@@ -889,7 +892,8 @@ export default function Settings() {
           <select
             value={attrWindow}
             onChange={e => setAttrWindow(Number(e.target.value))}
-            className="px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
+            disabled={isPreview}
+            className="px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
           >
             <option value={1}>1 day</option>
             <option value={7}>7 days</option>
@@ -901,7 +905,7 @@ export default function Settings() {
           <button
             onClick={handleAttrWindowSave}
             disabled={attrWindowSaving || isPreview}
-            className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {attrWindowSaving ? 'Saving…' : 'Save'}
           </button>
@@ -930,7 +934,8 @@ export default function Settings() {
             <select
               value={timezone}
               onChange={e => setTimezone(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
+              disabled={isPreview}
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
             >
               <option value="UTC">UTC (Coordinated Universal Time)</option>
               <option value="America/New_York">America/New_York (EST/EDT)</option>
@@ -954,15 +959,16 @@ export default function Settings() {
               type="text"
               value={excludedPaths}
               onChange={e => setExcludedPaths(e.target.value)}
+              disabled={isPreview}
               placeholder="/admin/*, /staging/*"
-              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
             />
           </div>
 
           <button
             type="submit"
             disabled={settingsSaving || isPreview}
-            className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {settingsSaving ? 'Saving…' : 'Save Site Settings'}
           </button>
@@ -986,13 +992,13 @@ export default function Settings() {
             value={newParam}
             onChange={e => setNewParam(e.target.value)}
             placeholder="e.g. affiliate"
-            className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
-            disabled={customParamsSaving}
+            className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
+            disabled={customParamsSaving || isPreview}
           />
           <button
             type="submit"
             disabled={customParamsSaving || !newParam.trim() || isPreview}
-            className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Add
           </button>
@@ -1041,8 +1047,9 @@ export default function Settings() {
               type="text"
               value={crossDomainDomains}
               onChange={e => setCrossDomainDomains(e.target.value)}
+              disabled={isPreview}
               placeholder="e.g. app.example.com, checkout.example.com"
-              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
             />
             <p className="text-[10px] text-st-gray dark:text-gray-400">
               Comma-separated list of target domains (maximum 20). No protocols, wildcards, or paths.
@@ -1055,8 +1062,9 @@ export default function Settings() {
               type="text"
               value={crossDomainCookieDomain}
               onChange={e => setCrossDomainCookieDomain(e.target.value)}
+              disabled={isPreview}
               placeholder="e.g. .example.com"
-              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
             />
             <p className="text-[10px] text-st-gray dark:text-gray-400">
               Must start with a leading dot and match or be a parent domain of your primary site domain. Enables fallback storage continuity.
@@ -1066,7 +1074,7 @@ export default function Settings() {
           <button
             type="submit"
             disabled={crossDomainSaving || isPreview}
-            className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors"
+            className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {crossDomainSaving ? 'Saving…' : 'Save Cross-Domain Settings'}
           </button>
@@ -1091,7 +1099,8 @@ export default function Settings() {
             <select
               value={retentionDays}
               onChange={e => setRetentionDays(Number(e.target.value))}
-              className="px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
+              disabled={isPreview}
+              className="px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
             >
               <option value={0}>Keep forever</option>
               <option value={30}>30 days</option>
@@ -1103,7 +1112,7 @@ export default function Settings() {
             <button
               onClick={handleRetentionSave}
               disabled={retentionSaving || isPreview}
-              className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors"
+              className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {retentionSaving ? 'Saving…' : 'Save'}
             </button>
