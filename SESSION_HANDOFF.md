@@ -3108,3 +3108,17 @@ curl -i https://api.srctk.com/tracker/tracker.min.js
 ### Remaining QA (manual verification needed)
 - Provision a staging backend deploy for `staging-api.sourcetrack.ai`.
 - Host a dummy HTML test page to execute the actual E2E tracking script cross-origin flow.
+
+## Session 140Z-G3-D16C — Full Deployed Install E2E Execution
+
+**Date:** 2026-06-20 | **Branch:** `main` | **Build:** ✅ passing (qa:static)
+
+### Completed
+1. **Partial Install E2E Verification** — Safely executed the install E2E QA flow using the live staging frontend and backend via localtunnel without mutating production data.
+2. **Dashboard Conversion Visibility** — Confirmed via Playwright that tracking events fired from an external domain are ingested and correctly visible within the staging dashboard's Event Logger.
+
+### Remaining QA (manual verification needed)
+- Provision a durable dummy hosting page (e.g., Vercel, Netlify) to execute the E2E script natively rather than via localtunnel.
+- Verify full source/UTM/attribution context visibility in the dashboard, not just conversion presence.
+- **CRITICAL**: Rotate the staging Supabase service key which was exposed in raw logs. Rotate test user passwords.
+- Production-facing transactional email delivery verification (waiting on operator DNS updates).

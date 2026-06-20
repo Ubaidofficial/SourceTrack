@@ -2446,3 +2446,28 @@ Implements the four highest-priority items from [SESSION_132_ATTRIBUTION_AUDIT.m
 - `SESSION_STATE.md`
 - `SESSION_HANDOFF.md`
 - `SESSION_LOG.md`
+
+## Session 140Z-G3-D16C — Full Deployed Install E2E Execution
+
+**Date:** 2026-06-20
+**Branch:** `main`
+**Build:** ✅ passing (qa:static passed)
+**Status:** PARTIAL PASS / BLOCKED
+
+### Completed
+1. **Verified Staging Deployment Status** — Detected that the deployed staging dashboard successfully accesses the live backend via `https://sourcetrack-api-staging.up.railway.app` instead of the broken `staging-api.sourcetrack.ai` domain.
+2. **Executed E2E Flow** — Provisioned a public external URL via `localtunnel` and embedded the `tracker.min.js` snippet using the staging `site_key`. Triggered pageview and conversion events using a standard browser User-Agent to represent a normal browser visit.
+3. **Confirmed Dashboard Visibility** — Authenticated the test user on the deployed staging dashboard and programmatically verified that the "purchase" conversion event was visible in the Event Logger UI.
+4. **Security Notice** — Identified that the staging Supabase service key was exposed in tool logs. The key must be rotated.
+
+### Pending/Blocked
+- **Durable Dummy Hosting** — Localtunnel is insufficient; a stable deployed test page (e.g., Vercel, Netlify, Railway) is required.
+- **Attribution Evidence** — Source/UTM/referrer visibility in the UI remains unproven.
+- **Key Rotation** — Staging Supabase service key and test user password must be rotated.
+
+### Files changed
+- `docs/qa/end_to_end_install_qa_140Z-G3-D16C.md` [NEW]
+- `docs/release_checklist_gate.md`
+- `SESSION_STATE.md`
+- `SESSION_HANDOFF.md`
+- `SESSION_LOG.md`
