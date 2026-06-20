@@ -1,5 +1,10 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
+> **Handoff:** Session 140Z-G3-D17 — Billing / Stripe Production Readiness Audit — **PARTIAL PASS / BLOCKED.**
+> - **Audit:** Audited billing and Stripe readiness. Verified secure checkout creation, accurate pricing/plan mapping, and webhook idempotency.
+> - **Blocker:** Missing operator Stripe configurations for live endpoints and price IDs. Test vs live mode isolation depends strictly on operator config. Paid beta remains NOT READY.
+> - **Deliverable:** Created `docs/qa/billing_stripe_production_readiness_140Z-G3-D17.md`.
+>
 > **Handoff:** Session 140Z-G3-D16 — End-to-End Install QA — **BLOCKED.**
 > - **Audit:** Attempted to perform the full onboarding, install, and attribution visibility user flow on the deployed environment.
 > - **Blocker:** Missing safe operator test credentials and an external live dummy site to install the tracking snippet. Release gate remains open.
