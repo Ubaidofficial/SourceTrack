@@ -358,8 +358,7 @@ router.get('/preview/:siteKeyOrId', async (req, res) => {
         install = { status: 'not_installed' }
       }
     } catch { install = { status: 'error' } }
-
-    logAction('preview_dashboard_view', 'site', siteKey, { site_name: site.name })
+    logAction('preview_dashboard_view', 'site', site.site_key || keyOrId, { site_name: site.name })
 
     return res.json({
       success: true,
