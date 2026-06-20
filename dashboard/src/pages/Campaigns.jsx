@@ -14,6 +14,7 @@ import MetricTile from '../components/MetricTile'
 import StatusBadge from '../components/StatusBadge'
 import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
 import { safeNumber, formatCurrency, formatCurrencyDecimal, formatNumber, formatMultiplier } from '../utils/numbers'
+import { isSupportPreviewActive } from "../utils/supportPreview";
 import { hasFeature } from '../lib/planFeatures'
 import { Bar } from 'react-chartjs-2'
 import {
@@ -559,17 +560,19 @@ export default function Campaigns() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          {anyConnected && (
+          {anyConnected && !isPreview && (
             <button onClick={handleSyncAllConnected} disabled={syncingAll}
               className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5 transition-colors font-medium shadow-sm">
               <RefreshCw className={`w-4 h-4 ${syncingAll ? 'animate-spin' : ''}`} />
               {syncingAll ? 'Syncing...' : 'Sync connected accounts'}
             </button>
           )}
-          <button onClick={() => setImportModalOpen(true)}
-            className="px-3 py-1.5 text-sm text-st-black bg-[#d7f550] hover:bg-[#c4df45] rounded-lg transition-colors font-medium flex items-center gap-1.5 shadow-sm">
-            <UploadCloud className="w-4 h-4" /> Import Costs
-          </button>
+          {!isPreview && (
+            <button onClick={() => setImportModalOpen(true)}
+              className="px-3 py-1.5 text-sm text-st-black bg-[#d7f550] hover:bg-[#c4df45] rounded-lg transition-colors font-medium flex items-center gap-1.5 shadow-sm">
+              <UploadCloud className="w-4 h-4" /> Import Costs
+            </button>
+          )}
 
           <button onClick={() => navigate('/report-builder')}
             className="px-3 py-1.5 text-sm text-gray-500 bg-gray-50 rounded-lg hover:bg-gray-100 font-medium">
@@ -1323,7 +1326,7 @@ export default function Campaigns() {
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-3">
               <button
                 onClick={closeModal}
-                disabled={importing}
+                disabled={isPreview || importing}
                 className="px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
                 Close
@@ -1331,7 +1334,7 @@ export default function Campaigns() {
               {importTab === 'upload' && (
                 <button
                   onClick={executeImport}
-                  disabled={importing || parsedRows.length === 0 || parsedRows.some(r => r.error)}
+                  disabled={isPreview || importing || parsedRows.length === 0 || parsedRows.some(r => r.error)}
                   className="px-4 py-2 text-sm font-semibold text-st-black bg-[#d7f550] hover:bg-[#c4df45] rounded-xl transition-colors disabled:opacity-50 flex items-center gap-1.5"
                 >
                   {importing ? (

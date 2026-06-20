@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import ConversionExplanationModal from '../components/ConversionExplanationModal'
 import { hasFeature } from '../lib/planFeatures'
+import { isSupportPreviewActive } from '../utils/supportPreview'
 import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
 import { SourceIcon, SourceChip } from '../components/SourceIcon'
 
@@ -1994,63 +1995,68 @@ export default function ReportBuilder() {
 
                   {/* Actions Header */}
                   <div className="flex items-center gap-2 self-start sm:self-center">
-                    {hasFeature(site?.plan, 'saved_reports') ? (
+                    {!isPreview && (
                       <>
-                        <button
-                          onClick={handleSave}
-                          className="px-3 py-1.5 text-xs bg-st-black text-white hover:bg-gray-800 dark:bg-lime-500 dark:text-st-black dark:hover:bg-lime-400 rounded-lg flex items-center gap-1 font-semibold transition-all shadow-sm"
-                        >
-                          <Bookmark className="w-3.5 h-3.5" />
-                          {editingId ? 'Update' : 'Save'}
-                        </button>
-                        {hasFeature(site?.plan, 'dashboard_widgets') ? (
-                          <button
-                            onClick={handleDashboardToggle}
-                            disabled={isDashboardToggling}
-                            className={`px-3 py-1.5 text-xs rounded-lg flex items-center gap-1.5 font-semibold transition-colors border shadow-sm ${
-                              isPinned
-                                ? 'bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30 border-red-200'
-                                : 'bg-lime-50 text-lime-800 hover:bg-lime-100 dark:bg-lime-950/20 dark:text-lime-400 dark:border-lime-900/30 border-lime-200'
-                            }`}
-                          >
-                            {isDashboardToggling ? (
-                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        {hasFeature(site?.plan, 'saved_reports') ? (
+                          <>
+                            <button
+                              onClick={handleSave}
+                              className="px-3 py-1.5 text-xs bg-st-black text-white hover:bg-gray-800 dark:bg-lime-500 dark:text-st-black dark:hover:bg-lime-400 rounded-lg flex items-center gap-1 font-semibold transition-all shadow-sm"
+                            >
+                              <Bookmark className="w-3.5 h-3.5" />
+                              {editingId ? 'Update' : 'Save'}
+                            </button>
+                            {hasFeature(site?.plan, 'dashboard_widgets') ? (
+                              <button
+                                onClick={handleDashboardToggle}
+                                disabled={isDashboardToggling}
+                                className={`px-3 py-1.5 text-xs rounded-lg flex items-center gap-1.5 font-semibold transition-colors border shadow-sm disabled:opacity-50 ${
+                                  isPinned
+                                    ? 'bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30 border-red-200'
+                                    : 'bg-lime-50 text-lime-800 hover:bg-lime-100 dark:bg-lime-950/20 dark:text-lime-400 dark:border-lime-900/30 border-lime-200'
+                                }`}
+                              >
+                                {isDashboardToggling ? (
+                                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <BarChart3 className="w-3.5 h-3.5" />
+                                )}
+                                {isPinned ? 'Unpin' : 'Pin'}
+                              </button>
                             ) : (
-                              <BarChart3 className="w-3.5 h-3.5" />
+                              <button
+                                onClick={() => navigate('/billing')}
+                                className="px-3 py-1.5 text-xs bg-gray-50 dark:bg-dark-card text-st-gray dark:text-gray-400 border border-gray-200 dark:border-dark-border rounded-lg flex items-center gap-1.5 font-semibold opacity-70"
+                                title="Pin to dashboard available on Growth"
+                              >
+                                🔒 Pin
+                              </button>
                             )}
-                            {isPinned ? 'Unpin' : 'Pin'}
+                          </>
+                        ) : (
+                          <span className="text-xs text-st-gray dark:text-gray-400">
+                            🔒 Save requires <a href="/billing" className="text-st-lime hover:underline font-semibold">Upgrade</a>
+                          </span>
+                        )}
+
+                        {hasFeature(site?.plan, 'csv_export') ? (
+                          <button
+                            onClick={handleExportCSV}
+                            className="px-3 py-1.5 text-xs bg-white dark:bg-dark-card hover:bg-gray-50 dark:hover:bg-dark-border text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-dark-border rounded-lg flex items-center gap-1 font-semibold shadow-sm"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            CSV
                           </button>
                         ) : (
-                          <button
-                            onClick={() => navigate('/billing')}
-                            className="px-3 py-1.5 text-xs bg-gray-50 dark:bg-dark-card text-st-gray dark:text-gray-400 border border-gray-200 dark:border-dark-border rounded-lg flex items-center gap-1.5 font-semibold opacity-70"
-                            title="Pin to dashboard available on Growth"
+                          <a
+                            href="/billing"
+                            className="px-3 py-1.5 text-xs bg-white dark:bg-dark-card hover:border-st-lime text-gray-400 border border-gray-300 dark:border-dark-border rounded-lg flex items-center gap-1 font-semibold shadow-sm opacity-70"
+                            title="CSV export available on Starter"
                           >
-                            🔒 Pin
-                          </button>
+                            🔒 CSV
+                          </a>
                         )}
                       </>
-                    ) : (
-                      <span className="text-xs text-st-gray dark:text-gray-400">
-                        🔒 Save requires <a href="/billing" className="text-st-lime hover:underline font-semibold">Upgrade</a>
-                      </span>
-                    )}
-                    {hasFeature(site?.plan, 'csv_export') ? (
-                      <button
-                        onClick={handleExportCSV}
-                        className="px-3 py-1.5 text-xs bg-white dark:bg-dark-card hover:bg-gray-50 dark:hover:bg-dark-border text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-dark-border rounded-lg flex items-center gap-1 font-semibold shadow-sm"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        CSV
-                      </button>
-                    ) : (
-                      <a
-                        href="/billing"
-                        className="px-3 py-1.5 text-xs bg-white dark:bg-dark-card hover:border-st-lime text-gray-400 border border-gray-300 dark:border-dark-border rounded-lg flex items-center gap-1 font-semibold shadow-sm opacity-70"
-                        title="CSV export available on Starter"
-                      >
-                        🔒 CSV
-                      </a>
                     )}
                   </div>
                 </div>
@@ -2372,27 +2378,29 @@ export default function ReportBuilder() {
                             </div>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between border-t border-gray-100 dark:border-dark-border mt-3 pt-3">
-                          {hasFeature(site?.plan, 'dashboard_widgets') ? (
-                            <button
-                              onClick={() => handleListPinToggle(r)}
-                              className={`text-xs flex items-center gap-1 font-semibold transition-colors ${
-                                r.show_on_dashboard
-                                  ? 'text-lime-600 dark:text-lime-400'
-                                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-                              }`}
-                            >
-                              <Bookmark className="w-3.5 h-3.5" style={{ fill: r.show_on_dashboard ? 'currentColor' : 'none' }} />
-                              {r.show_on_dashboard ? 'Pinned' : 'Pin'}
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => navigate('/billing')}
-                              className="text-xs flex items-center gap-1 font-semibold text-gray-400 opacity-70"
-                              title="Pin to dashboard available on Growth"
-                            >
-                              🔒 Pin
-                            </button>
+                        <div className={`flex items-center ${isPreview ? 'justify-end' : 'justify-between'} border-t border-gray-100 dark:border-dark-border mt-3 pt-3`}>
+                          {!isPreview && (
+                            hasFeature(site?.plan, 'dashboard_widgets') ? (
+                              <button
+                                onClick={() => handleListPinToggle(r)}
+                                className={`text-xs flex items-center gap-1 font-semibold transition-colors ${
+                                  r.show_on_dashboard
+                                    ? 'text-lime-600 dark:text-lime-400'
+                                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                                }`}
+                              >
+                                <Bookmark className="w-3.5 h-3.5" style={{ fill: r.show_on_dashboard ? 'currentColor' : 'none' }} />
+                                {r.show_on_dashboard ? 'Pinned' : 'Pin'}
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => navigate('/billing')}
+                                className="text-xs flex items-center gap-1 font-semibold text-gray-400 opacity-70"
+                                title="Pin to dashboard available on Growth"
+                              >
+                                🔒 Pin
+                              </button>
+                            )
                           )}
                           <div className="flex items-center gap-2">
                             <button
@@ -2401,16 +2409,18 @@ export default function ReportBuilder() {
                             >
                               Load
                             </button>
-                            <button
-                              onClick={() => {
-                                if (window.confirm(`Are you sure you want to delete "${r.name}"?`)) {
-                                  handleDelete(r.id)
-                                }
-                              }}
-                              className="px-2 py-1 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 rounded transition-all font-semibold"
-                            >
-                              Delete
-                            </button>
+                            {!isPreview && (
+                              <button
+                                onClick={() => {
+                                  if (window.confirm(`Are you sure you want to delete "${r.name}"?`)) {
+                                    handleDelete(r.id)
+                                  }
+                                }}
+                                className="px-2 py-1 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 rounded transition-all font-semibold"
+                              >
+                                Delete
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>

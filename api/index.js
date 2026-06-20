@@ -425,6 +425,22 @@ app.get('/api/attribution', requireUserAuth, validateSiteKey, requireSiteMembers
 app.get('/api/attribution/explain', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, attributionExplain)
 app.get("/api/attribution/verdicts", requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, attributionVerdicts)
 app.get('/api/journey/:visitorId', requireUserAuth, validateSiteKey, requireSiteMembership, defaultLimit, journey)
+// ── Support Preview Mutation Guard ─────────────────────────────────────────────
+app.use((req, res, next) => {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+    return next()
+  }
+  // Allow mutations on /api/admin/* (so operator can do operator things)
+  if (req.path.startsWith('/api/admin/')) {
+    return next()
+  }
+  // If the frontend flagged this as a support preview request
+  if (req.headers['x-sourcetrack-support-preview'] === 'true') {
+    return res.status(403).json({ success: false, error: 'Support preview is read-only' })
+  }
+  next()
+})
+
 app.use('/api/ai-chat', requireUserAuth, validateSiteKey, requireSiteMembership, aiChatRouter)
 app.use('/api/install', requireUserAuth, installRouter)
 app.use('/api/events', requireUserAuth, validateSiteKey, requireSiteMembership, eventsRouter)

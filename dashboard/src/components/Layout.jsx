@@ -10,7 +10,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { useSite } from '../contexts/SiteContext'
 import { LogoFull, LogoFullDark } from './Logo'
-import { isSupportPreviewActive } from '../utils/supportPreview'
+import { isSupportPreviewActive, getSupportPreviewSite } from '../utils/supportPreview'
+import SupportModeBanner from './SupportModeBanner'
 
 // "Install" removed: Integrations already surfaces the snippet + "Full Setup Guide" link,
 // making a separate top-level Install entry redundant.
@@ -299,6 +300,13 @@ export default function Layout({ children }) {
             </button>
           </div>
         </header>
+
+        {isSupportPreviewActive() && (
+          <SupportModeBanner
+            siteName={getSupportPreviewSite()?.site_name}
+            siteDomain={getSupportPreviewSite()?.site_domain}
+          />
+        )}
 
         <main className="flex-1 overflow-auto p-6">
           {children}

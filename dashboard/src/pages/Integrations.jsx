@@ -9,6 +9,7 @@ import {
   ExternalLink, Globe, Tag, ShoppingCart, BarChart3, Plug, Mail, Radio, Trash, Play, RefreshCw,
   ChevronDown, ChevronUp, XCircle
 } from 'lucide-react'
+import { isSupportPreviewActive } from "../utils/supportPreview";
 import DashboardCard from '../components/DashboardCard'
 import StatusBadge from '../components/StatusBadge'
 import MetricTile from '../components/MetricTile'
@@ -966,10 +967,12 @@ export default function Integrations() {
             Tracking setup, verification, and data health
           </p>
         </div>
-        <button onClick={() => navigate('/debugger')}
-          className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5">
-          <Bug className="w-4 h-4" /> Live Events
-        </button>
+        {!isPreview && (
+          <button onClick={() => navigate('/debugger')}
+            className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5">
+            <Bug className="w-4 h-4" /> Live Events
+          </button>
+        )}
       </div>
 
       {/* Over-reporting warning — only when DQ flagged duplicate_conversion_rate */}
@@ -1089,19 +1092,23 @@ export default function Integrations() {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-3 shrink-0">
-              <button
-                onClick={handleCopy}
-                className="px-4 py-2.5 text-xs font-semibold bg-st-green hover:opacity-90 text-white rounded-xl transition-colors flex items-center gap-2 shadow-sm"
-              >
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                {copied ? 'Copied' : 'Copy script'}
-              </button>
-              <button
-                onClick={handleViewInstallGuide}
-                className="px-4 py-2.5 bg-white/10 hover:bg-white/15 text-white border border-white/10 text-xs font-semibold rounded-xl transition-colors"
-              >
-                Show install steps
-              </button>
+              {!isPreview && (
+                <>
+                  <button
+                    onClick={handleCopy}
+                    className="px-4 py-2.5 text-xs font-semibold bg-st-green hover:opacity-90 text-white rounded-xl transition-colors flex items-center gap-2 shadow-sm"
+                  >
+                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                    {copied ? 'Copied' : 'Copy script'}
+                  </button>
+                  <button
+                    onClick={handleViewInstallGuide}
+                    className="px-4 py-2.5 bg-white/10 hover:bg-white/15 text-white border border-white/10 text-xs font-semibold rounded-xl transition-colors"
+                  >
+                    Show install steps
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -1137,7 +1144,7 @@ export default function Integrations() {
                     >
                       Docs
                     </a>
-                    {!isVerified && (
+                    {!isVerified && !isPreview && (
                       <button
                         onClick={(e) => { e.stopPropagation(); handleCopy(); }}
                         className="px-2.5 py-1 text-xs font-semibold bg-st-green hover:opacity-90 text-white rounded-lg transition-colors flex items-center gap-1 shrink-0"
@@ -1255,16 +1262,18 @@ export default function Integrations() {
                   <Link to="/docs/platforms/stripe" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
                     Docs
                   </Link>
-                  <button
-                    onClick={() => setActiveSection(activeSection === 'revenue.stripe' ? null : 'revenue.stripe')}
-                    className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
-                      stripeConnected
-                        ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700'
-                        : 'bg-st-green hover:opacity-90 text-white'
-                    }`}
-                  >
-                    {stripeConnected ? 'Manage' : 'Connect'}
-                  </button>
+                  {!isPreview && (
+                    <button
+                      onClick={() => setActiveSection(activeSection === 'revenue.stripe' ? null : 'revenue.stripe')}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
+                        stripeConnected
+                          ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700'
+                          : 'bg-st-green hover:opacity-90 text-white'
+                      }`}
+                    >
+                      {stripeConnected ? 'Manage' : 'Connect'}
+                    </button>
+                  )}
                 </div>
               }
               isExpanded={activeSection === 'revenue.stripe'}
@@ -1302,7 +1311,7 @@ export default function Integrations() {
                       <button
                         type="button"
                         onClick={handleDeleteStripe}
-                        disabled={stripeSubmitting}
+                        disabled={isPreview || stripeSubmitting}
                         className="px-3 py-1.5 border border-red-200 text-red-655 rounded-lg text-xs font-semibold hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-50"
                       >
                         Disconnect
@@ -1320,13 +1329,13 @@ export default function Integrations() {
                         value={stripeSecret}
                         onChange={e => setStripeSecret(e.target.value)}
                         placeholder="whsec_..."
-                        disabled={stripeSubmitting}
+                        disabled={isPreview || stripeSubmitting}
                         className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a1d1d] text-st-black dark:text-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-st-black/20"
                       />
                     </div>
                     <button
                       type="submit"
-                      disabled={stripeSubmitting || !stripeSecret.trim()}
+                      disabled={isPreview || stripeSubmitting || !stripeSecret.trim()}
                       className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 disabled:opacity-50 transition-colors"
                     >
                       {stripeSubmitting ? 'Saving...' : 'Save signing secret'}
@@ -1381,16 +1390,18 @@ export default function Integrations() {
                   <Link to="/docs/platforms/shopify" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
                     Docs
                   </Link>
-                  <button
-                    onClick={() => setActiveSection(activeSection === 'revenue.shopify' ? null : 'revenue.shopify')}
-                    className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
-                      shopifyConnected
-                        ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700'
-                        : 'bg-st-green hover:opacity-90 text-white'
-                    }`}
-                  >
-                    {shopifyConnected ? 'Manage' : 'Connect'}
-                  </button>
+                  {!isPreview && (
+                    <button
+                      onClick={() => setActiveSection(activeSection === 'revenue.shopify' ? null : 'revenue.shopify')}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
+                        shopifyConnected
+                          ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700'
+                          : 'bg-st-green hover:opacity-90 text-white'
+                      }`}
+                    >
+                      {shopifyConnected ? 'Manage' : 'Connect'}
+                    </button>
+                  )}
                 </div>
               }
               isExpanded={activeSection === 'revenue.shopify'}
@@ -1428,7 +1439,7 @@ export default function Integrations() {
                       <button
                         type="button"
                         onClick={handleDeleteShopify}
-                        disabled={shopifySubmitting}
+                        disabled={isPreview || shopifySubmitting}
                         className="px-3 py-1.5 border border-red-200 text-red-655 rounded-lg text-xs font-semibold hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-50"
                       >
                         Disconnect
@@ -1446,13 +1457,13 @@ export default function Integrations() {
                         value={shopifySecret}
                         onChange={e => setShopifySecret(e.target.value)}
                         placeholder="Paste webhook secret key"
-                        disabled={shopifySubmitting}
+                        disabled={isPreview || shopifySubmitting}
                         className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a1d1d] text-st-black dark:text-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-st-black/20"
                       />
                     </div>
                     <button
                       type="submit"
-                      disabled={shopifySubmitting || !shopifySecret.trim()}
+                      disabled={isPreview || shopifySubmitting || !shopifySecret.trim()}
                       className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 disabled:opacity-50 transition-colors"
                     >
                       {shopifySubmitting ? 'Saving...' : 'Save signing secret'}
@@ -1787,7 +1798,7 @@ export default function Integrations() {
                         <button
                           type="button"
                           onClick={handleSyncGoogleAds}
-                          disabled={syncingGads}
+                          disabled={isPreview || syncingGads}
                           className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1"
                         >
                           {syncingGads ? 'Syncing...' : 'Sync Now'}
@@ -1825,6 +1836,7 @@ export default function Integrations() {
                       <input
                         type="text"
                         required
+                        disabled={isPreview}
                         value={googleCustomerId}
                         onChange={e => setGoogleCustomerId(e.target.value)}
                         placeholder="1234567890"
@@ -1837,6 +1849,7 @@ export default function Integrations() {
                       </label>
                       <input
                         type="text"
+                        disabled={isPreview}
                         value={googleLoginCustomerId}
                         onChange={e => setGoogleLoginCustomerId(e.target.value)}
                         placeholder="9876543210"
@@ -1845,7 +1858,7 @@ export default function Integrations() {
                     </div>
                     <button
                       type="submit"
-                      disabled={gadsSaving}
+                      disabled={isPreview || gadsSaving}
                       className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 transition-colors"
                     >
                       {gadsSaving ? 'Saving...' : 'Save Configuration'}
@@ -1866,16 +1879,18 @@ export default function Integrations() {
                   <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
                     Docs
                   </a>
-                  <button
-                    onClick={() => setActiveSection(activeSection === 'ad.meta_ads' ? null : 'ad.meta_ads')}
-                    className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
-                      metaAdsConnected
-                        ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700'
-                        : 'bg-st-green hover:opacity-90 text-white'
-                    }`}
-                  >
-                    {metaAdsConnected ? 'Manage' : 'Connect'}
-                  </button>
+                  {!isPreview && (
+                    <button
+                      onClick={() => setActiveSection(activeSection === 'ad.meta_ads' ? null : 'ad.meta_ads')}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded-lg transition-colors ${
+                        metaAdsConnected
+                          ? 'bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700'
+                          : 'bg-st-green hover:opacity-90 text-white'
+                      }`}
+                    >
+                      {metaAdsConnected ? 'Manage' : 'Connect'}
+                    </button>
+                  )}
                 </div>
               }
               isExpanded={activeSection === 'ad.meta_ads'}
@@ -1892,7 +1907,7 @@ export default function Integrations() {
                       <button
                         type="button"
                         onClick={handleSyncMetaAds}
-                        disabled={syncingMeta}
+                        disabled={isPreview || syncingMeta}
                         className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 text-xs font-semibold rounded-lg transition-colors"
                       >
                         {syncingMeta ? 'Syncing...' : 'Sync Now'}
@@ -1928,6 +1943,7 @@ export default function Integrations() {
                       <input
                         type="password"
                         required
+                        disabled={isPreview}
                         value={metaAccessToken}
                         onChange={e => setMetaAccessToken(e.target.value)}
                         placeholder="EAA..."
@@ -1941,6 +1957,7 @@ export default function Integrations() {
                       <input
                         type="text"
                         required
+                        disabled={isPreview}
                         value={metaAdAccountId}
                         onChange={e => setMetaAdAccountId(e.target.value)}
                         placeholder="123456789"
@@ -1949,7 +1966,7 @@ export default function Integrations() {
                     </div>
                     <button
                       type="submit"
-                      disabled={metaConnecting}
+                      disabled={isPreview || metaConnecting}
                       className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 transition-colors"
                     >
                       {metaConnecting ? 'Saving...' : 'Connect Meta Ads'}
@@ -2305,7 +2322,7 @@ export default function Integrations() {
                         </div>
                         <button
                           type="submit"
-                          disabled={selectingProperty || !selectedProperty}
+                          disabled={isPreview || selectingProperty || !selectedProperty}
                           className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 disabled:opacity-50 transition-colors"
                         >
                           {selectingProperty ? 'Saving...' : 'Confirm Property Selection'}
@@ -2335,7 +2352,7 @@ export default function Integrations() {
                             <button
                               type="button"
                               onClick={handleSyncGsc}
-                              disabled={syncingGsc}
+                              disabled={isPreview || syncingGsc}
                               className="px-3 py-1.5 bg-st-black dark:bg-white text-white dark:text-black text-xs font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-white/95 disabled:opacity-50 transition-colors"
                             >
                               {syncingGsc ? 'Syncing...' : 'Sync Search Analytics'}
@@ -2350,7 +2367,7 @@ export default function Integrations() {
                           <button
                             type="button"
                             onClick={handleDisconnectGsc}
-                            disabled={disconnectingGsc}
+                            disabled={isPreview || disconnectingGsc}
                             className="px-3 py-1.5 border border-red-205 text-red-655 rounded-lg text-xs font-semibold hover:bg-red-55 dark:hover:bg-red-955/20 transition-colors disabled:opacity-50"
                           >
                             Disconnect
@@ -2403,9 +2420,11 @@ export default function Integrations() {
                   <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
                     Docs
                   </a>
-                  <Link to="/settings" className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors">
-                    Manage
-                  </Link>
+                  {!isPreview && (
+                    <Link to="/settings" className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors">
+                      Manage
+                    </Link>
+                  )}
                 </div>
               }
             />
@@ -2421,9 +2440,11 @@ export default function Integrations() {
                   <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
                     Docs
                   </a>
-                  <Link to="/settings" className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors">
-                    Manage
-                  </Link>
+                  {!isPreview && (
+                    <Link to="/settings" className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors">
+                      Manage
+                    </Link>
+                  )}
                 </div>
               }
             />
@@ -2494,15 +2515,17 @@ export default function Integrations() {
                         <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
                           Docs
                         </a>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveSection(activeSection === 'developer.payments_api' ? 'developer' : 'developer.payments_api');
-                          }}
-                          className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-150 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors"
-                        >
-                          {activeSection === 'developer.payments_api' ? 'Close' : 'Setup'}
-                        </button>
+                        {!isPreview && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveSection(activeSection === 'developer.payments_api' ? 'developer' : 'developer.payments_api');
+                            }}
+                            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-150 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors"
+                          >
+                            {activeSection === 'developer.payments_api' ? 'Close' : 'Setup'}
+                          </button>
+                        )}
                       </div>
                     }
                   >
@@ -2605,15 +2628,17 @@ export default function Integrations() {
                         <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
                           Docs
                         </a>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveSection(activeSection === 'developer.webhook_adapter' ? 'developer' : 'developer.webhook_adapter');
-                          }}
-                          className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-150 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors"
-                        >
-                          {activeSection === 'developer.webhook_adapter' ? 'Close' : 'Setup'}
-                        </button>
+                        {!isPreview && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveSection(activeSection === 'developer.webhook_adapter' ? 'developer' : 'developer.webhook_adapter');
+                            }}
+                            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-150 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors"
+                          >
+                            {activeSection === 'developer.webhook_adapter' ? 'Close' : 'Setup'}
+                          </button>
+                        )}
                       </div>
                     }
                   >
@@ -2625,8 +2650,8 @@ export default function Integrations() {
                             type="text"
                             placeholder="https://your-endpoint.com/webhook"
                             value={url}
+                            disabled={isPreview || submitting}
                             onChange={e => setUrl(e.target.value)}
-                            disabled={submitting}
                             className="w-full px-3 py-2 border border-gray-250 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-st-black/20"
                           />
                           <p className="text-[10px] text-st-gray mt-1 font-sans">
@@ -2663,7 +2688,7 @@ export default function Integrations() {
                                   <button
                                     type="button"
                                     onClick={handleRegenerateSecret}
-                                    disabled={submitting}
+                                    disabled={isPreview || submitting}
                                     className="text-[10px] text-gray-500 hover:text-st-black font-semibold flex items-center gap-1 transition-colors font-sans"
                                   >
                                     <RefreshCw className="w-3 h-3" /> Regenerate
@@ -2681,6 +2706,7 @@ export default function Integrations() {
                                   <input
                                     type="checkbox"
                                     checked={active}
+                                    disabled={isPreview}
                                     onChange={e => {
                                       setActive(e.target.checked)
                                       const isEdit = !!webhookData?.webhook?.id
@@ -2717,7 +2743,7 @@ export default function Integrations() {
                           <div className="flex items-center gap-2 font-sans">
                             <button
                               type="submit"
-                              disabled={submitting}
+                              disabled={isPreview || submitting}
                               className="px-4 py-2 bg-st-black text-white text-xs font-semibold rounded-lg hover:bg-st-black/90 disabled:opacity-50 transition-colors"
                             >
                               {submitting ? 'Saving...' : 'Save Configuration'}
@@ -2727,7 +2753,7 @@ export default function Integrations() {
                               <button
                                 type="button"
                                 onClick={handleTestWebhook}
-                                disabled={testing || submitting}
+                                disabled={isPreview || testing || submitting}
                                 className="px-4 py-2 bg-white text-gray-700 border border-gray-300 text-xs font-semibold rounded-lg hover:bg-gray-50 flex items-center gap-1.5 disabled:opacity-50 transition-colors"
                               >
                                 <Play className="w-3 h-3" /> {testing ? 'Testing...' : 'Test Webhook'}
@@ -2739,7 +2765,7 @@ export default function Integrations() {
                             <button
                               type="button"
                               onClick={handleDeleteWebhook}
-                              disabled={submitting}
+                              disabled={isPreview || submitting}
                               className="text-xs text-red-655 hover:text-red-850 font-semibold flex items-center gap-1 transition-colors font-sans"
                             >
                               <Trash className="w-3.5 h-3.5" /> Delete
@@ -2813,15 +2839,17 @@ export default function Integrations() {
                         <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
                           Docs
                         </a>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveSection(activeSection === 'developer.source_map' ? 'developer' : 'developer.source_map');
-                          }}
-                          className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-150 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors"
-                        >
-                          {activeSection === 'developer.source_map' ? 'Close' : 'Setup'}
-                        </button>
+                        {!isPreview && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveSection(activeSection === 'developer.source_map' ? 'developer' : 'developer.source_map');
+                            }}
+                            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-150 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors"
+                          >
+                            {activeSection === 'developer.source_map' ? 'Close' : 'Setup'}
+                          </button>
+                        )}
                       </div>
                     }
                   >

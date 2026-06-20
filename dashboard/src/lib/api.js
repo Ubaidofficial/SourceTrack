@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { isSupportPreviewActive } from '../utils/supportPreview'
 
 const normalizeBaseUrl = (value) => String(value || '').replace(/\/+$/, '')
 
@@ -37,9 +38,11 @@ export async function fetchApi(path, options = {}) {
   const normalizedOptions = normalizeFetchOptions(options)
   const { headers: extraHeaders, ...rest } = normalizedOptions
   const authHeaders = await getAuthHeaders()
+  const previewHeaders = isSupportPreviewActive() ? { 'X-Sourcetrack-Support-Preview': 'true' } : {}
+
   const res = await fetch(url, {
     ...rest,
-    headers: { 'Content-Type': 'application/json', ...authHeaders, ...extraHeaders }
+    headers: { 'Content-Type': 'application/json', ...authHeaders, ...previewHeaders, ...extraHeaders }
   })
 
   if (res.status === 402) {

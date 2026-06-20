@@ -25,7 +25,7 @@ import DashboardCard from '../components/DashboardCard'
 import DashboardTable from '../components/DashboardTable'
 import EmptyState from '../components/EmptyState'
 import FilterBar from '../components/FilterBar'
-import SupportModeBanner from '../components/SupportModeBanner'
+
 import ConversionExplanationModal from '../components/ConversionExplanationModal'
 import JourneyModal from '../components/JourneyModal'
 import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
@@ -273,9 +273,7 @@ export default function Dashboard() {
 
   return (
     <div className="st-container space-y-6">
-      {previewMode && (
-        <SupportModeBanner siteName={previewSiteName} siteDomain={previewSiteDomain} />
-      )}
+
 
       {/* Header Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

@@ -7,10 +7,12 @@ import { Copy, Check, ExternalLink, Globe, Link2, CreditCard, Link, ShieldCheck,
 import UTMBuilder from '../components/UTMBuilder'
 import { getTrialInfo, getPlanLabel, isPaidPlan } from '../lib/billing'
 import { hasFeature } from '../lib/planFeatures'
+import { isSupportPreviewActive } from '../utils/supportPreview'
 
 export default function Settings() {
   const { user } = useAuth()
   const { activeSite } = useSite()
+  const isPreview = isSupportPreviewActive()
 
   const [site, setSite]                 = useState(null)
   const [name, setName]                 = useState('')
@@ -543,6 +545,12 @@ export default function Settings() {
         <p className="text-sm text-st-gray dark:text-gray-400 mt-1">{user?.email}</p>
       </div>
 
+      {isPreview && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/30 rounded-xl p-4 text-sm text-amber-800 dark:text-amber-400 font-medium">
+          Settings are read-only in Support Preview. Billing, API tokens, and sensitive actions are hidden.
+        </div>
+      )}
+
       {/* Status message */}
       {message && (
         <div className={`rounded-lg px-4 py-3 text-sm ${
@@ -570,9 +578,11 @@ export default function Settings() {
               </p>
             </div>
           </div>
-          <a href="/billing" className="text-xs text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white underline">
-            Manage billing →
-          </a>
+          {!isPreview && (
+            <a href="/billing" className="text-xs text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white underline">
+              Manage billing →
+            </a>
+          )}
         </div>
       </section>
 
@@ -602,7 +612,7 @@ export default function Settings() {
           </div>
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || isPreview}
             className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors"
           >
             {saving ? 'Saving…' : 'Save Changes'}
@@ -621,8 +631,8 @@ export default function Settings() {
           <span className="text-sm text-gray-600 dark:text-gray-400">{shareEnabled ? 'Sharing enabled' : 'Sharing disabled'}</span>
           <button
             onClick={handleShareToggle}
-            disabled={shareLoading}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+            disabled={shareLoading || isPreview}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${
               shareEnabled ? 'bg-st-black dark:bg-white' : 'bg-gray-200 dark:bg-gray-700'
             }`}
           >
@@ -681,7 +691,7 @@ export default function Settings() {
           </span>
           <button
             onClick={handleCookielessToggle}
-            disabled={cookielessLoading}
+            disabled={cookielessLoading || isPreview}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${
               cookielessMode ? 'bg-st-black dark:bg-white' : 'bg-gray-200 dark:bg-gray-700'
             }`}
@@ -768,7 +778,7 @@ export default function Settings() {
               />
               <button
                 type="submit"
-                disabled={proxyLoading}
+                disabled={proxyLoading || isPreview}
                 className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors"
               >
                 {proxyLoading ? 'Saving...' : 'Set Domain'}
@@ -813,7 +823,7 @@ export default function Settings() {
               <button
                 type="button"
                 onClick={handleVerifyProxy}
-                disabled={proxyLoading}
+                disabled={proxyLoading || isPreview}
                 className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors flex items-center gap-1.5"
               >
                 {proxyLoading ? 'Checking...' : 'Check CNAME Status'}
@@ -821,7 +831,7 @@ export default function Settings() {
               <button
                 type="button"
                 onClick={handleDeleteProxy}
-                disabled={proxyLoading}
+                disabled={proxyLoading || isPreview}
                 className="px-4 py-2 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400 text-sm font-semibold rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 disabled:opacity-50 transition-colors"
               >
                 Remove Custom Domain
@@ -890,7 +900,7 @@ export default function Settings() {
           </select>
           <button
             onClick={handleAttrWindowSave}
-            disabled={attrWindowSaving}
+            disabled={attrWindowSaving || isPreview}
             className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors"
           >
             {attrWindowSaving ? 'Saving…' : 'Save'}
@@ -951,7 +961,7 @@ export default function Settings() {
 
           <button
             type="submit"
-            disabled={settingsSaving}
+            disabled={settingsSaving || isPreview}
             className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors"
           >
             {settingsSaving ? 'Saving…' : 'Save Site Settings'}
@@ -981,7 +991,7 @@ export default function Settings() {
           />
           <button
             type="submit"
-            disabled={customParamsSaving || !newParam.trim()}
+            disabled={customParamsSaving || !newParam.trim() || isPreview}
             className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors"
           >
             Add
@@ -995,8 +1005,8 @@ export default function Settings() {
                 <span className="text-sm font-mono text-st-black dark:text-white">{param}</span>
                 <button
                   onClick={() => handleRemoveParam(param)}
-                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 text-red-500 rounded"
-                  disabled={customParamsSaving}
+                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 text-red-500 rounded disabled:opacity-50"
+                  disabled={customParamsSaving || isPreview}
                   title="Remove parameter"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -1055,7 +1065,7 @@ export default function Settings() {
 
           <button
             type="submit"
-            disabled={crossDomainSaving}
+            disabled={crossDomainSaving || isPreview}
             className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors"
           >
             {crossDomainSaving ? 'Saving…' : 'Save Cross-Domain Settings'}
@@ -1092,7 +1102,7 @@ export default function Settings() {
             </select>
             <button
               onClick={handleRetentionSave}
-              disabled={retentionSaving}
+              disabled={retentionSaving || isPreview}
               className="px-4 py-2 bg-st-black dark:bg-white text-white dark:text-st-black text-sm font-semibold rounded-lg hover:bg-st-black/90 dark:hover:bg-gray-100 disabled:opacity-50 transition-colors"
             >
               {retentionSaving ? 'Saving…' : 'Save'}
@@ -1101,38 +1111,41 @@ export default function Settings() {
         </div>
 
         {/* Visitor data erasure */}
-        <div className="border-t border-gray-100 dark:border-gray-800 pt-4 space-y-2">
-          <p className="text-xs font-semibold text-st-black dark:text-white">Erase Visitor Data (Right to Erasure)</p>
-          <p className="text-xs text-st-gray dark:text-gray-400">
-            Enter a visitor's anonymous ID to erase matching SourceTrack app database records. This action is immediate for app database records and cannot be undone.
-          </p>
-          <div className="bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-lg p-3 text-[11px] text-amber-800 dark:text-amber-300 space-y-1.5 font-sans">
-            <p>• Database attribution records and stitched identity mappings will be permanently deleted from our app database.</p>
-            <p>• <strong>PostHog Deletion Limitation:</strong> Visitor erasure sends a best-effort deletion request to our analytics backend where supported. However, this is not independently verified and full raw-event purge verification is still pending.</p>
-            <p>• <strong>Sanitization Note:</strong> Ingestion-side PII sanitization is locally implemented to filter sensitive keys, but live staging/production verification remains pending.</p>
-            <p>• Third-party Stripe customer and billing records are not affected or queried during visitor data deletion.</p>
+        {!isPreview && (
+          <div className="border-t border-gray-100 dark:border-gray-800 pt-4 space-y-2">
+            <p className="text-xs font-semibold text-st-black dark:text-white">Erase Visitor Data (Right to Erasure)</p>
+            <p className="text-xs text-st-gray dark:text-gray-400">
+              Enter a visitor's anonymous ID to erase matching SourceTrack app database records. This action is immediate for app database records and cannot be undone.
+            </p>
+            <div className="bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-lg p-3 text-[11px] text-amber-800 dark:text-amber-300 space-y-1.5 font-sans">
+              <p>• Database attribution records and stitched identity mappings will be permanently deleted from our app database.</p>
+              <p>• <strong>PostHog Deletion Limitation:</strong> Visitor erasure sends a best-effort deletion request to our analytics backend where supported. However, this is not independently verified and full raw-event purge verification is still pending.</p>
+              <p>• <strong>Sanitization Note:</strong> Ingestion-side PII sanitization is locally implemented to filter sensitive keys, but live staging/production verification remains pending.</p>
+              <p>• Third-party Stripe customer and billing records are not affected or queried during visitor data deletion.</p>
+            </div>
+            <form onSubmit={handleVisitorDelete} className="flex items-center gap-3">
+              <input
+                type="text"
+                value={visitorId}
+                onChange={e => setVisitorId(e.target.value)}
+                placeholder="anonymous_id (e.g. xxxxxxxx-xxxx-4xxx-…)"
+                className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
+              />
+              <button
+                type="submit"
+                disabled={visitorDeleting || !visitorId.trim()}
+                className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                {visitorDeleting ? 'Erasing…' : 'Erase'}
+              </button>
+            </form>
           </div>
-          <form onSubmit={handleVisitorDelete} className="flex items-center gap-3">
-            <input
-              type="text"
-              value={visitorId}
-              onChange={e => setVisitorId(e.target.value)}
-              placeholder="anonymous_id (e.g. xxxxxxxx-xxxx-4xxx-…)"
-              className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
-            />
-            <button
-              type="submit"
-              disabled={visitorDeleting || !visitorId.trim()}
-              className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              {visitorDeleting ? 'Erasing…' : 'Erase'}
-            </button>
-          </form>
-        </div>
+        )}
       </section>
 
       {/* ── Server API Tokens ─────────────────────────────────────────── */}
+      {!isPreview && (
       <section id="api-tokens" className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4 scroll-mt-20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -1263,6 +1276,7 @@ export default function Settings() {
           </a>
         </div>
       </section>
+      )}
 
       {/* ── Support & Feedback ────────────────────────────────────────── */}
       <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-3">
@@ -1280,6 +1294,7 @@ export default function Settings() {
       </section>
 
       {/* ── Danger Zone (Account Deletion) ────────────────────────────── */}
+      {!isPreview && (
       <section className="bg-white dark:bg-[#1A1C1C] border border-red-200 dark:border-red-900/40 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-red-500" />
@@ -1317,6 +1332,7 @@ export default function Settings() {
           </button>
         </div>
       </section>
+      )}
 
       {/* ── UTM Builder ────────────────────────────────────────────────── */}
       <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
