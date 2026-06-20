@@ -1,5 +1,9 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
+> **Handoff:** Session 140Z-G3-D15 — Production Observability Readiness Audit — **PARTIAL PASS.**
+> - **Audit:** Reviewed backend request tracing, frontend monitoring, and log safety. Backend logging is secure and strips PII/secrets. Frontend error tracking and proactive alerts are missing.
+> - **Deliverable:** Created `docs/qa/production_observability_140Z-G3-D15.md`.
+>
 > **Handoff:** Session 140Z-G3-D14B — Live Attribution E2E Closeout — **PARTIAL PASS / BLOCKED.**
 > - **Audit:** Investigated `site_key=1` test failure. Fixed stale hardcoded ID by updating script to read `SOURCETRACK_SITE_KEY` env var.
 > - **Tests:** Integration test properly fails when env var is missing. Live E2E testing remains BLOCKED until operator seeds a staging test fixture.
