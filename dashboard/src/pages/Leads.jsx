@@ -14,12 +14,12 @@ import { safeNumber, formatCurrency } from '../utils/numbers'
 import { hasFeature } from '../lib/planFeatures'
 
 const CONVERSION_TYPE_BADGE = {
-  purchase: { bg: 'bg-green-100', text: 'text-green-800', label: 'Purchase' },
-  trial: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Trial' },
-  lead: { bg: 'bg-amber-100', text: 'text-amber-800', label: 'Lead Form' },
-  signup: { bg: 'bg-purple-100', text: 'text-purple-800', label: 'Sign Up' },
-  meeting: { bg: 'bg-sky-100', text: 'text-sky-800', label: 'Meeting' },
-  booking: { bg: 'bg-indigo-100', text: 'text-indigo-800', label: 'Booking' }
+  purchase: { bg: 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 border border-green-200/30 dark:border-green-900/30', label: 'Purchase' },
+  trial: { bg: 'bg-blue-50 text-blue-700 dark:bg-blue-950/20 dark:text-blue-400 border border-blue-200/30 dark:border-blue-900/30', label: 'Trial' },
+  lead: { bg: 'bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400 border border-amber-200/30 dark:border-amber-900/30', label: 'Lead Form' },
+  signup: { bg: 'bg-purple-50 text-purple-700 dark:bg-purple-950/20 dark:text-purple-400 border border-purple-200/30 dark:border-purple-900/30', label: 'Sign Up' },
+  meeting: { bg: 'bg-sky-50 text-sky-700 dark:bg-sky-950/20 dark:text-sky-400 border border-sky-200/30 dark:border-sky-900/30', label: 'Meeting' },
+  booking: { bg: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/20 dark:text-indigo-400 border border-indigo-200/30 dark:border-indigo-900/30', label: 'Booking' }
 }
 
 export default function Leads() {
@@ -148,11 +148,11 @@ export default function Leads() {
   }
 
   const STATUS_CHIP = {
-    lead:     { bg: 'bg-gray-100 text-gray-500', label: 'Unqualified' },
-    rejected: { bg: 'bg-gray-100 text-gray-500', label: 'Unqualified' },
-    mql:      { bg: 'bg-blue-50 text-blue-600',  label: 'MQL' },
-    sql:      { bg: 'bg-purple-50 text-purple-600', label: 'SQL' },
-    customer: { bg: 'bg-green-50 text-green-700', label: 'Qualified' }
+    lead:     { bg: 'bg-gray-50 text-gray-500 dark:bg-[#181B1B]/40 dark:text-gray-400 border border-gray-200 dark:border-dark-border/60', label: 'Unqualified' },
+    rejected: { bg: 'bg-gray-50 text-gray-500 dark:bg-[#181B1B]/40 dark:text-gray-400 border border-gray-200 dark:border-dark-border/60', label: 'Unqualified' },
+    mql:      { bg: 'bg-blue-50 text-blue-600 dark:bg-blue-950/20 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30',  label: 'MQL' },
+    sql:      { bg: 'bg-purple-50 text-purple-600 dark:bg-purple-950/20 dark:text-purple-400 border border-purple-100 dark:border-purple-900/30', label: 'SQL' },
+    customer: { bg: 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 border border-green-100 dark:border-green-900/30', label: 'Qualified' }
   }
 
   const hasRevenue = totalRevenue > 0
@@ -242,11 +242,11 @@ export default function Leads() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100">
+                <tr className="border-b border-gray-100 dark:border-dark-border bg-gray-50/50 dark:bg-dark-card/50">
                   <th className="py-3 px-3 w-8">
                     <input
                       type="checkbox"
-                      className="rounded border-gray-300 text-st-black focus:ring-st-black cursor-pointer"
+                      className="rounded border-gray-300 dark:border-gray-700 bg-white dark:bg-dark-card text-st-black focus:ring-st-black cursor-pointer"
                       checked={leads.length > 0 && selectedLeads.size === leads.length}
                       onChange={e => {
                         if (e.target.checked) setSelectedLeads(new Set(leads.map(l => l.id)))
@@ -254,15 +254,15 @@ export default function Leads() {
                       }}
                     />
                   </th>
-                  <th className="text-left py-3 px-3 text-xs font-medium text-st-gray">Visitor</th>
-                  <th className="text-left py-3 px-3 text-xs font-medium text-st-gray">Source</th>
-                  <th className="text-left py-3 px-3 text-xs font-medium text-st-gray">Event Type</th>
-                  <th className="text-right py-3 px-3 text-xs font-medium text-st-gray">Conversions</th>
-                  {hasRevenue && <th className="text-right py-3 px-3 text-xs font-medium text-st-gray">Revenue</th>}
-                  <th className="text-left py-3 px-3 text-xs font-medium text-st-gray">Last seen</th>
-                  <th className="text-left py-3 px-3 text-xs font-medium text-st-gray">Status</th>
-                  <th className="text-right py-3 px-3 text-xs font-medium text-st-gray">Country</th>
-                  <th className="text-right py-3 px-3 text-xs font-medium text-st-gray"></th>
+                  <th className="text-left py-3 px-3 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Visitor</th>
+                  <th className="text-left py-3 px-3 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Source</th>
+                  <th className="text-left py-3 px-3 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Event Type</th>
+                  <th className="text-right py-3 px-3 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Conversions</th>
+                  {hasRevenue && <th className="text-right py-3 px-3 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Revenue</th>}
+                  <th className="text-left py-3 px-3 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Last seen</th>
+                  <th className="text-left py-3 px-3 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Status</th>
+                  <th className="text-right py-3 px-3 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Country</th>
+                  <th className="text-right py-3 px-3 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider"></th>
                 </tr>
               </thead>
               <tbody>
@@ -275,12 +275,12 @@ export default function Leads() {
                     <tr
                       key={i}
                       onClick={() => openJourney(lead)}
-                      className={`border-b border-gray-50 hover:bg-lime-50/60 transition-colors cursor-pointer${isSelected ? ' bg-lime-50/30' : ''}`}
+                      className={`border-b border-gray-100/80 dark:border-dark-border/40 hover:bg-gray-50/50 dark:hover:bg-dark-hover/40 transition-colors cursor-pointer${isSelected ? ' bg-st-lime/5 dark:bg-st-lime/10' : ''}`}
                     >
                       <td className="py-3 px-3 w-8" onClick={e => e.stopPropagation()}>
                         <input
                           type="checkbox"
-                          className="rounded border-gray-300 text-st-black focus:ring-st-black cursor-pointer"
+                          className="rounded border-gray-300 dark:border-gray-700 bg-white dark:bg-dark-card text-st-black focus:ring-st-black cursor-pointer"
                           checked={isSelected}
                           onChange={() => {
                             setSelectedLeads(prev => {
@@ -292,11 +292,11 @@ export default function Leads() {
                           }}
                         />
                       </td>
-                      <td className="py-3 px-3 text-st-black font-mono text-xs">
+                      <td className="py-3 px-3 text-st-black dark:text-gray-300 font-mono text-xs">
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); openJourney(lead) }}
-                          className="font-mono text-xs text-st-black hover:underline underline-offset-2"
+                          className="font-mono text-xs text-st-black dark:text-gray-300 hover:underline underline-offset-2"
                           title="Open journey"
                         >
                           {shortId}...
@@ -306,7 +306,7 @@ export default function Leads() {
                         <div className="flex flex-col gap-0.5">
                           <SourceChip source={lead.ai_source || lead.source || 'direct'} />
                           {lead.campaign && lead.campaign !== 'none' && (
-                            <span className="text-[10px] text-st-gray truncate max-w-[140px]">{lead.campaign}</span>
+                            <span className="text-[10px] text-st-gray dark:text-gray-400 truncate max-w-[140px]">{lead.campaign}</span>
                           )}
                         </div>
                       </td>
@@ -314,47 +314,46 @@ export default function Leads() {
                         {lead.last_conversion_type ? (() => {
                           const key = String(lead.last_conversion_type).toLowerCase()
                           const style = CONVERSION_TYPE_BADGE[key] || {
-                            bg: 'bg-gray-100',
-                            text: 'text-gray-600',
+                            bg: 'bg-gray-50 text-gray-500 border border-gray-200 dark:border-gray-800',
                             label: lead.last_conversion_type
                           }
                           return (
-                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${style.bg} ${style.text}`}>
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${style.bg}`}>
                               {style.label}
                             </span>
                           )
                         })() : (
-                          <span className="text-xs text-st-gray">—</span>
+                          <span className="text-xs text-st-gray dark:text-gray-500">—</span>
                         )}
                       </td>
-                      <td className="py-3 px-3 text-right text-gray-600">{lead.conversions}</td>
+                      <td className="py-3 px-3 text-right text-gray-600 dark:text-gray-400 tabular-nums">{lead.conversions}</td>
                       {hasRevenue && (
-                        <td className="py-3 px-3 text-right font-medium text-st-black">
+                        <td className="py-3 px-3 text-right font-semibold text-st-black dark:text-white tabular-nums">
                           {lead.revenue != null ? formatCurrency(lead.revenue) : '—'}
                         </td>
                       )}
-                      <td className="py-3 px-3 text-xs text-st-gray">
+                      <td className="py-3 px-3 text-xs text-st-gray dark:text-gray-400 tabular-nums">
                         {lead.last_seen ? new Date(lead.last_seen).toLocaleDateString() : '—'}
                       </td>
                       <td className="py-3 px-3" onClick={e => e.stopPropagation()}>
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${statusStyle.bg}`}>
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full border whitespace-nowrap ${statusStyle.bg}`}>
                           {statusStyle.label}
                         </span>
                       </td>
-                      <td className="py-3 px-3 text-right text-st-gray text-xs">
+                      <td className="py-3 px-3 text-right text-st-gray dark:text-gray-400 text-xs tabular-nums">
                         {lead.country || '—'}
                       </td>
                       <td className="py-3 px-3 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={(e) => { e.stopPropagation(); navigate(`/leads/${encodeURIComponent(lead.id)}`) }}
-                            className="text-xs text-gray-600 hover:text-st-black font-medium"
+                            className="text-xs text-gray-600 dark:text-gray-400 hover:text-st-black dark:hover:text-white font-medium"
                           >
                             View
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); openJourney(lead) }}
-                            className="text-xs text-st-black hover:text-gray-700 font-medium flex items-center gap-1"
+                            className="text-xs text-st-black dark:text-white hover:text-gray-700 dark:hover:text-gray-300 font-medium flex items-center gap-1"
                           >
                             Journey <ArrowRight className="w-3 h-3" />
                           </button>

@@ -1153,7 +1153,7 @@ export default function ReportBuilder() {
           </p>
           <Link
             to="/app/integrations"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-150 dark:bg-gray-800 text-gray-750 dark:text-gray-350 hover:bg-gray-200 rounded-lg text-sm font-semibold transition-all"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 rounded-lg text-sm font-semibold transition-all"
           >
             <Settings className="w-4 h-4" />
             Manage Integrations
@@ -1195,7 +1195,7 @@ export default function ReportBuilder() {
           </p>
           <Link
             to="/app/integrations"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-150 dark:bg-gray-800 text-gray-750 dark:text-gray-350 hover:bg-gray-200 rounded-lg text-sm font-semibold transition-all"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 rounded-lg text-sm font-semibold transition-all"
           >
             <Settings className="w-4 h-4" />
             Manage Integrations
@@ -1237,7 +1237,7 @@ export default function ReportBuilder() {
           </p>
           <Link
             to="/app/integrations"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-150 dark:bg-gray-800 text-gray-750 dark:text-gray-350 hover:bg-gray-200 rounded-lg text-sm font-semibold transition-all"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 rounded-lg text-sm font-semibold transition-all"
           >
             <Settings className="w-4 h-4" />
             Select Property
@@ -1306,7 +1306,7 @@ export default function ReportBuilder() {
                       </span>
                     )}
                     {showLock && (
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-800 text-[10px] font-semibold text-gray-550 dark:text-gray-400">
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-gray-200 dark:bg-gray-800 text-[10px] font-semibold text-gray-500 dark:text-gray-400">
                         <Lock className="w-2.5 h-2.5" />
                         Locked
                       </span>
@@ -1319,7 +1319,7 @@ export default function ReportBuilder() {
                   </div>
                 </div>
                 <p className="text-xs text-st-gray dark:text-gray-400 mt-2 flex-grow">{p.desc}</p>
-                <div className="mt-3 pt-3 border-t border-gray-150 dark:border-gray-800 text-[10px] text-st-gray dark:text-gray-400 flex justify-between items-center w-full">
+                <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 text-[10px] text-st-gray dark:text-gray-400 flex justify-between items-center w-full">
                   <span>Metric: <strong className="text-gray-700 dark:text-gray-300">{METRICS.find(m => m.key === p.metric)?.label || p.metric}</strong></span>
                   <span>Dimension: <strong className="text-gray-700 dark:text-gray-300">{getDimensionLabel(p.groupBy)}</strong></span>
                 </div>
@@ -1339,7 +1339,7 @@ export default function ReportBuilder() {
               {showOtherCategories ? 'Hide other template types' : 'Show other template types'}
             </button>
             {showOtherCategories && (
-              <div className="mt-4 space-y-6 animate-fade-in p-5 bg-gray-50/50 dark:bg-dark-card/20 rounded-xl border border-gray-150 dark:border-dark-border">
+              <div className="mt-4 space-y-6 animate-fade-in p-5 bg-gray-50/50 dark:bg-dark-card/20 rounded-xl border border-gray-200 dark:border-dark-border">
                 <p className="text-xs text-st-gray dark:text-gray-400 font-medium">Templates from other business models (may not align with your current site setup):</p>
                 <div className="space-y-6">
                   {otherCategories.map(cat => {
@@ -1365,7 +1365,7 @@ export default function ReportBuilder() {
                                   </span>
                                   <div className="flex items-center gap-1">
                                     {showLock && (
-                                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-gray-150 dark:bg-gray-800 text-[9px] font-semibold text-gray-500 dark:text-gray-400">
+                                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-[9px] font-semibold text-gray-500 dark:text-gray-400">
                                         <Lock className="w-2.5 h-2.5" />
                                         Locked
                                       </span>
@@ -1495,13 +1495,13 @@ export default function ReportBuilder() {
                         <span className="font-bold truncate">{p.name}</span>
                         <div className="flex items-center gap-1 flex-shrink-0">
                           {showLock && (
-                            <span className="inline-flex items-center gap-0.5 px-1 py-0.2 bg-gray-150 dark:bg-gray-800 text-[9px] rounded text-gray-550 dark:text-gray-400 font-medium">
+                            <span className="inline-flex items-center gap-0.5 px-1 py-0.5 bg-gray-100 dark:bg-gray-800 text-[9px] rounded text-gray-500 dark:text-gray-400 font-medium">
                               <Lock className="w-2.5 h-2.5" />
                               Locked
                             </span>
                           )}
                           {p.shopifyBadge && (
-                            <span className="px-1 py-0.2 bg-blue-50 dark:bg-blue-950/20 text-[9px] text-blue-800 dark:text-blue-400 rounded font-medium">
+                            <span className="px-1 py-0.5 bg-blue-50 dark:bg-blue-950/20 text-[9px] text-blue-800 dark:text-blue-400 rounded font-medium">
                               Webhook
                             </span>
                           )}
@@ -1519,7 +1519,7 @@ export default function ReportBuilder() {
                   <button
                     type="button"
                     onClick={() => setShowOtherCategories(!showOtherCategories)}
-                    className="text-[10px] font-semibold text-lime-600 hover:text-lime-505 dark:text-lime-400 flex items-center gap-1 transition-all"
+                    className="text-[10px] font-semibold text-lime-600 hover:text-lime-500 dark:text-lime-400 flex items-center gap-1 transition-all"
                   >
                     {showOtherCategories ? 'Hide other template types' : 'Show other template types'}
                   </button>
@@ -1550,7 +1550,7 @@ export default function ReportBuilder() {
                                     <span className="font-semibold truncate">{p.name}</span>
                                     <div className="flex items-center gap-1 flex-shrink-0">
                                       {showLock && (
-                                        <span className="inline-flex items-center gap-0.5 px-1 py-0.2 bg-gray-150 dark:bg-gray-800 text-[8px] rounded text-gray-500 dark:text-gray-400 font-medium">
+                                        <span className="inline-flex items-center gap-0.5 px-1 py-0.5 bg-gray-100 dark:bg-gray-800 text-[8px] rounded text-gray-500 dark:text-gray-400 font-medium">
                                           <Lock className="w-1.5 h-1.5" />
                                           Locked
                                         </span>
@@ -1594,7 +1594,7 @@ export default function ReportBuilder() {
                   setRollingDays(30)
                   setEditingId(null)
                 }}
-                className="w-full py-1.5 bg-gray-150 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 border border-transparent rounded-lg flex items-center justify-center gap-1.5 font-bold transition-all text-xs"
+                className="w-full py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 border border-transparent rounded-lg flex items-center justify-center gap-1.5 font-bold transition-all text-xs"
               >
                 <Plus className="w-3.5 h-3.5" />
                 Start from blank (Advanced)
@@ -2219,38 +2219,38 @@ export default function ReportBuilder() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-gray-100 dark:border-dark-border bg-gray-50 dark:bg-dark-card">
-                          <th className="text-left py-2.5 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">
+                        <tr className="border-b border-gray-100 dark:border-dark-border bg-gray-50/50 dark:bg-[#181B1B]/40">
+                          <th className="text-left py-2.5 px-4 text-st-gray dark:text-gray-400 font-semibold text-xs uppercase tracking-wider">
                             {getDimensionLabel(groupBy) || 'Dimension'}
                           </th>
                           {groupBy2 && (
-                            <th className="text-left py-2.5 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">
+                            <th className="text-left py-2.5 px-4 text-st-gray dark:text-gray-400 font-semibold text-xs uppercase tracking-wider">
                               {getDimensionLabel(groupBy2) || 'Dimension 2'}
                             </th>
                           )}
                           {selectedMetrics.map(mk => (
-                            <th key={mk} className="text-right py-2.5 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">
+                            <th key={mk} className="text-right py-2.5 px-4 text-st-gray dark:text-gray-400 font-semibold text-xs uppercase tracking-wider">
                               {METRICS.find(m => m.key === mk)?.label || mk}
                             </th>
                           ))}
                           {showCompare && selectedMetrics.map(mk => (
-                            <th key={mk + '_chg'} className="text-right py-2.5 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">
+                            <th key={mk + '_chg'} className="text-right py-2.5 px-4 text-st-gray dark:text-gray-400 font-semibold text-xs uppercase tracking-wider">
                               vs prior
                             </th>
                           ))}
                           {showExplanation && !isMultiTouch && (
-                            <th className="text-left py-2.5 px-4 text-st-gray dark:text-gray-400 font-medium text-xs">Attribution logic</th>
+                            <th className="text-left py-2.5 px-4 text-st-gray dark:text-gray-400 font-semibold text-xs uppercase tracking-wider">Attribution logic</th>
                           )}
                         </tr>
                         {/* Summary Row */}
-                        <tr className="border-b border-gray-200 dark:border-dark-border bg-gray-100/50 dark:bg-dark-hover/50">
+                        <tr className="border-b border-gray-100 dark:border-dark-border bg-gray-100/50 dark:bg-dark-hover/30">
                           <td className="py-2.5 px-4 text-xs font-semibold text-gray-700 dark:text-gray-300">Summary Total</td>
                           {groupBy2 && <td />}
                           {selectedMetrics.map(mk => {
                             const mDef = METRICS.find(m => m.key === mk)
                             const fmt = mDef?.format || (v => String(v))
                             const totalVal = results.reduce((s, r) => s + (r[mk] ?? 0), 0)
-                            return <td key={mk} className="py-2.5 px-4 text-right text-xs font-bold text-st-black dark:text-white">{fmt(totalVal)}</td>
+                            return <td key={mk} className="py-2.5 px-4 text-right text-xs font-bold text-st-black dark:text-white tabular-nums">{fmt(totalVal)}</td>
                           })}
                           {showCompare && selectedMetrics.map(mk => {
                             const curTotal = results.reduce((s, r) => s + (r[mk] ?? 0), 0)
@@ -2258,7 +2258,7 @@ export default function ReportBuilder() {
                             const priorTotal = priorRows.reduce((s, r) => s + (r[mk] ?? 0), 0)
                             const delta = priorTotal > 0 ? ((curTotal - priorTotal) / priorTotal) * 100 : null
                             return (
-                              <td key={mk + '_chg_sum'} className="py-2.5 px-4 text-right text-xs">
+                              <td key={mk + '_chg_sum'} className="py-2.5 px-4 text-right text-xs tabular-nums">
                                 {delta !== null
                                   ? <span className={delta >= 0 ? 'text-green-600 font-bold' : 'text-red-500 font-bold'}>
                                       {delta >= 0 ? '+' : ''}{delta.toFixed(1)}%
@@ -2276,7 +2276,7 @@ export default function ReportBuilder() {
                           const priorRows = priorReportData?.results || []
                           const priorRow = priorRows.find(p => p.dim_value === r.dim_value)
                           return (
-                            <tr key={i} className="border-b border-gray-50 dark:border-dark-border/40 hover:bg-gray-50 dark:hover:bg-dark-hover">
+                            <tr key={i} className="border-b border-gray-100/70 dark:border-dark-border/40 hover:bg-gray-50/50 dark:hover:bg-dark-hover/40 transition-colors">
                               <td className="py-2.5 px-4 text-st-black dark:text-gray-200 font-medium">
                                 <span className="inline-flex items-center">
                                   {['source', 'channel'].includes(groupBy) ? (
@@ -2293,16 +2293,16 @@ export default function ReportBuilder() {
                               {selectedMetrics.map(mk => {
                                 const mDef = METRICS.find(m => m.key === mk)
                                 const fmt = mDef?.format || (v => String(v))
-                                return <td key={mk} className="py-2.5 px-4 text-right font-semibold text-st-black dark:text-white">{fmt(r[mk] ?? 0)}</td>
+                                return <td key={mk} className="py-2.5 px-4 text-right font-semibold text-st-black dark:text-white tabular-nums">{fmt(r[mk] ?? 0)}</td>
                               })}
                               {showCompare && selectedMetrics.map(mk => {
                                 const cur = r[mk] ?? 0
                                 const prior = priorRow?.[mk] ?? 0
                                 const delta = prior > 0 ? ((cur - prior) / prior) * 100 : null
                                 return (
-                                  <td key={mk + '_chg'} className="py-2.5 px-4 text-right text-xs">
+                                  <td key={mk + '_chg'} className="py-2.5 px-4 text-right text-xs tabular-nums">
                                     {delta !== null
-                                      ? <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${delta >= 0 ? 'bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400' : 'bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400'}`}>
+                                      ? <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold ${delta >= 0 ? 'bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border border-green-100 dark:border-green-900/30' : 'bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 border border-red-100 dark:border-red-900/20'}`}>
                                           {delta >= 0 ? '+' : ''}{delta.toFixed(1)}%
                                         </span>
                                       : <span className="text-gray-300 dark:text-gray-600 text-[10px]">—</span>
@@ -2369,9 +2369,9 @@ export default function ReportBuilder() {
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{r.name}</p>
                             <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-1.5 text-[10px] text-st-gray dark:text-gray-400">
-                              <span className="bg-gray-100 dark:bg-gray-850 px-1.5 py-0.5 rounded">{meta.metricLabel}</span>
-                              <span className="bg-gray-100 dark:bg-gray-850 px-1.5 py-0.5 rounded">{meta.groupLabel}</span>
-                              <span className="bg-gray-100 dark:bg-gray-850 px-1.5 py-0.5 rounded">{meta.modelLabel}</span>
+                              <span className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">{meta.metricLabel}</span>
+                              <span className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">{meta.groupLabel}</span>
+                              <span className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">{meta.modelLabel}</span>
                               {meta.filterCount > 0 && (
                                 <span className="bg-lime-50 text-lime-800 dark:bg-lime-950/20 dark:text-lime-400 px-1.5 py-0.5 rounded font-semibold">
                                   {meta.filterCount} filter{meta.filterCount > 1 ? 's' : ''}

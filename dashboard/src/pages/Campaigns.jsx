@@ -753,16 +753,16 @@ export default function Campaigns() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                  <tr className="border-b border-gray-100 dark:border-dark-border bg-gray-50/50 dark:bg-[#181B1B]/40">
+                    <th className="text-left py-3 px-4 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">
                       {DIMENSIONS.find(d => d.key === activeDim)?.label || 'Name'}
                     </th>
                     {activeDim === 'campaign' && (
-                      <th className="text-left py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                      <th className="text-left py-3 px-4 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">
                         Source / Medium
                       </th>
                     )}
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">
                       <div className="flex items-center justify-end gap-1 group relative">
                         <span>Status</span>
                         <HelpCircle className="w-3.5 h-3.5 text-gray-400 cursor-help" />
@@ -771,66 +771,66 @@ export default function Campaigns() {
                         </div>
                       </div>
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">
                       Visits
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">
                       Leads
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">
                       Conversions
                     </th>
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">
                       CVR%
                     </th>
                     {hasRevenue && (
                       <>
-                        <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                        <th className="text-right py-3 px-4 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">
                           Revenue
                         </th>
-                        <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                        <th className="text-right py-3 px-4 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">
                           Avg Value
                         </th>
                       </>
                     )}
                     {hasCost && (
                       <>
-                        <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                        <th className="text-right py-3 px-4 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">
                           Spend
                         </th>
-                        <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                        <th className="text-right py-3 px-4 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">
                           Clicks
                         </th>
-                        <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                        <th className="text-right py-3 px-4 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">
                           Impressions
                         </th>
-                        <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                        <th className="text-right py-3 px-4 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">
                           CTR
                         </th>
-                        <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                        <th className="text-right py-3 px-4 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">
                           CPC
                         </th>
-                        <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                        <th className="text-right py-3 px-4 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">
                           CPA
                         </th>
                       </>
                     )}
                     {hasRevenue && hasCost && (
                       <>
-                        <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                        <th className="text-right py-3 px-4 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">
                           ROAS
                         </th>
-                        <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                        <th className="text-right py-3 px-4 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">
                           Net Profit
                         </th>
                       </>
                     )}
-                    <th className="text-right py-3 px-4 text-xs font-medium text-st-gray uppercase tracking-wider">
+                    <th className="text-right py-3 px-4 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-gray-100 dark:divide-dark-border/40">
                   {rows.map((r, i) => {
                     const isOk = r.currency_status === 'ok'
                     const cvr = r.visits > 0 ? ((r.conversions / r.visits) * 100).toFixed(1) + '%' : '—'
@@ -843,7 +843,7 @@ export default function Campaigns() {
                                            'Draft / Tracking only'
 
                     return (
-                      <tr key={i} className="hover:bg-gray-50 dark:hover:bg-dark-hover/50 transition-colors cursor-pointer" onClick={() => setSelectedCampaign(r)}>
+                      <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-dark-hover/40 transition-colors cursor-pointer" onClick={() => setSelectedCampaign(r)}>
                         <td className="py-3 px-4">
                           <p className="text-st-black dark:text-white font-medium inline-flex items-center">
                             {r.name || 'unknown'}
@@ -860,7 +860,7 @@ export default function Campaigns() {
                           )}
                         </td>
                         {activeDim === 'campaign' && (
-                          <td className="py-3 px-4 text-xs font-mono text-st-gray">
+                          <td className="py-3 px-4 text-xs font-mono text-st-gray dark:text-gray-400">
                             {r.source || 'direct'} / {r.medium || 'none'}
                           </td>
                         )}
@@ -874,24 +874,24 @@ export default function Campaigns() {
                             </div>
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-right text-gray-600">
+                        <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400 tabular-nums">
                           {safeNumber(r.visits, 0)}
                         </td>
-                        <td className="py-3 px-4 text-right text-gray-600">
+                        <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400 tabular-nums">
                           {safeNumber(r.leads, 0)}
                         </td>
-                        <td className="py-3 px-4 text-right text-gray-600">
+                        <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400 tabular-nums">
                           {safeNumber(r.conversions, 0)}
                         </td>
-                        <td className="py-3 px-4 text-right text-gray-600">
+                        <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400 tabular-nums">
                           {cvr}
                         </td>
                         {hasRevenue && (
                           <>
-                            <td className="py-3 px-4 text-right font-semibold text-st-black dark:text-white">
+                            <td className="py-3 px-4 text-right font-semibold text-st-black dark:text-white tabular-nums">
                               {formatCurrency(r.revenue)}
                             </td>
-                            <td className="py-3 px-4 text-right text-st-gray">
+                            <td className="py-3 px-4 text-right text-st-gray dark:text-gray-400 tabular-nums">
                               {formatCurrencyDecimal(r.avg_value)}
                             </td>
                           </>
@@ -928,7 +928,7 @@ export default function Campaigns() {
                                 </div>
                               ) : (
                                 <div className="flex items-center justify-end gap-1 group">
-                                  <span className="text-gray-600">{r.spend ? formatCurrency(r.spend) : '—'}</span>
+                                  <span className="text-gray-600 dark:text-gray-400 tabular-nums">{r.spend ? formatCurrency(r.spend) : '—'}</span>
                                   {!isPreview && (
                                     <button onClick={() => { setEditingSpend(r.name); setSpendInput(spendMap[r.name] || '') }} className="opacity-0 group-hover:opacity-100 text-st-gray hover:text-gray-600">
                                       <Pencil className="w-3 h-3" />
@@ -937,19 +937,19 @@ export default function Campaigns() {
                                 </div>
                               )}
                             </td>
-                            <td className="py-3 px-4 text-right text-gray-600">
+                            <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400 tabular-nums">
                               {r.clicks ? formatNumber(r.clicks) : '—'}
                             </td>
-                            <td className="py-3 px-4 text-right text-gray-600">
+                            <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400 tabular-nums">
                               {r.impressions ? formatNumber(r.impressions) : '—'}
                             </td>
-                            <td className="py-3 px-4 text-right text-gray-600">
+                            <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400 tabular-nums">
                               {r.ctr ? `${r.ctr}%` : '—'}
                             </td>
-                            <td className="py-3 px-4 text-right text-gray-600">
+                            <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400 tabular-nums">
                               {r.cpc ? formatCurrencyDecimal(r.cpc) : '—'}
                             </td>
-                            <td className="py-3 px-4 text-right text-gray-600">
+                            <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400 tabular-nums">
                               {!isOk && r.spend > 0 ? (
                                 <CurrencyWarning status={r.currency_status} spendCur={r.spend_currency} trackCur={r.tracked_currency} />
                               ) : (
@@ -960,14 +960,14 @@ export default function Campaigns() {
                         )}
                         {hasRevenue && hasCost && (
                           <>
-                            <td className="py-3 px-4 text-right text-gray-600">
+                            <td className="py-3 px-4 text-right text-gray-600 dark:text-gray-400 tabular-nums">
                               {!isOk && r.spend > 0 ? (
                                 <CurrencyWarning status={r.currency_status} spendCur={r.spend_currency} trackCur={r.tracked_currency} />
                               ) : (
                                 r.roas ? <span className={r.roas >= 1.0 ? 'text-green-600 font-medium' : 'text-red-500'}>{r.roas}x</span> : '—'
                               )}
                             </td>
-                            <td className="py-3 px-4 text-right font-medium text-gray-700 dark:text-gray-300">
+                            <td className="py-3 px-4 text-right font-medium text-gray-700 dark:text-gray-300 tabular-nums">
                               {formatCurrency(netProfit)}
                             </td>
                           </>
@@ -1240,30 +1240,30 @@ export default function Campaigns() {
                   {parsedRows.length > 0 && (
                     <div className="space-y-1.5">
                       <h4 className="text-xs font-semibold text-st-black uppercase tracking-wider">Preview Ingest Batch ({parsedRows.length} rows)</h4>
-                      <div className="border border-gray-200 rounded-xl overflow-hidden max-h-48 overflow-y-auto">
+                      <div className="border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden max-h-48 overflow-y-auto bg-white dark:bg-dark-card">
                         <table className="w-full text-xs text-left">
-                          <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
+                          <thead className="bg-gray-50 dark:bg-[#181B1B]/40 border-b border-gray-200 dark:border-dark-border sticky top-0">
                             <tr>
-                              <th className="py-2 px-3 font-semibold text-st-gray w-24">Date</th>
-                              <th className="py-2 px-3 font-semibold text-st-gray w-20">Platform</th>
-                              <th className="py-2 px-3 font-semibold text-st-gray">Campaign</th>
-                              <th className="py-2 px-3 font-semibold text-st-gray text-right w-20">Spend</th>
-                              <th className="py-2 px-3 font-semibold text-st-gray w-16">Currency</th>
-                              <th className="py-2 px-3 font-semibold text-st-gray text-right w-16">Clicks</th>
-                              <th className="py-2 px-3 font-semibold text-st-gray text-right w-16">Impressions</th>
-                              <th className="py-2 px-3 font-semibold text-st-gray w-32">Validation</th>
+                              <th className="py-2 px-3 font-semibold text-st-gray dark:text-gray-400 w-24">Date</th>
+                              <th className="py-2 px-3 font-semibold text-st-gray dark:text-gray-400 w-20">Platform</th>
+                              <th className="py-2 px-3 font-semibold text-st-gray dark:text-gray-400">Campaign</th>
+                              <th className="py-2 px-3 font-semibold text-st-gray dark:text-gray-400 text-right w-20">Spend</th>
+                              <th className="py-2 px-3 font-semibold text-st-gray dark:text-gray-400 w-16">Currency</th>
+                              <th className="py-2 px-3 font-semibold text-st-gray dark:text-gray-400 text-right w-16">Clicks</th>
+                              <th className="py-2 px-3 font-semibold text-st-gray dark:text-gray-400 text-right w-16">Impressions</th>
+                              <th className="py-2 px-3 font-semibold text-st-gray dark:text-gray-400 w-32">Validation</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-gray-100">
+                          <tbody className="divide-y divide-gray-100 dark:divide-dark-border/40">
                             {parsedRows.map((r, idx) => (
-                              <tr key={idx} className={r.error ? 'bg-red-50/50 hover:bg-red-50 transition-colors' : 'hover:bg-gray-50 transition-colors'}>
-                                <td className="py-2 px-3 font-mono text-[11px]">{r.data.date || '—'}</td>
-                                <td className="py-2 px-3 uppercase text-[10px] tracking-wider font-semibold text-gray-500">{r.data.platform || '—'}</td>
-                                <td className="py-2 px-3 font-medium text-st-black truncate max-w-[150px]" title={r.data.campaign_name}>{r.data.campaign_name || '—'}</td>
-                                <td className="py-2 px-3 text-right font-semibold">{r.data.spend !== undefined ? `$${parseFloat(r.data.spend).toFixed(2)}` : '—'}</td>
-                                <td className="py-2 px-3 uppercase text-gray-600">{r.data.currency || 'USD'}</td>
-                                <td className="py-2 px-3 text-right text-gray-600">{r.data.clicks || 0}</td>
-                                <td className="py-2 px-3 text-right text-gray-600">{r.data.impressions || 0}</td>
+                              <tr key={idx} className={r.error ? 'bg-red-50/50 dark:bg-red-950/20 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors' : 'hover:bg-gray-50 dark:hover:bg-dark-hover/40 transition-colors'}>
+                                <td className="py-2 px-3 font-mono text-[11px] dark:text-gray-300">{r.data.date || '—'}</td>
+                                <td className="py-2 px-3 uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-gray-400">{r.data.platform || '—'}</td>
+                                <td className="py-2 px-3 font-medium text-st-black dark:text-white truncate max-w-[150px]" title={r.data.campaign_name}>{r.data.campaign_name || '—'}</td>
+                                <td className="py-2 px-3 text-right font-semibold dark:text-white tabular-nums">{r.data.spend !== undefined ? `$${parseFloat(r.data.spend).toFixed(2)}` : '—'}</td>
+                                <td className="py-2 px-3 uppercase text-gray-600 dark:text-gray-400">{r.data.currency || 'USD'}</td>
+                                <td className="py-2 px-3 text-right text-gray-600 dark:text-gray-400 tabular-nums">{r.data.clicks || 0}</td>
+                                <td className="py-2 px-3 text-right text-gray-600 dark:text-gray-400 tabular-nums">{r.data.impressions || 0}</td>
                                 <td className="py-2 px-3">
                                   {r.error ? (
                                     <span className="text-[10px] font-semibold text-red-600 flex items-center gap-0.5 leading-tight">
@@ -1294,31 +1294,31 @@ export default function Campaigns() {
                       No import history found. Run your first cost synchronization above.
                     </div>
                   ) : (
-                    <div className="border border-gray-200 rounded-xl overflow-hidden">
+                    <div className="border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden bg-white dark:bg-dark-card">
                       <table className="w-full text-xs text-left">
-                        <thead className="bg-gray-50 border-b border-gray-200">
+                        <thead className="bg-gray-50 dark:bg-[#181B1B]/40 border-b border-gray-200 dark:border-dark-border">
                           <tr>
-                            <th className="py-2.5 px-4 font-semibold text-st-gray">Date / Time</th>
-                            <th className="py-2.5 px-4 font-semibold text-st-gray">Sync Type</th>
-                            <th className="py-2.5 px-4 font-semibold text-st-gray">Source</th>
-                            <th className="py-2.5 px-4 font-semibold text-st-gray">Records Synced</th>
-                            <th className="py-2.5 px-4 font-semibold text-st-gray">Status</th>
-                            <th className="py-2.5 px-4 font-semibold text-st-gray">Logs / Error</th>
+                            <th className="py-2.5 px-4 font-semibold text-st-gray dark:text-gray-400">Date / Time</th>
+                            <th className="py-2.5 px-4 font-semibold text-st-gray dark:text-gray-400">Sync Type</th>
+                            <th className="py-2.5 px-4 font-semibold text-st-gray dark:text-gray-400">Source</th>
+                            <th className="py-2.5 px-4 font-semibold text-st-gray dark:text-gray-400 text-center">Records Synced</th>
+                            <th className="py-2.5 px-4 font-semibold text-st-gray dark:text-gray-400">Status</th>
+                            <th className="py-2.5 px-4 font-semibold text-st-gray dark:text-gray-400">Logs / Error</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody className="divide-y divide-gray-100 dark:divide-dark-border/40">
                           {importHistory.map((run, idx) => (
-                            <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                              <td className="py-2.5 px-4 font-medium text-st-black">
+                            <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-dark-hover/40 transition-colors">
+                              <td className="py-2.5 px-4 font-medium text-st-black dark:text-white">
                                 {format(new Date(run.sync_start), 'yyyy-MM-dd HH:mm:ss')}
                               </td>
-                              <td className="py-2.5 px-4 capitalize font-semibold text-gray-500">
+                              <td className="py-2.5 px-4 capitalize font-semibold text-gray-500 dark:text-gray-400">
                                 {run.sync_type || 'manual'}
                               </td>
-                              <td className="py-2.5 px-4 font-mono text-[11px] text-st-gray">
+                              <td className="py-2.5 px-4 font-mono text-[11px] text-st-gray dark:text-gray-400">
                                 {run.platform === 'manual_csv' ? 'Manual CSV' : run.platform}
                               </td>
-                              <td className="py-2.5 px-4 text-center font-bold">
+                              <td className="py-2.5 px-4 text-center font-bold dark:text-white tabular-nums">
                                 {run.records_synced}
                               </td>
                               <td className="py-2.5 px-4">
@@ -1327,7 +1327,7 @@ export default function Campaigns() {
                                   label={run.status}
                                 />
                               </td>
-                              <td className="py-2.5 px-4 text-st-gray truncate max-w-[200px]" title={run.error_message}>
+                              <td className="py-2.5 px-4 text-st-gray dark:text-gray-400 truncate max-w-[200px]" title={run.error_message}>
                                 {run.error_message || 'Completed cleanly'}
                               </td>
                             </tr>
@@ -1395,16 +1395,16 @@ function CampaignLandingPages({ siteKey, campaignName, dateFrom, dateTo }) {
     <div className="overflow-x-auto text-xs">
       <table className="w-full">
         <thead>
-          <tr className="border-b border-gray-100 text-left">
-            <th className="py-2 px-1 text-st-gray font-medium">Path</th>
-            <th className="py-2 px-1 text-right text-st-gray font-medium">Conversions</th>
+          <tr className="border-b border-gray-100 dark:border-dark-border text-left">
+            <th className="py-2 px-1 text-st-gray dark:text-gray-400 font-semibold uppercase tracking-wider text-[10px]">Path</th>
+            <th className="py-2 px-1 text-right text-st-gray dark:text-gray-400 font-semibold uppercase tracking-wider text-[10px]">Conversions</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-gray-100 dark:divide-dark-border/40">
           {results.slice(0, 5).map((r, i) => (
-            <tr key={i} className="border-b border-gray-50">
-              <td className="py-2 px-1 font-mono text-st-black dark:text-white truncate max-w-[200px]" title={r.dim_value}>{r.dim_value}</td>
-              <td className="py-2 px-1 text-right text-gray-700 dark:text-gray-300">{r.conversions}</td>
+            <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-dark-hover/40 transition-colors">
+              <td className="py-2 px-1 font-mono text-st-black dark:text-gray-300 truncate max-w-[200px]" title={r.dim_value}>{r.dim_value}</td>
+              <td className="py-2 px-1 text-right text-gray-700 dark:text-gray-300 tabular-nums">{r.conversions}</td>
             </tr>
           ))}
         </tbody>
@@ -1434,23 +1434,23 @@ function CampaignRecentLeads({ siteKey, campaignName, dateFrom, dateTo, navigate
     <div className="overflow-x-auto text-xs">
       <table className="w-full">
         <thead>
-          <tr className="border-b border-gray-100 text-left">
-            <th className="py-2 px-1 text-st-gray font-medium">Lead ID</th>
-            <th className="py-2 px-1 text-right text-st-gray font-medium">Conversions</th>
+          <tr className="border-b border-gray-100 dark:border-dark-border text-left">
+            <th className="py-2 px-1 text-st-gray dark:text-gray-400 font-semibold uppercase tracking-wider text-[10px]">Lead ID</th>
+            <th className="py-2 px-1 text-right text-st-gray dark:text-gray-400 font-semibold uppercase tracking-wider text-[10px]">Conversions</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-gray-100 dark:divide-dark-border/40">
           {leads.slice(0, 5).map((l, i) => (
-            <tr key={i} className="border-b border-gray-50">
+            <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-dark-hover/40 transition-colors">
               <td className="py-2 px-1">
                 <button
                   onClick={() => navigate('/leads')}
-                  className="font-mono text-blue-600 hover:underline text-[11px]"
+                  className="font-mono text-blue-600 dark:text-blue-400 hover:underline text-[11px]"
                 >
                   {l.id ? l.id.slice(0, 8) : 'unknown'}...
                 </button>
               </td>
-              <td className="py-2 px-1 text-right text-gray-700 dark:text-gray-300">{l.conversions}</td>
+              <td className="py-2 px-1 text-right text-gray-700 dark:text-gray-300 tabular-nums">{l.conversions}</td>
             </tr>
           ))}
         </tbody>
