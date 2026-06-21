@@ -181,7 +181,7 @@ export default function Leads() {
       </div>
 
       {!hasRevenue && !isLoading && (
-        <div className="p-4 bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/30 rounded-xl text-xs text-amber-850 dark:text-amber-300 leading-normal flex items-start gap-2.5">
+        <div className="p-4 bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/30 rounded-xl text-xs text-amber-800 dark:text-amber-300 leading-normal flex items-start gap-2.5">
           <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500 mt-0.5" />
           <div>
             <p className="font-semibold">No revenue in this period</p>

@@ -374,7 +374,7 @@ export default function Billing() {
       )}
 
       {/* ── Billing Help Footer ─────────────────────────────────────────── */}
-      <div className="text-center text-xs text-st-gray dark:text-gray-400 pt-4 border-t border-gray-150 dark:border-gray-800">
+      <div className="text-center text-xs text-st-gray dark:text-gray-400 pt-4 border-t border-gray-200 dark:border-gray-800">
         For billing, cancellation, or refund questions, email{' '}
         <a href="mailto:support@sourcetrack.ai" className="text-blue-600 dark:text-blue-400 hover:underline font-semibold">
           support@sourcetrack.ai

@@ -175,7 +175,7 @@ export default function Setup() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left checklist panel */}
         <div className="lg:col-span-4 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-4 shadow-sm space-y-3">
-          <h3 className="text-xs font-bold text-gray-405 dark:text-gray-500 uppercase tracking-wider px-2 select-none">
+          <h3 className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-2 select-none">
             Steps
           </h3>
           <div className="space-y-1">
@@ -236,7 +236,7 @@ export default function Setup() {
               </div>
 
               {site?.domain && (
-                <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-[#1E2121]/50 border border-gray-150 dark:border-transparent rounded-lg text-xs">
+                <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-[#1E2121]/50 border border-gray-200 dark:border-transparent rounded-lg text-xs">
                   <span className="font-semibold text-gray-700 dark:text-gray-300">Registered Domain:</span>
                   <span className="font-mono text-st-black dark:text-white select-all">{site.domain}</span>
                 </div>
@@ -256,7 +256,7 @@ export default function Setup() {
                     <pre className="text-green-400 text-xs font-mono overflow-x-auto whitespace-pre-wrap pr-12 leading-relaxed select-all">{snippet}</pre>
                     <button
                       onClick={handleCopy}
-                      className="absolute top-3 right-3 p-1.5 bg-gray-800 hover:bg-gray-750 text-gray-300 hover:text-white rounded transition-colors"
+                      className="absolute top-3 right-3 p-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded transition-colors"
                       title="Copy to clipboard"
                     >
                       {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -272,7 +272,7 @@ export default function Setup() {
                   <span className="flex items-center justify-center w-5 h-5 rounded-full bg-st-lime text-st-black text-xs font-extrabold">B</span>
                   <h4 className="font-semibold text-sm text-st-black dark:text-white">Paste before closing head tag</h4>
                 </div>
-                <p className="text-xs text-gray-650 dark:text-gray-400 leading-relaxed pl-7">
+                <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed pl-7">
                   Paste the copied snippet into the <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-xs font-mono">&lt;head&gt;</code> element of your website's HTML code (preferably before the closing <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-xs font-mono">&lt;/head&gt;</code> tag) to ensure it loads on every page.
                 </p>
               </div>
@@ -287,7 +287,7 @@ export default function Setup() {
               </div>
 
               {/* Platform Guides */}
-              <div className="bg-gray-50 dark:bg-[#1E2121]/50 border border-gray-150 dark:border-transparent rounded-xl p-4">
+              <div className="bg-gray-50 dark:bg-[#1E2121]/50 border border-gray-200 dark:border-transparent rounded-xl p-4">
                 <p className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">CMS platform guides</p>
                 <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs">
                   {[
@@ -305,7 +305,7 @@ export default function Setup() {
               </div>
 
               {/* Privacy Reminder */}
-              <div className="bg-gray-50/50 dark:bg-[#1E2121]/30 border border-gray-150 dark:border-transparent rounded-xl p-4">
+              <div className="bg-gray-50/50 dark:bg-[#1E2121]/30 border border-gray-200 dark:border-transparent rounded-xl p-4">
                 <div className="flex items-start gap-2.5">
                   <span className="text-gray-500 mt-0.5 text-sm">🔒</span>
                   <div className="flex-1 text-xs text-st-gray dark:text-gray-400">
@@ -318,7 +318,7 @@ export default function Setup() {
                       {showPrivacyNotes ? 'Hide notes' : 'Read privacy notes'}
                     </button>
                     {showPrivacyNotes && (
-                      <p className="mt-2 text-[11px] text-gray-650 dark:text-gray-400 leading-relaxed pt-2 border-t border-gray-150 dark:border-gray-800/60 font-sans">
+                      <p className="mt-2 text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed pt-2 border-t border-gray-200 dark:border-gray-800/60 font-sans">
                         Under GDPR, CCPA, and PECR regulations, you must disclose that you collect anonymous site metrics (referrers, UTM params, session length, and IP-derived location). While Cookieless Mode avoids writing browser cookies or localStorage keys, reading client headers (e.g., User-Agent, IP address) to generate visitor hashes may still require disclosure or explicit consent in certain jurisdictions. Customers are solely responsible for ensuring their tracking configurations comply with all regional regulations.
                       </p>
                     )}

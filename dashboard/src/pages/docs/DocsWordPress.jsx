@@ -76,7 +76,7 @@ export default function DocsWordPress() {
 
           <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
             <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">Option 2: Direct Theme Edit</h3>
-            <ol className="list-decimal pl-5 space-y-2 text-sm text-gray-750 dark:text-gray-300">
+            <ol className="list-decimal pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
               <li>Log in to your file manager or theme editor and open <code>wp-content/themes/your-active-theme/header.php</code>.</li>
               <li>Paste the script directly before the closing <code>&lt;/head&gt;</code> tag:
                 <DocsCodeBlock lang="php" replaceKey={true} pasteOnce={true}>
@@ -109,7 +109,7 @@ export default function DocsWordPress() {
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
             Common Mistakes
           </h2>
-          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-750 dark:text-gray-350">
+          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
             <li>
               <strong>Active Cache Blocker:</strong> If you use cache plugins (e.g. WP Rocket, W3 Total Cache, Autoptimize), you must clear your site cache after saving changes. Otherwise, visitors will continue loading the old HTML page without the script.
             </li>

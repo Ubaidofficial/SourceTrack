@@ -220,18 +220,18 @@ export default function DevelopersApi() {
               <tbody>
                 <tr className="border-b border-gray-100 dark:border-gray-800/60">
                   <td className="py-2 pr-4 font-mono text-xs text-red-600 dark:text-red-400">400 Bad Request</td>
-                  <td className="py-2 pr-4 font-mono text-xs text-gray-850 dark:text-gray-250">"Missing site_key" or "Invalid payload"</td>
-                  <td className="py-2 text-xs text-gray-650 dark:text-gray-405">The required request parameter or payload structure is invalid.</td>
+                  <td className="py-2 pr-4 font-mono text-xs text-gray-800 dark:text-gray-300">"Missing site_key" or "Invalid payload"</td>
+                  <td className="py-2 text-xs text-gray-600 dark:text-gray-400">The required request parameter or payload structure is invalid.</td>
                 </tr>
                 <tr className="border-b border-gray-100 dark:border-gray-800/60">
                   <td className="py-2 pr-4 font-mono text-xs text-red-600 dark:text-red-400">404 Not Found</td>
-                  <td className="py-2 pr-4 font-mono text-xs text-gray-850 dark:text-gray-250">"Site not found"</td>
-                  <td className="py-2 text-xs text-gray-650 dark:text-gray-405">The public site key does not exist or has been deactivated.</td>
+                  <td className="py-2 pr-4 font-mono text-xs text-gray-800 dark:text-gray-300">"Site not found"</td>
+                  <td className="py-2 text-xs text-gray-600 dark:text-gray-400">The public site key does not exist or has been deactivated.</td>
                 </tr>
                 <tr className="border-b border-gray-100 dark:border-gray-800/60">
                   <td className="py-2 pr-4 font-mono text-xs text-red-600 dark:text-red-400">500 Server Error</td>
-                  <td className="py-2 pr-4 font-mono text-xs text-gray-850 dark:text-gray-250">"Track failed" or "Internal error"</td>
-                  <td className="py-2 text-xs text-gray-650 dark:text-gray-405">Temporary database disconnect or unexpected server exception.</td>
+                  <td className="py-2 pr-4 font-mono text-xs text-gray-800 dark:text-gray-300">"Track failed" or "Internal error"</td>
+                  <td className="py-2 text-xs text-gray-600 dark:text-gray-400">Temporary database disconnect or unexpected server exception.</td>
                 </tr>
               </tbody>
             </table>

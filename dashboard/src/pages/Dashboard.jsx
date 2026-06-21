@@ -311,11 +311,11 @@ export default function Dashboard() {
         <>
           {/* Onboarding / Installation Alert Banner */}
           {!isLoading && !previewMode && site && (!site.last_seen_at || site.onboarding_completed === false) && (
-            <div className="bg-amber-50 dark:bg-amber-955/20 border border-amber-200 dark:border-amber-900/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
               <div className="flex items-start gap-2.5">
                 <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="font-bold text-amber-800 dark:text-amber-450">Tracking setup incomplete</h4>
+                  <h4 className="font-bold text-amber-800 dark:text-amber-400">Tracking setup incomplete</h4>
                   <p className="text-amber-700 dark:text-gray-300 mt-0.5">No events received yet. Finish setup to start seeing analytics and attribution.</p>
                 </div>
               </div>
@@ -334,7 +334,7 @@ export default function Dashboard() {
           {activeTab === 'overview' && (
             <div className="space-y-6">
               {activeResults.length === 0 ? (
-                <div className="bg-white dark:bg-[#1A1D1D] rounded-2xl border border-gray-150 dark:border-[#2A2E2E] p-12 text-center flex flex-col items-center justify-center space-y-6">
+                <div className="bg-white dark:bg-[#1A1D1D] rounded-2xl border border-gray-200 dark:border-[#2A2E2E] p-12 text-center flex flex-col items-center justify-center space-y-6">
                   <div>
                     <Users className="w-16 h-16 text-gray-200 mx-auto mb-4" />
                     <h3 className="text-xl font-semibold text-st-black dark:text-white mb-2">No attribution data yet</h3>

@@ -63,7 +63,7 @@ export default function DocsGoogleAds() {
 
           <div className="space-y-4">
             <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">Option A: Account-Level Setup (Recommended)</h3>
-            <p className="text-sm text-gray-750 dark:text-gray-350">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               Applying the template at the Account Level automatically covers all current and future campaigns in your Google Ads account:
             </p>
             <ol className="list-decimal pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
@@ -77,7 +77,7 @@ export default function DocsGoogleAds() {
 
           <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
             <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">Option B: Campaign-Level Setup</h3>
-            <p className="text-sm text-gray-750 dark:text-gray-350">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               If you only want to track specific campaigns with SourceTrack:
             </p>
             <ol className="list-decimal pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">

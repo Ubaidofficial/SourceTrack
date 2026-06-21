@@ -112,10 +112,10 @@ export default function DevelopersIdentify() {
 
         {/* Common Errors */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-850 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
             Common Errors
           </h2>
-          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-750 dark:text-gray-350">
+          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
             <li>
               <strong>Calling identify before script load:</strong> Ensure the main pixel has loaded or verify that <code>window.sourcetrack</code> is defined before calling <code>identify</code>.
             </li>

@@ -95,17 +95,17 @@ export default function DevelopersTracker() {
                 <tr className="border-b border-gray-100 dark:border-gray-800/60">
                   <td className="py-2 pr-4 font-mono text-xs text-gray-800 dark:text-gray-200">st_aid</td>
                   <td className="py-2 pr-4 text-xs text-gray-500">localStorage</td>
-                  <td className="py-2 text-xs text-gray-650 dark:text-gray-400">Anonymous visitor UUID — stable across sessions. Used to stitch journeys.</td>
+                  <td className="py-2 text-xs text-gray-600 dark:text-gray-400">Anonymous visitor UUID — stable across sessions. Used to stitch journeys.</td>
                 </tr>
                 <tr className="border-b border-gray-100 dark:border-gray-800/60">
                   <td className="py-2 pr-4 font-mono text-xs text-gray-800 dark:text-gray-200">st_ft_src / med / cmp</td>
                   <td className="py-2 pr-4 text-xs text-gray-500">localStorage</td>
-                  <td className="py-2 text-xs text-gray-650 dark:text-gray-400">First-touch UTM acquisition parameters — captured once on first visit.</td>
+                  <td className="py-2 text-xs text-gray-600 dark:text-gray-400">First-touch UTM acquisition parameters — captured once on first visit.</td>
                 </tr>
                 <tr className="border-b border-gray-100 dark:border-gray-800/60">
                   <td className="py-2 pr-4 font-mono text-xs text-gray-800 dark:text-gray-200">st_sid</td>
                   <td className="py-2 pr-4 text-xs text-gray-500">sessionStorage</td>
-                  <td className="py-2 text-xs text-gray-650 dark:text-gray-400">Session ID — remains stable for the browser tab.</td>
+                  <td className="py-2 text-xs text-gray-600 dark:text-gray-400">Session ID — remains stable for the browser tab.</td>
                 </tr>
               </tbody>
             </table>
@@ -181,23 +181,23 @@ export default function DevelopersTracker() {
               <tbody>
                 <tr className="border-b border-gray-100 dark:border-gray-800/60">
                   <td className="py-2 pr-4 font-mono text-xs text-gray-800 dark:text-gray-200">window.sourcetrack.optIn()</td>
-                  <td className="py-2 text-xs text-gray-650 dark:text-gray-400">Grants consent, persists <code>"true"</code> in localStorage (<code>st_consent</code>), and flushes any queued pageview or conversion events.</td>
+                  <td className="py-2 text-xs text-gray-600 dark:text-gray-400">Grants consent, persists <code>"true"</code> in localStorage (<code>st_consent</code>), and flushes any queued pageview or conversion events.</td>
                 </tr>
                 <tr className="border-b border-gray-100 dark:border-gray-800/60">
                   <td className="py-2 pr-4 font-mono text-xs text-gray-800 dark:text-gray-200">window.sourcetrack.optOut()</td>
-                  <td className="py-2 text-xs text-gray-650 dark:text-gray-400">Denies/revokes consent, persists <code>"false"</code> in localStorage, clears the queue, and blocks all future tracking.</td>
+                  <td className="py-2 text-xs text-gray-600 dark:text-gray-400">Denies/revokes consent, persists <code>"false"</code> in localStorage, clears the queue, and blocks all future tracking.</td>
                 </tr>
                 <tr className="border-b border-gray-100 dark:border-gray-800/60">
                   <td className="py-2 pr-4 font-mono text-xs text-gray-800 dark:text-gray-200">window.sourcetrack.consent(status)</td>
-                  <td className="py-2 text-xs text-gray-650 dark:text-gray-400">Updates consent status programmatically. Passing <code>true</code> enables tracking and flushes the queue; passing <code>false</code> blocks tracking and clears the queue.</td>
+                  <td className="py-2 text-xs text-gray-600 dark:text-gray-400">Updates consent status programmatically. Passing <code>true</code> enables tracking and flushes the queue; passing <code>false</code> blocks tracking and clears the queue.</td>
                 </tr>
                 <tr className="border-b border-gray-100 dark:border-gray-800/60">
                   <td className="py-2 pr-4 font-mono text-xs text-gray-800 dark:text-gray-200">window.sourcetrack.hasConsent()</td>
-                  <td className="py-2 text-xs text-gray-650 dark:text-gray-400">Returns <code>true</code> (opted in), <code>false</code> (opted out), or <code>null</code> (no decision yet).</td>
+                  <td className="py-2 text-xs text-gray-600 dark:text-gray-400">Returns <code>true</code> (opted in), <code>false</code> (opted out), or <code>null</code> (no decision yet).</td>
                 </tr>
                 <tr className="border-b border-gray-100 dark:border-gray-800/60">
                   <td className="py-2 pr-4 font-mono text-xs text-gray-800 dark:text-gray-200">window.sourcetrack.getContext()</td>
-                  <td className="py-2 text-xs text-gray-650 dark:text-gray-400">Returns a non-PII object containing visitor IDs (<code>anonymous_id</code>, <code>session_id</code>), first-touch acquisition properties, current-touch acquisition properties, and active click IDs. In cookieless mode, IDs may be <code>null</code> until the ID request resolves.</td>
+                  <td className="py-2 text-xs text-gray-600 dark:text-gray-400">Returns a non-PII object containing visitor IDs (<code>anonymous_id</code>, <code>session_id</code>), first-touch acquisition properties, current-touch acquisition properties, and active click IDs. In cookieless mode, IDs may be <code>null</code> until the ID request resolves.</td>
                 </tr>
               </tbody>
             </table>
@@ -206,10 +206,10 @@ export default function DevelopersTracker() {
 
         {/* Common Errors */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-850 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
             Common Errors
           </h2>
-          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-750 dark:text-gray-355 leading-relaxed">
+          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
             <li>
               <strong>Ad Blockers / Brave Shields blocking network requests:</strong> Strict privacy filters can block calls to <code>POST /api/track</code>. Ensure you test inside a clean browser tab or pause blockers.
             </li>

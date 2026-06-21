@@ -116,7 +116,7 @@ export default function DocsGTM() {
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
             Common Mistakes
           </h2>
-          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-750 dark:text-gray-350">
+          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
             <li>
               <strong>Forgetting to Publish:</strong> Preview mode only works for you. Make sure you click <strong>Submit &rarr; Publish</strong> in GTM so the tag is deployed for all your users.
             </li>

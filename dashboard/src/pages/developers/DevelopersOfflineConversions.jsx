@@ -167,23 +167,23 @@ export default function DevelopersOfflineConversions() {
               <tbody>
                 <tr className="border-b border-gray-100 dark:border-gray-800/60">
                   <td className="py-2 pr-4 font-mono text-xs text-red-600 dark:text-red-400">400 Bad Request</td>
-                  <td className="py-2 pr-4 font-mono text-xs text-gray-850 dark:text-gray-250">"conversion_value must be a valid number"</td>
-                  <td className="py-2 text-xs text-gray-650 dark:text-gray-405">The value passed is empty, string, or boolean instead of a number.</td>
+                  <td className="py-2 pr-4 font-mono text-xs text-gray-800 dark:text-gray-300">"conversion_value must be a valid number"</td>
+                  <td className="py-2 text-xs text-gray-600 dark:text-gray-400">The value passed is empty, string, or boolean instead of a number.</td>
                 </tr>
                 <tr className="border-b border-gray-100 dark:border-gray-800/60">
                   <td className="py-2 pr-4 font-mono text-xs text-red-600 dark:text-red-400">400 Bad Request</td>
-                  <td className="py-2 pr-4 font-mono text-xs text-gray-850 dark:text-gray-250">"A valid 3-letter currency code (e.g. USD) is required..."</td>
-                  <td className="py-2 text-xs text-gray-650 dark:text-gray-405">The value is greater than 0, but the currency is missing or invalid.</td>
+                  <td className="py-2 pr-4 font-mono text-xs text-gray-800 dark:text-gray-300">"A valid 3-letter currency code (e.g. USD) is required..."</td>
+                  <td className="py-2 text-xs text-gray-600 dark:text-gray-400">The value is greater than 0, but the currency is missing or invalid.</td>
                 </tr>
                 <tr className="border-b border-gray-100 dark:border-gray-800/60">
                   <td className="py-2 pr-4 font-mono text-xs text-red-600 dark:text-red-400">400 Bad Request</td>
-                  <td className="py-2 pr-4 font-mono text-xs text-gray-850 dark:text-gray-250">"At least one stable deduplication key... is required..."</td>
-                  <td className="py-2 text-xs text-gray-650 dark:text-gray-405">Revenue value is greater than 0, but no order_id, payment_id, or provider_event_id is supplied.</td>
+                  <td className="py-2 pr-4 font-mono text-xs text-gray-800 dark:text-gray-300">"At least one stable deduplication key... is required..."</td>
+                  <td className="py-2 text-xs text-gray-600 dark:text-gray-400">Revenue value is greater than 0, but no order_id, payment_id, or provider_event_id is supplied.</td>
                 </tr>
                 <tr className="border-b border-gray-100 dark:border-gray-800/60">
                   <td className="py-2 pr-4 font-mono text-xs text-red-600 dark:text-red-400">400 Bad Request</td>
-                  <td className="py-2 pr-4 font-mono text-xs text-gray-850 dark:text-gray-250">"occurred_at... must be a valid ISO 8601 date string"</td>
-                  <td className="py-2 text-xs text-gray-650 dark:text-gray-405">The time string supplied cannot be parsed by standard JavaScript Date engines.</td>
+                  <td className="py-2 pr-4 font-mono text-xs text-gray-800 dark:text-gray-300">"occurred_at... must be a valid ISO 8601 date string"</td>
+                  <td className="py-2 text-xs text-gray-600 dark:text-gray-400">The time string supplied cannot be parsed by standard JavaScript Date engines.</td>
                 </tr>
               </tbody>
             </table>

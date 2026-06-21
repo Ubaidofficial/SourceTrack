@@ -66,7 +66,7 @@ export default function DocsShopify() {
 
           <div className="space-y-4">
             <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">Step 1: Storefront Pixel Tracking</h3>
-            <p className="text-sm text-gray-750 dark:text-gray-350">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               Add the standard SourceTrack pixel script to your storefront theme to log UTMs and referrers:
             </p>
             <ol className="list-decimal pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-300">
@@ -83,7 +83,7 @@ export default function DocsShopify() {
 
           <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
             <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">Step 2: Capture Visitor ID in Shopify Cart</h3>
-            <p className="text-sm text-gray-750 dark:text-gray-350">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               To link checkout purchases with marketing sessions, you must store the anonymous visitor ID (<code>st_aid</code>) as a cart attribute. Add this Javascript snippet to your checkout or cart templates:
             </p>
             <DocsCodeBlock lang="js">
@@ -107,7 +107,7 @@ if (visitorId) {
 
           <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
             <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">Step 3: Connect Order Webhooks</h3>
-            <p className="text-sm text-gray-750 dark:text-gray-350">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
               Configure a webhook inside Shopify to forward order details to your SourceTrack endpoint on purchase confirmation:
             </p>
             <ol className="list-decimal pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
@@ -149,7 +149,7 @@ if (visitorId) {
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
             Common Mistakes
           </h2>
-          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-750 dark:text-gray-350">
+          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
             <li>
               <strong>Missing Cart Attribute:</strong> If you forget Step 2, Shopify won't store the visitor ID on the cart. Without it, the order webhook cannot stitch the purchase back to the acquisition source, and the conversion will show as unattributed.
             </li>

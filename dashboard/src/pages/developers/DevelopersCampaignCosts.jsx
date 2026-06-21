@@ -148,7 +148,7 @@ export default function DevelopersCampaignCosts() {
 
         {/* Common Errors */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-850 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
             Common Errors
           </h2>
           <div className="overflow-x-auto">
@@ -163,23 +163,23 @@ export default function DevelopersCampaignCosts() {
               <tbody>
                 <tr className="border-b border-gray-100 dark:border-gray-800/60">
                   <td className="py-2 pr-4 font-mono text-xs text-red-600 dark:text-red-400">400 Bad Request</td>
-                  <td className="py-2 pr-4 font-mono text-xs text-gray-850 dark:text-gray-250">"Clicks cannot be greater than impressions"</td>
-                  <td className="py-2 text-xs text-gray-650 dark:text-gray-405">A row contains click counts that exceed the impression count on that platform.</td>
+                  <td className="py-2 pr-4 font-mono text-xs text-gray-800 dark:text-gray-300">"Clicks cannot be greater than impressions"</td>
+                  <td className="py-2 text-xs text-gray-600 dark:text-gray-400">A row contains click counts that exceed the impression count on that platform.</td>
                 </tr>
                 <tr className="border-b border-gray-100 dark:border-gray-800/60">
                   <td className="py-2 pr-4 font-mono text-xs text-red-600 dark:text-red-400">400 Bad Request</td>
-                  <td className="py-2 pr-4 font-mono text-xs text-gray-850 dark:text-gray-250">"Maximum batch size is 1000 rows"</td>
-                  <td className="py-2 text-xs text-gray-650 dark:text-gray-405">The upload array size exceeds the maximum batch limit of 1000 items.</td>
+                  <td className="py-2 pr-4 font-mono text-xs text-gray-800 dark:text-gray-300">"Maximum batch size is 1000 rows"</td>
+                  <td className="py-2 text-xs text-gray-600 dark:text-gray-400">The upload array size exceeds the maximum batch limit of 1000 items.</td>
                 </tr>
                 <tr className="border-b border-gray-100 dark:border-gray-800/60">
                   <td className="py-2 pr-4 font-mono text-xs text-red-600 dark:text-red-400">402 Payment Req</td>
-                  <td className="py-2 pr-4 font-mono text-xs text-gray-850 dark:text-gray-250">"Feature manual_spend is not available..."</td>
-                  <td className="py-2 text-xs text-gray-650 dark:text-gray-405">Manual spend imports are locked by your current subscription tier. Upgrade required.</td>
+                  <td className="py-2 pr-4 font-mono text-xs text-gray-800 dark:text-gray-300">"Feature manual_spend is not available..."</td>
+                  <td className="py-2 text-xs text-gray-600 dark:text-gray-400">Manual spend imports are locked by your current subscription tier. Upgrade required.</td>
                 </tr>
                 <tr className="border-b border-gray-100 dark:border-gray-800/60">
                   <td className="py-2 pr-4 font-mono text-xs text-red-600 dark:text-red-400">401 Unauthorized</td>
-                  <td className="py-2 pr-4 font-mono text-xs text-gray-850 dark:text-gray-250">"Unauthorized access"</td>
-                  <td className="py-2 text-xs text-gray-650 dark:text-gray-405">Missing or invalid Authorization user token.</td>
+                  <td className="py-2 pr-4 font-mono text-xs text-gray-800 dark:text-gray-300">"Unauthorized access"</td>
+                  <td className="py-2 text-xs text-gray-600 dark:text-gray-400">Missing or invalid Authorization user token.</td>
                 </tr>
               </tbody>
             </table>

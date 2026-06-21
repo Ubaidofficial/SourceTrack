@@ -104,7 +104,7 @@ export default function DocsInstall() {
 
           <DocsCallout type="warning">
             <h4 className="font-extrabold text-amber-900 dark:text-amber-400 mb-1">What Setup Doctor Does Not Prove:</h4>
-            <ul className="list-disc pl-5 space-y-1 text-xs text-amber-800 dark:text-amber-450 leading-relaxed">
+            <ul className="list-disc pl-5 space-y-1 text-xs text-amber-800 dark:text-amber-400 leading-relaxed">
               <li>It does not prove every single page on your website has the script installed.</li>
               <li>It does not prove every custom conversion or event trigger is configured.</li>
               <li>Setup Doctor does not validate attribution accuracy.</li>
@@ -127,7 +127,7 @@ export default function DocsInstall() {
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
             Common Mistakes
           </h2>
-          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-750 dark:text-gray-350">
+          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
             <li>
               <strong>Incorrect Site Key:</strong> Double-check that your key matches the exact string shown under Settings in your dashboard.
             </li>

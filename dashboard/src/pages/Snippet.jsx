@@ -142,13 +142,13 @@ export default function Snippet() {
   const renderSubRow = (id, title, subtitle, content) => {
     const isExpanded = activeSub === id
     return (
-      <div className="border-b border-gray-150 dark:border-gray-800 last:border-0 pb-3 last:pb-0 pt-3 first:pt-0">
+      <div className="border-b border-gray-200 dark:border-gray-800 last:border-0 pb-3 last:pb-0 pt-3 first:pt-0">
         <button
           onClick={() => setActiveSub(isExpanded ? null : id)}
           className="w-full flex items-center justify-between text-left group"
         >
           <div className="pr-4">
-            <h4 className="text-xs font-semibold text-gray-800 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-450 transition-colors">{title}</h4>
+            <h4 className="text-xs font-semibold text-gray-800 dark:text-gray-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{title}</h4>
             <p className="text-[11px] text-gray-500 dark:text-gray-400 font-light mt-0.5">{subtitle}</p>
           </div>
           {isExpanded ? (
@@ -229,12 +229,10 @@ export default function Snippet() {
       </div>
 
       {/* 3-Step Guided Installation */}
-      <div className="bg-white dark:bg-[#1A1D1D] rounded-xl border border-gray-200 dark:border-[#333838] shadow-sm p-6 space-y-6">
-
-        {/* Step 1 */}
+      <div className="bg-white dark:bg-[#1A1D1D] rounded-xl border border-gray-200 dark:border-[#333838] shadow-sm p-6 space-y-6">        {/* Step 1 */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-450 text-xs font-bold">1</span>
+            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 text-xs font-bold">1</span>
             <h3 className="font-semibold text-sm text-st-black dark:text-white">Copy your tracking script</h3>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 pl-7">
@@ -246,7 +244,7 @@ export default function Snippet() {
                 <pre className="text-green-400 text-[11px] font-mono overflow-x-auto whitespace-pre-wrap pr-12 leading-relaxed select-all">{snippet}</pre>
                 <button
                   onClick={handleCopy}
-                  className="absolute top-2.5 right-2.5 p-1.5 bg-gray-800 hover:bg-gray-750 text-gray-300 hover:text-white rounded transition-colors"
+                  className="absolute top-2.5 right-2.5 p-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded transition-colors"
                   title="Copy to clipboard"
                 >
                   {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -261,18 +259,18 @@ export default function Snippet() {
         {/* Step 2 */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-450 text-xs font-bold">2</span>
+            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 text-xs font-bold">2</span>
             <h3 className="font-semibold text-sm text-st-black dark:text-white">Paste before closing head tag</h3>
           </div>
-          <p className="text-xs text-gray-650 dark:text-gray-400 pl-7">
-            Paste the copied snippet into the <code className="bg-gray-150 dark:bg-gray-800 px-1 py-0.5 rounded text-xs font-mono">&lt;head&gt;</code> element of your website's HTML code.
+          <p className="text-xs text-gray-600 dark:text-gray-400 pl-7">
+            Paste the copied snippet into the <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-xs font-mono">&lt;head&gt;</code> element of your website's HTML code.
           </p>
         </div>
 
         {/* Step 3 */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-450 text-xs font-bold">3</span>
+            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 text-xs font-bold">3</span>
             <h3 className="font-semibold text-sm text-st-black dark:text-white">Verify installation</h3>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 pl-7">
@@ -370,7 +368,7 @@ export default function Snippet() {
       )}
 
       {/* Platform Docs Links */}
-      <div className="bg-gray-50 dark:bg-[#161919]/60 rounded-xl border border-gray-150 dark:border-gray-800/80 p-4">
+      <div className="bg-gray-50 dark:bg-[#161919]/60 rounded-xl border border-gray-200 dark:border-gray-800/80 p-4">
         <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Platform install guides</p>
         <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
           {[
@@ -388,7 +386,7 @@ export default function Snippet() {
       </div>
 
       {/* Calm Privacy Reminder */}
-      <div className="bg-gray-50 dark:bg-[#161919]/60 rounded-xl border border-gray-150 dark:border-gray-800/80 p-4">
+      <div className="bg-gray-50 dark:bg-[#161919]/60 rounded-xl border border-gray-200 dark:border-gray-800/80 p-4">
         <div className="flex items-start gap-2.5">
           <span className="text-gray-500 mt-0.5 text-sm">🔒</span>
           <div className="flex-1 text-xs text-st-gray dark:text-gray-400">
@@ -401,7 +399,7 @@ export default function Snippet() {
               {showPrivacyNotes ? 'Hide notes' : 'Read privacy notes'}
             </button>
             {showPrivacyNotes && (
-              <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 leading-relaxed pt-2 border-t border-gray-150 dark:border-gray-800/60">
+              <p className="mt-2 text-xs text-gray-600 dark:text-gray-400 leading-relaxed pt-2 border-t border-gray-200 dark:border-gray-800/60">
                 Under GDPR, CCPA, and PECR regulations, you must disclose that you collect anonymous site metrics (referrers, UTM params, session length, and IP-derived location). While Cookieless Mode avoids writing browser cookies or localStorage keys, reading client headers (e.g., User-Agent, IP address) to generate visitor hashes may still require disclosure or explicit consent in certain jurisdictions. Customers are solely responsible for ensuring their tracking configurations comply with all regional regulations.
               </p>
             )}
@@ -423,7 +421,7 @@ export default function Snippet() {
         </button>
 
         {advancedOpen && (
-          <div className="border-t border-gray-150 dark:border-gray-800 p-5 space-y-3 bg-gray-50/20 dark:bg-[#151818]/10">
+          <div className="border-t border-gray-200 dark:border-gray-800 p-5 space-y-3 bg-gray-50/20 dark:bg-[#151818]/10">
             {renderSubRow(
               'identify',
               'Identify users',
@@ -432,13 +430,13 @@ export default function Snippet() {
                 <p>
                   Call <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[11px] font-mono">sourcetrack.identify()</code> when a user logs in or registers. This allows SourceTrack to attach user traits and compute Customer Lifetime Value (LTV).
                 </p>
-                <div className="bg-st-black rounded-lg p-3 relative mt-1 border border-gray-850">
+                <div className="bg-st-black rounded-lg p-3 relative mt-1 border border-gray-800">
                   <pre className="text-green-400 text-[11px] font-mono overflow-x-auto whitespace-pre-wrap pr-8 leading-relaxed">{`window.sourcetrack?.identify('user_123', {
   email: 'customer@example.com',
   name: 'Jane Doe'
 })`}</pre>
                 </div>
-                <div className="bg-st-black rounded-lg p-3 relative mt-1.5 border border-gray-850">
+                <div className="bg-st-black rounded-lg p-3 relative mt-1.5 border border-gray-800">
                   <pre className="text-green-400 text-[11px] font-mono overflow-x-auto whitespace-pre-wrap pr-8 leading-relaxed">{`// React hook example
 useEffect(() => {
   if (user) {
@@ -460,7 +458,7 @@ useEffect(() => {
                 <p>
                   Forward Stripe <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[11px] font-mono">invoice.paid</code> events to attribute recurring invoice payments to campaigns. <strong>Note:</strong> Reliable offline attribution currently requires passing the browser-generated <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[11px] font-mono">anonymous_id</code> in checkout/payment metadata. While <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[11px] font-mono">user_id</code> can be resolved to the visitor's original journey if a prior identity link exists in the database, stitching based on email alone is not supported. Passing the browser-generated <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[11px] font-mono">anonymous_id</code> directly in metadata remains the most reliable method. Avoid sending plaintext email as an identifier unless you have a deliberate privacy or legal basis; prefer using an internal user ID or a hashed identifier.
                 </p>
-                <div className="bg-st-black rounded-lg p-3 relative mt-1 border border-gray-850">
+                <div className="bg-st-black rounded-lg p-3 relative mt-1 border border-gray-800">
                   <pre className="text-green-400 text-[11px] font-mono overflow-x-auto whitespace-pre-wrap pr-8 leading-relaxed">{`// In your Stripe webhook handler (Node.js example)
 if (event.type === 'invoice.paid') {
   const invoice = event.data.object
@@ -491,7 +489,7 @@ if (event.type === 'invoice.paid') {
                 <p>
                   Send conversions directly from your server or backend database for CRM lifecycle stages or offline sales.
                 </p>
-                <div className="bg-st-black rounded-lg p-3 relative mt-1 border border-gray-850">
+                <div className="bg-st-black rounded-lg p-3 relative mt-1 border border-gray-800">
                   <pre className="text-green-400 text-[11px] font-mono overflow-x-auto whitespace-pre-wrap pr-8 leading-relaxed">{`POST https://api.srctk.com/api/conversion/offline
 Content-Type: application/json
 
@@ -514,7 +512,7 @@ Content-Type: application/json
                 <p>
                   To link attribution across multiple domains (e.g. landing page and app domain), add the <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-[11px] font-mono">data-cross-domains</code> attribute to your tracking snippet.
                 </p>
-                <div className="bg-st-black rounded-lg p-3 relative mt-1 border border-gray-850">
+                <div className="bg-st-black rounded-lg p-3 relative mt-1 border border-gray-800">
                   <pre className="text-green-400 text-[11px] font-mono overflow-x-auto whitespace-pre-wrap pr-8 leading-relaxed">{`<script async src="https://api.srctk.com/tracker.min.js"
         data-site-key="${site?.site_key || 'YOUR_SITE_KEY'}"
         data-cross-domains="app.yoursite.com, checkout.yoursite.com"></script>`}</pre>
@@ -530,7 +528,7 @@ Content-Type: application/json
                 <p>
                   Link anonymous visitor sessions to CRM contact profiles by calling the identify API. Use a stable user ID or email.
                 </p>
-                <div className="bg-st-black rounded-lg p-3 relative mt-1 border border-gray-850">
+                <div className="bg-st-black rounded-lg p-3 relative mt-1 border border-gray-800">
                   <pre className="text-green-400 text-[11px] font-mono overflow-x-auto whitespace-pre-wrap pr-8 leading-relaxed">{`POST https://api.srctk.com/api/identify
 Content-Type: application/json
 
@@ -552,7 +550,7 @@ Content-Type: application/json
                 <p>
                   Configure an outbound webhook URL to receive immediate POST payloads when a conversion event occurs. Webhooks are configured via environment variables on the backend.
                 </p>
-                <div className="bg-st-black rounded-lg p-3 relative mt-1 border border-gray-850">
+                <div className="bg-st-black rounded-lg p-3 relative mt-1 border border-gray-800">
                   <pre className="text-green-400 text-[11px] font-mono overflow-x-auto whitespace-pre-wrap pr-8 leading-relaxed">{`// Outbound Conversion Payload Example
 {
   "event_type": "conversion",
@@ -574,7 +572,7 @@ Content-Type: application/json
                 <p>
                   Track key customer actions or milestones that do not have a cash value, such as signups, lead forms, or bookings.
                 </p>
-                <div className="bg-st-black rounded-lg p-3 relative mt-1 border border-gray-850">
+                <div className="bg-st-black rounded-lg p-3 relative mt-1 border border-gray-800">
                   <pre className="text-green-400 text-[11px] font-mono overflow-x-auto whitespace-pre-wrap pr-8 leading-relaxed">{`window.sourcetrack?.track('lead_signup', {
   plan_tier: 'premium_trial',
   form_id: 'contact_sales_footer'

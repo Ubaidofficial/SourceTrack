@@ -140,7 +140,7 @@ export default function DocsQuickstart() {
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
             Common Mistakes
           </h2>
-          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-750 dark:text-gray-350">
+          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
             <li>
               <strong>Pasting script in the footer:</strong> The tracking script should go in the <code>&lt;head&gt;</code> section so that pageviews and acquisition details are captured before the visitor exits.
             </li>

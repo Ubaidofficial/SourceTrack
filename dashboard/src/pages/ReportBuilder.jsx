@@ -1360,7 +1360,7 @@ export default function ReportBuilder() {
                                 className="group relative flex flex-col text-left p-4 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border hover:border-lime-500 rounded-xl transition-all shadow-sm"
                               >
                                 <div className="flex items-start justify-between gap-2 w-full">
-                                  <span className="font-bold text-xs text-gray-800 dark:text-white group-hover:text-lime-650 dark:group-hover:text-lime-400">
+                                  <span className="font-bold text-xs text-gray-800 dark:text-white group-hover:text-lime-600 dark:group-hover:text-lime-400">
                                     {p.name}
                                   </span>
                                   <div className="flex items-center gap-1">
@@ -1767,7 +1767,7 @@ export default function ReportBuilder() {
                     <label className="block text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Group By 2</label>
                     <button
                       onClick={() => { setShowGroupBy2(false); setGroupBy2(null) }}
-                      className="text-xs text-red-500 hover:text-red-650"
+                      className="text-xs text-red-500 hover:text-red-600"
                     >
                       Remove
                     </button>
@@ -1933,7 +1933,7 @@ export default function ReportBuilder() {
                     <button
                       type="button"
                       onClick={() => { setFilters({}); setFilterCount(0) }}
-                      className="w-full py-1.5 border border-red-200 dark:border-red-950 text-red-500 hover:text-red-650 rounded transition-all font-semibold"
+                      className="w-full py-1.5 border border-red-200 dark:border-red-950 text-red-500 hover:text-red-600 rounded transition-all font-semibold"
                     >
                       Clear all filters
                     </button>

@@ -133,7 +133,7 @@ export default function DocsTroubleshooting() {
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
             Common Troubleshooting Mistakes
           </h2>
-          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-750 dark:text-gray-350">
+          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
             <li>
               <strong>Testing behind active proxy profiles:</strong> VPNs or corporate firewalls can occasionally filter incoming analytic endpoints. Test on standard connections or home networks.
             </li>

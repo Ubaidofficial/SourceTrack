@@ -1215,7 +1215,7 @@ export default function Settings() {
 
         <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 rounded-lg p-3 space-y-1">
           <p className="text-xs font-semibold text-blue-800 dark:text-blue-400">Site Key vs. Private API Token</p>
-          <p className="text-[11px] text-blue-700/85 dark:text-blue-305/85 leading-relaxed">
+          <p className="text-[11px] text-blue-700/85 dark:text-blue-400/85 leading-relaxed">
             Your <strong>Site Key</strong> is public and embedded in your tracking pixel. It can only ingest client-side traffic and cannot read your data. A <strong>Private API Token</strong> authorizes server-side conversion writes and must be kept secure.
           </p>
         </div>
@@ -1224,7 +1224,7 @@ export default function Settings() {
           <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
           <div className="space-y-1">
             <p className="text-xs font-semibold text-amber-800 dark:text-amber-400">Security Warning</p>
-            <p className="text-[11px] text-amber-700/85 dark:text-amber-305/85 leading-relaxed">
+            <p className="text-[11px] text-amber-700/85 dark:text-amber-400/85 leading-relaxed">
               <strong>Never use private API tokens in browser-side JavaScript or public client code.</strong> Doing so exposes your secret credentials. Only use them in secure backend environments.
             </p>
           </div>
@@ -1271,7 +1271,7 @@ export default function Settings() {
                       <th className="p-3 text-right">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-850">
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                     {apiKeys.map(k => (
                       <tr key={k.id} className="text-st-black dark:text-gray-300">
                         <td className="p-3 font-medium truncate max-w-[150px]">{k.name}</td>
@@ -1283,7 +1283,7 @@ export default function Settings() {
                         <td className="p-3 text-right">
                           <button
                             onClick={() => handleRevokeApiKey(k.id)}
-                            className="text-red-505 hover:text-red-705 font-semibold text-xs"
+                            className="text-red-600 hover:text-red-700 font-semibold text-xs"
                           >
                             Revoke
                           </button>
@@ -1459,7 +1459,7 @@ export default function Settings() {
                       type="text"
                       readOnly
                       value={createdToken.token}
-                      className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-850 dark:text-white rounded-lg text-xs font-mono select-all focus:outline-none"
+                      className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-xs font-mono select-all focus:outline-none"
                     />
                     <button
                       onClick={() => {
@@ -1470,14 +1470,14 @@ export default function Settings() {
                       className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-st-black dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 shrink-0 flex items-center justify-center"
                       title="Copy to Clipboard"
                     >
-                      {tokenCopied ? <Check className="w-4 h-4 text-green-650" /> : <Copy className="w-4 h-4" />}
+                      {tokenCopied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
                     </button>
                   </div>
                 </div>
 
                 <div className="bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-lg p-3 flex gap-2.5 items-start">
                   <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-500 shrink-0 mt-0.5" />
-                  <p className="text-[11px] text-amber-700/85 dark:text-amber-305/85 leading-relaxed font-semibold">
+                  <p className="text-[11px] text-amber-700/85 dark:text-amber-400/85 leading-relaxed font-semibold">
                     Never commit this token to Git repositories, include it in frontend source files, or post it publicly.
                   </p>
                 </div>

@@ -21,7 +21,7 @@ const IngestionActivityLog = ({ events, providerLabel }) => {
   const list = events?.data?.events || events?.events || []
   if (!list.length) {
     return (
-      <div className="rounded-lg border border-gray-150 dark:border-gray-800 p-3">
+      <div className="rounded-lg border border-gray-200 dark:border-gray-800 p-3">
         <p className="text-[11px] font-semibold text-st-gray dark:text-gray-400 mb-1">Recent webhook activity</p>
         <p className="text-[11px] text-st-gray dark:text-gray-500 font-sans">
           No {providerLabel} webhooks received yet. Refreshes every 15s while this card is open.
@@ -34,7 +34,7 @@ const IngestionActivityLog = ({ events, providerLabel }) => {
     s === 'duplicate' ? 'text-amber-700 bg-amber-50 dark:text-amber-300 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900/40' :
     'text-red-700 bg-red-50 dark:text-red-300 dark:bg-red-950/30 border-red-200 dark:border-red-900/40'
   return (
-    <div className="rounded-lg border border-gray-150 dark:border-gray-800 p-3">
+    <div className="rounded-lg border border-gray-200 dark:border-gray-800 p-3">
       <p className="text-[11px] font-semibold text-st-gray dark:text-gray-400 mb-2">Recent webhook activity</p>
       <ul className="space-y-1.5">
         {list.map(ev => (
@@ -77,7 +77,7 @@ const CollapsibleRow = ({
   actionButton
 }) => {
   return (
-    <div className="border-b border-gray-150 dark:border-gray-800 last:border-0 py-3.5 first:pt-0 last:pb-0">
+    <div className="border-b border-gray-200 dark:border-gray-800 last:border-0 py-3.5 first:pt-0 last:pb-0">
       <div
         className={`flex items-center justify-between gap-4 ${onToggle ? 'cursor-pointer select-none' : ''}`}
         onClick={onToggle || undefined}
@@ -1019,7 +1019,7 @@ export default function Integrations() {
       )}
 
       {/* Status Overview (Simplified status rail with proper hierarchy) */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-[#161919]/50 border border-gray-150 dark:border-gray-800/80 rounded-xl p-4 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-[#161919]/50 border border-gray-200 dark:border-gray-800/80 rounded-xl p-4 shadow-sm">
         {/* Primary Status */}
         <div className="flex items-center gap-3">
           <div className={`p-2 rounded-xl shrink-0 ${isVerified ? 'bg-green-500/10 text-green-500' : 'bg-amber-500/10 text-amber-500'}`}>
@@ -1035,7 +1035,7 @@ export default function Integrations() {
         </div>
 
         {/* Secondary Info */}
-        <div className="flex flex-wrap items-center gap-x-8 gap-y-3 pt-3 md:pt-0 border-t md:border-t-0 border-gray-150 dark:border-gray-800/80">
+        <div className="flex flex-wrap items-center gap-x-8 gap-y-3 pt-3 md:pt-0 border-t md:border-t-0 border-gray-200 dark:border-gray-800/80">
           <div className="flex items-center gap-2">
             <Globe className="w-3.5 h-3.5 text-st-gray dark:text-gray-500" />
             <div>
@@ -1126,8 +1126,8 @@ export default function Integrations() {
           <DashboardCard
             title="Core Tracking"
             subtitle="Tracking script and site verification"
-            className="border-gray-150 dark:border-gray-800/80 shadow-none"
-            headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-150 dark:border-gray-800/80"
+            className="border-gray-200 dark:border-gray-800/80 shadow-none"
+            headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-200 dark:border-gray-800/80"
             bodyClassName="p-4 pt-3"
           >
             <div className="space-y-1">
@@ -1190,9 +1190,9 @@ export default function Integrations() {
                   </div>
 
                   {!isVerified && (
-                    <div className="bg-amber-50 dark:bg-amber-955/15 border border-amber-200 dark:border-amber-900/30 rounded-lg p-3">
-                      <p className="text-sm text-amber-850 dark:text-amber-300 font-medium">Installation not verified</p>
-                      <p className="text-xs text-amber-650 dark:text-amber-400 mt-1 font-light font-sans">
+                    <div className="bg-amber-50 dark:bg-amber-900/15 border border-amber-200 dark:border-amber-900/30 rounded-lg p-3">
+                      <p className="text-sm text-amber-800 dark:text-amber-300 font-medium">Installation not verified</p>
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 font-light font-sans">
                         Paste the tracking script in your site's &lt;head&gt; tag and visit the site to trigger verification.
                       </p>
                       <div className="mt-2 text-xs">
@@ -1230,8 +1230,8 @@ export default function Integrations() {
         <DashboardCard
           title="Revenue Connections"
           subtitle="Stitch transaction, checkout, and email events back to user journeys"
-          className="border-gray-150 dark:border-gray-800/80 shadow-none"
-          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-150 dark:border-gray-800/80"
+          className="border-gray-200 dark:border-gray-800/80 shadow-none"
+          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-200 dark:border-gray-800/80"
           bodyClassName="p-4 pt-3"
         >
           <div className="space-y-1">
@@ -1318,7 +1318,7 @@ export default function Integrations() {
                           type="button"
                           onClick={handleDeleteStripe}
                           disabled={stripeSubmitting}
-                          className="px-3 py-1.5 border border-red-200 text-red-655 rounded-lg text-xs font-semibold hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-50"
+                          className="px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-50"
                         >
                           Disconnect
                         </button>
@@ -1448,7 +1448,7 @@ export default function Integrations() {
                           type="button"
                           onClick={handleDeleteShopify}
                           disabled={shopifySubmitting}
-                          className="px-3 py-1.5 border border-red-200 text-red-655 rounded-lg text-xs font-semibold hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-50"
+                          className="px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-50"
                         >
                           Disconnect
                         </button>
@@ -1531,7 +1531,7 @@ export default function Integrations() {
                         e.stopPropagation();
                         setActiveSection(activeSection === 'revenue.email' ? null : 'revenue.email');
                       }}
-                      className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-150 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors"
+                      className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-200 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors"
                     >
                       {activeSection === 'revenue.email' ? 'Close' : 'Setup'}
                     </button>
@@ -1547,7 +1547,7 @@ export default function Integrations() {
                 </p>
 
                 {/* Tab layout */}
-                <div className="flex border-b border-gray-150 dark:border-gray-800/80">
+                <div className="flex border-b border-gray-200 dark:border-gray-800/80">
                   {[
                     { id: 'pixel', label: 'Image pixel' },
                     { id: 'server', label: 'Server-side event' },
@@ -1628,7 +1628,7 @@ export default function Integrations() {
                               ['val', 'Numeric value (for conversions)'],
                             ].map(([k, v]) => (
                               <div key={k} className="flex items-start gap-1.5">
-                                <code className="text-[10px] font-mono text-st-black dark:text-white bg-gray-250 dark:bg-[#2A2E2E] px-1 py-0.5 rounded shrink-0">{k}</code>
+                                <code className="text-[10px] font-mono text-st-black dark:text-white bg-gray-200 dark:bg-[#2A2E2E] px-1 py-0.5 rounded shrink-0">{k}</code>
                                 <span className="text-[10px] text-st-gray dark:text-gray-400">{v}</span>
                               </div>
                             ))}
@@ -1649,8 +1649,8 @@ export default function Integrations() {
         <DashboardCard
           title="Ad Cost Sync"
           subtitle="Synchronize advertising costs and impressions to calculate true ROAS"
-          className="border-gray-150 dark:border-gray-800/80 shadow-none"
-          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-150 dark:border-gray-800/80"
+          className="border-gray-200 dark:border-gray-800/80 shadow-none"
+          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-200 dark:border-gray-800/80"
           bodyClassName="p-4 pt-3"
         >
           <div className="space-y-1">
@@ -1681,7 +1681,7 @@ export default function Integrations() {
                     Details
                   </button>
                   {!isPreview && (
-                    <Link to="/campaigns?import=true" className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-150 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors">
+                    <Link to="/campaigns?import=true" className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-200 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors">
                       Import
                     </Link>
                   )}
@@ -1696,20 +1696,20 @@ export default function Integrations() {
                   <div className="overflow-x-auto">
                     <table className="text-[11px] w-full border-collapse">
                       <thead>
-                        <tr className="text-st-gray dark:text-gray-400 border-b border-gray-150 dark:border-gray-800 text-left">
+                        <tr className="text-st-gray dark:text-gray-400 border-b border-gray-200 dark:border-gray-800 text-left">
                           <th className="py-1.5 pr-3 font-semibold">Column</th>
                           <th className="py-1.5 pr-3 font-semibold">Required</th>
                           <th className="py-1.5 font-semibold">Notes</th>
                         </tr>
                       </thead>
                       <tbody className="text-st-gray dark:text-gray-300">
-                        <tr className="border-b border-gray-100 dark:border-gray-850/60"><td className="py-1 pr-3 font-mono">date</td><td className="py-1 pr-3">Required</td><td className="py-1">YYYY-MM-DD — cannot be in the future</td></tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-850/60"><td className="py-1 pr-3 font-mono">platform</td><td className="py-1 pr-3">Optional</td><td className="py-1">lowercase alphanumeric (e.g. <code className="font-mono">facebook</code>, <code className="font-mono">google</code>). Defaults to <code className="font-mono">manual_csv</code>.</td></tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-850/60"><td className="py-1 pr-3 font-mono">campaign_name</td><td className="py-1 pr-3">Required</td><td className="py-1">Max 255 characters</td></tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-850/60"><td className="py-1 pr-3 font-mono">campaign_id</td><td className="py-1 pr-3">Optional</td><td className="py-1">Improves dedupe when re-importing</td></tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-850/60"><td className="py-1 pr-3 font-mono">spend</td><td className="py-1 pr-3">Required</td><td className="py-1">Non-negative number, no thousands separators</td></tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-850/60"><td className="py-1 pr-3 font-mono">currency</td><td className="py-1 pr-3">Optional</td><td className="py-1">3-letter ISO code (defaults to USD). Must match your conversion currency for ROAS to compute.</td></tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-850/60"><td className="py-1 pr-3 font-mono">clicks</td><td className="py-1 pr-3">Optional</td><td className="py-1">Non-negative integer; cannot exceed impressions</td></tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-800/60"><td className="py-1 pr-3 font-mono">date</td><td className="py-1 pr-3">Required</td><td className="py-1">YYYY-MM-DD — cannot be in the future</td></tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-800/60"><td className="py-1 pr-3 font-mono">platform</td><td className="py-1 pr-3">Optional</td><td className="py-1">lowercase alphanumeric (e.g. <code className="font-mono">facebook</code>, <code className="font-mono">google</code>). Defaults to <code className="font-mono">manual_csv</code>.</td></tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-800/60"><td className="py-1 pr-3 font-mono">campaign_name</td><td className="py-1 pr-3">Required</td><td className="py-1">Max 255 characters</td></tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-800/60"><td className="py-1 pr-3 font-mono">campaign_id</td><td className="py-1 pr-3">Optional</td><td className="py-1">Improves dedupe when re-importing</td></tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-800/60"><td className="py-1 pr-3 font-mono">spend</td><td className="py-1 pr-3">Required</td><td className="py-1">Non-negative number, no thousands separators</td></tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-800/60"><td className="py-1 pr-3 font-mono">currency</td><td className="py-1 pr-3">Optional</td><td className="py-1">3-letter ISO code (defaults to USD). Must match your conversion currency for ROAS to compute.</td></tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-800/60"><td className="py-1 pr-3 font-mono">clicks</td><td className="py-1 pr-3">Optional</td><td className="py-1">Non-negative integer; cannot exceed impressions</td></tr>
                         <tr><td className="py-1 pr-3 font-mono">impressions</td><td className="py-1 pr-3">Optional</td><td className="py-1">Non-negative integer</td></tr>
                       </tbody>
                     </table>
@@ -1834,7 +1834,7 @@ export default function Integrations() {
                             <button
                               type="button"
                               onClick={handleDisconnectGoogleAds}
-                              className="px-3 py-1.5 border border-red-250 text-red-650 hover:bg-red-50 dark:hover:bg-red-955/20 text-xs font-semibold rounded-lg transition-colors"
+                              className="px-3 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 text-xs font-semibold rounded-lg transition-colors"
                             >
                               Disconnect
                             </button>
@@ -1844,7 +1844,7 @@ export default function Integrations() {
                     )}
                   </div>
                 ) : (
-                  <p className="text-xs text-amber-655 dark:text-amber-400 font-sans">
+                  <p className="text-xs text-amber-600 dark:text-amber-400 font-sans">
                     Google Ads is not configured on this server. Missing environment variables.
                   </p>
                 )}
@@ -1867,7 +1867,7 @@ export default function Integrations() {
                           value={googleCustomerId}
                           onChange={e => setGoogleCustomerId(e.target.value)}
                           placeholder="1234567890"
-                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-800 text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
                         />
                       </div>
                       <div>
@@ -1879,7 +1879,7 @@ export default function Integrations() {
                           value={googleLoginCustomerId}
                           onChange={e => setGoogleLoginCustomerId(e.target.value)}
                           placeholder="9876543210"
-                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-800 text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
                         />
                       </div>
                       <button
@@ -1953,7 +1953,7 @@ export default function Integrations() {
                           <button
                             type="button"
                             onClick={handleDisconnectMetaAds}
-                            className="px-3 py-1.5 border border-red-200 text-red-650 hover:bg-red-50 text-xs font-semibold rounded-lg transition-colors"
+                            className="px-3 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold rounded-lg transition-colors"
                           >
                             Disconnect
                           </button>
@@ -1984,7 +1984,7 @@ export default function Integrations() {
                           value={metaAccessToken}
                           onChange={e => setMetaAccessToken(e.target.value)}
                           placeholder="EAA..."
-                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-850 bg-white dark:bg-gray-800 text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
                         />
                       </div>
                       <div>
@@ -1997,7 +1997,7 @@ export default function Integrations() {
                           value={metaAdAccountId}
                           onChange={e => setMetaAdAccountId(e.target.value)}
                           placeholder="123456789"
-                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-855 bg-white dark:bg-gray-800 text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
+                          className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 text-st-black dark:text-white rounded-lg text-xs focus:outline-none"
                         />
                       </div>
                       <button
@@ -2015,7 +2015,7 @@ export default function Integrations() {
 
             {/* Sync History Logs */}
             {syncHistoryList.length > 0 && (
-              <div className="pt-3 border-t border-gray-150 dark:border-gray-800/80">
+              <div className="pt-3 border-t border-gray-200 dark:border-gray-800/80">
                 <button
                   type="button"
                   onClick={() => setShowRecentSyncs(!showRecentSyncs)}
@@ -2029,7 +2029,7 @@ export default function Integrations() {
                   <div className="mt-3 overflow-x-auto border border-gray-100 dark:border-gray-800 rounded-lg p-3 bg-gray-50/50 dark:bg-gray-800/20">
                     <table className="w-full text-left text-[11px] border-collapse">
                       <thead>
-                        <tr className="border-b border-gray-150 dark:border-gray-800 text-st-gray dark:text-gray-400">
+                        <tr className="border-b border-gray-200 dark:border-gray-800 text-st-gray dark:text-gray-400">
                           <th className="pb-1.5 font-medium">Platform</th>
                           <th className="pb-1.5 font-medium">Status</th>
                           <th className="pb-1.5 font-medium">Records</th>
@@ -2038,8 +2038,8 @@ export default function Integrations() {
                       </thead>
                       <tbody>
                         {syncHistoryList.map(run => (
-                          <tr key={run.id} className="border-b border-gray-50 dark:border-gray-850/30 last:border-0 hover:bg-gray-50/55 dark:hover:bg-gray-800/10">
-                            <td className="py-1.5 font-medium text-gray-850 dark:text-gray-300 capitalize">{run.platform?.replace('_', ' ')}</td>
+                          <tr key={run.id} className="border-b border-gray-50 dark:border-gray-800/30 last:border-0 hover:bg-gray-50/55 dark:hover:bg-gray-800/10">
+                            <td className="py-1.5 font-medium text-gray-800 dark:text-gray-300 capitalize">{run.platform?.replace('_', ' ')}</td>
                             <td className="py-1.5">
                               <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
                                 run.status === 'success' ? 'bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400' : run.status === 'pending' ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400' : 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400'
@@ -2047,7 +2047,7 @@ export default function Integrations() {
                                 {run.status}
                               </span>
                             </td>
-                            <td className="py-1.5 text-gray-655 dark:text-gray-400">{run.records_synced}</td>
+                            <td className="py-1.5 text-gray-600 dark:text-gray-400">{run.records_synced}</td>
                             <td className="py-1.5 text-gray-500 dark:text-gray-500 font-sans">{new Date(run.sync_start).toLocaleString()}</td>
                           </tr>
                         ))}
@@ -2064,8 +2064,8 @@ export default function Integrations() {
         <DashboardCard
           title="Google Ads Setup Checklist"
           subtitle="Ensure your Google Ads campaigns are configured for precise, first-party attribution and ROAS sync"
-          className="border-gray-150 dark:border-gray-800/80 shadow-none"
-          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-150 dark:border-gray-800/80"
+          className="border-gray-200 dark:border-gray-800/80 shadow-none"
+          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-200 dark:border-gray-800/80"
           bodyClassName="p-4 pt-3"
         >
           <div className="space-y-4">
@@ -2234,8 +2234,8 @@ export default function Integrations() {
         <DashboardCard
           title="SEO Revenue"
           subtitle="Map search query traffic and click-share estimated revenue"
-          className="border-gray-150 dark:border-gray-800/80 shadow-none"
-          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-150 dark:border-gray-800/80"
+          className="border-gray-200 dark:border-gray-800/80 shadow-none"
+          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-200 dark:border-gray-800/80"
           bodyClassName="p-4 pt-3"
         >
           <div className="space-y-1">
@@ -2350,7 +2350,7 @@ export default function Integrations() {
                               <select
                                 value={selectedProperty}
                                 onChange={e => setSelectedProperty(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-250 bg-white text-st-black dark:text-white rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-st-black/20"
+                                className="w-full px-3 py-2 border border-gray-200 bg-white text-st-black dark:text-white rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-st-black/20"
                               >
                                 <option value="">-- Choose verified property URL --</option>
                                 {gscPropertiesData.properties.map(p => (
@@ -2381,7 +2381,7 @@ export default function Integrations() {
                         <div className="space-y-2 font-sans">
                           <div>
                             <p className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Property URL</p>
-                            <code className="text-xs font-mono text-gray-750 dark:text-gray-300 mt-1 block break-all">
+                            <code className="text-xs font-mono text-gray-700 dark:text-gray-300 mt-1 block break-all">
                               {gscIntegData.property_url}
                             </code>
                           </div>
@@ -2395,7 +2395,7 @@ export default function Integrations() {
                           )}
                         </div>
 
-                        <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-200 dark:border-gray-850/60 justify-between items-center">
+                        <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-200 dark:border-gray-800/60 justify-between items-center">
                           <div className="flex gap-2">
                             {!isPreview && (
                               <button
@@ -2419,7 +2419,7 @@ export default function Integrations() {
                               type="button"
                               onClick={handleDisconnectGsc}
                               disabled={disconnectingGsc}
-                              className="px-3 py-1.5 border border-red-205 text-red-655 rounded-lg text-xs font-semibold hover:bg-red-55 dark:hover:bg-red-955/20 transition-colors disabled:opacity-50"
+                              className="px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
                             >
                               Disconnect
                             </button>
@@ -2430,7 +2430,7 @@ export default function Integrations() {
                   </div>
                 )}
 
-                <div className="pt-3 border-t border-gray-150 dark:border-gray-800/60 space-y-1.5 text-xs text-st-gray dark:text-gray-400 font-sans">
+                <div className="pt-3 border-t border-gray-200 dark:border-gray-800/60 space-y-1.5 text-xs text-st-gray dark:text-gray-400 font-sans">
                   <p className="font-semibold text-st-black dark:text-white">Estimated SEO Revenue Allocation Logic</p>
                   <p className="leading-relaxed font-light">
                     This integration maps GSC performance data to SourceTrack conversion records using a landing-page matched estimated allocation model.
@@ -2456,8 +2456,8 @@ export default function Integrations() {
         <DashboardCard
           title="Advanced Domains & Routing"
           subtitle="Managed proxy domains and cross-domain tracking setup"
-          className="border-gray-150 dark:border-gray-800/80 shadow-none"
-          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-150 dark:border-gray-800/80"
+          className="border-gray-200 dark:border-gray-800/80 shadow-none"
+          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-200 dark:border-gray-800/80"
           bodyClassName="p-4 pt-3"
         >
           <div className="space-y-1">
@@ -2510,8 +2510,8 @@ export default function Integrations() {
         <DashboardCard
           title="Developer Options"
           subtitle="Advanced custom integrations, conversion webhooks, and raw API access"
-          className="border-gray-150 dark:border-gray-800/80 shadow-none"
-          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-150 dark:border-gray-800/80"
+          className="border-gray-200 dark:border-gray-800/80 shadow-none"
+          headerClassName="py-2.5 px-4 bg-gray-50/50 dark:bg-[#161919]/50 border-b border-gray-200 dark:border-gray-800/80"
           bodyClassName="p-4 pt-3"
         >
           <div className="space-y-1">
@@ -2540,7 +2540,7 @@ export default function Integrations() {
               />
             ) : (
               <div className="space-y-2">
-                <div className="flex justify-between items-center pb-2 mb-2 border-b border-gray-150 dark:border-gray-800/60">
+                <div className="flex justify-between items-center pb-2 mb-2 border-b border-gray-200 dark:border-gray-800/60">
                   <div>
                     <h4 className="text-sm font-semibold text-st-black dark:text-white">Developer Options</h4>
                     <p className="text-xs text-st-gray dark:text-gray-400">API, webhooks, and custom conversion methods</p>
@@ -2573,7 +2573,7 @@ export default function Integrations() {
                               e.stopPropagation();
                               setActiveSection(activeSection === 'developer.payments_api' ? 'developer' : 'developer.payments_api');
                             }}
-                            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-150 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors"
+                            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-200 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors"
                           >
                             {activeSection === 'developer.payments_api' ? 'Close' : 'Setup'}
                           </button>
@@ -2688,7 +2688,7 @@ export default function Integrations() {
                               e.stopPropagation();
                               setActiveSection(activeSection === 'developer.webhook_adapter' ? 'developer' : 'developer.webhook_adapter');
                             }}
-                            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-150 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors"
+                            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-200 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors"
                           >
                             {activeSection === 'developer.webhook_adapter' ? 'Close' : 'Setup'}
                           </button>
@@ -2711,7 +2711,7 @@ export default function Integrations() {
                             value={url}
                             disabled={isPreview || submitting}
                             onChange={e => setUrl(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-250 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-st-black/20"
+                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-st-black/20"
                           />
                           <p className="text-[10px] text-st-gray mt-1 font-sans">
                             Endpoint will receive a POST request with the conversion payload and X-SourceTrack-Signature header.
@@ -2829,7 +2829,7 @@ export default function Integrations() {
                               type="button"
                               onClick={handleDeleteWebhook}
                               disabled={submitting}
-                              className="text-xs text-red-655 hover:text-red-850 font-semibold flex items-center gap-1 transition-colors font-sans"
+                              className="text-xs text-red-600 hover:text-red-700 font-semibold flex items-center gap-1 transition-colors font-sans"
                             >
                               <Trash className="w-3.5 h-3.5" /> Delete
                             </button>
@@ -2865,7 +2865,7 @@ export default function Integrations() {
                               <tbody>
                                 {webhookData.deliveries.map(del => (
                                   <tr key={del.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
-                                    <td className="py-1.5 font-mono text-gray-750">{del.event_type}</td>
+                                    <td className="py-1.5 font-mono text-gray-700">{del.event_type}</td>
                                     <td className="py-1.5">
                                       <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${del.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
                                         {del.status_code || 'Error'}
@@ -2909,7 +2909,7 @@ export default function Integrations() {
                               e.stopPropagation();
                               setActiveSection(activeSection === 'developer.source_map' ? 'developer' : 'developer.source_map');
                             }}
-                            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-150 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors"
+                            className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-gray-200 hover:bg-gray-200 text-gray-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100 border border-transparent dark:border-slate-700 transition-colors"
                           >
                             {activeSection === 'developer.source_map' ? 'Close' : 'Setup'}
                           </button>

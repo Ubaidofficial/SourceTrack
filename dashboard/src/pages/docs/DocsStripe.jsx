@@ -66,7 +66,7 @@ export default function DocsStripe() {
 
           <div className="space-y-4">
             <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">Step 1: Forward Visitor ID in Stripe Metadata</h3>
-            <p className="text-sm text-gray-770 dark:text-gray-300 leading-relaxed">
+            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
               When creating a Stripe Checkout Session on your backend, read the visitor ID (stored in the browser as <code>st_aid</code>) from the client's request payload and pass it as <code>client_reference_id</code> or inside the <code>metadata</code> block as <code>anonymous_id</code> or <code>visitor_id</code>.
             </p>
             <DocsCodeBlock lang="js">
@@ -94,14 +94,14 @@ const session = await stripe.checkout.sessions.create({
 
           <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
             <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">Step 2: Configure Stripe Webhook</h3>
-            <p className="text-sm text-gray-770 dark:text-gray-300 leading-relaxed">
+            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
               Route event messages from Stripe directly to the SourceTrack ingestion URL:
             </p>
             <ol className="list-decimal pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
               <li>Log in to your <strong>Stripe Dashboard</strong> and navigate to <strong>Developers &rarr; Webhooks</strong>.</li>
               <li>Click <strong>Add Endpoint</strong>.</li>
               <li>Enter your customized webhook endpoint URL:
-                <div className="my-1.5 font-mono text-xs p-2 bg-gray-550/10 dark:bg-gray-800 rounded">
+                <div className="my-1.5 font-mono text-xs p-2 bg-gray-100 dark:bg-gray-800 rounded">
                   https://api.srctk.com/api/webhooks/stripe/YOUR_SITE_KEY
                 </div>
                 Replace <code>YOUR_SITE_KEY</code> with the Site Key found under settings in your dashboard.
@@ -137,7 +137,7 @@ const session = await stripe.checkout.sessions.create({
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
             Common Mistakes
           </h2>
-          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-750 dark:text-gray-350">
+          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
             <li>
               <strong>Incorrect Webhook Event Types:</strong> Stripe triggers a variety of events like <code>payment_intent.succeeded</code> or <code>invoice.paid</code>. SourceTrack only parses the <code>checkout.session.completed</code> payload to ingest revenue. Listening to other events will result in ignored log entries.
             </li>

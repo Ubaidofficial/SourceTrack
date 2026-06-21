@@ -105,7 +105,7 @@ export default function DocsFramer() {
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
             Common Mistakes
           </h2>
-          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-750 dark:text-gray-350">
+          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
             <li>
               <strong>Failing to Publish:</strong> Code changes inside Framer Settings do not take effect until you click <strong>Publish</strong>.
             </li>

@@ -169,10 +169,10 @@ app.post('/webhook-receiver', express.raw({ type: 'application/json' }), (req, r
 
         {/* Common Errors */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-850 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
             Common Errors
           </h2>
-          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-750 dark:text-gray-350">
+          <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
             <li>
               <strong>401 Unauthorized / Signature Mismatch:</strong> Occurs when checking req.body after JSON parsing. Verify signatures on the raw payload buffer before parser middleware edits it.
             </li>
