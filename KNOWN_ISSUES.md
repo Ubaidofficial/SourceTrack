@@ -6,6 +6,7 @@ Do not use this file as a backlog for every idea. Use it to prevent repeated mis
 
 ## Current verified/high-confidence issues
 
+
 ### 1. `schema.sql` is stale
 
 The live database schema has been repaired through migrations, but `supabase/schema.sql` does not fully reflect the current tables/columns/policies.

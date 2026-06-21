@@ -79,7 +79,11 @@ async function lastTouchAttribution(siteId, dateFrom, dateTo) {
 
   const sql = `
     SELECT
-      COALESCE(NULLIF(lt.utm_source, ''), 'direct') AS source,
+      COALESCE(
+        NULLIF(lt.utm_source, ''),
+        NULLIF(lt.ai_source, ''),
+        'direct'
+      ) AS source,
       COALESCE(NULLIF(lt.utm_medium, ''), 'none')   AS medium,
       COALESCE(lt.utm_campaign, '')                  AS campaign,
       count()                                         AS conversions,
@@ -90,7 +94,8 @@ async function lastTouchAttribution(siteId, dateFrom, dateTo) {
         e_inner.uuid AS conversion_uuid,
         argMax(pv.utm_source,   pv.timestamp) AS utm_source,
         argMax(pv.utm_medium,   pv.timestamp) AS utm_medium,
-        argMax(pv.utm_campaign, pv.timestamp) AS utm_campaign
+        argMax(pv.utm_campaign, pv.timestamp) AS utm_campaign,
+        argMax(pv.ai_source,   pv.timestamp) AS ai_source
       FROM events e_inner
       LEFT JOIN (
         SELECT
@@ -98,7 +103,8 @@ async function lastTouchAttribution(siteId, dateFrom, dateTo) {
           timestamp,
           properties.utm_source AS utm_source,
           properties.utm_medium AS utm_medium,
-          properties.utm_campaign AS utm_campaign
+          properties.utm_campaign AS utm_campaign,
+          properties.ai_source AS ai_source
         FROM events
         WHERE properties.site_id = '${esc(siteId)}'
           AND event = '$pageview'

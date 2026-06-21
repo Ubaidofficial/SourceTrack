@@ -549,14 +549,14 @@ export default function ReportBuilder() {
   })
 
   // Derived gates
-  const totalRevenue = dashboardOverview?.data?.kpis?.revenue || 0
+  const totalRevenue = dashboardOverview?.kpis?.revenue || 0
   const hasRevenueData = totalRevenue > 0
-  const stripeConnected = stripeStatus?.data?.configured === true
-  const shopifyConnected = shopifyStatus?.data?.configured === true
+  const stripeConnected = stripeStatus?.configured === true
+  const shopifyConnected = shopifyStatus?.configured === true
   const isRevenueConfigured = stripeConnected || shopifyConnected || hasRevenueData
 
-  const googleConnected = adPlatStatus?.data?.google_ads?.connected === true || adPlatStatus?.data?.google_ads?.status === 'connected'
-  const metaConnected = adPlatStatus?.data?.meta_ads?.connected === true || adPlatStatus?.data?.meta_ads?.status === 'connected'
+  const googleConnected = adPlatStatus?.google_ads?.connected === true || adPlatStatus?.google_ads?.status === 'connected'
+  const metaConnected = adPlatStatus?.meta_ads?.connected === true || adPlatStatus?.meta_ads?.status === 'connected'
   const totalSpend = campaignsOverview?.kpis?.total_spend || 0
   const hasCostData = totalSpend > 0
   const isCostConfigured = googleConnected || metaConnected || hasCostData
@@ -568,7 +568,7 @@ export default function ReportBuilder() {
     isCostConfigured,
     isGscConnected: gscStatus?.connected === true,
     isGscPropertySelected: !!gscStatus?.property_url,
-    hasAiSources: (dashboardOverview?.data?.ai_sources || []).length > 0
+    hasAiSources: (dashboardOverview?.ai_sources || []).length > 0
   }
 
   const isTemplateGated = (template, gates) => {

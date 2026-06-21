@@ -108,7 +108,7 @@ export default function Dashboard() {
   const [timeRange, setTimeRange] = useState(30)
   const [previewMode, setPreviewMode] = useState(false)
   const [explainModalOpen, setExplainModalOpen] = useState(false)
-  const [explainModel, setExplainModel] = useState(null)
+  const [explainModel, setExplainModel] = useState('first_touch')
   const [journeyLead, setJourneyLead] = useState(null)
   const [previewSiteName, setPreviewSiteName] = useState('')
   const [previewSiteDomain, setPreviewSiteDomain] = useState('')
@@ -493,15 +493,11 @@ export default function Dashboard() {
 
               {/* 3. Source Attribution table with switcher */}
               <DashboardCard title="Source Attribution" subtitle="Detailed performance breakdown by model">
-                <div className="mb-4">
-                  <select
-                    value={explainModel || 'last_touch'}
-                    onChange={(e) => setExplainModel(e.target.value)}
-                    className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white text-st-black font-semibold outline-none"
-                  >
-                    {MODELS.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
-                  </select>
-                </div>
+              <div className="mb-4">
+                <span className="inline-block px-3 py-1.5 border border-gray-200 dark:border-dark-border rounded-lg text-sm bg-gray-50 dark:bg-dark-bg text-st-black dark:text-white font-semibold">
+                  First-touch attribution
+                </span>
+              </div>
                 <DashboardTable
                   columns={
                     hasRevenue ? [
@@ -509,7 +505,7 @@ export default function Dashboard() {
                       { key: 'conversions', label: 'Conversions', render: (r) => r.conversions || 0 },
                       { key: 'revenue', label: 'Revenue', render: (r) => `$${(r.revenue || 0).toFixed(2)}` },
                       { key: 'details', label: 'Details', render: (r) => (
-                        <button onClick={() => { setExplainModel(explainModel || 'last_touch'); setExplainModalOpen(true) }} className="text-xs text-st-black dark:text-white font-semibold hover:underline">
+                        <button onClick={() => { setExplainModel('first_touch'); setExplainModalOpen(true) }} className="text-xs text-st-black dark:text-white font-semibold hover:underline">
                           View details
                         </button>
                       )}
@@ -518,7 +514,7 @@ export default function Dashboard() {
                       { key: 'conversions', label: 'Conversions', render: (r) => r.conversions || 0 },
                       { key: 'cvr', label: 'CVR%', render: (r) => r.cvr > 0 ? `${r.cvr.toFixed(1)}%` : '—' },
                       { key: 'details', label: 'Details', render: (r) => (
-                        <button onClick={() => { setExplainModel(explainModel || 'last_touch'); setExplainModalOpen(true) }} className="text-xs text-st-black dark:text-white font-semibold hover:underline">
+                        <button onClick={() => { setExplainModel('first_touch'); setExplainModalOpen(true) }} className="text-xs text-st-black dark:text-white font-semibold hover:underline">
                           View details
                         </button>
                       )}

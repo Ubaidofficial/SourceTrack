@@ -1,5 +1,33 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
+> **Handoff:** Session 140Z-G3-D18-BROWSER-VERIFY — Apply D18-1 and D18-3 Fixes & Verify on Staging — **PASS.**
+> - **Fixed D18-3:** Added `ai_source` extraction to the pageview subquery and fallback logic in the `lastTouchAttribution` HogQL query: `COALESCE(NULLIF(lt.utm_source, ''), NULLIF(lt.ai_source, ''), 'direct')`. Verified direct traffic remains `'direct'`.
+> - **Fixed D18-1:** Removed the placebo dropdown on the `/attribution` page component, replaced it with a clear `"First-touch attribution"` label, and updated the details buttons to default to `'first_touch'` to avoid mismatch.
+> - **Staging Browser Verification:** Local API and Vite dashboard were run against the staging Supabase/PostHog database. Dispatched test journeys (ChatGPT-referral and direct traffic) to staging and manually executed the nightly attribution job.
+> - Verified all three D18 fixes in the staging browser using Chrome DevTools with screenshots captured (`attribution_tab.png`, `report_builder_unlocked.png`, `report_builder_last_touch_ai.png`, `dashboard_overview.png`).
+> - **Cleanup:** Deleted all newly created test conversions from staging database and removed all temporary test scripts from the workspace root.
+> - **No commits.** Working tree contains staging fixes only, stopped for review.
+>
+> **Handoff:** Session 140Z-G3-D18-FIX — Diagnose D18 Bugs & Apply D18-2 Fix — **PASS.**
+> - **Diagnosed D18-1:** Confirmed model selector dropdown on `/attribution` updates component state but does not trigger a re-query (backend `/dashboard/overview` returns hardcoded `sources` using first touch). Scoped fix (wire via separate `/api/attribution` query vs hide dropdown).
+> - **Diagnosed D18-3:** Confirmed live HogQL `last_touch` query checks only `utm_source` and groups non-UTM AI referrers as direct. Scoped fix (updating query to COALESCE `utm_source` with `properties.ai_source`).
+> - **Fixed D18-2:** Removed all double-unwrapped `.data` properties in `ReportBuilder.jsx` for `dashboardOverview`, `stripeStatus`, `shopifyStatus`, and `adPlatStatus` hooks (total 8 instances corrected).
+> - **Verification:** Ran syntax checks on API code and confirmed dashboard build compiles successfully (`npm run build` PASS).
+> - **No commits.** Working tree contains staging fixes only. Stopped for review before proceeding with D18-1 or D18-3.
+>
+> **Handoff:** Session 140Z-G3-D18 — Full E2E Attribution Accuracy Test on Staging — **PASS.**
+> - **Journeys dispatched:** A (Google CPC, $297), B (ChatGPT AI referral, $149), C (Direct, $77). All returned 200 OK from `https://sourcetrack-api-staging.up.railway.app`.
+> - **PostHog verification:** Ingestion confirmed via HogQL. First-touch correctly attributes A→google, B→chatgpt.com, C→direct. Last-touch AI-as-direct bug reproduced for Journey B.
+> - **DB verification:** `attributed_conversions` table on staging confirmed correct channel/source columns after manual nightly attribution job trigger on Railway.
+> - **Dashboard browser verification:** Opened `https://sourcetrack-dashboard-staging.up.railway.app` in real Chrome. Report Builder verified (first-touch channel, last-touch channel, AI journey influence). `/attribution` tab verified. 10 screenshots captured.
+> - **Confirmed bugs (3):**
+>   - (a) **Attribution model selector placebo**: `/attribution` tab dropdown updates state only — does not re-query the backend. Renders hardcoded `overview.sources`. [Cite: attribution page rendering code]
+>   - (b) **ReportBuilder.jsx double-unwrapping gate bug**: `fetchApi` returns unwrapped `data`, but component queries `dashboardOverview?.data?.kpis?.revenue` (extra `.data` nesting), evaluating active revenue to `undefined` (0), which locks revenue-gated templates. [Cite: ReportBuilder.jsx ~L552]
+>   - (c) **HogQL last-touch AI-as-direct**: The live HogQL `group_by=source` query checks only `utm_source`, so Journey B (no UTM, ChatGPT referrer) is grouped as `direct`. Pre-aggregated DB column `last_touch_channel` correctly shows `AI Search` via the channel classifier.
+> - **Cleanup:** All 3 test conversions deleted from `attributed_conversions`. PostHog person profiles deleted via REST API (`delete_events=true`). All temp scripts removed. Working tree clean.
+> - **No code changes; no commits.**
+> - **Deliverable:** Created `docs/qa/attribution_accuracy_staging_e2e_140Z-G3-D18.md`.
+>
 > **Handoff:** Session 140Z-G3-D19-D — Pricing Truth Pass 1 + White-label Cleanup — **COMPLETE. Awaiting commit approval.**
 > - **Pass 1 (Pricing Alignment):** Aligned pricing page tracked-visit numbers to code enforcement defaults (Starter 25K→50K/mo, Growth 100K→150K/mo; Scale 500K+ unchanged). Growth price updated $79→$99. Founder $49 future-intent anchor added to Starter card desc. "Alerts for source and conversion changes" relabeled to "Source and conversion change detection" (on-demand panel, not proactive push). "Unlimited sites" relabeled to "Up to 99 sites". "White-label reporting" relabeled to "Unbranded CSV export". FAQ answer corrected: only pageviews count toward monthly tracked-visit limit; conversions have a separate cap.
 > - **Pass 1b (White-label Cleanup):** `white_label` matrix flag flipped `scale: true → false` in both `dashboard/src/lib/planFeatures.js` and `api/lib/plan-features.js` — feature is vapor (flag was never read by any gate or component). `FEATURE_LABELS['white_label']` relabeled to `'Unbranded CSV export'`. False white-label sharing claim removed from `SolutionAgency.jsx` FAQ answer (line 93). JSON-LD structured data answer rewritten to factual-only (no "present as your own proprietary reporting").
