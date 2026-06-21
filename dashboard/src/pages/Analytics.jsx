@@ -6,6 +6,7 @@ import { Line } from 'react-chartjs-2'
 import { fetchApi } from '../lib/api'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { useTheme } from '../contexts/ThemeContext'
 import { Eye, RefreshCw, Copy, Check, BarChart3 } from 'lucide-react'
 import { safeNumber } from '../utils/numbers'
 import { SourceIcon } from '../components/SourceIcon'
@@ -28,18 +29,18 @@ function DataRow({ label, count, max, icon, onClick, active }) {
   return (
     <div
       onClick={onClick}
-      className={`flex items-center gap-3 px-4 py-2.5 border-b border-[#2A2E2E]/60 last:border-0 transition-colors ${
+      className={`flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 dark:border-dark-border/40 last:border-0 transition-colors ${
         onClick ? 'cursor-pointer' : ''
-      } ${active ? 'bg-st-lime/5' : 'hover:bg-[#242829]'}`}
+      } ${active ? 'bg-st-lime/5' : 'hover:bg-gray-50 dark:hover:bg-dark-hover'}`}
     >
       {icon && <span className="flex-shrink-0 w-4 flex items-center">{icon}</span>}
-      <span className="text-xs flex-1 truncate text-white">{label}</span>
+      <span className="text-xs flex-1 truncate text-st-black dark:text-white">{label}</span>
       <div className="w-20 flex-shrink-0">
-        <div className="h-1.5 bg-[#2A2E2E] rounded-full overflow-hidden">
+        <div className="h-1.5 bg-gray-100 dark:bg-dark-border rounded-full overflow-hidden">
           <div className="h-full bg-st-lime rounded-full transition-all" style={{ width: `${pct.toFixed(1)}%` }} />
         </div>
       </div>
-      <span className="text-sm font-medium text-white w-14 text-right flex-shrink-0 tabular-nums">{n.toLocaleString()}</span>
+      <span className="text-sm font-medium text-st-black dark:text-white w-14 text-right flex-shrink-0 tabular-nums">{n.toLocaleString()}</span>
     </div>
   )
 }
@@ -51,12 +52,12 @@ function ListSection({ title, rows, getLabel, getCount, getIcon, onRowClick, isR
   const max = useMemo(() => Math.max(1, ...rows.map(r => safeNumber(getCount(r), 0))), [rows, getCount])
 
   return (
-    <div className="bg-[#1A1D1D] border border-[#2A2E2E] rounded-xl overflow-hidden">
-      <div className="px-4 py-3 border-b border-[#2A2E2E]">
-        <h3 className="text-sm font-semibold text-white">{title}</h3>
+    <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm">
+      <div className="px-4 py-3 border-b border-gray-100 dark:border-dark-border">
+        <h3 className="text-sm font-semibold text-st-black dark:text-white">{title}</h3>
       </div>
       {rows.length === 0 ? (
-        <p className="text-xs text-st-gray py-10 text-center">{emptyText}</p>
+        <p className="text-xs text-st-gray dark:text-gray-400 py-10 text-center">{emptyText}</p>
       ) : (
         <>
           {visible.map((r, i) => (
@@ -73,7 +74,7 @@ function ListSection({ title, rows, getLabel, getCount, getIcon, onRowClick, isR
           {rows.length > 8 && (
             <button
               onClick={() => setShowAll(s => !s)}
-              className="w-full py-2 text-xs text-st-gray hover:text-white border-t border-[#2A2E2E] transition-colors"
+              className="w-full py-2 text-xs text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white border-t border-gray-100 dark:border-dark-border transition-colors"
             >
               {showAll ? '↑ Show less' : `↓ Show all ${rows.length}`}
             </button>
@@ -87,13 +88,13 @@ function ListSection({ title, rows, getLabel, getCount, getIcon, onRowClick, isR
 // ─── KPI tile ─────────────────────────────────────────────────────────────────
 function KPITile({ label, value, delta, sub }) {
   return (
-    <div className="bg-[#1A1D1D] border border-[#2A2E2E] rounded-xl px-4 py-3">
-      <p className="text-[11px] text-st-gray font-medium uppercase tracking-wide mb-1.5">{label}</p>
-      <p className="text-xl font-semibold text-white tabular-nums">{value}</p>
+    <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl px-4 py-3 shadow-sm">
+      <p className="text-[11px] text-st-gray dark:text-gray-400 font-medium uppercase tracking-wide mb-1.5">{label}</p>
+      <p className="text-xl font-semibold text-st-black dark:text-white tabular-nums">{value}</p>
       {delta && (
         <p className={`text-[10px] font-medium mt-0.5 ${delta.color}`}>{delta.arrow} {delta.pct}% vs prior</p>
       )}
-      {sub && !delta && <p className="text-[10px] text-st-gray mt-0.5">{sub}</p>}
+      {sub && !delta && <p className="text-[10px] text-st-gray dark:text-gray-400 mt-0.5">{sub}</p>}
     </div>
   )
 }
@@ -102,6 +103,7 @@ function KPITile({ label, value, delta, sub }) {
 export default function Analytics() {
   const { user } = useAuth()
   const { activeSite } = useSite()
+  const { theme } = useTheme()
   const [searchParams, setSearchParams] = useSearchParams()
   const [days, setDays] = useState(30)
   const [filters, setFilters] = useState([])
@@ -242,19 +244,19 @@ export default function Analytics() {
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: '#0F1212',
-        borderColor: '#2A2E2E',
+        backgroundColor: theme === 'dark' ? '#1A1D1D' : '#ffffff',
+        borderColor: theme === 'dark' ? '#2A2E2E' : '#e5e7eb',
         borderWidth: 1,
-        titleColor: '#fff',
-        bodyColor: '#9CA3AF',
+        titleColor: theme === 'dark' ? '#ffffff' : '#111827',
+        bodyColor: theme === 'dark' ? '#9CA3AF' : '#4B5563',
         callbacks: { label: ctx => `Visitors: ${safeNumber(ctx.parsed.y, 0).toLocaleString()}` }
       }
     },
     scales: {
-      x: { grid: { display: false }, ticks: { color: '#7D8090', maxRotation: 0, maxTicksLimit: 8 } },
-      y: { grid: { color: '#2A2E2E' }, ticks: { color: '#7D8090', precision: 0 } }
+      x: { grid: { display: false }, ticks: { color: theme === 'dark' ? '#7D8090' : '#4B5563', maxRotation: 0, maxTicksLimit: 8 } },
+      y: { grid: { color: theme === 'dark' ? '#2A2E2E' : '#f3f4f6' }, ticks: { color: theme === 'dark' ? '#7D8090' : '#4B5563', precision: 0 } }
     }
-  }), [])
+  }), [theme])
 
   // ─── Snippet ───────────────────────────────────────────────────────────────
   const trackerFile = site?.cookieless_mode ? 'tracker.cookieless.min.js' : 'tracker.min.js'
@@ -275,12 +277,12 @@ export default function Analytics() {
       return (
         <div className="st-container py-24 text-center">
           <div className="max-w-md mx-auto space-y-4">
-            <div className="w-12 h-12 rounded-full bg-[#1A1D1D] border border-[#2A2E2E] flex items-center justify-center mx-auto">
-              <BarChart3 className="w-5 h-5 text-st-gray" />
+            <div className="w-12 h-12 rounded-full bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border flex items-center justify-center mx-auto shadow-sm">
+              <BarChart3 className="w-5 h-5 text-st-gray dark:text-gray-400" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-white mb-1">Analytics View Disabled</h2>
-              <p className="text-xs text-st-gray/80 leading-relaxed">
+              <h2 className="text-sm font-semibold text-st-black dark:text-white mb-1">Analytics View Disabled</h2>
+              <p className="text-xs text-st-gray/80 dark:text-gray-400/80 leading-relaxed">
                 Analytics is not available in Support Preview. Use Dashboard and Attribution for read-only customer context.
               </p>
             </div>
@@ -297,23 +299,23 @@ export default function Analytics() {
       {/* ─── Header ──────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-xl font-bold text-white">Analytics</h2>
-          <p className="text-xs text-st-gray mt-0.5">Understand traffic before you dig into attribution.</p>
+          <h2 className="text-xl font-bold text-st-black dark:text-white">Analytics</h2>
+          <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">Understand traffic before you dig into attribution.</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#1A1D1D] border border-[#2A2E2E] rounded-lg">
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-sm">
             <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${liveCount > 0 ? 'bg-green-500 animate-pulse' : 'bg-gray-600'}`} />
-            <span className="text-xs font-medium text-white tabular-nums">{liveCount}</span>
-            <span className="text-xs text-st-gray">live</span>
-            <button onClick={() => refetchLive()} className="text-st-gray hover:text-white ml-0.5">
+            <span className="text-xs font-medium text-st-black dark:text-white tabular-nums">{liveCount}</span>
+            <span className="text-xs text-st-gray dark:text-gray-400">live</span>
+            <button onClick={() => refetchLive()} className="text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white ml-0.5 transition-colors">
               <RefreshCw className="w-3 h-3" />
             </button>
           </div>
-          <div className="flex items-center gap-1 bg-[#1A1D1D] border border-[#2A2E2E] rounded-lg p-1">
+          <div className="flex items-center gap-1 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg p-1 shadow-sm">
             {[{l:'24h',d:1},{l:'7d',d:7},{l:'30d',d:30},{l:'90d',d:90}].map(t => (
               <button key={t.d} onClick={() => setDays(t.d)}
                 className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                  days === t.d ? 'bg-st-lime text-st-black' : 'text-st-gray hover:text-white'
+                  days === t.d ? 'bg-st-lime text-st-black font-semibold' : 'text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white'
                 }`}>
                 {t.l}
               </button>
@@ -326,13 +328,13 @@ export default function Analytics() {
       {filters.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {filters.map((f, i) => (
-            <span key={i} className="flex items-center gap-1 px-2 py-1 bg-[#242829] border border-[#2A2E2E] rounded-full text-xs text-white">
-              <span className="text-st-gray">{f.type}:</span> {f.value}
-              <button onClick={() => toggleFilter(f.type, f.value)} className="text-st-gray hover:text-white ml-1 leading-none text-sm">×</button>
+            <span key={i} className="flex items-center gap-1 px-2.5 py-1 bg-gray-50 dark:bg-dark-hover border border-gray-200 dark:border-dark-border rounded-full text-xs text-st-black dark:text-white shadow-sm">
+              <span className="text-st-gray dark:text-gray-400">{f.type}:</span> {f.value}
+              <button onClick={() => toggleFilter(f.type, f.value)} className="text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white ml-1.5 leading-none text-sm font-semibold">×</button>
             </span>
           ))}
           {filters.length > 1 && (
-            <button onClick={() => setFilters([])} className="text-xs text-st-gray hover:text-white px-2">Clear all</button>
+            <button onClick={() => setFilters([])} className="text-xs text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white px-2 transition-colors">Clear all</button>
           )}
         </div>
       )}
@@ -345,20 +347,20 @@ export default function Analytics() {
 
         /* ─── Empty state ──────────────────────────────────────────────── */
         <div className="max-w-md mx-auto py-16 text-center space-y-6">
-          <Eye className="w-10 h-10 text-st-gray/40 mx-auto" />
+          <Eye className="w-10 h-10 text-st-gray/40 dark:text-gray-500/40 mx-auto" />
           <div>
-            <h3 className="text-base font-semibold text-white mb-1">No pageviews yet</h3>
-            <p className="text-sm text-st-gray">Install the tracker to start collecting traffic data.</p>
+            <h3 className="text-base font-semibold text-st-black dark:text-white mb-1">No pageviews yet</h3>
+            <p className="text-sm text-st-gray dark:text-gray-400">Install the tracker to start collecting traffic data.</p>
           </div>
-          <div className="bg-[#1A1D1D] border border-[#2A2E2E] rounded-xl p-4 text-left space-y-3">
-            <p className="text-xs font-semibold text-white">Add to your site &lt;head&gt;:</p>
+          <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-4 text-left space-y-3 shadow-sm">
+            <p className="text-xs font-semibold text-st-black dark:text-white">Add to your site &lt;head&gt;:</p>
             <div className="flex items-start gap-2">
-              <code className="text-[11px] text-st-gray flex-1 break-all leading-relaxed">{snippetUrl}</code>
-              <button onClick={copySnippet} className="flex-shrink-0 p-1.5 text-st-gray hover:text-white border border-[#2A2E2E] rounded-lg">
+              <code className="text-[11px] text-st-gray dark:text-gray-300 flex-1 break-all leading-relaxed">{snippetUrl}</code>
+              <button onClick={copySnippet} className="flex-shrink-0 p-1.5 text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white border border-gray-200 dark:border-dark-border rounded-lg transition-colors">
                 {copied ? <Check className="w-3.5 h-3.5 text-st-lime" /> : <Copy className="w-3.5 h-3.5" />}
               </button>
             </div>
-            <p className="text-[11px] text-st-gray">Pageviews appear here once the tracker fires on your site. Conversions appear after your site sends conversion events.</p>
+            <p className="text-[11px] text-st-gray dark:text-gray-400">Pageviews appear here once the tracker fires on your site. Conversions appear after your site sends conversion events.</p>
           </div>
         </div>
 
@@ -401,13 +403,13 @@ export default function Analytics() {
           </div>
 
           {/* ─── Visitors chart ─────────────────────────────────────────── */}
-          <div className="bg-[#1A1D1D] border border-[#2A2E2E] rounded-xl p-4">
-            <p className="text-[11px] font-semibold text-st-gray uppercase tracking-wide mb-3">Visitors over time</p>
+          <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-4 shadow-sm">
+            <p className="text-[11px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wide mb-3">Visitors over time</p>
             <div style={{ height: 200 }}>
               {ts.labels && ts.labels.length > 0 ? (
                 <Line data={chartData} options={chartOptions} />
               ) : (
-                <p className="text-xs text-st-gray text-center py-12">No time-series data yet</p>
+                <p className="text-xs text-st-gray dark:text-gray-400 text-center py-12">No time-series data yet</p>
               )}
             </div>
           </div>
@@ -425,9 +427,9 @@ export default function Analytics() {
             />
 
             {/* Sources — referrers, medium, AI */}
-            <div className="bg-[#1A1D1D] border border-[#2A2E2E] rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-[#2A2E2E] flex items-center justify-between flex-wrap gap-2">
-                <h3 className="text-sm font-semibold text-white">Sources</h3>
+            <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm">
+              <div className="px-4 py-3 border-b border-gray-100 dark:border-dark-border flex items-center justify-between flex-wrap gap-2">
+                <h3 className="text-sm font-semibold text-st-black dark:text-white">Sources</h3>
                 <div className="flex gap-1">
                   {[
                     { key: 'referrer',  label: 'Referrers' },
@@ -437,7 +439,7 @@ export default function Analytics() {
                     <button key={tab.key}
                       onClick={() => { setSourceTab(tab.key); setSearchParams({ tab: tab.key }) }}
                       className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${
-                        sourceTab === tab.key ? 'bg-st-lime text-st-black' : 'text-st-gray hover:text-white'
+                        sourceTab === tab.key ? 'bg-st-lime text-st-black font-semibold' : 'text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white'
                       }`}>
                       {tab.label}
                     </button>
@@ -521,10 +523,10 @@ export default function Analytics() {
 
           {/* ─── AI Traffic (conditional) ─────────────────────────────────── */}
           {aiSources.length > 0 && (
-            <div className="bg-[#1A1D1D] border border-[#2A2E2E] rounded-xl overflow-hidden">
-              <div className="px-4 py-3 border-b border-[#2A2E2E] flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-white">AI Traffic</h3>
-                <span className="text-[10px] text-st-gray">
+            <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm">
+              <div className="px-4 py-3 border-b border-gray-100 dark:border-dark-border flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-st-black dark:text-white">AI Traffic</h3>
+                <span className="text-[10px] text-st-gray dark:text-gray-400">
                   {Math.round(aiSources.reduce((s,r) => s + safeNumber(r.visits,0), 0) / Math.max(1, safeNumber(kpis.unique_visitors, 1)) * 100)}% of all visitors
                 </span>
               </div>
@@ -547,12 +549,12 @@ export default function Analytics() {
 
           {/* ─── Conversions notice ───────────────────────────────────────── */}
           {convCount === 0 && (
-            <div className="bg-[#1A1D1D] border border-[#2A2E2E] rounded-xl px-4 py-4 flex items-start gap-3">
-              <span className="w-1.5 h-1.5 mt-1.5 rounded-full bg-st-gray flex-shrink-0" />
+            <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl px-4 py-4 flex items-start gap-3 shadow-sm">
+              <span className="w-1.5 h-1.5 mt-1.5 rounded-full bg-st-gray dark:bg-gray-400 flex-shrink-0" />
               <div>
-                <p className="text-sm font-medium text-white">No conversions in this period</p>
-                <p className="text-xs text-st-gray mt-0.5">
-                  Conversions appear after your site sends conversion events. See the <a href="/developers/conversions" className="underline hover:text-white">conversion events docs</a> for setup instructions.
+                <p className="text-sm font-medium text-st-black dark:text-white">No conversions in this period</p>
+                <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">
+                  Conversions appear after your site sends conversion events. See the <a href="/developers/conversions" className="underline hover:text-st-black dark:hover:text-white transition-colors">conversion events docs</a> for setup instructions.
                 </p>
               </div>
             </div>
@@ -573,14 +575,14 @@ function SourceTabList({ rows, tab, toggleFilter, isActive }) {
     if (tab === 'ai_source') {
       return (
         <div className="text-center py-12 px-4 space-y-2">
-          <p className="text-sm font-medium text-white">No AI traffic detected yet</p>
-          <p className="text-xs text-st-gray max-w-sm mx-auto">
+          <p className="text-sm font-medium text-st-black dark:text-white">No AI traffic detected yet</p>
+          <p className="text-xs text-st-gray dark:text-gray-400 max-w-sm mx-auto">
             When visitors arrive from ChatGPT, Claude, Perplexity, or other AI platforms, they'll appear here.
           </p>
         </div>
       )
     }
-    return <p className="text-xs text-st-gray py-10 text-center">No {tab} data yet</p>
+    return <p className="text-xs text-st-gray dark:text-gray-400 py-10 text-center">No {tab} data yet</p>
   }
 
   return (
@@ -605,7 +607,7 @@ function SourceTabList({ rows, tab, toggleFilter, isActive }) {
       {rows.length > 8 && (
         <button
           onClick={() => setShowAll(s => !s)}
-          className="w-full py-2 text-xs text-st-gray hover:text-white border-t border-[#2A2E2E] transition-colors"
+          className="w-full py-2 text-xs text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white border-t border-gray-100 dark:border-dark-border transition-colors"
         >
           {showAll ? '↑ Show less' : `↓ Show all ${rows.length}`}
         </button>

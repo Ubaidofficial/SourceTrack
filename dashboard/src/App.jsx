@@ -299,9 +299,9 @@ export default function App() {
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-              <Route path="/attribution" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/app/attribution" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/journeys" element={<Navigate to="/leads" replace />} />
-              <Route path="/ai-sources" element={<Navigate to="/attribution" replace />} />
+              <Route path="/ai-sources" element={<Navigate to="/app/attribution" replace />} />
               <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
               <Route path="/leads/:leadId" element={<ProtectedRoute><LeadDetail /></ProtectedRoute>} />
               <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />

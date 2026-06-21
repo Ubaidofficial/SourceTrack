@@ -115,7 +115,7 @@ export default function Dashboard() {
   const [lastRefresh, setLastRefresh] = useState(new Date())
   const freshnessLabel = useFreshnessLabel(lastRefresh)
   const location = useLocation()
-  const activeTab = location.pathname === '/attribution' ? 'attribution' : 'overview'
+  const activeTab = location.pathname === '/app/attribution' ? 'attribution' : 'overview'
 
   useEffect(() => {
     // Check for support-mode preview context
@@ -279,7 +279,7 @@ export default function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-st-black dark:text-white">
-            {location.pathname === '/attribution' ? 'Attribution' : 'Dashboard'}
+            {location.pathname === '/app/attribution' ? 'Attribution' : 'Dashboard'}
           </h2>
           {site && <p className="text-sm text-st-gray dark:text-gray-400 mt-0.5">{site.domain || site.name}</p>}
         </div>
@@ -373,7 +373,7 @@ export default function Dashboard() {
               {/* Command Center Nav */}
               <div className="flex flex-wrap gap-2">
                 <button onClick={() => navigate('/analytics')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-white hover:border-st-black dark:hover:border-white transition-colors">Analytics <ArrowRight className="w-3 h-3" /></button>
-                <button onClick={() => navigate('/attribution')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-white hover:border-st-black dark:hover:border-white transition-colors">Attribution <ArrowRight className="w-3 h-3" /></button>
+                <button onClick={() => navigate('/app/attribution')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-white hover:border-st-black dark:hover:border-white transition-colors">Attribution <ArrowRight className="w-3 h-3" /></button>
                 <button onClick={() => navigate('/leads')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-white hover:border-st-black dark:hover:border-white transition-colors">Leads <ArrowRight className="w-3 h-3" /></button>
                 <button onClick={() => navigate('/app/integrations')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-white hover:border-st-black dark:hover:border-white transition-colors">Integrations <ArrowRight className="w-3 h-3" /></button>
               </div>
