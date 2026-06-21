@@ -12,6 +12,7 @@ import { resolveClientIp } from '../lib/ip-resolver.js'
 import { claimIdempotencyKeys, rollbackIdempotencyKeys } from '../lib/idempotency.js'
 import { storeIdentityLink } from '../lib/identity-links.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
+import { checkIsDuplicate, registerConversion } from '../lib/shared-dedupe-cache.js'
 
 
 // In-memory dedup cache — 24h TTL. Fast path that catches the common case
@@ -239,6 +240,36 @@ export async function conversion(req, res) {
     if (orderId) {
       props.order_id = orderId
     }
+    // Short-window process-local cross-deduplication check
+    const incomingType = props.conversion_type || 'form'
+    const incomingValue = Number(props.conversion_value) || 0
+    const incomingHasOrderId = !!orderId
+    const isShortWindowDup = anonymousId ? checkIsDuplicate(
+      req.site.id,
+      anonymousId,
+      req.body.page_url,
+      true, // isExplicit
+      incomingType,
+      incomingValue,
+      incomingHasOrderId
+    ) : false
+
+    if (isShortWindowDup) {
+      try {
+        const siteId = req.site?.id
+        if (siteId) {
+          const log = dedupeEventsLog.get(siteId) || []
+          const now = Date.now()
+          const oneDayAgo = now - 24 * 60 * 60 * 1000
+          const recentLog = log.filter(e => e.timestamp > oneDayAgo)
+          recentLog.push({ timestamp: now, keyType: 'short_window' })
+          dedupeEventsLog.set(siteId, recentLog)
+        }
+      } catch (err) {
+        console.error('[dedupe-stats] failed to log short-window duplicate event:', err?.message)
+      }
+      return res.status(200).json({ success: true, data: { received: true, dedup_skipped: true, short_window: true }, error: null })
+    }
 
     // Deduplication — two layers, both keyed on (site, order_id, type):
     //   1. In-memory NodeCache — fast path for the common double-click case.
@@ -331,6 +362,19 @@ export async function conversion(req, res) {
 
     if (externalEventId) {
       dedupCache.set(externalEventId, true)
+    }
+
+    // Register conversion in the shared deduplication cache
+    if (anonymousId) {
+      registerConversion(
+        req.site.id,
+        anonymousId,
+        req.body.page_url,
+        true, // isExplicit
+        incomingType,
+        incomingValue,
+        incomingHasOrderId
+      )
     }
 
     const clientTimestamp = req.body?.timestamp ? sanitizeClientTimestamp(req.body.timestamp) : null

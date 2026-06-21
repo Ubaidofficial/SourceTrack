@@ -5,6 +5,8 @@ import { normalizeUtm, redactPiiFromObject, isPathExcluded, extractCustomParams,
 import { resolveClientIp } from '../lib/ip-resolver.js'
 import { ph } from '../lib/posthog.js'
 import { claimPageviewUsage } from '../lib/pageview-limits.js'
+import { checkIsDuplicate, registerConversion } from '../lib/shared-dedupe-cache.js'
+import { claimConversionUsage } from '../lib/conversion-limits.js'
 
 
 import { getSupabase } from '../lib/supabase.js'
@@ -86,6 +88,54 @@ function enrich(req) {
     server_timestamp: new Date().toISOString(),
     ai_source: req.ai_source || null
   }
+}
+
+export function isLeadForm({ form_id, form_name, form_action_path, page_path }) {
+  const id = (form_id || '').toLowerCase()
+  const name = (form_name || '').toLowerCase()
+  const action = (form_action_path || '').toLowerCase()
+  const page = (page_path || '').toLowerCase()
+
+  // 1. Exclude obvious non-lead / auth / search / filter / internal patterns
+  const excludeKeywords = [
+    'search',
+    'login', 'signin', 'log-in', 'sign-in',
+    'password', 'forgot', 'reset',
+    'filter',
+    'logout', 'signout', 'log-out', 'sign-out',
+    'subscribe', 'newsletter',
+    'search-form', 'searchform'
+  ]
+
+  for (const kw of excludeKeywords) {
+    if (id.includes(kw) || name.includes(kw) || action.includes(kw) || page.includes(kw)) {
+      return false
+    }
+  }
+
+  // Exclude internal app paths
+  const internalPaths = ['/app', '/dashboard', '/admin', '/console', '/portal', '/internal', '/auth', '/oauth']
+  for (const path of internalPaths) {
+    if (page === path || page.startsWith(path + '/')) {
+      return false
+    }
+  }
+
+  // 2. Positive lead-form signals
+  const positiveKeywords = [
+    'contact', 'demo', 'quote', 'sales', 'pricing', 'trial',
+    'signup', 'sign-up', 'waitlist', 'lead', 'consultation',
+    'book', 'register'
+  ]
+
+  for (const kw of positiveKeywords) {
+    if (id.includes(kw) || name.includes(kw) || action.includes(kw) || page.includes(kw)) {
+      return true
+    }
+  }
+
+  // 3. Ambiguous public forms: if it's on a public page and not excluded, treat as lead form
+  return true
 }
 
 export async function track(req, res) {
@@ -344,6 +394,89 @@ export async function track(req, res) {
         ...customParams
       }
     })
+
+    // Form conversion auto-promotion
+    if (req.body?.event === 'form_submit') {
+      const isIgnore = req.body.properties?.ignore_conversion === true
+      if (!isIgnore && isLeadForm({ form_id, form_name, form_action_path, page_path })) {
+        const anonId = req.body.anonymous_id || uuidv4()
+        const isDup = checkIsDuplicate(req.site.id, anonId, req.body.page_url, false, 'form', 0, false)
+        if (!isDup) {
+          // Enforce monthly conversion limits (fail-open on DB errors)
+          let limitAllowed = true
+          try {
+            const limitCheck = await claimConversionUsage(req.site)
+            if (!limitCheck.allowed) {
+              limitAllowed = false
+            }
+          } catch (limitErr) {
+            console.error('[track] conversion limit check failed, failing open:', limitErr.message || limitErr)
+          }
+
+          if (limitAllowed) {
+            // Register conversion in the shared deduplication cache
+            registerConversion(req.site.id, anonId, req.body.page_url, false, 'form', 0, false)
+
+            // Construct standard conversion properties
+            const conversionProps = {
+              site_id: req.site.id,
+              site_key: req.site.site_key,
+              anonymous_id: anonId,
+              user_id: typeof req.body.user_id === 'string' ? req.body.user_id.trim() : null,
+              is_conversion: true,
+              conversion_type: 'form',
+              form_name: form_name || null,
+              form_id: form_id || null,
+              form_provider: form_provider || 'unknown',
+              form_action_host: form_action_host || null,
+              form_action_path: form_action_path || null,
+              page_url: req.body.page_url,
+              page_path: page_path || null,
+              referrer: req.body.referrer,
+              utm_source: normalizeUtm(req.body.utm_source),
+              utm_medium: normalizeUtm(req.body.utm_medium),
+              utm_campaign: normalizeUtm(req.body.utm_campaign),
+              utm_content: normalizeUtm(req.body.utm_content),
+              utm_term: normalizeUtm(req.body.utm_term),
+              ref_param: normalizeUtm(req.body.ref_param || req.body.ref),
+              source_param: normalizeUtm(req.body.source_param || req.body.source),
+              via_param: normalizeUtm(req.body.via_param || req.body.via),
+              first_touch_source: normalizeUtm(req.body.first_touch_source),
+              first_touch_medium: normalizeUtm(req.body.first_touch_medium),
+              first_touch_campaign: normalizeUtm(req.body.first_touch_campaign),
+              first_touch_timestamp: sanitizeClientTimestamp(req.body.first_touch_timestamp),
+              ...normalizeClickIds(req.body),
+              utm_id: normalizeUtm(req.body.utm_id),
+              st_campaign_id: normalizeUtm(req.body.st_campaign_id),
+              st_adgroup_id: normalizeUtm(req.body.st_adgroup_id),
+              st_ad_id: normalizeUtm(req.body.st_ad_id),
+              st_target_id: normalizeUtm(req.body.st_target_id),
+              st_network: sanitizeValueTrack(req.body.st_network),
+              st_device: sanitizeValueTrack(req.body.st_device),
+              st_matchtype: sanitizeValueTrack(req.body.st_matchtype),
+              st_verify: sanitizeVerificationToken(req.body.st_verify),
+              ai_source: enriched.ai_source,
+              device_type: enriched.device_type,
+              browser_name: enriched.browser_name,
+              browser_version: enriched.browser_version,
+              os_name: enriched.os_name,
+              os_version: enriched.os_version,
+              country: enriched.country,
+              server_timestamp: enriched.server_timestamp,
+              ingestion_method: 'server_routed',
+              ...customParams
+            }
+
+            ph.capture({
+              distinctId: anonId,
+              event: '$conversion',
+              timestamp: clientTimestamp ? new Date(clientTimestamp) : undefined,
+              properties: conversionProps
+            })
+          }
+        }
+      }
+    }
 
     // Update telemetry metadata asynchronously & throttled (non-blocking)
     // We use req.site from auth middleware which caches basic details

@@ -23,6 +23,21 @@ The tracker listens for native browser `submit` events. It classifies the form p
 
 **What "auto-detected" means:** When a visitor submits a detected form, the tracker fires a `form_submit` event to `/api/track` containing the form provider, an anonymised form name, and attribution context. No entered field values (email, name, phone, message) are captured or forwarded.
 
+### Lead Conversion Auto-Promotion
+To simplify setup, SourceTrack automatically processes eligible form submissions as lead conversions (`conversion_type = 'form'`) at the backend ingestion layer. This allows forms to participate in single-touch and multi-touch attribution out-of-the-box.
+
+1. **Eligibility Rules:**
+   - **Included:** General contact, demo, quote, sales, pricing, trial, signup, register, waitlist, consultation, and booking forms. Signup/register forms are counted as conversions when on public landing pages.
+   - **Excluded:** Obvious non-lead forms (search, filter, newsletter-only subscribe, login, signin, logout, password reset) and internal app/dashboard forms (e.g. any form submitted from page paths starting with `/app`, `/dashboard`, `/admin`, `/console`, `/portal`, `/internal`).
+2. **Short-Window Deduplication:**
+   - SourceTrack uses a process-local in-memory 5-second deduplication cache to prevent double-counting.
+   - If an automated form submit event and an explicit conversion event (`sourcetrack.conversion()`) fire at the same time, they cross-deduplicate. Rich explicit conversions (non-zero value, non-form conversion type, or order ID) are never suppressed, but generic form leads are merged.
+   - *Note:* In-memory deduplication is a fast-path safety layer and is not durable across server restarts or multiple container instances.
+3. **No-Code Escape Hatch:**
+   - If you already fire custom conversion events via the JS SDK and want to prevent SourceTrack from automatically promoting a specific form submit, add the attribute `data-sourcetrack-ignore-conversion="true"` to your `<form>` element. The tracker will send a flag to skip conversion promotion while preserving the `form_submit` event for standard analytics.
+4. **Explicit Conversion API:**
+   - For precision tracking (e.g., matching purchases, attributing actual revenue/values, or passing specific order IDs), you should use the explicit `sourcetrack.conversion()` JavaScript SDK method or the Offline Conversions API instead of relying on automatic form promotion.
+
 **Tools in the ❌ column** use iframe or proprietary event systems that the browser `submit` listener cannot reach. Attribution for these tools requires passing `getContext()` output as hidden fields or URL parameters at submission time, then forwarding it to SourceTrack via your backend or a webhook handler. See [Form and Checkout Source Handoff Guide](form_checkout_source_handoff.md).
 
 ---

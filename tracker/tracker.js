@@ -839,6 +839,8 @@
         }
       }
 
+      var ignoreConv = form.getAttribute('data-sourcetrack-ignore-conversion') === 'true'
+
       var p = params(), ref = document.referrer || null
       var f = getFT(), u = utmFields(p)
 
@@ -858,7 +860,8 @@
             form_action_host: actionHost,
             form_action_path: actionPath,
             page_url: location.href,
-            page_path: location.pathname
+            page_path: location.pathname,
+            ignore_conversion: ignoreConv
           }
         },
         u,

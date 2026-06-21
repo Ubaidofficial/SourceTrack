@@ -390,7 +390,8 @@ test('Form Ingestion Backend Route Integration Tests', async (t) => {
             form_name: 'pass-sk_test_123', // secret keyword bypass attempt
             form_action_host: 'javascript:alert(1)', // unsafe script
             form_action_path: '/submit-form?q=123#hash',
-            page_path: '/register'
+            page_path: '/register',
+            ignore_conversion: true
           }
         }
       }
@@ -445,7 +446,8 @@ test('Form Ingestion Backend Route Integration Tests', async (t) => {
             email: 'unsafe-email@test.com',
             phone: '123456',
             hidden_field: 'token_secret_value',
-            some_other_value: 'arbitrary'
+            some_other_value: 'arbitrary',
+            ignore_conversion: true
           }
         }
       }
@@ -531,7 +533,10 @@ test('Form Ingestion Backend Route Integration Tests', async (t) => {
           body: {
             event: 'form_submit',
             anonymous_id: 'anon-123',
-            properties
+            properties: {
+              ...properties,
+              ignore_conversion: true
+            }
           }
         }
         const resMock = {
