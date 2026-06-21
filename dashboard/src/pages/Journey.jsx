@@ -10,7 +10,7 @@ import {
   Timer, FileText, LogIn, LogOut
 } from 'lucide-react'
 import { formatCurrencyDecimal } from '../utils/numbers'
-import { SourceIcon } from '../components/SourceIcon'
+import { SourceChip } from '../components/SourceIcon'
 
 const FILTERS = [
   { key: 'all', label: 'All Events' },
@@ -334,10 +334,7 @@ export default function Journey() {
                             Session {session.session_index}
                           </span>
                           {/* Source badge */}
-                          <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium max-w-[160px]">
-                            <SourceIcon source={session.source_label || 'direct'} className="w-3 h-3 flex-shrink-0" />
-                            <span className="truncate">{session.source_label || 'Direct'}</span>
-                          </span>
+                          <SourceChip source={session.source_label || 'direct'} className="max-w-[160px]" />
                           {session.contains_conversion && (
                             <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-lime-100 text-lime-800 font-medium">
                               <Zap className="w-3 h-3" /> Converted

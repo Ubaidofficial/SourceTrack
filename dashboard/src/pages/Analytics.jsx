@@ -9,7 +9,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { Eye, RefreshCw, Copy, Check, BarChart3 } from 'lucide-react'
 import { safeNumber } from '../utils/numbers'
-import { SourceIcon } from '../components/SourceIcon'
+import { SourceIcon, normalizeSource } from '../components/SourceIcon'
 import { useSite } from '../contexts/SiteContext'
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Filler)
 
@@ -535,7 +535,7 @@ export default function Analytics() {
                 return aiSources.map((r, i) => (
                   <DataRow
                     key={i}
-                    label={r.source}
+                    label={normalizeSource(r.source).name}
                     count={r.visits}
                     max={max}
                     icon={<SourceIcon source={r.source} className="w-3.5 h-3.5" />}
@@ -590,10 +590,10 @@ function SourceTabList({ rows, tab, toggleFilter, isActive }) {
       {visible.map((r, i) => (
         <DataRow
           key={i}
-          label={r.name || 'Unknown'}
+          label={normalizeSource(r.name || '').name}
           count={r.visitors}
           max={max}
-          icon={tab === 'referrer' ? <SourceIcon source={r.name || ''} className="w-3.5 h-3.5" /> : null}
+          icon={<SourceIcon source={r.name || ''} className="w-3.5 h-3.5" />}
           onClick={() => {
             if (tab === 'referrer')  toggleFilter('Source', r.name)
             if (tab === 'ai_source') toggleFilter('AI Source', r.name)
