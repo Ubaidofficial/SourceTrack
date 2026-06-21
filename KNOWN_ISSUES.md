@@ -79,6 +79,10 @@ Unsafe claim:
 
     SourceTrack has universal AI traffic detection.
 
+AI-search attribution depends on a referrer being present (client `document.referrer` or server `Referer` header). If a source strips the referrer, the visit lands as "direct" and no COALESCE/detection can recover it. This is a real limit of the approach, not a bug.
+
+Note: The server-fallback path (bare referrer -> middleware -> `properties.ai_source`) is verified by code-trace, not yet by a live referrer-only event. A referrer-only live test would close this verification gap.
+
 ### 6. HogQL gotchas
 
 Avoid:

@@ -26,7 +26,7 @@ const PLANS = [
       'Campaign cost imports',
       'Source and conversion change detection',
       'Advanced report builder and dashboard widgets',
-      '3 sites · 3 users',
+      '3 sites · 1 user',
       '150,000 tracked visits/mo',
     ],
     cta: 'Get Growth', href: '/signup', featured: true,
@@ -36,7 +36,7 @@ const PLANS = [
     desc: 'Best for agencies and high-volume teams needing more sites, volume, and support.',
     features: [
       'Everything in Growth',
-      'Up to 99 sites · up to 99 team members',
+      'Up to 99 sites · 1 user',
       'Unbranded CSV export',
       '5-year data history',
       'Higher conversion event limits',

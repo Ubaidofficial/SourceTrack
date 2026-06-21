@@ -61,7 +61,7 @@ export const FEATURE_LABELS = {
   email_reports:            'Email reports',
   csv_export:               'CSV export',
   api_access:               'API access',
-  multi_user:               'Team members',
+  multi_user:               '1 user',
   cookieless_mode:          'Cookieless tracking',
   white_label:              'Unbranded CSV export',
   manual_spend:             'Manual spend entry',

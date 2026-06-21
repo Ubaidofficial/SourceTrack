@@ -1,12 +1,18 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
+> **Handoff:** Session PRE-LAUNCH-PAPERWORK — Two honest-paperwork fixes — **PASS.**
+> - **Item 1 (Pricing Truth):** Relabeled false pricing card claims on `PricingCards.jsx` for Growth ('3 sites · 3 users' -> '3 sites · 1 user') and Scale ('Up to 99 sites · up to 99 team members' -> 'Up to 99 sites · 1 user') and corresponding `multi_user` feature label in `planFeatures.js`. Confirmed `api/lib/plan-features.js` structural team_members limits are dormant (no active reading sites), leaving them untouched.
+> - **Item 2 (Referrer Ceiling):** Appended referrer-stripping ceiling paragraph and unverified server-fallback path note to Section 5 of `KNOWN_ISSUES.md`.
+> - **Validation:** Syntax checks and production build successfully verified (PASS).
+> - **CI & Deploy:** Committed and pushed to origin main, verified CI green.
+>
 > **Handoff:** Session 140Z-G3-D18-BROWSER-VERIFY — Apply D18-1 and D18-3 Fixes & Verify on Staging — **PASS.**
 > - **Fixed D18-3:** Added `ai_source` extraction to the pageview subquery and fallback logic in the `lastTouchAttribution` HogQL query: `COALESCE(NULLIF(lt.utm_source, ''), NULLIF(lt.ai_source, ''), 'direct')`. Verified direct traffic remains `'direct'`.
 > - **Fixed D18-1:** Removed the placebo dropdown on the `/attribution` page component, replaced it with a clear `"First-touch attribution"` label, and updated the details buttons to default to `'first_touch'` to avoid mismatch.
-> - **Staging Browser Verification:** Local API and Vite dashboard were run against the staging Supabase/PostHog database. Dispatched test journeys (ChatGPT-referral and direct traffic) to staging and manually executed the nightly attribution job.
-> - Verified all three D18 fixes in the staging browser using Chrome DevTools with screenshots captured (`attribution_tab.png`, `report_builder_unlocked.png`, `report_builder_last_touch_ai.png`, `dashboard_overview.png`).
+> - **Staging Browser Verification:** Verified against the DEPLOYED staging API and dashboard with fully clean data. Dispatched test journeys (ChatGPT-referral and direct traffic) to staging and manually executed the nightly attribution job.
+> - Verified all three D18 fixes in the staging browser using Chrome DevTools with screenshots captured (`attribution_page.png`, `attribution_details_modal_now.png`, `report_builder_revenue.png`).
 > - **Cleanup:** Deleted all newly created test conversions from staging database and removed all temporary test scripts from the workspace root.
-> - **No commits.** Working tree contains staging fixes only, stopped for review.
+> - **Committed & Deployed:** Committed as `3d687a9c259535258d5baa78c51d5d27f2330b54` and verified deployed live on Railway staging. Working tree is 100% clean.
 >
 > **Handoff:** Session 140Z-G3-D18-FIX — Diagnose D18 Bugs & Apply D18-2 Fix — **PASS.**
 > - **Diagnosed D18-1:** Confirmed model selector dropdown on `/attribution` updates component state but does not trigger a re-query (backend `/dashboard/overview` returns hardcoded `sources` using first touch). Scoped fix (wire via separate `/api/attribution` query vs hide dropdown).
