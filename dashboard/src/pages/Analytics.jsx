@@ -11,6 +11,7 @@ import { Eye, RefreshCw, Copy, Check, BarChart3 } from 'lucide-react'
 import { safeNumber } from '../utils/numbers'
 import { SourceIcon, normalizeSource } from '../components/SourceIcon'
 import { useSite } from '../contexts/SiteContext'
+import MetricTile from '../components/MetricTile'
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Filler)
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -85,19 +86,7 @@ function ListSection({ title, rows, getLabel, getCount, getIcon, onRowClick, isR
   )
 }
 
-// ─── KPI tile ─────────────────────────────────────────────────────────────────
-function KPITile({ label, value, delta, sub }) {
-  return (
-    <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl px-4 py-3 shadow-sm">
-      <p className="text-[11px] text-st-gray dark:text-gray-400 font-medium uppercase tracking-wide mb-1.5">{label}</p>
-      <p className="text-xl font-semibold text-st-black dark:text-white tabular-nums">{value}</p>
-      {delta && (
-        <p className={`text-[10px] font-medium mt-0.5 ${delta.color}`}>{delta.arrow} {delta.pct}% vs prior</p>
-      )}
-      {sub && !delta && <p className="text-[10px] text-st-gray dark:text-gray-400 mt-0.5">{sub}</p>}
-    </div>
-  )
-}
+
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function Analytics() {
@@ -368,37 +357,43 @@ export default function Analytics() {
         <>
           {/* ─── KPIs ────────────────────────────────────────────────────── */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-            <KPITile
+            <MetricTile
               label="Visitors"
               value={safeNumber(kpis.unique_visitors, 0).toLocaleString()}
               delta={delta(kpis.unique_visitors, priorKpis.unique_visitors)}
+              compact
             />
-            <KPITile
+            <MetricTile
               label="Pageviews"
               value={safeNumber(kpis.pageviews, 0).toLocaleString()}
               delta={delta(kpis.pageviews, priorKpis.pageviews)}
+              compact
             />
-            <KPITile
+            <MetricTile
               label="Online now"
               value={liveCount.toLocaleString()}
               sub="refreshed every 30s"
+              compact
             />
-            <KPITile
+            <MetricTile
               label="Conversions"
               value={convCount > 0 ? convCount.toLocaleString() : '—'}
               sub={convCount === 0 ? 'No conversion events yet' : null}
               delta={convCount > 0 ? delta(kpis.conversion_count, priorKpis.conversion_count) : null}
+              compact
             />
-            <KPITile
+            <MetricTile
               label="Conv Rate"
               value={convRate > 0 ? `${convRate.toFixed(2)}%` : '—'}
               sub={convRate === 0 ? 'Send conversion events to track' : null}
               delta={convRate > 0 ? delta(kpis.conversion_rate, priorKpis.conversion_rate) : null}
+              compact
             />
-            <KPITile
+            <MetricTile
               label="Avg Duration"
               value={fmtDuration(kpis.avg_duration_seconds)}
               delta={delta(kpis.avg_duration_seconds, priorKpis.avg_duration_seconds)}
+              compact
             />
           </div>
 

@@ -13,6 +13,16 @@ function useCountUp(target, duration = 650) {
     const from = fromRef.current ?? 0
     if (from === to) { setCurrent(to); return }
 
+    const prefersReducedMotion = typeof window !== 'undefined'
+      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      : false
+
+    if (prefersReducedMotion) {
+      setCurrent(to)
+      fromRef.current = to
+      return
+    }
+
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
     startRef.current = null
 
@@ -35,14 +45,25 @@ function useCountUp(target, duration = 650) {
   return current
 }
 
-const MetricTile = ({ label, value, format = 'number', isEmpty = false, trend = null }) => {
-  const animated = useCountUp(
-    (isEmpty || value == null || format === 'text') ? null : Number(value)
-  )
+const MetricTile = ({
+  label,
+  value,
+  format = 'number',
+  isEmpty = false,
+  trend = null,
+  compact = false,
+  delta = null,
+  sub = null
+}) => {
+  const shouldAnimate = typeof value === 'number' && !Number.isNaN(value) && !isEmpty && value != null && format !== 'text'
+
+  const animated = useCountUp(shouldAnimate ? value : null)
 
   const formatValue = (val, fmt) => {
     if (val == null) return null
     const n = Number(val)
+    if (Number.isNaN(n)) return String(val)
+
     switch (fmt) {
       case 'currency': return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: n >= 10000 ? 0 : 2 }).format(n)
       case 'percent':  return `${n >= 0 ? '+' : ''}${safeNumber(n, 0).toFixed(1)}%`
@@ -55,26 +76,69 @@ const MetricTile = ({ label, value, format = 'number', isEmpty = false, trend = 
   const isEmptyState = isEmpty || value == null
   const displayValue = isEmptyState
     ? null
-    : format === 'text'
-      ? formatValue(value, format)
-      : animated != null ? formatValue(animated, format) : formatValue(value, format)
+    : typeof value === 'string'
+      ? value
+      : shouldAnimate && animated != null
+        ? formatValue(animated, format)
+        : formatValue(value, format)
 
-  const trendPositive = trend != null && trend > 0
-  const trendNegative = trend != null && trend < 0
+  const renderTrendPill = () => {
+    if (delta) {
+      const isPos = delta.arrow === '▲'
+      const isNeg = delta.arrow === '▼'
+      const pillBg = isPos
+        ? 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 border border-green-100 dark:border-green-900/30'
+        : isNeg
+          ? 'bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400 border border-red-100 dark:border-red-900/20'
+          : 'bg-gray-50 text-st-gray dark:bg-[#252929] dark:text-gray-400 border border-gray-150 dark:border-dark-border'
+      return (
+        <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold leading-none shadow-sm ${pillBg} ${delta.color}`}>
+          <span>{delta.arrow}</span>
+          <span>{delta.pct}%</span>
+        </span>
+      )
+    }
+
+    if (trend != null) {
+      const isPos = trend > 0
+      const isNeg = trend < 0
+      const pillBg = isPos
+        ? 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 border border-green-100 dark:border-green-900/30'
+        : isNeg
+          ? 'bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400 border border-red-100 dark:border-red-900/20'
+          : 'bg-gray-50 text-st-gray dark:bg-[#252929] dark:text-gray-400 border border-gray-150 dark:border-dark-border'
+      return (
+        <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-semibold leading-none shadow-sm ${pillBg}`}>
+          <span>{isPos ? '▲' : isNeg ? '▼' : '—'}</span>
+          <span>{Math.abs(safeNumber(trend, 0)).toFixed(1)}%</span>
+        </span>
+      )
+    }
+
+    return null
+  }
+
+  const showTrend = !isEmptyState && (trend != null || delta)
 
   return (
-    <div className="metric-tile bg-white dark:bg-dark-card rounded-xl p-5 shadow-sm border border-gray-100 dark:border-dark-border flex flex-col gap-1 transition-all">
-      <p className="text-xs font-medium text-st-gray dark:text-gray-400 uppercase tracking-wide">{label}</p>
-      {displayValue != null ? (
-        <p className="text-2xl font-semibold text-st-black dark:text-white tabular-nums">{displayValue}</p>
-      ) : (
-        <p className="text-2xl font-semibold text-gray-300">—</p>
-      )}
-      {isEmptyState && <p className="text-xs text-st-gray dark:text-gray-400 italic mt-0.5">Not yet tracked</p>}
-      {!isEmptyState && trend != null && (
-        <p className={`text-xs font-medium mt-0.5 ${trendPositive ? 'text-green-600' : trendNegative ? 'text-red-500' : 'text-st-gray'}`}>
-          {trendPositive ? '▲' : trendNegative ? '▼' : '—'} {Math.abs(safeNumber(trend, 0)).toFixed(1)}% vs last period
-        </p>
+    <div className={`metric-tile bg-white dark:bg-dark-card rounded-xl shadow-sm border border-gray-150 dark:border-dark-border flex flex-col justify-between transition-all hover:shadow-md duration-200 ${
+      compact ? 'px-4 py-3 gap-0.5' : 'p-5 gap-1.5'
+    }`}>
+      <div>
+        <p className={`text-st-gray dark:text-gray-400 font-semibold uppercase tracking-wider ${compact ? 'text-[10px] mb-1' : 'text-[11px] mb-1.5'}`}>{label}</p>
+        {displayValue != null ? (
+          <p className={`text-st-black dark:text-white font-bold tabular-nums tracking-tight ${compact ? 'text-xl' : 'text-2xl'}`}>{displayValue}</p>
+        ) : (
+          <p className={`text-st-black dark:text-white font-bold tracking-tight ${compact ? 'text-xl' : 'text-2xl'}`}>—</p>
+        )}
+      </div>
+      {(isEmptyState || showTrend || sub) && (
+        <div className="flex items-center gap-1.5 flex-wrap mt-2">
+          {isEmptyState && <p className="text-[10px] text-st-gray dark:text-gray-400 italic">Not yet tracked</p>}
+          {showTrend && renderTrendPill()}
+          {showTrend && <span className="text-[10px] text-st-gray dark:text-gray-400 font-medium">vs prior</span>}
+          {sub && <p className="text-[10px] text-st-gray dark:text-gray-400 font-medium truncate">{sub}</p>}
+        </div>
       )}
     </div>
   )

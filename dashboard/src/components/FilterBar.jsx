@@ -3,21 +3,31 @@ import { Download } from 'lucide-react'
 export default function FilterBar({ dateButtons = [], activeDate, onDateChange, onExport }) {
   return (
     <div className="flex items-center gap-3 flex-wrap">
-      {dateButtons.map((d) => (
-        <button
-          key={d.key}
-          onClick={() => onDateChange?.(d.key)}
-          className={`px-3 py-1 text-xs rounded-full transition-colors ${
-            activeDate === d.key
-              ? 'bg-st-lime/15 text-st-black dark:text-white font-medium'
-              : 'bg-gray-100 dark:bg-[#252929] text-gray-600 dark:text-gray-300 hover:bg-gray-200'
-          }`}
-        >
-          {d.label}
-        </button>
-      ))}
+      {dateButtons && dateButtons.length > 0 && (
+        <div className="inline-flex p-0.5 bg-gray-100 dark:bg-[#181B1B] border border-gray-200 dark:border-dark-border rounded-lg">
+          {dateButtons.map((d) => {
+            const isActive = activeDate === d.key
+            return (
+              <button
+                key={d.key}
+                onClick={() => onDateChange?.(d.key)}
+                className={`px-3 py-1 text-xs font-semibold rounded-md transition-all duration-150 focus-visible:ring-1 focus-visible:ring-st-lime focus-visible:outline-none ${
+                  isActive
+                    ? 'bg-white dark:bg-[#252929] text-st-black dark:text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-st-black dark:hover:text-white'
+                }`}
+              >
+                {d.label}
+              </button>
+            )
+          })}
+        </div>
+      )}
       {onExport && (
-        <button onClick={onExport} className="ml-auto flex items-center gap-1 px-3 py-1 text-xs text-gray-600 dark:text-gray-300 bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#333838] rounded-lg hover:bg-gray-50">
+        <button
+          onClick={onExport}
+          className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-600 dark:text-gray-300 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-hover transition-colors focus-visible:ring-1 focus-visible:ring-st-lime focus-visible:outline-none"
+        >
           <Download className="w-3.5 h-3.5" />
           Export
         </button>
