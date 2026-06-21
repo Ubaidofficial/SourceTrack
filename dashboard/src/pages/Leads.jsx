@@ -162,7 +162,7 @@ export default function Leads() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-st-black dark:text-white">Leads</h2>
-          <p className="text-sm text-st-gray mt-0.5">Individual visitors who have converted or engaged with your site</p>
+          <p className="text-sm text-st-gray dark:text-gray-400 mt-0.5">Individual visitors who have converted or engaged with your site</p>
         </div>
         {hasFeature(site?.plan, 'csv_export') ? (
           <button onClick={() => {
@@ -198,21 +198,21 @@ export default function Leads() {
 
       <div className="flex items-center gap-3">
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-st-gray" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-st-gray dark:text-gray-400" />
           <input
             type="text" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search by visitor ID, source, or campaign..."
-            className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+            className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-dark-border bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime"
           />
         </div>
         <select value={filterAI} onChange={e => setFilterAI(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
+          className="px-3 py-2 border border-gray-300 dark:border-dark-border bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime">
           <option value="all">All Sources</option>
           <option value="ai">AI Sources</option>
           <option value="non-ai">Non-AI Sources</option>
         </select>
         <select value={attributionModel} onChange={e => setAttributionModel(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
+          className="px-3 py-2 border border-gray-300 dark:border-dark-border bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime">
           <option value="first_touch">First Touch</option>
           <option value="last_touch">Last Touch</option>
         </select>
@@ -226,11 +226,11 @@ export default function Leads() {
         ) : leads.length === 0 ? (
           <div className="py-12 text-center space-y-2">
             {search || filterAI !== 'all' ? (
-              <p className="text-sm text-st-gray">No leads match your filters.</p>
+              <p className="text-sm text-st-gray dark:text-gray-400">No leads match your filters.</p>
             ) : (
               <>
                 <p className="text-sm font-medium text-st-black dark:text-white">No leads yet</p>
-                <p className="text-xs text-st-gray max-w-xs mx-auto">Leads appear after visitors submit a form, book a meeting, or trigger a conversion event.</p>
+                <p className="text-xs text-st-gray dark:text-gray-400 max-w-xs mx-auto">Leads appear after visitors submit a form, book a meeting, or trigger a conversion event.</p>
                 <div className="flex items-center justify-center gap-4 mt-3">
                   <a href="/setup" className="text-xs text-st-black dark:text-white underline underline-offset-2 hover:opacity-70">View install guide</a>
                   <a href="/docs/conversions" className="text-xs text-st-black dark:text-white underline underline-offset-2 hover:opacity-70">Open conversion docs</a>
@@ -275,7 +275,7 @@ export default function Leads() {
                     <tr
                       key={i}
                       onClick={() => openJourney(lead)}
-                      className={`border-b border-gray-100/80 dark:border-dark-border/40 hover:bg-gray-50/50 dark:hover:bg-dark-hover/40 transition-colors cursor-pointer${isSelected ? ' bg-st-lime/5 dark:bg-st-lime/10' : ''}`}
+                      className={`border-b border-gray-100/80 dark:border-dark-border/40 hover:bg-gray-50/50 dark:hover:bg-dark-hover/40 transition-colors cursor-pointer${isSelected ? ' bg-st-lime/5 dark:bg-[#1E2318]' : ''}`}
                     >
                       <td className="py-3 px-3 w-8" onClick={e => e.stopPropagation()}>
                         <input

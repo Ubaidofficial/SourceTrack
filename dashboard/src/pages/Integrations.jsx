@@ -1070,7 +1070,7 @@ export default function Integrations() {
       {isVerified && (
         <div className="p-3 bg-st-lime/5 border border-st-lime/20 rounded-xl flex items-center gap-2 max-w-max">
           <span className="w-1.5 h-1.5 rounded-full bg-st-lime animate-pulse shrink-0"></span>
-          <p className="text-xs text-white/90 font-medium">
+          <p className="text-xs text-st-black dark:text-white/90 font-medium">
             Next step: connect revenue or import ad costs.
           </p>
         </div>
@@ -1092,7 +1092,7 @@ export default function Integrations() {
               <p className="text-sm text-gray-300 dark:text-gray-400 max-w-xl font-light font-sans leading-relaxed">
                 SourceTrack needs the script before attribution, revenue, and costs can work.
               </p>
-              <p className="text-xs text-st-gray dark:text-gray-500 font-sans font-light">
+              <p className="text-xs text-gray-400 dark:text-gray-400 font-sans font-light">
                 Next step: install the JavaScript snippet. Revenue, SEO, and ad cost integrations work after tracking is active.
               </p>
             </div>

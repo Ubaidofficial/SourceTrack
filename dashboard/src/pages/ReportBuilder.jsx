@@ -1423,9 +1423,9 @@ export default function ReportBuilder() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pt-1.5">
       {/* Top Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Report Builder</h2>
           <p className="text-sm text-st-gray dark:text-gray-400 mt-1">Configure your lightweight report and preview live results</p>
@@ -1996,7 +1996,7 @@ export default function ReportBuilder() {
                   </div>
 
                   {/* Actions Header */}
-                  <div className="flex items-center gap-2 self-start sm:self-center">
+                  <div className="flex flex-wrap items-center gap-2 self-start sm:self-center">
                     {!isPreview && (
                       <>
                         {hasFeature(site?.plan, 'saved_reports') ? (

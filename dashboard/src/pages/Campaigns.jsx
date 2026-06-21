@@ -541,21 +541,21 @@ export default function Campaigns() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-2xl font-bold text-st-black">Campaigns & Attribution</h2>
+            <h2 className="text-2xl font-bold text-st-black dark:text-white">Campaigns & Attribution</h2>
             <span
-              className="inline-flex items-center px-1.5 py-0.5 rounded bg-st-black/5 text-[10px] font-semibold text-st-black"
+              className="inline-flex items-center px-1.5 py-0.5 rounded bg-st-black/5 dark:bg-white/10 text-[10px] font-semibold text-st-black dark:text-white/90"
               title="This page uses last-touch attribution. Revenue and conversions are credited to each visit's source at conversion time. To compare other models, open Report Builder."
             >
               Last Touch
             </span>
           </div>
-          <p className="text-sm text-st-gray mt-0.5">Performance by marketing channel — credited via last-touch attribution</p>
+          <p className="text-sm text-st-gray dark:text-gray-400 mt-0.5">Performance by marketing channel — credited via last-touch attribution</p>
           {anyConnected && (
-            <div className="text-[11px] text-st-gray mt-1 flex items-center gap-1.5 font-medium">
-              <span className="inline-block w-2 h-2 rounded-full bg-[#d7f550] animate-pulse" />
+            <div className="text-[11px] text-st-gray dark:text-gray-400 mt-1 flex items-center gap-1.5 font-medium">
+              <span className="inline-block w-2 h-2 rounded-full bg-st-lime dark:bg-st-lime-dark animate-pulse" />
               <span>
                 {googleConnected && lastSyncedGoogle && `Google Ads synced: ${new Date(lastSyncedGoogle).toLocaleString()}`}
                 {googleConnected && lastSyncedGoogle && metaConnected && lastSyncedMeta && ' · '}
@@ -565,23 +565,23 @@ export default function Campaigns() {
             </div>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {anyConnected && !isPreview && (
             <button onClick={handleSyncAllConnected} disabled={syncingAll}
-              className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5 transition-colors font-medium shadow-sm">
+              className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-hover flex items-center gap-1.5 transition-colors font-medium shadow-sm">
               <RefreshCw className={`w-4 h-4 ${syncingAll ? 'animate-spin' : ''}`} />
               {syncingAll ? 'Syncing...' : 'Sync connected accounts'}
             </button>
           )}
           {!isPreview && (
             <button onClick={() => setImportModalOpen(true)}
-              className="px-3 py-1.5 text-sm text-st-black bg-[#d7f550] hover:bg-[#c4df45] rounded-lg transition-colors font-medium flex items-center gap-1.5 shadow-sm">
+              className="px-3 py-1.5 text-sm text-st-black bg-st-lime hover:bg-st-lime-dark dark:bg-st-lime-dark dark:hover:bg-st-lime rounded-lg transition-colors font-semibold flex items-center gap-1.5 shadow-sm">
               <UploadCloud className="w-4 h-4" /> Import Costs
             </button>
           )}
 
           <button onClick={() => navigate('/report-builder')}
-            className="px-3 py-1.5 text-sm text-gray-500 bg-gray-50 rounded-lg hover:bg-gray-100 font-medium">
+            className="px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-dark-card rounded-lg hover:bg-gray-100 dark:hover:bg-dark-hover font-medium">
             Advanced Report
           </button>
 
@@ -590,12 +590,12 @@ export default function Campaigns() {
               if (!site) return
               const params = new URLSearchParams({ site_key: site.site_key, model: 'last_touch', days: dateRange, dimension: activeDim, search, status: statusFilter })
               window.open(`/api/campaigns/export?${params}`, '_blank')
-            }} className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5">
+            }} className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-hover flex items-center gap-1.5">
               <Download className="w-4 h-4" /> Export
             </button>
           ) : (
             <a href="/billing" title="CSV export available on Starter and above"
-              className="px-3 py-1.5 text-sm text-st-gray bg-white border border-gray-300 rounded-lg hover:border-st-lime flex items-center gap-1.5 opacity-70">
+              className="px-3 py-1.5 text-sm text-st-gray dark:text-gray-400 bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-hover flex items-center gap-1.5 opacity-70">
               🔒 Export · Upgrade
             </a>
           )}
@@ -611,22 +611,22 @@ export default function Campaigns() {
       )}
 
       {/* Filter Bar */}
-      <div className="bg-white/60 rounded-xl border border-gray-100 p-3">
+      <div className="bg-white/60 dark:bg-dark-card rounded-xl border border-gray-100 dark:border-dark-border p-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex-1 min-w-[200px] relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-st-gray" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-st-gray dark:text-gray-400" />
             <input
               type="text" value={search} onChange={e => setSearch(e.target.value)}
               placeholder={`Filter by ${DIMENSIONS.find(d => d.key === activeDim)?.label?.toLowerCase() || 'name'}...`}
-              className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900"
+              className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-dark-border bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime"
             />
           </div>
 
-          <div className="flex bg-gray-100 rounded-lg p-1">
+          <div className="flex bg-gray-100 dark:bg-[#181B1B] rounded-lg p-1">
             {DATE_RANGES.map(dr => (
               <button key={dr.label} onClick={() => setDateRange(dr.days)}
                 className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                  dateRange === dr.days ? 'bg-white text-st-black shadow-sm' : 'text-st-gray hover:text-gray-700'
+                  dateRange === dr.days ? 'bg-white dark:bg-[#252929] text-st-black dark:text-white shadow-sm' : 'text-st-gray dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'
                 }`}>
                 {dr.label}
               </button>
@@ -634,14 +634,14 @@ export default function Campaigns() {
           </div>
 
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-gray-900">
+            className="px-3 py-2 border border-gray-300 dark:border-dark-border bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime">
             <option value="all">All Status</option>
             <option value="active">Active</option>
             <option value="low">Low Volume</option>
             <option value="none">No Activity</option>
           </select>
 
-          <div className="flex items-center gap-1.5 text-xs text-st-gray">
+          <div className="flex items-center gap-1.5 text-xs text-st-gray dark:text-gray-400">
             <Filter className="w-3.5 h-3.5" />
             <span>{rows.length} results</span>
           </div>
@@ -711,7 +711,7 @@ export default function Campaigns() {
                 <>
                   <p className="text-xs text-st-gray mt-1">Imported costs can still be managed below.</p>
                   <button onClick={() => setImportModalOpen(true)}
-                    className="mt-4 px-4 py-2 text-sm text-st-black bg-[#d7f550] hover:bg-[#c4df45] rounded-lg transition-colors font-medium inline-flex items-center gap-1.5">
+                    className="mt-4 px-4 py-2 text-sm text-st-black bg-st-lime hover:bg-st-lime-dark dark:bg-st-lime-dark dark:hover:bg-st-lime rounded-lg transition-colors font-semibold inline-flex items-center gap-1.5">
                     <UploadCloud className="w-4 h-4" /> Import Costs
                   </button>
                 </>
@@ -730,8 +730,8 @@ export default function Campaigns() {
                     <>
                       <p className="text-sm text-st-gray mt-1">Import ad costs or wait for tracked campaign traffic.</p>
                       <div className="flex items-center justify-center gap-3 mt-4">
-                        <button onClick={() => setImportModalOpen(true)}
-                          className="px-4 py-2 text-sm text-st-black bg-[#d7f550] hover:bg-[#c4df45] rounded-lg transition-colors font-medium inline-flex items-center gap-1.5">
+                       <button onClick={() => setImportModalOpen(true)}
+                          className="px-4 py-2 text-sm text-st-black bg-st-lime hover:bg-st-lime-dark dark:bg-st-lime-dark dark:hover:bg-st-lime rounded-lg transition-colors font-semibold inline-flex items-center gap-1.5">
                           <UploadCloud className="w-4 h-4" /> Import Costs
                         </button>
                         <a
@@ -1066,15 +1066,15 @@ export default function Campaigns() {
               <DashboardCard title="UTM Parameters" subtitle="Captured UTM metadata">
                 <div className="grid grid-cols-2 gap-4 text-xs font-mono">
                   <div className="p-2 bg-gray-50 dark:bg-[#151818] rounded-lg">
-                    <span className="text-st-gray block">utm_source</span>
+                    <span className="text-st-gray dark:text-gray-400 block text-[10px]">utm_source</span>
                     <span className="text-st-black dark:text-white">{selectedCampaign.source || '—'}</span>
                   </div>
                   <div className="p-2 bg-gray-50 dark:bg-[#151818] rounded-lg">
-                    <span className="text-st-gray block">utm_medium</span>
+                    <span className="text-st-gray dark:text-gray-400 block text-[10px]">utm_medium</span>
                     <span className="text-st-black dark:text-white">{selectedCampaign.medium || '—'}</span>
                   </div>
                   <div className="p-2 bg-gray-50 dark:bg-[#151818] rounded-lg col-span-2">
-                    <span className="text-st-gray block">utm_campaign</span>
+                    <span className="text-st-gray dark:text-gray-400 block text-[10px]">utm_campaign</span>
                     <span className="text-st-black dark:text-white">{selectedCampaign.name}</span>
                   </div>
                 </div>
@@ -1142,7 +1142,7 @@ export default function Campaigns() {
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
                     className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
-                      dragOver ? 'border-[#d7f550] bg-lime-50/20' : 'border-gray-300 hover:border-st-black bg-gray-50/50'
+                      dragOver ? 'border-st-lime dark:border-st-lime-dark bg-lime-50/10 dark:bg-st-lime/5' : 'border-gray-300 dark:border-dark-border hover:border-st-black dark:hover:border-white bg-gray-50/50 dark:bg-dark-card/50'
                     }`}
                   >
                     <input
@@ -1353,7 +1353,7 @@ export default function Campaigns() {
                 <button
                   onClick={executeImport}
                   disabled={isPreview || importing || parsedRows.length === 0 || parsedRows.some(r => r.error)}
-                  className="px-4 py-2 text-sm font-semibold text-st-black bg-[#d7f550] hover:bg-[#c4df45] rounded-xl transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                  className="px-4 py-2 text-sm font-semibold text-st-black bg-st-lime hover:bg-st-lime-dark dark:bg-st-lime-dark dark:hover:bg-st-lime rounded-xl transition-colors disabled:opacity-50 flex items-center gap-1.5"
                 >
                   {importing ? (
                     <>

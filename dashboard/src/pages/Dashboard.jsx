@@ -389,7 +389,7 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <DashboardCard title="Top Sources" subtitle="Traffic and conversions by source">
                   {activeResults.length === 0 ? (
-                    <p className="text-sm text-st-gray py-6 text-center">No traffic detected yet.</p>
+                    <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">No traffic detected yet.</p>
                   ) : (
                     <DashboardTable
                       columns={[
@@ -410,7 +410,7 @@ export default function Dashboard() {
                   }
                 >
                   {!recentActivity || !recentActivity.events || recentActivity.events.length === 0 ? (
-                    <p className="text-sm text-st-gray py-6 text-center">No conversions in last 30 minutes.</p>
+                    <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">No conversions in last 30 minutes.</p>
                   ) : (
                     <DashboardTable
                       columns={[
@@ -455,7 +455,7 @@ export default function Dashboard() {
                 <DashboardCard title="Pinned Reports" subtitle="Saved report widgets pinned to your dashboard">
                   {dashboardReports.length === 0 ? (
                     <div className="text-center py-6 border border-dashed border-gray-200 rounded-lg">
-                      <p className="text-sm text-st-gray">No pinned reports yet. Pin reports from the Report Builder.</p>
+                      <p className="text-sm text-st-gray dark:text-gray-400">No pinned reports yet. Pin reports from the Report Builder.</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -538,7 +538,7 @@ export default function Dashboard() {
               {/* 5. AI Source Performance */}
               <DashboardCard title="AI Source Performance" subtitle="Traffic and conversions from AI engines">
                 {aiRevResults.length === 0 ? (
-                  <p className="text-sm text-st-gray py-6 text-center">No AI referrals detected yet.</p>
+                  <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">No AI referrals detected yet.</p>
                 ) : (
                   <DashboardTable
                     columns={[
@@ -555,7 +555,7 @@ export default function Dashboard() {
               {isGscConnected && (
                 <DashboardCard title="Search Terms / SEO Queries" subtitle="Organic query performance estimate">
                   <p className="text-xs text-st-gray dark:text-gray-400 mb-3">Matched by landing page and date range. Query revenue is estimated.</p>
-                  <p className="text-sm text-st-gray py-4 text-center">No search query data matches in this range.</p>
+                  <p className="text-sm text-st-gray dark:text-gray-400 py-4 text-center">No search query data matches in this range.</p>
                 </DashboardCard>
               )}
             </div>
@@ -699,17 +699,17 @@ function DashboardWidgetCard({ report, site }) {
 
         {isLoading ? (
           <div className="h-28 flex items-center justify-center">
-            <RefreshCw className="w-4 h-4 animate-spin text-st-gray" />
+            <RefreshCw className="w-4 h-4 animate-spin text-st-gray dark:text-gray-400" />
           </div>
         ) : isError ? (
           <div className="h-28 flex flex-col items-center justify-center text-center p-2">
             <span className="text-red-500 text-xs font-semibold">⚠️ Query failed</span>
-            <p className="text-[9px] text-st-gray mt-1 leading-normal">
+            <p className="text-[9px] text-st-gray dark:text-gray-400 mt-1 leading-normal">
               {error?.message || 'Configuration error'}
             </p>
           </div>
         ) : results.length === 0 ? (
-          <div className="h-28 flex items-center justify-center text-st-gray text-xs text-center p-4">
+          <div className="h-28 flex items-center justify-center text-st-gray dark:text-gray-400 text-xs text-center p-4">
             {nightlyNotice ? (
               <span>
                 <span className="block font-semibold text-amber-600 dark:text-amber-400 mb-1">Nightly calculation pending</span>
@@ -725,7 +725,7 @@ function DashboardWidgetCard({ report, site }) {
               <span className="text-2xl font-bold text-st-black dark:text-white tabular-nums">
                 {metricDef.format(total)}
               </span>
-              <span className="text-[10px] text-st-gray">{metricDef.label}</span>
+              <span className="text-[10px] text-st-gray dark:text-gray-400">{metricDef.label}</span>
             </div>
 
             <div className="space-y-1.5 pt-2 border-t border-gray-100/50 dark:border-[#2A2E2E]/50">

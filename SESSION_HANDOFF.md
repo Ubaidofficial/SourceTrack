@@ -1,5 +1,9 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
+> **Handoff:** Session 140P-D5 — Designer-Grade Visual Fixes — **PENDING BROWSER VERIFICATION.**
+> - **Visual fixes:** Fixed Leads selected row highlight to premium desaturated dark-olive (`dark:bg-[#1E2318]`); Campaigns filter wrapper and inputs styled with dark mode card/input tokens; Campaigns and Report Builder action rows wrapped with flex-wrap and stacked responsively on mobile; Report Builder title given pt-1.5 breathing room; Integrations next-step pill text contrast fixed; elevated dark mode contrast across dashboard empty states/widget labels; softened hardcoded raw lime to tokenized Brand Lime.
+> - **Verification:** Code changes compiled and statically validated cleanly (static QA & production build PASS). Verification in the live browser remains pending deployment to staging. Working tree contains D5 session changes, D5 QA report, and D4 QA report.
+>
 > **Handoff:** Session 140P-D4 — Authenticated Staging Browser Visual QA — **PARTIAL PASS.**
 > - **Staging Browser Verification:** Logged in as staging test user `stripe-e2e-139j@sourcetrack.ai` and verified D2 and D3 frontend UI improvements across all viewports (`1440px`, `1280px`, `768px`, `390px`) and light/dark modes.
 > - **Visual Issues Found:** Identified visual polish gaps: Campaigns dark filter/search wrapper is too light; Campaigns top action buttons and Report Builder right-side actions/content clip at narrow widths; Report Builder page title is vertically clipped; Integrations light next-step pill has poor contrast; dark-mode contrast is too dim across several pages; Leads dark selected row remains pale.
