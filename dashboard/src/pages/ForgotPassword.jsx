@@ -16,7 +16,7 @@ export default function ForgotPassword() {
     setLoading(true)
     try {
       const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`
+        redirectTo: 'https://app.sourcetrack.ai/reset-password'
       })
       if (resetErr) throw resetErr
       setSuccess(true)
