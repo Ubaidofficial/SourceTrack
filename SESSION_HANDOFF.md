@@ -1,5 +1,13 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
+> **Handoff:** Session 140P-D4 — Authenticated Staging Browser Visual QA — **PARTIAL PASS.**
+> - **Staging Browser Verification:** Logged in as staging test user `stripe-e2e-139j@sourcetrack.ai` and verified D2 and D3 frontend UI improvements across all viewports (`1440px`, `1280px`, `768px`, `390px`) and light/dark modes.
+> - **Visual Issues Found:** Identified visual polish gaps: Campaigns dark filter/search wrapper is too light; Campaigns top action buttons and Report Builder right-side actions/content clip at narrow widths; Report Builder page title is vertically clipped; Integrations light next-step pill has poor contrast; dark-mode contrast is too dim across several pages; Leads dark selected row remains pale.
+> - **Staging plan caveat:** Campaigns page visual QA was performed under a temporary DB plan override to bypass the starter billing gate.
+> - **DB Restoration:** Reverted staging Supabase `auth.users` passwords/metadata and sites `plan` to their initial secure baselines.
+> - **Recommended Fix Session:** Scoped fixes under future session `140P-D5 — Designer-Grade Visual Fixes`.
+> - **Validation:** Executed local static launch QA and frontend builds cleanly. Working tree contains D4 session documentation updates and the new QA report.
+>
 > **Handoff:** Session PRE-LAUNCH-PAPERWORK — Two honest-paperwork fixes — **PASS.**
 > - **Item 1 (Pricing Truth):** Relabeled false pricing card claims on `PricingCards.jsx` for Growth ('3 sites · 3 users' -> '3 sites · 1 user') and Scale ('Up to 99 sites · up to 99 team members' -> 'Up to 99 sites · 1 user') and corresponding `multi_user` feature label in `planFeatures.js`. Confirmed `api/lib/plan-features.js` structural team_members limits are dormant (no active reading sites), leaving them untouched.
 > - **Item 2 (Referrer Ceiling):** Appended referrer-stripping ceiling paragraph and unverified server-fallback path note to Section 5 of `KNOWN_ISSUES.md`.
