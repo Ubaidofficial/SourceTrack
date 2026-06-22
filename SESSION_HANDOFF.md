@@ -1,5 +1,17 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
+> **Handoff:** Session 140P-A1 — Fix A1 (Multi-touch conversions inflation) — **PASS.**
+> - **Multi-touch Counts Inflation Fixed:** Resolved count inflation in multi-touch attribution models (Linear, U-Shaped, Time Decay, W-Shaped) where counts summed to 70 instead of the true 34 on the `de400000` seed. Changed implementation to sum `touch.fraction` instead of a flat `+1` per touchpoint.
+> - **Floating-Point Safeguard:** Aggregated conversion counts returned by the API are rounded to 4 decimal places via `toFixed(4)` for API results representation to prevent JS representation floating-point glitches while keeping them mathematically exact.
+> - **Tightened Regression Test:** Added and verified a regression test script `scripts/qa-multitouch-counts.mjs` asserting individual model totals and splits per model for the multi-touch visitor (Visitor 1).
+> - **Remote CI Verified:** Committed as `4e1b49a` and pushed to `main`. Remote CI run `27988524772` completed successfully.
+>
+> **Handoff:** Session 140P-A2 — Fix A2 (AI/Organic Referrer Revenue Alignment) — **PASS.**
+> - **Referrer Revenue Key Aligned:** Aligned referrer and AI source revenue overlay by keying on `first_touch_channel` instead of `first_touch_source` in `/api/analytics/sources`, resolving the divergent per-path classification issue.
+> - **No New Classifiers:** Avoided linear attribution parsing or a new classifier.
+> - **Seeded Ground Truth Verified:** Verified against seed data (`de400000`) and the test `scripts/qa-sources-attribution.mjs` successfully reconciles all numbers to seeded ground truth.
+> - **Remote CI Verified:** Committed as `725ec08` and pushed to `main`. Remote CI run `27986635206` completed successfully.
+>
 > **Handoff:** Session 140P-D9 — Seeded Leads + Campaigns Browser Gap Verification — **PASS.**
 > - **Verification Gaps Closed:** Closed the two browser verification gaps from Session 140P-D8 on deployed staging (`https://sourcetrack-dashboard-staging.up.railway.app`).
 > - **Leads Selected Row Styling:** Verified dark mode selected row has a premium desaturated dark-olive background (`#1E2318`) with readable text, clean checkbox, and source chips across all viewports (desktop, 768px, 390px). Light mode and slide-over journey panel verified.
