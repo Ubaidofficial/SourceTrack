@@ -2677,14 +2677,14 @@ export async function getUShapedAttribution({
         aggregated[dimValue] = { revenue: 0, conversions: 0 }
       }
       aggregated[dimValue].revenue += parseFloat(touch.attributed_value || 0)
-      aggregated[dimValue].conversions += 1
+      aggregated[dimValue].conversions += parseFloat(touch.fraction || 0)
     }
   }
 
   const results = Object.entries(aggregated).map(([dim_value, stats]) => ({
     dim_value,
     revenue: parseFloat(stats.revenue.toFixed(2)),
-    conversions: stats.conversions
+    conversions: parseFloat(stats.conversions.toFixed(4))
   }))
 
   return results.sort((a, b) => b[metric] - a[metric])
@@ -2721,14 +2721,14 @@ export async function getTimeDecayAttribution({
       const dimValue = touch[groupBy] || touch.source || 'direct'
       if (!aggregated[dimValue]) aggregated[dimValue] = { revenue: 0, conversions: 0 }
       aggregated[dimValue].revenue += parseFloat(touch.attributed_value || 0)
-      aggregated[dimValue].conversions += 1
+      aggregated[dimValue].conversions += parseFloat(touch.fraction || 0)
     }
   }
 
   const results = Object.entries(aggregated).map(([dim_value, stats]) => ({
     dim_value,
     revenue: parseFloat(stats.revenue.toFixed(2)),
-    conversions: stats.conversions
+    conversions: parseFloat(stats.conversions.toFixed(4))
   }))
 
   return results.sort((a, b) => b[metric] - a[metric])
@@ -2765,14 +2765,14 @@ export async function getWShapedAttribution({
       const dimValue = touch[groupBy] || touch.source || 'direct'
       if (!aggregated[dimValue]) aggregated[dimValue] = { revenue: 0, conversions: 0 }
       aggregated[dimValue].revenue += parseFloat(touch.attributed_value || 0)
-      aggregated[dimValue].conversions += 1
+      aggregated[dimValue].conversions += parseFloat(touch.fraction || 0)
     }
   }
 
   const results = Object.entries(aggregated).map(([dim_value, stats]) => ({
     dim_value,
     revenue: parseFloat(stats.revenue.toFixed(2)),
-    conversions: stats.conversions
+    conversions: parseFloat(stats.conversions.toFixed(4))
   }))
 
   return results.sort((a, b) => b[metric] - a[metric])
@@ -2812,14 +2812,14 @@ export async function getLinearAttribution({
         aggregated[dimValue] = { revenue: 0, conversions: 0 }
       }
       aggregated[dimValue].revenue += parseFloat(touch.attributed_value || 0)
-      aggregated[dimValue].conversions += 1
+      aggregated[dimValue].conversions += parseFloat(touch.fraction || 0)
     }
   }
 
   const results = Object.entries(aggregated).map(([dim_value, stats]) => ({
     dim_value,
     revenue: parseFloat(stats.revenue.toFixed(2)),
-    conversions: stats.conversions
+    conversions: parseFloat(stats.conversions.toFixed(4))
   }))
 
   return results.sort((a, b) => b[metric] - a[metric])
