@@ -39,7 +39,7 @@ async function main() {
 
   const now = Date.now();
   const distinctId = `demo_dedupe_reg_${now}`;
-  
+
   // Scenarios setup
   const orderIdHappy = `reg_happy_${now}`;
   const orderIdDiff = `reg_diff_${now}`;
@@ -157,12 +157,12 @@ async function main() {
 
   console.log('Flushing PostHog events...');
   await ph.flush();
-  
+
   console.log('Waiting 30 seconds for PostHog to ingest...');
   await new Promise(r => setTimeout(r, 30000));
 
   console.log('\n3. VERIFYING CLICKHOUSE (getFlexibleReport)...');
-  
+
   // Query Scenario A (using last_touch to query utm_campaign)
   const repA = await getFlexibleReport(siteId, 'last_touch', '2026-06-20', '2026-06-25', 'campaign', 'revenue', { campaign: orderIdHappy });
   const countRepA = await getFlexibleReport(siteId, 'last_touch', '2026-06-20', '2026-06-25', 'campaign', 'conversions', { campaign: orderIdHappy });
@@ -184,7 +184,7 @@ async function main() {
   console.log('✅ Scenario B ClickHouse Deduplication Verified.');
 
   // Query Scenario C (Keyless - should double count: $100 total, 2 conversions)
-  const repC = await getFlexibleReport(siteId, 'last_touch', '2026-06-20', '2026-06-25', 'campaign', 'revenue', { campaign: orderIdNull }); 
+  const repC = await getFlexibleReport(siteId, 'last_touch', '2026-06-20', '2026-06-25', 'campaign', 'revenue', { campaign: orderIdNull });
   const countRepC = await getFlexibleReport(siteId, 'last_touch', '2026-06-20', '2026-06-25', 'campaign', 'conversions', { campaign: orderIdNull });
   console.log('Scenario C ClickHouse Keyless (Should double count):', { revenue: repC, conversions: countRepC });
   if (repC[0]?.revenue !== 100 || countRepC[0]?.conversions !== 2) {
@@ -196,7 +196,7 @@ async function main() {
   execSync('node api/jobs/nightly-attribution.js', { stdio: 'inherit' });
 
   console.log('\n5. VERIFYING SUPABASE (attributed_conversions)...');
-  
+
   // Check Scenario A in DB
   const { data: dbRowsA } = await supabase
     .from('attributed_conversions')
