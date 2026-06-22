@@ -113,6 +113,11 @@ Deduplication requires an `order_id` / `external_event_id` to be present. Keyles
 
 Verified by code inspection: both the `days_to_convert` ([api/lib/attribution-engine.js:L1837-1841](file:///Users/ubaid/Desktop/trackiq/api/lib/attribution-engine.js#L1837-1841)) and `touchpoints_per_conversion` ([api/lib/attribution-engine.js:L1890-1894](file:///Users/ubaid/Desktop/trackiq/api/lib/attribution-engine.js#L1890-1894)) return paths explicitly supply a `conversions` weight field to `mergeGoogleResults`, ensuring they are weighted correctly rather than defaulting to naive equal-weighting.
 
+### 10. AI Search timestamp resolution seam
+
+The `/sources` AI-platform resolution joins conversion `first_touch_timestamp` to pageview `timestamp` by EXACT millisecond match. If they don't match (clock skew, precision, pageview outside the window/50k limit), AI conversions fall back to a hardcoded `'AI: ChatGPT'` default — which would misattribute Claude/Perplexity revenue to ChatGPT (same wrong-row class as A2). Verified working on seeded data where timestamps match exactly; production timestamp-match reliability is unverified. A later fix should fall back to `'AI: Other'` or `first_touch_source`, not guess ChatGPT.
+
+
 ## Recently fixed
 
 ### Safe JS-based Multi-Touch Attribution Engine (Session 105)

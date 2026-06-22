@@ -352,7 +352,7 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
 
     if (tab === 'ai_source') {
       let query = supabase.from('pageviews')
-        .select('session_id, ai_source')
+        .select('session_id, ai_source, timestamp')
         .eq('site_id', siteId)
         .gte('timestamp', from)
         .not('ai_source', 'is', null)
@@ -373,12 +373,29 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
       try {
         const { data: convRows } = await supabase
           .from('attributed_conversions')
-          .select('first_touch_source, conversion_value')
+          .select('distinct_id, conversion_value, first_touch_timestamp, first_touch_channel, first_touch_source')
           .eq('site_id', siteId)
           .gte('conversion_date', fromDate)
           .lte('conversion_date', toDate)
+
+        const pvMap = {}
+        ;(rows || []).forEach(pv => {
+          if (pv.timestamp) {
+            const timeMs = new Date(pv.timestamp).getTime()
+            pvMap[timeMs] = pv
+          }
+        })
+
         ;(convRows || []).forEach(r => {
-          const normName = normalizeAISourceName(r.first_touch_source)
+          let platform = null
+          if (r.first_touch_channel === 'AI Search') {
+            const matchTime = r.first_touch_timestamp ? new Date(r.first_touch_timestamp).getTime() : 0
+            const matchPv = pvMap[matchTime]
+            if (matchPv && matchPv.ai_source) {
+              platform = matchPv.ai_source
+            }
+          }
+          const normName = normalizeAISourceName(platform || r.first_touch_source)
           if (normName) {
             revenueByKey[normName] = (revenueByKey[normName] || 0) + (Number(r.conversion_value) || 0)
           }
@@ -428,7 +445,7 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
 
     // referrer / medium — group by pageviews
     let query = supabase.from('pageviews')
-      .select('referrer, utm_source, utm_medium, session_id, ai_source')
+      .select('referrer, utm_source, utm_medium, session_id, ai_source, timestamp')
       .eq('site_id', siteId)
       .gte('timestamp', from)
       .limit(50000)
@@ -472,16 +489,58 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
       try {
         const { data: convRows } = await supabase
           .from('attributed_conversions')
-          .select('first_touch_source, conversion_value')
+          .select('distinct_id, conversion_value, first_touch_timestamp, first_touch_channel, first_touch_source')
           .eq('site_id', siteId)
           .gte('conversion_date', fromDate)
           .lte('conversion_date', toDate)
-        ;(convRows || []).forEach(r => {
-          let key = (r.first_touch_source || 'Direct').toLowerCase()
-          if (isGoogleSource(key)) {
-            key = 'google'
+
+        const pvMap = {}
+        ;(rows || []).forEach(pv => {
+          if (pv.timestamp) {
+            const timeMs = new Date(pv.timestamp).getTime()
+            pvMap[timeMs] = pv
           }
-          revenueByKey[key] = (revenueByKey[key] || 0) + (Number(r.conversion_value) || 0)
+        })
+
+        ;(convRows || []).forEach(r => {
+          let key = 'Direct'
+          const channel = r.first_touch_channel || 'Direct'
+
+          if (channel === 'Paid Search' || channel === 'Organic Search') {
+            key = 'google'
+          } else if (channel === 'Direct') {
+            key = 'Direct'
+          } else if (channel === 'AI Search') {
+            const matchTime = r.first_touch_timestamp ? new Date(r.first_touch_timestamp).getTime() : 0
+            const matchPv = pvMap[matchTime]
+            if (matchPv && matchPv.ai_source) {
+              key = `AI: ${matchPv.ai_source}`
+            } else {
+              key = r.first_touch_source ? `AI: ${r.first_touch_source}` : 'AI: ChatGPT'
+            }
+          } else {
+            const matchTime = r.first_touch_timestamp ? new Date(r.first_touch_timestamp).getTime() : 0
+            const matchPv = pvMap[matchTime]
+            if (matchPv) {
+              if (matchPv.utm_source) key = matchPv.utm_source.toLowerCase()
+              else if (matchPv.referrer) {
+                try {
+                  const host = new URL(matchPv.referrer).hostname.replace('www.','')
+                  key = host
+                } catch {
+                  key = 'Direct'
+                }
+              }
+            } else {
+              key = r.first_touch_source || 'Direct'
+            }
+          }
+
+          let lowerKey = key.toLowerCase()
+          if (isGoogleSource(lowerKey)) {
+            lowerKey = 'google'
+          }
+          revenueByKey[lowerKey] = (revenueByKey[lowerKey] || 0) + (Number(r.conversion_value) || 0)
         })
       } catch (_e) { /* table may be empty */ }
     }
