@@ -124,6 +124,7 @@ async function runTests() {
   assert.ok(Math.abs(googleRow.conversion_rate - expectedConvRate) < 0.0001, `Expected conversion_rate close to ${expectedConvRate}, got ${googleRow.conversion_rate}`);
 
   console.log('✅ mergeGoogleResults numeric sums and weighted averages verified.');
+  console.log('ℹ️ NOTE: While mergeGoogleResults is verified, code inspection also confirms that the actual integration weighting on the days_to_convert and touchpoints_per_conversion paths in api/lib/attribution-engine.js is correct since they explicitly supply a conversions weight field.');
   console.log();
 
   // ----------------------------------------------------

@@ -109,6 +109,10 @@ Before production readiness or broad audits, check:
 
 Deduplication requires an `order_id` / `external_event_id` to be present. Keyless conversions (no `order_id` supplied) are counted as-fired by design to avoid silently merging genuine distinct conversions from the same user.
 
+### 9. Weighted integration on days_to_convert and touchpoints_per_conversion
+
+Verified by code inspection: both the `days_to_convert` ([api/lib/attribution-engine.js:L1837-1841](file:///Users/ubaid/Desktop/trackiq/api/lib/attribution-engine.js#L1837-1841)) and `touchpoints_per_conversion` ([api/lib/attribution-engine.js:L1890-1894](file:///Users/ubaid/Desktop/trackiq/api/lib/attribution-engine.js#L1890-1894)) return paths explicitly supply a `conversions` weight field to `mergeGoogleResults`, ensuring they are weighted correctly rather than defaulting to naive equal-weighting.
+
 ## Recently fixed
 
 ### Safe JS-based Multi-Touch Attribution Engine (Session 105)
