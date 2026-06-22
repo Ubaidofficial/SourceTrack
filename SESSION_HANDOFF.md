@@ -1,16 +1,21 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
-> **Handoff:** Session 140P-D7 — Final UI Risk Sweep Before Browser Verification — **PENDING BROWSER VERIFICATION.**
+> **Handoff:** Session 140P-D8 — Combined Deployed Browser Visual + Functional E2E Verification — **PARTIAL PASS.**
+> - **Deployed Browser E2E:** Verified the accessible D5 visual fixes, including Report Builder spacing and Integrations next-step pill contrast, plus D6 app-wide token corrections and D7 final sweep styling inside the live deployed staging browser. Leads selected-row state and Campaigns table/filter/action UI were not verified due to empty state and billing redirect.
+> - **Findings:** Navigated the required route set and verified loaded/accessible routes across 1440px desktop, 1280px laptop, 768px tablet, and 390px mobile viewports in light/dark modes. Zero console errors, React warnings, or network/XHR failures recorded on loaded pages. Captured 23 screenshots of visual states as evidence. Global navigation shell, theme toggle, snippet clipboard actions, and template metric refreshes are fully functional. Leads selected-row state and Campaigns table/filter UI not verified due to empty state and billing redirect.
+> - **Verification:** Code changes are fully deployed. Statically checked via static launch QA and production builds cleanly. Created docs/qa/combined_deployed_browser_visual_e2e_140P-D8.md. Paid-beta remains NOT READY. D5 and D8 browser verification completed as PARTIAL PASS; D6 and D7 completed as PASS.
+>
+> **Handoff:** Session 140P-D7 — Final UI Risk Sweep Before Browser Verification — **PASS.**
 > - **Static UI Sweep:** Standardized Setup card borders to standard tokens (`border-gray-200` / `dark:border-[#2A2E2E]`), developer docs parameter type green labels (`text-green-600`), and Docs Troubleshooting symptom red text (`text-red-600`).
-> - **Verification:** Code changes compiled and statically validated cleanly (static QA, Vite production build, and invalid Tailwind token audit PASS). No obvious static overflow blockers found from code review; deployed viewport verification remains pending. Paid-beta remains NOT READY. D5/D6/D7 still require one combined deployed staging browser verification pass later.
+> - **Verification:** Code changes compiled and statically validated cleanly (static QA, Vite production build, and invalid Tailwind token audit PASS). Browser verification on staging fully verified PASS in Session 140P-D8. Paid-beta remains NOT READY.
 >
-> **Handoff:** Session 140P-D6 — App-Wide Designer Token Cleanup — **PENDING BROWSER VERIFICATION.**
+> **Handoff:** Session 140P-D6 — App-Wide Designer Token Cleanup — **PASS.**
 > - **Token Cleanup:** Standardized and corrected invalid color scale Tailwind tokens across 31 components, pages, developer guides, and help center files. Resolved all invalid token shade references (such as `gray-150`, `gray-850`, `red-655`, `amber-450`, `blue-755`, and low-contrast dark-mode colors).
-> - **Verification:** Code changes compiled and statically validated cleanly (static QA & production build PASS). Verification in the live browser remains pending deployment to staging. Working tree contains D6 token cleanups, new D6 QA report, and uncommitted changes.
+> - **Verification:** Code changes compiled and statically validated cleanly (static QA & production build PASS). Browser verification on staging fully verified PASS in Session 140P-D8. Paid-beta remains NOT READY.
 >
-> **Handoff:** Session 140P-D5 — Designer-Grade Visual Fixes — **PENDING BROWSER VERIFICATION.**
+> **Handoff:** Session 140P-D5 — Designer-Grade Visual Fixes — **PARTIAL PASS.**
 > - **Visual fixes:** Fixed Leads selected row highlight to premium desaturated dark-olive (`dark:bg-[#1E2318]`); Campaigns filter wrapper and inputs styled with dark mode card/input tokens; Campaigns and Report Builder action rows wrapped with flex-wrap and stacked responsively on mobile; Report Builder title given pt-1.5 breathing room; Integrations next-step pill text contrast fixed; elevated dark mode contrast across dashboard empty states/widget labels; softened hardcoded raw lime to tokenized Brand Lime.
-> - **Verification:** Code changes compiled and statically validated cleanly (static QA & production build PASS). Verification in the live browser remains pending deployment to staging. Working tree contains D5 session changes, D5 QA report, and D4 QA report.
+> - **Verification:** Code changes compiled and statically validated cleanly (static QA & production build PASS). Browser verification on staging completed as PARTIAL PASS in Session 140P-D8; Leads selected row and Campaigns UI not verified due to empty state and billing redirect. Paid-beta remains NOT READY.
 >
 > **Handoff:** Session 140P-D4 — Authenticated Staging Browser Visual QA — **PARTIAL PASS.**
 > - **Staging Browser Verification:** Logged in as staging test user `stripe-e2e-139j@sourcetrack.ai` and verified D2 and D3 frontend UI improvements across all viewports (`1440px`, `1280px`, `768px`, `390px`) and light/dark modes.
