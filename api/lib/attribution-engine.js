@@ -3,7 +3,7 @@ import { queryHogQL } from './posthog.js'
 import { deriveSessions, annotateSessions } from './sessionization.js'
 import { channelFromEvent, detectAiPlatformFromEvent } from './channel-classifier.js'
 import { getSupabase } from './supabase.js'
-import { esc } from './utils.js'
+import { esc, isGoogleSource } from './utils.js'
 import { serializeHogQLDateRange, serializeHogQLDateTime, buildHogQLTimestampFilter } from './hogql-date.js'
 
 
@@ -1534,7 +1534,10 @@ export async function getMultiTouchAttributionLive({
       ko_click_id: ko_click_id || null,
       page_url: pageUrl || null,
       utm_term: utmTerm || null,
-      derived_source: utmSource || aiSource || (referrer ? (() => { try { return new URL(referrer).hostname.replace('www.', '') } catch (_) { return null } })() : null) || 'direct'
+      derived_source: (() => {
+        const raw = utmSource || aiSource || (referrer ? (() => { try { return new URL(referrer).hostname.replace('www.', '') } catch (_) { return null } })() : null) || 'direct'
+        return isGoogleSource(raw) ? 'google' : raw
+      })()
     }
 
     if (custKey1) pvObj[`custom_${custKey1}`] = row[23]
@@ -1684,10 +1687,11 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
       attributionWindow,
       attributeBy
     })
-    const isTruncated = results.length >= 50000
+    const merged = mergeGoogleResults(results, groupBy, groupBy2, metric)
+    const isTruncated = merged.length >= 50000
     const returnValue = isTruncated
-      ? { results, truncated: true, truncated_at: 50000 }
-      : results
+      ? { results: merged, truncated: true, truncated_at: 50000 }
+      : merged
 
     cache.set(key, returnValue)
     return returnValue
@@ -1706,10 +1710,11 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
       attributionWindow,
       attributeBy
     })
-    const isTruncated = results.length >= 50000
+    const merged = mergeGoogleResults(results, groupBy, groupBy2, metric)
+    const isTruncated = merged.length >= 50000
     const returnValue = isTruncated
-      ? { results, truncated: true, truncated_at: 50000 }
-      : results
+      ? { results: merged, truncated: true, truncated_at: 50000 }
+      : merged
 
     cache.set(key, returnValue)
     return returnValue
@@ -1783,10 +1788,11 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
       touchpoints: Number(touchpoints) || 0
     }))
 
+    const merged = mergeGoogleResults(results, groupBy, groupBy2, 'revenue')
     const isTruncated = rows.length >= 50000
     const returnValue = isTruncated
-      ? { results, truncated: true, truncated_at: 50000 }
-      : results
+      ? { results: merged, truncated: true, truncated_at: 50000 }
+      : merged
 
     cache.set(key, returnValue)
     return returnValue
@@ -1834,10 +1840,11 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
       conversions: Number(conversions) || 0
     }))
 
+    const merged = mergeGoogleResults(results, groupBy, groupBy2, 'days_to_convert')
     const isTruncated = rows.length >= 50000
     const returnValue = isTruncated
-      ? { results, truncated: true, truncated_at: 50000 }
-      : results
+      ? { results: merged, truncated: true, truncated_at: 50000 }
+      : merged
 
     cache.set(key, returnValue)
     return returnValue
@@ -1886,10 +1893,11 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
       conversions: Number(conversions) || 0
     }))
 
+    const merged = mergeGoogleResults(results, groupBy, groupBy2, 'touchpoints_per_conversion')
     const isTruncated = rows.length >= 50000
     const returnValue = isTruncated
-      ? { results, truncated: true, truncated_at: 50000 }
-      : results
+      ? { results: merged, truncated: true, truncated_at: 50000 }
+      : merged
 
     cache.set(key, returnValue)
     return returnValue
@@ -2503,11 +2511,12 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     }
   }
 
+  const merged = mergeGoogleResults(results, groupBy, groupBy2, metricLabel)
   const isTruncated = rows.length >= 50000
 
   const finalResult = isTruncated
-    ? { results, truncated: true, truncated_at: 50000 }
-    : results
+    ? { results: merged, truncated: true, truncated_at: 50000 }
+    : merged
 
   cache.set(key, finalResult)
   return finalResult
@@ -2607,7 +2616,10 @@ export async function getPreAggregatedAttribution({
   // Aggregate by dimension
   const aggregated = {}
   for (const row of rows) {
-    const dimValue = row[selectField] || 'direct'
+    let dimValue = row[selectField] || 'direct'
+    if (isGoogleSource(dimValue)) {
+      dimValue = 'google'
+    }
     if (!aggregated[dimValue]) {
       aggregated[dimValue] = { revenue: 0, conversions: 0 }
     }
@@ -2987,3 +2999,56 @@ export function calculateAttribution(touchpoints, conversionValue) {
     w_shaped: adjustReconciliation(w_shaped)
   }
 }
+
+export function mergeGoogleResults(results, groupBy, groupBy2, metricLabel) {
+  if (!Array.isArray(results)) return results
+  const mergedResults = []
+  const seen = new Map()
+  for (const item of results) {
+    if (isGoogleSource(item.dim_value)) {
+      item.dim_value = 'google'
+    }
+    if (groupBy2 && isGoogleSource(item.dim_value2)) {
+      item.dim_value2 = 'google'
+    }
+
+    let key = item.dim_value
+    if (groupBy2) {
+      key += '|||' + item.dim_value2
+    }
+
+    if (seen.has(key)) {
+      const existing = seen.get(key)
+      for (const k of Object.keys(item)) {
+        if (k === 'dim_value' || k === 'dim_value2' || k === 'conversions' || k === 'sessions') continue
+        if (typeof item[k] === 'number') {
+          if (k === 'avg_conversion_value' || k === 'days_to_convert' || k === 'touchpoints_per_conversion' || k === 'conversion_rate') {
+            const existingWeight = existing.conversions || existing.sessions || 1
+            const itemWeight = item.conversions || item.sessions || 1
+            existing[k] = (existing[k] * existingWeight + item[k] * itemWeight) / (existingWeight + itemWeight)
+          } else {
+            existing[k] = (existing[k] || 0) + item[k]
+          }
+        }
+      }
+      if (item.conversions !== undefined) {
+        existing.conversions = (existing.conversions || 0) + item.conversions
+      }
+      if (item.sessions !== undefined) {
+        existing.sessions = (existing.sessions || 0) + item.sessions
+      }
+    } else {
+      seen.set(key, { ...item })
+      mergedResults.push(seen.get(key))
+    }
+  }
+
+  // Sort again as merging could disrupt order
+  if (groupBy === 'date') {
+    mergedResults.sort((a, b) => String(a.dim_value).localeCompare(String(b.dim_value)))
+  } else {
+    mergedResults.sort((a, b) => (b[metricLabel] || 0) - (a[metricLabel] || 0))
+  }
+  return mergedResults
+}
+

@@ -231,7 +231,7 @@ export default function Campaigns() {
   const [spendInput, setSpendInput] = useState('')
   const [savingState, setSavingState] = useState({ campaign: null, status: 'idle' }) // 'idle' | 'saving' | 'success' | 'error'
   const [site, setSite] = useState(null)
-  const [activeDim, setActiveDim] = useState('source')
+  const [activeDim, setActiveDim] = useState('campaign')
   const [dateRange, setDateRange] = useState(30)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')

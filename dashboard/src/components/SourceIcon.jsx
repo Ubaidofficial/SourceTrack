@@ -94,7 +94,7 @@ export function normalizeSource(source = '') {
 
   // 4. Organic Search
   if (src.includes('google') || src.includes('google organic') || src.includes('google search') || src.includes('google.co')) {
-    return { name: 'Google Organic', brandKey: 'google', category: 'search' }
+    return { name: 'Google', brandKey: 'google', category: 'search' }
   }
   if (src.includes('bing')) {
     return { name: 'Bing', brandKey: 'microsoft', category: 'search' }

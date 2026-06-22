@@ -46,6 +46,30 @@ export function normalizeUtm(value) {
 }
 
 /**
+ * Checks if a string is a general Google variant (e.g. google, google.com, google.co.uk).
+ * Tightly matches google.<tld> or www.google.<tld> where TLD is country/generic.
+ *
+ * @param {*} val
+ * @returns {boolean}
+ */
+export function isGoogleSource(val) {
+  if (!val || typeof val !== 'string') return false
+  const lower = val.trim().toLowerCase()
+  if (lower === 'google') return true
+  const parts = lower.split('.')
+  const cleanParts = parts[0] === 'www' ? parts.slice(1) : parts
+  if (cleanParts[0] !== 'google') return false
+  if (cleanParts.length === 2) {
+    return /^[a-z]{2,6}$/.test(cleanParts[1])
+  }
+  if (cleanParts.length === 3) {
+    return cleanParts[1] === 'co' || cleanParts[1] === 'com' || cleanParts[1] === 'org' || cleanParts[1] === 'net'
+  }
+  return false
+}
+
+
+/**
  * Sanitize Google ValueTrack parameters safely:
  * - Stringify, trim, and remove control characters.
  * - Cap length to 100 characters.

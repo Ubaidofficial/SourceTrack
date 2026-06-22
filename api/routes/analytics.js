@@ -4,7 +4,7 @@ import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { getSupabase } from '../lib/supabase.js'
-import { redactPiiFromUrl, redactPiiFromObject } from '../lib/utils.js'
+import { redactPiiFromUrl, redactPiiFromObject, isGoogleSource } from '../lib/utils.js'
 import { requireFeature, isSiteStatusBlocked } from '../lib/plan-features.js'
 import { claimPageviewUsage } from '../lib/pageview-limits.js'
 import {
@@ -17,7 +17,7 @@ import {
 const router = express.Router()
 
 // Known bot/crawler UA patterns — silent drop (return 200 so bots don't retry)
-const BOT_UA_PATTERN = /bot|crawl|spider|slurp|mediapartners|adsbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot|discordbot|applebot|bingpreview|googleweblight|lighthouse|pagespeed|headlesschrome|phantomjs|selenium|puppeteer|playwright|wget|curl\/|python-requests|axios\/|go-http|java\/|ruby\/|php\//i
+const BOT_UA_PATTERN = /bot|crawl|spider|slurp|mediapartners|adsbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot|discordbot|applebot|bingpreview|googleweblight|lighthouse|pagespeed|headlesschrome|phantomjs|selenium|puppeteer|playwright|wget|curl\/|python-requests|axios\/|go-http|java\/|ruby\/|php\/|google-extended|headless/i
 
 // ─── Filter parsing ──────────────────────────────────────────────────────────
 // Supports two formats:
@@ -443,9 +443,21 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
       } else {
         // referrer tab — fall through classification (matches /summary classifySource)
         if (r.ai_source) key = `AI: ${r.ai_source}`
+        else if (r.utm_source && isGoogleSource(r.utm_source)) {
+          key = 'google'
+        }
         else if (r.utm_source) key = r.utm_source.toLowerCase()
         else if (r.referrer) {
-          try { key = new URL(r.referrer).hostname.replace('www.','') } catch { key = 'Direct' }
+          try {
+            const host = new URL(r.referrer).hostname.replace('www.','')
+            if (isGoogleSource(host)) {
+              key = 'google'
+            } else {
+              key = host
+            }
+          } catch {
+            key = 'Direct'
+          }
         } else {
           key = 'Direct'
         }
@@ -465,7 +477,10 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
           .gte('conversion_date', fromDate)
           .lte('conversion_date', toDate)
         ;(convRows || []).forEach(r => {
-          const key = (r.first_touch_source || 'Direct').toLowerCase()
+          let key = (r.first_touch_source || 'Direct').toLowerCase()
+          if (isGoogleSource(key)) {
+            key = 'google'
+          }
           revenueByKey[key] = (revenueByKey[key] || 0) + (Number(r.conversion_value) || 0)
         })
       } catch (_e) { /* table may be empty */ }

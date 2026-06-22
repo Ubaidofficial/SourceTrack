@@ -22,7 +22,7 @@ function escapeCsv(val) {
 async function getCampaignsData(req) {
   const posthogSiteId = String(req.site.id)
 
-  const dimension = req.query.dimension || 'source'
+  const dimension = req.query.dimension || 'campaign'
   if (!ALLOWED_DIMS.has(dimension)) {
     throw new Error(`Invalid dimension. Must be one of: ${[...ALLOWED_DIMS].join(', ')}`)
   }

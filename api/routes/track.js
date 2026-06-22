@@ -14,7 +14,7 @@ import { getSupabase } from '../lib/supabase.js'
 
 // Same crawler pattern used by /api/analytics/collect — keeps PostHog event
 // counts clean (Googlebot, Lighthouse, scripted clients don't represent users).
-const BOT_UA_PATTERN = /bot|crawl|spider|slurp|mediapartners|adsbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot|discordbot|applebot|bingpreview|googleweblight|lighthouse|pagespeed|headlesschrome|phantomjs|selenium|puppeteer|playwright|wget|curl\/|python-requests|axios\/|go-http|java\/|ruby\/|php\//i
+const BOT_UA_PATTERN = /bot|crawl|spider|slurp|mediapartners|adsbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot|discordbot|applebot|bingpreview|googleweblight|lighthouse|pagespeed|headlesschrome|phantomjs|selenium|puppeteer|playwright|wget|curl\/|python-requests|axios\/|go-http|java\/|ruby\/|php\/|google-extended|headless/i
 
 async function updateTelemetryMetadata(site, body) {
   try {
