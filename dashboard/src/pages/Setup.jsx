@@ -482,7 +482,7 @@ export default function Setup() {
                 </div>
 
                 {/* Card 2 */}
-                <div className="border border-[#E2E8F0] dark:border-dark-border rounded-xl p-4 space-y-2">
+                <div className="border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-2">
                   <h4 className="text-xs font-bold text-st-black dark:text-white font-sans">Report Builder Basics</h4>
                   <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
                     Once tracking events arrive, use the Report Builder to organize metrics by channel group-bys, models, and campaign names.
@@ -504,7 +504,7 @@ export default function Setup() {
                 </div>
 
                 {/* Card 4 */}
-                <div className="border border-[#E2E8F0] dark:border-dark-border rounded-xl p-4 space-y-2">
+                <div className="border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-2">
                   <h4 className="text-xs font-bold text-st-black dark:text-white font-sans">Troubleshooting Diagnostic Issues</h4>
                   <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
                     See explanations for common Tracking Doctor errors, wrong domain warnings, or missing telemetry messages.

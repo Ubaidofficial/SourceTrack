@@ -18,7 +18,7 @@ function HeaderTable({ headers }) {
           {headers.map((h, i) => (
             <tr key={i} className="border-b border-gray-100 dark:border-gray-800/60 last:border-0">
               <td className="py-2 pr-4 font-mono text-[13px] text-gray-800 dark:text-gray-200 align-top">{h.name}</td>
-              <td className="py-2 pr-4 text-[13px] text-[#00AA57] dark:text-green-400 font-mono align-top">{h.type}</td>
+              <td className="py-2 pr-4 text-[13px] text-green-600 dark:text-green-400 font-mono align-top">{h.type}</td>
               <td className="py-2 text-[13px] text-gray-600 dark:text-gray-400 align-top">{h.desc}</td>
             </tr>
           ))}

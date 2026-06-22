@@ -1,5 +1,9 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
+> **Handoff:** Session 140P-D7 — Final UI Risk Sweep Before Browser Verification — **PENDING BROWSER VERIFICATION.**
+> - **Static UI Sweep:** Standardized Setup card borders to standard tokens (`border-gray-200` / `dark:border-[#2A2E2E]`), developer docs parameter type green labels (`text-green-600`), and Docs Troubleshooting symptom red text (`text-red-600`).
+> - **Verification:** Code changes compiled and statically validated cleanly (static QA, Vite production build, and invalid Tailwind token audit PASS). No obvious static overflow blockers found from code review; deployed viewport verification remains pending. Paid-beta remains NOT READY. D5/D6/D7 still require one combined deployed staging browser verification pass later.
+>
 > **Handoff:** Session 140P-D6 — App-Wide Designer Token Cleanup — **PENDING BROWSER VERIFICATION.**
 > - **Token Cleanup:** Standardized and corrected invalid color scale Tailwind tokens across 31 components, pages, developer guides, and help center files. Resolved all invalid token shade references (such as `gray-150`, `gray-850`, `red-655`, `amber-450`, `blue-755`, and low-contrast dark-mode colors).
 > - **Verification:** Code changes compiled and statically validated cleanly (static QA & production build PASS). Verification in the live browser remains pending deployment to staging. Working tree contains D6 token cleanups, new D6 QA report, and uncommitted changes.
