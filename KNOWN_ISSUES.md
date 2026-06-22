@@ -105,7 +105,9 @@ Before production readiness or broad audits, check:
 
     find api dashboard/src tracker -name "*.bak*" -print
 
-Do not commit unnecessary `.bak` files.
+### 8. Keyless conversions bypass deduplication
+
+Deduplication requires an `order_id` / `external_event_id` to be present. Keyless conversions (no `order_id` supplied) are counted as-fired by design to avoid silently merging genuine distinct conversions from the same user.
 
 ## Recently fixed
 

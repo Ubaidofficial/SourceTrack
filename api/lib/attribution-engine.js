@@ -2104,6 +2104,23 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
       throw new Error(`Unknown metric: ${metric}`)
   }
 
+  // Deduplicate conversions by external_event_id before grouping/aggregating in ClickHouse
+  if (eventFilter && eventFilter.includes("event = '$conversion'")) {
+    eventFilter += ` AND (
+      properties.external_event_id IS NULL
+      OR toString(properties.external_event_id) = ''
+      OR uuid IN (
+        SELECT argMin(uuid, timestamp)
+        FROM events
+        WHERE properties.site_id = '${safeSite}'
+          AND event = '$conversion'
+          AND properties.external_event_id IS NOT NULL
+          AND toString(properties.external_event_id) != ''
+        GROUP BY properties.external_event_id
+      )
+    )`
+  }
+
   // Attribution window: when set on a touchpoint model, only credit pageview touchpoints
   // that occurred within N days before each conversion. If no qualifying touchpoint exists
   // inside the window, the conversion falls back to 'direct'.

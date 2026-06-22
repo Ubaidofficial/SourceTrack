@@ -170,12 +170,13 @@ async function processSite(site) {
       distinct_id,
       timestamp,
       properties.conversion_type,
-      properties.conversion_value
+      properties.conversion_value,
+      properties.external_event_id
     FROM events
     WHERE event = '$conversion'
       AND properties.site_id = '${site.id}'
       AND timestamp >= now() - INTERVAL 24 HOUR
-    ORDER BY timestamp DESC
+    ORDER BY timestamp ASC
     LIMIT 1000
   `
   
@@ -202,7 +203,8 @@ async function processSite(site) {
         distinct_id: row[1],
         timestamp: row[2],
         conversion_type: row[3],
-        conversion_value: row[4]
+        conversion_value: row[4],
+        external_event_id: row[5] || null
       }
       
       await processConversion(site, conversion)
@@ -395,6 +397,7 @@ async function processConversion(site, conversion) {
     conversion_timestamp: conversion.timestamp,
     conversion_type: conversion.conversion_type || null,
     conversion_value: convValue,
+    external_event_id: conversion.external_event_id || null,
 
     first_touch_source: attribution.first_touch?.source || attribution.first_touch?.derived_source || null,
     first_touch_medium: attribution.first_touch?.medium || null,
