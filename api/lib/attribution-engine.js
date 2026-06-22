@@ -3051,4 +3051,3 @@ export function mergeGoogleResults(results, groupBy, groupBy2, metricLabel) {
   }
   return mergedResults
 }
-

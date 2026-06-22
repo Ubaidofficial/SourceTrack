@@ -12,7 +12,7 @@ async function runTests() {
   // TEST 1: isGoogleSource pattern matching
   // ----------------------------------------------------
   console.log('--- TEST 1: isGoogleSource ---');
-  
+
   const positiveCases = [
     'google',
     'google.com',
@@ -160,7 +160,7 @@ async function runTests() {
     } else {
       key = 'Direct';
     }
-    
+
     groups[key] = groups[key] || { name: key, visitors_set: new Set() };
     if (r.session_id) groups[key].visitors_set.add(r.session_id);
   });
