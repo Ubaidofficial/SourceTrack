@@ -953,8 +953,16 @@ export default function ReportBuilder() {
     window.open(`/api/export/report?${params}`, '_blank')
   }
 
-  const getMetricValue = (row) => {
-    return row[metric] || row.revenue || row.conversions || row.sessions || row.leads || row.conversion_rate || row.avg_conversion_value || 0
+  const getMetricValue = (row, metricKey = metric) => {
+    if (!row) return 0
+    const v = row[metricKey]
+    if (v === undefined) {
+      if (import.meta.env.DEV) {
+        console.warn(`metric key missing: ${metricKey}`, row)
+      }
+      return 0
+    }
+    return Number(v) || 0
   }
 
   const MULTI_COLORS = [
@@ -972,7 +980,7 @@ export default function ReportBuilder() {
           const mDef = METRICS.find(x => x.key === mk)
           return {
             label: mDef?.label || mk,
-            data: results.slice(0, 15).map(r => r[mk] ?? 0),
+            data: results.slice(0, 15).map(r => getMetricValue(r, mk)),
             backgroundColor: chartType === 'area' ? MULTI_COLORS[mi % MULTI_COLORS.length].replace('0.85)', '0.15)') : MULTI_COLORS[mi % MULTI_COLORS.length],
             borderColor: chartType === 'line' || chartType === 'area' ? MULTI_COLORS[mi % MULTI_COLORS.length] : undefined,
             borderRadius: chartType === 'bar' ? 4 : 0,
@@ -997,7 +1005,16 @@ export default function ReportBuilder() {
     maintainAspectRatio: false,
     plugins: {
       legend: { display: chartType === 'pie', position: 'right' },
-      tooltip: { callbacks: { label: (ctx) => `${metricLabel}: ${metricFormat(ctx.raw)}` } }
+      tooltip: {
+        callbacks: {
+          label: (ctx) => {
+            const datasetKey = isMultiMetric ? selectedMetrics[ctx.datasetIndex] : metric
+            const mDef = METRICS.find(m => m.key === datasetKey)
+            const fmt = mDef?.format || ((v) => String(v))
+            return `${ctx.dataset.label || metricLabel}: ${fmt(ctx.raw)}`
+          }
+        }
+      }
     },
     scales: chartType !== 'pie' ? {
       y: { beginAtZero: true, ticks: { callback: (v) => metric === 'revenue' || metric === 'avg_conversion_value' ? `$${v}` : v } }
@@ -2249,13 +2266,13 @@ export default function ReportBuilder() {
                           {selectedMetrics.map(mk => {
                             const mDef = METRICS.find(m => m.key === mk)
                             const fmt = mDef?.format || (v => String(v))
-                            const totalVal = results.reduce((s, r) => s + (r[mk] ?? 0), 0)
+                            const totalVal = results.reduce((s, r) => s + getMetricValue(r, mk), 0)
                             return <td key={mk} className="py-2.5 px-4 text-right text-xs font-bold text-st-black dark:text-white tabular-nums">{fmt(totalVal)}</td>
                           })}
                           {showCompare && selectedMetrics.map(mk => {
-                            const curTotal = results.reduce((s, r) => s + (r[mk] ?? 0), 0)
+                            const curTotal = results.reduce((s, r) => s + getMetricValue(r, mk), 0)
                             const priorRows = priorReportData?.results || []
-                            const priorTotal = priorRows.reduce((s, r) => s + (r[mk] ?? 0), 0)
+                            const priorTotal = priorRows.reduce((s, r) => s + getMetricValue(r, mk), 0)
                             const delta = priorTotal > 0 ? ((curTotal - priorTotal) / priorTotal) * 100 : null
                             return (
                               <td key={mk + '_chg_sum'} className="py-2.5 px-4 text-right text-xs tabular-nums">
@@ -2293,11 +2310,11 @@ export default function ReportBuilder() {
                               {selectedMetrics.map(mk => {
                                 const mDef = METRICS.find(m => m.key === mk)
                                 const fmt = mDef?.format || (v => String(v))
-                                return <td key={mk} className="py-2.5 px-4 text-right font-semibold text-st-black dark:text-white tabular-nums">{fmt(r[mk] ?? 0)}</td>
+                                return <td key={mk} className="py-2.5 px-4 text-right font-semibold text-st-black dark:text-white tabular-nums">{fmt(getMetricValue(r, mk))}</td>
                               })}
                               {showCompare && selectedMetrics.map(mk => {
-                                const cur = r[mk] ?? 0
-                                const prior = priorRow?.[mk] ?? 0
+                                const cur = getMetricValue(r, mk)
+                                const prior = getMetricValue(priorRow, mk)
                                 const delta = prior > 0 ? ((cur - prior) / prior) * 100 : null
                                 return (
                                   <td key={mk + '_chg'} className="py-2.5 px-4 text-right text-xs tabular-nums">

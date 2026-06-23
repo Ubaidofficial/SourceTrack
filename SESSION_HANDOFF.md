@@ -1,5 +1,13 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
+> **Handoff:** Session 140P-RB-FIX-3 — Report Builder Frontend Chart/Table Metric Mismatch — **PASS.**
+> - **Unified Metric Resolver:** Refactored `getMetricValue(row, metricKey = metric)` to resolve metric values using the correct metric key, coalescing missing or non-numeric values to `0`.
+> - **DEV Warning for Missing Keys:** Programmed a console warning in DEV mode if the key is entirely missing (`undefined`) from the row object, preventing silent data regressions while remaining safe in production.
+> - **Applied Call Sites Unification:** Updated the chart datasets (single-metric and multi-metric), the table rows, and the table summary total/comparison rows to use the unified `getMetricValue` resolver instead of direct bracket lookups or ad-hoc fallback chains.
+> - **Standardized Formatting:** Refactored the chart tooltip callback to dynamically retrieve and apply the correct formatter function for each metric key, ensuring currency (for `revenue` / `avg_conversion_value`) and integers (for `leads` / `customers` / `conversions`) display correctly on both single and multi-metric charts.
+> - **Vite Production Build:** Verified the dashboard build successfully passes with `npm run build`.
+
+>
 > **Handoff:** Session 140P-RB-FIX-1-2 — Report Builder pre-aggregated leads metric bypass & Timezone Boundaries — **PASS.**
 > - **Pre-aggregated Leads/Customers Fix:** Added `conversion_type` to the Supabase select query in `getPreAggregatedAttribution` (in `api/lib/attribution-engine.js`). Used `classifyConversionType` from `conversion-classifier.js` to aggregate `leads` and `customers` metrics on the pre-aggregated path (`first_touch` / `last_touch`). Calculated `avg_conversion_value` as `revenue / customers`. Added fallback sort-key logic.
 > - **Timezone date boundaries & HQL Fix:** Resolved the ClickHouse/HogQL `toDateTime` UTC coercion bug in `getDateFilterExpr` by passing the timezone parameter explicitly to both sides of the boundary comparisons. This correctly captures boundary conversions (such as the UTC 23:08 and 23:30 conversions on June 20, which fall on June 21 Paris-local time), bringing Campaigns overview, Dashboard, and Report Builder into 100% mathematical agreement (4 conversions and $198 revenue).
