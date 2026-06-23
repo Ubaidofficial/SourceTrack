@@ -28,7 +28,7 @@ async function request(path, token, options = {}) {
 
 test('Timezone boundary reconciliation across Dashboard, Analytics, and Campaigns', async (t) => {
   const supabase = getSupabase();
-  
+
   // Log in
   const { data: loginData, error: loginErr } = await supabase.auth.signInWithPassword({
     email: DEMO_EMAIL,
@@ -67,10 +67,10 @@ test('Timezone boundary reconciliation across Dashboard, Analytics, and Campaign
   await t.test('Campaigns Overview agrees on the 30-day KPIs ($1,110 and 31 conversions) and correct local dateTo', async () => {
     const campaignsRes = await request(`/api/campaigns/overview?site_key=${DEMO_SITE_KEY}&days=30&model=last_touch&dimension=campaign`, token);
     assert.strictEqual(campaignsRes.status, 200);
-    
+
     // Check that dateTo returned in response matches June 23 (local Paris time)
     assert.strictEqual(campaignsRes.body.data?.dateTo, '2026-06-23', 'Campaigns dateTo must be June 23, 2026 (local Paris date)');
-    
+
     // Check KPIs match the dashboard's 30-day counts
     const kpis = campaignsRes.body.data?.kpis;
     assert.strictEqual(kpis?.total_revenue, 1110, 'Campaigns 30-day revenue must be $1,110');
