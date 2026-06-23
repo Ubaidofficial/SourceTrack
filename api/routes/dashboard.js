@@ -5,6 +5,8 @@ import { getSupabase as getSupabaseAdmin } from '../lib/supabase.js'
 import { esc, isValidTimezone, getLocalDateString, getPaddedUtcDateRange } from '../lib/utils.js'
 import { channelFromEvent } from '../lib/channel-classifier.js'
 import { getSetupDiagnostics } from '../lib/setup-doctor.js'
+import { classifyConversionType } from '../lib/conversion-classifier.js'
+
 
 
 const router = Router()
@@ -122,6 +124,8 @@ router.get('/overview', validateSiteKey, async (req, res) => {
 
     let totalRevenue = 0
     let totalConversions = 0
+    let totalLeads = 0
+    let totalCustomers = 0
     let totalAIRevenue = 0
     let sqlCount = 0
     let ftNonDirectRevenue = 0
@@ -142,6 +146,14 @@ router.get('/overview', validateSiteKey, async (req, res) => {
 
       totalRevenue += val
       totalConversions++
+
+      const typeClass = classifyConversionType(r.conversion_type)
+      if (typeClass === 'lead') {
+        totalLeads++
+      } else if (typeClass === 'customer') {
+        totalCustomers++
+      }
+
       if (r.status === 'sql') sqlCount++
       if (ftChannel !== 'Direct') ftNonDirectRevenue += val
       if (ltChannel !== 'Direct') ltNonDirectRevenue += val
@@ -165,7 +177,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       }
 
       // channel/leads trend by date
-      if (localDate) {
+      if (localDate && typeClass === 'lead') {
         if (!channelTrendMap[localDate]) channelTrendMap[localDate] = { dim_value: localDate, leads: 0 }
         channelTrendMap[localDate].leads++
       }
@@ -229,7 +241,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       .slice(0, 20)
 
     // ── Aggregate prior period ──────────────────────────────────────────────
-    let prevRevenue = 0, prevLeads = 0, prevConversions = 0, prevAIRevenue = 0
+    let prevRevenue = 0, prevLeads = 0, prevCustomers = 0, prevConversions = 0, prevAIRevenue = 0
     for (const r of priorRows) {
       const localDate = getLocalDateString(new Date(r.conversion_timestamp || r.conversion_date), tz)
       if (localDate < localPrevDateFrom || localDate > localPrevDateTo) {
@@ -238,14 +250,20 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       const val = Number(r.conversion_value) || 0
       prevRevenue += val
       prevConversions++
-      prevLeads++
+
+      const typeClass = classifyConversionType(r.conversion_type)
+      if (typeClass === 'lead') {
+        prevLeads++
+      } else if (typeClass === 'customer') {
+        prevCustomers++
+      }
+
       if (isAISource(r.first_touch_source)) prevAIRevenue += val
     }
 
     // ── KPIs ────────────────────────────────────────────────────────────────
-    const totalLeads = totalConversions
     const sqlPercent = totalConversions > 0 ? parseFloat((sqlCount / totalConversions * 100).toFixed(1)) : 0
-    const avgValue = totalConversions > 0 ? parseFloat((totalRevenue / totalConversions).toFixed(2)) : 0
+    const avgValue = totalCustomers > 0 ? parseFloat((totalRevenue / totalCustomers).toFixed(2)) : 0
     const aiShareTotal = totalRevenue > 0 ? parseFloat(((totalAIRevenue / totalRevenue) * 100).toFixed(2)) : 0
     // convRate uses totalSessions from PostHog bounce_rate query (populated below)
     // bestRPV uses revenue/conversions per source (no per-source session data available)
@@ -324,12 +342,16 @@ router.get('/overview', validateSiteKey, async (req, res) => {
           sessions: totalSessions,
           bounce_rate: bounceRate,
           leads: totalLeads,
-          sql_percent: sqlPercent,
           leads_prev: prevLeads,
+          customers: totalCustomers,
+          customers_prev: prevCustomers,
+          sql_percent: sqlPercent,
           ai_revenue: totalAIRevenue,
           ai_revenue_prev: prevAIRevenue,
           ai_revenue_share: aiShareTotal,
           conversion_rate: totalSessions > 0 ? parseFloat(((totalConversions / totalSessions) * 100).toFixed(2)) : 0,
+          lead_conversion_rate: totalSessions > 0 ? parseFloat(((totalLeads / totalSessions) * 100).toFixed(2)) : 0,
+          customer_conversion_rate: totalSessions > 0 ? parseFloat(((totalCustomers / totalSessions) * 100).toFixed(2)) : 0,
           avg_value: avgValue,
           best_rpv_channel: bestRPV.dim_value,
           best_rpv: bestRPV.rpv

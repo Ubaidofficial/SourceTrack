@@ -53,6 +53,11 @@ test('Timezone boundary reconciliation across Dashboard, Analytics, and Campaign
     assert.ok(june21Dash, 'Dashboard should have a June 21 entry in revenue_trend');
     assert.strictEqual(june21Dash.revenue, 198, 'Dashboard June 21 revenue must be $198');
 
+    // Assert split KPIs for the 30-day window
+    assert.strictEqual(dashRes.body.data?.kpis?.leads, 20, 'Dashboard 30-day leads must be 20');
+    assert.strictEqual(dashRes.body.data?.kpis?.customers, 11, 'Dashboard 30-day customers must be 11');
+    assert.strictEqual(dashRes.body.data?.kpis?.conversions, 31, 'Dashboard 30-day conversions must be 31');
+
     // 2. Analytics Summary June 21
     const summaryRes = await request(`/api/analytics/summary?site_key=${DEMO_SITE_KEY}&from=2026-06-21&to=2026-06-21`, token);
     assert.strictEqual(summaryRes.status, 200);
@@ -79,6 +84,7 @@ test('Timezone boundary reconciliation across Dashboard, Analytics, and Campaign
     // Check KPIs match the dashboard's 30-day counts
     const kpis = campaignsRes.body.data?.kpis;
     assert.strictEqual(kpis?.total_revenue, 1110, 'Campaigns 30-day revenue must be $1,110');
+    assert.strictEqual(kpis?.total_leads, 20, 'Campaigns 30-day leads must be 20');
     assert.strictEqual(kpis?.total_conversions, 31, 'Campaigns 30-day conversions must be 31');
   });
 });

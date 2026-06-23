@@ -199,10 +199,14 @@ export default function Dashboard() {
   const totalRevenue = kpis.revenue || 0
   const totalConversions = kpis.conversions || 0
   const totalLeads = kpis.leads || 0
-  const convRate = kpis.conversion_rate || 0
+  const totalCustomers = kpis.customers || 0
+  const leadConvRate = kpis.lead_conversion_rate || 0
+  const customerConvRate = kpis.customer_conversion_rate || 0
+  const avgValue = kpis.avg_value || 0
 
   const revenueDelta = formatDeltaVal(kpis.revenue, kpis.revenue_prev)
   const leadsDelta = formatDeltaVal(kpis.leads, kpis.leads_prev)
+  const customersDelta = formatDeltaVal(kpis.customers, kpis.customers_prev)
 
   const aiRevResults = overview?.ai_sources || []
   const activeResults = overview?.sources || []
@@ -357,15 +361,44 @@ export default function Dashboard() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {hasRevenue ? (
                   <>
-                    <MetricTile label="Revenue" value={totalRevenue} format="currency" trend={revenueDelta?.pct} />
-                    <MetricTile label="Conversions" value={totalConversions} />
-                    <MetricTile label="Conversion Rate" value={totalConversions > 0 ? convRate : null} format="percent" isEmpty={totalConversions === 0} />
+                    <MetricTile
+                      label="Revenue"
+                      value={totalRevenue}
+                      format="currency"
+                      trend={revenueDelta?.pct}
+                      sub={avgValue > 0 ? `Avg value: $${avgValue.toFixed(2)}` : null}
+                    />
+                    <MetricTile
+                      label="Leads"
+                      value={totalLeads}
+                      trend={leadsDelta?.pct}
+                      sub={leadConvRate > 0 ? `${leadConvRate.toFixed(1)}% conversion rate` : null}
+                    />
+                    <MetricTile
+                      label="Customers"
+                      value={totalCustomers}
+                      trend={customersDelta?.pct}
+                      sub={customerConvRate > 0 ? `${customerConvRate.toFixed(1)}% conversion rate` : null}
+                    />
                   </>
                 ) : (
                   <>
-                    <MetricTile label="Total Leads" value={totalLeads} trend={leadsDelta?.pct} />
-                    <MetricTile label="Conversions" value={totalConversions} />
-                    <MetricTile label="Conversion Rate" value={totalConversions > 0 ? convRate : null} format="percent" isEmpty={totalConversions === 0} />
+                    <MetricTile
+                      label="Total Leads"
+                      value={totalLeads}
+                      trend={leadsDelta?.pct}
+                    />
+                    <MetricTile
+                      label="Customers"
+                      value={totalCustomers}
+                      trend={customersDelta?.pct}
+                    />
+                    <MetricTile
+                      label="Lead Conversion Rate"
+                      value={totalLeads > 0 ? leadConvRate : null}
+                      format="percent"
+                      isEmpty={totalLeads === 0}
+                    />
                   </>
                 )}
               </div>
@@ -402,7 +435,7 @@ export default function Dashboard() {
                   )}
                 </DashboardCard>
 
-                <DashboardCard title="Recent Conversions" subtitle="Latest attributed conversions"
+                <DashboardCard title="Recent Conversions" subtitle={totalConversions > 0 ? `Latest attributed conversions • ${totalConversions} total` : 'Latest attributed conversions'}
                   action={
                     <button onClick={() => navigate('/leads')} className="text-xs font-semibold text-st-black dark:text-white flex items-center gap-1">
                       View Leads <ArrowRight className="w-3 h-3" />

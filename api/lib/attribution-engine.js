@@ -5,6 +5,8 @@ import { channelFromEvent, detectAiPlatformFromEvent } from './channel-classifie
 import { getSupabase } from './supabase.js'
 import { esc, isGoogleSource } from './utils.js'
 import { serializeHogQLDateRange, serializeHogQLDateTime, buildHogQLTimestampFilter } from './hogql-date.js'
+import { LEAD_TYPES } from './conversion-classifier.js'
+
 
 
 const cache = new NodeCache({ stdTTL: 60, checkperiod: 30 })
@@ -2051,14 +2053,8 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     case 'leads':
       metricCol = 'count()'
       metricLabel = 'leads'
-      eventFilter = `AND event = '$conversion' AND (
-      lower(COALESCE(toString(properties.conversion_type), '')) IN (
-        'lead', 'signup', 'sign_up', 'trial', 'free_trial', 'meeting',
-        'book_demo', 'schedule_meeting', 'contact_form', 'mql', 'form'
-      )
-      OR properties.conversion_type IS NULL
-      OR toString(properties.conversion_type) = ''
-    )`
+      const leadTypeList = LEAD_TYPES.map(t => `'${esc(t)}'`).join(', ')
+      eventFilter = `AND event = '$conversion' AND lower(COALESCE(toString(properties.conversion_type), '')) IN (${leadTypeList})`
       extraSelect = ''
       break
     case 'conversion_rate':
