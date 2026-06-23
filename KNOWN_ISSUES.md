@@ -115,7 +115,15 @@ Verified by code inspection: both the `days_to_convert` ([api/lib/attribution-en
 
 ### 10. AI Search timestamp resolution seam
 
-The `/sources` AI-platform resolution joins conversion `first_touch_timestamp` to pageview `timestamp` by EXACT millisecond match. If they don't match (clock skew, precision, pageview outside the window/50k limit), AI conversions fall back to a hardcoded `'AI: ChatGPT'` default — which would misattribute Claude/Perplexity revenue to ChatGPT (same wrong-row class as A2). Verified working on seeded data where timestamps match exactly; production timestamp-match reliability is unverified. A later fix should fall back to `'AI: Other'` or `first_touch_source`, not guess ChatGPT.
+### 11. Cross-metric timezone inconsistency in getFlexibleReport
+
+Within `getFlexibleReport`, queries for the metrics `revenue`, `conversions`, and `leads` use the timezone-aware `getDateFilterExpr` helper. However, helper metrics like `days_to_convert`, `touchpoints_per_conversion`, and the `LTV` path query dates using raw UTC bounds. This creates a temporary inconsistency at timezone boundaries between different metrics on the same screen.
+- **Follow-up Task**: `Task-0: Lock timezone ground truth for secondary metrics (LTV, days_to_convert, touchpoints), then make them timezone-aware under getDateFilterExpr.`
+
+### 12. Untested multi-touch/flexible models ignore timezone boundaries
+
+To avoid untested blast-radius risks, the calculations inside `getMultiTouchAttributionLive`, `getSessionReport`, and `getAiPlatformAttributionLive` have been reverted to query using UTC. Consequently, users selecting linear/u_shaped/time_decay or viewing sessions will still see timezone discrepancies (e.g. conversions showing on different days compared to the dashboard).
+- **Follow-up Task**: `Task-0: Lock timezone ground truth for linear/u-shaped/time-decay and session calculations, then roll out timezone-aware query bounds (getDateFilterExpr) with targeted integration tests.`
 
 
 ## Recently fixed

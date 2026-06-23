@@ -3,11 +3,35 @@ import { queryHogQL } from './posthog.js'
 import { deriveSessions, annotateSessions } from './sessionization.js'
 import { channelFromEvent, detectAiPlatformFromEvent } from './channel-classifier.js'
 import { getSupabase } from './supabase.js'
-import { esc, isGoogleSource } from './utils.js'
+import { esc, isGoogleSource, isValidTimezone, getLocalDateString, getPaddedUtcDateRange } from './utils.js'
 import { serializeHogQLDateRange, serializeHogQLDateTime, buildHogQLTimestampFilter } from './hogql-date.js'
-import { LEAD_TYPES } from './conversion-classifier.js'
+import { LEAD_TYPES, classifyConversionType } from './conversion-classifier.js'
 
+export function getDateFilterExpr(timestampCol, tz, dateFrom, dateTo) {
+  const startStr = typeof dateFrom === 'string' ? dateFrom.trim() : new Date(dateFrom).toISOString().slice(0, 10)
+  const endStr = typeof dateTo === 'string' ? dateTo.trim() : new Date(dateTo).toISOString().slice(0, 10)
 
+  // Shift end date by +1 day for exclusive end in UTC
+  const dEnd = new Date(endStr)
+  dEnd.setUTCDate(dEnd.getUTCDate() + 1)
+  const nextDayStr = dEnd.toISOString().slice(0, 10)
+
+  if (!tz || tz === 'UTC') {
+    return `${timestampCol} >= toDateTime('${startStr}T00:00:00.000Z') AND ${timestampCol} < toDateTime('${nextDayStr}T00:00:00.000Z')`
+  }
+
+  // Timezone-aware filtering:
+  // 1. Pad the index scan range by 1 day in UTC to cover timezone differences
+  const dFrom = new Date(startStr)
+  dFrom.setUTCDate(dFrom.getUTCDate() - 1)
+  const padFromStr = dFrom.toISOString().slice(0, 10)
+
+  const dTo = new Date(endStr)
+  dTo.setUTCDate(dTo.getUTCDate() + 2) // endStr + 2 days for safe padding
+  const padToStr = dTo.toISOString().slice(0, 10)
+
+  return `${timestampCol} >= toDateTime('${padFromStr}T00:00:00.000Z') AND ${timestampCol} < toDateTime('${padToStr}T00:00:00.000Z') AND toTimeZone(${timestampCol}, '${esc(tz)}') >= toDateTime('${startStr} 00:00:00', '${esc(tz)}') AND toTimeZone(${timestampCol}, '${esc(tz)}') < toDateTime('${nextDayStr} 00:00:00', '${esc(tz)}')`
+}
 
 const cache = new NodeCache({ stdTTL: 60, checkperiod: 30 })
 
@@ -1724,6 +1748,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
 
   const { from: fromDate, to: toDate } = serializeHogQLDateRange(dateFrom, dateTo)
   const safeSite = esc(siteId)
+  const tz = filters.timezone || 'UTC'
 
   // Linear attribution: legacy, dead code kept for safety / documentation
   if (model === 'linear') {
@@ -2422,8 +2447,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
       ${extraSelect}
     FROM events${refJoin}${qualifyingJoin}${windowJoin}${customJoin}
     WHERE properties.site_id = '${safeSite}'
-      AND timestamp >= ${fromDate}
-      AND timestamp < ${toDate}
+      AND ${getDateFilterExpr('timestamp', tz, dateFrom, dateTo)}
       ${eventFilter}${filterClauses}
     GROUP BY dim_value${effectiveDim2Expr ? ', dim_value2' : ''}
     ${havingClause}
@@ -2526,7 +2550,8 @@ export async function getPreAggregatedAttribution({
   dateTo,
   groupBy = 'source',
   metric = 'revenue',
-  filters = {}
+  filters = {},
+  timezone = 'UTC'
 }) {
   const supabase = getSupabase()
 
@@ -2553,12 +2578,15 @@ export async function getPreAggregatedAttribution({
     groupField = sourceField
   }
 
+  const tz = isValidTimezone(timezone) ? timezone : 'UTC'
+  const padded = getPaddedUtcDateRange(dateFrom, dateTo)
+
   let query = supabase
     .from('attributed_conversions')
-    .select(`${selectField}, conversion_value, distinct_id, conversion_date`)
+    .select(`${selectField}, conversion_value, distinct_id, conversion_date, conversion_type, conversion_timestamp`)
     .eq('site_id', siteId)
-    .gte('conversion_date', dateFrom)
-    .lte('conversion_date', dateTo)
+    .gte('conversion_date', padded.from)
+    .lte('conversion_date', padded.to)
     .not(selectField, 'is', null)
 
   if (filters.customer_type) {
@@ -2569,7 +2597,10 @@ export async function getPreAggregatedAttribution({
 
   if (error) throw new Error(`Supabase query failed: ${error.message}`)
 
-  let rows = data || []
+  let rows = (data || []).filter(r => {
+    const localDate = getLocalDateString(new Date(r.conversion_timestamp || r.conversion_date), tz)
+    return localDate >= dateFrom && localDate <= dateTo
+  })
 
   // Apply new/returning customer filter in JS (attributed_conversions is pre-aggregated)
   if (filters.customer_type && rows.length > 0) {
@@ -2591,7 +2622,7 @@ export async function getPreAggregatedAttribution({
       .from('attributed_conversions')
       .select('distinct_id')
       .eq('site_id', siteId)
-      .lt('conversion_date', dateFrom)
+      .lt('conversion_date', padded.from)
 
     if (!prevErr && prevData) {
       for (const r of prevData) {
@@ -2617,21 +2648,40 @@ export async function getPreAggregatedAttribution({
       dimValue = 'google'
     }
     if (!aggregated[dimValue]) {
-      aggregated[dimValue] = { revenue: 0, conversions: 0 }
+      aggregated[dimValue] = { revenue: 0, conversions: 0, leads: 0, customers: 0 }
     }
     aggregated[dimValue].revenue += parseFloat(row.conversion_value || 0)
     aggregated[dimValue].conversions += 1
+
+    const typeClass = classifyConversionType(row.conversion_type)
+    if (typeClass === 'lead') {
+      aggregated[dimValue].leads += 1
+    } else if (typeClass === 'customer') {
+      aggregated[dimValue].customers += 1
+    }
   }
 
   // Format results
-  const results = Object.entries(aggregated).map(([dim_value, stats]) => ({
-    dim_value,
-    revenue: parseFloat(stats.revenue.toFixed(2)),
-    conversions: stats.conversions
-  }))
+  const results = Object.entries(aggregated).map(([dim_value, stats]) => {
+    const customers = stats.customers
+    return {
+      dim_value,
+      revenue: parseFloat(stats.revenue.toFixed(2)),
+      conversions: stats.conversions,
+      leads: stats.leads,
+      customers: stats.customers,
+      avg_conversion_value: customers > 0 ? parseFloat((stats.revenue / customers).toFixed(2)) : 0
+    }
+  })
 
-  return results.sort((a, b) => b[metric] - a[metric])
+  // Guard the sort key per user request
+  const sortKey = ['revenue', 'conversions', 'leads', 'customers', 'avg_conversion_value'].includes(metric)
+    ? metric
+    : 'conversions'
+
+  return results.sort((a, b) => (b[sortKey] || 0) - (a[sortKey] || 0))
 }
+
 
 // NOTE: The advanced multi-touch models (Linear, U-Shaped, W-Shaped, Time Decay) are temporarily
 // hidden from the UI and gated at the API level because of a known HogQL outer-variable correlation

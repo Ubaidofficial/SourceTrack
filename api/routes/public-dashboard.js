@@ -25,7 +25,7 @@ router.get('/:token', publicDashboardLimit, async (req, res) => {
 
     const { data: site } = await getSupabase()
       .from('sites')
-      .select('id, site_key, public_share_enabled, public_share_token')
+      .select('id, site_key, public_share_enabled, public_share_token, timezone')
       .eq('public_share_token', token)
       .eq('public_share_enabled', true)
       .single()
@@ -38,9 +38,9 @@ router.get('/:token', publicDashboardLimit, async (req, res) => {
     const dateTo = today.toISOString().slice(0, 10)
 
     const [topSources, topCampaigns, topChannels] = await Promise.all([
-      getPreAggregatedAttribution({ siteId: site.id, model: 'first_touch', dateFrom, dateTo, groupBy: 'source', metric: 'revenue' }),
-      getPreAggregatedAttribution({ siteId: site.id, model: 'first_touch', dateFrom, dateTo, groupBy: 'campaign', metric: 'revenue' }),
-      getPreAggregatedAttribution({ siteId: site.id, model: 'first_touch', dateFrom, dateTo, groupBy: 'channel', metric: 'revenue' })
+      getPreAggregatedAttribution({ siteId: site.id, model: 'first_touch', dateFrom, dateTo, groupBy: 'source', metric: 'revenue', timezone: site.timezone }),
+      getPreAggregatedAttribution({ siteId: site.id, model: 'first_touch', dateFrom, dateTo, groupBy: 'campaign', metric: 'revenue', timezone: site.timezone }),
+      getPreAggregatedAttribution({ siteId: site.id, model: 'first_touch', dateFrom, dateTo, groupBy: 'channel', metric: 'revenue', timezone: site.timezone })
     ])
 
     const totalRevenue = topSources.reduce((s, r) => s + (r.revenue || 0), 0)

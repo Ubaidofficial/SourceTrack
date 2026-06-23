@@ -60,11 +60,11 @@ async function getCampaignsData(req) {
   const [
     revenueResult, conversionsResult, visitsResult, leadsResult, prevRevenueResult, spendData
   ] = await Promise.all([
-    safeHogQL(() => getFlexibleReport(posthogSiteId, model, dateFrom, dateTo, dimension, 'revenue', {})),
-    safeHogQL(() => getFlexibleReport(posthogSiteId, model, dateFrom, dateTo, dimension, 'conversions', {})),
-    safeHogQL(() => getFlexibleReport(posthogSiteId, model, dateFrom, dateTo, dimension, 'sessions', {})),
-    safeHogQL(() => getFlexibleReport(posthogSiteId, model, dateFrom, dateTo, dimension, 'leads', {})),
-    getFlexibleRev(posthogSiteId, model, prevDateFrom, prevDateTo, dimension),
+    safeHogQL(() => getFlexibleReport(posthogSiteId, model, dateFrom, dateTo, dimension, 'revenue', { timezone: tz })),
+    safeHogQL(() => getFlexibleReport(posthogSiteId, model, dateFrom, dateTo, dimension, 'conversions', { timezone: tz })),
+    safeHogQL(() => getFlexibleReport(posthogSiteId, model, dateFrom, dateTo, dimension, 'sessions', { timezone: tz })),
+    safeHogQL(() => getFlexibleReport(posthogSiteId, model, dateFrom, dateTo, dimension, 'leads', { timezone: tz })),
+    getFlexibleRev(posthogSiteId, model, prevDateFrom, prevDateTo, dimension, tz),
     supabase
       .from('campaign_costs')
       .select('campaign_name, spend, clicks, impressions, currency, platform, campaign_id')
@@ -263,9 +263,9 @@ async function getCampaignsData(req) {
 }
 
 // Resilient wrapper for prior period revenue check
-async function getFlexibleRev(posthogSiteId, model, dateFrom, dateTo, dimension) {
+async function getFlexibleRev(posthogSiteId, model, dateFrom, dateTo, dimension, tz) {
   try {
-    return await getFlexibleReport(posthogSiteId, model, dateFrom, dateTo, dimension, 'revenue', {})
+    return await getFlexibleReport(posthogSiteId, model, dateFrom, dateTo, dimension, 'revenue', { timezone: tz })
   } catch (err) {
     console.warn('[campaigns] prior period revenue fetch failed:', err.message)
     return []

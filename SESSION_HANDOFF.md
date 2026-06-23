@@ -1,5 +1,19 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
+> **Handoff:** Session 140P-RB-FIX-1-2 — Report Builder pre-aggregated leads metric bypass & Timezone Boundaries — **PASS.**
+> - **Pre-aggregated Leads/Customers Fix:** Added `conversion_type` to the Supabase select query in `getPreAggregatedAttribution` (in `api/lib/attribution-engine.js`). Used `classifyConversionType` from `conversion-classifier.js` to aggregate `leads` and `customers` metrics on the pre-aggregated path (`first_touch` / `last_touch`). Calculated `avg_conversion_value` as `revenue / customers`. Added fallback sort-key logic.
+> - **Timezone date boundaries & HQL Fix:** Resolved the ClickHouse/HogQL `toDateTime` UTC coercion bug in `getDateFilterExpr` by passing the timezone parameter explicitly to both sides of the boundary comparisons. This correctly captures boundary conversions (such as the UTC 23:08 and 23:30 conversions on June 20, which fall on June 21 Paris-local time), bringing Campaigns overview, Dashboard, and Report Builder into 100% mathematical agreement (4 conversions and $198 revenue).
+> - **Scope Isolation & Clean Reverts:** Reverted all other 7 query paths (LTV, windowJoin, days_to_convert, touchpoints, getMultiTouchAttributionLive, getAiPlatformAttributionLive, getSessionReport) to use raw UTC dates to avoid regression risks on paths without locked ground truth. 
+> - **Logged Known Issues:** Logged the resulting cross-metric timezone boundary inconsistency and multi-touch UTC boundary limitation to `KNOWN_ISSUES.md` along with follow-up tasks to lock ground-truth values and implement tests for each.
+> - **Integration Test:** Added `api/tests/report-builder-leads.test.js` asserting all channel metrics, 30-day cross-screen equality, and June 21 Paris boundary agreement across Report Builder, Dashboard, and Campaigns. All 8 tests pass successfully.
+
+>
+> **Handoff:** Session 140P-A5-B1 — Taxonomy & KPI Split — **PASS.**
+> - **Canonical Taxonomy Classifier:** Created `api/lib/conversion-classifier.js` defining canonical `LEAD_TYPES`, `CUSTOMER_TYPES`, and a helper `classifyConversionType(type)` mapping raw strings (untyped, null, or generic to `'other'`).
+> - **Campaigns Leads Cleanup:** Refactored `getPreAggregatedAttribution` case `'leads'` query to restrict matches directly to canonical `LEAD_TYPES`, removing legacy OR null/empty clauses.
+> - **Dashboard Conversions KPI Split:** Refactored `api/routes/dashboard.js` to return split `leads` and `customers` counts and rates, and updated frontend `Dashboard.jsx` to render separate KPI cards (Leads, Customers, and ACV) and include a total conversions count subtitle on the recent conversions list.
+> - **Tests and CI:** Added unit tests for the classifier and verified all timezone boundary splits. Committed, pushed, and remote CI is green.
+>
 > **Handoff:** Session 140P-A3-A4 — Timezone Consistency (A3/Campaigns + A4/Analytics) — **PASS.**
 > - **Timezone Inconsistency Fixed:** Bounded pageview/conversion queries and date bucketing in `api/routes/campaigns.js` and `api/routes/analytics.js` (/summary and /sources) to use site-specific timezones via `getLocalDateString` and `getPaddedUtcDateRange`, matching the timezone-aware dashboard overview behavior exactly.
 > - **Cross-Screen Agreement:** Reconciled 30-day KPIs to be exactly identical side-by-side on Dashboard and Campaigns ($1,110 and 31 conversions) by excluding UTC boundary records falling outside the Paris local timezone window. Confirmed the June 21, 2026 boundary conversion is correctly bucketed to local Paris time ($198 revenue) on all screens.

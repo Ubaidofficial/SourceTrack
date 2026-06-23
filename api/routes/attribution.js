@@ -141,7 +141,8 @@ export async function attribution(req, res) {
             dateTo: date_to,
             groupBy: group_by,
             metric,
-            filters
+            filters,
+            timezone: req.site?.timezone
           })
           return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results } })
         } catch (error) {
@@ -216,7 +217,7 @@ export async function attribution(req, res) {
           return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results: [], _notice: NIGHTLY_NOTICE } })
         }
       }
-
+      filters.timezone = tz
       const reportResult = await getFlexibleReport(posthogSiteId, model, date_from, date_to, group_by, metric, filters,
         req.query.group_by2 || null,
         req.query.time_granularity || 'day',
@@ -353,7 +354,8 @@ export async function attributionVerdicts(req, res) {
       dateFrom: date_from,
       dateTo: date_to,
       groupBy: 'campaign',
-      metric: 'all'
+      metric: 'all',
+      timezone: req.site?.timezone
     })
 
     if (!campaigns?.length) return res.json({ success: true, data: [], error: null })

@@ -1,4 +1,6 @@
-Session: Session 140P-A3-A4 — Timezone Consistency (A3/Campaigns + A4/Analytics) — PASS. Staging site key de400000 verified. CI green.
+Session: Session 140P-RB-FIX-1-2 — Report Builder Leads & Timezone Boundaries — PASS. Local tests green. Timezone boundary UTC coercion resolved.
+Prior Completed: Session 140P-A5-B1 — Taxonomy & KPI Split — PASS. Staging site key de400000 verified. CI green.
+Prior Completed: Session 140P-A3-A4 — Timezone Consistency (A3/Campaigns + A4/Analytics) — PASS. Staging site key de400000 verified. CI green.
 Prior Completed: Session 140P-A1 — Fix A1 (Multi-touch conversions inflation) — PASS. Staging site key de400000 verified. CI green.
 Prior Completed: Session 140P-A2 — Fix A2 (AI/Organic Referrer Revenue Alignment) — PASS. Staging site key de400000 verified. CI green.
 Prior Completed: Session 140P-D9 — Seeded Leads + Campaigns Browser Gap Verification (PASS — Logged in as staging test user stripe-e2e-139j@sourcetrack.ai. Verified D5 Leads selected-row dark desaturated olive green highlight, journey slide-over, and Campaigns responsive table/filters/action buttons in dark/light modes on staging using temporary plan upgrades and settings-PATCH cache invalidation. Reverted all staging mutations and verified restore. Captured 9 detailed screenshots. Paid-beta remains NOT READY.)

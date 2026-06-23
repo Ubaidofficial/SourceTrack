@@ -101,6 +101,7 @@ router.get('/report', async (req, res) => {
     if (fHasAiSource) filters.has_ai_source = fHasAiSource
     if (fMinConversions) filters.min_conversions = fMinConversions
 
+    filters.timezone = req.site?.timezone || 'UTC'
     const results = await getFlexibleReport(posthogSiteId, model, date_from, date_to, group_by, metric, filters)
 
     if (!results || results.length === 0) {
