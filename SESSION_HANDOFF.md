@@ -1,5 +1,11 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
+> **Handoff:** Session 140P-A3-A4 — Timezone Consistency (A3/Campaigns + A4/Analytics) — **PASS.**
+> - **Timezone Inconsistency Fixed:** Bounded pageview/conversion queries and date bucketing in `api/routes/campaigns.js` and `api/routes/analytics.js` (/summary and /sources) to use site-specific timezones via `getLocalDateString` and `getPaddedUtcDateRange`, matching the timezone-aware dashboard overview behavior exactly.
+> - **Cross-Screen Agreement:** Reconciled 30-day KPIs to be exactly identical side-by-side on Dashboard and Campaigns ($1,110 and 31 conversions) by excluding UTC boundary records falling outside the Paris local timezone window. Confirmed the June 21, 2026 boundary conversion is correctly bucketed to local Paris time ($198 revenue) on all screens.
+> - **Committed Regression Test:** Added `api/tests/timezone-reconciliation.test.js` using `node:test`, asserting 4 green timezone boundary-crossing cases and cross-screen data agreement. The test runs in CI (part of the `qa:attribution:unit` suite) and gracefully bypasses database connections when staging environment variables are missing.
+> - **Remote CI Verified:** Committed and pushed to `main`. Remote CI runs are green.
+>
 > **Handoff:** Session 140P-A1 — Fix A1 (Multi-touch conversions inflation) — **PASS.**
 > - **Multi-touch Counts Inflation Fixed:** Resolved count inflation in multi-touch attribution models (Linear, U-Shaped, Time Decay, W-Shaped) where counts summed to 70 instead of the true 34 on the `de400000` seed. Changed implementation to sum `touch.fraction` instead of a flat `+1` per touchpoint.
 > - **Floating-Point Safeguard:** Aggregated conversion counts returned by the API are rounded to 4 decimal places via `toFixed(4)` for API results representation to prevent JS representation floating-point glitches while keeping them mathematically exact.
