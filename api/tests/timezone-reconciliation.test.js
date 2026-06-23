@@ -27,6 +27,11 @@ async function request(path, token, options = {}) {
 }
 
 test('Timezone boundary reconciliation across Dashboard, Analytics, and Campaigns', async (t) => {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+    console.log('SKIPPING Timezone boundary reconciliation tests - Supabase credentials not set in environment.');
+    return;
+  }
+
   const supabase = getSupabase();
 
   // Log in
