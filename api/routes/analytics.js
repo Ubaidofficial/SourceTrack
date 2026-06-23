@@ -4,7 +4,7 @@ import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { getSupabase } from '../lib/supabase.js'
-import { redactPiiFromUrl, redactPiiFromObject, isGoogleSource } from '../lib/utils.js'
+import { redactPiiFromUrl, redactPiiFromObject, isGoogleSource, isValidTimezone, getLocalDateString, getLocalMonthString, getLocalWeekString, getPaddedUtcDateRange } from '../lib/utils.js'
 import { requireFeature, isSiteStatusBlocked } from '../lib/plan-features.js'
 import { claimPageviewUsage } from '../lib/pageview-limits.js'
 import {
@@ -154,22 +154,32 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
     const toParam = req.query.to || null
     const granularity = ['daily','weekly','monthly'].includes(req.query.granularity) ? req.query.granularity : 'daily'
     const supabase = getSupabase()
-    const from = fromParam && toParam
-      ? new Date(fromParam).toISOString()
-      : new Date(Date.now() - days * 86400000).toISOString()
-    const to = fromParam && toParam ? new Date(toParam).toISOString() : null
+
+    const tz = isValidTimezone(req.site?.timezone) ? req.site.timezone : 'UTC'
+    const localDateTo = toParam || getLocalDateString(new Date(), tz)
+    const localDateFrom = fromParam || getLocalDateString(new Date(Date.now() - days * 86400000), tz)
+
+    const currentPadded = getPaddedUtcDateRange(localDateFrom, localDateTo)
+    const from = new Date(currentPadded.from + 'T00:00:00Z').toISOString()
+    const to = new Date(currentPadded.to + 'T23:59:59Z').toISOString()
+
     const filters = parseFilters(req)
 
     let query = supabase.from('pageviews')
       .select('url,referrer,utm_source,utm_medium,utm_campaign,country,device,browser,os,session_id,duration_seconds,ai_source,timestamp')
-      .eq('site_id', siteId).gte('timestamp', from)
+      .eq('site_id', siteId).gte('timestamp', from).lte('timestamp', to)
       .order('timestamp', { ascending: false }).limit(10000)
-    if (to) query = query.lte('timestamp', to)
     query = applyPageviewFilters(query, filters)
 
-    const { data: rows, error } = await query
+    const { data: rawRows, error } = await query
     if (error) throw error
-    const pv = rows || []
+    const rows = rawRows || []
+
+    const pv = rows.filter(r => {
+      const localDate = getLocalDateString(new Date(r.timestamp), tz)
+      return localDate >= localDateFrom && localDate <= localDateTo
+    })
+
     const uniqueSessions = new Set(pv.map(r => r.session_id).filter(Boolean)).size
     const sessionCounts = {}
     pv.forEach(r => { if (r.session_id) sessionCounts[r.session_id] = (sessionCounts[r.session_id] || 0) + 1 })
@@ -209,22 +219,15 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
     })
 
     // Bucket helper based on granularity (daily/weekly/monthly).
-    function bucket(iso) {
-      const d = new Date(iso)
-      if (granularity === 'monthly') return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}`
-      if (granularity === 'weekly') {
-        // ISO week: Monday-anchored. Cheap approximation — go back to Monday.
-        const day = d.getUTCDay() || 7
-        const monday = new Date(d)
-        monday.setUTCDate(d.getUTCDate() - (day - 1))
-        return monday.toISOString().slice(0, 10)
-      }
-      return d.toISOString().slice(0, 10)
+    function bucket(isoOrDate) {
+      if (granularity === 'monthly') return getLocalMonthString(isoOrDate, tz)
+      if (granularity === 'weekly') return getLocalWeekString(isoOrDate, tz)
+      return getLocalDateString(isoOrDate, tz)
     }
 
     const dayVisitorBuckets = {}
     Object.entries(sessionFirstSeen).forEach(([sid, ts]) => {
-      const b = bucket(new Date(ts).toISOString())
+      const b = bucket(ts)
       dayVisitorBuckets[b] = (dayVisitorBuckets[b] || 0) + 1
     })
 
@@ -238,25 +241,26 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
     const trend = Object.entries(dayCounts).sort((a, b) => a[0].localeCompare(b[0])).slice(-90).map(([date, views]) => ({ date, views }))
 
     // New vs returning
-    const fromMs = new Date(from).getTime()
     let newVisitors = 0, returningVisitors = 0
     Object.values(sessionFirstSeen).forEach(firstTs => {
-      if (firstTs >= fromMs) newVisitors++
+      const localDate = getLocalDateString(new Date(firstTs), tz)
+      if (localDate >= localDateFrom) newVisitors++
       else returningVisitors++
     })
 
     // ─── Revenue join from attributed_conversions ────────────────────────────
-    const toDate = (to ? to.slice(0,10) : new Date().toISOString().slice(0,10))
-    const fromDate = from.slice(0,10)
     let conversions = []
     try {
       const { data: convRows } = await supabase
         .from('attributed_conversions')
-        .select('conversion_date, conversion_value, first_touch_source, first_touch_channel')
+        .select('conversion_date, conversion_value, first_touch_source, first_touch_channel, conversion_timestamp')
         .eq('site_id', siteId)
-        .gte('conversion_date', fromDate)
-        .lte('conversion_date', toDate)
-      conversions = convRows || []
+        .gte('conversion_date', currentPadded.from)
+        .lte('conversion_date', currentPadded.to)
+      conversions = (convRows || []).filter(r => {
+        const localDate = getLocalDateString(new Date(r.conversion_timestamp || r.conversion_date), tz)
+        return localDate >= localDateFrom && localDate <= localDateTo
+      })
     } catch (_e) {
       // attributed_conversions table may be empty for very new sites — fail silently.
     }
@@ -269,8 +273,7 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
     // Revenue time series — bucketed the same way as visitor time series
     const revenueBuckets = {}
     conversions.forEach(r => {
-      if (!r.conversion_date) return
-      const b = bucket(new Date(r.conversion_date).toISOString())
+      const b = bucket(r.conversion_timestamp || r.conversion_date)
       revenueBuckets[b] = (revenueBuckets[b] || 0) + (Number(r.conversion_value) || 0)
     })
 
@@ -290,7 +293,7 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
     res.json({
       success: true,
       data: {
-        period: { days, from: fromDate, to: toDate, granularity },
+        period: { days, from: localDateFrom, to: localDateTo, granularity },
         kpis: {
           pageviews: pv.length,
           unique_visitors: uniqueSessions,
@@ -326,9 +329,12 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
     const days = Math.min(parseInt(req.query.days) || 30, 90)
     const tab = ['channel','referrer','campaign','medium','ai_source'].includes(req.query.tab) ? req.query.tab : 'referrer'
     const supabase = getSupabase()
-    const from = new Date(Date.now() - days * 86400000).toISOString()
-    const fromDate = from.slice(0,10)
-    const toDate = new Date().toISOString().slice(0,10)
+
+    const tz = isValidTimezone(req.site?.timezone) ? req.site.timezone : 'UTC'
+    const localDateTo = getLocalDateString(new Date(), tz)
+    const localDateFrom = getLocalDateString(new Date(Date.now() - days * 86400000), tz)
+    const padded = getPaddedUtcDateRange(localDateFrom, localDateTo)
+
     const filters = parseFilters(req)
 
     function normalizeAISourceName(source) {
@@ -354,15 +360,21 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
       let query = supabase.from('pageviews')
         .select('session_id, ai_source, timestamp')
         .eq('site_id', siteId)
-        .gte('timestamp', from)
+        .gte('timestamp', new Date(padded.from + 'T00:00:00Z').toISOString())
+        .lte('timestamp', new Date(padded.to + 'T23:59:59Z').toISOString())
         .not('ai_source', 'is', null)
         .neq('ai_source', '')
         .limit(50000)
       query = applyPageviewFilters(query, filters)
-      const { data: rows } = await query
+      const { data: rawRows } = await query
+
+      const rows = (rawRows || []).filter(r => {
+        const localDate = getLocalDateString(new Date(r.timestamp), tz)
+        return localDate >= localDateFrom && localDate <= localDateTo
+      })
 
       const groups = {}
-      ;(rows || []).forEach(r => {
+      rows.forEach(r => {
         const normName = normalizeAISourceName(r.ai_source)
         if (!normName) return
         groups[normName] = groups[normName] || { name: normName, visitors_set: new Set() }
@@ -371,22 +383,27 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
 
       let revenueByKey = {}
       try {
-        const { data: convRows } = await supabase
+        const { data: rawConvRows } = await supabase
           .from('attributed_conversions')
-          .select('distinct_id, conversion_value, first_touch_timestamp, first_touch_channel, first_touch_source')
+          .select('distinct_id, conversion_value, first_touch_timestamp, first_touch_channel, first_touch_source, conversion_date, conversion_timestamp')
           .eq('site_id', siteId)
-          .gte('conversion_date', fromDate)
-          .lte('conversion_date', toDate)
+          .gte('conversion_date', padded.from)
+          .lte('conversion_date', padded.to)
+
+        const convRows = (rawConvRows || []).filter(r => {
+          const localDate = getLocalDateString(new Date(r.conversion_timestamp || r.conversion_date), tz)
+          return localDate >= localDateFrom && localDate <= localDateTo
+        })
 
         const pvMap = {}
-        ;(rows || []).forEach(pv => {
+        rows.forEach(pv => {
           if (pv.timestamp) {
             const timeMs = new Date(pv.timestamp).getTime()
             pvMap[timeMs] = pv
           }
         })
 
-        ;(convRows || []).forEach(r => {
+        convRows.forEach(r => {
           let platform = null
           if (r.first_touch_channel === 'AI Search') {
             const matchTime = r.first_touch_timestamp ? new Date(r.first_touch_timestamp).getTime() : 0
@@ -418,18 +435,23 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
       const col = tab === 'channel' ? 'first_touch_channel' : 'first_touch_source'
       const campaignCol = 'first_touch_campaign'
       const selectCols = tab === 'campaign'
-        ? `${campaignCol}, conversion_value`
-        : `${col}, conversion_value`
-      const { data: rows } = await supabase
+        ? `${campaignCol}, conversion_value, conversion_timestamp, conversion_date`
+        : `${col}, conversion_value, conversion_timestamp, conversion_date`
+      const { data: rawRows } = await supabase
         .from('attributed_conversions')
         .select(selectCols)
         .eq('site_id', siteId)
-        .gte('conversion_date', fromDate)
-        .lte('conversion_date', toDate)
+        .gte('conversion_date', padded.from)
+        .lte('conversion_date', padded.to)
+
+      const rows = (rawRows || []).filter(r => {
+        const localDate = getLocalDateString(new Date(r.conversion_timestamp || r.conversion_date), tz)
+        return localDate >= localDateFrom && localDate <= localDateTo
+      })
 
       const groupCol = tab === 'campaign' ? campaignCol : col
       const groups = {}
-      ;(rows || []).forEach(r => {
+      rows.forEach(r => {
         const key = r[groupCol] || (tab === 'channel' ? 'Direct' : 'untagged')
         groups[key] = groups[key] || { name: key, conversions: 0, revenue: 0 }
         groups[key].conversions++
@@ -447,13 +469,19 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
     let query = supabase.from('pageviews')
       .select('referrer, utm_source, utm_medium, session_id, ai_source, timestamp')
       .eq('site_id', siteId)
-      .gte('timestamp', from)
+      .gte('timestamp', new Date(padded.from + 'T00:00:00Z').toISOString())
+      .lte('timestamp', new Date(padded.to + 'T23:59:59Z').toISOString())
       .limit(50000)
     query = applyPageviewFilters(query, filters)
-    const { data: rows } = await query
+    const { data: rawRows } = await query
+
+    const rows = (rawRows || []).filter(r => {
+      const localDate = getLocalDateString(new Date(r.timestamp), tz)
+      return localDate >= localDateFrom && localDate <= localDateTo
+    })
 
     const groups = {}
-    ;(rows || []).forEach(r => {
+    rows.forEach(r => {
       let key
       if (tab === 'medium') {
         key = (r.utm_medium || 'none').toLowerCase()
@@ -487,22 +515,27 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
     let revenueByKey = {}
     if (tab === 'referrer') {
       try {
-        const { data: convRows } = await supabase
+        const { data: rawConvRows } = await supabase
           .from('attributed_conversions')
-          .select('distinct_id, conversion_value, first_touch_timestamp, first_touch_channel, first_touch_source')
+          .select('distinct_id, conversion_value, first_touch_timestamp, first_touch_channel, first_touch_source, conversion_date, conversion_timestamp')
           .eq('site_id', siteId)
-          .gte('conversion_date', fromDate)
-          .lte('conversion_date', toDate)
+          .gte('conversion_date', padded.from)
+          .lte('conversion_date', padded.to)
+
+        const convRows = (rawConvRows || []).filter(r => {
+          const localDate = getLocalDateString(new Date(r.conversion_timestamp || r.conversion_date), tz)
+          return localDate >= localDateFrom && localDate <= localDateTo
+        })
 
         const pvMap = {}
-        ;(rows || []).forEach(pv => {
+        rows.forEach(pv => {
           if (pv.timestamp) {
             const timeMs = new Date(pv.timestamp).getTime()
             pvMap[timeMs] = pv
           }
         })
 
-        ;(convRows || []).forEach(r => {
+        convRows.forEach(r => {
           let key = 'Direct'
           const channel = r.first_touch_channel || 'Direct'
 
