@@ -392,7 +392,8 @@ export default function Analytics() {
             <MetricTile
               label="Avg Duration"
               value={fmtDuration(kpis.avg_duration_seconds)}
-              delta={delta(kpis.avg_duration_seconds, priorKpis.avg_duration_seconds)}
+              sub={kpis.avg_duration_seconds == null ? 'Not available' : null}
+              delta={kpis.avg_duration_seconds == null ? null : delta(kpis.avg_duration_seconds, priorKpis.avg_duration_seconds)}
               compact
             />
           </div>
