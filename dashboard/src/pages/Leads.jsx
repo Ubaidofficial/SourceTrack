@@ -85,10 +85,76 @@ export default function Leads() {
     enabled: !!site?.site_key
   })
 
+  const [sortField, setSortField] = useState('last_seen')
+  const [sortOrder, setSortOrder] = useState('desc')
+
   const leads = leadsData?.leads || []
   const totalRevenue = safeNumber(leadsData?.total_revenue, 0)
   const totalConversions = safeNumber(leadsData?.total_conversions, 0)
   const totalLeads = safeNumber(leadsData?.total, leads.length)
+
+  function handleSort(field) {
+    if (sortField === field) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortOrder('desc')
+    }
+  }
+
+  const sortedLeads = [...leads].sort((a, b) => {
+    let aVal, bVal
+
+    if (sortField === 'visitor') {
+      aVal = a.id || ''
+      bVal = b.id || ''
+    } else if (sortField === 'source') {
+      aVal = a.ai_source || a.source || 'direct'
+      bVal = b.ai_source || b.source || 'direct'
+    } else if (sortField === 'event_type') {
+      aVal = a.last_conversion_type || ''
+      bVal = b.last_conversion_type || ''
+    } else if (sortField === 'conversions') {
+      aVal = safeNumber(a.conversions, 0)
+      bVal = safeNumber(b.conversions, 0)
+    } else if (sortField === 'revenue') {
+      aVal = safeNumber(a.revenue, 0)
+      bVal = safeNumber(b.revenue, 0)
+    } else if (sortField === 'last_seen') {
+      aVal = a.last_seen ? new Date(a.last_seen).getTime() : 0
+      bVal = b.last_seen ? new Date(b.last_seen).getTime() : 0
+    } else if (sortField === 'status') {
+      aVal = statusMap[a.id] || a.status || 'lead'
+      bVal = statusMap[b.id] || b.status || 'lead'
+    } else if (sortField === 'country') {
+      aVal = a.country || ''
+      bVal = b.country || ''
+    } else {
+      return 0
+    }
+
+    if (aVal === bVal) return 0
+
+    const comparison = typeof aVal === 'string'
+      ? aVal.localeCompare(bVal, undefined, { sensitivity: 'base' })
+      : aVal - bVal
+
+    return sortOrder === 'asc' ? comparison : -comparison
+  })
+
+  const renderHeader = (field, label, alignRight = false) => {
+    const isSorted = sortField === field
+    const arrow = isSorted ? (sortOrder === 'asc' ? ' ↑' : ' ↓') : ''
+    return (
+      <th
+        onClick={() => handleSort(field)}
+        className={`${alignRight ? 'text-right' : 'text-left'} py-3 px-3 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider cursor-pointer select-none hover:bg-gray-100/70 dark:hover:bg-dark-hover/40 transition-colors`}
+      >
+        {label}
+        {isSorted && <span className="text-[10px] font-bold text-st-lime whitespace-pre">{arrow}</span>}
+      </th>
+    )
+  }
   const journeyVisitorId = journeyLead?.id || journeyLead?.visitor_id || journeyLead?.anonymous_id || null
 
   function openJourney(lead) {
@@ -254,19 +320,19 @@ export default function Leads() {
                       }}
                     />
                   </th>
-                  <th className="text-left py-3 px-3 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Visitor</th>
-                  <th className="text-left py-3 px-3 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Source</th>
-                  <th className="text-left py-3 px-3 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Event Type</th>
-                  <th className="text-right py-3 px-3 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Conversions</th>
-                  {hasRevenue && <th className="text-right py-3 px-3 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Revenue</th>}
-                  <th className="text-left py-3 px-3 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Last seen</th>
-                  <th className="text-left py-3 px-3 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Status</th>
-                  <th className="text-right py-3 px-3 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Country</th>
+                  {renderHeader('visitor', 'Visitor')}
+                  {renderHeader('source', 'Source')}
+                  {renderHeader('event_type', 'Event Type')}
+                  {renderHeader('conversions', 'Conversions', true)}
+                  {hasRevenue && renderHeader('revenue', 'Revenue', true)}
+                  {renderHeader('last_seen', 'Last seen')}
+                  {renderHeader('status', 'Status')}
+                  {renderHeader('country', 'Country', true)}
                   <th className="text-right py-3 px-3 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider"></th>
                 </tr>
               </thead>
               <tbody>
-                {leads.map((lead, i) => {
+                {sortedLeads.map((lead, i) => {
                   const shortId = lead.id ? lead.id.slice(0, 8) : 'unknown'
                   const isSelected = selectedLeads.has(lead.id)
                   const curStatus = statusMap[lead.id] || lead.status || 'lead'
