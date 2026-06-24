@@ -26,3 +26,7 @@ logs/
 # Playwright reports & results
 playwright-report/
 test-results/
+
+# Local scratch directory
+scratch/
+
