@@ -5,7 +5,7 @@ import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { getSupabase } from '../lib/supabase.js'
 import { fetchPageviews } from '../lib/posthog.js'
-import { redactPiiFromUrl, redactPiiFromObject, isGoogleSource, isValidTimezone, getLocalDateString, getLocalMonthString, getLocalWeekString, getPaddedUtcDateRange, getNow } from '../lib/utils.js'
+import { redactPiiFromUrl, redactPiiFromObject, isGoogleSource, isValidTimezone, getLocalDateString, getLocalMonthString, getLocalWeekString, getPaddedUtcDateRange, getNow, bucketUniqueVisitors } from '../lib/utils.js'
 import { requireFeature, isSiteStatusBlocked } from '../lib/plan-features.js'
 import { claimPageviewUsage } from '../lib/pageview-limits.js'
 import {
@@ -185,14 +185,7 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
     }
 
     // ─── Time series — unique visitors per bucket (distinct anonymous_id active in each bucket)
-    const dayVisitorSets = {}
-    pv.forEach(r => {
-      if (!r.anonymous_id) return
-      const b = bucket(r.timestamp)
-      ;(dayVisitorSets[b] || (dayVisitorSets[b] = new Set())).add(r.anonymous_id)
-    })
-    const dayVisitorBuckets = {}
-    for (const [b, set] of Object.entries(dayVisitorSets)) dayVisitorBuckets[b] = set.size
+    const dayVisitorBuckets = bucketUniqueVisitors(pv, bucket)
 
     // Page-view count by bucket (kept for backward-compat "trend" field).
     const dayCounts = {}

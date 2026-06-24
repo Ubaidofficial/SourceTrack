@@ -36,6 +36,28 @@ export function toHogDate(iso) {
 }
 
 /**
+ * Count distinct visitors (anonymous_id) per time bucket — the "unique visitors
+ * over time" series. A visitor active in multiple buckets is counted in EACH
+ * bucket (daily uniques don't sum to period uniques). Rows with no anonymous_id
+ * are skipped.
+ *
+ * @param {Array<{anonymous_id?: string, timestamp: string}>} rows
+ * @param {(timestamp: string) => string} bucketOf — maps a row timestamp to a bucket key
+ * @returns {Object<string, number>} bucket key → distinct visitor count
+ */
+export function bucketUniqueVisitors(rows, bucketOf) {
+  const sets = {}
+  for (const r of rows) {
+    if (!r.anonymous_id) continue
+    const b = bucketOf(r.timestamp)
+    ;(sets[b] || (sets[b] = new Set())).add(r.anonymous_id)
+  }
+  const counts = {}
+  for (const [b, set] of Object.entries(sets)) counts[b] = set.size
+  return counts
+}
+
+/**
  * Normalize a UTM-like value: trim + lowercase. Returns the original on
  * non-string inputs so it's safe to pipe through with `null`/`undefined`.
  *
