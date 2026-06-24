@@ -177,16 +177,6 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
     pv.filter(r => r.country).forEach(r => { countryCounts[r.country] = (countryCounts[r.country] || 0) + 1 })
     const topCountries = Object.entries(countryCounts).sort((a, b) => b[1] - a[1]).slice(0, 50).map(([country, visits]) => ({ country, visits }))
 
-    // ─── Time series — visitors by date (uses anonymous_id first-seen, not pv count)
-    const visitorFirstSeen = {}
-    pv.forEach(r => {
-      if (!r.anonymous_id) return
-      const ts = new Date(r.timestamp).getTime()
-      if (!visitorFirstSeen[r.anonymous_id] || ts < visitorFirstSeen[r.anonymous_id]) {
-        visitorFirstSeen[r.anonymous_id] = ts
-      }
-    })
-
     // Bucket helper based on granularity (daily/weekly/monthly).
     function bucket(isoOrDate) {
       if (granularity === 'monthly') return getLocalMonthString(isoOrDate, tz)
@@ -194,11 +184,15 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
       return getLocalDateString(isoOrDate, tz)
     }
 
-    const dayVisitorBuckets = {}
-    Object.entries(visitorFirstSeen).forEach(([, ts]) => {
-      const b = bucket(ts)
-      dayVisitorBuckets[b] = (dayVisitorBuckets[b] || 0) + 1
+    // ─── Time series — unique visitors per bucket (distinct anonymous_id active in each bucket)
+    const dayVisitorSets = {}
+    pv.forEach(r => {
+      if (!r.anonymous_id) return
+      const b = bucket(r.timestamp)
+      ;(dayVisitorSets[b] || (dayVisitorSets[b] = new Set())).add(r.anonymous_id)
     })
+    const dayVisitorBuckets = {}
+    for (const [b, set] of Object.entries(dayVisitorSets)) dayVisitorBuckets[b] = set.size
 
     // Page-view count by bucket (kept for backward-compat "trend" field).
     const dayCounts = {}
@@ -261,9 +255,9 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
         kpis: {
           pageviews: pv.length,
           unique_visitors: uniqueVisitors,
-          new_visitors: 0,
-          returning_visitors: 0,
-          bounce_rate: 0,
+          new_visitors: null,
+          returning_visitors: null,
+          bounce_rate: null,
           avg_duration_seconds: null,
           total_revenue: totalRevenue,
           conversion_count: conversionCount,
