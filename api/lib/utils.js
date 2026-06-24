@@ -12,14 +12,16 @@ import crypto from 'crypto'
 
 /**
  * Escape a value for safe inclusion in HogQL string literals.
- * Doubles single quotes (ClickHouse/HogQL escape rule).
+ * HogQL/ClickHouse string literals honor C-style backslash escapes, so a value
+ * ending in a backslash could otherwise escape the closing quote and break out
+ * (confirmed injection). Escape backslashes FIRST, then double single quotes.
  * Defensive `String()` wrap avoids `null.replace` crashes on bad inputs.
  *
  * @param {*} value — any value; coerced to string before escaping
  * @returns {string}
  */
 export function esc(value = '') {
-  return String(value).replace(/'/g, "''")
+  return String(value).replace(/\\/g, '\\\\').replace(/'/g, "''")
 }
 
 /**
