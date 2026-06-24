@@ -5,6 +5,7 @@ import { getSupabase } from '../lib/supabase.js'
 import { esc } from '../lib/utils.js'
 import { requireFeature } from '../lib/plan-features.js'
 import { serializeHogQLDateRange, buildHogQLTimestampFilter } from '../lib/hogql-date.js'
+import { normalizeSource } from '../lib/source-normalizer.js'
 
 const router = Router()
 
@@ -82,6 +83,56 @@ router.get('/', validateSiteKey, async (req, res) => {
       last_conversion_type: lastConversionType || null
     }))
 
+    // Stitch Supabase attribution data
+    const distinctIds = leads.map(l => l.id).filter(Boolean)
+    const attMap = {}
+    if (distinctIds.length > 0) {
+      const { data: convs, error: convErr } = await getSupabase()
+        .from('attributed_conversions')
+        .select('distinct_id, first_touch_source, first_touch_medium, first_touch_campaign, last_touch_source, last_touch_medium, last_touch_campaign, channel, first_touch_channel, last_touch_channel')
+        .eq('site_id', siteId)
+        .in('distinct_id', distinctIds)
+      if (convErr) {
+        console.error('Failed to query attributed_conversions:', convErr)
+      } else if (convs) {
+        for (const c of convs) {
+          if (!attMap[c.distinct_id]) {
+            attMap[c.distinct_id] = c
+          }
+        }
+      }
+    }
+
+    const isLastTouch = attributionModel === 'last_touch'
+    leads = leads.map(l => {
+      const c = attMap[l.id]
+      if (c) {
+        const rawSrc = isLastTouch ? c.last_touch_source : c.first_touch_source
+        const rawMed = isLastTouch ? c.last_touch_medium : c.first_touch_medium
+        const rawCamp = isLastTouch ? c.last_touch_campaign : c.first_touch_campaign
+        const rawChan = isLastTouch ? c.last_touch_channel : c.first_touch_channel
+
+        const norm = normalizeSource(rawSrc || 'direct')
+        const isAI = rawChan === 'AI Search'
+
+        return {
+          ...l,
+          source: norm.name,
+          medium: rawMed || 'none',
+          campaign: rawCamp || null,
+          ai_source: isAI ? norm.name : null
+        }
+      } else {
+        const norm = normalizeSource(l.source || 'direct')
+        const isAI = !!l.ai_source || norm.category === 'ai'
+        return {
+          ...l,
+          source: norm.name,
+          ai_source: isAI ? (l.ai_source ? normalizeSource(l.ai_source).name : norm.name) : null
+        }
+      }
+    })
+
     if (search) {
       leads = leads.filter(l =>
         (l.id && l.id.toLowerCase().includes(search)) ||
@@ -155,6 +206,49 @@ router.get('/:leadId', validateSiteKey, async (req, res) => {
 
     const [firstSeen, lastSeen, pageviews, conversions, totalRevenue, source, medium, aiSource, country, firstPageUrl, campaign, firstTouchSource, firstTouchMedium, activeDays] = rows[0]
 
+    // Query single lead Supabase attribution data
+    const { data: convs, error: convErr } = await getSupabase()
+      .from('attributed_conversions')
+      .select('first_touch_source, first_touch_medium, first_touch_campaign, last_touch_source, last_touch_medium, last_touch_campaign, channel, first_touch_channel, last_touch_channel')
+      .eq('site_id', req.site.id)
+      .eq('distinct_id', leadId)
+
+    if (convErr) {
+      console.error('Failed to query attributed_conversions:', convErr)
+    }
+
+    let finalSource = source || 'direct'
+    let finalMedium = medium || 'none'
+    let finalCampaign = campaign || null
+    let finalAiSource = aiSource || null
+    let finalFirstTouchSource = firstTouchSource || null
+    let finalFirstTouchMedium = firstTouchMedium || null
+
+    if (convs && convs.length > 0) {
+      const c = convs[0]
+      const isLastTouch = req.query.attribution_model === 'last_touch'
+      const rawSrc = isLastTouch ? c.last_touch_source : c.first_touch_source
+      const rawMed = isLastTouch ? c.last_touch_medium : c.first_touch_medium
+      const rawCamp = isLastTouch ? c.last_touch_campaign : c.first_touch_campaign
+      const rawChan = isLastTouch ? c.last_touch_channel : c.first_touch_channel
+
+      const norm = normalizeSource(rawSrc || 'direct')
+      const isAI = rawChan === 'AI Search'
+
+      finalSource = norm.name
+      finalMedium = rawMed || 'none'
+      finalCampaign = rawCamp || null
+      finalAiSource = isAI ? norm.name : null
+      finalFirstTouchSource = normalizeSource(c.first_touch_source || 'direct').name
+      finalFirstTouchMedium = c.first_touch_medium || 'none'
+    } else {
+      const norm = normalizeSource(finalSource)
+      const isAI = !!finalAiSource || norm.category === 'ai'
+      finalSource = norm.name
+      finalAiSource = isAI ? (finalAiSource ? normalizeSource(finalAiSource).name : norm.name) : null
+      finalFirstTouchSource = normalizeSource(finalFirstTouchSource || 'direct').name
+    }
+
     return res.status(200).json({
       success: true,
       data: {
@@ -164,14 +258,14 @@ router.get('/:leadId', validateSiteKey, async (req, res) => {
         pageviews: Number(pageviews) || 0,
         conversions: Number(conversions) || 0,
         revenue: Number(totalRevenue) || 0,
-        source: source || 'direct',
-        medium: medium || 'none',
-        campaign: campaign || null,
-        ai_source: aiSource || null,
+        source: finalSource,
+        medium: finalMedium,
+        campaign: finalCampaign,
+        ai_source: finalAiSource,
         country: country || null,
         first_page_url: firstPageUrl || null,
-        first_touch_source: firstTouchSource || null,
-        first_touch_medium: firstTouchMedium || null,
+        first_touch_source: finalFirstTouchSource,
+        first_touch_medium: finalFirstTouchMedium,
         active_days: Number(activeDays) || 0
       },
       error: null

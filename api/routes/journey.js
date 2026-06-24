@@ -1,32 +1,43 @@
 import { queryHogQL } from '../lib/posthog.js'
 import { esc } from '../lib/utils.js'
 import { deriveSessions, annotateSessions, sessionAggregates } from '../lib/sessionization.js'
+import { getSupabase } from '../lib/supabase.js'
+import { normalizeSource } from '../lib/source-normalizer.js'
 
 /**
  * Classify a session's entry source using UTM/referrer/AI data.
  * Local helper — does NOT import from analytics.js routes.
  */
 function classifyEntrySource(session) {
-  if (!session) return 'Direct'
+  if (!session) return 'Direct / None'
+
   // AI source takes priority
-  if (session.entry_ai_source) return `AI: ${session.entry_ai_source}`
+  if (session.entry_ai_source) {
+    const norm = normalizeSource(session.entry_ai_source)
+    return norm.name
+  }
+
   // UTM source
   if (session.entry_source) {
+    const norm = normalizeSource(session.entry_source)
+    if (norm.category === 'paid') return norm.name
     const medium = (session.entry_medium || '').toLowerCase()
-    if (['cpc', 'ppc', 'paid', 'paid_search'].includes(medium)) return 'Paid Search'
-    if (['email', 'newsletter'].includes(medium)) return 'Email'
-    return session.entry_source
+    if (['cpc', 'ppc', 'paid', 'paid_search'].includes(medium)) {
+      return norm.name.endsWith('Ads') ? norm.name : `${norm.name} Ads`
+    }
+    return norm.name
   }
+
   // Referrer
   if (session.entry_referrer) {
     try {
       const host = new URL(session.entry_referrer).hostname.replace('www.', '')
-      if (['google.', 'bing.', 'yahoo.', 'duckduckgo.'].some(s => host.includes(s))) return 'Organic Search'
-      if (['facebook.com', 'instagram.com', 'linkedin.com', 'twitter.com', 'x.com', 'tiktok.com'].some(s => host.includes(s))) return 'Organic Social'
-      return host
+      const norm = normalizeSource(host)
+      return norm.name
     } catch (_e) { /* invalid URL */ }
   }
-  return session.is_direct_entry ? 'Direct' : 'Direct'
+
+  return 'Direct / None'
 }
 
 export async function journey(req, res) {
@@ -103,6 +114,17 @@ export async function journey(req, res) {
     }))
     const userId = events.find(e => e.user_id)?.user_id || null
 
+    // Query single lead Supabase attribution data
+    const { data: convs, error: convErr } = await getSupabase()
+      .from('attributed_conversions')
+      .select('first_touch_source, first_touch_medium, first_touch_campaign, channel, first_touch_channel')
+      .eq('site_id', posthogSiteId)
+      .eq('distinct_id', visitorId)
+
+    if (convErr) {
+      console.error('Failed to query attributed_conversions in journey:', convErr)
+    }
+
     // ── Derive sessions from flat events ──
     // deriveSessions expects objects with top-level fields; our events already match.
     // We need to also capture entry_referrer and entry_ai_source for source classification.
@@ -121,6 +143,23 @@ export async function journey(req, res) {
       const firstEvent = sessionEvents[0] || {}
       sess.entry_referrer = firstEvent.referrer || null
       sess.entry_ai_source = firstEvent.ai_source || null
+      sess.entry_source = firstEvent.utm_source || null
+      sess.entry_medium = firstEvent.utm_medium || null
+      sess.entry_campaign = firstEvent.utm_campaign || null
+
+      // Overwrite first session with Supabase attribution if available
+      if (sessions.length === 0 && convs && convs.length > 0) {
+        const c = convs[0]
+        sess.entry_source = c.first_touch_source || sess.entry_source
+        sess.entry_medium = c.first_touch_medium || sess.entry_medium
+        sess.entry_campaign = c.first_touch_campaign || sess.entry_campaign
+        if (c.first_touch_channel === 'AI Search') {
+          sess.entry_ai_source = c.first_touch_source || sess.entry_ai_source
+        } else {
+          sess.entry_ai_source = null
+        }
+      }
+
       sess.source_label = classifyEntrySource(sess)
       sess.events = sessionEvents
 
