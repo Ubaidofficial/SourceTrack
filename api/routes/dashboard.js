@@ -6,6 +6,7 @@ import { esc, isValidTimezone, getLocalDateString, getPaddedUtcDateRange, getNow
 import { channelFromEvent } from '../lib/channel-classifier.js'
 import { getSetupDiagnostics } from '../lib/setup-doctor.js'
 import { classifyConversionType } from '../lib/conversion-classifier.js'
+import { normalizeSource } from '../lib/source-normalizer.js'
 
 
 
@@ -160,9 +161,10 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       if (ltChannel !== 'Direct') ltNonDirectRevenue += val
 
       // source breakdown
-      if (!sourceMap[source]) sourceMap[source] = { dim_value: source, revenue: 0, conversions: 0, sessions: 0, rpv: 0 }
-      sourceMap[source].revenue += val
-      sourceMap[source].conversions++
+      const normSource = normalizeSource(source).name
+      if (!sourceMap[normSource]) sourceMap[normSource] = { dim_value: normSource, revenue: 0, conversions: 0, sessions: 0, rpv: 0 }
+      sourceMap[normSource].revenue += val
+      sourceMap[normSource].conversions++
 
       // campaign breakdown
       if (campaign) {
