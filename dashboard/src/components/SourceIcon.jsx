@@ -7,7 +7,7 @@ import {
   OpenAILogo, AnthropicLogo, PerplexityLogo, GeminiLogo, GrokLogo, CopilotLogo, DeepSeekLogo
 } from '../lib/brandLogos'
 
-import { normalizeSource } from '../../../api/lib/source-normalizer.js'
+import { normalizeSource } from '../lib/source-normalizer.js'
 export { normalizeSource }
 
 /**
