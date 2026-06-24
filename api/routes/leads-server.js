@@ -190,7 +190,7 @@ router.get('/:leadId', validateSiteKey, async (req, res) => {
         argMin(properties.first_touch_campaign, timestamp) AS campaign,
         argMin(properties.first_touch_source, timestamp) AS first_touch_source,
         argMin(properties.first_touch_medium, timestamp) AS first_touch_medium,
-        COUNT(DISTINCT date(timestamp)) AS active_days
+        COUNT(DISTINCT toDate(timestamp)) AS active_days
       FROM events
       WHERE properties.site_id = '${esc(req.site.id)}'
         AND distinct_id = '${esc(leadId)}'

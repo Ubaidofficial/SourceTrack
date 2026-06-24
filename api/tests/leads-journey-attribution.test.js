@@ -105,4 +105,14 @@ test('Leads and Journey Supabase Stitching and Fallback Normalization', async (t
     assert.ok(firstSession.source_label.includes('ChatGPT'),
       `First session source label should match ChatGPT, got: ${firstSession.source_label}`);
   });
+
+  await t.test('5. GET /api/leads/:leadId returns lead details and active_days (Path 2a crash fix)', async () => {
+    const leadId = 'demo_diag_user_13_ai_mv_v6';
+    const res = await request(`/api/leads/${leadId}?site_key=${DEMO_SITE_KEY}`, token);
+    assert.strictEqual(res.status, 200);
+    assert.ok(res.body?.success);
+    const data = res.body.data;
+    assert.strictEqual(typeof data.active_days, 'number', 'active_days should be a number');
+    assert.ok(data.active_days >= 1, 'active_days should be at least 1');
+  });
 });
