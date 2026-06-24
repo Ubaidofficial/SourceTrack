@@ -1,4 +1,5 @@
-Session: Session 140P-RB-FIX-3 — Report Builder Frontend Chart/Table Metric Mismatch — PASS. Production build passes.
+Session: Session 140P-MS-JOIN-CLOCK-SKEW-FIX — Clock Skew Join Hardening & CI Hardening Audit — PASS. Regression tests green. Production build compiles successfully.
+Prior Completed: Session 140P-RB-FIX-3 — Report Builder Frontend Chart/Table Metric Mismatch — PASS. Production build passes.
 Prior Completed: Session 140P-RB-FIX-1-2 — Report Builder Leads & Timezone Boundaries — PASS. Local tests green. Timezone boundary UTC coercion resolved.
 Prior Completed: Session 140P-A3-A4 — Timezone Consistency (A3/Campaigns + A4/Analytics) — PASS. Staging site key de400000 verified. CI green.
 Prior Completed: Session 140P-A1 — Fix A1 (Multi-touch conversions inflation) — PASS. Staging site key de400000 verified. CI green.

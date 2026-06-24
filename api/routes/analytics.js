@@ -4,7 +4,7 @@ import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { getSupabase } from '../lib/supabase.js'
-import { redactPiiFromUrl, redactPiiFromObject, isGoogleSource, isValidTimezone, getLocalDateString, getLocalMonthString, getLocalWeekString, getPaddedUtcDateRange } from '../lib/utils.js'
+import { redactPiiFromUrl, redactPiiFromObject, isGoogleSource, isValidTimezone, getLocalDateString, getLocalMonthString, getLocalWeekString, getPaddedUtcDateRange, getNow } from '../lib/utils.js'
 import { requireFeature, isSiteStatusBlocked } from '../lib/plan-features.js'
 import { claimPageviewUsage } from '../lib/pageview-limits.js'
 import {
@@ -156,8 +156,9 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
     const supabase = getSupabase()
 
     const tz = isValidTimezone(req.site?.timezone) ? req.site.timezone : 'UTC'
-    const localDateTo = toParam || getLocalDateString(new Date(), tz)
-    const localDateFrom = fromParam || getLocalDateString(new Date(Date.now() - days * 86400000), tz)
+    const now = getNow(req)
+    const localDateTo = toParam || getLocalDateString(now, tz)
+    const localDateFrom = fromParam || getLocalDateString(new Date(now.getTime() - days * 86400000), tz)
 
     const currentPadded = getPaddedUtcDateRange(localDateFrom, localDateTo)
     const from = new Date(currentPadded.from + 'T00:00:00Z').toISOString()
@@ -331,11 +332,67 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
     const supabase = getSupabase()
 
     const tz = isValidTimezone(req.site?.timezone) ? req.site.timezone : 'UTC'
-    const localDateTo = getLocalDateString(new Date(), tz)
-    const localDateFrom = getLocalDateString(new Date(Date.now() - days * 86400000), tz)
+    const now = getNow(req)
+    const localDateTo = getLocalDateString(now, tz)
+    const localDateFrom = getLocalDateString(new Date(now.getTime() - days * 86400000), tz)
     const padded = getPaddedUtcDateRange(localDateFrom, localDateTo)
 
     const filters = parseFilters(req)
+
+    function findMatchingPageview(firstTouchTimestamp, firstTouchSource, firstTouchChannel, rowsList) {
+      if (!firstTouchTimestamp) return null
+      const targetTime = new Date(firstTouchTimestamp).getTime()
+      let bestMatch = null
+      let bestScore = -1
+      let minDiff = Infinity
+      const tolerance = 5000 // 5 seconds clock skew/ingestion latency tolerance
+
+      const normSource = firstTouchSource ? firstTouchSource.toLowerCase().trim() : ''
+      const normChannel = firstTouchChannel ? firstTouchChannel.trim() : ''
+
+      for (const pv of rowsList) {
+        if (!pv.timestamp) continue
+        const pvTime = new Date(pv.timestamp).getTime()
+        const diff = Math.abs(pvTime - targetTime)
+        if (diff > tolerance) continue
+
+        let score = 0
+        if (normChannel === 'AI Search') {
+          if (pv.ai_source && normSource) {
+            const pvAiNorm = normalizeAISourceName(pv.ai_source).toLowerCase()
+            const convAiNorm = normalizeAISourceName(normSource).toLowerCase()
+            if (pvAiNorm === convAiNorm || pvAiNorm.includes(convAiNorm) || convAiNorm.includes(pvAiNorm)) {
+              score = 3
+            }
+          }
+        } else {
+          if (pv.utm_source && normSource && pv.utm_source.toLowerCase().trim() === normSource) {
+            score = 3
+          } else if (pv.referrer && normSource) {
+            try {
+              const host = new URL(pv.referrer).hostname.replace('www.', '').toLowerCase().trim()
+              if (host === normSource || host.includes(normSource) || normSource.includes(host)) {
+                score = 2
+              }
+            } catch {
+              // Ignore invalid referrer
+            }
+          } else if (!pv.utm_source && !pv.referrer && (normSource === 'direct' || normSource === 'none' || !normSource)) {
+            score = 1
+          }
+        }
+
+        if (score > bestScore) {
+          bestScore = score
+          minDiff = diff
+          bestMatch = pv
+        } else if (score === bestScore && diff < minDiff) {
+          minDiff = diff
+          bestMatch = pv
+        }
+      }
+      return bestScore > 0 ? bestMatch : null
+    }
 
     function normalizeAISourceName(source) {
       if (!source) return null
@@ -395,19 +452,10 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
           return localDate >= localDateFrom && localDate <= localDateTo
         })
 
-        const pvMap = {}
-        rows.forEach(pv => {
-          if (pv.timestamp) {
-            const timeMs = new Date(pv.timestamp).getTime()
-            pvMap[timeMs] = pv
-          }
-        })
-
         convRows.forEach(r => {
           let platform = null
           if (r.first_touch_channel === 'AI Search') {
-            const matchTime = r.first_touch_timestamp ? new Date(r.first_touch_timestamp).getTime() : 0
-            const matchPv = pvMap[matchTime]
+            const matchPv = findMatchingPageview(r.first_touch_timestamp, r.first_touch_source, r.first_touch_channel, rows)
             if (matchPv && matchPv.ai_source) {
               platform = matchPv.ai_source
             }
@@ -527,14 +575,6 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
           return localDate >= localDateFrom && localDate <= localDateTo
         })
 
-        const pvMap = {}
-        rows.forEach(pv => {
-          if (pv.timestamp) {
-            const timeMs = new Date(pv.timestamp).getTime()
-            pvMap[timeMs] = pv
-          }
-        })
-
         convRows.forEach(r => {
           let key = 'Direct'
           const channel = r.first_touch_channel || 'Direct'
@@ -544,16 +584,14 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
           } else if (channel === 'Direct') {
             key = 'Direct'
           } else if (channel === 'AI Search') {
-            const matchTime = r.first_touch_timestamp ? new Date(r.first_touch_timestamp).getTime() : 0
-            const matchPv = pvMap[matchTime]
+            const matchPv = findMatchingPageview(r.first_touch_timestamp, r.first_touch_source, r.first_touch_channel, rows)
             if (matchPv && matchPv.ai_source) {
               key = `AI: ${matchPv.ai_source}`
             } else {
-              key = r.first_touch_source ? `AI: ${r.first_touch_source}` : 'AI: ChatGPT'
+              key = r.first_touch_source ? `AI: ${normalizeAISourceName(r.first_touch_source)}` : 'AI: ChatGPT'
             }
           } else {
-            const matchTime = r.first_touch_timestamp ? new Date(r.first_touch_timestamp).getTime() : 0
-            const matchPv = pvMap[matchTime]
+            const matchPv = findMatchingPageview(r.first_touch_timestamp, r.first_touch_source, r.first_touch_channel, rows)
             if (matchPv) {
               if (matchPv.utm_source) key = matchPv.utm_source.toLowerCase()
               else if (matchPv.referrer) {

@@ -283,6 +283,44 @@ function PublicRoute({ children }) {
   return children
 }
 
+// ─── App-subdomain root redirect ─────────────────────────────────────────────
+// app.sourcetrack.ai is the app shell — it must NEVER show the marketing
+// Landing page. Branch directly on auth state:
+//   • authenticated  →  /dashboard  (one redirect)
+//   • unauthenticated →  /login      (one redirect, no ProtectedRoute bounce)
+//   • loading        →  spinner while Supabase resolves the session
+// www.sourcetrack.ai renders <Landing /> as before.
+// ─────────────────────────────────────────────────────────────────────────────
+const APP_HOSTNAME = 'app.sourcetrack.ai'
+
+function AppRootRedirect() {
+  const { user, loading } = useAuth()
+
+  // Only activate on the app subdomain; fall through to Landing elsewhere
+  // (This component is only rendered for the '/' route on app. — see Routes below,
+  //  but the hostname check is a belt-and-suspenders guard.)
+  if (typeof window !== 'undefined' && window.location.hostname !== APP_HOSTNAME) {
+    return <Landing />
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-dark-bg">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black dark:border-st-lime" />
+      </div>
+    )
+  }
+
+  if (user) {
+    if (getAuthAppRole(user) === 'super_admin') {
+      return <Navigate to="/ops" replace />
+    }
+    return <Navigate to="/dashboard" replace />
+  }
+
+  return <Navigate to="/login" replace />
+}
+
 export default function App() {
   initPostHog()
 
@@ -357,8 +395,10 @@ export default function App() {
 
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/terms" element={<Terms />} />
-              {/* Public marketing pages — accessible to everyone */}
-              <Route path="/" element={<Landing />} />
+              {/* Root: app.sourcetrack.ai → auth-branch (authed=/dashboard, unauthed=/login)
+                       www.sourcetrack.ai  → Landing (marketing) */}
+              <Route path="/" element={<AppRootRedirect />} />
+              {/* Public marketing pages — accessible to everyone on www. */}
               <Route path="/product" element={<Product />} />
               <Route path="/attribution" element={<Attribution />} />
               <Route path="/ai-referral-tracking" element={<AIReferralTracking />} />
@@ -375,7 +415,8 @@ export default function App() {
               <Route path="/ecommerce-attribution" element={<Navigate to="/use-cases/ecommerce" replace />} />
               <Route path="/lead-gen-attribution" element={<Navigate to="/use-cases/lead-generation" replace />} />
               <Route path="/agency-attribution" element={<Navigate to="/use-cases/agencies" replace />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              {/* Unknown paths: on app. subdomain go through auth-branch; on www. fall to Landing */}
+              <Route path="*" element={<AppRootRedirect />} />
             </Routes>
           </BrowserRouter>
         </SiteProvider>

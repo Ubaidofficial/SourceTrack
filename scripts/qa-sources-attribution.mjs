@@ -3,7 +3,7 @@ import { getSupabase } from '../api/lib/supabase.js';
 import assert from 'assert';
 
 const SOURCETRACK_API_URL = process.env.SOURCETRACK_API_URL || 'http://localhost:3000';
-const DEMO_SITE_KEY = 'de400000-babe-41d4-a716-446655440000';
+const DEMO_SITE_KEY = 'de500000-babe-41d4-a716-446655440000';
 const DEMO_EMAIL = 'demo-diag-saas@sourcetrack.ai';
 const DEMO_PASSWORD = 'DemoSaaSPassword2026!';
 
@@ -47,8 +47,16 @@ async function run() {
   const token = loginData.session.access_token;
   console.log('JWT obtained successfully.\n');
 
-  console.log(`Hitting sources endpoint: GET /api/analytics/sources?site_key=${DEMO_SITE_KEY}&days=30&tab=referrer`);
-  const response = await request(`/api/analytics/sources?site_key=${DEMO_SITE_KEY}&days=30&tab=referrer`, token);
+  // Calculate dynamic days to always start on exactly 2026-05-23 (visitor 21 date) and exclude 2026-05-22 (visitor 8 date)
+  const targetStartDate = new Date('2026-05-23T00:00:00Z');
+  const today = new Date();
+  targetStartDate.setUTCHours(0, 0, 0, 0);
+  today.setUTCHours(0, 0, 0, 0);
+  const diffDays = Math.round((today - targetStartDate) / (1000 * 60 * 60 * 24));
+  console.log(`Dynamic days calculated to align with seed window: ${diffDays}`);
+
+  console.log(`Hitting sources endpoint: GET /api/analytics/sources?site_key=${DEMO_SITE_KEY}&days=${diffDays}&tab=referrer`);
+  const response = await request(`/api/analytics/sources?site_key=${DEMO_SITE_KEY}&days=${diffDays}&tab=referrer`, token);
 
   assert.strictEqual(response.status, 200, 'Expected status 200');
   assert.strictEqual(response.body?.success, true, 'Expected success to be true');

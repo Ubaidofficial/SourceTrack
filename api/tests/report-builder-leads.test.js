@@ -4,7 +4,7 @@ import 'dotenv/config';
 import { getSupabase } from '../lib/supabase.js';
 
 const SOURCETRACK_API_URL = process.env.SOURCETRACK_API_URL || 'http://localhost:3000';
-const DEMO_SITE_KEY = 'de400000-babe-41d4-a716-446655440000';
+const DEMO_SITE_KEY = 'de500000-babe-41d4-a716-446655440000';
 const DEMO_EMAIL = 'demo-diag-saas@sourcetrack.ai';
 const DEMO_PASSWORD = 'DemoSaaSPassword2026!';
 
@@ -12,6 +12,7 @@ async function request(path, token, options = {}) {
   const url = `${SOURCETRACK_API_URL.replace(/\/+$/, '')}${path}`;
   const headers = {
     'Content-Type': 'application/json',
+    'x-sourcetrack-now': '2026-06-23T12:00:00.000Z',
     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...(options.headers || {})
   };
@@ -280,5 +281,69 @@ test('Report Builder pre-aggregated leads and customers metrics reconciliation',
 
     assert.strictEqual(campConversions, repConversions, 'Campaigns 30-day conversions must match Report Builder');
     assert.strictEqual(campRevenue, repRevenue, 'Campaigns 30-day revenue must match Report Builder');
+  });
+
+  await t.test('new dimensions (country, device, browser, landing_page) return correct splits and match ground truth', async () => {
+    // 1. Group by country
+    const countryRes = await request(
+      `/api/attribution?site_key=${DEMO_SITE_KEY}&model=first_touch&date_from=2026-05-24&date_to=2026-06-23&group_by=country&metric=conversions`,
+      token
+    );
+    assert.strictEqual(countryRes.status, 200);
+    const countryResults = countryRes.body.data?.results || [];
+    const getCountryVal = (c, metricKey) => countryResults.find(r => r.dim_value === c)?.[metricKey] || 0;
+    assert.strictEqual(getCountryVal('GB', 'conversions'), 8);
+    assert.strictEqual(getCountryVal('GB', 'revenue'), 198);
+    assert.strictEqual(getCountryVal('FR', 'conversions'), 11);
+    assert.strictEqual(getCountryVal('FR', 'revenue'), 396);
+    assert.strictEqual(getCountryVal('US', 'conversions'), 12);
+    assert.strictEqual(getCountryVal('US', 'revenue'), 516);
+
+    // 2. Group by device
+    const deviceRes = await request(
+      `/api/attribution?site_key=${DEMO_SITE_KEY}&model=first_touch&date_from=2026-05-24&date_to=2026-06-23&group_by=device&metric=conversions`,
+      token
+    );
+    assert.strictEqual(deviceRes.status, 200);
+    const deviceResults = deviceRes.body.data?.results || [];
+    const getDeviceVal = (d, metricKey) => deviceResults.find(r => r.dim_value === d)?.[metricKey] || 0;
+    assert.strictEqual(getDeviceVal('desktop', 'conversions'), 8);
+    assert.strictEqual(getDeviceVal('desktop', 'revenue'), 198);
+    assert.strictEqual(getDeviceVal('tablet', 'conversions'), 11);
+    assert.strictEqual(getDeviceVal('tablet', 'revenue'), 396);
+    assert.strictEqual(getDeviceVal('mobile', 'conversions'), 12);
+    assert.strictEqual(getDeviceVal('mobile', 'revenue'), 516);
+
+    // 3. Group by browser
+    const browserRes = await request(
+      `/api/attribution?site_key=${DEMO_SITE_KEY}&model=first_touch&date_from=2026-05-24&date_to=2026-06-23&group_by=browser&metric=conversions`,
+      token
+    );
+    assert.strictEqual(browserRes.status, 200);
+    const browserResults = browserRes.body.data?.results || [];
+    const getBrowserVal = (b, metricKey) => browserResults.find(r => r.dim_value === b)?.[metricKey] || 0;
+    assert.strictEqual(getBrowserVal('safari', 'conversions'), 8);
+    assert.strictEqual(getBrowserVal('safari', 'revenue'), 198);
+    assert.strictEqual(getBrowserVal('chrome', 'conversions'), 11);
+    assert.strictEqual(getBrowserVal('chrome', 'revenue'), 396);
+    assert.strictEqual(getBrowserVal('firefox', 'conversions'), 12);
+    assert.strictEqual(getBrowserVal('firefox', 'revenue'), 516);
+
+    // 4. Group by landing_page
+    const lpRes = await request(
+      `/api/attribution?site_key=${DEMO_SITE_KEY}&model=first_touch&date_from=2026-05-24&date_to=2026-06-23&group_by=landing_page&metric=conversions`,
+      token
+    );
+    assert.strictEqual(lpRes.status, 200);
+    const lpResults = lpRes.body.data?.results || [];
+    const getLpVal = (l, metricKey) => lpResults.find(r => r.dim_value === l)?.[metricKey] || 0;
+    assert.strictEqual(getLpVal('/blog/post-1', 'conversions'), 5);
+    assert.strictEqual(getLpVal('/blog/post-1', 'revenue'), 198);
+    assert.strictEqual(getLpVal('/features', 'conversions'), 8);
+    assert.strictEqual(getLpVal('/features', 'revenue'), 198);
+    assert.strictEqual(getLpVal('/', 'conversions'), 8);
+    assert.strictEqual(getLpVal('/', 'revenue'), 318);
+    assert.strictEqual(getLpVal('/pricing', 'conversions'), 10);
+    assert.strictEqual(getLpVal('/pricing', 'revenue'), 396);
   });
 });

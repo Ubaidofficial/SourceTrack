@@ -133,6 +133,32 @@ if (process.env.NODE_ENV === 'production') {
 
 const app = express()
 
+// Time-mocking middleware for testing (only in non-production environments with explicit opt-in)
+app.use((req, res, next) => {
+  const nowHeader = req.headers['x-sourcetrack-now'] || req.query.now_override
+  const isTestMode = process.env.NODE_ENV !== 'production' && process.env.ALLOW_TEST_TIME_MOCK === 'true'
+
+  if (nowHeader) {
+    if (!isTestMode) {
+      // Strictly fail-closed: strip headers and parameters at the middleware boundary in production
+      delete req.headers['x-sourcetrack-now']
+      if (req.query.now_override) {
+        delete req.query.now_override
+      }
+      return next()
+    }
+
+    if (global.timeMockStorage) {
+      const mockTime = new Date(nowHeader).getTime()
+      if (!isNaN(mockTime)) {
+        global.timeMockStorage.run(mockTime, () => next())
+        return
+      }
+    }
+  }
+  next()
+})
+
 // Stage 1 Early Managed Proxy Gate
 app.use(managedProxyEarlyGate)
 

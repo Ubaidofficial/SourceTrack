@@ -257,7 +257,16 @@ U-shaped / W-shaped / Time Decay / Linear models showed blank charts with no exp
 attribution-engine.js had 14 AI domains; nightly job had 8. Canonical `api/lib/channel-classifier.js` created with 21 domains; both consumers import from it.
 
 
+## New Known Gaps (Session 140P-RB-FIX-4, not yet fixed)
+
+### country/device/browser
+Build dimension support — requires schema columns on `attributed_conversions` (or ClickHouse pageview-join) + nightly job populating them + real multi-value seed data to test against. Post-launch.
+
+### landing_page
+Build real landing-page report — first-pageview-per-visitor resolution + backing storage. Post-launch.
+
 ## New Known Gaps (Session 128D-B.1, not yet fixed)
+
 
 ### Deferred filter support in Report Builder
 The following dimensions are supported as group-by targets in the Report Builder but are deferred as direct filters:

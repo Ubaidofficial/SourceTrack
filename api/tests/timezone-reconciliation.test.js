@@ -4,7 +4,7 @@ import 'dotenv/config';
 import { getSupabase } from '../lib/supabase.js';
 
 const SOURCETRACK_API_URL = process.env.SOURCETRACK_API_URL || 'http://localhost:3000';
-const DEMO_SITE_KEY = 'de400000-babe-41d4-a716-446655440000';
+const DEMO_SITE_KEY = 'de500000-babe-41d4-a716-446655440000';
 const DEMO_EMAIL = 'demo-diag-saas@sourcetrack.ai';
 const DEMO_PASSWORD = 'DemoSaaSPassword2026!';
 
@@ -12,6 +12,7 @@ async function request(path, token, options = {}) {
   const url = `${SOURCETRACK_API_URL.replace(/\/+$/, '')}${path}`;
   const headers = {
     'Content-Type': 'application/json',
+    'x-sourcetrack-now': '2026-06-23T12:00:00.000Z',
     ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
     ...(options.headers || {})
   };

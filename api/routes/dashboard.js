@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
 import { getSupabase as getSupabaseAdmin } from '../lib/supabase.js'
-import { esc, isValidTimezone, getLocalDateString, getPaddedUtcDateRange } from '../lib/utils.js'
+import { esc, isValidTimezone, getLocalDateString, getPaddedUtcDateRange, getNow } from '../lib/utils.js'
 import { channelFromEvent } from '../lib/channel-classifier.js'
 import { getSetupDiagnostics } from '../lib/setup-doctor.js'
 import { classifyConversionType } from '../lib/conversion-classifier.js'
@@ -25,10 +25,11 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     const tz = isValidTimezone(req.site?.timezone) ? req.site.timezone : 'UTC'
 
     // Compute local date boundaries
-    const localDateTo = getLocalDateString(new Date(), tz)
-    const localDateFrom = getLocalDateString(new Date(Date.now() - days * 86400000), tz)
-    const localPrevDateFrom = getLocalDateString(new Date(Date.now() - days * 2 * 86400000), tz)
-    const localPrevDateTo = getLocalDateString(new Date(Date.now() - days * 86400000), tz)
+    const now = getNow(req)
+    const localDateTo = getLocalDateString(now, tz)
+    const localDateFrom = getLocalDateString(new Date(now.getTime() - days * 86400000), tz)
+    const localPrevDateFrom = getLocalDateString(new Date(now.getTime() - days * 2 * 86400000), tz)
+    const localPrevDateTo = getLocalDateString(new Date(now.getTime() - days * 86400000), tz)
 
     // Compute padded UTC boundaries for Supabase index querying (±1 day)
     const currentPadded = getPaddedUtcDateRange(localDateFrom, localDateTo)

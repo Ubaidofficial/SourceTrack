@@ -2573,6 +2573,18 @@ export async function getPreAggregatedAttribution({
   } else if (groupBy === 'channel') {
     selectField = model === 'last_touch' ? 'last_touch_channel' : 'first_touch_channel'
     groupField  = model === 'last_touch' ? 'last_touch_channel' : 'first_touch_channel'
+  } else if (groupBy === 'country') {
+    selectField = model === 'first_touch' ? 'first_touch_country' : 'last_touch_country'
+    groupField = selectField
+  } else if (groupBy === 'device') {
+    selectField = model === 'first_touch' ? 'first_touch_device' : 'last_touch_device'
+    groupField = selectField
+  } else if (groupBy === 'browser') {
+    selectField = model === 'first_touch' ? 'first_touch_browser' : 'last_touch_browser'
+    groupField = selectField
+  } else if (groupBy === 'landing_page') {
+    selectField = model === 'first_touch' ? 'first_touch_landing_page' : 'last_touch_landing_page'
+    groupField = selectField
   } else {
     selectField = sourceField
     groupField = sourceField
@@ -2904,7 +2916,11 @@ export function calculateAttribution(touchpoints, conversionValue) {
       utm_term: tp.utm_term || null,
       referrer_domain: extractReferrerDomain(tp.referrer),
       channel: tpCh(tp),
-      timestamp: tp.timestamp
+      timestamp: tp.timestamp,
+      country: tp.country || 'unknown',
+      device: tp.device || 'unknown',
+      browser: tp.browser || 'unknown',
+      landing_page: tp.landing_page || 'unknown'
     }
     for (const key of Object.keys(tp)) {
       if (key.startsWith('custom_')) {

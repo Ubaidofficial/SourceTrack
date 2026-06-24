@@ -2,7 +2,7 @@ import express from 'express'
 import { getFlexibleReport } from '../lib/attribution-engine.js'
 import { getSupabase } from '../lib/supabase.js'
 import { summarizeCurrencyStatus } from '../lib/ad-cost-imports.js'
-import { isValidTimezone, getLocalDateString } from '../lib/utils.js'
+import { isValidTimezone, getLocalDateString, getNow } from '../lib/utils.js'
 
 const ALLOWED_DIMS = new Set(['source', 'medium', 'campaign', 'ai_source'])
 const MAX_DAYS = 365
@@ -30,10 +30,11 @@ async function getCampaignsData(req) {
   const statusFilter = req.query.status || 'all'
 
   const tz = isValidTimezone(req.site?.timezone) ? req.site.timezone : 'UTC'
-  const dateTo = getLocalDateString(new Date(), tz)
-  const dateFrom = getLocalDateString(new Date(Date.now() - days * 86400000), tz)
-  const prevDateTo = getLocalDateString(new Date(Date.now() - 86400000), tz)
-  const prevDateFrom = getLocalDateString(new Date(Date.now() - (days + 1) * 86400000), tz)
+  const now = getNow(req)
+  const dateTo = getLocalDateString(now, tz)
+  const dateFrom = getLocalDateString(new Date(now.getTime() - days * 86400000), tz)
+  const prevDateTo = getLocalDateString(new Date(now.getTime() - 86400000), tz)
+  const prevDateFrom = getLocalDateString(new Date(now.getTime() - (days + 1) * 86400000), tz)
 
   const supabase = getSupabase()
 

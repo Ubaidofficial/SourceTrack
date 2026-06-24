@@ -3,6 +3,35 @@ dotenv.config()
 
 import { getSupabase } from '../lib/supabase.js'
 
+const isReprocess = process.argv.includes('--reprocess-all') || process.argv.some(arg => arg.startsWith('--reprocess-site='));
+const confirmDestructive = process.argv.includes('--confirm-destructive');
+const reprocessSiteKey = process.argv.find(arg => arg.startsWith('--reprocess-site='))?.split('=')[1];
+const reprocessSuffixFilter = process.argv.find(arg => arg.startsWith('--reprocess-suffix-filter='))?.split('=')[1];
+
+if (isReprocess) {
+  const dbUrl = process.env.SUPABASE_URL || '';
+  const STAGING_REF = 'nrsvpwzekfrdrzkoecfk';
+
+  // 1. Staging project ref allowlist check
+  if (!dbUrl.includes(STAGING_REF)) {
+    console.error(`❌ ERROR: Reprocessing is ONLY allowed on the staging database reference: ${STAGING_REF}`);
+    process.exit(1);
+  }
+
+  // 2. Explicit confirm flag check
+  if (!confirmDestructive) {
+    console.error('❌ ERROR: Reprocessing is a destructive operation. You must pass the --confirm-destructive flag to proceed.');
+    process.exit(1);
+  }
+
+  // 3. Recognized test site key check
+  const STABLE_TEST_SITE_KEY = 'de500000-babe-41d4-a716-446655440000';
+  if (reprocessSiteKey !== STABLE_TEST_SITE_KEY) {
+    console.error(`❌ ERROR: Reprocessing is ONLY allowed for the recognized staging test site key: ${STABLE_TEST_SITE_KEY}`);
+    process.exit(1);
+  }
+}
+
 // Shared channel classifier — single source of truth with the live attribution engine
 import { channelFromEvent } from '../lib/channel-classifier.js'
 
@@ -33,6 +62,16 @@ let _processed = 0
 const _t0 = Date.now()
 
 const supabase = _supabase
+
+function parsePathname(urlStr) {
+  if (!urlStr) return 'unknown'
+  try {
+    const url = urlStr.startsWith('/') ? new URL(urlStr, 'http://localhost') : new URL(urlStr)
+    return url.pathname || 'unknown'
+  } catch (_) {
+    return 'unknown'
+  }
+}
 
 const POSTHOG_PERSONAL_API_KEY = process.env.POSTHOG_PERSONAL_API_KEY
 const POSTHOG_PROJECT_ID = process.env.POSTHOG_PROJECT_ID
@@ -77,11 +116,18 @@ async function main() {
     // attribution is a paid feature. Also skip sites with no activity in the
     // last 7 days to save compute (no new conversions to attribute).
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-    const { data: sites, error: sitesError } = await supabase
+    let query = supabase
       .from('sites')
       .select('id, site_key, plan, attribution_window_days, last_seen_at')
-      .not('plan', 'in', '(free,inactive,archived)')
-      .or(`last_seen_at.gte.${sevenDaysAgo},last_seen_at.is.null`)
+
+    if (reprocessSiteKey) {
+      query = query.eq('site_key', reprocessSiteKey)
+    } else {
+      query = query.not('plan', 'in', '(free,inactive,archived)')
+        .or(`last_seen_at.gte.${sevenDaysAgo},last_seen_at.is.null`)
+    }
+
+    const { data: sites, error: sitesError } = await query
 
     if (sitesError) {
       logError('Failed to fetch sites', sitesError)
@@ -164,6 +210,15 @@ async function main() {
 async function processSite(site) {
   log(`Processing site: ${site.site_key}`)
   
+  const lookbackInterval = isReprocess ? '90 DAY' : '24 HOUR'
+
+  let suffixFilterClause = ''
+  if (reprocessSuffixFilter) {
+    suffixFilterClause = `AND distinct_id LIKE '%${reprocessSuffixFilter}'`
+  } else if (site.site_key === 'de400000-babe-41d4-a716-446655440000') {
+    suffixFilterClause = "AND distinct_id LIKE '%_mv'"
+  }
+
   const conversionsQuery = `
     SELECT 
       uuid,
@@ -175,14 +230,17 @@ async function processSite(site) {
     FROM events
     WHERE event = '$conversion'
       AND properties.site_id = '${site.id}'
-      AND timestamp >= now() - INTERVAL 24 HOUR
+      AND timestamp >= now() - INTERVAL ${lookbackInterval}
+      ${suffixFilterClause}
     ORDER BY timestamp ASC
     LIMIT 1000
   `
-  
+
+  log(`conversionsQuery: ${conversionsQuery}`)
   let rows
   try {
     rows = await queryPostHog(conversionsQuery)
+    log(`conversionsQuery returned ${rows ? rows.length : 0} rows`)
   } catch (error) {
     logWarn(`PostHog query failed for site ${site.site_key}: ${error.message}`)
     return { processed: 0, failed: 0 }
@@ -195,6 +253,7 @@ async function processSite(site) {
   
   let processed = 0
   let failed = 0
+  const records = []
   
   for (const row of rows) {
     try {
@@ -207,7 +266,15 @@ async function processSite(site) {
         external_event_id: row[5] || null
       }
       
-      await processConversion(site, conversion)
+      const record = await processConversion(site, conversion)
+      if (isReprocess) {
+        records.push(record)
+      } else {
+        const { error } = await supabase
+          .from('attributed_conversions')
+          .upsert(record, { onConflict: 'site_id,conversion_event_id' })
+        if (error) throw new Error(`Supabase upsert failed: ${error.message}`)
+      }
       processed++
       await sleep(200)
       
@@ -217,6 +284,26 @@ async function processSite(site) {
     }
   }
   
+  if (isReprocess && records.length > 0) {
+    log(`Reprocessing: deleting existing conversions for site ${site.site_key}...`)
+    const { error: deleteError } = await supabase
+      .from('attributed_conversions')
+      .delete()
+      .eq('site_id', site.id)
+    if (deleteError) {
+      throw new Error(`Failed to delete existing conversions: ${deleteError.message}`)
+    }
+
+    log(`Reprocessing: inserting ${records.length} calculated conversions for site ${site.site_key}...`)
+    const { error: insertError } = await supabase
+      .from('attributed_conversions')
+      .insert(records)
+    if (insertError) {
+      throw new Error(`Failed to insert reprocessed conversions: ${insertError.message}`)
+    }
+    log(`Reprocessing complete for site ${site.site_key}: successfully inserted ${records.length} rows.`)
+  }
+
   log(`Site ${site.site_key}: ${processed} processed, ${failed} failed`)
   return { processed, failed }
 }
@@ -268,7 +355,10 @@ async function processConversion(site, conversion) {
       properties.pclid,
       properties.sccid,
       properties.ko_click_id,
-      properties.page_url
+      properties.page_url,
+      properties.country,
+      properties.device_type,
+      properties.browser_name
     FROM events
     WHERE event = '$pageview'
       AND distinct_id = '${conversion.distinct_id}'
@@ -287,30 +377,37 @@ async function processConversion(site, conversion) {
     touchpointRows = []
   }
 
-  const touchpoints = (touchpointRows || []).map(row => ({
-    timestamp: row[0],
-    utm_source: row[1] || null,
-    utm_medium: row[2] || null,
-    utm_campaign: row[3] || null,
-    referrer: row[4] || null,
-    ai_source: row[5] || null,
-    gclid:     row[6]  || null,
-    gbraid:    row[7]  || null,
-    wbraid:    row[8]  || null,
-    fbclid:    row[9]  || null,
-    msclkid:   row[10] || null,
-    ttclid:    row[11] || null,
-    li_fat_id: row[12] || null,
-    li_fatid:  row[13] || null,
-    twclid:    row[14] || null,
-    dclid:     row[15] || null,
-    snapclid:  row[16] || null,
-    pclid:     row[17] || null,
-    sccid:     row[18] || null,
-    ko_click_id: row[19] || null,
-    page_url:  row[20] || null,
-    derived_source: row[1] || row[6] || (row[4] ? (() => { try { return new URL(row[4]).hostname.replace('www.', '') } catch (_e) { return null } })() : null) || 'direct'
-  }))
+  const touchpoints = (touchpointRows || []).map(row => {
+    const pageUrl = row[20] || null
+    return {
+      timestamp: row[0],
+      utm_source: row[1] || null,
+      utm_medium: row[2] || null,
+      utm_campaign: row[3] || null,
+      referrer: row[4] || null,
+      ai_source: row[5] || null,
+      gclid:     row[6]  || null,
+      gbraid:    row[7]  || null,
+      wbraid:    row[8]  || null,
+      fbclid:    row[9]  || null,
+      msclkid:   row[10] || null,
+      ttclid:    row[11] || null,
+      li_fat_id: row[12] || null,
+      li_fatid:  row[13] || null,
+      twclid:    row[14] || null,
+      dclid:     row[15] || null,
+      snapclid:  row[16] || null,
+      pclid:     row[17] || null,
+      sccid:     row[18] || null,
+      ko_click_id: row[19] || null,
+      page_url:  pageUrl,
+      derived_source: row[1] || row[6] || (row[4] ? (() => { try { return new URL(row[4]).hostname.replace('www.', '') } catch (_e) { return null } })() : null) || 'direct',
+      country:   row[21] || 'unknown',
+      device:    row[22] || 'unknown',
+      browser:   row[23] || 'unknown',
+      landing_page: parsePathname(pageUrl)
+    }
+  })
   
   const attribution = calculateAttribution(touchpoints, convValue)
 
@@ -426,16 +523,19 @@ async function processConversion(site, conversion) {
       has_ai_source:    !!(firstTp.ai_source),
       touchpoint_count: touchpoints.length
     }),
-    channel_30d: channel30d
+    channel_30d: channel30d,
+
+    first_touch_country: firstTp.country || 'unknown',
+    last_touch_country: lastTp.country || 'unknown',
+    first_touch_device: firstTp.device || 'unknown',
+    last_touch_device: lastTp.device || 'unknown',
+    first_touch_browser: firstTp.browser || 'unknown',
+    last_touch_browser: lastTp.browser || 'unknown',
+    first_touch_landing_page: firstTp.landing_page || 'unknown',
+    last_touch_landing_page: lastTp.landing_page || 'unknown'
   }
 
-  const { error } = await supabase
-    .from('attributed_conversions')
-    .upsert(record, { onConflict: 'site_id,conversion_event_id' })
-  
-  if (error) {
-    throw new Error(`Supabase upsert failed: ${error.message}`)
-  }
+  return record
 }
 
 function calculateAttribution(touchpoints, conversionValue) {
@@ -467,7 +567,11 @@ function calculateAttribution(touchpoints, conversionValue) {
     medium: tp.utm_medium || null,
     campaign: tp.utm_campaign || null,
     channel: tpCh(tp),
-    timestamp: tp.timestamp
+    timestamp: tp.timestamp,
+    country: tp.country || 'unknown',
+    device: tp.device || 'unknown',
+    browser: tp.browser || 'unknown',
+    landing_page: tp.landing_page || 'unknown'
   })
 
   // ── Linear ──────────────────────────────────────────────────────────────────

@@ -3,7 +3,7 @@ import { getSupabase } from '../api/lib/supabase.js';
 import assert from 'assert';
 
 const SOURCETRACK_API_URL = process.env.SOURCETRACK_API_URL || 'http://localhost:3000';
-const DEMO_SITE_KEY = 'de400000-babe-41d4-a716-446655440000';
+const DEMO_SITE_KEY = 'de500000-babe-41d4-a716-446655440000';
 const DEMO_EMAIL = 'demo-diag-saas@sourcetrack.ai';
 const DEMO_PASSWORD = 'DemoSaaSPassword2026!';
 
@@ -47,9 +47,9 @@ async function run() {
   const token = loginData.session.access_token;
   console.log('JWT obtained successfully.\n');
 
-  const now = new Date();
-  const date_to = now.toISOString().slice(0, 10);
-  const date_from = new Date(now.getTime() - 30 * 86400000).toISOString().slice(0, 10);
+  // Fix time-of-run dependency by using a fixed stable date range matching the seed window
+  const date_to = '2026-06-23';
+  const date_from = '2026-05-23';
 
   const models = ['linear', 'u_shaped', 'time_decay', 'w_shaped'];
 

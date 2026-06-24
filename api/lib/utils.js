@@ -456,6 +456,19 @@ export function getPaddedUtcDateRange(localDateFrom, localDateTo) {
   }
 }
 
+export function getNow(req) {
+  const isTestMode = process.env.NODE_ENV !== 'production' && process.env.ALLOW_TEST_TIME_MOCK === 'true'
+  if (isTestMode && req) {
+    const override = req.headers['x-sourcetrack-now'] || req.query.now_override
+    if (override) {
+      const d = new Date(override)
+      if (!isNaN(d.getTime())) return d
+    }
+  }
+  return new Date()
+}
+
+
 let cachedKeyBuffer = null
 
 function getEncryptionKeyBuffer() {
