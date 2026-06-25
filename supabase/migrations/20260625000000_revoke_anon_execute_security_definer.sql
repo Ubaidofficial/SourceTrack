@@ -1,29 +1,26 @@
--- Revoke EXECUTE on SECURITY DEFINER functions from client-facing roles.
+-- Revoke client-facing EXECUTE on two over-granted functions.
 --
--- Both functions below are SECURITY DEFINER, which Supabase's security
--- advisor flags ("anon_security_definer") because any role with EXECUTE can
--- invoke them with the definer's elevated privileges. Neither needs to be
--- callable by the anon or authenticated (or default PUBLIC) roles:
+-- Staging grant-state audit found both functions hold EXECUTE for PUBLIC,
+-- anon, authenticated, postgres, and service_role. The PUBLIC grant is the
+-- key problem: revoking only anon/authenticated leaves PUBLIC intact, and
+-- anon inherits PUBLIC, so the grant must be revoked FROM PUBLIC too.
 --
---   * claim_revenue_idempotency_keys(text,text,jsonb)
---       Sole caller is the backend via the service_role key
---       (api/lib/idempotency.js -> getSupabase()). service_role is not
---       affected by these REVOKEs.
+--   * public.enforce_free_tier_abuse_guards()  — SECURITY DEFINER.
+--       Trigger function on sites (BEFORE INSERT/UPDATE). Flagged by the
+--       advisor's anon_security_definer check. Triggers fire as part of the
+--       statement regardless of the invoking role's EXECUTE privilege, so
+--       revoking direct EXECUTE does not stop the guard from firing on
+--       anon-key sites inserts. There is no .rpc() call to it.
 --
---   * enforce_free_tier_abuse_guards()
---       Trigger function on sites (BEFORE INSERT/UPDATE). Triggers fire as
---       part of the statement regardless of the invoking role's EXECUTE
---       privilege, so revoking direct EXECUTE does not stop the guard from
---       firing on anon-key sites inserts. There is no .rpc() call to it.
+--   * public.claim_revenue_idempotency_keys(text,text,jsonb)  — SECURITY
+--       INVOKER (prosecdef=false on staging). Sole caller is the backend via
+--       the service_role key (api/lib/idempotency.js -> getSupabase()). No
+--       client needs direct EXECUTE; the anon/authenticated/PUBLIC grants are
+--       unnecessary attack surface.
 --
--- REVOKE is idempotent: revoking a privilege that was never granted emits a
--- notice, not an error. Revoking from PUBLIC + anon + authenticated covers
--- every client-facing grantee whichever one currently holds it.
+-- service_role (backend caller) and postgres (superuser) grants are left
+-- untouched. REVOKE is idempotent: revoking a privilege that was never
+-- granted emits a notice, not an error.
 
-REVOKE EXECUTE ON FUNCTION claim_revenue_idempotency_keys(text, text, jsonb) FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION claim_revenue_idempotency_keys(text, text, jsonb) FROM anon;
-REVOKE EXECUTE ON FUNCTION claim_revenue_idempotency_keys(text, text, jsonb) FROM authenticated;
-
-REVOKE EXECUTE ON FUNCTION enforce_free_tier_abuse_guards() FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION enforce_free_tier_abuse_guards() FROM anon;
-REVOKE EXECUTE ON FUNCTION enforce_free_tier_abuse_guards() FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.claim_revenue_idempotency_keys(text, text, jsonb) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.enforce_free_tier_abuse_guards() FROM PUBLIC, anon, authenticated;
