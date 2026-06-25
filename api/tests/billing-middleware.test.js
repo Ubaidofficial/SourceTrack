@@ -2713,7 +2713,7 @@ test('resolveCheckoutPrice — plan key validation', async (t) => {
   })
 })
 
-test('getPriceMap — early bird annual price ID maps to starter entitlements', async (t) => {
+test('getPriceMap — early bird annual price ID maps to growth entitlements', async (t) => {
   const savedEarlyBird = process.env.STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID
 
   t.after(() => {
@@ -2721,11 +2721,11 @@ test('getPriceMap — early bird annual price ID maps to starter entitlements', 
     else process.env.STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID = savedEarlyBird
   })
 
-  await t.test('early_bird price ID present in map and maps to starter', () => {
+  await t.test('early_bird price ID present in map and maps to growth', () => {
     process.env.STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID = 'price_test_early_bird_abc'
     const map = getPriceMap()
-    assert.strictEqual(map['price_test_early_bird_abc'], 'starter',
-      'Early Bird annual price ID must map to starter entitlements in webhook handler')
+    assert.strictEqual(map['price_test_early_bird_abc'], 'growth',
+      'Founder (Early Bird annual) price ID must map to growth entitlements in webhook handler')
   })
 
   await t.test('early_bird price ID absent — not in map, does not default to growth', () => {
