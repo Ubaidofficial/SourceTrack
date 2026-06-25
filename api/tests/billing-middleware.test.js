@@ -11,7 +11,7 @@ process.env.ENCRYPTION_KEY = '00000000000000000000000000000000000000000000000000
 
 import { getSupabase } from '../lib/supabase.js'
 import { validateSiteKey, siteCache } from '../middleware/auth.js'
-import { isValidRedirectUrl, getRedirectAllowlist, getDefaultBillingReturnUrl, resolveCheckoutPrice, getPriceMap } from '../routes/billing.js'
+import { isValidRedirectUrl, getRedirectAllowlist, getDefaultBillingReturnUrl, resolveCheckoutPrice, getPriceMap, getCurrentMonthUsage } from '../routes/billing.js'
 import { checkTierLimit } from '../middleware/tier-check.js'
 import { dispatchWebhook } from '../lib/webhook.js'
 import { checkSiteCreationLimit } from '../lib/site-limits.js'
@@ -2736,4 +2736,49 @@ test('getPriceMap — early bird annual price ID maps to starter entitlements', 
     // Confirm the map does not accidentally resolve it to growth
     assert.notStrictEqual(map['price_test_early_bird_abc'], 'growth')
   })
+})
+
+test('getCurrentMonthUsage — reads site_usage_monthly via service role (140G billing meter)', async (t) => {
+  const client = getSupabase()
+  const originalFrom = client.from
+
+  // Capture the query the helper builds so we can assert table + filters.
+  let captured = null
+  function mockFrom(rowResult) {
+    return (table) => {
+      captured = { table, eqs: [] }
+      const builder = {
+        select: (cols) => { captured.cols = cols; return builder },
+        eq: (col, val) => { captured.eqs.push([col, val]); return builder },
+        maybeSingle: async () => rowResult
+      }
+      return builder
+    }
+  }
+
+  // Expected UTC month key — identical formula to api/lib/pageview-limits.js
+  const now = new Date()
+  const expectedMonth = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`
+
+  await t.test('defaults to 0/0 when no usage row exists for the month', async () => {
+    client.from = mockFrom({ data: null, error: null })
+    const usage = await getCurrentMonthUsage('site-abc')
+    assert.strictEqual(captured.table, 'site_usage_monthly')
+    assert.deepStrictEqual(captured.eqs[0], ['site_id', 'site-abc'])
+    assert.deepStrictEqual(captured.eqs[1], ['month', expectedMonth])
+    assert.deepStrictEqual(usage, { month: expectedMonth, pageview_count: 0, conversion_count: 0 })
+  })
+
+  await t.test('returns real counts when a row exists', async () => {
+    client.from = mockFrom({ data: { pageview_count: 4213, conversion_count: 27 }, error: null })
+    const usage = await getCurrentMonthUsage('site-abc')
+    assert.deepStrictEqual(usage, { month: expectedMonth, pageview_count: 4213, conversion_count: 27 })
+  })
+
+  await t.test('throws on DB error (caller maps to 500)', async () => {
+    client.from = mockFrom({ data: null, error: { message: 'boom' } })
+    await assert.rejects(() => getCurrentMonthUsage('site-abc'))
+  })
+
+  client.from = originalFrom
 })
