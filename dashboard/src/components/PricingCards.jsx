@@ -2,8 +2,8 @@ import { Link } from 'react-router-dom'
 
 const PLANS = [
   {
-    key: 'starter', name: 'Starter', price: '$29', period: '/mo',
-    desc: 'Founder pricing locked at $29/mo — rises to $49 when founding closes.',
+    key: 'starter', name: 'Starter', price: '$49', period: '/mo',
+    desc: 'For founders and marketers attributing leads and revenue by source.',
     features: [
       'Track visits, leads, and conversions by source',
       'Detect AI referrals from ChatGPT, Claude, and Perplexity',
@@ -17,7 +17,7 @@ const PLANS = [
     cta: 'Get Starter', href: '/signup', featured: false,
   },
   {
-    key: 'growth', name: 'Growth', price: '$99', period: '/mo',
+    key: 'growth', name: 'Growth', price: '$79', period: '/mo',
     desc: 'Best for teams scaling campaigns, SEO, and AI referrals.',
     features: [
       'Everything in Starter',
