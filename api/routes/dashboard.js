@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
 import { getSupabase as getSupabaseAdmin } from '../lib/supabase.js'
-import { esc, isValidTimezone, getLocalDateString, getPaddedUtcDateRange, getNow } from '../lib/utils.js'
+import { esc, isValidTimezone, getLocalDateString, getPaddedUtcDateRange, getNow, cappedRate } from '../lib/utils.js'
 import { channelFromEvent } from '../lib/channel-classifier.js'
 import { getSetupDiagnostics } from '../lib/setup-doctor.js'
 import { classifyConversionType } from '../lib/conversion-classifier.js'
@@ -49,7 +49,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     ] = await Promise.all([
       supabase
         .from('attributed_conversions')
-        .select('first_touch_source, first_touch_channel, last_touch_channel, first_touch_campaign, conversion_value, conversion_type, conversion_date, status, touchpoint_count, conversion_timestamp')
+        .select('first_touch_source, first_touch_channel, last_touch_channel, first_touch_campaign, conversion_value, conversion_type, conversion_date, status, touchpoint_count, conversion_timestamp, distinct_id, anonymous_id')
         .eq('site_id', req.site.id)
         .gte('conversion_date', currentPadded.from)
         .lte('conversion_date', currentPadded.to),
@@ -132,6 +132,12 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     let sqlCount = 0
     let ftNonDirectRevenue = 0
     let ltNonDirectRevenue = 0
+    // DISTINCT converters by canonical visitor identity (distinct_id == anonymous_id),
+    // the same key the denominator (totalSessions = count(DISTINCT distinct_id)) uses.
+    // Rate numerators must count people, not raw rows, or repeat conversions push >100%.
+    const converters = new Set()
+    const leadConverters = new Set()
+    const customerConverters = new Set()
 
     for (const r of rows) {
       const localDate = getLocalDateString(new Date(r.conversion_timestamp || r.conversion_date), tz)
@@ -154,6 +160,13 @@ router.get('/overview', validateSiteKey, async (req, res) => {
         totalLeads++
       } else if (typeClass === 'customer') {
         totalCustomers++
+      }
+
+      const convId = r.distinct_id || r.anonymous_id
+      if (convId) {
+        converters.add(convId)
+        if (typeClass === 'lead') leadConverters.add(convId)
+        else if (typeClass === 'customer') customerConverters.add(convId)
       }
 
       if (r.status === 'sql') sqlCount++
@@ -352,9 +365,9 @@ router.get('/overview', validateSiteKey, async (req, res) => {
           ai_revenue: totalAIRevenue,
           ai_revenue_prev: prevAIRevenue,
           ai_revenue_share: aiShareTotal,
-          conversion_rate: totalSessions > 0 ? parseFloat(((totalConversions / totalSessions) * 100).toFixed(2)) : 0,
-          lead_conversion_rate: totalSessions > 0 ? parseFloat(((totalLeads / totalSessions) * 100).toFixed(2)) : 0,
-          customer_conversion_rate: totalSessions > 0 ? parseFloat(((totalCustomers / totalSessions) * 100).toFixed(2)) : 0,
+          conversion_rate: parseFloat(cappedRate(converters.size, totalSessions).toFixed(2)),
+          lead_conversion_rate: parseFloat(cappedRate(leadConverters.size, totalSessions).toFixed(2)),
+          customer_conversion_rate: parseFloat(cappedRate(customerConverters.size, totalSessions).toFixed(2)),
           avg_value: avgValue,
           best_rpv_channel: bestRPV.dim_value,
           best_rpv: bestRPV.rpv

@@ -58,6 +58,51 @@ export function bucketUniqueVisitors(rows, bucketOf) {
 }
 
 /**
+ * Count DISTINCT converters from a set of conversion rows. The numerator of a
+ * conversion rate must be distinct people, not raw conversion rows — a visitor
+ * who converts multiple times is ONE converter, not many (otherwise the rate can
+ * exceed 100%). Keys on the same canonical visitor identity as the pageview
+ * denominator: distinct_id (== anonymous_id in SourceTrack), falling back to
+ * anonymous_id. Rows with no identity are skipped.
+ *
+ * @param {Array<{distinct_id?: string, anonymous_id?: string}>} rows
+ * @param {(row: object) => (string|undefined)} [idOf] — identity extractor
+ * @returns {number} distinct converter count
+ */
+export function countDistinctConverters(rows, idOf = r => r.distinct_id || r.anonymous_id) {
+  const ids = new Set()
+  for (const r of rows) {
+    const id = idOf(r)
+    if (id) ids.add(id)
+  }
+  return ids.size
+}
+
+/**
+ * Compute a percentage rate, guarded against a zero/empty denominator and capped
+ * at 100%. The cap is belt-and-suspenders: the real correctness fix is feeding a
+ * distinct-converter numerator, but the cap structurally prevents any future
+ * numerator/denominator drift (different identity spaces, windows, etc.) from
+ * surfacing a nonsensical >100% rate to users.
+ *
+ * @param {number} numerator
+ * @param {number} denominator
+ * @returns {number} rate in [0, 100]
+ */
+export function cappedRate(numerator, denominator) {
+  if (!denominator || denominator <= 0) return 0
+  const rate = (numerator / denominator) * 100
+  if (rate > 100) {
+    // Cap should never actually trigger once the numerator is distinct converters.
+    // If it does, an upstream over-count slipped through (e.g. duplicate writes,
+    // identity-space drift) — surface it instead of silently masking it.
+    console.warn(`[cappedRate] raw rate ${rate.toFixed(2)}% (numerator=${numerator}, denominator=${denominator}) capped to 100% — possible upstream over-count`)
+    return 100
+  }
+  return rate
+}
+
+/**
  * Normalize a UTM-like value: trim + lowercase. Returns the original on
  * non-string inputs so it's safe to pipe through with `null`/`undefined`.
  *
