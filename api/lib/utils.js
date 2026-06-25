@@ -12,14 +12,16 @@ import crypto from 'crypto'
 
 /**
  * Escape a value for safe inclusion in HogQL string literals.
- * Doubles single quotes (ClickHouse/HogQL escape rule).
+ * HogQL/ClickHouse string literals honor C-style backslash escapes, so a value
+ * ending in a backslash could otherwise escape the closing quote and break out
+ * (confirmed injection). Escape backslashes FIRST, then double single quotes.
  * Defensive `String()` wrap avoids `null.replace` crashes on bad inputs.
  *
  * @param {*} value — any value; coerced to string before escaping
  * @returns {string}
  */
 export function esc(value = '') {
-  return String(value).replace(/'/g, "''")
+  return String(value).replace(/\\/g, '\\\\').replace(/'/g, "''")
 }
 
 /**
@@ -31,6 +33,28 @@ export function esc(value = '') {
  */
 export function toHogDate(iso) {
   return iso.replace('T', ' ').replace(/\.\d+Z?$/, '').replace('Z', '')
+}
+
+/**
+ * Count distinct visitors (anonymous_id) per time bucket — the "unique visitors
+ * over time" series. A visitor active in multiple buckets is counted in EACH
+ * bucket (daily uniques don't sum to period uniques). Rows with no anonymous_id
+ * are skipped.
+ *
+ * @param {Array<{anonymous_id?: string, timestamp: string}>} rows
+ * @param {(timestamp: string) => string} bucketOf — maps a row timestamp to a bucket key
+ * @returns {Object<string, number>} bucket key → distinct visitor count
+ */
+export function bucketUniqueVisitors(rows, bucketOf) {
+  const sets = {}
+  for (const r of rows) {
+    if (!r.anonymous_id) continue
+    const b = bucketOf(r.timestamp)
+    ;(sets[b] || (sets[b] = new Set())).add(r.anonymous_id)
+  }
+  const counts = {}
+  for (const [b, set] of Object.entries(sets)) counts[b] = set.size
+  return counts
 }
 
 /**

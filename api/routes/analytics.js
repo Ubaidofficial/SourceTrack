@@ -4,7 +4,8 @@ import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { getSupabase } from '../lib/supabase.js'
-import { redactPiiFromUrl, redactPiiFromObject, isGoogleSource, isValidTimezone, getLocalDateString, getLocalMonthString, getLocalWeekString, getPaddedUtcDateRange, getNow } from '../lib/utils.js'
+import { fetchPageviews } from '../lib/posthog.js'
+import { redactPiiFromUrl, redactPiiFromObject, isGoogleSource, isValidTimezone, getLocalDateString, getLocalMonthString, getLocalWeekString, getPaddedUtcDateRange, getNow, bucketUniqueVisitors } from '../lib/utils.js'
 import { requireFeature, isSiteStatusBlocked } from '../lib/plan-features.js'
 import { claimPageviewUsage } from '../lib/pageview-limits.js'
 import {
@@ -43,27 +44,6 @@ function parseFilters(req) {
     out.push({ type: String(req.query.filter_type), value: String(req.query.filter_value) })
   }
   return out
-}
-
-// Apply a list of filters to a Supabase pageviews query.
-function applyPageviewFilters(query, filters) {
-  for (const { type, value } of filters) {
-    if (type === 'Page' || type === 'Entry' || type === 'Exit')
-      query = query.ilike('url', `%${value}%`)
-    else if (type === 'Source')
-      query = query.eq('referrer', value)
-    else if (type === 'Country')
-      query = query.eq('country', value)
-    else if (type === 'Device')
-      query = query.eq('device', value)
-    else if (type === 'Browser')
-      query = query.eq('browser', value)
-    else if (type === 'OS')
-      query = query.eq('os', value)
-    else if (type === 'AI Source')
-      query = query.eq('ai_source', value)
-  }
-  return query
 }
 
 router.post('/collect',
@@ -161,33 +141,21 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
     const localDateFrom = fromParam || getLocalDateString(new Date(now.getTime() - days * 86400000), tz)
 
     const currentPadded = getPaddedUtcDateRange(localDateFrom, localDateTo)
-    const from = new Date(currentPadded.from + 'T00:00:00Z').toISOString()
-    const to = new Date(currentPadded.to + 'T23:59:59Z').toISOString()
 
     const filters = parseFilters(req)
 
-    let query = supabase.from('pageviews')
-      .select('url,referrer,utm_source,utm_medium,utm_campaign,country,device,browser,os,session_id,duration_seconds,ai_source,timestamp')
-      .eq('site_id', siteId).gte('timestamp', from).lte('timestamp', to)
-      .order('timestamp', { ascending: false }).limit(10000)
-    query = applyPageviewFilters(query, filters)
-
-    const { data: rawRows, error } = await query
-    if (error) throw error
-    const rows = rawRows || []
+    // Pageviews come from PostHog ($pageview), not the legacy Supabase table.
+    const rows = await fetchPageviews(siteId, currentPadded.from, currentPadded.to, { filters, limit: 10000, queryName: 'summary' })
 
     const pv = rows.filter(r => {
       const localDate = getLocalDateString(new Date(r.timestamp), tz)
       return localDate >= localDateFrom && localDate <= localDateTo
     })
 
-    const uniqueSessions = new Set(pv.map(r => r.session_id).filter(Boolean)).size
-    const sessionCounts = {}
-    pv.forEach(r => { if (r.session_id) sessionCounts[r.session_id] = (sessionCounts[r.session_id] || 0) + 1 })
-    const sessionArr = Object.values(sessionCounts)
-    const bounceRate = sessionArr.length > 0 ? (sessionArr.filter(c => c === 1).length / sessionArr.length) * 100 : 0
-    const durations = pv.map(r => r.duration_seconds).filter(d => d > 0)
-    const avgDuration = durations.length > 0 ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length) : 0
+    // Visitor-dedup uses anonymous_id (server-routed PostHog events carry no session_id).
+    const uniqueVisitors = new Set(pv.map(r => r.anonymous_id).filter(Boolean)).size
+    // bounce_rate & avg_duration_seconds need per-session pageview counts / durations
+    // that PostHog server-routed events don't provide — suppressed in the response below.
     const pageCounts = {}
     pv.forEach(r => { try { const path = new URL(r.url).pathname; pageCounts[path] = (pageCounts[path] || 0) + 1 } catch (_e) {} })
     const topPages = Object.entries(pageCounts).sort((a, b) => b[1] - a[1]).slice(0, 50).map(([page, views]) => ({ page, views }))
@@ -209,16 +177,6 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
     pv.filter(r => r.country).forEach(r => { countryCounts[r.country] = (countryCounts[r.country] || 0) + 1 })
     const topCountries = Object.entries(countryCounts).sort((a, b) => b[1] - a[1]).slice(0, 50).map(([country, visits]) => ({ country, visits }))
 
-    // ─── Time series — visitors by date (uses session_id first-seen, not pv count)
-    const sessionFirstSeen = {}
-    pv.forEach(r => {
-      if (!r.session_id) return
-      const ts = new Date(r.timestamp).getTime()
-      if (!sessionFirstSeen[r.session_id] || ts < sessionFirstSeen[r.session_id]) {
-        sessionFirstSeen[r.session_id] = ts
-      }
-    })
-
     // Bucket helper based on granularity (daily/weekly/monthly).
     function bucket(isoOrDate) {
       if (granularity === 'monthly') return getLocalMonthString(isoOrDate, tz)
@@ -226,11 +184,8 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
       return getLocalDateString(isoOrDate, tz)
     }
 
-    const dayVisitorBuckets = {}
-    Object.entries(sessionFirstSeen).forEach(([sid, ts]) => {
-      const b = bucket(ts)
-      dayVisitorBuckets[b] = (dayVisitorBuckets[b] || 0) + 1
-    })
+    // ─── Time series — unique visitors per bucket (distinct anonymous_id active in each bucket)
+    const dayVisitorBuckets = bucketUniqueVisitors(pv, bucket)
 
     // Page-view count by bucket (kept for backward-compat "trend" field).
     const dayCounts = {}
@@ -241,13 +196,8 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
     })
     const trend = Object.entries(dayCounts).sort((a, b) => a[0].localeCompare(b[0])).slice(-90).map(([date, views]) => ({ date, views }))
 
-    // New vs returning
-    let newVisitors = 0, returningVisitors = 0
-    Object.values(sessionFirstSeen).forEach(firstTs => {
-      const localDate = getLocalDateString(new Date(firstTs), tz)
-      if (localDate >= localDateFrom) newVisitors++
-      else returningVisitors++
-    })
+    // new_visitors / returning_visitors require session-window classification that
+    // PostHog server-routed events can't support reliably — suppressed (response below).
 
     // ─── Revenue join from attributed_conversions ────────────────────────────
     let conversions = []
@@ -268,8 +218,8 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
 
     const totalRevenue = conversions.reduce((s, r) => s + (Number(r.conversion_value) || 0), 0)
     const conversionCount = conversions.length
-    const conversionRate = uniqueSessions > 0 ? (conversionCount / uniqueSessions) * 100 : 0
-    const revenuePerVisitor = uniqueSessions > 0 ? totalRevenue / uniqueSessions : 0
+    const conversionRate = uniqueVisitors > 0 ? (conversionCount / uniqueVisitors) * 100 : 0
+    const revenuePerVisitor = uniqueVisitors > 0 ? totalRevenue / uniqueVisitors : 0
 
     // Revenue time series — bucketed the same way as visitor time series
     const revenueBuckets = {}
@@ -297,11 +247,11 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
         period: { days, from: localDateFrom, to: localDateTo, granularity },
         kpis: {
           pageviews: pv.length,
-          unique_visitors: uniqueSessions,
-          new_visitors: newVisitors,
-          returning_visitors: returningVisitors,
-          bounce_rate: bounceRate,
-          avg_duration_seconds: avgDuration,
+          unique_visitors: uniqueVisitors,
+          new_visitors: null,
+          returning_visitors: null,
+          bounce_rate: null,
+          avg_duration_seconds: null,
           total_revenue: totalRevenue,
           conversion_count: conversionCount,
           conversion_rate: conversionRate,
@@ -414,18 +364,10 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
     }
 
     if (tab === 'ai_source') {
-      let query = supabase.from('pageviews')
-        .select('session_id, ai_source, timestamp')
-        .eq('site_id', siteId)
-        .gte('timestamp', new Date(padded.from + 'T00:00:00Z').toISOString())
-        .lte('timestamp', new Date(padded.to + 'T23:59:59Z').toISOString())
-        .not('ai_source', 'is', null)
-        .neq('ai_source', '')
-        .limit(50000)
-      query = applyPageviewFilters(query, filters)
-      const { data: rawRows } = await query
+      const rawRows = await fetchPageviews(siteId, padded.from, padded.to, { filters, limit: 50000, queryName: 'sources_ai' })
 
-      const rows = (rawRows || []).filter(r => {
+      const rows = rawRows.filter(r => {
+        if (!r.ai_source) return false
         const localDate = getLocalDateString(new Date(r.timestamp), tz)
         return localDate >= localDateFrom && localDate <= localDateTo
       })
@@ -435,7 +377,7 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
         const normName = normalizeAISourceName(r.ai_source)
         if (!normName) return
         groups[normName] = groups[normName] || { name: normName, visitors_set: new Set() }
-        if (r.session_id) groups[normName].visitors_set.add(r.session_id)
+        if (r.anonymous_id) groups[normName].visitors_set.add(r.anonymous_id)
       })
 
       let revenueByKey = {}
@@ -514,16 +456,9 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
     }
 
     // referrer / medium — group by pageviews
-    let query = supabase.from('pageviews')
-      .select('referrer, utm_source, utm_medium, session_id, ai_source, timestamp')
-      .eq('site_id', siteId)
-      .gte('timestamp', new Date(padded.from + 'T00:00:00Z').toISOString())
-      .lte('timestamp', new Date(padded.to + 'T23:59:59Z').toISOString())
-      .limit(50000)
-    query = applyPageviewFilters(query, filters)
-    const { data: rawRows } = await query
+    const rawRows = await fetchPageviews(siteId, padded.from, padded.to, { filters, limit: 50000, queryName: 'sources_ref' })
 
-    const rows = (rawRows || []).filter(r => {
+    const rows = rawRows.filter(r => {
       const localDate = getLocalDateString(new Date(r.timestamp), tz)
       return localDate >= localDateFrom && localDate <= localDateTo
     })
@@ -556,7 +491,7 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
         }
       }
       groups[key] = groups[key] || { name: key, visitors_set: new Set() }
-      if (r.session_id) groups[key].visitors_set.add(r.session_id)
+      if (r.anonymous_id) groups[key].visitors_set.add(r.anonymous_id)
     })
 
     // Optional revenue overlay for referrer tab via attributed_conversions
@@ -705,29 +640,11 @@ router.get('/data-quality/latest', requireUserAuth, validateSiteKey, requireSite
 })
 
 router.get('/entry-exit', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
-  try {
-    const siteId = String(req.site.id)
-    const days = parseInt(req.query.days) || 30
-    const from = new Date(Date.now() - days * 86400000).toISOString()
-    const filters = parseFilters(req)
-    const supabase = getSupabase()
-    let q = supabase.from('pageviews')
-      .select('entry_page, exit_page, session_id')
-      .eq('site_id', siteId).gte('timestamp', from).limit(20000)
-    q = applyPageviewFilters(q, filters)
-    const { data: rows } = await q
-    if (!rows) return res.json({ success: true, data: { entry_pages: [], exit_pages: [] } })
-    const entryCount = {}, exitCount = {}, totalSessions = new Set()
-    rows.forEach(r => {
-      if (r.session_id) totalSessions.add(r.session_id)
-      if (r.entry_page) entryCount[r.entry_page] = (entryCount[r.entry_page] || 0) + 1
-      if (r.exit_page) exitCount[r.exit_page] = (exitCount[r.exit_page] || 0) + 1
-    })
-    const total = totalSessions.size || 1
-    const entry_pages = Object.entries(entryCount).sort((a,b)=>b[1]-a[1]).slice(0,50).map(([page,count])=>({page,count,pct:Math.round(count/total*100)}))
-    const exit_pages = Object.entries(exitCount).sort((a,b)=>b[1]-a[1]).slice(0,50).map(([page,count])=>({page,count,pct:Math.round(count/total*100)}))
-    res.json({ success: true, data: { entry_pages, exit_pages } })
-  } catch (err) { res.status(500).json({ success: false, error: err.message }) }
+  // Entry/exit pages are session-boundary metrics — the first and last pageview of each
+  // visit. PostHog server-routed events carry no usable session_id, so these can't be
+  // derived honestly (deriving over anonymous_id would merge weeks of visits into one).
+  // Suppressed to empty; the dashboard renders its "No entry/exit data yet" state.
+  res.json({ success: true, data: { entry_pages: [], exit_pages: [] } })
 })
 
 router.get('/outbound', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
@@ -772,31 +689,22 @@ router.get('/browsers', requireUserAuth, validateSiteKey, requireSiteMembership,
     const siteId = String(req.site.id)
     const days = Math.min(parseInt(req.query.days) || 30, 90)
     const from = new Date(Date.now() - days * 86400000).toISOString()
+    const to = new Date().toISOString()
     const filters = parseFilters(req)
-    const supabase = getSupabase()
 
-    let query = supabase
-      .from('pageviews')
-      .select('browser, session_id')
-      .eq('site_id', siteId)
-      .gte('timestamp', from)
-      .not('browser', 'is', null)
-      .limit(50000)
-    query = applyPageviewFilters(query, filters)
-
-    const { data: rows } = await query
-    if (!rows) return res.json({ success: true, data: [] })
+    const rows = await fetchPageviews(siteId, from, to, { filters, limit: 50000, queryName: 'browsers' })
 
     const counts = {}
     for (const r of rows) {
-      const b = r.browser || 'other'
-      counts[b] = counts[b] || { browser: b, sessions: new Set() }
-      if (r.session_id) counts[b].sessions.add(r.session_id)
+      if (!r.browser) continue
+      const b = r.browser
+      counts[b] = counts[b] || { browser: b, visitors: new Set() }
+      if (r.anonymous_id) counts[b].visitors.add(r.anonymous_id)
     }
 
-    const total = Object.values(counts).reduce((s, c) => s + c.sessions.size, 0) || 1
+    const total = Object.values(counts).reduce((s, c) => s + c.visitors.size, 0) || 1
     const results = Object.values(counts)
-      .map(c => ({ browser: c.browser, visitors: c.sessions.size, percentage: parseFloat((c.sessions.size / total * 100).toFixed(1)) }))
+      .map(c => ({ browser: c.browser, visitors: c.visitors.size, percentage: parseFloat((c.visitors.size / total * 100).toFixed(1)) }))
       .sort((a, b) => b.visitors - a.visitors)
       .slice(0, 50)
 
@@ -812,31 +720,22 @@ router.get('/os', requireUserAuth, validateSiteKey, requireSiteMembership, async
     const siteId = String(req.site.id)
     const days = Math.min(parseInt(req.query.days) || 30, 90)
     const from = new Date(Date.now() - days * 86400000).toISOString()
+    const to = new Date().toISOString()
     const filters = parseFilters(req)
-    const supabase = getSupabase()
 
-    let query = supabase
-      .from('pageviews')
-      .select('os, session_id')
-      .eq('site_id', siteId)
-      .gte('timestamp', from)
-      .not('os', 'is', null)
-      .limit(50000)
-    query = applyPageviewFilters(query, filters)
-
-    const { data: rows } = await query
-    if (!rows) return res.json({ success: true, data: [] })
+    const rows = await fetchPageviews(siteId, from, to, { filters, limit: 50000, queryName: 'os' })
 
     const counts = {}
     for (const r of rows) {
-      const o = r.os || 'unknown'
-      counts[o] = counts[o] || { os: o, sessions: new Set() }
-      if (r.session_id) counts[o].sessions.add(r.session_id)
+      if (!r.os) continue
+      const o = r.os
+      counts[o] = counts[o] || { os: o, visitors: new Set() }
+      if (r.anonymous_id) counts[o].visitors.add(r.anonymous_id)
     }
 
-    const total = Object.values(counts).reduce((s, c) => s + c.sessions.size, 0) || 1
+    const total = Object.values(counts).reduce((s, c) => s + c.visitors.size, 0) || 1
     const results = Object.values(counts)
-      .map(c => ({ os: c.os, visitors: c.sessions.size, percentage: parseFloat((c.sessions.size / total * 100).toFixed(1)) }))
+      .map(c => ({ os: c.os, visitors: c.visitors.size, percentage: parseFloat((c.visitors.size / total * 100).toFixed(1)) }))
       .sort((a, b) => b.visitors - a.visitors)
       .slice(0, 50)
 
