@@ -17,7 +17,7 @@ function FoundingEarlyBirdCard() {
             Lock in the lowest price we'll ever offer.
           </h2>
           <p className="mt-4 max-w-[480px] mx-auto text-[#586464] text-lg leading-[1.55]">
-            Only 10 public early-bird seats available.
+            Only 25 founding spots available.
           </p>
         </div>
 
@@ -31,14 +31,14 @@ function FoundingEarlyBirdCard() {
           <p className="text-[#8A9B9B] text-[13px] font-semibold tracking-[-0.01em] mt-1 mb-5">Founder annual access</p>
 
           <div className="text-[22px] font-black tracking-[-0.04em] text-st-lime leading-none">First Month Free</div>
-          <p className="text-[#CBD4D4] text-[15px] mt-1 mb-5">Then $99 for your first year.</p>
+          <p className="text-[#CBD4D4] text-[15px] mt-1 mb-5">Then $99/year — locked forever while your subscription stays active.</p>
 
           <div className="mb-1 text-[52px] leading-none font-black tracking-[-0.07em]">
             $99<span className="text-[15px] tracking-[-0.02em] text-[#CBD4D4]">/year</span>
           </div>
           <p className="text-[13px] font-bold text-[#CBD4D4] -mt-1 mb-3">Founding annual price</p>
 
-          <p className="text-[#CBD4D4] text-[15px] leading-[1.55]">Lock your first year for $99 before this founding price closes.</p>
+          <p className="text-[#CBD4D4] text-[15px] leading-[1.55]">Lock in $99/year forever — your rate never increases while your subscription stays continuously active. One per customer, while the 25 founding spots last.</p>
 
           <ul className="mt-6 mb-6 grid gap-3 list-none p-0">
             {[
@@ -54,7 +54,7 @@ function FoundingEarlyBirdCard() {
             ))}
           </ul>
 
-          <p className="text-[11px] text-[#8A9B9B] mb-5">Annual billing. Renewal terms are confirmed before you're charged.</p>
+          <p className="text-[11px] text-[#8A9B9B] mb-5">Annual billing. Your $99/year rate is locked forever while your subscription stays continuously active.</p>
 
           <Link
             to="/signup?plan=early_bird_annual"
@@ -70,7 +70,7 @@ function FoundingEarlyBirdCard() {
 
 const SEO = {
   title: 'SourceTrack Pricing — Early Bird $99/year | SourceTrack',
-  description: 'SourceTrack founding annual pricing: first month free, then $99/year — only 10 public founding seats. Multi-touch attribution for campaigns, AI referrals, search queries, and revenue.',
+  description: 'SourceTrack founding annual pricing: first month free, then $99/year locked forever — only 25 founding spots. Multi-touch attribution for campaigns, AI referrals, search queries, and revenue.',
   canonical: 'https://sourcetrack.ai/pricing',
   ogTitle: 'SourceTrack Pricing',
 }
@@ -78,11 +78,11 @@ const SEO = {
 const HERO = {
   kicker: 'Pricing',
   h1: 'Simple attribution pricing.',
-  sub: 'First month free, no card required. Early Bird annual access is $99 for your first year.',
+  sub: 'First month free, no card required. Early Bird annual access is $99/year, locked forever.',
   primaryCta: 'Start free',
   secondaryCta: 'Talk to sales',
   secondaryHref: 'mailto:sales@sourcetrack.ai',
-  proofs: ['First month free — no card required', 'Only 10 early-bird seats', 'Cancel anytime'],
+  proofs: ['First month free — no card required', 'Only 25 founding spots', 'Cancel anytime'],
 }
 
 
@@ -114,7 +114,7 @@ export default function Pricing() {
               { q: 'How do I install SourceTrack?', a: 'Paste one lightweight script tag into your site or add it through Google Tag Manager. Works on any website, Shopify store, Webflow site, or WordPress site. Setup takes about 5 minutes.' },
               { q: 'Does SourceTrack track AI referrals like ChatGPT traffic?', a: 'Yes — SourceTrack detects 22 AI domains including ChatGPT, Claude, Gemini, and Perplexity, and correctly attributes leads and revenue to the AI source instead of labeling them as direct traffic.' },
               { q: 'How does the first month free work?', a: 'Your first month is free — no card required to start. Basic analytics and lead source tracking are available immediately. Journey timeline, revenue attribution, alerts, and advanced features unlock on paid plans.' },
-              { q: 'What happens after the Early Bird first year?', a: 'Early Bird is a founding annual price. Your renewal price and terms for subsequent years are shown and confirmed during checkout before you are charged.' },
+              { q: 'Does my Early Bird $99/year price ever increase?', a: 'No. The $99/year founding rate is locked forever — it never increases as long as your subscription stays continuously active. The offer is limited to 25 founding spots, one per customer.' },
               { q: 'Does SourceTrack connect to Shopify or Stripe?', a: 'Yes. SourceTrack can receive Stripe payment events via a webhook recipe so you can see which sources drove actual revenue. For Shopify, a manual webhook recipe is available for custom storefronts. Both require a short developer setup — about 20–30 minutes.' },
               { q: 'Do I need a developer?', a: 'Not for basic analytics. Paste one script tag or use Google Tag Manager and tracking starts in minutes. Connecting Stripe revenue data or Shopify orders requires a webhook setup — about 20–30 minutes with a developer or technical founder.' },
               { q: 'How accurate is SourceTrack attribution?', a: 'SourceTrack uses a cookieless daily-rotating hash for visitor identification — no cookies, no fingerprinting, no third-party data. This works well for the majority of traffic but can be less precise on shared networks or VPNs. Attribution results are calculated nightly; real-time pageview counts are always current.' },
