@@ -280,12 +280,6 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
           {mode === 'dashboard' && (
             <>
               <button
-                onClick={() => navigate('/debugger')}
-                className="px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-[#252929] hover:bg-gray-200 dark:hover:bg-[#333838] border border-gray-200 dark:border-white/5 rounded-lg transition-colors"
-              >
-                Event Logger
-              </button>
-              <button
                 onClick={() => navigate('/snippet')}
                 className="px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-[#252929] hover:bg-gray-200 dark:hover:bg-[#333838] border border-gray-200 dark:border-white/5 rounded-lg transition-colors"
               >

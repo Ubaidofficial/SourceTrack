@@ -376,10 +376,7 @@ export default function Setup() {
                   }`}>
                     {testConvResult.ok ? (
                       <div className="space-y-1">
-                        <p className="font-medium">Test conversion sent. Check the{' '}
-                          <Link to="/debugger" className="font-semibold underline hover:no-underline">Event Logger</Link>
-                          {' '}to confirm it arrived.
-                        </p>
+                        <p className="font-medium">Test conversion sent. It can take a few minutes to appear in your reports.</p>
                       </div>
                     ) : (
                       <p className="font-medium">{testConvResult.message}</p>

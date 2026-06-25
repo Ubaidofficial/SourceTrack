@@ -327,10 +327,7 @@ export default function Snippet() {
           }`}>
             {testConvResult.ok ? (
               <div className="space-y-1.5">
-                <p className="font-medium">Test conversion sent. Check the{' '}
-                  <Link to="/debugger" className="font-semibold underline hover:no-underline">Event Debugger</Link>
-                  {' '}to confirm it arrived. Reports can take a few minutes to update.
-                </p>
+                <p className="font-medium">Test conversion sent. Reports can take a few minutes to update.</p>
                 <p>
                   <Link to="/developers/conversions" className="font-semibold underline hover:no-underline">Next: test real attribution from your website →</Link>
                 </p>

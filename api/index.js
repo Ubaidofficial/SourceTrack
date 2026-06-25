@@ -34,25 +34,20 @@ import { conversion } from './routes/conversion.js'
 import { conversionOffline } from './routes/conversion-offline.js'
 import { attribution, attributionExplain, attributionVerdicts } from './routes/attribution.js'
 import { journey } from './routes/journey.js'
-import { aiChatRouter } from './routes/ai-chat.js'
 import { installRouter } from './routes/install.js'
 import { eventsRouter } from './routes/events.js'
-import { cohortsRouter } from './routes/cohorts.js'
 import { alertsRouter } from './routes/alerts.js'
 import { hygieneRouter } from './routes/hygiene.js'
 import { exportRouter } from './routes/export.js'
 import { onboardingRouter } from './routes/onboarding.js'
 import { sitesRouter } from './routes/sites.js'
 import { dashboardRouter } from './routes/dashboard.js'
-import { aiAnalyticsRouter } from './routes/ai-analytics.js'
 import { leadsRouter } from './routes/leads-server.js'
 import { campaignsRouter } from './routes/campaigns.js'
 import { campaignCostsRouter } from './routes/campaign-costs.js'
-import { publicDashboardRouter } from './routes/public-dashboard.js'
 import { integrationsRouter } from './routes/integrations.js'
 import { googleSearchConsoleRouter } from './routes/google-search-console.js'
 import { adPlatformsRouter } from './routes/ad-platforms.js'
-import { seoRevenueRouter } from './routes/seo-revenue.js'
 import { adminRouter } from './routes/admin.js'
 import { savedReportsRouter } from './routes/saved-reports.js'
 import { requireUserAuth } from './middleware/user-auth.js'
@@ -67,7 +62,6 @@ import webhookIncomingRouter from './routes/webhook-incoming.js'
 import { trackerIdRouter } from './routes/tracker-id.js'
 import { gdprRouter } from './routes/gdpr.js'
 import { pixelRouter } from './routes/pixel.js'
-import { annotationsRouter } from './routes/annotations.js'
 import { webhooksRouter } from './routes/webhooks.js'
 import { stripeWebhookRouter } from './routes/stripe-webhook.js'
 import { shopifyWebhookRouter } from './routes/shopify-webhook.js'
@@ -468,17 +462,14 @@ app.use((req, res, next) => {
   next()
 })
 
-app.use('/api/ai-chat', requireUserAuth, validateSiteKey, requireSiteMembership, aiChatRouter)
 app.use('/api/install', requireUserAuth, installRouter)
 app.use('/api/events', requireUserAuth, validateSiteKey, requireSiteMembership, eventsRouter)
-app.use('/api/cohorts', requireUserAuth, validateSiteKey, requireSiteMembership, cohortsRouter)
 app.use('/api/alerts', requireUserAuth, validateSiteKey, requireSiteMembership, alertsRouter)
 app.use('/api/hygiene', requireUserAuth, validateSiteKey, requireSiteMembership, hygieneRouter)
 app.use('/api/export', requireUserAuth, validateSiteKey, requireSiteMembership, exportRouter)
 app.use('/api/onboarding', requireUserAuth, onboardingRouter)
 app.use('/api/sites', requireUserAuth, sitesRouter)
 app.use('/api/dashboard', requireUserAuth, validateSiteKey, requireSiteMembership, dashboardRouter)
-app.use('/api/ai-analytics', requireUserAuth, validateSiteKey, requireSiteMembership, aiAnalyticsRouter)
 app.use('/api/leads', requireUserAuth, validateSiteKey, requireSiteMembership, leadsRouter)
 app.use('/api/campaigns', requireUserAuth, validateSiteKey, requireSiteMembership, campaignsRouter)
 app.use('/api/saved-reports', requireUserAuth, validateSiteKey, requireSiteMembership, savedReportsRouter)
@@ -488,9 +479,7 @@ app.use('/api/reports', requireUserAuth, validateSiteKey, requireSiteMembership,
 app.use('/api/integrations/google-search-console', googleSearchConsoleRouter)
 app.use('/api/integrations/ad-platforms', adPlatformsRouter)
 app.use('/api/integrations', requireUserAuth, validateSiteKey, requireSiteMembership, integrationsRouter)
-app.use('/api/seo-revenue', requireUserAuth, validateSiteKey, requireSiteMembership, seoRevenueRouter)
 app.use('/api/campaign-costs', requireUserAuth, validateSiteKey, requireSiteMembership, campaignCostsRouter)
-app.use('/api/public', publicDashboardRouter)
 app.use('/api/server', serverEventsRouter)
 app.use('/api/billing', billingRouter)
 app.use('/api/admin', requireUserAuth, adminRouter)
@@ -505,9 +494,6 @@ app.get('/api/sessions', requireUserAuth, validateSiteKey, requireSiteMembership
 
 // Cookieless tracker identity endpoint (public — called from customer sites)
 app.use('/api/tracker/id', bindManagedProxySiteKey, trackerIdRouter)
-
-// Annotations — chart markers for deploys, campaigns, events
-app.use('/api/annotations', requireUserAuth, validateSiteKey, requireSiteMembership, annotationsRouter)
 
 // GDPR / privacy endpoints (authenticated)
 app.use('/api/gdpr', requireUserAuth, gdprRouter)

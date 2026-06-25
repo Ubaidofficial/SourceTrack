@@ -970,12 +970,6 @@ export default function Integrations() {
             Tracking setup, verification, and data health
           </p>
         </div>
-        {!isPreview && (
-          <button onClick={() => navigate('/debugger')}
-            className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5">
-            <Bug className="w-4 h-4" /> Live Events
-          </button>
-        )}
       </div>
 
       {/* Over-reporting warning — only when DQ flagged duplicate_conversion_rate */}
@@ -2275,9 +2269,6 @@ export default function Integrations() {
               }
               actionButton={
                 <div className="flex items-center gap-2">
-                  <Link to="/seo-revenue" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
-                    Report
-                  </Link>
                   {hasFeature(site?.plan, 'gsc_seo_revenue') ? (
                     !isPreview && (
                       <button
@@ -2407,12 +2398,6 @@ export default function Integrations() {
                                 {syncingGsc ? 'Syncing...' : 'Sync Search Analytics'}
                               </button>
                             )}
-                            <Link
-                              to="/seo-revenue"
-                              className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors inline-flex items-center"
-                            >
-                              View Report
-                            </Link>
                           </div>
                           {!isPreview && (
                             <button
