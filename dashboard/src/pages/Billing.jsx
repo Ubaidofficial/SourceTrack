@@ -290,8 +290,8 @@ export default function Billing() {
             </div>
             <p className="text-base font-black text-st-black dark:text-white">Early Bird Annual</p>
             <p className="text-2xl font-black text-st-black dark:text-white mt-1">$99<span className="text-sm font-normal text-st-gray dark:text-gray-400">/year</span></p>
-            <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">Annual billing · first 10 public seats</p>
-            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mt-2">First month free, then $99/year · Starter-level access</p>
+            <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">Annual billing · 25 founding spots · one per customer</p>
+            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mt-2">First month free, then $99/year locked forever while your subscription stays active · Starter-level access</p>
             {earlyBirdPriceId ? (
               <button
                 onClick={() => handleUpgrade('early_bird_annual')}
