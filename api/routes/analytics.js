@@ -46,6 +46,44 @@ function parseFilters(req) {
   return out
 }
 
+// ─── Self-referral (own-domain) exclusion ────────────────────────────────────
+// Internal page→page navigations record document.referrer = the site's own domain,
+// which referrer-based source classification would otherwise count as a distinct
+// traffic source (e.g. "techrupt.pk"). Build a matcher from the site's own domain
+// (and any cross-domain domains) so those referrers collapse into Direct.
+// Subdomain-aware: a referrer host matches an own-domain D when host === D or
+// host endsWith '.'+D (covers apex, www., and any *.<domain>).
+function normalizeDomainHost(d) {
+  if (!d || typeof d !== 'string') return null
+  let h = d.trim().toLowerCase()
+  if (!h) return null
+  h = h.replace(/^https?:\/\//, '') // strip scheme
+  h = h.replace(/\/.*$/, '')        // strip path
+  h = h.replace(/:\d+$/, '')        // strip port
+  h = h.replace(/^www\./, '')       // strip leading www.
+  return h || null
+}
+
+function buildOwnDomainMatcher(site) {
+  const own = new Set()
+  const primary = normalizeDomainHost(site?.domain)
+  if (primary) own.add(primary)
+  if (Array.isArray(site?.cross_domain_domains)) {
+    for (const d of site.cross_domain_domains) {
+      const n = normalizeDomainHost(d)
+      if (n) own.add(n)
+    }
+  }
+  return (host) => {
+    if (!host || own.size === 0) return false
+    const h = String(host).toLowerCase().replace(/^www\./, '')
+    for (const d of own) {
+      if (h === d || h.endsWith('.' + d)) return true
+    }
+    return false
+  }
+}
+
 router.post('/collect',
   trackVisitorLimit,
   trackIpLimit,
@@ -159,10 +197,11 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
     const pageCounts = {}
     pv.forEach(r => { try { const path = new URL(r.url).pathname; pageCounts[path] = (pageCounts[path] || 0) + 1 } catch (_e) {} })
     const topPages = Object.entries(pageCounts).sort((a, b) => b[1] - a[1]).slice(0, 50).map(([page, views]) => ({ page, views }))
+    const isOwnDomain = buildOwnDomainMatcher(req.site)
     function classifySource(row) {
       if (row.ai_source) return `AI: ${row.ai_source}`
       if (row.utm_source) { const m = (row.utm_medium || '').toLowerCase(); if (['cpc','ppc','paid','paid_search'].includes(m)) return 'Paid Search'; if (['email','newsletter'].includes(m)) return 'Email'; return row.utm_source }
-      if (row.referrer) { try { const host = new URL(row.referrer).hostname.replace('www.', ''); if (['google.','bing.','yahoo.','duckduckgo.'].some(s => host.includes(s))) return 'Organic Search'; if (['facebook.com','instagram.com','linkedin.com','twitter.com','x.com','tiktok.com'].some(s => host.includes(s))) return 'Organic Social'; return host } catch (_e) {} }
+      if (row.referrer) { try { const host = new URL(row.referrer).hostname.replace('www.', ''); if (isOwnDomain(host)) return 'Direct'; if (['google.','bing.','yahoo.','duckduckgo.'].some(s => host.includes(s))) return 'Organic Search'; if (['facebook.com','instagram.com','linkedin.com','twitter.com','x.com','tiktok.com'].some(s => host.includes(s))) return 'Organic Social'; return host } catch (_e) {} }
       return 'Direct'
     }
     const sourceCounts = {}
@@ -467,6 +506,7 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
       return localDate >= localDateFrom && localDate <= localDateTo
     })
 
+    const isOwnDomain = buildOwnDomainMatcher(req.site)
     const groups = {}
     rows.forEach(r => {
       let key
@@ -482,7 +522,9 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
         else if (r.referrer) {
           try {
             const host = new URL(r.referrer).hostname.replace('www.','')
-            if (isGoogleSource(host)) {
+            if (isOwnDomain(host)) {
+              key = 'Direct'
+            } else if (isGoogleSource(host)) {
               key = 'google'
             } else {
               key = host
