@@ -6,6 +6,7 @@ import { fetchApi } from '../lib/api'
 import { useAuth } from '../contexts/AuthContext'
 import { Search, AlertTriangle, RefreshCw, BarChart2, MousePointer, Eye, DollarSign, Award, ChevronRight } from 'lucide-react'
 import { formatCurrency, formatPercent } from '../utils/numbers'
+import { hasRevenueData } from './seoRevenueTruthGate'
 
 export default function SEORevenue() {
   const { user } = useAuth()
@@ -75,6 +76,9 @@ export default function SEORevenue() {
   const gscPropertySelected = !!reportData?.gsc_property_selected
   const summary = reportData?.summary || { organic_conversions: 0, organic_revenue: 0, gsc_clicks: 0 }
   const landingPages = reportData?.landing_pages || []
+  // Truth-gate: only show revenue figures when revenue genuinely exists. When
+  // there's no revenue at all, show a calm empty-state instead of a fake $0.
+  const hasRevenue = hasRevenueData(summary, landingPages)
 
   return (
     <div className="space-y-6">
@@ -165,8 +169,17 @@ export default function SEORevenue() {
             <DollarSign className="w-4 h-4 text-orange-400" />
             <p className="text-[11px] text-st-gray font-medium uppercase tracking-wider">Organic Search Revenue</p>
           </div>
-          <p className="text-2xl font-bold text-white tabular-nums">{formatCurrency(summary.organic_revenue, 0)}</p>
-          <p className="text-[10px] text-st-gray mt-0.5">First-touch organic revenue</p>
+          {hasRevenue ? (
+            <>
+              <p className="text-2xl font-bold text-white tabular-nums">{formatCurrency(summary.organic_revenue, 0)}</p>
+              <p className="text-[10px] text-st-gray mt-0.5">First-touch organic revenue</p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-semibold text-st-gray tabular-nums">No revenue yet</p>
+              <p className="text-[10px] text-st-gray mt-0.5">Connect Stripe, a webhook, or manual conversion values</p>
+            </>
+          )}
         </div>
 
         <div className="bg-[#1A1D1D] border border-[#2A2E2E] rounded-xl px-4 py-3">
@@ -221,7 +234,7 @@ export default function SEORevenue() {
                         {page.conversions.toLocaleString()}
                       </td>
                       <td className="py-3 px-3 text-right text-orange-400 tabular-nums">
-                        {formatCurrency(page.revenue, 0)}
+                        {hasRevenue ? formatCurrency(page.revenue, 0) : '—'}
                       </td>
                       <td className="py-3 px-3 text-right text-white tabular-nums">
                         {gscConnected && gscPropertySelected ? page.clicks.toLocaleString() : '—'}
@@ -276,7 +289,7 @@ export default function SEORevenue() {
                       </p>
                       <div className="text-right shrink-0">
                         <p className="text-xs font-semibold text-orange-400 tabular-nums">
-                          {formatCurrency(q.estimated_revenue, 0)}
+                          {hasRevenue ? formatCurrency(q.estimated_revenue, 0) : '—'}
                         </p>
                         <p className="text-[10px] text-st-gray tabular-nums">
                           {q.estimated_conversions.toFixed(1)} conversions
