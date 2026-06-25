@@ -12,17 +12,11 @@ import Signup from './pages/Signup'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import Dashboard from './pages/Dashboard'
-import Journey from './pages/Journey'
-import AIChat from './pages/AIChat'
-import AIAnalytics from './pages/AIAnalytics'
 import Setup from './pages/Setup'
 import Settings from './pages/Settings'
-import ShareDashboard from './pages/ShareDashboard'
 import Billing from './pages/Billing'
-import DataQuality from './pages/DataQuality'
 import Onboarding from './pages/Onboarding'
 import AuthCallback from './pages/AuthCallback'
-import EventDebugger from './pages/EventDebugger'
 import Leads from './pages/Leads'
 import LeadDetail from './pages/LeadDetail'
 import Campaigns from './pages/Campaigns'
@@ -348,20 +342,14 @@ export default function App() {
               <Route path="/security" element={<Security />} />
               <Route path="/demo" element={<Demo />} />
               <Route path="/report-builder" element={<ReportBuilderGate />} />
-              <Route path="/journey" element={<ProtectedRoute><Journey /></ProtectedRoute>} />
               <Route path="/seo-revenue" element={<ProtectedRoute><SEORevenue /></ProtectedRoute>} />
               <Route path="/old-analytics" element={<Navigate to="/analytics" replace />} />
-              <Route path="/ai-chat" element={<ProtectedRoute><AIChat /></ProtectedRoute>} />
-              <Route path="/ai-analytics" element={<ProtectedRoute><AIAnalytics /></ProtectedRoute>} />
               <Route path="/snippet" element={<Navigate to="/setup" replace />} />
               <Route path="/setup" element={<ProtectedRoute><Setup /></ProtectedRoute>} />
-              <Route path="/debugger" element={<ProtectedRoute><EventDebugger /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
-              <Route path="/data-quality" element={<ProtectedRoute><DataQuality /></ProtectedRoute>} />
               <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
               <Route path="/ops" element={<AdminRoute><Layout><Admin /></Layout></AdminRoute>} />
-              <Route path="/share/:token" element={<ShareDashboard />} />
               {/* Auth callback — handles OAuth redirect flow */}
               <Route path="/auth/callback" element={<AuthCallback />} />
               {/* Public docs — no auth required */}

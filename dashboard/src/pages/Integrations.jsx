@@ -970,12 +970,6 @@ export default function Integrations() {
             Tracking setup, verification, and data health
           </p>
         </div>
-        {!isPreview && (
-          <button onClick={() => navigate('/debugger')}
-            className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-1.5">
-            <Bug className="w-4 h-4" /> Live Events
-          </button>
-        )}
       </div>
 
       {/* Over-reporting warning — only when DQ flagged duplicate_conversion_rate */}
