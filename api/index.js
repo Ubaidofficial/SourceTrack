@@ -48,6 +48,7 @@ import { campaignCostsRouter } from './routes/campaign-costs.js'
 import { integrationsRouter } from './routes/integrations.js'
 import { googleSearchConsoleRouter } from './routes/google-search-console.js'
 import { adPlatformsRouter } from './routes/ad-platforms.js'
+import { seoRevenueRouter } from './routes/seo-revenue.js'
 import { adminRouter } from './routes/admin.js'
 import { savedReportsRouter } from './routes/saved-reports.js'
 import { requireUserAuth } from './middleware/user-auth.js'
@@ -479,6 +480,7 @@ app.use('/api/reports', requireUserAuth, validateSiteKey, requireSiteMembership,
 app.use('/api/integrations/google-search-console', googleSearchConsoleRouter)
 app.use('/api/integrations/ad-platforms', adPlatformsRouter)
 app.use('/api/integrations', requireUserAuth, validateSiteKey, requireSiteMembership, integrationsRouter)
+app.use('/api/seo-revenue', requireUserAuth, validateSiteKey, requireSiteMembership, seoRevenueRouter)
 app.use('/api/campaign-costs', requireUserAuth, validateSiteKey, requireSiteMembership, campaignCostsRouter)
 app.use('/api/server', serverEventsRouter)
 app.use('/api/billing', billingRouter)

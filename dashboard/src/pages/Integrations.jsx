@@ -2269,6 +2269,9 @@ export default function Integrations() {
               }
               actionButton={
                 <div className="flex items-center gap-2">
+                  <Link to="/seo-revenue" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
+                    Report
+                  </Link>
                   {hasFeature(site?.plan, 'gsc_seo_revenue') ? (
                     !isPreview && (
                       <button
@@ -2398,6 +2401,12 @@ export default function Integrations() {
                                 {syncingGsc ? 'Syncing...' : 'Sync Search Analytics'}
                               </button>
                             )}
+                            <Link
+                              to="/seo-revenue"
+                              className="px-3 py-1.5 border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors inline-flex items-center"
+                            >
+                              View Report
+                            </Link>
                           </div>
                           {!isPreview && (
                             <button
