@@ -3,7 +3,7 @@ import SolutionPage from './SolutionPage'
 const DATA = {
   slug: 'use-cases/agencies',
   title: 'Multi-Site Agency Attribution Reporting | SourceTrack',
-  description: "Stop building attribution reports in spreadsheets. SourceTrack gives agencies multi-client attribution dashboards, unbranded CSV exports, and a clean server-side conversion pipeline. From $149/mo.",
+  description: "Stop building attribution reports in spreadsheets. SourceTrack gives agencies multi-client attribution dashboards, unbranded CSV exports, and a clean server-side conversion pipeline.",
   canonical: 'https://sourcetrack.ai/use-cases/agencies',
   ogTitle: 'Agency Attribution — Multi-Client Attribution & Unbranded Reporting | SourceTrack',
   ogDescription: "Attribution reporting your clients will actually believe. Multi-site dashboards, unbranded exports, and client-level attribution — without the spreadsheet grind.",
@@ -102,7 +102,7 @@ const DATA = {
       },
       {
         q: "What's the best pricing plan for agencies?",
-        a: "The Scale plan (from $149/mo) includes multi-site management, unbranded CSV exports, and up to 500,000+ monthly events across client sites. For agencies with higher traffic volumes, contact sales for custom pricing.",
+        a: "The Growth plan ($79/mo) covers most agencies — multi-site management, the advanced report builder, and Stripe revenue tracking across client sites. For higher traffic volumes or more client sites, contact sales for custom pricing.",
       },
     ],
   },
