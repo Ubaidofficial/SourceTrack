@@ -2,11 +2,22 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 import { getSupabase } from '../lib/supabase.js'
+import { clampDays, classifyJourney, applyBackfill } from '../lib/backfill.js'
 
 const isReprocess = process.argv.includes('--reprocess-all') || process.argv.some(arg => arg.startsWith('--reprocess-site='));
 const confirmDestructive = process.argv.includes('--confirm-destructive');
 const reprocessSiteKey = process.argv.find(arg => arg.startsWith('--reprocess-site='))?.split('=')[1];
 const reprocessSuffixFilter = process.argv.find(arg => arg.startsWith('--reprocess-suffix-filter='))?.split('=')[1];
+
+// ── Per-site historical backfill (NEW; separate from --reprocess-site) ────────
+// Uses the SAME per-row upsert as nightly (onConflict site_id,conversion_event_id),
+// NOT the staging-locked destructive delete+insert reprocess path. Works on prod
+// but requires --confirm to write; defaults to dry-run.
+const backfillSiteId = process.argv.find(arg => arg.startsWith('--backfill-site='))?.split('=')[1];
+const isBackfill = !!backfillSiteId;
+const backfillDays = process.argv.find(arg => arg.startsWith('--days='))?.split('=')[1];
+const backfillDryRun = process.argv.includes('--dry-run');
+const backfillConfirm = process.argv.includes('--confirm');
 
 if (isReprocess) {
   const dbUrl = process.env.SUPABASE_URL || '';
@@ -84,6 +95,13 @@ async function main() {
   if (!POSTHOG_PERSONAL_API_KEY || !POSTHOG_PROJECT_ID || !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
     logError('Missing required environment variables')
     throw new Error("Missing required environment variables")
+  }
+
+  // Backfill mode short-circuits the nightly lock + all-sites loop: it targets one
+  // explicit site via the per-row upsert path. It must NOT write a nightly job_run
+  // (health checks read that), so the EOF handler is guarded by isBackfill too.
+  if (isBackfill) {
+    return runBackfill()
   }
 
   // Concurrency lock — if a previous run is still in-flight (no terminal row
@@ -207,9 +225,91 @@ async function main() {
   }
 }
 
+async function runBackfill() {
+  const days = clampDays(backfillDays)
+  const sbRef = (process.env.SUPABASE_URL || '').match(/https?:\/\/([^.]+)\./)?.[1] || 'unknown'
+
+  const { data: site, error: siteErr } = await supabase
+    .from('sites')
+    .select('id, site_key, plan, attribution_window_days')
+    .eq('id', backfillSiteId)
+    .maybeSingle()
+  if (siteErr) throw new Error(`Failed to fetch site ${backfillSiteId}: ${siteErr.message}`)
+  if (!site) throw new Error(`Site ${backfillSiteId} not found`)
+
+  const attrWindowDays = Math.min(90, Math.max(1, site.attribution_window_days || 30))
+  const willWrite = backfillConfirm && !backfillDryRun
+
+  // Log target + Supabase ref + window BEFORE any write.
+  log(`BACKFILL target: site_id=${site.id} site_key=${site.site_key} plan=${site.plan} | supabase_ref=${sbRef} | conversion_window=${days}d | attribution_window=${attrWindowDays}d | mode=${willWrite ? 'WRITE (--confirm)' : 'DRY-RUN (no writes)'}`)
+  if (!willWrite && !backfillDryRun) {
+    logWarn('No --confirm flag → running DRY-RUN. Pass --confirm to persist writes.')
+  }
+
+  const conversionsQuery = `
+    SELECT uuid, distinct_id, timestamp, properties.conversion_type, properties.conversion_value, properties.external_event_id
+    FROM events
+    WHERE event = '$conversion'
+      AND properties.site_id = '${site.id}'
+      AND timestamp >= now() - INTERVAL ${days} DAY
+    ORDER BY timestamp ASC
+    LIMIT 5000
+  `
+  const rows = await queryPostHog(conversionsQuery)
+  log(`Found ${rows?.length || 0} $conversion event(s) in the ${days}d window`)
+
+  const records = []
+  const journey = { complete: 0, possibly_truncated: 0, no_journey: 0 }
+  for (const row of (rows || [])) {
+    const conversion = {
+      uuid: row[0], distinct_id: row[1], timestamp: row[2],
+      conversion_type: row[3], conversion_value: row[4], external_event_id: row[5] || null
+    }
+    if (!conversion.uuid || !conversion.distinct_id || !conversion.timestamp) {
+      logWarn(`Skipping invalid conversion ${conversion.uuid}`)
+      continue
+    }
+    const record = await processConversion(site, conversion)
+    records.push(record)
+    journey[classifyJourney(record, conversion.timestamp, attrWindowDays)]++
+  }
+
+  // Real upsert adapter — honors BOTH unique indexes:
+  //   (site_id, conversion_event_id)            → existing row UPDATEs (idempotent re-run)
+  //   partial (site_id, external_event_id) for a DIFFERENT conversion_event_id
+  //                                             → unique violation 23505 → caught + skipped
+  //                                               (a duplicate source $conversion event)
+  const store = {
+    async upsert(record) {
+      const { error } = await supabase
+        .from('attributed_conversions')
+        .upsert(record, { onConflict: 'site_id,conversion_event_id' })
+      if (error) {
+        if (error.code === '23505') return 'skipped_duplicate'
+        throw new Error(`Supabase upsert failed: ${error.message}`)
+      }
+      await sleep(100)
+      return 'upserted'
+    }
+  }
+
+  const result = await applyBackfill(records, { dryRun: !willWrite, store })
+  _processed = result.upserted
+
+  if (!willWrite) {
+    log(`DRY-RUN: ${result.wouldWrite} conversion(s) WOULD be upserted (0 written).`)
+  } else {
+    log(`WROTE: ${result.upserted} upserted, ${result.skippedDuplicate} skipped (external_event_id duplicate).`)
+  }
+  if (journey.possibly_truncated > 0) {
+    logWarn(`${journey.possibly_truncated} conversion(s) have POSSIBLY-TRUNCATED journeys — first touch sits at the ${attrWindowDays}d attribution-window boundary, so earlier touches are excluded. Do NOT present these as complete journeys.`)
+  }
+  log(`Journey completeness: complete=${journey.complete}, possibly_truncated=${journey.possibly_truncated}, no_journey=${journey.no_journey}`)
+}
+
 async function processSite(site) {
   log(`Processing site: ${site.site_key}`)
-  
+
   const lookbackInterval = isReprocess ? '90 DAY' : '24 HOUR'
 
   let suffixFilterClause = ''
@@ -855,10 +955,20 @@ function sleep(ms) {
 
 main()
   .then(() => {
+    // Backfill is a manual, single-site op — it must NOT write a nightly job_run
+    // (health-agent/data-quality treat that as "nightly ran"). Log only.
+    if (isBackfill) {
+      log(`Backfill complete (${_processed} upserted)`)
+      return
+    }
     _writeJobRun({ status: 'success', conversions_processed: _processed, duration_ms: Date.now() - _t0 })
     _slackAlert('✅', 'Attribution Job — SUCCESS', `Processed ${_processed} conversions in ${Date.now() - _t0}ms`)
   })
   .catch(err => {
+    if (isBackfill) {
+      logError('Backfill failed', err)
+      process.exit(1)
+    }
     _writeJobRun({ status: 'failed', conversions_processed: _processed, error_message: err.message, duration_ms: Date.now() - _t0 })
     _slackAlert('🔴', 'Attribution Job — FAILED', err.message)
     process.exit(1)
