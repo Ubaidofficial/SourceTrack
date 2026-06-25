@@ -35,14 +35,6 @@ const PLANS = [
     limit: '150,000 tracked pageviews/mo',
     highlight: true,
   },
-  {
-    key: 'scale',
-    name: 'Scale',
-    price: 'From $149/mo',
-    period: 'billed monthly',
-    limit: '500,000+ tracked pageviews/mo',
-    highlight: false,
-  },
 ]
 
 export default function Billing() {
@@ -319,7 +311,7 @@ export default function Billing() {
             )}
           </div>
 
-          <div className="grid sm:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-2 gap-4">
             {PLANS.map(p => (
               <div key={p.key} className={`rounded-xl border p-5 flex flex-col justify-between ${
                 p.highlight
