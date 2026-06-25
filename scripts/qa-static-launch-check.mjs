@@ -228,20 +228,14 @@ if (checkFileExists('api/index.js')) {
     '/api/conversion/offline',
     '/api/sites',
     '/api/export',
-    '/api/public',
     '/api/reports',
-    '/api/ai-analytics',
-    '/api/ai-chat',
     '/api/campaign-costs'
   ];
   const requiredRouters = [
     'conversionOffline',
     'sitesRouter',
     'exportRouter',
-    'publicDashboardRouter',
     'savedReportsRouter',
-    'aiAnalyticsRouter',
-    'aiChatRouter',
     'campaignCostsRouter'
   ];
 
