@@ -5,7 +5,7 @@ import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { getSupabase } from '../lib/supabase.js'
 import { fetchPageviews } from '../lib/posthog.js'
-import { redactPiiFromUrl, redactPiiFromObject, isGoogleSource, isValidTimezone, getLocalDateString, getLocalMonthString, getLocalWeekString, getPaddedUtcDateRange, getNow, bucketUniqueVisitors } from '../lib/utils.js'
+import { redactPiiFromUrl, redactPiiFromObject, isGoogleSource, isValidTimezone, getLocalDateString, getLocalMonthString, getLocalWeekString, getPaddedUtcDateRange, getNow, bucketUniqueVisitors, countDistinctConverters, cappedRate } from '../lib/utils.js'
 import { requireFeature, isSiteStatusBlocked } from '../lib/plan-features.js'
 import { claimPageviewUsage } from '../lib/pageview-limits.js'
 import {
@@ -204,7 +204,7 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
     try {
       const { data: convRows } = await supabase
         .from('attributed_conversions')
-        .select('conversion_date, conversion_value, first_touch_source, first_touch_channel, conversion_timestamp')
+        .select('conversion_date, conversion_value, first_touch_source, first_touch_channel, conversion_timestamp, distinct_id, anonymous_id')
         .eq('site_id', siteId)
         .gte('conversion_date', currentPadded.from)
         .lte('conversion_date', currentPadded.to)
@@ -218,7 +218,11 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
 
     const totalRevenue = conversions.reduce((s, r) => s + (Number(r.conversion_value) || 0), 0)
     const conversionCount = conversions.length
-    const conversionRate = uniqueVisitors > 0 ? (conversionCount / uniqueVisitors) * 100 : 0
+    // Rate numerator = DISTINCT converters (same canonical visitor identity the
+    // denominator uses — distinct_id/anonymous_id), NOT raw conversion rows. A
+    // visitor converting N times is one converter. cappedRate also guards >100%.
+    const distinctConverters = countDistinctConverters(conversions)
+    const conversionRate = cappedRate(distinctConverters, uniqueVisitors)
     const revenuePerVisitor = uniqueVisitors > 0 ? totalRevenue / uniqueVisitors : 0
 
     // Revenue time series — bucketed the same way as visitor time series
