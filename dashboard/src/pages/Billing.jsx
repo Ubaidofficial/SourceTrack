@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { CreditCard, ExternalLink, Zap, CheckCircle2 } from 'lucide-react'
 import { normalizePlan } from '../lib/planFeatures'
 import { getPlanLabel } from '../lib/billing'
-import { createCheckout, getBillingPortal, getBillingStatus } from '../lib/api'
+import { createCheckout, getBillingPortal, getBillingStatus, fetchApi } from '../lib/api'
 
 // Default pageview limits per plan. The site's own pv_limit column takes precedence.
 const PLAN_DEFAULT_LIMITS = {
@@ -80,14 +80,15 @@ export default function Billing() {
           console.error('[Billing] Failed to fetch billing status:', statusErr)
         }
 
-        const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
-        const { count } = await supabase
-          .from('pageviews')
-          .select('session_id', { count: 'exact', head: true })
-          .eq('site_id', data.id)
-          .gte('timestamp', monthStart)
-          .not('session_id', 'is', null)
-        setUsage(count ?? 0)
+        // Read usage from the service-role API (site_usage_monthly) — the same
+        // source the ingestion limiter increments. The old client-direct count on
+        // the dead `pageviews` table always returned 0.
+        try {
+          const usageData = await fetchApi(`/billing/usage?${new URLSearchParams({ site_key: data.site_key })}`)
+          setUsage(usageData?.pageview_count ?? 0)
+        } catch (usageErr) {
+          console.error('[Billing] Failed to fetch usage:', usageErr)
+        }
       }
     } catch (_e) {
       /* silent */

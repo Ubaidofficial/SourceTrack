@@ -527,4 +527,57 @@ router.get('/status', requireUserAuth, validateSiteKey, requireSiteMembership, a
   }
 })
 
+/**
+ * Read the current calendar-month usage row for a site from site_usage_monthly —
+ * the service-role-only table the ingestion limiter increments via
+ * claim_site_pageview_usage / claim_site_conversion_usage. Returns zeros when no
+ * row exists yet for the month.
+ *
+ * The month key is UTC YYYY-MM, IDENTICAL to the limiter's p_month
+ * (api/lib/pageview-limits.js:36-39 — getUTCFullYear / getUTCMonth+1 padded), so
+ * the number shown to the user matches exactly what the limiter enforces on.
+ *
+ * Plain SELECT — never the claim_* RPCs (those increment, wrong for display).
+ */
+export async function getCurrentMonthUsage(siteId) {
+  const now = new Date()
+  const year = now.getUTCFullYear()
+  const month = String(now.getUTCMonth() + 1).padStart(2, '0')
+  const monthStr = `${year}-${month}`
+
+  const { data, error } = await getSupabase()
+    .from('site_usage_monthly')
+    .select('pageview_count, conversion_count')
+    .eq('site_id', siteId)
+    .eq('month', monthStr)
+    .maybeSingle()
+
+  if (error) throw error
+
+  return {
+    month: monthStr,
+    pageview_count: data?.pageview_count ?? 0,
+    conversion_count: data?.conversion_count ?? 0
+  }
+}
+
+/**
+ * GET /api/billing/usage?site_key=...
+ * Current-month usage counters for the site, read from site_usage_monthly via
+ * the service_role backend (the table is RLS deny-all, so it must NOT be read
+ * client-direct). Mirrors the auth pattern of GET /status.
+ */
+router.get('/usage', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
+  try {
+    const site = req.site
+    if (!site) return res.status(401).json({ success: false, data: null, error: 'Unauthorized' })
+
+    const usage = await getCurrentMonthUsage(site.id)
+    return res.status(200).json({ success: true, data: usage, error: null })
+  } catch (err) {
+    console.error('[billing] usage error:', err.message)
+    return res.status(500).json({ success: false, data: null, error: 'Failed to fetch usage' })
+  }
+})
+
 export { router as billingRouter }
