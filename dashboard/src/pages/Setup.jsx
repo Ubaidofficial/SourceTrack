@@ -9,7 +9,7 @@ import {
   ExternalLink, Key, CheckCircle, ArrowRight,
   Activity, BookOpen, ShieldCheck
 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import SetupDoctorCard from '../components/SetupDoctorCard'
 
 
@@ -20,7 +20,12 @@ export default function Setup() {
   const [copied, setCopied] = useState(false)
   const [proxyDomain, setProxyDomain] = useState(null)
   const [showPrivacyNotes, setShowPrivacyNotes] = useState(false)
-  const [activeTab, setActiveTab] = useState('install')
+  const [searchParams] = useSearchParams()
+  const [activeTab, setActiveTab] = useState(
+    ['install', 'health', 'conversions', 'learn'].includes(searchParams.get('tab'))
+      ? searchParams.get('tab')
+      : 'install'
+  )
 
   const [testConvLoading, setTestConvLoading] = useState(false)
   const [testConvResult, setTestConvResult] = useState(null)

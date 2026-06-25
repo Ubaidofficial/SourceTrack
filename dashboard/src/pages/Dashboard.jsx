@@ -30,6 +30,7 @@ import ConversionExplanationModal from '../components/ConversionExplanationModal
 import JourneyModal from '../components/JourneyModal'
 import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
 import { SourceIcon, SourceChip } from '../components/SourceIcon'
+import { safeNumber } from '../utils/numbers'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
 
@@ -161,7 +162,18 @@ export default function Dashboard() {
     enabled: !!site?.site_key && !previewMode && hasFeature(site?.plan, 'dashboard_widgets')
   })
 
-
+  // Traffic signal via the Analytics data path. overview.sources is derived from
+  // attributed_conversions, so it is empty whenever conversions = 0 — even when the
+  // site has real traffic. This query lets the Overview tell "no traffic" apart from
+  // "traffic but no conversions" and reuse the same visitors/pageviews/sources cards.
+  const { data: analyticsSummary } = useQuery({
+    queryKey: ['dashboard-traffic-summary', site?.site_key, timeRange],
+    queryFn: async () => {
+      if (!site?.site_key) return null
+      return fetchApi(`/analytics/summary?site_key=${encodeURIComponent(site.site_key)}&days=${timeRange}`)
+    },
+    enabled: !!site?.site_key && !previewMode
+  })
 
   const { data: liveData } = useQuery({
     queryKey: ['live-visitors', site?.site_key],
@@ -275,6 +287,27 @@ export default function Dashboard() {
   const hasRevenue = totalRevenue > 0
   const isGscConnected = site?.gsc_connected || overview?.gsc_connected || false
 
+  // ── Three-state Overview gate (decided in this order) ──────────────────────
+  //  (a) NO TRAFFIC       → install-guide empty state
+  //  (b) TRAFFIC, 0 conv  → traffic cards + conversion-setup CTA (revenue/attribution gated)
+  //  (c) FULL DATA        → normal overview
+  // Traffic cards reuse the Analytics summary path (visitors/pageviews/sources/pages).
+  const trafficKpis      = analyticsSummary?.kpis || {}
+  const trafficVisitors  = safeNumber(trafficKpis.unique_visitors, 0)
+  const trafficPageviews = safeNumber(trafficKpis.pageviews, 0)
+  const trafficSources   = analyticsSummary?.top_sources || []
+  const trafficTopPages  = analyticsSummary?.top_pages || []
+  const hasConversions = activeResults.length > 0
+  // Support preview can't fetch the analytics traffic path, so retain the original
+  // 2-state behavior there (install guide vs full overview) instead of a half-populated
+  // state (b). For real users, traffic is read from the Analytics summary, falling back to
+  // overview-native signals (pageview sessions / top_pages) to avoid a load-race flash.
+  const hasTraffic = previewMode
+    ? hasConversions
+    : (trafficPageviews > 0
+        || topPagesResults.length > 0
+        || safeNumber(overview?.kpis?.sessions, 0) > 0)
+
   return (
     <div className="st-container space-y-6">
 
@@ -337,7 +370,7 @@ export default function Dashboard() {
           {/* ──────────────────────────────────────────────────────── */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
-              {activeResults.length === 0 ? (
+              {!hasTraffic ? (
                 <div className="bg-white dark:bg-[#1A1D1D] rounded-2xl border border-gray-200 dark:border-[#2A2E2E] p-12 text-center flex flex-col items-center justify-center space-y-6">
                   <div>
                     <Users className="w-16 h-16 text-gray-200 mx-auto mb-4" />
@@ -355,6 +388,84 @@ export default function Dashboard() {
                     <Zap className="w-3.5 h-3.5" /> Go to Install Guide
                   </button>
                 </div>
+              ) : !hasConversions ? (
+                /* ── STATE (b): traffic exists, zero conversion events ─────────── */
+                <>
+                  <div className="bg-white dark:bg-[#1A1D1D] rounded-2xl border border-gray-200 dark:border-[#2A2E2E] p-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <Zap className="w-5 h-5 text-st-black dark:text-white shrink-0 mt-0.5" />
+                      <div>
+                        <h3 className="text-base font-semibold text-st-black dark:text-white">
+                          You're getting visitors — now tell SourceTrack what counts as a conversion.
+                        </h3>
+                        <p className="text-sm text-st-gray dark:text-gray-400 mt-1 max-w-xl">
+                          Traffic is flowing in. Set up conversion events to unlock revenue, attribution, and ROI reporting.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => navigate('/setup?tab=conversions')}
+                      className="px-4 py-2 bg-st-black text-white rounded-lg text-xs font-semibold hover:bg-st-black/90 transition-colors flex items-center gap-1.5 shrink-0"
+                    >
+                      Set up conversion events <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Traffic KPIs (real data) + gated conversions tile */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <MetricTile label="Visitors" value={trafficVisitors} format="number" />
+                    <MetricTile label="Pageviews" value={trafficPageviews} format="number" />
+                    <MetricTile label="Conversions" value="—" sub="No conversion events yet" />
+                  </div>
+
+                  {/* Command Center Nav */}
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={() => navigate('/analytics')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-white hover:border-st-black dark:hover:border-white transition-colors">Analytics <ArrowRight className="w-3 h-3" /></button>
+                    <button onClick={() => navigate('/setup?tab=conversions')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-white hover:border-st-black dark:hover:border-white transition-colors">Set up conversions <ArrowRight className="w-3 h-3" /></button>
+                  </div>
+
+                  {/* Top Sources + Top Pages — Analytics traffic data path */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <DashboardCard title="Top Sources" subtitle="Traffic by source">
+                      {trafficSources.length === 0 ? (
+                        <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">No traffic detected yet.</p>
+                      ) : (
+                        <DashboardTable
+                          columns={[
+                            { key: 'source', label: 'Source', render: (r) => <SourceChip source={r.source || 'Direct'} /> },
+                            { key: 'visits', label: 'Visits', render: (r) => safeNumber(r.visits, 0).toLocaleString() }
+                          ]}
+                          rows={trafficSources.slice(0, 5)}
+                        />
+                      )}
+                    </DashboardCard>
+
+                    <DashboardCard title="Top Pages" subtitle="Most viewed pages">
+                      {trafficTopPages.length === 0 ? (
+                        <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">No page data yet.</p>
+                      ) : (
+                        <DashboardTable
+                          columns={[
+                            { key: 'page', label: 'Page', render: (r) => <span className="font-mono text-xs">{(r.page || '/').replace(/^https?:\/\/[^/]+/, '') || '/'}</span> },
+                            { key: 'views', label: 'Views', render: (r) => safeNumber(r.views, 0).toLocaleString() }
+                          ]}
+                          rows={trafficTopPages.slice(0, 5)}
+                        />
+                      )}
+                    </DashboardCard>
+                  </div>
+
+                  {/* Truth-gate: revenue / attribution withheld until conversions exist */}
+                  <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl px-4 py-4 flex items-start gap-3 shadow-sm">
+                    <span className="w-1.5 h-1.5 mt-1.5 rounded-full bg-st-gray dark:bg-gray-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-st-black dark:text-white">Revenue &amp; attribution — no conversion events yet</p>
+                      <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">
+                        Revenue, source attribution, and ROI reporting appear here once your site sends conversion events. See the <a href="/developers/conversions" className="underline hover:text-st-black dark:hover:text-white transition-colors">conversion events docs</a> or <button onClick={() => navigate('/setup?tab=conversions')} className="underline hover:text-st-black dark:hover:text-white transition-colors">set them up now</button>.
+                      </p>
+                    </div>
+                  </div>
+                </>
               ) : (
                 <>
                   {/* KPI Strip: strictly max 3 primary KPIs */}
