@@ -2,8 +2,8 @@ import { Link } from 'react-router-dom'
 
 const PLANS = [
   {
-    key: 'starter', name: 'Starter', price: '$29', period: '/mo',
-    desc: 'Founder pricing locked at $29/mo — rises to $49 when founding closes.',
+    key: 'starter', name: 'Starter', price: '$49', period: '/mo',
+    desc: 'For founders and marketers attributing leads and revenue by source.',
     features: [
       'Track visits, leads, and conversions by source',
       'Detect AI referrals from ChatGPT, Claude, and Perplexity',
@@ -17,7 +17,7 @@ const PLANS = [
     cta: 'Get Starter', href: '/signup', featured: false,
   },
   {
-    key: 'growth', name: 'Growth', price: '$99', period: '/mo',
+    key: 'growth', name: 'Growth', price: '$79', period: '/mo',
     desc: 'Best for teams scaling campaigns, SEO, and AI referrals.',
     features: [
       'Everything in Starter',
@@ -31,25 +31,11 @@ const PLANS = [
     ],
     cta: 'Get Growth', href: '/signup', featured: true,
   },
-  {
-    key: 'scale', name: 'Scale', price: 'From $149', period: '/mo',
-    desc: 'Best for agencies and high-volume teams needing more sites, volume, and support.',
-    features: [
-      'Everything in Growth',
-      'Up to 99 sites · 1 user',
-      'Unbranded CSV export',
-      '5-year data history',
-      'Higher conversion event limits',
-      'Priority support and setup guidance',
-      '500,000+ tracked visits/mo',
-    ],
-    cta: 'Talk to sales', href: 'mailto:sales@sourcetrack.ai', featured: false,
-  },
 ]
 
 export default function PricingCards() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch max-w-[760px] mx-auto">
       {PLANS.map((p, i) => (
         <article key={p.key} className={`relative p-7 rounded-[32px] border flex flex-col min-h-0 sm:min-h-[460px] ${
           p.featured
