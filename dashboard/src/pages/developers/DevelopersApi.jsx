@@ -165,7 +165,7 @@ export default function DevelopersApi() {
           </p>
 
           <DocsCallout type="info">
-            Server API Tokens must be created in the <strong>Settings</strong> page under the <strong>Server API Tokens</strong> section. They require a Growth or Scale plan.
+            Server API Tokens must be created in the <strong>Settings</strong> page under the <strong>Server API Tokens</strong> section. They require the Growth plan.
           </DocsCallout>
 
           <h4 className="text-sm font-extrabold text-gray-900 dark:text-white">Request Body</h4>
