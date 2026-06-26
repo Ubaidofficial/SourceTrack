@@ -284,7 +284,7 @@ export default function Leads() {
         </select>
       </div>
 
-      <DashboardCard title="All Leads" subtitle={`${totalLeads} visitors`}>
+      <DashboardCard title="All Leads" subtitle={`${totalLeads} leads in range`}>
         {isLoading ? (
           <div className="py-12 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black mx-auto" />

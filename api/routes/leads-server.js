@@ -150,11 +150,30 @@ router.get('/', validateSiteKey, async (req, res) => {
     const totalRevenue = leads.reduce((s, l) => s + l.revenue, 0)
     const totalConversions = leads.reduce((s, l) => s + l.conversions, 0)
 
+    // True lead count = DISTINCT converting identities in range, NOT the page size.
+    // `leads.length` is capped at the query LIMIT, so it undercounts; this separate
+    // aggregate gives the real total (a "lead" = a distinct visitor with a conversion,
+    // the same unit the Dashboard KPI uses). Falls back to the page length on error.
+    let total = leads.length
+    try {
+      const countRows = await queryHogQL(`
+        SELECT count(DISTINCT distinct_id)
+        FROM events
+        WHERE properties.site_id = '${esc(siteId)}'
+          AND event = '$conversion'
+          ${dateFilter}
+      `, 'leads_count')
+      const trueTotal = Number(countRows?.[0]?.[0])
+      if (Number.isFinite(trueTotal)) total = trueTotal
+    } catch (_e) {
+      // Count query failed — keep the page-length fallback rather than 500.
+    }
+
     return res.status(200).json({
       success: true,
       data: {
         leads,
-        total: leads.length,
+        total,
         total_revenue: totalRevenue,
         total_conversions: totalConversions
       },
