@@ -33,6 +33,20 @@ function getLogHash(value) {
   return crypto.createHmac('sha256', salt).update(value || '').digest('hex').slice(0, 8)
 }
 
+// Structured, log-only observability for pre-flight guard rejections on the GSC
+// routes (402 feature gate, 409 concurrency, 400 misconfig). These guards
+// intentionally do NOT write a gsc_sync_runs row — its status enum is only
+// pending/success/failed — so this console line is the sole signal that a
+// request was rejected before the sync worker ran. Site key is hashed.
+function logGscGuardRejection(reason, req) {
+  console.warn('[GSC guard] rejected ' + JSON.stringify({
+    site: getLogHash(req.site?.site_key),
+    plan: req.site?.plan || null,
+    path: req.path,
+    reason
+  }))
+}
+
 // 1. PUBLIC ROUTE: OAuth Callback from Google
 // Note: This route is public because it is the target of Google redirect.
 // Authentication is handled securely via the signed state token.
@@ -179,7 +193,10 @@ router.use(requireUserAuth, validateSiteKey, requireSiteMembership)
 
 const gateGscFeature = (req, res, next) => {
   const block = requireFeature(req.site?.plan, 'gsc_seo_revenue', 'Google Search Console')
-  if (block) return res.status(402).json(block)
+  if (block) {
+    logGscGuardRejection('feature_gate_402', req)
+    return res.status(402).json(block)
+  }
   next()
 }
 
@@ -354,6 +371,7 @@ router.post('/sync', gateGscFeature, async (req, res) => {
 
   // 1. Concurrency Lock: check in-memory set
   if (activeSyncs.has(siteKey)) {
+    logGscGuardRejection('concurrent_sync_in_memory_409', req)
     return res.status(409).json({ success: false, error: 'A search performance synchronization is already running.' })
   }
 
@@ -370,6 +388,7 @@ router.post('/sync', gateGscFeature, async (req, res) => {
       .limit(1)
 
     if (recentPending && recentPending.length > 0) {
+      logGscGuardRejection('recent_pending_sync_409', req)
       return res.status(409).json({ success: false, error: 'A sync run was recently started. Please try again in 15 minutes.' })
     }
 
@@ -380,6 +399,7 @@ router.post('/sync', gateGscFeature, async (req, res) => {
       .maybeSingle()
 
     if (!conn?.encrypted_refresh_token || !conn?.property_url) {
+      logGscGuardRejection('connection_not_configured_400', req)
       return res.status(400).json({ success: false, error: 'GSC connection properties are not configured.' })
     }
 
