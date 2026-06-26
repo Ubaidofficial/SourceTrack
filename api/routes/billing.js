@@ -19,14 +19,15 @@ const _seenStripeEvents = new NodeCache({ stdTTL: 86400, checkperiod: 3600 })
 // Populated from env vars so production and test keys both work.
 // Legacy env vars STRIPE_PRICE_ID_PRO/AGENCY are still read but map to the
 // new canonical names (growth/business) via normalizePlan.
-// Early Bird Annual maps to 'starter' entitlements — same limits, annual billing interval.
+// Early Bird Annual (Founder) maps to 'growth' entitlements — sold as Growth-level
+// ("locked forever, Growth features"), billed annually at the founding price.
 export function getPriceMap() {
   const map = {}
   if (process.env.STRIPE_PRICE_ID_STARTER)          map[process.env.STRIPE_PRICE_ID_STARTER]          = 'starter'
   if (process.env.STRIPE_PRICE_ID_GROWTH)           map[process.env.STRIPE_PRICE_ID_GROWTH]           = 'growth'
   if (process.env.STRIPE_PRICE_ID_SCALE)            map[process.env.STRIPE_PRICE_ID_SCALE]            = 'scale'
   if (process.env.STRIPE_PRICE_ID_BUSINESS)         map[process.env.STRIPE_PRICE_ID_BUSINESS]         = 'scale'
-  if (process.env.STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID) map[process.env.STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID] = 'starter'
+  if (process.env.STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID) map[process.env.STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID] = 'growth'
 
   // Legacy env vars — preserved for backward compatibility
   if (process.env.STRIPE_PRICE_ID_PRO)    map[process.env.STRIPE_PRICE_ID_PRO]    = 'growth'
