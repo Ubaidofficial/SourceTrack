@@ -25,6 +25,23 @@ function sanitizeCustomProperties(props) {
   return clean
 }
 
+// Raw ad click identifiers that may be present on a conversion (mirrors
+// normalizeClickIds in lib/utils.js). Collected into a nested object, empties
+// omitted, so the payload only carries the click IDs that were actually seen.
+const CLICK_ID_KEYS = [
+  'gclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid', 'ttclid',
+  'li_fat_id', 'li_fatid', 'twclid', 'dclid', 'snapclid', 'pclid',
+  'sccid', 'ko_click_id'
+]
+function collectClickIds(props) {
+  const out = {}
+  for (const key of CLICK_ID_KEYS) {
+    const val = props?.[key]
+    if (val !== null && val !== undefined && val !== '') out[key] = val
+  }
+  return out
+}
+
 // Outbound Webhook Test Dispatcher
 export async function sendTestWebhook(destination, siteKey) {
   const mockPayload = {
@@ -48,7 +65,9 @@ export async function sendTestWebhook(destination, siteKey) {
       campaign: "test-campaign",
       content: "test-content",
       term: "test-term",
-      channel: "Paid Search"
+      channel: "Paid Search",
+      ai_source: null,
+      click_ids: { gclid: "TEST-gclid-1234" }
     },
     page: {
       page_url: "https://example.com/checkout/thank-you",
@@ -174,8 +193,13 @@ export function dispatchWebhook(eventType, properties) {
           li_fat_id: properties.li_fat_id
         })
 
+        // Standard conversions keep 'conversion.created' for backward-compat;
+        // offline conversions get their own event name so consumers can tell
+        // them apart. (eventType is 'conversion' or 'conversion.offline'.)
+        const eventName = eventType === 'conversion.offline' ? 'conversion.offline' : 'conversion.created'
+
         const payload = {
-          event: "conversion.created",
+          event: eventName,
           created_at: new Date().toISOString(),
           site_key: siteKey,
           conversion: {
@@ -195,7 +219,9 @@ export function dispatchWebhook(eventType, properties) {
             campaign,
             content: properties.utm_content || null,
             term: properties.utm_term || null,
-            channel
+            channel,
+            ai_source: properties.ai_source || null,
+            click_ids: collectClickIds(properties)
           },
           page: {
             page_url: properties.page_url ? redactPiiFromUrl(properties.page_url) : null,
@@ -223,7 +249,7 @@ export function dispatchWebhook(eventType, properties) {
             headers: {
               'Content-Type': 'application/json',
               'X-SourceTrack-Signature': signature,
-              'X-SourceTrack-Event': 'conversion.created'
+              'X-SourceTrack-Event': eventName
             },
             body: bodyStr,
             signal: controller.signal
@@ -247,7 +273,7 @@ export function dispatchWebhook(eventType, properties) {
             .from('webhook_deliveries')
             .insert({
               destination_id: dest.id,
-              event_type: 'conversion.created',
+              event_type: eventName,
               status_code: statusCode,
               success,
               error_message: errorMessage ? errorMessage.substring(0, 500) : null

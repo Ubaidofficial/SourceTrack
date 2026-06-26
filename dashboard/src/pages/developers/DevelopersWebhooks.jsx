@@ -91,7 +91,7 @@ export default function DevelopersWebhooks() {
           </p>
           <HeaderTable headers={[
             { name: 'Content-Type', type: 'string', desc: 'Will always be set to application/json.' },
-            { name: 'X-SourceTrack-Event', type: 'string', desc: 'The type of event triggered (e.g. conversion.created).' },
+            { name: 'X-SourceTrack-Event', type: 'string', desc: 'The type of event triggered: conversion.created for standard conversions, conversion.offline for offline conversion imports.' },
             { name: 'X-SourceTrack-Signature', type: 'string', desc: 'The SHA-256 HMAC signature of the raw body payload, generated using your webhook secret.' }
           ]} />
         </section>
@@ -124,7 +124,13 @@ export default function DevelopersWebhooks() {
     "source": "google",
     "medium": "cpc",
     "campaign": "brand-search",
-    "channel": "Paid Search"
+    "content": "hero-cta",
+    "term": "running shoes",
+    "channel": "Paid Search",
+    "ai_source": null,
+    "click_ids": {
+      "gclid": "Cj0KCQ..."
+    }
   },
   "page": {
     "page_url": "https://example.com/checkout/thank-you",
