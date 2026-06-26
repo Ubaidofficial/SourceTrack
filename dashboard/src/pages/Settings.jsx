@@ -1240,7 +1240,7 @@ export default function Settings() {
           <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-800 p-6 text-center bg-gray-50/30 dark:bg-dark-hover/5">
             <div className="text-xs font-semibold text-amber-600 uppercase tracking-widest mb-2">🔒 Premium Feature</div>
             <p className="text-xs font-bold text-st-black dark:text-white mb-1">Server API Token Management</p>
-            <p className="text-[11px] text-st-gray dark:text-gray-400 mb-4">API access is available on Growth and Scale plans.</p>
+            <p className="text-[11px] text-st-gray dark:text-gray-400 mb-4">API access is available on the Growth plan.</p>
             <a
               href="/billing"
               className="inline-block text-xs font-semibold px-4 py-2 rounded-lg bg-st-black dark:bg-white text-white dark:text-st-black hover:bg-st-black/95 dark:hover:bg-gray-100 transition-colors"

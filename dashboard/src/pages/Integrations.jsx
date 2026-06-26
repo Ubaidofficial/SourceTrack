@@ -1569,7 +1569,7 @@ export default function Integrations() {
                       <Link
                         to="/billing"
                         className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-gray-300 text-st-gray hover:border-st-lime dark:border-gray-700 transition-colors"
-                        title="Google Search Console integration is available on Growth and Scale plans"
+                        title="Google Search Console integration is available on the Growth plan"
                       >
                         🔒 Connect · Upgrade
                       </Link>
