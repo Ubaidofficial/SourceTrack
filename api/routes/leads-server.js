@@ -133,6 +133,27 @@ router.get('/', validateSiteKey, async (req, res) => {
       }
     })
 
+    // Stitch persisted qualification status (source of truth: lead_qualifications,
+    // keyed by site_id + visitor_id). qualified=true -> 'Qualified',
+    // false -> 'Unqualified', no row -> null.
+    const qualMap = {}
+    if (distinctIds.length > 0) {
+      const { data: quals, error: qualErr } = await getSupabase()
+        .from('lead_qualifications')
+        .select('visitor_id, qualified')
+        .eq('site_id', siteId)
+        .in('visitor_id', distinctIds)
+      if (qualErr) {
+        console.error('Failed to query lead_qualifications:', qualErr)
+      } else if (quals) {
+        for (const q of quals) qualMap[q.visitor_id] = q.qualified
+      }
+    }
+    leads = leads.map(l => ({
+      ...l,
+      status: l.id in qualMap ? (qualMap[l.id] ? 'Qualified' : 'Unqualified') : null
+    }))
+
     if (search) {
       leads = leads.filter(l =>
         (l.id && l.id.toLowerCase().includes(search)) ||
@@ -225,6 +246,22 @@ router.get('/:leadId', validateSiteKey, async (req, res) => {
 
     const [firstSeen, lastSeen, pageviews, conversions, totalRevenue, source, medium, aiSource, country, firstPageUrl, campaign, firstTouchSource, firstTouchMedium, activeDays] = rows[0]
 
+    // Persisted qualification status (source of truth: lead_qualifications).
+    let qualStatus = null
+    {
+      const { data: qual, error: qualErr } = await getSupabase()
+        .from('lead_qualifications')
+        .select('qualified')
+        .eq('site_id', req.site.id)
+        .eq('visitor_id', leadId)
+        .maybeSingle()
+      if (qualErr) {
+        console.error('Failed to query lead_qualifications:', qualErr)
+      } else if (qual) {
+        qualStatus = qual.qualified ? 'Qualified' : 'Unqualified'
+      }
+    }
+
     // Query single lead Supabase attribution data
     const { data: convs, error: convErr } = await getSupabase()
       .from('attributed_conversions')
@@ -285,7 +322,8 @@ router.get('/:leadId', validateSiteKey, async (req, res) => {
         first_page_url: firstPageUrl || null,
         first_touch_source: finalFirstTouchSource,
         first_touch_medium: finalFirstTouchMedium,
-        active_days: Number(activeDays) || 0
+        active_days: Number(activeDays) || 0,
+        status: qualStatus
       },
       error: null
     })

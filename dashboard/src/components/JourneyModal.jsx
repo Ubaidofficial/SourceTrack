@@ -83,6 +83,14 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
   const [expandedSessions, setExpandedSessions] = useState({})
   const [expandedEvents, setExpandedEvents] = useState({})
 
+  // Local status so the dropdown holds the chosen value instead of snapping back
+  // to the prop. Seeded from the persisted status (GET /leads -> 'Qualified' |
+  // 'Unqualified' | null), mapped to the server-valid option value.
+  const [statusValue, setStatusValue] = useState(leadSummary?.status === 'Qualified' ? 'customer' : 'rejected')
+  useEffect(() => {
+    setStatusValue(leadSummary?.status === 'Qualified' ? 'customer' : 'rejected')
+  }, [leadSummary?.status])
+
   useEffect(() => {
     if (!visitorId || !siteKey) return
     setLoading(true)
@@ -142,16 +150,17 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
             <div className="flex items-center gap-1.5 mr-2">
               <span className="text-xs text-st-gray dark:text-gray-400 font-medium">Status:</span>
               <select
-                value={leadSummary?.status === 'lead' ? 'rejected' : (leadSummary?.status || 'rejected')}
+                value={statusValue}
                 onChange={async (e) => {
                   const newStatus = e.target.value
+                  setStatusValue(newStatus)
                   try {
-                    await fetchApi(`/leads/${visitorId}/qualify`, {
+                    await fetchApi(`/leads/${visitorId}/qualify?site_key=${siteKey}`, {
                       method: 'PATCH',
                       body: JSON.stringify({ status: newStatus })
                     })
                     if (onQualified) {
-                      onQualified(newStatus)
+                      onQualified(newStatus === 'rejected' ? 'Unqualified' : 'Qualified')
                     }
                   } catch (err) {
                     console.error("Failed to update status from journey modal", err)
@@ -159,10 +168,10 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                 }}
                 className="text-xs font-semibold px-2 py-1 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-st-black dark:text-white cursor-pointer focus:outline-none"
               >
+                {/* Binary Qualified/Unqualified only. MQL/SQL re-enabled when
+                    lead_qualifications.status column lands (B-full follow-up). */}
                 <option value="rejected">Unqualified</option>
                 <option value="customer">Qualified</option>
-                <option value="mql">MQL</option>
-                <option value="sql">SQL</option>
               </select>
             </div>
 

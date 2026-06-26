@@ -168,7 +168,7 @@ export default function Leads() {
     try {
       await Promise.all(
         Array.from(selectedLeads).map(leadId =>
-          fetchApi(`/leads/${leadId}/qualify`, {
+          fetchApi(`/leads/${leadId}/qualify?site_key=${site.site_key}`, {
             method: 'PATCH',
             body: JSON.stringify({ status: newStatus })
           })
@@ -218,7 +218,10 @@ export default function Leads() {
     rejected: { bg: 'bg-gray-50 text-gray-500 dark:bg-[#181B1B]/40 dark:text-gray-400 border border-gray-200 dark:border-dark-border/60', label: 'Unqualified' },
     mql:      { bg: 'bg-blue-50 text-blue-600 dark:bg-blue-950/20 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30',  label: 'MQL' },
     sql:      { bg: 'bg-purple-50 text-purple-600 dark:bg-purple-950/20 dark:text-purple-400 border border-purple-100 dark:border-purple-900/30', label: 'SQL' },
-    customer: { bg: 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 border border-green-100 dark:border-green-900/30', label: 'Qualified' }
+    customer: { bg: 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 border border-green-100 dark:border-green-900/30', label: 'Qualified' },
+    // Server-derived status vocabulary (from lead_qualifications via GET /leads).
+    Qualified:   { bg: 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 border border-green-100 dark:border-green-900/30', label: 'Qualified' },
+    Unqualified: { bg: 'bg-gray-50 text-gray-500 dark:bg-[#181B1B]/40 dark:text-gray-400 border border-gray-200 dark:border-dark-border/60', label: 'Unqualified' }
   }
 
   const hasRevenue = totalRevenue > 0
