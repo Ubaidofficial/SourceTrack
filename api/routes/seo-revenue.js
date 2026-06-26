@@ -5,6 +5,7 @@ import { queryHogQL } from '../lib/posthog.js'
 import { normalizePath } from '../lib/url-normalization.js'
 import { esc } from '../lib/utils.js'
 import { requireFeature } from '../lib/plan-features.js'
+import { ORGANIC_SEARCH_ENGINE_HOSTS, ORGANIC_SEARCH_SOURCES } from '../lib/channel-classifier.js'
 
 const router = express.Router()
 
@@ -97,12 +98,30 @@ router.get('/', async (req, res) => {
       const cappedVisitorIds = uniqueVisitorIds.slice(0, 1000)
       const escapedIds = cappedVisitorIds.map(id => `'${esc(id)}'`).join(',')
 
+      // Landing page = the visitor's FIRST ORGANIC-SEARCH pageview WITHIN the
+      // report window — not their all-time-first pageview (which credited an
+      // unrelated historical page). Organic is detected from the shared
+      // channel-classifier lists (single source of truth with channelFromEvent):
+      // referrer host is a known search engine, OR utm_source is one with no
+      // paid medium. Visitors with no organic pageview in-window return no row
+      // here and fall to the 'unknown' bucket (surfaced by the #29 logging).
+      const organicReferrerClause = ORGANIC_SEARCH_ENGINE_HOSTS
+        .map(h => `properties.referrer ILIKE '%${h}%'`)
+        .join(' OR ')
+      const organicSourceInList = ORGANIC_SEARCH_SOURCES.map(s => `'${s}'`).join(', ')
+
       const sql = `
         SELECT distinct_id, argMin(properties.page_url, timestamp)
         FROM events
         WHERE properties.site_id = '${esc(siteId)}'
           AND event = '$pageview'
           AND distinct_id IN (${escapedIds})
+          AND timestamp >= toDateTime('${esc(from)} 00:00:00')
+          AND timestamp <= toDateTime('${esc(to)} 23:59:59')
+          AND (
+            (${organicReferrerClause})
+            OR (lower(properties.utm_source) IN (${organicSourceInList}) AND coalesce(properties.utm_medium, '') = '')
+          )
         GROUP BY distinct_id
       `
 
