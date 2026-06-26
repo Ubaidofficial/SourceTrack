@@ -44,8 +44,11 @@ router.get('/callback', async (req, res) => {
     return res.status(500).send('DASHBOARD_URL environment variable is not configured')
   }
 
-  // Ensure redirect target appends fixed internal path
-  const redirectTarget = `${dashboardBaseUrl.replace(/\/$/, '')}/integrations`
+  // Ensure redirect target appends fixed internal path. Must be the AUTHENTICATED
+  // app route (/app/integrations) where the property-selection picker lives — not
+  // the public marketing /integrations page, which has no picker and ignores the
+  // gsc_connected/gsc_error params.
+  const redirectTarget = `${dashboardBaseUrl.replace(/\/$/, '')}/app/integrations`
 
   if (authError) {
     console.error('[GSC OAuth Callback] Google authentication error:', authError)
