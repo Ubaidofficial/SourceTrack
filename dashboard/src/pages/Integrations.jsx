@@ -1617,7 +1617,7 @@ export default function Integrations() {
                               <select
                                 value={selectedProperty}
                                 onChange={e => setSelectedProperty(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-st-black dark:text-white rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-st-black/20"
+                                className="w-full px-3 py-2 border border-gray-200 dark:border-[#2A2C30] bg-white dark:bg-[#161719] text-st-black dark:text-white rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-st-black/20"
                               >
                                 <option value="">-- Choose verified property URL --</option>
                                 {gscPropertiesData.properties.map(p => (
