@@ -401,7 +401,7 @@ export default function LeadDetail() {
           onClose={() => setShowJourney(false)}
           onQualified={async () => {
             try {
-              await fetchApi(`/leads/${lead?.id}/qualify`, { method: 'PATCH', body: JSON.stringify({ qualified: true }) })
+              await fetchApi(`/leads/${lead?.id}/qualify?site_key=${site.site_key}`, { method: 'PATCH', body: JSON.stringify({ qualified: true }) })
             } catch(e) { console.error('qualify failed', e) }
             setShowJourney(false)
           }}
