@@ -7,6 +7,8 @@
  * live queries and pre-aggregated reports.
  */
 
+import { isGoogleSource } from './utils.js'
+
 // All known AI assistant/search domains
 export const AI_REFERRER_DOMAINS = [
   'chatgpt.com', 'chat.openai.com', 'claude.ai', 'anthropic.com',
@@ -211,4 +213,57 @@ export function channelFromEvent(props = {}) {
   if (!source || source === 'direct') return 'Direct'
   if (source) return 'Other Campaign'
   return 'Direct'
+}
+
+/**
+ * Canonical SOURCE/ENGINE classifier — the source DIMENSION (distinct from the
+ * channel dimension above). Returns the engine/host token, NOT a channel bucket:
+ * a Bing referrer yields 'bing.com' (→ "Bing" once normalized), never
+ * 'Organic Search'. Lifted verbatim from the canonical /analytics/sources
+ * referrer-tab classifier so both Sources surfaces share one implementation.
+ *
+ * Pure: visitor-denomination is the caller's job (see topSourcesByVisitor).
+ *
+ * @param {object} props - { ai_source, utm_source, referrer }
+ * @param {object} opts  - { isOwnDomain } per-site own-domain matcher (host => bool)
+ * @returns {string} source token: 'AI: <X>' | 'google' | '<host>' | '<utm_source>' | 'Direct'
+ */
+export function sourceFromEvent(props = {}, { isOwnDomain } = {}) {
+  const isOwn = typeof isOwnDomain === 'function' ? isOwnDomain : () => false
+  if (props.ai_source) return `AI: ${props.ai_source}`
+  if (props.utm_source && isGoogleSource(props.utm_source)) return 'google'
+  if (props.utm_source) return String(props.utm_source).toLowerCase()
+  if (props.referrer) {
+    try {
+      const host = new URL(props.referrer).hostname.replace('www.', '')
+      if (isOwn(host)) return 'Direct'
+      if (isGoogleSource(host)) return 'google'
+      return host
+    } catch (_e) {
+      return 'Direct'
+    }
+  }
+  return 'Direct'
+}
+
+/**
+ * Visitor-denominated source aggregation for the "Top Sources" surface.
+ * Counts UNIQUE VISITORS (distinct anonymous_id) per source token — NOT
+ * pageviews — so a single visitor with N pageviews from one source counts once.
+ *
+ * @param {Array} rows - pageview rows ({ ai_source, utm_source, referrer, anonymous_id })
+ * @param {object} opts - { isOwnDomain, limit = 50 }
+ * @returns {Array<{source: string, visits: number}>} sorted desc by visits
+ */
+export function topSourcesByVisitor(rows = [], { isOwnDomain, limit = 50 } = {}) {
+  const sets = {}
+  for (const r of rows) {
+    const src = sourceFromEvent(r, { isOwnDomain })
+    if (!sets[src]) sets[src] = new Set()
+    if (r.anonymous_id) sets[src].add(r.anonymous_id)
+  }
+  return Object.entries(sets)
+    .map(([source, set]) => ({ source, visits: set.size }))
+    .sort((a, b) => b.visits - a.visits)
+    .slice(0, limit)
 }
