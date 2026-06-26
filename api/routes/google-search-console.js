@@ -150,6 +150,8 @@ router.get('/callback', async (req, res) => {
         status: 'connected',
         last_error_code: null,
         last_error_message: null,
+        // Only set when present so a re-auth without the claim never wipes a stored email
+        ...(tokens.email ? { google_account_email: tokens.email } : {}),
         updated_at: new Date().toISOString()
       }, { onConflict: 'site_key' })
 

@@ -115,7 +115,7 @@ export function getAuthUrl(siteKey, userId) {
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: 'https://www.googleapis.com/auth/webmasters.readonly',
+    scope: 'openid email https://www.googleapis.com/auth/webmasters.readonly',
     access_type: 'offline',
     prompt: 'consent',
     state
@@ -130,7 +130,8 @@ export async function exchangeCodeForTokens(code) {
     return {
       refresh_token: 'mock_refresh_token_123',
       access_token: 'mock_access_token_123',
-      expires_in: 3600
+      expires_in: 3600,
+      email: 'mock_gsc_user@example.com'
     }
   }
 
@@ -166,7 +167,24 @@ export async function exchangeCodeForTokens(code) {
   return {
     refresh_token: data.refresh_token || null,
     access_token: data.access_token,
-    expires_in: data.expires_in
+    expires_in: data.expires_in,
+    email: extractEmailFromIdToken(data.id_token)
+  }
+}
+
+// Decodes the email claim from a Google id_token (JWT) without signature
+// verification — the token came directly from Google's token endpoint over
+// TLS, so it is trusted for the sole purpose of recording the account email.
+// Returns null if the token is absent or malformed.
+function extractEmailFromIdToken(idToken) {
+  if (!idToken || typeof idToken !== 'string') return null
+  try {
+    const payloadB64 = idToken.split('.')[1]
+    if (!payloadB64) return null
+    const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8'))
+    return payload.email || null
+  } catch (_e) {
+    return null
   }
 }
 
