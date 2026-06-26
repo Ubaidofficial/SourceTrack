@@ -18,6 +18,13 @@ export const AI_REFERRER_DOMAINS = [
   'chat.mistral.ai', 'mistral.ai', 'character.ai', 'pi.ai', 'inflection.ai'
 ]
 
+// Canonical Organic Search signals — exported so other surfaces (e.g. the
+// SEO-revenue landing-page query) detect organic identically and stay in sync.
+// Host tokens carry a trailing dot to match the registrable domain
+// (e.g. 'google.' → google.com / google.co.uk, not "googleads").
+export const ORGANIC_SEARCH_ENGINE_HOSTS = ['google.', 'bing.', 'yahoo.', 'duckduckgo.', 'ecosia.', 'kagi.', 'brave.', 'yandex.', 'baidu.']
+export const ORGANIC_SEARCH_SOURCES = ['google', 'bing', 'yahoo', 'duckduckgo', 'baidu', 'yandex', 'brave', 'ecosia']
+
 // Strip protocol, www., and lowercase. Returns null on malformed input.
 function extractHost(url) {
   if (!url || typeof url !== 'string') return null
@@ -191,10 +198,8 @@ export function channelFromEvent(props = {}) {
   if (['sms', 'text', 'mms'].includes(medium)) return 'SMS'
 
   // 6. Organic Search (referrer or source match)
-  const searchEngines = ['google.', 'bing.', 'yahoo.', 'duckduckgo.', 'ecosia.', 'kagi.', 'brave.', 'yandex.', 'baidu.']
-  const searchSources = ['google', 'bing', 'yahoo', 'duckduckgo', 'baidu', 'yandex', 'brave', 'ecosia']
-  if (searchEngines.some(se => ref.includes(se))) return 'Organic Search'
-  if (source && searchSources.includes(source) && !medium) return 'Organic Search'
+  if (ORGANIC_SEARCH_ENGINE_HOSTS.some(se => ref.includes(se))) return 'Organic Search'
+  if (source && ORGANIC_SEARCH_SOURCES.includes(source) && !medium) return 'Organic Search'
 
   // 7. Organic Social (referrer or source match)
   const socialDomains = ['facebook.com', 'instagram.com', 'linkedin.com', 'twitter.com', 'x.com', 'tiktok.com', 'pinterest.com', 'reddit.com', 'youtube.com', 'snapchat.com', 'threads.net']
