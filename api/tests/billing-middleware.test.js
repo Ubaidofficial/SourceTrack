@@ -11,7 +11,7 @@ process.env.ENCRYPTION_KEY = '00000000000000000000000000000000000000000000000000
 
 import { getSupabase } from '../lib/supabase.js'
 import { validateSiteKey, siteCache } from '../middleware/auth.js'
-import { isValidRedirectUrl, getRedirectAllowlist, getDefaultBillingReturnUrl, resolveCheckoutPrice, getPriceMap, getCurrentMonthUsage } from '../routes/billing.js'
+import { isValidRedirectUrl, getRedirectAllowlist, getDefaultBillingReturnUrl, resolveCheckoutPrice, getPriceMap, getCurrentMonthUsage, billingWebhookHandler, stripe as billingStripe } from '../routes/billing.js'
 import { checkTierLimit } from '../middleware/tier-check.js'
 import { dispatchWebhook } from '../lib/webhook.js'
 import { checkSiteCreationLimit } from '../lib/site-limits.js'
@@ -2781,4 +2781,97 @@ test('getCurrentMonthUsage — reads site_usage_monthly via service role (140G b
   })
 
   client.from = originalFrom
+})
+
+// ─── Stripe billing webhook: persistence + idempotency recovery (Bugs A + B) ──
+test('billingWebhookHandler — Founder checkout persists growth + retry recovers', async (t) => {
+  const client = getSupabase()
+  const originalFrom = client.from
+
+  process.env.STRIPE_WEBHOOK_SECRET = 'whsec_test'
+  const savedEarlyBird = process.env.STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID
+  process.env.STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID = 'price_founder_test'
+
+  let lastUpdate = null   // payload of the last sites.update()
+  let updateError = false // toggle to simulate a transient DB write failure
+  let updateCalls = 0
+
+  client.from = (table) => {
+    if (table === 'sites') {
+      return {
+        update: (payload) => ({
+          eq: async () => {
+            updateCalls++
+            if (updateError) return { error: { message: 'transient db error' } }
+            lastUpdate = payload
+            return { error: null }
+          }
+        }),
+        // invalidateCacheBySiteId(): sites.select().eq().maybeSingle()
+        select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { id: 'site-1', site_key: 'sk-1', domain: 'x.com' }, error: null }) }) })
+      }
+    }
+    return originalFrom.call(client, table)
+  }
+
+  const evt = {
+    id: 'evt-founder-recover-1',
+    type: 'checkout.session.completed',
+    data: { object: { client_reference_id: 'site-1', customer: 'cus_1', subscription: 'sub_1' } }
+  }
+  // Stub the exact Stripe client instance the handler uses (own-property shadow).
+  const origConstructEvent = billingStripe.webhooks.constructEvent
+  const origRetrieve = billingStripe.subscriptions.retrieve
+  billingStripe.webhooks.constructEvent = () => evt
+  billingStripe.subscriptions.retrieve = async () => ({ items: { data: [{ price: { id: 'price_founder_test' } }] } })
+
+  t.after(() => {
+    client.from = originalFrom
+    billingStripe.webhooks.constructEvent = origConstructEvent
+    billingStripe.subscriptions.retrieve = origRetrieve
+    if (savedEarlyBird === undefined) delete process.env.STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID
+    else process.env.STRIPE_EARLY_BIRD_ANNUAL_PRICE_ID = savedEarlyBird
+  })
+
+  function mockReqRes() {
+    const req = { headers: { 'stripe-signature': 'sig' }, body: Buffer.from('{}') }
+    const out = { statusCode: 200, body: null }
+    const res = {
+      status(c) { out.statusCode = c; return this },
+      json(b) { out.body = b; return this }
+    }
+    return { req, res, out }
+  }
+
+  // Bug B: transient DB failure → 500, and the event is NOT claimed as processed.
+  await t.test('transient DB failure returns 500 without poisoning idempotency', async () => {
+    updateError = true
+    const m = mockReqRes()
+    await billingWebhookHandler(m.req, m.res)
+    assert.strictEqual(m.out.statusCode, 500, 'failed write must surface as 500')
+  })
+
+  // Bug A + B: Stripe retries the SAME event.id; it must re-process and persist
+  // plan='growth', pv_limit=150000, stripe_customer_id, stripe_subscription_id.
+  await t.test('retry of the same event recovers and writes full billing state', async () => {
+    updateError = false
+    const m = mockReqRes()
+    await billingWebhookHandler(m.req, m.res)
+    assert.strictEqual(m.out.statusCode, 200, 'retry should succeed, not be skipped as duplicate')
+    assert.ok(lastUpdate, 'sites.update() must have been called on retry')
+    assert.strictEqual(lastUpdate.plan, 'growth')
+    assert.strictEqual(lastUpdate.pv_limit, 150000)
+    assert.strictEqual(lastUpdate.stripe_customer_id, 'cus_1')
+    assert.strictEqual(lastUpdate.stripe_subscription_id, 'sub_1')
+  })
+
+  // A genuine duplicate (same event already processed successfully) is skipped.
+  await t.test('true duplicate after success is skipped without re-writing', async () => {
+    const callsBefore = updateCalls
+    const m = mockReqRes()
+    await billingWebhookHandler(m.req, m.res)
+    assert.strictEqual(m.out.statusCode, 200)
+    assert.strictEqual(m.out.body?.duplicate, true)
+    assert.strictEqual(updateCalls, callsBefore, 'duplicate must not trigger another DB write')
+  })
 })

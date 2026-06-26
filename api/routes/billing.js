@@ -6,7 +6,9 @@ import { normalizePlan, getPvLimit } from '../lib/plan-features.js'
 import { requireUserAuth } from '../middleware/user-auth.js'
 import { validateSiteKey, requireSiteMembership, clearSiteCache, clearSiteCacheForKeys } from '../middleware/auth.js'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+// Exported so tests can stub the Stripe client (constructEvent / subscriptions)
+// on the exact instance the webhook handler uses.
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2024-06-20'
 })
 
@@ -153,14 +155,13 @@ export async function billingWebhookHandler(req, res) {
   const sb = getSupabase()
 
   // Stripe retries webhooks for ~3 days on non-2xx. event.id is unique per
-  // event regardless of retry — record it to skip duplicate processing.
-  if (event.id) {
-    const seen = _seenStripeEvents.get(event.id)
-    if (seen) {
-      console.log(`[billing] duplicate Stripe event ${event.id} (${event.type}) — skipping`)
-      return res.json({ received: true, duplicate: true })
-    }
-    _seenStripeEvents.set(event.id, true)
+  // event regardless of retry — skip an event we've already PROCESSED. The
+  // claim is committed only after the DB write succeeds (see below), so a
+  // failed first attempt does NOT poison the retry: Stripe re-delivers the
+  // same event.id and we re-attempt instead of returning a false duplicate.
+  if (event.id && _seenStripeEvents.get(event.id)) {
+    console.log(`[billing] duplicate Stripe event ${event.id} (${event.type}) — skipping`)
+    return res.json({ received: true, duplicate: true })
   }
 
   try {
@@ -297,6 +298,11 @@ export async function billingWebhookHandler(req, res) {
         // Unhandled event — not an error
         break
     }
+
+    // Commit the idempotency claim ONLY after the handler (incl. DB write)
+    // succeeded. On a thrown error we fall through to the catch without
+    // claiming, so Stripe's retry of the same event.id is re-processed.
+    if (event.id) _seenStripeEvents.set(event.id, true)
 
     return res.status(200).json({ received: true })
   } catch (err) {
