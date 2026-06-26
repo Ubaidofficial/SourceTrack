@@ -55,7 +55,7 @@ export async function validateSiteKey(req, res, next) {
     const supabase = getSupabase()
     let { data, error } = await supabase
       .from('sites')
-      .select('id, site_key, plan, pv_limit, created_at, company_id, owner_id, business_type, trial_ends_at, attribution_window_days, onboarding_completed, last_seen_at, onboarding_state, domain, excluded_paths, timezone, custom_url_params, cross_domain_domains, cross_domain_cookie_domain, stripe_customer_id')
+      .select('id, site_key, plan, pv_limit, created_at, company_id, owner_id, business_type, trial_ends_at, attribution_window_days, onboarding_completed, last_seen_at, onboarding_state, domain, excluded_paths, timezone, custom_url_params, cross_domain_domains, cross_domain_cookie_domain, stripe_customer_id, stripe_subscription_id')
       .eq('site_key', siteKey)
       .single()
 
@@ -80,6 +80,7 @@ export async function validateSiteKey(req, res, next) {
       data.attribution_window_days = 30
       data.cross_domain_domains = null
       data.cross_domain_cookie_domain = null
+      data.stripe_subscription_id = null
       error = null
     }
 
