@@ -16,11 +16,11 @@ export const ph = new PostHog(process.env.POSTHOG_API_KEY, {
   flushInterval
 })
 
+// Best-effort flush on natural process exit (covers short-lived job scripts).
+// The API server's SIGTERM/SIGINT shutdown is owned solely by api/index.js,
+// which awaits ph.shutdown() before exit — so this module must NOT register a
+// competing SIGTERM handler that could call process.exit() ahead of that flush.
 process.on('exit', () => ph.shutdown())
-process.on('SIGTERM', async () => {
-  await ph.shutdown()
-  process.exit(0)
-})
 
 export async function queryHogQL(sql, queryName = 'trackiq') {
   try {
