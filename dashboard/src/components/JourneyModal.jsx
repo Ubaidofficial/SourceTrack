@@ -201,11 +201,10 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                   )}
                 </div>
 
-                {/* AI Journey Summary Card */}
+                {/* Journey Overview Card */}
                 <div className="bg-purple-50 border border-purple-200 dark:bg-purple-950/20 dark:border-purple-900/30 rounded-xl p-4 space-y-2">
                   <div className="flex items-center gap-1.5 text-purple-900 dark:text-purple-400 font-semibold text-xs">
-                    <Bot className="w-4 h-4 text-purple-500" />
-                    <span>AI Journey Summary</span>
+                    <span>Journey Overview</span>
                   </div>
                   <p className="text-xs text-purple-800 dark:text-purple-300 leading-normal font-sans">
                     {summary.aiSource ? (
@@ -213,9 +212,6 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                     ) : (
                       <>Visitor arrived via organic/direct navigation. No AI referral sources detected in this journey.</>
                     )}
-                  </p>
-                  <p className="text-[10px] text-purple-500 dark:text-purple-400 italic">
-                    Generated from journey events and source data.
                   </p>
                 </div>
 
