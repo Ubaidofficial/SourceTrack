@@ -139,6 +139,7 @@ export default function Billing() {
   const isTrial   = plan === 'trial'
   const isFree    = plan === 'free'
   const isPaid    = ['starter', 'growth', 'scale'].includes(plan)
+  const isInactive = ['inactive', 'archived'].includes(plan)
   const subscription = billingStatus?.subscription
   const isCanceledAtPeriodEnd = !!subscription?.cancel_at_period_end
   const currentPeriodEnd = subscription?.current_period_end
@@ -205,11 +206,12 @@ export default function Billing() {
           <span className="text-2xl font-black text-st-black dark:text-white capitalize">{getPlanLabel(plan)}</span>
           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
             isTrial ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400' :
+            isInactive ? 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400' :
             isCanceledAtPeriodEnd ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400' :
             isPaid  ? 'bg-st-lime/15 text-green-700 dark:text-st-lime' :
                       'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300'
           }`}>
-            {isTrial ? 'Trial' : isFree ? 'Free' : isCanceledAtPeriodEnd ? 'Cancels soon' : 'Active'}
+            {isTrial ? 'Trial' : isFree ? 'Free' : isInactive ? 'Inactive' : isCanceledAtPeriodEnd ? 'Cancels soon' : 'Active'}
           </span>
         </div>
 
