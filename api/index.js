@@ -5,6 +5,7 @@ import helmet from 'helmet'
 import cors from 'cors'
 import NodeCache from 'node-cache'
 import { getSupabase } from './lib/supabase.js'
+import { ph } from './lib/posthog.js'
 
 import {
   defaultLimit,
@@ -587,18 +588,33 @@ const server = app.listen(PORT, () => {
 })
 
 // Graceful shutdown — Railway sends SIGTERM ~10s before SIGKILL on deploys.
-// Close the HTTP server so in-flight requests finish, then exit.
-function shutdown(signal) {
+// Single ordered owner: drain in-flight HTTP requests, THEN flush the PostHog
+// buffer (so $pageview captures from those in-flight requests are delivered
+// before exit — otherwise a claimed quota unit could outlive its event), THEN
+// exit. ph's own SIGTERM handler is intentionally removed so nothing races
+// process.exit() ahead of this flush.
+let shuttingDown = false
+async function shutdown(signal) {
+  if (shuttingDown) return
+  shuttingDown = true
   console.log(`[shutdown] ${signal} received, draining…`)
-  server.close(() => {
-    console.log('[shutdown] http server closed')
-    process.exit(0)
-  })
   // Hard exit if we exceed the platform's grace window.
-  setTimeout(() => {
+  const forceExit = setTimeout(() => {
     console.error('[shutdown] timeout — forcing exit')
     process.exit(1)
-  }, 10_000).unref()
+  }, 10_000)
+  forceExit.unref()
+  server.close(async () => {
+    console.log('[shutdown] http server closed')
+    try {
+      await ph.shutdown()
+      console.log('[shutdown] posthog buffer flushed')
+    } catch (err) {
+      console.error('[shutdown] posthog flush failed:', err?.message)
+    }
+    clearTimeout(forceExit)
+    process.exit(0)
+  })
 }
 process.on('SIGTERM', () => shutdown('SIGTERM'))
 process.on('SIGINT',  () => shutdown('SIGINT'))
