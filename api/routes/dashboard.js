@@ -55,7 +55,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
         .lte('conversion_date', currentPadded.to),
       supabase
         .from('attributed_conversions')
-        .select('first_touch_source, first_touch_channel, last_touch_channel, conversion_value, conversion_type, status, conversion_date, conversion_timestamp')
+        .select('first_touch_source, first_touch_channel, last_touch_channel, conversion_value, conversion_type, status, conversion_date, conversion_timestamp, distinct_id, anonymous_id')
         .eq('site_id', req.site.id)
         .gte('conversion_date', priorPadded.from)
         .lte('conversion_date', priorPadded.to),
@@ -126,7 +126,6 @@ router.get('/overview', validateSiteKey, async (req, res) => {
 
     let totalRevenue = 0
     let totalConversions = 0
-    let totalLeads = 0
     let totalCustomers = 0
     let totalAIRevenue = 0
     let sqlCount = 0
@@ -156,12 +155,12 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       totalConversions++
 
       const typeClass = classifyConversionType(r.conversion_type)
-      if (typeClass === 'lead') {
-        totalLeads++
-      } else if (typeClass === 'customer') {
+      if (typeClass === 'customer') {
         totalCustomers++
       }
 
+      // Leads counted as DISTINCT lead identities (people), not raw conversion
+      // rows — unifies the unit with the Leads page and dedupes repeat submitters.
       const convId = r.distinct_id || r.anonymous_id
       if (convId) {
         converters.add(convId)
@@ -257,7 +256,10 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       .slice(0, 20)
 
     // ── Aggregate prior period ──────────────────────────────────────────────
-    let prevRevenue = 0, prevLeads = 0, prevCustomers = 0, prevConversions = 0, prevAIRevenue = 0
+    let prevRevenue = 0, prevCustomers = 0, prevConversions = 0, prevAIRevenue = 0
+    // Leads counted as DISTINCT lead identities (same unit as the current period
+    // and the Leads page), so the delta compares like-for-like, not rows-vs-people.
+    const prevLeadConverters = new Set()
     for (const r of priorRows) {
       const localDate = getLocalDateString(new Date(r.conversion_timestamp || r.conversion_date), tz)
       if (localDate < localPrevDateFrom || localDate > localPrevDateTo) {
@@ -269,7 +271,8 @@ router.get('/overview', validateSiteKey, async (req, res) => {
 
       const typeClass = classifyConversionType(r.conversion_type)
       if (typeClass === 'lead') {
-        prevLeads++
+        const convId = r.distinct_id || r.anonymous_id
+        if (convId) prevLeadConverters.add(convId)
       } else if (typeClass === 'customer') {
         prevCustomers++
       }
@@ -357,8 +360,8 @@ router.get('/overview', validateSiteKey, async (req, res) => {
           conversions_prev: prevConversions,
           sessions: totalSessions,
           bounce_rate: bounceRate,
-          leads: totalLeads,
-          leads_prev: prevLeads,
+          leads: leadConverters.size,
+          leads_prev: prevLeadConverters.size,
           customers: totalCustomers,
           customers_prev: prevCustomers,
           sql_percent: sqlPercent,

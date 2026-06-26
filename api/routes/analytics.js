@@ -271,8 +271,24 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
       revenueBuckets[b] = (revenueBuckets[b] || 0) + (Number(r.conversion_value) || 0)
     })
 
-    // Build aligned time-series labels covering both visitors and revenue buckets.
-    const allBuckets = new Set([...Object.keys(dayVisitorBuckets), ...Object.keys(revenueBuckets), ...Object.keys(dayCounts)])
+    // Pad the X-axis to the full selected window so a sparse dataset doesn't
+    // visually compress (e.g. 30d selected but data on only 2 days). Enumerate
+    // every local day in [localDateFrom, localDateTo], bucket at the active
+    // granularity, and zero-fill below. Values are unchanged — only previously
+    // absent labels are added.
+    const fullBuckets = []
+    const seenBuckets = new Set()
+    let cursor = localDateFrom
+    for (let i = 0; cursor <= localDateTo && i < 400; i++) {
+      const b = bucket(`${cursor}T12:00:00Z`)
+      if (!seenBuckets.has(b)) { seenBuckets.add(b); fullBuckets.push(b) }
+      const d = new Date(`${cursor}T00:00:00Z`)
+      d.setUTCDate(d.getUTCDate() + 1)
+      cursor = d.toISOString().slice(0, 10)
+    }
+
+    // Build aligned time-series labels covering the full window plus any data buckets.
+    const allBuckets = new Set([...fullBuckets, ...Object.keys(dayVisitorBuckets), ...Object.keys(revenueBuckets), ...Object.keys(dayCounts)])
     const labels = [...allBuckets].sort()
     const visitors_timeseries = labels.map(l => dayVisitorBuckets[l] || 0)
     const revenue_timeseries = labels.map(l => revenueBuckets[l] || 0)

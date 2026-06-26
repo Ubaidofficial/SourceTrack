@@ -47,15 +47,16 @@ function DataRow({ label, count, max, icon, onClick, active }) {
 }
 
 // ─── Section card ─────────────────────────────────────────────────────────────
-function ListSection({ title, rows, getLabel, getCount, getIcon, onRowClick, isRowActive, emptyText = 'No data yet' }) {
+function ListSection({ title, rows, getLabel, getCount, getIcon, onRowClick, isRowActive, emptyText = 'No data yet', unit }) {
   const [showAll, setShowAll] = useState(false)
   const visible = showAll ? rows : rows.slice(0, 8)
   const max = useMemo(() => Math.max(1, ...rows.map(r => safeNumber(getCount(r), 0))), [rows, getCount])
 
   return (
     <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm">
-      <div className="px-4 py-3 border-b border-gray-100 dark:border-dark-border">
+      <div className="px-4 py-3 border-b border-gray-100 dark:border-dark-border flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold text-st-black dark:text-white">{title}</h3>
+        {unit && <span className="text-[10px] uppercase tracking-wide text-st-gray dark:text-gray-400 font-medium flex-shrink-0">{unit}</span>}
       </div>
       {rows.length === 0 ? (
         <p className="text-xs text-st-gray dark:text-gray-400 py-10 text-center">{emptyText}</p>
@@ -455,6 +456,7 @@ export default function Analytics() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <ListSection
               title="Top Countries"
+              unit="pageviews"
               rows={topCountries}
               getLabel={r => r.country || 'Unknown'}
               getCount={r => r.visits}
@@ -464,6 +466,7 @@ export default function Analytics() {
             />
             <ListSection
               title="Devices"
+              unit="pageviews"
               rows={Object.entries(devices).sort((a,b) => safeNumber(b[1],0) - safeNumber(a[1],0)).map(([k,v]) => ({ device: k, count: v }))}
               getLabel={r => r.device.charAt(0).toUpperCase() + r.device.slice(1)}
               getCount={r => r.count}
@@ -477,6 +480,7 @@ export default function Analytics() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <ListSection
               title="Browsers"
+              unit="visitors"
               rows={browsers}
               getLabel={r => r.browser}
               getCount={r => r.visitors}
@@ -486,6 +490,7 @@ export default function Analytics() {
             />
             <ListSection
               title="Operating Systems"
+              unit="visitors"
               rows={osList}
               getLabel={r => r.os}
               getCount={r => r.visitors}
