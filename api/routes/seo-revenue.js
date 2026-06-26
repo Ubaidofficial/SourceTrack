@@ -1,4 +1,5 @@
 import express from 'express'
+import crypto from 'crypto'
 import { getSupabase } from '../lib/supabase.js'
 import { queryHogQL } from '../lib/posthog.js'
 import { normalizePath } from '../lib/url-normalization.js'
@@ -6,6 +7,20 @@ import { esc } from '../lib/utils.js'
 import { requireFeature } from '../lib/plan-features.js'
 
 const router = express.Router()
+
+// Helper: hashed site identifier for privacy-hardened logging (mirrors the
+// getLogHash used in google-search-console.js / ad-platforms.js).
+function getLogHash(value) {
+  const salt = process.env.ST_LOG_HASH_SECRET || process.env.TRACKER_SALT || process.env.ENCRYPTION_KEY
+  if (!salt) {
+    if (process.env.NODE_ENV === 'production') {
+      return crypto.createHmac('sha256', 'missing-log-secret').update(value || '').digest('hex').slice(0, 8)
+    } else {
+      return crypto.createHash('sha256').update(value || '').digest('hex').slice(0, 8)
+    }
+  }
+  return crypto.createHmac('sha256', salt).update(value || '').digest('hex').slice(0, 8)
+}
 
 // GET /api/seo-revenue: Generate Estimated SEO Revenue report
 router.get('/', async (req, res) => {
@@ -72,6 +87,11 @@ router.get('/', async (req, res) => {
 
     // 3. Resolve landing page paths for converting visitors via PostHog
     const visitorLandingPages = {}
+    // Tracks whether the landing-page lookup itself failed (timeout / query
+    // error). Distinguishes "unknown because the lookup broke" (data-quality
+    // failure — all organic revenue dumped to 'unknown') from "unknown because
+    // this visitor genuinely has no resolvable organic landing pageview".
+    let landingLookupFailed = false
     if (uniqueVisitorIds.length > 0) {
       // Cap at 1,000 distinct IDs
       const cappedVisitorIds = uniqueVisitorIds.slice(0, 1000)
@@ -105,6 +125,7 @@ router.get('/', async (req, res) => {
           }
         }
       } catch (phErr) {
+        landingLookupFailed = true
         console.error('[SEO Revenue] PostHog landing page query failed or timed out:', phErr.message)
       }
     }
@@ -121,6 +142,36 @@ router.get('/', async (req, res) => {
       }
       sourceTrackPagesMap[pagePath].conversions += stats.count
       sourceTrackPagesMap[pagePath].revenue += stats.revenue
+    }
+
+    // Observability: surface revenue that landed in the 'unknown' bucket, and
+    // distinguish the two causes. Signal only — does NOT change any attribution
+    // numbers (the bucketing above is unchanged).
+    if (uniqueVisitorIds.length > 0) {
+      const unknownBucket = sourceTrackPagesMap['unknown'] || { conversions: 0, revenue: 0 }
+      const resolvedVisitors = Object.keys(visitorLandingPages).length
+      if (landingLookupFailed) {
+        // Lookup broke (timeout / query error) → unknown is a data-quality failure.
+        console.error('[SEO Revenue] gsc_landing_lookup_failed ' + JSON.stringify({
+          site: getLogHash(siteKey),
+          reason: 'gsc_landing_lookup_failed',
+          organic_visitors: uniqueVisitorIds.length,
+          resolved_visitors: resolvedVisitors,
+          unknown_conversions: unknownBucket.conversions,
+          unknown_revenue: unknownBucket.revenue
+        }))
+      } else if (unknownBucket.conversions > 0) {
+        // Lookup succeeded but some visitors have no resolvable organic landing
+        // pageview — genuinely unknown, not a failure.
+        console.warn('[SEO Revenue] gsc_landing_no_match ' + JSON.stringify({
+          site: getLogHash(siteKey),
+          reason: 'gsc_landing_no_match',
+          organic_visitors: uniqueVisitorIds.length,
+          resolved_visitors: resolvedVisitors,
+          unknown_conversions: unknownBucket.conversions,
+          unknown_revenue: unknownBucket.revenue
+        }))
+      }
     }
 
     // 4. Fetch GSC daily performance performance rows from Supabase cache
