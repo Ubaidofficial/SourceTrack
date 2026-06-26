@@ -5,6 +5,7 @@ import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { getSupabase } from '../lib/supabase.js'
 import { fetchPageviews } from '../lib/posthog.js'
+import { sourceFromEvent, topSourcesByVisitor } from '../lib/channel-classifier.js'
 import { redactPiiFromUrl, redactPiiFromObject, isGoogleSource, isValidTimezone, getLocalDateString, getLocalMonthString, getLocalWeekString, getPaddedUtcDateRange, getNow, bucketUniqueVisitors, countDistinctConverters, cappedRate } from '../lib/utils.js'
 import { requireFeature, isSiteStatusBlocked } from '../lib/plan-features.js'
 import { claimPageviewUsage } from '../lib/pageview-limits.js'
@@ -198,15 +199,11 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
     pv.forEach(r => { try { const path = new URL(r.url).pathname; pageCounts[path] = (pageCounts[path] || 0) + 1 } catch (_e) {} })
     const topPages = Object.entries(pageCounts).sort((a, b) => b[1] - a[1]).slice(0, 50).map(([page, views]) => ({ page, views }))
     const isOwnDomain = buildOwnDomainMatcher(req.site)
-    function classifySource(row) {
-      if (row.ai_source) return `AI: ${row.ai_source}`
-      if (row.utm_source) { const m = (row.utm_medium || '').toLowerCase(); if (['cpc','ppc','paid','paid_search'].includes(m)) return 'Paid Search'; if (['email','newsletter'].includes(m)) return 'Email'; return row.utm_source }
-      if (row.referrer) { try { const host = new URL(row.referrer).hostname.replace('www.', ''); if (isOwnDomain(host)) return 'Direct'; if (['google.','bing.','yahoo.','duckduckgo.'].some(s => host.includes(s))) return 'Organic Search'; if (['facebook.com','instagram.com','linkedin.com','twitter.com','x.com','tiktok.com'].some(s => host.includes(s))) return 'Organic Social'; return host } catch (_e) {} }
-      return 'Direct'
-    }
-    const sourceCounts = {}
-    pv.forEach(r => { const src = classifySource(r); sourceCounts[src] = (sourceCounts[src] || 0) + 1 })
-    const topSources = Object.entries(sourceCounts).sort((a, b) => b[1] - a[1]).slice(0, 50).map(([source, visits]) => ({ source, visits }))
+    // Top Sources = SOURCE/ENGINE dimension, visitor-denominated (unique
+    // anonymous_id per source), via the shared classifier so this surface
+    // matches /analytics/sources?tab=referrer exactly. Previously counted
+    // pageviews and bucketed engines into channels ("Organic Search").
+    const topSources = topSourcesByVisitor(pv, { isOwnDomain })
     const aiCounts = {}
     pv.filter(r => r.ai_source).forEach(r => { aiCounts[r.ai_source] = (aiCounts[r.ai_source] || 0) + 1 })
     const aiSources = Object.entries(aiCounts).sort((a, b) => b[1] - a[1]).map(([source, visits]) => ({ source, visits }))
@@ -529,28 +526,8 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
       if (tab === 'medium') {
         key = (r.utm_medium || 'none').toLowerCase()
       } else {
-        // referrer tab — fall through classification (matches /summary classifySource)
-        if (r.ai_source) key = `AI: ${r.ai_source}`
-        else if (r.utm_source && isGoogleSource(r.utm_source)) {
-          key = 'google'
-        }
-        else if (r.utm_source) key = r.utm_source.toLowerCase()
-        else if (r.referrer) {
-          try {
-            const host = new URL(r.referrer).hostname.replace('www.','')
-            if (isOwnDomain(host)) {
-              key = 'Direct'
-            } else if (isGoogleSource(host)) {
-              key = 'google'
-            } else {
-              key = host
-            }
-          } catch {
-            key = 'Direct'
-          }
-        } else {
-          key = 'Direct'
-        }
+        // referrer tab — shared SOURCE classifier (same impl as /summary top_sources)
+        key = sourceFromEvent(r, { isOwnDomain })
       }
       groups[key] = groups[key] || { name: key, visitors_set: new Set() }
       if (r.anonymous_id) groups[key].visitors_set.add(r.anonymous_id)
