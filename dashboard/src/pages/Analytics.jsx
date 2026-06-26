@@ -171,6 +171,19 @@ export default function Analytics() {
     enabled: !!site?.site_key
   })
 
+  // ─── SEO Traffic (Search Console, traffic-only) ─────────────────────────────
+  // GSC finalizes data on a 2-3 day lag, so bound the window at yesterday.
+  const { data: seoTraffic } = useQuery({
+    queryKey: ['analytics-seo-traffic', site?.site_key, days],
+    queryFn: () => {
+      const to = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+      const from = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
+      return fetchApi(`/seo-revenue?site_key=${site.site_key}&from=${from}&to=${to}`, { skipBillingRedirect: true })
+    },
+    enabled: !!site?.site_key,
+    retry: false
+  })
+
   // ─── Shape data ────────────────────────────────────────────────────────────
   const d            = summary || {}
   const kpis         = d.kpis || {}
@@ -186,6 +199,10 @@ export default function Analytics() {
   const osList       = osData || []
   const sourcesRows  = sourcesData?.rows || []
   const ts           = d.timeseries || { labels: [], visitors: [] }
+
+  // SEO Traffic surface only renders when GSC is connected AND a property is selected.
+  const seoConnected = !!(seoTraffic?.gsc_connected && seoTraffic?.gsc_property_selected)
+  const seoQueries   = seoTraffic?.queries || []
 
   const convCount  = safeNumber(kpis.conversion_count, 0)
   const convRate   = safeNumber(kpis.conversion_rate, 0)
@@ -545,6 +562,46 @@ export default function Analytics() {
                   />
                 ))
               })()}
+            </div>
+          )}
+
+          {/* ─── SEO Traffic — Search Console (conditional, traffic-only) ──── */}
+          {seoConnected && (
+            <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm">
+              <div className="px-4 py-3 border-b border-gray-100 dark:border-dark-border flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-st-black dark:text-white">SEO Traffic</h3>
+                <span className="text-[10px] text-st-gray dark:text-gray-400 flex-shrink-0">
+                  {safeNumber(seoTraffic?.summary?.gsc_clicks, 0).toLocaleString()} Search Console clicks
+                </span>
+              </div>
+              {seoQueries.length === 0 ? (
+                <p className="text-xs text-st-gray dark:text-gray-400 py-10 text-center">No Search Console queries in this period</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-gray-100 dark:border-dark-border text-st-gray dark:text-gray-400 text-[10px] uppercase tracking-wide">
+                        <th className="py-2 px-4 font-medium">Query</th>
+                        <th className="py-2 px-3 font-medium text-right">Clicks</th>
+                        <th className="py-2 px-3 font-medium text-right">Impressions</th>
+                        <th className="py-2 px-3 font-medium text-right">CTR</th>
+                        <th className="py-2 px-4 font-medium text-right">Avg Pos</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {seoQueries.slice(0, 10).map((q, i) => (
+                        <tr key={i} className="border-b border-gray-100 dark:border-dark-border last:border-0 text-xs">
+                          <td className="py-2.5 px-4 font-mono text-st-black dark:text-white max-w-[240px] truncate" title={q.query}>{q.query}</td>
+                          <td className="py-2.5 px-3 text-right tabular-nums text-st-black dark:text-white">{safeNumber(q.clicks, 0).toLocaleString()}</td>
+                          <td className="py-2.5 px-3 text-right tabular-nums text-st-gray dark:text-gray-400">{safeNumber(q.impressions, 0).toLocaleString()}</td>
+                          <td className="py-2.5 px-3 text-right tabular-nums text-st-gray dark:text-gray-400">{(safeNumber(q.ctr, 0) * 100).toFixed(1)}%</td>
+                          <td className="py-2.5 px-4 text-right tabular-nums text-st-gray dark:text-gray-400">{safeNumber(q.position, 0).toFixed(1)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 
