@@ -1,5 +1,7 @@
 import net from 'net'
 import dns from 'dns/promises'
+import http from 'node:http'
+import https from 'node:https'
 
 // Outbound-webhook SSRF guard.
 //
@@ -187,4 +189,104 @@ export async function assertWebhookDestinationSafe(urlStr) {
 // (type 'opaqueredirect', status 0); some runtimes expose the raw 3xx instead.
 export function isRedirectResponse(res) {
   return res.type === 'opaqueredirect' || (res.status >= 300 && res.status < 400)
+}
+
+// TOCTOU-safe outbound POST for webhook delivery.
+//
+// The previous flow validated the destination (DNS lookup) and then let fetch
+// resolve DNS a SECOND time — a DNS-rebinding window between check and connect.
+// safeWebhookPost resolves once, validates every resolved IP, and PINS the
+// connection to a validated IP via a custom Agent `lookup`, so the socket
+// connects to the exact IP that was checked. SNI, the TLS certificate, and the
+// Host header all still use the original hostname (correct TLS) — only the
+// address the socket dials is pinned. (undici's `connect` would do the same;
+// it isn't in the dependency tree, so we use Node's built-in http/https Agent.)
+//
+// The SSRF check logic is unchanged — this reuses validateWebhookUrl + isBlockedIp.
+// Redirects are never followed by http(s).request, so a 3xx is reported and
+// rejected. Returns { statusCode, success, errorMessage } (never throws on a
+// network error; throws only when the destination is blocked/unresolvable).
+export async function safeWebhookPost(urlStr, { headers = {}, body = '', timeoutMs = 5000 } = {}) {
+  const check = validateWebhookUrl(urlStr)
+  if (!check.valid) {
+    const err = new Error(check.error)
+    err.code = 'WEBHOOK_URL_BLOCKED'
+    throw err
+  }
+
+  const parsed = new URL(urlStr)
+  const lib = parsed.protocol === 'https:' ? https : http
+
+  // Resolve once and pick the validated IP to pin (skipped under the dev opt-in).
+  let pinnedIp = null
+  let pinnedFamily = 0
+  if (!privateDestinationsAllowed()) {
+    const host = check.hostname
+    if (net.isIP(host)) {
+      pinnedIp = host
+      pinnedFamily = net.isIP(host)
+    } else {
+      let addresses
+      try {
+        addresses = await dns.lookup(host, { all: true })
+      } catch {
+        const err = new Error('Webhook host could not be resolved')
+        err.code = 'WEBHOOK_DNS_ERROR'
+        throw err
+      }
+      if (!addresses.length) {
+        const err = new Error('Webhook host could not be resolved')
+        err.code = 'WEBHOOK_DNS_ERROR'
+        throw err
+      }
+      for (const { address } of addresses) {
+        if (isBlockedIp(address)) {
+          const err = new Error('Webhook host resolves to a private or local address')
+          err.code = 'WEBHOOK_URL_BLOCKED'
+          throw err
+        }
+      }
+      pinnedIp = addresses[0].address
+      pinnedFamily = addresses[0].family || net.isIP(addresses[0].address)
+    }
+  }
+
+  const agentOpts = {}
+  if (pinnedIp) {
+    // Pin DNS resolution for this connection to the already-validated IP.
+    agentOpts.lookup = (_hostname, _opts, cb) => cb(null, pinnedIp, pinnedFamily)
+  }
+  const agent = new lib.Agent(agentOpts)
+
+  return await new Promise((resolve) => {
+    let settled = false
+    const finish = (result) => {
+      if (settled) return
+      settled = true
+      try { agent.destroy() } catch { /* noop */ }
+      resolve(result)
+    }
+
+    const req = lib.request(urlStr, { method: 'POST', headers, agent }, (res) => {
+      const status = res.statusCode || 0
+      res.resume() // drain; we never store the response body
+      if (status >= 300 && status < 400) {
+        finish({ statusCode: status, success: false, errorMessage: 'Webhook endpoint returned a redirect, which is not allowed' })
+      } else {
+        const ok = status >= 200 && status < 300
+        finish({ statusCode: status, success: ok, errorMessage: ok ? null : `HTTP error ${status}` })
+      }
+    })
+
+    req.setTimeout(timeoutMs, () => {
+      req.destroy()
+      finish({ statusCode: null, success: false, errorMessage: `Webhook timed out after ${timeoutMs}ms` })
+    })
+    req.on('error', (err) => {
+      finish({ statusCode: null, success: false, errorMessage: err.message })
+    })
+
+    if (body) req.write(body)
+    req.end()
+  })
 }

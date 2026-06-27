@@ -5,7 +5,8 @@ import {
   validateWebhookUrl,
   isBlockedIp,
   isRedirectResponse,
-  assertWebhookDestinationSafe
+  assertWebhookDestinationSafe,
+  safeWebhookPost
 } from '../lib/ssrf-guard.js'
 
 // Run fn with WEBHOOK_ALLOW_PRIVATE set to `value` (undefined deletes it), then
@@ -183,4 +184,16 @@ test('assertWebhookDestinationSafe — invalid URL throws', async () => {
   await withPrivateOffAsync(() =>
     assert.rejects(() => assertWebhookDestinationSafe('http://localhost/x'))
   )
+})
+
+test('safeWebhookPost — blocked destination throws before connecting (TOCTOU pin)', async () => {
+  await withPrivateOffAsync(async () => {
+    // Literal metadata IP — rejected by validateWebhookUrl, never dials a socket.
+    await assert.rejects(
+      () => safeWebhookPost('https://169.254.169.254/x', { body: '{}' }),
+      /private or local|not allowed/i
+    )
+    // plain http (no opt-in) is rejected too.
+    await assert.rejects(() => safeWebhookPost('http://example.com/x', { body: '{}' }))
+  })
 })

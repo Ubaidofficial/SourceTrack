@@ -4,7 +4,7 @@ import { getSupabase } from './supabase.js'
 import { redactPiiFromUrl } from './utils.js'
 import { channelFromEvent } from './channel-classifier.js'
 import { hasFeature } from './plan-features.js'
-import { assertWebhookDestinationSafe, isRedirectResponse } from './ssrf-guard.js'
+import { safeWebhookPost } from './ssrf-guard.js'
 
 const WEBHOOK_URL = process.env.WEBHOOK_URL || null
 const WEBHOOK_TIMEOUT_MS = 5000
@@ -90,42 +90,24 @@ export async function sendTestWebhook(destination, siteKey) {
   let errorMessage = null
 
   try {
-    // SSRF guard: re-validate + resolve the destination immediately before send
-    // (defends against DNS rebinding that create-time validation can't catch).
-    await assertWebhookDestinationSafe(destination.url)
-
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS)
-    try {
-      const res = await fetch(destination.url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-SourceTrack-Signature': signature,
-          'X-SourceTrack-Event': 'conversion.created'
-        },
-        body: bodyStr,
-        redirect: 'manual',
-        signal: controller.signal
-      })
-
-      if (isRedirectResponse(res)) {
-        success = false
-        statusCode = res.status || null
-        errorMessage = 'Webhook endpoint returned a redirect, which is not allowed'
-      } else {
-        statusCode = res.status
-        success = res.ok
-        if (!res.ok) {
-          errorMessage = `HTTP error ${res.status}`
-        }
-      }
-    } finally {
-      clearTimeout(timer)
-    }
+    // TOCTOU-safe delivery: single DNS resolution, every resolved IP validated,
+    // and the connection pinned to the checked IP (closes the DNS-rebinding gap
+    // between the SSRF check and the actual connect).
+    const result = await safeWebhookPost(destination.url, {
+      headers: {
+        'Content-Type': 'application/json',
+        'X-SourceTrack-Signature': signature,
+        'X-SourceTrack-Event': 'conversion.created'
+      },
+      body: bodyStr,
+      timeoutMs: WEBHOOK_TIMEOUT_MS
+    })
+    statusCode = result.statusCode
+    success = result.success
+    errorMessage = result.errorMessage
   } catch (err) {
     success = false
-    errorMessage = err.name === 'AbortError' ? 'Webhook timed out after 5000ms' : err.message
+    errorMessage = err.message
   }
 
   try {
@@ -254,42 +236,24 @@ export function dispatchWebhook(eventType, properties) {
         let errorMessage = null
 
         try {
-          // SSRF guard: re-validate + resolve the destination immediately before
-          // send (defends against DNS rebinding create-time validation misses).
-          await assertWebhookDestinationSafe(dest.url)
-
-          const controller = new AbortController()
-          const timer = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS)
-          try {
-            const res = await fetch(dest.url, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-SourceTrack-Signature': signature,
-                'X-SourceTrack-Event': eventName
-              },
-              body: bodyStr,
-              redirect: 'manual',
-              signal: controller.signal
-            })
-
-            if (isRedirectResponse(res)) {
-              success = false
-              statusCode = res.status || null
-              errorMessage = 'Webhook endpoint returned a redirect, which is not allowed'
-            } else {
-              statusCode = res.status
-              success = res.ok
-              if (!res.ok) {
-                errorMessage = `HTTP error ${res.status}`
-              }
-            }
-          } finally {
-            clearTimeout(timer)
-          }
+          // TOCTOU-safe delivery: single DNS resolution, every resolved IP
+          // validated, and the connection pinned to the checked IP (closes the
+          // DNS-rebinding gap between the SSRF check and the actual connect).
+          const result = await safeWebhookPost(dest.url, {
+            headers: {
+              'Content-Type': 'application/json',
+              'X-SourceTrack-Signature': signature,
+              'X-SourceTrack-Event': eventName
+            },
+            body: bodyStr,
+            timeoutMs: WEBHOOK_TIMEOUT_MS
+          })
+          statusCode = result.statusCode
+          success = result.success
+          errorMessage = result.errorMessage
         } catch (fetchErr) {
           success = false
-          errorMessage = fetchErr.name === 'AbortError' ? 'Webhook timed out after 5000ms' : fetchErr.message
+          errorMessage = fetchErr.message
         }
 
         // Write log (no response body stored)

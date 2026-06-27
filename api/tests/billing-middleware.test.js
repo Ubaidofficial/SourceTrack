@@ -1,5 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert'
+import http from 'node:http'
+import https from 'node:https'
 
 // Set mock environment variables so getSupabase() doesn't throw or complain about env-safety
 process.env.NODE_ENV = 'test'
@@ -416,13 +418,23 @@ test('dispatchWebhook plan limit enforcement', async (t) => {
   let fetchCalled = false
   let fetchArgs = []
 
-  // Mock global fetch
-  const originalFetch = globalThis.fetch
-  globalThis.fetch = async (url, options) => {
+  // dispatchWebhook now delivers via safeWebhookPost (node http/https.request),
+  // not global fetch. Opt into WEBHOOK_ALLOW_PRIVATE so the guard skips DNS
+  // pinning (keeps the test offline/deterministic), and mock http(s).request to
+  // capture the outbound call.
+  const originalAllowPrivate = process.env.WEBHOOK_ALLOW_PRIVATE
+  process.env.WEBHOOK_ALLOW_PRIVATE = 'true'
+  const originalHttpsRequest = https.request
+  const originalHttpRequest = http.request
+  const mockRequest = (url, options, cb) => {
     fetchCalled = true
-    fetchArgs.push({ url, options })
-    return { ok: true, status: 200 }
+    fetchArgs.push({ url: typeof url === 'string' ? url : (url && url.href), options })
+    const res = { statusCode: 200, resume() {}, on() { return res } }
+    queueMicrotask(() => { if (typeof cb === 'function') cb(res) })
+    return { setTimeout() {}, on() { return this }, write() {}, end() {}, destroy() {} }
   }
+  https.request = mockRequest
+  http.request = mockRequest
 
   client.from = (table) => {
     if (table === 'webhook_destinations') {
@@ -490,7 +502,10 @@ test('dispatchWebhook plan limit enforcement', async (t) => {
 
   t.after(() => {
     client.from = originalFrom
-    globalThis.fetch = originalFetch
+    https.request = originalHttpsRequest
+    http.request = originalHttpRequest
+    if (originalAllowPrivate === undefined) delete process.env.WEBHOOK_ALLOW_PRIVATE
+    else process.env.WEBHOOK_ALLOW_PRIVATE = originalAllowPrivate
   })
 
   await t.test('dispatch is allowed for a plan with webhook_outbound', async () => {
