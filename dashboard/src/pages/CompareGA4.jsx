@@ -52,7 +52,7 @@ export default function CompareGA4() {
               ['Enterprise attribution', 'Cometly, SourceLoop, Ruler, Triple Whale', 'Powerful: ad-cost ROAS, two-way CRM sync, CAPI to ad platforms. Also heavier, pricier, usually demo-gated. Built for ad-ops / RevOps.'],
               ['SourceTrack', 'The simple, private middle', 'The source behind every lead and sale, AI and SEO included, with no CRM and no stack to run. Built for founders.'],
             ].map(([name, who, desc], i) => (
-              <div key={name} className={`p-6 rounded-[26px] border ${i === 3 ? 'bg-st-black text-white border-white/10 shadow-[0_24px_80px_rgba(31,35,35,.12)]' : 'bg-white border-[rgba(31,35,35,.10)] shadow-[0_12px_38px_rgba(31,35,35,.055)]'}`}>
+              <div key={name} className={`lift p-6 rounded-[26px] border ${i === 3 ? 'bg-st-black text-white border-white/10 shadow-[0_24px_80px_rgba(31,35,35,.12)]' : 'bg-white border-[rgba(31,35,35,.10)] shadow-[0_12px_38px_rgba(31,35,35,.055)]'}`}>
                 <strong className={`block text-lg tracking-[-0.04em] ${i === 3 ? 'text-white' : 'text-st-black'}`}>{name}</strong>
                 <span className={`block mt-1 text-xs font-bold ${i === 3 ? 'text-[#9FE870]' : 'text-[#8A9B9B]'}`}>{who}</span>
                 <p className={`mt-3 text-sm leading-[1.55] ${i === 3 ? 'text-[#CBD4D4]' : 'text-[#586464]'}`}>{desc}</p>

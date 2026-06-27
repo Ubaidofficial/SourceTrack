@@ -61,8 +61,12 @@ export default function HeroSection({
             </div>
           </div>
 
-          <div className="col-span-12 lg:col-span-6 self-center">
-            {children}
+          <div className="col-span-12 lg:col-span-6 self-center relative">
+            {/* Soft lime radial glow behind the product preview (calm, low opacity) */}
+            <div aria-hidden className="pointer-events-none absolute inset-0 flex items-center justify-center">
+              <div className="w-[440px] h-[440px] max-w-full rounded-full bg-st-lime opacity-[0.14] blur-[80px]" />
+            </div>
+            <div className="relative">{children}</div>
           </div>
         </div>
       </div>
