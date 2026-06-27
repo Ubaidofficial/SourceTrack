@@ -65,6 +65,48 @@ function formatDuration(seconds) {
   return `${h}h ${m}m`
 }
 
+// Relative "x ago" with the exact datetime available as a tooltip via title.
+function relativeTime(value) {
+  if (!value) return null
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return null
+  const diffMs = Date.now() - d.getTime()
+  const sec = Math.round(diffMs / 1000)
+  if (sec < 60) return 'just now'
+  const min = Math.round(sec / 60)
+  if (min < 60) return `${min}m ago`
+  const hr = Math.round(min / 60)
+  if (hr < 24) return `${hr}h ago`
+  const day = Math.round(hr / 24)
+  if (day < 30) return `${day} day${day === 1 ? '' : 's'} ago`
+  const mo = Math.round(day / 30)
+  if (mo < 12) return `${mo}mo ago`
+  return `${Math.round(day / 365)}y ago`
+}
+
+// Integration source per event (C3). Event type from ingestion_method
+// (browser -> "Browser", anything else -> "Server"); integration from
+// source_system. Returns null when neither field is present (show nothing).
+const INTEGRATIONS = {
+  stripe:   { label: 'Stripe',   dot: 'bg-violet-500' },
+  shopify:  { label: 'Shopify',  dot: 'bg-green-500' },
+  zapier:   { label: 'Zapier',   dot: 'bg-orange-500' },
+  calendly: { label: 'Calendly', dot: 'bg-blue-500' },
+  webhook:  { label: 'Webhook',  dot: 'bg-gray-500' },
+  manual:   { label: 'Manual',   dot: 'bg-gray-400' },
+}
+function integrationMeta(e) {
+  const im = (e.ingestion_method || '').toLowerCase()
+  const ss = (e.source_system || '').toLowerCase()
+  if (!im && !ss) return null
+  const eventType = im ? (im === 'browser' ? 'Browser' : 'Server') : null
+  const integ = ss
+    ? (INTEGRATIONS[ss] || { label: ss.charAt(0).toUpperCase() + ss.slice(1), dot: 'bg-gray-400' })
+    : null
+  if (!eventType && !integ) return null
+  return { eventType, integ }
+}
+
 function truncateUrl(urlStr, maxLen = 50) {
   if (!urlStr) return ''
   try {
@@ -103,10 +145,18 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
       .finally(() => setLoading(false))
   }, [visitorId, siteKey])
 
+  // C1 — default-expand the most recent (last) session once data loads.
+  useEffect(() => {
+    const s = data?.sessions || []
+    if (s.length > 0) setExpandedSessions({ [s.length - 1]: true })
+  }, [data])
+
   const allEvents = data?.events || []
   const sessions = data?.sessions || []
 
   const summary = computeSummary(allEvents, data, leadSummary)
+  // C4b — real revenue only (truth-gated: value > 0). Hidden entirely if none.
+  const revenueEvents = allEvents.filter(e => e.event === '$conversion' && Number(e.conversion_value) > 0)
 
   function toggleSession(idx) {
     setExpandedSessions(prev => ({ ...prev, [idx]: !prev[idx] }))
@@ -238,10 +288,11 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                 <div className="bg-white dark:bg-dark-card rounded-xl p-4 shadow-sm space-y-2">
                   <p className="text-xs font-semibold text-st-black dark:text-white mb-2">Journey Summary</p>
                   <SummaryField label="Profile ID" value={shortIdentifier(summary.profileId)} />
-                  <SummaryField label="First Seen" value={summary.firstSeen} />
-                  <SummaryField label="Last Active" value={summary.lastSeen} />
+                  <SummaryField label="First Active" value={summary.firstSeenRel} title={summary.firstSeen} />
+                  <SummaryField label="Last Active" value={summary.lastSeenRel} title={summary.lastSeen} />
+                  <SummaryField label="Create Date" value={summary.createDate} title={summary.createDateAbs} />
                   <SummaryField label="First Touch" value={summary.firstTouch} />
-                  <SummaryField label="First Touch Date" value={summary.firstTouchDate} />
+                  <SummaryField label="First Touch Date" value={summary.firstTouchDateRel} title={summary.firstTouchDate} />
                   <SummaryField label="Last Page" value={summary.lastLocation} />
                   <SummaryField label="Last Conversion" value={summary.currentEventType !== '—' ? summary.currentEventType : null} />
                   {summary.aiSource && (
@@ -253,6 +304,39 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                     </div>
                   )}
                 </div>
+
+                {/* C4b — Revenue / Transactions. Only real revenue (value > 0); hidden if none. */}
+                {revenueEvents.length > 0 && (
+                  <div className="bg-white dark:bg-dark-card rounded-xl p-4 shadow-sm space-y-2">
+                    <p className="text-xs font-semibold text-st-black dark:text-white mb-2">Revenue</p>
+                    <div className="space-y-2">
+                      {revenueEvents.map((e, i) => {
+                        const meta = integrationMeta(e)
+                        return (
+                          <div key={i} className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-st-lime/20 text-st-black dark:text-st-lime truncate max-w-[90px]">
+                                {e.conversion_type || 'Conversion'}
+                              </span>
+                              {meta?.integ && (
+                                <span className="flex items-center gap-0.5 text-[10px] text-st-gray dark:text-gray-400">
+                                  <span className={`w-1.5 h-1.5 rounded-full ${meta.integ.dot}`} />
+                                  {meta.integ.label}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-xs font-semibold text-st-black dark:text-white">${safeNumber(e.conversion_value, 0).toFixed(0)}</p>
+                              <p className="text-[9px] text-gray-400" title={formatDateTime(e.timestamp) || undefined}>
+                                {relativeTime(e.timestamp) || '—'}
+                              </p>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 <div className="bg-white dark:bg-dark-card rounded-xl p-4 shadow-sm space-y-2">
                   <p className="text-xs font-semibold text-st-black dark:text-white mb-2">Environment</p>
@@ -444,6 +528,22 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                                                   ${safeNumber(e.conversion_value, 0).toFixed(0)}
                                                 </span>
                                               )}
+                                              {(() => {
+                                                const meta = integrationMeta(e)
+                                                if (!meta) return null
+                                                return (
+                                                  <span className="flex items-center gap-1 text-[10px] text-gray-500 dark:text-gray-400">
+                                                    {meta.eventType}
+                                                    {meta.eventType && meta.integ && <span>·</span>}
+                                                    {meta.integ && (
+                                                      <span className="flex items-center gap-0.5">
+                                                        <span className={`w-1.5 h-1.5 rounded-full ${meta.integ.dot}`} />
+                                                        via {meta.integ.label}
+                                                      </span>
+                                                    )}
+                                                  </span>
+                                                )
+                                              })()}
                                             </div>
                                             {e.page_url && (
                                               <p className="text-[10px] text-st-gray dark:text-gray-400 mt-0.5 truncate break-all" title={e.page_url}>
@@ -502,12 +602,12 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
   )
 }
 
-function SummaryField({ label, value }) {
+function SummaryField({ label, value, title }) {
   if (value === null || value === undefined || value === '') return null
   return (
     <div className="flex items-center justify-between">
       <p className="text-xs text-st-gray dark:text-gray-400">{label}</p>
-      <p className="text-xs font-medium text-st-black dark:text-white truncate max-w-[120px]">{value}</p>
+      <p className="text-xs font-medium text-st-black dark:text-white truncate max-w-[120px]" title={title || undefined}>{value}</p>
     </div>
   )
 }
@@ -525,8 +625,9 @@ function computeSummary(events, data = {}, leadSummary = {}) {
   const empty = {
     lastLocation: 'Unknown', conversionValue: 0, device: 'Unknown',
     touchpoints: 0, totalConversions: 0, journeyDuration: '—', firstTouch: 'Direct',
-    firstTouchDate: null, firstSeen: null, lastSeen: null, currentEventType: '—',
-    aiSource: null, pathPreview: [], profileId: data?.visitor_id || null,
+    firstTouchDate: null, firstTouchDateRel: null, firstSeen: null, firstSeenRel: null,
+    lastSeen: null, lastSeenRel: null, createDate: null, createDateAbs: null,
+    currentEventType: '—', aiSource: null, pathPreview: [], profileId: data?.visitor_id || null,
     userId: null, browser: null, os: null, country: null
   }
   if (!events?.length) return empty
@@ -557,8 +658,12 @@ function computeSummary(events, data = {}, leadSummary = {}) {
   const osEvent = events.find(e => e.os_name)
   const browser = nameVersion(browserEvent?.browser_name, browserEvent?.browser_version)
   const os = nameVersion(osEvent?.os_name, osEvent?.os_version)
-  const firstSeen = formatDateTime(leadSummary?.first_seen || firstEvent?.timestamp)
-  const lastSeen = formatDateTime(leadSummary?.last_seen || lastEvent?.timestamp)
+  const firstSeenRaw = leadSummary?.first_seen || firstEvent?.timestamp
+  const lastSeenRaw = leadSummary?.last_seen || lastEvent?.timestamp
+  const firstSeen = formatDateTime(firstSeenRaw)
+  const lastSeen = formatDateTime(lastSeenRaw)
+  // Create Date — when this profile became a lead (first conversion). Hidden if never converted.
+  const createDateRaw = conversions[0]?.timestamp || null
 
   let journeyDuration = '<1 day'
   if (events.length >= 2) {
@@ -587,7 +692,10 @@ function computeSummary(events, data = {}, leadSummary = {}) {
   return {
     lastLocation, conversionValue, device, country, browser, os,
     touchpoints: pageviews.length, totalConversions, journeyDuration,
-    firstTouch, firstTouchDate, firstSeen, lastSeen,
+    firstTouch, firstTouchDate, firstTouchDateRel: relativeTime(firstEvent?.timestamp),
+    firstSeen, firstSeenRel: relativeTime(firstSeenRaw),
+    lastSeen, lastSeenRel: relativeTime(lastSeenRaw),
+    createDate: relativeTime(createDateRaw), createDateAbs: formatDateTime(createDateRaw),
     currentEventType, aiSource, pathPreview, profileId, userId
   }
 }
