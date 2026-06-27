@@ -482,8 +482,7 @@ router.patch('/settings', async (req, res) => {
       try {
         const validated = validateCrossDomainSettings(
           req.body,
-          req.site?.domain,
-          process.env.NODE_ENV === 'production'
+          req.site?.domain
         )
         crossDomainDomains = validated.crossDomainDomains
         crossDomainCookieDomain = validated.crossDomainCookieDomain

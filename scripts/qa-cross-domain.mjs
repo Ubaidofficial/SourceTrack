@@ -88,10 +88,10 @@ function runBackendValidationTests() {
     validateCrossDomainSettings({ cross_domain_domains: ['example.com/checkout'] }, 'example.com')
   }, /must not contain protocols or paths/, 'Should reject paths')
 
-  // Case H: Reject localhost in production
+  // Case H: Reject localhost unconditionally (not gated on NODE_ENV)
   assert.throws(() => {
-    validateCrossDomainSettings({ cross_domain_domains: ['local.localhost'] }, 'example.com', true)
-  }, /localhost domain.*not allowed in production/, 'Should reject localhost in production')
+    validateCrossDomainSettings({ cross_domain_domains: ['local.localhost'] }, 'example.com')
+  }, /localhost domain.*not allowed/, 'Should reject localhost in every environment')
 
   // Case I: Max domains limit
   assert.throws(() => {
