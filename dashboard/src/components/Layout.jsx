@@ -18,7 +18,7 @@ const NAV_GROUPS = [
   {
     label: null,
     items: [
-      { to: '/setup',         label: 'Setup',        icon: ListChecks },
+      { to: '/setup',         label: 'Setup & Health', icon: ListChecks },
       { to: '/dashboard',     label: 'Dashboard',    icon: LayoutDashboard },
       { to: '/analytics',     label: 'Analytics',    icon: BarChart3 },
       { to: '/app/attribution',   label: 'Attribution',  icon: FileBarChart },
@@ -32,7 +32,7 @@ const NAV_GROUPS = [
 ]
 
 const PAGE_TITLES = {
-  '/setup': 'Setup',
+  '/setup': 'Setup & Health',
   '/dashboard': 'Dashboard',
   '/analytics': 'Analytics',
   '/app/attribution': 'Attribution',

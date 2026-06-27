@@ -644,6 +644,76 @@ router.get('/recent-conversions', requireUserAuth, validateSiteKey, requireSiteM
   }
 })
 
+// ─── Attribution coverage (Setup & Health) ───────────────────────────────────
+// Deterministic, read-only health stat. Coverage = % of conversions in
+// {site, window} that we can trace to a known acquisition source — first- OR
+// last-touch channel that is not direct/unknown/blank (denylist applied after
+// lower(trim)). This is a coverage/health number, NOT the credited-channel mix
+// shown on the attribution dashboard. No change to attribution computation;
+// purely a derived read over existing columns. Tenant-scoped by site_id.
+router.get('/coverage', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
+  try {
+    const siteId = String(req.site.id)
+    const days = Math.min(Math.max(parseInt(req.query.days) || 30, 1), 90)
+    const supabase = getSupabase()
+    const fromDate = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
+    const toDate = new Date().toISOString().slice(0, 10)
+
+    const DENY = new Set(['direct', 'unknown', ''])
+    const isKnown = (v) => v != null && !DENY.has(String(v).trim().toLowerCase())
+
+    // Page through conversions in the window. Conversions are low-volume, so this
+    // stays cheap while avoiding the implicit 1000-row cap — the count is exact,
+    // never silently truncated.
+    const PAGE = 1000
+    let offset = 0
+    let total = 0
+    let covered = 0
+    let tagged = 0
+    for (;;) {
+      const { data, error } = await supabase
+        .from('attributed_conversions')
+        .select('first_touch_channel, last_touch_channel, confidence_signals')
+        .eq('site_id', siteId)
+        .gte('conversion_date', fromDate)
+        .lte('conversion_date', toDate)
+        .range(offset, offset + PAGE - 1)
+      if (error) throw error
+      const rows = data || []
+      for (const r of rows) {
+        total++
+        if (isKnown(r.first_touch_channel) || isKnown(r.last_touch_channel)) covered++
+        let sig = r.confidence_signals || {}
+        if (typeof sig === 'string') { try { sig = JSON.parse(sig) } catch { sig = {} } }
+        if (sig.has_utm === true || sig.has_click_id === true) tagged++
+      }
+      if (rows.length < PAGE) break
+      offset += PAGE
+    }
+
+    // Truth-gate: no conversions in the window → no number (caller shows a calm
+    // empty state). Never emit 0% as a stand-in for "no data".
+    if (total === 0) {
+      return res.json({ success: true, data: { has_data: false, window_days: days } })
+    }
+
+    res.json({
+      success: true,
+      data: {
+        has_data: true,
+        window_days: days,
+        total,
+        covered,
+        coverage_pct: Math.round((covered / total) * 1000) / 10,
+        tagged_pct: Math.round((tagged / total) * 1000) / 10
+      }
+    })
+  } catch (err) {
+    console.error('[analytics/coverage]', err.message)
+    res.status(500).json({ success: false, error: 'Coverage failed' })
+  }
+})
+
 // ─── Latest data quality report ──────────────────────────────────────────────
 // Returns the most recent row per check_name for this site. Used by the
 // Integrations page to surface the duplicate_conversion_rate warning above

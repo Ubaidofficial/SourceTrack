@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import SetupDoctorCard from '../components/SetupDoctorCard'
+import AttributionCoverageCard from '../components/AttributionCoverageCard'
 
 
 export default function Setup() {
@@ -173,7 +174,7 @@ export default function Setup() {
   return (
     <div className="space-y-6 max-w-6xl pb-10">
       <div>
-        <h2 className="text-2xl font-bold text-st-black dark:text-white">Setup Guide</h2>
+        <h2 className="text-2xl font-bold text-st-black dark:text-white">Setup &amp; Health</h2>
         <p className="text-sm text-st-gray dark:text-gray-400 mt-1">Get SourceTrack installed, verified, and configured.</p>
       </div>
 
@@ -344,6 +345,8 @@ export default function Setup() {
               ) : (
                 <div className="h-40 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl animate-pulse" />
               )}
+
+              {site?.site_key && <AttributionCoverageCard siteKey={site.site_key} />}
 
               {/* Test Conversion Section */}
               <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-5 shadow-sm space-y-3">
