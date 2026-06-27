@@ -17,6 +17,7 @@ import Settings from './pages/Settings'
 import Billing from './pages/Billing'
 import Onboarding from './pages/Onboarding'
 import AuthCallback from './pages/AuthCallback'
+import AuthConfirm from './pages/AuthConfirm'
 import Leads from './pages/Leads'
 import LeadDetail from './pages/LeadDetail'
 import Campaigns from './pages/Campaigns'
@@ -352,6 +353,8 @@ export default function App() {
               <Route path="/ops" element={<AdminRoute><Layout><Admin /></Layout></AdminRoute>} />
               {/* Auth callback — handles OAuth redirect flow */}
               <Route path="/auth/callback" element={<AuthCallback />} />
+              {/* Auth confirm — same-domain token_hash verifyOtp flow (email links) */}
+              <Route path="/auth/confirm" element={<AuthConfirm />} />
               {/* Public docs — no auth required */}
               <Route path="/docs" element={<DocsHome />} />
               <Route path="/docs/quickstart" element={<DocsQuickstart />} />
