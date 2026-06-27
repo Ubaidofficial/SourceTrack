@@ -1,0 +1,21 @@
+# SourceTrack
+
+> Lightweight, privacy-first attribution analytics for founders and marketers.
+
+SourceTrack shows which sources, search queries, and AI tools (ChatGPT, Perplexity,
+Gemini, Claude, and others) bring your leads and revenue. First-, last-, and
+multi-touch attribution, AI-referral detection, a Google Search Console SEO signal,
+and cookieless, first-party tracking. No CRM required.
+
+## Key pages
+- Pricing: https://sourcetrack.ai/pricing
+- Product overview: https://sourcetrack.ai/product
+- Use cases: https://sourcetrack.ai/use-cases/saas, /use-cases/shopify, /use-cases/lead-generation
+- Docs: https://sourcetrack.ai/docs
+
+## Notes
+- Cookieless by default. No fingerprinting. First-party tracking.
+- Core data is stored in the EU; the analytics event store is US-hosted.
+- Revenue appears only when a real source is connected (Stripe beta/test-mode,
+  a webhook, or a manual conversion value) — never an invented number.
+- Search Console query-level revenue is estimated, matched by landing page and date range.

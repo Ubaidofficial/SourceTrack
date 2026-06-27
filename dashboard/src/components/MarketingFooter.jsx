@@ -24,8 +24,9 @@ export default function MarketingFooter() {
             <Link to="/integrations" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Integrations</Link>
           </div>
           <div>
-            <h4 className="mb-3 text-white text-[13px] uppercase tracking-[0.08em] font-bold">Use cases</h4>
+            <h4 className="mb-3 text-white text-[13px] uppercase tracking-[0.08em] font-bold">Solutions</h4>
             <Link to="/use-cases/saas" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">SaaS</Link>
+            <Link to="/use-cases/shopify" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Shopify</Link>
             <Link to="/use-cases/ecommerce" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Ecommerce</Link>
             <Link to="/use-cases/lead-generation" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Lead generation</Link>
             <Link to="/use-cases/agencies" className="block my-2 text-sm font-bold hover:text-st-lime transition-colors">Agencies</Link>
@@ -54,6 +55,7 @@ export default function MarketingFooter() {
             <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
             <Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
             <Link to="/security" className="hover:text-white transition-colors">Security</Link>
+            <a href="/llms.txt" className="hover:text-white transition-colors">AI info</a>
           </div>
           <span>Start free, no card required · Starter $49/mo · Growth $79/mo · Founder $99/yr.</span>
         </div>

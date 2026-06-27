@@ -62,6 +62,7 @@ import SolutionEcommerce from './pages/SolutionEcommerce'
 import SolutionSaaS from './pages/SolutionSaaS'
 import SolutionLeadGen from './pages/SolutionLeadGen'
 import SolutionAgency from './pages/SolutionAgency'
+import SolutionShopify from './pages/SolutionShopify'
 import Privacy from './pages/Privacy'
 import Terms from './pages/Terms'
 import SEORevenue from './pages/SEORevenue'
@@ -401,11 +402,16 @@ export default function App() {
               <Route path="/use-cases/ecommerce" element={<SolutionEcommerce />} />
               <Route path="/use-cases/lead-generation" element={<SolutionLeadGen />} />
               <Route path="/use-cases/agencies" element={<SolutionAgency />} />
+              <Route path="/use-cases/shopify" element={<SolutionShopify />} />
               {/* Legacy redirects */}
               <Route path="/saas-attribution" element={<Navigate to="/use-cases/saas" replace />} />
               <Route path="/ecommerce-attribution" element={<Navigate to="/use-cases/ecommerce" replace />} />
               <Route path="/lead-gen-attribution" element={<Navigate to="/use-cases/lead-generation" replace />} />
               <Route path="/agency-attribution" element={<Navigate to="/use-cases/agencies" replace />} />
+              {/* /for/* entry points → canonical /use-cases/* (no duplicate content) */}
+              <Route path="/for/saas" element={<Navigate to="/use-cases/saas" replace />} />
+              <Route path="/for/shopify" element={<Navigate to="/use-cases/shopify" replace />} />
+              <Route path="/for/lead-gen" element={<Navigate to="/use-cases/lead-generation" replace />} />
               {/* Unknown paths: on app. subdomain go through auth-branch; on www. fall to Landing */}
               <Route path="*" element={<AppRootRedirect />} />
             </Routes>
