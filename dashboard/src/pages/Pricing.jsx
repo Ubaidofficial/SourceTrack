@@ -73,7 +73,7 @@ export default function Pricing() {
         </div>
       </section>
 
-      {/* Privacy & data — mechanism-true GDPR/CCPA claims only (no "fully compliant" badge) */}
+      {/* Privacy & data — mechanism-true privacy claims only; no over-claimed compliance badge */}
       <section className="py-[96px] bg-white border-t border-[rgba(31,35,35,.06)]">
         <div className="max-w-[1320px] mx-auto px-8">
           <div className="text-center mb-[54px]">
