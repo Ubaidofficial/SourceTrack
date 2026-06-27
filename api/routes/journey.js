@@ -72,7 +72,9 @@ export async function journey(req, res) {
         properties.user_id,
         properties.order_id,
         properties.destination_domain,
-        properties.destination_url
+        properties.destination_url,
+        properties.source_system,
+        properties.ingestion_method
       FROM events
       WHERE properties.site_id = '${esc(posthogSiteId)}'
         AND distinct_id = '${esc(visitorId)}'
@@ -88,7 +90,8 @@ export async function journey(req, res) {
       aiSource, isConversion, conversionValue,
       conversionType, deviceType, browserName, browserVersion,
       osName, osVersion, country, userId,
-      orderId, destinationDomain, destinationUrl
+      orderId, destinationDomain, destinationUrl,
+      sourceSystem, ingestionMethod
     ]) => ({
       event,
       timestamp,
@@ -110,7 +113,9 @@ export async function journey(req, res) {
       user_id: userId || null,
       order_id: orderId || null,
       destination_domain: destinationDomain || null,
-      destination_url: destinationUrl || null
+      destination_url: destinationUrl || null,
+      source_system: sourceSystem || null,
+      ingestion_method: ingestionMethod || null
     }))
     const userId = events.find(e => e.user_id)?.user_id || null
 
