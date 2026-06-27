@@ -1,45 +1,58 @@
 import { Link } from 'react-router-dom'
 
+// NOTE: exact monthly volume + retention limits and the precise Starter/Growth/
+// Founder feature split are [VERIFY] against plan-features.js before publishing.
+// We do not invent caps here — unverified limits are shown as [VERIFY].
 const PLANS = [
   {
     key: 'starter', name: 'Starter', price: '$49', period: '/mo',
-    desc: 'For founders and marketers attributing leads and revenue by source.',
+    desc: 'For a founder tracking one site who wants real attribution, fast.',
     features: [
-      'Track visits, leads, and conversions by source',
-      'Detect AI referrals from ChatGPT, Claude, and Perplexity',
-      'View lead and customer journeys',
-      'Multi-touch attribution models',
-      'Manual conversion and event tracking',
-      'Saved reports and CSV export',
+      'Source, UTM, referrer & campaign attribution',
+      'AI-referral detection',
+      'Cookieless lightweight analytics',
+      'Conversion tracking + lead qualification',
+      'First-, last- & multi-touch views',
+      'CSV export',
       '1 site',
-      '50,000 tracked visits/mo',
+      'Monthly volume & retention — [VERIFY]',
     ],
-    cta: 'Get Starter', href: '/signup', featured: false,
+    cta: 'Start free', href: '/signup', featured: false,
   },
   {
     key: 'growth', name: 'Growth', price: '$79', period: '/mo',
-    desc: 'Best for teams scaling campaigns, SEO, and AI referrals.',
+    desc: 'For founders scaling traffic who want the full toolkit.',
     features: [
       'Everything in Starter',
-      'Stripe revenue tracking (webhook recipe)',
-      'Google Search Console visibility',
-      'Campaign cost imports',
-      'Source and conversion change detection',
-      'Advanced report builder and dashboard widgets',
-      '3 sites · 1 user',
-      '150,000 tracked visits/mo',
+      'Report Builder with saved & pinned reports',
+      'Google Search Console SEO attribution (beta)',
+      'Stripe revenue attribution (beta / test-mode)',
+      'Manual Shopify & webhook revenue import',
+      'Higher volume & longer retention — [VERIFY]',
     ],
-    cta: 'Get Growth', href: '/signup', featured: true,
+    cta: 'Start free', href: '/signup', featured: true,
+  },
+  {
+    key: 'founder', name: 'Founder', price: '$99', period: '/yr',
+    desc: 'Early-bird annual — a one-time founder seat for early believers.',
+    features: [
+      '25 seats. One per customer. Locked forever.',
+      'Growth-level features',
+      'Price never rises while you keep the seat',
+      'No card required to start',
+      'Seats left — [VERIFY: wire to a real count]',
+    ],
+    cta: 'Claim a Founder seat', href: '/signup?plan=early_bird_annual', featured: false,
   },
 ]
 
 export default function PricingCards() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch max-w-[760px] mx-auto">
-      {PLANS.map((p, i) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-stretch max-w-[1080px] mx-auto">
+      {PLANS.map((p) => (
         <article key={p.key} className={`relative p-7 rounded-[32px] border flex flex-col min-h-0 sm:min-h-[460px] ${
           p.featured
-            ? 'bg-st-black text-white border-[rgba(255,255,255,.10)] shadow-[0_24px_80px_rgba(31,35,35,.12)] -translate-y-2.5'
+            ? 'bg-st-black text-white border-[rgba(255,255,255,.10)] shadow-[0_24px_80px_rgba(31,35,35,.12)] lg:-translate-y-2.5'
             : 'bg-white border-[rgba(31,35,35,.10)] shadow-[0_12px_38px_rgba(31,35,35,.055)]'
         }`}>
           {p.featured && (
@@ -57,19 +70,12 @@ export default function PricingCards() {
               <li key={j} className={`font-bold text-sm before:content-['✓'] before:mr-[9px] before:text-[#00AA57] before:font-black ${p.featured ? 'text-[#CBD4D4]' : 'text-[#566161]'}`}>{f}</li>
             ))}
           </ul>
-          {p.href.startsWith('mailto:') ? (
-            <a href={p.href} className={`mt-auto inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full text-[15px] font-extrabold tracking-[-0.025em] transition-all hover:-translate-y-px ${
-              p.featured ? 'bg-st-lime text-st-black shadow-[0_18px_52px_rgba(204,240,63,0.28)] hover:bg-[#D9FA64]' : 'border border-[rgba(31,35,35,.10)] bg-white text-st-black hover:border-[rgba(31,35,35,.24)]'
-            }`}>
-              {p.cta}
-            </a>
-          ) : (
-            <Link to={p.href} className={`mt-auto inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full text-[15px] font-extrabold tracking-[-0.025em] transition-all hover:-translate-y-px ${
-              p.featured ? 'bg-st-lime text-st-black shadow-[0_18px_52px_rgba(204,240,63,0.28)] hover:bg-[#D9FA64]' : 'border border-[rgba(31,35,35,.10)] bg-white text-st-black hover:border-[rgba(31,35,35,.24)]'
-            }`}>
-              {p.cta}
-            </Link>
-          )}
+          <Link to={p.href} className={`mt-auto inline-flex items-center justify-center gap-2.5 min-h-[52px] px-[22px] rounded-full text-[15px] font-extrabold tracking-[-0.025em] transition-all hover:-translate-y-px ${
+            p.featured ? 'bg-st-lime text-st-black shadow-[0_18px_52px_rgba(204,240,63,0.28)] hover:bg-[#D9FA64]' : 'border border-[rgba(31,35,35,.10)] bg-white text-st-black hover:border-[rgba(31,35,35,.24)]'
+          }`}>
+            {p.cta}
+          </Link>
+          {!p.featured && <p className="mt-2 text-center text-[12px] font-bold text-[#8A9B9B]">No card required.</p>}
         </article>
       ))}
     </div>

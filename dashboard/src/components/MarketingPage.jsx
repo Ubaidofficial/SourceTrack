@@ -4,7 +4,7 @@ import MarketingFooter from './MarketingFooter'
 import HeroSection from './HeroSection'
 import FinalCTA from './FinalCTA'
 
-export default function MarketingPage({ seo, hero, heroChildren, children }) {
+export default function MarketingPage({ seo, hero, heroChildren, children, finalCta }) {
   const jsonLdItems = Array.isArray(seo.jsonLd)
     ? seo.jsonLd
     : seo.jsonLd
@@ -38,7 +38,7 @@ export default function MarketingPage({ seo, hero, heroChildren, children }) {
       <main>
         <HeroSection {...hero}>{heroChildren}</HeroSection>
         {children}
-        <FinalCTA />
+        <FinalCTA {...(finalCta || {})} />
       </main>
 
       <MarketingFooter />
