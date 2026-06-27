@@ -91,13 +91,18 @@ router.get('/users', async (_req, res) => {
       }
     }
 
-    // Fetch user emails from auth
+    // Fetch user emails from auth. A member is "orphaned" when its user_id has no
+    // matching auth.users row — surface that explicitly so the UI never renders a
+    // raw UUID as if it were an email (spec §30.5) and the headline count can
+    // exclude orphans. (No DB mutation here — orphan cleanup is a separate track.)
     const enriched = await Promise.all((members || []).map(async (m) => {
-      let email = m.user_id
+      let email = null
+      let orphaned = true
       try {
         const { data: { user }, error: authErr } = await getSupabase().auth.admin.getUserById(m.user_id)
         if (!authErr && user) {
-          email = user.email || m.user_id
+          orphaned = false
+          email = user.email || null
         }
       } catch {
         /* best effort */
@@ -106,6 +111,7 @@ router.get('/users', async (_req, res) => {
       return {
         ...m,
         email,
+        orphaned,
         company_name: m.company_id ? companyMap[m.company_id] || null : null
       }
     }))
