@@ -640,18 +640,30 @@ export default function Onboarding() {
           </button>
         </div>
 
-        {/* Platform install guides */}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs mt-3">
-          <span className="font-semibold text-[#6B7373] dark:text-gray-400">Platform guides:</span>
-          {[
-            { label: 'GTM', to: '/docs/platforms/google-tag-manager' },
-            { label: 'Webflow', to: '/docs/platforms/webflow' },
-            { label: 'WordPress', to: '/docs/platforms/wordpress' },
-            { label: 'Framer', to: '/docs/platforms/framer' },
-            { label: 'Shopify', to: '/docs/platforms/shopify' },
-          ].map(p => (
-            <a key={p.label} href={p.to} className="text-blue-600 dark:text-blue-400 hover:underline">{p.label}</a>
-          ))}
+        {/* Platform install guides — prominent cards linking to existing /docs/platforms/* */}
+        <div className="mt-4">
+          <p className="text-xs font-semibold text-[#6B7373] dark:text-gray-400 mb-2">Using a website builder or CMS? Open the step-by-step guide:</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {[
+              { label: 'WordPress', desc: 'Plugin / theme header', to: '/docs/platforms/wordpress' },
+              { label: 'Shopify', desc: 'Theme + checkout', to: '/docs/platforms/shopify' },
+              { label: 'Webflow', desc: 'Site-wide custom code', to: '/docs/platforms/webflow' },
+              { label: 'Framer', desc: 'Site settings → custom code', to: '/docs/platforms/framer' },
+              { label: 'Google Tag Manager', desc: 'Custom HTML tag', to: '/docs/platforms/google-tag-manager' },
+            ].map(p => (
+              <a
+                key={p.label}
+                href={p.to}
+                className="flex items-center justify-between gap-2 rounded-xl border border-[#DDE4E4] dark:border-white/10 bg-white dark:bg-white/5 px-3 py-2 hover:border-blue-400 dark:hover:border-blue-400/60 hover:bg-blue-50/40 dark:hover:bg-white/10 transition-colors"
+              >
+                <span className="min-w-0">
+                  <span className="block text-xs font-bold text-[#1F2323] dark:text-white truncate">{p.label}</span>
+                  <span className="block text-[10px] text-[#6B7373] dark:text-gray-400 truncate">{p.desc}</span>
+                </span>
+                <ArrowRight className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+              </a>
+            ))}
+          </div>
         </div>
 
         <button
@@ -688,6 +700,11 @@ export default function Onboarding() {
       </div>
     )
   }
+
+  // Presentational 3-phase framing over the underlying 6 steps (no logic change):
+  // Add site (1-2) → Install (3-4) → Configure (5-6).
+  const PHASES = ['Add site', 'Install', 'Configure']
+  const phaseIdx = step <= 2 ? 0 : step <= 4 ? 1 : 2
 
   return (
     <div className="min-h-screen bg-[#F1F4F4] dark:bg-[#2B302F] text-[#1F2323] dark:text-white flex flex-col">
@@ -750,6 +767,12 @@ export default function Onboarding() {
 
       {/* Body */}
       <div className="flex-1 flex flex-col items-center justify-center px-4 py-10">
+        {/* 3-phase progress framing (presentational; underlying flow is still 6 steps) */}
+        <div className="text-center mb-3">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#6B7373] dark:text-gray-400">
+            Phase {phaseIdx + 1} of 3 · {PHASES[phaseIdx]}
+          </span>
+        </div>
         {/* Mobile fallback: full stepper is hidden below md, show compact step text instead */}
         <div className="md:hidden text-center mb-6">
           <span className="inline-flex items-center px-3 py-1 rounded-full bg-white dark:bg-white/5 text-xs font-semibold text-[#6B7373] dark:text-gray-400 mb-2">

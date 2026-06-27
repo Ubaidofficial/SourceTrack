@@ -416,12 +416,15 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
             }
           }}>
             <summary className="list-none flex items-center justify-between text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors cursor-pointer select-none">
-              <span>Browser Connection Check</span>
+              <span>Dashboard connection check</span>
               <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
             </summary>
             <div className="mt-3 p-3 bg-gray-50 dark:bg-[#1E2121]/50 border border-gray-200 dark:border-transparent rounded-lg text-xs space-y-2">
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-normal font-sans">
+                Tests whether <strong>this dashboard</strong> can reach the SourceTrack API. It does not test your website visitors&apos; tracker connection or any content-security-policy on your site.
+              </p>
               <div className="flex items-center justify-between">
-                <span className="text-gray-600 dark:text-gray-400 font-medium">Connection to SourceTrack API:</span>
+                <span className="text-gray-600 dark:text-gray-400 font-medium">This dashboard&apos;s connection to the API:</span>
                 <span className={`font-bold ${
                   reachability === 'reachable' ? 'text-green-600 dark:text-green-400' :
                   reachability === 'blocked' ? 'text-red-500' :
@@ -436,12 +439,12 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
               </div>
               {reachability === 'blocked' && (
                 <p className="text-[11px] text-red-500 leading-normal font-sans">
-                  Browser/network may be blocking SourceTrack. Try a clean browser profile or pause aggressive blockers while testing.
+                  This dashboard&apos;s browser/network may be blocking the SourceTrack API. Try a clean browser profile or pause aggressive blockers. (This does not indicate a problem on your website itself.)
                 </p>
               )}
               {reachability === 'reachable' && (
                 <p className="text-[11px] text-green-600 dark:text-green-400 leading-normal font-sans">
-                  Browser can reach SourceTrack API successfully.
+                  This dashboard can reach the SourceTrack API successfully.
                 </p>
               )}
               {reachability !== 'checking' && (
