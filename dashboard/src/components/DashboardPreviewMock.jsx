@@ -12,7 +12,7 @@ export default function DashboardPreviewMock() {
             </div>
             <span>SourceTrack — revenue attribution dashboard</span>
             <span className="inline-flex items-center gap-[7px] rounded-full py-[6px] px-[10px] bg-[rgba(204,240,63,.12)] text-st-lime text-xs font-black">
-              <span className="w-2 h-2 rounded-full bg-st-lime" />Live
+              <span className="w-2 h-2 rounded-full bg-st-lime" />Demo
             </span>
           </div>
 

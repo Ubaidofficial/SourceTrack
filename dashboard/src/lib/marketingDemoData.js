@@ -9,7 +9,7 @@ export const demoData = {
       { id: 'revenue', label: 'Revenue', value: '$18,420', trend: '↗ +23.5% attribution' },
       { id: 'conversions', label: 'Conversions', value: '184', trend: '3.8% conv. rate' },
       { id: 'revPerVisitor', label: 'Rev / Visitor', value: '$3.80', trend: 'Lifetime value' },
-      { id: 'live', label: 'Live Visitors', value: '14', trend: 'Real-time tracking', isLive: true },
+      { id: 'live', label: 'Visitors · 24h', value: '142', trend: 'Sample · last 24h' },
       { id: 'aiRevenue', label: 'AI Revenue', value: '$3,840', trend: 'ChatGPT, Claude, etc.' },
     ],
     chartData: [
@@ -219,8 +219,8 @@ export const demoData = {
       { id: 'visitors', label: 'Visitors', value: '12,000', trend: 'Last 30 days' },
       { id: 'revenue', label: 'Revenue', value: '$42,870', trend: '↗ +18.2% attribution' },
       { id: 'conversions', label: 'Orders', value: '312', trend: '2.6% conv. rate' },
-      { id: 'revPerVisitor', label: 'AOV', value: '$137.40', trend: 'Average order value' },
-      { id: 'live', label: 'Live Visitors', value: '28', trend: 'Real-time tracking', isLive: true },
+      { id: 'revPerVisitor', label: 'Rev / Visitor', value: '$3.57', trend: 'Attributed per visitor' },
+      { id: 'live', label: 'Visitors · 24h', value: '286', trend: 'Sample · last 24h' },
       { id: 'aiRevenue', label: 'AI Revenue', value: '$2,140', trend: 'ChatGPT, Perplexity, etc.' },
     ],
     chartData: [
@@ -297,7 +297,7 @@ export const demoData = {
         stitchingMethod: 'gclid (Google Click ID)',
         conversionType: 'Store Purchase',
         explanation: 'Attributed to Google Shopping click ID. Mapped using GCLID parameters to attribute the cart order value.',
-        recommendedTemplate: 'Imported cost vs attributed revenue'
+        recommendedTemplate: 'Attributed revenue by source'
       },
       'TikTok': {
         sourceName: 'TikTok',
@@ -431,7 +431,7 @@ export const demoData = {
       { id: 'revenue', label: 'Pipeline Value', value: '$96,500', trend: '↗ +27.8% attribution' },
       { id: 'conversions', label: 'Leads', value: '428', trend: '5.1% conv. rate' },
       { id: 'revPerVisitor', label: 'Val / Lead', value: '$225.40', trend: 'Qualified: 73 leads' },
-      { id: 'live', label: 'Live Visitors', value: '19', trend: 'Real-time tracking', isLive: true },
+      { id: 'live', label: 'Visitors · 24h', value: '198', trend: 'Sample · last 24h' },
       { id: 'aiRevenue', label: 'AI Pipeline', value: '$14,800', trend: 'ChatGPT, Gemini, etc.' },
     ],
     chartData: [
@@ -642,7 +642,7 @@ export const demoData = {
       { id: 'revenue', label: 'Attributed Revenue', value: '$142,500', trend: '↗ +19.6% attribution' },
       { id: 'conversions', label: 'Conversions', value: '1,280', trend: '5.15% conv. rate' },
       { id: 'revPerVisitor', label: 'Client Sites', value: '12', trend: 'Active workspaces' },
-      { id: 'live', label: 'Live Visitors', value: '38', trend: 'Real-time tracking', isLive: true },
+      { id: 'live', label: 'Visitors · 24h', value: '384', trend: 'Sample · last 24h' },
       { id: 'aiRevenue', label: 'AI Revenue', value: '$28,400', trend: 'ChatGPT, Perplexity, etc.' },
     ],
     chartData: [
