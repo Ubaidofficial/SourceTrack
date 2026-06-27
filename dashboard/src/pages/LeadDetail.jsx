@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { fetchApi } from '../lib/api'
@@ -28,6 +28,7 @@ export default function LeadDetail() {
   const { user } = useAuth()
   const { leadId } = useParams()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [showJourney, setShowJourney] = useState(false)
   const [site, setSite] = useState(null)
   const [copied, setCopied] = useState(false)
@@ -399,10 +400,12 @@ export default function LeadDetail() {
           siteKey={site?.site_key}
           leadSummary={lead}
           onClose={() => setShowJourney(false)}
-          onQualified={async () => {
-            try {
-              await fetchApi(`/leads/${lead?.id}/qualify?site_key=${site.site_key}`, { method: 'PATCH', body: JSON.stringify({ qualified: true }) })
-            } catch(e) { console.error('qualify failed', e) }
+          onQualified={(newStatus) => {
+            // JourneyModal already persisted the chosen 4-state status
+            // (unqualified | qualified | mql | sql) via PATCH. Don't re-PATCH
+            // here — the old code overwrote it with a binary { qualified: true },
+            // forcing MQL/SQL back to "qualified". Just refresh the detail view.
+            queryClient.invalidateQueries({ queryKey: ['lead-detail', site?.site_key, leadId] })
             setShowJourney(false)
           }}
         />
