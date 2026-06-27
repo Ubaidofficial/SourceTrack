@@ -63,6 +63,9 @@ import SolutionSaaS from './pages/SolutionSaaS'
 import SolutionLeadGen from './pages/SolutionLeadGen'
 import SolutionAgency from './pages/SolutionAgency'
 import Privacy from './pages/Privacy'
+import DPA from './pages/DPA'
+import Subprocessors from './pages/Subprocessors'
+import DoNotSell from './pages/DoNotSell'
 import Terms from './pages/Terms'
 import SEORevenue from './pages/SEORevenue'
 import PublicIntegrations from './pages/PublicIntegrations'
@@ -385,6 +388,9 @@ export default function App() {
               <Route path="/docs/revenue" element={<Navigate to="/developers/offline-conversions" replace />} />
 
               <Route path="/privacy" element={<Privacy />} />
+              <Route path="/dpa" element={<DPA />} />
+              <Route path="/subprocessors" element={<Subprocessors />} />
+              <Route path="/do-not-sell" element={<DoNotSell />} />
               <Route path="/terms" element={<Terms />} />
               {/* Root: app.sourcetrack.ai → auth-branch (authed=/dashboard, unauthed=/login)
                        www.sourcetrack.ai  → Landing (marketing) */}

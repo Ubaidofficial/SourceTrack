@@ -52,6 +52,9 @@ export default function MarketingFooter() {
           <div className="flex flex-wrap items-center gap-5">
             <span>© {new Date().getFullYear()} SourceTrack.</span>
             <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+            <Link to="/dpa" className="hover:text-white transition-colors">DPA</Link>
+            <Link to="/subprocessors" className="hover:text-white transition-colors">Sub-processors</Link>
+            <Link to="/do-not-sell" className="hover:text-white transition-colors">Do Not Sell or Share</Link>
             <Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
             <Link to="/security" className="hover:text-white transition-colors">Security</Link>
           </div>

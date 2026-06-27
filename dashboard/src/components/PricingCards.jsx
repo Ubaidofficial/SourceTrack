@@ -1,8 +1,11 @@
 import { Link } from 'react-router-dom'
 
-// NOTE: exact monthly volume + retention limits and the precise Starter/Growth/
-// Founder feature split are [VERIFY] against plan-features.js before publishing.
-// We do not invent caps here — unverified limits are shown as [VERIFY].
+// Monthly pageview caps are taken verbatim from PLAN_DEFAULT_PV_LIMIT in
+// api/lib/plan-features.js: starter 50_000, growth 150_000. Founder (early-bird
+// annual) maps to Growth entitlements, so 150,000. Data-retention is NOT claimed
+// here — it is not enforced in prod. "First month free" is intentionally NOT
+// claimed: the live Stripe trial is 14 days, so that copy would be untrue until
+// the trial is changed to 30d (tracked as a separate follow-up).
 const PLANS = [
   {
     key: 'starter', name: 'Starter', price: '$49', period: '/mo',
@@ -15,7 +18,7 @@ const PLANS = [
       'First-, last- & multi-touch views',
       'CSV export',
       '1 site',
-      'Monthly volume & retention — [VERIFY]',
+      '50,000 tracked pageviews/mo',
     ],
     cta: 'Start free', href: '/signup', featured: false,
   },
@@ -28,7 +31,7 @@ const PLANS = [
       'Google Search Console SEO attribution (beta)',
       'Stripe revenue attribution (beta / test-mode)',
       'Manual Shopify & webhook revenue import',
-      'Higher volume & longer retention — [VERIFY]',
+      '150,000 tracked pageviews/mo',
     ],
     cta: 'Start free', href: '/signup', featured: true,
   },
@@ -38,8 +41,9 @@ const PLANS = [
     features: [
       '25 seats. One per customer. Locked forever.',
       'Growth-level features',
+      '150,000 tracked pageviews/mo',
+      '28-day money-back guarantee',
       'Price never rises while you keep the seat',
-      'No card required to start',
       'Seats left — [VERIFY: wire to a real count]',
     ],
     cta: 'Claim a Founder seat', href: '/signup?plan=early_bird_annual', featured: false,
