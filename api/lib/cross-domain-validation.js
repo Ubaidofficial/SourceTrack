@@ -1,4 +1,4 @@
-export function validateCrossDomainSettings(body, siteDomain, isProduction = false) {
+export function validateCrossDomainSettings(body, siteDomain) {
   // 1. Validate domains
   let crossDomainDomains = undefined
   if (body.cross_domain_domains !== undefined) {
@@ -41,10 +41,10 @@ export function validateCrossDomainSettings(body, siteDomain, isProduction = fal
           throw new Error(`Domain "${d}" is a public suffix or local hostname and cannot be used for cross-domain tracking.`)
         }
 
-        if (isProduction) {
-          if (d === 'localhost' || d === '127.0.0.1' || d === '::1' || d.endsWith('.localhost')) {
-            throw new Error(`localhost domain "${d}" is not allowed in production`)
-          }
+        // Reject localhost/loopback unconditionally — never gate security on
+        // NODE_ENV (a local/dev value must not loosen validation anywhere).
+        if (d === 'localhost' || d === '127.0.0.1' || d === '::1' || d.endsWith('.localhost')) {
+          throw new Error(`localhost domain "${d}" is not allowed`)
         }
       }
       crossDomainDomains = uniqueDomains
