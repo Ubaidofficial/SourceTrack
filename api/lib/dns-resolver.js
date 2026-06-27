@@ -1,5 +1,6 @@
 import dns from 'dns'
 import { inspectClientIp } from './ip-resolver.js'
+import { assertWebhookDestinationSafe } from './ssrf-guard.js'
 
 /**
  * Normalizes CNAME target domains by stripping any trailing dots and lowercasing.
@@ -72,7 +73,12 @@ export async function verifySslAndRouting(domain) {
   // Production verification check
   try {
     const url = `https://${normalizedDomain}/.well-known/sourcetrack/proxy-health`
-    
+
+    // SSRF guard: the domain is customer-controlled, so validate it (and reject
+    // private/loopback/link-local resolutions) before fetching. assertWebhook
+    // DestinationSafe accepts a full URL string and resolves the host itself.
+    await assertWebhookDestinationSafe(url)
+
     // Set a strict 5-second timeout to prevent verification hanging
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 5000)
