@@ -133,26 +133,30 @@ router.get('/', validateSiteKey, async (req, res) => {
       }
     })
 
-    // Stitch persisted qualification status (source of truth: lead_qualifications,
-    // keyed by site_id + visitor_id). qualified=true -> 'Qualified',
-    // false -> 'Unqualified', no row -> null.
+    // Stitch persisted qualification status (source of truth: lead_qualifications.status,
+    // keyed by site_id + visitor_id). Canonical values: unqualified|qualified|mql|sql.
+    // Back-compat: legacy rows where status IS NULL derive from the qualified bool
+    // (true -> 'qualified', false -> 'unqualified'); no row -> null. Self-heals on next write.
     const qualMap = {}
     if (distinctIds.length > 0) {
       const { data: quals, error: qualErr } = await getSupabase()
         .from('lead_qualifications')
-        .select('visitor_id, qualified')
+        .select('visitor_id, status, qualified')
         .eq('site_id', siteId)
         .in('visitor_id', distinctIds)
       if (qualErr) {
         console.error('Failed to query lead_qualifications:', qualErr)
       } else if (quals) {
-        for (const q of quals) qualMap[q.visitor_id] = q.qualified
+        for (const q of quals) qualMap[q.visitor_id] = q
       }
     }
-    leads = leads.map(l => ({
-      ...l,
-      status: l.id in qualMap ? (qualMap[l.id] ? 'Qualified' : 'Unqualified') : null
-    }))
+    leads = leads.map(l => {
+      const q = qualMap[l.id]
+      return {
+        ...l,
+        status: q ? (q.status ?? (q.qualified ? 'qualified' : 'unqualified')) : null
+      }
+    })
 
     if (search) {
       leads = leads.filter(l =>
@@ -246,19 +250,20 @@ router.get('/:leadId', validateSiteKey, async (req, res) => {
 
     const [firstSeen, lastSeen, pageviews, conversions, totalRevenue, source, medium, aiSource, country, firstPageUrl, campaign, firstTouchSource, firstTouchMedium, activeDays] = rows[0]
 
-    // Persisted qualification status (source of truth: lead_qualifications).
+    // Persisted qualification status (source of truth: lead_qualifications.status).
+    // Back-compat: legacy row with status NULL derives from the qualified bool.
     let qualStatus = null
     {
       const { data: qual, error: qualErr } = await getSupabase()
         .from('lead_qualifications')
-        .select('qualified')
+        .select('status, qualified')
         .eq('site_id', req.site.id)
         .eq('visitor_id', leadId)
         .maybeSingle()
       if (qualErr) {
         console.error('Failed to query lead_qualifications:', qualErr)
       } else if (qual) {
-        qualStatus = qual.qualified ? 'Qualified' : 'Unqualified'
+        qualStatus = qual.status ?? (qual.qualified ? 'qualified' : 'unqualified')
       }
     }
 
@@ -340,18 +345,21 @@ router.patch('/:leadId/qualify', validateSiteKey, async (req, res) => {
 
     const { leadId } = req.params
     const { status, notes } = req.body
-    const VALID = ['lead', 'mql', 'sql', 'customer', 'rejected']
+    // Canonical 4-state vocabulary (matches lead_qualifications_status_check + the frontend).
+    const VALID = ['unqualified', 'qualified', 'mql', 'sql']
     if (!leadId || leadId.trim() === '') {
       return res.status(400).json({ success: false, data: null, error: 'leadId is required' })
     }
-    const newStatus = VALID.includes(status) ? status : (req.body.qualified !== false ? 'sql' : 'rejected')
+    // Legacy boolean callers (no explicit status) map to qualified/unqualified.
+    const newStatus = VALID.includes(status) ? status : (req.body.qualified !== false ? 'qualified' : 'unqualified')
 
     const { data, error } = await getSupabase()
       .from('lead_qualifications')
       .upsert({
         site_id: req.site.id,
         visitor_id: leadId,
-        qualified: newStatus !== 'rejected',
+        status: newStatus,
+        qualified: ['qualified', 'mql', 'sql'].includes(newStatus),
         qualified_by: req.user?.id || null,
         qualified_at: new Date().toISOString(),
         notes: notes || ''

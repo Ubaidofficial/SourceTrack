@@ -213,15 +213,14 @@ export default function Leads() {
     document.body.removeChild(link)
   }
 
+  // Canonical 4-state status vocabulary (matches lead_qualifications.status + the
+  // CHECK constraint). `lead` is the null/unmarked fallback (curStatus || 'lead').
   const STATUS_CHIP = {
-    lead:     { bg: 'bg-gray-50 text-gray-500 dark:bg-[#181B1B]/40 dark:text-gray-400 border border-gray-200 dark:border-dark-border/60', label: 'Unqualified' },
-    rejected: { bg: 'bg-gray-50 text-gray-500 dark:bg-[#181B1B]/40 dark:text-gray-400 border border-gray-200 dark:border-dark-border/60', label: 'Unqualified' },
-    mql:      { bg: 'bg-blue-50 text-blue-600 dark:bg-blue-950/20 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30',  label: 'MQL' },
-    sql:      { bg: 'bg-purple-50 text-purple-600 dark:bg-purple-950/20 dark:text-purple-400 border border-purple-100 dark:border-purple-900/30', label: 'SQL' },
-    customer: { bg: 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 border border-green-100 dark:border-green-900/30', label: 'Qualified' },
-    // Server-derived status vocabulary (from lead_qualifications via GET /leads).
-    Qualified:   { bg: 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 border border-green-100 dark:border-green-900/30', label: 'Qualified' },
-    Unqualified: { bg: 'bg-gray-50 text-gray-500 dark:bg-[#181B1B]/40 dark:text-gray-400 border border-gray-200 dark:border-dark-border/60', label: 'Unqualified' }
+    lead:        { bg: 'bg-gray-50 text-gray-500 dark:bg-[#181B1B]/40 dark:text-gray-400 border border-gray-200 dark:border-dark-border/60', label: 'Unqualified' },
+    unqualified: { bg: 'bg-gray-50 text-gray-500 dark:bg-[#181B1B]/40 dark:text-gray-400 border border-gray-200 dark:border-dark-border/60', label: 'Unqualified' },
+    qualified:   { bg: 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 border border-green-100 dark:border-green-900/30', label: 'Qualified' },
+    mql:         { bg: 'bg-blue-50 text-blue-600 dark:bg-blue-950/20 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30',  label: 'MQL' },
+    sql:         { bg: 'bg-purple-50 text-purple-600 dark:bg-purple-950/20 dark:text-purple-400 border border-purple-100 dark:border-purple-900/30', label: 'SQL' }
   }
 
   const hasRevenue = totalRevenue > 0
@@ -441,10 +440,10 @@ export default function Leads() {
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-st-black text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-4 text-xs font-medium">
           <span>{selectedLeads.size} selected</span>
           <div className="w-px h-4 bg-gray-700" />
-          <button onClick={() => handleBulkStatusChange('customer')} className="hover:text-st-lime transition-colors">Mark Qualified</button>
+          <button onClick={() => handleBulkStatusChange('qualified')} className="hover:text-st-lime transition-colors">Mark Qualified</button>
           <button onClick={() => handleBulkStatusChange('mql')} className="hover:text-st-lime transition-colors">Mark MQL</button>
           <button onClick={() => handleBulkStatusChange('sql')} className="hover:text-st-lime transition-colors">Mark SQL</button>
-          <button onClick={() => handleBulkStatusChange('rejected')} className="hover:text-st-lime transition-colors">Mark Unqualified</button>
+          <button onClick={() => handleBulkStatusChange('unqualified')} className="hover:text-st-lime transition-colors">Mark Unqualified</button>
           <div className="w-px h-4 bg-gray-700" />
           <button onClick={handleExportSelected} className="text-st-lime hover:underline">Export CSV</button>
         </div>

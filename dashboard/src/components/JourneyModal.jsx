@@ -84,11 +84,13 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
   const [expandedEvents, setExpandedEvents] = useState({})
 
   // Local status so the dropdown holds the chosen value instead of snapping back
-  // to the prop. Seeded from the persisted status (GET /leads -> 'Qualified' |
-  // 'Unqualified' | null), mapped to the server-valid option value.
-  const [statusValue, setStatusValue] = useState(leadSummary?.status === 'Qualified' ? 'customer' : 'rejected')
+  // to the prop. Seeded from the persisted status (GET /leads -> canonical
+  // 'unqualified' | 'qualified' | 'mql' | 'sql' | null); null/unknown -> 'unqualified'.
+  const [statusValue, setStatusValue] = useState(
+    ['unqualified', 'qualified', 'mql', 'sql'].includes(leadSummary?.status) ? leadSummary.status : 'unqualified'
+  )
   useEffect(() => {
-    setStatusValue(leadSummary?.status === 'Qualified' ? 'customer' : 'rejected')
+    setStatusValue(['unqualified', 'qualified', 'mql', 'sql'].includes(leadSummary?.status) ? leadSummary.status : 'unqualified')
   }, [leadSummary?.status])
 
   useEffect(() => {
@@ -160,7 +162,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                       body: JSON.stringify({ status: newStatus })
                     })
                     if (onQualified) {
-                      onQualified(newStatus === 'rejected' ? 'Unqualified' : 'Qualified')
+                      onQualified(newStatus)
                     }
                   } catch (err) {
                     console.error("Failed to update status from journey modal", err)
@@ -168,10 +170,10 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                 }}
                 className="text-xs font-semibold px-2 py-1 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-st-black dark:text-white cursor-pointer focus:outline-none"
               >
-                {/* Binary Qualified/Unqualified only. MQL/SQL re-enabled when
-                    lead_qualifications.status column lands (B-full follow-up). */}
-                <option value="rejected">Unqualified</option>
-                <option value="customer">Qualified</option>
+                <option value="unqualified">Unqualified</option>
+                <option value="qualified">Qualified</option>
+                <option value="mql">MQL</option>
+                <option value="sql">SQL</option>
               </select>
             </div>
 
