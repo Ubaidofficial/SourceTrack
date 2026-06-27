@@ -8,6 +8,21 @@ import DashboardCard from '../components/DashboardCard'
 import MetricTile from '../components/MetricTile'
 import StatusBadge from '../components/StatusBadge'
 
+// Domain-inferred local/dev detection so localhost/test sites aren't shown as
+// real customers in the Ops Sites tab (spec §33). Surface-only — no data change.
+function isLocalDomain(domain) {
+  const host = String(domain || '').toLowerCase().trim().replace(/^https?:\/\//, '').split('/')[0].split(':')[0]
+  if (!host) return false
+  return (
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host === '::1' ||
+    host.endsWith('.local') ||
+    host.endsWith('.localhost') ||
+    !host.includes('.') // bare hostname with no public TLD
+  )
+}
+
 export default function Admin() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -278,6 +293,9 @@ export default function Admin() {
 
   const totalCompanies = companies.length
   const totalUsers = users.length
+  // Headline member count excludes orphaned company_members rows (user_id with no
+  // auth.users row). Raw total kept for context. Orphan rows are not deleted here.
+  const validMembers = users.filter(u => !u.orphaned).length
   const totalSites = sites.length
   const verifiedSites = sites.filter(s => s.onboarding_completed).length
 
@@ -294,7 +312,7 @@ export default function Admin() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricTile label="Companies" value={totalCompanies.toLocaleString()}
           icon={Building2} iconBg="bg-lime-100" iconColor="text-lime-700" />
-        <MetricTile label="Members" value={totalUsers.toLocaleString()}
+        <MetricTile label={validMembers !== totalUsers ? `Members (${(totalUsers - validMembers).toLocaleString()} orphaned)` : 'Members'} value={validMembers.toLocaleString()}
           icon={Users} iconBg="bg-blue-100" iconColor="text-blue-600" />
         <MetricTile label="Sites" value={totalSites.toLocaleString()}
           icon={Globe} iconBg="bg-green-100" iconColor="text-green-600" />
@@ -370,7 +388,15 @@ export default function Admin() {
                 <tbody>
                   {users.map((u) => (
                     <tr key={u.id} className="border-b border-gray-50 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-hover">
-                      <td className="py-2.5 px-3 text-st-black dark:text-white">{u.email}</td>
+                      <td className="py-2.5 px-3 text-st-black dark:text-white">
+                        {u.orphaned ? (
+                          <span className="italic text-st-gray dark:text-gray-400">
+                            Orphaned · no auth user <span className="font-mono not-italic">··{String(u.user_id || '').slice(-4)}</span>
+                          </span>
+                        ) : (
+                          u.email || '—'
+                        )}
+                      </td>
                       <td className="py-2.5 px-3 text-gray-600 dark:text-gray-300">{u.company_name || '—'}</td>
                       <td className="py-2.5 px-3">
                         <StatusBadge status={u.role === 'admin' ? 'active' : 'pending'} label={u.role || 'none'} />
@@ -408,7 +434,16 @@ export default function Admin() {
                 <tbody>
                   {sites.map((s) => (
                     <tr key={s.id} className="border-b border-gray-50 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-hover">
-                      <td className="py-2.5 px-3 text-st-black dark:text-white truncate max-w-[200px]">{s.domain || s.name}</td>
+                      <td className="py-2.5 px-3 text-st-black dark:text-white max-w-[220px]">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="truncate max-w-[160px]">{s.domain || s.name}</span>
+                          {isLocalDomain(s.domain) && (
+                            <span className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                              Local
+                            </span>
+                          )}
+                        </span>
+                      </td>
                       <td className="py-2.5 px-3 text-gray-600 dark:text-gray-300">{s.company_name || '—'}</td>
                       <td className="py-2.5 px-3">
                         <StatusBadge
