@@ -6,6 +6,7 @@ import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import { requireFeature } from '../lib/plan-features.js'
 import { redactPiiFromUrl } from '../lib/utils.js'
 import { sendTestWebhook } from '../lib/webhook.js'
+import { validateWebhookUrl } from '../lib/ssrf-guard.js'
 
 const router = Router()
 
@@ -21,44 +22,9 @@ function maskSecret(secret) {
   return secret.substring(0, 10) + '••••••••' + secret.substring(secret.length - 4)
 }
 
-// URL Validation to prevent SSRF and secure production endpoints
-export function validateWebhookUrl(urlStr) {
-  try {
-    const parsed = new URL(urlStr)
-    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-      return { valid: false, error: 'URL must use HTTP or HTTPS protocol' }
-    }
-
-    const isProd = process.env.NODE_ENV === 'production'
-
-    if (isProd && parsed.protocol !== 'https:') {
-      return { valid: false, error: 'URL must use HTTPS protocol in production' }
-    }
-
-    const hostname = parsed.hostname.toLowerCase()
-
-    // SSRF protection: reject local and private ranges
-    const isPrivateHostname =
-      hostname === 'localhost' ||
-      hostname.endsWith('.local') ||
-      hostname.endsWith('.internal') ||
-      hostname === '127.0.0.1' ||
-      hostname === '::1'
-
-    // Match RFC1918 and RFC3927 private ranges
-    const privateIpRegex = /^(10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+|192\.168\.\d+\.\d+|169\.254\.\d+\.\d+)$/
-
-    if (isPrivateHostname || privateIpRegex.test(hostname)) {
-      if (isProd) {
-        return { valid: false, error: 'Private or local addresses are not allowed in production' }
-      }
-    }
-
-    return { valid: true, hostname }
-  } catch (err) {
-    return { valid: false, error: 'Invalid or malformed URL' }
-  }
-}
+// SSRF URL validation lives in ../lib/ssrf-guard.js so the delivery path can
+// reuse it. Re-exported for backward-compat with any existing importers.
+export { validateWebhookUrl }
 
 // GET /api/webhooks?site_key=... (List webhook configurations for a site)
 router.get('/', requireUserAuth, validateSiteKey, requireSiteMembership, async (req, res) => {
