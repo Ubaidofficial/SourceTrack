@@ -1,39 +1,13 @@
 import { Link } from 'react-router-dom'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { LogoFullDark } from '../components/Logo'
+import Reveal from '../components/Reveal'
 
-// ── Shared scroll animation ───────────────────────────────────────────────────
-function useInView(threshold = 0.1) {
-  const ref = useRef(null)
-  const [inView, setInView] = useState(false)
-  useEffect(() => {
-    const obs = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setInView(true) },
-      { threshold }
-    )
-    if (ref.current) obs.observe(ref.current)
-    return () => obs.disconnect()
-  }, [threshold])
-  return [ref, inView]
-}
-
-function FadeUp({ children, delay = 0, className = '' }) {
-  const [ref, inView] = useInView()
-  return (
-    <div
-      ref={ref}
-      className={className}
-      style={{
-        opacity: inView ? 1 : 0,
-        transform: inView ? 'translateY(0)' : 'translateY(28px)',
-        transition: `opacity 0.65s cubic-bezier(0.16,1,0.3,1) ${delay}ms, transform 0.65s cubic-bezier(0.16,1,0.3,1) ${delay}ms`,
-      }}
-    >
-      {children}
-    </div>
-  )
-}
+// Scroll-reveal now uses the shared, reduced-motion-safe Reveal primitive
+// (fade + ≤8px translateY). FadeUp is kept as a thin alias so existing usages
+// in this file are unchanged.
+const FadeUp = Reveal
 
 function FAQItem({ q, a }) {
   const [open, setOpen] = useState(false)

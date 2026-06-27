@@ -10,6 +10,7 @@ import AiSourcesFixture from '../components/AiSourcesFixture'
 import GscQueryFixture from '../components/GscQueryFixture'
 import JourneyFixture from '../components/JourneyFixture'
 import ReportBuilderMock from '../components/ReportBuilderMock'
+import Reveal from '../components/Reveal'
 
 const SEO = {
   title: 'SourceTrack — Know which sources bring your leads and revenue',
@@ -184,7 +185,7 @@ export default function Landing() {
               SourceTrack recognizes each one and tracks what those visitors do next.
             </p>
           </div>
-          <AiSourcesFixture />
+          <Reveal delay={80}><AiSourcesFixture /></Reveal>
         </div>
       </section>
 
@@ -201,9 +202,9 @@ export default function Landing() {
               Clicks and impressions stop being vanity and start showing outcomes.
             </p>
           </div>
-          <div className="lg:order-1">
+          <Reveal delay={80} className="lg:order-1">
             <GscQueryFixture />
-          </div>
+          </Reveal>
         </div>
       </section>
 
@@ -220,7 +221,7 @@ export default function Landing() {
               story of how a visitor actually became a customer.
             </p>
           </div>
-          <JourneyFixture />
+          <Reveal delay={80}><JourneyFixture /></Reveal>
         </div>
       </section>
 
@@ -237,9 +238,9 @@ export default function Landing() {
               Powerful enough to investigate, simple enough you won&rsquo;t need a data team.
             </p>
           </div>
-          <div className="lg:order-1">
+          <Reveal delay={80} className="lg:order-1">
             <ReportBuilderMock />
-          </div>
+          </Reveal>
         </div>
       </section>
 
@@ -360,7 +361,7 @@ export default function Landing() {
               ['Growth', '$79/mo', 'The full toolkit: Report Builder, Search Console SEO, Stripe revenue (beta).'],
               ['Founder', '$99/yr', 'Early-bird annual. 25 seats, one per customer, Growth-level features, locked forever.'],
             ].map(([name, price, desc]) => (
-              <div key={name} className="p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.10)] shadow-[0_12px_38px_rgba(31,35,35,.055)] text-left">
+              <div key={name} className="lift p-6 rounded-[26px] bg-white border border-[rgba(31,35,35,.10)] shadow-[0_12px_38px_rgba(31,35,35,.055)] text-left">
                 <strong className="block text-st-black text-lg tracking-[-0.04em]">{name}</strong>
                 <span className="block mt-1 text-[28px] font-black tracking-[-0.05em] text-st-black">{price}</span>
                 <p className="mt-2 text-[#586464] text-sm leading-[1.5]">{desc}</p>

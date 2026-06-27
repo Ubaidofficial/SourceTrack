@@ -23,4 +23,22 @@
   .st-container {
     @apply max-w-[1320px] mx-auto px-6;
   }
+
+  /* Gentle card hover for the marketing site: small lift + soft shadow.
+     Transition only — disabled under prefers-reduced-motion (no transform). */
+  .lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .lift:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 18px 52px rgba(31, 35, 35, 0.10);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lift,
+  .lift:hover {
+    transform: none;
+    transition: box-shadow 0.2s ease;
+  }
 }
