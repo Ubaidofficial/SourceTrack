@@ -9,7 +9,7 @@ export default function HeroSection({
   primaryHref = '/signup',
   secondaryCta,
   secondaryHref,
-  proofs = ['Install in minutes', 'Track 30 attributed conversions free', 'Built for founders and marketers'],
+  proofs = ['Install in minutes', 'No credit card required', 'Built for founders and marketers'],
   children,
 }) {
   return (

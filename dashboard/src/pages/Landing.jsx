@@ -6,6 +6,10 @@ import HowItWorksSteps from '../components/HowItWorksSteps'
 import ComparisonTable from '../components/ComparisonTable'
 import SectionKicker from '../components/SectionKicker'
 import HeroPreviewCard from '../components/HeroPreviewCard'
+import AiSourcesFixture from '../components/AiSourcesFixture'
+import GscQueryFixture from '../components/GscQueryFixture'
+import JourneyFixture from '../components/JourneyFixture'
+import ReportBuilderMock from '../components/ReportBuilderMock'
 
 const SEO = {
   title: 'SourceTrack — Know which sources bring your leads and revenue',
@@ -163,6 +167,78 @@ export default function Landing() {
               { icon: 'L', title: 'Qualify leads — without a CRM.', body: 'Mark any lead Qualified, MQL, SQL, or Unqualified right where the data lives. Push to your CRM one way if you want one — there’s no two-way sync to babysit.' },
               { icon: 'P', title: 'Privacy-first by default.', body: 'Cookieless visitor tracking. No fingerprinting. First-party by design. Privacy isn’t a toggle you flip — it’s how the tracker works.' },
             ]} />
+          </div>
+        </div>
+      </section>
+
+      {/* Showcase — AI sources */}
+      <section className="py-[96px] bg-[#F7FAFA] border-y border-[rgba(31,35,35,.06)]">
+        <div className="max-w-[1320px] mx-auto px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <SectionKicker label="AI sources" />
+            <h2 className="mt-5 text-[clamp(28px,3.6vw,46px)] leading-[0.98] tracking-[-0.06em] font-black text-st-black">
+              The AI traffic everyone else calls &ldquo;direct.&rdquo;
+            </h2>
+            <p className="mt-4 text-[#586464] text-lg leading-[1.55] max-w-[460px]">
+              ChatGPT, Perplexity, Gemini, Claude, Copilot, and DeepSeek are a real acquisition channel now.
+              SourceTrack recognizes each one and tracks what those visitors do next.
+            </p>
+          </div>
+          <AiSourcesFixture />
+        </div>
+      </section>
+
+      {/* Showcase — SEO / Search Console */}
+      <section className="py-[96px] bg-white">
+        <div className="max-w-[1320px] mx-auto px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="lg:order-2">
+            <SectionKicker label="SEO" />
+            <h2 className="mt-5 text-[clamp(28px,3.6vw,46px)] leading-[0.98] tracking-[-0.06em] font-black text-st-black">
+              Turn Search Console into a revenue signal.
+            </h2>
+            <p className="mt-4 text-[#586464] text-lg leading-[1.55] max-w-[460px]">
+              See which queries and landing pages bring traffic that converts — matched by landing page and date range.
+              Clicks and impressions stop being vanity and start showing outcomes.
+            </p>
+          </div>
+          <div className="lg:order-1">
+            <GscQueryFixture />
+          </div>
+        </div>
+      </section>
+
+      {/* Showcase — Journeys */}
+      <section className="py-[96px] bg-[#F7FAFA] border-y border-[rgba(31,35,35,.06)]">
+        <div className="max-w-[1320px] mx-auto px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <SectionKicker label="Journeys" />
+            <h2 className="mt-5 text-[clamp(28px,3.6vw,46px)] leading-[0.98] tracking-[-0.06em] font-black text-st-black">
+              Follow the journey, not just the last click.
+            </h2>
+            <p className="mt-4 text-[#586464] text-lg leading-[1.55] max-w-[460px]">
+              Every conversion has a path — first touch, the pages in between, the return visits. SourceTrack tells the
+              story of how a visitor actually became a customer.
+            </p>
+          </div>
+          <JourneyFixture />
+        </div>
+      </section>
+
+      {/* Showcase — Report Builder */}
+      <section className="py-[96px] bg-white">
+        <div className="max-w-[1320px] mx-auto px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div className="lg:order-2">
+            <SectionKicker label="Report Builder" />
+            <h2 className="mt-5 text-[clamp(28px,3.6vw,46px)] leading-[0.98] tracking-[-0.06em] font-black text-st-black">
+              Build the report, save the view.
+            </h2>
+            <p className="mt-4 text-[#586464] text-lg leading-[1.55] max-w-[460px]">
+              Start from a template, pick your dimensions and metrics, and pin the views that matter to your dashboard.
+              Powerful enough to investigate, simple enough you won&rsquo;t need a data team.
+            </p>
+          </div>
+          <div className="lg:order-1">
+            <ReportBuilderMock />
           </div>
         </div>
       </section>

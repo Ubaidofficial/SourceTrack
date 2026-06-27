@@ -8,11 +8,11 @@ export default function ReportBuilderMock() {
           <span className="inline-flex items-center rounded-full bg-st-lime py-2 px-3 text-xs font-black">Pin to dashboard</span>
         </div>
         <div className="grid grid-cols-6 gap-3">
-          <Widget bars title="Revenue by channel" />
+          <Widget bars title="Revenue by source" />
           <Widget list title="AI search leads" />
-          <Widget bars title="Trial to paid" />
+          <Widget bars title="Conversions by source" />
           <Widget list title="Top landing pages" />
-          <Widget bars title="Campaign ROAS" />
+          <Widget bars title="Organic search queries" />
         </div>
       </div>
 
