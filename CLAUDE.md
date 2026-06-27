@@ -115,6 +115,21 @@ Enforce these **in code**, not just in copy. Hiding/labeling is the default; fak
 
 ---
 
+## 6.5 Security, RLS & Tenant Isolation (non-negotiable)
+
+This is a multi-tenant SaaS handling other companies' customer + revenue data. A tenant-isolation or RLS miss is a breach, not a bug.
+
+- **RLS on every tenant table.** Any new table holding customer/tenant data ships with Row-Level Security **enabled** and tenant-scoped policies. Never expose a table to the `anon` or `authenticated` role without an explicit policy. Default-deny.
+- **Tenant isolation in every query.** Every query returning customer data is scoped to the tenant (`site_id` / `company_id` / `user_id` as appropriate). Never return cross-tenant rows. Service-role queries that bypass RLS must filter by tenant **explicitly in code**.
+- **`site_key` vs `site_id`:** `site_id` is the internal identifier (joins, internal refs); `site_key` is the customer-facing tracking key. Never expose a raw `site_key` in UI, logs, or error messages. Every ingestion endpoint validates `site_key` and rejects (401/403) when missing or unknown — never fall through to a default tenant. (Missing `site_key` → 401 and raw-`site_key` exposure have both bitten us.)
+- **SSRF guard on user-supplied URLs.** Any server-side fetch of a customer-controlled URL (managed proxy, outbound webhook target, domain verification, GSC) must be SSRF-guarded: reject private/loopback/link-local/metadata IPs (`169.254.169.254`, `10/8`, `127/8`, `::1`, …), restrict scheme to `https`, cap redirects. Never fetch an internal address on behalf of user input.
+- **Outbound webhooks:** HMAC-sign payloads, keep them plan-gated, keep the SSRF guard on the target URL. Don't widen scope without review.
+- **Idempotency on all ingestion** (not just Stripe). Any endpoint ingesting events/conversions/revenue must be idempotent: claim the idempotency key **after** the write succeeds, so a retry can't double-count or drop.
+- **Cookieless identity is a security boundary, not only privacy.** Never introduce cross-site identifiers, third-party storage, or fingerprinting to "improve" matching. First-party, cookieless only.
+- **Agents never trigger live Stripe writes.** Billing/refund/subscription changes go through reviewed code or the human — never an agent-initiated Stripe MCP/API write. Live-money actions are human-gated, same class as `auth.users` (§0).
+
+---
+
 ## 7. The Two Stripe Webhooks (NEVER conflate)
 
 There are two completely separate Stripe webhooks. Mixing them up corrupts either billing or revenue attribution.
@@ -176,7 +191,7 @@ Plus:
 - **Supabase client:** use `getSupabase()` from `api/lib/supabase.js` only — never call `createClient()` directly in routes. Every `createClient()` must use `{ realtime: { transport: WebSocket } }`.
 - **Jobs:** `dotenv.config()` must be the **first line** in all job/cron files.
 - **Tracker URL** is `/tracker/tracker.min.js` — never `/tracker/loader.min.js`.
-- **PostHog HogQL:** all string interpolations must use `esc()` — never raw `${variable}`.
+- **PostHog HogQL:** all string interpolations must use `esc()` — never raw `${variable}`. Use `toFloatOrZero`, never `toFloat64OrZero`. Prefer `countIf(...)` over `COUNT(CASE WHEN ...)`. Qualify `distinct_id` in joins — never leave it ambiguous.
 - **Channel classifier:** `ORGANIC_SEARCH_ENGINE_HOSTS` / `ORGANIC_SEARCH_SOURCES` are the single exported source of truth, shared between the HogQL query and `channelFromEvent`. Don't fork or duplicate this logic.
 - **Attribution accuracy > speed** — verify the math before committing. When in doubt about attribution logic, **read `nightly-attribution.js` and `attribution-engine.js` before changing anything.**
 

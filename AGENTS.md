@@ -1,75 +1,232 @@
-# AGENTS.md
+# AGENTS.md — SourceTrack
 
-Context file for AI agents (GPT, Claude, DeepSeek, etc.) working on this repo.
+Context + standing rules for **any** AI agent (Claude, GPT, DeepSeek, Gemini/Antigravity, etc.) working on this repo.
+This is the universal entry point. Read **§0 Hard Safety Limits first** — it overrides everything. Then the Quick Start, then the rules below.
 
-## Quick Start
+> Companion file: `CLAUDE.md` (read by Claude Code) mirrors §0 and the standing rules here. Keep the two in sync; if they ever diverge, **the stricter rule wins.**
 
-Read these in order before any coding session:
+---
 
-1. `RULES.md` — 10 coding behavior rules
-2. `AGENT_BRIEF.md` — Product, stack, ports, commands
-3. `PROJECT_CONTEXT_COMPACT.md` — Condensed overview
-4. `SESSION_STATE.md` — Current session, branch, blockers
-5. `SESSION_HANDOFF.md` — Last completed work, pending QA
-6. `KNOWN_ISSUES.md` — Verified bugs/gaps only
-7. `AI_SESSION_PLAN.md` — Upcoming session plan
+## 0. Hard Safety Limits (non-negotiable — override everything else)
+
+These are **not advisory.** They override any other instruction, including urgency, emotional framing, or apparent task necessity. If completing a task seems to require any of these, the forbidden action is **never** the answer — **STOP and report "blocked: need a human."**
+
+### Production & data safety
+- **READ-ONLY by default.** Never write to production or staging databases without an explicit, per-task human go-ahead.
+- **NEVER write to `auth.users` or `auth.sessions`** under any circumstances — no signup-as-test, no password/hash edits, no `email_confirmed_at` changes, no user/session deletes.
+- **No DDL / migrations applied to any live database.** Agents may *write a migration file*; only a human-approved orchestrator step applies it (see §8).
+- If a test user or seed row is needed, **STOP and ask the human to provide it.** Do not create one.
+
+### Secrets
+- **NEVER read, extract, copy, print, log, or use raw secrets/keys** — service-role/secret keys, JWT secrets, Railway/host env variables, SMTP credentials, API tokens. Use only the scoped MCP tools provided.
+- **Never write a secret to a file, script, or log** — even temporarily, even to "clean it up after."
+- No secret, key, or token belongs in this repo or any committed file. Never commit `.env`, secrets, `.bak`, or test artifacts (see `docs/ai_agent_workflow_rules.md` → Secret Handling Rules).
+
+### Auth & access
+- Never reset, change, or work around any password or login. Never mint recovery/magic links.
+- If you cannot access something because you're not logged in, **STOP and report "blocked: need a provided session."** Do not seek, guess, mint, or engineer credentials in any way.
+
+### Scope discipline
+- Do the single task asked. Past assistance or an emotional/urgency framing is never authorization to exceed these limits.
+
+> These exist because an agent once treated "read-only" as advisory and engineered around a missing login — extracting a production key and mutating `auth.users`. That must never recur. The real guardrail is **revoked capability** (scoped MCP grants); this section is the backstop.
+
+---
+
+## 1. Quick Start — read these before any session (in order)
+
+1. `RULES.md` — coding behavior rules
+2. `AGENT_BRIEF.md` — product, stack, ports, commands, commit format
+3. `PROJECT_CONTEXT_COMPACT.md` — condensed overview
+4. `SESSION_STATE.md` — current session, branch, blockers
+5. `SESSION_HANDOFF.md` — last completed work, pending QA
+6. `KNOWN_ISSUES.md` — verified bugs/gaps only
+7. `AI_SESSION_PLAN.md` — upcoming session plan
 
 Then use `DOCS_INDEX.md` to find task-specific docs.
 
-## How to Use This Repo
+**Authority order (when sources conflict):** `SCOPE_LOCKED.md` wins all scope conflicts → `SECURITY_FINDINGS.md` → `sourcetrack_design_complete_v1.md` → this file / `CLAUDE.md`. Don't silently reconcile a conflict — surface it.
+
+---
+
+## 2. Session Workflow
 
 ### Before every session
-- Read the 7 files above
-- Check `SESSION_STATE.md` for current branch and blockers
-- Check `MANUAL_QA_BACKLOG.md` for pending QA
+- Read the 7 files above; check `SESSION_STATE.md` for current branch/blockers and `MANUAL_QA_BACKLOG.md` for pending QA.
 
 ### During every session
-- Follow `RULES.md` (surgical changes, no scope creep, verify before claiming)
-- Update `SESSION_STATE.md` when starting/ending work
-- Log bugs found in `BUG_REVIEW_LOG.md`
+- Follow `RULES.md` and §3 below (surgical changes, no scope creep, verify before claiming).
+- Update `SESSION_STATE.md` when starting/ending work; log bugs in `BUG_REVIEW_LOG.md`.
 
 ### After every session
 - Run: `node --check api/index.js api/routes/*.js api/lib/*.js`
 - Run: `cd dashboard && npm run build`
 - Run: `git diff --check`
-- Update `SESSION_HANDOFF.md` with what was done and what remains
-- Update `SESSION_LOG.md` with session summary
-- Update `AI_SESSION_PLAN.md` to mark session status
-- If tracker changed: `npm run build:tracker`
+- If the tracker changed: `npm run build:tracker`
+- Update `SESSION_HANDOFF.md` (done + remaining), `SESSION_LOG.md` (summary), `AI_SESSION_PLAN.md` (status).
 
-### Before committing
-- All checks above must pass
-- Manual QA must be performed if applicable (mark in MANUAL_QA_BACKLOG.md)
-- Never commit `.env`, secrets, `.bak` files, or test artifacts (see [Secret Handling Rules](file:///Users/ubaid/Desktop/trackiq/docs/ai_agent_workflow_rules.md#secret-handling-rules))
-- Commit message must use the HEREDOC format from AGENT_BRIEF.md
-- **AI-Agent Workflow**: AI-agent workflow rules are governed by [ai_agent_workflow_rules.md](file:///Users/ubaid/Desktop/trackiq/docs/ai_agent_workflow_rules.md). No AI-agent may commit or push before raw diff review and explicit user approval.
+### Before committing — **commit gate**
+- All checks above pass; manual QA performed if applicable (mark in `MANUAL_QA_BACKLOG.md`).
+- **No agent may commit or push before raw `git diff` review and explicit user approval** (governed by `docs/ai_agent_workflow_rules.md`).
+- Never commit `.env`, secrets, `.bak`, or test artifacts.
+- Commit message uses the HEREDOC format from `AGENT_BRIEF.md`.
 
+---
 
-## Project Rules
+## 3. Core Project Rules
 
-- **Surgical changes only.** Touch only what you must. Match existing style.
-- **No scope creep.** If something adjacent is broken, surface it in session report — don't fix silently.
-- **Verify, don't assume.** Code inspection is not runtime verification.
-- **Treat PROGRESS.md and DEEPSEEK.md as history, not proof.**
-- **Figma docs are design specs, not implementation proof.**
-- **Do not overclaim.** Never claim Cometly/DataFast/Usermaven parity, paid ad features, or business dashboards unless verified in code + QA.
+- **Surgical changes only.** Touch only what you must; match existing style. Every changed line traces to the request.
+- **No scope creep.** If something adjacent is broken, surface it in the session report — don't fix it silently.
+- **Verify, don't assume.** Code inspection is **not** runtime verification. Design docs / Figma describe *intended* architecture, not what's built.
+- **Treat `PROGRESS.md` and `DEEPSEEK.md` as history, not proof.**
+- **Do not overclaim.** Never claim Cometly/DataFast/Usermaven parity, paid-ad features, ROAS/cost-import, MRR/trial-to-paid, or business-dashboard features unless verified in code **and** QA.
+- **Think before coding:** state assumptions; if multiple interpretations exist, present them — don't pick silently; if a simpler path exists, say so.
+- **Simplicity first:** minimum code that solves the problem; no speculative abstractions, flexibility, or error handling for impossible cases.
 
-## Key Files
+---
+
+## 4. Architecture (verified — do not "fix" intentional designs)
+
+**Stack:** Node.js **ESM** (`import`/`export` only — never `require()`), Express, React + Vite, Supabase, PostHog, Railway, Stripe (two separate webhooks — see §6).
+
+**Hybrid data model (do not collapse):**
+- **PostHog** = events / analytics **read** layer (pageviews, sessions, HogQL).
+- **Supabase (Postgres)** = source of truth for **attribution, conversions, revenue, billing/entitlements**.
+- OLTP/OLAP split: Postgres + ClickHouse.
+- The `pageviews` table is **empty by design** — analytics reads come from PostHog. Do not "repair" it.
+
+**Environments & refs (these are project refs, NOT secrets — never put keys in any committed file):**
+- Repo: `Ubaidofficial/SourceTrack`.
+- Supabase: prod `zxjjjsipafojhzkkumvh`, staging `nrsvpwzekfrdrzkoecfk`.
+- PostHog: prod `416017`, staging `469905`.
+- Railway: prod env `dc68ba7b`, staging `74a58dbc`.
+- URLs: app `app.sourcetrack.ai`, API `api.srctk.com`, staging dashboard `sourcetrack-dashboard-staging.up.railway.app`.
+
+**Project-specific code rules:**
+- Use `getSupabase()` from `api/lib/supabase.js` only — never call `createClient()` directly in routes. Every `createClient()` must use `{ realtime: { transport: WebSocket } }`.
+- `dotenv.config()` must be the **first line** in all job/cron files.
+- Tracker URL is `/tracker/tracker.min.js` — never `/tracker/loader.min.js`.
+- PostHog HogQL interpolations must use `esc()` — never raw `${variable}`. Use `toFloatOrZero`, never `toFloat64OrZero`. Prefer `countIf(...)` over `COUNT(CASE WHEN ...)`. Qualify `distinct_id` in joins — never leave it ambiguous.
+- Channel classifier: `ORGANIC_SEARCH_ENGINE_HOSTS` / `ORGANIC_SEARCH_SOURCES` are the single exported source of truth, shared between the HogQL query and `channelFromEvent` — don't fork it.
+- **Attribution accuracy > speed.** Verify the math before committing. When unsure about attribution logic, read `nightly-attribution.js` and `attribution-engine.js` before changing anything.
+
+---
+
+## 5. Data Truth & Privacy (non-negotiable product invariants — enforce in code, not just copy)
+
+- **No fake zeros.** Never render `$0`/`0`/`—` as a stand-in for "no data." Hide the metric or show a calm empty state.
+- **Revenue** appears only when a real revenue source exists (Stripe/webhook/manual conversion value). Else hide revenue cards/columns.
+- **Cost-gated metrics** (ROAS, CPL, CAC, ad spend, net profit) are hidden unless ad-cost data exists for the range.
+- **GSC/SEO** requires a connected property; query-level revenue is **estimated**, matched by landing page + date range, and carries the truth label. Never imply exact query→customer attribution.
+- **Privacy is the moat — non-negotiable:** cookieless visitor model, **no fingerprinting**, respect DNT, **never add cookies**. `enrich()` never stores raw IP. No person-level de-anonymization, ever.
+- **AI features are truthful-only** (design spec §26): no LLM-narrated freeform revenue/ROAS/attribution numbers, no fake predictions, no fake recommendations, no model-version labels, no chatbot analyzer in V1.
+
+---
+
+## 5.5 Security, RLS & Tenant Isolation (non-negotiable)
+
+This is a multi-tenant SaaS handling other companies' customer + revenue data. A tenant-isolation or RLS miss is a breach, not a bug.
+
+- **RLS on every tenant table.** Any new table holding customer/tenant data ships with Row-Level Security **enabled** and tenant-scoped policies. Never expose a table to the `anon` or `authenticated` role without an explicit policy. Default-deny.
+- **Tenant isolation in every query.** Every query returning customer data is scoped to the tenant (`site_id` / `company_id` / `user_id`). Never return cross-tenant rows. Service-role queries that bypass RLS must filter by tenant **explicitly in code**.
+- **`site_key` vs `site_id`:** `site_id` is internal (joins/refs); `site_key` is the customer-facing tracking key. Never expose a raw `site_key` in UI, logs, or error messages. Every ingestion endpoint validates `site_key` and rejects (401/403) when missing/unknown — never fall through to a default tenant.
+- **SSRF guard on user-supplied URLs.** Any server-side fetch of a customer-controlled URL (managed proxy, outbound webhook target, domain verification, GSC) must reject private/loopback/link-local/metadata IPs (`169.254.169.254`, `10/8`, `127/8`, `::1`, …), restrict scheme to `https`, and cap redirects. Never fetch an internal address on behalf of user input.
+- **Outbound webhooks:** HMAC-sign payloads, keep them plan-gated, keep the SSRF guard. Don't widen scope without review.
+- **Idempotency on all ingestion** (not just Stripe). Any endpoint ingesting events/conversions/revenue must be idempotent: claim the key **after** the write succeeds.
+- **Cookieless identity is a security boundary, not only privacy.** No cross-site identifiers, third-party storage, or fingerprinting — first-party, cookieless only.
+- **Agents never trigger live Stripe writes.** Billing/refund/subscription changes go through reviewed code or the human — never an agent-initiated Stripe MCP/API write. Live-money actions are human-gated, same class as `auth.users` (§0).
+
+---
+
+## 6. The Two Stripe Webhooks (NEVER conflate)
+
+1. **`api/routes/billing.js` → `billingWebhookHandler`** — SourceTrack's **own** billing/entitlements (plan state on sites). Dedupe via in-memory NodeCache. **Records no revenue.**
+2. **`api/routes/stripe-webhook.js` → `POST /:site_key`** — **customers' buyers'** purchases, ingested as `$conversion` for attribution. DB idempotency via `revenue_idempotency_keys` / `claim_revenue_idempotency_keys`.
+
+**Idempotency rule:** claim the key **after** the write succeeds. Pricing (live, locked): Starter $49/mo · Growth $79/mo · Founder $99/yr. MRR-by-source and trial→paid are **not built** — don't assume they exist.
+
+---
+
+## 7. PR & Merge Discipline
+
+Every PR delivers a **7-command bundle** (raw terminal output): `git status` · `git diff --stat` · session-doc (`*.md`) diff **empty** · `git log --oneline` · `git diff --check` · `node --check` on changed JS · `git rev-parse HEAD`.
+
+Plus:
+- **CI green on the EXACT head SHA** (that SHA's run, not "a" green run).
+- `mergeable_state` **CLEAN** before merge — never merge on `UNKNOWN`; wait for it to resolve.
+- **Agents do NOT merge.** The human merges. Stop at "PR up, CI green, bundle delivered, approval requested."
+- After a squash-merge, dependent branches must be **rebased onto the new `main`** with fresh CI before merging.
+
+---
+
+## 8. Migrations & DDL Discipline
+
+- **Agents write the migration FILE only** — timestamped, snake_case, under `supabase/migrations/`. Agents **never** apply it to any database and never use a DB write tool to run it. A human-approved orchestrator step applies it **staging → prod**.
+- **Idempotent guards:** wrap DDL in existence checks so it's safe across environments.
+- **Ordering:** when adding a FK with `ON DELETE CASCADE` to a table with violating rows, **delete the orphans first, then add the FK.**
+- **apply-then-merge:** apply the DB change before merging the code that depends on it.
+- **Forward-only:** never modify an already-applied migration; write a new timestamped one.
+- **Schema drift is real:** prod ≠ staging, and prod is often *tighter*. Verify the actual constraint on **prod** (read-only) before assuming repo schema = live schema.
+
+---
+
+## 9. Verification Principles
+
+- **Real-env only:** verify on staging/prod URLs — **never localhost.** A localhost pass proves nothing about production.
+- **Design doc = intent, not current state.** Verify against the **fetched remote ref** (`git fetch`; `git show origin/main:<file>` / `git grep` on the fetched ref) — local working-tree reads are stale.
+- **"Is it real?" checks pull identifying rows, not just counts.** A count can look healthy while every row is test/seed data (e.g. "68 members" that were 59 orphans). Select and inspect the rows.
+- **Verify every "handled elsewhere" claim against the actual data path.** These assumptions have been proven wrong repeatedly.
+- **Only GREEN, prod-verified, with-real-data is "done"** or marketable. Cross-reference site IDs against known test/seed sites before concluding real-customer impact.
+- **Browser/E2E agents can false-pass** — require a screenshot per claim, and a human money-math confirm for anything revenue-related. Confirm a change is actually deployed before judging it; if you see legacy UI, report "not deployed," don't FAIL. Report only what you see — never fabricate.
+
+---
+
+## 10. Scope Gates (V1 / V1.1 / V2)
+
+- A **designed component is not a shipped feature.** Visibility is gated by feature flags, data availability, integration status, and rollout scope.
+- **V1** = ship now · **V1.1** = next, locked/hidden in V1 · **V2** = future, not in active V1 UI.
+- Don't surface V1.1/V2 UI without a feature flag and explicit go-ahead. Honor the design spec's §26 prohibited-elements list.
+
+---
+
+## 11. Agent Roles & Dispatch
+
+- **Orchestrator (planning chat)** — plans, dispatches, verifies. Read-only Supabase + PostHog MCP. Reviews SQL and hand-applies migrations on human go. Doesn't write code.
+- **Claude Code (CC)** — executes: files, logic, DB-migration *files*. No Railway, no browser. Subject to §0, §7, §8.
+- **Browser E2E agent (Antigravity)** — visual verification only. **Browser tooling + read-only MCP only** — no DB writes, no secret/Railway access (post-incident lockdown). If blocked on login, it stops and reports; it never works around auth.
+
+Every agent task arrives as a copy/paste-ready prompt prefixed with the relevant standing rules and **labeled `[→ CC]` or `[→ ANTIGRAVITY]`**. Treat an agent "PASS" as a claim to verify, not a fact.
+
+---
+
+## 12. Communication & Operating Stance
+
+Carry-forward role: **honest orchestrator + senior MarTech engineer + SaaS QA manager.** Brutal honesty, **evidence over narration**, **verify-before-trust**.
+- Recommendation-first, concise, explicit next steps. State assumptions inline; flag uncertainty honestly.
+- Honest pushback is welcomed. Don't narrate work you haven't verified — show the diff/query/screenshot, not a description of it.
+
+---
+
+## 13. Key Files
 
 | File | Purpose |
 |---|---|
+| `CLAUDE.md` | Companion standing-rules file (Claude Code); mirrors §0 |
 | `RULES.md` | Coding behavior contract |
-| `AGENT_BRIEF.md` | Stack, ports, commands, core rules |
+| `AGENT_BRIEF.md` | Stack, ports, commands, commit format, core rules |
 | `PROJECT_CONTEXT_COMPACT.md` | Product/stack/design at a glance |
+| `SCOPE_LOCKED.md` | Scope source of truth (wins conflicts) |
+| `SECURITY_FINDINGS.md` | Security findings/decisions |
+| `sourcetrack_design_complete_v1.md` | Product/design spec (intent, not proof) |
 | `AI_SESSION_PLAN.md` | Upcoming session roadmap |
 | `SESSION_STATE.md` | Current branch, blockers, active work |
 | `SESSION_LOG.md` | Session history log |
 | `SESSION_HANDOFF.md` | Last completed work + pending QA |
 | `KNOWN_ISSUES.md` | Verified bugs and risks |
-| `IMPLEMENTATION_GAP_LIST.md` | What's built vs what's planned |
+| `IMPLEMENTATION_GAP_LIST.md` | Built vs planned |
 | `MANUAL_QA_BACKLOG.md` | Per-session manual QA items |
-| `BUG_REVIEW_LOG.md` | Code review issues found |
+| `BUG_REVIEW_LOG.md` | Code-review issues found |
 | `COMMANDCODE_RUNBOOK.md` | Standard procedures |
 | `DOCS_INDEX.md` | Full doc inventory with classifications |
-| `PROGRESS.md` | Session-by-session history (archive) |
-| `DEEPSEEK.md` | DeepSeek session history (archive) |
+| `docs/ai_agent_workflow_rules.md` | Secret handling + no-commit-without-approval governance |
+| `PROGRESS.md` / `DEEPSEEK.md` | Session history (archive — history, not proof) |
