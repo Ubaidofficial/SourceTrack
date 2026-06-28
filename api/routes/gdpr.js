@@ -4,6 +4,7 @@
  * DELETE /api/gdpr/visitor   — erase all data for one visitor (by anonymous_id)
  * DELETE /api/gdpr/account   — full account purge (all sites + auth user)
  * PUT    /api/gdpr/retention — set data_retention_days for a site
+ * GET    /api/gdpr/export    — DSAR export of one site's data as a JSON bundle
  *
  * All endpoints require a logged-in user (requireUserAuth) and verify that the
  * caller owns (or is a member of) the site they are operating on.
@@ -12,6 +13,7 @@
 import { Router } from 'express'
 import { getSupabase } from '../lib/supabase.js'
 import { getStructuralLimits } from '../lib/plan-features.js'
+import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 
 export const gdprRouter = Router()
 
@@ -312,5 +314,86 @@ gdprRouter.put('/retention', async (req, res) => {
   } catch (err) {
     console.error('[GDPR] retention update error:', err)
     return res.status(500).json({ success: false, error: 'Failed to update retention policy' })
+  }
+})
+
+// ────────────────────────────────────────────────────────────────────────────
+// GET /api/gdpr/export?site_key=<key>
+// DSAR export of ONE site's data as a single JSON bundle. Auth chain mirrors
+// /api/webhooks (requireUserAuth at mount + validateSiteKey + requireSiteMembership
+// here) so cross-tenant access is rejected by middleware. Every query is ALSO
+// filtered by the resolved site_id/site_key in code — this runs as service-role
+// and must not trust RLS alone.
+// ────────────────────────────────────────────────────────────────────────────
+
+// Mask a webhook signing secret — never serialize the raw value.
+function maskSecret(secret) {
+  if (!secret || typeof secret !== 'string' || secret.length < 15) return ''
+  return secret.slice(0, 10) + '••••••••' + secret.slice(-4)
+}
+
+// Build the DSAR bundle for one site. `supabase` is injected so this is
+// unit-testable; `site` is the membership-verified req.site ({ id, site_key,
+// company_id, ... }). EXCLUDES every secret column by using explicit allowlist
+// selects (never select('*') on tables that carry secrets).
+export async function buildGdprExport(supabase, site, { now = () => new Date() } = {}) {
+  const siteId = site.id
+  const siteKey = site.site_key
+
+  const pull = async (table, columns, column, value) => {
+    const { data, error } = await supabase.from(table).select(columns).eq(column, value)
+    if (error) throw new Error(`${table}: ${error.message}`)
+    return data || []
+  }
+
+  const tables = {}
+
+  // attributed_conversions — all columns (no secrets on this table), by site_id.
+  tables.attributed_conversions = await pull('attributed_conversions', '*', 'site_id', siteId)
+
+  // lead_qualifications — status trail. NOTE: schema has no created_at/updated_at;
+  // qualified_at is the real timestamp column, so it stands in for them.
+  tables.lead_qualifications = await pull('lead_qualifications', 'status, qualified_by, qualified_at', 'site_id', siteId)
+
+  // site_identity_links — the tenant's own identity graph.
+  tables.site_identity_links = await pull('site_identity_links', 'anonymous_id, user_id, created_at', 'site_id', siteId)
+
+  // gsc_performance_daily — aggregates only, by site_key.
+  tables.gsc_performance_daily = await pull('gsc_performance_daily', 'query, page_path, clicks, impressions, ctr, position, date', 'site_key', siteKey)
+
+  // gsc_connections — NON-SECRET columns only (encrypted_refresh_token excluded).
+  tables.gsc_connections = await pull('gsc_connections', 'property_url, google_account_email, status, last_synced_at, created_at', 'site_key', siteKey)
+
+  // webhook_destinations — config + MASKED secret (raw secret never serialized).
+  const dests = await pull('webhook_destinations', 'url, active, created_at, secret', 'site_key', siteKey)
+  tables.webhook_destinations = dests.map(d => ({ url: d.url, active: d.active, created_at: d.created_at, secret: maskSecret(d.secret) }))
+
+  // sites — explicit safe allowlist (excludes api_key/api_key_hash, all *_capi_token,
+  // google_ads_developer_token, encrypted_* secrets, public_share_token, stripe ids).
+  tables.sites = await pull('sites', 'id, site_key, name, domain, plan, created_at, onboarding_completed, business_type, timezone, data_retention_days', 'id', siteId)
+
+  // companies + company_members — account context, scoped to this site's company.
+  if (site.company_id) {
+    tables.companies = await pull('companies', 'id, name, created_at', 'id', site.company_id)
+    tables.company_members = await pull('company_members', 'company_id, user_id, role, created_at', 'company_id', site.company_id)
+  } else {
+    tables.companies = []
+    tables.company_members = []
+  }
+
+  // PostHog events deferred — not queried this release.
+  tables.posthog_events = 'available on request'
+
+  return { generated_at: now().toISOString(), site_key: siteKey, tables }
+}
+
+gdprRouter.get('/export', validateSiteKey, requireSiteMembership, async (req, res) => {
+  try {
+    const supabase = getSupabase()
+    const bundle = await buildGdprExport(supabase, req.site)
+    return res.json(bundle)
+  } catch (err) {
+    console.error('[GDPR] export error:', err.message)
+    return res.status(500).json({ success: false, data: null, error: 'Failed to export data' })
   }
 })
