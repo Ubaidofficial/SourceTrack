@@ -199,7 +199,13 @@ gdprRouter.delete('/account', async (req, res) => {
           .delete()
           .in('site_id', siteIds)
 
-        // 3. Delete sites
+        // 3. Delete sites. This CASCADE-deletes all site-scoped GSC data via the
+        // FK `... REFERENCES sites(site_key) ON DELETE CASCADE` on each table:
+        //   - gsc_connections      (incl. encrypted_refresh_token + google_account_email)
+        //   - gsc_performance_daily
+        //   - gsc_sync_runs
+        // (see supabase/migrations/20260607212000_add_google_search_console.sql).
+        // If that cascade is ever dropped, these tables must be deleted explicitly here.
         await supabase.from('sites').delete().in('id', siteIds)
       }
     }
