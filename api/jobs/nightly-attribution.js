@@ -617,12 +617,15 @@ async function processConversion(site, conversion) {
     last_touch_channel:  lastTouchChannel,
     channel:             firstTouchChannel,
     attribution_confidence: confidence,
-    confidence_signals: JSON.stringify({
+    // Store as a real jsonb object (supabase-js serializes the object into the
+    // jsonb column). Previously JSON.stringify'd here, which Postgres stored as a
+    // jsonb STRING scalar (jsonb_typeof='string'), so bare `->>'key'` read NULL.
+    confidence_signals: {
       has_utm:          !!(firstTp.utm_source),
       has_click_id:     !!(firstTp.gclid || firstTp.fbclid),
       has_ai_source:    !!(firstTp.ai_source),
       touchpoint_count: touchpoints.length
-    }),
+    },
     channel_30d: channel30d,
 
     first_touch_country: firstTp.country || 'unknown',
