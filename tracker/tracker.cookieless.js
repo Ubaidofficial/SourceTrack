@@ -1,6 +1,12 @@
 ;(function () {
   'use strict'
 
+  // ─── Do Not Track / Global Privacy Control ────────────────────────────────
+  // Opt-out signaled by the browser/OS — abort before any id fetch or beacon.
+  // Parity with the cookie build (tracker.js). Opt-in is still possible via the
+  // data-consent-required attribute (consent system below).
+  if (navigator.doNotTrack === '1' || window.doNotTrack === '1' || navigator.globalPrivacyControl === true) return
+
   // ─── Config ────────────────────────────────────────────────────────────────
   var sc = document.currentScript || document.querySelector('script[data-site-key]')
   var K  = (sc && sc.getAttribute('data-site-key')) || ''
@@ -130,6 +136,33 @@
         ? navigator.sendBeacon(u, new Blob([b], { type: 'application/json' }))
         : fetch(u, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: b, keepalive: true }).catch(function () {})
     } catch (_) {}
+  }
+
+  // ─── Consent management (in-memory only) ────────────────────────────────────
+  // Mirrors the cookie build's gate (tracker.js). data-consent-required="true"
+  // holds all tracking until sourcetrack.consent(true) (opt-in mode); without it,
+  // tracking fires immediately (opt-out model). sourcetrack.optOut()/optIn()
+  // always work. NOTE: the cookieless build has NO storage, so the consent
+  // decision is in-memory and PER-PAGE-LOAD by design — it is NOT persisted
+  // across page loads (the cookie build persists it in localStorage).
+  var CONSENT_REQUIRED = !!(sc && sc.getAttribute('data-consent-required') === 'true')
+  var _cq = []
+  var _consentGiven = null  // null = undecided; true/false = explicit (in-memory only)
+
+  var _rawSend = send
+  function sendGated(ep, data) {
+    if (isExcluded()) return                            // excluded paths
+    if (_consentGiven === false) return                 // opted out
+    if (CONSENT_REQUIRED && _consentGiven !== true) {   // opt-in: hold until consent(true)
+      _cq.push([ep, data])
+      return
+    }
+    _rawSend(ep, data)
+  }
+  send = sendGated
+  function _flushConsentQueue() {
+    var q = _cq.splice(0)
+    for (var i = 0; i < q.length; i++) _rawSend(q[i][0], q[i][1])
   }
 
   // ─── Flush queued events once IDs arrive ───────────────────────────────────
@@ -281,6 +314,23 @@
       var data = { site_key: K, event: event, anonymous_id: AID, session_id: SID, page_url: location.href, properties: properties || {} }
       AID ? send('/api/track', data) : _q.push({ ep: '/api/track', data: data })
     },
+
+    // ── Consent API ─────────────────────────────────────────────────────────
+    // Parity with the cookie build. In-memory only (cookieless has no storage):
+    // the decision is per-page-load and is NOT persisted across loads.
+    // sourcetrack.consent(true)  — grant, flush queued events
+    // sourcetrack.consent(false) — deny, clear queue, stop tracking
+    consent: function (granted) {
+      _consentGiven = !!granted
+      if (_consentGiven) {
+        _flushConsentQueue()
+      } else {
+        _cq.length = 0  // clear queued events — do not send
+      }
+    },
+    optOut: function () { window.sourcetrack.consent(false) },
+    optIn:  function () { window.sourcetrack.consent(true) },
+    hasConsent: function () { return _consentGiven },
 
     getContext: function () {
       var p = params(), ref = document.referrer || null
