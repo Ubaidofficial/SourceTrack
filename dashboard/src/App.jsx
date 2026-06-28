@@ -72,6 +72,7 @@ import SEORevenue from './pages/SEORevenue'
 import PublicIntegrations from './pages/PublicIntegrations'
 import Security from './pages/Security'
 import Demo from './pages/Demo'
+import UtmBuilderTool from './pages/tools/UtmBuilder'
 
 const queryClient = new QueryClient()
 
@@ -403,6 +404,8 @@ export default function App() {
               <Route path="/pricing" element={<Pricing />} />
               <Route path="/compare/ga4" element={<CompareGA4 />} />
               <Route path="/compare-ga4" element={<Navigate to="/compare/ga4" replace />} />
+              {/* Public free tools — SEO landing pages, no auth */}
+              <Route path="/tools/utm-builder" element={<UtmBuilderTool />} />
               {/* Solution pages — public direct canonical routes */}
               <Route path="/use-cases/saas" element={<SolutionSaaS />} />
               <Route path="/use-cases/ecommerce" element={<SolutionEcommerce />} />
