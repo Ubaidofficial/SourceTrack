@@ -7,7 +7,7 @@
     "start": "node api/bootstrap.js",
     "dev": "nodemon api/bootstrap.js",
     "build:tracker": "esbuild tracker/tracker.js --bundle --minify --outfile=tracker/tracker.min.js && esbuild tracker/tracker.cookieless.js --bundle --minify --outfile=tracker/tracker.cookieless.min.js",
-    "qa:attribution:unit": "node --test api/tests/attribution.test.js api/tests/hogql-date.test.js api/tests/timezone-reconciliation.test.js api/tests/esc-hogql.test.js api/tests/analytics-timeseries.test.js api/tests/conversion-rate.test.js api/tests/backfill.test.js api/tests/analytics-top-sources.test.js api/tests/retention-purge.test.js",
+    "qa:attribution:unit": "node --test api/tests/attribution.test.js api/tests/hogql-date.test.js api/tests/timezone-reconciliation.test.js api/tests/esc-hogql.test.js api/tests/analytics-timeseries.test.js api/tests/conversion-rate.test.js api/tests/backfill.test.js api/tests/analytics-top-sources.test.js api/tests/retention-purge.test.js api/tests/gsc-daily-sync.test.js",
     "qa:tracker:unit": "node --test api/tests/tracker-click-ids.test.js api/tests/pii-sanitization.test.js api/tests/ai-chat.test.js api/tests/tracker-form-capture.test.js api/tests/tracker-booking-passthrough.test.js api/tests/tracker-booking-detection.test.js api/tests/provider-truth-audit.test.js",
     "qa:identity:unit": "node --test api/tests/identity-resolution.test.js api/tests/billing-middleware.test.js api/tests/observability.test.js api/tests/webhook-ssrf.test.js",
     "qa:attribution": "node scripts/qa-attribution-harness.mjs && node scripts/qa-attribution-integration.mjs",

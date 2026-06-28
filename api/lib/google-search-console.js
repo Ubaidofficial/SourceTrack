@@ -221,7 +221,11 @@ export async function refreshAccessToken(encryptedRefreshToken) {
       const errorText = await response.text()
       console.error(`[GSC Client Debug] Refresh token failed status: ${response.status}. Body:`, errorText.slice(0, 500))
     }
-    throw new Error('google_access_token_refresh_failed')
+    // Carry the HTTP status so callers (e.g. the daily-sync backoff) can tell a
+    // transient 5xx from a dead-token 4xx. Manual /sync only reads err.message.
+    const err = new Error('google_access_token_refresh_failed')
+    err.status = response.status
+    throw err
   }
 
   const data = await response.json()
@@ -319,7 +323,12 @@ export async function fetchGscPerformance(propertyUrl, startDate, endDate, acces
       const errorText = await response.text()
       console.error(`[GSC Client Debug] Query performance failed status: ${response.status}. Body:`, errorText.slice(0, 500))
     }
-    throw new Error('gsc_performance_query_failed')
+    // Carry status + Retry-After so the daily-sync backoff can respect 429/5xx.
+    const err = new Error('gsc_performance_query_failed')
+    err.status = response.status
+    const retryAfter = Number(response.headers?.get?.('retry-after'))
+    if (Number.isFinite(retryAfter) && retryAfter > 0) err.retryAfterMs = retryAfter * 1000
+    throw err
   }
 
   const data = await response.json()
