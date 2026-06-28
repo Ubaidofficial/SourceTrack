@@ -4,6 +4,9 @@ dotenv.config()
 import { getSupabase } from '../lib/supabase.js'
 import { clampDays, classifyJourney, applyBackfill } from '../lib/backfill.js'
 import { purgeSiteRetention } from '../lib/retention-purge.js'
+import { runGscDailySync } from '../lib/gsc-daily-sync.js'
+import { refreshAccessToken, fetchGscPerformance } from '../lib/google-search-console.js'
+import { normalizePath } from '../lib/url-normalization.js'
 
 const isReprocess = process.argv.includes('--reprocess-all') || process.argv.some(arg => arg.startsWith('--reprocess-site='));
 const confirmDestructive = process.argv.includes('--confirm-destructive');
@@ -199,6 +202,37 @@ async function main() {
       await runRetentionPurge(sites)
     } catch (purgeErr) {
       logWarn(`Retention purge failed (non-fatal): ${purgeErr.message}`)
+    }
+
+    // GSC daily auto-sync (piggybacks this cron — option (a); no new Railway
+    // service). Fully isolated: its own job_runs row + try/catch so a GSC failure
+    // can NEVER mark the attribution run failed. Per-connection isolation lives
+    // inside runGscDailySync.
+    try {
+      const gscStart = Date.now()
+      const gsc = await runGscDailySync({
+        supabase, refreshAccessToken, fetchGscPerformance, normalizePath, sleep, log
+      })
+      await supabase.from('job_runs').insert({
+        job_name: 'gsc-daily-sync',
+        status: 'success',
+        conversions_processed: gsc.records_synced,
+        error_message: gsc.failed > 0 ? `${gsc.failed}/${gsc.eligible} connections failed` : null,
+        duration_ms: Date.now() - gscStart,
+        ran_at: new Date().toISOString()
+      })
+    } catch (gscErr) {
+      logWarn(`GSC daily sync failed (non-fatal): ${gscErr.message}`)
+      try {
+        await supabase.from('job_runs').insert({
+          job_name: 'gsc-daily-sync',
+          status: 'failed',
+          conversions_processed: 0,
+          error_message: gscErr.message,
+          duration_ms: 0,
+          ran_at: new Date().toISOString()
+        })
+      } catch (_) { /* best-effort logging only */ }
     }
 
     // Free-tier-specific purge: drop pageviews > 30 days old. The general
