@@ -6,7 +6,9 @@
     <title>SourceTrack — Revenue Attribution Analytics for SaaS, Lead Gen, and Agencies</title>
     <meta name="description" content="SourceTrack helps SaaS, lead-gen, and agency teams track which sources, campaigns, AI referrals, and customer journeys turn into conversions and revenue. Multi-touch attribution with a lightweight install." />
     <meta name="robots" content="index, follow" />
-    <link rel="canonical" href="https://sourcetrack.ai/" />
+    <!-- Canonical is injected per-page at runtime via react-helmet-async (every
+         indexable route sets its own). No static root canonical here — a hardcoded
+         https://sourcetrack.ai/ would wrongly canonicalize every page to the homepage. -->
 
     <!-- Open Graph -->
     <meta property="og:type"        content="website" />
