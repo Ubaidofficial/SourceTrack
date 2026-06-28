@@ -64,7 +64,7 @@ const FEATURE_MATRIX = {
 export const PLAN_STRUCTURAL_LIMITS = {
   free:     { sites: 1,        webhooks: 0, team_members: 1,  retention_days: 30,   conversion_events: 30 },
   trial:    { sites: 1,        webhooks: 5, team_members: 1,  retention_days: 365,  conversion_events: 99 },
-  starter:  { sites: 1,        webhooks: 5, team_members: 1,  retention_days: 90,   conversion_events: 150 },
+  starter:  { sites: 1,        webhooks: 0, team_members: 1,  retention_days: 90,   conversion_events: 150 },
   growth:   { sites: 3,        webhooks: 20,team_members: 3,  retention_days: 365,  conversion_events: 750 },
   scale:    { sites: Infinity, webhooks: 99,team_members: 99, retention_days: 1825, conversion_events: 2500 },
   inactive: { sites: 0,        webhooks: 0, team_members: 0,  retention_days: 0,    conversion_events: 0 },
