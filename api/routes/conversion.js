@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid'
 import NodeCache from 'node-cache'
 import { ph } from '../lib/posthog.js'
 import { dispatchWebhook } from '../lib/webhook.js'
-import { sendMetaCAPI, sendGoogleConversion, sendMicrosoftConversion, sendLinkedInConversion, sendTikTokConversion } from '../lib/conversion-sync.js'
+import { sendMetaCAPI, sendGoogleConversion, sendMicrosoftConversion, sendLinkedInConversion } from '../lib/conversion-sync.js'
 import { getSupabase } from '../lib/supabase.js'
 import { normalizeUtm, getFirstTouchFields, redactPiiFromObject, isPathExcluded, extractCustomParams, sanitizeClientTimestamp, sanitizeValueTrack, sanitizeVerificationToken, normalizeClickIds } from '../lib/utils.js'
 import { hasFeature } from '../lib/plan-features.js'
@@ -391,7 +391,7 @@ export async function conversion(req, res) {
     if (hasFeature(req.site?.plan, 'capi_server_side')) try {
       getCapiSupabase()
         .from('sites')
-        .select('meta_pixel_id,meta_capi_token,google_ads_customer_id,google_ads_conversion_action_id,google_ads_developer_token,microsoft_tag_id,microsoft_capi_token,linkedin_partner_id,linkedin_capi_token,tiktok_pixel_id,tiktok_access_token')
+        .select('meta_pixel_id,meta_capi_token,google_ads_customer_id,google_ads_conversion_action_id,google_ads_developer_token,microsoft_tag_id,microsoft_capi_token,linkedin_partner_id,linkedin_capi_token')
         .eq('id', req.site.id)
         .single()
         .then(({ data: capiSite }) => {
@@ -400,8 +400,7 @@ export async function conversion(req, res) {
             sendMetaCAPI(capiSite, { ...props, ip_address: clientIp }),
             sendGoogleConversion(capiSite, props),
             sendMicrosoftConversion(capiSite, props),
-            sendLinkedInConversion(capiSite, props),
-            sendTikTokConversion(capiSite, { ...props, ip_address: clientIp })
+            sendLinkedInConversion(capiSite, props)
           ]).then(results => results.forEach((r, i) => {
             if (r.status === 'rejected') console.error(`[CAPI ${i}]`, r.reason?.message)
           }))
