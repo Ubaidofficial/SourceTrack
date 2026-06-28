@@ -1,7 +1,7 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, FileBarChart, Settings, Users, BarChart3, Plug, LogOut, Menu, X, Shield,
-  Sun, Moon, ChevronDown, Megaphone, ListChecks
+  Sun, Moon, ChevronDown, Megaphone, ListChecks, Bell
 } from 'lucide-react'
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
@@ -11,6 +11,7 @@ import { useTheme } from '../contexts/ThemeContext'
 import { useSite } from '../contexts/SiteContext'
 import { LogoFull, LogoFullDark } from './Logo'
 import SupportModeBanner from './SupportModeBanner'
+import AlertDrawer from './AlertDrawer'
 
 // "Install" removed: Integrations already surfaces the snippet + "Full Setup Guide" link,
 // making a separate top-level Install entry redundant.
@@ -55,7 +56,22 @@ export default function Layout({ children }) {
   const navigate = useNavigate()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [alertsOpen, setAlertsOpen] = useState(false)
   const isPreview = activeSite?.support_preview || false
+
+  // Anomaly-watcher alerts for the bell badge — undismissed only, 60s stale.
+  const { data: alertsData } = useQuery({
+    queryKey: ['site-alerts', activeSite?.site_key],
+    queryFn: async () => {
+      if (!activeSite?.site_key) return null
+      return fetchApi(`/site-alerts?site_key=${encodeURIComponent(activeSite.site_key)}`)
+    },
+    enabled: !!activeSite?.site_key,
+    staleTime: 60000,
+    retry: false,
+  })
+  const alerts = alertsData?.data?.alerts || []
+  const alertCount = alerts.length
 
   // Query setup diagnostics for active site safely, silently, and without polling
   const { data: doctorData } = useQuery({
@@ -286,6 +302,19 @@ export default function Layout({ children }) {
             )}
           </div>
           <div className="flex items-center gap-3">
+            {/* Alerts bell */}
+            <button
+              onClick={() => setAlertsOpen(true)}
+              className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-hover transition-colors"
+              aria-label={alertCount > 0 ? `Alerts (${alertCount} unread)` : 'Alerts'}
+            >
+              <Bell className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              {alertCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-bold leading-none">
+                  {alertCount > 9 ? '9+' : alertCount}
+                </span>
+              )}
+            </button>
             {/* Theme Toggle */}
             <button
               onClick={toggleTheme}
@@ -300,6 +329,13 @@ export default function Layout({ children }) {
             </button>
           </div>
         </header>
+
+        <AlertDrawer
+          isOpen={alertsOpen}
+          onClose={() => setAlertsOpen(false)}
+          siteKey={activeSite?.site_key}
+          alerts={alerts}
+        />
 
         {isPreview && (
           <SupportModeBanner
