@@ -3,6 +3,7 @@ dotenv.config()
 
 import { getSupabase } from '../lib/supabase.js'
 import { clampDays, classifyJourney, applyBackfill } from '../lib/backfill.js'
+import { purgeSiteRetention } from '../lib/retention-purge.js'
 
 const isReprocess = process.argv.includes('--reprocess-all') || process.argv.some(arg => arg.startsWith('--reprocess-site='));
 const confirmDestructive = process.argv.includes('--confirm-destructive');
@@ -785,8 +786,10 @@ function calculateAttribution(touchpoints, conversionValue) {
 }
 
 // ─── GDPR Retention Auto-Purge ────────────────────────────────────────────────
-// Deletes attributed_conversions older than data_retention_days for each site
-// that has a retention policy set. Runs after attribution processing each night.
+// Deletes retention-governed rows older than data_retention_days for each site
+// that has a retention policy set: attributed_conversions plus the GSC cache/log
+// tables (gsc_performance_daily, gsc_sync_runs). Runs after attribution
+// processing each night. Per-site scoped — see purgeSiteRetention.
 async function runRetentionPurge(sites) {
   if (!sites?.length) return
 
@@ -806,20 +809,15 @@ async function runRetentionPurge(sites) {
       cutoff.setDate(cutoff.getDate() - site.data_retention_days)
       const cutoffStr = cutoff.toISOString().slice(0, 10)
 
-      const { count, error: delErr } = await supabase
-        .from('attributed_conversions')
-        .delete({ count: 'exact' })
-        .eq('site_id', site.id)
-        .lt('conversion_date', cutoffStr)
+      const counts = await purgeSiteRetention(supabase, site, cutoffStr)
+      const siteTotal = counts.attributed_conversions + counts.gsc_performance_daily + counts.gsc_sync_runs
 
-      if (delErr) {
-        logWarn(`Retention purge for site ${site.site_key} failed: ${delErr.message}`)
-      } else if (count > 0) {
-        log(`Retention purge: deleted ${count} rows from site ${site.site_key} (>${site.data_retention_days}d old)`)
-        totalPurged += count
+      if (siteTotal > 0) {
+        log(`Retention purge: site ${site.site_key} — conversions:${counts.attributed_conversions} gsc_perf:${counts.gsc_performance_daily} gsc_runs:${counts.gsc_sync_runs} (>${site.data_retention_days}d old)`)
+        totalPurged += siteTotal
       }
     } catch (siteErr) {
-      logWarn(`Retention purge site ${site.site_key} threw: ${siteErr.message}`)
+      logWarn(`Retention purge site ${site.site_key} failed: ${siteErr.message}`)
     }
   }
 
