@@ -14,6 +14,7 @@ const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../.
 // silently kills the whole fan-out (the bug this guards). tiktok_* and
 // google_ads_access_token do NOT exist on prod and must never reappear here.
 const REAL_CAPI_COLUMNS = new Set([
+  'id',
   'meta_pixel_id', 'meta_capi_token',
   'google_ads_customer_id', 'google_ads_conversion_action_id', 'google_ads_developer_token',
   'microsoft_tag_id', 'microsoft_capi_token',

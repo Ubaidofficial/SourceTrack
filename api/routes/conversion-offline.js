@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
 import { dispatchWebhook } from '../lib/webhook.js'
-import { sendMetaCAPI, sendGoogleConversion, sendMicrosoftConversion, sendLinkedInConversion } from '../lib/conversion-sync.js'
+import { dispatchCapi } from '../lib/conversion-sync.js'
 import { getSupabase } from '../lib/supabase.js'
 import { getFirstTouchFields, redactPiiFromObject, normalizeClickIds } from '../lib/utils.js'
 import { hasFeature } from '../lib/plan-features.js'
@@ -243,19 +243,14 @@ export async function conversionOffline(req, res) {
     if (hasFeature(req.site?.plan, 'capi_server_side')) try {
       getCapiSupabase()
         .from('sites')
-        .select('meta_pixel_id,meta_capi_token,google_ads_customer_id,google_ads_conversion_action_id,google_ads_developer_token,microsoft_tag_id,microsoft_capi_token,linkedin_partner_id,linkedin_capi_token')
+        .select('id,meta_pixel_id,meta_capi_token,google_ads_customer_id,google_ads_conversion_action_id,google_ads_developer_token,microsoft_tag_id,microsoft_capi_token,linkedin_partner_id,linkedin_capi_token')
         .eq('id', req.site.id)
         .single()
         .then(({ data: capiSite }) => {
           if (!capiSite) return
-          Promise.allSettled([
-            sendMetaCAPI(capiSite, { ...props }),
-            sendGoogleConversion(capiSite, props),
-            sendMicrosoftConversion(capiSite, props),
-            sendLinkedInConversion(capiSite, props)
-          ]).then(results => results.forEach((r, i) => {
-            if (r.status === 'rejected') console.error(`[offline CAPI ${i}]`, r.reason?.message)
-          }))
+          // Fan-out + per-platform delivery log (writes capi_deliveries rows).
+          dispatchCapi(getCapiSupabase(), capiSite, { ...props })
+            .catch(err => console.error('[offline CAPI dispatch]', err?.message))
         })
     } catch (_capiErr) { /* never block offline conversion response */ }
 
