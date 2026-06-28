@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert'
+import crypto from 'node:crypto'
 
 import {
   validateWebhookUrl,
@@ -8,6 +9,7 @@ import {
   assertWebhookDestinationSafe,
   safeWebhookPost
 } from '../lib/ssrf-guard.js'
+import { signWebhookPayload } from '../lib/webhook.js'
 
 // Run fn with WEBHOOK_ALLOW_PRIVATE set to `value` (undefined deletes it), then
 // restore. Synchronous so env is set for the duration of the inline asserts —
@@ -196,4 +198,27 @@ test('safeWebhookPost — blocked destination throws before connecting (TOCTOU p
     // plain http (no opt-in) is rejected too.
     await assert.rejects(() => safeWebhookPost('http://example.com/x', { body: '{}' }))
   })
+})
+
+test('signWebhookPayload — emits Stripe-style t=...,v1=... header', () => {
+  const secret = 'whsec_test_secret'
+  const body = JSON.stringify({ hello: 'world' })
+  const { t, v1, header } = signWebhookPayload(secret, body, 1700000000)
+  assert.strictEqual(t, 1700000000)
+  assert.strictEqual(header, `t=1700000000,v1=${v1}`)
+  assert.match(header, /^t=\d+,v1=[0-9a-f]{64}$/)
+})
+
+test('signWebhookPayload — v1 is HMAC-SHA256 over `t.body` and is consumer-verifiable', () => {
+  const secret = 'whsec_test_secret'
+  const body = JSON.stringify({ amount: 100, currency: 'USD' })
+  const { v1, header } = signWebhookPayload(secret, body)
+  // Reproduce what a receiver does: parse t + v1 from the header, recompute.
+  const parts = Object.fromEntries(header.split(',').map(kv => kv.split('=')))
+  const expected = crypto.createHmac('sha256', secret).update(`${parts.t}.${body}`).digest('hex')
+  assert.strictEqual(parts.v1, v1)
+  assert.strictEqual(parts.v1, expected)
+  // The old bare-body scheme must NOT match — confirms replay binding is in effect.
+  const oldScheme = crypto.createHmac('sha256', secret).update(body).digest('hex')
+  assert.notStrictEqual(parts.v1, oldScheme)
 })

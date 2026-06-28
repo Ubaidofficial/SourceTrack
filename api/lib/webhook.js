@@ -9,6 +9,16 @@ import { safeWebhookPost } from './ssrf-guard.js'
 const WEBHOOK_URL = process.env.WEBHOOK_URL || null
 const WEBHOOK_TIMEOUT_MS = 5000
 
+// Sign an outbound webhook body with a Stripe-style timestamped signature.
+// signedPayload = `${t}.${bodyStr}`; v1 = HMAC-SHA256(secret, signedPayload) hex.
+// The header value `t=${t},v1=${v1}` lets a consumer verify integrity AND bound
+// replay by comparing `t` against their own clock. The secret stays per-destination.
+// Shared by the real and test delivery paths so they sign identically.
+export function signWebhookPayload(secret, bodyStr, t = Math.floor(Date.now() / 1000)) {
+  const v1 = crypto.createHmac('sha256', secret).update(`${t}.${bodyStr}`).digest('hex')
+  return { t, v1, header: `t=${t},v1=${v1}` }
+}
+
 // Helper to filter out sensitive PII keys from custom properties
 function sanitizeCustomProperties(props) {
   if (!props || typeof props !== 'object') return {}
@@ -80,10 +90,7 @@ export async function sendTestWebhook(destination, siteKey) {
   }
 
   const bodyStr = JSON.stringify(mockPayload)
-  const signature = crypto
-    .createHmac('sha256', destination.secret)
-    .update(bodyStr)
-    .digest('hex')
+  const signature = signWebhookPayload(destination.secret, bodyStr).header
 
   let statusCode = null
   let success = false
@@ -226,10 +233,7 @@ export function dispatchWebhook(eventType, properties) {
         }
 
         const bodyStr = JSON.stringify(payload)
-        const signature = crypto
-          .createHmac('sha256', dest.secret)
-          .update(bodyStr)
-          .digest('hex')
+        const signature = signWebhookPayload(dest.secret, bodyStr).header
 
         let statusCode = null
         let success = false
