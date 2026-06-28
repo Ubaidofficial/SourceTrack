@@ -316,6 +316,10 @@
       AID ? send('/api/track', data) : _q.push({ ep: '/api/track', data: data })
     },
 
+    // sourcetrack.getToken() — returns the current daily-rotating visitor id for
+    // server-side attribution stitching. May be null until the async id resolves.
+    getToken: function () { return AID },
+
     // ── Consent API ─────────────────────────────────────────────────────────
     // Parity with the cookie build. In-memory only (cookieless has no storage):
     // the decision is per-page-load and is NOT persisted across loads.
