@@ -9,6 +9,7 @@ import dotenv from 'dotenv'
 dotenv.config()
 import { getSupabase } from '../lib/supabase.js'
 import { normalizePlan, getPvLimit } from '../lib/plan-features.js'
+import { writeJobRun } from '../lib/job-runs.js'
 
 const THRESHOLDS = [50, 80, 100]
 const RESEND_FROM = 'SourceTrack <usage@sourcetrack.ai>'
@@ -176,10 +177,12 @@ async function run() {
     }
   }
 
-  await supabase.from('job_runs').insert({
+  // job_runs row — summary in error_message (no `details` column exists).
+  // writeJobRun rejects unknown columns and logs a failed insert loudly.
+  await writeJobRun(supabase, {
     job_name: 'usage-threshold-emails',
     status: errors > 0 ? 'warning' : 'success',
-    details: `Sent ${sent}, skipped ${skipped}, errors ${errors}`,
+    error_message: `Sent ${sent}, skipped ${skipped}, errors ${errors}`,
     ran_at: new Date().toISOString()
   })
 

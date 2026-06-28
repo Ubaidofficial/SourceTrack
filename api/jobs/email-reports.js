@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import WebSocket from 'ws'
 import { getSupabase } from '../lib/supabase.js'
+import { writeJobRun } from '../lib/job-runs.js'
 const isMonthly = process.argv.includes('--monthly')
 const periodLabel = isMonthly ? 'Monthly' : 'Weekly'
 const days = isMonthly ? 30 : 7
@@ -243,10 +244,13 @@ async function run() {
     }
   }
 
-  await getSupabase().from('job_runs').insert({
+  // job_runs row — summary goes in error_message (the only free-text column;
+  // there is no `details` column). writeJobRun rejects unknown columns and logs
+  // a failed insert loudly instead of swallowing it.
+  await writeJobRun(getSupabase(), {
     job_name: jobName,
     status: errors > 0 ? 'warning' : 'success',
-    details: `Sent ${sent}, skipped ${skipped}, errors ${errors}`,
+    error_message: `Sent ${sent}, skipped ${skipped}, errors ${errors}`,
     ran_at: now
   })
 
