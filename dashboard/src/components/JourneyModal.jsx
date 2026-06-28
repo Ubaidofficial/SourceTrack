@@ -153,6 +153,9 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
 
   const allEvents = data?.events || []
   const sessions = data?.sessions || []
+  // Dark-traffic stitching: prior AI session behind a Direct conversion. Set
+  // server-side only when stitched deterministically (never inferred).
+  const aiInfluence = data?.ai_influence || null
 
   const summary = computeSummary(allEvents, data, leadSummary)
   // C4b — real revenue only (truth-gated: value > 0). Hidden entirely if none.
@@ -579,6 +582,20 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                                             {e.order_id && <p>Order ID: {e.order_id}</p>}
                                             {e.destination_domain && <p>Destination Domain: {e.destination_domain}</p>}
                                             {e.destination_url && <p className="break-all">Destination URL: {normalizeUrl(e.destination_url)}</p>}
+                                          </div>
+                                        )}
+
+                                        {/* Dark-traffic stitching badge — only on the
+                                            conversion row when a prior AI session was stitched. */}
+                                        {isConversion && aiInfluence && (
+                                          <div className="px-2 pb-2 ml-7">
+                                            <span
+                                              className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-400 font-medium"
+                                              title="This conversion arrived as Direct traffic but a prior AI session was detected. Attribution is based on a clicked link, not inferred awareness."
+                                            >
+                                              <Bot className="w-2.5 h-2.5" />
+                                              Via {aiInfluence.source}{aiInfluence.session_at ? ` (${relativeTime(aiInfluence.session_at)})` : ''}
+                                            </span>
                                           </div>
                                         )}
                                       </div>

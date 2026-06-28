@@ -324,6 +324,7 @@ export default function Leads() {
                   </th>
                   {renderHeader('visitor', 'Visitor')}
                   {renderHeader('source', 'Source')}
+                  <th className="text-left py-3 px-3 text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">AI Source</th>
                   {renderHeader('event_type', 'Event Type')}
                   {renderHeader('conversions', 'Conversions', true)}
                   {hasRevenue && renderHeader('revenue', 'Revenue', true)}
@@ -377,6 +378,18 @@ export default function Leads() {
                             <span className="text-[10px] text-st-gray dark:text-gray-400 truncate max-w-[140px]">{lead.campaign}</span>
                           )}
                         </div>
+                      </td>
+                      <td className="py-3 px-3">
+                        {lead.ai_influenced_source ? (
+                          <span
+                            className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-700 dark:bg-purple-950/30 dark:text-purple-400 text-[10px] font-medium truncate max-w-[140px]"
+                            title="Conversion arrived as Direct traffic; a prior AI session was detected."
+                          >
+                            {lead.ai_influenced_source}
+                          </span>
+                        ) : (
+                          <span className="text-st-gray dark:text-gray-500">—</span>
+                        )}
                       </td>
                       <td className="py-3 px-3">
                         {lead.last_conversion_type ? (() => {

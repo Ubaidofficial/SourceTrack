@@ -89,7 +89,7 @@ router.get('/', validateSiteKey, async (req, res) => {
     if (distinctIds.length > 0) {
       const { data: convs, error: convErr } = await getSupabase()
         .from('attributed_conversions')
-        .select('distinct_id, first_touch_source, first_touch_medium, first_touch_campaign, last_touch_source, last_touch_medium, last_touch_campaign, channel, first_touch_channel, last_touch_channel')
+        .select('distinct_id, first_touch_source, first_touch_medium, first_touch_campaign, last_touch_source, last_touch_medium, last_touch_campaign, channel, first_touch_channel, last_touch_channel, ai_influenced_source')
         .eq('site_id', siteId)
         .in('distinct_id', distinctIds)
       if (convErr) {
@@ -120,7 +120,8 @@ router.get('/', validateSiteKey, async (req, res) => {
           source: norm.name,
           medium: rawMed || 'none',
           campaign: rawCamp || null,
-          ai_source: isAI ? norm.name : null
+          ai_source: isAI ? norm.name : null,
+          ai_influenced_source: c.ai_influenced_source || null
         }
       } else {
         const norm = normalizeSource(l.source || 'direct')
@@ -128,7 +129,8 @@ router.get('/', validateSiteKey, async (req, res) => {
         return {
           ...l,
           source: norm.name,
-          ai_source: isAI ? (l.ai_source ? normalizeSource(l.ai_source).name : norm.name) : null
+          ai_source: isAI ? (l.ai_source ? normalizeSource(l.ai_source).name : norm.name) : null,
+          ai_influenced_source: null
         }
       }
     })
