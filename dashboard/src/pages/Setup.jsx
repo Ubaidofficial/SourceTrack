@@ -7,7 +7,8 @@ import { fetchApi } from '../lib/api'
 import {
   Copy, Check, Code, RefreshCw, ChevronRight, Send,
   ExternalLink, Key, CheckCircle, ArrowRight,
-  Activity, BookOpen, ShieldCheck
+  Activity, BookOpen, ShieldCheck, SlidersHorizontal,
+  Globe, Filter, MapPin, Lock, Rocket, DollarSign, Link2
 } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import SetupDoctorCard from '../components/SetupDoctorCard'
@@ -24,13 +25,38 @@ export default function Setup() {
   const [showPrivacyNotes, setShowPrivacyNotes] = useState(false)
   const [searchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState(
-    ['install', 'health', 'conversions', 'learn'].includes(searchParams.get('tab'))
+    ['install', 'health', 'conversions', 'additional', 'learn'].includes(searchParams.get('tab'))
       ? searchParams.get('tab')
       : 'install'
   )
 
   const [testConvLoading, setTestConvLoading] = useState(false)
   const [testConvResult, setTestConvResult] = useState(null)
+
+  // Per-platform URL parameter helper (install tab) — pure frontend, static strings.
+  const [paramPlatform, setParamPlatform] = useState('google')
+  const [paramCopied, setParamCopied] = useState(false)
+  const URL_PARAM_TEMPLATES = {
+    google: '?utm_source=google&utm_medium=cpc&utm_campaign={{campaign}}',
+    meta:   '?utm_source=facebook&utm_medium=paid_social&utm_campaign={{campaign}}',
+    tiktok: '?utm_source=tiktok&utm_medium=paid_social&utm_campaign={{campaign}}',
+    email:  '?utm_source=email&utm_medium=email&utm_campaign={{campaign}}'
+  }
+  const handleCopyParam = () => {
+    try {
+      navigator.clipboard.writeText(URL_PARAM_TEMPLATES[paramPlatform])
+      setParamCopied(true)
+      setTimeout(() => setParamCopied(false), 2000)
+    } catch (_) {}
+  }
+
+  // Tracking Health questionnaire — React state only (no DB, no API). Score
+  // calculation is a follow-up task; answers are passed to SetupDoctorCard.
+  const [hasForms, setHasForms] = useState(null)
+  const [businessType, setBusinessType] = useState(null)
+  const [hasRevenue, setHasRevenue] = useState(null)
+  const [questionnaireComplete, setQuestionnaireComplete] = useState(false)
+  const questionnaireAnswered = hasForms !== null && businessType !== null && hasRevenue !== null
 
   // Load site details
   useEffect(() => {
@@ -164,8 +190,15 @@ export default function Setup() {
       icon: ShieldCheck
     },
     {
+      id: 'additional',
+      label: '4. Additional Setup',
+      desc: 'Optional accuracy & privacy',
+      done: false,
+      icon: SlidersHorizontal
+    },
+    {
       id: 'learn',
-      label: '4. Learn',
+      label: '5. Learn',
       desc: 'Guides and attribution basics',
       done: false,
       icon: BookOpen
@@ -284,6 +317,49 @@ export default function Setup() {
                 </p>
               </div>
 
+              {/* Per-platform URL parameter helper — static strings, pure frontend */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="flex items-center justify-center w-5 h-5 rounded-full bg-st-lime text-st-black text-xs font-extrabold">C</span>
+                  <h4 className="font-semibold text-sm text-st-black dark:text-white">Add URL parameters to your ad links</h4>
+                </div>
+                <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed pl-7">
+                  Append these parameters to the destination URLs in your ads so SourceTrack can attribute each click. Replace <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-xs font-mono">{'{{campaign}}'}</code> with your campaign name.
+                </p>
+                <div className="pl-7 space-y-2">
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { key: 'google', label: 'Google' },
+                      { key: 'meta', label: 'Meta' },
+                      { key: 'tiktok', label: 'TikTok' },
+                      { key: 'email', label: 'Email' }
+                    ].map(p => (
+                      <button
+                        key={p.key}
+                        onClick={() => setParamPlatform(p.key)}
+                        className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                          paramPlatform === p.key
+                            ? 'bg-st-black text-white dark:bg-white dark:text-st-black'
+                            : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="bg-st-black rounded-lg p-3 relative border border-gray-800">
+                    <pre className="text-green-400 text-xs font-mono overflow-x-auto whitespace-pre-wrap pr-12 leading-relaxed select-all">{URL_PARAM_TEMPLATES[paramPlatform]}</pre>
+                    <button
+                      onClick={handleCopyParam}
+                      className="absolute top-2.5 right-2.5 p-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded transition-colors"
+                      title="Copy to clipboard"
+                    >
+                      {paramCopied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <div className="pt-4 border-t border-gray-200 dark:border-dark-border">
                 <button
                   onClick={() => setActiveTab('health')}
@@ -337,11 +413,97 @@ export default function Setup() {
 
           {activeTab === 'health' && (
             <div className="space-y-6">
+              {/* Health questionnaire — React state only; score is a follow-up task */}
+              <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-5 shadow-sm space-y-4">
+                <div className="flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  <h3 className="text-sm font-semibold text-st-black dark:text-white">Tell us about your setup</h3>
+                </div>
+
+                {/* Q1 */}
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-st-black dark:text-white">Do you have forms on your website?</p>
+                  <div className="flex gap-1.5">
+                    {[['Yes', true], ['No', false]].map(([label, val]) => (
+                      <button
+                        key={label}
+                        onClick={() => setHasForms(val)}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                          hasForms === val
+                            ? 'bg-st-black text-white dark:bg-white dark:text-st-black'
+                            : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Q2 */}
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-st-black dark:text-white">What best describes your business?</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {['SaaS', 'eCommerce', 'Lead Gen', 'Other'].map(label => (
+                      <button
+                        key={label}
+                        onClick={() => setBusinessType(label)}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                          businessType === label
+                            ? 'bg-st-black text-white dark:bg-white dark:text-st-black'
+                            : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Q3 */}
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-st-black dark:text-white">Have you connected a revenue source?</p>
+                  <div className="flex gap-1.5">
+                    {[['Yes', true], ['No', false]].map(([label, val]) => (
+                      <button
+                        key={label}
+                        onClick={() => setHasRevenue(val)}
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
+                          hasRevenue === val
+                            ? 'bg-st-black text-white dark:bg-white dark:text-st-black'
+                            : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-1">
+                  <button
+                    onClick={() => setQuestionnaireComplete(true)}
+                    disabled={!questionnaireAnswered}
+                    className="px-3 py-1.5 bg-st-black dark:bg-white text-white dark:text-st-black rounded-lg text-xs font-semibold disabled:opacity-40 transition-opacity"
+                  >
+                    Calculate Health Score
+                  </button>
+                  {questionnaireComplete && (
+                    <div className="mt-3 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Health score: calculating…</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {site?.site_key ? (
                 <SetupDoctorCard
                   siteKey={site.site_key}
                   mode="snippet"
                   onVerificationSuccess={() => refetchDoctor()}
+                  questionnaire={{ hasForms, businessType, hasRevenue }}
+                  questionnaireComplete={questionnaireComplete}
                 />
               ) : (
                 <div className="h-40 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl animate-pulse" />
@@ -468,10 +630,65 @@ export default function Setup() {
             </div>
           )}
 
+          {activeTab === 'additional' && (
+            <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-6 shadow-sm space-y-6">
+              <div>
+                <h3 className="text-lg font-bold text-st-black dark:text-white">4. Additional Setup</h3>
+                <p className="text-sm text-st-gray dark:text-gray-400 mt-1">
+                  Optional settings that improve accuracy and privacy. Configure these in Settings.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  {
+                    icon: Globe,
+                    title: 'First-party domain tracking',
+                    desc: 'Improve cross-session accuracy in Safari and privacy browsers. Recommended for SaaS.',
+                    cta: 'Read the docs',
+                    to: '/docs/install'
+                  },
+                  {
+                    icon: Filter,
+                    title: 'Bot filtering',
+                    desc: 'Exclude known bots and internal traffic from your analytics.',
+                    cta: 'Settings › Advanced',
+                    to: '/settings'
+                  },
+                  {
+                    icon: MapPin,
+                    title: 'IP exclusion',
+                    desc: 'Exclude your own IP address from tracking.',
+                    cta: 'Settings › Advanced',
+                    to: '/settings'
+                  },
+                  {
+                    icon: Lock,
+                    title: 'Webhook secret',
+                    desc: 'Add HMAC verification to your conversion webhook.',
+                    cta: 'Settings › Advanced › Webhook secret',
+                    to: '/settings'
+                  }
+                ].map(card => (
+                  <div key={card.title} className="border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <card.icon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                      <h4 className="text-xs font-bold text-st-black dark:text-white">{card.title}</h4>
+                    </div>
+                    <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">{card.desc}</p>
+                    <Link to={card.to} className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline inline-flex items-center gap-1">
+                      {card.cta} <ExternalLink className="w-3 h-3" />
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {activeTab === 'learn' && (
             <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-6 shadow-sm space-y-6">
               <div>
-                <h3 className="text-lg font-bold text-st-black dark:text-white">4. Resources & Documentation</h3>
+                <h3 className="text-lg font-bold text-st-black dark:text-white">5. Resources & Documentation</h3>
                 <p className="text-sm text-st-gray dark:text-gray-400 mt-1">
                   Learn how tracking works, configure custom URLs, and build reports.
                 </p>
@@ -519,6 +736,62 @@ export default function Setup() {
                   </p>
                   <Link to="/docs/troubleshooting" className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline inline-flex items-center gap-1">
                     Troubleshooting Help <ExternalLink className="w-3 h-3" />
+                  </Link>
+                </div>
+
+                {/* Card 5 — Install the script */}
+                <div className="border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Code className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                    <h4 className="text-xs font-bold text-st-black dark:text-white">Install SourceTrack script</h4>
+                  </div>
+                  <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
+                    Step-by-step guide to adding the tracking snippet to your site and verifying it loads.
+                  </p>
+                  <Link to="/docs/install" className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline inline-flex items-center gap-1">
+                    Install Guide <ExternalLink className="w-3 h-3" />
+                  </Link>
+                </div>
+
+                {/* Card 6 — Track first conversion */}
+                <div className="border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Rocket className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                    <h4 className="text-xs font-bold text-st-black dark:text-white">Track your first conversion</h4>
+                  </div>
+                  <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
+                    Fire a conversion event so SourceTrack can tie leads and sales back to their source.
+                  </p>
+                  <Link to="/developers/conversions" className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline inline-flex items-center gap-1">
+                    Conversions Guide <ExternalLink className="w-3 h-3" />
+                  </Link>
+                </div>
+
+                {/* Card 7 — Attribute revenue */}
+                <div className="border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                    <h4 className="text-xs font-bold text-st-black dark:text-white">Attribute revenue</h4>
+                  </div>
+                  <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
+                    Send conversion values (including offline) to see revenue by source, not just clicks.
+                  </p>
+                  <Link to="/developers/offline-conversions" className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline inline-flex items-center gap-1">
+                    Revenue Guide <ExternalLink className="w-3 h-3" />
+                  </Link>
+                </div>
+
+                {/* Card 8 — UTM link builder */}
+                <div className="border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Link2 className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                    <h4 className="text-xs font-bold text-st-black dark:text-white">UTM link builder</h4>
+                  </div>
+                  <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
+                    Build clean, consistent UTM-tagged campaign URLs so every link reports correctly.
+                  </p>
+                  <Link to="/tools/utm-builder" className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline inline-flex items-center gap-1">
+                    Open UTM Builder <ExternalLink className="w-3 h-3" />
                   </Link>
                 </div>
               </div>
