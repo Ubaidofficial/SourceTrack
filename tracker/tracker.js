@@ -11,6 +11,19 @@
   var K  = (sc && sc.getAttribute('data-site-key')) || ''
   var B  = (sc && sc.src) ? new URL(sc.src).origin : location.origin
   var EXCL = (sc && sc.getAttribute('data-exclude')) || ''
+  // Phase 1 auto-fill: opt-in. Default OFF — when absent/!=='true', no new behavior.
+  var AUTO_FIELDS = !!(sc && sc.getAttribute('data-auto-fields') === 'true')
+
+  // Single source of truth for the attribution fields safe to hand off into a
+  // customer's form / URL / POST body. NO raw referrer, NO IP — referrer is
+  // exposed only as referrer_host, the URL only as landing_page_path.
+  var HANDOFF_SAFE_KEYS = [
+    'anonymous_id', 'session_id',
+    'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+    'referrer_host', 'landing_page_path',
+    'first_touch_source', 'first_touch_medium', 'first_touch_campaign',
+    'last_touch_source', 'last_touch_medium', 'last_touch_campaign'
+  ]
 
   function isPathExcluded(path, patternsStr) {
     if (!patternsStr) return false
@@ -491,13 +504,7 @@
       var prefix = typeof opts.prefix === 'string' ? opts.prefix : 'st_'
       var ctx = window.sourcetrack.getContext()
       var out = {}
-      var safe = [
-        'anonymous_id', 'session_id',
-        'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
-        'referrer_host', 'landing_page_path',
-        'first_touch_source', 'first_touch_medium', 'first_touch_campaign',
-        'last_touch_source', 'last_touch_medium', 'last_touch_campaign'
-      ]
+      var safe = HANDOFF_SAFE_KEYS
       for (var i = 0; i < safe.length; i++) {
         var k = safe[i]
         if (ctx[k] !== null && ctx[k] !== undefined) {
@@ -526,6 +533,9 @@
       var selector     = typeof opts.selector === 'string' ? opts.selector : 'form'
       var fieldMap     = opts.fields && typeof opts.fields === 'object' ? opts.fields : {}
       var createMissing = !!opts.createMissing
+      // skipNonEmpty (used by Phase 1 auto-fill): never overwrite a field that
+      // already has a value or that we previously filled (data-st-injected).
+      var skipNonEmpty = !!opts.skipNonEmpty
       var ctx = window.sourcetrack.getContext()
 
       function resolve(key) {
@@ -552,12 +562,81 @@
               form.appendChild(input)
             }
             if (input) {
+              if (skipNonEmpty) {
+                if (input.value) continue                                  // never overwrite a non-empty field
+                if (input.getAttribute && input.getAttribute('data-st-injected')) continue  // idempotent
+              }
               input.value = String(val)
+              if (skipNonEmpty && input.setAttribute) {
+                try { input.setAttribute('data-st-injected', '1') } catch (_) {}
+              }
             }
           }
         }
       } catch (_) {}
     }
+  }
+
+  // ─── Phase 1 Auto-Fill (opt-in: data-auto-fields="true") ────────────────────
+  // Populates ONLY pre-existing hidden inputs whose name matches the safe handoff
+  // set (createMissing:false — never creates nodes, never overwrites non-empty).
+  // Runs at discovery time only; never in the submit path, never preventDefault.
+  // Privacy: DNT/GPC already hard-aborts this whole IIFE at the top; we re-check
+  // here for defence-in-depth and also honor the consent gate (_consentGiven).
+  function autoFillAllowed() {
+    if (navigator.doNotTrack === '1' || window.doNotTrack === '1' || navigator.globalPrivacyControl === true) return false
+    if (_consentGiven === false) return false
+    if (CONSENT_REQUIRED && _consentGiven !== true) return false
+    return true
+  }
+
+  function runAutoFill() {
+    try {
+      if (!AUTO_FIELDS || !autoFillAllowed()) return
+      var fields = {}
+      for (var i = 0; i < HANDOFF_SAFE_KEYS.length; i++) {
+        fields['st_' + HANDOFF_SAFE_KEYS[i]] = HANDOFF_SAFE_KEYS[i]
+      }
+      var cids = (window.sourcetrack.getContext().click_ids) || {}
+      for (var ck in cids) {
+        if (Object.prototype.hasOwnProperty.call(cids, ck)) fields['st_' + ck] = ck
+      }
+      window.sourcetrack.fillHiddenFields({ selector: 'form', fields: fields, createMissing: false, skipNonEmpty: true })
+    } catch (_) {}
+  }
+
+  function initAutoFill() {
+    try {
+      if (!AUTO_FIELDS) return
+      runAutoFill()  // fill forms present now
+
+      // Bounded observer for late/SPA forms — hard auto-disconnect after the cap.
+      if (typeof MutationObserver === 'undefined' || !document.body) return
+      var obs = new MutationObserver(function (muts) {
+        for (var m = 0; m < muts.length; m++) {
+          var added = muts[m].addedNodes || []
+          for (var n = 0; n < added.length; n++) {
+            var node = added[n]
+            if (node && (node.nodeName === 'FORM' || (node.querySelector && node.querySelector('form')))) {
+              runAutoFill()  // idempotent (skipNonEmpty + data-st-injected)
+              return
+            }
+          }
+        }
+      })
+      obs.observe(document.body, { childList: true, subtree: true })
+      setTimeout(function () { try { obs.disconnect() } catch (_) {} }, 10000)  // hard cap: 10s
+    } catch (_) {}
+  }
+
+  if (AUTO_FIELDS) {
+    try {
+      if (document.readyState === 'loading') {
+        addEventListener('DOMContentLoaded', initAutoFill)
+      } else {
+        initAutoFill()
+      }
+    } catch (_) {}
   }
 
   // ─── Outbound Link Tracking ────────────────────────────────────────────────
