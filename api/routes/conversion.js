@@ -5,6 +5,7 @@ import NodeCache from 'node-cache'
 import { ph } from '../lib/posthog.js'
 import { dispatchWebhook } from '../lib/webhook.js'
 import { dispatchCapi } from '../lib/conversion-sync.js'
+import { resolveCapiEventId } from '../lib/capi-event-id.js'
 import { getSupabase } from '../lib/supabase.js'
 import { normalizeUtm, getFirstTouchFields, redactPiiFromObject, isPathExcluded, extractCustomParams, sanitizeClientTimestamp, sanitizeValueTrack, sanitizeVerificationToken, normalizeClickIds } from '../lib/utils.js'
 import { hasFeature } from '../lib/plan-features.js'
@@ -233,13 +234,16 @@ export async function conversion(req, res) {
     }
 
     const orderId = req.body.order_id || req.body.orderId || null
-    const externalEventId = orderId
-      ? `${req.site.id}:${orderId}:${props.conversion_type || 'conversion'}`
-      : null
+    // Dedup id: client-supplied event_id > deterministic order-based id > null.
+    const externalEventId = resolveCapiEventId(req.body, req.site.id, props.conversion_type)
     props.external_event_id = externalEventId
     if (orderId) {
       props.order_id = orderId
     }
+    // Meta match-quality cookies (read-only — the merchant's own _fbp/_fbc set by
+    // their Meta Pixel) forwarded only to Meta CAPI. Structured ids, not PII.
+    if (typeof req.body.fbp === 'string' && /^[\w.\-]{1,128}$/.test(req.body.fbp)) props.fbp = req.body.fbp
+    if (typeof req.body.fbc === 'string' && /^[\w.\-]{1,256}$/.test(req.body.fbc)) props.fbc = req.body.fbc
     // Short-window process-local cross-deduplication check
     const incomingType = props.conversion_type || 'form'
     const incomingValue = Number(props.conversion_value) || 0

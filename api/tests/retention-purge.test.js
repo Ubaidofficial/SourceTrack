@@ -53,6 +53,11 @@ function seed() {
       { site_key: 'keyA', sync_start: '2026-05-20T00:00:00Z' }, // A, old → purge
       { site_key: 'keyA', sync_start: '2026-06-20T00:00:00Z' }, // A, new → keep
       { site_key: 'keyB', sync_start: '2026-05-20T00:00:00Z' }  // B, old → keep
+    ],
+    capi_deliveries: [
+      { site_id: 'idA', created_at: '2026-05-10T00:00:00Z' },   // A, old → purge
+      { site_id: 'idA', created_at: '2026-06-20T00:00:00Z' },   // A, new → keep
+      { site_id: 'idB', created_at: '2026-05-10T00:00:00Z' }    // B, old → keep (other tenant)
     ]
   }
 }
@@ -65,7 +70,8 @@ test('purgeSiteRetention — purges conversions AND GSC rows older than cutoff',
   assert.deepStrictEqual(counts, {
     attributed_conversions: 1,
     gsc_performance_daily: 1,
-    gsc_sync_runs: 1
+    gsc_sync_runs: 1,
+    capi_deliveries: 1
   })
 })
 
@@ -78,10 +84,13 @@ test('purgeSiteRetention — keeps in-window rows and never touches other tenant
   assert.ok(tables.gsc_performance_daily.some(r => r.site_key === 'keyA' && r.date === '2026-06-10'))
   assert.ok(tables.gsc_sync_runs.some(r => r.site_key === 'keyA' && r.sync_start === '2026-06-20T00:00:00Z'))
 
+  assert.ok(tables.capi_deliveries.some(r => r.site_id === 'idA' && r.created_at === '2026-06-20T00:00:00Z'))
+
   // Tenant B is entirely untouched (no cross-tenant delete)
   assert.strictEqual(tables.attributed_conversions.filter(r => r.site_id === 'idB').length, 1)
   assert.strictEqual(tables.gsc_performance_daily.filter(r => r.site_key === 'keyB').length, 1)
   assert.strictEqual(tables.gsc_sync_runs.filter(r => r.site_key === 'keyB').length, 1)
+  assert.strictEqual(tables.capi_deliveries.filter(r => r.site_id === 'idB').length, 1)
 })
 
 test('purgeSiteRetention — throws (named table) on a delete error', async () => {

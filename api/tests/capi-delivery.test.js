@@ -48,6 +48,29 @@ test('decrypt success: a properly-encrypted token is used (HTTP call made)', asy
   assert.strictEqual(calls, 1)
 })
 
+// ── Click-ID / match-quality forwarding (Meta fbp/fbc) ──────────────────────
+test('sendMetaCAPI: forwards real _fbp/_fbc when present (real fbc wins over derived)', async () => {
+  let body
+  await withFetch(async (_url, opts) => { body = JSON.parse(opts.body); return resp(200, {}) }, async () => {
+    await sendMetaCAPI(
+      { meta_pixel_id: 'px', meta_capi_token: encryptCapiToken('tok') },
+      { conversion_type: 'purchase', conversion_value: 5, fbp: 'fb.1.111.AAA', fbc: 'fb.1.222.BBB', fbclid: 'CL' })
+  })
+  assert.strictEqual(body.data[0].user_data.fbp, 'fb.1.111.AAA')
+  assert.strictEqual(body.data[0].user_data.fbc, 'fb.1.222.BBB')
+})
+
+test('sendMetaCAPI: derives fbc from fbclid when no real _fbc cookie', async () => {
+  let body
+  await withFetch(async (_url, opts) => { body = JSON.parse(opts.body); return resp(200, {}) }, async () => {
+    await sendMetaCAPI(
+      { meta_pixel_id: 'px', meta_capi_token: encryptCapiToken('tok') },
+      { conversion_type: 'purchase', conversion_value: 5, fbclid: 'CLICKID' })
+  })
+  assert.match(body.data[0].user_data.fbc, /^fb\.1\.\d+\.CLICKID$/)
+  assert.strictEqual(body.data[0].user_data.fbp, undefined)
+})
+
 // ── Delivery log ────────────────────────────────────────────────────────────
 test('logCapiDelivery: only real columns, rejects unknown, surfaces errors', async () => {
   const sb = mockSupabase()

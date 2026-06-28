@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
 import { dispatchWebhook } from '../lib/webhook.js'
 import { dispatchCapi } from '../lib/conversion-sync.js'
+import { resolveCapiEventId } from '../lib/capi-event-id.js'
 import { getSupabase } from '../lib/supabase.js'
 import { getFirstTouchFields, redactPiiFromObject, normalizeClickIds } from '../lib/utils.js'
 import { hasFeature } from '../lib/plan-features.js'
@@ -174,7 +175,7 @@ export async function conversionOffline(req, res) {
       idempotency_key: idempotencyKey,
       conversion_type: conversionType,
       stitching_method: stitchingMethod,
-      external_event_id: orderId ? `${req.site.id}:${orderId}:${conversionType}` : null,
+      external_event_id: resolveCapiEventId(req.body, req.site.id, conversionType),
       webhook_user_id: userId,
       webhook_email_present: !!req.body.email,
       identity_resolution_source: stitchingMethod,

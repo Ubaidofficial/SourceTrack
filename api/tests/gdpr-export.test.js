@@ -52,6 +52,10 @@ function seed() {
       // includes the secret token — must be projected OUT of the export
       { site_key: 'kA', property_url: 'https://a', google_account_email: 'a@x.com', status: 'connected', last_synced_at: '2026-06-01', created_at: '2026-05-01', encrypted_refresh_token: 'SECRET_REFRESH_TOKEN_AAA' }
     ],
+    capi_deliveries: [
+      { site_id: 'A', platform: 'meta', event_ref: 'evt1', status: 'success', http_status: 200, error_message: null, attempt: 1, created_at: '2026-06-01' },
+      { site_id: 'B', platform: 'meta', event_ref: 'evtX', status: 'success', http_status: 200, error_message: null, attempt: 1, created_at: '2026-06-01' } // other tenant
+    ],
     webhook_destinations: [
       // Fixture only — deliberately NOT a real secret prefix, to keep the repo
       // secret-scanner happy while still exercising the masking logic.
@@ -79,11 +83,17 @@ test('buildGdprExport — bundle shape matches the locked table list', async () 
   assert.strictEqual(out.site_key, 'kA')
   assert.ok(out.generated_at)
   assert.deepStrictEqual(Object.keys(out.tables).sort(), [
-    'attributed_conversions', 'companies', 'company_members', 'gsc_connections',
+    'attributed_conversions', 'capi_deliveries', 'companies', 'company_members', 'gsc_connections',
     'gsc_performance_daily', 'lead_qualifications', 'posthog_events',
     'site_identity_links', 'sites', 'webhook_destinations'
   ])
   assert.strictEqual(out.tables.posthog_events, 'available on request')
+})
+
+test('buildGdprExport — capi_deliveries included, scoped to the caller site only', async () => {
+  const out = await buildGdprExport(makeDb(seed()), SITE)
+  assert.strictEqual(out.tables.capi_deliveries.length, 1)
+  assert.strictEqual(out.tables.capi_deliveries[0].event_ref, 'evt1')
 })
 
 test('buildGdprExport — cross-tenant rows are excluded (filtered by site in code)', async () => {
