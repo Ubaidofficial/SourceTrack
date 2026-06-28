@@ -117,23 +117,11 @@ function truncateUrl(urlStr, maxLen = 50) {
   }
 }
 
-// A session is "direct" when its entry source is direct/empty/null OR its medium
-// is '(none)'. AI-referred sessions are attributed (named source), so never direct.
-function isDirectSession(s) {
-  if (!s) return false
-  if (s.entry_ai_source) return false
-  const src = (s.entry_source == null ? '' : String(s.entry_source)).trim().toLowerCase()
-  const med = (s.entry_medium == null ? '' : String(s.entry_medium)).trim().toLowerCase()
-  if (med === '(none)') return true
-  return src === '' || src === 'direct'
-}
-
 export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose, onQualified }) {
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState(null)
   const [filter, setFilter]   = useState('all') // all | conversions | ai
-  const [hideDirect, setHideDirect] = useState(true) // hide direct visits by default; resets on close (unmount)
   const [expandedSessions, setExpandedSessions] = useState({})
   const [expandedEvents, setExpandedEvents] = useState({})
 
@@ -397,16 +385,6 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                   ))}
                 </div>
 
-                {/* Direct-visit toggle */}
-                <div className="flex items-center justify-end mb-2 flex-shrink-0">
-                  <button
-                    onClick={() => setHideDirect(v => !v)}
-                    className="text-[11px] font-medium text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white transition-colors"
-                  >
-                    {hideDirect ? 'Showing attributed visits · Show direct' : 'Showing all visits · Hide direct'}
-                  </button>
-                </div>
-
                 {/* Session cards */}
                 {sessions.length === 0 ? (
                   <p className="text-sm text-st-gray dark:text-gray-400 py-8 text-center">No events match this filter.</p>
@@ -420,9 +398,6 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                         : filter === 'conversions'
                           ? sessionEvents.filter(e => e.event === '$conversion')
                           : sessionEvents.filter(e => e.ai_source)
-
-                      // Hide direct visits when toggled — but always keep converting sessions
-                      if (hideDirect && isDirectSession(session) && !session.contains_conversion) return null
 
                       // Skip sessions that have no matching events under current filter
                       if (filter !== 'all' && filtered.length === 0) return null
