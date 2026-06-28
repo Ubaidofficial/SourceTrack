@@ -211,6 +211,21 @@ app.post('/webhook-receiver', express.raw({ type: 'application/json' }), (req, r
         <DocsCallout type="info">
           Webhook signing secrets are managed inside the dashboard under <strong>Integrations &rarr; Outbound Webhooks</strong>.
         </DocsCallout>
+
+        {/* Attribution stitching */}
+        <section className="space-y-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+            Attribution stitching
+          </h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+            Read the visitor&apos;s anonymous token in the browser and forward it with your form or
+            order submission so your server can stitch the conversion back to the original visit.
+          </p>
+          <DocsCodeBlock lang="js">
+{`const token = sourcetrack.getToken();
+formData.append('st_token', token); // pass to your server`}
+          </DocsCodeBlock>
+        </section>
       </div>
     </DocsLayout>
   )

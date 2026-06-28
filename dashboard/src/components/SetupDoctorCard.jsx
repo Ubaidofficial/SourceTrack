@@ -91,7 +91,7 @@ const STATUS_MAP = {
   }
 }
 
-export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerificationSuccess }) {
+export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerificationSuccess, questionnaire = {}, questionnaireComplete = false }) {
   const navigate = useNavigate()
   const [accordionOpen, setAccordionOpen] = useState(false)
   const [verificationToken] = useState(() => {
@@ -141,6 +141,15 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
       if (status === 401 || status === 403) return false
       return shouldPoll ? 5000 : false
     }
+  })
+
+  // CAPI deliveries — only for the composite health score (no-error-in-30min check).
+  // Fetched only once the questionnaire is complete (score is hidden until then).
+  const { data: capiResp, isLoading: capiLoading, error: capiError } = useQuery({
+    queryKey: ['capi-deliveries', siteKey],
+    queryFn: () => fetchApi(`/integrations/capi/deliveries?site_key=${encodeURIComponent(siteKey)}`),
+    enabled: !!siteKey && questionnaireComplete,
+    retry: false
   })
 
   const isAuthError = error?.status === 401 || error?.status === 403
@@ -248,6 +257,44 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
     })
   }
 
+  // ── Composite health score (0–100) — deterministic, no LLM, no recommendations.
+  // Shown only when the questionnaire (from Setup) is complete. Indeterminate
+  // checks get half points and are marked 'pending'. Note: there is no server-side
+  // "forms detected" signal, so the forms criterion can only ever be pending.
+  const capiErrors30m = (() => {
+    const rows = Array.isArray(capiResp?.data) ? capiResp.data : []
+    const cutoff = Date.now() - 30 * 60 * 1000
+    return rows.filter(r =>
+      ['failed', 'error', 'rejected'].includes(r.status) &&
+      new Date(r.created_at).getTime() >= cutoff
+    )
+  })()
+
+  const scoreParts = [
+    // Pixel detected
+    tracker_install?.installed ? { pts: 30, status: 'passed' } : { pts: 0, status: 'failed' },
+    // At least one conversion configured
+    conversion_setup?.detected ? { pts: 20, status: 'passed' } : { pts: 0, status: 'failed' },
+    // Revenue source connected (from questionnaire)
+    questionnaire?.hasRevenue === true ? { pts: 20, status: 'passed' } : { pts: 0, status: 'failed' },
+    // No CAPI delivery errors in last 30 min (indeterminate while loading/error)
+    (capiLoading || capiError)
+      ? { pts: 8, status: 'pending' }
+      : (capiErrors30m.length === 0 ? { pts: 15, status: 'passed' } : { pts: 0, status: 'failed' }),
+    // Forms: hasForms AND forms detected — no server signal for detection → indeterminate
+    questionnaire?.hasForms === true
+      ? { pts: 8, status: 'pending' }
+      : { pts: 0, status: 'na' }
+  ]
+  const healthScore = scoreParts.reduce((s, p) => s + p.pts, 0)
+  const issuesFound = scoreParts.filter(p => p.status === 'failed').length
+  const pendingCount = scoreParts.filter(p => p.status === 'pending').length
+  const scoreColorClass = healthScore >= 80
+    ? 'text-green-600 dark:text-green-400'
+    : healthScore >= 50
+      ? 'text-amber-600 dark:text-amber-400'
+      : 'text-red-600 dark:text-red-400'
+
   return (
     <div className="bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-5 shadow-sm space-y-4">
       {/* 1. Header Section */}
@@ -298,6 +345,28 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
           </button>
         </div>
       </div>
+
+      {/* Composite health score — only once the questionnaire is complete */}
+      {questionnaireComplete ? (
+        <div className="flex items-center justify-between gap-4 p-4 rounded-xl bg-gray-50 dark:bg-[#252929]/40 border border-gray-100 dark:border-[#2A2E2E]">
+          <div className="flex items-baseline gap-1">
+            <span className={`text-4xl font-black tabular-nums ${scoreColorClass}`}>{healthScore}</span>
+            <span className="text-sm font-semibold text-gray-400 dark:text-gray-500">/100</span>
+          </div>
+          <div className="text-right">
+            <p className="text-xs font-semibold text-st-black dark:text-white">
+              {issuesFound} {issuesFound === 1 ? 'issue' : 'issues'} found
+            </p>
+            {pendingCount > 0 && (
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">{pendingCount} pending</p>
+            )}
+          </div>
+        </div>
+      ) : (
+        <p className="text-xs text-gray-500 dark:text-gray-400 p-4 rounded-xl bg-gray-50 dark:bg-[#252929]/40 border border-gray-100 dark:border-[#2A2E2E]">
+          Answer the questions above to see your health score.
+        </p>
+      )}
 
       {/* 2. Setup Checks Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">

@@ -421,6 +421,10 @@
       send('/api/track', { site_key: K, event: event, anonymous_id: AID, session_id: SID, page_url: location.href, properties: properties || {} })
     },
 
+    // sourcetrack.getToken() — returns the resolved anonymous_id for server-side
+    // attribution stitching (pass it to your backend alongside a form/order).
+    getToken: function () { return AID },
+
     // ── Consent API ───────────────────────────────────────────────────────────
     // sourcetrack.consent(true)  — grant consent, flush queued events
     // sourcetrack.consent(false) — deny consent, clear queue, stop tracking

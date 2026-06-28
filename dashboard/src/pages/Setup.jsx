@@ -644,7 +644,7 @@ export default function Setup() {
                   {
                     icon: Globe,
                     title: 'First-party domain tracking',
-                    desc: 'Improve cross-session accuracy in Safari and privacy browsers. Recommended for SaaS.',
+                    desc: 'Cross-session attribution in Safari and privacy browsers may be incomplete on the default install. Safari limits session storage to 24 hours for third-party scripts. Add data-cookie-domain to improve accuracy for multi-day conversion journeys.',
                     cta: 'Read the docs',
                     to: '/docs/install'
                   },
