@@ -1,7 +1,29 @@
 import { createHash } from 'crypto'
+import { encryptSecret, decryptSecret } from './utils.js'
+import { logCapiDelivery } from './capi-deliveries.js'
 
 function sha256(str) {
   return createHash('sha256').update(str.trim().toLowerCase()).digest('hex')
+}
+
+// CAPI tokens are stored encrypted at rest (AES-256-GCM, ENCRYPTION_KEY) — same
+// pattern as gsc/stripe secrets. Decrypt FAIL-SAFE: a token that can't be
+// decrypted (bad/corrupt/plaintext) returns null so that platform NO-OPS — we
+// never send a garbage token to an ad platform and never throw into the
+// conversion path. Phase 2's config-write path must call encryptCapiToken().
+function safeDecrypt(value) {
+  if (!value) return null
+  try {
+    return decryptSecret(value)
+  } catch (_) {
+    return null
+  }
+}
+
+// Phase 2 (config UI / write path) calls this before persisting a CAPI token.
+// Exported now so the encrypt/decrypt pair lives in one place.
+export function encryptCapiToken(value) {
+  return encryptSecret(value)
 }
 
 /**
@@ -23,7 +45,7 @@ async function fetchWithRetry(url, opts = {}, label = 'CAPI') {
     } catch (networkErr) {
       // DNS / connection reset / timeout — retry transparently.
       if (attempt < maxAttempts - 1) {
-        const wait = 500 * Math.pow(2, attempt)
+        const wait = 500 * Math.pow(2, attempt) + Math.floor(Math.random() * 250) // + jitter
         console.warn(`[${label}] network error (${networkErr.message}) — retrying in ${wait}ms`)
         await new Promise(r => setTimeout(r, wait))
         continue
@@ -34,7 +56,7 @@ async function fetchWithRetry(url, opts = {}, label = 'CAPI') {
     const retryable = response.status === 429 || response.status >= 500
     if (retryable && attempt < maxAttempts - 1) {
       const retryAfter = parseInt(response.headers.get('retry-after') || '0', 10)
-      const wait = retryAfter > 0 ? retryAfter * 1000 : 500 * Math.pow(2, attempt)
+      const wait = retryAfter > 0 ? retryAfter * 1000 : 500 * Math.pow(2, attempt) + Math.floor(Math.random() * 250) // + jitter
       console.warn(`[${label}] HTTP ${response.status} — retrying in ${wait}ms (attempt ${attempt + 1}/${maxAttempts})`)
       await new Promise(r => setTimeout(r, wait))
       continue
@@ -141,7 +163,8 @@ function getTikTokEventName(conversionType) {
 
 // ─── Meta CAPI ────────────────────────────────────────────────────────────────
 export async function sendMetaCAPI(site, evt) {
-  if (!site.meta_pixel_id || !site.meta_capi_token) return null
+  const token = safeDecrypt(site.meta_capi_token)
+  if (!site.meta_pixel_id || !token) return null  // no/undecryptable token → no-op (fail-safe)
 
   const userData = {}
   if (evt.ip_address)  userData.client_ip_address  = evt.ip_address
@@ -173,13 +196,13 @@ export async function sendMetaCAPI(site, evt) {
   if (testCode) body.test_event_code = testCode
 
   const r = await fetchWithRetry(
-    `https://graph.facebook.com/v19.0/${site.meta_pixel_id}/events?access_token=${site.meta_capi_token}`,
+    `https://graph.facebook.com/v19.0/${site.meta_pixel_id}/events?access_token=${token}`,
     { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
     'Meta CAPI'
   )
-  const result = await r.json()
+  const result = await r.json().catch(() => ({}))
   if (!r.ok) console.error('[Meta CAPI]', eventName, JSON.stringify(result))
-  return result
+  return { ok: r.ok, http_status: r.status, error_message: r.ok ? null : JSON.stringify(result).slice(0, 500) }
 }
 
 // ─── Google Ads Conversion Upload ────────────────────────────────────────────
@@ -193,11 +216,12 @@ export async function sendMetaCAPI(site, evt) {
 //   3. Use the resulting access_token (refresh periodically — 1h TTL)
 //   Reference: https://developers.google.com/google-ads/api/docs/oauth/overview
 export async function sendGoogleConversion(site, evt) {
-  if (!site.google_ads_customer_id || !site.google_ads_developer_token) return null
+  const devToken = safeDecrypt(site.google_ads_developer_token)
+  if (!site.google_ads_customer_id || !devToken) return null  // no/undecryptable token → no-op
   if (!evt.gclid && !evt.gbraid && !evt.wbraid) return null // no click ID = no attribution
 
-  // OAuth2 access token: per-site column takes priority, then global env var
-  const accessToken = site.google_ads_access_token || process.env.GOOGLE_ADS_ACCESS_TOKEN
+  // OAuth2 access token: per-site column (encrypted) takes priority, then global env var
+  const accessToken = safeDecrypt(site.google_ads_access_token) || process.env.GOOGLE_ADS_ACCESS_TOKEN
   if (!accessToken) {
     console.warn('[Google Ads CAPI] Skipped — no OAuth2 access token configured. Set GOOGLE_ADS_ACCESS_TOKEN env var or google_ads_access_token on the site.')
     return null
@@ -226,23 +250,28 @@ export async function sendGoogleConversion(site, evt) {
       method: 'POST',
       headers: {
         'Authorization':   `Bearer ${accessToken}`,       // OAuth2 token
-        'developer-token': site.google_ads_developer_token, // separate header
+        'developer-token': devToken,                        // separate header (decrypted)
         'Content-Type':    'application/json'
       },
       body: JSON.stringify(body)
     },
     'Google Ads CAPI'
   )
+  let detail = ''
   if (!r.ok) {
-    const detail = await r.text().catch(() => '')
+    detail = await r.text().catch(() => '')
     console.error('[Google Ads CAPI] HTTP', r.status, detail.slice(0, 200))
   }
-  return r.ok
+  return { ok: r.ok, http_status: r.status, error_message: r.ok ? null : detail.slice(0, 500) }
 }
 
 // ─── Microsoft UET ───────────────────────────────────────────────────────────
 export async function sendMicrosoftConversion(site, evt) {
-  if (!site.microsoft_tag_id || !site.microsoft_capi_token) return null
+  // Decrypt to validate the token is present + well-formed (fail-safe). The
+  // existing Microsoft request shape is unchanged (Phase 1 adds no new sender
+  // behavior); Phase 2 wires the token into the request if/when needed.
+  const token = safeDecrypt(site.microsoft_capi_token)
+  if (!site.microsoft_tag_id || !token) return null  // no/undecryptable token → no-op
 
   const r = await fetchWithRetry('https://bat.bing.com/bat.svc/c', {
     method: 'POST',
@@ -256,12 +285,13 @@ export async function sendMicrosoftConversion(site, evt) {
     })
   }, 'Microsoft UET')
   if (!r.ok) console.error('[Microsoft UET] HTTP', r.status)
-  return r.ok
+  return { ok: r.ok, http_status: r.status, error_message: r.ok ? null : `HTTP ${r.status}` }
 }
 
 // ─── LinkedIn CAPI ───────────────────────────────────────────────────────────
 export async function sendLinkedInConversion(site, evt) {
-  if (!site.linkedin_partner_id || !site.linkedin_capi_token) return null
+  const token = safeDecrypt(site.linkedin_capi_token)
+  if (!site.linkedin_partner_id || !token) return null  // no/undecryptable token → no-op
 
   const body = {
     conversion: `urn:lla:llaPartnerConversion:${site.linkedin_partner_id}`,
@@ -282,14 +312,14 @@ export async function sendLinkedInConversion(site, evt) {
   const r = await fetchWithRetry('https://api.linkedin.com/v2/conversionEvents', {
     method: 'POST',
     headers: {
-      'Authorization':    `Bearer ${site.linkedin_capi_token}`,
+      'Authorization':    `Bearer ${token}`,
       'LinkedIn-Version': '202406',
       'Content-Type':     'application/json'
     },
     body: JSON.stringify(body)
   }, 'LinkedIn CAPI')
   if (!r.ok) console.error('[LinkedIn CAPI] HTTP', r.status)
-  return r.ok
+  return { ok: r.ok, http_status: r.status, error_message: r.ok ? null : `HTTP ${r.status}` }
 }
 
 // ─── TikTok CAPI ─────────────────────────────────────────────────────────────
@@ -338,4 +368,42 @@ export async function sendTikTokConversion(site, eventData) {
   } catch (e) {
     console.error('[TikTok CAPI]', e.message)
   }
+}
+
+// ─── CAPI fan-out + delivery log ─────────────────────────────────────────────
+// Runs the configured senders for one conversion and writes ONE capi_deliveries
+// row per real send attempt (success/failed). A sender that returns null (no
+// token / undecryptable token / no click id) made no attempt and is NOT logged
+// — keeps the table to genuine attempts. Never throws into the conversion path.
+// `site` must include `id` (selected by the caller) + the CAPI columns.
+export async function dispatchCapi(supabase, site, evt) {
+  const eventRef = evt.external_event_id || evt.order_id || null
+  const senders = [
+    ['meta', sendMetaCAPI],
+    ['google', sendGoogleConversion],
+    ['microsoft', sendMicrosoftConversion],
+    ['linkedin', sendLinkedInConversion]
+  ]
+
+  await Promise.allSettled(senders.map(async ([platform, fn]) => {
+    let result
+    try {
+      result = await fn(site, evt)
+    } catch (err) {
+      await logCapiDelivery(supabase, {
+        site_id: site.id, platform, event_ref: eventRef,
+        status: 'failed', http_status: null,
+        error_message: String(err?.message || err).slice(0, 500), attempt: 1
+      })
+      return
+    }
+    if (result === null || result === undefined) return  // skipped (no attempt) — not logged
+    await logCapiDelivery(supabase, {
+      site_id: site.id, platform, event_ref: eventRef,
+      status: result.ok ? 'success' : 'failed',
+      http_status: result.http_status ?? null,
+      error_message: result.ok ? null : (result.error_message || null),
+      attempt: 1
+    })
+  }))
 }
