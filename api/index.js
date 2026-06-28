@@ -38,6 +38,7 @@ import { journey } from './routes/journey.js'
 import { installRouter } from './routes/install.js'
 import { eventsRouter } from './routes/events.js'
 import { alertsRouter } from './routes/alerts.js'
+import { siteAlertsRouter } from './routes/site-alerts.js'
 import { hygieneRouter } from './routes/hygiene.js'
 import { exportRouter } from './routes/export.js'
 import { onboardingRouter } from './routes/onboarding.js'
@@ -468,6 +469,7 @@ app.use((req, res, next) => {
 app.use('/api/install', requireUserAuth, installRouter)
 app.use('/api/events', requireUserAuth, validateSiteKey, requireSiteMembership, eventsRouter)
 app.use('/api/alerts', requireUserAuth, validateSiteKey, requireSiteMembership, alertsRouter)
+app.use('/api/site-alerts', requireUserAuth, validateSiteKey, requireSiteMembership, siteAlertsRouter)
 app.use('/api/hygiene', requireUserAuth, validateSiteKey, requireSiteMembership, hygieneRouter)
 app.use('/api/export', requireUserAuth, validateSiteKey, requireSiteMembership, exportRouter)
 app.use('/api/onboarding', requireUserAuth, onboardingRouter)
