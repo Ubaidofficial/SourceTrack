@@ -12,6 +12,7 @@ import {
 import { Link, useSearchParams } from 'react-router-dom'
 import SetupDoctorCard from '../components/SetupDoctorCard'
 import AttributionCoverageCard from '../components/AttributionCoverageCard'
+import CapiDeliveryStatus from '../components/CapiDeliveryStatus'
 
 
 export default function Setup() {
@@ -347,6 +348,8 @@ export default function Setup() {
               )}
 
               {site?.site_key && <AttributionCoverageCard siteKey={site.site_key} />}
+
+              {site?.site_key && <CapiDeliveryStatus siteKey={site.site_key} />}
 
               {/* Test Conversion Section */}
               <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-5 shadow-sm space-y-3">
