@@ -122,7 +122,7 @@ export async function journey(req, res) {
     // Query single lead Supabase attribution data
     const { data: convs, error: convErr } = await getSupabase()
       .from('attributed_conversions')
-      .select('first_touch_source, first_touch_medium, first_touch_campaign, channel, first_touch_channel')
+      .select('first_touch_source, first_touch_medium, first_touch_campaign, channel, first_touch_channel, ai_influenced_source, ai_influenced_session_at')
       .eq('site_id', posthogSiteId)
       .eq('distinct_id', visitorId)
 
@@ -192,7 +192,12 @@ export async function journey(req, res) {
         event_count: events.length,
         session_count: sessions.length,
         derived_from_events: true,
-        session_timeout_minutes: 30
+        session_timeout_minutes: 30,
+        // Dark-traffic stitching: prior AI session behind a Direct conversion.
+        // Non-null only when the attribution engine stitched one deterministically.
+        ai_influence: (convs?.[0]?.ai_influenced_source)
+          ? { source: convs[0].ai_influenced_source, session_at: convs[0].ai_influenced_session_at || null }
+          : null
       },
       error: null
     })

@@ -596,6 +596,26 @@ async function processConversion(site, conversion) {
 
   const confidence = calculateConfidence(touchpoints, firstTouchChannel)
 
+  // Dark-traffic stitching (Feature 1): when the converting (last) touch is
+  // Direct but the journey contains a prior AI Search touchpoint, surface that
+  // AI session deterministically — never inferred, never LLM. Source preference:
+  // the first-touch source when first touch was AI Search (it carries the real
+  // domain, e.g. 'chat.openai.com'); otherwise the AI touchpoint's own source,
+  // falling back to the channel name 'AI Search' (the JSONB touchpoint stores
+  // channel='AI Search' but source=null, so the fallback is the common case).
+  const firstTouchSource = attribution.first_touch?.source || attribution.first_touch?.derived_source || null
+  let aiInfluencedSource = null
+  let aiInfluencedSessionAt = null
+  if (lastTouchChannel === 'Direct') {
+    const aiTouch = (attribution.linear || []).find(tp => tp.channel === 'AI Search')
+    if (aiTouch && aiTouch.timestamp) {
+      aiInfluencedSource = (firstTouchChannel === 'AI Search' && firstTouchSource)
+        ? firstTouchSource
+        : (aiTouch.source || 'AI Search')
+      aiInfluencedSessionAt = aiTouch.timestamp
+    }
+  }
+
   const tp30 = touchpoints.filter(tp => new Date(tp.timestamp) >= new Date(new Date(conversion.timestamp) - 30 * 86400000))
   const first30 = tp30[0]
   const channel30d = first30 ? channelFromEvent({
@@ -631,7 +651,7 @@ async function processConversion(site, conversion) {
     conversion_value: convValue,
     external_event_id: conversion.external_event_id || null,
 
-    first_touch_source: attribution.first_touch?.source || attribution.first_touch?.derived_source || null,
+    first_touch_source: firstTouchSource,
     first_touch_medium: attribution.first_touch?.medium || null,
     first_touch_campaign: attribution.first_touch?.campaign || null,
     first_touch_timestamp: attribution.first_touch?.timestamp || null,
@@ -650,6 +670,8 @@ async function processConversion(site, conversion) {
     processing_version: '1.0',
     first_touch_channel: firstTouchChannel,
     last_touch_channel:  lastTouchChannel,
+    ai_influenced_source:     aiInfluencedSource,
+    ai_influenced_session_at: aiInfluencedSessionAt,
     channel:             firstTouchChannel,
     attribution_confidence: confidence,
     // Store as a real jsonb object (supabase-js serializes the object into the
