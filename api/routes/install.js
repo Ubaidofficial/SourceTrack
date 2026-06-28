@@ -3,6 +3,7 @@ import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 
 import { getSupabase } from '../lib/supabase.js'
 import { getSetupDiagnostics, getBasicInstallStatus } from '../lib/setup-doctor.js'
+import { detectPlatform } from '../lib/platform-detector.js'
 
 
 const normalizeBaseUrl = (value) => String(value || '').replace(/\/+$/, '');
@@ -124,6 +125,25 @@ router.get('/doctor', validateSiteKey, requireSiteMembership, async (req, res) =
       error: 'Diagnostics check failed'
     })
   }
+})
+
+// Setup Concierge: advisory platform detection for the registered domain.
+// Always 200 — the detector never throws and self-reports failures as
+// { platform: 'unknown', confidence: 'low', error: true }. The domain fetched
+// is the authoritative req.site.domain (set by validateSiteKey), never a
+// client-supplied value, so this cannot be used as an open SSRF proxy.
+router.get('/detect-platform', validateSiteKey, requireSiteMembership, async (req, res) => {
+  const domain = req.site?.domain || null
+  if (!domain) {
+    return res.status(200).json({
+      success: true,
+      data: { platform: 'unknown', confidence: 'low', gtm_present: false, signals: [], error: true },
+      error: null
+    })
+  }
+
+  const result = await detectPlatform(domain)
+  return res.status(200).json({ success: true, data: result, error: null })
 })
 
 export { router as installRouter }
