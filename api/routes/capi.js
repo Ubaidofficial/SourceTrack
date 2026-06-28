@@ -105,6 +105,27 @@ router.get('/status', async (req, res) => {
   }
 })
 
+// Read-only delivery log for the Setup & Health surface. Returns the last 50
+// delivery rows for the membership-verified tenant (req.site, set by the
+// validateSiteKey + requireSiteMembership mount middleware). Tenant isolation is
+// enforced in code via .eq('site_id', req.site.id) — never a client-supplied id.
+// No tokens, no secrets, no plan gate (diagnostic visibility mirrors /status).
+router.get('/deliveries', async (req, res) => {
+  try {
+    const { data, error } = await getSupabase()
+      .from('capi_deliveries')
+      .select('id, platform, event_ref, status, http_status, attempt, error_message, created_at')
+      .eq('site_id', req.site.id)
+      .order('created_at', { ascending: false })
+      .limit(50)
+    if (error) throw error
+    return res.json({ success: true, data: data || [], error: null })
+  } catch (err) {
+    console.error('[capi] deliveries error:', err.message)
+    return res.status(500).json({ success: false, data: null, error: 'Failed to load CAPI deliveries' })
+  }
+})
+
 router.post('/:platform', enforceCapi, async (req, res) => {
   try {
     const { update, error } = buildCapiUpdate(req.params.platform, req.body)
