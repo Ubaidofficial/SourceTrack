@@ -170,7 +170,10 @@ export async function sendMetaCAPI(site, evt) {
   if (evt.ip_address)  userData.client_ip_address  = evt.ip_address
   if (evt.user_agent)  userData.client_user_agent  = evt.user_agent
   if (evt.email)       userData.em                 = [sha256(evt.email)]
-  if (evt.fbclid)      userData.fbc = `fb.1.${Date.now()}.${evt.fbclid}`
+  // Prefer the real Meta cookies (highest match quality); else derive fbc from fbclid.
+  if (evt.fbp)         userData.fbp = evt.fbp
+  if (evt.fbc)         userData.fbc = evt.fbc
+  else if (evt.fbclid) userData.fbc = `fb.1.${Date.now()}.${evt.fbclid}`
 
   const eventName = getMetaEventName(evt.conversion_type)
 

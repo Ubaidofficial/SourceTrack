@@ -386,6 +386,9 @@
           conversion_value: opts.value || opts.conversion_value || 0,
           conversion_type:  opts.type  || opts.conversion_type  || 'conversion',
           order_id:         opts.order_id || opts.orderId        || null,
+          event_id:         opts.event_id || null,            // shared browser↔server dedup id
+          fbp:              getCookie('_fbp') || null,         // merchant's own Meta cookies
+          fbc:              getCookie('_fbc') || null,         // (read-only; forwarded to Meta CAPI)
           properties:       opts.properties || null,
           ref_param:        p.ref || null,
           source_param:     p.source || null,

@@ -361,6 +361,9 @@ export async function buildGdprExport(supabase, site, { now = () => new Date() }
   // gsc_performance_daily — aggregates only, by site_key.
   tables.gsc_performance_daily = await pull('gsc_performance_daily', 'query, page_path, clicks, impressions, ctr, position, date', 'site_key', siteKey)
 
+  // capi_deliveries — the site's server-side conversion-forward history (no secrets).
+  tables.capi_deliveries = await pull('capi_deliveries', 'platform, event_ref, status, http_status, error_message, attempt, created_at', 'site_id', siteId)
+
   // gsc_connections — NON-SECRET columns only (encrypted_refresh_token excluded).
   tables.gsc_connections = await pull('gsc_connections', 'property_url, google_account_email, status, last_synced_at, created_at', 'site_key', siteKey)
 

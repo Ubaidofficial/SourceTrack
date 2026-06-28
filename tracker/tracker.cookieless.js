@@ -296,7 +296,8 @@
         { site_key: K, anonymous_id: AID, session_id: SID, page_url: location.href, referrer: ref, cookieless: true,
           conversion_value: opts.value || opts.conversion_value || 0,
           conversion_type:  opts.type  || opts.conversion_type  || 'conversion',
-          order_id:         opts.order_id || opts.orderId        || null },
+          order_id:         opts.order_id || opts.orderId        || null,
+          event_id:         opts.event_id || null },           // dedup id (no _fbp/_fbc: cookieless reads no cookies)
         utmFields(p),
         deriveFirstTouch(p, ref),
         { ai_source: aiSrc(ref, p.utm_source) }
