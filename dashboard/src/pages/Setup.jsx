@@ -58,6 +58,14 @@ export default function Setup() {
   const [questionnaireComplete, setQuestionnaireComplete] = useState(false)
   const questionnaireAnswered = hasForms !== null && businessType !== null && hasRevenue !== null
 
+  // Setup Concierge: advisory platform detection (React state only, never
+  // persisted, cleared on reload). Fires on Install tab mount against the
+  // read-only registered domain. Fire-and-forget — never blocks the tab.
+  const [detectedPlatform, setDetectedPlatform] = useState(null)
+  const [detectionConfidence, setDetectionConfidence] = useState(null)
+  const [gtmPresent, setGtmPresent] = useState(false)
+  const [detectionLoading, setDetectionLoading] = useState(false)
+
   // Load site details
   useEffect(() => {
     async function load() {
@@ -96,6 +104,26 @@ export default function Setup() {
     load()
   }, [user, activeSite])
 
+  // Fire platform detection when the Install tab is shown and the registered
+  // domain is known. Advisory only: failures are swallowed silently.
+  useEffect(() => {
+    if (activeTab !== 'install') return
+    if (!site?.site_key || !site?.domain) return
+    let cancelled = false
+    setDetectionLoading(true)
+    fetchApi(`/install/detect-platform?site_key=${encodeURIComponent(site.site_key)}&domain=${encodeURIComponent(site.domain)}`)
+      .then((resp) => {
+        if (cancelled) return
+        const result = resp?.data ?? resp ?? {}
+        setDetectedPlatform(result.platform ?? null)
+        setDetectionConfidence(result.confidence ?? null)
+        setGtmPresent(!!result.gtm_present)
+      })
+      .catch(() => { /* silent — detection is advisory */ })
+      .finally(() => { if (!cancelled) setDetectionLoading(false) })
+    return () => { cancelled = true }
+  }, [activeTab, site?.site_key, site?.domain])
+
   // React query to fetch tracking health status
   const { data: doctorResponse, refetch: refetchDoctor } = useQuery({
     queryKey: ['setup-doctor', site?.site_key],
@@ -108,6 +136,16 @@ export default function Setup() {
   })
 
   const diagnostics = doctorResponse?.data ?? doctorResponse ?? null
+
+  // Only platforms with a matching CMS guide chip can be "recommended", and
+  // only at high/medium confidence — otherwise the banner would point nowhere.
+  const CHIP_PLATFORM_LABELS = { shopify: 'Shopify', wordpress: 'WordPress', webflow: 'Webflow' }
+  const recommendedChip =
+    detectedPlatform &&
+    (detectionConfidence === 'high' || detectionConfidence === 'medium') &&
+    CHIP_PLATFORM_LABELS[detectedPlatform]
+      ? detectedPlatform
+      : null
 
   const trackerBaseUrl = (import.meta.env.VITE_TRACKER_BASE_URL || import.meta.env.VITE_API_URL || window.location.origin).replace(/\/+$/, '');
 
@@ -279,6 +317,12 @@ export default function Setup() {
                 <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-[#1E2121]/50 border border-gray-200 dark:border-transparent rounded-lg text-xs">
                   <span className="font-semibold text-gray-700 dark:text-gray-300">Registered Domain:</span>
                   <span className="font-mono text-st-black dark:text-white select-all">{site.domain}</span>
+                  {detectionLoading && (
+                    <span className="inline-flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                      Detecting platform…
+                    </span>
+                  )}
                 </div>
               )}
 
@@ -369,21 +413,51 @@ export default function Setup() {
                 </button>
               </div>
 
+              {/* Detection banner — advisory, only at high/medium confidence
+                  with a guide we can point to. Silent on low/unknown/error. */}
+              {recommendedChip && (
+                <div className="flex items-start gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-900/30 rounded-lg text-xs text-green-800 dark:text-green-300">
+                  <CheckCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                  <span>
+                    Detected: <span className="font-semibold">{CHIP_PLATFORM_LABELS[recommendedChip]}</span> — we've highlighted the recommended install guide below.
+                    {gtmPresent && <span className="block mt-0.5">+ Google Tag Manager detected.</span>}
+                  </span>
+                </div>
+              )}
+
               {/* Platform Guides */}
               <div className="bg-gray-50 dark:bg-[#1E2121]/50 border border-gray-200 dark:border-transparent rounded-xl p-4">
                 <p className="text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">CMS platform guides</p>
                 <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs">
                   {[
-                    { label: 'Google Tag Manager', to: '/docs/platforms/google-tag-manager' },
-                    { label: 'Webflow', to: '/docs/platforms/webflow' },
-                    { label: 'WordPress', to: '/docs/platforms/wordpress' },
+                    { label: 'Google Tag Manager', to: '/docs/platforms/google-tag-manager', gtm: true },
+                    { label: 'Webflow', to: '/docs/platforms/webflow', platform: 'webflow' },
+                    { label: 'WordPress', to: '/docs/platforms/wordpress', platform: 'wordpress' },
                     { label: 'Framer', to: '/docs/platforms/framer' },
-                    { label: 'Shopify Recipe', to: '/docs/platforms/shopify' },
-                  ].map(p => (
-                    <Link key={p.label} to={p.to} className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:underline">
-                      {p.label} <ExternalLink className="w-3 h-3" />
-                    </Link>
-                  ))}
+                    { label: 'Shopify Recipe', to: '/docs/platforms/shopify', platform: 'shopify' },
+                  ].map(p => {
+                    const isRecommended = p.platform && p.platform === recommendedChip
+                    return (
+                      <span key={p.label} className="inline-flex items-center gap-1.5">
+                        <Link
+                          to={p.to}
+                          className={`inline-flex items-center gap-1 hover:underline ${
+                            isRecommended
+                              ? 'text-green-700 dark:text-green-400 font-semibold border border-green-300 dark:border-green-900/40 rounded-full px-2 py-0.5'
+                              : 'text-blue-600 dark:text-blue-400'
+                          }`}
+                        >
+                          {p.label} <ExternalLink className="w-3 h-3" />
+                        </Link>
+                        {isRecommended && (
+                          <span className="px-1.5 py-0.5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] font-bold">Recommended</span>
+                        )}
+                        {p.gtm && gtmPresent && (
+                          <span className="px-1.5 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[10px] font-semibold">GTM detected</span>
+                        )}
+                      </span>
+                    )
+                  })}
                 </div>
               </div>
 
