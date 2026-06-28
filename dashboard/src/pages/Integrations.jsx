@@ -16,6 +16,7 @@ import StatusBadge from '../components/StatusBadge'
 import MetricTile from '../components/MetricTile'
 import { safeNumber, formatNumber } from '../utils/numbers'
 import { hasFeature } from '../lib/planFeatures'
+import CapiSettings from '../components/CapiSettings'
 
 const IngestionActivityLog = ({ events, providerLabel }) => {
   const list = events?.data?.events || events?.events || []
@@ -1720,6 +1721,7 @@ export default function Integrations() {
       {/* ADVANCED TRACKING SECTION */}
       <div className="space-y-3">
         <h3 className="text-xs font-bold text-st-gray dark:text-gray-400 uppercase tracking-wider">Advanced Tracking</h3>
+        {hasFeature(site?.plan, 'capi_server_side') && <CapiSettings site={site} />}
         <DashboardCard
           title="Advanced Domains & Routing"
           subtitle="Managed proxy domains and cross-domain tracking setup"
