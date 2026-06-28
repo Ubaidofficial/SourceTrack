@@ -92,7 +92,7 @@ export default function DevelopersWebhooks() {
           <HeaderTable headers={[
             { name: 'Content-Type', type: 'string', desc: 'Will always be set to application/json.' },
             { name: 'X-SourceTrack-Event', type: 'string', desc: 'The type of event triggered: conversion.created for standard conversions, conversion.offline for offline conversion imports.' },
-            { name: 'X-SourceTrack-Signature', type: 'string', desc: 'The SHA-256 HMAC signature of the raw body payload, generated using your webhook secret.' }
+            { name: 'X-SourceTrack-Signature', type: 'string', desc: 'Timestamped signature in the form t=<unix-seconds>,v1=<hex>. v1 is the SHA-256 HMAC of `<t>.<raw-body>`, computed with your webhook secret. The timestamp lets your endpoint reject replayed deliveries.' }
           ]} />
         </section>
 
@@ -146,28 +146,38 @@ export default function DevelopersWebhooks() {
             Validating Outbound Webhook Signatures
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-            To confirm that webhook payloads are legitimate, compute the SHA-256 HMAC of the raw request payload using your Outbound Webhook signing secret and compare it to the signature header:
+            The signature header has the form <code>t=&lt;unix-seconds&gt;,v1=&lt;hex&gt;</code>. Parse out <code>t</code> and <code>v1</code>, recompute the SHA-256 HMAC of <code>{'`${t}.${rawBody}`'}</code> with your Outbound Webhook signing secret, and compare it to <code>v1</code> using a timing-safe equality. Optionally reject the request when <code>t</code> is too far from your own clock to block replays:
           </p>
           <DocsCodeBlock lang="js">
 {`// Node.js Express signature verification example
 const crypto = require('crypto');
 
 app.post('/webhook-receiver', express.raw({ type: 'application/json' }), (req, res) => {
-  const signature = req.headers['x-sourcetrack-signature'];
+  const header = req.headers['x-sourcetrack-signature'] || '';
   const secret = 'YOUR_WEBHOOK_SIGNING_SECRET';
 
-  // Compute HMAC signature on the raw string/buffer body
-  const expectedSignature = crypto
+  // Header format: t=<unix-seconds>,v1=<hex>
+  const parts = Object.fromEntries(header.split(',').map((kv) => kv.split('=')));
+  const { t, v1 } = parts;
+
+  // Recompute HMAC over \`<t>.<raw-body>\` (req.body is the raw Buffer)
+  const expected = crypto
     .createHmac('sha256', secret)
-    .update(req.body)
+    .update(t + '.' + req.body.toString('utf8'))
     .digest('hex');
 
-  if (signature === expectedSignature) {
-    // Verified and authentic
-    res.sendStatus(200);
+  const valid =
+    v1 &&
+    v1.length === expected.length &&
+    crypto.timingSafeEqual(Buffer.from(v1), Buffer.from(expected));
+
+  // Optional replay guard: reject deliveries older than 5 minutes
+  const fresh = Math.abs(Math.floor(Date.now() / 1000) - Number(t)) < 300;
+
+  if (valid && fresh) {
+    res.sendStatus(200); // Verified and authentic
   } else {
-    // Signature mismatch
-    res.sendStatus(401);
+    res.sendStatus(401); // Signature mismatch or stale timestamp
   }
 });`}
           </DocsCodeBlock>
