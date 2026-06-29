@@ -604,7 +604,7 @@ export default function Admin() {
               <button
                 onClick={handleRecheck}
                 disabled={rechecking}
-                className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-hover flex items-center gap-1.5 disabled:opacity-50"
+                className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border-strong rounded-lg hover:bg-gray-50 dark:hover:bg-dark-hover flex items-center gap-1.5 disabled:opacity-50"
               >
               <RefreshCw className={`w-3.5 h-3.5 ${rechecking ? 'animate-spin' : ''}`} />
               {rechecking ? 'Rechecking...' : 'Recheck All Features'}
@@ -671,7 +671,7 @@ export default function Admin() {
             <p className="text-xs text-st-gray">Editable truthfulness notes — persisted to database</p>
               <button
                 onClick={() => { setQaFormMode('create'); setQaFormData({ feature_key: '', note_type: 'watch', note_text: '' }) }}
-                className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-hover flex items-center gap-1.5"
+                className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border-strong rounded-lg hover:bg-gray-50 dark:hover:bg-dark-hover flex items-center gap-1.5"
               >
               <Plus className="w-3.5 h-3.5" /> Add Note
             </button>

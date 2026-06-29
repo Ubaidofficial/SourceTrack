@@ -155,7 +155,7 @@ export default function Layout({ children }) {
                 <select
                   value={activeSite?.site_key || ''}
                   onChange={(e) => setActiveSiteKey(e.target.value)}
-                  className="w-full pl-3 pr-8 py-1.5 text-xs font-semibold text-st-black dark:text-dark-primary bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-sm hover:border-st-lime dark:hover:border-st-lime focus:outline-none focus:ring-1 focus:ring-st-lime transition-all appearance-none cursor-pointer font-sans"
+                  className="w-full pl-3 pr-8 py-1.5 text-xs font-semibold text-st-black dark:text-dark-primary bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border-strong rounded-lg shadow-sm hover:border-st-lime dark:hover:border-st-lime focus:outline-none focus:ring-1 focus:ring-st-lime transition-all appearance-none cursor-pointer font-sans"
                 >
                   {sites.map((s) => (
                     <option key={s.site_key || s.id} value={s.site_key || s.id}>

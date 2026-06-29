@@ -23,7 +23,8 @@ export default {
           bg: '#0F1010',      // Base background (lowest elevation)
           card: '#141515',     // Card surface (one step up)
           hover: '#1A1C1C',    // Hover / highest elevation
-          border: 'rgba(255,255,255,0.06)', // Translucent edge-of-light
+          border: 'rgba(255,255,255,0.06)', // Translucent edge-of-light (surfaces)
+          'border-strong': 'rgba(255,255,255,0.12)', // Interactive controls (inputs/selects) — reads as an affordance, still below the lime focus ring
           text: '#E8E9EB'      // Primary dark text (never pure white)
         }
       }

@@ -218,7 +218,7 @@ function CustomSelect({ value, onChange, options, placeholder = 'Select option..
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-3 py-2 text-sm bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border rounded-lg shadow-sm focus:outline-none text-gray-700 dark:text-gray-200 text-left disabled:opacity-50"
+        className="w-full flex items-center justify-between px-3 py-2 text-sm bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border-strong rounded-lg shadow-sm focus:outline-none text-gray-700 dark:text-gray-200 text-left disabled:opacity-50"
       >
         <span className="truncate">{displayLabel}</span>
         <ChevronDown className="w-4 h-4 ml-2 text-gray-400 flex-shrink-0" />
@@ -317,7 +317,7 @@ function DateRangePopover({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-3 py-2 text-sm bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border rounded-lg shadow-sm focus:outline-none text-gray-700 dark:text-gray-200 text-left"
+        className="w-full flex items-center justify-between px-3 py-2 text-sm bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border-strong rounded-lg shadow-sm focus:outline-none text-gray-700 dark:text-gray-200 text-left"
       >
         <span className="truncate">{displayLabel}</span>
         <ChevronDown className="w-4 h-4 ml-2 text-gray-400 flex-shrink-0" />
@@ -1450,7 +1450,7 @@ export default function ReportBuilder() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsDrawerOpen(true)}
-            className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-hover flex items-center gap-1.5 transition-all font-semibold shadow-sm"
+            className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border-strong rounded-lg hover:bg-gray-50 dark:hover:bg-dark-hover flex items-center gap-1.5 transition-all font-semibold shadow-sm"
           >
             <Bookmark className="w-4 h-4 text-lime-500" />
             Saved Reports
@@ -1629,7 +1629,7 @@ export default function ReportBuilder() {
                   onChange={(e) => setReportName(e.target.value)}
                   placeholder="e.g. Weekly Revenue by Source"
                   maxLength={60}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg text-sm outline-none focus:ring-1 focus:ring-lime-500 dark:bg-dark-card dark:text-dark-primary"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border-strong rounded-lg text-sm outline-none focus:ring-1 focus:ring-lime-500 dark:bg-dark-card dark:text-dark-primary"
                 />
               </div>
 
@@ -1702,7 +1702,7 @@ export default function ReportBuilder() {
                   <button
                     type="button"
                     onClick={() => setShowMetricDropdown(!showMetricDropdown)}
-                    className="w-full flex items-center justify-between px-3 py-2 text-sm bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border rounded-lg shadow-sm text-gray-700 dark:text-gray-200 text-left"
+                    className="w-full flex items-center justify-between px-3 py-2 text-sm bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border-strong rounded-lg shadow-sm text-gray-700 dark:text-gray-200 text-left"
                   >
                     <span className="truncate text-xs text-st-gray dark:text-gray-400">
                       {selectedMetrics.length === 0 ? 'Select metrics...' : `+ Add metric (${selectedMetrics.length} selected)`}
@@ -1894,7 +1894,7 @@ export default function ReportBuilder() {
                       value={filters.channel || ''}
                       onChange={(e) => applyFilter('channel', e.target.value || undefined)}
                       placeholder="e.g. Organic Search"
-                      className="w-full px-2 py-1 border border-gray-300 dark:border-dark-border dark:bg-dark-card rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-dark-primary"
+                      className="w-full px-2 py-1 border border-gray-300 dark:border-dark-border-strong dark:bg-dark-card rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-dark-primary"
                     />
                   </div>
 
@@ -1906,7 +1906,7 @@ export default function ReportBuilder() {
                       value={filters.source || ''}
                       onChange={(e) => applyFilter('source', e.target.value || undefined)}
                       placeholder="e.g. google"
-                      className="w-full px-2 py-1 border border-gray-300 dark:border-dark-border dark:bg-dark-card rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-dark-primary"
+                      className="w-full px-2 py-1 border border-gray-300 dark:border-dark-border-strong dark:bg-dark-card rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-dark-primary"
                     />
                   </div>
 
@@ -1918,7 +1918,7 @@ export default function ReportBuilder() {
                       value={filters.medium || ''}
                       onChange={(e) => applyFilter('medium', e.target.value || undefined)}
                       placeholder="e.g. cpc"
-                      className="w-full px-2 py-1 border border-gray-300 dark:border-dark-border dark:bg-dark-card rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-dark-primary"
+                      className="w-full px-2 py-1 border border-gray-300 dark:border-dark-border-strong dark:bg-dark-card rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-dark-primary"
                     />
                   </div>
 
@@ -1930,7 +1930,7 @@ export default function ReportBuilder() {
                       value={filters.campaign || ''}
                       onChange={(e) => applyFilter('campaign', e.target.value || undefined)}
                       placeholder="e.g. summer_sale"
-                      className="w-full px-2 py-1 border border-gray-300 dark:border-dark-border dark:bg-dark-card rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-dark-primary"
+                      className="w-full px-2 py-1 border border-gray-300 dark:border-dark-border-strong dark:bg-dark-card rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-dark-primary"
                     />
                   </div>
 
@@ -1942,7 +1942,7 @@ export default function ReportBuilder() {
                       value={filters.conversion_type || ''}
                       onChange={(e) => applyFilter('conversion_type', e.target.value || undefined)}
                       placeholder="e.g. signup"
-                      className="w-full px-2 py-1.5 border border-gray-300 dark:border-dark-border dark:bg-dark-card rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-dark-primary"
+                      className="w-full px-2 py-1.5 border border-gray-300 dark:border-dark-border-strong dark:bg-dark-card rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-dark-primary"
                     />
                   </div>
 
@@ -2061,7 +2061,7 @@ export default function ReportBuilder() {
                         {hasFeature(site?.plan, 'csv_export') ? (
                           <button
                             onClick={handleExportCSV}
-                            className="px-3 py-1.5 text-xs bg-white dark:bg-dark-card hover:bg-gray-50 dark:hover:bg-dark-border text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-dark-border rounded-lg flex items-center gap-1 font-semibold shadow-sm"
+                            className="px-3 py-1.5 text-xs bg-white dark:bg-dark-card hover:bg-gray-50 dark:hover:bg-dark-border text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-dark-border-strong rounded-lg flex items-center gap-1 font-semibold shadow-sm"
                           >
                             <Download className="w-3.5 h-3.5" />
                             CSV
@@ -2069,7 +2069,7 @@ export default function ReportBuilder() {
                         ) : (
                           <a
                             href="/billing"
-                            className="px-3 py-1.5 text-xs bg-white dark:bg-dark-card hover:border-st-lime text-gray-400 border border-gray-300 dark:border-dark-border rounded-lg flex items-center gap-1 font-semibold shadow-sm opacity-70"
+                            className="px-3 py-1.5 text-xs bg-white dark:bg-dark-card hover:border-st-lime text-gray-400 border border-gray-300 dark:border-dark-border-strong rounded-lg flex items-center gap-1 font-semibold shadow-sm opacity-70"
                             title="CSV export available on Starter"
                           >
                             🔒 CSV

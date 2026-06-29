@@ -9,6 +9,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { Eye, RefreshCw, Copy, Check, BarChart3 } from 'lucide-react'
 import { safeNumber } from '../utils/numbers'
+import { limeAreaGradient } from '../utils/limeAreaGradient'
+import { tooltipPlugin, CHART_COLORS } from '../utils/chartTooltip'
 import { SourceIcon, normalizeSource } from '../components/SourceIcon'
 import { useSite } from '../contexts/SiteContext'
 import MetricTile from '../components/MetricTile'
@@ -229,39 +231,52 @@ export default function Analytics() {
   function isActive(type, value) { return filters.some(f => f.type === type && f.value === value) }
 
   // ─── Visitors chart ────────────────────────────────────────────────────────
+  // Dark line (matches the Dashboard trend) so it stays readable over the lime
+  // area gradient; lime points + hover dot for the accent.
   const chartData = useMemo(() => ({
     labels: ts.labels || [],
     datasets: [{
       label: 'Visitors',
       data: ts.visitors || [],
-      borderColor: '#CCF03F',
-      backgroundColor: 'rgba(204,240,63,0.06)',
+      borderColor: 'rgba(17,24,39,1)',
+      backgroundColor: limeAreaGradient,
       fill: true,
       tension: 0.4,
       pointRadius: 2,
-      pointBackgroundColor: '#CCF03F',
+      pointBackgroundColor: CHART_COLORS.lime,
+      pointHoverRadius: 5,
+      pointHoverBackgroundColor: CHART_COLORS.lime,
+      pointHoverBorderColor: CHART_COLORS.lime,
     }]
   }), [ts])
 
-  const chartOptions = useMemo(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: theme === 'dark' ? '#1A1D1D' : '#ffffff',
-        borderColor: theme === 'dark' ? '#2A2E2E' : '#e5e7eb',
-        borderWidth: 1,
-        titleColor: theme === 'dark' ? '#ffffff' : '#111827',
-        bodyColor: theme === 'dark' ? '#9CA3AF' : '#4B5563',
-        callbacks: { label: ctx => `Visitors: ${safeNumber(ctx.parsed.y, 0).toLocaleString()}` }
+  // Truth-gated tooltip: Visitors always; Revenue ONLY when that point's
+  // revenue > 0. timeseries has no new/returning split (null by design) and no
+  // per-point conversions, so no such rows are rendered. No fabricated values.
+  const visitorsTooltipRows = (i) => {
+    const rows = [{ label: 'Visitors', value: safeNumber(ts.visitors?.[i], 0).toLocaleString(), accent: true }]
+    const rev = ts.revenue?.[i]
+    if (rev > 0) rows.push({ label: 'Revenue', value: `$${safeNumber(rev, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}` })
+    return rows
+  }
+
+  const chartOptions = useMemo(() => {
+    const isDark = theme === 'dark'
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: tooltipPlugin(visitorsTooltipRows)
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: isDark ? CHART_COLORS.tick.dark : CHART_COLORS.tick.light, maxRotation: 0, maxTicksLimit: 8 } },
+        y: { grid: { color: isDark ? CHART_COLORS.grid.dark : CHART_COLORS.grid.light }, ticks: { color: isDark ? CHART_COLORS.tick.dark : CHART_COLORS.tick.light, precision: 0 } }
       }
-    },
-    scales: {
-      x: { grid: { display: false }, ticks: { color: theme === 'dark' ? '#7D8090' : '#4B5563', maxRotation: 0, maxTicksLimit: 8 } },
-      y: { grid: { color: theme === 'dark' ? '#2A2E2E' : '#f3f4f6' }, ticks: { color: theme === 'dark' ? '#7D8090' : '#4B5563', precision: 0 } }
     }
-  }), [theme])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [theme, ts])
 
   // ─── Snippet ───────────────────────────────────────────────────────────────
   const trackerFile = site?.cookieless_mode ? 'tracker.cookieless.min.js' : 'tracker.min.js'

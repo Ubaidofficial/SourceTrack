@@ -31,6 +31,8 @@ import JourneyModal from '../components/JourneyModal'
 import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
 import { SourceIcon, SourceChip } from '../components/SourceIcon'
 import { safeNumber } from '../utils/numbers'
+import { limeAreaGradient } from '../utils/limeAreaGradient'
+import { tooltipPlugin, CHART_COLORS } from '../utils/chartTooltip'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
 
@@ -234,24 +236,13 @@ export default function Dashboard() {
     .filter(m => canMultiTouch || !MULTI_TOUCH.has(m.key))
     .map(m => ({ model: m.key, label: m.label, total: models[m.key] || 0 }))
 
-  // Vertical lime area-fill gradient for the trend line: solid #CCF03F at the
-  // top fading to 35% at the baseline. Returns a flat fallback before the chart
-  // area is laid out on first render.
-  const limeAreaGradient = (ctx) => {
-    const { ctx: canvas, chartArea } = ctx.chart
-    if (!chartArea) return 'rgba(204,240,63,0.35)'
-    const g = canvas.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-    g.addColorStop(0, '#CCF03F')
-    g.addColorStop(1, 'rgba(204,240,63,0.35)')
-    return g
-  }
-
   const revTrendData = {
     labels: timeResults.map(r => r.dim_value || ''),
     datasets: [{
       label: 'Revenue', data: timeResults.map(r => r.revenue || 0),
       borderColor: 'rgba(17, 24, 39, 1)', backgroundColor: limeAreaGradient,
-      fill: true, tension: 0.3, pointRadius: 2
+      fill: true, tension: 0.3, pointRadius: 2,
+      pointHoverRadius: 5, pointHoverBackgroundColor: CHART_COLORS.lime, pointHoverBorderColor: CHART_COLORS.lime
     }]
   }
 
@@ -266,21 +257,34 @@ export default function Dashboard() {
       backgroundColor: limeAreaGradient,
       borderWidth: 2,
       pointRadius: 3,
+      pointHoverRadius: 5, pointHoverBackgroundColor: CHART_COLORS.lime, pointHoverBorderColor: CHART_COLORS.lime,
       tension: 0.3,
       fill: true
     }]
   }
 
-  const chartOpts = (prefix = '$') => {
+  // Truth-gated tooltip rows — render ONLY fields present in the data source.
+  // revenue_trend rows are { dim_value, revenue }; channel_trend rows are
+  // { dim_value, leads }. No fabricated metrics.
+  const revTooltipRows = (i) => {
+    const rev = timeResults[i]?.revenue
+    return rev > 0 ? [{ label: 'Revenue', value: `$${safeNumber(rev, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`, accent: true }] : []
+  }
+  const leadTooltipRows = (i) => [
+    { label: 'Leads', value: safeNumber(channelTrendResults[i]?.leads, 0).toLocaleString(), accent: true }
+  ]
+
+  const chartOpts = (prefix = '$', getRows = revTooltipRows) => {
     const isDark = document.documentElement.classList.contains('dark')
-    const gridColor = isDark ? '#2A2E2E' : '#f3f4f6'
-    const tickColor = isDark ? '#9CA3AF' : '#6b7280'
+    const gridColor = isDark ? CHART_COLORS.grid.dark : CHART_COLORS.grid.light
+    const tickColor = isDark ? CHART_COLORS.tick.dark : CHART_COLORS.tick.light
     return {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: tooltipPlugin(getRows) },
       scales: {
-        y: { beginAtZero: true, ticks: { callback: (v) => `${prefix}${v}`, maxTicksLimit: 5 }, grid: { color: gridColor } },
-        x: { ticks: { maxTicksLimit: 8 }, grid: { display: false } }
+        y: { beginAtZero: true, ticks: { color: tickColor, callback: (v) => `${prefix}${v}`, maxTicksLimit: 5 }, grid: { color: gridColor } },
+        x: { ticks: { color: tickColor, maxTicksLimit: 8 }, grid: { display: false } }
       }
     }
   }
@@ -537,7 +541,7 @@ export default function Dashboard() {
               {/* Performance Trend Chart */}
               <DashboardCard title="Performance Trend" subtitle={`Last ${timeRange} days • ${site?.timezone || 'UTC'}`}>
                 <div className="h-64">
-                  <Line data={hasRevenue ? revTrendData : channelTrendData} options={chartOpts(hasRevenue ? '$' : '')} />
+                  <Line data={hasRevenue ? revTrendData : channelTrendData} options={chartOpts(hasRevenue ? '$' : '', hasRevenue ? revTooltipRows : leadTooltipRows)} />
                 </div>
               </DashboardCard>
 
@@ -635,7 +639,7 @@ export default function Dashboard() {
               {/* 1. Source performance trend chart */}
               <DashboardCard title="Source Performance Trend" subtitle="Conversions by source over time">
                 <div className="h-64">
-                  <Line data={channelTrendData} options={chartOpts('')} />
+                  <Line data={channelTrendData} options={chartOpts('', leadTooltipRows)} />
                 </div>
               </DashboardCard>
 

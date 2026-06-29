@@ -568,7 +568,7 @@ export default function Campaigns() {
         <div className="flex flex-wrap items-center gap-2">
           {anyConnected && !isPreview && (
             <button onClick={handleSyncAllConnected} disabled={syncingAll}
-              className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-hover flex items-center gap-1.5 transition-colors font-medium shadow-sm">
+              className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border-strong rounded-lg hover:bg-gray-50 dark:hover:bg-dark-hover flex items-center gap-1.5 transition-colors font-medium shadow-sm">
               <RefreshCw className={`w-4 h-4 ${syncingAll ? 'animate-spin' : ''}`} />
               {syncingAll ? 'Syncing...' : 'Sync connected accounts'}
             </button>
@@ -590,12 +590,12 @@ export default function Campaigns() {
               if (!site) return
               const params = new URLSearchParams({ site_key: site.site_key, model: 'last_touch', days: dateRange, dimension: activeDim, search, status: statusFilter })
               window.open(`/api/campaigns/export?${params}`, '_blank')
-            }} className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-hover flex items-center gap-1.5">
+            }} className="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border-strong rounded-lg hover:bg-gray-50 dark:hover:bg-dark-hover flex items-center gap-1.5">
               <Download className="w-4 h-4" /> Export
             </button>
           ) : (
             <a href="/billing" title="CSV export available on Starter and above"
-              className="px-3 py-1.5 text-sm text-st-gray dark:text-gray-400 bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border rounded-lg hover:bg-gray-50 dark:hover:bg-dark-hover flex items-center gap-1.5 opacity-70">
+              className="px-3 py-1.5 text-sm text-st-gray dark:text-gray-400 bg-white dark:bg-dark-card border border-gray-300 dark:border-dark-border-strong rounded-lg hover:bg-gray-50 dark:hover:bg-dark-hover flex items-center gap-1.5 opacity-70">
               🔒 Export · Upgrade
             </a>
           )}
@@ -618,7 +618,7 @@ export default function Campaigns() {
             <input
               type="text" value={search} onChange={e => setSearch(e.target.value)}
               placeholder={`Filter by ${DIMENSIONS.find(d => d.key === activeDim)?.label?.toLowerCase() || 'name'}...`}
-              className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-dark-border bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-dark-primary focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime"
+              className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-dark-border-strong bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-dark-primary focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime"
             />
           </div>
 
@@ -634,7 +634,7 @@ export default function Campaigns() {
           </div>
 
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 dark:border-dark-border bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-dark-primary focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime">
+            className="px-3 py-2 border border-gray-300 dark:border-dark-border-strong bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-dark-primary focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime">
             <option value="all">All Status</option>
             <option value="active">Active</option>
             <option value="low">Low Volume</option>
@@ -1142,7 +1142,7 @@ export default function Campaigns() {
                     onDragLeave={handleDragLeave}
                     onDrop={handleDrop}
                     className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
-                      dragOver ? 'border-st-lime dark:border-st-lime-dark bg-lime-50/10 dark:bg-st-lime/5' : 'border-gray-300 dark:border-dark-border hover:border-st-black dark:hover:border-white bg-gray-50/50 dark:bg-dark-card/50'
+                      dragOver ? 'border-st-lime dark:border-st-lime-dark bg-lime-50/10 dark:bg-st-lime/5' : 'border-gray-300 dark:border-dark-border-strong hover:border-st-black dark:hover:border-white bg-gray-50/50 dark:bg-dark-card/50'
                     }`}
                   >
                     <input
