@@ -88,7 +88,6 @@ None in this session (all backend SQL handled via application code + existing ta
 
 ## Feature 1: TikTok CAPI
 Status: COMPLETE
-File: api/lib/conversion-sync.js — sendTikTokConversion added
 File: api/routes/conversion.js — wired into CAPI sync block
 SQL: tiktok_pixel_id, tiktok_access_token columns added to sites table
 Note: Requires customer to add TikTok Pixel ID and Access Token in Integrations page
