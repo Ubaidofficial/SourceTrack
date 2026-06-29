@@ -88,8 +88,8 @@ export default function Signup() {
       <Helmet>
         <title>Start free with SourceTrack | SourceTrack</title>
         <meta name="description" content="Create a free SourceTrack account and start tracking attribution across 9 models in under 3 minutes." />
-        <meta name="robots" content="noindex, nofollow" />
-        <link rel="canonical" href="https://sourcetrack.ai/signup" />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://app.sourcetrack.ai/signup" />
       </Helmet>
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
