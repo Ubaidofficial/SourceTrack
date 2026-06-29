@@ -17,7 +17,7 @@ class DocsErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="py-24 text-center px-4 bg-white dark:bg-[#1A1D1D] rounded-2xl border border-gray-100 dark:border-gray-800">
+        <div className="py-24 text-center px-4 bg-white dark:bg-dark-card rounded-2xl border border-gray-100 dark:border-dark-border">
           <h2 className="text-xl font-bold text-gray-900 dark:text-dark-primary mb-2">Docs failed to load</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">Please refresh or contact support.</p>
         </div>
@@ -31,8 +31,8 @@ export default function DocsLayout({ children, isDeveloper = false }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F9FAFB] dark:bg-[#111414] text-gray-900 dark:text-dark-primary transition-colors duration-150">
-      <MarketingHeader />
+    <div className="min-h-screen flex flex-col bg-[#F9FAFB] dark:bg-dark-bg text-gray-900 dark:text-dark-primary transition-colors duration-150">
+      <MarketingHeader themed />
 
       {/* Main layout container */}
       <div className="flex-1 max-w-[1320px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex gap-8">
@@ -47,7 +47,7 @@ export default function DocsLayout({ children, isDeveloper = false }) {
         <div className="md:hidden fixed bottom-6 right-6 z-40">
           <button
             onClick={() => setMobileNavOpen(true)}
-            className="flex items-center gap-2 bg-[#1F2323] text-white dark:bg-[#CCF03F] dark:text-[#1F2323] px-5 py-3 rounded-full shadow-xl font-extrabold text-sm tracking-wide transition-all active:scale-95"
+            className="flex items-center gap-2 bg-st-black text-white dark:bg-st-lime dark:text-st-black px-5 py-3 rounded-full shadow-xl font-extrabold text-sm tracking-wide transition-all active:scale-95"
           >
             Menu
           </button>
@@ -57,7 +57,7 @@ export default function DocsLayout({ children, isDeveloper = false }) {
         {mobileNavOpen && (
           <div className="fixed inset-0 z-50 md:hidden bg-black/60 backdrop-blur-sm" onClick={() => setMobileNavOpen(false)}>
             <div
-              className="absolute left-0 top-0 bottom-0 w-72 bg-white dark:bg-[#1A1D1D] p-6 overflow-y-auto"
+              className="absolute left-0 top-0 bottom-0 w-72 bg-white dark:bg-dark-card p-6 overflow-y-auto"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex justify-between items-center mb-6">

@@ -36,7 +36,7 @@ function ParamTable({ params }) {
 
 function MethodSignature({ signature }) {
   return (
-    <div className="bg-gray-50 dark:bg-[#1a1d1d] border border-gray-200 dark:border-[#2a2e2e] rounded-lg px-4 py-3 my-4">
+    <div className="bg-gray-50 dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg px-4 py-3 my-4">
       <code className="text-sm font-mono text-gray-800 dark:text-gray-200 font-semibold">{signature}</code>
     </div>
   )
