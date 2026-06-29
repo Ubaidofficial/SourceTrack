@@ -70,13 +70,61 @@ const WRAPPER_KEYS = new Set(['distinctId', 'event', 'properties'])
 //   os      -> os_name            (pixel.js:110, an os_name JSON-bag key)
 const PIXEL_RENAME = { value: 'conversion_value', browser: 'browser_name', os: 'os_name' }
 
-// Phase 2b placeholder. Canonical, deterministic-per-conversion event_id: prefer a
-// natural id where one exists; else a generated uuid. Real derivation (the §2.5
-// app-side (site_id, event_id) claim) lands in Phase 2b — do NOT rely on the uuid
-// branch for dedup yet.
+// Trim to a non-empty string, or null. Accepts finite numbers (Shopify order ids
+// already arrive as strings, but be defensive).
+function natId (v) {
+  if (typeof v === 'string') { const t = v.trim(); return t || null }
+  if (typeof v === 'number' && Number.isFinite(v)) return String(v)
+  return null
+}
+
+// Canonical, provider-INDEPENDENT, deterministic-per-logical-conversion event_id
+// (§2.5). Precedence is LOCKED (Phase-2b ruling); do not reorder. The (site_id,
+// event_id) claim in idempotency.js carries tenant scope — event_id itself stays
+// provider/site-independent so a shared natural id can cross-dedup producers.
+//
+// Cross-producer dedup IS possible only where two producers share a stable id:
+//   - offline <-> browser: both compute `external_event_id` via the same
+//     resolveCapiEventId formula (conversion.js:238, conversion-offline.js:178 ->
+//     capi-event-id.js:14-23), so branch 2 dedups them when order_id+type match.
+// It is IMPOSSIBLE for browser<->Stripe and Shopify<->Stripe — those producers
+// share NO stable id (merchant order_id vs Stripe cs_/pi_/in_; Shopify order id vs
+// Stripe ids), so we do NOT attempt it. That double-count is a documented
+// limitation (Phase-2b audit), not a bug to "fix" here.
 export function deriveEventId (raw) {
-  return raw.stripe_invoice_id || raw.stripe_subscription_id || raw.order_id ||
-    raw.external_event_id || raw.idempotency_key || randomUUID()
+  // 1. Client-supplied event_id — the merchant's pixel eventID; highest-fidelity
+  //    true browser<->server dedup (capi-event-id.js:9-10).
+  const clientId = natId(raw.event_id)
+  if (clientId) return clientId
+  // 2. external_event_id = the resolveCapiEventId value (client event_id OR
+  //    `${siteId}:${orderId}:${type}`). Enables offline<->browser dedup.
+  const ext = natId(raw.external_event_id)
+  if (ext) return ext
+  // 3. Stripe invoice id — the per-PERIOD key. A renewal gets a fresh invoice_id,
+  //    so it is correctly NOT a duplicate of the prior period (stripe-subscription.js:60-69).
+  const invoice = natId(raw.stripe_invoice_id)
+  if (invoice) return invoice
+  // 4. Stripe subscription id — reached ONLY when there is no invoice (once-per-
+  //    subscription lifecycle: trial_start/churn). Scope by conversion_type so the
+  //    two transitions don't collide and renewals are never collapsed — mirrors
+  //    buildSubscriptionIdempotencyKeys (stripe-subscription.js:66-72).
+  const sub = natId(raw.stripe_subscription_id)
+  if (sub) return `${sub}:${natId(raw.conversion_type) || 'conversion'}`
+  // 5-8. Merchant / provider natural ids.
+  const order = natId(raw.order_id)
+  if (order) return order
+  const payment = natId(raw.payment_id)
+  if (payment) return payment
+  const idem = natId(raw.idempotency_key)
+  if (idem) return idem
+  const provEvt = natId(raw.provider_event_id)
+  if (provEvt) return provEvt
+  // 9. Last resort: a generated uuid. Reached by producers with NO natural id
+  //    (proxy, pixel, server-events, and webhook-incoming whose only id lives in
+  //    `conversion_event_id`, which is intentionally NOT in this precedence —
+  //    matches the no-existing-claim reality and the §2.6 "dead on read" finding).
+  //    These rows are append-only and not cross-dedupable.
+  return randomUUID()
 }
 
 function tsMillis (v) {
@@ -173,7 +221,7 @@ export function normalizeEvent (raw) {
   const distinctId = (src.distinct_id ?? src.distinctId ?? src.anonymous_id) || randomUUID()
   out.distinct_id = distinctId
   out.visitor_id = (src.visitor_id ?? src.anonymous_id) || distinctId
-  out.event_id = (src.event_id != null && src.event_id !== '') ? src.event_id : deriveEventId(src)
+  out.event_id = deriveEventId(src) // branch 1 returns src.event_id when present
   const ms = tsMillis(src.timestamp)
   out.timestamp = Number.isNaN(ms) ? new Date().toISOString() : new Date(ms).toISOString()
   out.ingestion_method = src.ingestion_method || 'unknown'

@@ -9,9 +9,10 @@ at one choke point, then buffers and hands a gzipped NDJSON payload to an
 | module | export | responsibility |
 |---|---|---|
 | `normalize.js` | `normalizeEvent(raw)` | pure raw→canonical mapping |
-| `normalize.js` | `deriveEventId(raw)` | **stub** — natural id else uuid (real derivation = Phase 2b) |
+| `normalize.js` | `deriveEventId(raw)` | provider-independent, deterministic-per-conversion `event_id` (Phase 2b) |
 | `normalize.js` | `TYPED_COLUMNS`, `REQUIRED_COLUMNS` | the schema contract, exported for tests/wiring |
 | `batch.js` | `createBatcher({ transport, … })` | buffered NDJSON → gzip → injected transport |
+| `idempotency.js` | `createRevenueIdempotency(supabase)` | claim/rollback on `(site_id, event_id)` (Phase 2b) |
 
 ## `normalizeEvent(raw)` — the contract
 
@@ -63,10 +64,31 @@ Guarantees:
   but does **not** poison the chain — subsequent batches still flush. **429-aware
   retry/backoff is Phase 2d.**
 
+## `deriveEventId(raw)` — provider-independent dedup key (Phase 2b)
+
+Returns the canonical `event_id` (§2.5). **Locked precedence** (do not reorder):
+
+1. `event_id` — client-supplied (merchant pixel eventID); true browser↔server dedup
+2. `external_event_id` — the `resolveCapiEventId` value; **enables offline↔browser dedup** (both producers compute the same `${siteId}:${orderId}:${type}`)
+3. `stripe_invoice_id` — per-**period** key (a renewal's fresh invoice ≠ prior period)
+4. `stripe_subscription_id` — only when no invoice (lifecycle: trial/churn), scoped `:conversion_type` (mirrors `buildSubscriptionIdempotencyKeys`)
+5–8. `order_id` → `payment_id` → `idempotency_key` → `provider_event_id`
+9. generated **uuid** — no-natural-id producers (proxy/pixel/server-events/webhook-incoming); append-only, not dedupable
+
+**Documented limitation:** browser↔Stripe and Shopify↔Stripe share **no** stable id, so cross-producer dedup for those pairs is impossible at the `event_id` level — intentionally not attempted (Phase-2b audit).
+
+## `createRevenueIdempotency(supabase)` — parallel `(site_id, event_id)` claim (Phase 2b)
+
+- `claim(siteId, eventId)` → `{ claimed: true }` (emit) · `{ claimed: false, duplicate: true }` (skip) · `{ claimed: false, error }` (**caller fails OPEN — emit anyway**; never drop revenue on a DB hiccup, mirrors `conversion.js:309-333`). Keys on `(site_id, event_id)` with **no provider** — a shared `event_id` cross-dedups producers the existing provider-scoped `revenue_idempotency_keys` cannot.
+- `rollback(siteId, eventId)` — releases the claim if the emit path fails, so a retry can re-claim (mirrors `rollbackIdempotencyKeys`, `api/lib/idempotency.js:102-130`).
+- Supabase client is **dependency-injected** (mockable; no real DB in tests).
+- New table authored as a **migration file only** (not applied): `supabase/migrations/20260630120000_create_tinybird_revenue_idempotency.sql` — runs **alongside** the existing claim, not a replacement.
+
 ## Out of scope here (later phases)
 
-Idempotency `(site_id, event_id)` claim (2b) · real Events API POST + token (2c) ·
-429 retry/backoff (2d) · producer wiring. None of those live in this module.
+Real Events API POST + token (2c) · 429 retry/backoff (2d) · producer wiring (2c) ·
+the Stripe checkout/invoice subscription-mode double-count (a 2c producer fix).
+None of those live in this module.
 
 ### Known deferred (non-blocking, from the Phase-2a adversarial review)
 
