@@ -83,9 +83,9 @@ const MetricTile = ({
       <div>
         <p className={`text-st-gray dark:text-gray-400 font-semibold uppercase tracking-wider ${compact ? 'text-[10px] mb-1' : 'text-[11px] mb-1.5'}`}>{label}</p>
         {displayValue != null ? (
-          <p className={`text-st-black dark:text-white font-bold tabular-nums tracking-tight ${compact ? 'text-xl' : 'text-2xl'}`}>{displayValue}</p>
+          <p className={`text-st-black dark:text-dark-primary font-bold tabular-nums tracking-tight ${compact ? 'text-xl' : 'text-2xl'}`}>{displayValue}</p>
         ) : (
-          <p className={`text-st-black dark:text-white font-bold tracking-tight ${compact ? 'text-xl' : 'text-2xl'}`}>—</p>
+          <p className={`text-st-black dark:text-dark-primary font-bold tracking-tight ${compact ? 'text-xl' : 'text-2xl'}`}>—</p>
         )}
       </div>
       {(isEmptyState || showTrend || sub) && (

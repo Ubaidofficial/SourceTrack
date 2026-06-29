@@ -544,7 +544,7 @@ export default function Campaigns() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-2xl font-bold text-st-black dark:text-white">Campaigns & Attribution</h2>
+            <h2 className="text-2xl font-bold text-st-black dark:text-dark-primary">Campaigns & Attribution</h2>
             <span
               className="inline-flex items-center px-1.5 py-0.5 rounded bg-st-black/5 dark:bg-white/10 text-[10px] font-semibold text-st-black dark:text-white/90"
               title="This page uses last-touch attribution. Revenue and conversions are credited to each visit's source at conversion time. To compare other models, open Report Builder."
@@ -618,7 +618,7 @@ export default function Campaigns() {
             <input
               type="text" value={search} onChange={e => setSearch(e.target.value)}
               placeholder={`Filter by ${DIMENSIONS.find(d => d.key === activeDim)?.label?.toLowerCase() || 'name'}...`}
-              className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-dark-border bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime"
+              className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-dark-border bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-dark-primary focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime"
             />
           </div>
 
@@ -626,7 +626,7 @@ export default function Campaigns() {
             {DATE_RANGES.map(dr => (
               <button key={dr.label} onClick={() => setDateRange(dr.days)}
                 className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                  dateRange === dr.days ? 'bg-white dark:bg-[#252929] text-st-black dark:text-white shadow-sm' : 'text-st-gray dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'
+                  dateRange === dr.days ? 'bg-white dark:bg-[#252929] text-st-black dark:text-dark-primary shadow-sm' : 'text-st-gray dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'
                 }`}>
                 {dr.label}
               </button>
@@ -634,7 +634,7 @@ export default function Campaigns() {
           </div>
 
           <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 dark:border-dark-border bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime">
+            className="px-3 py-2 border border-gray-300 dark:border-dark-border bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-dark-primary focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime">
             <option value="all">All Status</option>
             <option value="active">Active</option>
             <option value="low">Low Volume</option>
@@ -845,7 +845,7 @@ export default function Campaigns() {
                     return (
                       <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-dark-hover/40 transition-colors cursor-pointer" onClick={() => setSelectedCampaign(r)}>
                         <td className="py-3 px-4">
-                          <p className="text-st-black dark:text-white font-medium inline-flex items-center">
+                          <p className="text-st-black dark:text-dark-primary font-medium inline-flex items-center">
                             {r.name || 'unknown'}
                             {isDirectLabel(r.name) && <DirectInfo />}
                           </p>
@@ -888,7 +888,7 @@ export default function Campaigns() {
                         </td>
                         {hasRevenue && (
                           <>
-                            <td className="py-3 px-4 text-right font-semibold text-st-black dark:text-white tabular-nums">
+                            <td className="py-3 px-4 text-right font-semibold text-st-black dark:text-dark-primary tabular-nums">
                               {formatCurrency(r.revenue)}
                             </td>
                             <td className="py-3 px-4 text-right text-st-gray dark:text-gray-400 tabular-nums">
@@ -911,7 +911,7 @@ export default function Campaigns() {
                                     <>
                                       <input
                                         type="number"
-                                        className="w-20 text-right border border-gray-300 rounded px-1 py-0.5 text-xs outline-none focus:ring-1 focus:ring-gray-900 dark:bg-dark-card dark:text-white"
+                                        className="w-20 text-right border border-gray-300 rounded px-1 py-0.5 text-xs outline-none focus:ring-1 focus:ring-gray-900 dark:bg-dark-card dark:text-dark-primary"
                                         value={spendInput}
                                         onChange={e => setSpendInput(e.target.value)}
                                         onKeyDown={e => e.key === 'Enter' && saveSpend(r.name)}
@@ -975,7 +975,7 @@ export default function Campaigns() {
                         <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                           <button
                             onClick={() => setSelectedCampaign(r)}
-                            className="text-xs text-st-black dark:text-white font-semibold hover:underline"
+                            className="text-xs text-st-black dark:text-dark-primary font-semibold hover:underline"
                           >
                             Details
                           </button>
@@ -1002,7 +1002,7 @@ export default function Campaigns() {
               </div>
             ) : !hasRevenue ? (
               <div className="h-64 flex flex-col items-center justify-center text-center px-6 gap-2">
-                <p className="text-sm font-medium text-st-black dark:text-white">No revenue in this period</p>
+                <p className="text-sm font-medium text-st-black dark:text-dark-primary">No revenue in this period</p>
                 <p className="text-xs text-st-gray max-w-xs">Revenue appears after Stripe, Shopify, or a conversion event sends a purchase value. <a href="/app/integrations" className="underline hover:text-st-black">Open Integrations</a> to set up revenue tracking.</p>
               </div>
             ) : rows.length === 0 ? (
@@ -1028,7 +1028,7 @@ export default function Campaigns() {
             <div className="px-6 py-4 border-b border-gray-100 dark:border-[#2A2E2E] flex items-center justify-between flex-shrink-0 bg-gray-50/50 dark:bg-[#151818]/50">
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-base font-bold text-st-black dark:text-white">Campaign Details</h2>
+                  <h2 className="text-base font-bold text-st-black dark:text-dark-primary">Campaign Details</h2>
                   {(() => {
                     const statusText = selectedCampaign.status === 'active' ? 'Active' :
                                        selectedCampaign.status === 'paused' ? 'Paused' :
@@ -1045,7 +1045,7 @@ export default function Campaigns() {
                   {selectedCampaign.name} • {selectedCampaign.source || 'direct'} / {selectedCampaign.medium || 'none'}
                 </p>
               </div>
-              <button onClick={() => setSelectedCampaign(null)} className="p-1.5 text-st-gray dark:text-gray-400 hover:text-st-black dark:text-white rounded-lg hover:bg-gray-100">
+              <button onClick={() => setSelectedCampaign(null)} className="p-1.5 text-st-gray dark:text-gray-400 hover:text-st-black dark:text-dark-primary rounded-lg hover:bg-gray-100">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -1067,15 +1067,15 @@ export default function Campaigns() {
                 <div className="grid grid-cols-2 gap-4 text-xs font-mono">
                   <div className="p-2 bg-gray-50 dark:bg-[#151818] rounded-lg">
                     <span className="text-st-gray dark:text-gray-400 block text-[10px]">utm_source</span>
-                    <span className="text-st-black dark:text-white">{selectedCampaign.source || '—'}</span>
+                    <span className="text-st-black dark:text-dark-primary">{selectedCampaign.source || '—'}</span>
                   </div>
                   <div className="p-2 bg-gray-50 dark:bg-[#151818] rounded-lg">
                     <span className="text-st-gray dark:text-gray-400 block text-[10px]">utm_medium</span>
-                    <span className="text-st-black dark:text-white">{selectedCampaign.medium || '—'}</span>
+                    <span className="text-st-black dark:text-dark-primary">{selectedCampaign.medium || '—'}</span>
                   </div>
                   <div className="p-2 bg-gray-50 dark:bg-[#151818] rounded-lg col-span-2">
                     <span className="text-st-gray dark:text-gray-400 block text-[10px]">utm_campaign</span>
-                    <span className="text-st-black dark:text-white">{selectedCampaign.name}</span>
+                    <span className="text-st-black dark:text-dark-primary">{selectedCampaign.name}</span>
                   </div>
                 </div>
               </DashboardCard>
@@ -1259,8 +1259,8 @@ export default function Campaigns() {
                               <tr key={idx} className={r.error ? 'bg-red-50/50 dark:bg-red-950/20 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors' : 'hover:bg-gray-50 dark:hover:bg-dark-hover/40 transition-colors'}>
                                 <td className="py-2 px-3 font-mono text-[11px] dark:text-gray-300">{r.data.date || '—'}</td>
                                 <td className="py-2 px-3 uppercase text-[10px] tracking-wider font-semibold text-gray-500 dark:text-gray-400">{r.data.platform || '—'}</td>
-                                <td className="py-2 px-3 font-medium text-st-black dark:text-white truncate max-w-[150px]" title={r.data.campaign_name}>{r.data.campaign_name || '—'}</td>
-                                <td className="py-2 px-3 text-right font-semibold dark:text-white tabular-nums">{r.data.spend !== undefined ? `$${parseFloat(r.data.spend).toFixed(2)}` : '—'}</td>
+                                <td className="py-2 px-3 font-medium text-st-black dark:text-dark-primary truncate max-w-[150px]" title={r.data.campaign_name}>{r.data.campaign_name || '—'}</td>
+                                <td className="py-2 px-3 text-right font-semibold dark:text-dark-primary tabular-nums">{r.data.spend !== undefined ? `$${parseFloat(r.data.spend).toFixed(2)}` : '—'}</td>
                                 <td className="py-2 px-3 uppercase text-gray-600 dark:text-gray-400">{r.data.currency || 'USD'}</td>
                                 <td className="py-2 px-3 text-right text-gray-600 dark:text-gray-400 tabular-nums">{r.data.clicks || 0}</td>
                                 <td className="py-2 px-3 text-right text-gray-600 dark:text-gray-400 tabular-nums">{r.data.impressions || 0}</td>
@@ -1309,7 +1309,7 @@ export default function Campaigns() {
                         <tbody className="divide-y divide-gray-100 dark:divide-dark-border">
                           {importHistory.map((run, idx) => (
                             <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-dark-hover/40 transition-colors">
-                              <td className="py-2.5 px-4 font-medium text-st-black dark:text-white">
+                              <td className="py-2.5 px-4 font-medium text-st-black dark:text-dark-primary">
                                 {format(new Date(run.sync_start), 'yyyy-MM-dd HH:mm:ss')}
                               </td>
                               <td className="py-2.5 px-4 capitalize font-semibold text-gray-500 dark:text-gray-400">
@@ -1318,7 +1318,7 @@ export default function Campaigns() {
                               <td className="py-2.5 px-4 font-mono text-[11px] text-st-gray dark:text-gray-400">
                                 {run.platform === 'manual_csv' ? 'Manual CSV' : run.platform}
                               </td>
-                              <td className="py-2.5 px-4 text-center font-bold dark:text-white tabular-nums">
+                              <td className="py-2.5 px-4 text-center font-bold dark:text-dark-primary tabular-nums">
                                 {run.records_synced}
                               </td>
                               <td className="py-2.5 px-4">

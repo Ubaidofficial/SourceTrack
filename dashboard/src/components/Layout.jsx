@@ -155,7 +155,7 @@ export default function Layout({ children }) {
                 <select
                   value={activeSite?.site_key || ''}
                   onChange={(e) => setActiveSiteKey(e.target.value)}
-                  className="w-full pl-3 pr-8 py-1.5 text-xs font-semibold text-st-black dark:text-white bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-sm hover:border-st-lime dark:hover:border-st-lime focus:outline-none focus:ring-1 focus:ring-st-lime transition-all appearance-none cursor-pointer font-sans"
+                  className="w-full pl-3 pr-8 py-1.5 text-xs font-semibold text-st-black dark:text-dark-primary bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-sm hover:border-st-lime dark:hover:border-st-lime focus:outline-none focus:ring-1 focus:ring-st-lime transition-all appearance-none cursor-pointer font-sans"
                 >
                   {sites.map((s) => (
                     <option key={s.site_key || s.id} value={s.site_key || s.id}>
@@ -170,7 +170,7 @@ export default function Layout({ children }) {
             ) : sites.length === 1 ? (
               <div className="flex items-center justify-between px-3 py-1.5 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-sm">
                 <div className="min-w-0 flex-1 pr-2">
-                  <p className="text-xs font-semibold text-st-black dark:text-white truncate">{activeSite?.name || activeSite?.domain}</p>
+                  <p className="text-xs font-semibold text-st-black dark:text-dark-primary truncate">{activeSite?.name || activeSite?.domain}</p>
                   <p className="text-[9px] font-mono text-st-gray dark:text-gray-500 truncate">{activeSite?.site_key}</p>
                 </div>
                 {activeSite?.last_seen_at && (
@@ -210,7 +210,7 @@ export default function Layout({ children }) {
             </div>
             <div className="flex items-center justify-between px-3 py-1.5 bg-white dark:bg-dark-card border border-emerald-100 dark:border-emerald-900/30 rounded-lg shadow-sm">
               <div className="min-w-0 flex-1 pr-2">
-                <p className="text-xs font-semibold text-st-black dark:text-white truncate">{activeSite?.name || activeSite?.domain || 'Preview Site'}</p>
+                <p className="text-xs font-semibold text-st-black dark:text-dark-primary truncate">{activeSite?.name || activeSite?.domain || 'Preview Site'}</p>
                 {activeSite?.domain && <p className="text-[9px] font-mono text-st-gray dark:text-gray-500 truncate">{activeSite?.domain}</p>}
               </div>
             </div>
@@ -294,7 +294,7 @@ export default function Layout({ children }) {
             </button>
             {pageTitle && (
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold text-st-black dark:text-white">{pageTitle}</h2>
+                <h2 className="text-sm font-semibold text-st-black dark:text-dark-primary">{pageTitle}</h2>
                 {location.pathname === '/dashboard' && (
                   <span className="px-2 py-0.5 text-xs font-medium bg-st-lime/20 text-st-black rounded-full">Live</span>
                 )}

@@ -45,7 +45,7 @@ export default function DevelopersTracker() {
 
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+          <h1 className="text-3xl font-black text-gray-900 dark:text-dark-primary tracking-tight">
             Tracker SDK
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-2 text-base leading-relaxed">
@@ -55,7 +55,7 @@ export default function DevelopersTracker() {
 
         {/* Overview */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Overview
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -65,7 +65,7 @@ export default function DevelopersTracker() {
 
         {/* Script Tag Attributes */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Script Attributes
           </h2>
           <ParamTable params={[
@@ -76,7 +76,7 @@ export default function DevelopersTracker() {
 
         {/* Standard Storage-Based Tracker */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Standard Storage-Based Tracker
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -114,7 +114,7 @@ export default function DevelopersTracker() {
 
         {/* Cookieless Tracking Mode */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Cookieless Tracking Mode
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -136,7 +136,7 @@ export default function DevelopersTracker() {
 
         {/* Path Exclusions */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Path Exclusions (Client-Side)
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -151,13 +151,13 @@ export default function DevelopersTracker() {
 
         {/* Consent & Privacy API */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Consent & Privacy API
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
             SourceTrack supports explicit consent management. You can configure the tracker to hold all events in queue until the visitor opts in (for example, via a cookie banner or Consent Management Platform).
           </p>
-          <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">1. Require Consent by Default</h3>
+          <h3 className="text-sm font-extrabold text-gray-900 dark:text-dark-primary">1. Require Consent by Default</h3>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
             Add the <code>data-consent-required="true"</code> attribute to the tracker script tag. This blocks all pageviews and event transmissions on load:
           </p>
@@ -166,7 +166,7 @@ export default function DevelopersTracker() {
         data-site-key="YOUR_SITE_KEY"
         data-consent-required="true"></script>`}
           </DocsCodeBlock>
-          <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">2. JavaScript API Methods</h3>
+          <h3 className="text-sm font-extrabold text-gray-900 dark:text-dark-primary">2. JavaScript API Methods</h3>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
             Use the following global window functions to manage consent states dynamically:
           </p>
@@ -206,7 +206,7 @@ export default function DevelopersTracker() {
 
         {/* Common Errors */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Common Errors
           </h2>
           <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -221,7 +221,7 @@ export default function DevelopersTracker() {
 
         {/* Security Note */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Security & Privacy Note
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">

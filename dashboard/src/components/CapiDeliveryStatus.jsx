@@ -75,7 +75,7 @@ export default function CapiDeliveryStatus({ siteKey }) {
     <div className="bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-5 shadow-sm">
       <div className="flex items-center gap-2 mb-1">
         <Send className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-        <h3 className="text-sm font-semibold text-st-black dark:text-white">CAPI Delivery Status</h3>
+        <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">CAPI Delivery Status</h3>
       </div>
       {children}
     </div>

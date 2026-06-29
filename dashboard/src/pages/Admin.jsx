@@ -303,7 +303,7 @@ export default function Admin() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-st-black dark:text-white">Ops Console</h2>
+          <h2 className="text-2xl font-bold text-st-black dark:text-dark-primary">Ops Console</h2>
           <p className="text-sm text-st-gray dark:text-gray-400 mt-0.5">Internal workspace overview</p>
         </div>
         <StatusBadge status="verified" label="Ops" />
@@ -325,7 +325,7 @@ export default function Admin() {
           <button key={tab} onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === tab
-                ? 'border-st-black text-st-black dark:border-white dark:text-white'
+                ? 'border-st-black text-st-black dark:border-white dark:text-dark-primary'
                 : 'border-transparent text-st-gray dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
             }`}>
             {tab === 'site_inspector' ? 'Site Inspector' : tab === 'feature_status' ? 'Features' : tab === 'qa_notes' ? 'QA Notes' : tab === 'audit_log' ? 'Audit Log' : tab === 'users' ? 'Members' : tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -353,7 +353,7 @@ export default function Admin() {
                 <tbody>
                   {companies.map((c) => (
                     <tr key={c.id} className="border-b border-gray-50 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-hover">
-                      <td className="py-2.5 px-3 text-st-black dark:text-white font-medium">{c.name}</td>
+                      <td className="py-2.5 px-3 text-st-black dark:text-dark-primary font-medium">{c.name}</td>
                       <td className="py-2.5 px-3 text-right text-gray-600 dark:text-gray-300">{c.member_count}</td>
                       <td className="py-2.5 px-3 text-right text-gray-600 dark:text-gray-300">{c.site_count}</td>
                       <td className="py-2.5 px-3 text-right text-st-gray dark:text-gray-400 text-xs">
@@ -388,7 +388,7 @@ export default function Admin() {
                 <tbody>
                   {users.map((u) => (
                     <tr key={u.id} className="border-b border-gray-50 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-hover">
-                      <td className="py-2.5 px-3 text-st-black dark:text-white">
+                      <td className="py-2.5 px-3 text-st-black dark:text-dark-primary">
                         {u.orphaned ? (
                           <span className="italic text-st-gray dark:text-gray-400">
                             Orphaned · no auth user <span className="font-mono not-italic">··{String(u.user_id || '').slice(-4)}</span>
@@ -434,7 +434,7 @@ export default function Admin() {
                 <tbody>
                   {sites.map((s) => (
                     <tr key={s.id} className="border-b border-gray-50 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-hover">
-                      <td className="py-2.5 px-3 text-st-black dark:text-white max-w-[220px]">
+                      <td className="py-2.5 px-3 text-st-black dark:text-dark-primary max-w-[220px]">
                         <span className="inline-flex items-center gap-1.5">
                           <span className="truncate max-w-[160px]">{s.domain || s.name}</span>
                           {isLocalDomain(s.domain) && (
@@ -459,7 +459,7 @@ export default function Admin() {
                       </td>
                       <td className="py-2.5 px-3 text-right">
                         <button onClick={() => handlePreview(s)}
-                          className="text-xs text-st-black dark:text-white hover:text-gray-700 font-medium flex items-center gap-1 ml-auto">
+                          className="text-xs text-st-black dark:text-dark-primary hover:text-gray-700 font-medium flex items-center gap-1 ml-auto">
                           <ExternalLink className="w-3 h-3" /> Preview
                         </button>
                       </td>
@@ -502,7 +502,7 @@ export default function Admin() {
             <div className="space-y-4">
               <DashboardCard title="Site Info" subtitle={`${siteDetail.site?.domain || siteDetail.site?.name || 'Unnamed'}`}>
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div><p className="text-xs text-st-gray">Site Key</p><p className="font-mono text-xs text-st-black dark:text-white truncate">{siteDetail.site?.site_key_redacted || 'Redacted'}</p></div>
+                  <div><p className="text-xs text-st-gray">Site Key</p><p className="font-mono text-xs text-st-black dark:text-dark-primary truncate">{siteDetail.site?.site_key_redacted || 'Redacted'}</p></div>
                   <div><p className="text-xs text-st-gray">Plan</p><StatusBadge status={['starter','growth','scale'].includes(siteDetail.site?.plan) ? 'active' : ['trial','free'].includes(siteDetail.site?.plan) ? 'pending' : 'error'} label={siteDetail.site?.plan || 'unknown'} /></div>
                   <div><p className="text-xs text-st-gray">Created</p><p className="text-st-black">{siteDetail.site?.created_at ? new Date(siteDetail.site.created_at).toLocaleDateString() : '—'}</p></div>
                   <div><p className="text-xs text-st-gray">Company</p><p className="text-st-black">{siteDetail.site?.company_name || '—'}</p></div>
@@ -532,7 +532,7 @@ export default function Admin() {
                       siteNotes.map(note => (
                       <div key={note.id} className="bg-gray-50 dark:bg-dark-hover p-3 rounded-lg border border-gray-100 dark:border-dark-border">
                         <p className="text-xs text-st-gray mb-1">{note.admin_email} · {new Date(note.created_at).toLocaleString()}</p>
-                        <p className="text-sm text-st-black dark:text-white whitespace-pre-wrap">{note.note}</p>
+                        <p className="text-sm text-st-black dark:text-dark-primary whitespace-pre-wrap">{note.note}</p>
                         </div>
                       ))
                     )}
@@ -642,7 +642,7 @@ export default function Admin() {
                 <tbody>
                   {featureStatus.features.map((f) => (
                     <tr key={f.name} className="border-b border-gray-50 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-hover">
-                      <td className="py-2.5 px-3 text-st-black dark:text-white font-medium">{f.name}</td>
+                      <td className="py-2.5 px-3 text-st-black dark:text-dark-primary font-medium">{f.name}</td>
                       <td className="py-2.5 px-3">
                         <StatusBadge
                           status={f.status === 'live' ? 'verified' :
@@ -745,7 +745,7 @@ export default function Admin() {
                   <tbody>
                     {qaNotes.map((n) => (
                       <tr key={n.id} className="border-b border-gray-50 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-hover">
-                        <td className="py-2.5 px-3 text-st-black dark:text-white font-medium">{n.feature_key}</td>
+                        <td className="py-2.5 px-3 text-st-black dark:text-dark-primary font-medium">{n.feature_key}</td>
                         <td className="py-2.5 px-3">
                           <StatusBadge
                             status={n.note_type === 'safe_claim' ? 'verified' : n.note_type === 'misleading' ? 'error' : 'warning'}
@@ -807,7 +807,7 @@ export default function Admin() {
                         <td className="py-2.5 px-3 text-st-gray dark:text-gray-400 text-xs whitespace-nowrap">
                           {new Date(entry.created_at).toLocaleString()}
                         </td>
-                        <td className="py-2.5 px-3 text-st-black dark:text-white">{entry.admin_email || entry.admin_user_id?.slice(0, 8) || '—'}</td>
+                        <td className="py-2.5 px-3 text-st-black dark:text-dark-primary">{entry.admin_email || entry.admin_user_id?.slice(0, 8) || '—'}</td>
                         <td className="py-2.5 px-3">
                           <StatusBadge
                             status={entry.action === 'recheck_features' ? 'warning' : 'active'}

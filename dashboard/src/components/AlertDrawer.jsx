@@ -52,8 +52,8 @@ export default function AlertDrawer({ isOpen, onClose, siteKey, alerts = [] }) {
       <div className="fixed top-0 right-0 h-full w-full max-w-sm bg-white dark:bg-dark-card border-l border-gray-200 dark:border-dark-border shadow-xl z-50 flex flex-col">
         <div className="h-14 flex items-center justify-between px-4 border-b border-gray-200 dark:border-dark-border flex-shrink-0">
           <div className="flex items-center gap-2">
-            <Bell className="w-4 h-4 text-st-black dark:text-white" />
-            <h2 className="text-sm font-semibold text-st-black dark:text-white">Alerts</h2>
+            <Bell className="w-4 h-4 text-st-black dark:text-dark-primary" />
+            <h2 className="text-sm font-semibold text-st-black dark:text-dark-primary">Alerts</h2>
           </div>
           <button
             onClick={onClose}

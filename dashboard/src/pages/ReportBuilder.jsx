@@ -364,7 +364,7 @@ function DateRangePopover({
                   max="730"
                   value={customDaysVal}
                   onChange={(e) => setCustomDaysVal(e.target.value)}
-                  className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded text-center text-st-black dark:text-white"
+                  className="w-16 px-2 py-1 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded text-center text-st-black dark:text-dark-primary"
                 />
                 <span className="text-gray-500">days</span>
                 <button
@@ -411,7 +411,7 @@ function DateRangePopover({
                         type="date"
                         value={dateFrom}
                         onChange={(e) => setDateFrom(e.target.value)}
-                        className="w-full px-2 py-1 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded text-center text-st-black dark:text-white"
+                        className="w-full px-2 py-1 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded text-center text-st-black dark:text-dark-primary"
                       />
                     </div>
                     <div>
@@ -420,7 +420,7 @@ function DateRangePopover({
                         type="date"
                         value={dateTo}
                         onChange={(e) => setDateTo(e.target.value)}
-                        className="w-full px-2 py-1 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded text-center text-st-black dark:text-white"
+                        className="w-full px-2 py-1 border border-gray-300 dark:border-gray-700 dark:bg-gray-800 rounded text-center text-st-black dark:text-dark-primary"
                       />
                     </div>
                   </div>
@@ -1142,7 +1142,7 @@ export default function ReportBuilder() {
           <div className="w-16 h-16 bg-lime-500/10 border border-lime-500/20 text-lime-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <Lock className={iconClass} />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Revenue Tracking Required</h3>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-dark-primary mb-2">Revenue Tracking Required</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
             This report requires revenue integration. Connect Stripe, Shopify manual webhook, or send Conversion API revenue events to start tracking sales.
           </p>
@@ -1163,7 +1163,7 @@ export default function ReportBuilder() {
           <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <Lock className="w-8 h-8 text-amber-600 dark:text-amber-400" />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Waiting for Revenue Data</h3>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-dark-primary mb-2">Waiting for Revenue Data</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
             Stripe/Shopify status is configured, but no revenue data has been recorded for this site yet.
             Once a purchase or payment event occurs, revenue reports will populate automatically.
@@ -1185,7 +1185,7 @@ export default function ReportBuilder() {
           <div className="w-16 h-16 bg-lime-500/10 border border-lime-500/20 text-lime-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <Lock className={iconClass} />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Ad Integration Required</h3>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-dark-primary mb-2">Ad Integration Required</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
             Connect Google Ads or Meta Ads in Integrations to track ad spend, campaigns, ROAS, CAC, and CPA.
           </p>
@@ -1206,7 +1206,7 @@ export default function ReportBuilder() {
           <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <Lock className="w-8 h-8 text-amber-600 dark:text-amber-400" />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Waiting for Cost Data</h3>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-dark-primary mb-2">Waiting for Cost Data</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
             Ad accounts are connected, but no ad spend cost data has been synced for this site yet. Cost data typically updates every few hours.
           </p>
@@ -1227,7 +1227,7 @@ export default function ReportBuilder() {
           <div className="w-16 h-16 bg-lime-500/10 border border-lime-500/20 text-lime-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <Lock className={iconClass} />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Google Search Console Required</h3>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-dark-primary mb-2">Google Search Console Required</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
             Connect your Google Search Console account in Integrations to sync organic search queries.
           </p>
@@ -1248,7 +1248,7 @@ export default function ReportBuilder() {
           <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <Lock className="w-8 h-8 text-amber-600 dark:text-amber-400" />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Select Search Console Property</h3>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-dark-primary mb-2">Select Search Console Property</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
             Google Search Console is connected, but no property is selected yet. Go to Integrations to select a property.
           </p>
@@ -1269,7 +1269,7 @@ export default function ReportBuilder() {
           <div className="w-16 h-16 bg-lime-500/10 border border-lime-500/20 text-lime-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <Sparkles className="w-8 h-8 text-lime-600 dark:text-lime-400" />
           </div>
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">No AI Referral Traffic Detected</h3>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-dark-primary mb-2">No AI Referral Traffic Detected</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
             AI journey and trials templates populate automatically once visitors refer from platforms like ChatGPT, Claude, Gemini, or Perplexity.
           </p>
@@ -1284,7 +1284,7 @@ export default function ReportBuilder() {
     return (
       <div className="bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border p-6 space-y-6 animate-fade-in">
         <div className="border-b border-gray-100 dark:border-dark-border pb-4">
-          <h3 className="text-lg font-bold text-gray-800 dark:text-white">
+          <h3 className="text-lg font-bold text-gray-800 dark:text-dark-primary">
             {normalizedType !== 'unknown'
               ? `Recommended templates for ${normalizedType === 'Lead Gen / Agency' ? 'Lead Gen & Agency' : normalizedType}`
               : 'Recommended templates'}
@@ -1313,7 +1313,7 @@ export default function ReportBuilder() {
                 className="group relative flex flex-col text-left p-5 bg-gray-50 dark:bg-dark-card/50 border border-gray-200 dark:border-dark-border hover:border-lime-500 rounded-xl transition-all shadow-sm"
               >
                 <div className="flex items-start justify-between gap-2 w-full">
-                  <span className="font-bold text-sm text-gray-900 dark:text-white group-hover:text-lime-600 dark:group-hover:text-lime-400">
+                  <span className="font-bold text-sm text-gray-900 dark:text-dark-primary group-hover:text-lime-600 dark:group-hover:text-lime-400">
                     {p.name}
                   </span>
                   <div className="flex items-center gap-1.5">
@@ -1377,7 +1377,7 @@ export default function ReportBuilder() {
                                 className="group relative flex flex-col text-left p-4 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border hover:border-lime-500 rounded-xl transition-all shadow-sm"
                               >
                                 <div className="flex items-start justify-between gap-2 w-full">
-                                  <span className="font-bold text-xs text-gray-800 dark:text-white group-hover:text-lime-600 dark:group-hover:text-lime-400">
+                                  <span className="font-bold text-xs text-gray-800 dark:text-dark-primary group-hover:text-lime-600 dark:group-hover:text-lime-400">
                                     {p.name}
                                   </span>
                                   <div className="flex items-center gap-1">
@@ -1444,7 +1444,7 @@ export default function ReportBuilder() {
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Report Builder</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-dark-primary">Report Builder</h2>
           <p className="text-sm text-st-gray dark:text-gray-400 mt-1">Configure your lightweight report and preview live results</p>
         </div>
         <div className="flex items-center gap-2">
@@ -1469,7 +1469,7 @@ export default function ReportBuilder() {
         if (activePreset && activePreset.desc) {
           return (
             <div className="text-xs text-st-gray dark:text-gray-400 bg-lime-500/10 border border-lime-500/20 rounded-lg px-3 py-2 max-w-max">
-              💡 <span className="font-semibold text-gray-900 dark:text-white">{activePreset.name}:</span> {activePreset.desc}
+              💡 <span className="font-semibold text-gray-900 dark:text-dark-primary">{activePreset.name}:</span> {activePreset.desc}
             </div>
           )
         }
@@ -1482,7 +1482,7 @@ export default function ReportBuilder() {
         {/* Left Column: Configure Card */}
         <div className="w-full xl:w-[360px] flex-shrink-0 space-y-4">
           <div className="bg-white dark:bg-dark-card rounded-xl shadow-sm border border-gray-200 dark:border-dark-border p-5 space-y-4">
-            <h3 className="text-sm font-semibold text-gray-800 dark:text-white pb-2 border-b border-gray-100 dark:border-dark-border">Configure Report</h3>
+            <h3 className="text-sm font-semibold text-gray-800 dark:text-dark-primary pb-2 border-b border-gray-100 dark:border-dark-border">Configure Report</h3>
 
             {/* A. Recommended Templates Section */}
             <div className="space-y-2 border-b border-gray-100 dark:border-dark-border pb-3">
@@ -1629,7 +1629,7 @@ export default function ReportBuilder() {
                   onChange={(e) => setReportName(e.target.value)}
                   placeholder="e.g. Weekly Revenue by Source"
                   maxLength={60}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg text-sm outline-none focus:ring-1 focus:ring-lime-500 dark:bg-dark-card dark:text-white"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-dark-border rounded-lg text-sm outline-none focus:ring-1 focus:ring-lime-500 dark:bg-dark-card dark:text-dark-primary"
                 />
               </div>
 
@@ -1894,7 +1894,7 @@ export default function ReportBuilder() {
                       value={filters.channel || ''}
                       onChange={(e) => applyFilter('channel', e.target.value || undefined)}
                       placeholder="e.g. Organic Search"
-                      className="w-full px-2 py-1 border border-gray-300 dark:border-dark-border dark:bg-dark-card rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-white"
+                      className="w-full px-2 py-1 border border-gray-300 dark:border-dark-border dark:bg-dark-card rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-dark-primary"
                     />
                   </div>
 
@@ -1906,7 +1906,7 @@ export default function ReportBuilder() {
                       value={filters.source || ''}
                       onChange={(e) => applyFilter('source', e.target.value || undefined)}
                       placeholder="e.g. google"
-                      className="w-full px-2 py-1 border border-gray-300 dark:border-dark-border dark:bg-dark-card rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-white"
+                      className="w-full px-2 py-1 border border-gray-300 dark:border-dark-border dark:bg-dark-card rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-dark-primary"
                     />
                   </div>
 
@@ -1918,7 +1918,7 @@ export default function ReportBuilder() {
                       value={filters.medium || ''}
                       onChange={(e) => applyFilter('medium', e.target.value || undefined)}
                       placeholder="e.g. cpc"
-                      className="w-full px-2 py-1 border border-gray-300 dark:border-dark-border dark:bg-dark-card rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-white"
+                      className="w-full px-2 py-1 border border-gray-300 dark:border-dark-border dark:bg-dark-card rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-dark-primary"
                     />
                   </div>
 
@@ -1930,7 +1930,7 @@ export default function ReportBuilder() {
                       value={filters.campaign || ''}
                       onChange={(e) => applyFilter('campaign', e.target.value || undefined)}
                       placeholder="e.g. summer_sale"
-                      className="w-full px-2 py-1 border border-gray-300 dark:border-dark-border dark:bg-dark-card rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-white"
+                      className="w-full px-2 py-1 border border-gray-300 dark:border-dark-border dark:bg-dark-card rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-dark-primary"
                     />
                   </div>
 
@@ -1942,7 +1942,7 @@ export default function ReportBuilder() {
                       value={filters.conversion_type || ''}
                       onChange={(e) => applyFilter('conversion_type', e.target.value || undefined)}
                       placeholder="e.g. signup"
-                      className="w-full px-2 py-1.5 border border-gray-300 dark:border-dark-border dark:bg-dark-card rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-white"
+                      className="w-full px-2 py-1.5 border border-gray-300 dark:border-dark-border dark:bg-dark-card rounded text-xs outline-none focus:ring-1 focus:ring-lime-500 dark:text-dark-primary"
                     />
                   </div>
 
@@ -1999,12 +1999,12 @@ export default function ReportBuilder() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
                     <h4 className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Previewing</h4>
-                    <p className="text-lg font-bold text-st-black dark:text-white truncate mt-0.5">{reportName || 'Untitled Report'}</p>
+                    <p className="text-lg font-bold text-st-black dark:text-dark-primary truncate mt-0.5">{reportName || 'Untitled Report'}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-2">
                       <span className="text-xs font-bold text-lime-600 dark:text-lime-400">{metricFormat(total)}</span>
                       <span className="text-xs text-st-gray dark:text-gray-400">total {metricLabel}</span>
                       <span
-                        className="inline-flex items-center px-1.5 py-0.5 rounded bg-st-black/5 dark:bg-white/10 text-[10px] font-semibold text-st-black dark:text-white"
+                        className="inline-flex items-center px-1.5 py-0.5 rounded bg-st-black/5 dark:bg-white/10 text-[10px] font-semibold text-st-black dark:text-dark-primary"
                         title={`Attribution model: ${MODELS.find(m => m.key === model)?.label || model}. The model determines which touch in the customer journey gets credit.`}
                       >
                         {MODELS.find(m => m.key === model)?.label || model}
@@ -2117,7 +2117,7 @@ export default function ReportBuilder() {
                               <span className="truncate">{r.dim_value || 'Direct / None'}</span>
                               {isDirectLabel(r.dim_value || 'Direct / None') && <DirectInfo />}
                             </span>
-                            <span className="font-bold text-gray-900 dark:text-white">{metricFormat(val)}</span>
+                            <span className="font-bold text-gray-900 dark:text-dark-primary">{metricFormat(val)}</span>
                           </div>
                           <div className="h-3 bg-gray-100 dark:bg-dark-card rounded-full overflow-hidden flex">
                             <div className="h-full bg-lime-500 rounded-full" style={{ width: `${percent}%` }} />
@@ -2177,7 +2177,7 @@ export default function ReportBuilder() {
                     return (
                       <div>
                         <p className="text-sm text-st-gray dark:text-gray-400">{metricLabel}</p>
-                        <div className="mt-2 text-4xl font-semibold text-st-black dark:text-white">{formatKpiValue(currentVal, metric)}</div>
+                        <div className="mt-2 text-4xl font-semibold text-st-black dark:text-dark-primary">{formatKpiValue(currentVal, metric)}</div>
                         <div className="mt-3 text-sm">
                           {delta ? (
                             <span className={delta.positive ? 'text-green-600' : 'text-red-600'}>
@@ -2267,7 +2267,7 @@ export default function ReportBuilder() {
                             const mDef = METRICS.find(m => m.key === mk)
                             const fmt = mDef?.format || (v => String(v))
                             const totalVal = results.reduce((s, r) => s + getMetricValue(r, mk), 0)
-                            return <td key={mk} className="py-2.5 px-4 text-right text-xs font-bold text-st-black dark:text-white tabular-nums">{fmt(totalVal)}</td>
+                            return <td key={mk} className="py-2.5 px-4 text-right text-xs font-bold text-st-black dark:text-dark-primary tabular-nums">{fmt(totalVal)}</td>
                           })}
                           {showCompare && selectedMetrics.map(mk => {
                             const curTotal = results.reduce((s, r) => s + getMetricValue(r, mk), 0)
@@ -2310,7 +2310,7 @@ export default function ReportBuilder() {
                               {selectedMetrics.map(mk => {
                                 const mDef = METRICS.find(m => m.key === mk)
                                 const fmt = mDef?.format || (v => String(v))
-                                return <td key={mk} className="py-2.5 px-4 text-right font-semibold text-st-black dark:text-white tabular-nums">{fmt(getMetricValue(r, mk))}</td>
+                                return <td key={mk} className="py-2.5 px-4 text-right font-semibold text-st-black dark:text-dark-primary tabular-nums">{fmt(getMetricValue(r, mk))}</td>
                               })}
                               {showCompare && selectedMetrics.map(mk => {
                                 const cur = getMetricValue(r, mk)
@@ -2363,7 +2363,7 @@ export default function ReportBuilder() {
           <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
             <div className="w-screen max-w-md bg-white dark:bg-dark-card border-l border-gray-200 dark:border-dark-border shadow-2xl flex flex-col">
               <div className="px-6 py-5 border-b border-gray-100 dark:border-dark-border flex items-center justify-between">
-                <h3 className="text-lg font-bold text-gray-800 dark:text-white">Saved Reports</h3>
+                <h3 className="text-lg font-bold text-gray-800 dark:text-dark-primary">Saved Reports</h3>
                 <button onClick={() => setIsDrawerOpen(false)} className="text-gray-400 hover:text-gray-500">
                   <X className="w-5 h-5" />
                 </button>
@@ -2384,7 +2384,7 @@ export default function ReportBuilder() {
                       <div key={r.id} className="rounded-xl border border-gray-200 dark:border-dark-border p-4 bg-gray-50/50 dark:bg-dark-card/50 hover:bg-gray-50 dark:hover:bg-dark-hover transition-all">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{r.name}</p>
+                            <p className="text-sm font-semibold text-gray-900 dark:text-dark-primary truncate">{r.name}</p>
                             <div className="flex flex-wrap gap-x-2 gap-y-0.5 mt-1.5 text-[10px] text-st-gray dark:text-gray-400">
                               <span className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">{meta.metricLabel}</span>
                               <span className="bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">{meta.groupLabel}</span>

@@ -15,7 +15,7 @@ export default function DocsWordPress() {
 
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+          <h1 className="text-3xl font-black text-gray-900 dark:text-dark-primary tracking-tight">
             WordPress Setup Recipe
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-2 text-base leading-relaxed">
@@ -25,7 +25,7 @@ export default function DocsWordPress() {
 
         {/* 1. Who this is for */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Who This Is For
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -45,7 +45,7 @@ export default function DocsWordPress() {
 
         {/* 2. What you will set up */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             What You Will Set Up
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -55,12 +55,12 @@ export default function DocsWordPress() {
 
         {/* 3. Steps */}
         <section className="space-y-6">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Steps: WordPress Integration
           </h2>
 
           <div className="space-y-4">
-            <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">Option 1: Using a Plugin (Recommended)</h3>
+            <h3 className="text-sm font-extrabold text-gray-900 dark:text-dark-primary">Option 1: Using a Plugin (Recommended)</h3>
             <ol className="list-decimal pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
               <li>Log in to your WordPress Admin dashboard.</li>
               <li>Go to <strong>Plugins &rarr; Add New</strong> and search for <strong>WPCode</strong> (or any "Insert Headers and Footers" plugin).</li>
@@ -75,7 +75,7 @@ export default function DocsWordPress() {
           </div>
 
           <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-            <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">Option 2: Direct Theme Edit</h3>
+            <h3 className="text-sm font-extrabold text-gray-900 dark:text-dark-primary">Option 2: Direct Theme Edit</h3>
             <ol className="list-decimal pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
               <li>Log in to your file manager or theme editor and open <code>wp-content/themes/your-active-theme/header.php</code>.</li>
               <li>Paste the script directly before the closing <code>&lt;/head&gt;</code> tag:
@@ -93,7 +93,7 @@ export default function DocsWordPress() {
 
         {/* 4. How to verify it worked */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             How to Verify It Worked
           </h2>
           <ol className="list-decimal pl-5 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -106,7 +106,7 @@ export default function DocsWordPress() {
 
         {/* 5. Common mistakes */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Common Mistakes
           </h2>
           <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
@@ -121,7 +121,7 @@ export default function DocsWordPress() {
 
         {/* 6. Next step */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Next Step
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">

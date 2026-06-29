@@ -61,7 +61,7 @@ export default function DevelopersApi() {
 
       <div className="space-y-8">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+          <h1 className="text-3xl font-black text-gray-900 dark:text-dark-primary tracking-tight">
             API Reference
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-2 text-base leading-relaxed">
@@ -70,7 +70,7 @@ export default function DevelopersApi() {
         </div>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             POST /api/track
           </h2>
           <Endpoint method="POST" path="/api/track" description="No auth — validated by site_key" />
@@ -78,7 +78,7 @@ export default function DevelopersApi() {
             Submit a pageview or custom event to the server. The client-side tracker calls this automatically on navigation events.
           </p>
 
-          <h4 className="text-sm font-extrabold text-gray-900 dark:text-white">Request Body</h4>
+          <h4 className="text-sm font-extrabold text-gray-900 dark:text-dark-primary">Request Body</h4>
           <ParamTable params={[
             { name: 'site_key', type: 'string', required: true, desc: 'Your public Site Key.' },
             { name: 'event', type: 'string', required: false, desc: 'Event label. Defaults to $pageview.' },
@@ -91,7 +91,7 @@ export default function DevelopersApi() {
             { name: 'utm_campaign', type: 'string', required: false, desc: 'Campaign name.' }
           ]} />
 
-          <h4 className="text-sm font-extrabold text-gray-900 dark:text-white">Example CURL Request</h4>
+          <h4 className="text-sm font-extrabold text-gray-900 dark:text-dark-primary">Example CURL Request</h4>
           <DocsCodeBlock lang="bash">
 {`curl -X POST https://api.srctk.com/api/track \\
   -H "Content-Type: application/json" \\
@@ -109,7 +109,7 @@ export default function DevelopersApi() {
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             POST /api/conversion
           </h2>
           <Endpoint method="POST" path="/api/conversion" description="No auth — validated by site_key" />
@@ -117,7 +117,7 @@ export default function DevelopersApi() {
             Record a browser-submitted conversion event to power multi-touch attribution models.
           </p>
 
-          <h4 className="text-sm font-extrabold text-gray-900 dark:text-white">Request Body</h4>
+          <h4 className="text-sm font-extrabold text-gray-900 dark:text-dark-primary">Request Body</h4>
           <ParamTable params={[
             { name: 'site_key', type: 'string', required: true, desc: 'Your Site Key.' },
             { name: 'anonymous_id', type: 'string', required: true, desc: 'Visitor identifier to stitch attribution logs.' },
@@ -128,7 +128,7 @@ export default function DevelopersApi() {
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             POST /api/identify
           </h2>
           <Endpoint method="POST" path="/api/identify" description="No auth — validated by site_key" />
@@ -136,7 +136,7 @@ export default function DevelopersApi() {
             Link an anonymous visitor's tracking ID with their user profile for future server-side attribution.
           </p>
 
-          <h4 className="text-sm font-extrabold text-gray-900 dark:text-white">Request Body</h4>
+          <h4 className="text-sm font-extrabold text-gray-900 dark:text-dark-primary">Request Body</h4>
           <ParamTable params={[
             { name: 'site_key', type: 'string', required: true, desc: 'Your Site Key.' },
             { name: 'anonymous_id', type: 'string', required: true, desc: 'Anonymous ID of the active session.' },
@@ -146,7 +146,7 @@ export default function DevelopersApi() {
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             GET /api/tracker/id
           </h2>
           <Endpoint method="GET" path="/api/tracker/id?site_key=xxx" description="Public — validated by site_key" />
@@ -156,7 +156,7 @@ export default function DevelopersApi() {
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             POST /api/server/event
           </h2>
           <Endpoint method="POST" path="/api/server/event" description="Auth — validated by Bearer Token" />
@@ -168,7 +168,7 @@ export default function DevelopersApi() {
             Server API Tokens must be created in the <strong>Settings</strong> page under the <strong>Server API Tokens</strong> section. They require the Growth plan.
           </DocsCallout>
 
-          <h4 className="text-sm font-extrabold text-gray-900 dark:text-white">Request Body</h4>
+          <h4 className="text-sm font-extrabold text-gray-900 dark:text-dark-primary">Request Body</h4>
           <ParamTable params={[
             { name: 'event', type: 'string', required: false, desc: 'Event label. Defaults to $pageview.' },
             { name: 'anonymous_id', type: 'string', required: false, desc: 'Visitor anonymous UUID.' },
@@ -186,7 +186,7 @@ export default function DevelopersApi() {
             { name: 'properties', type: 'object', required: false, desc: 'JSON object containing custom metadata.' }
           ]} />
 
-          <h4 className="text-sm font-extrabold text-gray-900 dark:text-white">Example CURL Request</h4>
+          <h4 className="text-sm font-extrabold text-gray-900 dark:text-dark-primary">Example CURL Request</h4>
           <DocsCodeBlock lang="bash">
 {`curl -X POST https://api.srctk.com/api/server/event \\
   -H "Content-Type: application/json" \\
@@ -205,7 +205,7 @@ export default function DevelopersApi() {
 
         {/* Common Errors */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Common Errors
           </h2>
           <div className="overflow-x-auto">
@@ -240,7 +240,7 @@ export default function DevelopersApi() {
 
         {/* Security Note */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Security Note
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">

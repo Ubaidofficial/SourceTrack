@@ -165,7 +165,7 @@ export default function Billing() {
   return (
     <div className="max-w-4xl space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-st-black dark:text-white">Billing</h2>
+        <h2 className="text-2xl font-bold text-st-black dark:text-dark-primary">Billing</h2>
         <p className="text-sm text-st-gray dark:text-gray-400 mt-0.5">Manage your plan, limits, and billing details</p>
       </div>
 
@@ -199,11 +199,11 @@ export default function Billing() {
       <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-2">
           <CreditCard className="w-4 h-4 text-st-gray dark:text-gray-400" />
-          <h3 className="text-sm font-bold text-st-black dark:text-white">Current Plan</h3>
+          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Current Plan</h3>
         </div>
 
         <div className="flex items-baseline gap-3">
-          <span className="text-2xl font-black text-st-black dark:text-white capitalize">{getPlanLabel(plan)}</span>
+          <span className="text-2xl font-black text-st-black dark:text-dark-primary capitalize">{getPlanLabel(plan)}</span>
           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
             isTrial ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400' :
             isInactive ? 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400' :
@@ -256,7 +256,7 @@ export default function Billing() {
       {/* ── Upgrade Plans (trial or free) ─────────────────────────────────────── */}
       {showUpgradePlans && (
         <section className="space-y-4">
-          <h3 className="text-sm font-bold text-st-black dark:text-white">Available Plans</h3>
+          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Available Plans</h3>
           <p className="text-xs text-st-gray dark:text-gray-400 -mt-2">
             {earlyBirdPriceId
               ? 'Standard plans are billed monthly. Annual billing is available for the founding Early Bird offer.'
@@ -273,11 +273,11 @@ export default function Billing() {
             />
             <label htmlFor="terms-checkbox" className="text-xs text-st-gray dark:text-gray-400 leading-normal select-none">
               I have read and agree to the SourceTrack{' '}
-              <Link to="/terms" className="text-st-black dark:text-white font-semibold hover:underline" target="_blank" rel="noopener noreferrer">
+              <Link to="/terms" className="text-st-black dark:text-dark-primary font-semibold hover:underline" target="_blank" rel="noopener noreferrer">
                 Terms
               </Link>{' '}
               and{' '}
-              <Link to="/privacy" className="text-st-black dark:text-white font-semibold hover:underline" target="_blank" rel="noopener noreferrer">
+              <Link to="/privacy" className="text-st-black dark:text-dark-primary font-semibold hover:underline" target="_blank" rel="noopener noreferrer">
                 Privacy Policy
               </Link>.
             </label>
@@ -290,8 +290,8 @@ export default function Billing() {
                 Founding Offer
               </span>
             </div>
-            <p className="text-base font-black text-st-black dark:text-white">Early Bird Annual</p>
-            <p className="text-2xl font-black text-st-black dark:text-white mt-1">$99<span className="text-sm font-normal text-st-gray dark:text-gray-400">/year</span></p>
+            <p className="text-base font-black text-st-black dark:text-dark-primary">Early Bird Annual</p>
+            <p className="text-2xl font-black text-st-black dark:text-dark-primary mt-1">$99<span className="text-sm font-normal text-st-gray dark:text-gray-400">/year</span></p>
             <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">Annual billing · 25 founding spots · one per customer</p>
             <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mt-2">First month free, then $99/year locked forever while your subscription stays active · Starter-level access</p>
             {earlyBirdPriceId ? (
@@ -322,14 +322,14 @@ export default function Billing() {
               }`}>
                 <div>
                   <div className="flex items-center justify-between">
-                    <p className="text-base font-black text-st-black dark:text-white">{p.name}</p>
+                    <p className="text-base font-black text-st-black dark:text-dark-primary">{p.name}</p>
                     {p.highlight && (
                       <span className="text-[9px] font-bold uppercase tracking-wider bg-st-lime text-black px-1.5 py-0.5 rounded-full">
                         Popular
                       </span>
                     )}
                   </div>
-                  <p className="text-2xl font-black text-st-black dark:text-white mt-2">{p.price}</p>
+                  <p className="text-2xl font-black text-st-black dark:text-dark-primary mt-2">{p.price}</p>
                   <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">{p.period}</p>
                   <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mt-2">{p.limit}</p>
                 </div>
@@ -339,7 +339,7 @@ export default function Billing() {
                   className={`w-full text-xs font-semibold py-2.5 mt-4 rounded-lg transition-colors disabled:opacity-60 ${
                     p.highlight
                       ? 'bg-st-lime text-black hover:bg-st-lime/90'
-                      : 'border border-gray-300 dark:border-gray-700 text-st-black dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800'
+                      : 'border border-gray-300 dark:border-gray-700 text-st-black dark:text-dark-primary hover:bg-gray-50 dark:hover:bg-gray-800'
                   }`}
                 >
                   {upgradeLoading === p.key ? 'Redirecting…' : `Upgrade to ${p.name}`}
@@ -353,14 +353,14 @@ export default function Billing() {
       {/* ── Downgrade option for paid plans ───────────────────────────────── */}
       {isPaid && (
         <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6">
-          <h3 className="text-sm font-bold text-st-black dark:text-white mb-1">Change or Cancel Plan</h3>
+          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary mb-1">Change or Cancel Plan</h3>
           <p className="text-xs text-st-gray dark:text-gray-400 mb-4">
             Upgrade, downgrade, update payment details, or cancel — all from your Stripe billing portal.
           </p>
           <button
             onClick={handlePortal}
             disabled={portalLoading}
-            className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-700 text-st-black dark:text-white text-sm font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-700 text-st-black dark:text-dark-primary text-sm font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors"
           >
             <ExternalLink className="w-4 h-4" />
             {portalLoading ? 'Opening portal…' : 'Open Billing Portal'}

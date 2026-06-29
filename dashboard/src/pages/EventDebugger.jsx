@@ -465,7 +465,7 @@ export default function EventDebugger() {
               </>
             ) : health?.status === 'never_seen' || !health ? (
               <>
-                <p className="text-sm font-medium text-st-black dark:text-white">No events received yet</p>
+                <p className="text-sm font-medium text-st-black dark:text-dark-primary">No events received yet</p>
                 <p className="text-xs text-st-gray dark:text-gray-400 mt-1 max-w-sm">SourceTrack hasn't received any data from your website.</p>
                 <ol className="text-xs text-st-gray dark:text-gray-400 mt-3 space-y-1 text-left">
                   <li>1. <Link to="/snippet" className="text-blue-600 dark:text-blue-400 hover:underline">Install the tracker snippet</Link></li>

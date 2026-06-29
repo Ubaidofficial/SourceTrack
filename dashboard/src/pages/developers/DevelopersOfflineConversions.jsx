@@ -57,7 +57,7 @@ export default function DevelopersOfflineConversions() {
 
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+          <h1 className="text-3xl font-black text-gray-900 dark:text-dark-primary tracking-tight">
             Offline Conversions
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-2 text-base leading-relaxed">
@@ -67,7 +67,7 @@ export default function DevelopersOfflineConversions() {
 
         {/* Overview */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Overview
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -77,7 +77,7 @@ export default function DevelopersOfflineConversions() {
 
         {/* Endpoint */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             HTTP Endpoint
           </h2>
           <Endpoint method="POST" path="/api/conversion/offline" description="Public Ingestion — validated by site_key" />
@@ -85,7 +85,7 @@ export default function DevelopersOfflineConversions() {
 
         {/* Parameters */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Payload Parameters
           </h2>
           <ParamTable params={[
@@ -106,12 +106,12 @@ export default function DevelopersOfflineConversions() {
 
         {/* Copy-Paste Example */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Code Examples
           </h2>
           <div className="space-y-4">
             <div>
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-2">cURL POST Request</h3>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-dark-primary mb-2">cURL POST Request</h3>
               <DocsCodeBlock lang="bash">
 {`curl -X POST https://api.srctk.com/api/conversion/offline \\
   -H "Content-Type: application/json" \\
@@ -128,7 +128,7 @@ export default function DevelopersOfflineConversions() {
             </div>
 
             <div>
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-2">Node.js Fetch</h3>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-dark-primary mb-2">Node.js Fetch</h3>
               <DocsCodeBlock lang="js">
 {`await fetch('https://api.srctk.com/api/conversion/offline', {
   method: 'POST',
@@ -152,7 +152,7 @@ export default function DevelopersOfflineConversions() {
 
         {/* Common Errors */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Common Errors
           </h2>
           <div className="overflow-x-auto">
@@ -192,7 +192,7 @@ export default function DevelopersOfflineConversions() {
 
         {/* Security Note */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Security Note
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">

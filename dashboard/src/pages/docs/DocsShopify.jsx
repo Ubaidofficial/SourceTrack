@@ -15,7 +15,7 @@ export default function DocsShopify() {
 
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+          <h1 className="text-3xl font-black text-gray-900 dark:text-dark-primary tracking-tight">
             Shopify Manual Revenue Attribution Recipe
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-2 text-base leading-relaxed">
@@ -25,7 +25,7 @@ export default function DocsShopify() {
 
         {/* 1. Who this is for */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Who This Is For
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -46,7 +46,7 @@ export default function DocsShopify() {
 
         {/* 2. What you will set up */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             What You Will Set Up
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -60,12 +60,12 @@ export default function DocsShopify() {
 
         {/* 3. Steps */}
         <section className="space-y-6">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Steps: Shopify Integration
           </h2>
 
           <div className="space-y-4">
-            <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">Step 1: Storefront Pixel Tracking</h3>
+            <h3 className="text-sm font-extrabold text-gray-900 dark:text-dark-primary">Step 1: Storefront Pixel Tracking</h3>
             <p className="text-sm text-gray-700 dark:text-gray-300">
               Add the standard SourceTrack pixel script to your storefront theme to log UTMs and referrers:
             </p>
@@ -82,7 +82,7 @@ export default function DocsShopify() {
           </div>
 
           <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-            <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">Step 2: Capture Visitor ID in Shopify Cart</h3>
+            <h3 className="text-sm font-extrabold text-gray-900 dark:text-dark-primary">Step 2: Capture Visitor ID in Shopify Cart</h3>
             <p className="text-sm text-gray-700 dark:text-gray-300">
               To link checkout purchases with marketing sessions, you must store the anonymous visitor ID (<code>st_aid</code>) as a cart attribute. Add this Javascript snippet to your checkout or cart templates:
             </p>
@@ -106,7 +106,7 @@ if (visitorId) {
           </div>
 
           <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-            <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">Step 3: Connect Order Webhooks</h3>
+            <h3 className="text-sm font-extrabold text-gray-900 dark:text-dark-primary">Step 3: Connect Order Webhooks</h3>
             <p className="text-sm text-gray-700 dark:text-gray-300">
               Configure a webhook inside Shopify to forward order details to your SourceTrack endpoint on purchase confirmation:
             </p>
@@ -134,7 +134,7 @@ if (visitorId) {
 
         {/* 4. How to verify it worked */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             How to Verify It Worked
           </h2>
           <ol className="list-decimal pl-5 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -146,7 +146,7 @@ if (visitorId) {
 
         {/* 5. Common mistakes */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Common Mistakes
           </h2>
           <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
@@ -161,7 +161,7 @@ if (visitorId) {
 
         {/* 6. Next step */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Next Step
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">

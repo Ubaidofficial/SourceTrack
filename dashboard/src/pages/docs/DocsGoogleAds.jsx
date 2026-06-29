@@ -15,7 +15,7 @@ export default function DocsGoogleAds() {
 
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+          <h1 className="text-3xl font-black text-gray-900 dark:text-dark-primary tracking-tight">
             Google Ads Setup Guide
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-2 text-base leading-relaxed">
@@ -25,7 +25,7 @@ export default function DocsGoogleAds() {
 
         {/* 1. Who this is for */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Who This Is For
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -35,7 +35,7 @@ export default function DocsGoogleAds() {
 
         {/* 2. Tracking Template Explainer */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             The SourceTrack ValueTrack Template
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -57,12 +57,12 @@ export default function DocsGoogleAds() {
 
         {/* 3. Steps */}
         <section className="space-y-6">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             How to Install the Tracking Template
           </h2>
 
           <div className="space-y-4">
-            <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">Option A: Account-Level Setup (Recommended)</h3>
+            <h3 className="text-sm font-extrabold text-gray-900 dark:text-dark-primary">Option A: Account-Level Setup (Recommended)</h3>
             <p className="text-sm text-gray-700 dark:text-gray-300">
               Applying the template at the Account Level automatically covers all current and future campaigns in your Google Ads account:
             </p>
@@ -76,7 +76,7 @@ export default function DocsGoogleAds() {
           </div>
 
           <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-            <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">Option B: Campaign-Level Setup</h3>
+            <h3 className="text-sm font-extrabold text-gray-900 dark:text-dark-primary">Option B: Campaign-Level Setup</h3>
             <p className="text-sm text-gray-700 dark:text-gray-300">
               If you only want to track specific campaigns with SourceTrack:
             </p>
@@ -92,7 +92,7 @@ export default function DocsGoogleAds() {
 
         {/* 4. Verification */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Verifying Your Setup
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">

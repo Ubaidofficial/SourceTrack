@@ -67,7 +67,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-dark-border">
           <div className="flex items-center gap-2">
             <HelpCircle className="w-5 h-5 text-st-gray dark:text-gray-400" />
-            <h3 className="text-base font-semibold text-st-black dark:text-white">Attribution Explanation</h3>
+            <h3 className="text-base font-semibold text-st-black dark:text-dark-primary">Attribution Explanation</h3>
           </div>
           <button onClick={onClose} className="p-1.5 text-st-gray dark:text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-dark-hover rounded-lg transition-colors">
             <X className="w-5 h-5" />
@@ -95,7 +95,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
               </div>
 
               <div className="bg-gray-50 dark:bg-dark-bg rounded-lg p-3 text-xs text-gray-600 dark:text-gray-300 space-y-2">
-                <p className="font-medium text-gray-700 dark:text-white">How this model works</p>
+                <p className="font-medium text-gray-700 dark:text-dark-primary">How this model works</p>
                 {model === 'first_touch' && (
                   <p>First Touch assigns 100% credit to the first UTM source this visitor ever encountered. The value is stored in a browser cookie at their initial visit and sent with every conversion event. If no UTM was present on the first visit, the source is "direct".</p>
                 )}
@@ -143,15 +143,15 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                 <div className="grid grid-cols-3 gap-3 text-sm">
                   <div>
                     <p className="text-xs text-st-gray dark:text-gray-400">Value</p>
-                    <p className="font-medium text-st-black dark:text-white">${(data.conversion?.value || 0).toLocaleString()}</p>
+                    <p className="font-medium text-st-black dark:text-dark-primary">${(data.conversion?.value || 0).toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-xs text-st-gray dark:text-gray-400">Date</p>
-                    <p className="font-medium text-st-black dark:text-white">{data.conversion?.timestamp ? new Date(data.conversion.timestamp).toLocaleString() : '—'}</p>
+                    <p className="font-medium text-st-black dark:text-dark-primary">{data.conversion?.timestamp ? new Date(data.conversion.timestamp).toLocaleString() : '—'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-st-gray dark:text-gray-400">Attributed To</p>
-                    <p className="font-medium text-st-black dark:text-white">
+                    <p className="font-medium text-st-black dark:text-dark-primary">
                       {data.attributed_to?.source || 'direct'}
                       {data.attributed_to?.medium && data.attributed_to.medium !== 'none' && (
                         <span className="text-st-gray dark:text-gray-400"> / {data.attributed_to.medium}</span>
@@ -170,7 +170,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                     <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
                   )}
                   <div className="space-y-1">
-                    <p className="text-sm font-medium text-st-black dark:text-white">
+                    <p className="text-sm font-medium text-st-black dark:text-dark-primary">
                       {modelLabels[data.model] || data.model}
                       {data.fallback && <span className="text-amber-700 ml-1">(fallback)</span>}
                     </p>
@@ -183,17 +183,17 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg p-3 text-center">
                   <Route className="w-4 h-4 text-st-gray dark:text-gray-400 mx-auto mb-1" />
-                  <p className="text-lg font-semibold text-st-black dark:text-white">{data.journey_summary?.touchpoint_count || 0}</p>
+                  <p className="text-lg font-semibold text-st-black dark:text-dark-primary">{data.journey_summary?.touchpoint_count || 0}</p>
                   <p className="text-xs text-st-gray dark:text-gray-400">Touchpoints</p>
                 </div>
                 <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg p-3 text-center">
                   <Clock className="w-4 h-4 text-st-gray dark:text-gray-400 mx-auto mb-1" />
-                  <p className="text-lg font-semibold text-st-black dark:text-white">{data.journey_summary?.journey_duration_days || 0}d</p>
+                  <p className="text-lg font-semibold text-st-black dark:text-dark-primary">{data.journey_summary?.journey_duration_days || 0}d</p>
                   <p className="text-xs text-st-gray dark:text-gray-400">Journey Duration</p>
                 </div>
                 <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg p-3 text-center">
                   <MousePointerClick className="w-4 h-4 text-st-gray dark:text-gray-400 mx-auto mb-1" />
-                  <p className="text-lg font-semibold text-st-black dark:text-white">{data.journey_summary?.total_events || 0}</p>
+                  <p className="text-lg font-semibold text-st-black dark:text-dark-primary">{data.journey_summary?.total_events || 0}</p>
                   <p className="text-xs text-st-gray dark:text-gray-400">Total Events</p>
                 </div>
               </div>
@@ -203,19 +203,19 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                 <div className="grid grid-cols-3 gap-3">
                   <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg p-3 text-center">
                     <Layers className="w-4 h-4 text-st-gray dark:text-gray-400 mx-auto mb-1" />
-                    <p className="text-lg font-semibold text-st-black dark:text-white">{data.journey_summary?.session_count || 0}</p>
+                    <p className="text-lg font-semibold text-st-black dark:text-dark-primary">{data.journey_summary?.session_count || 0}</p>
                     <p className="text-xs text-st-gray dark:text-gray-400">Sessions</p>
                   </div>
                   <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg p-3 text-center">
                     <Clock className="w-4 h-4 text-st-gray dark:text-gray-400 mx-auto mb-1" />
-                    <p className="text-lg font-semibold text-st-black dark:text-white">
+                    <p className="text-lg font-semibold text-st-black dark:text-dark-primary">
                       {data.journey_summary?.converting_session_index || '—'}
                     </p>
                     <p className="text-xs text-st-gray dark:text-gray-400">Converting Session</p>
                   </div>
                   <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg p-3 text-center">
                     <Route className="w-4 h-4 text-st-gray dark:text-gray-400 mx-auto mb-1" />
-                    <p className="text-lg font-semibold text-st-black dark:text-white">
+                    <p className="text-lg font-semibold text-st-black dark:text-dark-primary">
                       {data.sessions?.find(s => s.contains_conversion)?.pageview_count || 0}
                     </p>
                     <p className="text-xs text-st-gray dark:text-gray-400">Pages in Conv. Session</p>
@@ -250,7 +250,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
               {/* Event timeline */}
               {viewMode === 'events' && (
                 <div>
-                  <h4 className="text-sm font-medium text-st-black dark:text-white mb-3">Journey Timeline</h4>
+                  <h4 className="text-sm font-medium text-st-black dark:text-dark-primary mb-3">Journey Timeline</h4>
                   <div className="space-y-2">
                     {data.all_touches?.map((touch, i) => {
                       const isAttributed = attributedTouch &&
@@ -274,7 +274,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                           }`} />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium text-st-black dark:text-white">{touch.source || 'direct'}</span>
+                              <span className="font-medium text-st-black dark:text-dark-primary">{touch.source || 'direct'}</span>
                               {touch.medium && touch.medium !== 'none' && (
                                 <span className="text-xs text-st-gray dark:text-gray-400">/ {touch.medium}</span>
                               )}
@@ -300,7 +300,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
               {/* Session timeline */}
               {viewMode === 'sessions' && data.sessions?.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-medium text-st-black dark:text-white mb-3">Session Timeline</h4>
+                  <h4 className="text-sm font-medium text-st-black dark:text-dark-primary mb-3">Session Timeline</h4>
                   <div className="space-y-3">
                     {data.sessions.map((sess) => (
                       <div
@@ -314,7 +314,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
                             <Layers className="w-3.5 h-3.5 text-st-gray dark:text-gray-400" />
-                            <span className="font-medium text-st-black dark:text-white">Session {sess.session_index}</span>
+                            <span className="font-medium text-st-black dark:text-dark-primary">Session {sess.session_index}</span>
                             {sess.contains_conversion && (
                               <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">Conversion</span>
                             )}
@@ -326,7 +326,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                         <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 dark:text-gray-300 mb-2">
                           <div>
                             <span className="text-st-gray dark:text-gray-400">Entry:</span>{' '}
-                            <span className={sess.is_direct_entry ? 'text-st-gray dark:text-gray-400' : 'text-st-black dark:text-white'}>
+                            <span className={sess.is_direct_entry ? 'text-st-gray dark:text-gray-400' : 'text-st-black dark:text-dark-primary'}>
                               {sess.entry_source || 'direct'}
                             </span>
                           </div>
@@ -354,7 +354,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
 
                {/* Model logic tooltip */}
               <div className="bg-gray-50 dark:bg-dark-bg rounded-lg p-3 text-xs text-gray-600 dark:text-gray-300 space-y-1 border border-transparent dark:border-dark-border">
-                <p className="font-medium text-gray-700 dark:text-white">Why this attribution?</p>
+                <p className="font-medium text-gray-700 dark:text-dark-primary">Why this attribution?</p>
                 {data.model === 'first_touch' && (
                   <p>First Touch assigns 100% credit to the first UTM source this visitor ever encountered. The value is stored in a browser cookie at their initial visit and sent with every conversion event.</p>
                 )}

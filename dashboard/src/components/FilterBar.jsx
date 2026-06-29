@@ -13,7 +13,7 @@ export default function FilterBar({ dateButtons = [], activeDate, onDateChange, 
                 onClick={() => onDateChange?.(d.key)}
                 className={`px-3 py-1 text-xs font-semibold rounded-md transition-all duration-150 focus-visible:ring-1 focus-visible:ring-st-lime focus-visible:outline-none ${
                   isActive
-                    ? 'bg-white dark:bg-[#252929] text-st-black dark:text-white shadow-sm'
+                    ? 'bg-white dark:bg-[#252929] text-st-black dark:text-dark-primary shadow-sm'
                     : 'text-gray-600 dark:text-gray-400 hover:text-st-black dark:hover:text-white'
                 }`}
               >

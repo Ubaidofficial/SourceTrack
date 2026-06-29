@@ -31,9 +31,9 @@ export default function OnboardingProgress({ currentStep, totalSteps = 6 }) {
             <span
               className={`text-sm whitespace-nowrap tracking-[-0.02em] ${
                 isCurrent
-                  ? 'font-extrabold text-[#1F2323] dark:text-white'
+                  ? 'font-extrabold text-[#1F2323] dark:text-dark-primary'
                   : isCompleted
-                  ? 'font-semibold text-[#1F2323] dark:text-white'
+                  ? 'font-semibold text-[#1F2323] dark:text-dark-primary'
                   : 'font-medium text-[#6B7373] dark:text-gray-500'
               }`}
             >

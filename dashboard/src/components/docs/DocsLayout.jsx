@@ -18,7 +18,7 @@ class DocsErrorBoundary extends React.Component {
     if (this.state.hasError) {
       return (
         <div className="py-24 text-center px-4 bg-white dark:bg-[#1A1D1D] rounded-2xl border border-gray-100 dark:border-gray-800">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Docs failed to load</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-dark-primary mb-2">Docs failed to load</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">Please refresh or contact support.</p>
         </div>
       )
@@ -31,7 +31,7 @@ export default function DocsLayout({ children, isDeveloper = false }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F9FAFB] dark:bg-[#111414] text-gray-900 dark:text-white transition-colors duration-150">
+    <div className="min-h-screen flex flex-col bg-[#F9FAFB] dark:bg-[#111414] text-gray-900 dark:text-dark-primary transition-colors duration-150">
       <MarketingHeader />
 
       {/* Main layout container */}

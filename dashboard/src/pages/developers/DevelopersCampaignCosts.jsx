@@ -57,7 +57,7 @@ export default function DevelopersCampaignCosts() {
 
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+          <h1 className="text-3xl font-black text-gray-900 dark:text-dark-primary tracking-tight">
             Campaign Cost Imports
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-2 text-base leading-relaxed">
@@ -67,7 +67,7 @@ export default function DevelopersCampaignCosts() {
 
         {/* Overview */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Overview
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -77,7 +77,7 @@ export default function DevelopersCampaignCosts() {
 
         {/* Endpoint */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             REST API Endpoint
           </h2>
           <Endpoint method="POST" path="/api/campaign-costs/import?site_key=YOUR_SITE_KEY" description="Authenticated via User Session" />
@@ -85,7 +85,7 @@ export default function DevelopersCampaignCosts() {
 
         {/* CSV Schema & JSON validation table */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Validation & Database Constraints
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -108,12 +108,12 @@ export default function DevelopersCampaignCosts() {
 
         {/* Copy-Paste Example */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Copy-Paste Examples
           </h2>
           <div className="space-y-4">
             <div>
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-2">CSV File Format Example</h3>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-dark-primary mb-2">CSV File Format Example</h3>
               <DocsCodeBlock lang="csv">
 {`date,platform,campaign_name,campaign_id,spend,currency,clicks,impressions
 2026-06-08,facebook,Summer Sale Campaign,fb_cmp_1202,45.50,USD,40,1200
@@ -122,7 +122,7 @@ export default function DevelopersCampaignCosts() {
             </div>
 
             <div>
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-2">Programmatic Bulk Import (cURL)</h3>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-dark-primary mb-2">Programmatic Bulk Import (cURL)</h3>
               <DocsCodeBlock lang="bash">
 {`curl -X POST "https://api.srctk.com/api/campaign-costs/import?site_key=sk_live_abc123" \\
   -H "Authorization: Bearer YOUR_USER_SESSION_TOKEN" \\
@@ -148,7 +148,7 @@ export default function DevelopersCampaignCosts() {
 
         {/* Common Errors */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Common Errors
           </h2>
           <div className="overflow-x-auto">
@@ -188,7 +188,7 @@ export default function DevelopersCampaignCosts() {
 
         {/* Security Note */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Security Note
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">

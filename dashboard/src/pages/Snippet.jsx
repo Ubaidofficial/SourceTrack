@@ -169,13 +169,13 @@ export default function Snippet() {
   return (
     <div className="space-y-6 max-w-2xl pb-10">
       <div>
-        <h2 className="text-2xl font-bold text-st-black dark:text-white">Install SourceTrack</h2>
+        <h2 className="text-2xl font-bold text-st-black dark:text-dark-primary">Install SourceTrack</h2>
         <p className="text-sm text-st-gray dark:text-gray-400 mt-1">Add one script to your website and verify tracking.</p>
       </div>
 
       {/* Setup Checklist */}
       <div className="bg-white dark:bg-[#1A1D1D] rounded-xl border border-gray-200 dark:border-[#333838] shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-st-black dark:text-white mb-3">Setup checklist</h3>
+        <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary mb-3">Setup checklist</h3>
         <div className="space-y-2">
           {[
             { done: true, label: 'Create your site', detail: 'Done' },
@@ -200,11 +200,11 @@ export default function Snippet() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     {step.href ? (
-                      <Link to={step.href} className="font-medium text-st-black dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors">{step.label}</Link>
+                      <Link to={step.href} className="font-medium text-st-black dark:text-dark-primary hover:text-blue-600 dark:hover:text-blue-400 transition-colors">{step.label}</Link>
                     ) : step.action ? (
-                      <button onClick={step.action} className="font-medium text-st-black dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left">{step.label}</button>
+                      <button onClick={step.action} className="font-medium text-st-black dark:text-dark-primary hover:text-blue-600 dark:hover:text-blue-400 transition-colors text-left">{step.label}</button>
                     ) : (
-                      <span className={`font-medium ${step.done ? 'text-gray-500 dark:text-gray-500' : 'text-st-black dark:text-white'}`}>{step.label}</span>
+                      <span className={`font-medium ${step.done ? 'text-gray-500 dark:text-gray-500' : 'text-st-black dark:text-dark-primary'}`}>{step.label}</span>
                     )}
                     {step.detail && <span className="text-gray-400 dark:text-gray-500">{step.detail}</span>}
                   </div>
@@ -233,7 +233,7 @@ export default function Snippet() {
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 text-xs font-bold">1</span>
-            <h3 className="font-semibold text-sm text-st-black dark:text-white">Copy your tracking script</h3>
+            <h3 className="font-semibold text-sm text-st-black dark:text-dark-primary">Copy your tracking script</h3>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 pl-7">
             Add this tracking code to your website to automatically capture pageviews, sessions, and UTM traffic sources.
@@ -260,7 +260,7 @@ export default function Snippet() {
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 text-xs font-bold">2</span>
-            <h3 className="font-semibold text-sm text-st-black dark:text-white">Paste before closing head tag</h3>
+            <h3 className="font-semibold text-sm text-st-black dark:text-dark-primary">Paste before closing head tag</h3>
           </div>
           <p className="text-xs text-gray-600 dark:text-gray-400 pl-7">
             Paste the copied snippet into the <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-xs font-mono">&lt;head&gt;</code> element of your website's HTML code.
@@ -271,7 +271,7 @@ export default function Snippet() {
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <span className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 text-xs font-bold">3</span>
-            <h3 className="font-semibold text-sm text-st-black dark:text-white">Verify installation</h3>
+            <h3 className="font-semibold text-sm text-st-black dark:text-dark-primary">Verify installation</h3>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 pl-7">
             Open your website in a new browser tab to trigger a pageview event, then verify setup diagnostics below.
@@ -292,7 +292,7 @@ export default function Snippet() {
       <div className="bg-white dark:bg-[#1A1D1D] rounded-xl border border-gray-200 dark:border-[#333838] shadow-sm p-5 space-y-3">
         <div className="flex items-center gap-2">
           <Send className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-          <h3 className="text-sm font-semibold text-st-black dark:text-white">Send a test conversion</h3>
+          <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">Send a test conversion</h3>
         </div>
         <p className="text-xs text-gray-500 dark:text-gray-400">
           Send a $0 test conversion from this dashboard to confirm SourceTrack can receive conversion events for this site.
@@ -348,11 +348,11 @@ export default function Snippet() {
         <div className="bg-white dark:bg-[#1A1D1D] rounded-xl border border-gray-200 dark:border-[#333838] shadow-sm p-5">
           <div className="flex items-center gap-2 mb-2">
             <Key className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-            <h3 className="text-sm font-semibold text-st-black dark:text-white">Your Site Key</h3>
+            <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">Your Site Key</h3>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Use this key for server-side API calls and integrations.</p>
           <div className="flex items-center gap-2">
-            <code className="flex-1 bg-gray-50 dark:bg-[#252929] border border-gray-200 dark:border-[#333838] rounded-lg px-3 py-2 text-sm font-mono text-st-black dark:text-white select-all">{site.site_key}</code>
+            <code className="flex-1 bg-gray-50 dark:bg-[#252929] border border-gray-200 dark:border-[#333838] rounded-lg px-3 py-2 text-sm font-mono text-st-black dark:text-dark-primary select-all">{site.site_key}</code>
             <button
               onClick={() => { navigator.clipboard.writeText(site.site_key).catch(() => {}) }}
               className="p-2 bg-gray-100 dark:bg-[#252929] hover:bg-gray-200 dark:hover:bg-[#333838] rounded-lg transition-colors"
@@ -411,7 +411,7 @@ export default function Snippet() {
           className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-[#252929] transition-colors"
         >
           <div>
-            <h3 className="text-sm font-semibold text-st-black dark:text-white">Advanced setup</h3>
+            <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">Advanced setup</h3>
             <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">Optional for SaaS, ecommerce, CRM, and server-side conversions.</p>
           </div>
           {advancedOpen ? <ChevronDown className="w-4 h-4 text-st-gray" /> : <ChevronRight className="w-4 h-4 text-st-gray" />}

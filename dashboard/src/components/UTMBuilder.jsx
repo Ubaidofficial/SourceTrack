@@ -37,7 +37,7 @@ export default function UTMBuilder() {
     setTerm('')
   }
 
-  const inputClass = "w-full px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
+  const inputClass = "w-full px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
 
   function onBlurLower(setter) {
     return (e) => setter(e.target.value.trim().toLowerCase())
@@ -122,7 +122,7 @@ export default function UTMBuilder() {
       {taggedUrl && (
         <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
           <p className="text-xs text-st-gray dark:text-gray-400 mb-1">Tagged URL</p>
-          <p className="text-xs text-st-black dark:text-white break-all font-mono">{taggedUrl}</p>
+          <p className="text-xs text-st-black dark:text-dark-primary break-all font-mono">{taggedUrl}</p>
         </div>
       )}
 

@@ -23,7 +23,7 @@ export default function AttributionCoverageCard({ siteKey }) {
     <div className="bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-5 shadow-sm">
       <div className="flex items-center gap-2 mb-1">
         <Crosshair className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-        <h3 className="text-sm font-semibold text-st-black dark:text-white">Attribution coverage</h3>
+        <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">Attribution coverage</h3>
       </div>
       {children}
     </div>
@@ -58,7 +58,7 @@ export default function AttributionCoverageCard({ siteKey }) {
         % of conversions we can trace to a known acquisition source.
       </p>
       <div className="mt-3 flex items-end gap-2">
-        <span className="text-4xl font-black tracking-tight text-st-black dark:text-white tabular-nums">
+        <span className="text-4xl font-black tracking-tight text-st-black dark:text-dark-primary tabular-nums">
           {stat.coverage_pct}%
         </span>
         <span className="text-xs text-gray-500 dark:text-gray-400 mb-1.5">
@@ -73,7 +73,7 @@ export default function AttributionCoverageCard({ siteKey }) {
 
       <div className="mt-3 pt-3 border-t border-gray-100 dark:border-[#2A2E2E]">
         <p className="text-xs text-gray-500 dark:text-gray-400">
-          <span className="font-semibold text-st-black dark:text-white tabular-nums">{stat.tagged_pct}%</span>{' '}
+          <span className="font-semibold text-st-black dark:text-dark-primary tabular-nums">{stat.tagged_pct}%</span>{' '}
           of conversions arrived with a tagged link (UTM or click ID).
         </p>
       </div>

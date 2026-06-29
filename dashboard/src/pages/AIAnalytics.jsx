@@ -148,7 +148,7 @@ export default function AIAnalytics() {
       ) : !hasData ? (
         <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#333838] p-12 text-center">
           <Sparkles className="w-12 h-12 text-lime-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-st-black dark:text-white mb-2">No AI traffic detected yet</h3>
+          <h3 className="text-lg font-semibold text-st-black dark:text-dark-primary mb-2">No AI traffic detected yet</h3>
           <p className="text-sm text-st-gray dark:text-gray-400 max-w-md mx-auto mb-6">
             AI Analytics shows you which AI platforms (ChatGPT, Claude, Perplexity, etc.) send visitors to your site — and which of those visitors convert.
           </p>
@@ -214,7 +214,7 @@ export default function AIAnalytics() {
           {/* AOV Comparison + AI Revenue Share Info */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="bg-white dark:bg-[#1A1D1D] rounded-xl border border-gray-200 dark:border-[#333838] shadow-sm p-6">
-              <h3 className="text-sm font-semibold text-st-black dark:text-white mb-2">AI vs Non-AI Average Order Value</h3>
+              <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary mb-2">AI vs Non-AI Average Order Value</h3>
               <div className="flex items-end gap-8">
                 <div>
                   <p className="text-xs text-st-gray">AI</p>
@@ -238,7 +238,7 @@ export default function AIAnalytics() {
             </div>
 
             <div className="bg-white dark:bg-[#1A1D1D] rounded-xl border border-gray-200 dark:border-[#333838] shadow-sm p-6">
-              <h3 className="text-sm font-semibold text-st-black dark:text-white mb-2">About AI Source Tracking</h3>
+              <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary mb-2">About AI Source Tracking</h3>
               <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
                 SourceTrack detects AI platform traffic by inspecting the HTTP referrer header when a visitor arrives from an AI chat tool.
                 Supported platforms: ChatGPT, Claude, Perplexity, Gemini, Grok, Copilot, DeepSeek, and others.
@@ -276,7 +276,7 @@ export default function AIAnalytics() {
                 <tbody>
                   {platforms.map((p, i) => (
                     <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
-                      <td className="py-2 px-3 text-st-black dark:text-white font-medium flex items-center gap-2">
+                      <td className="py-2 px-3 text-st-black dark:text-dark-primary font-medium flex items-center gap-2">
                         {p.platform}
                         <StatusBadge status="verified" label="AI" />
                       </td>
@@ -327,7 +327,7 @@ export default function AIAnalytics() {
               <tbody>
                 {platforms.map((p, i) => (
                   <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="py-2.5 px-3 text-st-black dark:text-white font-medium">{p.platform}</td>
+                    <td className="py-2.5 px-3 text-st-black dark:text-dark-primary font-medium">{p.platform}</td>
                     <td className="py-2.5 px-3 text-right text-st-black">${(p.revenue || 0).toFixed(0)}</td>
                     <td className="py-2.5 px-3 text-right text-gray-600">{p.conversions.toLocaleString()}</td>
                     <td className="py-2.5 px-3 text-right text-st-gray">
@@ -479,7 +479,7 @@ function ForecastCard({ siteKey }) {
       ) : error ? (
         <div className="py-6 text-center">
           <p className="text-sm text-red-500">{error}</p>
-          <button onClick={runForecast} className="mt-3 text-xs text-st-black dark:text-white underline">Try again</button>
+          <button onClick={runForecast} className="mt-3 text-xs text-st-black dark:text-dark-primary underline">Try again</button>
         </div>
       ) : insufficient ? (
         <div className="py-6 text-center">
@@ -518,7 +518,7 @@ function ForecastCard({ siteKey }) {
               <tbody>
                 {forecast.forecast.map((row, i) => (
                   <tr key={i} className="border-b border-gray-50">
-                    <td className="py-2 text-st-black dark:text-white font-mono">{row.date}</td>
+                    <td className="py-2 text-st-black dark:text-dark-primary font-mono">{row.date}</td>
                     <td className="py-2 text-right font-semibold text-st-black">${(row.revenue || 0).toFixed(0)}</td>
                     <td className="py-2 text-right text-st-gray">{row.leads || 0}</td>
                     <td className="py-2 text-right">
@@ -611,7 +611,7 @@ function AnomalyCard({ siteKey }) {
       ) : error ? (
         <div className="py-6 text-center">
           <p className="text-sm text-red-500">{error}</p>
-          <button onClick={run} className="mt-3 text-xs text-st-black dark:text-white underline">Try again</button>
+          <button onClick={run} className="mt-3 text-xs text-st-black dark:text-dark-primary underline">Try again</button>
         </div>
       ) : !d?.has_enough_data ? (
         <div className="py-6 text-center">
@@ -668,7 +668,7 @@ function AnomalyCard({ siteKey }) {
                 <tbody>
                   {channels.slice(0, 8).map((ch, i) => (
                     <tr key={i} className="border-b border-gray-50">
-                      <td className="py-2 text-st-black dark:text-white font-medium truncate max-w-[120px]">{ch.channel}</td>
+                      <td className="py-2 text-st-black dark:text-dark-primary font-medium truncate max-w-[120px]">{ch.channel}</td>
                       <td className="py-2 text-right text-st-black">${(ch.this_week_revenue || 0).toFixed(0)}</td>
                       <td className="py-2 text-right text-st-gray">${(ch.last_week_revenue || 0).toFixed(0)}</td>
                       <td className={`py-2 text-right font-semibold ${deltaColor(ch.rev_delta_pct)}`}>{deltaLabel(ch.rev_delta_pct)}</td>
@@ -750,7 +750,7 @@ function VerdictCard({ siteKey }) {
       ) : error ? (
         <div className="py-6 text-center">
           <p className="text-sm text-red-500">{error}</p>
-          <button onClick={run} className="mt-3 text-xs text-st-black dark:text-white underline">Try again</button>
+          <button onClick={run} className="mt-3 text-xs text-st-black dark:text-dark-primary underline">Try again</button>
         </div>
       ) : !verdicts?.length ? (
         <div className="py-6 text-center">
@@ -781,7 +781,7 @@ function VerdictCard({ siteKey }) {
                   <span className="text-lg flex-shrink-0">{s.icon}</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-semibold text-st-black dark:text-white truncate max-w-[160px]">{v.campaign}</span>
+                      <span className="text-sm font-semibold text-st-black dark:text-dark-primary truncate max-w-[160px]">{v.campaign}</span>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${s.bg} ${s.text}`}>{v.verdict}</span>
                     </div>
                     {v.reason && <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">{v.reason}</p>}

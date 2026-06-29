@@ -82,7 +82,7 @@ export default function AuthConfirm() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <LogoMark className="w-12 h-12 mx-auto mb-4" />
-          <h1 className="text-3xl font-extrabold tracking-[-0.06em] text-[#1F2323] dark:text-white">SourceTrack</h1>
+          <h1 className="text-3xl font-extrabold tracking-[-0.06em] text-[#1F2323] dark:text-dark-primary">SourceTrack</h1>
           <p className="text-st-gray dark:text-gray-400 mt-2">Link expired or invalid</p>
         </div>
 
