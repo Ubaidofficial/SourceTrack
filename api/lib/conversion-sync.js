@@ -121,46 +121,6 @@ function getMetaEventName(conversionType) {
   return META_EVENT_MAP[normalizeKey(conversionType)] || 'Purchase'
 }
 
-// ─── TikTok CAPI event name mapping ──────────────────────────────────────────
-// Reference: https://business-api.tiktok.com/portal/docs
-const TIKTOK_EVENT_MAP = {
-  // Purchases (TikTok calls this PlaceAnOrder)
-  purchase:    'PlaceAnOrder',
-  sale:        'PlaceAnOrder',
-  order:       'PlaceAnOrder',
-  buy:         'PlaceAnOrder',
-  // Cart / checkout
-  add_to_cart: 'AddToCart',
-  addtocart:   'AddToCart',
-  add_cart:    'AddToCart',
-  checkout:    'InitiateCheckout',
-  initiate_checkout: 'InitiateCheckout',
-  begin_checkout:    'InitiateCheckout',
-  // Lead-gen
-  lead:        'SubmitForm',
-  form:        'SubmitForm',
-  form_submit: 'SubmitForm',
-  contact:     'Contact',
-  // Registration / trial
-  signup:      'CompleteRegistration',
-  sign_up:     'CompleteRegistration',
-  register:    'CompleteRegistration',
-  registration:'CompleteRegistration',
-  trial:       'CompleteRegistration',
-  // Subscription
-  subscribe:   'Subscribe',
-  subscription:'Subscribe',
-  // Content / browse
-  view_content:'ViewContent',
-  page_view:   'ViewContent',
-  search:      'Search',
-  download:    'Download',
-}
-
-function getTikTokEventName(conversionType) {
-  return TIKTOK_EVENT_MAP[normalizeKey(conversionType)] || 'PlaceAnOrder'
-}
-
 // ─── Meta CAPI ────────────────────────────────────────────────────────────────
 export async function sendMetaCAPI(site, evt) {
   const token = safeDecrypt(site.meta_capi_token)
@@ -323,54 +283,6 @@ export async function sendLinkedInConversion(site, evt) {
   }, 'LinkedIn CAPI')
   if (!r.ok) console.error('[LinkedIn CAPI] HTTP', r.status)
   return { ok: r.ok, http_status: r.status, error_message: r.ok ? null : `HTTP ${r.status}` }
-}
-
-// ─── TikTok CAPI ─────────────────────────────────────────────────────────────
-export async function sendTikTokConversion(site, eventData) {
-  if (!site?.tiktok_pixel_id || !site?.tiktok_access_token) return
-
-  const eventName = getTikTokEventName(eventData.conversion_type)
-
-  try {
-    const payload = {
-      pixel_code: site.tiktok_pixel_id,
-      event:      eventName,
-      event_time: Math.floor(new Date(eventData.timestamp ?? Date.now()).getTime() / 1000),
-      event_id:   eventData.external_event_id ?? undefined, // dedup key
-      context: {
-        user: {
-          ...(eventData.ttclid    ? { ttclid: eventData.ttclid } : {}),
-          ...(eventData.ip_address ? { ip:     sha256(eventData.ip_address) } : {}),
-          ...(eventData.email      ? { email:  sha256(eventData.email) }      : {}),
-        },
-        page: { url: eventData.page_url || undefined }
-      },
-      properties: {
-        currency:     'USD',
-        value:        Number(eventData.conversion_value) || 0,
-        ...(eventData.order_id       ? { order_id:     eventData.order_id }       : {}),
-        ...(eventData.conversion_type? { content_type: eventData.conversion_type } : {}),
-      }
-    }
-
-    const res = await fetchWithRetry('https://business-api.tiktok.com/open_api/v1.3/event/track/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Token': site.tiktok_access_token
-      },
-      body: JSON.stringify({
-        pixel_code: site.tiktok_pixel_id,
-        batch: [payload]
-      })
-    }, 'TikTok CAPI')
-    if (!res.ok) {
-      const err = await res.text()
-      console.error('[TikTok CAPI]', eventName, err.slice(0, 200))
-    }
-  } catch (e) {
-    console.error('[TikTok CAPI]', e.message)
-  }
 }
 
 // ─── CAPI fan-out + delivery log ─────────────────────────────────────────────
