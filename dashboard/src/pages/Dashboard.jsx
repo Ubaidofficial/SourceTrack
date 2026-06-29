@@ -234,11 +234,23 @@ export default function Dashboard() {
     .filter(m => canMultiTouch || !MULTI_TOUCH.has(m.key))
     .map(m => ({ model: m.key, label: m.label, total: models[m.key] || 0 }))
 
+  // Vertical lime area-fill gradient for the trend line: solid #CCF03F at the
+  // top fading to 35% at the baseline. Returns a flat fallback before the chart
+  // area is laid out on first render.
+  const limeAreaGradient = (ctx) => {
+    const { ctx: canvas, chartArea } = ctx.chart
+    if (!chartArea) return 'rgba(204,240,63,0.35)'
+    const g = canvas.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
+    g.addColorStop(0, '#CCF03F')
+    g.addColorStop(1, 'rgba(204,240,63,0.35)')
+    return g
+  }
+
   const revTrendData = {
     labels: timeResults.map(r => r.dim_value || ''),
     datasets: [{
       label: 'Revenue', data: timeResults.map(r => r.revenue || 0),
-      borderColor: 'rgba(17, 24, 39, 1)', backgroundColor: 'rgba(17, 24, 39, 0.08)',
+      borderColor: 'rgba(17, 24, 39, 1)', backgroundColor: limeAreaGradient,
       fill: true, tension: 0.3, pointRadius: 2
     }]
   }
@@ -251,7 +263,7 @@ export default function Dashboard() {
       label: 'Leads',
       data: channelTrendResults.map(r => r.leads || 0),
       borderColor: 'rgba(17,24,39,0.85)',
-      backgroundColor: 'rgba(17,24,39,0.08)',
+      backgroundColor: limeAreaGradient,
       borderWidth: 2,
       pointRadius: 3,
       tension: 0.3,
@@ -880,12 +892,12 @@ function DashboardWidgetCard({ report, site }) {
                 const label = r.dim_value || '—'
                 return (
                   <div key={i} className="flex items-center gap-2">
-                    <span className="text-[10px] text-st-gray dark:text-gray-400 w-20 truncate flex-shrink-0 inline-flex items-center" title={label}>
-                      <span className="truncate">{label}</span>
-                      {isDirectLabel(label) && <DirectInfo />}
-                    </span>
-                    <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
-                      <div className="h-full bg-st-black dark:bg-white rounded-full transition-all" style={{ width: `${barW}%` }} />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[10px] text-st-gray dark:text-gray-400 truncate inline-flex items-center max-w-full" title={label}>
+                        <span className="truncate">{label}</span>
+                        {isDirectLabel(label) && <DirectInfo />}
+                      </span>
+                      <div style={{ height: '2px', width: `${barW}%`, background: 'rgba(204,240,63,0.6)', borderRadius: '1px', marginTop: '3px' }} />
                     </div>
                     <span className="text-[10px] font-medium text-gray-700 dark:text-gray-300 w-14 text-right flex-shrink-0 tabular-nums">
                       {metricDef.format(val)}

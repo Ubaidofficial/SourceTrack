@@ -35,11 +35,9 @@ function DataRow({ label, count, max, icon, onClick, active }) {
       } ${active ? 'bg-st-lime/5' : 'hover:bg-gray-50 dark:hover:bg-dark-hover'}`}
     >
       {icon && <span className="flex-shrink-0 w-4 flex items-center">{icon}</span>}
-      <span className="text-xs flex-1 truncate text-st-black dark:text-white">{label}</span>
-      <div className="w-20 flex-shrink-0">
-        <div className="h-1.5 bg-gray-100 dark:bg-dark-border rounded-full overflow-hidden">
-          <div className="h-full bg-st-lime rounded-full transition-all" style={{ width: `${pct.toFixed(1)}%` }} />
-        </div>
+      <div className="flex-1 min-w-0">
+        <span className="text-xs truncate text-st-black dark:text-white block">{label}</span>
+        <div style={{ height: '2px', width: `${pct.toFixed(1)}%`, background: 'rgba(204,240,63,0.6)', borderRadius: '1px', marginTop: '3px' }} />
       </div>
       <span className="text-sm font-medium text-st-black dark:text-white w-14 text-right flex-shrink-0 tabular-nums">{n.toLocaleString()}</span>
     </div>
