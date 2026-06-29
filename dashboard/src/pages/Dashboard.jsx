@@ -530,6 +530,21 @@ export default function Dashboard() {
                 )}
               </div>
 
+              {/* Secondary metric: Bounce Rate. Truth-gated — hidden entirely
+                  when null (Analytics path / no data); never a fake 0% placeholder. */}
+              {kpis.bounce_rate != null && (
+                <div className="flex flex-wrap gap-4">
+                  <div className="w-full sm:w-52" title="Bounce rate — share of sessions with only one page or action.">
+                    <MetricTile
+                      label="Bounce Rate"
+                      value={`${Number(kpis.bounce_rate).toFixed(1)}%`}
+                      compact
+                      sub="Sessions with one page/action"
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Command Center Nav */}
               <div className="flex flex-wrap gap-2">
                 <button onClick={() => navigate('/analytics')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-dark-primary hover:border-st-black dark:hover:border-white transition-colors">Analytics <ArrowRight className="w-3 h-3" /></button>
