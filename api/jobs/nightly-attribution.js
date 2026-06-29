@@ -282,7 +282,7 @@ async function runBackfill() {
   }
 
   const conversionsQuery = `
-    SELECT uuid, distinct_id, timestamp, properties.conversion_type, properties.conversion_value, properties.external_event_id
+    SELECT uuid, distinct_id, timestamp, properties.conversion_type, properties.conversion_value, properties.external_event_id, properties.webhook_customer_id, properties.stripe_subscription_id
     FROM events
     WHERE event = '$conversion'
       AND properties.site_id = '${site.id}'
@@ -298,7 +298,8 @@ async function runBackfill() {
   for (const row of (rows || [])) {
     const conversion = {
       uuid: row[0], distinct_id: row[1], timestamp: row[2],
-      conversion_type: row[3], conversion_value: row[4], external_event_id: row[5] || null
+      conversion_type: row[3], conversion_value: row[4], external_event_id: row[5] || null,
+      webhook_customer_id: row[6] || null, stripe_subscription_id: row[7] || null
     }
     if (!conversion.uuid || !conversion.distinct_id || !conversion.timestamp) {
       logWarn(`Skipping invalid conversion ${conversion.uuid}`)
@@ -355,13 +356,15 @@ async function processSite(site) {
   }
 
   const conversionsQuery = `
-    SELECT 
+    SELECT
       uuid,
       distinct_id,
       timestamp,
       properties.conversion_type,
       properties.conversion_value,
-      properties.external_event_id
+      properties.external_event_id,
+      properties.webhook_customer_id,
+      properties.stripe_subscription_id
     FROM events
     WHERE event = '$conversion'
       AND properties.site_id = '${site.id}'
@@ -398,7 +401,9 @@ async function processSite(site) {
         timestamp: row[2],
         conversion_type: row[3],
         conversion_value: row[4],
-        external_event_id: row[5] || null
+        external_event_id: row[5] || null,
+        webhook_customer_id: row[6] || null,
+        stripe_subscription_id: row[7] || null
       }
       
       const record = await processConversion(site, conversion)
@@ -695,7 +700,47 @@ async function processConversion(site, conversion) {
     last_touch_landing_page: lastTp.landing_page || 'unknown'
   }
 
+  // Step 2: acquisition-locked subscription→source link. Only for subscription
+  // events (they alone carry a Stripe customer id + subscription id from the
+  // Step-1 webhook). Write-once so renewals/later runs never re-attribute; the
+  // chronologically-first event (ORDER BY timestamp ASC) defines the snapshot.
+  if (conversion.webhook_customer_id && conversion.stripe_subscription_id) {
+    // Unstitchable (placeholder distinct_id) or no journey → no acquisition
+    // source: store null + 'unknown', never a fabricated source.
+    const unstitched = String(conversion.distinct_id || '').startsWith('stripe_') || touchpoints.length === 0
+    await upsertSubscriptionIdentity(site, {
+      stripe_customer_id:    conversion.webhook_customer_id,
+      first_subscription_id: conversion.stripe_subscription_id,
+      source_conversion_id:  conversion.uuid || null,
+      anonymous_id:          unstitched ? null : conversion.distinct_id,
+      first_touch_source:    unstitched ? null : record.first_touch_source,
+      first_touch_channel:   unstitched ? null : record.first_touch_channel,
+      first_touch_campaign:  unstitched ? null : record.first_touch_campaign,
+      last_touch_source:     unstitched ? null : record.last_touch_source,
+      last_touch_channel:    unstitched ? null : record.last_touch_channel,
+      attribution_status:    unstitched ? 'unknown' : 'resolved'
+    })
+  }
+
   return record
+}
+
+// Acquisition-locked upsert into subscription_identity. ignoreDuplicates →
+// INSERT … ON CONFLICT (site_id, stripe_customer_id) DO NOTHING, so the first
+// write (the acquisition event) wins and renewals never clobber it. Non-fatal:
+// a failure here must not break attribution of the conversion itself.
+async function upsertSubscriptionIdentity(site, row) {
+  try {
+    const { error } = await supabase
+      .from('subscription_identity')
+      .upsert(
+        { site_id: site.id, source_locked_at: new Date().toISOString(), ...row },
+        { onConflict: 'site_id,stripe_customer_id', ignoreDuplicates: true }
+      )
+    if (error) logWarn(`subscription_identity upsert failed for site ${site.site_key}: ${error.message}`)
+  } catch (err) {
+    logWarn(`subscription_identity upsert threw for site ${site.site_key}: ${err.message}`)
+  }
 }
 
 function calculateAttribution(touchpoints, conversionValue) {
