@@ -7,6 +7,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased] — 2026-05-23
 
+### Corrected
+
+**CAPI provider scope — Meta and Google Ads only.**
+- Conversion forwarding (CAPI) is configurable for **Meta** and **Google Ads** only. `ad_platform_connections` enforces a CHECK constraint permitting only `google_ads` and `meta_ads`; `capi_deliveries` is currently empty.
+- Earlier entries below referenced Microsoft, LinkedIn, and TikTok CAPI (e.g. the 5-provider retry note, the offline-conversion CAPI note, and `TIKTOK_EVENT_MAP`). Those provider paths were never configurable end-to-end and were removed in #60. Those dated entries are left intact as a historical record; this note supersedes their provider lists.
+
 ### Beta QA — Auth → Onboarding → Tracker → Dashboard Flow
 
 #### Fixed
