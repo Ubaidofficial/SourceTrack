@@ -107,7 +107,7 @@ export default function DataQuality() {
     <div className="space-y-8 max-w-3xl">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-st-black dark:text-white">Data Quality</h2>
+          <h2 className="text-2xl font-bold text-st-black dark:text-dark-primary">Data Quality</h2>
           <p className="text-sm text-st-gray dark:text-gray-400 mt-1">{reports.length} checks evaluated</p>
         </div>
         <button
@@ -127,7 +127,7 @@ export default function DataQuality() {
           <span className={`text-2xl font-bold ${scoreColor}`}>{healthScore}</span>
         </div>
         <div>
-          <h3 className="text-sm font-bold text-st-black dark:text-white">Overall Health Score</h3>
+          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Overall Health Score</h3>
           <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">
             {healthScore >= 80 ? 'Your data quality is excellent' : healthScore >= 60 ? 'Some metrics need attention' : 'Several issues detected — investigate'}
           </p>
@@ -142,7 +142,7 @@ export default function DataQuality() {
       {/* ── Per-Check Table ───────────────────────────────────────────── */}
       <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-          <h3 className="text-sm font-bold text-st-black dark:text-white">Quality Checks</h3>
+          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Quality Checks</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -167,7 +167,7 @@ export default function DataQuality() {
                 const Icon = STATUS_ICONS[r.status] || CheckCircle
                 return (
                   <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
-                    <td className="px-4 py-2.5 font-medium text-st-black dark:text-white">{r.check_name}</td>
+                    <td className="px-4 py-2.5 font-medium text-st-black dark:text-dark-primary">{r.check_name}</td>
                     <td className="px-4 py-2.5 text-st-gray dark:text-gray-400">
                       {typeof r.value === 'number' ? r.value < 10 ? `${(safeNumber(r.value,0) * 100).toFixed(1)}%` : `${r.value}h` : r.value}
                     </td>
@@ -197,7 +197,7 @@ export default function DataQuality() {
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
           <div className="flex items-center gap-2">
             <Shield className="w-4 h-4 text-st-gray dark:text-gray-400" />
-            <h3 className="text-sm font-bold text-st-black dark:text-white">Active Alerts</h3>
+            <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Active Alerts</h3>
             {alerts.length > 0 && (
               <span className="px-2 py-0.5 text-xs font-bold bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full">
                 {alerts.length}
@@ -218,7 +218,7 @@ export default function DataQuality() {
                       <Icon className="w-3 h-3" />
                       {a.severity}
                     </span>
-                    <span className="text-sm font-medium text-st-black dark:text-white">{a.title}</span>
+                    <span className="text-sm font-medium text-st-black dark:text-dark-primary">{a.title}</span>
                   </div>
                   <p className="text-xs text-st-gray dark:text-gray-400 mt-1">{a.message}</p>
                 </div>

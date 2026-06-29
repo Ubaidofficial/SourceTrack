@@ -246,7 +246,7 @@ export default function Setup() {
   return (
     <div className="space-y-6 max-w-6xl pb-10">
       <div>
-        <h2 className="text-2xl font-bold text-st-black dark:text-white">Setup &amp; Health</h2>
+        <h2 className="text-2xl font-bold text-st-black dark:text-dark-primary">Setup &amp; Health</h2>
         <p className="text-sm text-st-gray dark:text-gray-400 mt-1">Get SourceTrack installed, verified, and configured.</p>
       </div>
 
@@ -307,7 +307,7 @@ export default function Setup() {
           {activeTab === 'install' && (
             <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-6 shadow-sm space-y-6">
               <div>
-                <h3 className="text-lg font-bold text-st-black dark:text-white">1. Install Tracking Code</h3>
+                <h3 className="text-lg font-bold text-st-black dark:text-dark-primary">1. Install Tracking Code</h3>
                 <p className="text-sm text-st-gray dark:text-gray-400 mt-1">
                   Add this tracking script to your site to capture traffic and attribution details automatically.
                 </p>
@@ -316,7 +316,7 @@ export default function Setup() {
               {site?.domain && (
                 <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-[#1E2121]/50 border border-gray-200 dark:border-transparent rounded-lg text-xs">
                   <span className="font-semibold text-gray-700 dark:text-gray-300">Registered Domain:</span>
-                  <span className="font-mono text-st-black dark:text-white select-all">{site.domain}</span>
+                  <span className="font-mono text-st-black dark:text-dark-primary select-all">{site.domain}</span>
                   {detectionLoading && (
                     <span className="inline-flex items-center gap-1.5 text-gray-400 dark:text-gray-500">
                       <RefreshCw className="w-3 h-3 animate-spin" />
@@ -329,7 +329,7 @@ export default function Setup() {
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <span className="flex items-center justify-center w-5 h-5 rounded-full bg-st-lime text-st-black text-xs font-extrabold">A</span>
-                  <h4 className="font-semibold text-sm text-st-black dark:text-white">Copy your snippet</h4>
+                  <h4 className="font-semibold text-sm text-st-black dark:text-dark-primary">Copy your snippet</h4>
                 </div>
                 {activeSite?.support_preview ? (
                   <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/30 rounded-lg p-4 text-center text-sm text-amber-800 dark:text-amber-400">
@@ -354,7 +354,7 @@ export default function Setup() {
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <span className="flex items-center justify-center w-5 h-5 rounded-full bg-st-lime text-st-black text-xs font-extrabold">B</span>
-                  <h4 className="font-semibold text-sm text-st-black dark:text-white">Paste before closing head tag</h4>
+                  <h4 className="font-semibold text-sm text-st-black dark:text-dark-primary">Paste before closing head tag</h4>
                 </div>
                 <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed pl-7">
                   Paste the copied snippet into the <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-xs font-mono">&lt;head&gt;</code> element of your website's HTML code (preferably before the closing <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-xs font-mono">&lt;/head&gt;</code> tag) to ensure it loads on every page.
@@ -365,7 +365,7 @@ export default function Setup() {
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <span className="flex items-center justify-center w-5 h-5 rounded-full bg-st-lime text-st-black text-xs font-extrabold">C</span>
-                  <h4 className="font-semibold text-sm text-st-black dark:text-white">Add URL parameters to your ad links</h4>
+                  <h4 className="font-semibold text-sm text-st-black dark:text-dark-primary">Add URL parameters to your ad links</h4>
                 </div>
                 <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed pl-7">
                   Append these parameters to the destination URLs in your ads so SourceTrack can attribute each click. Replace <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-xs font-mono">{'{{campaign}}'}</code> with your campaign name.
@@ -491,12 +491,12 @@ export default function Setup() {
               <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-5 shadow-sm space-y-4">
                 <div className="flex items-center gap-2">
                   <Activity className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                  <h3 className="text-sm font-semibold text-st-black dark:text-white">Tell us about your setup</h3>
+                  <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">Tell us about your setup</h3>
                 </div>
 
                 {/* Q1 */}
                 <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-st-black dark:text-white">Do you have forms on your website?</p>
+                  <p className="text-xs font-medium text-st-black dark:text-dark-primary">Do you have forms on your website?</p>
                   <div className="flex gap-1.5">
                     {[['Yes', true], ['No', false]].map(([label, val]) => (
                       <button
@@ -516,7 +516,7 @@ export default function Setup() {
 
                 {/* Q2 */}
                 <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-st-black dark:text-white">What best describes your business?</p>
+                  <p className="text-xs font-medium text-st-black dark:text-dark-primary">What best describes your business?</p>
                   <div className="flex flex-wrap gap-1.5">
                     {['SaaS', 'eCommerce', 'Lead Gen', 'Other'].map(label => (
                       <button
@@ -536,7 +536,7 @@ export default function Setup() {
 
                 {/* Q3 */}
                 <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-st-black dark:text-white">Have you connected a revenue source?</p>
+                  <p className="text-xs font-medium text-st-black dark:text-dark-primary">Have you connected a revenue source?</p>
                   <div className="flex gap-1.5">
                     {[['Yes', true], ['No', false]].map(([label, val]) => (
                       <button
@@ -591,7 +591,7 @@ export default function Setup() {
               <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-5 shadow-sm space-y-3">
                 <div className="flex items-center gap-2">
                   <Send className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                  <h3 className="text-sm font-semibold text-st-black dark:text-white">Send a test conversion</h3>
+                  <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">Send a test conversion</h3>
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   Send a $0 test conversion from this dashboard to confirm SourceTrack can receive conversion events for this site.
@@ -637,7 +637,7 @@ export default function Setup() {
           {activeTab === 'conversions' && (
             <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-6 shadow-sm space-y-6">
               <div>
-                <h3 className="text-lg font-bold text-st-black dark:text-white">3. Conversion Tracking</h3>
+                <h3 className="text-lg font-bold text-st-black dark:text-dark-primary">3. Conversion Tracking</h3>
                 <p className="text-sm text-st-gray dark:text-gray-400 mt-1">
                   Ensure conversions (signups, leads, sales) are sent to SourceTrack to enable attribution calculations.
                 </p>
@@ -645,7 +645,7 @@ export default function Setup() {
 
               {/* Custom conversions client-side */}
               <div className="space-y-2">
-                <h4 className="text-sm font-semibold text-st-black dark:text-white">Client-side JavaScript API</h4>
+                <h4 className="text-sm font-semibold text-st-black dark:text-dark-primary">Client-side JavaScript API</h4>
                 <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
                   Call the tracking script directly on your site when a visitor completes a conversion event:
                 </p>
@@ -661,7 +661,7 @@ export default function Setup() {
 
               {/* Developer conversions endpoint link */}
               <div className="space-y-2">
-                <h4 className="text-sm font-semibold text-st-black dark:text-white font-sans">Server-side Conversion API</h4>
+                <h4 className="text-sm font-semibold text-st-black dark:text-dark-primary font-sans">Server-side Conversion API</h4>
                 <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
                   Send conversions from your backend server or CRM. Learn more in our{' '}
                   <Link to="/developers/conversions" className="text-blue-600 dark:text-blue-400 underline hover:no-underline font-semibold">Conversions Developer Guide</Link>.
@@ -670,12 +670,12 @@ export default function Setup() {
 
               {/* Integrations checklist */}
               <div className="pt-4 border-t border-gray-200 dark:border-dark-border space-y-4">
-                <h4 className="text-sm font-semibold text-st-black dark:text-white font-sans">Offline & Platform Webhook Integrations</h4>
+                <h4 className="text-sm font-semibold text-st-black dark:text-dark-primary font-sans">Offline & Platform Webhook Integrations</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Stripe */}
                   <div className="border border-gray-200 dark:border-dark-border rounded-xl p-4 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-st-black dark:text-white">Stripe Checkout Attribution</span>
+                      <span className="text-xs font-bold text-st-black dark:text-dark-primary">Stripe Checkout Attribution</span>
                       <span className="px-2 py-0.5 text-[9px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 rounded-full">Test Mode Beta</span>
                     </div>
                     <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
@@ -689,7 +689,7 @@ export default function Setup() {
                   {/* Shopify */}
                   <div className="border border-gray-200 dark:border-dark-border rounded-xl p-4 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-st-black dark:text-white">Shopify Integration</span>
+                      <span className="text-xs font-bold text-st-black dark:text-dark-primary">Shopify Integration</span>
                       <span className="px-2 py-0.5 text-[9px] font-bold bg-gray-100 text-gray-600 dark:bg-dark-hover dark:text-gray-400 rounded-full">Manual Webhook</span>
                     </div>
                     <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
@@ -707,7 +707,7 @@ export default function Setup() {
           {activeTab === 'additional' && (
             <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-6 shadow-sm space-y-6">
               <div>
-                <h3 className="text-lg font-bold text-st-black dark:text-white">4. Additional Setup</h3>
+                <h3 className="text-lg font-bold text-st-black dark:text-dark-primary">4. Additional Setup</h3>
                 <p className="text-sm text-st-gray dark:text-gray-400 mt-1">
                   Optional settings that improve accuracy and privacy. Configure these in Settings.
                 </p>
@@ -747,7 +747,7 @@ export default function Setup() {
                   <div key={card.title} className="border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-2">
                     <div className="flex items-center gap-2">
                       <card.icon className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                      <h4 className="text-xs font-bold text-st-black dark:text-white">{card.title}</h4>
+                      <h4 className="text-xs font-bold text-st-black dark:text-dark-primary">{card.title}</h4>
                     </div>
                     <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">{card.desc}</p>
                     <Link to={card.to} className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline inline-flex items-center gap-1">
@@ -762,7 +762,7 @@ export default function Setup() {
           {activeTab === 'learn' && (
             <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-6 shadow-sm space-y-6">
               <div>
-                <h3 className="text-lg font-bold text-st-black dark:text-white">5. Resources & Documentation</h3>
+                <h3 className="text-lg font-bold text-st-black dark:text-dark-primary">5. Resources & Documentation</h3>
                 <p className="text-sm text-st-gray dark:text-gray-400 mt-1">
                   Learn how tracking works, configure custom URLs, and build reports.
                 </p>
@@ -771,7 +771,7 @@ export default function Setup() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Card 1 */}
                 <div className="border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-2">
-                  <h4 className="text-xs font-bold text-st-black dark:text-white">Attribution & UTM Parameters</h4>
+                  <h4 className="text-xs font-bold text-st-black dark:text-dark-primary">Attribution & UTM Parameters</h4>
                   <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
                     SourceTrack resolves campaign attribution using UTM parameters and click-IDs. Learn about the campaign URL syntax rules.
                   </p>
@@ -782,7 +782,7 @@ export default function Setup() {
 
                 {/* Card 2 */}
                 <div className="border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-2">
-                  <h4 className="text-xs font-bold text-st-black dark:text-white font-sans">Report Builder Basics</h4>
+                  <h4 className="text-xs font-bold text-st-black dark:text-dark-primary font-sans">Report Builder Basics</h4>
                   <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
                     Once tracking events arrive, use the Report Builder to organize metrics by channel group-bys, models, and campaign names.
                   </p>
@@ -793,7 +793,7 @@ export default function Setup() {
 
                 {/* Card 3 */}
                 <div className="border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-2">
-                  <h4 className="text-xs font-bold text-st-black dark:text-white font-sans">Google Ads GCLID Ingestion</h4>
+                  <h4 className="text-xs font-bold text-st-black dark:text-dark-primary font-sans">Google Ads GCLID Ingestion</h4>
                   <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
                     Learn how auto-tagging routes ad clicks from Google Search campaigns directly into your visitor journeys.
                   </p>
@@ -804,7 +804,7 @@ export default function Setup() {
 
                 {/* Card 4 */}
                 <div className="border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-2">
-                  <h4 className="text-xs font-bold text-st-black dark:text-white font-sans">Troubleshooting Diagnostic Issues</h4>
+                  <h4 className="text-xs font-bold text-st-black dark:text-dark-primary font-sans">Troubleshooting Diagnostic Issues</h4>
                   <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
                     See explanations for common Tracking Doctor errors, wrong domain warnings, or missing telemetry messages.
                   </p>
@@ -817,7 +817,7 @@ export default function Setup() {
                 <div className="border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-2">
                   <div className="flex items-center gap-2">
                     <Code className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                    <h4 className="text-xs font-bold text-st-black dark:text-white">Install SourceTrack script</h4>
+                    <h4 className="text-xs font-bold text-st-black dark:text-dark-primary">Install SourceTrack script</h4>
                   </div>
                   <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
                     Step-by-step guide to adding the tracking snippet to your site and verifying it loads.
@@ -831,7 +831,7 @@ export default function Setup() {
                 <div className="border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-2">
                   <div className="flex items-center gap-2">
                     <Rocket className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                    <h4 className="text-xs font-bold text-st-black dark:text-white">Track your first conversion</h4>
+                    <h4 className="text-xs font-bold text-st-black dark:text-dark-primary">Track your first conversion</h4>
                   </div>
                   <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
                     Fire a conversion event so SourceTrack can tie leads and sales back to their source.
@@ -845,7 +845,7 @@ export default function Setup() {
                 <div className="border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-2">
                   <div className="flex items-center gap-2">
                     <DollarSign className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                    <h4 className="text-xs font-bold text-st-black dark:text-white">Attribute revenue</h4>
+                    <h4 className="text-xs font-bold text-st-black dark:text-dark-primary">Attribute revenue</h4>
                   </div>
                   <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
                     Send conversion values (including offline) to see revenue by source, not just clicks.
@@ -859,7 +859,7 @@ export default function Setup() {
                 <div className="border border-gray-200 dark:border-[#2A2E2E] rounded-xl p-4 space-y-2">
                   <div className="flex items-center gap-2">
                     <Link2 className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                    <h4 className="text-xs font-bold text-st-black dark:text-white">UTM link builder</h4>
+                    <h4 className="text-xs font-bold text-st-black dark:text-dark-primary">UTM link builder</h4>
                   </div>
                   <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
                     Build clean, consistent UTM-tagged campaign URLs so every link reports correctly.

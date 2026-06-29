@@ -18,7 +18,7 @@ export default function DashboardCard({ title, subtitle, action, menuItems, chil
       {(title || action || menuItems) && (
         <div className={`px-5 py-4 border-b border-gray-100 dark:border-dark-border flex items-center justify-between ${headerClassName}`}>
           <div>
-            {title && <h3 className="text-sm font-semibold text-st-black dark:text-white">{title}</h3>}
+            {title && <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">{title}</h3>}
             {subtitle && <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">{subtitle}</p>}
           </div>
           <div className="flex items-center gap-2">

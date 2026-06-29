@@ -39,7 +39,7 @@ export default function DevelopersWebhooks() {
 
       <div className="space-y-8">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+          <h1 className="text-3xl font-black text-gray-900 dark:text-dark-primary tracking-tight">
             Webhooks & HMAC Verification
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-2 text-base leading-relaxed">
@@ -49,7 +49,7 @@ export default function DevelopersWebhooks() {
 
         {/* Overview */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Overview
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -59,7 +59,7 @@ export default function DevelopersWebhooks() {
 
         {/* Inbound Webhooks */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Inbound Webhooks (Stripe & Shopify)
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -67,13 +67,13 @@ export default function DevelopersWebhooks() {
           </p>
           <div className="space-y-3 pl-4 border-l-2 border-gray-200 dark:border-gray-800">
             <div>
-              <h4 className="text-sm font-bold text-gray-900 dark:text-white">Stripe Checkout Webhook</h4>
+              <h4 className="text-sm font-bold text-gray-900 dark:text-dark-primary">Stripe Checkout Webhook</h4>
               <code className="text-xs font-mono block p-2 bg-gray-50 dark:bg-gray-800 rounded mt-1">
                 https://api.srctk.com/api/webhooks/stripe/YOUR_SITE_KEY
               </code>
             </div>
             <div>
-              <h4 className="text-sm font-bold text-gray-900 dark:text-white">Shopify Paid Order Webhook</h4>
+              <h4 className="text-sm font-bold text-gray-900 dark:text-dark-primary">Shopify Paid Order Webhook</h4>
               <code className="text-xs font-mono block p-2 bg-gray-50 dark:bg-gray-800 rounded mt-1">
                 https://api.srctk.com/api/webhooks/shopify/YOUR_SITE_KEY
               </code>
@@ -83,7 +83,7 @@ export default function DevelopersWebhooks() {
 
         {/* Outbound Webhook Header Details */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Outbound Webhook Headers
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -98,7 +98,7 @@ export default function DevelopersWebhooks() {
 
         {/* Outbound Webhook Payload Schema */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Outbound Webhook Payload Schema
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -142,7 +142,7 @@ export default function DevelopersWebhooks() {
 
         {/* Validating Outbound Webhook Signatures */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Validating Outbound Webhook Signatures
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -185,7 +185,7 @@ app.post('/webhook-receiver', express.raw({ type: 'application/json' }), (req, r
 
         {/* Common Errors */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Common Errors
           </h2>
           <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
@@ -200,7 +200,7 @@ app.post('/webhook-receiver', express.raw({ type: 'application/json' }), (req, r
 
         {/* Security Note */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Security Note
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -214,7 +214,7 @@ app.post('/webhook-receiver', express.raw({ type: 'application/json' }), (req, r
 
         {/* Attribution stitching */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Attribution stitching
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">

@@ -15,7 +15,7 @@ export default function DocsQuickstart() {
 
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+          <h1 className="text-3xl font-black text-gray-900 dark:text-dark-primary tracking-tight">
             Quickstart Guide
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-2 text-base leading-relaxed">
@@ -25,7 +25,7 @@ export default function DocsQuickstart() {
 
         {/* 1. Who this is for */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Who This Is For
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -46,7 +46,7 @@ export default function DocsQuickstart() {
 
         {/* 2. What you will set up */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             What You Will Set Up
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -56,27 +56,27 @@ export default function DocsQuickstart() {
 
         {/* 3. Steps */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Steps: The 5-Minute Checklist
           </h2>
 
           <ol className="list-decimal pl-5 space-y-6 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
             <li>
-              <h4 className="font-extrabold text-gray-900 dark:text-white inline-block">Create a Site Profile</h4>
+              <h4 className="font-extrabold text-gray-900 dark:text-dark-primary inline-block">Create a Site Profile</h4>
               <p className="mt-1">
                 Log in to the dashboard, click on your site profile selector in the sidebar, and select <strong>Add New Site</strong>. Enter your domain name and choose your primary currency.
               </p>
             </li>
 
             <li>
-              <h4 className="font-extrabold text-gray-900 dark:text-white inline-block">Copy your Site Key</h4>
+              <h4 className="font-extrabold text-gray-900 dark:text-dark-primary inline-block">Copy your Site Key</h4>
               <p className="mt-1">
                 Go to the Settings page in your dashboard. Under the Site Settings tab, copy your unique public <strong>Site Key</strong> (which starts with <code>st_</code>).
               </p>
             </li>
 
             <li>
-              <h4 className="font-extrabold text-gray-900 dark:text-white inline-block">Install the Tracker Script</h4>
+              <h4 className="font-extrabold text-gray-900 dark:text-dark-primary inline-block">Install the Tracker Script</h4>
               <p className="mt-1">
                 Paste this code snippet before the closing <code>&lt;/head&gt;</code> tag of your website. Replace <code>YOUR_SITE_KEY</code> with your real key.
               </p>
@@ -86,21 +86,21 @@ export default function DocsQuickstart() {
             </li>
 
             <li>
-              <h4 className="font-extrabold text-gray-900 dark:text-white inline-block">Visit your Website</h4>
+              <h4 className="font-extrabold text-gray-900 dark:text-dark-primary inline-block">Visit your Website</h4>
               <p className="mt-1">
                 Open a new browser tab, go to your live website, and click around a few pages to trigger pageview events.
               </p>
             </li>
 
             <li>
-              <h4 className="font-extrabold text-gray-900 dark:text-white inline-block">Verify your First Pageview</h4>
+              <h4 className="font-extrabold text-gray-900 dark:text-dark-primary inline-block">Verify your First Pageview</h4>
               <p className="mt-1">
                 Return to the SourceTrack dashboard. Use the <strong>Setup Doctor</strong> diagnostic check on the Snippet Code page to check whether your site is connected and sending events, or open the <strong>Event Debugger</strong> to see whether your visit appears.
               </p>
             </li>
 
             <li>
-              <h4 className="font-extrabold text-gray-900 dark:text-white inline-block">Trigger a Test Conversion</h4>
+              <h4 className="font-extrabold text-gray-900 dark:text-dark-primary inline-block">Trigger a Test Conversion</h4>
               <p className="mt-1">
                 To test conversion attribution, trigger an action on your website that fires a conversion call. For example, paste this in your browser console:
               </p>
@@ -114,7 +114,7 @@ export default function DocsQuickstart() {
             </li>
 
             <li>
-              <h4 className="font-extrabold text-gray-900 dark:text-white inline-block">Check your Reports</h4>
+              <h4 className="font-extrabold text-gray-900 dark:text-dark-primary inline-block">Check your Reports</h4>
               <p className="mt-1">
                 Verify that the test conversion appears in the Event Debugger and Report Builder under your designated conversion type.
               </p>
@@ -124,7 +124,7 @@ export default function DocsQuickstart() {
 
         {/* 4. How to verify it worked */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             How to Verify It Worked
           </h2>
           <ol className="list-decimal pl-5 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -137,7 +137,7 @@ export default function DocsQuickstart() {
 
         {/* 5. Common mistakes */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Common Mistakes
           </h2>
           <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
@@ -152,7 +152,7 @@ export default function DocsQuickstart() {
 
         {/* 6. Next step */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Next Step
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">

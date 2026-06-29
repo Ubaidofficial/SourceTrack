@@ -36,10 +36,10 @@ function DataRow({ label, count, max, icon, onClick, active }) {
     >
       {icon && <span className="flex-shrink-0 w-4 flex items-center">{icon}</span>}
       <div className="flex-1 min-w-0">
-        <span className="text-xs truncate text-st-black dark:text-white block">{label}</span>
+        <span className="text-xs truncate text-st-black dark:text-dark-primary block">{label}</span>
         <div style={{ height: '2px', width: `${pct.toFixed(1)}%`, background: 'rgba(204,240,63,0.6)', borderRadius: '1px', marginTop: '3px' }} />
       </div>
-      <span className="text-sm font-medium text-st-black dark:text-white w-14 text-right flex-shrink-0 tabular-nums">{n.toLocaleString()}</span>
+      <span className="text-sm font-medium text-st-black dark:text-dark-primary w-14 text-right flex-shrink-0 tabular-nums">{n.toLocaleString()}</span>
     </div>
   )
 }
@@ -53,7 +53,7 @@ function ListSection({ title, rows, getLabel, getCount, getIcon, onRowClick, isR
   return (
     <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm">
       <div className="px-4 py-3 border-b border-gray-100 dark:border-dark-border flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-st-black dark:text-white">{title}</h3>
+        <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">{title}</h3>
         {unit && <span className="text-[10px] uppercase tracking-wide text-st-gray dark:text-gray-400 font-medium flex-shrink-0">{unit}</span>}
       </div>
       {rows.length === 0 ? (
@@ -286,7 +286,7 @@ export default function Analytics() {
               <BarChart3 className="w-5 h-5 text-st-gray dark:text-gray-400" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-st-black dark:text-white mb-1">Analytics View Disabled</h2>
+              <h2 className="text-sm font-semibold text-st-black dark:text-dark-primary mb-1">Analytics View Disabled</h2>
               <p className="text-xs text-st-gray/80 dark:text-gray-400/80 leading-relaxed">
                 Analytics is not available in Support Preview. Use Dashboard and Attribution for read-only customer context.
               </p>
@@ -304,13 +304,13 @@ export default function Analytics() {
       {/* ─── Header ──────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-xl font-bold text-st-black dark:text-white">Analytics</h2>
+          <h2 className="text-xl font-bold text-st-black dark:text-dark-primary">Analytics</h2>
           <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">Understand traffic before you dig into attribution.</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-sm">
             <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${liveCount > 0 ? 'bg-green-500 animate-pulse' : 'bg-gray-600'}`} />
-            <span className="text-xs font-medium text-st-black dark:text-white tabular-nums">{liveCount}</span>
+            <span className="text-xs font-medium text-st-black dark:text-dark-primary tabular-nums">{liveCount}</span>
             <span className="text-xs text-st-gray dark:text-gray-400">live</span>
             <button onClick={() => refetchLive()} className="text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white ml-0.5 transition-colors">
               <RefreshCw className="w-3 h-3" />
@@ -333,7 +333,7 @@ export default function Analytics() {
       {filters.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {filters.map((f, i) => (
-            <span key={i} className="flex items-center gap-1 px-2.5 py-1 bg-gray-50 dark:bg-dark-hover border border-gray-200 dark:border-dark-border rounded-full text-xs text-st-black dark:text-white shadow-sm">
+            <span key={i} className="flex items-center gap-1 px-2.5 py-1 bg-gray-50 dark:bg-dark-hover border border-gray-200 dark:border-dark-border rounded-full text-xs text-st-black dark:text-dark-primary shadow-sm">
               <span className="text-st-gray dark:text-gray-400">{f.type}:</span> {f.value}
               <button onClick={() => toggleFilter(f.type, f.value)} className="text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white ml-1.5 leading-none text-sm font-semibold">×</button>
             </span>
@@ -354,11 +354,11 @@ export default function Analytics() {
         <div className="max-w-md mx-auto py-16 text-center space-y-6">
           <Eye className="w-10 h-10 text-st-gray/40 dark:text-gray-500/40 mx-auto" />
           <div>
-            <h3 className="text-base font-semibold text-st-black dark:text-white mb-1">No pageviews yet</h3>
+            <h3 className="text-base font-semibold text-st-black dark:text-dark-primary mb-1">No pageviews yet</h3>
             <p className="text-sm text-st-gray dark:text-gray-400">Install the tracker to start collecting traffic data.</p>
           </div>
           <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-4 text-left space-y-3 shadow-sm">
-            <p className="text-xs font-semibold text-st-black dark:text-white">Add to your site &lt;head&gt;:</p>
+            <p className="text-xs font-semibold text-st-black dark:text-dark-primary">Add to your site &lt;head&gt;:</p>
             <div className="flex items-start gap-2">
               <code className="text-[11px] text-st-gray dark:text-gray-300 flex-1 break-all leading-relaxed">{snippetUrl}</code>
               <button onClick={copySnippet} className="flex-shrink-0 p-1.5 text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white border border-gray-200 dark:border-dark-border rounded-lg transition-colors">
@@ -441,7 +441,7 @@ export default function Analytics() {
             {/* Sources — referrers, medium, AI */}
             <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm">
               <div className="px-4 py-3 border-b border-gray-100 dark:border-dark-border flex items-center justify-between flex-wrap gap-2">
-                <h3 className="text-sm font-semibold text-st-black dark:text-white">Sources</h3>
+                <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">Sources</h3>
                 <div className="flex gap-1">
                   {[
                     { key: 'referrer',  label: 'Referrers' },
@@ -541,7 +541,7 @@ export default function Analytics() {
           {aiSources.length > 0 && (
             <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm">
               <div className="px-4 py-3 border-b border-gray-100 dark:border-dark-border flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-st-black dark:text-white">AI Traffic</h3>
+                <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">AI Traffic</h3>
                 <span className="text-[10px] text-st-gray dark:text-gray-400">
                   {Math.round(aiSources.reduce((s,r) => s + safeNumber(r.visits,0), 0) / Math.max(1, safeNumber(kpis.unique_visitors, 1)) * 100)}% of all visitors
                 </span>
@@ -567,7 +567,7 @@ export default function Analytics() {
           {seoConnected && (
             <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm">
               <div className="px-4 py-3 border-b border-gray-100 dark:border-dark-border flex items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold text-st-black dark:text-white">SEO Traffic</h3>
+                <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">SEO Traffic</h3>
                 <span className="text-[10px] text-st-gray dark:text-gray-400 flex-shrink-0">
                   {safeNumber(seoTraffic?.summary?.gsc_clicks, 0).toLocaleString()} Search Console clicks
                 </span>
@@ -589,8 +589,8 @@ export default function Analytics() {
                     <tbody>
                       {seoQueries.slice(0, 10).map((q, i) => (
                         <tr key={i} className="border-b border-gray-100 dark:border-dark-border last:border-0 text-xs">
-                          <td className="py-2.5 px-4 font-mono text-st-black dark:text-white max-w-[240px] truncate" title={q.query}>{q.query}</td>
-                          <td className="py-2.5 px-3 text-right tabular-nums text-st-black dark:text-white">{safeNumber(q.clicks, 0).toLocaleString()}</td>
+                          <td className="py-2.5 px-4 font-mono text-st-black dark:text-dark-primary max-w-[240px] truncate" title={q.query}>{q.query}</td>
+                          <td className="py-2.5 px-3 text-right tabular-nums text-st-black dark:text-dark-primary">{safeNumber(q.clicks, 0).toLocaleString()}</td>
                           <td className="py-2.5 px-3 text-right tabular-nums text-st-gray dark:text-gray-400">{safeNumber(q.impressions, 0).toLocaleString()}</td>
                           <td className="py-2.5 px-3 text-right tabular-nums text-st-gray dark:text-gray-400">{(safeNumber(q.ctr, 0) * 100).toFixed(1)}%</td>
                           <td className="py-2.5 px-4 text-right tabular-nums text-st-gray dark:text-gray-400">{safeNumber(q.position, 0).toFixed(1)}</td>
@@ -608,7 +608,7 @@ export default function Analytics() {
             <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl px-4 py-4 flex items-start gap-3 shadow-sm">
               <span className="w-1.5 h-1.5 mt-1.5 rounded-full bg-st-gray dark:bg-gray-400 flex-shrink-0" />
               <div>
-                <p className="text-sm font-medium text-st-black dark:text-white">No conversions in this period</p>
+                <p className="text-sm font-medium text-st-black dark:text-dark-primary">No conversions in this period</p>
                 <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">
                   Conversions appear after your site sends conversion events. See the <a href="/developers/conversions" className="underline hover:text-st-black dark:hover:text-white transition-colors">conversion events docs</a> for setup instructions.
                 </p>
@@ -631,7 +631,7 @@ function SourceTabList({ rows, tab, toggleFilter, isActive }) {
     if (tab === 'ai_source') {
       return (
         <div className="text-center py-12 px-4 space-y-2">
-          <p className="text-sm font-medium text-st-black dark:text-white">No AI traffic detected yet</p>
+          <p className="text-sm font-medium text-st-black dark:text-dark-primary">No AI traffic detected yet</p>
           <p className="text-xs text-st-gray dark:text-gray-400 max-w-sm mx-auto">
             When visitors arrive from ChatGPT, Claude, Perplexity, or other AI platforms, they'll appear here.
           </p>

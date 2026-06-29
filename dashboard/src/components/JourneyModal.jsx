@@ -191,7 +191,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
         {/* ── Header ── */}
         <div className="px-6 py-4 border-b border-gray-100 dark:border-dark-border flex items-center justify-between flex-shrink-0 bg-gray-50/50 dark:bg-dark-bg/50">
           <div>
-            <h2 className="text-base font-bold text-st-black dark:text-white">Visitor Journey</h2>
+            <h2 className="text-base font-bold text-st-black dark:text-dark-primary">Visitor Journey</h2>
             <p className="text-xs text-st-gray dark:text-gray-400 font-mono mt-0.5">{shortId}</p>
           </div>
           <div className="flex items-center gap-3">
@@ -221,7 +221,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                     console.error("Failed to update status from journey modal", err)
                   }
                 }}
-                className="text-xs font-semibold px-2 py-1 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-st-black dark:text-white cursor-pointer focus:outline-none"
+                className="text-xs font-semibold px-2 py-1 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-st-black dark:text-dark-primary cursor-pointer focus:outline-none"
               >
                 <option value="unqualified">Unqualified</option>
                 <option value="qualified">Qualified</option>
@@ -257,7 +257,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
               <div className="lg:col-span-2 bg-st-lime/10 dark:bg-st-lime/5 p-6 space-y-5 border-r border-gray-100 dark:border-dark-border overflow-y-auto">
                 <div>
                   <p className="text-[10px] text-st-gray dark:text-gray-400 uppercase tracking-wide">Profile</p>
-                  <h3 className="mt-1 text-lg font-bold text-st-black dark:text-white font-mono break-all">{shortId}</h3>
+                  <h3 className="mt-1 text-lg font-bold text-st-black dark:text-dark-primary font-mono break-all">{shortId}</h3>
                   {summary.userId && (
                     <p className="mt-1 text-xs text-st-gray dark:text-gray-400 break-all">
                       User ID: <span className="font-mono">{shortIdentifier(summary.userId)}</span>
@@ -289,7 +289,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
 
                 {/* Activity and attribution */}
                 <div className="bg-white dark:bg-dark-card rounded-xl p-4 shadow-sm space-y-2">
-                  <p className="text-xs font-semibold text-st-black dark:text-white mb-2">Journey Summary</p>
+                  <p className="text-xs font-semibold text-st-black dark:text-dark-primary mb-2">Journey Summary</p>
                   <SummaryField label="Profile ID" value={shortIdentifier(summary.profileId)} />
                   <SummaryField label="First Active" value={summary.firstSeenRel} title={summary.firstSeen} />
                   <SummaryField label="Last Active" value={summary.lastSeenRel} title={summary.lastSeen} />
@@ -311,7 +311,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                 {/* C4b — Revenue / Transactions. Only real revenue (value > 0); hidden if none. */}
                 {revenueEvents.length > 0 && (
                   <div className="bg-white dark:bg-dark-card rounded-xl p-4 shadow-sm space-y-2">
-                    <p className="text-xs font-semibold text-st-black dark:text-white mb-2">Revenue</p>
+                    <p className="text-xs font-semibold text-st-black dark:text-dark-primary mb-2">Revenue</p>
                     <div className="space-y-2">
                       {revenueEvents.map((e, i) => {
                         const meta = integrationMeta(e)
@@ -329,7 +329,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                               )}
                             </div>
                             <div className="text-right flex-shrink-0">
-                              <p className="text-xs font-semibold text-st-black dark:text-white">${safeNumber(e.conversion_value, 0).toFixed(0)}</p>
+                              <p className="text-xs font-semibold text-st-black dark:text-dark-primary">${safeNumber(e.conversion_value, 0).toFixed(0)}</p>
                               <p className="text-[9px] text-gray-400" title={formatDateTime(e.timestamp) || undefined}>
                                 {relativeTime(e.timestamp) || '—'}
                               </p>
@@ -342,7 +342,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                 )}
 
                 <div className="bg-white dark:bg-dark-card rounded-xl p-4 shadow-sm space-y-2">
-                  <p className="text-xs font-semibold text-st-black dark:text-white mb-2">Environment</p>
+                  <p className="text-xs font-semibold text-st-black dark:text-dark-primary mb-2">Environment</p>
                   <SummaryField label="Device" value={summary.device} />
                   <SummaryField label="Browser" value={summary.browser} />
                   <SummaryField label="OS" value={summary.os} />
@@ -352,7 +352,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                 {/* Path preview */}
                 {summary.pathPreview.length > 1 && (
                   <div className="bg-white dark:bg-dark-card rounded-xl p-4 shadow-sm">
-                    <p className="text-xs font-semibold text-st-black dark:text-white mb-2">Page Path</p>
+                    <p className="text-xs font-semibold text-st-black dark:text-dark-primary mb-2">Page Path</p>
                     <div className="flex flex-wrap items-center gap-1">
                       {summary.pathPreview.map((p, i) => (
                         <span key={i} className="flex items-center gap-1">
@@ -429,7 +429,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                             {/* Session info */}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-xs font-semibold text-gray-800 dark:text-white">
+                                <span className="text-xs font-semibold text-gray-800 dark:text-dark-primary">
                                   Session {session.session_index}
                                 </span>
                                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-dark-hover text-gray-500 dark:text-gray-400 font-medium truncate max-w-[120px]">
@@ -527,7 +527,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                                                 </span>
                                               )}
                                               {e.conversion_value > 0 && (
-                                                <span className="text-[10px] font-semibold text-st-black dark:text-white">
+                                                <span className="text-[10px] font-semibold text-st-black dark:text-dark-primary">
                                                   ${safeNumber(e.conversion_value, 0).toFixed(0)}
                                                 </span>
                                               )}
@@ -624,7 +624,7 @@ function SummaryField({ label, value, title }) {
   return (
     <div className="flex items-center justify-between">
       <p className="text-xs text-st-gray dark:text-gray-400">{label}</p>
-      <p className="text-xs font-medium text-st-black dark:text-white truncate max-w-[120px]" title={title || undefined}>{value}</p>
+      <p className="text-xs font-medium text-st-black dark:text-dark-primary truncate max-w-[120px]" title={title || undefined}>{value}</p>
     </div>
   )
 }
@@ -632,7 +632,7 @@ function SummaryField({ label, value, title }) {
 function JourneyStat({ label, value }) {
   return (
     <div className="bg-white dark:bg-dark-card rounded-xl p-3 text-center shadow-sm border border-gray-100 dark:border-dark-border">
-      <p className="text-lg font-bold text-st-black dark:text-white truncate">{value ?? '—'}</p>
+      <p className="text-lg font-bold text-st-black dark:text-dark-primary truncate">{value ?? '—'}</p>
       <p className="text-[10px] text-st-gray dark:text-gray-400 uppercase tracking-wide mt-0.5">{label}</p>
     </div>
   )

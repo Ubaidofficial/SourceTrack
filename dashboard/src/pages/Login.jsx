@@ -75,7 +75,7 @@ export default function Login() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <LogoMark className="w-12 h-12 mx-auto mb-4" />
-          <h1 className="text-3xl font-extrabold tracking-[-0.06em] text-[#1F2323] dark:text-white">SourceTrack</h1>
+          <h1 className="text-3xl font-extrabold tracking-[-0.06em] text-[#1F2323] dark:text-dark-primary">SourceTrack</h1>
           <p className="text-st-gray dark:text-gray-400 mt-2">Sign in to your account</p>
         </div>
 
@@ -110,7 +110,7 @@ export default function Login() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2.5 bg-white dark:bg-[#252A29] text-[#1F2323] dark:text-white border border-gray-300 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-st-lime focus:border-st-lime outline-none"
+              className="w-full px-3 py-2.5 bg-white dark:bg-[#252A29] text-[#1F2323] dark:text-dark-primary border border-gray-300 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-st-lime focus:border-st-lime outline-none"
             />
           </div>
 
@@ -126,7 +126,7 @@ export default function Login() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2.5 bg-white dark:bg-[#252A29] text-[#1F2323] dark:text-white border border-gray-300 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-st-lime focus:border-st-lime outline-none"
+              className="w-full px-3 py-2.5 bg-white dark:bg-[#252A29] text-[#1F2323] dark:text-dark-primary border border-gray-300 dark:border-white/10 rounded-xl text-sm focus:ring-2 focus:ring-st-lime focus:border-st-lime outline-none"
             />
           </div>
 
@@ -139,7 +139,7 @@ export default function Login() {
           </button>
 
           <p className="text-center text-sm text-st-gray">
-            Don't have an account? <Link to="/signup" className="text-st-black dark:text-white hover:underline">Sign up</Link>
+            Don't have an account? <Link to="/signup" className="text-st-black dark:text-dark-primary hover:underline">Sign up</Link>
           </p>
         </form>
       </div>

@@ -51,7 +51,7 @@ function PlatformCard({ platform, status, siteKey, onChanged }) {
   return (
     <div className="border border-gray-200 dark:border-dark-border rounded-xl p-4">
       <div className="flex items-center justify-between mb-2">
-        <h4 className="text-sm font-semibold text-st-black dark:text-white">{platform.label}</h4>
+        <h4 className="text-sm font-semibold text-st-black dark:text-dark-primary">{platform.label}</h4>
         <span className={`text-[11px] font-semibold ${st.connected ? 'text-green-600 dark:text-green-400' : 'text-st-gray dark:text-gray-400'}`}>
           {st.connected ? 'Connected' : 'Not connected'}
         </span>
@@ -93,7 +93,7 @@ export default function CapiSettings({ site }) {
 
   return (
     <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-5">
-      <h3 className="text-sm font-semibold text-st-black dark:text-white mb-1">Server-side Conversions (CAPI)</h3>
+      <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary mb-1">Server-side Conversions (CAPI)</h3>
       <p className="text-[11px] text-st-gray dark:text-gray-400 mb-4">
         Forward conversions server-side to ad platforms for better match quality. Default event mapping applies automatically.
         For non-order events, pass a stable <span className="font-mono">event_id</span> to dedupe against your browser pixel.

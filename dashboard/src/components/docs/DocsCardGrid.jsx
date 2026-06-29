@@ -17,7 +17,7 @@ export default function DocsCardGrid({ items }) {
             {...linkProps}
             className="block p-5 bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-gray-800 rounded-xl hover:border-gray-300 dark:hover:border-gray-700 hover:shadow-sm transition-all group"
           >
-            <h5 className="text-sm font-extrabold text-gray-900 dark:text-white group-hover:text-[#CCF03F] transition-colors flex items-center gap-1">
+            <h5 className="text-sm font-extrabold text-gray-900 dark:text-dark-primary group-hover:text-[#CCF03F] transition-colors flex items-center gap-1">
               {item.title}
               {isExternal && <span className="text-[10px] text-gray-400">↗</span>}
             </h5>

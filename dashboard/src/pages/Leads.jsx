@@ -229,7 +229,7 @@ export default function Leads() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-st-black dark:text-white">Leads</h2>
+          <h2 className="text-2xl font-bold text-st-black dark:text-dark-primary">Leads</h2>
           <p className="text-sm text-st-gray dark:text-gray-400 mt-0.5">Individual visitors who have converted or engaged with your site</p>
         </div>
         {hasFeature(site?.plan, 'csv_export') ? (
@@ -270,17 +270,17 @@ export default function Leads() {
           <input
             type="text" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search by visitor ID, source, or campaign..."
-            className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-dark-border bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime"
+            className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-dark-border bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-dark-primary focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime"
           />
         </div>
         <select value={filterAI} onChange={e => setFilterAI(e.target.value)}
-          className="px-3 py-2 border border-gray-300 dark:border-dark-border bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime">
+          className="px-3 py-2 border border-gray-300 dark:border-dark-border bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-dark-primary focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime">
           <option value="all">All Sources</option>
           <option value="ai">AI Sources</option>
           <option value="non-ai">Non-AI Sources</option>
         </select>
         <select value={attributionModel} onChange={e => setAttributionModel(e.target.value)}
-          className="px-3 py-2 border border-gray-300 dark:border-dark-border bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-white focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime">
+          className="px-3 py-2 border border-gray-300 dark:border-dark-border bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-dark-primary focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime">
           <option value="first_touch">First Touch</option>
           <option value="last_touch">Last Touch</option>
         </select>
@@ -297,11 +297,11 @@ export default function Leads() {
               <p className="text-sm text-st-gray dark:text-gray-400">No leads match your filters.</p>
             ) : (
               <>
-                <p className="text-sm font-medium text-st-black dark:text-white">No leads yet</p>
+                <p className="text-sm font-medium text-st-black dark:text-dark-primary">No leads yet</p>
                 <p className="text-xs text-st-gray dark:text-gray-400 max-w-xs mx-auto">Leads appear after visitors submit a form, book a meeting, or trigger a conversion event.</p>
                 <div className="flex items-center justify-center gap-4 mt-3">
-                  <a href="/setup" className="text-xs text-st-black dark:text-white underline underline-offset-2 hover:opacity-70">View install guide</a>
-                  <a href="/docs/conversions" className="text-xs text-st-black dark:text-white underline underline-offset-2 hover:opacity-70">Open conversion docs</a>
+                  <a href="/setup" className="text-xs text-st-black dark:text-dark-primary underline underline-offset-2 hover:opacity-70">View install guide</a>
+                  <a href="/docs/conversions" className="text-xs text-st-black dark:text-dark-primary underline underline-offset-2 hover:opacity-70">Open conversion docs</a>
                 </div>
               </>
             )}
@@ -409,7 +409,7 @@ export default function Leads() {
                       </td>
                       <td className="py-3 px-3 text-right text-gray-600 dark:text-gray-400 tabular-nums">{lead.conversions}</td>
                       {hasRevenue && (
-                        <td className="py-3 px-3 text-right font-semibold text-st-black dark:text-white tabular-nums">
+                        <td className="py-3 px-3 text-right font-semibold text-st-black dark:text-dark-primary tabular-nums">
                           {lead.revenue != null ? formatCurrency(lead.revenue) : '—'}
                         </td>
                       )}
@@ -434,7 +434,7 @@ export default function Leads() {
                           </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); openJourney(lead) }}
-                            className="text-xs text-st-black dark:text-white hover:text-gray-700 dark:hover:text-gray-300 font-medium flex items-center gap-1"
+                            className="text-xs text-st-black dark:text-dark-primary hover:text-gray-700 dark:hover:text-gray-300 font-medium flex items-center gap-1"
                           >
                             Journey <ArrowRight className="w-3 h-3" />
                           </button>

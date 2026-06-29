@@ -53,9 +53,9 @@ export default function ShareDashboard() {
         </Helmet>
         <div className="text-center space-y-4 p-8">
           <AlertCircle className="w-12 h-12 text-red-400 mx-auto" />
-          <h2 className="text-xl font-bold text-st-black dark:text-white">{error}</h2>
+          <h2 className="text-xl font-bold text-st-black dark:text-dark-primary">{error}</h2>
           <p className="text-sm text-st-gray dark:text-gray-400">The owner may have disabled sharing or the link may be incorrect.</p>
-          <a href="https://sourcetrack.ai" className="text-sm text-st-black dark:text-white underline">Powered by SourceTrack</a>
+          <a href="https://sourcetrack.ai" className="text-sm text-st-black dark:text-dark-primary underline">Powered by SourceTrack</a>
         </div>
       </div>
     )
@@ -111,8 +111,8 @@ export default function ShareDashboard() {
       <header className="bg-white dark:bg-dark-card border-b border-gray-200 dark:border-dark-border px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Bot className="w-6 h-6 text-st-black dark:text-white" />
-            <h1 className="text-lg font-bold text-st-black dark:text-white">SourceTrack Dashboard</h1>
+            <Bot className="w-6 h-6 text-st-black dark:text-dark-primary" />
+            <h1 className="text-lg font-bold text-st-black dark:text-dark-primary">SourceTrack Dashboard</h1>
           </div>
           <span className="text-xs text-st-gray dark:text-gray-400">
             {date_from} — {date_to} ({days}d)
@@ -129,7 +129,7 @@ export default function ShareDashboard() {
                 <Icon className="w-4 h-4 text-st-gray dark:text-gray-400" />
                 <span className="text-xs text-st-gray dark:text-gray-400">{label}</span>
               </div>
-              <span className="text-xl font-bold text-st-black dark:text-white">{value ?? '—'}</span>
+              <span className="text-xl font-bold text-st-black dark:text-dark-primary">{value ?? '—'}</span>
             </div>
           ))}
         </div>
@@ -137,7 +137,7 @@ export default function ShareDashboard() {
         {/* Attribution Table */}
         <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-            <h2 className="text-sm font-bold text-st-black dark:text-white">Attribution</h2>
+            <h2 className="text-sm font-bold text-st-black dark:text-dark-primary">Attribution</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -156,7 +156,7 @@ export default function ShareDashboard() {
                   </tr>
                 ) : channels.slice(0, 10).map((ch, i) => (
                   <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
-                    <td className="px-4 py-2.5 font-medium text-st-black dark:text-white">{ch.dim_value || 'Unknown'}</td>
+                    <td className="px-4 py-2.5 font-medium text-st-black dark:text-dark-primary">{ch.dim_value || 'Unknown'}</td>
                     <td className="px-4 py-2.5 text-right text-st-gray dark:text-gray-400">{ch.conversions || 0}</td>
                     <td className="px-4 py-2.5 text-right text-st-gray dark:text-gray-400">
                       {ch.revenue != null ? formatWholeCurrencyOrDash(ch.revenue) : '—'}
@@ -175,7 +175,7 @@ export default function ShareDashboard() {
         <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center gap-2">
             <Bot className="w-4 h-4 text-st-gray dark:text-gray-400" />
-            <h2 className="text-sm font-bold text-st-black dark:text-white">AI Search Traffic</h2>
+            <h2 className="text-sm font-bold text-st-black dark:text-dark-primary">AI Search Traffic</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -195,7 +195,7 @@ export default function ShareDashboard() {
                   </tr>
                 ) : aiSources.slice(0, 10).map((ai, i) => (
                   <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-800/30">
-                    <td className="px-4 py-2.5 font-medium text-st-black dark:text-white">{ai.dim_value || 'Unknown'}</td>
+                    <td className="px-4 py-2.5 font-medium text-st-black dark:text-dark-primary">{ai.dim_value || 'Unknown'}</td>
                     <td className="px-4 py-2.5 text-right text-st-gray dark:text-gray-400">{ai.conversions || 0}</td>
                     <td className="px-4 py-2.5 text-right text-st-gray dark:text-gray-400">
                       {ai.revenue != null ? formatWholeCurrencyOrDash(ai.revenue) : '—'}

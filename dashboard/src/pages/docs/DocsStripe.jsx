@@ -15,7 +15,7 @@ export default function DocsStripe() {
 
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+          <h1 className="text-3xl font-black text-gray-900 dark:text-dark-primary tracking-tight">
             Stripe Webhook / API Revenue Attribution Recipe
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-2 text-base leading-relaxed">
@@ -25,7 +25,7 @@ export default function DocsStripe() {
 
         {/* 1. Who this is for */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Who This Is For
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -46,7 +46,7 @@ export default function DocsStripe() {
 
         {/* 2. What you will set up */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             What You Will Set Up
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -60,12 +60,12 @@ export default function DocsStripe() {
 
         {/* 3. Steps */}
         <section className="space-y-6">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Steps: Stripe Integration
           </h2>
 
           <div className="space-y-4">
-            <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">Step 1: Forward Visitor ID in Stripe Metadata</h3>
+            <h3 className="text-sm font-extrabold text-gray-900 dark:text-dark-primary">Step 1: Forward Visitor ID in Stripe Metadata</h3>
             <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
               When creating a Stripe Checkout Session on your backend, read the visitor ID (stored in the browser as <code>st_aid</code>) from the client's request payload and pass it as <code>client_reference_id</code> or inside the <code>metadata</code> block as <code>anonymous_id</code> or <code>visitor_id</code>.
             </p>
@@ -93,7 +93,7 @@ const session = await stripe.checkout.sessions.create({
           </div>
 
           <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-            <h3 className="text-sm font-extrabold text-gray-900 dark:text-white">Step 2: Configure Stripe Webhook</h3>
+            <h3 className="text-sm font-extrabold text-gray-900 dark:text-dark-primary">Step 2: Configure Stripe Webhook</h3>
             <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
               Route event messages from Stripe directly to the SourceTrack ingestion URL:
             </p>
@@ -121,7 +121,7 @@ const session = await stripe.checkout.sessions.create({
 
         {/* 4. How to verify it worked */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             How to Verify It Worked
           </h2>
           <ol className="list-decimal pl-5 space-y-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -134,7 +134,7 @@ const session = await stripe.checkout.sessions.create({
 
         {/* 5. Common mistakes */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Common Mistakes
           </h2>
           <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
@@ -152,7 +152,7 @@ const session = await stripe.checkout.sessions.create({
 
         {/* 6. Next step */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Next Step
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">

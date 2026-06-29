@@ -327,7 +327,7 @@ export default function Dashboard() {
       {/* Header Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-st-black dark:text-white">
+          <h2 className="text-2xl font-bold text-st-black dark:text-dark-primary">
             {location.pathname === '/app/attribution' ? 'Attribution' : 'Dashboard'}
           </h2>
           {site && <p className="text-sm text-st-gray dark:text-gray-400 mt-0.5">{site.domain || site.name}</p>}
@@ -386,7 +386,7 @@ export default function Dashboard() {
                 <div className="bg-white dark:bg-[#1A1D1D] rounded-2xl border border-gray-200 dark:border-[#2A2E2E] p-12 text-center flex flex-col items-center justify-center space-y-6">
                   <div>
                     <Users className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-                    <h3 className="text-xl font-semibold text-st-black dark:text-white mb-2">No attribution data yet</h3>
+                    <h3 className="text-xl font-semibold text-st-black dark:text-dark-primary mb-2">No attribution data yet</h3>
                     <p className="text-sm text-st-gray dark:text-gray-400 max-w-md mx-auto">
                       {!site?.last_seen_at
                         ? 'Install the tracker on your website to start seeing traffic and attribution reports.'
@@ -405,9 +405,9 @@ export default function Dashboard() {
                 <>
                   <div className="bg-white dark:bg-[#1A1D1D] rounded-2xl border border-gray-200 dark:border-[#2A2E2E] p-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div className="flex items-start gap-3">
-                      <Zap className="w-5 h-5 text-st-black dark:text-white shrink-0 mt-0.5" />
+                      <Zap className="w-5 h-5 text-st-black dark:text-dark-primary shrink-0 mt-0.5" />
                       <div>
-                        <h3 className="text-base font-semibold text-st-black dark:text-white">
+                        <h3 className="text-base font-semibold text-st-black dark:text-dark-primary">
                           You're getting visitors — now tell SourceTrack what counts as a conversion.
                         </h3>
                         <p className="text-sm text-st-gray dark:text-gray-400 mt-1 max-w-xl">
@@ -432,8 +432,8 @@ export default function Dashboard() {
 
                   {/* Command Center Nav */}
                   <div className="flex flex-wrap gap-2">
-                    <button onClick={() => navigate('/analytics')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-white hover:border-st-black dark:hover:border-white transition-colors">Analytics <ArrowRight className="w-3 h-3" /></button>
-                    <button onClick={() => navigate('/setup?tab=conversions')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-white hover:border-st-black dark:hover:border-white transition-colors">Set up conversions <ArrowRight className="w-3 h-3" /></button>
+                    <button onClick={() => navigate('/analytics')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-dark-primary hover:border-st-black dark:hover:border-white transition-colors">Analytics <ArrowRight className="w-3 h-3" /></button>
+                    <button onClick={() => navigate('/setup?tab=conversions')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-dark-primary hover:border-st-black dark:hover:border-white transition-colors">Set up conversions <ArrowRight className="w-3 h-3" /></button>
                   </div>
 
                   {/* Top Sources + Top Pages — Analytics traffic data path */}
@@ -471,7 +471,7 @@ export default function Dashboard() {
                   <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl px-4 py-4 flex items-start gap-3 shadow-sm">
                     <span className="w-1.5 h-1.5 mt-1.5 rounded-full bg-st-gray dark:bg-gray-400 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-medium text-st-black dark:text-white">Revenue &amp; attribution — no conversion events yet</p>
+                      <p className="text-sm font-medium text-st-black dark:text-dark-primary">Revenue &amp; attribution — no conversion events yet</p>
                       <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">
                         Revenue, source attribution, and ROI reporting appear here once your site sends conversion events. See the <a href="/developers/conversions" className="underline hover:text-st-black dark:hover:text-white transition-colors">conversion events docs</a> or <button onClick={() => navigate('/setup?tab=conversions')} className="underline hover:text-st-black dark:hover:text-white transition-colors">set them up now</button>.
                       </p>
@@ -528,10 +528,10 @@ export default function Dashboard() {
 
               {/* Command Center Nav */}
               <div className="flex flex-wrap gap-2">
-                <button onClick={() => navigate('/analytics')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-white hover:border-st-black dark:hover:border-white transition-colors">Analytics <ArrowRight className="w-3 h-3" /></button>
-                <button onClick={() => navigate('/app/attribution')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-white hover:border-st-black dark:hover:border-white transition-colors">Attribution <ArrowRight className="w-3 h-3" /></button>
-                <button onClick={() => navigate('/leads')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-white hover:border-st-black dark:hover:border-white transition-colors">Leads <ArrowRight className="w-3 h-3" /></button>
-                <button onClick={() => navigate('/app/integrations')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-white hover:border-st-black dark:hover:border-white transition-colors">Integrations <ArrowRight className="w-3 h-3" /></button>
+                <button onClick={() => navigate('/analytics')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-dark-primary hover:border-st-black dark:hover:border-white transition-colors">Analytics <ArrowRight className="w-3 h-3" /></button>
+                <button onClick={() => navigate('/app/attribution')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-dark-primary hover:border-st-black dark:hover:border-white transition-colors">Attribution <ArrowRight className="w-3 h-3" /></button>
+                <button onClick={() => navigate('/leads')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-dark-primary hover:border-st-black dark:hover:border-white transition-colors">Leads <ArrowRight className="w-3 h-3" /></button>
+                <button onClick={() => navigate('/app/integrations')} className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 dark:border-[#2A2E2E] bg-white dark:bg-[#1A1D1D] text-st-black dark:text-dark-primary hover:border-st-black dark:hover:border-white transition-colors">Integrations <ArrowRight className="w-3 h-3" /></button>
               </div>
 
               {/* Performance Trend Chart */}
@@ -560,7 +560,7 @@ export default function Dashboard() {
 
                 <DashboardCard title="Recent Conversions" subtitle={totalConversions > 0 ? `Latest attributed conversions • ${totalConversions} total` : 'Latest attributed conversions'}
                   action={
-                    <button onClick={() => navigate('/leads')} className="text-xs font-semibold text-st-black dark:text-white flex items-center gap-1">
+                    <button onClick={() => navigate('/leads')} className="text-xs font-semibold text-st-black dark:text-dark-primary flex items-center gap-1">
                       View Leads <ArrowRight className="w-3 h-3" />
                     </button>
                   }
@@ -577,7 +577,7 @@ export default function Dashboard() {
                           r.visitor_id ? (
                             <button
                               onClick={() => setJourneyLead(r)}
-                              className="text-xs text-st-black dark:text-white font-semibold hover:underline"
+                              className="text-xs text-st-black dark:text-dark-primary font-semibold hover:underline"
                             >
                               View journey
                             </button>
@@ -650,7 +650,7 @@ export default function Dashboard() {
               {/* 3. Source Attribution table with switcher */}
               <DashboardCard title="Source Attribution" subtitle="Detailed performance breakdown by model">
               <div className="mb-4">
-                <span className="inline-block px-3 py-1.5 border border-gray-200 dark:border-dark-border rounded-lg text-sm bg-gray-50 dark:bg-dark-bg text-st-black dark:text-white font-semibold">
+                <span className="inline-block px-3 py-1.5 border border-gray-200 dark:border-dark-border rounded-lg text-sm bg-gray-50 dark:bg-dark-bg text-st-black dark:text-dark-primary font-semibold">
                   First-touch attribution
                 </span>
               </div>
@@ -661,7 +661,7 @@ export default function Dashboard() {
                       { key: 'conversions', label: 'Conversions', render: (r) => r.conversions || 0 },
                       { key: 'revenue', label: 'Revenue', render: (r) => `$${(r.revenue || 0).toFixed(2)}` },
                       { key: 'details', label: 'Details', render: (r) => (
-                        <button onClick={() => { setExplainModel('first_touch'); setExplainModalOpen(true) }} className="text-xs text-st-black dark:text-white font-semibold hover:underline">
+                        <button onClick={() => { setExplainModel('first_touch'); setExplainModalOpen(true) }} className="text-xs text-st-black dark:text-dark-primary font-semibold hover:underline">
                           View details
                         </button>
                       )}
@@ -670,7 +670,7 @@ export default function Dashboard() {
                       { key: 'conversions', label: 'Conversions', render: (r) => r.conversions || 0 },
                       { key: 'cvr', label: 'CVR%', render: (r) => r.cvr > 0 ? `${r.cvr.toFixed(1)}%` : '—' },
                       { key: 'details', label: 'Details', render: (r) => (
-                        <button onClick={() => { setExplainModel('first_touch'); setExplainModalOpen(true) }} className="text-xs text-st-black dark:text-white font-semibold hover:underline">
+                        <button onClick={() => { setExplainModel('first_touch'); setExplainModalOpen(true) }} className="text-xs text-st-black dark:text-dark-primary font-semibold hover:underline">
                           View details
                         </button>
                       )}
@@ -822,10 +822,10 @@ function DashboardWidgetCard({ report, site }) {
       <div>
         <div className="flex items-start justify-between gap-2 border-b border-gray-100 dark:border-[#2A2E2E] pb-2">
           <div className="min-w-0">
-            <h4 className="text-xs font-semibold text-st-black dark:text-white truncate" title={report.name}>{report.name}</h4>
+            <h4 className="text-xs font-semibold text-st-black dark:text-dark-primary truncate" title={report.name}>{report.name}</h4>
             <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[9px] text-st-gray dark:text-gray-400 mt-0.5">
               <span
-                className="inline-flex items-center px-1.5 py-0.5 rounded bg-st-black/5 dark:bg-white/10 text-[9px] font-semibold text-st-black dark:text-white"
+                className="inline-flex items-center px-1.5 py-0.5 rounded bg-st-black/5 dark:bg-white/10 text-[9px] font-semibold text-st-black dark:text-dark-primary"
                 title={`Attribution model: ${MODELS.find(m => m.key === cfg.model)?.label || cfg.model}. The model determines which touch in the customer journey gets credit for this metric.`}
               >
                 {MODELS.find(m => m.key === cfg.model)?.label || cfg.model}
@@ -878,7 +878,7 @@ function DashboardWidgetCard({ report, site }) {
         ) : (
           <div className="mt-3 space-y-2">
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-bold text-st-black dark:text-white tabular-nums">
+              <span className="text-2xl font-bold text-st-black dark:text-dark-primary tabular-nums">
                 {metricDef.format(total)}
               </span>
               <span className="text-[10px] text-st-gray dark:text-gray-400">{metricDef.label}</span>

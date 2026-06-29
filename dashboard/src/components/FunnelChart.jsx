@@ -60,7 +60,7 @@ export default function FunnelChart({ steps = [], loading = false, hasSteps = fa
         return (
           <div key={i} className="space-y-1">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-medium text-st-black dark:text-white truncate mr-2">
+              <span className="font-medium text-st-black dark:text-dark-primary truncate mr-2">
                 {i + 1}. {s.step}
               </span>
               <span className="text-st-gray dark:text-gray-400 flex-shrink-0">
@@ -89,7 +89,7 @@ export default function FunnelChart({ steps = [], loading = false, hasSteps = fa
       })}
       <div className="flex items-center gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
         <TrendingDown className="w-4 h-4 text-st-gray dark:text-gray-400" />
-        <span className="text-sm font-semibold text-st-black dark:text-white">
+        <span className="text-sm font-semibold text-st-black dark:text-dark-primary">
           {overallRate}% overall conversion rate
         </span>
         <span className="text-xs text-st-gray dark:text-gray-400">

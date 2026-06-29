@@ -542,7 +542,7 @@ export default function Settings() {
   return (
     <div className="space-y-8 max-w-2xl">
       <div>
-        <h2 className="text-2xl font-bold text-st-black dark:text-white">Settings</h2>
+        <h2 className="text-2xl font-bold text-st-black dark:text-dark-primary">Settings</h2>
         <p className="text-sm text-st-gray dark:text-gray-400 mt-1">{user?.email}</p>
       </div>
 
@@ -569,7 +569,7 @@ export default function Settings() {
           <div className="flex items-center gap-2">
             <CreditCard className="w-4 h-4 text-st-gray dark:text-gray-400" />
             <div>
-              <p className="text-sm font-bold text-st-black dark:text-white">
+              <p className="text-sm font-bold text-st-black dark:text-dark-primary">
                 Plan: <span className="capitalize">{getPlanLabel(plan)}</span>
                 {isTrial && daysLeft !== null && (
                   <span className={`ml-2 text-xs font-medium ${trialExpired ? 'text-red-500' : daysLeft <= 3 ? 'text-red-500' : 'text-amber-500'}`}>
@@ -589,7 +589,7 @@ export default function Settings() {
 
       {/* ── Site Settings ──────────────────────────────────────────────── */}
       <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
-        <h3 className="text-sm font-bold text-st-black dark:text-white">Site Settings</h3>
+        <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Site Settings</h3>
         <form onSubmit={handleSave} className="space-y-3">
           <div>
             <label className="block text-xs text-st-gray dark:text-gray-400 mb-1">Site Name</label>
@@ -598,7 +598,7 @@ export default function Settings() {
               value={name}
               onChange={e => setName(e.target.value)}
               disabled={isPreview}
-              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
               placeholder="My Website"
             />
           </div>
@@ -609,7 +609,7 @@ export default function Settings() {
               value={domain}
               onChange={e => setDomain(e.target.value)}
               disabled={isPreview}
-              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
               placeholder="yoursite.com"
             />
           </div>
@@ -631,7 +631,7 @@ export default function Settings() {
       <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-2">
           <Globe className="w-4 h-4 text-st-gray dark:text-gray-400" />
-          <h3 className="text-sm font-bold text-st-black dark:text-white">Public Dashboard</h3>
+          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Public Dashboard</h3>
         </div>
         <p className="text-xs text-st-gray dark:text-gray-400">Share a read-only view of your analytics — no login required.</p>
         <div className="flex items-center justify-between">
@@ -676,7 +676,7 @@ export default function Settings() {
       <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-st-gray dark:text-gray-400" />
-          <h3 className="text-sm font-bold text-st-black dark:text-white">Cookieless Tracking</h3>
+          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Cookieless Tracking</h3>
         </div>
         <p className="text-xs text-st-gray dark:text-gray-400">
           When enabled, the tracker uses a server-derived daily-rotating hash instead of localStorage or cookies.
@@ -731,7 +731,7 @@ export default function Settings() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Globe className="w-4 h-4 text-st-gray dark:text-gray-400" />
-            <h3 className="text-sm font-bold text-st-black dark:text-white">Custom Tracking Domain</h3>
+            <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Custom Tracking Domain</h3>
           </div>
           {(() => {
             const getProxyStatusInfo = () => {
@@ -789,7 +789,7 @@ export default function Settings() {
                 onChange={e => setProxyDomain(e.target.value)}
                 placeholder="track.yourdomain.com"
                 disabled={proxyLoading || isPreview}
-                className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
+                className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
               />
               {isPreview ? (
                 <span className="text-xs text-st-gray italic self-center">Hidden in Support Preview</span>
@@ -810,16 +810,16 @@ export default function Settings() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                 <div>
                   <span className="block text-st-gray dark:text-gray-400 font-medium mb-1">DNS Record Type</span>
-                  <code className="font-mono text-st-black dark:text-white font-bold bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded">CNAME</code>
+                  <code className="font-mono text-st-black dark:text-dark-primary font-bold bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded">CNAME</code>
                 </div>
                 <div>
                   <span className="block text-st-gray dark:text-gray-400 font-medium mb-1">Host/Subdomain</span>
-                  <code className="font-mono text-st-black dark:text-white font-bold bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded">{proxyConfig.domain}</code>
+                  <code className="font-mono text-st-black dark:text-dark-primary font-bold bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded">{proxyConfig.domain}</code>
                 </div>
                 <div className="md:col-span-2">
                   <span className="block text-st-gray dark:text-gray-400 font-medium mb-1">Points To (Target)</span>
                   <div className="flex items-center gap-2">
-                    <code className="font-mono text-st-black dark:text-white font-bold bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded truncate flex-1">{proxyConfig.cname_target}</code>
+                    <code className="font-mono text-st-black dark:text-dark-primary font-bold bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded truncate flex-1">{proxyConfig.cname_target}</code>
                     <button
                       onClick={async () => {
                         try {
@@ -863,9 +863,9 @@ export default function Settings() {
 
             {proxyConfig.status === 'active' && (
               <div className="bg-gray-50 dark:bg-[#202222] border border-gray-100 dark:border-gray-800 rounded-xl p-4 space-y-2">
-                <span className="block text-xs font-semibold text-st-black dark:text-white">Your first-party tracking snippet:</span>
+                <span className="block text-xs font-semibold text-st-black dark:text-dark-primary">Your first-party tracking snippet:</span>
                 <div className="flex items-center gap-2 bg-gray-200 dark:bg-gray-700 rounded-lg p-2">
-                  <code className="font-mono text-xs text-st-black dark:text-white break-all flex-1 select-all">
+                  <code className="font-mono text-xs text-st-black dark:text-dark-primary break-all flex-1 select-all">
                     {`<script async src="https://${proxyConfig.domain}/${site?.cookieless_mode ? 'tracker.cookieless.min.js' : 'tracker.min.js'}" data-site-key="${displaySiteKey}"></script>`}
                   </code>
                   <button
@@ -902,7 +902,7 @@ export default function Settings() {
       <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-2">
           <Clock className="w-4 h-4 text-st-gray dark:text-gray-400" />
-          <h3 className="text-sm font-bold text-st-black dark:text-white">Attribution Window</h3>
+          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Attribution Window</h3>
         </div>
         <p className="text-xs text-st-gray dark:text-gray-400">
           The maximum number of days between a visitor's first touch and a conversion for it to be attributed.
@@ -913,7 +913,7 @@ export default function Settings() {
             value={attrWindow}
             onChange={e => setAttrWindow(Number(e.target.value))}
             disabled={isPreview}
-            className="px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
+            className="px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
           >
             <option value={1}>1 day</option>
             <option value={7}>7 days</option>
@@ -943,7 +943,7 @@ export default function Settings() {
       <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-2">
           <Globe className="w-4 h-4 text-st-gray dark:text-gray-400" />
-          <h3 className="text-sm font-bold text-st-black dark:text-white">Site Settings</h3>
+          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Site Settings</h3>
         </div>
         <p className="text-xs text-st-gray dark:text-gray-400">
           Configure default reporting timezone boundaries and exclude specific client paths from tracking.
@@ -959,7 +959,7 @@ export default function Settings() {
               value={timezone}
               onChange={e => setTimezone(e.target.value)}
               disabled={isPreview}
-              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
             >
               <option value="UTC">UTC (Coordinated Universal Time)</option>
               <option value="America/New_York">America/New_York (EST/EDT)</option>
@@ -985,7 +985,7 @@ export default function Settings() {
               onChange={e => setExcludedPaths(e.target.value)}
               disabled={isPreview}
               placeholder="/admin/*, /staging/*"
-              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
             />
           </div>
 
@@ -1007,7 +1007,7 @@ export default function Settings() {
       <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-2">
           <Link className="w-4 h-4 text-st-gray dark:text-gray-400" />
-          <h3 className="text-sm font-bold text-st-black dark:text-white">Custom URL Parameters</h3>
+          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Custom URL Parameters</h3>
         </div>
         <p className="text-xs text-st-gray dark:text-gray-400">
           Capture and attribute custom marketing parameters (e.g. <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-[10px]">?affiliate=123</code> or <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-[10px]">?partner=xyz</code>).
@@ -1020,7 +1020,7 @@ export default function Settings() {
             value={newParam}
             onChange={e => setNewParam(e.target.value)}
             placeholder="e.g. affiliate"
-            className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
+            className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
             disabled={customParamsSaving || isPreview}
           />
           {!isPreview && (
@@ -1038,7 +1038,7 @@ export default function Settings() {
           <div className="border border-gray-200 dark:border-gray-800 rounded-lg divide-y divide-gray-200 dark:divide-gray-800">
             {customParams.map(param => (
               <div key={param} className="flex items-center justify-between p-3">
-                <span className="text-sm font-mono text-st-black dark:text-white">{param}</span>
+                <span className="text-sm font-mono text-st-black dark:text-dark-primary">{param}</span>
                 {!isPreview && (
                   <button
                     onClick={() => handleRemoveParam(param)}
@@ -1066,7 +1066,7 @@ export default function Settings() {
           <svg className="w-4 h-4 text-st-gray dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
           </svg>
-          <h3 className="text-sm font-bold text-st-black dark:text-white">Cross-Domain Tracking</h3>
+          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Cross-Domain Tracking</h3>
         </div>
         <p className="text-xs text-st-gray dark:text-gray-400">
           Stitch visitor attribution continuity across separate domains you own. Links pointing to domains listed here will be decorated automatically with secure identity tags.
@@ -1074,14 +1074,14 @@ export default function Settings() {
 
         <form onSubmit={handleCrossDomainSave} className="space-y-4">
           <div className="space-y-2">
-            <label className="block text-xs font-semibold text-st-black dark:text-white">Cross-Domain Hostnames</label>
+            <label className="block text-xs font-semibold text-st-black dark:text-dark-primary">Cross-Domain Hostnames</label>
             <input
               type="text"
               value={crossDomainDomains}
               onChange={e => setCrossDomainDomains(e.target.value)}
               disabled={isPreview}
               placeholder="e.g. app.example.com, checkout.example.com"
-              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
             />
             <p className="text-[10px] text-st-gray dark:text-gray-400">
               Comma-separated list of target domains (maximum 20). No protocols, wildcards, or paths.
@@ -1089,14 +1089,14 @@ export default function Settings() {
           </div>
 
           <div className="space-y-2">
-            <label className="block text-xs font-semibold text-st-black dark:text-white">TLD Cookie Domain Fallback (Optional)</label>
+            <label className="block text-xs font-semibold text-st-black dark:text-dark-primary">TLD Cookie Domain Fallback (Optional)</label>
             <input
               type="text"
               value={crossDomainCookieDomain}
               onChange={e => setCrossDomainCookieDomain(e.target.value)}
               disabled={isPreview}
               placeholder="e.g. .example.com"
-              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
             />
             <p className="text-[10px] text-st-gray dark:text-gray-400">
               Must start with a leading dot and match or be a parent domain of your primary site domain. Enables fallback storage continuity.
@@ -1121,12 +1121,12 @@ export default function Settings() {
       <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-6">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-4 h-4 text-st-gray dark:text-gray-400" />
-          <h3 className="text-sm font-bold text-st-black dark:text-white">Privacy &amp; Data</h3>
+          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Privacy &amp; Data</h3>
         </div>
 
         {/* Retention policy */}
         <div className="space-y-2">
-          <p className="text-xs font-semibold text-st-black dark:text-white">Data Retention</p>
+          <p className="text-xs font-semibold text-st-black dark:text-dark-primary">Data Retention</p>
           <p className="text-xs text-st-gray dark:text-gray-400">
             Attribution records older than the selected period are automatically deleted each night.
             Set to "Keep forever" if you are not subject to a retention obligation.
@@ -1136,7 +1136,7 @@ export default function Settings() {
               value={retentionDays}
               onChange={e => setRetentionDays(Number(e.target.value))}
               disabled={isPreview}
-              className="px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
+              className="px-3 py-2 border border-gray-200 dark:border-gray-800 dark:bg-[#1A1C1C] dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20 disabled:opacity-60 disabled:cursor-not-allowed dark:disabled:bg-gray-800/50"
             >
               <option value={0}>Keep forever</option>
               <option value={30}>30 days</option>
@@ -1162,7 +1162,7 @@ export default function Settings() {
         {/* Visitor data erasure */}
         {!isPreview && (
           <div className="border-t border-gray-100 dark:border-gray-800 pt-4 space-y-2">
-            <p className="text-xs font-semibold text-st-black dark:text-white">Erase Visitor Data (Right to Erasure)</p>
+            <p className="text-xs font-semibold text-st-black dark:text-dark-primary">Erase Visitor Data (Right to Erasure)</p>
             <p className="text-xs text-st-gray dark:text-gray-400">
               Enter a visitor's anonymous ID to erase matching SourceTrack app database records. This action is immediate for app database records and cannot be undone.
             </p>
@@ -1178,7 +1178,7 @@ export default function Settings() {
                 value={visitorId}
                 onChange={e => setVisitorId(e.target.value)}
                 placeholder="anonymous_id (e.g. xxxxxxxx-xxxx-4xxx-…)"
-                className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
+                className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
               />
               <button
                 type="submit"
@@ -1199,7 +1199,7 @@ export default function Settings() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Key className="w-4 h-4 text-st-gray dark:text-gray-400" />
-            <h3 className="text-sm font-bold text-st-black dark:text-white">Server API Tokens</h3>
+            <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Server API Tokens</h3>
           </div>
           <a
             href="/developers"
@@ -1239,7 +1239,7 @@ export default function Settings() {
         {!hasFeature(plan, 'api_access') ? (
           <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-800 p-6 text-center bg-gray-50/30 dark:bg-dark-hover/5">
             <div className="text-xs font-semibold text-amber-600 uppercase tracking-widest mb-2">🔒 Premium Feature</div>
-            <p className="text-xs font-bold text-st-black dark:text-white mb-1">Server API Token Management</p>
+            <p className="text-xs font-bold text-st-black dark:text-dark-primary mb-1">Server API Token Management</p>
             <p className="text-[11px] text-st-gray dark:text-gray-400 mb-4">API access is available on the Growth plan.</p>
             <a
               href="/billing"
@@ -1331,7 +1331,7 @@ export default function Settings() {
       <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-3">
         <div className="flex items-center gap-2">
           <HelpCircle className="w-4 h-4 text-st-gray dark:text-gray-400" />
-          <h3 className="text-sm font-bold text-st-black dark:text-white">Support & Feedback</h3>
+          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Support & Feedback</h3>
         </div>
         <p className="text-xs text-st-gray dark:text-gray-400 leading-relaxed">
           Need help setting up your tracking script, configuring integrations, or have questions? Email us at{' '}
@@ -1369,7 +1369,7 @@ export default function Settings() {
             value={deleteAccountConfirm}
             onChange={e => setDeleteAccountConfirm(e.target.value)}
             placeholder='Type DELETE to confirm'
-            className="flex-1 px-3 py-2 border border-red-200 dark:border-red-900/40 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-400/40"
+            className="flex-1 px-3 py-2 border border-red-200 dark:border-red-900/40 dark:bg-gray-800 dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-400/40"
           />
           <button
             onClick={handleAccountDelete}
@@ -1387,7 +1387,7 @@ export default function Settings() {
       <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
         <div className="flex items-center gap-2">
           <Link className="w-4 h-4 text-st-gray dark:text-gray-400" />
-          <h3 className="text-sm font-bold text-st-black dark:text-white">UTM Builder</h3>
+          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">UTM Builder</h3>
         </div>
         <p className="text-xs text-st-gray dark:text-gray-400">Generate tagged URLs for accurate campaign tracking. All parameters are lowercased automatically.</p>
         <UTMBuilder />
@@ -1398,7 +1398,7 @@ export default function Settings() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
           <div className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl max-w-md w-full p-6 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 pb-2">
-              <h3 className="text-sm font-bold text-st-black dark:text-white">Generate Server API Token</h3>
+              <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Generate Server API Token</h3>
               {!createdToken && (
                 <button
                   onClick={() => setNewTokenModalOpen(false)}
@@ -1419,7 +1419,7 @@ export default function Settings() {
                     onChange={e => setNewTokenName(e.target.value)}
                     placeholder="e.g. Production Backend SDK"
                     required
-                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
+                    className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-dark-primary rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-st-black/20 dark:focus:ring-white/20"
                   />
                   <p className="text-[10px] text-st-gray dark:text-gray-400">
                     Use a descriptive name so you remember where this token is deployed.
@@ -1430,7 +1430,7 @@ export default function Settings() {
                   <button
                     type="button"
                     onClick={() => setNewTokenModalOpen(false)}
-                    className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-st-black dark:text-white text-xs font-semibold rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                    className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-st-black dark:text-dark-primary text-xs font-semibold rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                   >
                     Cancel
                   </button>
@@ -1459,7 +1459,7 @@ export default function Settings() {
                       type="text"
                       readOnly
                       value={createdToken.token}
-                      className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-lg text-xs font-mono select-all focus:outline-none"
+                      className="flex-1 px-3 py-2 border border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-dark-primary rounded-lg text-xs font-mono select-all focus:outline-none"
                     />
                     <button
                       onClick={() => {
@@ -1467,7 +1467,7 @@ export default function Settings() {
                         setTokenCopied(true);
                         setTimeout(() => setTokenCopied(false), 2000);
                       }}
-                      className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-st-black dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 shrink-0 flex items-center justify-center"
+                      className="px-3 py-2 bg-gray-100 dark:bg-gray-800 text-st-black dark:text-dark-primary rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 shrink-0 flex items-center justify-center"
                       title="Copy to Clipboard"
                     >
                       {tokenCopied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}

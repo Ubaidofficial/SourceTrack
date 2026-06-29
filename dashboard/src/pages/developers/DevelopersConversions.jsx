@@ -53,7 +53,7 @@ export default function DevelopersConversions() {
 
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+          <h1 className="text-3xl font-black text-gray-900 dark:text-dark-primary tracking-tight">
             Browser Conversions
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-2 text-base leading-relaxed">
@@ -63,7 +63,7 @@ export default function DevelopersConversions() {
 
         {/* Overview */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Overview
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -73,7 +73,7 @@ export default function DevelopersConversions() {
 
         {/* Method Signature */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Method Signature
           </h2>
           <MethodSignature signature="window.sourcetrack.conversion(options)" />
@@ -81,7 +81,7 @@ export default function DevelopersConversions() {
 
         {/* Parameters Table */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Parameters
           </h2>
           <ParamTable params={[
@@ -94,7 +94,7 @@ export default function DevelopersConversions() {
 
         {/* Copy-Paste Example */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Example Implementation
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -119,7 +119,7 @@ export default function DevelopersConversions() {
 
         {/* Common Errors */}
         <section className="space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Common Errors
           </h2>
           <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
@@ -137,7 +137,7 @@ export default function DevelopersConversions() {
 
         {/* Security Note */}
         <section className="space-y-2">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Security Note
           </h2>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">

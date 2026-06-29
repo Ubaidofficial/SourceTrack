@@ -194,7 +194,7 @@ export default function LeadDetail() {
               {(lead.source || lead.first_touch_source) ? (
                 <SourceChip source={lead.source || lead.first_touch_source} />
               ) : (
-                <p className="text-xs text-st-black dark:text-white">—</p>
+                <p className="text-xs text-st-black dark:text-dark-primary">—</p>
               )}
             </div>
             <SourceDataRow label="Campaign" value={lead.campaign && lead.campaign !== 'none' ? lead.campaign : null} />
@@ -418,7 +418,7 @@ function SourceDataRow({ label, value }) {
   return (
     <div className="flex items-start justify-between gap-3">
       <p className="text-xs text-st-gray dark:text-gray-400 font-medium uppercase tracking-wider shrink-0">{label}</p>
-      <p className="text-xs text-st-black dark:text-white text-right break-all">{value ?? '—'}</p>
+      <p className="text-xs text-st-black dark:text-dark-primary text-right break-all">{value ?? '—'}</p>
     </div>
   )
 }

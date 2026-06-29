@@ -186,7 +186,7 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
             <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
           )}
           <div>
-            <h3 className="font-semibold text-st-black dark:text-white">
+            <h3 className="font-semibold text-st-black dark:text-dark-primary">
               {isAuthError ? 'Verification Pending' : 'Diagnostics Unavailable'}
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 leading-normal">
@@ -313,7 +313,7 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
           </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-semibold text-st-black dark:text-white">Tracking Doctor</h3>
+              <h3 className="font-semibold text-st-black dark:text-dark-primary">Tracking Doctor</h3>
               <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${statusConfig.badge}`}>
                 {statusConfig.label}
               </span>
@@ -354,7 +354,7 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
             <span className="text-sm font-semibold text-gray-400 dark:text-gray-500">/100</span>
           </div>
           <div className="text-right">
-            <p className="text-xs font-semibold text-st-black dark:text-white">
+            <p className="text-xs font-semibold text-st-black dark:text-dark-primary">
               {issuesFound} {issuesFound === 1 ? 'issue' : 'issues'} found
             </p>
             {pendingCount > 0 && (
@@ -545,21 +545,21 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
           <div className="mt-3 p-3 bg-gray-50 dark:bg-[#1E2121]/50 border border-gray-200 dark:border-transparent rounded-lg text-[11px] font-sans text-gray-600 dark:text-gray-400 space-y-2 leading-relaxed">
             <div className="grid grid-cols-2 gap-y-1.5 border-b border-gray-100 dark:border-gray-800 pb-2">
               <div>Last Seen Event</div>
-              <div className="font-semibold text-st-black dark:text-white">{tracker_install.last_event_name || 'None'}</div>
+              <div className="font-semibold text-st-black dark:text-dark-primary">{tracker_install.last_event_name || 'None'}</div>
 
               <div>Last Event Timestamp</div>
-              <div className="font-mono text-st-black dark:text-white">
+              <div className="font-mono text-st-black dark:text-dark-primary">
                 {tracker_install.last_seen_at ? new Date(tracker_install.last_seen_at).toLocaleString() : 'Never'}
               </div>
 
               <div>Event Source Domain</div>
-              <div className="font-semibold text-st-black dark:text-white">{domain_match.event_domain || 'Unknown'}</div>
+              <div className="font-semibold text-st-black dark:text-dark-primary">{domain_match.event_domain || 'Unknown'}</div>
 
               <div>Registered Domain</div>
-              <div className="font-semibold text-st-black dark:text-white">{domain_match.registered_domain || 'Not configured'}</div>
+              <div className="font-semibold text-st-black dark:text-dark-primary">{domain_match.registered_domain || 'Not configured'}</div>
 
               <div>Environment Type</div>
-              <div className="font-mono text-st-black dark:text-white uppercase tracking-wider text-[10px]">
+              <div className="font-mono text-st-black dark:text-dark-primary uppercase tracking-wider text-[10px]">
                 {environment_detection}
               </div>
             </div>

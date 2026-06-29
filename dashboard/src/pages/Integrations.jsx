@@ -88,7 +88,7 @@ const CollapsibleRow = ({
             <Icon className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <h4 className="text-sm font-semibold text-st-black dark:text-white flex items-center gap-2">
+            <h4 className="text-sm font-semibold text-st-black dark:text-dark-primary flex items-center gap-2">
               {title}
             </h4>
             <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5 line-clamp-1">{subtitle}</p>
@@ -805,7 +805,7 @@ export default function Integrations() {
             <p className="text-[10px] uppercase font-bold tracking-wider text-st-gray dark:text-gray-500">Tracking Status</p>
             <div className="flex items-center gap-2 mt-0.5">
               <span className={`w-2 h-2 rounded-full ${isVerified ? 'bg-green-500' : 'bg-amber-500'}`}></span>
-              <span className="text-sm font-bold text-st-black dark:text-white">{isVerified ? 'Active' : 'Pending Verification'}</span>
+              <span className="text-sm font-bold text-st-black dark:text-dark-primary">{isVerified ? 'Active' : 'Pending Verification'}</span>
             </div>
           </div>
         </div>
@@ -941,13 +941,13 @@ export default function Integrations() {
                   <div className="grid grid-cols-2 gap-4 pb-3 border-b border-gray-100 dark:border-gray-800">
                     <div>
                       <p className="text-xs text-st-gray dark:text-gray-400 font-medium uppercase tracking-wider mb-1">Last Event</p>
-                      <p className="text-sm text-st-black dark:text-white">
+                      <p className="text-sm text-st-black dark:text-dark-primary">
                         {installData?.last_event ? new Date(installData.last_event).toLocaleString() : '—'}
                       </p>
                     </div>
                     <div>
                       <p className="text-xs text-st-gray dark:text-gray-400 font-medium uppercase tracking-wider mb-1">Event Type</p>
-                      <p className="text-sm text-st-black dark:text-white">{installData?.last_event_type || '—'}</p>
+                      <p className="text-sm text-st-black dark:text-dark-primary">{installData?.last_event_type || '—'}</p>
                     </div>
                   </div>
 
@@ -1113,7 +1113,7 @@ export default function Integrations() {
                         onChange={e => setStripeSecret(e.target.value)}
                         placeholder="whsec_..."
                         disabled={isPreview || stripeSubmitting}
-                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a1d1d] text-st-black dark:text-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-st-black/20"
+                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a1d1d] text-st-black dark:text-dark-primary rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-st-black/20"
                       />
                     </div>
                     <button
@@ -1127,7 +1127,7 @@ export default function Integrations() {
                 )}
 
                 <div className="pt-3 border-t border-gray-100 dark:border-gray-800/60 space-y-2">
-                  <p className="text-xs font-semibold text-st-black dark:text-white">Quick setup</p>
+                  <p className="text-xs font-semibold text-st-black dark:text-dark-primary">Quick setup</p>
                   <ul className="text-xs text-st-gray dark:text-gray-400 space-y-1.5 font-sans">
                     <li className="flex items-start gap-2">
                       <span className="text-green-500 font-medium">✓</span>
@@ -1243,7 +1243,7 @@ export default function Integrations() {
                         onChange={e => setShopifySecret(e.target.value)}
                         placeholder="Paste webhook secret key"
                         disabled={isPreview || shopifySubmitting}
-                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a1d1d] text-st-black dark:text-white rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-st-black/20"
+                        className="w-full px-3 py-2 border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a1d1d] text-st-black dark:text-dark-primary rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-st-black/20"
                       />
                     </div>
                     <button
@@ -1257,7 +1257,7 @@ export default function Integrations() {
                 )}
 
                 <div className="pt-3 border-t border-gray-100 dark:border-gray-800/60 space-y-2">
-                  <p className="text-xs font-semibold text-st-black dark:text-white">Quick setup</p>
+                  <p className="text-xs font-semibold text-st-black dark:text-dark-primary">Quick setup</p>
                   <ul className="text-xs text-st-gray dark:text-gray-400 space-y-1.5 font-sans">
                     <li className="flex items-start gap-2">
                       <span className="text-green-500 font-medium">✓</span>
@@ -1335,7 +1335,7 @@ export default function Integrations() {
                       onClick={() => setEmailTab(tab.id)}
                       className={`px-3 py-1.5 text-xs font-semibold border-b-2 transition-colors ${
                         emailTab === tab.id
-                          ? 'border-st-lime text-st-lime dark:text-white'
+                          ? 'border-st-lime text-st-lime dark:text-dark-primary'
                           : 'border-transparent text-st-gray hover:text-white'
                       }`}
                     >
@@ -1404,7 +1404,7 @@ export default function Integrations() {
                               ['val', 'Numeric value (for conversions)'],
                             ].map(([k, v]) => (
                               <div key={k} className="flex items-start gap-1.5">
-                                <code className="text-[10px] font-mono text-st-black dark:text-white bg-gray-200 dark:bg-[#2A2E2E] px-1 py-0.5 rounded shrink-0">{k}</code>
+                                <code className="text-[10px] font-mono text-st-black dark:text-dark-primary bg-gray-200 dark:bg-[#2A2E2E] px-1 py-0.5 rounded shrink-0">{k}</code>
                                 <span className="text-[10px] text-st-gray dark:text-gray-400">{v}</span>
                               </div>
                             ))}
@@ -1457,7 +1457,7 @@ export default function Integrations() {
             >
               <div className="space-y-3">
                 <div>
-                  <p className="text-xs font-semibold text-st-black dark:text-white mb-1.5">CSV columns</p>
+                  <p className="text-xs font-semibold text-st-black dark:text-dark-primary mb-1.5">CSV columns</p>
                   <div className="overflow-x-auto">
                     <table className="text-[11px] w-full border-collapse">
                       <thead>
@@ -1618,7 +1618,7 @@ export default function Integrations() {
                               <select
                                 value={selectedProperty}
                                 onChange={e => setSelectedProperty(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-200 dark:border-[#2A2C30] bg-white dark:bg-[#161719] text-st-black dark:text-white rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-st-black/20"
+                                className="w-full px-3 py-2 border border-gray-200 dark:border-[#2A2C30] bg-white dark:bg-[#161719] text-st-black dark:text-dark-primary rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-st-black/20"
                               >
                                 <option value="">-- Choose verified property URL --</option>
                                 {gscPropertiesData.properties.map(p => (
@@ -1656,7 +1656,7 @@ export default function Integrations() {
                           {gscIntegData.last_synced_at && (
                             <div>
                               <p className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Last Synced At</p>
-                              <span className="text-xs text-st-black dark:text-white mt-0.5 block">
+                              <span className="text-xs text-st-black dark:text-dark-primary mt-0.5 block">
                                 {new Date(gscIntegData.last_synced_at).toLocaleString()}
                               </span>
                             </div>
@@ -1699,7 +1699,7 @@ export default function Integrations() {
                 )}
 
                 <div className="pt-3 border-t border-gray-200 dark:border-gray-800/60 space-y-1.5 text-xs text-st-gray dark:text-gray-400 font-sans">
-                  <p className="font-semibold text-st-black dark:text-white">Estimated SEO Revenue Allocation Logic</p>
+                  <p className="font-semibold text-st-black dark:text-dark-primary">Estimated SEO Revenue Allocation Logic</p>
                   <p className="leading-relaxed font-light">
                     This integration maps GSC performance data to SourceTrack conversion records using a landing-page matched estimated allocation model.
                   </p>
@@ -1811,7 +1811,7 @@ export default function Integrations() {
               <div className="space-y-2">
                 <div className="flex justify-between items-center pb-2 mb-2 border-b border-gray-200 dark:border-gray-800/60">
                   <div>
-                    <h4 className="text-sm font-semibold text-st-black dark:text-white">Developer Options</h4>
+                    <h4 className="text-sm font-semibold text-st-black dark:text-dark-primary">Developer Options</h4>
                     <p className="text-xs text-st-gray dark:text-gray-400">API, webhooks, and custom conversion methods</p>
                   </div>
                   <button
@@ -1919,7 +1919,7 @@ export default function Integrations() {
 
                       <div className="pt-3 border-t border-gray-100 dark:border-gray-800/60 space-y-1.5">
                         <div className="flex justify-between items-center">
-                          <h4 className="text-xs font-semibold text-st-black dark:text-white">Stitching to visitor journeys</h4>
+                          <h4 className="text-xs font-semibold text-st-black dark:text-dark-primary">Stitching to visitor journeys</h4>
                           <div className="flex gap-3">
                             <Link to="/developers/offline-conversions" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline font-sans">
                               Offline conversions →
@@ -1930,7 +1930,7 @@ export default function Integrations() {
                           </div>
                         </div>
                         <p className="text-xs text-st-gray dark:text-gray-400 font-sans leading-relaxed font-light">
-                          Stitch payments to a visitor journey by sending the anonymous id (from the browser storage <code className="font-mono text-[11px] bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-st-black dark:text-white">st_aid</code>) in the <code className="font-mono text-[11px] bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-st-black dark:text-white">anonymous_id</code> field. Without it, the conversion is recorded as <code className="font-mono">unattributed</code>.
+                          Stitch payments to a visitor journey by sending the anonymous id (from the browser storage <code className="font-mono text-[11px] bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-st-black dark:text-dark-primary">st_aid</code>) in the <code className="font-mono text-[11px] bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-st-black dark:text-dark-primary">anonymous_id</code> field. Without it, the conversion is recorded as <code className="font-mono">unattributed</code>.
                         </p>
                       </div>
 

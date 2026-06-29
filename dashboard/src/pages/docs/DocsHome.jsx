@@ -82,7 +82,7 @@ export default function DocsHome() {
 
       <div className="space-y-8">
         <div>
-          <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+          <h1 className="text-3xl font-black text-gray-900 dark:text-dark-primary tracking-tight">
             SourceTrack Docs
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-2 text-base leading-relaxed">
@@ -91,21 +91,21 @@ export default function DocsHome() {
         </div>
 
         <section>
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2 mb-4">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2 mb-4">
             Start here
           </h2>
           <DocsCardGrid items={START_CARDS} />
         </section>
 
         <section>
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2 mb-4">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2 mb-4">
             Platform setup recipes
           </h2>
           <DocsCardGrid items={PLATFORM_CARDS} />
         </section>
 
         <section>
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2 mb-4">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2 mb-4">
             Help & Developer Portal
           </h2>
           <DocsCardGrid items={HELP_CARDS} />
@@ -113,48 +113,48 @@ export default function DocsHome() {
 
         {/* Glossary / Terms Section */}
         <section className="bg-gray-50 dark:bg-[#131515] border border-gray-200 dark:border-gray-800 rounded-2xl p-6 space-y-4">
-          <h2 className="text-lg font-extrabold text-gray-950 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-2">
+          <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Glossary: Key Concepts
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="space-y-1">
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white">Tracker Script</h3>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-dark-primary">Tracker Script</h3>
               <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
                 The lightweight JavaScript snippet that loads on your website pages to record visitor sessions and referrers.
               </p>
             </div>
             <div className="space-y-1">
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white">Site Key</h3>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-dark-primary">Site Key</h3>
               <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
                 The public identifier (starting with <code>st_</code>) that authorizes your script to submit tracking data to your dashboard profile.
               </p>
             </div>
             <div className="space-y-1">
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white">Pageview</h3>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-dark-primary">Pageview</h3>
               <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
                 An event recorded automatically every time a customer navigates to a new page or route on your site.
               </p>
             </div>
             <div className="space-y-1">
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white">Conversion</h3>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-dark-primary">Conversion</h3>
               <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
                 A key action taken by a user (like registering, booking a demo, or buying an item) that you want to track and attribute.
               </p>
             </div>
             <div className="space-y-1">
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white">Source & Referrer</h3>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-dark-primary">Source & Referrer</h3>
               <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
                 The channel or website that referred the user to your page (e.g. <code>google</code>, <code>twitter.com</code>, or direct traffic).
               </p>
             </div>
             <div className="space-y-1">
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white">UTMs & Click IDs</h3>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-dark-primary">UTMs & Click IDs</h3>
               <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
                 Standard tags (like <code>utm_source</code>) and ad click identifiers (like <code>gclid</code>) parsed from the URL to map paid ad campaigns.
               </p>
             </div>
             <div className="space-y-1">
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white">Webhook</h3>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-dark-primary">Webhook</h3>
               <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
                 An automated server-to-server message sent from payment systems (like Stripe or Shopify) to report order value to SourceTrack.
               </p>

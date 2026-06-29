@@ -308,7 +308,7 @@ export default function Onboarding() {
                 value={domain}
                 onChange={(e) => setDomain(e.target.value)}
                 placeholder="ex: google.com"
-                className="w-full px-4 py-3 bg-white dark:bg-[#1A1F1F] text-[#1F2323] dark:text-white placeholder:text-[#8D9696] border border-[#C9D1D1] dark:border-white/15 rounded-xl text-sm outline-none focus:ring-2 focus:ring-st-lime focus:border-st-lime"
+                className="w-full px-4 py-3 bg-white dark:bg-[#1A1F1F] text-[#1F2323] dark:text-dark-primary placeholder:text-[#8D9696] border border-[#C9D1D1] dark:border-white/15 rounded-xl text-sm outline-none focus:ring-2 focus:ring-st-lime focus:border-st-lime"
               />
               <p className="text-xs text-st-gray dark:text-gray-400 mt-1">We'll use this URL to personalize your set up process</p>
               {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
@@ -353,7 +353,7 @@ export default function Onboarding() {
                       <Icon className="w-8 h-8" />
                     </span>
                     <div>
-                      <p className="font-extrabold text-[#1F2323] dark:text-white">{bt.label}</p>
+                      <p className="font-extrabold text-[#1F2323] dark:text-dark-primary">{bt.label}</p>
                       <p className="text-xs text-st-gray dark:text-gray-400 mt-1">{bt.desc}</p>
                     </div>
                   </button>
@@ -393,12 +393,12 @@ export default function Onboarding() {
                           : 'border-gray-200 dark:border-white/10 hover:border-st-lime/70 bg-white dark:bg-white/[0.02]'
                     }`}
                   >
-                    <span className={`h-20 w-full rounded-xl flex items-center justify-center ${selected ? 'bg-white dark:bg-white text-[#1F2323]' : 'bg-[#F1F4F4] dark:bg-white/5 text-[#1F2323] dark:text-white'}`}>
+                    <span className={`h-20 w-full rounded-xl flex items-center justify-center ${selected ? 'bg-white dark:bg-white text-[#1F2323]' : 'bg-[#F1F4F4] dark:bg-white/5 text-[#1F2323] dark:text-dark-primary'}`}>
                       <Icon className="w-10 h-10" />
                     </span>
                     <div className="flex-1">
                       <div className="flex items-center justify-center gap-2">
-                        <p className="font-extrabold text-[#1F2323] dark:text-white">{m.label}</p>
+                        <p className="font-extrabold text-[#1F2323] dark:text-dark-primary">{m.label}</p>
                         {m.recommended && <span className="text-[10px] font-bold bg-lime-100 text-lime-800 px-1.5 py-0.5 rounded-full">Recommended</span>}
                       </div>
                       <p className="text-xs text-st-gray dark:text-gray-400 mt-1">{m.desc}</p>
@@ -452,7 +452,7 @@ export default function Onboarding() {
                       {selected && <Check className="w-3 h-3 text-white" />}
                     </div>
                     <div>
-                      <p className="font-semibold text-sm text-st-black dark:text-white">{conv.label}</p>
+                      <p className="font-semibold text-sm text-st-black dark:text-dark-primary">{conv.label}</p>
                       <p className="text-xs text-st-gray dark:text-gray-400">{conv.desc}</p>
                     </div>
                   </button>
@@ -482,7 +482,7 @@ export default function Onboarding() {
             <button type="button" onClick={() => setStep(5)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-white transition-colors mb-3">
               <ArrowLeft className="w-4 h-4" /> Back
             </button>
-            <p className="text-sm font-medium text-gray-700 dark:text-white mb-1">
+            <p className="text-sm font-medium text-gray-700 dark:text-dark-primary mb-1">
               Verify SourceTrack Script in {installMethod === 'gtm' ? 'GTM' : 'Your Site'}
             </p>
             <p className="text-xs text-st-gray dark:text-gray-400 mb-4 leading-normal">
@@ -494,7 +494,7 @@ export default function Onboarding() {
                 <div className="w-12 h-12 rounded-full bg-st-lime/10 dark:bg-st-lime/5 flex items-center justify-center mx-auto">
                   <Check className="w-6 h-6 text-st-lime" />
                 </div>
-                <p className="text-lg font-semibold text-st-black dark:text-white">Great! Script Verified Successfully</p>
+                <p className="text-lg font-semibold text-st-black dark:text-dark-primary">Great! Script Verified Successfully</p>
                 <p className="text-xs text-st-gray dark:text-gray-400">Your site is connected and data is flowing.</p>
                 <button
                   disabled={loading}
@@ -634,7 +634,7 @@ export default function Onboarding() {
           <pre className="text-xs text-[#1F2323] dark:text-gray-200 overflow-x-auto whitespace-pre-wrap break-all pr-24">{snippet || 'Loading script...'}</pre>
           <button
             onClick={handleCopySnippet}
-            className="absolute top-3 right-3 px-3 py-1.5 bg-white dark:bg-white/10 text-[#1F2323] dark:text-white border border-gray-200 dark:border-white/10 text-xs rounded-lg hover:bg-gray-50 dark:hover:bg-white/15 flex items-center gap-1"
+            className="absolute top-3 right-3 px-3 py-1.5 bg-white dark:bg-white/10 text-[#1F2323] dark:text-dark-primary border border-gray-200 dark:border-white/10 text-xs rounded-lg hover:bg-gray-50 dark:hover:bg-white/15 flex items-center gap-1"
           >
             <Copy className="w-3 h-3" /> {copied ? 'Copied!' : 'Copy Code'}
           </button>
@@ -657,7 +657,7 @@ export default function Onboarding() {
                 className="flex items-center justify-between gap-2 rounded-xl border border-[#DDE4E4] dark:border-white/10 bg-white dark:bg-white/5 px-3 py-2 hover:border-blue-400 dark:hover:border-blue-400/60 hover:bg-blue-50/40 dark:hover:bg-white/10 transition-colors"
               >
                 <span className="min-w-0">
-                  <span className="block text-xs font-bold text-[#1F2323] dark:text-white truncate">{p.label}</span>
+                  <span className="block text-xs font-bold text-[#1F2323] dark:text-dark-primary truncate">{p.label}</span>
                   <span className="block text-[10px] text-[#6B7373] dark:text-gray-400 truncate">{p.desc}</span>
                 </span>
                 <ArrowRight className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
@@ -707,7 +707,7 @@ export default function Onboarding() {
   const phaseIdx = step <= 2 ? 0 : step <= 4 ? 1 : 2
 
   return (
-    <div className="min-h-screen bg-[#F1F4F4] dark:bg-[#2B302F] text-[#1F2323] dark:text-white flex flex-col">
+    <div className="min-h-screen bg-[#F1F4F4] dark:bg-[#2B302F] text-[#1F2323] dark:text-dark-primary flex flex-col">
       {/* Header — brand left, stepper centered (desktop), logout right */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-6 px-6 lg:px-12 py-8">
         <div className="dark:hidden"><LogoFull className="h-8 w-auto" /></div>
@@ -744,9 +744,9 @@ export default function Onboarding() {
                 <span
                   className={`text-sm whitespace-nowrap tracking-[-0.02em] ${
                     isCurrent
-                      ? 'font-extrabold text-[#1F2323] dark:text-white'
+                      ? 'font-extrabold text-[#1F2323] dark:text-dark-primary'
                       : isCompleted
-                      ? `font-semibold text-[#1F2323] dark:text-white ${clickable ? 'group-hover:underline' : ''}`
+                      ? `font-semibold text-[#1F2323] dark:text-dark-primary ${clickable ? 'group-hover:underline' : ''}`
                       : 'font-medium text-[#6B7373] dark:text-gray-500'
                   }`}
                 >
@@ -759,7 +759,7 @@ export default function Onboarding() {
         </div>
         <button
           onClick={() => { signOut(); navigate('/login', { replace: true }) }}
-          className="justify-self-end inline-flex items-center justify-center min-h-[44px] px-5 rounded-full border border-[rgba(31,35,35,.12)] dark:border-white/15 bg-white dark:bg-white/5 text-[#1F2323] dark:text-white text-sm font-bold hover:bg-[#F1F4F4] dark:hover:bg-white/10 transition-colors"
+          className="justify-self-end inline-flex items-center justify-center min-h-[44px] px-5 rounded-full border border-[rgba(31,35,35,.12)] dark:border-white/15 bg-white dark:bg-white/5 text-[#1F2323] dark:text-dark-primary text-sm font-bold hover:bg-[#F1F4F4] dark:hover:bg-white/10 transition-colors"
         >
           Log out
         </button>
@@ -778,7 +778,7 @@ export default function Onboarding() {
           <span className="inline-flex items-center px-3 py-1 rounded-full bg-white dark:bg-white/5 text-xs font-semibold text-[#6B7373] dark:text-gray-400 mb-2">
             Step {step} of 6
           </span>
-          <p className="text-lg font-extrabold text-[#1F2323] dark:text-white">{STEP_TITLES[step]}</p>
+          <p className="text-lg font-extrabold text-[#1F2323] dark:text-dark-primary">{STEP_TITLES[step]}</p>
         </div>
         {renderStepContent()}
       </div>
