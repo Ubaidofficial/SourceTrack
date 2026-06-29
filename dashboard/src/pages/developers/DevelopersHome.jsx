@@ -72,7 +72,7 @@ export default function DevelopersHome() {
         </section>
 
         {/* Developer Glossary Section */}
-        <section className="bg-gray-50 dark:bg-[#131515] border border-gray-200 dark:border-gray-800 rounded-2xl p-6 space-y-4">
+        <section className="bg-gray-50 dark:bg-dark-card border border-gray-200 dark:border-gray-800 rounded-2xl p-6 space-y-4">
           <h2 className="text-lg font-extrabold text-gray-950 dark:text-dark-primary border-b border-gray-100 dark:border-gray-800 pb-2">
             Developer Glossary: Concepts
           </h2>

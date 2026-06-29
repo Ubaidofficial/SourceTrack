@@ -36,7 +36,7 @@ function ParamTable({ params }) {
 
 function Endpoint({ method, path, description }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 bg-gray-50 dark:bg-[#1a1d1d] border border-gray-200 dark:border-[#2a2e2e] rounded-lg px-4 py-3 my-4">
+    <div className="flex flex-wrap items-center gap-3 bg-gray-50 dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg px-4 py-3 my-4">
       <span className={`inline-block text-[11px] font-bold font-mono px-2 py-0.5 rounded ${
         method === 'POST'
           ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'

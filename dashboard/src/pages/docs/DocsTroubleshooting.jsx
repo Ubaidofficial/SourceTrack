@@ -99,7 +99,7 @@ export default function DocsTroubleshooting() {
 
           <div className="space-y-6">
             {TROUBLESHOOTING_ITEMS.map((item, idx) => (
-              <div key={idx} className="p-5 bg-white dark:bg-[#1A1D1D] border border-gray-200 dark:border-gray-800 rounded-xl space-y-3">
+              <div key={idx} className="p-5 bg-white dark:bg-dark-card border border-gray-200 dark:border-gray-800 rounded-xl space-y-3">
                 <h3 className="text-sm font-extrabold text-red-600 flex items-start gap-1.5">
                   <span className="mt-0.5 shrink-0">Symptom:</span>
                   <span>{item.symptom}</span>
