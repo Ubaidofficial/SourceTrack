@@ -467,6 +467,14 @@ async function processSite(site) {
 // attribution_status='unknown' to the now-resolved subscription_identity source;
 // the .eq('attribution_status','unknown') filter preserves acquisition-lock by
 // never touching already-resolved rows. Non-fatal.
+//
+// TODO(perf, follow-up): this re-scans EVERY permanently-unknown row every night
+// — customers whose acquisition never resolves stay in the unknown set forever,
+// so the per-night cost grows unbounded with churned/unattributable subscriptions.
+// Fine at current volume (~0 subscriptions). Intended bound: only sweep identities
+// that became 'resolved' since the last run (e.g. filter subscription_identity by
+// source_locked_at > last_run_at), so the work is proportional to NEW resolutions,
+// not the cumulative unknown backlog.
 async function backfillSubscriptionRevenueSource(site) {
   try {
     const { data: unknownRows, error: selErr } = await supabase
