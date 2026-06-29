@@ -33,7 +33,6 @@ const FEATURE_MATRIX = {
   capi_server_side:        { free: false, trial: true,  starter: true,  growth: true,  scale: true },
   over_reporting_detection:{ free: false, trial: true,  starter: true,  growth: true,  scale: true },
   revenue_analytics:       { free: false, trial: true,  starter: false, growth: true,  scale: true },
-  custom_segments:         { free: false, trial: true,  starter: true,  growth: true,  scale: true },
   funnels_cohorts:         { free: false, trial: true,  starter: true,  growth: true,  scale: true },
   email_reports:           { free: false, trial: true,  starter: true,  growth: true,  scale: true },
   csv_export:              { free: false, trial: true,  starter: true,  growth: true,  scale: true },
