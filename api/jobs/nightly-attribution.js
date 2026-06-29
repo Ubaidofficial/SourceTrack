@@ -2,6 +2,7 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 import { getSupabase } from '../lib/supabase.js'
+import { esc } from '../lib/utils.js'
 import { clampDays, classifyJourney, applyBackfill } from '../lib/backfill.js'
 import { purgeSiteRetention } from '../lib/retention-purge.js'
 import { runGscDailySync } from '../lib/gsc-daily-sync.js'
@@ -285,7 +286,7 @@ async function runBackfill() {
     SELECT uuid, distinct_id, timestamp, properties.conversion_type, properties.conversion_value, properties.external_event_id, properties.webhook_customer_id, properties.stripe_subscription_id, properties.stripe_invoice_id, properties.currency, properties.provider_event_id, properties.occurred_at
     FROM events
     WHERE event = '$conversion'
-      AND properties.site_id = '${site.id}'
+      AND properties.site_id = '${esc(site.id)}'
       AND timestamp >= now() - INTERVAL ${days} DAY
     ORDER BY timestamp ASC
     LIMIT 5000
@@ -352,7 +353,7 @@ async function processSite(site) {
 
   let suffixFilterClause = ''
   if (reprocessSuffixFilter) {
-    suffixFilterClause = `AND distinct_id LIKE '%${reprocessSuffixFilter}'`
+    suffixFilterClause = `AND distinct_id LIKE '%${esc(reprocessSuffixFilter)}'`
   } else if (site.site_key === 'de400000-babe-41d4-a716-446655440000') {
     suffixFilterClause = "AND distinct_id LIKE '%_mv'"
   }
@@ -373,7 +374,7 @@ async function processSite(site) {
       properties.occurred_at
     FROM events
     WHERE event = '$conversion'
-      AND properties.site_id = '${site.id}'
+      AND properties.site_id = '${esc(site.id)}'
       AND timestamp >= now() - INTERVAL ${lookbackInterval}
       ${suffixFilterClause}
     ORDER BY timestamp ASC
@@ -564,10 +565,10 @@ async function processConversion(site, conversion) {
       properties.browser_name
     FROM events
     WHERE event = '$pageview'
-      AND distinct_id = '${conversion.distinct_id}'
-      AND properties.site_id = '${site.id}'
-      AND timestamp <= toDateTime('${conversion.timestamp}')
-      AND timestamp >= toDateTime('${conversion.timestamp}') - INTERVAL ${windowDays} DAY
+      AND distinct_id = '${esc(conversion.distinct_id)}'
+      AND properties.site_id = '${esc(site.id)}'
+      AND timestamp <= toDateTime('${esc(conversion.timestamp)}')
+      AND timestamp >= toDateTime('${esc(conversion.timestamp)}') - INTERVAL ${windowDays} DAY
     ORDER BY timestamp ASC
     LIMIT 500
   `
