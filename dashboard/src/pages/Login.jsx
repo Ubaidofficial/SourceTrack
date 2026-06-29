@@ -69,8 +69,8 @@ export default function Login() {
       <Helmet>
         <title>Log in to SourceTrack | SourceTrack</title>
         <meta name="description" content="Sign in to your SourceTrack attribution dashboard." />
-        <meta name="robots" content="noindex, nofollow" />
-        <link rel="canonical" href="https://sourcetrack.ai/login" />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://app.sourcetrack.ai/login" />
       </Helmet>
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">

@@ -29,6 +29,30 @@ app.use((req, res, next) => {
   next()
 })
 
+// Per-host indexing policy via X-Robots-Tag (authoritative: applies to every
+// response, beats the index.html <meta robots>, and actively *removes* already-
+// indexed URLs — unlike a robots.txt Disallow, which would block the crawl Google
+// needs to even see the noindex). Railway healthchecks still get a normal 200.
+//   - www.sourcetrack.ai  → marketing, fully indexable (no header).
+//   - app.sourcetrack.ai  → noindex EVERYTHING except the public auth entry
+//     points /login and /signup (their canonical is app.sourcetrack.ai/...).
+//   - Railway *.up.railway.app (prod + staging) + any other host → noindex all;
+//     they must not compete with the canonical domains in search.
+const INDEXABLE_APP_PATHS = new Set(['/login', '/signup'])
+app.use((req, res, next) => {
+  const host = req.headers.host || ''
+  if (host === CANONICAL_HOST) {
+    // marketing — fully indexable
+  } else if (host === APP_HOST) {
+    if (!INDEXABLE_APP_PATHS.has(req.path)) {
+      res.setHeader('X-Robots-Tag', 'noindex, nofollow')
+    }
+  } else {
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow')
+  }
+  next()
+})
+
 // Explicit XML / text routes so content-type is never ambiguous
 app.get('/sitemap.xml', (_req, res) => {
   res.setHeader('Content-Type', 'application/xml; charset=utf-8')

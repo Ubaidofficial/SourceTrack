@@ -1,8 +1,6 @@
 User-agent: *
 Disallow: /dashboard
 Disallow: /settings
-Disallow: /login
-Disallow: /signup
 Disallow: /auth/callback
 Disallow: /ai-chat
 Disallow: /ai-analytics
