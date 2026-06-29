@@ -1027,10 +1027,10 @@ async function runRetentionPurge(sites) {
       const cutoffStr = cutoff.toISOString().slice(0, 10)
 
       const counts = await purgeSiteRetention(supabase, site, cutoffStr)
-      const siteTotal = counts.attributed_conversions + counts.gsc_performance_daily + counts.gsc_sync_runs + (counts.capi_deliveries || 0)
+      const siteTotal = counts.attributed_conversions + counts.gsc_performance_daily + counts.gsc_sync_runs + (counts.capi_deliveries || 0) + (counts.custom_events || 0)
 
       if (siteTotal > 0) {
-        log(`Retention purge: site ${site.site_key} — conversions:${counts.attributed_conversions} gsc_perf:${counts.gsc_performance_daily} gsc_runs:${counts.gsc_sync_runs} capi:${counts.capi_deliveries || 0} (>${site.data_retention_days}d old)`)
+        log(`Retention purge: site ${site.site_key} — conversions:${counts.attributed_conversions} gsc_perf:${counts.gsc_performance_daily} gsc_runs:${counts.gsc_sync_runs} capi:${counts.capi_deliveries || 0} custom:${counts.custom_events || 0} (>${site.data_retention_days}d old)`)
         totalPurged += siteTotal
       }
     } catch (siteErr) {
