@@ -782,7 +782,7 @@ export default function Integrations() {
               Over-reporting detection · Starter plan
             </p>
             <p className="text-sm text-st-gray">
-              Automatically flag duplicate pixel fires that inflate Meta / Google / TikTok
+              Automatically flag duplicate pixel fires that inflate Meta / Google
               conversion counts. Upgrade to keep your ad platform numbers honest.
             </p>
           </div>

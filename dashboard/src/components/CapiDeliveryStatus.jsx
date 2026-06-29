@@ -15,11 +15,10 @@ import { fetchApi } from '../lib/api'
 const PLATFORMS = [
   { key: 'all', label: 'All' },
   { key: 'meta', label: 'Meta' },
-  { key: 'google', label: 'Google' },
-  { key: 'tiktok', label: 'TikTok' }
+  { key: 'google', label: 'Google' }
 ]
 
-const PLATFORM_LABEL = { meta: 'Meta', google: 'Google', tiktok: 'TikTok', microsoft: 'Microsoft', linkedin: 'LinkedIn' }
+const PLATFORM_LABEL = { meta: 'Meta', google: 'Google', microsoft: 'Microsoft', linkedin: 'LinkedIn' }
 
 // Status → badge classes. Covers the prod CHECK values (success/failed/skipped)
 // AND the spec vocabulary (pending/retry/error/rejected) so it renders correctly
@@ -99,7 +98,7 @@ export default function CapiDeliveryStatus({ siteKey }) {
     return (
       <Shell>
         <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed mt-1">
-          No CAPI deliveries recorded yet — connect Meta, Google, or TikTok to start forwarding conversions.
+          No CAPI deliveries recorded yet — connect Meta or Google to start forwarding conversions.
         </p>
       </Shell>
     )
