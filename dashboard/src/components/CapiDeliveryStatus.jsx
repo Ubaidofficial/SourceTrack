@@ -18,7 +18,7 @@ const PLATFORMS = [
   { key: 'google', label: 'Google' }
 ]
 
-const PLATFORM_LABEL = { meta: 'Meta', google: 'Google', microsoft: 'Microsoft', linkedin: 'LinkedIn' }
+const PLATFORM_LABEL = { meta: 'Meta', google: 'Google' }
 
 // Status → badge classes. Covers the prod CHECK values (success/failed/skipped)
 // AND the spec vocabulary (pending/retry/error/rejected) so it renders correctly
