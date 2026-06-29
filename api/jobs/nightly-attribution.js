@@ -282,7 +282,7 @@ async function runBackfill() {
   }
 
   const conversionsQuery = `
-    SELECT uuid, distinct_id, timestamp, properties.conversion_type, properties.conversion_value, properties.external_event_id, properties.webhook_customer_id, properties.stripe_subscription_id
+    SELECT uuid, distinct_id, timestamp, properties.conversion_type, properties.conversion_value, properties.external_event_id, properties.webhook_customer_id, properties.stripe_subscription_id, properties.stripe_invoice_id, properties.currency, properties.provider_event_id, properties.occurred_at
     FROM events
     WHERE event = '$conversion'
       AND properties.site_id = '${site.id}'
@@ -299,7 +299,9 @@ async function runBackfill() {
     const conversion = {
       uuid: row[0], distinct_id: row[1], timestamp: row[2],
       conversion_type: row[3], conversion_value: row[4], external_event_id: row[5] || null,
-      webhook_customer_id: row[6] || null, stripe_subscription_id: row[7] || null
+      webhook_customer_id: row[6] || null, stripe_subscription_id: row[7] || null,
+      stripe_invoice_id: row[8] || null, currency: row[9] || null,
+      provider_event_id: row[10] || null, occurred_at: row[11] || null
     }
     if (!conversion.uuid || !conversion.distinct_id || !conversion.timestamp) {
       logWarn(`Skipping invalid conversion ${conversion.uuid}`)
@@ -364,7 +366,11 @@ async function processSite(site) {
       properties.conversion_value,
       properties.external_event_id,
       properties.webhook_customer_id,
-      properties.stripe_subscription_id
+      properties.stripe_subscription_id,
+      properties.stripe_invoice_id,
+      properties.currency,
+      properties.provider_event_id,
+      properties.occurred_at
     FROM events
     WHERE event = '$conversion'
       AND properties.site_id = '${site.id}'
@@ -403,9 +409,13 @@ async function processSite(site) {
         conversion_value: row[4],
         external_event_id: row[5] || null,
         webhook_customer_id: row[6] || null,
-        stripe_subscription_id: row[7] || null
+        stripe_subscription_id: row[7] || null,
+        stripe_invoice_id: row[8] || null,
+        currency: row[9] || null,
+        provider_event_id: row[10] || null,
+        occurred_at: row[11] || null
       }
-      
+
       const record = await processConversion(site, conversion)
       if (isReprocess) {
         records.push(record)
@@ -444,8 +454,53 @@ async function processSite(site) {
     log(`Reprocessing complete for site ${site.site_key}: successfully inserted ${records.length} rows.`)
   }
 
+  // Step 3: source backfill sweep — flip subscription_revenue rows from
+  // 'unknown'→resolved when the matching subscription_identity is now 'resolved'.
+  await backfillSubscriptionRevenueSource(site)
+
   log(`Site ${site.site_key}: ${processed} processed, ${failed} failed`)
   return { processed, failed }
+}
+
+// Guarded source backfill for subscription_revenue: the ONLY path that can
+// change a revenue row's source after insert. Updates rows that are currently
+// attribution_status='unknown' to the now-resolved subscription_identity source;
+// the .eq('attribution_status','unknown') filter preserves acquisition-lock by
+// never touching already-resolved rows. Non-fatal.
+async function backfillSubscriptionRevenueSource(site) {
+  try {
+    const { data: unknownRows, error: selErr } = await supabase
+      .from('subscription_revenue')
+      .select('stripe_customer_id')
+      .eq('site_id', site.id)
+      .eq('attribution_status', 'unknown')
+    if (selErr) { logWarn(`subscription_revenue backfill select failed for site ${site.site_key}: ${selErr.message}`); return }
+    if (!unknownRows?.length) return
+
+    const customerIds = [...new Set(unknownRows.map(r => r.stripe_customer_id).filter(Boolean))]
+    for (const customerId of customerIds) {
+      const { data: identity } = await supabase
+        .from('subscription_identity')
+        .select('first_touch_source, first_touch_channel, attribution_status')
+        .eq('site_id', site.id)
+        .eq('stripe_customer_id', customerId)
+        .maybeSingle()
+      if (identity?.attribution_status !== 'resolved') continue
+      const { error: updErr } = await supabase
+        .from('subscription_revenue')
+        .update({
+          first_touch_source:  identity.first_touch_source,
+          first_touch_channel: identity.first_touch_channel,
+          attribution_status:  'resolved'
+        })
+        .eq('site_id', site.id)
+        .eq('stripe_customer_id', customerId)
+        .eq('attribution_status', 'unknown')   // acquisition-lock: never overwrite resolved rows
+      if (updErr) logWarn(`subscription_revenue backfill update failed for site ${site.site_key}: ${updErr.message}`)
+    }
+  } catch (err) {
+    logWarn(`subscription_revenue backfill threw for site ${site.site_key}: ${err.message}`)
+  }
 }
 
 function calculateConfidence(touchpoints, channel) {
@@ -720,9 +775,62 @@ async function processConversion(site, conversion) {
       last_touch_channel:    unstitched ? null : record.last_touch_channel,
       attribution_status:    unstitched ? 'unknown' : 'resolved'
     })
+
+    // Step 3: write the lifecycle/revenue row, denormalizing the LOCKED
+    // acquisition source from subscription_identity (read back below) — NOT this
+    // event's re-computed attribution, so renewals carry the acquisition source.
+    await insertSubscriptionRevenue(site, conversion)
   }
 
   return record
+}
+
+// Write one subscription_revenue row per subscription lifecycle event, with the
+// acquisition source denormalized from subscription_identity. ON CONFLICT
+// (site_id, dedup_key) DO NOTHING — amount is write-once; the backfill sweep is
+// the only path that later changes a row. Non-fatal (must not break attribution).
+async function insertSubscriptionRevenue(site, conversion) {
+  try {
+    // Denormalize the acquisition source from subscription_identity (just upserted
+    // for the acquisition event, or pre-existing for renewals). DO NOTHING insert
+    // wins on conflict so amount is write-once; the source-only backfill sweep is
+    // the only path that can later change a row.
+    const { data: identity } = await supabase
+      .from('subscription_identity')
+      .select('first_touch_source, first_touch_channel, attribution_status')
+      .eq('site_id', site.id)
+      .eq('stripe_customer_id', conversion.webhook_customer_id)
+      .maybeSingle()
+
+    const eventType = conversion.conversion_type
+    // dedup_key mirrors stripe-subscription.js buildSubscriptionIdempotencyKeys:
+    // invoice_id for revenue events; subscription_id:type for funnel events.
+    const dedupKey = conversion.stripe_invoice_id
+      ? conversion.stripe_invoice_id
+      : `${conversion.stripe_subscription_id}:${eventType}`
+
+    const { error } = await supabase
+      .from('subscription_revenue')
+      .upsert({
+        site_id:                site.id,
+        stripe_customer_id:     conversion.webhook_customer_id,
+        stripe_subscription_id: conversion.stripe_subscription_id,
+        invoice_id:             conversion.stripe_invoice_id || null,
+        event_type:             eventType,
+        amount:                 Number(conversion.conversion_value) || 0,
+        currency:               conversion.currency || 'USD',
+        first_touch_source:     identity?.attribution_status === 'resolved' ? identity.first_touch_source : null,
+        first_touch_channel:    identity?.attribution_status === 'resolved' ? identity.first_touch_channel : null,
+        attribution_status:     identity?.attribution_status === 'resolved' ? 'resolved' : 'unknown',
+        provider_event_id:      conversion.provider_event_id || null,
+        source_conversion_id:   conversion.uuid || null,
+        occurred_at:            conversion.occurred_at || conversion.timestamp,
+        dedup_key:              dedupKey
+      }, { onConflict: 'site_id,dedup_key', ignoreDuplicates: true })
+    if (error) logWarn(`subscription_revenue insert failed for site ${site.site_key}: ${error.message}`)
+  } catch (err) {
+    logWarn(`subscription_revenue insert threw for site ${site.site_key}: ${err.message}`)
+  }
 }
 
 // Acquisition-locked upsert into subscription_identity. ignoreDuplicates →
