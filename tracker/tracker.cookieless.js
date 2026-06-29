@@ -165,6 +165,25 @@
     for (var i = 0; i < q.length; i++) _rawSend(q[i][0], q[i][1])
   }
 
+  // ─── Engaged-time beacon ─────────────────────────────────────────────────────
+  // Fires ONE custom $heartbeat when the page is left, giving a single-page
+  // session a later same-session event so the server-derived session endTs (and
+  // therefore duration) reflects real engaged time instead of 0s. Deliberately
+  // NOT $pageview — that would consume pageview quota and inflate pageview_count.
+  // One per page load: _hbSent dedups the visibilitychange(hidden)+pagehide
+  // double-fire. SID is null until /api/tracker/id resolves, so guard on it.
+  // Cookie-free: reuses the existing IDs + consent/exclusion-gated send.
+  var _hbSent = false
+  function sendHeartbeat() {
+    if (_hbSent || !SID) return
+    _hbSent = true
+    send('/api/track', { site_key: K, event: '$heartbeat', anonymous_id: AID, session_id: SID, page_url: location.href })
+  }
+  addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') sendHeartbeat()
+  })
+  addEventListener('pagehide', sendHeartbeat)
+
   // ─── Flush queued events once IDs arrive ───────────────────────────────────
   function flush() {
     var q = _q.splice(0)

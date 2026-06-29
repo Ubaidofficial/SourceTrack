@@ -341,6 +341,24 @@
     for (var i = 0; i < q.length; i++) _rawSend(q[i][0], q[i][1])
   }
 
+  // ─── Engaged-time beacon ─────────────────────────────────────────────────────
+  // Fires ONE custom $heartbeat when the page is left, giving a single-page
+  // session a later same-session event so the server-derived session endTs (and
+  // therefore duration) reflects real engaged time instead of 0s. Deliberately
+  // NOT $pageview — that would consume pageview quota and inflate pageview_count.
+  // One per page load: _hbSent dedups the visibilitychange(hidden)+pagehide
+  // double-fire. Goes through the consent/exclusion-gated send + sendBeacon.
+  var _hbSent = false
+  function sendHeartbeat() {
+    if (_hbSent || !SID) return
+    _hbSent = true
+    send('/api/track', { site_key: K, event: '$heartbeat', anonymous_id: AID, session_id: SID, page_url: location.href })
+  }
+  addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') sendHeartbeat()
+  })
+  addEventListener('pagehide', sendHeartbeat)
+
   function sanitizeFtValue(val) {
     if (typeof val !== 'string') return ''
     var clean = val.replace(/[\x00-\x1F\x7F]/g, '').trim()
