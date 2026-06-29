@@ -546,7 +546,7 @@ export default function Campaigns() {
           <div className="flex items-center gap-2 flex-wrap">
             <h2 className="text-2xl font-bold text-st-black dark:text-dark-primary">Campaigns & Attribution</h2>
             <span
-              className="inline-flex items-center px-1.5 py-0.5 rounded bg-st-black/5 dark:bg-white/10 text-[10px] font-semibold text-st-black dark:text-white/90"
+              className="inline-flex items-center px-1.5 py-0.5 rounded bg-st-black/5 dark:bg-white/10 text-[10px] font-semibold text-st-black dark:text-dark-text/90"
               title="This page uses last-touch attribution. Revenue and conversions are credited to each visit's source at conversion time. To compare other models, open Report Builder."
             >
               Last Touch
@@ -626,7 +626,7 @@ export default function Campaigns() {
             {DATE_RANGES.map(dr => (
               <button key={dr.label} onClick={() => setDateRange(dr.days)}
                 className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                  dateRange === dr.days ? 'bg-white dark:bg-[#252929] text-st-black dark:text-dark-primary shadow-sm' : 'text-st-gray dark:text-gray-400 hover:text-gray-700 dark:hover:text-white'
+                  dateRange === dr.days ? 'bg-white dark:bg-[#252929] text-st-black dark:text-dark-primary shadow-sm' : 'text-st-gray dark:text-gray-400 hover:text-gray-700 dark:hover:text-dark-text'
                 }`}>
                 {dr.label}
               </button>

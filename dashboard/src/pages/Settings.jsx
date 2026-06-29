@@ -580,7 +580,7 @@ export default function Settings() {
             </div>
           </div>
           {!isPreview && (
-            <a href="/billing" className="text-xs text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white underline">
+            <a href="/billing" className="text-xs text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text underline">
               Manage billing →
             </a>
           )}
@@ -890,7 +890,7 @@ export default function Settings() {
         <div className="text-right">
           <a
             href="/developers/tracker"
-            className="inline-flex items-center gap-1 text-xs font-medium text-st-gray hover:text-st-black dark:text-gray-400 dark:hover:text-white transition-colors"
+            className="inline-flex items-center gap-1 text-xs font-medium text-st-gray hover:text-st-black dark:text-gray-400 dark:hover:text-dark-text transition-colors"
           >
             Custom Domain Setup Guide
             <ExternalLink className="w-3 h-3" />
@@ -1203,7 +1203,7 @@ export default function Settings() {
           </div>
           <a
             href="/developers"
-            className="text-xs text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white underline"
+            className="text-xs text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text underline"
           >
             Developer Portal →
           </a>
@@ -1311,14 +1311,14 @@ export default function Settings() {
         <div className="flex flex-wrap gap-4 pt-2 border-t border-gray-100 dark:border-gray-800 text-[11px]">
           <a
             href="/developers/api"
-            className="flex items-center gap-1 text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white"
+            className="flex items-center gap-1 text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text"
           >
             <ExternalLink className="w-3.5 h-3.5" />
             API Integration Guide
           </a>
           <a
             href="/developers/security"
-            className="flex items-center gap-1 text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white"
+            className="flex items-center gap-1 text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text"
           >
             <ShieldCheck className="w-3.5 h-3.5" />
             Security & Token Best Practices
@@ -1402,7 +1402,7 @@ export default function Settings() {
               {!createdToken && (
                 <button
                   onClick={() => setNewTokenModalOpen(false)}
-                  className="text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white"
+                  className="text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text"
                 >
                   <X className="w-4 h-4" />
                 </button>

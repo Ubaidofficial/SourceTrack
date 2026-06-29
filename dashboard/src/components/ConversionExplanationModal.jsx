@@ -69,7 +69,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
             <HelpCircle className="w-5 h-5 text-st-gray dark:text-gray-400" />
             <h3 className="text-base font-semibold text-st-black dark:text-dark-primary">Attribution Explanation</h3>
           </div>
-          <button onClick={onClose} className="p-1.5 text-st-gray dark:text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-dark-hover rounded-lg transition-colors">
+          <button onClick={onClose} className="p-1.5 text-st-gray dark:text-gray-400 hover:text-gray-600 dark:hover:text-dark-text hover:bg-gray-100 dark:hover:bg-dark-hover rounded-lg transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>

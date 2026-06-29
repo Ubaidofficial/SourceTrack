@@ -64,7 +64,7 @@ export default function DocsLayout({ children, isDeveloper = false }) {
                 <span className="font-black text-xs uppercase tracking-widest text-gray-400 dark:text-gray-500">Navigation</span>
                 <button
                   onClick={() => setMobileNavOpen(false)}
-                  className="p-1 rounded text-gray-500 hover:text-gray-800 dark:hover:text-white text-xs font-bold"
+                  className="p-1 rounded text-gray-500 hover:text-gray-800 dark:hover:text-dark-text text-xs font-bold"
                 >
                   Close
                 </button>
