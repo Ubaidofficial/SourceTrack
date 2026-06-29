@@ -1274,7 +1274,7 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
       get() {
         return {
           constructEvent: () => {
-            return { id: 'evt-123', type: 'customer.subscription.updated', data: { object: {} } }
+            return { id: 'evt-123', type: 'payment_intent.succeeded', data: { object: {} } }
           }
         }
       },
@@ -1319,7 +1319,7 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
 
       assert.strictEqual(statusVal, 200)
       assert.strictEqual(jsonVal.ignored, true)
-      assert.strictEqual(jsonVal.reason, 'Event type customer.subscription.updated ignored')
+      assert.strictEqual(jsonVal.reason, 'Event type payment_intent.succeeded ignored')
       assert.strictEqual(rpcCallCount, 0)
     } finally {
       client.from = originalFrom
