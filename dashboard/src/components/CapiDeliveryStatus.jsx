@@ -171,7 +171,7 @@ export default function CapiDeliveryStatus({ siteKey }) {
                       {hasError && (
                         <button
                           onClick={() => setExpanded(isOpen ? null : r.id)}
-                          className="ml-2 text-gray-400 hover:text-st-black dark:hover:text-white underline decoration-dotted"
+                          className="ml-2 text-gray-400 hover:text-st-black dark:hover:text-dark-text underline decoration-dotted"
                         >
                           {isOpen ? 'hide' : 'error'}
                         </button>

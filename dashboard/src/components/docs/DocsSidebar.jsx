@@ -75,7 +75,7 @@ export default function DocsSidebar({ isDeveloper = false, onItemClick }) {
                   className={`block px-3 py-2 rounded-lg text-[13px] font-semibold transition-all ${
                     active
                       ? 'bg-gray-200 dark:bg-[#252929] text-[#1F2323] dark:text-[#CCF03F] font-bold'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#1A1D1D]'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-dark-text hover:bg-gray-50 dark:hover:bg-[#1A1D1D]'
                   }`}
                 >
                   {link.label}

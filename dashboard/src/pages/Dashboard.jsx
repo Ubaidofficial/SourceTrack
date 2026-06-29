@@ -473,7 +473,7 @@ export default function Dashboard() {
                     <div>
                       <p className="text-sm font-medium text-st-black dark:text-dark-primary">Revenue &amp; attribution — no conversion events yet</p>
                       <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">
-                        Revenue, source attribution, and ROI reporting appear here once your site sends conversion events. See the <a href="/developers/conversions" className="underline hover:text-st-black dark:hover:text-white transition-colors">conversion events docs</a> or <button onClick={() => navigate('/setup?tab=conversions')} className="underline hover:text-st-black dark:hover:text-white transition-colors">set them up now</button>.
+                        Revenue, source attribution, and ROI reporting appear here once your site sends conversion events. See the <a href="/developers/conversions" className="underline hover:text-st-black dark:hover:text-dark-text transition-colors">conversion events docs</a> or <button onClick={() => navigate('/setup?tab=conversions')} className="underline hover:text-st-black dark:hover:text-dark-text transition-colors">set them up now</button>.
                       </p>
                     </div>
                   </div>
@@ -847,7 +847,7 @@ function DashboardWidgetCard({ report, site }) {
               }))
               navigate(`/report-builder?edit=${report.id}`)
             }}
-            className="text-[10px] text-st-gray hover:text-st-black dark:hover:text-white font-medium shrink-0"
+            className="text-[10px] text-st-gray hover:text-st-black dark:hover:text-dark-text font-medium shrink-0"
           >
             Edit
           </button>

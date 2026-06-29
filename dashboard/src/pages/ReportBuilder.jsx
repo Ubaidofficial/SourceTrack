@@ -2331,7 +2331,7 @@ export default function ReportBuilder() {
                                 <td className="py-2.5 px-4">
                                   <button
                                     onClick={() => setExplainModalOpen(true)}
-                                    className="text-xs text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white flex items-center gap-1"
+                                    className="text-xs text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text flex items-center gap-1"
                                   >
                                     <HelpCircle className="w-3 h-3" />
                                     {model === 'first_touch' && 'First visit attribution'}

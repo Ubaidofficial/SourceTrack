@@ -332,7 +332,7 @@ export default function Onboarding() {
             showBack
             onBack={() => setStep(1)}
           >
-            <button type="button" onClick={() => setStep(1)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-white transition-colors">
+            <button type="button" onClick={() => setStep(1)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-dark-text transition-colors">
               <ArrowLeft className="w-4 h-4" /> Back
             </button>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -373,7 +373,7 @@ export default function Onboarding() {
             showBack
             onBack={() => setStep(2)}
           >
-            <button type="button" onClick={() => setStep(2)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-white transition-colors mb-3">
+            <button type="button" onClick={() => setStep(2)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-dark-text transition-colors mb-3">
               <ArrowLeft className="w-4 h-4" /> Back
             </button>
             <p className="text-sm font-bold text-[#1F2323] dark:text-gray-100 mb-3">Choose Installation Method</p>
@@ -423,7 +423,7 @@ export default function Onboarding() {
             showBack
             onBack={() => setStep(3)}
           >
-            <button type="button" onClick={() => setStep(4)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-white transition-colors mb-3">
+            <button type="button" onClick={() => setStep(4)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-dark-text transition-colors mb-3">
               <ArrowLeft className="w-4 h-4" /> Back
             </button>
             <p className="text-sm font-medium text-gray-700 dark:text-gray-200">Configure Conversions</p>
@@ -479,7 +479,7 @@ export default function Onboarding() {
             showBack
             onBack={() => setStep(5)}
           >
-            <button type="button" onClick={() => setStep(5)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-white transition-colors mb-3">
+            <button type="button" onClick={() => setStep(5)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-dark-text transition-colors mb-3">
               <ArrowLeft className="w-4 h-4" /> Back
             </button>
             <p className="text-sm font-medium text-gray-700 dark:text-dark-primary mb-1">
@@ -573,7 +573,7 @@ export default function Onboarding() {
                       setLoading(false)
                     }
                   }}
-                  className="w-full text-center text-xs font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-white transition-colors py-2 disabled:opacity-50"
+                  className="w-full text-center text-xs font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-dark-text transition-colors py-2 disabled:opacity-50"
                 >
                   Verify Later (Skip for now)
                 </button>
@@ -598,7 +598,7 @@ export default function Onboarding() {
         showBack
         onBack={() => setStep(3)}
       >
-        <button type="button" onClick={() => setStep(3)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-white transition-colors mb-3">
+        <button type="button" onClick={() => setStep(3)} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#6B7373] hover:text-[#1F2323] dark:text-gray-400 dark:hover:text-dark-text transition-colors mb-3">
           <ArrowLeft className="w-4 h-4" /> Back
         </button>
         {isGTM ? (

@@ -747,7 +747,7 @@ export default function Integrations() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white/90">Integrations</h2>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-dark-text/90">Integrations</h2>
           <p className="text-sm text-st-gray mt-0.5">
             Tracking setup, verification, and data health
           </p>
@@ -816,7 +816,7 @@ export default function Integrations() {
             <Globe className="w-3.5 h-3.5 text-st-gray dark:text-gray-500" />
             <div>
               <p className="text-[9px] uppercase font-bold tracking-wider text-st-gray dark:text-gray-500">Domain</p>
-              <p className="text-xs font-semibold text-st-black dark:text-white/80">{site?.domain || '—'}</p>
+              <p className="text-xs font-semibold text-st-black dark:text-dark-text/80">{site?.domain || '—'}</p>
             </div>
           </div>
 
@@ -824,7 +824,7 @@ export default function Integrations() {
             <AlertTriangle className={`w-3.5 h-3.5 ${alerts.length > 0 ? 'text-red-500' : 'text-green-500'}`} />
             <div>
               <p className="text-[9px] uppercase font-bold tracking-wider text-st-gray dark:text-gray-500">Alerts</p>
-              <p className="text-xs font-semibold text-st-black dark:text-white/80">
+              <p className="text-xs font-semibold text-st-black dark:text-dark-text/80">
                 {alerts.length > 0 ? `${alerts.length} Active` : 'No alerts'}
               </p>
             </div>
@@ -834,7 +834,7 @@ export default function Integrations() {
             <Bug className={`w-3.5 h-3.5 ${safeNumber(hygieneData?.total_issues, 0) > 0 ? 'text-amber-500' : 'text-green-500'}`} />
             <div>
               <p className="text-[9px] uppercase font-bold tracking-wider text-st-gray dark:text-gray-500">Data Health</p>
-              <p className="text-xs font-semibold text-st-black dark:text-white/80">
+              <p className="text-xs font-semibold text-st-black dark:text-dark-text/80">
                 {safeNumber(hygieneData?.total_issues, 0) > 0 ? 'Needs Review' : 'Healthy'}
               </p>
             </div>
@@ -846,7 +846,7 @@ export default function Integrations() {
       {isVerified && (
         <div className="p-3 bg-st-lime/5 border border-st-lime/20 rounded-xl flex items-center gap-2 max-w-max">
           <span className="w-1.5 h-1.5 rounded-full bg-st-lime animate-pulse shrink-0"></span>
-          <p className="text-xs text-st-black dark:text-white/90 font-medium">
+          <p className="text-xs text-st-black dark:text-dark-text/90 font-medium">
             Next step: connect revenue or import ad costs.
           </p>
         </div>
@@ -921,7 +921,7 @@ export default function Integrations() {
                       href="https://www.sourcetrack.ai/docs"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1"
+                      className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-dark-text transition-colors hover:underline mr-1"
                     >
                       Docs
                     </a>
@@ -984,7 +984,7 @@ export default function Integrations() {
                       href="https://www.sourcetrack.ai/docs"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline font-semibold flex items-center gap-1"
+                      className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-dark-text transition-colors hover:underline font-semibold flex items-center gap-1"
                     >
                       Full setup guide <ExternalLink className="w-3 h-3" />
                     </a>
@@ -1040,7 +1040,7 @@ export default function Integrations() {
               badgeLabel={stripeConnected ? 'Active' : 'Not Configured'}
               actionButton={
                 <div className="flex items-center gap-2">
-                  <Link to="/docs/platforms/stripe" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
+                  <Link to="/docs/platforms/stripe" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-dark-text transition-colors hover:underline mr-1">
                     Docs
                   </Link>
                   {!isPreview && (
@@ -1067,7 +1067,7 @@ export default function Integrations() {
                     <button
                       type="button"
                       onClick={handleCopyStripeUrl}
-                      className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black dark:hover:text-white transition-colors"
+                      className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black dark:hover:text-dark-text transition-colors"
                     >
                       {copiedStripeUrl ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
                       {copiedStripeUrl ? 'Copied' : 'Copy URL'}
@@ -1170,7 +1170,7 @@ export default function Integrations() {
               badgeLabel={shopifyConnected ? 'Active' : 'Not Configured'}
               actionButton={
                 <div className="flex items-center gap-2">
-                  <Link to="/docs/platforms/shopify" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
+                  <Link to="/docs/platforms/shopify" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-dark-text transition-colors hover:underline mr-1">
                     Docs
                   </Link>
                   {!isPreview && (
@@ -1197,7 +1197,7 @@ export default function Integrations() {
                     <button
                       type="button"
                       onClick={handleCopyShopifyUrl}
-                      className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black dark:hover:text-white transition-colors"
+                      className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black dark:hover:text-dark-text transition-colors"
                     >
                       {copiedShopifyUrl ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
                       {copiedShopifyUrl ? 'Copied' : 'Copy URL'}
@@ -1355,7 +1355,7 @@ export default function Integrations() {
                           <div className="flex items-center justify-between mb-1.5">
                             <p className="text-xs font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider">Email Image Tag</p>
                             <button onClick={() => handleCopyPixel(emailPixelExample)}
-                              className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black dark:hover:text-white transition-colors"
+                              className="flex items-center gap-1 text-xs text-st-gray hover:text-st-black dark:hover:text-dark-text transition-colors"
                             >
                               {copiedPixel ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                               {copiedPixel ? 'Copied' : 'Copy'}
@@ -1441,7 +1441,7 @@ export default function Integrations() {
                   <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); setActiveSection(activeSection === 'ad.csv' ? null : 'ad.csv') }}
-                    className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1"
+                    className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-dark-text transition-colors hover:underline mr-1"
                   >
                     Details
                   </button>
@@ -1543,7 +1543,7 @@ export default function Integrations() {
               }
               actionButton={
                 <div className="flex items-center gap-2">
-                  <Link to="/seo-revenue" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
+                  <Link to="/seo-revenue" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-dark-text transition-colors hover:underline mr-1">
                     Report
                   </Link>
                   {hasFeature(site?.plan, 'gsc_seo_revenue') ? (
@@ -1707,7 +1707,7 @@ export default function Integrations() {
                     <strong>Disclaimer:</strong> GSC provides aggregate query data, not user-level attribution. Query revenue is estimated from click share on matching pages.
                   </p>
                   <div className="pt-1">
-                    <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline">
+                    <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-dark-text transition-colors hover:underline">
                       Read GSC Setup Docs →
                     </a>
                   </div>
@@ -1738,7 +1738,7 @@ export default function Integrations() {
               badgeLabel={crossDomainConfigured ? 'Active' : 'Not Configured'}
               actionButton={
                 <div className="flex items-center gap-2">
-                  <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
+                  <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-dark-text transition-colors hover:underline mr-1">
                     Docs
                   </a>
                   {!isPreview && (
@@ -1758,7 +1758,7 @@ export default function Integrations() {
               badgeLabel={proxyStatusLabel}
               actionButton={
                 <div className="flex items-center gap-2">
-                  <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
+                  <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-dark-text transition-colors hover:underline mr-1">
                     Docs
                   </a>
                   {!isPreview && (
@@ -1833,7 +1833,7 @@ export default function Integrations() {
                     onToggle={() => setActiveSection(activeSection === 'developer.payments_api' ? 'developer' : 'developer.payments_api')}
                     actionButton={
                       <div className="flex items-center gap-2">
-                        <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
+                        <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-dark-text transition-colors hover:underline mr-1">
                           Docs
                         </a>
                         {!isPreview && (
@@ -1921,10 +1921,10 @@ export default function Integrations() {
                         <div className="flex justify-between items-center">
                           <h4 className="text-xs font-semibold text-st-black dark:text-dark-primary">Stitching to visitor journeys</h4>
                           <div className="flex gap-3">
-                            <Link to="/developers/offline-conversions" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline font-sans">
+                            <Link to="/developers/offline-conversions" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-dark-text transition-colors hover:underline font-sans">
                               Offline conversions →
                             </Link>
-                            <Link to="/developers/security" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline font-sans">
+                            <Link to="/developers/security" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-dark-text transition-colors hover:underline font-sans">
                               Security →
                             </Link>
                           </div>
@@ -1948,7 +1948,7 @@ export default function Integrations() {
                     onToggle={() => setActiveSection(activeSection === 'developer.webhook_adapter' ? 'developer' : 'developer.webhook_adapter')}
                     actionButton={
                       <div className="flex items-center gap-2">
-                        <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
+                        <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-dark-text transition-colors hover:underline mr-1">
                           Docs
                         </a>
                         {!isPreview && (
@@ -2152,7 +2152,7 @@ export default function Integrations() {
                       )}
 
                       <div className="pt-2 flex justify-end">
-                        <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline font-semibold font-sans">
+                        <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-dark-text transition-colors hover:underline font-semibold font-sans">
                           Read Webhook Docs →
                         </a>
                       </div>
@@ -2169,7 +2169,7 @@ export default function Integrations() {
                     onToggle={() => setActiveSection(activeSection === 'developer.source_map' ? 'developer' : 'developer.source_map')}
                     actionButton={
                       <div className="flex items-center gap-2">
-                        <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-white transition-colors hover:underline mr-1">
+                        <a href="https://www.sourcetrack.ai/docs" target="_blank" rel="noopener noreferrer" className="text-xs text-st-gray hover:text-st-black dark:text-slate-300 dark:hover:text-dark-text transition-colors hover:underline mr-1">
                           Docs
                         </a>
                         {!isPreview && (
@@ -2216,7 +2216,7 @@ export default function Integrations() {
 
       {/* Clean Integrations Footer */}
       <div className="text-center mt-8 pb-12">
-        <a href="mailto:support@sourcetrack.ai" className="text-sm text-st-gray dark:text-gray-500 hover:text-st-black dark:hover:text-white transition-colors">
+        <a href="mailto:support@sourcetrack.ai" className="text-sm text-st-gray dark:text-gray-500 hover:text-st-black dark:hover:text-dark-text transition-colors">
           Need another integration? Request one →
         </a>
       </div>

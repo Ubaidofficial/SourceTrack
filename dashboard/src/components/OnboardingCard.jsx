@@ -11,7 +11,7 @@ export default function OnboardingCard({ icon: Icon, title, subtitle, children, 
           {showBack && (
             <button
               onClick={onBack}
-              className="mb-1 inline-flex items-center gap-1 text-sm font-semibold text-[#7D8090] hover:text-[#1F2323] dark:hover:text-white transition-colors"
+              className="mb-1 inline-flex items-center gap-1 text-sm font-semibold text-[#7D8090] hover:text-[#1F2323] dark:hover:text-dark-text transition-colors"
             >
               <ChevronLeft className="w-4 h-4" /> Go Back
             </button>

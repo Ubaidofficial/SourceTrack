@@ -90,7 +90,7 @@ export default function AlertDrawer({ isOpen, onClose, siteKey, alerts = [] }) {
                     <button
                       onClick={() => handleDismiss(alert.id)}
                       disabled={dismissingId === alert.id}
-                      className="text-[11px] font-medium text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-hover transition-colors disabled:opacity-50"
+                      className="text-[11px] font-medium text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-hover transition-colors disabled:opacity-50"
                     >
                       {dismissingId === alert.id ? 'Dismissing…' : 'Dismiss'}
                     </button>

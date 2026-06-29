@@ -428,7 +428,7 @@ export default function Leads() {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={(e) => { e.stopPropagation(); navigate(`/leads/${encodeURIComponent(lead.id)}`) }}
-                            className="text-xs text-gray-600 dark:text-gray-400 hover:text-st-black dark:hover:text-white font-medium"
+                            className="text-xs text-gray-600 dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text font-medium"
                           >
                             View
                           </button>

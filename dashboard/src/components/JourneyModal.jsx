@@ -230,7 +230,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
               </select>
             </div>
 
-            <button onClick={onClose} className="p-1.5 text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-dark-hover">
+            <button onClick={onClose} className="p-1.5 text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text rounded-lg hover:bg-gray-100 dark:hover:bg-dark-hover">
               <X className="w-4 h-4" />
             </button>
           </div>

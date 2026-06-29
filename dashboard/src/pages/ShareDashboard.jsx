@@ -210,7 +210,7 @@ export default function ShareDashboard() {
 
       {/* Footer */}
       <footer className="border-t border-gray-200 dark:border-dark-border py-4 text-center">
-        <a href="https://sourcetrack.ai" className="text-xs text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-white transition-colors">
+        <a href="https://sourcetrack.ai" className="text-xs text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text transition-colors">
           Powered by SourceTrack
         </a>
       </footer>

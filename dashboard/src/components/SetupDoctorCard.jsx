@@ -484,7 +484,7 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
               checkBrowserReachability()
             }
           }}>
-            <summary className="list-none flex items-center justify-between text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors cursor-pointer select-none">
+            <summary className="list-none flex items-center justify-between text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-dark-text transition-colors cursor-pointer select-none">
               <span>Dashboard connection check</span>
               <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
             </summary>
@@ -535,7 +535,7 @@ export default function SetupDoctorCard({ siteKey, mode = 'dashboard', onVerific
       <div className="border-t border-gray-200 dark:border-[#2A2E2E] pt-3">
         <button
           onClick={() => setAccordionOpen(!accordionOpen)}
-          className="w-full flex items-center justify-between text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors"
+          className="w-full flex items-center justify-between text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-dark-text transition-colors"
         >
           <span>Technical Diagnostics</span>
           {accordionOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
