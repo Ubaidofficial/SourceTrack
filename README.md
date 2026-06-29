@@ -7,7 +7,7 @@ Privacy-first marketing attribution + cookieless web analytics for SaaS, ecommer
 - **Multi-touch attribution** — first-touch, last-touch, linear, U-shaped, time-decay, W-shaped models
 - **Click-ID detection** — `gclid`, `gbraid`, `wbraid`, `fbclid`, `msclkid`, `ttclid`, `li_fat_id`, `twclid`
 - **AI traffic attribution** — ChatGPT, Claude, Perplexity, Gemini, Grok, Copilot, DeepSeek + ~10 more
-- **Conversion forwarding** — outbound conversion events to configured ad platforms (Meta, Google Ads, Microsoft, LinkedIn, TikTok) where customer credentials are provided; hashed PII and event-id deduplication
+- **Conversion forwarding** — outbound conversion events to configured ad platforms (Meta, Google Ads) where customer credentials are provided; hashed PII and event-id deduplication
 - **Cookieless web analytics** — Plausible-style page-view dashboard (separate tracker)
 
 ---
@@ -58,7 +58,7 @@ Production deploys on Railway — see [`AUDIT_PROD_READINESS_V2.md`](./AUDIT_PRO
 │      │                                                            │
 │      ▼                                                            │
 │ /api/conversion ──► PostHog ($conversion event)                  │
-│                ──► CAPI: Meta, Google, Microsoft, LinkedIn, TikTok│
+│                ──► CAPI: Meta, Google                             │
 │                       (async, hashed email, event-id dedup)      │
 │                                                                  │
 │ /api/identify ──► ph.identify + ph.alias                         │
@@ -91,7 +91,7 @@ Customers install **only** the attribution tracker on their site. The analytics 
 ### Data flow
 
 1. **Pageview** → tracker.js → `/api/track` → PostHog (event-time enrichment: country via GeoIP, browser/OS via UAParser, AI source detection)
-2. **Conversion** → `sourcetrack.conversion(...)` → `/api/conversion` → PostHog `$conversion` + async CAPI to all 5 ad platforms
+2. **Conversion** → `sourcetrack.conversion(...)` → `/api/conversion` → PostHog `$conversion` + async CAPI to Meta and Google Ads
 3. **Nightly job** (Railway cron 02:00 UTC) → queries PostHog for the last N days of $conversion events → fetches each visitor's touchpoint history → computes 4 attribution models + confidence score → upserts to `attributed_conversions` in Supabase
 4. **Dashboard** → reads pre-aggregated `attributed_conversions` for sub-second queries
 
