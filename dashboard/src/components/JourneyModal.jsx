@@ -221,7 +221,7 @@ export default function JourneyModal({ visitorId, siteKey, leadSummary, onClose,
                     console.error("Failed to update status from journey modal", err)
                   }
                 }}
-                className="text-xs font-semibold px-2 py-1 rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-bg text-st-black dark:text-dark-primary cursor-pointer focus:outline-none"
+                className="text-xs font-semibold px-2 py-1 rounded-lg border border-gray-300 dark:border-dark-border-strong bg-white dark:bg-dark-bg text-st-black dark:text-dark-primary cursor-pointer focus:outline-none"
               >
                 <option value="unqualified">Unqualified</option>
                 <option value="qualified">Qualified</option>

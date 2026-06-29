@@ -270,17 +270,17 @@ export default function Leads() {
           <input
             type="text" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search by visitor ID, source, or campaign..."
-            className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-dark-border bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-dark-primary focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime"
+            className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-dark-border-strong bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-dark-primary focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime"
           />
         </div>
         <select value={filterAI} onChange={e => setFilterAI(e.target.value)}
-          className="px-3 py-2 border border-gray-300 dark:border-dark-border bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-dark-primary focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime">
+          className="px-3 py-2 border border-gray-300 dark:border-dark-border-strong bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-dark-primary focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime">
           <option value="all">All Sources</option>
           <option value="ai">AI Sources</option>
           <option value="non-ai">Non-AI Sources</option>
         </select>
         <select value={attributionModel} onChange={e => setAttributionModel(e.target.value)}
-          className="px-3 py-2 border border-gray-300 dark:border-dark-border bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-dark-primary focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime">
+          className="px-3 py-2 border border-gray-300 dark:border-dark-border-strong bg-white dark:bg-[#181B1B]/40 rounded-lg text-sm outline-none text-st-black dark:text-dark-primary focus:ring-2 focus:ring-gray-900 dark:focus:ring-st-lime">
           <option value="first_touch">First Touch</option>
           <option value="last_touch">Last Touch</option>
         </select>
