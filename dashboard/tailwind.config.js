@@ -17,12 +17,14 @@ export default {
           orange: '#FF8800',
           red: '#E54545'
         },
-        // Enhanced dark mode colors
+        // Enhanced dark mode colors — layered elevation by lightness (no glow,
+        // no glassmorphism). Border is an edge-of-light, not a gray line.
         dark: {
-          bg: '#0F1212',      // Main background (premium calming dark)
-          card: '#161919',     // Card background (slightly lighter for elevation)
-          border: '#242929',   // Soft dark borders
-          hover: '#1D2121'     // Hover/subtle background states
+          bg: '#0F1010',      // Base background (lowest elevation)
+          card: '#141515',     // Card surface (one step up)
+          hover: '#1A1C1C',    // Hover / highest elevation
+          border: 'rgba(255,255,255,0.06)', // Translucent edge-of-light
+          text: '#E8E9EB'      // Primary dark text (never pure white)
         }
       }
     }
