@@ -266,7 +266,7 @@ export default function ConversionExplanationModal({ isOpen, onClose, siteKey, m
                               ? 'bg-green-50 dark:bg-green-900/20 border-green-200'
                               : isSkipped
                               ? 'bg-gray-50 dark:bg-dark-bg border-gray-100 dark:border-dark-border opacity-60'
-                              : 'bg-white dark:bg-dark-card border-gray-100 dark:border-dark-border/60'
+                              : 'bg-white dark:bg-dark-card border-gray-100 dark:border-dark-border'
                           }`}
                         >
                           <div className={`w-2 h-2 rounded-full flex-shrink-0 ${

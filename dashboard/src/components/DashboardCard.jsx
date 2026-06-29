@@ -14,7 +14,7 @@ export default function DashboardCard({ title, subtitle, action, menuItems, chil
   }, [menuOpen])
 
   return (
-    <div className={`bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm overflow-hidden ${className}`}>
+    <div className={`bg-white dark:bg-dark-card rounded-xl border border-gray-200 dark:border-dark-border shadow-sm card-hairline overflow-hidden ${className}`}>
       {(title || action || menuItems) && (
         <div className={`px-5 py-4 border-b border-gray-100 dark:border-dark-border flex items-center justify-between ${headerClassName}`}>
           <div>

@@ -216,8 +216,8 @@ export default function Leads() {
   // Canonical 4-state status vocabulary (matches lead_qualifications.status + the
   // CHECK constraint). `lead` is the null/unmarked fallback (curStatus || 'lead').
   const STATUS_CHIP = {
-    lead:        { bg: 'bg-gray-50 text-gray-500 dark:bg-[#181B1B]/40 dark:text-gray-400 border border-gray-200 dark:border-dark-border/60', label: 'Unqualified' },
-    unqualified: { bg: 'bg-gray-50 text-gray-500 dark:bg-[#181B1B]/40 dark:text-gray-400 border border-gray-200 dark:border-dark-border/60', label: 'Unqualified' },
+    lead:        { bg: 'bg-gray-50 text-gray-500 dark:bg-[#181B1B]/40 dark:text-gray-400 border border-gray-200 dark:border-dark-border', label: 'Unqualified' },
+    unqualified: { bg: 'bg-gray-50 text-gray-500 dark:bg-[#181B1B]/40 dark:text-gray-400 border border-gray-200 dark:border-dark-border', label: 'Unqualified' },
     qualified:   { bg: 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 border border-green-100 dark:border-green-900/30', label: 'Qualified' },
     mql:         { bg: 'bg-blue-50 text-blue-600 dark:bg-blue-950/20 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30',  label: 'MQL' },
     sql:         { bg: 'bg-purple-50 text-purple-600 dark:bg-purple-950/20 dark:text-purple-400 border border-purple-100 dark:border-purple-900/30', label: 'SQL' }
@@ -344,7 +344,7 @@ export default function Leads() {
                     <tr
                       key={i}
                       onClick={() => openJourney(lead)}
-                      className={`border-b border-gray-100/80 dark:border-dark-border/40 hover:bg-gray-50/50 dark:hover:bg-dark-hover/40 transition-colors cursor-pointer${isSelected ? ' bg-st-lime/5 dark:bg-[#1E2318]' : ''}`}
+                      className={`border-b border-gray-100/80 dark:border-dark-border hover:bg-gray-50/50 dark:hover:bg-dark-hover/40 transition-colors cursor-pointer${isSelected ? ' bg-st-lime/5 dark:bg-[#1E2318]' : ''}`}
                     >
                       <td className="py-3 px-3 w-8" onClick={e => e.stopPropagation()}>
                         <input

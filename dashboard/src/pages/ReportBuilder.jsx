@@ -2293,7 +2293,7 @@ export default function ReportBuilder() {
                           const priorRows = priorReportData?.results || []
                           const priorRow = priorRows.find(p => p.dim_value === r.dim_value)
                           return (
-                            <tr key={i} className="border-b border-gray-100/70 dark:border-dark-border/40 hover:bg-gray-50/50 dark:hover:bg-dark-hover/40 transition-colors">
+                            <tr key={i} className="border-b border-gray-100/70 dark:border-dark-border hover:bg-gray-50/50 dark:hover:bg-dark-hover/40 transition-colors">
                               <td className="py-2.5 px-4 text-st-black dark:text-gray-200 font-medium">
                                 <span className="inline-flex items-center">
                                   {['source', 'channel'].includes(groupBy) ? (

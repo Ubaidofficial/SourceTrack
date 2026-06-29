@@ -30,7 +30,7 @@ function DataRow({ label, count, max, icon, onClick, active }) {
   return (
     <div
       onClick={onClick}
-      className={`flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 dark:border-dark-border/40 last:border-0 transition-colors ${
+      className={`flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 dark:border-dark-border last:border-0 transition-colors ${
         onClick ? 'cursor-pointer' : ''
       } ${active ? 'bg-st-lime/5' : 'hover:bg-gray-50 dark:hover:bg-dark-hover'}`}
     >

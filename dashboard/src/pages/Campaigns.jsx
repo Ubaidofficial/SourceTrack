@@ -830,7 +830,7 @@ export default function Campaigns() {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-dark-border/40">
+                <tbody className="divide-y divide-gray-100 dark:divide-dark-border">
                   {rows.map((r, i) => {
                     const isOk = r.currency_status === 'ok'
                     const cvr = r.visits > 0 ? ((r.conversions / r.visits) * 100).toFixed(1) + '%' : '—'
@@ -1254,7 +1254,7 @@ export default function Campaigns() {
                               <th className="py-2 px-3 font-semibold text-st-gray dark:text-gray-400 w-32">Validation</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-gray-100 dark:divide-dark-border/40">
+                          <tbody className="divide-y divide-gray-100 dark:divide-dark-border">
                             {parsedRows.map((r, idx) => (
                               <tr key={idx} className={r.error ? 'bg-red-50/50 dark:bg-red-950/20 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors' : 'hover:bg-gray-50 dark:hover:bg-dark-hover/40 transition-colors'}>
                                 <td className="py-2 px-3 font-mono text-[11px] dark:text-gray-300">{r.data.date || '—'}</td>
@@ -1306,7 +1306,7 @@ export default function Campaigns() {
                             <th className="py-2.5 px-4 font-semibold text-st-gray dark:text-gray-400">Logs / Error</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-dark-border/40">
+                        <tbody className="divide-y divide-gray-100 dark:divide-dark-border">
                           {importHistory.map((run, idx) => (
                             <tr key={idx} className="hover:bg-gray-50/50 dark:hover:bg-dark-hover/40 transition-colors">
                               <td className="py-2.5 px-4 font-medium text-st-black dark:text-white">
@@ -1400,7 +1400,7 @@ function CampaignLandingPages({ siteKey, campaignName, dateFrom, dateTo }) {
             <th className="py-2 px-1 text-right text-st-gray dark:text-gray-400 font-semibold uppercase tracking-wider text-[10px]">Conversions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100 dark:divide-dark-border/40">
+        <tbody className="divide-y divide-gray-100 dark:divide-dark-border">
           {results.slice(0, 5).map((r, i) => (
             <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-dark-hover/40 transition-colors">
               <td className="py-2 px-1 font-mono text-st-black dark:text-gray-300 truncate max-w-[200px]" title={r.dim_value}>{r.dim_value}</td>
@@ -1439,7 +1439,7 @@ function CampaignRecentLeads({ siteKey, campaignName, dateFrom, dateTo, navigate
             <th className="py-2 px-1 text-right text-st-gray dark:text-gray-400 font-semibold uppercase tracking-wider text-[10px]">Conversions</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100 dark:divide-dark-border/40">
+        <tbody className="divide-y divide-gray-100 dark:divide-dark-border">
           {leads.slice(0, 5).map((l, i) => (
             <tr key={i} className="hover:bg-gray-50/50 dark:hover:bg-dark-hover/40 transition-colors">
               <td className="py-2 px-1">

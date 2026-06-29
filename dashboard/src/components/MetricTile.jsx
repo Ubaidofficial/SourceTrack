@@ -1,49 +1,5 @@
-import { useState, useEffect, useRef } from 'react'
 import { safeNumber } from '../utils/numbers'
-
-function useCountUp(target, duration = 650) {
-  const [current, setCurrent] = useState(null)
-  const rafRef = useRef(null)
-  const startRef = useRef(null)
-  const fromRef = useRef(0)
-
-  useEffect(() => {
-    if (target == null) { setCurrent(null); return }
-    const to = Number(target)
-    const from = fromRef.current ?? 0
-    if (from === to) { setCurrent(to); return }
-
-    const prefersReducedMotion = typeof window !== 'undefined'
-      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      : false
-
-    if (prefersReducedMotion) {
-      setCurrent(to)
-      fromRef.current = to
-      return
-    }
-
-    if (rafRef.current) cancelAnimationFrame(rafRef.current)
-    startRef.current = null
-
-    const animate = (ts) => {
-      if (!startRef.current) startRef.current = ts
-      const progress = Math.min((ts - startRef.current) / duration, 1)
-      const eased = 1 - Math.pow(1 - progress, 3) // ease-out cubic
-      setCurrent(from + (to - from) * eased)
-      if (progress < 1) {
-        rafRef.current = requestAnimationFrame(animate)
-      } else {
-        fromRef.current = to
-        setCurrent(to)
-      }
-    }
-    rafRef.current = requestAnimationFrame(animate)
-    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
-  }, [target, duration])
-
-  return current
-}
+import { useCountUp } from '../utils/useCountUp'
 
 const MetricTile = ({
   label,
@@ -121,7 +77,7 @@ const MetricTile = ({
   const showTrend = !isEmptyState && (trend != null || delta)
 
   return (
-    <div className={`metric-tile bg-white dark:bg-dark-card rounded-xl shadow-sm border border-gray-200 dark:border-dark-border flex flex-col justify-between transition-all hover:shadow-md duration-200 ${
+    <div className={`metric-tile bg-white dark:bg-dark-card rounded-xl shadow-sm card-hairline border border-gray-200 dark:border-dark-border flex flex-col justify-between transition-all hover:shadow-md duration-200 ${
       compact ? 'px-4 py-3 gap-0.5' : 'p-5 gap-1.5'
     }`}>
       <div>

@@ -26,7 +26,7 @@ export default function DashboardTable({ columns = [], rows = [], onRowClick, em
                 role={onRowClick ? 'button' : undefined}
                 onClick={() => onRowClick?.(row, i)}
                 onKeyDown={(e) => { if (onRowClick && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onRowClick(row, i) } }}
-                className={`border-b border-gray-50 dark:border-dark-border/40 hover:bg-gray-50 dark:hover:bg-dark-hover ${onRowClick ? 'cursor-pointer' : ''}`}
+                className={`border-b border-gray-50 dark:border-dark-border hover:bg-gray-50 dark:hover:bg-dark-hover ${onRowClick ? 'cursor-pointer' : ''}`}
               >
                 {columns.map((col, j) => (
                   <td key={j} className={`py-2 px-4 text-gray-600 dark:text-gray-300 text-xs ${col.cellClassName || ''}`}>
