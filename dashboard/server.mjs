@@ -29,6 +29,23 @@ app.use((req, res, next) => {
   next()
 })
 
+// Deindex non-canonical hosts. Railway's public *.up.railway.app URLs (production
+// + staging) and any configured staging host serve the app for healthchecks /
+// preview, but must NOT be indexed — they compete with www./app.sourcetrack.ai in
+// search. Only the two canonical hosts stay indexable. X-Robots-Tag is the
+// authoritative signal here: it applies to every response (not just HTML), beats
+// the index.html <meta robots>, and actively *removes* already-indexed URLs —
+// unlike a robots.txt Disallow, which would block the very crawl Google needs to
+// see the noindex. The Railway healthcheck still gets a normal 200.
+app.use((req, res, next) => {
+  const host = req.headers.host || ''
+  const isCanonical = host === CANONICAL_HOST || host === APP_HOST
+  if (!isCanonical) {
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow')
+  }
+  next()
+})
+
 // Explicit XML / text routes so content-type is never ambiguous
 app.get('/sitemap.xml', (_req, res) => {
   res.setHeader('Content-Type', 'application/xml; charset=utf-8')
