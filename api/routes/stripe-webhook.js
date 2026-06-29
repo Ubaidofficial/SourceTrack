@@ -7,12 +7,134 @@ import { claimIdempotencyKeys, logIngestionEvent, rollbackIdempotencyKeys } from
 import { ph } from '../lib/posthog.js'
 import { resolveWebhookAnonymousId } from '../lib/identity-links.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
+import { SUBSCRIPTION_EVENTS, mapSubscriptionEvent, buildSubscriptionIdempotencyKeys } from '../lib/stripe-subscription.js'
 
 
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'fake_key_for_webhook_sync_construct', {
   apiVersion: '2024-06-20'
 })
+
+// Ingest a Stripe subscription-lifecycle event as a $conversion.
+//
+// STEP 1 scope: ingest + PRESERVE the durable keys (stripe customer_id /
+// subscription_id / invoice_id) so step 2's subscription_identity table can
+// backfill acquisition attribution. Source attribution is NOT resolved here —
+// renewals/invoices carry no anonymous_id and (by decision) email/customer_id
+// are not visitor-identity join keys, so when no in-event stitch key is present
+// the conversion is marked attribution_status='unknown' and NEVER bucketed to a
+// fabricated source (decisions 3/4). Acquisition-locked attribution is applied
+// later (step 4) from the preserved keys.
+//
+// Idempotency: claim → capture → rollback-on-failure, so the claim becomes
+// permanent only after the write succeeds (§6.5) and a Stripe retry of a failed
+// delivery re-attempts instead of being dropped as a duplicate.
+//
+// Returns { status, body } for the caller to send.
+async function handleSubscriptionEvent(event, site, siteKey) {
+  const obj = event.data.object || {}
+  const providerEventId = event.id
+  const eventType = event.type
+  const occurredAt = event.created ? new Date(event.created * 1000).toISOString() : new Date().toISOString()
+
+  const { conversionType, value, currency, customerId, subscriptionId, invoiceId, billingReason, skipReason } = mapSubscriptionEvent(event)
+
+  if (skipReason) {
+    return { status: 200, body: { received: true, ignored: true, reason: skipReason } }
+  }
+
+  // Identity stitch. client_reference_id is checkout-only, so subscription events
+  // can only stitch via explicit metadata IDs; customer_id is preserved but is
+  // not a visitor-identity join key today (resolved later in step 2).
+  const metadata = obj.metadata || {}
+  const resolved = await resolveWebhookAnonymousId({
+    siteId: site.id,
+    anonymousId: metadata.anonymous_id || null,
+    visitorId: metadata.visitor_id || null,
+    userId: metadata.sourcetrack_user_id || metadata.site_user_id || null,
+    email: null,
+    customerId
+  })
+
+  let distinctId
+  let attributionStatus
+  let stitchingMethod = 'none'
+  if (resolved.anonymousId) {
+    distinctId = resolved.anonymousId
+    stitchingMethod = resolved.source
+  } else {
+    distinctId = `stripe_subscription_unattributed:${subscriptionId || customerId || providerEventId}`
+    attributionStatus = 'unknown'
+  }
+
+  const keys = buildSubscriptionIdempotencyKeys({ providerEventId, conversionType, invoiceId, subscriptionId })
+
+  const claim = await claimIdempotencyKeys(siteKey, 'stripe', keys)
+  if (claim.duplicate) {
+    await logIngestionEvent(siteKey, 'stripe', { providerEventId, orderId: invoiceId || subscriptionId, value, currency, status: 'duplicate' })
+    return { status: 200, body: { received: true, duplicate: true } }
+  }
+  if (!claim.success) {
+    await logIngestionEvent(siteKey, 'stripe', { providerEventId, orderId: invoiceId || subscriptionId, value, currency, status: 'error', errorMessage: claim.error || 'Failed to claim idempotency keys' })
+    return { status: 500, body: { error: 'Temporary processing failure' } }
+  }
+
+  try {
+    // Monthly conversion-limit gate (fail-open on DB error), mirroring the
+    // checkout path. Roll the claim back if blocked so it isn't a silent drop.
+    let allowed = true
+    try {
+      const lc = await claimConversionUsage(site)
+      if (!lc.allowed) allowed = false
+    } catch (limitErr) {
+      console.error('[stripe-webhook] Conversion limit check failed, failing open:', limitErr.message || limitErr)
+    }
+    if (!allowed) {
+      await rollbackIdempotencyKeys(siteKey, 'stripe', keys)
+      return { status: 200, body: { success: false, data: null, error: 'Conversion limit reached for your plan', ignored: true } }
+    }
+
+    const conversionProperties = {
+      site_id: site.id,
+      site_key: site.site_key,
+      conversion_value: value,
+      currency,
+      conversion_type: conversionType,
+      conversion_event_id: invoiceId || (subscriptionId ? `${subscriptionId}:${conversionType}` : providerEventId),
+      provider: 'stripe',
+      provider_event_id: providerEventId,
+      stripe_event_type: eventType,
+      stripe_billing_reason: billingReason,
+      occurred_at: occurredAt,
+      ingestion_method: 'webhook_stripe',
+      stitching_method: stitchingMethod,
+      utm_source: 'stripe',
+      utm_medium: 'webhook',
+      utm_campaign: null,
+      first_touch_source: 'stripe',
+      first_touch_medium: 'webhook',
+      // Durable keys preserved for step 2 (subscription_identity backfill):
+      webhook_customer_id: customerId || null,
+      stripe_subscription_id: subscriptionId || null,
+      stripe_invoice_id: invoiceId || null,
+      identity_resolution_source: resolved.source,
+      identity_resolution_status: resolved.anonymousId ? 'resolved' : 'unresolved'
+    }
+    if (attributionStatus) {
+      conversionProperties.attribution_status = attributionStatus
+    }
+
+    await ph.capture({ distinctId, event: '$conversion', properties: conversionProperties })
+    await logIngestionEvent(siteKey, 'stripe', { providerEventId, orderId: invoiceId || subscriptionId, value, currency, status: 'success' })
+    return { status: 200, body: { received: true } }
+  } catch (err) {
+    // Release the claim so Stripe's retry re-attempts instead of dropping.
+    try { await rollbackIdempotencyKeys(siteKey, 'stripe', keys) } catch (_) { /* best-effort */ }
+    console.error('[stripe-webhook] Subscription event capture failed:', err.message)
+    await logIngestionEvent(siteKey, 'stripe', { providerEventId, orderId: invoiceId || subscriptionId, value, currency, status: 'error', errorMessage: err.message || 'PostHog capture failed' })
+    return { status: 500, body: { error: 'Temporary processing failure' } }
+  }
+}
 
 const router = Router()
 
@@ -82,7 +204,13 @@ router.post('/:site_key', async (req, res) => {
   }
 
 
-  // 5. Support only explicit event types, ignore unsupported event types with safe 200 response
+  // 5. Route supported event types. Subscription lifecycle (renewals, trials,
+  // upgrades, cancellations) goes to the recurring handler; one-shot checkouts
+  // use the existing path below; everything else is ignored with a safe 200.
+  if (SUBSCRIPTION_EVENTS.has(event.type)) {
+    const r = await handleSubscriptionEvent(event, site, siteKey)
+    return res.status(r.status).json(r.body)
+  }
   if (event.type !== 'checkout.session.completed') {
     return res.status(200).json({ received: true, ignored: true, reason: `Event type ${event.type} ignored` })
   }
