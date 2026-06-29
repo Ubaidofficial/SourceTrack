@@ -10,7 +10,7 @@
 // in-memory store). Returns per-table deleted counts. Throws on the first
 // delete error so the caller can log it per-site and move on.
 export async function purgeSiteRetention(db, site, cutoffStr) {
-  const counts = { attributed_conversions: 0, gsc_performance_daily: 0, gsc_sync_runs: 0, capi_deliveries: 0 }
+  const counts = { attributed_conversions: 0, gsc_performance_daily: 0, gsc_sync_runs: 0, capi_deliveries: 0, custom_events: 0 }
 
   // attributed_conversions — scoped by internal site_id, by conversion_date.
   const conv = await db
@@ -47,6 +47,15 @@ export async function purgeSiteRetention(db, site, cutoffStr) {
     .lt('created_at', cutoffStr)
   if (capi.error) throw new Error(`capi_deliveries: ${capi.error.message}`)
   counts.capi_deliveries = capi.count || 0
+
+  // custom_events — outbound-click + custom event log, scoped by site_id, by timestamp.
+  const custom = await db
+    .from('custom_events')
+    .delete({ count: 'exact' })
+    .eq('site_id', site.id)
+    .lt('timestamp', cutoffStr)
+  if (custom.error) throw new Error(`custom_events: ${custom.error.message}`)
+  counts.custom_events = custom.count || 0
 
   return counts
 }
