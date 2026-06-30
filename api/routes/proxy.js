@@ -100,21 +100,30 @@ router.post('/e',
     const sanitizedProperties = redactPiiFromObject(properties || {})
     sanitizedProperties.referrer = sanitizedReferrer
 
-    await ph.capture({
-      distinctId: anonymous_id || uuidv4(),
-      event,
-      properties: {
-        ...sanitizedProperties,
-        site_id: site.id,
-        site_key,
-        country: enriched.country,
-        device_type: enriched.device_type,
-        browser: enriched.browser,
-        server_timestamp: enriched.server_timestamp,
-        ai_source: getAiSource(sanitizedReferrer) || sanitizedProperties.ai_source || null,
-        proxy: true,
-      }
-    })
+    // distinctId hoisted to a const (behavior-identical) computed ONCE so the
+    // additive Tinybird dual-write below carries the IDENTICAL anonymous
+    // distinct_id ph.capture received — calling uuidv4() a second time here
+    // would silently break visitor stitching between PostHog and Tinybird for
+    // anonymous pageviews/events (tinybird/PHASE2C_PAGEVIEW_DUALWRITE_PLAN.md §2.2).
+    const distinctId = anonymous_id || uuidv4()
+    const pageviewProps = {
+      ...sanitizedProperties,
+      site_id: site.id,
+      site_key,
+      country: enriched.country,
+      device_type: enriched.device_type,
+      browser: enriched.browser,
+      server_timestamp: enriched.server_timestamp,
+      ai_source: getAiSource(sanitizedReferrer) || sanitizedProperties.ai_source || null,
+      proxy: true,
+    }
+
+    await ph.capture({ distinctId, event, properties: pageviewProps })
+
+    // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
+    // No natural id on this path -> deriveEventId falls to a uuid. site_key in
+    // the payload is dropped by the adapter.
+    dualWriteEvent({ distinctId, event, properties: pageviewProps })
   } catch (err) { console.error('[proxy/e]', err.message) }
 })
 
@@ -223,11 +232,27 @@ router.get('/pixel.gif',
     }
 
     const enriched = enrichFromRequest(req)
-    await ph.capture({
-      distinctId: uid || uuidv4(),
-      event: '$pageview',
-      properties: { site_id: site.id, site_key, event_type: 'pixel', country: enriched.country, device_type: enriched.device_type, server_timestamp: enriched.server_timestamp, proxy: true }
-    })
+    // distinctId hoisted to a const (behavior-identical) computed ONCE so the
+    // additive Tinybird dual-write below carries the IDENTICAL anonymous
+    // distinct_id ph.capture received — calling uuidv4() a second time here
+    // would silently break visitor stitching between PostHog and Tinybird for
+    // anonymous pixel pageviews (tinybird/PHASE2C_PAGEVIEW_DUALWRITE_PLAN.md §2.3).
+    const distinctId = uid || uuidv4()
+    const pageviewProps = { site_id: site.id, site_key, event_type: 'pixel', country: enriched.country, device_type: enriched.device_type, server_timestamp: enriched.server_timestamp, proxy: true }
+
+    await ph.capture({ distinctId, event: '$pageview', properties: pageviewProps })
+
+    // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
+    // No natural id on the pixel path -> deriveEventId falls to a uuid. site_key
+    // in the payload is dropped by the adapter. `event_type: 'pixel'` is a
+    // PostHog-only analytics label, NOT the canonical Tinybird discriminator —
+    // normalizeEvent prefers a bag `event_type` over the wrapper `event`
+    // (tinybird/adapter/normalize.js:250), so passing it through as-is would
+    // silently relabel every dual-written row 'pixel' instead of '$pageview'.
+    // Renamed to `tracking_method` (matching pixel.js's own convention) for the
+    // Tinybird-bound payload only — ph.capture above is unaffected.
+    const { event_type: _pixelLabel, ...dualWriteProps } = pageviewProps
+    dualWriteEvent({ distinctId, event: '$pageview', properties: { ...dualWriteProps, tracking_method: 'pixel' } })
   } catch (err) { console.error('[proxy/pixel]', err.message) }
 })
 

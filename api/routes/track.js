@@ -329,72 +329,86 @@ export async function track(req, res) {
       }
     }
 
+    // distinctId hoisted to a const (behavior-identical) computed ONCE so the
+    // additive Tinybird dual-write below carries the IDENTICAL anonymous
+    // distinct_id ph.capture received — calling uuidv4() a second time here
+    // would silently break visitor stitching between PostHog and Tinybird for
+    // anonymous pageviews (tinybird/PHASE2C_PAGEVIEW_DUALWRITE_PLAN.md §2.1).
+    const distinctId = req.body.anonymous_id || uuidv4()
+    // properties hoisted to a const (behavior-identical) so the dual-write call
+    // reuses the exact same object the existing ph.capture sends.
+    const pageviewProps = {
+      site_id: req.site.id,
+      anonymous_id: req.body.anonymous_id,
+      page_url: req.body.page_url,
+      referrer: req.body.referrer,
+      utm_source: normalizeUtm(req.body.utm_source),
+      utm_medium: normalizeUtm(req.body.utm_medium),
+      utm_campaign: normalizeUtm(req.body.utm_campaign),
+      utm_content: normalizeUtm(req.body.utm_content),
+      utm_term: normalizeUtm(req.body.utm_term),
+      ref_param: normalizeUtm(req.body.ref_param || req.body.ref),
+      source_param: normalizeUtm(req.body.source_param || req.body.source),
+      via_param: normalizeUtm(req.body.via_param || req.body.via),
+      first_touch_source: normalizeUtm(req.body.first_touch_source),
+      first_touch_medium: normalizeUtm(req.body.first_touch_medium),
+      first_touch_campaign: normalizeUtm(req.body.first_touch_campaign),
+      first_touch_timestamp: sanitizeClientTimestamp(req.body.first_touch_timestamp),
+      ...normalizeClickIds(req.body),
+      utm_id: normalizeUtm(req.body.utm_id),
+      st_campaign_id: normalizeUtm(req.body.st_campaign_id),
+      st_adgroup_id: normalizeUtm(req.body.st_adgroup_id),
+      st_ad_id: normalizeUtm(req.body.st_ad_id),
+      st_target_id: normalizeUtm(req.body.st_target_id),
+      st_network: sanitizeValueTrack(req.body.st_network),
+      st_device: sanitizeValueTrack(req.body.st_device),
+      st_matchtype: sanitizeValueTrack(req.body.st_matchtype),
+      st_verify: sanitizeVerificationToken(req.body.st_verify),
+      ai_source: enriched.ai_source,
+      device_type: enriched.device_type,
+      browser_name: enriched.browser_name,
+      browser_version: enriched.browser_version,
+      os_name: enriched.os_name,
+      os_version: enriched.os_version,
+      country: enriched.country,
+      server_timestamp: enriched.server_timestamp,
+      ingestion_method: 'server_routed',
+      ...(req.body?.event === 'form_submit' ? {
+        event_type: 'form_submit',
+        form_provider: form_provider,
+        form_id: form_id,
+        form_name: form_name,
+        form_action_host: form_action_host,
+        form_action_path: form_action_path,
+        page_path: page_path
+      } : {}),
+      ...(req.body?.event === 'booking_scheduled' ? {
+        event_type: 'booking_scheduled',
+        booking_provider: booking_provider,
+        booking_detection_method: booking_detection_method,
+        booking_event_type: booking_event_type,
+        page_path: booking_page_path
+      } : {}),
+      // Feature: custom event properties — any object passed as `properties` is spread
+      // Excluded for form_submit and booking_scheduled (fixed schemas, no passthrough)
+      ...((req.body?.event === 'form_submit' || req.body?.event === 'booking_scheduled')
+        ? {}
+        : req.body.properties && typeof req.body.properties === 'object' && !Array.isArray(req.body.properties)
+          ? { custom_properties: req.body.properties }
+          : {}),
+      ...customParams
+    }
+
     ph.capture({
-      distinctId: req.body.anonymous_id || uuidv4(),
+      distinctId,
       event: req.body.event || '$pageview',
       timestamp: clientTimestamp ? new Date(clientTimestamp) : undefined,
-      properties: {
-        site_id: req.site.id,
-        anonymous_id: req.body.anonymous_id,
-        page_url: req.body.page_url,
-        referrer: req.body.referrer,
-        utm_source: normalizeUtm(req.body.utm_source),
-        utm_medium: normalizeUtm(req.body.utm_medium),
-        utm_campaign: normalizeUtm(req.body.utm_campaign),
-        utm_content: normalizeUtm(req.body.utm_content),
-        utm_term: normalizeUtm(req.body.utm_term),
-        ref_param: normalizeUtm(req.body.ref_param || req.body.ref),
-        source_param: normalizeUtm(req.body.source_param || req.body.source),
-        via_param: normalizeUtm(req.body.via_param || req.body.via),
-        first_touch_source: normalizeUtm(req.body.first_touch_source),
-        first_touch_medium: normalizeUtm(req.body.first_touch_medium),
-        first_touch_campaign: normalizeUtm(req.body.first_touch_campaign),
-        first_touch_timestamp: sanitizeClientTimestamp(req.body.first_touch_timestamp),
-        ...normalizeClickIds(req.body),
-        utm_id: normalizeUtm(req.body.utm_id),
-        st_campaign_id: normalizeUtm(req.body.st_campaign_id),
-        st_adgroup_id: normalizeUtm(req.body.st_adgroup_id),
-        st_ad_id: normalizeUtm(req.body.st_ad_id),
-        st_target_id: normalizeUtm(req.body.st_target_id),
-        st_network: sanitizeValueTrack(req.body.st_network),
-        st_device: sanitizeValueTrack(req.body.st_device),
-        st_matchtype: sanitizeValueTrack(req.body.st_matchtype),
-        st_verify: sanitizeVerificationToken(req.body.st_verify),
-        ai_source: enriched.ai_source,
-        device_type: enriched.device_type,
-        browser_name: enriched.browser_name,
-        browser_version: enriched.browser_version,
-        os_name: enriched.os_name,
-        os_version: enriched.os_version,
-        country: enriched.country,
-        server_timestamp: enriched.server_timestamp,
-        ingestion_method: 'server_routed',
-        ...(req.body?.event === 'form_submit' ? {
-          event_type: 'form_submit',
-          form_provider: form_provider,
-          form_id: form_id,
-          form_name: form_name,
-          form_action_host: form_action_host,
-          form_action_path: form_action_path,
-          page_path: page_path
-        } : {}),
-        ...(req.body?.event === 'booking_scheduled' ? {
-          event_type: 'booking_scheduled',
-          booking_provider: booking_provider,
-          booking_detection_method: booking_detection_method,
-          booking_event_type: booking_event_type,
-          page_path: booking_page_path
-        } : {}),
-        // Feature: custom event properties — any object passed as `properties` is spread
-        // Excluded for form_submit and booking_scheduled (fixed schemas, no passthrough)
-        ...((req.body?.event === 'form_submit' || req.body?.event === 'booking_scheduled')
-          ? {}
-          : req.body.properties && typeof req.body.properties === 'object' && !Array.isArray(req.body.properties)
-            ? { custom_properties: req.body.properties }
-            : {}),
-        ...customParams
-      }
+      properties: pageviewProps
     })
+
+    // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
+    // No natural id on this path -> deriveEventId falls to a uuid.
+    dualWriteEvent({ distinctId, event: req.body.event || '$pageview', timestamp: clientTimestamp, properties: pageviewProps })
 
     // Form conversion auto-promotion
     if (req.body?.event === 'form_submit') {
