@@ -112,7 +112,10 @@ export function withRetry (transport, {
         const headerMs = err.retryAfterMs
         const backoff = Math.min(maxDelayMs, baseDelayMs * (2 ** attempt))
         const waitMs = (typeof headerMs === 'number' && headerMs >= 0)
-          ? headerMs
+          // Honor the server's Retry-After / X-RateLimit-Reset, but CAP at maxDelayMs:
+          // a malformed/hostile header (or a misparsed X-RateLimit-Reset epoch) cannot
+          // stall a batch beyond maxDelayMs. Bounded in BOTH count and duration.
+          ? Math.min(maxDelayMs, headerMs)
           : backoff + Math.floor(random() * backoff) // full jitter on top of backoff
         attempt++
         await sleep(waitMs)

@@ -92,6 +92,25 @@ test('429 without header -> exponential backoff + jitter', async () => {
   assert.deepStrictEqual(sleep.waits, [200, 400])
 })
 
+test('header wait > maxDelayMs is CLAMPED to maxDelayMs (bounded duration)', async () => {
+  // hostile/malformed Retry-After: 86400s (24h) -> must clamp to maxDelayMs.
+  const fetch = mockFetch([{ status: 429, headers: { 'Retry-After': '86400' } }, { status: 202 }])
+  const sleep = mockSleep()
+  await withRetry(createTinybirdTransport({ ...FAKE, fetch }), { sleep, maxDelayMs: 30000 })(GZ)
+  assert.deepStrictEqual(sleep.waits, [30000], 'clamped to maxDelayMs, not 86400000')
+  // finding #2 incidental: a misparsed X-RateLimit-Reset epoch -> huge ms -> also clamped.
+  const fetch2 = mockFetch([{ status: 429, headers: { 'X-RateLimit-Reset': '1000000000' } }, { status: 202 }])
+  const sleep2 = mockSleep()
+  await withRetry(createTinybirdTransport({ ...FAKE, fetch: fetch2 }), { sleep: sleep2, maxDelayMs: 30000 })(GZ)
+  assert.strictEqual(sleep2.waits.length, 1)
+  assert.ok(sleep2.waits[0] <= 30000, 'misparsed-epoch huge wait is clamped to maxDelayMs')
+  // a header UNDER the cap is still honored exactly (intent preserved up to the cap).
+  const fetch3 = mockFetch([{ status: 429, headers: { 'Retry-After': '2' } }, { status: 202 }])
+  const sleep3 = mockSleep()
+  await withRetry(createTinybirdTransport({ ...FAKE, fetch: fetch3 }), { sleep: sleep3, maxDelayMs: 30000 })(GZ)
+  assert.deepStrictEqual(sleep3.waits, [2000], 'header under the cap honored exactly')
+})
+
 test('5xx -> retries with backoff', async () => {
   const fetch = mockFetch([{ status: 503 }, { status: 202 }])
   const sleep = mockSleep()
