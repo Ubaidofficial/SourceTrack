@@ -14,6 +14,7 @@ import { claimConversionUsage } from '../lib/conversion-limits.js'
 import { claimPageviewUsage } from '../lib/pageview-limits.js'
 import { isSiteStatusBlocked } from '../lib/plan-features.js'
 import { redactPiiFromObject, redactPiiFromUrl } from '../lib/utils.js'
+import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
 import {
   trackVisitorLimit,
   trackIpLimit,
@@ -154,22 +155,35 @@ router.post('/c',
       console.error('[proxy/c] Conversion limit check failed, failing open:', limitErr.message || limitErr)
     }
 
+    // distinctId + captureProperties hoisted to consts (behavior-identical) so the
+    // inline uuidv4() fallbacks are computed ONCE and the additive Tinybird
+    // dual-write below shares the exact same distinct_id / payload the existing
+    // ph.capture uses. (Named captureProperties to avoid shadowing the `properties`
+    // already destructured from req.body above.)
+    const distinctId = anonymous_id || uuidv4()
+    const captureProperties = {
+      ...sanitizedProperties,
+      site_id: site.id,
+      site_key,
+      conversion_value: conversion_value || 0,
+      conversion_type: conversion_type || null,
+      conversion_event_id: order_id || uuidv4(),
+      country: enriched.country,
+      device_type: enriched.device_type,
+      server_timestamp: enriched.server_timestamp,
+      proxy: true,
+    }
+
     await ph.capture({
-      distinctId: anonymous_id || uuidv4(),
+      distinctId,
       event: '$conversion',
-      properties: {
-        ...sanitizedProperties,
-        site_id: site.id,
-        site_key,
-        conversion_value: conversion_value || 0,
-        conversion_type: conversion_type || null,
-        conversion_event_id: order_id || uuidv4(),
-        country: enriched.country,
-        device_type: enriched.device_type,
-        server_timestamp: enriched.server_timestamp,
-        proxy: true,
-      }
+      properties: captureProperties
     })
+
+    // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
+    // order_id (when present) is exposed at the raw root so deriveEventId keys on
+    // it (else a uuid). site_key in the payload is dropped by the adapter.
+    dualWriteEvent({ distinctId, event: '$conversion', order_id, properties: captureProperties })
   } catch (err) { console.error('[proxy/c]', err.message) }
 })
 
