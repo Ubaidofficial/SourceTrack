@@ -8,6 +8,7 @@ import { ph } from '../lib/posthog.js'
 import { resolveWebhookAnonymousId } from '../lib/identity-links.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
 import { SUBSCRIPTION_EVENTS, mapSubscriptionEvent, buildSubscriptionIdempotencyKeys } from '../lib/stripe-subscription.js'
+import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
 
 
 
@@ -125,6 +126,14 @@ async function handleSubscriptionEvent(event, site, siteKey) {
     }
 
     await ph.capture({ distinctId, event: '$conversion', properties: conversionProperties })
+
+    // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
+    // Subscription path: reached only after signature verify, the persistent claim
+    // duplicate-skip, and plan-limit returned — a duplicate the claim skips never
+    // dual-writes. deriveEventId resolves stripe_invoice_id (branch 3) else
+    // stripe_subscription_id:type (branch 4) from props; NOT conversion_event_id.
+    dualWriteEvent({ distinctId, event: '$conversion', timestamp: occurredAt, properties: conversionProperties })
+
     await logIngestionEvent(siteKey, 'stripe', { providerEventId, orderId: invoiceId || subscriptionId, value, currency, status: 'success' })
     return { status: 200, body: { received: true } }
   } catch (err) {
@@ -372,6 +381,15 @@ router.post('/:site_key', async (req, res) => {
       event: '$conversion',
       properties: conversionProperties
     })
+
+    // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
+    // Checkout path: reached only after signature verify, the persistent claim
+    // duplicate-skip (:285), and plan-limit returned. deriveEventId resolves order_id
+    // (= session.id, branch 5) from props; NOT conversion_event_id.
+    // NOTE: a subscription-mode checkout ALSO emits an invoice.paid $conversion — the
+    // known double-count. Mirrored here as-is and ACCEPTABLE (flag OFF, nothing emits);
+    // Phase 5c adds the session.mode suppression before the flag ever flips.
+    dualWriteEvent({ distinctId, event: '$conversion', timestamp: occurredAt, properties: conversionProperties })
 
     await logIngestionEvent(siteKey, 'stripe', {
       providerEventId,

@@ -140,6 +140,44 @@ const shopifyRaw = (orderId) => ({
   }
 })
 
+// ── Batch 5b: stripe-webhook.js (both paths) ────────────────────────────────────
+// Checkout: order_id = session.id -> deriveEventId branch 5. NO stripe_invoice_id /
+// stripe_subscription_id in checkout props, so it resolves order_id.
+const stripeCheckoutRaw = {
+  distinctId: 'stripe_unattributed:cs_test_123', event: '$conversion', timestamp: '2026-06-30T10:00:00.000Z',
+  properties: {
+    site_id: SITE, site_key: 'sk_live_STRIPECK', conversion_value: 49.0, currency: 'USD',
+    conversion_type: 'purchase', conversion_event_id: 'cs_test_123', order_id: 'cs_test_123',
+    payment_id: 'pi_test_777', provider: 'stripe', provider_event_id: 'evt_ck_1',
+    stripe_event_type: 'checkout.session.completed', occurred_at: '2026-06-30T10:00:00.000Z',
+    ingestion_method: 'webhook_stripe', stitching_method: 'none', utm_source: 'stripe',
+    utm_medium: 'webhook', first_touch_source: 'stripe', webhook_customer_id: 'cus_test_1'
+  }
+}
+// Subscription invoice.paid: stripe_invoice_id present -> deriveEventId branch 3.
+const stripeSubInvoiceRaw = {
+  distinctId: 'stripe_subscription_unattributed:sub_test_5', event: '$conversion', timestamp: '2026-06-30T10:00:00.000Z',
+  properties: {
+    site_id: SITE, site_key: 'sk_live_STRIPESUB', conversion_value: 79.0, currency: 'USD',
+    conversion_type: 'subscription', conversion_event_id: 'in_test_999', provider: 'stripe',
+    provider_event_id: 'evt_inv_1', stripe_event_type: 'invoice.paid', stripe_billing_reason: 'subscription_create',
+    occurred_at: '2026-06-30T10:00:00.000Z', ingestion_method: 'webhook_stripe', stitching_method: 'none',
+    utm_source: 'stripe', webhook_customer_id: 'cus_test_2',
+    stripe_subscription_id: 'sub_test_5', stripe_invoice_id: 'in_test_999'
+  }
+}
+// Subscription lifecycle (no invoice, e.g. trial_start): branch 4 -> sub_id:conversion_type.
+const stripeSubLifecycleRaw = {
+  distinctId: 'stripe_subscription_unattributed:sub_test_5', event: '$conversion', timestamp: '2026-06-30T10:00:00.000Z',
+  properties: {
+    site_id: SITE, site_key: 'sk_live_STRIPESUB', conversion_value: 0, currency: 'USD',
+    conversion_type: 'trial_start', conversion_event_id: 'sub_test_5:trial_start', provider: 'stripe',
+    provider_event_id: 'evt_subcreate_1', stripe_event_type: 'customer.subscription.created',
+    occurred_at: '2026-06-30T10:00:00.000Z', ingestion_method: 'webhook_stripe', stitching_method: 'none',
+    webhook_customer_id: 'cus_test_2', stripe_subscription_id: 'sub_test_5'
+  }
+}
+
 // ── Gate logic ──────────────────────────────────────────────────────────────────
 test('flag parsing: only "true"/"1" enable; everything else is OFF', () => {
   for (const v of ['true', '1']) { process.env.TINYBIRD_DUAL_WRITE = v; assert.strictEqual(isDualWriteEnabled(), true) }
@@ -440,6 +478,69 @@ test('shopify claim-gating: HMAC-fail / claim-skipped duplicate / limit -> NO du
   simulateShopify(true, { duplicate: false }, true)     // verified + claimed + allowed -> emit
   await __getDualWriteBatcher().flush()
   assert.strictEqual(rec.lines().length, 1, 'exactly one dual-write on the success path')
+  reset()
+})
+
+// ── Batch 5b: stripe (both paths) ───────────────────────────────────────────────
+test('stripe checkout: ON -> event_id = order_id (session.id, branch 5); site_key DROPPED', async () => {
+  const { ok, rec } = await emitOn(stripeCheckoutRaw)
+  assert.strictEqual(ok, true)
+  const ev = rec.lines()[0]
+  assert.strictEqual(ev.site_id, SITE)
+  assert.strictEqual(ev.event_id, 'cs_test_123', 'order_id (session.id) resolves, not conversion_event_id')
+  assert.ok(!('site_key' in ev) && !JSON.stringify(ev).includes('sk_live_STRIPECK'))
+  reset()
+})
+
+test('stripe subscription invoice.paid: ON -> event_id = stripe_invoice_id (branch 3)', async () => {
+  const { ok, rec } = await emitOn(stripeSubInvoiceRaw)
+  assert.strictEqual(ok, true)
+  const ev = rec.lines()[0]
+  assert.strictEqual(ev.site_id, SITE)
+  assert.strictEqual(ev.event_id, 'in_test_999', 'stripe_invoice_id wins (per-period key; renewals stay distinct)')
+  assert.ok(!('site_key' in ev) && !JSON.stringify(ev).includes('sk_live_STRIPESUB'))
+  reset()
+})
+
+test('stripe subscription lifecycle (no invoice): ON -> event_id = sub_id:conversion_type (branch 4)', async () => {
+  const { ok, rec } = await emitOn(stripeSubLifecycleRaw)
+  assert.strictEqual(ok, true)
+  assert.strictEqual(rec.lines()[0].event_id, 'sub_test_5:trial_start', 'scoped by type so trial/churn never collide')
+  reset()
+})
+
+test('stripe both paths: flag OFF -> none emit (persistent claim + routing unaffected)', () => {
+  reset()
+  const rec = recorder()
+  setDualWriteTransport(rec.transport, BATCH_OPTS)
+  for (const raw of [stripeCheckoutRaw, stripeSubInvoiceRaw, stripeSubLifecycleRaw]) {
+    assert.strictEqual(dualWriteEvent(raw), false)
+  }
+  assert.strictEqual(rec.lines().length, 0)
+  reset()
+})
+
+// Lens (b) BOTH paths: dualWriteEvent fires only after sig-verify + persistent claim
+// succeeds. A claim-skipped duplicate must NOT dual-write. Mirrors both Stripe paths.
+test('stripe claim-gating (both paths): sig-fail / claim-skipped / limit -> NO dual-write', async () => {
+  process.env.TINYBIRD_DUAL_WRITE = 'true'
+  const rec = recorder()
+  setDualWriteTransport(rec.transport, BATCH_OPTS)
+  const simulateStripe = (raw, sigOk, claim, limitAllowed) => {
+    if (!sigOk) return                  // invalid HMAC signature -> 400
+    if (claim.duplicate) return         // claim duplicate-skip (checkout :285 / subscription :72)
+    if (!limitAllowed) return           // plan-limit block
+    dualWriteEvent(raw)                  // after ph.capture
+  }
+  simulateStripe(stripeCheckoutRaw, false, { duplicate: false }, true)   // bad sig
+  simulateStripe(stripeCheckoutRaw, true, { duplicate: true }, true)      // checkout claim skip
+  simulateStripe(stripeSubInvoiceRaw, true, { duplicate: true }, true)    // subscription claim skip
+  simulateStripe(stripeSubInvoiceRaw, true, { duplicate: false }, false)  // limit
+  assert.strictEqual(rec.lines().length, 0, 'no dual-write on any suppressed path (either Stripe path)')
+  simulateStripe(stripeCheckoutRaw, true, { duplicate: false }, true)     // success
+  simulateStripe(stripeSubInvoiceRaw, true, { duplicate: false }, true)   // success
+  await __getDualWriteBatcher().flush()
+  assert.strictEqual(rec.lines().length, 2, 'one dual-write per successful path')
   reset()
 })
 
