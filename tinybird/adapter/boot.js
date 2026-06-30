@@ -16,6 +16,7 @@
 
 import { setDualWriteTransport, isDualWriteEnabled } from './dual-write.js'
 import { createTinybirdTransport } from './transport.js'
+import { createSampledLogger, capLabel } from './log-sampler.js'
 
 let _wired = false
 
@@ -41,7 +42,25 @@ export function initTinybirdDualWrite ({ fetch } = {}) {
 
   try {
     const transport = createTinybirdTransport({ host, token, datasource, fetch })
-    setDualWriteTransport(transport)
+    // Observability: a failing POST (deliver throws after retries) was previously
+    // 100% silent — no onError was wired, so "zero POST attempts" was invisible.
+    // Wire a SAMPLED, never-throwing onError that logs ONLY err.message + batch
+    // count + event_type(s). NEVER the batch/event body (PII + would flood).
+    // Safety of `err.message` depends on transport.js NEVER embedding the token or
+    // request URL in a thrown error (it doesn't — token is header-only); keep it so.
+    const logTransportError = createSampledLogger()
+    const onError = (err, batch) => {
+      const msg = (err && err.message) ? err.message : String(err)
+      const count = Array.isArray(batch) ? batch.length : 0
+      let types = ''
+      try {
+        if (Array.isArray(batch)) {
+          types = [...new Set(batch.map((e) => e && e.event_type).filter(Boolean))].map((t) => capLabel(t)).join(',')
+        }
+      } catch (_) { /* never let log-building throw */ }
+      logTransportError(`[tinybird] dual-write POST failed (events NOT delivered): ${msg} | batch=${count} types=${types}`)
+    }
+    setDualWriteTransport(transport, { onError })
     _wired = true
     // host + datasource are not secrets; the token is NEVER logged.
     console.log(`[tinybird] dual-write transport wired -> ${host} name=${datasource}`)

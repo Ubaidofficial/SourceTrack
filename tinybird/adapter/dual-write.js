@@ -15,10 +15,17 @@
 
 import { normalizeEvent } from './normalize.js'
 import { createBatcher } from './batch.js'
+import { createSampledLogger, capLabel } from './log-sampler.js'
 
 let _transport = null
 let _batcher = null
 let _batcherOpts
+// Sampled, bounded logger for the normalize/enqueue swallow below — so a normalize
+// throw is VISIBLE (once per interval, with a suppressed count) instead of silent.
+let _dropLog = createSampledLogger()
+
+// Test-only: reset the sampler so a test starts from a clean (un-emitted) state.
+export function __resetDualWriteObservability () { _dropLog = createSampledLogger() }
 
 export function isDualWriteEnabled () {
   const v = process.env.TINYBIRD_DUAL_WRITE
@@ -54,8 +61,13 @@ export function dualWriteEvent (raw) {
     const normalized = normalizeEvent(raw) // pure: derives event_id, drops PII/site_key, never mutates `raw`
     Promise.resolve(batcher.enqueue(normalized)).catch(() => {}) // never surface to producer
     return true
-  } catch (_) {
-    return false // a malformed event must NEVER break the live capture path
+  } catch (err) {
+    // A malformed event must NEVER break the live capture path — still return false.
+    // But log it (SAMPLED, never the body): err.message + the wrapper event name
+    // only. raw.event is the non-PII canonical type ('$conversion', '$pageview').
+    const msg = (err && err.message) ? err.message : String(err)
+    _dropLog(`[tinybird] dual-write normalize/enqueue failed (event dropped): ${msg} | event=${capLabel(raw && raw.event)}`)
+    return false
   }
 }
 
