@@ -10,6 +10,7 @@ import { claimIdempotencyKeys, logIngestionEvent, rollbackIdempotencyKeys } from
 
 import { storeIdentityLink, resolveAnonymousId } from '../lib/identity-links.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
+import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
 
 
 // Alias kept for the CAPI block readability — same singleton underneath.
@@ -239,6 +240,13 @@ export async function conversionOffline(req, res) {
       timestamp: new Date(occurredAt),
       properties: props
     })
+
+    // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
+    // Reached ONLY after the PERSISTENT claimIdempotencyKeys duplicate skip (:95)
+    // and the plan-limit block (:222) returned — so a duplicate the claim skips
+    // never dual-writes. props.external_event_id (:178, resolveCapiEventId) lets
+    // deriveEventId branch-2 resolve the SAME id browser computes -> cross-dedup.
+    dualWriteEvent({ distinctId, event: '$conversion', timestamp: occurredAt, properties: props })
 
     // Fire CAPI integrations async (keep original behavior, gated by plan)
     if (hasFeature(req.site?.plan, 'capi_server_side')) try {

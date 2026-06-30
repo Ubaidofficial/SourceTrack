@@ -7,6 +7,10 @@ import { gunzipSync } from 'node:zlib'
 import {
   dualWriteEvent, isDualWriteEnabled, setDualWriteTransport, __getDualWriteBatcher
 } from '../dual-write.js'
+import { deriveEventId } from '../normalize.js'
+// The REAL resolveCapiEventId the producers use (conversion.js:238 / offline:178) —
+// proves offline<->browser cross-dedup with the actual id derivation, not a literal.
+import { resolveCapiEventId } from '../../../api/lib/capi-event-id.js'
 
 function recorder () {
   const payloads = []
@@ -87,6 +91,29 @@ const trackFormRaw = {
     site_id: SITE, site_key: 'sk_live_SECRET2', anonymous_id: 'anon-5', is_conversion: true,
     conversion_type: 'form', form_name: 'demo', page_url: 'https://x.example.com/pricing',
     utm_source: 'google', ingestion_method: 'server_routed'
+  }
+}
+// ── Batch 3: browser (conversion.js) + offline (conversion-offline.js) ───────────
+// Both producers stamp props.external_event_id = resolveCapiEventId(body, site_id,
+// type). For the SAME order_id + conversion_type that value is identical -> the
+// shared event_id that proves offline<->browser cross-dedup.
+const SHARED_BODY = { order_id: 'ord_777' }
+const SHARED_TYPE = 'purchase'
+const SHARED_EXT = resolveCapiEventId(SHARED_BODY, SITE, SHARED_TYPE) // `${SITE}:ord_777:purchase`
+const browserConvRaw = {
+  distinctId: 'browser-anon', event: '$conversion', timestamp: '2026-06-30T10:00:00.000Z',
+  properties: {
+    site_id: SITE, site_key: 'sk_live_BROWSER', anonymous_id: 'browser-anon', is_conversion: true,
+    conversion_value: 120.0, conversion_type: SHARED_TYPE, order_id: SHARED_BODY.order_id,
+    external_event_id: SHARED_EXT, ingestion_method: 'server_routed', utm_source: 'google'
+  }
+}
+const offlineConvRaw = {
+  distinctId: 'offline-srv', event: '$conversion', timestamp: '2026-06-30T10:00:00.000Z',
+  properties: {
+    site_id: SITE, site_key: 'sk_live_OFFLINE', is_conversion: true, conversion_value: 120.0,
+    conversion_type: SHARED_TYPE, order_id: SHARED_BODY.order_id, external_event_id: SHARED_EXT,
+    ingestion_method: 'offline', provider: 'payments_api', currency: 'USD'
   }
 }
 
@@ -253,5 +280,72 @@ test('track.js gating: a deduped/limit-blocked form does NOT dual-write', async 
   simulateForm(false, true)       // real, allowed -> dual-writes
   await __getDualWriteBatcher().flush()
   assert.strictEqual(rec.lines().length, 1, 'exactly one dual-write on the allowed path')
+  reset()
+})
+
+// ── Batch 3 ─────────────────────────────────────────────────────────────────────
+test('browser (conversion.js): ON -> event_id = external_event_id; site_key DROPPED', async () => {
+  const { ok, rec } = await emitOn(browserConvRaw)
+  assert.strictEqual(ok, true)
+  const ev = rec.lines()[0]
+  assert.strictEqual(ev.site_id, SITE)
+  assert.strictEqual(ev.event_id, SHARED_EXT, 'deriveEventId branch-2 resolves external_event_id')
+  assert.ok(!('site_key' in ev) && !JSON.stringify(ev).includes('sk_live_BROWSER'))
+  reset()
+})
+
+test('offline (conversion-offline.js): ON -> event_id = external_event_id; site_key DROPPED', async () => {
+  const { ok, rec } = await emitOn(offlineConvRaw)
+  assert.strictEqual(ok, true)
+  const ev = rec.lines()[0]
+  assert.strictEqual(ev.site_id, SITE)
+  assert.strictEqual(ev.event_id, SHARED_EXT)
+  assert.ok(!('site_key' in ev) && !JSON.stringify(ev).includes('sk_live_OFFLINE'))
+  reset()
+})
+
+test('CROSS-DEDUP PROOF: browser + offline, same order_id+type -> SAME event_id', async () => {
+  // direct (deriveEventId) and end-to-end (through the wired dual-write path)
+  assert.strictEqual(deriveEventId(browserConvRaw.properties), deriveEventId(offlineConvRaw.properties))
+  const browser = await emitOn(browserConvRaw)
+  const browserId = browser.rec.lines()[0].event_id
+  reset()
+  const offline = await emitOn(offlineConvRaw)
+  const offlineId = offline.rec.lines()[0].event_id
+  assert.strictEqual(browserId, offlineId, 'browser and offline derive the SAME event_id')
+  assert.strictEqual(browserId, SHARED_EXT)
+  reset()
+})
+
+// Lens (b) — the load-bearing one: dualWriteEvent fires ONLY after the persistent
+// claim SUCCEEDS. A duplicate (claim.duplicate) returns before ph.capture, so it
+// must NOT dual-write. Mirrors conversion.js / conversion-offline.js control flow.
+test('persistent-claim gating: a duplicate the claim SKIPS does NOT dual-write', async () => {
+  process.env.TINYBIRD_DUAL_WRITE = 'true'
+  const rec = recorder()
+  setDualWriteTransport(rec.transport, BATCH_OPTS)
+  const simulateClaimed = (claim, limitAllowed) => {
+    if (claim.duplicate) return // conversion.js:321 / offline:95 — skip-on-duplicate
+    if (!limitAllowed) return   // plan-limit block
+    // ph.capture(...) then:
+    dualWriteEvent(browserConvRaw)
+  }
+  simulateClaimed({ duplicate: true }, true)        // duplicate -> claim skips -> NO emit
+  simulateClaimed({ duplicate: false }, false)      // limit blocked -> NO emit
+  assert.strictEqual(rec.lines().length, 0, 'a claim-skipped duplicate / limited conversion never dual-writes')
+  simulateClaimed({ duplicate: false }, true)        // claim success + allowed -> emit
+  await __getDualWriteBatcher().flush()
+  assert.strictEqual(rec.lines().length, 1, 'exactly one dual-write on claim-success path')
+  reset()
+})
+
+test('Batch 3 producers: flag OFF -> none emit (safety guarantee)', () => {
+  reset()
+  const rec = recorder()
+  setDualWriteTransport(rec.transport, BATCH_OPTS)
+  for (const raw of [browserConvRaw, offlineConvRaw]) {
+    assert.strictEqual(dualWriteEvent(raw), false)
+  }
+  assert.strictEqual(rec.lines().length, 0)
   reset()
 })
