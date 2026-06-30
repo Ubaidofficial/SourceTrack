@@ -59,7 +59,13 @@ const isPii = (key) => { const k = key.toLowerCase(); return PII_KEYS.has(k) || 
 // Keys that must NEVER reach prod ingest.
 //  - site_key: customer-facing secret, never read in HogQL, dropped from schema (§6.5 / §2.6).
 //  - _synthetic / refund_of: generator-only flags (the synthetic dataset's edge markers).
-const FORBIDDEN_KEYS = new Set(['site_key', '_synthetic', 'refund_of'])
+//  - raw_payload: a STRINGIFIED, truncated dump of the customer-controlled webhook
+//    body (webhook-incoming.js:172). Zero analytics read value (§2.6 bag/debug), and
+//    a secret-smuggling vector: the recursive PII/forbidden strip cannot descend into
+//    a JSON *string* value, so a bypassed-key secret (e.g. a customer-sent `site_key`)
+//    embedded in that string would otherwise ride into the json:$ row. Drop the whole
+//    field. (Phase-2c-Batch-2 review finding.)
+const FORBIDDEN_KEYS = new Set(['site_key', '_synthetic', 'refund_of', 'raw_payload'])
 
 // ph.capture() wrapper fields consumed into canonical columns — never re-emitted as bag keys.
 const WRAPPER_KEYS = new Set(['distinctId', 'event', 'properties'])

@@ -65,12 +65,17 @@ const serverEventsRaw = {
 // ── Batch 2 producers ───────────────────────────────────────────────────────────
 // webhook-incoming: passes fields.orderId as raw order_id (NOT conversion_event_id),
 // + sanitizedProps (email/name already [REDACTED]; site_key present; adapter drops all).
+// raw_payload mirrors the real producer (webhook-incoming.js:171): a STRINGIFIED,
+// truncated dump of the customer body. A customer-sent `site_key` is a bypassed key
+// in redactPiiFromObject, so it survives INSIDE this string — the smuggling vector.
+const SMUGGLED_SECRET = 'sk_live_SMUGGLED_IN_BODY'
 const webhookIncomingRaw = (orderId) => ({
   distinctId: 'anon-4', event: '$conversion', order_id: orderId,
   properties: {
     site_id: SITE, site_key: 'sk_live_SECRET', conversion_value: 25.0, conversion_type: 'webhook',
     conversion_event_id: orderId || 'baked-in-uuid', email: '[REDACTED]', name: '[REDACTED]',
     utm_source: 'webhook', utm_medium: 'webhook', webhook_source: 'curl/8',
+    raw_payload: `{"site_key":"${SMUGGLED_SECRET}","deal_id":"d1","note":"customer body"}`,
     server_timestamp: '2026-06-30T10:00:00.000Z', stitching_method: 'none',
     webhook_email_present: true, identity_resolution_status: 'unresolved'
   }
@@ -191,6 +196,11 @@ test('webhook-incoming: ON -> event_id=fields.orderId; site_key/email/name DROPP
   assert.strictEqual(ev.event_type, '$conversion')
   assert.ok(!('site_key' in ev) && !('email' in ev) && !('name' in ev), 'secret + PII dropped')
   assert.ok(!JSON.stringify(ev).includes('sk_live_SECRET'))
+  // NON-VACUOUS raw_payload check: the whole raw_payload field is dropped, so a
+  // secret SMUGGLED inside its stringified JSON cannot ride into the NDJSON. This
+  // assertion FAILS if raw_payload is removed from FORBIDDEN_KEYS (verified).
+  assert.ok(!('raw_payload' in ev), 'raw_payload field dropped entirely')
+  assert.ok(!JSON.stringify(ev).includes(SMUGGLED_SECRET), 'secret inside raw_payload string never reaches the transport')
   reset()
 })
 
