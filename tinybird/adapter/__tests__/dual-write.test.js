@@ -78,7 +78,8 @@ const webhookIncomingRaw = (orderId) => ({
   properties: {
     site_id: SITE, site_key: 'sk_live_SECRET', conversion_value: 25.0, conversion_type: 'webhook',
     conversion_event_id: orderId || 'baked-in-uuid', email: '[REDACTED]', name: '[REDACTED]',
-    utm_source: 'webhook', utm_medium: 'webhook', webhook_source: 'curl/8',
+    utm_source: 'webhook', utm_medium: 'webhook',
+    webhook_source: 'Mozilla/5.0 (raw-UA-via-webhook_source-9f3)', // raw UA relabeled -> drop
     raw_payload: `{"site_key":"${SMUGGLED_SECRET}","deal_id":"d1","note":"customer body"}`,
     server_timestamp: '2026-06-30T10:00:00.000Z', stitching_method: 'none',
     webhook_email_present: true, identity_resolution_status: 'unresolved'
@@ -226,6 +227,10 @@ test('webhook-incoming: ON -> event_id=fields.orderId; site_key/email/name DROPP
   assert.strictEqual(ev.event_type, '$conversion')
   assert.ok(!('site_key' in ev) && !('email' in ev) && !('name' in ev), 'secret + PII dropped')
   assert.ok(!JSON.stringify(ev).includes('sk_live_SECRET'))
+  // NON-VACUOUS webhook_source check: raw UA relabeled under webhook_source is
+  // dropped (FAILS without webhook_source in FORBIDDEN_KEYS).
+  assert.ok(!('webhook_source' in ev), 'webhook_source (raw UA) dropped')
+  assert.ok(!JSON.stringify(ev).includes('raw-UA-via-webhook_source-9f3'), 'raw UA bytes never reach the transport under any key')
   // NON-VACUOUS raw_payload check: the whole raw_payload field is dropped, so a
   // secret SMUGGLED inside its stringified JSON cannot ride into the NDJSON. This
   // assertion FAILS if raw_payload is removed from FORBIDDEN_KEYS (verified).

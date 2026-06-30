@@ -71,7 +71,11 @@ const isPii = (key) => { const k = key.toLowerCase(); return PII_KEYS.has(k) || 
 //    already arrives as the typed device_type/browser_name/os_name columns (derived
 //    upstream via UAParser). The CAPI path reads UA from emit-time props, not Tinybird,
 //    so dropping it here doesn't affect CAPI. (Phase-2c-Batch-3 review finding.)
-const FORBIDDEN_KEYS = new Set(['site_key', '_synthetic', 'refund_of', 'raw_payload', 'user_agent'])
+//  - webhook_source: raw req.headers['user-agent'] relabeled (webhook-incoming.js:170)
+//    — the SAME fingerprinting UA bytes under a different key, with no read-side use.
+//    Drop it (not a coarsened webhook-origin label — that's a future product choice).
+//    (Phase-2c-Batch-3 follow-up review finding.)
+const FORBIDDEN_KEYS = new Set(['site_key', '_synthetic', 'refund_of', 'raw_payload', 'user_agent', 'webhook_source'])
 
 // ph.capture() wrapper fields consumed into canonical columns — never re-emitted as bag keys.
 const WRAPPER_KEYS = new Set(['distinctId', 'event', 'properties'])
