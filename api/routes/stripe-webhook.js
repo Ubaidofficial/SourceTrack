@@ -328,6 +328,12 @@ router.post('/:site_key', async (req, res) => {
       // customer_id + client_reference_id stitch so nightly seeds subscription_identity.
       // One-time (payment-mode) checkout keeps its full value. (The audit log below
       // still records the real `value`.)
+      // KNOWN LIMITATION (Option B, accepted): a subscription signup increments the raw
+      // conversions count twice ($0 'purchase' carrier + invoice.paid) — revenue and
+      // customers counts are correct; conversions inflated by 1/signup. Carrier stays
+      // 'purchase' because moving it off would drop subscription signups from the
+      // customers metric (classifyConversionType: only 'purchase'/'closed_won' = customer).
+      // Read-side conversions-count correctness deferred to Phase 9 golden tests.
       conversion_value: checkoutConversionValue(session.mode, value),
       currency,
       conversion_type: 'purchase',
