@@ -16,7 +16,6 @@
 import { normalizeEvent } from './normalize.js'
 import { createBatcher } from './batch.js'
 import { createSampledLogger, capLabel } from './log-sampler.js'
-import { tempDebug } from './temp-debug.js' // TEMP-DEBUG (revert)
 
 let _transport = null
 let _batcher = null
@@ -55,21 +54,14 @@ function getBatcher () {
 //   true  — event normalized (event_id derived) and enqueued to the injected
 //           transport (fire-and-forget; the producer never awaits it).
 export function dualWriteEvent (raw) {
-  tempDebug('dw', `entry event=${capLabel(raw && raw.event)}`) // TEMP-DEBUG (revert)
-  if (!isDualWriteEnabled()) { tempDebug('dw', 'isDualWriteEnabled=FALSE -> drop'); return false } // TEMP-DEBUG (revert)
-  tempDebug('dw', 'isDualWriteEnabled=true') // TEMP-DEBUG (revert)
+  if (!isDualWriteEnabled()) return false // flag OFF: zero work, no construction
   const batcher = getBatcher()
-  if (!batcher) { tempDebug('dw', 'getBatcher=NULL (no transport wired) -> drop'); return false } // TEMP-DEBUG (revert)
-  tempDebug('dw', 'getBatcher=ok') // TEMP-DEBUG (revert)
+  if (!batcher) return false              // ON but no transport yet (pre-2d): no-op
   try {
     const normalized = normalizeEvent(raw) // pure: derives event_id, drops PII/site_key, never mutates `raw`
-    tempDebug('dw', `normalize=ok event_id=${capLabel(normalized && normalized.event_id)} site_id_present=${!!(normalized && normalized.site_id)}`) // TEMP-DEBUG (revert)
-    tempDebug('dw', 'enqueue: calling batcher.enqueue') // TEMP-DEBUG (revert)
     Promise.resolve(batcher.enqueue(normalized)).catch(() => {}) // never surface to producer
-    tempDebug('dw', 'enqueue: returned (sync) -> returning true') // TEMP-DEBUG (revert)
     return true
   } catch (err) {
-    tempDebug('dw', `normalize/enqueue THREW: ${err && err.message}`) // TEMP-DEBUG (revert)
     // A malformed event must NEVER break the live capture path — still return false.
     // But log it (SAMPLED, never the body): err.message + the wrapper event name
     // only. raw.event is the non-PII canonical type ('$conversion', '$pageview').
