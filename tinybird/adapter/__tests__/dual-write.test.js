@@ -40,12 +40,17 @@ async function emitOn (raw) {
 
 // ── Representative payloads, exactly as each wired producer passes them ──────────
 const SITE = 'site-uuid-123'
+// Distinct sentinel for conversion_event_id in every fixture: deriveEventId must
+// pick the NATURAL id (order_id/invoice_id/sub_id), NOT conversion_event_id. With
+// the sentinel != the natural id, the `event_id === <natural>` assertions genuinely
+// exercise that exclusion (they'd fail if conversion_event_id were ever consumed).
+const CEID_SENTINEL = 'SENTINEL_should_not_appear'
 const proxyRaw = (order_id) => ({
   distinctId: 'anon-1', event: '$conversion', order_id,
   properties: {
     referrer: '', site_id: SITE, site_key: 'sk_live_SECRET',
     conversion_value: 49.0, conversion_type: 'purchase',
-    conversion_event_id: order_id || 'generated', country: 'US', device_type: 'desktop',
+    conversion_event_id: CEID_SENTINEL, country: 'US', device_type: 'desktop',
     server_timestamp: '2026-06-30T10:00:00.000Z', proxy: true
   }
 })
@@ -77,7 +82,7 @@ const webhookIncomingRaw = (orderId) => ({
   distinctId: 'anon-4', event: '$conversion', order_id: orderId,
   properties: {
     site_id: SITE, site_key: 'sk_live_SECRET', conversion_value: 25.0, conversion_type: 'webhook',
-    conversion_event_id: orderId || 'baked-in-uuid', email: '[REDACTED]', name: '[REDACTED]',
+    conversion_event_id: CEID_SENTINEL, email: '[REDACTED]', name: '[REDACTED]',
     utm_source: 'webhook', utm_medium: 'webhook',
     webhook_source: 'Mozilla/5.0 (raw-UA-via-webhook_source-9f3)', // raw UA relabeled -> drop
     raw_payload: `{"site_key":"${SMUGGLED_SECRET}","deal_id":"d1","note":"customer body"}`,
@@ -132,7 +137,7 @@ const shopifyRaw = (orderId) => ({
   distinctId: 'shopify_unattributed:' + orderId, event: '$conversion', timestamp: '2026-06-30T10:00:00.000Z',
   properties: {
     site_id: SITE, site_key: 'sk_live_SHOPIFY', conversion_value: 75.0, currency: 'USD',
-    conversion_type: 'purchase', conversion_event_id: orderId, order_id: orderId,
+    conversion_type: 'purchase', conversion_event_id: CEID_SENTINEL, order_id: orderId,
     order_name: '#1042', provider: 'shopify', provider_event_id: 'wh_evt_abc',
     occurred_at: '2026-06-30T10:00:00.000Z', ingestion_method: 'webhook_shopify',
     stitching_method: 'none', utm_source: 'shopify', utm_medium: 'webhook',
@@ -147,7 +152,7 @@ const stripeCheckoutRaw = {
   distinctId: 'stripe_unattributed:cs_test_123', event: '$conversion', timestamp: '2026-06-30T10:00:00.000Z',
   properties: {
     site_id: SITE, site_key: 'sk_live_STRIPECK', conversion_value: 49.0, currency: 'USD',
-    conversion_type: 'purchase', conversion_event_id: 'cs_test_123', order_id: 'cs_test_123',
+    conversion_type: 'purchase', conversion_event_id: CEID_SENTINEL, order_id: 'cs_test_123',
     payment_id: 'pi_test_777', provider: 'stripe', provider_event_id: 'evt_ck_1',
     stripe_event_type: 'checkout.session.completed', occurred_at: '2026-06-30T10:00:00.000Z',
     ingestion_method: 'webhook_stripe', stitching_method: 'none', utm_source: 'stripe',
@@ -159,7 +164,7 @@ const stripeSubInvoiceRaw = {
   distinctId: 'stripe_subscription_unattributed:sub_test_5', event: '$conversion', timestamp: '2026-06-30T10:00:00.000Z',
   properties: {
     site_id: SITE, site_key: 'sk_live_STRIPESUB', conversion_value: 79.0, currency: 'USD',
-    conversion_type: 'subscription', conversion_event_id: 'in_test_999', provider: 'stripe',
+    conversion_type: 'subscription', conversion_event_id: CEID_SENTINEL, provider: 'stripe',
     provider_event_id: 'evt_inv_1', stripe_event_type: 'invoice.paid', stripe_billing_reason: 'subscription_create',
     occurred_at: '2026-06-30T10:00:00.000Z', ingestion_method: 'webhook_stripe', stitching_method: 'none',
     utm_source: 'stripe', webhook_customer_id: 'cus_test_2',
@@ -171,7 +176,7 @@ const stripeSubLifecycleRaw = {
   distinctId: 'stripe_subscription_unattributed:sub_test_5', event: '$conversion', timestamp: '2026-06-30T10:00:00.000Z',
   properties: {
     site_id: SITE, site_key: 'sk_live_STRIPESUB', conversion_value: 0, currency: 'USD',
-    conversion_type: 'trial_start', conversion_event_id: 'sub_test_5:trial_start', provider: 'stripe',
+    conversion_type: 'trial_start', conversion_event_id: CEID_SENTINEL, provider: 'stripe',
     provider_event_id: 'evt_subcreate_1', stripe_event_type: 'customer.subscription.created',
     occurred_at: '2026-06-30T10:00:00.000Z', ingestion_method: 'webhook_stripe', stitching_method: 'none',
     webhook_customer_id: 'cus_test_2', stripe_subscription_id: 'sub_test_5'
