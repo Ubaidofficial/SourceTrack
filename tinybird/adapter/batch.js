@@ -13,6 +13,7 @@
 
 import { gzip } from 'node:zlib'
 import { promisify } from 'node:util'
+import { tempDebug } from './temp-debug.js' // TEMP-DEBUG (revert)
 
 const gzipAsync = promisify(gzip)
 
@@ -51,16 +52,19 @@ export function createBatcher (opts = {}) {
 
   function startTimer () {
     if (T > 0 && timer === null) {
-      timer = setInterval(() => { flush().catch(() => {}) }, T)
+      timer = setInterval(() => { tempDebug('batch', `timer FIRED (T=${T}) -> flush; buffer=${buffer.length}`); flush().catch(() => {}) }, T) // TEMP-DEBUG (revert)
       if (typeof timer.unref === 'function') timer.unref() // don't keep the event loop alive
     }
   }
 
   async function deliver (batch) {
+    tempDebug('batch', `deliver: gzip+POST attempt count=${batch.length}`) // TEMP-DEBUG (revert)
     const ndjson = batch.map((e) => JSON.stringify(e)).join('\n') + '\n'
     const payload = gzipPayload ? await gzipAsync(ndjson) : ndjson
     try {
+      tempDebug('batch', 'deliver: calling transport (POST) now') // TEMP-DEBUG (revert)
       await transport(payload, { count: batch.length, gzip: gzipPayload })
+      tempDebug('batch', 'deliver: transport returned OK (2xx)') // TEMP-DEBUG (revert)
     } catch (err) {
       // Phase 2d: 429/5xx retry+backoff lives in the INJECTED transport
       // (transport.js withRetry); this catch is the SURRENDER point after retries
@@ -72,9 +76,10 @@ export function createBatcher (opts = {}) {
   }
 
   function flush () {
-    if (buffer.length === 0) return Promise.resolve()
+    if (buffer.length === 0) { tempDebug('batch', 'flush called but buffer EMPTY -> noop'); return Promise.resolve() } // TEMP-DEBUG (revert)
     const batch = buffer
     buffer = []
+    tempDebug('batch', `flush FIRING batchCount=${batch.length}`) // TEMP-DEBUG (revert)
     // `result` rejects for THIS caller if this batch fails. The ordering chain is
     // the SWALLOWED branch (`.catch(() => {})`), so one transport failure cannot
     // poison successors — the next batch still delivers (it is only dropped, with
@@ -87,7 +92,9 @@ export function createBatcher (opts = {}) {
   function enqueue (event) {
     buffer.push(event)
     startTimer()
-    if (buffer.length >= N) return flush()
+    tempDebug('batch', `enqueue buffer=${buffer.length} N=${N} T=${T} timerArmed=${timer !== null}`) // TEMP-DEBUG (revert)
+    if (buffer.length >= N) { tempDebug('batch', 'enqueue: buffer>=N -> flush now'); return flush() } // TEMP-DEBUG (revert)
+    tempDebug('batch', 'enqueue: below N -> buffered (awaiting timer/stop)') // TEMP-DEBUG (revert)
     // Buffered only — return a resolved promise, NOT the in-flight `chain`, so an
     // awaiting caller isn't coupled to an unrelated slow flush. The event drains
     // on the next threshold / timer / stop().
