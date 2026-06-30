@@ -14,6 +14,11 @@
 # site_key is intentionally DROPPED (§2.6 note + §6.5): never read in HogQL and a
 # customer-facing secret. The adapter must not forward it. No email/name/PII cols.
 
+# Append-only ingest token, scoped to THIS datasource only (no read/admin). The dual-
+# write transport (TINYBIRD_APPEND_TOKEN) uses it. Tinybird mints the value at deploy;
+# never hardcoded. Read it post-deploy via `tb token ls` / the UI.
+TOKEN "dual_write_append" APPEND
+
 SCHEMA >
     `site_id` String `json:$.site_id`,
     `event_type` LowCardinality(String) `json:$.event_type`,
