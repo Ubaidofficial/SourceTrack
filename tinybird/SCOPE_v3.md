@@ -31,13 +31,12 @@ The v2 spine is unchanged and correct: single-table, sorting-key-first, compute-
 - Workspaces: **`ST_Staging`** (staging) · **`SourceTrack`** (prod). One `events` table, 4 logical event types (`$pageview`, `$conversion`, `$identify`, dynamic/custom).
 - Governance: file-based via CC; human hand-applies staging→prod; orchestrator read-only verify; no self-merge; staging-first.
 
-## 0.3 Plan reality (org-wide Free) ⚠️
+## 0.3 Plan reality — CORRECTED 2026-06-30 (was stale: "org-wide Free")
 
-`imubaid93` org = **Free**, and the meters are **shared across all workspaces in the org**: ~**1,000 requests/day**, **10 GB** storage, **0.25 vCPU**, 1 thread/request.
-- **Build/validate on Free: fine** — synthetic volume is controlled; ingest batches don't hit the read meter.
-- **Staging caution:** golden-test sweeps fire many reads → can brush the shared 1k/day. Budget validation runs.
-- **Prod cutover GATE:** `SourceTrack` must move to **Developer ($25/mo)** or Startup-Program credits before Phase 10. 10GB + 1k req/day won't hold production.
-- **Load-test caveat:** on 0.25 vCPU, validate the **query plan / scan shape** (index scan vs full scan via `rows_read`), **not** absolute p95 — defer latency sign-off to a Developer-tier run.
+**`imubaid93` org = Enterprise**, confirmed via `tb --cloud workspace current` during Phase 4c build, on all three workspaces (`ST_Staging`, `SourceTrack` prod, `imubaid93_workspace`). The Free-tier framing this section previously asserted (~1,000 requests/day, 10GB storage, 0.25 vCPU shared across the org) was incorrect as of this correction — there is no evidence it was ever accurate at the time of writing either; it was not re-verified before being relied on.
+- **No Free-tier req/storage/vCPU ceiling applies** to build, validate, or prod cutover. The "Prod cutover GATE: move to Developer" framing below no longer applies — `SourceTrack` prod is already Enterprise.
+- **Does not mean unlimited:** Tinybird's plan-independent platform limits still apply and are load-bearing — e.g. the documented **128KB SQL-length limit** (hit during Phase 4d's `{{Array(...)}}` IN-list sizing, see `PHASE4_4D_PLAN.md` / the Phase 4 handoff entry), which is why the chunk-at-100 visitor-batching workaround was kept rather than removed. Don't read "Enterprise" as "no limits to check."
+- **Load-test caveat, revised:** the original 0.25-vCPU framing is moot; query-plan/scan-shape validation (`rows_read` via `tb --cloud sql`) remains good practice regardless of tier, just not a tier-driven necessity.
 
 ## 0.4 Scalability principle
 

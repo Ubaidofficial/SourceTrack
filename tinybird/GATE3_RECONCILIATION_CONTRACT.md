@@ -99,6 +99,13 @@ RULE — compare INTERVALS, not absolute timestamps: the harness compares the wi
 - ~~Does Phase-0 synthetic exist in PostHog?~~ → **Moot**: gating is (b) live window, not synthetic. (Answer was "no" anyway — Tinybird-only.)
 - ~~Which is the clean gating site?~~ → **`de200000-…441111`**, confirmed via Supabase MCP (Decision 2).
 
+## 7. 4c finding — last_touch per-field argMax semantic (load-bearing for any argMax port)
+**ClickHouse `argMax(arg, val)` SKIPS rows where `arg` is NULL.** HogQL's production `last_touch` (`lastTouchAttribution`) runs `argMax(utm_source, ts)`, `argMax(ai_source, ts)`, etc. as INDEPENDENT per-column aggregates — so each column's "last" value comes from the last NON-NULL row for THAT column, which can be DIFFERENT physical touches. Result: last_touch can synthesize a touchpoint identity that never existed as one row (verified 4c visitor Y: `utm_source=facebook` from touch 1 + `ai_source=ChatGPT` from touch 3, fused). This is PRE-EXISTING LIVE PRODUCTION BEHAVIOR. Parity REQUIRES replicating it, NOT "fixing" it.
+- **Join shipped = A-3: one independent `ASOF LEFT JOIN` per field, each pre-filtered to non-null rows for that field.** A single-row ASOF JOIN canNOT reproduce the split (returns one row's fields together) → would fail parity. A-2 (literal nested equality+inequality ON) is structurally REJECTED by Tinybird (`Unsupported JOIN ON conditions`) — ASOF is mandatory, not optional.
+- **Carries to 4d and any future argMax port:** any model using per-column argMax has this independent-null-skip behavior; reproduce per-field, don't assume single-row.
+- **NEW PRODUCT-SEMANTICS BACKLOG (post-cutover, NOT migration scope):** decide whether fusing fields from different touches into one "last touch" (e.g. paid `facebook` + AI `ChatGPT`) is the attribution behavior to keep. Migration replicates faithfully; whether the original is *correct* is a separate post-migration product decision.
+- **4c scope limit:** signed off for single-identity visitors (`distinct_id == visitor_id`) ONLY. Merged-identity (`visitor_id ≠ distinct_id`, server-events.js user_id-merge, normalize.js:251-253) NOT tested → deferred to the $identify/identity-reconciliation item.
+
 ---
 
 ## 6. Unverified-by-orchestrator note

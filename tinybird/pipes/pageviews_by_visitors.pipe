@@ -1,0 +1,71 @@
+DESCRIPTION >
+    Phase 4d (Pattern C row-pull). Pageviews for a SPECIFIC set of converted
+    visitors over the lookback window, replacing HogQL's IN-list-filtered pvSql
+    in getAiPlatformAttributionLive (api/lib/attribution-engine.js:471-503).
+    Feeds the SAME unchanged selectAiTouchForConversion (engine:310-347) and
+    detectAiPlatformFromEvent (channel-classifier.js:103-134) — both confirmed
+    by reading the code to be single-row JS selection (no per-column argMax,
+    no fusion-across-rows risk the way Pattern A's last_touch had; see
+    tinybird/PHASE4_4D_PLAN.md §1). This pipe's job is row-pull parity only.
+
+    CHUNKING KEPT, not removed (tinybird/PHASE4_4D_PLAN.md §2.3 / 4d report):
+    Tinybird's documented SQL-length limit is 128KB
+    (https://www.tinybird.co/docs/forward/pricing/limits). {{Array(...)}}
+    interpolates into the final SQL text, so a large visitor_id array inflates
+    the query toward that ceiling — measured ~91KB for 2000 realistic-length
+    UUIDs from the array alone. The caller MUST chunk visitor_ids at 100 per
+    call (mirroring api/lib/attribution-engine.js's existing
+    AI_ATTRIBUTION_VISITOR_BATCH_SIZE=100 / chunkVisitorIds), looping this pipe
+    once per chunk — NOT pass an unbounded array in one call.
+
+    SCOPE LIMIT (not validated by this pipe or its fixture): distinct_id ==
+    visitor_id only. A merged identity (server-events.js's user_id path) could
+    diverge visitor_id from distinct_id (normalize.js:251-253) — deferred to
+    the $identify / identity-reconciliation backlog item, same as 4c.
+    Separately unresolved: whether the caller should build this pipe's IN-list
+    from distinct_id or visitor_id (HogQL's live IN-list is built from
+    distinct_id, engine:454) — for single-identity visitors they're equal, so
+    this fixture can't distinguish the choice; flagged, not decided, here.
+
+    NOT YET PUSHED (no `tb push`/`tb deploy` run — validated via read-only
+    `tb --cloud sql` only, per standing no-push rule).
+
+TOKEN "phase4_pageviews_by_visitors_read" READ
+
+NODE pageviews_by_visitors_node
+SQL >
+    %
+    SELECT
+        visitor_id,
+        distinct_id,
+        timestamp,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        referrer,
+        ai_source,
+        gclid,
+        gbraid,
+        wbraid,
+        fbclid,
+        msclkid,
+        ttclid,
+        li_fat_id,
+        li_fatid,
+        twclid,
+        dclid,
+        snapclid,
+        pclid,
+        sccid,
+        ko_click_id,
+        page_url,
+        utm_term
+    FROM events_by_visitor
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$pageview'
+      AND visitor_id IN {{ Array(visitor_ids, 'String', required=True) }}
+      AND timestamp >= {{ DateTime(lookback_from, required=True) }}
+      AND timestamp < {{ DateTime(date_to, required=True) }}
+    ORDER BY visitor_id, timestamp ASC
+
+TYPE endpoint
