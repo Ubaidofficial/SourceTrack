@@ -62,9 +62,10 @@ export function createBatcher (opts = {}) {
     try {
       await transport(payload, { count: batch.length, gzip: gzipPayload })
     } catch (err) {
-      // Phase 2d: 429-aware retry/backoff belongs here. For now we surface the
-      // error and re-throw; events are NOT silently re-queued (avoids unbounded
-      // growth / double-send before the retry policy exists).
+      // Phase 2d: 429/5xx retry+backoff lives in the INJECTED transport
+      // (transport.js withRetry); this catch is the SURRENDER point after retries
+      // are exhausted (or a permanent 4xx). We surface to onError and re-throw;
+      // events are NOT silently re-queued (avoids unbounded growth / double-send).
       if (typeof onError === 'function') onError(err, batch)
       throw err
     }
