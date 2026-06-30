@@ -14,8 +14,6 @@
 // retriable with backoff honoring Retry-After / X-RateLimit-Reset; rows-per-request
 // don't count (batching is the lever); not idempotent (our event_id is the guard).
 
-import { tempDebug } from './temp-debug.js' // TEMP-DEBUG (revert)
-
 export class TinybirdTransportError extends Error {
   constructor (message, { status, retryable, retryAfterMs } = {}) {
     super(message)
@@ -56,25 +54,19 @@ export function parseRetryAfterMs (headers, now = Date.now()) {
 // TinybirdTransportError on non-2xx (retryable for 429/5xx, permanent for other 4xx)
 // and on network/timeout (retryable). host/token/datasource are REQUIRED args injected
 // from env. fetch + timeoutMs injectable so tests use a mock (no real network).
-export function createTinybirdTransport ({ host, token, datasource, fetch: fetchImpl, timeoutMs } = {}) {
+export function createTinybirdTransport ({ host, token, datasource, fetch: fetchImpl, timeoutMs = 10000 } = {}) {
   if (!host || !token || !datasource) {
     throw new TypeError('createTinybirdTransport: host, token, datasource are required (inject from env)')
   }
   const doFetch = fetchImpl || globalThis.fetch
   if (typeof doFetch !== 'function') throw new TypeError('createTinybirdTransport: no fetch implementation available')
   const url = `${String(host).replace(/\/$/, '')}/v0/events?name=${encodeURIComponent(datasource)}`
-  // Explicit arg wins; else TINYBIRD_TIMEOUT_MS (so a debug deploy can fail fast,
-  // e.g. 3000); else 10000. Abort surfaces a hung connect as a visible error.
-  const effectiveTimeoutMs = (typeof timeoutMs === 'number')
-    ? timeoutMs
-    : (parseInt(process.env.TINYBIRD_TIMEOUT_MS, 10) || 10000)
 
   return async function transport (payload /*, meta */) {
     const ctrl = (typeof AbortController === 'function') ? new AbortController() : null
-    const timer = ctrl ? setTimeout(() => ctrl.abort(), effectiveTimeoutMs) : null
+    const timer = ctrl ? setTimeout(() => ctrl.abort(), timeoutMs) : null
     let res
     try {
-      tempDebug('transport', `before fetch url=${url} timeoutMs=${effectiveTimeoutMs}`) // TEMP-DEBUG (revert) — host+ds only, NO token
       res = await doFetch(url, {
         method: 'POST',
         headers: {
@@ -84,10 +76,8 @@ export function createTinybirdTransport ({ host, token, datasource, fetch: fetch
         body: payload,
         signal: ctrl ? ctrl.signal : undefined
       })
-      tempDebug('transport', `fetch returned status=${res.status}`) // TEMP-DEBUG (revert)
     } catch (err) {
       // network error or timeout (AbortError) — retryable, no header timing.
-      tempDebug('transport', `fetch THREW: ${err && err.message ? err.message : err}`) // TEMP-DEBUG (revert) — message only, never token/body
       throw new TinybirdTransportError(`Tinybird transport network error: ${err && err.message ? err.message : err}`, { retryable: true })
     } finally {
       if (timer) clearTimeout(timer)
