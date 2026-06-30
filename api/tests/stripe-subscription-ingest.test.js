@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert'
 
-import { mapSubscriptionEvent, buildSubscriptionIdempotencyKeys } from '../lib/stripe-subscription.js'
+import { mapSubscriptionEvent, buildSubscriptionIdempotencyKeys, checkoutConversionValue, buildSubscriptionIdentitySeed } from '../lib/stripe-subscription.js'
 
 // Synthetic Stripe events — the whole point is verifying ingestion logic WITHOUT
 // a real paying customer (mapSubscriptionEvent / key construction are pure).
@@ -90,4 +90,68 @@ test('lifecycle events scope subscription_id by conversion type (once per subscr
 test('provider_event_id is always present (replay dedup)', () => {
   const keys = buildSubscriptionIdempotencyKeys({ providerEventId: 'evt_x', conversionType: 'churn', invoiceId: null, subscriptionId: 'sub_9' })
   assert.ok(keys.some(k => k.key_type === 'provider_event_id' && k.key_value === 'evt_x'))
+})
+
+// ── Phase 5c: subscription-mode checkout double-count fix ──────────────────────
+
+const RECORD = {
+  first_touch_source: 'google', first_touch_channel: 'Paid Search', first_touch_campaign: 'spring',
+  last_touch_source: 'google', last_touch_channel: 'Paid Search'
+}
+
+// TEST 1 — subscription-mode checkout contributes $0; one-time keeps full value.
+test('5c: subscription-mode checkout -> $0 conversion_value; one-time -> full value', () => {
+  assert.strictEqual(checkoutConversionValue('subscription', 49), 0, 'subscription mode zeroed (no double-count)')
+  assert.strictEqual(checkoutConversionValue('payment', 49), 49, 'one-time keeps full value')
+  assert.strictEqual(checkoutConversionValue('setup', 0), 0)
+})
+
+// TEST 2 — carry-forward: a RESOLVED subscription-mode checkout (customer_id, NO
+// subscription_id) now SEEDS a resolved subscription_identity row (it didn't before,
+// because the old gate required stripe_subscription_id). That resolved seed is what
+// the existing backfill reads to flip the later invoice.paid revenue row -> resolved.
+test('5c: resolved subscription-mode checkout seeds subscription_identity (carry-forward)', () => {
+  const seed = buildSubscriptionIdentitySeed({
+    conversion: { webhook_customer_id: 'cus_1', stripe_subscription_id: null, distinct_id: 'anon-visitor-1', uuid: 'evt-checkout-1' },
+    touchpoints: [{ timestamp: 't' }],   // stitched: a real journey exists
+    record: RECORD
+  })
+  assert.ok(seed, 'checkout with customer_id + stitch seeds even without subscription_id')
+  assert.strictEqual(seed.stripe_customer_id, 'cus_1')
+  assert.strictEqual(seed.first_subscription_id, null, 'checkout has no subscription_id yet')
+  assert.strictEqual(seed.anonymous_id, 'anon-visitor-1')
+  assert.strictEqual(seed.first_touch_source, 'google')
+  assert.strictEqual(seed.attribution_status, 'resolved')
+})
+
+// TEST 3 — NO-DOWNGRADE: an UNSTITCHED checkout does NOT seed (returns null), so it
+// never locks 'unknown'; a later self-stitching invoice.paid still seeds resolved.
+test('5c: unstitched checkout does NOT seed; later stitched invoice.paid seeds resolved', () => {
+  // unstitched via placeholder distinct_id
+  assert.strictEqual(buildSubscriptionIdentitySeed({
+    conversion: { webhook_customer_id: 'cus_2', stripe_subscription_id: null, distinct_id: 'stripe_unattributed:cs_x', uuid: 'e' },
+    touchpoints: [{ timestamp: 't' }], record: RECORD
+  }), null, 'placeholder distinct_id -> no seed (no-downgrade)')
+  // unstitched via no journey
+  assert.strictEqual(buildSubscriptionIdentitySeed({
+    conversion: { webhook_customer_id: 'cus_2', stripe_subscription_id: null, distinct_id: 'anon-x', uuid: 'e' },
+    touchpoints: [], record: RECORD
+  }), null, 'no touchpoints -> no seed')
+  // the later self-stitching invoice.paid still seeds resolved (with its subscription_id)
+  const seed = buildSubscriptionIdentitySeed({
+    conversion: { webhook_customer_id: 'cus_2', stripe_subscription_id: 'sub_2', distinct_id: 'anon-visitor-2', uuid: 'evt-inv-2' },
+    touchpoints: [{ timestamp: 't' }], record: RECORD
+  })
+  assert.ok(seed && seed.attribution_status === 'resolved')
+  assert.strictEqual(seed.first_subscription_id, 'sub_2')
+})
+
+// TEST 4 — one-time payment path & non-Stripe conversions are unaffected.
+test('5c: one-time path untouched; non-customer conversions never seed', () => {
+  assert.strictEqual(checkoutConversionValue('payment', 123.45), 123.45, 'one-time value passes through unchanged')
+  // a conversion with no stripe customer id (e.g. a browser/shopify conversion) never seeds
+  assert.strictEqual(buildSubscriptionIdentitySeed({
+    conversion: { distinct_id: 'anon-3', uuid: 'u', stripe_subscription_id: null },
+    touchpoints: [{ timestamp: 't' }], record: RECORD
+  }), null, 'no webhook_customer_id -> no seed')
 })

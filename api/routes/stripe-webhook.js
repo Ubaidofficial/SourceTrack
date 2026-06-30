@@ -7,7 +7,7 @@ import { claimIdempotencyKeys, logIngestionEvent, rollbackIdempotencyKeys } from
 import { ph } from '../lib/posthog.js'
 import { resolveWebhookAnonymousId } from '../lib/identity-links.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
-import { SUBSCRIPTION_EVENTS, mapSubscriptionEvent, buildSubscriptionIdempotencyKeys } from '../lib/stripe-subscription.js'
+import { SUBSCRIPTION_EVENTS, mapSubscriptionEvent, buildSubscriptionIdempotencyKeys, checkoutConversionValue } from '../lib/stripe-subscription.js'
 import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
 
 
@@ -323,7 +323,12 @@ router.post('/:site_key', async (req, res) => {
     const conversionProperties = {
       site_id: site.id,
       site_key: site.site_key,
-      conversion_value: value,
+      // Phase 5c: a subscription-mode checkout contributes $0 (subscription revenue
+      // counts ONCE, on invoice.paid) — but the event is still emitted with full
+      // customer_id + client_reference_id stitch so nightly seeds subscription_identity.
+      // One-time (payment-mode) checkout keeps its full value. (The audit log below
+      // still records the real `value`.)
+      conversion_value: checkoutConversionValue(session.mode, value),
       currency,
       conversion_type: 'purchase',
       conversion_event_id: orderId || paymentId || providerEventId,
@@ -386,9 +391,9 @@ router.post('/:site_key', async (req, res) => {
     // Checkout path: reached only after signature verify, the persistent claim
     // duplicate-skip (:285), and plan-limit returned. deriveEventId resolves order_id
     // (= session.id, branch 5) from props; NOT conversion_event_id.
-    // NOTE: a subscription-mode checkout ALSO emits an invoice.paid $conversion — the
-    // known double-count. Mirrored here as-is and ACCEPTABLE (flag OFF, nothing emits);
-    // Phase 5c adds the session.mode suppression before the flag ever flips.
+    // NOTE: a subscription-mode checkout ALSO fires invoice.paid; Phase 5c zeroes
+    // THIS checkout's conversion_value (above) so subscription revenue counts once on
+    // invoice.paid — the dual-write mirrors that $0 (no double-count when the flag flips).
     dualWriteEvent({ distinctId, event: '$conversion', timestamp: occurredAt, properties: conversionProperties })
 
     await logIngestionEvent(siteKey, 'stripe', {
