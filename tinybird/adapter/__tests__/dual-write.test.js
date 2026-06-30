@@ -62,6 +62,28 @@ const serverEventsRaw = {
     country: 'DE', server_timestamp: '2026-06-30T10:00:00.000Z', ingestion_method: 'server_sdk'
   }
 }
+// ── Batch 2 producers ───────────────────────────────────────────────────────────
+// webhook-incoming: passes fields.orderId as raw order_id (NOT conversion_event_id),
+// + sanitizedProps (email/name already [REDACTED]; site_key present; adapter drops all).
+const webhookIncomingRaw = (orderId) => ({
+  distinctId: 'anon-4', event: '$conversion', order_id: orderId,
+  properties: {
+    site_id: SITE, site_key: 'sk_live_SECRET', conversion_value: 25.0, conversion_type: 'webhook',
+    conversion_event_id: orderId || 'baked-in-uuid', email: '[REDACTED]', name: '[REDACTED]',
+    utm_source: 'webhook', utm_medium: 'webhook', webhook_source: 'curl/8',
+    server_timestamp: '2026-06-30T10:00:00.000Z', stitching_method: 'none',
+    webhook_email_present: true, identity_resolution_status: 'unresolved'
+  }
+})
+// track.js form promotion: no natural id -> uuid; site_key present (adapter drops).
+const trackFormRaw = {
+  distinctId: 'anon-5', event: '$conversion', timestamp: '2026-06-30T10:00:00.000Z',
+  properties: {
+    site_id: SITE, site_key: 'sk_live_SECRET2', anonymous_id: 'anon-5', is_conversion: true,
+    conversion_type: 'form', form_name: 'demo', page_url: 'https://x.example.com/pricing',
+    utm_source: 'google', ingestion_method: 'server_routed'
+  }
+}
 
 // ── Gate logic ──────────────────────────────────────────────────────────────────
 test('flag parsing: only "true"/"1" enable; everything else is OFF', () => {
@@ -156,5 +178,70 @@ test('all three producers: flag OFF -> none emit (the safety guarantee, per prod
     assert.strictEqual(dualWriteEvent(raw), false)
   }
   assert.strictEqual(rec.lines().length, 0, 'zero emits across all three when OFF')
+  reset()
+})
+
+// ── Batch 2 ─────────────────────────────────────────────────────────────────────
+test('webhook-incoming: ON -> event_id=fields.orderId; site_key/email/name DROPPED', async () => {
+  const { ok, rec } = await emitOn(webhookIncomingRaw('wh_order_9'))
+  assert.strictEqual(ok, true)
+  const ev = rec.lines()[0]
+  assert.strictEqual(ev.site_id, SITE)
+  assert.strictEqual(ev.event_id, 'wh_order_9', 'deriveEventId resolves the raw order_id, not conversion_event_id')
+  assert.strictEqual(ev.event_type, '$conversion')
+  assert.ok(!('site_key' in ev) && !('email' in ev) && !('name' in ev), 'secret + PII dropped')
+  assert.ok(!JSON.stringify(ev).includes('sk_live_SECRET'))
+  reset()
+})
+
+test('webhook-incoming: ON with no orderId -> uuid (NOT the conversion_event_id uuid)', async () => {
+  const { rec } = await emitOn(webhookIncomingRaw(null))
+  assert.match(rec.lines()[0].event_id, /^[0-9a-f-]{36}$/)
+  reset()
+})
+
+test('track.js form: ON -> uuid event_id, correct site_id, site_key DROPPED', async () => {
+  const { ok, rec } = await emitOn(trackFormRaw)
+  assert.strictEqual(ok, true)
+  const ev = rec.lines()[0]
+  assert.strictEqual(ev.site_id, SITE)
+  assert.match(ev.event_id, /^[0-9a-f-]{36}$/, 'form path has no natural id -> uuid')
+  assert.strictEqual(ev.conversion_type, 'form')
+  assert.ok(!('site_key' in ev) && !JSON.stringify(ev).includes('sk_live_SECRET2'))
+  reset()
+})
+
+test('Batch 2 producers: flag OFF -> none emit (safety guarantee)', () => {
+  reset()
+  const rec = recorder()
+  setDualWriteTransport(rec.transport, BATCH_OPTS)
+  for (const raw of [webhookIncomingRaw('wh_1'), trackFormRaw]) {
+    assert.strictEqual(dualWriteEvent(raw), false)
+  }
+  assert.strictEqual(rec.lines().length, 0, 'zero emits across both Batch-2 producers when OFF')
+  reset()
+})
+
+// Lens (b) at the logic level: dualWriteEvent only runs in the !isDup + limitAllowed
+// branch (mirrors track.js control flow). A deduped or limit-blocked form never
+// dual-writes — proving placement AFTER the in-memory guard.
+test('track.js gating: a deduped/limit-blocked form does NOT dual-write', async () => {
+  process.env.TINYBIRD_DUAL_WRITE = 'true'
+  const rec = recorder()
+  setDualWriteTransport(rec.transport, BATCH_OPTS)
+  const simulateForm = (isDup, limitAllowed) => {
+    if (!isDup) {                 // checkIsDuplicate short-circuit (track.js:404)
+      if (limitAllowed) {         // claimConversionUsage gate (track.js:416)
+        // ph.capture(...) then:
+        dualWriteEvent(trackFormRaw)
+      }
+    }
+  }
+  simulateForm(true, true)        // duplicate -> skipped entirely
+  simulateForm(false, false)      // limit reached -> skipped
+  assert.strictEqual(rec.lines().length, 0, 'no dual-write when deduped or limited')
+  simulateForm(false, true)       // real, allowed -> dual-writes
+  await __getDualWriteBatcher().flush()
+  assert.strictEqual(rec.lines().length, 1, 'exactly one dual-write on the allowed path')
   reset()
 })

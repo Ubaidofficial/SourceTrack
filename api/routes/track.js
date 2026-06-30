@@ -6,6 +6,7 @@ import { resolveClientIp } from '../lib/ip-resolver.js'
 import { ph } from '../lib/posthog.js'
 import { claimPageviewUsage } from '../lib/pageview-limits.js'
 import { checkIsDuplicate, registerConversion } from '../lib/shared-dedupe-cache.js'
+import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
 
 
@@ -473,6 +474,12 @@ export async function track(req, res) {
               timestamp: clientTimestamp ? new Date(clientTimestamp) : undefined,
               properties: conversionProps
             })
+
+            // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when
+            // off). Placed INSIDE the !isDup + limitAllowed guards, AFTER ph.capture,
+            // so a deduped/limited form never dual-writes. No natural id on the form
+            // path -> deriveEventId falls to a uuid.
+            dualWriteEvent({ distinctId: anonId, event: '$conversion', timestamp: clientTimestamp, properties: conversionProps })
           }
         }
       }
