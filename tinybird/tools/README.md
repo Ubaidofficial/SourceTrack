@@ -109,9 +109,12 @@ of band — never commit it.**
 ```
 # gzip the NDJSON and POST to the Events API (events datasource).
 # $TB_APPEND_TOKEN = a DATASOURCE:APPEND-scoped token for ST_Staging (NOT stored here).
+# Host = the global API endpoint https://api.tinybird.co. The europe-west3/gcp region
+# slug appears ONLY in the `ui:` (dashboard) URL, NOT the API host — the API host comes
+# from the `api:` field of `tb --cloud info` and region-routes server-side.
 gzip -c tinybird/fixtures/events_sample.ndjson > /tmp/events_sample.ndjson.gz
 
-curl -X POST 'https://api.europe-west3.gcp.tinybird.co/v0/events?name=events' \
+curl -X POST 'https://api.tinybird.co/v0/events?name=events' \
   -H "Authorization: Bearer $TB_APPEND_TOKEN" \
   -H 'Content-Encoding: gzip' \
   --data-binary @/tmp/events_sample.ndjson.gz
