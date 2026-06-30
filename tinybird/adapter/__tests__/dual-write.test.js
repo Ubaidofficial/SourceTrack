@@ -108,10 +108,13 @@ const browserConvRaw = {
     external_event_id: SHARED_EXT, ingestion_method: 'server_routed', utm_source: 'google'
   }
 }
+const SECRET_UA = 'Mozilla/5.0 (fingerprint-UA-12345)'
 const offlineConvRaw = {
   distinctId: 'offline-srv', event: '$conversion', timestamp: '2026-06-30T10:00:00.000Z',
   properties: {
     site_id: SITE, site_key: 'sk_live_OFFLINE', is_conversion: true, conversion_value: 120.0,
+    user_agent: SECRET_UA, // conversion-offline.js:171 — raw UA; §6 fingerprinting-adjacent
+    custom_properties: { user_agent: SECRET_UA }, // nested too — must drop at every depth
     conversion_type: SHARED_TYPE, order_id: SHARED_BODY.order_id, external_event_id: SHARED_EXT,
     ingestion_method: 'offline', provider: 'payments_api', currency: 'USD'
   }
@@ -347,5 +350,18 @@ test('Batch 3 producers: flag OFF -> none emit (safety guarantee)', () => {
     assert.strictEqual(dualWriteEvent(raw), false)
   }
   assert.strictEqual(rec.lines().length, 0)
+  reset()
+})
+
+// raw user_agent dropped (§6 fingerprinting-adjacent). NON-VACUOUS: FAILS without
+// user_agent in FORBIDDEN_KEYS. The typed device_type/browser_name/os_name (derived
+// upstream) are unaffected; raw UA has zero read value on the Tinybird plane.
+test('user_agent dropped from the Tinybird plane at every depth (top-level + nested)', async () => {
+  const { ok, rec } = await emitOn(offlineConvRaw)
+  assert.strictEqual(ok, true)
+  const ev = rec.lines()[0]
+  assert.ok(!('user_agent' in ev), 'top-level user_agent dropped')
+  assert.ok(!('user_agent' in (ev.custom_properties || {})), 'nested user_agent dropped')
+  assert.ok(!JSON.stringify(ev).includes(SECRET_UA), 'raw UA string never reaches the transport at any depth')
   reset()
 })

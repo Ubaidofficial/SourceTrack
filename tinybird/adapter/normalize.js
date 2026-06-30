@@ -65,7 +65,13 @@ const isPii = (key) => { const k = key.toLowerCase(); return PII_KEYS.has(k) || 
 //    a JSON *string* value, so a bypassed-key secret (e.g. a customer-sent `site_key`)
 //    embedded in that string would otherwise ride into the json:$ row. Drop the whole
 //    field. (Phase-2c-Batch-2 review finding.)
-const FORBIDDEN_KEYS = new Set(['site_key', '_synthetic', 'refund_of', 'raw_payload'])
+//  - user_agent: raw UA string (conversion-offline.js:171). Fingerprinting-adjacent
+//    (§6 — stricter EU posture for the new plane); zero analytics read value — the
+//    read layer never reads stored user_agent, and the analytics-useful derivation
+//    already arrives as the typed device_type/browser_name/os_name columns (derived
+//    upstream via UAParser). The CAPI path reads UA from emit-time props, not Tinybird,
+//    so dropping it here doesn't affect CAPI. (Phase-2c-Batch-3 review finding.)
+const FORBIDDEN_KEYS = new Set(['site_key', '_synthetic', 'refund_of', 'raw_payload', 'user_agent'])
 
 // ph.capture() wrapper fields consumed into canonical columns — never re-emitted as bag keys.
 const WRAPPER_KEYS = new Set(['distinctId', 'event', 'properties'])
