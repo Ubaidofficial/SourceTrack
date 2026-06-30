@@ -75,7 +75,21 @@ const isPii = (key) => { const k = key.toLowerCase(); return PII_KEYS.has(k) || 
 //    — the SAME fingerprinting UA bytes under a different key, with no read-side use.
 //    Drop it (not a coarsened webhook-origin label — that's a future product choice).
 //    (Phase-2c-Batch-3 follow-up review finding.)
-const FORBIDDEN_KEYS = new Set(['site_key', '_synthetic', 'refund_of', 'raw_payload', 'user_agent', 'webhook_source'])
+//  - city: geoip city (pixel.js:112) — granular geo beyond the typed `country` column;
+//    no read-side use. fbp / fbc: Meta _fbp/_fbc cookie identifiers (conversion.js:245-246)
+//    — CAPI reads them from emit-time props (conversion-sync.js:134-135 via dispatchCapi),
+//    NOT the Tinybird plane, so dropping here doesn't degrade CAPI; no read-side use.
+//    (Sweep ruling — fingerprinting/cookie, read-verified safe.)
+//
+// PHASE-7 ITEM (do NOT act now): browser_version / os_version are fingerprinting-
+// GRANULARITY but ALSO a live read dependency (events.js:111/113, journey.js:68/70 —
+// events explorer + journey panel), so they are intentionally KEPT here. The
+// privacy-vs-feature tension (accept version granularity on the EU plane, or coarsen
+// the UI to family-only) is a Phase-7 product decision. Likewise the customer-bag
+// spread (custom_properties / customParams / x_* / ...req.body.properties) is
+// recursive-DENYLIST-only today; the hybrid screen (key-name pattern reject + size
+// cap) for novel customer-named fingerprinting keys is a Phase-7 item.
+const FORBIDDEN_KEYS = new Set(['site_key', '_synthetic', 'refund_of', 'raw_payload', 'user_agent', 'webhook_source', 'city', 'fbp', 'fbc'])
 
 // ph.capture() wrapper fields consumed into canonical columns — never re-emitted as bag keys.
 const WRAPPER_KEYS = new Set(['distinctId', 'event', 'properties'])

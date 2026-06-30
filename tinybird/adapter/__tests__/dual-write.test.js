@@ -106,7 +106,12 @@ const browserConvRaw = {
   properties: {
     site_id: SITE, site_key: 'sk_live_BROWSER', anonymous_id: 'browser-anon', is_conversion: true,
     conversion_value: 120.0, conversion_type: SHARED_TYPE, order_id: SHARED_BODY.order_id,
-    external_event_id: SHARED_EXT, ingestion_method: 'server_routed', utm_source: 'google'
+    external_event_id: SHARED_EXT, ingestion_method: 'server_routed', utm_source: 'google',
+    // fingerprinting/cookie keys the sweep ruled DROP (city pixel.js:112; fbp/fbc conversion.js:245-246)
+    city: 'Berlin', fbp: 'fb.1.123.ABCxyz', fbc: 'fb.1.456.CLICKDEF',
+    // browser_version/os_version are KEPT (read by events.js/journey.js) — must SURVIVE
+    browser_version: '120.0.1', os_version: '17.2', os_name: 'iOS',
+    custom_properties: { city: 'Munich', fbp: 'nested-fbp-GHI' } // nested -> must also drop
   }
 }
 const SECRET_UA = 'Mozilla/5.0 (fingerprint-UA-12345)'
@@ -299,6 +304,26 @@ test('browser (conversion.js): ON -> event_id = external_event_id; site_key DROP
   assert.strictEqual(ev.site_id, SITE)
   assert.strictEqual(ev.event_id, SHARED_EXT, 'deriveEventId branch-2 resolves external_event_id')
   assert.ok(!('site_key' in ev) && !JSON.stringify(ev).includes('sk_live_BROWSER'))
+  reset()
+})
+
+// Sweep ruling: city/fbp/fbc dropped at every depth; browser_version/os_version/os_name
+// KEPT (live read dependency). NON-VACUOUS — fails without the 3 in FORBIDDEN_KEYS.
+test('fingerprinting drop: city/fbp/fbc gone (nested too); *_version KEPT', async () => {
+  const { ok, rec } = await emitOn(browserConvRaw)
+  assert.strictEqual(ok, true)
+  const ev = rec.lines()[0]
+  for (const k of ['city', 'fbp', 'fbc']) {
+    assert.ok(!(k in ev), `${k} dropped top-level`)
+    assert.ok(!(k in (ev.custom_properties || {})), `${k} dropped nested`)
+  }
+  for (const v of ['Berlin', 'Munich', 'fb.1.123.ABCxyz', 'nested-fbp-GHI', 'fb.1.456.CLICKDEF']) {
+    assert.ok(!JSON.stringify(ev).includes(v), `${v} never reaches transport at any depth`)
+  }
+  // KEPT (read by events.js/journey.js) — must survive
+  assert.strictEqual(ev.browser_version, '120.0.1', 'browser_version KEPT (live read)')
+  assert.strictEqual(ev.os_version, '17.2', 'os_version KEPT (live read)')
+  assert.strictEqual(ev.os_name, 'iOS', 'os_name KEPT')
   reset()
 })
 

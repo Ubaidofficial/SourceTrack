@@ -61,7 +61,7 @@ test('pixel divergence: value/browser/os renamed to canonical names', () => {
     value: 42.5,            // -> conversion_value (pixel.js:116)
     browser: 'Chrome',      // -> browser_name     (pixel.js:109)
     os: 'macOS',            // -> os_name          (pixel.js:110)
-    city: 'Berlin',         // not a column -> bag
+    region: 'Berlin',       // neutral unknown key -> bag (city is now FORBIDDEN)
     tracking_method: 'pixel', // bag
     x_campaign: 'spring',   // pixel x_ passthrough -> bag
     timestamp: '2026-06-01T10:00:00.000Z'
@@ -71,7 +71,7 @@ test('pixel divergence: value/browser/os renamed to canonical names', () => {
   assert.strictEqual(out.browser_name, 'Chrome')
   assert.strictEqual(out.os_name, 'macOS')
   assert.ok(!('value' in out) && !('browser' in out) && !('os' in out), 'divergent names removed')
-  assert.strictEqual(out.city, 'Berlin', 'unknown key preserved into bag')
+  assert.strictEqual(out.region, 'Berlin', 'unknown key preserved into bag')
   assert.strictEqual(out.tracking_method, 'pixel')
   assert.strictEqual(out.x_campaign, 'spring')
   assert.strictEqual(out.event_type, '$conversion', 'event -> event_type')
@@ -108,7 +108,7 @@ test('PII denylist is RECURSIVE: nested PII/forbidden keys dropped at every dept
     site_id: 'site-01', event: '$conversion', anonymous_id: 'a1',
     timestamp: '2026-06-01T10:00:00.000Z',
     custom_properties: { email: 'buyer@example.com', name: 'Jane', plan: 'pro' },
-    billing: { contact: { phone: '+15551234567', city: 'Berlin' } }, // 2 levels deep
+    billing: { contact: { phone: '+15551234567', region: 'Berlin' } }, // 2 levels deep
     items: [{ email: 'x@y.com', sku: 'ABC' }, { sku: 'DEF' }],         // array of objects
     meta: { site_key: 'sk_live_SECRET', refund_of: 'evt_orig', _synthetic: true, kept: 1 }
   }
@@ -120,7 +120,7 @@ test('PII denylist is RECURSIVE: nested PII/forbidden keys dropped at every dept
   }
   // non-PII siblings are preserved (drop is surgical, not wholesale)
   assert.strictEqual(out.custom_properties.plan, 'pro')
-  assert.strictEqual(out.billing.contact.city, 'Berlin')
+  assert.strictEqual(out.billing.contact.region, 'Berlin')
   assert.deepStrictEqual(out.items, [{ sku: 'ABC' }, { sku: 'DEF' }])
   assert.strictEqual(out.meta.kept, 1)
   assert.ok(!('site_key' in out.meta) && !('_synthetic' in out.meta) && !('refund_of' in out.meta))
