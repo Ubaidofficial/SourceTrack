@@ -110,7 +110,7 @@ const browserConvRaw = {
   distinctId: 'browser-anon', event: '$conversion', timestamp: '2026-06-30T10:00:00.000Z',
   properties: {
     site_id: SITE, site_key: 'sk_live_BROWSER', anonymous_id: 'browser-anon', is_conversion: true,
-    conversion_value: 120.0, conversion_type: SHARED_TYPE, order_id: SHARED_BODY.order_id,
+    conversion_value: 120.0, conversion_type: SHARED_TYPE, order_id: 'ord_browser_111',
     external_event_id: SHARED_EXT, ingestion_method: 'server_routed', utm_source: 'google',
     // fingerprinting/cookie keys the sweep ruled DROP (city pixel.js:112; fbp/fbc conversion.js:245-246)
     city: 'Berlin', fbp: 'fb.1.123.ABCxyz', fbc: 'fb.1.456.CLICKDEF',
@@ -126,7 +126,7 @@ const offlineConvRaw = {
     site_id: SITE, site_key: 'sk_live_OFFLINE', is_conversion: true, conversion_value: 120.0,
     user_agent: SECRET_UA, // conversion-offline.js:171 — raw UA; §6 fingerprinting-adjacent
     custom_properties: { user_agent: SECRET_UA }, // nested too — must drop at every depth
-    conversion_type: SHARED_TYPE, order_id: SHARED_BODY.order_id, external_event_id: SHARED_EXT,
+    conversion_type: SHARED_TYPE, order_id: 'ord_offline_222', external_event_id: SHARED_EXT,
     ingestion_method: 'offline', provider: 'payments_api', currency: 'USD'
   }
 }
@@ -394,16 +394,21 @@ test('offline (conversion-offline.js): ON -> event_id = external_event_id; site_
   reset()
 })
 
-test('CROSS-DEDUP PROOF: browser + offline, same order_id+type -> SAME event_id', async () => {
-  // direct (deriveEventId) and end-to-end (through the wired dual-write path)
+test('CROSS-DEDUP PROOF: browser + offline, shared external_event_id -> SAME event_id', async () => {
+  // browser order_id='ord_browser_111', offline order_id='ord_offline_222' (DIFFERENT),
+  // but both share external_event_id=SHARED_EXT. Equal event_id therefore proves
+  // deriveEventId used branch-2 (external_event_id), NOT branch-5 (order_id) — the
+  // equality is now independently load-bearing: if branch-2 broke, the two would
+  // derive their DIFFERENT order_ids and this would FAIL.
+  assert.notStrictEqual(browserConvRaw.properties.order_id, offlineConvRaw.properties.order_id)
   assert.strictEqual(deriveEventId(browserConvRaw.properties), deriveEventId(offlineConvRaw.properties))
   const browser = await emitOn(browserConvRaw)
   const browserId = browser.rec.lines()[0].event_id
   reset()
   const offline = await emitOn(offlineConvRaw)
   const offlineId = offline.rec.lines()[0].event_id
-  assert.strictEqual(browserId, offlineId, 'browser and offline derive the SAME event_id')
-  assert.strictEqual(browserId, SHARED_EXT)
+  assert.strictEqual(browserId, offlineId, 'SAME event_id despite different order_ids -> branch-2 dedup')
+  assert.strictEqual(browserId, SHARED_EXT) // anchor: both resolve to the shared external_event_id
   reset()
 })
 
