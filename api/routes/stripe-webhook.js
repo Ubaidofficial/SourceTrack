@@ -7,7 +7,7 @@ import { claimIdempotencyKeys, logIngestionEvent, rollbackIdempotencyKeys } from
 import { ph } from '../lib/posthog.js'
 import { resolveWebhookAnonymousId } from '../lib/identity-links.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
-import { SUBSCRIPTION_EVENTS, mapSubscriptionEvent, buildSubscriptionIdempotencyKeys } from '../lib/stripe-subscription.js'
+import { SUBSCRIPTION_EVENTS, mapSubscriptionEvent, buildSubscriptionIdempotencyKeys, checkoutConversionValue } from '../lib/stripe-subscription.js'
 
 
 
@@ -314,7 +314,12 @@ router.post('/:site_key', async (req, res) => {
     const conversionProperties = {
       site_id: site.id,
       site_key: site.site_key,
-      conversion_value: value,
+      // Phase 5c: a subscription-mode checkout contributes $0 (subscription revenue
+      // counts ONCE, on invoice.paid) — but the event is still emitted with full
+      // customer_id + client_reference_id stitch so nightly seeds subscription_identity.
+      // One-time (payment-mode) checkout keeps its full value. (The audit log below
+      // still records the real `value`.)
+      conversion_value: checkoutConversionValue(session.mode, value),
       currency,
       conversion_type: 'purchase',
       conversion_event_id: orderId || paymentId || providerEventId,
