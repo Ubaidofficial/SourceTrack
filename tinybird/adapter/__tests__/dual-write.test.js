@@ -125,6 +125,20 @@ const offlineConvRaw = {
     ingestion_method: 'offline', provider: 'payments_api', currency: 'USD'
   }
 }
+// ── Batch 4: shopify-webhook.js ─────────────────────────────────────────────────
+// Shopify has no external_event_id/client event_id -> deriveEventId resolves
+// order_id (= String(payload.id), shopify-webhook.js:121) via branch 5.
+const shopifyRaw = (orderId) => ({
+  distinctId: 'shopify_unattributed:' + orderId, event: '$conversion', timestamp: '2026-06-30T10:00:00.000Z',
+  properties: {
+    site_id: SITE, site_key: 'sk_live_SHOPIFY', conversion_value: 75.0, currency: 'USD',
+    conversion_type: 'purchase', conversion_event_id: orderId, order_id: orderId,
+    order_name: '#1042', provider: 'shopify', provider_event_id: 'wh_evt_abc',
+    occurred_at: '2026-06-30T10:00:00.000Z', ingestion_method: 'webhook_shopify',
+    stitching_method: 'none', utm_source: 'shopify', utm_medium: 'webhook',
+    first_touch_source: 'shopify', first_touch_medium: 'webhook'
+  }
+})
 
 // ── Gate logic ──────────────────────────────────────────────────────────────────
 test('flag parsing: only "true"/"1" enable; everything else is OFF', () => {
@@ -380,6 +394,52 @@ test('Batch 3 producers: flag OFF -> none emit (safety guarantee)', () => {
     assert.strictEqual(dualWriteEvent(raw), false)
   }
   assert.strictEqual(rec.lines().length, 0)
+  reset()
+})
+
+// ── Batch 4: shopify-webhook.js ─────────────────────────────────────────────────
+test('shopify: ON -> event_id = order_id (branch 5); site_key DROPPED', async () => {
+  const { ok, rec } = await emitOn(shopifyRaw('5500000123'))
+  assert.strictEqual(ok, true)
+  const ev = rec.lines()[0]
+  assert.strictEqual(ev.site_id, SITE)
+  assert.strictEqual(ev.event_id, '5500000123', 'deriveEventId resolves order_id, not conversion_event_id')
+  assert.strictEqual(ev.event_type, '$conversion')
+  assert.strictEqual(ev.provider, 'shopify')
+  assert.ok(!('site_key' in ev) && !JSON.stringify(ev).includes('sk_live_SHOPIFY'))
+  reset()
+})
+
+test('shopify: flag OFF -> no emit (HMAC + persistent claim path unaffected)', () => {
+  reset()
+  const rec = recorder()
+  setDualWriteTransport(rec.transport, BATCH_OPTS)
+  assert.strictEqual(dualWriteEvent(shopifyRaw('5500000123')), false)
+  assert.strictEqual(rec.lines().length, 0)
+  reset()
+})
+
+// Lens (b): dualWriteEvent fires ONLY after HMAC + the persistent claim succeeds.
+// A duplicate the claim skips (shopify-webhook.js:138 -> return :147) must NOT
+// dual-write. Mirrors the shopify control flow.
+test('shopify claim-gating: HMAC-fail / claim-skipped duplicate / limit -> NO dual-write', async () => {
+  process.env.TINYBIRD_DUAL_WRITE = 'true'
+  const rec = recorder()
+  setDualWriteTransport(rec.transport, BATCH_OPTS)
+  const simulateShopify = (hmacOk, claim, limitAllowed) => {
+    if (!hmacOk) return                 // :72 invalid HMAC -> 400
+    if (claim.duplicate) return         // :138 -> return :147
+    if (!limitAllowed) return           // :249 limit block
+    // ph.capture(...) then:
+    dualWriteEvent(shopifyRaw('5500000123'))
+  }
+  simulateShopify(false, { duplicate: false }, true)   // bad HMAC -> NO emit
+  simulateShopify(true, { duplicate: true }, true)      // claim skip -> NO emit
+  simulateShopify(true, { duplicate: false }, false)    // limit -> NO emit
+  assert.strictEqual(rec.lines().length, 0, 'suppressed conversions never dual-write')
+  simulateShopify(true, { duplicate: false }, true)     // verified + claimed + allowed -> emit
+  await __getDualWriteBatcher().flush()
+  assert.strictEqual(rec.lines().length, 1, 'exactly one dual-write on the success path')
   reset()
 })
 
