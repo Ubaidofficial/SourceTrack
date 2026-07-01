@@ -1848,20 +1848,26 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     FROM (
       SELECT
         cv.uuid AS conversion_uuid,
-        argMin(COALESCE(NULLIF(toString(pv.properties.utm_source), ''), 'direct'), pv.timestamp) AS dim_value,
+        argMin(COALESCE(NULLIF(toString(pv.utm_source), ''), 'direct'), pv.timestamp) AS dim_value,
         dateDiff('day', min(pv.timestamp), cv.timestamp) AS days_gap
-      FROM events cv
-      INNER JOIN events pv
+      FROM (
+        SELECT uuid, distinct_id, timestamp
+        FROM events
+        WHERE properties.site_id = '${safeSite}'
+          AND event = '$conversion'
+          AND timestamp >= ${fromDate}
+          AND timestamp < ${toDate}
+      ) cv
+      INNER JOIN (
+        SELECT distinct_id, timestamp, properties.utm_source AS utm_source
+        FROM events
+        WHERE properties.site_id = '${safeSite}'
+          AND event = '$pageview'
+          AND properties.utm_source IS NOT NULL
+          AND properties.utm_source != ''
+      ) pv
         ON pv.distinct_id = cv.distinct_id
-        AND pv.properties.site_id = cv.properties.site_id
-        AND pv.event = '$pageview'
         AND pv.timestamp <= cv.timestamp
-        AND pv.properties.utm_source IS NOT NULL
-        AND pv.properties.utm_source != ''
-      WHERE cv.properties.site_id = '${safeSite}'
-        AND cv.event = '$conversion'
-        AND cv.timestamp >= ${fromDate}
-        AND cv.timestamp < ${toDate}
       GROUP BY cv.uuid, cv.timestamp
       HAVING days_gap >= 0
     )
@@ -1901,21 +1907,27 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
       SELECT
         cv.uuid AS conversion_uuid,
         COALESCE(
-          argMinIf(toString(pv.properties.utm_source), pv.timestamp, pv.properties.utm_source IS NOT NULL AND pv.properties.utm_source != ''),
-          NULLIF(toString(cv.properties.utm_source), ''),
+          argMinIf(toString(pv.utm_source), pv.timestamp, pv.utm_source IS NOT NULL AND pv.utm_source != ''),
+          NULLIF(toString(cv.utm_source), ''),
           'direct'
         ) AS dim_value,
         countIf(pv.event = '$pageview') AS touch_count
-      FROM events cv
-      INNER JOIN events pv
+      FROM (
+        SELECT uuid, distinct_id, timestamp, properties.utm_source AS utm_source
+        FROM events
+        WHERE properties.site_id = '${safeSite}'
+          AND event = '$conversion'
+          AND timestamp >= ${fromDate}
+          AND timestamp < ${toDate}
+      ) cv
+      INNER JOIN (
+        SELECT distinct_id, timestamp, event, properties.utm_source AS utm_source
+        FROM events
+        WHERE properties.site_id = '${safeSite}'
+      ) pv
         ON pv.distinct_id = cv.distinct_id
-        AND pv.properties.site_id = cv.properties.site_id
         AND pv.timestamp <= cv.timestamp
-      WHERE cv.properties.site_id = '${safeSite}'
-        AND cv.event = '$conversion'
-        AND cv.timestamp >= ${fromDate}
-        AND cv.timestamp < ${toDate}
-      GROUP BY cv.uuid, cv.properties.utm_source
+      GROUP BY cv.uuid, cv.utm_source
       HAVING touch_count > 0
     )
     GROUP BY dim_value
@@ -2174,6 +2186,29 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
   const isTouchModel = model === 'first_touch' || model === 'last_touch' || model === 'first_touch_non_direct' || model === 'last_touch_non_direct'
 
   // Windowed attribution: find the qualifying pageview touchpoint within N days of each conversion.
+  //
+  // KNOWN RESIDUAL: both self-join sides below are pre-filtered into subqueries
+  // (site_id/event scoped inside each, before the join) — this fixed a 504 query
+  // timeout that a direct self-join on the raw `events` table hit on EVERY prior
+  // attempt, at any data volume, regardless of where the timestamp inequality
+  // lived (confirmed empirically: even a pure-equality self-join with zero
+  // inequality conditions timed out identically). That fix is not a 100%
+  // guarantee, though: verification ran this exact query shape 21 times across
+  // 4 real sites, 9 date ranges, and 3 window values (7/30/90d) — 20/21 passed
+  // (188ms-4,487ms) and 1/21 hit the same 504 (~10.9s, at PostHog's own timeout
+  // ceiling). That one failure was the FIRST invocation of this exact query
+  // shape immediately after this code shipped — zero prior compiles anywhere.
+  // It did NOT reproduce on a dedicated test after a genuine 3-minute real-time
+  // pause (first call in that batch: 4,219ms; every call after: <300ms) — so
+  // the residual risk looks like a one-time first-compile cost (PostHog/
+  // ClickHouse warming up a query plan it hasn't seen before), not a per-request
+  // risk that recurs under load or over time. Net: a real user could see this
+  // metric silently return `analytics_unavailable: true` (swallowed by
+  // api/routes/attribution.js's catch block, HTTP 200) on the very first
+  // request against this query shape after a fresh deploy, before any request
+  // has warmed it — accepted as a known, bounded, documented risk rather than
+  // fixed further. If this ever needs closing, the candidate mitigation is a
+  // single fire-and-forget warm-up call at service boot (see founder review).
   let windowJoin = ''
   let windowedDimExpr = null
   let windowedDim2Expr = null
@@ -2181,32 +2216,52 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
   if (isTouchModel && hasAttributionWindow) {
     const aggFn = (model === 'first_touch' || model === 'first_touch_non_direct') ? 'argMin' : 'argMax'
     const ndFilter = (model === 'first_touch_non_direct' || model === 'last_touch_non_direct')
-      ? `\n        AND _pv.properties.utm_source != 'direct'`
+      ? `\n          AND properties.utm_source != 'direct'`
       : ''
 
     windowJoin = `
     LEFT JOIN (
       SELECT
-        events.uuid AS _win_uuid,
-        ${aggFn}(_pv.properties.utm_source, _pv.timestamp) AS _w_source,
-        ${aggFn}(_pv.properties.utm_medium, _pv.timestamp) AS _w_medium,
-        ${aggFn}(_pv.properties.utm_campaign, _pv.timestamp) AS _w_campaign,
-        ${aggFn}(_pv.properties.utm_term, _pv.timestamp) AS _w_term,
-        ${aggFn}(_pv.properties.referrer, _pv.timestamp) AS _w_referrer
-      FROM events
-      LEFT JOIN events AS _pv
-        ON _pv.distinct_id = events.distinct_id
-        AND _pv.properties.site_id = events.properties.site_id
-        AND _pv.event = '$pageview'
-        AND _pv.properties.utm_source IS NOT NULL
-        AND _pv.properties.utm_source != ''${ndFilter}
-        AND _pv.timestamp >= events.timestamp - INTERVAL ${windowDays} DAY
-        AND _pv.timestamp <= events.timestamp
-      WHERE events.properties.site_id = '${safeSite}'
-        AND events.event = '$conversion'
-        AND events.timestamp >= ${fromDate}
-        AND events.timestamp < ${toDate}
-      GROUP BY events.uuid
+        cv.uuid AS _win_uuid,
+        ${aggFn}If(_pv.utm_source, _pv.timestamp,
+          _pv.timestamp >= cv.timestamp - INTERVAL ${windowDays} DAY
+          AND _pv.timestamp <= cv.timestamp) AS _w_source,
+        ${aggFn}If(_pv.utm_medium, _pv.timestamp,
+          _pv.timestamp >= cv.timestamp - INTERVAL ${windowDays} DAY
+          AND _pv.timestamp <= cv.timestamp) AS _w_medium,
+        ${aggFn}If(_pv.utm_campaign, _pv.timestamp,
+          _pv.timestamp >= cv.timestamp - INTERVAL ${windowDays} DAY
+          AND _pv.timestamp <= cv.timestamp) AS _w_campaign,
+        ${aggFn}If(_pv.utm_term, _pv.timestamp,
+          _pv.timestamp >= cv.timestamp - INTERVAL ${windowDays} DAY
+          AND _pv.timestamp <= cv.timestamp) AS _w_term,
+        ${aggFn}If(_pv.referrer, _pv.timestamp,
+          _pv.timestamp >= cv.timestamp - INTERVAL ${windowDays} DAY
+          AND _pv.timestamp <= cv.timestamp) AS _w_referrer
+      FROM (
+        SELECT uuid, distinct_id, timestamp
+        FROM events
+        WHERE properties.site_id = '${safeSite}'
+          AND event = '$conversion'
+          AND timestamp >= ${fromDate}
+          AND timestamp < ${toDate}
+      ) cv
+      LEFT JOIN (
+        SELECT
+          distinct_id, timestamp,
+          properties.utm_source AS utm_source,
+          properties.utm_medium AS utm_medium,
+          properties.utm_campaign AS utm_campaign,
+          properties.utm_term AS utm_term,
+          properties.referrer AS referrer
+        FROM events
+        WHERE properties.site_id = '${safeSite}'
+          AND event = '$pageview'
+          AND properties.utm_source IS NOT NULL
+          AND properties.utm_source != ''${ndFilter}
+      ) AS _pv
+        ON _pv.distinct_id = cv.distinct_id
+      GROUP BY cv.uuid
     ) _win ON events.uuid = _win._win_uuid`
 
     if (groupBy === 'source' || groupBy === 'medium' || groupBy === 'campaign' || groupBy === 'keyword' || groupBy === 'referrer_domain') {
