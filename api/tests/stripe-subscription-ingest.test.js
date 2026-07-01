@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert'
 
-import { mapSubscriptionEvent, buildSubscriptionIdempotencyKeys, checkoutConversionValue, buildSubscriptionIdentitySeed } from '../lib/stripe-subscription.js'
+import { mapSubscriptionEvent, buildSubscriptionIdempotencyKeys, checkoutConversionValue, buildSubscriptionIdentitySeed, isSubscriptionCheckoutCarrier } from '../lib/stripe-subscription.js'
 
 // Synthetic Stripe events — the whole point is verifying ingestion logic WITHOUT
 // a real paying customer (mapSubscriptionEvent / key construction are pure).
@@ -154,4 +154,105 @@ test('5c: one-time path untouched; non-customer conversions never seed', () => {
     conversion: { distinct_id: 'anon-3', uuid: 'u', stripe_subscription_id: null },
     touchpoints: [{ timestamp: 't' }], record: RECORD
   }), null, 'no webhook_customer_id -> no seed')
+})
+
+// ── Phase 7: isSubscriptionCheckoutCarrier ────────────────────────────────────
+
+const carrierBase = () => ({
+  provider: 'stripe',
+  conversion_type: 'purchase',
+  conversion_value: 0,
+  stripe_subscription_id: 'sub_1',
+  stripe_event_type: 'checkout.session.completed'
+})
+
+// CASE 1 — the actual bug: subscription-mode checkout carrier, all fields match.
+test('7: subscription-mode checkout carrier -> true', () => {
+  assert.strictEqual(isSubscriptionCheckoutCarrier(carrierBase()), true)
+})
+
+// CASE 2 — invoice.paid (or any subscription-lifecycle event): conversion_type is
+// never 'purchase' on that path (mapSubscriptionEvent only emits
+// subscription/renewal/trial_start/trial_converted/churn), so it must not match
+// even though it shares provider='stripe' and carries a real stripe_subscription_id.
+test('7: invoice.paid / subscription-lifecycle event -> false (conversion_type is never purchase)', () => {
+  assert.strictEqual(isSubscriptionCheckoutCarrier({ ...carrierBase(), conversion_type: 'subscription' }), false)
+  assert.strictEqual(isSubscriptionCheckoutCarrier({ ...carrierBase(), conversion_type: 'renewal' }), false)
+})
+
+// CASE 3 — a real one-time (payment-mode) checkout with a non-zero value must
+// never be excluded from counts.
+test('7: one-time checkout with real value -> false', () => {
+  assert.strictEqual(isSubscriptionCheckoutCarrier({ ...carrierBase(), conversion_value: 49, stripe_subscription_id: null }), false)
+})
+
+// CASE 4 — the edge case both proposals flagged: a genuinely fully-discounted
+// ($0) ONE-TIME checkout. Payment-mode checkouts never get a subscription_id
+// (session.subscription is null), so this must NOT match — presence of
+// stripe_subscription_id is what disambiguates it from CASE 1.
+test('7: fully-discounted ($0) one-time checkout -> false (no subscription_id)', () => {
+  assert.strictEqual(isSubscriptionCheckoutCarrier({ ...carrierBase(), stripe_subscription_id: null }), false)
+})
+
+// CASE 5 — a non-Stripe $0 'purchase' conversion (e.g. a hypothetical future
+// provider reusing the same conversion_type) must never match on provider alone.
+test('7: non-Stripe provider -> false even with matching value/type', () => {
+  assert.strictEqual(isSubscriptionCheckoutCarrier({ ...carrierBase(), provider: 'shopify' }), false)
+  assert.strictEqual(isSubscriptionCheckoutCarrier({ ...carrierBase(), provider: null }), false)
+})
+
+// conversion_value null-coercion, stated explicitly per the code comment: null
+// coerces to 0 (may match), but a truly-absent value (undefined) never matches.
+test('7: conversion_value null-coercion — null matches as 0, undefined fails closed', () => {
+  assert.strictEqual(isSubscriptionCheckoutCarrier({ ...carrierBase(), conversion_value: null }), true, 'Number(null) === 0')
+  assert.strictEqual(isSubscriptionCheckoutCarrier({ ...carrierBase(), conversion_value: undefined }), false, 'Number(undefined) is NaN, never skip on missing data')
+})
+
+// ── Regression: nightly-attribution.js:797's insertSubscriptionRevenue gate ──
+//
+// `if (conversion.webhook_customer_id && conversion.stripe_subscription_id &&
+// !isSubscriptionCheckoutCarrier(conversion))` — since Phase 7 forwards
+// session.subscription onto the checkout carrier, the carrier now has
+// webhook_customer_id AND stripe_subscription_id both truthy, so
+// isSubscriptionCheckoutCarrier(conversion) is the ONLY thing still excluding it
+// from firing insertSubscriptionRevenue (which would otherwise attempt
+// event_type: 'purchase', rejected by subscription_revenue's CHECK constraint).
+// These two tests lock in that exclusion AND confirm the fix didn't collaterally
+// exclude the legitimate funnel events that share stripe_subscription_id but
+// have no stripe_invoice_id.
+
+// CASE 6 — a carrier-shaped conversion object (exactly what nightly-attribution.js
+// builds from a checkout-carrier PostHog row) must be excluded.
+test('7: carrier-shaped conversion -> isSubscriptionCheckoutCarrier true (gate must exclude it)', () => {
+  const carrierConversion = {
+    webhook_customer_id: 'cus_1',
+    stripe_subscription_id: 'sub_1',
+    stripe_invoice_id: null,
+    provider: 'stripe',
+    conversion_type: 'purchase',
+    conversion_value: 0,
+    stripe_event_type: 'checkout.session.completed'
+  }
+  assert.strictEqual(isSubscriptionCheckoutCarrier(carrierConversion), true)
+})
+
+// CASE 7 — trial_start / trial_converted / churn funnel events: these legitimately
+// have webhook_customer_id + stripe_subscription_id (same shape the carrier now
+// has) but conversion_type is never 'purchase' on that path (mapSubscriptionEvent
+// only emits subscription/renewal/trial_start/trial_converted/churn) — must NOT
+// be excluded, or insertSubscriptionRevenue would stop firing for real lifecycle
+// events too.
+test('7: trial_start/trial_converted/churn funnel events -> isSubscriptionCheckoutCarrier false (gate must still admit them)', () => {
+  for (const conversion_type of ['trial_start', 'trial_converted', 'churn']) {
+    const funnelConversion = {
+      webhook_customer_id: 'cus_1',
+      stripe_subscription_id: 'sub_1',
+      stripe_invoice_id: null,
+      provider: 'stripe',
+      conversion_type,
+      conversion_value: 0,
+      stripe_event_type: conversion_type === 'churn' ? 'customer.subscription.deleted' : 'customer.subscription.created'
+    }
+    assert.strictEqual(isSubscriptionCheckoutCarrier(funnelConversion), false, `${conversion_type} must not be excluded`)
+  }
 })
