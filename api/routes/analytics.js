@@ -15,6 +15,7 @@ import {
   trackSiteLimit,
   trackGlobalIpLimit
 } from '../middleware/rate-limit.js'
+import { resolveClientIp } from '../lib/ip-resolver.js'
 
 const router = express.Router()
 
@@ -132,7 +133,7 @@ router.post('/collect',
       return res.json({ ok: true })
     }
 
-    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || ''
+    const ip = resolveClientIp(req)
     const parser = new UAParser(ua)
     let country = null
     if (ip) { const geo = geoip.lookup(ip); country = geo?.country || null }

@@ -8,6 +8,7 @@ import { getSupabase } from '../lib/supabase.js'
 import { requireFeature } from '../lib/plan-features.js'
 import { storeIdentityLink, resolveAnonymousId } from '../lib/identity-links.js'
 import { trackGlobalIpLimit } from '../middleware/rate-limit.js'
+import { resolveClientIp } from '../lib/ip-resolver.js'
 
 const router = Router()
 
@@ -47,7 +48,7 @@ router.post('/event', trackGlobalIpLimit, async (req, res) => {
       return res.status(402).json(block)
     }
 
-    const customerIp = req.body.user_ip || req.headers['x-forwarded-for']?.split(',')[0]?.trim() || ''
+    const customerIp = req.body.user_ip || resolveClientIp(req) || ''
     const customerUa = req.body.user_agent || req.headers['user-agent'] || ''
     const parser = new UAParser(customerUa)
 

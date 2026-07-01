@@ -14,6 +14,7 @@ import { claimConversionUsage } from '../lib/conversion-limits.js'
 import { claimPageviewUsage } from '../lib/pageview-limits.js'
 import { isSiteStatusBlocked } from '../lib/plan-features.js'
 import { redactPiiFromObject, redactPiiFromUrl } from '../lib/utils.js'
+import { resolveClientIp } from '../lib/ip-resolver.js'
 import {
   trackVisitorLimit,
   trackIpLimit,
@@ -44,8 +45,7 @@ function getAiSource(referrer) {
 
 function enrichFromRequest(req) {
   const headers = req.headers || {}
-  const ip = (headers['x-forwarded-for'] || '').split(',')[0].trim()
-    || headers['x-real-ip'] || ''
+  const ip = resolveClientIp(req)
   const ua = headers['user-agent'] || ''
   const parser = new UAParser(ua)
   const geo = ip ? geoip.lookup(ip) : null

@@ -136,14 +136,13 @@ export function getSafeRouteLabel(req) {
 function logRateLimitTripped({ route, layer, req, siteKey, limiterKey }) {
   const sk = siteKey
   const ip = resolveClientIp(req) || ''
-  const resolverMode = process.env.ST_IP_RESOLVER_MODE === 'railway' ? 'railway' : 'connection'
 
   const siteKeyHash = sk ? hashForLog(sk).slice(0, 8) : 'missing'
   const ipHash = ip ? hashForLog(ip) : 'missing'
   const limiterKeyHash = limiterKey ? hashForLog(limiterKey) : 'missing'
 
   console.warn(
-    `[rate-limit] route=${route} layer=${layer} status=429 site_key_hash=${siteKeyHash} ip_hash=${ipHash} limiter_key_hash=${limiterKeyHash} resolver_mode=${resolverMode}`
+    `[rate-limit] route=${route} layer=${layer} status=429 site_key_hash=${siteKeyHash} ip_hash=${ipHash} limiter_key_hash=${limiterKeyHash}`
   )
 }
 
