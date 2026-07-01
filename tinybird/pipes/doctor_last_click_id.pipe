@@ -1,0 +1,43 @@
+DESCRIPTION >
+    Setup & Health: most recent event carrying any paid click ID, trailing 30d.
+    Tenant-scoped; prunes via (site_id, timestamp). Faithful 1:1 port of
+    setup-doctor.js's queryHogQL call at api/lib/setup-doctor.js:83 (queryName
+    'doctor_last_click_id'). Typed-column translation (SCOPE_v3.md §2.6):
+    properties.site_id -> site_id; all 14 click-id fields (gclid, gbraid,
+    wbraid, fbclid, msclkid, ttclid, twclid, li_fat_id, li_fatid, dclid,
+    snapclid, pclid, sccid, ko_click_id) are typed columns per §2.6 — direct
+    column reads, no JSONExtract needed. No JSON-bag fields in this query.
+    Source has NO event_type filter (matches any event, not just $pageview) —
+    preserved exactly as-is; this is a faithful parity port, not an
+    "improvement" — do not add a filter that wasn't in the live query.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+TOKEN "st_endpoint_read" READ
+
+NODE doctor_last_click_id_node
+SQL >
+    %
+    SELECT gclid, gbraid, wbraid, fbclid, msclkid, ttclid, twclid, li_fat_id, li_fatid, dclid, snapclid, pclid, sccid, ko_click_id
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND timestamp >= now() - INTERVAL 30 DAY
+      AND (
+        (gclid != '' AND isNotNull(gclid)) OR
+        (gbraid != '' AND isNotNull(gbraid)) OR
+        (wbraid != '' AND isNotNull(wbraid)) OR
+        (fbclid != '' AND isNotNull(fbclid)) OR
+        (msclkid != '' AND isNotNull(msclkid)) OR
+        (ttclid != '' AND isNotNull(ttclid)) OR
+        (twclid != '' AND isNotNull(twclid)) OR
+        (li_fat_id != '' AND isNotNull(li_fat_id)) OR
+        (li_fatid != '' AND isNotNull(li_fatid)) OR
+        (dclid != '' AND isNotNull(dclid)) OR
+        (snapclid != '' AND isNotNull(snapclid)) OR
+        (pclid != '' AND isNotNull(pclid)) OR
+        (sccid != '' AND isNotNull(sccid)) OR
+        (ko_click_id != '' AND isNotNull(ko_click_id))
+      )
+    ORDER BY timestamp DESC
+    LIMIT 1
+
+TYPE endpoint

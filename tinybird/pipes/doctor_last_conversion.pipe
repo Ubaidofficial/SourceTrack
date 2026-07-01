@@ -1,0 +1,23 @@
+DESCRIPTION >
+    Setup & Health: most recent conversion, trailing 30d. Tenant-scoped; prunes
+    via (site_id, timestamp). Faithful 1:1 port of setup-doctor.js's queryHogQL
+    call at api/lib/setup-doctor.js:70 (queryName 'doctor_last_conversion').
+    Typed-column translation (SCOPE_v3.md §2.6): properties.site_id -> site_id,
+    event -> event_type, properties.conversion_type -> conversion_type (typed,
+    DEFAULT 'untyped'). No JSON-bag fields in this query.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+TOKEN "st_endpoint_read" READ
+
+NODE doctor_last_conversion_node
+SQL >
+    %
+    SELECT timestamp, conversion_type
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$conversion'
+      AND timestamp >= now() - INTERVAL 30 DAY
+    ORDER BY timestamp DESC
+    LIMIT 1
+
+TYPE endpoint

@@ -1,0 +1,40 @@
+DESCRIPTION >
+    Super-admin preview: top 5 sources by revenue, trailing 30d. Tenant-scoped;
+    prunes via (site_id, timestamp). Faithful 1:1 port of
+    api/routes/admin.js:327-339 (queryName 'admin_preview_sources'). Checked
+    against all shipped integ_* shapes (suspected match per dispatch note) —
+    DIFFERENT: no shipped pipe groups by utm_source with a revenue HAVING
+    filter; not a duplicate. Typed-column translation (SCOPE_v3.md §2.6):
+    properties.site_id -> site_id, event -> event_type,
+    properties.utm_source -> utm_source (typed, Nullable->'direct' on read
+    per §2.6 — the live COALESCE(...,'direct') IS the documented read-side
+    default, kept verbatim), properties.conversion_value -> conversion_value
+    (typed Float64 DEFAULT 0, NOT Nullable).
+    REAL TRANSLATION ISSUE, caught by parity validation (not a blind copy):
+    the live query wraps in `toFloatOrZero(toString(...))` — `toFloatOrZero`
+    is PostHog HogQL sugar, not a native ClickHouse function; running it
+    verbatim against Tinybird's own ClickHouse (`tb --cloud sql`) fails with
+    "Unknown function toFloatOrZero". Translated to the equivalent native
+    function `toFloat64OrZero`, keeping the `toString(...)` wrap (redundant
+    against the already-Float64 column but harmless) since only the function
+    name is invalid, not the expression shape. No JSON-bag fields.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+TOKEN "st_endpoint_read" READ
+
+NODE admin_preview_sources_node
+SQL >
+    %
+    SELECT
+        COALESCE(utm_source, 'direct') AS source,
+        sumIf(toFloat64OrZero(toString(conversion_value)), event_type = '$conversion') AS revenue,
+        countIf(event_type = '$conversion') AS conversions
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND timestamp >= now() - INTERVAL 30 DAY
+    GROUP BY source
+    HAVING revenue > 0
+    ORDER BY revenue DESC
+    LIMIT 5
+
+TYPE endpoint

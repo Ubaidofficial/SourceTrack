@@ -1,0 +1,30 @@
+DESCRIPTION >
+    Leads: true distinct-converter count for a range (used to correct the
+    page-length undercount in the leads list). Tenant-scoped; prunes via
+    (site_id, timestamp). Faithful 1:1 port of api/routes/leads-server.js:186-192
+    (queryName 'leads_count'). Identity rule #19a: count(DISTINCT distinct_id)
+    — canonical stitching key, no argMin/argMax. Typed-column translation
+    (SCOPE_v3.md §2.6): properties.site_id -> site_id, event -> event_type.
+    No JSON-bag fields.
+    The live query's date filter is OPTIONAL (only added when the caller
+    supplies both date_from and date_to) — ported as an optional Tinybird
+    `{% if defined(...) %}` block (date_from_ts/date_to_ts, full boundary
+    strings) rather than always-required, to match the source's actual
+    conditional behavior instead of forcing a fixed window that isn't there.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+TOKEN "st_endpoint_read" READ
+
+NODE leads_count_node
+SQL >
+    %
+    SELECT count(DISTINCT distinct_id) AS leads_count
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$conversion'
+      {% if defined(date_from_ts) %}
+      AND timestamp >= toDateTime({{ String(date_from_ts, required=True) }})
+      AND timestamp < toDateTime({{ String(date_to_ts, required=True) }})
+      {% end %}
+
+TYPE endpoint

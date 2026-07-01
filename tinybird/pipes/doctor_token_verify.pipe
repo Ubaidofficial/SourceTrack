@@ -1,0 +1,28 @@
+DESCRIPTION >
+    Setup & Health: confirms a client-supplied verification token landed in the
+    last 15 minutes. Tenant-scoped; prunes via (site_id, timestamp). Faithful
+    1:1 port of setup-doctor.js's queryHogQL call at
+    api/lib/setup-doctor.js:145 (queryName 'doctor_token_verify').
+    Typed-column translation (SCOPE_v3.md §2.6): properties.site_id -> site_id.
+    JSON-BAG FIELD HIT (flagged): properties.st_verify is in §2.6's JSON-bag
+    list (alongside st_network/st_device/st_matchtype), not a typed column —
+    read via JSONExtractString(properties, 'st_verify').
+    Live query took the token VALUE as a second runtime input (the producer's
+    sanitizeVerificationToken(verificationToken) output); ported as a second
+    required template param (st_verify) rather than interpolated, matching
+    HARD RULE #1's no-interpolation requirement for the tenant param and
+    applying the same principle to this second user-supplied value.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+TOKEN "st_endpoint_read" READ
+
+NODE doctor_token_verify_node
+SQL >
+    %
+    SELECT count() AS token_verify_count
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND JSONExtractString(properties, 'st_verify') = {{ String(st_verify, required=True) }}
+      AND timestamp >= now() - INTERVAL 15 MINUTE
+
+TYPE endpoint

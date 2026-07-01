@@ -1,0 +1,20 @@
+DESCRIPTION >
+    Setup & Health: pageview count, trailing 30d. Tenant-scoped; prunes via
+    (site_id, timestamp). Faithful 1:1 port of setup-doctor.js's queryHogQL
+    call at api/lib/setup-doctor.js:59 (queryName 'doctor_pageviews_30d').
+    Typed-column translation (SCOPE_v3.md §2.6): properties.site_id -> site_id,
+    event -> event_type. No JSON-bag fields in this query.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+TOKEN "st_endpoint_read" READ
+
+NODE doctor_pageviews_30d_node
+SQL >
+    %
+    SELECT count() AS pageviews_30d
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$pageview'
+      AND timestamp >= now() - INTERVAL 30 DAY
+
+TYPE endpoint

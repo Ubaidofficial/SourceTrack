@@ -1,0 +1,24 @@
+DESCRIPTION >
+    Integrations: day-over-day conversion comparison (Promise.all batch).
+    Tenant-scoped; prunes via (site_id, timestamp). Faithful 1:1 port of
+    api/routes/integrations.js:93-100 (queryName 'integ_conversions').
+    Typed-column translation: properties.site_id -> site_id, event ->
+    event_type. No JSON-bag fields. IDENTICAL query text to
+    alert_conversions.pipe (api/routes/alerts.js:54) — duplicate logic,
+    Phase-6 consolidation candidate (noted, not acted on).
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+TOKEN "st_endpoint_read" READ
+
+NODE integ_conversions_node
+SQL >
+    %
+    SELECT
+        SUM(CASE WHEN timestamp >= now() - INTERVAL 1 DAY THEN 1 ELSE 0 END) AS today,
+        SUM(CASE WHEN timestamp >= now() - INTERVAL 2 DAY AND timestamp < now() - INTERVAL 1 DAY THEN 1 ELSE 0 END) AS yesterday
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$conversion'
+      AND timestamp >= now() - INTERVAL 2 DAY
+
+TYPE endpoint

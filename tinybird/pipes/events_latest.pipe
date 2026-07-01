@@ -1,0 +1,133 @@
+DESCRIPTION >
+    Events: full recent event list with optional event_type/source/date-range/
+    search filters (events explorer table). Tenant-scoped; prunes via
+    (site_id, timestamp). Faithful 1:1 port of api/routes/events.js:22-137
+    (queryName 'events_latest') — flagged unassigned in the prior batch's
+    census, closed here as a plain distinct_id read (identity rule #19a:
+    distinct_id selected + used in the search filter, canonical stitching
+    key, no argMin/argMax).
+    Typed-column translation (SCOPE_v3.md §2.6): properties.site_id ->
+    site_id, event -> event_type, properties.page_url -> page_url,
+    properties.referrer -> referrer, properties.ai_source -> ai_source,
+    properties.device_type -> device_type, properties.country -> country,
+    properties.utm_source/utm_medium/utm_campaign/utm_content/utm_term ->
+    typed columns, properties.gclid/fbclid/msclkid/ttclid/gbraid/wbraid/
+    li_fat_id/li_fatid/twclid/dclid/snapclid/pclid/sccid/ko_click_id -> typed
+    columns, properties.first_touch_source/first_touch_medium/
+    first_touch_campaign -> typed columns, properties.conversion_type ->
+    conversion_type, properties.conversion_value -> conversion_value (typed
+    Float64 DEFAULT 0), properties.ingestion_method -> ingestion_method,
+    properties.browser_name -> browser_name.
+    JSON-BAG FIELDS HIT (flagged): properties.is_conversion, ref_param,
+    source_param, via_param, browser_version, os_name, os_version, utm_id,
+    st_campaign_id, st_adgroup_id, st_ad_id, st_target_id, st_network,
+    st_device, st_matchtype — all in §2.6's bag list, read via
+    JSONExtractString(properties, '<key>'). `properties AS raw_properties`
+    ported as-is (already the full bag column, no extraction needed).
+    OPTIONAL FILTERS ported as Tinybird `{% if defined(...) %}` blocks,
+    matching the source's conditional WHERE-array building exactly:
+    event_type_filter (event_type = X), source_filter (lower/COALESCE OR
+    across utm_source/first_touch_source/ai_source — all typed, so COALESCE
+    still applies to genuine NULLs same as before), date_from_ts/date_to_ts
+    (full boundary strings, not string-interpolated, matching prior-batch
+    convention), search_filter (LIKE OR across event_type/distinct_id/
+    page_url/referrer/utm_source/utm_medium/utm_campaign/ai_source/
+    conversion_type/ingestion_method — all typed columns).
+    LIMIT: source clamps `limit` to [1,500] default 100 in JS
+    (clampLimit()) before interpolating — that clamp is NOT reproducible in
+    template SQL, so the caller MUST apply the same [1,500]/default-100 clamp
+    before passing `limit_val`; this pipe does not re-clamp.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+TOKEN "st_endpoint_read" READ
+
+NODE events_latest_node
+SQL >
+    %
+    SELECT
+        event_type,
+        timestamp,
+        distinct_id,
+        page_url,
+        referrer,
+        ai_source,
+        JSONExtractString(properties, 'is_conversion') AS is_conversion,
+        device_type,
+        country,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        utm_content,
+        utm_term,
+        gclid,
+        fbclid,
+        msclkid,
+        ttclid,
+        JSONExtractString(properties, 'ref_param') AS ref_param,
+        JSONExtractString(properties, 'source_param') AS source_param,
+        JSONExtractString(properties, 'via_param') AS via_param,
+        first_touch_source,
+        first_touch_medium,
+        first_touch_campaign,
+        conversion_type,
+        conversion_value,
+        ingestion_method,
+        browser_name,
+        JSONExtractString(properties, 'browser_version') AS browser_version,
+        JSONExtractString(properties, 'os_name') AS os_name,
+        JSONExtractString(properties, 'os_version') AS os_version,
+        gbraid,
+        wbraid,
+        li_fat_id,
+        li_fatid,
+        twclid,
+        dclid,
+        snapclid,
+        pclid,
+        sccid,
+        ko_click_id,
+        JSONExtractString(properties, 'utm_id') AS utm_id,
+        JSONExtractString(properties, 'st_campaign_id') AS st_campaign_id,
+        JSONExtractString(properties, 'st_adgroup_id') AS st_adgroup_id,
+        JSONExtractString(properties, 'st_ad_id') AS st_ad_id,
+        JSONExtractString(properties, 'st_target_id') AS st_target_id,
+        JSONExtractString(properties, 'st_network') AS st_network,
+        JSONExtractString(properties, 'st_device') AS st_device,
+        JSONExtractString(properties, 'st_matchtype') AS st_matchtype,
+        properties AS raw_properties
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      {% if defined(event_type_filter) %}
+      AND event_type = {{ String(event_type_filter, required=True) }}
+      {% end %}
+      {% if defined(source_filter) %}
+      AND (
+        lower(COALESCE(toString(utm_source), '')) = {{ String(source_filter, required=True) }}
+        OR lower(COALESCE(toString(first_touch_source), '')) = {{ String(source_filter, required=True) }}
+        OR lower(COALESCE(toString(ai_source), '')) = {{ String(source_filter, required=True) }}
+      )
+      {% end %}
+      {% if defined(date_from_ts) %}
+      AND timestamp >= toDateTime({{ String(date_from_ts, required=True) }})
+      {% end %}
+      {% if defined(date_to_ts) %}
+      AND timestamp < toDateTime({{ String(date_to_ts, required=True) }})
+      {% end %}
+      {% if defined(search_filter) %}
+      AND (
+        lower(toString(event_type)) LIKE concat('%', {{ String(search_filter, required=True) }}, '%')
+        OR lower(toString(distinct_id)) LIKE concat('%', {{ String(search_filter, required=True) }}, '%')
+        OR lower(COALESCE(toString(page_url), '')) LIKE concat('%', {{ String(search_filter, required=True) }}, '%')
+        OR lower(COALESCE(toString(referrer), '')) LIKE concat('%', {{ String(search_filter, required=True) }}, '%')
+        OR lower(COALESCE(toString(utm_source), '')) LIKE concat('%', {{ String(search_filter, required=True) }}, '%')
+        OR lower(COALESCE(toString(utm_medium), '')) LIKE concat('%', {{ String(search_filter, required=True) }}, '%')
+        OR lower(COALESCE(toString(utm_campaign), '')) LIKE concat('%', {{ String(search_filter, required=True) }}, '%')
+        OR lower(COALESCE(toString(ai_source), '')) LIKE concat('%', {{ String(search_filter, required=True) }}, '%')
+        OR lower(COALESCE(toString(conversion_type), '')) LIKE concat('%', {{ String(search_filter, required=True) }}, '%')
+        OR lower(COALESCE(toString(ingestion_method), '')) LIKE concat('%', {{ String(search_filter, required=True) }}, '%')
+      )
+      {% end %}
+    ORDER BY timestamp DESC
+    LIMIT {{ Int32(limit_val, 100) }}
+
+TYPE endpoint

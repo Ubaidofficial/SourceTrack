@@ -1,0 +1,28 @@
+DESCRIPTION >
+    Integrations hygiene: pageview counts grouped by referrer, for pageviews
+    with no utm_source, trailing 30d. Tenant-scoped; prunes via (site_id,
+    timestamp). Faithful 1:1 port of api/routes/integrations.js:48-58
+    (queryName 'integ_referrers'). Typed-column translation: properties.site_id
+    -> site_id, event -> event_type, properties.referrer -> referrer (typed,
+    String Nullable per §2.6), properties.utm_source -> utm_source. No
+    JSON-bag fields.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+TOKEN "st_endpoint_read" READ
+
+NODE integ_referrers_node
+SQL >
+    %
+    SELECT referrer, count() AS cnt
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$pageview'
+      AND referrer IS NOT NULL
+      AND referrer != ''
+      AND utm_source IS NULL
+      AND timestamp >= now() - INTERVAL 30 DAY
+    GROUP BY referrer
+    ORDER BY cnt DESC
+    LIMIT 30
+
+TYPE endpoint

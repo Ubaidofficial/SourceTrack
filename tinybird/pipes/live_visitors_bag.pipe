@@ -1,0 +1,64 @@
+DESCRIPTION >
+    Live visitor count, trailing 5 minutes. Tenant-scoped; prunes via
+    (site_id, timestamp). Faithful 1:1 port of api/routes/live.js:15-21
+    (queryName 'live_visitors' in source — renamed live_visitors_bag here
+    to avoid a name collision with dashboard.js:526's already-ported
+    dashboard_live_visitors.pipe, which is a DIFFERENT query).
+    Identity rule #19b: THIS query genuinely dedups on the JSON-bag
+    properties.anonymous_id — confirmed verbatim from the live source:
+    `count(DISTINCT properties.anonymous_id) AS live_visitors`, NOT
+    distinct_id. Ported as count(DISTINCT JSONExtractString(properties,
+    'anonymous_id')).
+    CONFIRMED NOT A DUPLICATE of dashboard_live_visitors.pipe (dashboard.js:
+    524-528): both share the identical outer shape — count(DISTINCT <key>)
+    WHERE event_type = '$pageview' AND timestamp >= now() - INTERVAL 5
+    MINUTE — but the aggregated identity KEY differs: dashboard_live_
+    visitors.pipe counts DISTINCT distinct_id (a typed column, sorting-key
+    prefix), this one counts DISTINCT the bag anonymous_id (JSON-extracted,
+    no sorting-key benefit). That is a real, substantive difference (not
+    "modulo site param"), so this is NOT closed-by-reuse against
+    dashboard_live_visitors.pipe — both are authored, separately, as the
+    dispatch requires.
+    Typed-column translation (SCOPE_v3.md §2.6): properties.site_id ->
+    site_id, event -> event_type.
+    REAL TRANSLATION ISSUE, caught by parity validation (not a blind copy):
+    JSONExtractString returns '' (never NULL) when the bag key is absent —
+    confirmed on the gating site, 2 producers (proxy/e and pixel.gif
+    routes) never set properties.anonymous_id at all. ClickHouse's
+    count(DISTINCT x) excludes true SQL NULL, so live HogQL's
+    count(DISTINCT properties.anonymous_id) correctly does not count those
+    visitors' missing-key rows as a distinct identity — but a naive
+    JSONExtractString port would count the shared '' value as one extra
+    distinct bucket, over-counting by 1. Fixed with
+    count(DISTINCT nullIf(JSONExtractString(properties, 'anonymous_id'),
+    '')), converting the empty-string sentinel back to NULL before
+    counting, restoring exact parity with live's NULL-exclusion behavior.
+    Verified over a widened 90-day window on the gating site: live HogQL
+    = 11, unfixed Tinybird port = 12 (off by exactly the '' bucket), fixed
+    Tinybird port = 11 (exact match) — see batch dispatch report for the
+    full reconciliation of every remaining visitor-name delta (all traced
+    to already-documented pre-dual-write-cutover data, not new gaps).
+    COST NOTE (flagged, not fixed — parity boundary, not a Phase-5 concern):
+    count(DISTINCT ...) over a JSON-extracted bag field scans and parses the
+    full bag column for every row in the window — a high-cardinality bag
+    field gets none of the (site_id, timestamp) sorting-key benefit
+    distinct_id gets. Phase-6 promote-to-typed candidate: if `anonymous_id`
+    is ever promoted to a real typed column in events.datasource (distinct
+    from distinct_id, since here they are NOT always the same value —
+    confirmed divergent for the 2 producers above), this pipe should be
+    re-pointed at it. Not optimized here — this is a parity port, not a
+    rewrite.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+TOKEN "st_endpoint_read" READ
+
+NODE live_visitors_bag_node
+SQL >
+    %
+    SELECT count(DISTINCT nullIf(JSONExtractString(properties, 'anonymous_id'), '')) AS live_visitors
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$pageview'
+      AND timestamp >= now() - INTERVAL 5 MINUTE
+
+TYPE endpoint

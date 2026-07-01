@@ -18,17 +18,32 @@ DESCRIPTION >
     AI_ATTRIBUTION_VISITOR_BATCH_SIZE=100 / chunkVisitorIds), looping this pipe
     once per chunk — NOT pass an unbounded array in one call.
 
-    SCOPE LIMIT (not validated by this pipe or its fixture): distinct_id ==
-    visitor_id only. A merged identity (server-events.js's user_id path) could
-    diverge visitor_id from distinct_id (normalize.js:251-253) — deferred to
-    the $identify / identity-reconciliation backlog item, same as 4c.
-    Separately unresolved: whether the caller should build this pipe's IN-list
-    from distinct_id or visitor_id (HogQL's live IN-list is built from
-    distinct_id, engine:454) — for single-identity visitors they're equal, so
-    this fixture can't distinguish the choice; flagged, not decided, here.
+    IDENTITY FIX (rule #19c): this pipe's IN-list filter was `visitor_id IN`,
+    but live HogQL builds the IN-list from `c.distinct_id`
+    (attribution-engine.js:454) and filters with `distinct_id IN (...)`
+    (attribution-engine.js:501) — resolved here from "flagged, not decided"
+    to "distinct_id, matching live HogQL exactly." Changed the WHERE-clause
+    filter and the ORDER BY's leading key from visitor_id to distinct_id.
+    Under single-identity (distinct_id == visitor_id, the only case any
+    producer or fixture currently exercises) this is numerically a no-op, but
+    the pipe's structural filter key now matches the live query.
+
+    SCOPE LIMIT (re-validated, post-fix, only for distinct_id == visitor_id):
+    a merged identity (server-events.js's user_id path) could diverge
+    visitor_id from distinct_id (normalize.js:251-253) — deferred to the
+    $identify / identity-reconciliation backlog item, same as 4c. Merged-
+    identity case remains UNVERIFIED — no fixture exercises it.
 
     NOT YET PUSHED (no `tb push`/`tb deploy` run — validated via read-only
     `tb --cloud sql` only, per standing no-push rule).
+
+    PHASE 6 ADDITION (N+1 rewrite, aiplatform:505): added optional
+    page_size/page_offset params, preserving the SAME pagination/continuation
+    safety the old JS loop already had (LIMIT AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE
+    OFFSET offset, stopping when a page returns fewer rows than page_size) —
+    NOT deleting the bound, per the dispatch's explicit caveat. Default
+    page_size (5000) matches the old AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE
+    exactly, so behavior is unchanged for any caller that omits these params.
 
 TOKEN "phase4_pageviews_by_visitors_read" READ
 
@@ -63,9 +78,11 @@ SQL >
     FROM events_by_visitor
     WHERE site_id = {{ String(site_id, required=True) }}
       AND event_type = '$pageview'
-      AND visitor_id IN {{ Array(visitor_ids, 'String', required=True) }}
+      AND distinct_id IN {{ Array(visitor_ids, 'String', required=True) }}
       AND timestamp >= {{ DateTime(lookback_from, required=True) }}
       AND timestamp < {{ DateTime(date_to, required=True) }}
-    ORDER BY visitor_id, timestamp ASC
+    ORDER BY distinct_id, timestamp ASC
+    LIMIT {{ Int32(page_size, 5000) }}
+    OFFSET {{ Int32(page_offset, 0) }}
 
 TYPE endpoint

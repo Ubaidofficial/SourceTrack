@@ -1,0 +1,28 @@
+DESCRIPTION >
+    Dashboard overview: pageview week-over-week + day/hour counts + last event
+    timestamp (Promise.all batch). Tenant-scoped; prunes via site_id (this
+    query has no timestamp lower-bound predicate — preserved exactly from
+    source, matches the alert_traffic/integ_traffic shape's columns but
+    checked and is DIFFERENT: this query adds count_day/count_hour/last_event
+    and has no `timestamp >= now() - INTERVAL 14 DAY` bound, so it is not a
+    duplicate). Faithful 1:1 port of api/routes/dashboard.js:69-79 (queryName
+    'dash_alerts'). Typed-column translation (SCOPE_v3.md §2.6):
+    properties.site_id -> site_id, event -> event_type. No JSON-bag fields.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+TOKEN "st_endpoint_read" READ
+
+NODE dash_alerts_node
+SQL >
+    %
+    SELECT
+        SUM(CASE WHEN timestamp >= now() - INTERVAL 7 DAY THEN 1 ELSE 0 END) AS this_week,
+        SUM(CASE WHEN timestamp >= now() - INTERVAL 14 DAY AND timestamp < now() - INTERVAL 7 DAY THEN 1 ELSE 0 END) AS last_week,
+        countIf(timestamp >= now() - INTERVAL 1 DAY) AS count_day,
+        countIf(timestamp >= now() - INTERVAL 1 HOUR) AS count_hour,
+        MAX(timestamp) AS last_event
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$pageview'
+
+TYPE endpoint

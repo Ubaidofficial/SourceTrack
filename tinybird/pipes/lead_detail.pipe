@@ -1,0 +1,70 @@
+DESCRIPTION >
+    Leads: single-visitor detail (first/last seen, pageview+conversion
+    counts, revenue, first-touch attribution fields, active days). Tenant-
+    scoped; prunes via (site_id, timestamp). Faithful 1:1 port of
+    api/routes/leads-server.js:224-245 (queryName 'lead_detail'). Identity
+    rule #19a: WHERE distinct_id = <param>, canonical stitching key.
+    Typed-column translation (SCOPE_v3.md §2.6): properties.site_id ->
+    site_id, event -> event_type, properties.utm_source -> utm_source
+    (Nullable), properties.first_touch_source -> first_touch_source
+    (DEFAULT 'direct'), properties.utm_medium -> utm_medium (Nullable),
+    properties.first_touch_medium -> first_touch_medium (DEFAULT 'none'),
+    properties.ai_source -> ai_source (Nullable), properties.country ->
+    country (Nullable), properties.page_url -> page_url (Nullable),
+    properties.conversion_value -> conversion_value (Float64 DEFAULT 0).
+    toFloatOrZero -> toFloat64OrZero (same class of fix as prior batches).
+    §7 NULL-SKIP ANALYSIS — same per-field conclusions as leads_list.pipe
+    (full table + evidence in the batch dispatch report): source/medium/
+    ai_source are COALESCE-guarded (never skip, no fix needed); country/
+    first_page_url are genuinely Nullable typed columns (skip already
+    matches live HogQL, no fix needed).
+    THIS PIPE ADDS TWO RAW (non-COALESCE) argMin fields not present in
+    leads_list: argMin(properties.first_touch_source) and
+    argMin(properties.first_touch_medium) — both DEFAULT-backed typed
+    columns ('direct'/'none'). A nullIf(...) null-skip restoration was
+    tried for these plus campaign, then REJECTED after live cross-store
+    testing on cc-4c-visitorY: live HogQL resolves
+    campaign=''/first_touch_source='direct'/first_touch_medium='none' (real,
+    explicitly-set values, not absent) for every event this pipe will ever
+    see in Tinybird — the only genuinely-NULL rows for these fields on the
+    gating site (439/459) come from `demo_run3_user_*` bulk/offline-seeded
+    data (ingestion_method NULL/'offline') that bypasses the live tracker
+    pipeline, predates the dual-write cutover, and is absent from Tinybird
+    by construction. Applying nullIf(x, DEFAULT) nulled out the real
+    resolved values instead, a verified regression (live: campaign=''
+    /fts='direct'/ftm='none'; nullIf'd typed side: all NULL — mismatch).
+    Left as plain column references. Output column names are ft_source /
+    ft_medium (not first_touch_source/first_touch_medium) — using the same
+    name as the argMin's own input column as an alias made ClickHouse's
+    query analyzer reject the query ("cannot use aggregate function alias
+    inside another aggregate function"); renamed to the closest non-
+    colliding name to keep the query valid.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+TOKEN "st_endpoint_read" READ
+
+NODE lead_detail_node
+SQL >
+    %
+    SELECT
+        MIN(timestamp) AS first_seen,
+        MAX(timestamp) AS last_seen,
+        countIf(event_type = '$pageview') AS pageviews,
+        countIf(event_type = '$conversion') AS conversions,
+        SUM(CASE WHEN event_type = '$conversion' THEN toFloat64OrZero(toString(conversion_value)) ELSE 0 END) AS total_revenue,
+        argMin(COALESCE(NULLIF(utm_source, ''), NULLIF(first_touch_source, ''), 'direct'), timestamp) AS source,
+        argMin(COALESCE(NULLIF(utm_medium, ''), NULLIF(first_touch_medium, ''), 'none'), timestamp) AS medium,
+        argMin(COALESCE(NULLIF(ai_source, ''), ''), timestamp) AS ai_source,
+        argMin(country, timestamp) AS country,
+        argMin(page_url, timestamp) AS first_page_url,
+        argMin(first_touch_campaign, timestamp) AS campaign,
+        argMin(first_touch_source, timestamp) AS ft_source,
+        argMin(first_touch_medium, timestamp) AS ft_medium,
+        COUNT(DISTINCT toDate(timestamp)) AS active_days
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND distinct_id = {{ String(distinct_id, required=True) }}
+    GROUP BY distinct_id
+    LIMIT 1
+
+TYPE endpoint

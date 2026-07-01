@@ -1,5 +1,6 @@
 import NodeCache from 'node-cache'
 import { queryHogQL } from './posthog.js'
+import { queryTinybirdPipe } from './tinybird-read.js'
 import { deriveSessions, annotateSessions } from './sessionization.js'
 import { channelFromEvent, detectAiPlatformFromEvent } from './channel-classifier.js'
 import { getSupabase } from './supabase.js'
@@ -450,20 +451,99 @@ export async function getAiPlatformAttributionLive({
   const fromIso = fromDate.match(/'([^']+)'/)[1]
   const lookbackDate = new Date(new Date(fromIso).getTime() - windowDays * 24 * 60 * 60 * 1000)
   const lookbackStr = serializeHogQLDateTime(lookbackDate)
+  // Raw ISO forms for the Tinybird pipe's DateTime(...) params — Tinybird
+  // takes plain values, not HogQL's wrapped toDateTime('...') expression
+  // strings that lookbackStr/toDate carry for the HogQL fallback path.
+  const lookbackIso = lookbackStr.match(/'([^']+)'/)[1]
+  const toIso = toDate.match(/'([^']+)'/)[1]
 
   const uniqueIds = [...new Set(conversions.map(c => c.distinct_id))].filter(Boolean)
   if (uniqueIds.length === 0) {
     return []
   }
 
-  const AI_ATTRIBUTION_VISITOR_BATCH_SIZE = 100
+  // Phase 6 N+1 rewrite (aiplatform:505): raised from 100 -> 2500.
+  // pageviews_by_visitors.pipe's own measured byte-math (~91KB for 2000
+  // UUIDs against Tinybird's 128KB SQL-length cap) puts the ceiling near
+  // ~2800 UUIDs; 2500 keeps margin. Below this threshold (the common case)
+  // the whole unique-visitor set collapses to ONE Tinybird call instead of
+  // ceil(uniqueIds.length / 100) sequential HogQL round-trips.
+  const AI_ATTRIBUTION_VISITOR_BATCH_SIZE = 2500
   const AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE = 5000
 
   const batches = chunkVisitorIds(uniqueIds, AI_ATTRIBUTION_VISITOR_BATCH_SIZE)
   const pageviewsByVisitor = {}
 
+  // Shared row -> pvObj mapper for BOTH the Tinybird and HogQL paths, so the
+  // two paths cannot silently drift from each other's field handling.
+  function toPvObj(row) {
+    return {
+      timestamp: row.timestamp,
+      utm_source: row.utm_source || null,
+      utm_medium: row.utm_medium || null,
+      utm_campaign: row.utm_campaign || null,
+      referrer: row.referrer || null,
+      ai_source: row.ai_source || null,
+      gclid: row.gclid || null,
+      gbraid: row.gbraid || null,
+      wbraid: row.wbraid || null,
+      fbclid: row.fbclid || null,
+      msclkid: row.msclkid || null,
+      ttclid: row.ttclid || null,
+      li_fat_id: row.li_fat_id || null,
+      li_fatid: row.li_fatid || null,
+      twclid: row.twclid || null,
+      dclid: row.dclid || null,
+      snapclid: row.snapclid || null,
+      pclid: row.pclid || null,
+      sccid: row.sccid || null,
+      ko_click_id: row.ko_click_id || null,
+      page_url: row.page_url || null,
+      utm_term: row.utm_term || null
+    }
+  }
+
+  // SAFETY (do not delete the row-cap): paginate the Tinybird pipe exactly
+  // like the old HogQL loop did — stop when a page returns fewer rows than
+  // page_size, so a single very-high-traffic batch still can't return an
+  // unbounded number of rows in one response. Returns null (not throws) if
+  // TINYBIRD_READ_ENABLED is off, misconfigured, or any page fails — the
+  // caller falls back to the untouched HogQL loop for that batch.
+  async function fetchBatchFromTinybird(batchIds) {
+    const rows = []
+    let pageOffset = 0
+    while (true) {
+      const page = await queryTinybirdPipe('pageviews_by_visitors', {
+        site_id: safeSite,
+        visitor_ids: batchIds,
+        lookback_from: lookbackIso,
+        date_to: toIso,
+        page_size: AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE,
+        page_offset: pageOffset
+      })
+      if (page === null) return null
+      for (const row of page) rows.push(row)
+      if (page.length < AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE) break
+      pageOffset += AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE
+    }
+    return rows
+  }
+
   for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
     const batchIds = batches[batchIdx]
+
+    const tbRows = await fetchBatchFromTinybird(batchIds)
+
+    if (tbRows !== null) {
+      for (const row of tbRows) {
+        const distinctId = row.distinct_id
+        if (!pageviewsByVisitor[distinctId]) pageviewsByVisitor[distinctId] = []
+        pageviewsByVisitor[distinctId].push(toPvObj(row))
+      }
+      continue
+    }
+
+    // Fall back to the existing HogQL loop, UNCHANGED, for this batch.
     const escapedIds = batchIds.map(id => `'${esc(id)}'`)
 
     let offset = 0
@@ -506,53 +586,30 @@ export async function getAiPlatformAttributionLive({
 
       for (const row of pvRows) {
         const distinctId = row[0]
-        const timestamp = row[1]
-        const utmSource = row[2]
-        const utmMedium = row[3]
-        const utmCampaign = row[4]
-        const referrer = row[5]
-        const aiSource = row[6]
-        const gclid = row[7]
-        const gbraid = row[8]
-        const wbraid = row[9]
-        const fbclid = row[10]
-        const msclkid = row[11]
-        const ttclid = row[12]
-        const li_fat_id = row[13]
-        const li_fatid = row[14]
-        const twclid = row[15]
-        const dclid = row[16]
-        const snapclid = row[17]
-        const pclid = row[18]
-        const sccid = row[19]
-        const ko_click_id = row[20]
-        const pageUrl = row[21]
-        const utmTerm = row[22]
-
-        const pvObj = {
-          timestamp,
-          utm_source: utmSource || null,
-          utm_medium: utmMedium || null,
-          utm_campaign: utmCampaign || null,
-          referrer: referrer || null,
-          ai_source: aiSource || null,
-          gclid: gclid || null,
-          gbraid: gbraid || null,
-          wbraid: wbraid || null,
-          fbclid: fbclid || null,
-          msclkid: msclkid || null,
-          ttclid: ttclid || null,
-          li_fat_id: li_fat_id || null,
-          li_fatid: li_fatid || null,
-          twclid: twclid || null,
-          dclid: dclid || null,
-          snapclid: snapclid || null,
-          pclid: pclid || null,
-          sccid: sccid || null,
-          ko_click_id: ko_click_id || null,
-          page_url: pageUrl || null,
-          utm_term: utmTerm || null
-        }
+        const pvObj = toPvObj({
+          timestamp: row[1],
+          utm_source: row[2],
+          utm_medium: row[3],
+          utm_campaign: row[4],
+          referrer: row[5],
+          ai_source: row[6],
+          gclid: row[7],
+          gbraid: row[8],
+          wbraid: row[9],
+          fbclid: row[10],
+          msclkid: row[11],
+          ttclid: row[12],
+          li_fat_id: row[13],
+          li_fatid: row[14],
+          twclid: row[15],
+          dclid: row[16],
+          snapclid: row[17],
+          pclid: row[18],
+          sccid: row[19],
+          ko_click_id: row[20],
+          page_url: row[21],
+          utm_term: row[22]
+        })
 
         if (!pageviewsByVisitor[distinctId]) pageviewsByVisitor[distinctId] = []
         pageviewsByVisitor[distinctId].push(pvObj)

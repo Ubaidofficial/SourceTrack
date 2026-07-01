@@ -1,0 +1,41 @@
+DESCRIPTION >
+    Dashboard overview: top pageview page_urls for a caller-supplied
+    UTC-padded window intersected with a timezone-local day range
+    (Promise.all batch). Tenant-scoped; prunes via (site_id, timestamp).
+    Faithful 1:1 port of api/routes/dashboard.js:98-112 (queryName
+    'dash_top_pages'). Typed-column translation (SCOPE_v3.md §2.6):
+    properties.site_id -> site_id, event -> event_type,
+    properties.page_url -> page_url (typed, String Nullable per §2.6). No
+    JSON-bag fields. Checked against edge_domains.pipe (also a page_url
+    group-by) — DIFFERENT: edge_domains has no event_type/date filter and a
+    different LIMIT (100 vs 500); not a duplicate.
+    The live query interpolates 4 date-boundary values (built from
+    currentPadded.from/to + ' 00:00:00'/' 23:59:59', and localDateFrom/To +
+    ' 00:00:00'/' 23:59:59') plus tz directly into the SQL string; per
+    doctor_token_verify.pipe's precedent (no raw interpolation of non-tenant
+    runtime values), these are ported as required template params carrying
+    the full boundary string as the caller already builds it
+    (current_from_ts, current_to_ts, tz, local_from_ts, local_to_ts) rather
+    than string-interpolated or re-concatenated inside the pipe.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+TOKEN "st_endpoint_read" READ
+
+NODE dash_top_pages_node
+SQL >
+    %
+    SELECT
+        page_url,
+        count() AS count
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$pageview'
+      AND timestamp >= toDateTime({{ String(current_from_ts, required=True) }})
+      AND timestamp <= toDateTime({{ String(current_to_ts, required=True) }})
+      AND toTimeZone(timestamp, {{ String(tz, required=True) }}) >= toDateTime({{ String(local_from_ts, required=True) }})
+      AND toTimeZone(timestamp, {{ String(tz, required=True) }}) <= toDateTime({{ String(local_to_ts, required=True) }})
+    GROUP BY page_url
+    ORDER BY count DESC
+    LIMIT 500
+
+TYPE endpoint

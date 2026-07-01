@@ -1,0 +1,33 @@
+DESCRIPTION >
+    Sessions: raw conversion rows over a caller-supplied range, to mark
+    converting sessions during on-read session derivation. Tenant-scoped;
+    prunes via (site_id, timestamp), secondary sort by distinct_id matches
+    the source's ORDER BY. Faithful 1:1 port of api/routes/sessions.js:48-61
+    (queryName 'sessions_conversions'). Identity rule #19a: distinct_id is
+    the row-grouping key downstream (canonical stitching key), no
+    argMin/argMax. Typed-column translation (SCOPE_v3.md §2.6):
+    properties.site_id -> site_id, event -> event_type,
+    properties.conversion_value -> conversion_value (typed Float64 DEFAULT 0,
+    NOT Nullable). No JSON-bag fields.
+    Date range REQUIRED (same as sessions_pageviews.pipe) — ported as
+    required params date_from_ts/date_to_ts.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+TOKEN "st_endpoint_read" READ
+
+NODE sessions_conversions_node
+SQL >
+    %
+    SELECT
+        distinct_id,
+        timestamp,
+        conversion_value
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$conversion'
+      AND timestamp >= toDateTime({{ String(date_from_ts, required=True) }})
+      AND timestamp < toDateTime({{ String(date_to_ts, required=True) }})
+    ORDER BY distinct_id ASC, timestamp ASC
+    LIMIT 50000
+
+TYPE endpoint

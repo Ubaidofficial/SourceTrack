@@ -1,0 +1,40 @@
+DESCRIPTION >
+    Google Ads setup checklist: pixel/UTM/click-id/campaign-id/adgroup-id/
+    ad-id detection counts + last-seen timestamps, trailing 30d. Tenant-scoped;
+    prunes via (site_id, timestamp). Faithful 1:1 port of
+    api/routes/integrations.js:279-292 (queryName 'google_ads_checklist').
+    Typed-column translation (SCOPE_v3.md §2.6): properties.site_id -> site_id,
+    event -> event_type, properties.utm_source/utm_medium/utm_content ->
+    utm_source/utm_medium/utm_content (typed, Nullable), properties.gclid/
+    gbraid/wbraid -> gclid/gbraid/wbraid (typed, Nullable, per
+    doctor_last_click_id.pipe's already-established `(x != '' AND
+    isNotNull(x))` style, reused here for consistency).
+    JSON-BAG FIELDS HIT (flagged, not silently typed — §2.6 lists these as
+    bag-only, NOT typed columns): utm_id, st_campaign_id, st_adgroup_id,
+    st_ad_id — read via JSONExtractString(properties, '<key>'), same
+    treatment as doctor_paid_params_count.pipe. JSONExtractString returns ''
+    (never NULL) for a missing key, so the live query's `(x IS NOT NULL AND x
+    != '')` pattern collapses to `JSONExtractString(...) != ''` for these
+    four fields — semantically equivalent (missing-or-empty both yield ''),
+    not a behavior change.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+TOKEN "st_endpoint_read" READ
+
+NODE google_ads_checklist_node
+SQL >
+    %
+    SELECT
+        count() AS total_events,
+        SUM(CASE WHEN (utm_source != '' AND isNotNull(utm_source)) OR (utm_medium != '' AND isNotNull(utm_medium)) THEN 1 ELSE 0 END) AS utms_detected_count,
+        SUM(CASE WHEN (gclid != '' AND isNotNull(gclid)) OR (gbraid != '' AND isNotNull(gbraid)) OR (wbraid != '' AND isNotNull(wbraid)) THEN 1 ELSE 0 END) AS click_id_detected_count,
+        SUM(CASE WHEN (JSONExtractString(properties, 'utm_id') != '') OR (JSONExtractString(properties, 'st_campaign_id') != '') THEN 1 ELSE 0 END) AS campaign_id_detected_count,
+        SUM(CASE WHEN (JSONExtractString(properties, 'st_adgroup_id') != '') THEN 1 ELSE 0 END) AS adgroup_id_detected_count,
+        SUM(CASE WHEN (JSONExtractString(properties, 'st_ad_id') != '') OR (utm_content != '' AND isNotNull(utm_content)) THEN 1 ELSE 0 END) AS ad_id_detected_count,
+        MAX(CASE WHEN (gclid != '' AND isNotNull(gclid)) OR (gbraid != '' AND isNotNull(gbraid)) OR (wbraid != '' AND isNotNull(wbraid)) THEN timestamp ELSE null END) AS last_paid_click_seen,
+        MAX(CASE WHEN event_type = '$conversion' AND ((gclid != '' AND isNotNull(gclid)) OR (gbraid != '' AND isNotNull(gbraid)) OR (wbraid != '' AND isNotNull(wbraid))) THEN timestamp ELSE null END) AS last_conversion_attributed
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND timestamp >= now() - INTERVAL 30 DAY
+
+TYPE endpoint

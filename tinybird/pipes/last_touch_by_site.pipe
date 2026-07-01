@@ -22,12 +22,22 @@ DESCRIPTION >
     "Unsupported JOIN ON conditions" on the mixed equality+inequality ON clause
     — confirms classic ClickHouse JOIN doesn't accept this shape; ASOF JOIN is
     required either way.
-    SCOPE LIMIT: validated only for distinct_id == visitor_id (every producer
-    used in the 4c fixture sets only anonymous_id, no separate visitor_id/
-    user_id). Server-events.js's user_id-merge path can in principle diverge
-    visitor_id from distinct_id (normalize.js:251-253) — NOT covered by this
-    pipe's validation; deferred to the $identify / identity-reconciliation
-    backlog item.
+    IDENTITY FIX (rule #19c): the join key was `visitor_id`, but the live
+    HogQL self-join (attribution-engine.js:138) joins `pv.distinct_id =
+    e_inner.distinct_id`, not visitor_id. Changed all 4 ASOF JOIN keys (and
+    the events_by_visitor subquery SELECTs) from visitor_id to distinct_id to
+    match the live query exactly. This is a real, previously-latent divergence
+    — under single-identity (distinct_id == visitor_id, the only case any
+    producer or fixture currently exercises) the two keys are numerically
+    identical so no fixture failure surfaced it, but the pipe's structural
+    join key was wrong relative to live HogQL.
+    SCOPE LIMIT: re-validated (post-fix) only for distinct_id == visitor_id
+    (every producer used in the 4c fixture sets only anonymous_id, no separate
+    visitor_id/user_id). Server-events.js's user_id-merge path can in
+    principle diverge visitor_id from distinct_id (normalize.js:251-253) —
+    NOT covered by this pipe's validation, merged-identity case remains
+    UNVERIFIED (no fixture exercises it); deferred to the $identify /
+    identity-reconciliation backlog item, same as before this fix.
     NOT YET PUSHED (no `tb push`/`tb deploy` run — validated via read-only
     `tb --cloud sql` against the live schema only, per standing no-push rule).
 
@@ -46,7 +56,7 @@ SQL >
         ai.ai_source
     FROM
     (
-        SELECT event_id, distinct_id, visitor_id, timestamp
+        SELECT event_id, distinct_id, timestamp
         FROM events
         WHERE site_id = {{ String(site_id, required=True) }}
           AND event_type = '$conversion'
@@ -55,28 +65,28 @@ SQL >
     ) AS conv
     ASOF LEFT JOIN
     (
-        SELECT visitor_id, timestamp, utm_source FROM events_by_visitor
+        SELECT distinct_id, timestamp, utm_source FROM events_by_visitor
         WHERE site_id = {{ String(site_id, required=True) }}
           AND event_type = '$pageview' AND utm_source IS NOT NULL
-    ) AS src ON conv.visitor_id = src.visitor_id AND src.timestamp <= conv.timestamp
+    ) AS src ON conv.distinct_id = src.distinct_id AND src.timestamp <= conv.timestamp
     ASOF LEFT JOIN
     (
-        SELECT visitor_id, timestamp, utm_medium FROM events_by_visitor
+        SELECT distinct_id, timestamp, utm_medium FROM events_by_visitor
         WHERE site_id = {{ String(site_id, required=True) }}
           AND event_type = '$pageview' AND utm_medium IS NOT NULL
-    ) AS med ON conv.visitor_id = med.visitor_id AND med.timestamp <= conv.timestamp
+    ) AS med ON conv.distinct_id = med.distinct_id AND med.timestamp <= conv.timestamp
     ASOF LEFT JOIN
     (
-        SELECT visitor_id, timestamp, utm_campaign FROM events_by_visitor
+        SELECT distinct_id, timestamp, utm_campaign FROM events_by_visitor
         WHERE site_id = {{ String(site_id, required=True) }}
           AND event_type = '$pageview' AND utm_campaign IS NOT NULL
-    ) AS camp ON conv.visitor_id = camp.visitor_id AND camp.timestamp <= conv.timestamp
+    ) AS camp ON conv.distinct_id = camp.distinct_id AND camp.timestamp <= conv.timestamp
     ASOF LEFT JOIN
     (
-        SELECT visitor_id, timestamp, ai_source FROM events_by_visitor
+        SELECT distinct_id, timestamp, ai_source FROM events_by_visitor
         WHERE site_id = {{ String(site_id, required=True) }}
           AND event_type = '$pageview' AND ai_source IS NOT NULL
-    ) AS ai ON conv.visitor_id = ai.visitor_id AND ai.timestamp <= conv.timestamp
+    ) AS ai ON conv.distinct_id = ai.distinct_id AND ai.timestamp <= conv.timestamp
     ORDER BY conv.timestamp DESC
 
 TYPE endpoint

@@ -1,0 +1,21 @@
+DESCRIPTION >
+    Events health check: most recent event timestamp (any event type).
+    Tenant-scoped; prunes via (site_id, timestamp). Faithful 1:1 port of
+    api/routes/events.js:226-232 (queryName 'events_health_last').
+    Typed-column translation: properties.site_id -> site_id; timestamp
+    unchanged (already typed top-level). Source has NO event_type filter
+    (matches any event) — preserved exactly. No JSON-bag fields.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+TOKEN "st_endpoint_read" READ
+
+NODE events_health_last_node
+SQL >
+    %
+    SELECT timestamp
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+    ORDER BY timestamp DESC
+    LIMIT 1
+
+TYPE endpoint

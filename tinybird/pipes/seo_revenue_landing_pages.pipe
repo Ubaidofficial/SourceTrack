@@ -1,0 +1,46 @@
+DESCRIPTION >
+    SEO revenue: first organic-search landing page per converted visitor,
+    within a caller-supplied window. Tenant-scoped; prunes via (site_id,
+    timestamp). Faithful 1:1 port of api/routes/seo-revenue.js:113-126
+    (queryName 'seo-revenue-landing-pages'). Identity rule #19a: GROUP BY
+    distinct_id, IN-list filter on distinct_id, canonical stitching key
+    (live source builds the IN-list from Supabase attributed_conversions'
+    distinct_id, same convention as pageviews_by_visitors.pipe's #19c fix).
+    Typed-column translation (SCOPE_v3.md §2.6): properties.site_id ->
+    site_id, event -> event_type, properties.page_url -> page_url
+    (Nullable), properties.referrer -> referrer (Nullable), properties.
+    utm_source -> utm_source (Nullable), properties.utm_medium -> utm_medium
+    (Nullable).
+    §7 NULL-SKIP ANALYSIS: argMin(page_url, timestamp) has no COALESCE.
+    page_url is genuinely Nullable in the typed schema (no DEFAULT per
+    §2.6) — ClickHouse's null-skip on the typed column matches live HogQL's
+    bag-side null-skip exactly. No divergence, no fix needed.
+    ORGANIC_SEARCH_ENGINE_HOSTS / ORGANIC_SEARCH_SOURCES (api/lib/
+    channel-classifier.js:25-26, the project's single source of truth per
+    CLAUDE.md §11) are inlined as literal SQL below since Tinybird pipes
+    can't import JS constants — this is a point-in-time snapshot; if that
+    list is edited in channel-classifier.js this pipe will silently drift
+    and needs re-syncing (flagged, not solved here).
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+TOKEN "st_endpoint_read" READ
+
+NODE seo_revenue_landing_pages_node
+SQL >
+    %
+    SELECT distinct_id, argMin(page_url, timestamp) AS landing_page
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$pageview'
+      AND distinct_id IN {{ Array(visitor_ids, 'String', required=True) }}
+      AND timestamp >= toDateTime({{ String(from_ts, required=True) }})
+      AND timestamp <= toDateTime({{ String(to_ts, required=True) }})
+      AND (
+        referrer ILIKE '%google.%' OR referrer ILIKE '%bing.%' OR referrer ILIKE '%yahoo.%'
+        OR referrer ILIKE '%duckduckgo.%' OR referrer ILIKE '%ecosia.%' OR referrer ILIKE '%kagi.%'
+        OR referrer ILIKE '%brave.%' OR referrer ILIKE '%yandex.%' OR referrer ILIKE '%baidu.%'
+        OR (lower(utm_source) IN ('google','bing','yahoo','duckduckgo','baidu','yandex','brave','ecosia') AND coalesce(utm_medium, '') = '')
+      )
+    GROUP BY distinct_id
+
+TYPE endpoint

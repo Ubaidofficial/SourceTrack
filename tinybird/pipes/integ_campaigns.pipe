@@ -1,0 +1,26 @@
+DESCRIPTION >
+    Integrations hygiene: pageview counts grouped by utm_campaign, trailing
+    30d. Tenant-scoped; prunes via (site_id, timestamp). Faithful 1:1 port of
+    api/routes/integrations.js:36-46 (queryName 'integ_campaigns').
+    Typed-column translation: properties.site_id -> site_id, event ->
+    event_type, properties.utm_campaign -> utm_campaign (typed, String
+    Nullable->'' on read per §2.6). No JSON-bag fields.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+TOKEN "st_endpoint_read" READ
+
+NODE integ_campaigns_node
+SQL >
+    %
+    SELECT utm_campaign AS campaign, count() AS cnt
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$pageview'
+      AND utm_campaign IS NOT NULL
+      AND utm_campaign != ''
+      AND timestamp >= now() - INTERVAL 30 DAY
+    GROUP BY campaign
+    ORDER BY cnt DESC
+    LIMIT 100
+
+TYPE endpoint

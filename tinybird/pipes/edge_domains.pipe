@@ -1,0 +1,25 @@
+DESCRIPTION >
+    Edge-case check: page_url counts (any event type), used to detect
+    multi-domain installs. Tenant-scoped; prunes via (site_id, timestamp
+    sorting key, though this query has no timestamp predicate — preserved
+    exactly from source). Faithful 1:1 port of api/routes/events.js:301-310
+    (queryName 'edge_domains'). Typed-column translation: properties.site_id
+    -> site_id, properties.page_url -> page_url (typed, String Nullable per
+    §2.6). No JSON-bag fields.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+TOKEN "st_endpoint_read" READ
+
+NODE edge_domains_node
+SQL >
+    %
+    SELECT page_url, count() AS cnt
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND page_url IS NOT NULL
+      AND page_url != ''
+    GROUP BY page_url
+    HAVING cnt > 0
+    LIMIT 100
+
+TYPE endpoint
