@@ -116,20 +116,24 @@ if (process.env.NODE_ENV === 'production') {
     process.exit(1)
   }
 
-  // Warn if ST_IP_RESOLVER_MODE is not set to railway in production
-  if (process.env.ST_IP_RESOLVER_MODE !== 'railway') {
-    console.warn('\n================================================================================')
-    console.warn('[startup] WARNING: ST_IP_RESOLVER_MODE is not set to "railway" in production!')
-    console.warn('Migrated ingestion routes will fall back to connection-mode (socket) IPs.')
-    console.warn('If deployed behind Railway Edge, this will result in using internal 100.64.x.x IPs')
-    console.warn('for client geo-location, cookieless visitor identity, and CAPI dispatches.')
-    console.warn('Please ensure ST_IP_RESOLVER_MODE=railway is configured on the Railway service.')
-    console.warn('================================================================================\n')
-  }
 }
 
 
 const app = express()
+
+// Railway's edge proxy adds exactly ONE hop in front of this container —
+// confirmed via Railway's own support channel (not assumed): their edge
+// appends its own trustworthy observation of the real client IP as the LAST
+// entry in X-Forwarded-For, and their proxy fleet is a single tier (no
+// separate internal load-balancer hop exposed in the header chain). Without
+// this, Express's req.ip/req.ips fall back to the raw socket address (i.e.
+// Railway's own edge IP for every request), which silently breaks two things:
+// (1) any IP-based security decision that reads X-Forwarded-For directly
+// becomes trivially spoofable (a client can prepend any fake IP), and (2) any
+// rate limiter keyed on req.ip's default keyGenerator buckets ALL clients
+// together under one shared limit instead of per-client. See
+// api/lib/ip-resolver.js for how the resolved req.ip is consumed.
+app.set('trust proxy', 1)
 
 // Time-mocking middleware for testing (only in non-production environments with explicit opt-in)
 app.use((req, res, next) => {
@@ -524,7 +528,6 @@ if (process.env.ST_IP_DIAGNOSTIC_SECRET) {
       normalized_socket_ip: info.normalized_socket_ip,
       normalized_req_ip: info.normalized_req_ip,
       selected_ip: info.selected_ip,
-      mode: info.mode,
       warning_flags: info.warning_flags
     })
   })

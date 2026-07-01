@@ -1,11 +1,37 @@
 /**
  * Central Client IP Resolver
  *
- * For Session 124B:
- * This helper resolves client IP from safe connection/socket level values (connection mode)
- * or parses the Edge-sanitized XFF chain for the first valid public client IP (railway mode).
+ * REQUIRES app.set('trust proxy', 1) in api/index.js. Railway's edge proxy is
+ * confirmed (via Railway's own support channel, not assumed) to add exactly
+ * ONE hop in front of every container, and to append its own trustworthy
+ * observation of the real client IP as the LAST (rightmost) entry in
+ * X-Forwarded-For. With trust proxy correctly set to 1, Express's own
+ * req.ip/req.ips (backed by the `proxy-addr` package Express uses
+ * internally) already implements the correct "trust exactly N hops counted
+ * from the right" extraction — so resolveClientIp() below is a thin wrapper
+ * over req.ip, not a second, independent header parser.
  *
- * Mode is enabled via environment variable: ST_IP_RESOLVER_MODE=railway
+ * DECISION (was previously left ambiguous — resolved here): this file used to
+ * hand-parse X-Forwarded-For itself, picking the first "public-looking" IP
+ * scanning from the LEFT (gated behind ST_IP_RESOLVER_MODE=railway), as a
+ * workaround for trust proxy never being configured. That workaround read the
+ * WRONG END of the header — Railway confirmed the trustworthy value is the
+ * LAST entry, not the first — and was trivially spoofable: any client could
+ * prepend an arbitrary fake public IP (e.g. `X-Forwarded-For: 8.8.8.8, <real
+ * ip>`) and have it accepted, since the "public IP" filter only rejects
+ * private/loopback/CGNAT ranges, not fake-but-valid public ones.
+ *
+ * Now that trust proxy is correctly configured, keeping a second hand-rolled
+ * parser of the exact same untrusted header is not meaningful defense in
+ * depth — both mechanisms would trust the same hop count against the same
+ * input, so a bug in one is not caught by the other (as just happened: the
+ * custom parser drifted from correct behavior while nothing validated it
+ * against Express's own well-tested logic). resolveClientIp() below relies on
+ * req.ip alone. inspectClientIp() is kept as a DIAGNOSTIC-ONLY helper (used by
+ * the secret-gated /api/diag/ip endpoint) — it reports what Express resolved
+ * plus raw header state and anomaly flags, for debugging trust-proxy
+ * misconfiguration or unexpected header shapes, but is never used for any
+ * rate-limiting or other security-relevant decision.
  */
 
 /**
@@ -25,6 +51,7 @@ function normalizeIp(ip) {
 
 /**
  * Check if a normalized IP address is a public IP (i.e. not loopback, private, CGNAT, link-local, or broadcast).
+ * Used only for diagnostic warning flags below — never to alter which IP gets resolved.
  *
  * @param {string} ip
  * @returns {boolean} True if the IP is public
@@ -74,7 +101,24 @@ export function isPublicIp(ip) {
 }
 
 /**
- * Inspects client IP headers and connection properties.
+ * Resolves the trustworthy client IP for a request. Relies entirely on
+ * Express's own req.ip, which is only correct when app.set('trust proxy', 1)
+ * is configured (api/index.js) — see the file-level comment above for why
+ * this file no longer hand-parses X-Forwarded-For itself.
+ *
+ * @param {import('express').Request} req
+ * @returns {string} Resolved client IP, or '' if none could be resolved
+ */
+export function resolveClientIp(req) {
+  return normalizeIp(req.ip)
+}
+
+/**
+ * Diagnostic-only inspection of client IP resolution. NOT used for any
+ * rate-limiting or security decision — see resolveClientIp() for that.
+ * Reports what Express actually resolved (req.ip/req.ips) alongside raw
+ * connection/header state, plus warning flags for shapes worth investigating
+ * (e.g. trust-proxy misconfiguration, or a resolved IP that isn't public).
  *
  * @param {import('express').Request} req
  * @returns {object} Diagnostic information
@@ -88,47 +132,22 @@ export function inspectClientIp(req) {
 
   const normalized_socket_ip = normalizeIp(socket_remote_address)
   const normalized_req_ip = normalizeIp(req_ip)
+  const selected_ip = resolveClientIp(req)
 
-  const mode = process.env.ST_IP_RESOLVER_MODE === 'railway' ? 'railway' : 'connection'
-  let selected_ip = normalized_req_ip || normalized_socket_ip
   const warning_flags = []
 
   if (raw_x_forwarded_for) {
     warning_flags.push('XFF_HEADER_PRESENT')
   }
 
-  if (mode === 'railway') {
-    if (raw_x_forwarded_for) {
-      const parts = raw_x_forwarded_for.split(',').map(s => s.trim()).filter(Boolean)
-      let foundPublic = null
-      for (const part of parts) {
-        const normalizedPart = normalizeIp(part)
-        if (isPublicIp(normalizedPart)) {
-          foundPublic = normalizedPart
-          break
-        }
-      }
-
-      if (foundPublic) {
-        selected_ip = foundPublic
-      } else {
-        warning_flags.push('RAILWAY_NO_PUBLIC_XFF_IP')
-      }
-    } else {
-      warning_flags.push('RAILWAY_MISSING_XFF_HEADER')
-    }
-  }
-
-  // Compare XFF first IP with connection IP for warnings
-  if (raw_x_forwarded_for) {
-    const firstXff = normalizeIp(raw_x_forwarded_for.split(',')[0])
-    if (firstXff !== (normalized_req_ip || normalized_socket_ip)) {
-      warning_flags.push('XFF_CONNECTION_IP_MISMATCH')
-    }
-  }
-
   if (!selected_ip) {
     warning_flags.push('NO_IP_RESOLVED')
+  } else if (!isPublicIp(selected_ip)) {
+    // With trust proxy correctly set to Railway's confirmed single hop, this
+    // should never fire in production — a private/loopback resolved IP here
+    // means trust proxy is misconfigured (wrong hop count) or the request
+    // didn't come through Railway's edge at all.
+    warning_flags.push('RESOLVED_IP_NOT_PUBLIC')
   }
 
   return {
@@ -140,18 +159,6 @@ export function inspectClientIp(req) {
     normalized_socket_ip,
     normalized_req_ip,
     selected_ip,
-    mode,
     warning_flags
   }
-}
-
-/**
- * Resolves the connection IP address for client request.
- *
- * @param {import('express').Request} req
- * @returns {string} Resolved connection IP
- */
-export function resolveClientIp(req) {
-  const info = inspectClientIp(req)
-  return info.selected_ip
 }
