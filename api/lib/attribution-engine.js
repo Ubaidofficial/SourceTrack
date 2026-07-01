@@ -2175,6 +2175,29 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
   const isTouchModel = model === 'first_touch' || model === 'last_touch' || model === 'first_touch_non_direct' || model === 'last_touch_non_direct'
 
   // Windowed attribution: find the qualifying pageview touchpoint within N days of each conversion.
+  //
+  // KNOWN RESIDUAL: both self-join sides below are pre-filtered into subqueries
+  // (site_id/event scoped inside each, before the join) — this fixed a 504 query
+  // timeout that a direct self-join on the raw `events` table hit on EVERY prior
+  // attempt, at any data volume, regardless of where the timestamp inequality
+  // lived (confirmed empirically: even a pure-equality self-join with zero
+  // inequality conditions timed out identically). That fix is not a 100%
+  // guarantee, though: verification ran this exact query shape 21 times across
+  // 4 real sites, 9 date ranges, and 3 window values (7/30/90d) — 20/21 passed
+  // (188ms-4,487ms) and 1/21 hit the same 504 (~10.9s, at PostHog's own timeout
+  // ceiling). That one failure was the FIRST invocation of this exact query
+  // shape immediately after this code shipped — zero prior compiles anywhere.
+  // It did NOT reproduce on a dedicated test after a genuine 3-minute real-time
+  // pause (first call in that batch: 4,219ms; every call after: <300ms) — so
+  // the residual risk looks like a one-time first-compile cost (PostHog/
+  // ClickHouse warming up a query plan it hasn't seen before), not a per-request
+  // risk that recurs under load or over time. Net: a real user could see this
+  // metric silently return `analytics_unavailable: true` (swallowed by
+  // api/routes/attribution.js's catch block, HTTP 200) on the very first
+  // request against this query shape after a fresh deploy, before any request
+  // has warmed it — accepted as a known, bounded, documented risk rather than
+  // fixed further. If this ever needs closing, the candidate mitigation is a
+  // single fire-and-forget warm-up call at service boot (see founder review).
   let windowJoin = ''
   let windowedDimExpr = null
   let windowedDim2Expr = null
