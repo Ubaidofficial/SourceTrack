@@ -50,6 +50,7 @@ if (isReprocess) {
 
 // Shared channel classifier — single source of truth with the live attribution engine
 import { channelFromEvent } from '../lib/channel-classifier.js'
+import { buildSubscriptionIdentitySeed, isSubscriptionCheckoutCarrier } from '../lib/stripe-subscription.js'
 
 const _supabase = getSupabase()
 const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL
@@ -283,7 +284,7 @@ async function runBackfill() {
   }
 
   const conversionsQuery = `
-    SELECT uuid, distinct_id, timestamp, properties.conversion_type, properties.conversion_value, properties.external_event_id, properties.webhook_customer_id, properties.stripe_subscription_id, properties.stripe_invoice_id, properties.currency, properties.provider_event_id, properties.occurred_at
+    SELECT uuid, distinct_id, timestamp, properties.conversion_type, properties.conversion_value, properties.external_event_id, properties.webhook_customer_id, properties.stripe_subscription_id, properties.stripe_invoice_id, properties.currency, properties.provider_event_id, properties.occurred_at, properties.stripe_event_type, properties.provider
     FROM events
     WHERE event = '$conversion'
       AND properties.site_id = '${esc(site.id)}'
@@ -302,15 +303,20 @@ async function runBackfill() {
       conversion_type: row[3], conversion_value: row[4], external_event_id: row[5] || null,
       webhook_customer_id: row[6] || null, stripe_subscription_id: row[7] || null,
       stripe_invoice_id: row[8] || null, currency: row[9] || null,
-      provider_event_id: row[10] || null, occurred_at: row[11] || null
+      provider_event_id: row[10] || null, occurred_at: row[11] || null,
+      stripe_event_type: row[12] || null, provider: row[13] || null
     }
     if (!conversion.uuid || !conversion.distinct_id || !conversion.timestamp) {
       logWarn(`Skipping invalid conversion ${conversion.uuid}`)
       continue
     }
     const record = await processConversion(site, conversion)
-    records.push(record)
-    journey[classifyJourney(record, conversion.timestamp, attrWindowDays)]++
+    if (isSubscriptionCheckoutCarrier(conversion)) {
+      log(`Skipping backfill record for subscription-checkout $0 carrier ${conversion.uuid}`)
+    } else {
+      records.push(record)
+      journey[classifyJourney(record, conversion.timestamp, attrWindowDays)]++
+    }
   }
 
   // Real upsert adapter — honors BOTH unique indexes:
@@ -371,7 +377,9 @@ async function processSite(site) {
       properties.stripe_invoice_id,
       properties.currency,
       properties.provider_event_id,
-      properties.occurred_at
+      properties.occurred_at,
+      properties.stripe_event_type,
+      properties.provider
     FROM events
     WHERE event = '$conversion'
       AND properties.site_id = '${esc(site.id)}'
@@ -414,11 +422,22 @@ async function processSite(site) {
         stripe_invoice_id: row[8] || null,
         currency: row[9] || null,
         provider_event_id: row[10] || null,
-        occurred_at: row[11] || null
+        occurred_at: row[11] || null,
+        stripe_event_type: row[12] || null,
+        provider: row[13] || null
       }
 
+      // processConversion() ALWAYS runs in full — the subscription_identity seed
+      // (and, when gated, subscription_revenue insert) must still happen off this
+      // exact event, since the checkout carrier is the only one with the
+      // client_reference_id stitch. Only the attributed_conversions write below is
+      // conditionally skipped — this is a COUNT-only exclusion (Phase 7), not a
+      // change to the money-rail write path.
       const record = await processConversion(site, conversion)
-      if (isReprocess) {
+      const isCarrier = isSubscriptionCheckoutCarrier(conversion)
+      if (isCarrier) {
+        log(`Skipping attributed_conversions write for subscription-checkout $0 carrier ${conversion.uuid} (site ${site.site_key})`)
+      } else if (isReprocess) {
         records.push(record)
       } else {
         const { error } = await supabase
@@ -764,30 +783,40 @@ async function processConversion(site, conversion) {
     last_touch_landing_page: lastTp.landing_page || 'unknown'
   }
 
-  // Step 2: acquisition-locked subscription→source link. Only for subscription
-  // events (they alone carry a Stripe customer id + subscription id from the
-  // Step-1 webhook). Write-once so renewals/later runs never re-attribute; the
-  // chronologically-first event (ORDER BY timestamp ASC) defines the snapshot.
-  if (conversion.webhook_customer_id && conversion.stripe_subscription_id) {
-    // Unstitchable (placeholder distinct_id) or no journey → no acquisition
-    // source: store null + 'unknown', never a fabricated source.
-    const unstitched = String(conversion.distinct_id || '').startsWith('stripe_') || touchpoints.length === 0
-    await upsertSubscriptionIdentity(site, {
-      stripe_customer_id:    conversion.webhook_customer_id,
-      first_subscription_id: conversion.stripe_subscription_id,
-      source_conversion_id:  conversion.uuid || null,
-      anonymous_id:          unstitched ? null : conversion.distinct_id,
-      first_touch_source:    unstitched ? null : record.first_touch_source,
-      first_touch_channel:   unstitched ? null : record.first_touch_channel,
-      first_touch_campaign:  unstitched ? null : record.first_touch_campaign,
-      last_touch_source:     unstitched ? null : record.last_touch_source,
-      last_touch_channel:    unstitched ? null : record.last_touch_channel,
-      attribution_status:    unstitched ? 'unknown' : 'resolved'
-    })
+  // Step 2: acquisition-locked subscription→source link. Phase 5c: SEED on stripe
+  // customer_id ALONE, so a subscription-mode checkout ($0 carrier — customer_id +
+  // client_reference_id stitch) seeds and lets the surviving invoice.paid
+  // self-resolve via the backfill. As of Phase 7 the carrier also carries its own
+  // stripe_subscription_id (forwarded from Stripe's session.subscription — see
+  // isSubscriptionCheckoutCarrier), so first_subscription_id is populated at seed
+  // time instead of null; that's a write-once, never-read-back field (see
+  // isSubscriptionCheckoutCarrier's doc comment), so it changes nothing here.
+  // STITCHED-ONLY (no-downgrade): the helper returns null for an unstitched
+  // conversion, so it never locks an 'unknown' row that would block a later
+  // self-stitching invoice.paid. Write-once: the chronologically-first
+  // (ORDER BY timestamp ASC) stitched event wins via the ignoreDuplicates upsert.
+  const seedRow = buildSubscriptionIdentitySeed({ conversion, touchpoints, record })
+  if (seedRow) {
+    await upsertSubscriptionIdentity(site, seedRow)
+  }
 
-    // Step 3: write the lifecycle/revenue row, denormalizing the LOCKED
-    // acquisition source from subscription_identity (read back below) — NOT this
-    // event's re-computed attribution, so renewals carry the acquisition source.
+  // Step 3: write the lifecycle/revenue row — gated on a subscription id PLUS an
+  // explicit carrier exclusion. Before Phase 7, "no stripe_subscription_id" was
+  // enough to exclude the checkout event on its own (the checkout handler never
+  // set that field). Phase 7 forwards Stripe's session.subscription onto the
+  // carrier too (see isSubscriptionCheckoutCarrier), so the carrier now HAS a
+  // stripe_subscription_id — without the explicit exclusion below, this gate
+  // would also fire for the checkout event, attempting to insert
+  // event_type: 'purchase' into subscription_revenue, which is schema-constrained
+  // to ('subscription','renewal','trial_start','trial_converted','churn') and
+  // would fail the DB CHECK constraint on every subscription signup (caught
+  // non-fatally by insertSubscriptionRevenue's own error handling, but never
+  // intended to fire at all). isSubscriptionCheckoutCarrier is the same
+  // discriminator used by Path A/B's count-exclusion fixes — DO NOT remove this
+  // exclusion or swap it for a stripe_invoice_id check: trial_start/
+  // trial_converted/churn funnel events legitimately have stripe_subscription_id
+  // but no stripe_invoice_id, and must still reach this insert.
+  if (conversion.webhook_customer_id && conversion.stripe_subscription_id && !isSubscriptionCheckoutCarrier(conversion)) {
     await insertSubscriptionRevenue(site, conversion)
   }
 

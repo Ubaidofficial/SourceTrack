@@ -7,7 +7,7 @@ import { claimIdempotencyKeys, logIngestionEvent, rollbackIdempotencyKeys } from
 import { ph } from '../lib/posthog.js'
 import { resolveWebhookAnonymousId } from '../lib/identity-links.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
-import { SUBSCRIPTION_EVENTS, mapSubscriptionEvent, buildSubscriptionIdempotencyKeys } from '../lib/stripe-subscription.js'
+import { SUBSCRIPTION_EVENTS, mapSubscriptionEvent, buildSubscriptionIdempotencyKeys, checkoutConversionValue } from '../lib/stripe-subscription.js'
 
 
 
@@ -314,7 +314,21 @@ router.post('/:site_key', async (req, res) => {
     const conversionProperties = {
       site_id: site.id,
       site_key: site.site_key,
-      conversion_value: value,
+      // Phase 5c: a subscription-mode checkout contributes $0 (subscription revenue
+      // counts ONCE, on invoice.paid) — but the event is still emitted with full
+      // customer_id + client_reference_id stitch so nightly seeds subscription_identity.
+      // One-time (payment-mode) checkout keeps its full value. (The audit log below
+      // still records the real `value`.)
+      // Carrier stays 'purchase' because moving it off would drop subscription
+      // signups from the customers metric (classifyConversionType: only
+      // 'purchase'/'closed_won' = customer). PREVIOUSLY a known limitation (raw
+      // conversions count inflated by 1/signup, revenue/customers unaffected) — as
+      // of Phase 7 this carrier is excluded from conversion-COUNT aggregates by
+      // isSubscriptionCheckoutCarrier (stripe-subscription.js) at both read sites
+      // (nightly-attribution.js processSite, attribution-engine.js
+      // getMultiTouchAttributionLive); historical rows are not backfilled (fix-forward
+      // only, count-only impact — see tinybird/PHASE7_ATTRIBUTED_CONVERSIONS_DOUBLE_UPSERT_PROPOSAL.md).
+      conversion_value: checkoutConversionValue(session.mode, value),
       currency,
       conversion_type: 'purchase',
       conversion_event_id: orderId || paymentId || providerEventId,
@@ -333,6 +347,12 @@ router.post('/:site_key', async (req, res) => {
       first_touch_medium: 'webhook',
       webhook_user_id: metadata.sourcetrack_user_id || metadata.site_user_id || session.client_reference_id || null,
       webhook_customer_id: session.customer || null,
+      // Phase 7: forward Stripe's own session.subscription. Present only for a
+      // subscription-mode checkout (never for one-time/payment-mode) — this is what
+      // lets isSubscriptionCheckoutCarrier (stripe-subscription.js) tell a genuine
+      // $0 subscription-mode carrier apart from a fully-discounted one-time $0
+      // checkout, which would otherwise look identical on every other field.
+      stripe_subscription_id: session.subscription || null,
       webhook_email_present: !!session.customer_details?.email,
       identity_resolution_source: resolved.source,
       identity_resolution_status: resolved.anonymousId ? 'resolved' : 'unresolved'

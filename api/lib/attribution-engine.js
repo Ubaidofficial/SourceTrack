@@ -6,6 +6,7 @@ import { getSupabase } from './supabase.js'
 import { esc, isGoogleSource, isValidTimezone, getLocalDateString, getPaddedUtcDateRange } from './utils.js'
 import { serializeHogQLDateRange, serializeHogQLDateTime, buildHogQLTimestampFilter } from './hogql-date.js'
 import { LEAD_TYPES, classifyConversionType } from './conversion-classifier.js'
+import { isSubscriptionCheckoutCarrier } from './stripe-subscription.js'
 
 export function getDateFilterExpr(timestampCol, tz, dateFrom, dateTo) {
   const startStr = typeof dateFrom === 'string' ? dateFrom.trim() : new Date(dateFrom).toISOString().slice(0, 10)
@@ -1414,7 +1415,9 @@ export async function getMultiTouchAttributionLive({
       properties.provider AS provider,
       properties.attribution_status AS attribution_status,
       properties.stitching_method AS stitching_method,
-      properties.ingestion_method AS ingestion_method
+      properties.ingestion_method AS ingestion_method,
+      properties.stripe_subscription_id AS stripe_subscription_id,
+      properties.stripe_event_type AS stripe_event_type
     FROM events
     WHERE properties.site_id = '${safeSite}'
       AND event = '$conversion'
@@ -1425,7 +1428,7 @@ export async function getMultiTouchAttributionLive({
   `
   const convRows = await queryHogQL(convSql, 'multitouch_conversions_live')
 
-  const conversions = convRows.map(([uuid, distinctId, timestamp, conversionType, conversionValue, utmSource, utmMedium, utmCampaign, referrer, aiSource, country, deviceType, utmTerm, rawProvider, rawAttrStatus, rawStitchMethod, rawIngestionMethod]) => {
+  const conversions = convRows.map(([uuid, distinctId, timestamp, conversionType, conversionValue, utmSource, utmMedium, utmCampaign, referrer, aiSource, country, deviceType, utmTerm, rawProvider, rawAttrStatus, rawStitchMethod, rawIngestionMethod, stripeSubscriptionId, stripeEventType]) => {
     const ingestionMethod = rawIngestionMethod || null
     const provider = rawProvider || (ingestionMethod === 'server_routed' ? 'browser' : ingestionMethod === 'offline' ? 'payments_api' : 'unknown')
     const stitchingMethod = rawStitchMethod || (ingestionMethod === 'server_routed' ? 'browser' : 'unknown')
@@ -1452,7 +1455,9 @@ export async function getMultiTouchAttributionLive({
       utm_term: utmTerm || null,
       provider,
       attribution_status: attributionStatus,
-      stitching_method: stitchingMethod
+      stitching_method: stitchingMethod,
+      stripe_subscription_id: stripeSubscriptionId || null,
+      stripe_event_type: stripeEventType || null
     }
   })
 
@@ -1577,6 +1582,12 @@ export async function getMultiTouchAttributionLive({
   const aggregated = {}
 
   for (const conv of conversions) {
+    // Phase 7: exclude the $0 subscription-checkout carrier from conversion-COUNT
+    // credit (revenue is unaffected — it's already $0 on this row). This is a
+    // COUNT-only exclusion; the carrier's touchpoints/pageviews are untouched, and
+    // this loop has no write path of its own (no Supabase write here at all).
+    if (isSubscriptionCheckoutCarrier(conv)) continue
+
     const visitorPvs = pageviewsByVisitor[conv.distinct_id] || []
 
     // Filter pageviews within the window

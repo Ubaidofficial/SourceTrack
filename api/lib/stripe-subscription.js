@@ -72,3 +72,87 @@ export function buildSubscriptionIdempotencyKeys({ providerEventId, conversionTy
   }
   return keys
 }
+
+// ── Phase 5c: subscription-mode checkout double-count fix ──────────────────────
+//
+// A subscription-creating checkout fires BOTH checkout.session.completed AND
+// invoice.paid, each as a $conversion — double-counting the first payment. The
+// fix counts subscription revenue ONCE (on invoice.paid) while keeping the
+// checkout event as a $0 attribution carrier (it alone can stitch via
+// client_reference_id, which invoice.paid never sees).
+
+// The checkout $conversion's revenue: $0 for a subscription-mode checkout (revenue
+// lands on invoice.paid), full value for a one-time (payment-mode) checkout.
+// Pure: the live route applies this to conversion_value only — everything else
+// (customer_id, the client_reference_id stitch, distinct_id) is unchanged.
+export function checkoutConversionValue(sessionMode, value) {
+  return sessionMode === 'subscription' ? 0 : value
+}
+
+// The acquisition-locked subscription_identity SEED row for one nightly conversion,
+// or null to SKIP. Seeds on stripe customer_id ALONE (so a subscription-mode
+// checkout — customer_id + a client_reference_id stitch but NO subscription_id —
+// seeds, letting the surviving invoice.paid self-resolve its source via the backfill).
+// STITCHED-ONLY (no-downgrade): returns null for an unstitched conversion, so it
+// never locks an 'unknown' row that would block a later self-stitching invoice.paid.
+// first_subscription_id: as of Phase 7, a subscription-mode checkout now carries its
+// own stripe_subscription_id (forwarded from Stripe's session.subscription — see
+// isSubscriptionCheckoutCarrier below), so this is populated at seed time when
+// available; it is write-once/informational only (no downstream code reads it back,
+// and it is not part of subscription_identity's ON CONFLICT target), so this is a
+// pure accuracy improvement, not a behavior change.
+export function buildSubscriptionIdentitySeed({ conversion, touchpoints, record }) {
+  if (!conversion || !conversion.webhook_customer_id) return null
+  const unstitched = String(conversion.distinct_id || '').startsWith('stripe_') ||
+    (touchpoints?.length || 0) === 0
+  if (unstitched) return null
+  return {
+    stripe_customer_id:    conversion.webhook_customer_id,
+    first_subscription_id: conversion.stripe_subscription_id || null,
+    source_conversion_id:  conversion.uuid || null,
+    anonymous_id:          conversion.distinct_id,
+    first_touch_source:    record.first_touch_source,
+    first_touch_channel:   record.first_touch_channel,
+    first_touch_campaign:  record.first_touch_campaign,
+    last_touch_source:     record.last_touch_source,
+    last_touch_channel:    record.last_touch_channel,
+    attribution_status:    'resolved'
+  }
+}
+
+// ── Phase 7: subscription-checkout-carrier discriminator ───────────────────────
+//
+// Identifies the $0 subscription-mode checkout $conversion (the "carrier" from
+// Phase 5c above) so a caller can EXCLUDE it from conversion-COUNT aggregates
+// (attributed_conversions rows in nightly-attribution.js; live multi-touch model
+// credit in attribution-engine.js) without touching revenue, customer counts, or
+// the subscription_identity/subscription_revenue write path — none of those read
+// this helper. The carrier's $0 value and its role as the client_reference_id
+// stitch source are both left completely alone; this only answers "should this
+// row count as its own conversion for COUNTING purposes."
+//
+// Requires `stripe_subscription_id` to be PRESENT on the carrier. The checkout
+// handler (api/routes/stripe-webhook.js) forwards Stripe's own `session.subscription`
+// onto the $0 carrier event for exactly this reason: Stripe populates
+// session.subscription at checkout completion for a subscription-mode session, and
+// NEVER populates it for a one-time (payment-mode) session. That's what makes
+// presence (not absence) of stripe_subscription_id the unambiguous signal here — a
+// genuinely fully-discounted ($0) ONE-TIME checkout has the identical provider /
+// conversion_type / conversion_value / stripe_event_type as the subscription
+// carrier, but can never have a subscription_id, so it correctly does NOT match.
+//
+// conversion_value null-coercion (explicit choice, not implicit): Number(null) === 0,
+// so a `null` conversion_value is treated the same as an explicit `0` (may match).
+// Number(undefined) is NaN, which is never === 0, so a conversion whose
+// conversion_value is truly absent (key not sent at all) never matches — this fails
+// CLOSED (does not skip) rather than guessing. A false negative here only preserves
+// today's existing count-inflation behavior (no new bug); a false positive would
+// newly and incorrectly exclude a real conversion from every count that reads this
+// helper. Uncertain/malformed data should never cause a row to be skipped.
+export function isSubscriptionCheckoutCarrier({ provider, conversion_type, conversion_value, stripe_subscription_id, stripe_event_type } = {}) {
+  return provider === 'stripe' &&
+    conversion_type === 'purchase' &&
+    Number(conversion_value) === 0 &&
+    !!stripe_subscription_id &&
+    stripe_event_type === 'checkout.session.completed'
+}
