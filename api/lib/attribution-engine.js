@@ -452,11 +452,18 @@ export async function getAiPlatformAttributionLive({
   const fromIso = fromDate.match(/'([^']+)'/)[1]
   const lookbackDate = new Date(new Date(fromIso).getTime() - windowDays * 24 * 60 * 60 * 1000)
   const lookbackStr = serializeHogQLDateTime(lookbackDate)
-  // Raw ISO forms for the Tinybird pipe's DateTime(...) params — Tinybird
-  // takes plain values, not HogQL's wrapped toDateTime('...') expression
-  // strings that lookbackStr/toDate carry for the HogQL fallback path.
-  const lookbackIso = lookbackStr.match(/'([^']+)'/)[1]
-  const toIso = toDate.match(/'([^']+)'/)[1]
+  // Tinybird's DateTime(...) template param expects ClickHouse's native
+  // 'YYYY-MM-DD HH:MM:SS.mmm' format (space-separated, no T/Z) — NOT the
+  // ISO-8601-with-T/Z string that HogQL's toDateTime('...') wrapper carries.
+  // Confirmed via a real call against the deployed pageviews_by_visitors pipe:
+  // the ISO-with-T/Z form fails with "Cannot convert string '...' to type
+  // DateTime64(3, 'UTC')(TYPE_MISMATCH)"; the space-separated form works.
+  // lookbackStr/toDate must still be unwrapped from their toDateTime('...')
+  // expression string first (that's what they carry for the HogQL fallback
+  // path) before this formatter can run on the raw date value underneath.
+  const toTinybirdDateTime = (isoWithTZ) => isoWithTZ.replace('T', ' ').replace(/Z$/, '')
+  const lookbackIso = toTinybirdDateTime(lookbackStr.match(/'([^']+)'/)[1])
+  const toIso = toTinybirdDateTime(toDate.match(/'([^']+)'/)[1])
 
   const uniqueIds = [...new Set(conversions.map(c => c.distinct_id))].filter(Boolean)
   if (uniqueIds.length === 0) {
