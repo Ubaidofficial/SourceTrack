@@ -172,7 +172,9 @@ export default function SEORevenue() {
           {hasRevenue ? (
             <>
               <p className="text-2xl font-bold text-white tabular-nums">{formatCurrency(summary.organic_revenue, 0)}</p>
-              <p className="text-[10px] text-st-gray mt-0.5">First-touch organic revenue</p>
+              <p className="text-[10px] text-st-gray mt-0.5">
+                First-touch organic revenue · Matched by landing page and date range. Query revenue is estimated.
+              </p>
             </>
           ) : (
             <>
@@ -202,6 +204,11 @@ export default function SEORevenue() {
             <h3 className="text-sm font-semibold text-white">Top Organic Landing Pages</h3>
             <span className="text-[10px] text-st-gray uppercase tracking-wider">SourceTrack + GSC</span>
           </div>
+          {hasRevenue && (
+            <p className="px-4 pt-2 text-[10px] text-st-gray">
+              Matched by landing page and date range. Query revenue is estimated.
+            </p>
+          )}
 
           <div className="overflow-x-auto">
             {landingPages.length === 0 ? (
@@ -219,40 +226,43 @@ export default function SEORevenue() {
                   </tr>
                 </thead>
                 <tbody>
-                  {landingPages.map(page => (
-                    <tr
-                      key={page.page_path}
-                      onClick={() => setSelectedPagePath(page.page_path)}
-                      className={`border-b border-[#2A2E2E]/60 last:border-0 hover:bg-[#242829] cursor-pointer transition-colors text-xs ${
-                        selectedPagePath === page.page_path ? 'bg-st-lime/5 border-l-2 border-l-st-lime' : ''
-                      }`}
-                    >
-                      <td className="py-3 px-4 font-mono text-white max-w-[200px] truncate" title={page.page_path}>
-                        {page.page_path}
-                      </td>
-                      <td className="py-3 px-3 text-right text-white tabular-nums font-semibold">
-                        {page.conversions.toLocaleString()}
-                      </td>
-                      <td className="py-3 px-3 text-right text-orange-400 tabular-nums">
-                        {hasRevenue ? formatCurrency(page.revenue, 0) : '—'}
-                      </td>
-                      <td className="py-3 px-3 text-right text-white tabular-nums">
-                        {gscConnected && gscPropertySelected ? page.clicks.toLocaleString() : '—'}
-                      </td>
-                      <td className="py-3 px-3 text-right text-st-gray tabular-nums">
-                        {gscConnected && gscPropertySelected ? page.impressions.toLocaleString() : '—'}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
-                          selectedPagePath === page.page_path
-                            ? 'bg-st-lime text-black'
-                            : 'bg-[#2a2e2e] text-st-gray hover:text-white'
-                        }`}>
-                          Queries
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {landingPages.map(page => {
+                    const pageHasRevenue = page.revenue > 0
+                    return (
+                      <tr
+                        key={page.page_path}
+                        onClick={() => setSelectedPagePath(page.page_path)}
+                        className={`border-b border-[#2A2E2E]/60 last:border-0 hover:bg-[#242829] cursor-pointer transition-colors text-xs ${
+                          selectedPagePath === page.page_path ? 'bg-st-lime/5 border-l-2 border-l-st-lime' : ''
+                        }`}
+                      >
+                        <td className="py-3 px-4 font-mono text-white max-w-[200px] truncate" title={page.page_path}>
+                          {page.page_path}
+                        </td>
+                        <td className="py-3 px-3 text-right text-white tabular-nums font-semibold">
+                          {page.conversions.toLocaleString()}
+                        </td>
+                        <td className="py-3 px-3 text-right text-orange-400 tabular-nums">
+                          {hasRevenue && pageHasRevenue ? formatCurrency(page.revenue, 0) : '—'}
+                        </td>
+                        <td className="py-3 px-3 text-right text-white tabular-nums">
+                          {gscConnected && gscPropertySelected ? page.clicks.toLocaleString() : '—'}
+                        </td>
+                        <td className="py-3 px-3 text-right text-st-gray tabular-nums">
+                          {gscConnected && gscPropertySelected ? page.impressions.toLocaleString() : '—'}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded ${
+                            selectedPagePath === page.page_path
+                              ? 'bg-st-lime text-black'
+                              : 'bg-[#2a2e2e] text-st-gray hover:text-white'
+                          }`}>
+                            Queries
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             )}
@@ -266,6 +276,11 @@ export default function SEORevenue() {
             <p className="text-[10px] text-st-gray mt-0.5">
               {selectedPagePath ? `Landing Page: ${selectedPagePath}` : 'Select a landing page on the left to view queries'}
             </p>
+            {selectedPagePath && hasRevenue && (
+              <p className="text-[10px] text-st-gray mt-0.5">
+                Matched by landing page and date range. Query revenue is estimated.
+              </p>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto max-h-[600px]">
@@ -289,7 +304,7 @@ export default function SEORevenue() {
                       </p>
                       <div className="text-right shrink-0">
                         <p className="text-xs font-semibold text-orange-400 tabular-nums">
-                          {hasRevenue ? formatCurrency(q.estimated_revenue, 0) : '—'}
+                          {hasRevenue && q.estimated_revenue > 0 ? formatCurrency(q.estimated_revenue, 0) : '—'}
                         </p>
                         <p className="text-[10px] text-st-gray tabular-nums">
                           {q.estimated_conversions.toFixed(1)} conversions
