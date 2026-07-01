@@ -14,8 +14,6 @@ DESCRIPTION >
     ''), not a behavior change, just JSONExtract's null-handling contract.
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
 
-TOKEN "st_endpoint_read" READ
-
 NODE doctor_paid_params_count_node
 SQL >
     %

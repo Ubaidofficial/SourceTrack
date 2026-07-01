@@ -8,8 +8,6 @@ DESCRIPTION >
     consolidation candidate (noted, not acted on, per the dispatch).
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
 
-TOKEN "st_endpoint_read" READ
-
 NODE alert_traffic_node
 SQL >
     %

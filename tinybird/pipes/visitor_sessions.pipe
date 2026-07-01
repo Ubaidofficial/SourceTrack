@@ -11,8 +11,6 @@ DESCRIPTION >
     Float64 DEFAULT 0). No JSON-bag fields.
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
 
-TOKEN "st_endpoint_read" READ
-
 NODE visitor_sessions_node
 SQL >
     %

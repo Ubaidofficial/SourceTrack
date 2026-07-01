@@ -38,8 +38,16 @@ DESCRIPTION >
     template SQL, so the caller MUST apply the same [1,500]/default-100 clamp
     before passing `limit_val`; this pipe does not re-clamp.
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
-
-TOKEN "st_endpoint_read" READ
+    DEPLOY FIX (tb --cloud deploy --check, ST_Staging v4.6.4): date/datetime
+    params were declared String(param, required=True) then wrapped in
+    toDateTime(...) — that combination failed with CANNOT_PARSE_DATETIME
+    under --check's '__no_value__' placeholder injection (a non-date string
+    toDateTime() can't parse). Fixed by declaring the param itself as
+    DateTime(...) (matching the already-shipped Phase 4 pipes' proven
+    pattern) and dropping the now-redundant toDateTime(...) wrapper — no
+    SQL/filter logic changed, only the param type. Re-validated via
+    tb --cloud sql with real values post-fix; parity held (see batch
+    dispatch report).
 
 NODE events_latest_node
 SQL >
@@ -108,10 +116,10 @@ SQL >
       )
       {% end %}
       {% if defined(date_from_ts) %}
-      AND timestamp >= toDateTime({{ String(date_from_ts, required=True) }})
+      AND timestamp >= {{ DateTime(date_from_ts, '1970-01-01 00:00:00') }}
       {% end %}
       {% if defined(date_to_ts) %}
-      AND timestamp < toDateTime({{ String(date_to_ts, required=True) }})
+      AND timestamp < {{ DateTime(date_to_ts, '1970-01-01 00:00:00') }}
       {% end %}
       {% if defined(search_filter) %}
       AND (

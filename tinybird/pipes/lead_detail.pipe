@@ -41,8 +41,6 @@ DESCRIPTION >
     colliding name to keep the query valid.
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
 
-TOKEN "st_endpoint_read" READ
-
 NODE lead_detail_node
 SQL >
     %

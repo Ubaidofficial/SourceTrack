@@ -26,8 +26,27 @@ DESCRIPTION >
     (current_from_ts, current_to_ts, tz, local_from_ts, local_to_ts) rather
     than string-interpolated or re-concatenated inside the pipe.
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
-
-TOKEN "st_endpoint_read" READ
+    DEPLOY FIX (tb --cloud deploy --check, ST_Staging v4.6.4, round 2): after
+    the date/datetime param fix, --check surfaced the tz twin of the same
+    issue — BAD_ARGUMENTS "Cannot load time zone '__no_value__'" from
+    toTimeZone(timestamp, tz) when tz was declared String(tz, required=True)
+    with no default. Fixed by giving tz a valid default:
+    String(tz, 'UTC') — --check now has a loadable timezone to inject.
+    Real callers passing a real tz behave identically (UTC is only used
+    when the param is genuinely absent, same as --check's placeholder
+    case). Only the tz param changed — no other param or SQL logic touched.
+    Re-validated via tb --cloud sql with the gating site's real tz post-fix;
+    parity held (see batch dispatch report).
+    DEPLOY FIX (tb --cloud deploy --check, ST_Staging v4.6.4): date/datetime
+    params were declared String(param, required=True) then wrapped in
+    toDateTime(...) — that combination failed with CANNOT_PARSE_DATETIME
+    under --check's '__no_value__' placeholder injection (a non-date string
+    toDateTime() can't parse). Fixed by declaring the param itself as
+    DateTime(...) (matching the already-shipped Phase 4 pipes' proven
+    pattern) and dropping the now-redundant toDateTime(...) wrapper — no
+    SQL/filter logic changed, only the param type. Re-validated via
+    tb --cloud sql with real values post-fix; parity held (see batch
+    dispatch report).
 
 NODE dash_stages_node
 SQL >
@@ -41,10 +60,10 @@ SQL >
       AND event_type = '$conversion'
       AND ingestion_method = 'offline'
       AND conversion_type IN ('lead_created', 'qualified', 'opportunity', 'closed_won')
-      AND timestamp >= toDateTime({{ String(current_from_ts, required=True) }})
-      AND timestamp <= toDateTime({{ String(current_to_ts, required=True) }})
-      AND toTimeZone(timestamp, {{ String(tz, required=True) }}) >= toDateTime({{ String(local_from_ts, required=True) }})
-      AND toTimeZone(timestamp, {{ String(tz, required=True) }}) <= toDateTime({{ String(local_to_ts, required=True) }})
+      AND timestamp >= {{ DateTime(current_from_ts, required=True) }}
+      AND timestamp <= {{ DateTime(current_to_ts, required=True) }}
+      AND toTimeZone(timestamp, {{ String(tz, 'UTC') }}) >= {{ DateTime(local_from_ts, required=True) }}
+      AND toTimeZone(timestamp, {{ String(tz, 'UTC') }}) <= {{ DateTime(local_to_ts, required=True) }}
     GROUP BY stage
     ORDER BY count DESC
     LIMIT 100

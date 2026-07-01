@@ -8,8 +8,6 @@ DESCRIPTION >
     JSON-bag fields.
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
 
-TOKEN "st_endpoint_read" READ
-
 NODE integ_referrers_node
 SQL >
     %

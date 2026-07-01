@@ -7,8 +7,6 @@ DESCRIPTION >
     (matches any event) — preserved exactly. No JSON-bag fields.
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
 
-TOKEN "st_endpoint_read" READ
-
 NODE events_health_last_node
 SQL >
     %

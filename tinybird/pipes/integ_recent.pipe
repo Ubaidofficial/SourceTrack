@@ -10,8 +10,6 @@ DESCRIPTION >
     candidate (noted, not acted on).
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
 
-TOKEN "st_endpoint_read" READ
-
 NODE integ_recent_node
 SQL >
     %

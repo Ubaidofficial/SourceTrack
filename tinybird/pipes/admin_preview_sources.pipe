@@ -20,8 +20,6 @@ DESCRIPTION >
     name is invalid, not the expression shape. No JSON-bag fields.
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
 
-TOKEN "st_endpoint_read" READ
-
 NODE admin_preview_sources_node
 SQL >
     %

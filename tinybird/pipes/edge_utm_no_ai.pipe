@@ -8,8 +8,6 @@ DESCRIPTION >
     (typed, LowCardinality Nullable per §2.6). No JSON-bag fields.
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
 
-TOKEN "st_endpoint_read" READ
-
 NODE edge_utm_no_ai_node
 SQL >
     %

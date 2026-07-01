@@ -14,8 +14,6 @@ DESCRIPTION >
     applying the same principle to this second user-supplied value.
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
 
-TOKEN "st_endpoint_read" READ
-
 NODE doctor_token_verify_node
 SQL >
     %

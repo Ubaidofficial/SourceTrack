@@ -50,8 +50,6 @@ DESCRIPTION >
     rewrite.
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
 
-TOKEN "st_endpoint_read" READ
-
 NODE live_visitors_bag_node
 SQL >
     %

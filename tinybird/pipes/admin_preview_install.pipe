@@ -11,8 +11,6 @@ DESCRIPTION >
     cross-file duplicates from prior batches.
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
 
-TOKEN "st_endpoint_read" READ
-
 NODE admin_preview_install_node
 SQL >
     %

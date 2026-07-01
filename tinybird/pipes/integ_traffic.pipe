@@ -8,8 +8,6 @@ DESCRIPTION >
     flagged as a Phase-6 consolidation candidate (noted, not acted on).
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
 
-TOKEN "st_endpoint_read" READ
-
 NODE integ_traffic_node
 SQL >
     %

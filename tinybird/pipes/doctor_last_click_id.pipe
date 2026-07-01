@@ -12,8 +12,6 @@ DESCRIPTION >
     "improvement" — do not add a filter that wasn't in the live query.
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
 
-TOKEN "st_endpoint_read" READ
-
 NODE doctor_last_click_id_node
 SQL >
     %

@@ -19,8 +19,6 @@ DESCRIPTION >
     No JSON-bag fields.
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
 
-TOKEN "st_endpoint_read" READ
-
 NODE integ_missing_conv_node
 SQL >
     %

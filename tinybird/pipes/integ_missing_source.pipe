@@ -7,8 +7,6 @@ DESCRIPTION >
     Nullable->'direct' on read per §2.6). No JSON-bag fields.
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
 
-TOKEN "st_endpoint_read" READ
-
 NODE integ_missing_source_node
 SQL >
     %

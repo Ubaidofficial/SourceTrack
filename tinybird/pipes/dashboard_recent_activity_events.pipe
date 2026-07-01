@@ -23,8 +23,6 @@ DESCRIPTION >
     read via JSONExtractString(properties, '<key>').
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
 
-TOKEN "st_endpoint_read" READ
-
 NODE dashboard_recent_activity_events_node
 SQL >
     %

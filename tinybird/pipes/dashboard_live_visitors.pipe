@@ -10,8 +10,6 @@ DESCRIPTION >
     properties.site_id -> site_id, event -> event_type. No JSON-bag fields.
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
 
-TOKEN "st_endpoint_read" READ
-
 NODE dashboard_live_visitors_node
 SQL >
     %

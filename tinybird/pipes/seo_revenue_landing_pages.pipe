@@ -22,8 +22,16 @@ DESCRIPTION >
     list is edited in channel-classifier.js this pipe will silently drift
     and needs re-syncing (flagged, not solved here).
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
-
-TOKEN "st_endpoint_read" READ
+    DEPLOY FIX (tb --cloud deploy --check, ST_Staging v4.6.4): date/datetime
+    params were declared String(param, required=True) then wrapped in
+    toDateTime(...) — that combination failed with CANNOT_PARSE_DATETIME
+    under --check's '__no_value__' placeholder injection (a non-date string
+    toDateTime() can't parse). Fixed by declaring the param itself as
+    DateTime(...) (matching the already-shipped Phase 4 pipes' proven
+    pattern) and dropping the now-redundant toDateTime(...) wrapper — no
+    SQL/filter logic changed, only the param type. Re-validated via
+    tb --cloud sql with real values post-fix; parity held (see batch
+    dispatch report).
 
 NODE seo_revenue_landing_pages_node
 SQL >
@@ -33,8 +41,8 @@ SQL >
     WHERE site_id = {{ String(site_id, required=True) }}
       AND event_type = '$pageview'
       AND distinct_id IN {{ Array(visitor_ids, 'String', required=True) }}
-      AND timestamp >= toDateTime({{ String(from_ts, required=True) }})
-      AND timestamp <= toDateTime({{ String(to_ts, required=True) }})
+      AND timestamp >= {{ DateTime(from_ts, required=True) }}
+      AND timestamp <= {{ DateTime(to_ts, required=True) }}
       AND (
         referrer ILIKE '%google.%' OR referrer ILIKE '%bing.%' OR referrer ILIKE '%yahoo.%'
         OR referrer ILIKE '%duckduckgo.%' OR referrer ILIKE '%ecosia.%' OR referrer ILIKE '%kagi.%'

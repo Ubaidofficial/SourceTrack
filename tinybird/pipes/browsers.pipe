@@ -36,8 +36,16 @@ DESCRIPTION >
     batches; authored separately per the dispatch ("one .pipe each"),
     flagged as a Phase-6 consolidation candidate.
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
-
-TOKEN "st_endpoint_read" READ
+    DEPLOY FIX (tb --cloud deploy --check, ST_Staging v4.6.4): date/datetime
+    params were declared String(param, required=True) then wrapped in
+    toDateTime(...) — that combination failed with CANNOT_PARSE_DATETIME
+    under --check's '__no_value__' placeholder injection (a non-date string
+    toDateTime() can't parse). Fixed by declaring the param itself as
+    DateTime(...) (matching the already-shipped Phase 4 pipes' proven
+    pattern) and dropping the now-redundant toDateTime(...) wrapper — no
+    SQL/filter logic changed, only the param type. Re-validated via
+    tb --cloud sql with real values post-fix; parity held (see batch
+    dispatch report).
 
 NODE browsers_node
 SQL >
@@ -58,8 +66,8 @@ SQL >
     FROM events
     WHERE site_id = {{ String(site_id, required=True) }}
       AND event_type = '$pageview'
-      AND timestamp >= toDateTime({{ String(date_from_ts, required=True) }})
-      AND timestamp < toDateTime({{ String(date_to_ts, required=True) }})
+      AND timestamp >= {{ DateTime(date_from_ts, required=True) }}
+      AND timestamp < {{ DateTime(date_to_ts, required=True) }}
       {% if defined(filter_page) %}
       AND page_url ILIKE concat('%', {{ String(filter_page, required=True) }}, '%')
       {% end %}

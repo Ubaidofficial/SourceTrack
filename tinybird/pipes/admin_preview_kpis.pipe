@@ -17,8 +17,6 @@ DESCRIPTION >
     is invalid. No JSON-bag fields.
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
 
-TOKEN "st_endpoint_read" READ
-
 NODE admin_preview_kpis_node
 SQL >
     %

@@ -12,8 +12,6 @@ DESCRIPTION >
     SELECT list — not a duplicate. No JSON-bag fields.
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
 
-TOKEN "st_endpoint_read" READ
-
 NODE admin_site_detail_node
 SQL >
     %

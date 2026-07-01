@@ -24,8 +24,6 @@ DESCRIPTION >
     (anything not in the TYPED table is bag) they're routed the same way.
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
 
-TOKEN "st_endpoint_read" READ
-
 NODE journey_node
 SQL >
     %

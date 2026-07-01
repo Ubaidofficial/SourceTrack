@@ -7,8 +7,6 @@ DESCRIPTION >
     DEFAULT 'untyped'). No JSON-bag fields in this query.
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
 
-TOKEN "st_endpoint_read" READ
-
 NODE doctor_last_conversion_node
 SQL >
     %

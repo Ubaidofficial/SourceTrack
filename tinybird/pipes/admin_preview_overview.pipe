@@ -12,8 +12,6 @@ DESCRIPTION >
     prior batches.
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
 
-TOKEN "st_endpoint_read" READ
-
 NODE admin_preview_overview_node
 SQL >
     %

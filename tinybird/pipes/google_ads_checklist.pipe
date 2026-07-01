@@ -19,8 +19,6 @@ DESCRIPTION >
     not a behavior change.
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
 
-TOKEN "st_endpoint_read" READ
-
 NODE google_ads_checklist_node
 SQL >
     %

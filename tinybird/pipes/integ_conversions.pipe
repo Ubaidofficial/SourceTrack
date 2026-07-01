@@ -8,8 +8,6 @@ DESCRIPTION >
     Phase-6 consolidation candidate (noted, not acted on).
     NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
 
-TOKEN "st_endpoint_read" READ
-
 NODE integ_conversions_node
 SQL >
     %
