@@ -467,8 +467,21 @@ export async function getAiPlatformAttributionLive({
     const batchIds = batches[batchIdx]
     const escapedIds = batchIds.map(id => `'${esc(id)}'`)
 
-    let offset = 0
+    // Keyset (cursor) pagination, NOT OFFSET: PostHog's HogQL API rejects any
+    // query containing an OFFSET clause when authenticated with a personal API
+    // key — confirmed via a real call, fails even at OFFSET 0 ("OFFSET is not
+    // supported on queries made with a personal API key"). The standard
+    // tiebreaker-safe keyset idiom (`timestamp > X OR (timestamp = X AND
+    // uuid > Y)`) ALSO fails here — verified this is a distinct HogQL/ClickHouse
+    // bug with the `(A OR (B AND C))` boolean-nesting shape itself, reproduced
+    // even with zero timestamp/date values involved. The working alternative,
+    // verified end-to-end against real data (13 pages, 316/316 rows, zero
+    // duplicates): compare a single computed sort-key string with one plain
+    // `>` predicate instead of a boolean OR/AND structure.
+    let pageNum = 0
+    let cursor = null
     while (true) {
+      const cursorClause = cursor ? `\n          AND concat(toString(timestamp), '|', uuid) > '${esc(cursor)}'` : ''
       const batchPvSql = `
         SELECT
           distinct_id,
@@ -493,17 +506,18 @@ export async function getAiPlatformAttributionLive({
           properties.sccid AS sccid,
           properties.ko_click_id AS ko_click_id,
           properties.page_url AS page_url,
-          properties.utm_term AS utm_term
+          properties.utm_term AS utm_term,
+          concat(toString(timestamp), '|', uuid) AS _cursor_key
         FROM events
         WHERE properties.site_id = '${safeSite}'
           AND event = '$pageview'
           AND timestamp >= ${lookbackStr}
           AND timestamp < ${toDate}
-          AND distinct_id IN (${escapedIds.join(',')})
-        ORDER BY timestamp ASC
-        LIMIT ${AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE} OFFSET ${offset}
+          AND distinct_id IN (${escapedIds.join(',')})${cursorClause}
+        ORDER BY _cursor_key ASC
+        LIMIT ${AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE}
       `
-      const pvRows = await queryHogQL(batchPvSql, `aiplatform_pageviews_live_batch_${batchIdx}_page_${offset}`)
+      const pvRows = await queryHogQL(batchPvSql, `aiplatform_pageviews_live_batch_${batchIdx}_page_${pageNum}`)
 
       for (const row of pvRows) {
         const distinctId = row[0]
@@ -529,6 +543,7 @@ export async function getAiPlatformAttributionLive({
         const ko_click_id = row[20]
         const pageUrl = row[21]
         const utmTerm = row[22]
+        const cursorKey = row[23]
 
         const pvObj = {
           timestamp,
@@ -557,12 +572,13 @@ export async function getAiPlatformAttributionLive({
 
         if (!pageviewsByVisitor[distinctId]) pageviewsByVisitor[distinctId] = []
         pageviewsByVisitor[distinctId].push(pvObj)
+        cursor = cursorKey
       }
 
       if (pvRows.length < AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE) {
         break
       }
-      offset += AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE
+      pageNum++
     }
   }
 
