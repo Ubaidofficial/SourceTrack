@@ -482,11 +482,26 @@ export async function getAiPlatformAttributionLive({
   const batches = chunkVisitorIds(uniqueIds, AI_ATTRIBUTION_VISITOR_BATCH_SIZE)
   const pageviewsByVisitor = {}
 
+  // Normalize a timestamp to an explicit-UTC form BEFORE it enters the app's
+  // `new Date(...)` comparisons downstream (selectAiTouchForConversion's window
+  // check + the date-grouping at ~:663). Tinybird's DateTime64 pipe rows come back
+  // space-separated with NO zone marker ('2026-06-29 21:29:28.976'), which
+  // `new Date()` parses as the RUNTIME's LOCAL time — a TZ-dependent error once
+  // compared against HogQL conversions' ISO-'Z' timestamps (mixed-store: pageviews
+  // from the Tinybird pipe, conversions from HogQL). Strict no-op for any string
+  // already carrying a zone (Z or ±HH:MM), so HogQL-sourced rows are untouched.
+  // Same approach as tsMs() in tinybird/tools/phase4_touchpoint_diff.js (9dd496c).
+  const toUtcSafeTs = (ts) => {
+    if (typeof ts !== 'string') return ts
+    const s = ts.trim()
+    return /[zZ]$|[+-]\d{2}:?\d{2}$/.test(s) ? s : s.replace(' ', 'T') + 'Z'
+  }
+
   // Shared row -> pvObj mapper for BOTH the Tinybird and HogQL paths, so the
   // two paths cannot silently drift from each other's field handling.
   function toPvObj(row) {
     return {
-      timestamp: row.timestamp,
+      timestamp: toUtcSafeTs(row.timestamp),
       utm_source: row.utm_source || null,
       utm_medium: row.utm_medium || null,
       utm_campaign: row.utm_campaign || null,
