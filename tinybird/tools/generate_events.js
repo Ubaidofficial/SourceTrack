@@ -73,6 +73,10 @@ const SEED = String(args.seed ?? 'sourcetrack')
 // across run-days. Override with --end YYYY-MM-DD.
 const END = String(args.end ?? '2026-06-30')
 const OUT = String(args.out ?? 'tinybird/fixtures/events_sample.ndjson')
+// --site-id <uuid>: when set, EVERY event uses this single real site_id (one tenant's
+// worth of data), overriding the synthetic site-NN naming. Unset (default) keeps the
+// existing --sites N multi-site synthetic behavior unchanged.
+const SITE_ID_OVERRIDE = args['site-id'] ? String(args['site-id']) : null
 
 const rng = mulberry32(hashSeed(SEED))
 const endMs = Date.parse(END + 'T23:59:59.000Z')
@@ -236,7 +240,7 @@ let dups = 0
 
 for (let v = 0; v < VISITORS; v++) {
   const sIdx = randInt(0, SITES - 1)
-  const site_id = siteId(sIdx)
+  const site_id = SITE_ID_OVERRIDE ?? siteId(sIdx)
   const site_host = `${site_id}.example.com`
   const visitorId = uuid4()
   const startMs = endMs - Math.floor(rng() * rangeMs)
@@ -318,7 +322,7 @@ for (let v = 0; v < VISITORS; v++) {
 stream.end(() => {
   process.stderr.write(
     `[generate_events] wrote ${total} events -> ${OUT}\n` +
-    `  seed=${SEED} visitors=${VISITORS} sites=${SITES} days=${DAYS} end=${END} conversion-rate=${CONV_RATE}\n` +
+    `  seed=${SEED} visitors=${VISITORS} sites=${SITE_ID_OVERRIDE ? `1 (--site-id ${SITE_ID_OVERRIDE})` : SITES} days=${DAYS} end=${END} conversion-rate=${CONV_RATE}\n` +
     `  conversions=${conversions} refunds=${refunds} duplicates=${dups}\n`
   )
 })
