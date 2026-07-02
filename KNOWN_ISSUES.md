@@ -125,6 +125,15 @@ Within `getFlexibleReport`, queries for the metrics `revenue`, `conversions`, an
 To avoid untested blast-radius risks, the calculations inside `getMultiTouchAttributionLive`, `getSessionReport`, and `getAiPlatformAttributionLive` have been reverted to query using UTC. Consequently, users selecting linear/u_shaped/time_decay or viewing sessions will still see timezone discrepancies (e.g. conversions showing on different days compared to the dashboard).
 - **Follow-up Task**: `Task-0: Lock timezone ground truth for linear/u-shaped/time-decay and session calculations, then roll out timezone-aware query bounds (getDateFilterExpr) with targeted integration tests.`
 
+### 13. Money-rail finding: runBackfill carrier-exclusion gap (STATUS: traced, unconfirmed, fix NOT authorized)
+
+- **Finding**: the on-demand runBackfill path (`--backfill-site=`) query (`nightly-attribution.js:~287`) omits `properties.provider` and `properties.stripe_event_type`, so `isSubscriptionCheckoutCarrier` returns false there; it also lacks the `isCarrier` skip that `processSite` has (~:432). A subscription-checkout carrier processed via backfill therefore leaks an `attributed_conversions` count-inflation row that the `3b6c92d` double-count fix removed on the automatic path.
+- **subscription_revenue is protected**: `CHECK` constraint `event_type IN ('subscription','renewal','trial_start','trial_converted','churn')` (migration `20260629130000_create_subscription_revenue.sql:~50`) excludes `'purchase'` → carrier insert cleanly rejected, no corruption, no partial write.
+- **Scope/severity**: BOUNDED and operator-gated. The automatic nightly path (`processSite`) is CORRECT — it selects both fields (~:375-376). NOT a Phase 10 blocker on current understanding.
+- **Confidence caveat**: this trace is single-source (CC) and REVERSED DIRECTION ONCE this session before landing here. It has NOT been independently confirmed. Before any fix, get one independent confirmation (second-party trace or founder read of the `processSite` vs `runBackfill` dispatch + the two `SELECT` queries + the `CHECK`-constraint DDL).
+- **Suggested fix** (NOT authorized — money-rail, human-gated per SCOPE §0/§7): add `properties.provider` + `properties.stripe_event_type` to the `runBackfill` query and mirror the `processSite` `isCarrier` skip before the `attributed_conversions` upsert.
+- Line numbers marked `~` are CC's citations, not independently verified.
+
 
 ## Recently fixed
 
