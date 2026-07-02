@@ -158,9 +158,18 @@ function groupByVisitor(pvRows) {
 export async function diffTouchpointSets({ siteId, dateFrom, dateTo, attributionWindow = null, conversionsReadToken, pageviewsReadToken }) {
   const { from: fromDate, to: toDate } = serializeHogQLDateRange(dateFrom, dateTo)
   const { windowDays, lookbackStr } = resolveLookback(attributionWindow, fromDate)
-  const fromIso = fromDate.match(/'([^']+)'/)[1]
-  const toIso = toDate.match(/'([^']+)'/)[1]
-  const lookbackIso = lookbackStr.match(/'([^']+)'/)[1]
+  // Tinybird's DateTime(...) params on both target pipes are backed by ClickHouse
+  // DateTime64(3, 'UTC'), which expects the native space-separated format
+  // 'YYYY-MM-DD HH:MM:SS.mmm' — NOT the ISO-8601-with-T/Z string that HogQL's
+  // toDateTime('...') wrapper carries (that form fails with TYPE_MISMATCH). Mirrors
+  // the proven fix in commit 7cd3140 (getAiPlatformAttributionLive → pageviews_by_visitors).
+  // Format-only: the underlying date VALUE is unchanged; only these Tinybird-bound
+  // strings are reformatted. The HogQL fetches below use the wrapped fromDate/toDate/
+  // lookbackStr directly and are untouched.
+  const toTinybirdDateTime = (isoWithTZ) => isoWithTZ.replace('T', ' ').replace(/Z$/, '')
+  const fromIso = toTinybirdDateTime(fromDate.match(/'([^']+)'/)[1])
+  const toIso = toTinybirdDateTime(toDate.match(/'([^']+)'/)[1])
+  const lookbackIso = toTinybirdDateTime(lookbackStr.match(/'([^']+)'/)[1])
 
   const [hogqlConversions, hogqlPageviews, tbConversions, tbPageviews] = await Promise.all([
     fetchHogqlConversions(siteId, fromDate, toDate),
