@@ -122,14 +122,42 @@ async function fetchTinybirdRows(pipeName, token, params) {
 }
 
 // Guardrail 1: compare at FULL DateTime64(3) ms precision — never truncate.
+// TZ-safety: HogQL rows carry an explicit 'Z' (parsed as UTC — correct, LEFT UNCHANGED).
+// Tinybird DateTime64 rows come back space-separated with NO zone marker
+// ('2026-06-28 01:29:28.976'); bare `new Date()` parses that as the RUNNER's LOCAL time
+// — a TZ-dependent error (e.g. −120min on a Europe/Madrid runner, which produced the
+// observed constant 7,200,339ms = 2h + 339ms offset). Normalize a ZONELESS string to UTC
+// (swap the space for 'T', append 'Z'). No-op for any string already carrying a zone
+// (Z or ±HH:MM) — so the HogQL parse is untouched. Chose this over a Date.UTC(...) manual
+// component split: it's a strict no-op for the correct HogQL format and robust to format
+// drift (any zone-carrying string passes through; a manual split would be brittle to the
+// 6-decimal micros / varying fractional digits the two stores use).
 function tsMs(ts) {
-  const ms = new Date(ts).getTime()
+  let s = ts
+  if (typeof s === 'string') {
+    s = s.trim()
+    const hasZone = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(s)
+    if (!hasZone) s = s.replace(' ', 'T') + 'Z'
+  }
+  const ms = new Date(s).getTime()
   if (Number.isNaN(ms)) throw new Error(`Unparseable timestamp in diff input: ${ts}`)
   return ms
 }
 
+// After the UTC-parse fix, the residual PostHog↔Tinybird gap is a constant ~339ms
+// (PostHog's ingestion-side timestamp adjustment — the carried "compare intervals, not
+// absolutes" rule). Exact-ms equality would still reject those, so conversion- and
+// touchpoint-matching use a ±TS_TOLERANCE_MS window. 500ms covers the observed 339ms with
+// margin and stays far below the minutes-apart spacing of distinct real touchpoints.
+const TS_TOLERANCE_MS = 500
+
 function diffTuple(pv) {
   return JSON.stringify([pv.distinct_id, tsMs(pv.timestamp), ...DIFF_FIELDS.map(f => pv[f] ?? null)])
+}
+
+// Touchpoint identity WITHOUT the timestamp (matched separately within TS_TOLERANCE_MS).
+function tpFieldsKey(pv) {
+  return JSON.stringify([pv.distinct_id, ...DIFF_FIELDS.map(f => pv[f] ?? null)])
 }
 
 function windowPageviewsForConversion(conversionTs, pageviewsByVisitor, distinctId, windowDays) {
@@ -197,11 +225,13 @@ export async function diffTouchpointSets({ siteId, dateFrom, dateTo, attribution
     const hogqlTouches = windowPageviewsForConversion(conv.timestamp, hogqlPvByVisitor, conv.distinct_id, windowDays)
     const tbTouches = windowPageviewsForConversion(conv.timestamp, tbPvByVisitor, conv.distinct_id, windowDays)
 
-    const hogqlSet = new Set(hogqlTouches.map(diffTuple))
-    const tbSet = new Set(tbTouches.map(diffTuple))
-
-    const hogqlOnly = [...hogqlSet].filter(t => !tbSet.has(t))
-    const tinybirdOnly = [...tbSet].filter(t => !hogqlSet.has(t))
+    // Tolerant touchpoint match: identical field-key AND timestamp within TS_TOLERANCE_MS
+    // (was exact-ms Set equality — which the constant ~339ms cross-store offset broke).
+    // Reported as diffTuple strings (timestamp included) for human diffability.
+    const touchMatches = (a, b) =>
+      tpFieldsKey(a) === tpFieldsKey(b) && Math.abs(tsMs(a.timestamp) - tsMs(b.timestamp)) <= TS_TOLERANCE_MS
+    const hogqlOnly = hogqlTouches.filter(h => !tbTouches.some(t => touchMatches(h, t))).map(diffTuple)
+    const tinybirdOnly = tbTouches.filter(t => !hogqlTouches.some(h => touchMatches(h, t))).map(diffTuple)
 
     if (hogqlOnly.length || tinybirdOnly.length) {
       mismatches.push({ distinct_id: conv.distinct_id, conversion_timestamp: conv.timestamp, hogqlOnly, tinybirdOnly })
@@ -210,10 +240,15 @@ export async function diffTouchpointSets({ siteId, dateFrom, dateTo, attribution
 
   // Also flag conversion-set mismatches (conversion present in one store, not the other) —
   // a touchpoint-set diff is meaningless for a conversion neither store agrees exists.
-  const tbConversionKeys = new Set(tbConversions.map(c => `${c.distinct_id}|${tsMs(c.timestamp)}`))
-  const hogqlConversionKeys = new Set(hogqlConversions.map(c => `${c.distinct_id}|${tsMs(c.timestamp)}`))
-  const conversionsHogqlOnly = hogqlConversions.filter(c => !tbConversionKeys.has(`${c.distinct_id}|${tsMs(c.timestamp)}`))
-  const conversionsTinybirdOnly = tbConversions.filter(c => !hogqlConversionKeys.has(`${c.distinct_id}|${tsMs(c.timestamp)}`))
+  // Match: same distinct_id AND timestamps within TS_TOLERANCE_MS (was exact-ms Set
+  // equality). Sets are fixture-scale, so O(n*m) is fine. Assumes a visitor's own
+  // conversions are >TS_TOLERANCE_MS apart (true for these fixtures) — otherwise two
+  // same-visitor near-simultaneous conversions could match ambiguously; flag if that
+  // ever appears in real data.
+  const conversionMatches = (a, b) =>
+    a.distinct_id === b.distinct_id && Math.abs(tsMs(a.timestamp) - tsMs(b.timestamp)) <= TS_TOLERANCE_MS
+  const conversionsHogqlOnly = hogqlConversions.filter(h => !tbConversions.some(t => conversionMatches(h, t)))
+  const conversionsTinybirdOnly = tbConversions.filter(t => !hogqlConversions.some(h => conversionMatches(h, t)))
 
   return {
     pass: mismatches.length === 0 && conversionsHogqlOnly.length === 0 && conversionsTinybirdOnly.length === 0,
