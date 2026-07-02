@@ -29,11 +29,17 @@ const HOST = process.env.TINYBIRD_HOST
 const TOKEN = process.env.TINYBIRD_READ_TOKEN
 const SITE_A = process.env.SITE_A || 'de200000-babe-41d4-a716-446655441111' // real seed tenant
 const SITE_B = process.env.SITE_B || 'de400000-babe-41d4-a716-446655441111' // real seed tenant
-// Pipe/param contract (verified against the .pipe files at authoring; re-confirm if pipes change):
-//   dashboard_recent_activity_events(site_id) -> rows incl. distinct_id  (visitor harvest)
-//   journey(site_id, visitor_id)              -> that visitor's events   (probe)
-const HARVEST_PIPE = 'dashboard_recent_activity_events'
-const PROBE_PIPE = 'journey'
+// Pipe/param contract (verified against the .pipe files; re-confirm if pipes change):
+//   events_latest(site_id) -> recent events incl. distinct_id (visitor harvest)
+//   journey(site_id, visitor_id) -> that visitor's events      (probe; no time window)
+// HARVEST PIPE CHOICE: use events_latest, NOT dashboard_recent_activity_events. The latter
+// has a hard `timestamp >= now() - INTERVAL 30 MINUTE` predicate (dashboard_recent_activity_events.pipe:51),
+// so it harvests 0 rows for any tenant whose data is older than 30 min (e.g. the gating
+// site's June-dated fixtures) — a false harvest failure. events_latest has NO mandatory time
+// window (only optional {% if defined %} date filters; events_latest.pipe:107-123), so it
+// returns a visitor regardless of data age. Overridable via HARVEST_PIPE / PROBE_PIPE env.
+const HARVEST_PIPE = process.env.HARVEST_PIPE || 'events_latest'
+const PROBE_PIPE = process.env.PROBE_PIPE || 'journey'
 
 if (!HOST || !TOKEN) {
   console.error('MISSING TINYBIRD_HOST / TINYBIRD_READ_TOKEN — cannot run. FOUNDER-MUST-RUN (see header).')
