@@ -155,7 +155,7 @@ function groupByVisitor(pvRows) {
  * Tinybird pipe pair. Returns { pass, totalConversions, mismatches }.
  * mismatches[i] = { distinct_id, conversion_timestamp, hogqlOnly: [...], tinybirdOnly: [...] }
  */
-export async function diffTouchpointSets({ siteId, dateFrom, dateTo, attributionWindow = null, conversionsReadToken, pageviewsReadToken }) {
+export async function diffTouchpointSets({ siteId, dateFrom, dateTo, attributionWindow = null, conversionsReadToken, pageviewsReadToken, fixturePrefix = null }) {
   const { from: fromDate, to: toDate } = serializeHogQLDateRange(dateFrom, dateTo)
   const { windowDays, lookbackStr } = resolveLookback(attributionWindow, fromDate)
   // Tinybird's DateTime(...) params on both target pipes are backed by ClickHouse
@@ -171,12 +171,23 @@ export async function diffTouchpointSets({ siteId, dateFrom, dateTo, attribution
   const toIso = toTinybirdDateTime(toDate.match(/'([^']+)'/)[1])
   const lookbackIso = toTinybirdDateTime(lookbackStr.match(/'([^']+)'/)[1])
 
-  const [hogqlConversions, hogqlPageviews, tbConversions, tbPageviews] = await Promise.all([
+  let [hogqlConversions, hogqlPageviews, tbConversions, tbPageviews] = await Promise.all([
     fetchHogqlConversions(siteId, fromDate, toDate),
     fetchHogqlPageviews(siteId, lookbackStr, toDate),
     fetchTinybirdRows('conversions_by_site', conversionsReadToken, { site_id: siteId, date_from: fromIso, date_to: toIso }),
     fetchTinybirdRows('pageviews_windowed_by_site', pageviewsReadToken, { site_id: siteId, lookback_from: lookbackIso, date_to: toIso })
   ])
+
+  // Optional fixture isolation (default OFF — stays general-purpose): restrict BOTH
+  // conversion legs to a distinct_id prefix (e.g. 'cc-4a-') so the diff runs only over
+  // the intended fixtures, not every site conversion. The conversions_by_site pipe has
+  // no distinct_id param, so this is a client-side post-fetch filter on both legs (the
+  // touchpoint loop below runs only over hogqlConversions, and windowPageviewsForConversion
+  // pulls only each conversion-visitor's pageviews, so filtering conversions is sufficient).
+  if (fixturePrefix) {
+    hogqlConversions = hogqlConversions.filter(c => typeof c.distinct_id === 'string' && c.distinct_id.startsWith(fixturePrefix))
+    tbConversions = tbConversions.filter(c => typeof c.distinct_id === 'string' && c.distinct_id.startsWith(fixturePrefix))
+  }
 
   const hogqlPvByVisitor = groupByVisitor(hogqlPageviews)
   const tbPvByVisitor = groupByVisitor(tbPageviews)

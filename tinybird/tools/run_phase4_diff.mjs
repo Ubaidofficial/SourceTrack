@@ -73,13 +73,19 @@ const SITE_ID   = 'de200000-babe-41d4-a716-446655441111' // gating site (holds c
 const DATE_FROM = '2026-06-26'
 const DATE_TO   = '2026-06-30'
 
+// Fixture isolation: default 'cc-4a-' so the diff runs ONLY the 3 Pattern-B fixtures,
+// not the ~17 non-cc-4a in-window conversions (cc-4c/cc-4d + seed) that polluted the
+// unfiltered run. Set FIXTURE_PREFIX='' to run the full general version (all conversions).
+const FIXTURE_PREFIX = (process.env.FIXTURE_PREFIX ?? 'cc-4a-') || null
+
 const result = await diffTouchpointSets({
   siteId: SITE_ID,
   dateFrom: DATE_FROM,
   dateTo: DATE_TO,
   attributionWindow: null, // -> 30d lookback (matches Phase 4a)
   conversionsReadToken: process.env.PHASE4_CONVERSIONS_READ_TOKEN,
-  pageviewsReadToken: process.env.PHASE4_PAGEVIEWS_READ_TOKEN
+  pageviewsReadToken: process.env.PHASE4_PAGEVIEWS_READ_TOKEN,
+  fixturePrefix: FIXTURE_PREFIX
 })
 
 const convHogqlOnly = result.conversionsHogqlOnly?.length ?? 0
@@ -87,7 +93,7 @@ const convTbOnly    = result.conversionsTinybirdOnly?.length ?? 0
 const tpMismatches  = result.mismatches?.length ?? 0
 
 console.log('─'.repeat(64))
-console.log(`[phase4-diff] window=[${DATE_FROM} .. ${DATE_TO}]  site=${SITE_ID}`)
+console.log(`[phase4-diff] window=[${DATE_FROM} .. ${DATE_TO}]  site=${SITE_ID}  fixturePrefix=${FIXTURE_PREFIX ?? '(none — all conversions)'}`)
 console.log(`[phase4-diff] totalConversions=${result.totalConversions}  windowDays=${result.windowDays}`)
 console.log(`[phase4-diff] conversionsHogqlOnly=${convHogqlOnly}  conversionsTinybirdOnly=${convTbOnly}  touchpointMismatches=${tpMismatches}`)
 console.log('─'.repeat(64))
