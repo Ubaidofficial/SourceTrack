@@ -41,7 +41,14 @@ export function initTinybirdDualWrite ({ fetch } = {}) {
   }
 
   try {
-    const transport = createTinybirdTransport({ host, token, datasource, fetch })
+    // §11 Layer A: surface quarantined rows inside 2xx responses (previously
+    // 100% silent). SAMPLED warn, count only — never the row bodies (PII).
+    const logQuarantine = createSampledLogger()
+    const onResult = (body) => {
+      const q = Number(body && body.quarantined_rows) || 0
+      if (q > 0) logQuarantine(`[tinybird] Events API quarantined ${q} row(s) in an accepted batch (successful_rows=${Number(body.successful_rows) || 0}) — check events_quarantine; a quarantined $conversion is silent revenue loss`)
+    }
+    const transport = createTinybirdTransport({ host, token, datasource, fetch, onResult })
     // Observability: a failing POST (deliver throws after retries) was previously
     // 100% silent — no onError was wired, so "zero POST attempts" was invisible.
     // Wire a SAMPLED, never-throwing onError that logs ONLY err.message + batch

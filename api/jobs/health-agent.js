@@ -2,6 +2,7 @@ import 'dotenv/config'
 import WebSocket from 'ws'
 import OpenAI from 'openai'
 import { getSupabase } from '../lib/supabase.js'
+import { fetchQuarantineSummary, classifyQuarantine } from '../lib/quarantine-alarm.js'
 
 const deepseek = new OpenAI({ baseURL: 'https://api.deepseek.com', apiKey: process.env.DEEPSEEK_API_KEY })
 const SLACK = process.env.SLACK_WEBHOOK_URL
@@ -9,7 +10,11 @@ const API_URL = process.env.API_URL || 'http://localhost:3000'
 
 // Checks that failing immediately classify the whole system as critical.
 // Everything else is warning-level.
-const CRITICAL_CHECKS = new Set(['supabase', 'posthog'])
+// tinybird_quarantine only THROWS for quarantined $conversion rows (silent
+// revenue loss, SCOPE_v3 §11) — connectivity problems and non-conversion
+// quarantine rows come back as warnings, so its presence here makes exactly
+// the conversion case critical.
+const CRITICAL_CHECKS = new Set(['supabase', 'posthog', 'tinybird_quarantine'])
 
 // check() wraps an async fn.
 // Return { _status: 'warning', ...rest } from fn to report a warning without throwing.
@@ -136,7 +141,33 @@ async function collectSnapshot() {
       return { all_present: true }
     }),
 
-    // 10. Health agent process memory — NOT the API server.
+    // 10. Tinybird conversion-quarantine alarm (SCOPE_v3 §11, Layer B).
+    // Reads events_quarantine via the SQL API with the workspace READ token
+    // (verified sufficient — no admin scope). Severity mapping:
+    //   quarantined $conversion  -> throw -> CRITICAL (name is in CRITICAL_CHECKS)
+    //   other quarantined rows   -> warning
+    //   Tinybird unreachable     -> warning (an outage is not a quarantined conversion)
+    //   env not configured       -> ok+skipped (expected on prod pre-cutover — no noise)
+    check('tinybird_quarantine', async () => {
+      const host = process.env.TINYBIRD_HOST
+      const token = process.env.TINYBIRD_READ_TOKEN
+      if (!host || !token) {
+        return { skipped: 'no TINYBIRD_HOST/TINYBIRD_READ_TOKEN — quarantine monitoring off (expected pre-cutover)' }
+      }
+      const lookbackHours = Number(process.env.QUARANTINE_LOOKBACK_HOURS) || 2
+      let rows
+      try {
+        rows = await fetchQuarantineSummary({ host, token, lookbackHours })
+      } catch (e) {
+        return { _status: 'warning', warning: `quarantine check unreachable: ${e.message}` }
+      }
+      const verdict = classifyQuarantine(rows)
+      if (verdict.level === 'critical') throw new Error(verdict.summary)
+      if (verdict.level === 'warn') return { _status: 'warning', warning: verdict.summary, quarantined_rows: verdict.totalRows, lookback_hours: lookbackHours }
+      return { quarantined_rows: 0, lookback_hours: lookbackHours }
+    }),
+
+    // 11. Health agent process memory — NOT the API server.
     // Measures this script's own Node.js process. Values will always be low (~20-60MB).
     // Flag only extreme values that suggest a runaway script.
     check('agent_memory', async () => {
