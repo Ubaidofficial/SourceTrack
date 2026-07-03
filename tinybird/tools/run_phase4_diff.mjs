@@ -57,7 +57,7 @@ if (process.env.POSTHOG_PROJECT_ID !== '469905') {
 // touch that client. Set a placeholder only if the founder hasn't set a real one.
 // Must precede the import → use dynamic import() (static imports are hoisted).
 if (!process.env.POSTHOG_API_KEY) {
-  process.env.POSTHOG_API_KEY = 'unused-by-diff-capture-client'
+  process.env.POSTHOG_API_KEY = 'mock-unused-by-diff-capture-client'
 }
 const { diffTouchpointSets } = await import('./phase4_touchpoint_diff.js')
 
