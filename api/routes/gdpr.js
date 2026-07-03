@@ -14,8 +14,50 @@ import { Router } from 'express'
 import { getSupabase } from '../lib/supabase.js'
 import { getStructuralLimits } from '../lib/plan-features.js'
 import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
+import { eraseSubjectFromTinybird } from '../../tinybird/adapter/erase.js'
 
 export const gdprRouter = Router()
+
+// Run the Tinybird erasure leg for one subject and durably record it in
+// erasure_log. NEVER throws — mirrors the PostHog leg's best-effort posture for
+// the HTTP response, but (unlike PostHog) persists the outcome so a failed or
+// skipped delete is retryable/provable, not silent. Default is dry-run; the
+// caller passes confirm=true (from an explicit request flag) to actually delete.
+async function eraseFromTinybirdAndAudit(supabase, { siteId, subjectId, confirm }) {
+  let result
+  try {
+    result = await eraseSubjectFromTinybird({
+      host: process.env.TINYBIRD_HOST,
+      adminToken: process.env.TINYBIRD_ADMIN_TOKEN,
+      readToken: process.env.TINYBIRD_READ_TOKEN,
+      siteId,
+      subjectId,
+      confirm: confirm === true
+    })
+  } catch (err) {
+    // eraseSubjectFromTinybird is designed never to throw; this is a backstop.
+    result = { status: 'failed', subjectId, siteId, datasources: [], perDatasource: [], reason: err.message }
+  }
+
+  const rowCounts = {}
+  for (const d of result.perDatasource || []) rowCounts[d.datasource] = d.matched
+  try {
+    await supabase.from('erasure_log').insert({
+      subject_id: subjectId,
+      site_id: siteId,
+      datasources: result.datasources || [],
+      executed_at: result.status === 'executed' ? new Date().toISOString() : null,
+      status: result.status,
+      row_counts: rowCounts,
+      detail: { reason: result.reason || null, perDatasource: result.perDatasource || [] }
+    })
+  } catch (logErr) {
+    // If the audit table isn't applied yet (migration pending), don't fail the
+    // erasure response — but make the gap loud.
+    console.error('[GDPR] erasure_log write failed (migration applied?):', logErr.message)
+  }
+  return result
+}
 
 // Helper: resolve site record for calling user (membership-aware)
 async function getSiteForUser(supabase, userId, siteKey) {
@@ -125,9 +167,18 @@ gdprRouter.delete('/visitor', async (req, res) => {
     // 2. Delete from PostHog (best-effort, don't fail the response)
     await deletePostHogPerson(anonymous_id, site.posthog_site_id)
 
+    // 3. Delete from Tinybird (events + events_by_visitor), audited to
+    // erasure_log. Destructive → dry-run unless the caller explicitly confirms.
+    const tinybird = await eraseFromTinybirdAndAudit(supabase, {
+      siteId: site.id,
+      subjectId: anonymous_id,
+      confirm: req.body.confirm_tinybird_erase === true
+    })
+
     return res.json({
       success: true,
-      message: `Visitor data for anonymous_id "${anonymous_id}" has been erased.`
+      message: `Visitor data for anonymous_id "${anonymous_id}" has been erased.`,
+      tinybird_erasure: { status: tinybird.status, datasources: tinybird.perDatasource }
     })
   } catch (err) {
     console.error('[GDPR] visitor delete error:', err)
