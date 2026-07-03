@@ -33,7 +33,32 @@ test('policy: empty quarantine -> ok', () => {
   assert.equal(classifyQuarantine(null).level, 'ok')
 })
 
+test('policy: an OLD $conversion row still -> CRITICAL (classification never looks at age)', () => {
+  // Documents the contract that classifyQuarantine ignores last_seen. NOTE:
+  // this alone would NOT have caught the original bug — the gap was in the SQL
+  // (it windowed the $conversion tier so old conversions never reached this
+  // function). The buildQuarantineSql test below is the actual regression guard.
+  const v = classifyQuarantine([{ event_type: '$conversion', n: 1, last_seen: '2020-01-01 00:00:00' }])
+  assert.equal(v.level, 'critical')
+  assert.equal(v.conversionRows, 1)
+})
+
 // ── SQL construction ─────────────────────────────────────────────────────────
+
+test('buildQuarantineSql: $conversion tier is UNBOUNDED; only the non-conversion tier is windowed', () => {
+  const sql = buildQuarantineSql(2)
+  // Two tiers via UNION ALL, each grouping by event_type.
+  assert.match(sql, /UNION ALL/)
+  // The $conversion tier must NOT carry an insertion_date filter (unbounded) —
+  // this is the regression: a quarantined conversion must alarm until drained,
+  // regardless of age.
+  const convTier = sql.slice(sql.indexOf("event_type = '$conversion'"), sql.indexOf('UNION ALL'))
+  assert.ok(!/insertion_date/.test(convTier), `$conversion tier must have no insertion_date filter, got: ${convTier}`)
+  // The non-conversion tier keeps the window.
+  const otherTier = sql.slice(sql.indexOf('UNION ALL'))
+  assert.match(otherTier, /event_type != '\$conversion'/)
+  assert.match(otherTier, /insertion_date > now\(\) - INTERVAL 2 HOUR/)
+})
 
 test('buildQuarantineSql: numeric lookback only; garbage falls back to default', () => {
   assert.match(buildQuarantineSql(6), /INTERVAL 6 HOUR/)

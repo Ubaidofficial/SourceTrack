@@ -12,11 +12,16 @@
 // api/jobs/health-agent.js as the 'tinybird_quarantine' check.
 //
 // No durable last_check: health-agent has no persistence layer and adding one
-// is DDL (founder-gated, §8). Instead a LOOKBACK WINDOW (env
-// QUARANTINE_LOOKBACK_HOURS, default 2 — the agent runs hourly per the
-// runbook, so 2h covers a missed run). Consequence, intentional: rows keep
-// alerting on every run inside the window — for conversion loss that is the
-// desired behavior (alarm until someone drains/handles the quarantine).
+// is DDL (founder-gated, §8). Two-tier query instead:
+//   - $conversion tier is UNBOUNDED (no insertion_date filter) — a quarantined
+//     conversion is silent revenue loss, so it must keep firing CRITICAL on
+//     every run until events_quarantine is DRAINED of conversions, no matter
+//     how old the row is. (An earlier version windowed this tier too, so a
+//     quarantined conversion aged out of the alarm after ~2h — the exact
+//     failure mode this alarm exists to prevent.)
+//   - non-conversion tier keeps a LOOKBACK WINDOW (env QUARANTINE_LOOKBACK_HOURS,
+//     default 2 — the agent runs hourly per the runbook, so 2h covers a missed
+//     run) so benign rows (e.g. the existing $pageview probe) don't WARN forever.
 
 const DEFAULT_TIMEOUT_MS = 15_000
 
@@ -24,8 +29,15 @@ export function buildQuarantineSql (lookbackHours) {
   const hours = Number.isFinite(Number(lookbackHours)) && Number(lookbackHours) > 0
     ? Math.floor(Number(lookbackHours))
     : 2
-  // Numeric interpolation only (validated above) — no string interpolation.
-  return `SELECT event_type, count() AS n, max(insertion_date) AS last_seen FROM events_quarantine WHERE insertion_date > now() - INTERVAL ${hours} HOUR GROUP BY event_type ORDER BY n DESC FORMAT JSON`
+  // The ONLY interpolation is `hours` (validated numeric above); '$conversion'
+  // is a hardcoded literal, not input. UNION wrapped in a subquery so the outer
+  // ORDER BY binds to the whole union (ClickHouse binds a bare trailing ORDER BY
+  // to the last SELECT only). $conversion tier: no time filter (unbounded).
+  return `SELECT * FROM (` +
+    `SELECT event_type, count() AS n, max(insertion_date) AS last_seen FROM events_quarantine WHERE event_type = '$conversion' GROUP BY event_type` +
+    ` UNION ALL ` +
+    `SELECT event_type, count() AS n, max(insertion_date) AS last_seen FROM events_quarantine WHERE event_type != '$conversion' AND insertion_date > now() - INTERVAL ${hours} HOUR GROUP BY event_type` +
+    `) ORDER BY n DESC FORMAT JSON`
 }
 
 // Query the Tinybird SQL API for recent quarantine rows grouped by event_type.
