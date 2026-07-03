@@ -54,7 +54,13 @@ export function parseRetryAfterMs (headers, now = Date.now()) {
 // TinybirdTransportError on non-2xx (retryable for 429/5xx, permanent for other 4xx)
 // and on network/timeout (retryable). host/token/datasource are REQUIRED args injected
 // from env. fetch + timeoutMs injectable so tests use a mock (no real network).
-export function createTinybirdTransport ({ host, token, datasource, fetch: fetchImpl, timeoutMs = 10000 } = {}) {
+// opts.onResult (optional): called with the PARSED 2xx response body
+// ({ successful_rows, quarantined_rows } per the Events API) — response
+// OBSERVATION only, never alters what is sent, never throws into the write
+// path (parse + callback are fully guarded). Added for the §11 quarantine
+// alarm's Layer A: pre-hook, a quarantined row inside a 2xx response was
+// 100% silent at write time.
+export function createTinybirdTransport ({ host, token, datasource, fetch: fetchImpl, timeoutMs = 10000, onResult } = {}) {
   if (!host || !token || !datasource) {
     throw new TypeError('createTinybirdTransport: host, token, datasource are required (inject from env)')
   }
@@ -83,7 +89,12 @@ export function createTinybirdTransport ({ host, token, datasource, fetch: fetch
       if (timer) clearTimeout(timer)
     }
 
-    if (res.status >= 200 && res.status < 300) return
+    if (res.status >= 200 && res.status < 300) {
+      if (typeof onResult === 'function' && typeof res.json === 'function') {
+        try { onResult(await res.json()) } catch (_) { /* observation only — never throws into the write path */ }
+      }
+      return
+    }
     const retryable = res.status === 429 || (res.status >= 500 && res.status < 600)
     const retryAfterMs = res.status === 429 ? parseRetryAfterMs(res.headers) : undefined
     throw new TinybirdTransportError(`Tinybird Events API responded ${res.status}`, { status: res.status, retryable, retryAfterMs })
