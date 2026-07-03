@@ -284,7 +284,7 @@ async function runBackfill() {
   }
 
   const conversionsQuery = `
-    SELECT uuid, distinct_id, timestamp, properties.conversion_type, properties.conversion_value, properties.external_event_id, properties.webhook_customer_id, properties.stripe_subscription_id, properties.stripe_invoice_id, properties.currency, properties.provider_event_id, properties.occurred_at
+    SELECT uuid, distinct_id, timestamp, properties.conversion_type, properties.conversion_value, properties.external_event_id, properties.webhook_customer_id, properties.stripe_subscription_id, properties.stripe_invoice_id, properties.currency, properties.provider_event_id, properties.occurred_at, properties.stripe_event_type, properties.provider
     FROM events
     WHERE event = '$conversion'
       AND properties.site_id = '${esc(site.id)}'
@@ -303,15 +303,20 @@ async function runBackfill() {
       conversion_type: row[3], conversion_value: row[4], external_event_id: row[5] || null,
       webhook_customer_id: row[6] || null, stripe_subscription_id: row[7] || null,
       stripe_invoice_id: row[8] || null, currency: row[9] || null,
-      provider_event_id: row[10] || null, occurred_at: row[11] || null
+      provider_event_id: row[10] || null, occurred_at: row[11] || null,
+      stripe_event_type: row[12] || null, provider: row[13] || null
     }
     if (!conversion.uuid || !conversion.distinct_id || !conversion.timestamp) {
       logWarn(`Skipping invalid conversion ${conversion.uuid}`)
       continue
     }
     const record = await processConversion(site, conversion)
-    records.push(record)
-    journey[classifyJourney(record, conversion.timestamp, attrWindowDays)]++
+    if (isSubscriptionCheckoutCarrier(conversion)) {
+      log(`Skipping backfill record for subscription-checkout $0 carrier ${conversion.uuid}`)
+    } else {
+      records.push(record)
+      journey[classifyJourney(record, conversion.timestamp, attrWindowDays)]++
+    }
   }
 
   // Real upsert adapter — honors BOTH unique indexes:
