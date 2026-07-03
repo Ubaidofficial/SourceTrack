@@ -1,0 +1,35 @@
+{
+  "_meta": {
+    "note": "Expected comparator outcomes for the committed cc-4a/cc-4c/cc-4d snapshots. Derived from the fixture designs (PHASE4_4A_FIXTURE_PLAN.md, PHASE4_4C_PLAN.md §3-5, PHASE4_4D_PLAN.md §4) and confirmed against the live stores 2026-07-03. The replay verifier (tinybird/qa/phase4_replay_verify.mjs) fails if the comparators produce anything else."
+  },
+  "pattern_b": {
+    "models_covered": ["time_decay", "linear", "u_shaped", "w_shaped"],
+    "totalConversions": 3,
+    "conversionsHogqlOnly": 0,
+    "conversionsTinybirdOnly": 0,
+    "touchpointMismatches": 0
+  },
+  "last_touch": {
+    "totalConversions": 3,
+    "picks": {
+      "cc-4c-visitorX": { "utm_source": "newsletter", "utm_medium": "email", "utm_campaign": null, "ai_source": null },
+      "cc-4c-visitorY": { "utm_source": "facebook", "utm_medium": "paid_social", "utm_campaign": null, "ai_source": "ChatGPT" },
+      "cc-4c-visitorZ": { "utm_source": "google", "utm_medium": "cpc", "utm_campaign": null, "ai_source": null }
+    },
+    "non_tie_mismatches": 0,
+    "tie_rows": ["cc-4c-visitorZ"],
+    "note_y": "visitorY is the load-bearing per-field null-skip case: source/medium credited from touch1, ai_source from touch3 — DIFFERENT touchpoints, matching HogQL's per-column argMax semantics. visitorZ is the exact-timestamp tie: both stores agreed (google/cpc) at capture; a future disagreement is reported as documented ambiguity, not parity failure (4C §5)."
+  },
+  "ai_platforms": {
+    "totalConversions": 4,
+    "credits": {
+      "cc-4d-visitorP": "ChatGPT",
+      "cc-4d-visitorQ": "Perplexity",
+      "cc-4d-visitorR": "Perplexity",
+      "cc-4d-visitorS": null
+    },
+    "creditMismatches": 0,
+    "rowSetMismatches": 0,
+    "note": "P pins AI-not-last-touch (backward scan past google/cpc). R pins most-recent-AI-wins (Perplexity, not ChatGPT) past a trailing direct touch. S is the negative case — must be PRESENT with null credit on both legs."
+  }
+}

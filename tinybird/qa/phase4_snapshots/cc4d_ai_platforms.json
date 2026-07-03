@@ -1,0 +1,50 @@
+{
+  "_meta": {
+    "captured": "2026-07-03",
+    "site_id": "de200000-babe-41d4-a716-446655441111",
+    "window": { "date_from": "2026-06-26", "date_to_exclusive": "2026-07-01", "lookback_from": "2026-05-27 00:00:00", "windowDays": 30 },
+    "sources": {
+      "posthog": "469905, the live getAiPlatformAttributionLive convSql + IN-list pvSql shapes, restricted to cc-4d visitors",
+      "tinybird": "deployed conversions_by_site + pageviews_by_visitors pipes. ARRAY WIRE FORMAT: visitor_ids MUST be sent as ONE comma-separated param value — repeated same-name keys silently return only the FIRST visitor (verified empirically 2026-07-03 against the deployed pipe; see fetchTinybirdRows in tools/phase4_touchpoint_diff.js)"
+    },
+    "note": "Both legs feed the SAME exported selectAiTouchForConversion (attribution-engine.js:312). Fields omitted from a pageview object are null. visitorS is the negative case: no AI signal anywhere; expected credit is null in BOTH stores, and its conversion MUST still be present on both legs (a dropped conversion must fail, not false-green)."
+  },
+  "posthog": {
+    "conversions": [
+      { "uuid": "019f1a75-c08b-71ed-a05c-81a6475059fd", "distinct_id": "cc-4d-visitorP", "timestamp": "2026-06-27T21:55:51.182000Z" },
+      { "uuid": "019f1a75-c587-7ef5-9a84-4999426e3154", "distinct_id": "cc-4d-visitorQ", "timestamp": "2026-06-27T21:55:51.182000Z" },
+      { "uuid": "019f1a75-cbfd-7aa5-a401-161b343737a1", "distinct_id": "cc-4d-visitorR", "timestamp": "2026-06-27T22:00:51.182000Z" },
+      { "uuid": "019f1a75-d0e6-7ff4-ad3a-70876824d116", "distinct_id": "cc-4d-visitorS", "timestamp": "2026-06-27T21:55:51.182000Z" }
+    ],
+    "pageviews": [
+      { "distinct_id": "cc-4d-visitorP", "timestamp": "2026-06-27T21:35:51.182000Z", "referrer": "https://chatgpt.com/", "ai_source": "ChatGPT", "page_url": "https://cc-phase2c-verify.invalid/4d-fixture/p/touch1" },
+      { "distinct_id": "cc-4d-visitorP", "timestamp": "2026-06-27T21:45:51.182000Z", "utm_source": "google", "utm_medium": "cpc", "page_url": "https://cc-phase2c-verify.invalid/4d-fixture/p/touch2" },
+      { "distinct_id": "cc-4d-visitorQ", "timestamp": "2026-06-27T21:35:51.182000Z", "utm_source": "facebook", "utm_medium": "paid_social", "page_url": "https://cc-phase2c-verify.invalid/4d-fixture/q/touch1" },
+      { "distinct_id": "cc-4d-visitorQ", "timestamp": "2026-06-27T21:45:51.182000Z", "referrer": "https://www.perplexity.ai/", "ai_source": "Perplexity", "page_url": "https://cc-phase2c-verify.invalid/4d-fixture/q/touch2" },
+      { "distinct_id": "cc-4d-visitorR", "timestamp": "2026-06-27T21:35:51.182000Z", "referrer": "https://chatgpt.com/", "ai_source": "ChatGPT", "page_url": "https://cc-phase2c-verify.invalid/4d-fixture/r/touch1" },
+      { "distinct_id": "cc-4d-visitorR", "timestamp": "2026-06-27T21:45:51.182000Z", "referrer": "https://www.perplexity.ai/", "ai_source": "Perplexity", "page_url": "https://cc-phase2c-verify.invalid/4d-fixture/r/touch2" },
+      { "distinct_id": "cc-4d-visitorR", "timestamp": "2026-06-27T21:50:51.182000Z", "page_url": "https://cc-phase2c-verify.invalid/4d-fixture/r/touch3" },
+      { "distinct_id": "cc-4d-visitorS", "timestamp": "2026-06-27T21:35:51.182000Z", "utm_source": "google", "utm_medium": "cpc", "page_url": "https://cc-phase2c-verify.invalid/4d-fixture/s/touch1" },
+      { "distinct_id": "cc-4d-visitorS", "timestamp": "2026-06-27T21:45:51.182000Z", "page_url": "https://cc-phase2c-verify.invalid/4d-fixture/s/touch2" }
+    ]
+  },
+  "tinybird": {
+    "conversions": [
+      { "event_id": "de200000-babe-41d4-a716-446655441111:cc-4d-p-order-1:purchase", "distinct_id": "cc-4d-visitorP", "timestamp": "2026-06-27 21:55:50.852" },
+      { "event_id": "de200000-babe-41d4-a716-446655441111:cc-4d-q-order-1:purchase", "distinct_id": "cc-4d-visitorQ", "timestamp": "2026-06-27 21:55:50.852" },
+      { "event_id": "de200000-babe-41d4-a716-446655441111:cc-4d-r-order-1:purchase", "distinct_id": "cc-4d-visitorR", "timestamp": "2026-06-27 22:00:50.852" },
+      { "event_id": "de200000-babe-41d4-a716-446655441111:cc-4d-s-order-1:purchase", "distinct_id": "cc-4d-visitorS", "timestamp": "2026-06-27 21:55:50.852" }
+    ],
+    "pageviews": [
+      { "distinct_id": "cc-4d-visitorP", "timestamp": "2026-06-27 21:35:50.852", "referrer": "https://chatgpt.com/", "ai_source": "ChatGPT", "page_url": "https://cc-phase2c-verify.invalid/4d-fixture/p/touch1" },
+      { "distinct_id": "cc-4d-visitorP", "timestamp": "2026-06-27 21:45:50.852", "utm_source": "google", "utm_medium": "cpc", "page_url": "https://cc-phase2c-verify.invalid/4d-fixture/p/touch2" },
+      { "distinct_id": "cc-4d-visitorQ", "timestamp": "2026-06-27 21:35:50.852", "utm_source": "facebook", "utm_medium": "paid_social", "page_url": "https://cc-phase2c-verify.invalid/4d-fixture/q/touch1" },
+      { "distinct_id": "cc-4d-visitorQ", "timestamp": "2026-06-27 21:45:50.852", "referrer": "https://www.perplexity.ai/", "ai_source": "Perplexity", "page_url": "https://cc-phase2c-verify.invalid/4d-fixture/q/touch2" },
+      { "distinct_id": "cc-4d-visitorR", "timestamp": "2026-06-27 21:35:50.852", "referrer": "https://chatgpt.com/", "ai_source": "ChatGPT", "page_url": "https://cc-phase2c-verify.invalid/4d-fixture/r/touch1" },
+      { "distinct_id": "cc-4d-visitorR", "timestamp": "2026-06-27 21:45:50.852", "referrer": "https://www.perplexity.ai/", "ai_source": "Perplexity", "page_url": "https://cc-phase2c-verify.invalid/4d-fixture/r/touch2" },
+      { "distinct_id": "cc-4d-visitorR", "timestamp": "2026-06-27 21:50:50.852", "page_url": "https://cc-phase2c-verify.invalid/4d-fixture/r/touch3" },
+      { "distinct_id": "cc-4d-visitorS", "timestamp": "2026-06-27 21:35:50.852", "utm_source": "google", "utm_medium": "cpc", "page_url": "https://cc-phase2c-verify.invalid/4d-fixture/s/touch1" },
+      { "distinct_id": "cc-4d-visitorS", "timestamp": "2026-06-27 21:45:50.852", "page_url": "https://cc-phase2c-verify.invalid/4d-fixture/s/touch2" }
+    ]
+  }
+}
