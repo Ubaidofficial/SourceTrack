@@ -614,8 +614,8 @@ export async function getAiPlatformAttributionLive({
     else if (groupBy === 'date') {
       const refDate = new Date(attributeBy === 'first_seen_date' && visitorPvs[0] ? visitorPvs[0].timestamp : conv.timestamp)
       if (granularity === 'quarter') {
-        const q = Math.floor(refDate.getMonth() / 3) + 1
-        dimVal = `${refDate.getFullYear()}-Q${q}`
+        const q = Math.floor(refDate.getUTCMonth() / 3) + 1
+        dimVal = `${refDate.getUTCFullYear()}-Q${q}`
       } else if (granularity === 'month') {
         dimVal = refDate.toISOString().slice(0, 7)
       } else {
@@ -639,8 +639,8 @@ export async function getAiPlatformAttributionLive({
       else if (groupBy2 === 'date') {
         const refDate = new Date(attributeBy === 'first_seen_date' && visitorPvs[0] ? visitorPvs[0].timestamp : conv.timestamp)
         if (granularity === 'quarter') {
-          const q = Math.floor(refDate.getMonth() / 3) + 1
-          dimVal2 = `${refDate.getFullYear()}-Q${q}`
+          const q = Math.floor(refDate.getUTCMonth() / 3) + 1
+          dimVal2 = `${refDate.getUTCFullYear()}-Q${q}`
         } else if (granularity === 'month') {
           dimVal2 = refDate.toISOString().slice(0, 7)
         } else {
@@ -1660,8 +1660,8 @@ export async function getMultiTouchAttributionLive({
       else if (groupBy === 'date') {
         const refDate = new Date(attributeBy === 'first_seen_date' && touchpoints[0] ? touchpoints[0].timestamp : conv.timestamp)
         if (granularity === 'quarter') {
-          const q = Math.floor(refDate.getMonth() / 3) + 1
-          dimVal = `${refDate.getFullYear()}-Q${q}`
+          const q = Math.floor(refDate.getUTCMonth() / 3) + 1
+          dimVal = `${refDate.getUTCFullYear()}-Q${q}`
         } else if (granularity === 'month') {
           dimVal = refDate.toISOString().slice(0, 7)
         } else {
