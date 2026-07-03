@@ -2,9 +2,9 @@ name: CI Regression Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, claude/tinybird-phase1-events-schema ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, claude/tinybird-phase1-events-schema ]
 
 jobs:
   build-and-test:
