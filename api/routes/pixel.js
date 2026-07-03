@@ -28,6 +28,7 @@ import { ph } from '../lib/posthog.js'
 import { getSupabase } from '../lib/supabase.js'
 import { normalizeUtm } from '../lib/utils.js'
 import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
+import { resolveClientIp } from '../lib/ip-resolver.js'
 
 const router = Router()
 
@@ -77,7 +78,7 @@ router.get('/', async (req, res) => {
     }
 
     // Enrich
-    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || ''
+    const ip = resolveClientIp(req)
     const ua = q.ua || req.headers['user-agent'] || ''
     const parser = new UAParser(ua)
     const geo = ip ? geoip.lookup(ip) : null
