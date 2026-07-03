@@ -8,6 +8,7 @@ import { ph } from '../lib/posthog.js'
 import { resolveWebhookAnonymousId } from '../lib/identity-links.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
 import { SUBSCRIPTION_EVENTS, mapSubscriptionEvent, buildSubscriptionIdempotencyKeys, checkoutConversionValue } from '../lib/stripe-subscription.js'
+import { REFUND_EVENT_TYPE, buildRefundIdempotencyKeys, buildRefundConversion } from '../lib/stripe-refund.js'
 import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
 
 
@@ -145,6 +146,49 @@ async function handleSubscriptionEvent(event, site, siteKey) {
   }
 }
 
+// Ingest a Stripe refund.created as a compensating SIGNED (negative) $conversion
+// into TINYBIRD ONLY (§9, founder Q1=A). NOT ph.capture'd and NOT written to
+// Supabase attributed_conversions — PostHog-read and Supabase revenue stay GROSS
+// pending the deferred netting decision. Idempotency: refund-specific claim keys
+// (provider_event_id + refund_id) that never collide with the purchase's
+// order_id/payment_id claim, PLUS a stamped Tinybird event_id (= refund id) that
+// is exactly-once across webhook retries and distinct from the purchase's id.
+async function handleRefundEvent(event, site, siteKey) {
+  const providerEventId = event.id
+  let refundConv
+  try {
+    refundConv = buildRefundConversion(event, site)
+  } catch (err) {
+    // Malformed/zero-amount refund — ack so Stripe stops retrying, but record it.
+    await logIngestionEvent(siteKey, 'stripe', { providerEventId, orderId: null, value: 0, currency: 'USD', status: 'error', errorMessage: err.message })
+    return { status: 200, body: { received: true, ignored: true, reason: err.message } }
+  }
+
+  // Refund-specific idempotency — MUST NOT reuse the purchase's order_id/payment_id.
+  const keys = buildRefundIdempotencyKeys(event)
+  const claim = await claimIdempotencyKeys(siteKey, 'stripe', keys)
+  if (claim.duplicate) {
+    await logIngestionEvent(siteKey, 'stripe', { providerEventId, orderId: refundConv.properties.event_id, value: refundConv.value, currency: refundConv.currency, status: 'duplicate' })
+    return { status: 200, body: { received: true, duplicate: true } }
+  }
+  if (!claim.success) {
+    await logIngestionEvent(siteKey, 'stripe', { providerEventId, orderId: refundConv.properties.event_id, value: refundConv.value, currency: refundConv.currency, status: 'error', errorMessage: claim.error || 'Failed to claim refund idempotency keys' })
+    return { status: 500, body: { error: 'Temporary processing failure' } }
+  }
+
+  try {
+    // TINYBIRD-ONLY: dual-write only, NO ph.capture (keeps PostHog-read gross).
+    // Flag-gated + never throws; the stamped negative nets via the signed-sum MV.
+    dualWriteEvent({ distinctId: refundConv.distinctId, event: '$conversion', timestamp: refundConv.occurredAt, properties: refundConv.properties })
+    await logIngestionEvent(siteKey, 'stripe', { providerEventId, orderId: refundConv.properties.event_id, value: refundConv.value, currency: refundConv.currency, status: 'success' })
+    return { status: 200, body: { received: true, refund: true, conversion_value: refundConv.properties.conversion_value } }
+  } catch (err) {
+    try { await rollbackIdempotencyKeys(siteKey, 'stripe', keys) } catch (_) { /* best-effort */ }
+    await logIngestionEvent(siteKey, 'stripe', { providerEventId, orderId: refundConv.properties.event_id, value: refundConv.value, currency: refundConv.currency, status: 'error', errorMessage: err.message || 'Refund dual-write failed' })
+    return { status: 500, body: { error: 'Temporary processing failure' } }
+  }
+}
+
 const router = Router()
 
 router.post('/:site_key', async (req, res) => {
@@ -218,6 +262,14 @@ router.post('/:site_key', async (req, res) => {
   // use the existing path below; everything else is ignored with a safe 200.
   if (SUBSCRIPTION_EVENTS.has(event.type)) {
     const r = await handleSubscriptionEvent(event, site, siteKey)
+    return res.status(r.status).json(r.body)
+  }
+  // Refunds: compensating signed (negative) $conversion, Tinybird-only (§9, Q1=A).
+  // Only refund.created is handled — a refund ALSO fires charge.refunded; handling
+  // exactly one avoids double-compensating. charge.refunded falls through to the
+  // safe ignore-200 below.
+  if (event.type === REFUND_EVENT_TYPE) {
+    const r = await handleRefundEvent(event, site, siteKey)
     return res.status(r.status).json(r.body)
   }
   if (event.type !== 'checkout.session.completed') {
