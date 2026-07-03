@@ -1,0 +1,54 @@
+{
+  "_meta": {
+    "captured": "2026-07-03",
+    "site_id": "de200000-babe-41d4-a716-446655441111",
+    "window": { "date_from": "2026-06-26", "date_to_exclusive": "2026-07-01", "lookback_from": "2026-05-27 00:00:00", "windowDays": 30 },
+    "sources": {
+      "posthog": "469905 (SourceTrack Staging), live HogQL — the harness's exact Pattern-B queries",
+      "tinybird": "deployed pipes conversions_by_site + pageviews_windowed_by_site (ST_Staging)"
+    },
+    "note": "Real fired cc-4a fixture rows captured from BOTH stores. Timestamps intentionally differ by the uniform +339ms PostHog ingestion offset (GATE3 interval rule); the comparator's ±500ms tolerance absorbs it. Fields omitted from a pageview object are null."
+  },
+  "posthog": {
+    "conversions": [
+      { "uuid": "019f1a39-0866-7c19-9a2a-050c6e93855c", "distinct_id": "cc-4a-j2-visitor", "timestamp": "2026-06-27T21:09:29.315000Z" },
+      { "uuid": "019f1a38-ffd8-771e-809a-4540bd22ba0f", "distinct_id": "cc-4a-j1-visitor", "timestamp": "2026-06-28T01:29:29.315000Z" },
+      { "uuid": "019f1a39-1304-7918-a287-67ebf1c0e0cf", "distinct_id": "cc-4a-j3-visitor", "timestamp": "2026-06-29T21:29:29.315000Z" }
+    ],
+    "pageviews": [
+      { "distinct_id": "cc-4a-j1-visitor", "timestamp": "2026-06-27T20:29:29.315000Z", "utm_source": "google", "utm_medium": "cpc", "utm_campaign": "brand", "page_url": "https://cc-phase2c-verify.invalid/4a-fixture/j1/touch1" },
+      { "distinct_id": "cc-4a-j1-visitor", "timestamp": "2026-06-27T22:29:29.315000Z", "page_url": "https://cc-phase2c-verify.invalid/4a-fixture/j1/touch2" },
+      { "distinct_id": "cc-4a-j1-visitor", "timestamp": "2026-06-28T00:29:29.315000Z", "utm_source": "newsletter", "utm_medium": "email", "page_url": "https://cc-phase2c-verify.invalid/4a-fixture/j1/touch3" },
+      { "distinct_id": "cc-4a-j2-visitor", "timestamp": "2026-06-27T20:29:29.315000Z", "utm_source": "facebook", "utm_medium": "paid_social", "page_url": "https://cc-phase2c-verify.invalid/4a-fixture/j2/touch1" },
+      { "distinct_id": "cc-4a-j2-visitor", "timestamp": "2026-06-27T20:39:29.315000Z", "referrer": "https://chatgpt.com/", "ai_source": "ChatGPT", "page_url": "https://cc-phase2c-verify.invalid/4a-fixture/j2/touch2" },
+      { "distinct_id": "cc-4a-j2-visitor", "timestamp": "2026-06-27T20:49:29.315000Z", "page_url": "https://cc-phase2c-verify.invalid/4a-fixture/j2/touch3" },
+      { "distinct_id": "cc-4a-j2-visitor", "timestamp": "2026-06-27T20:59:29.315000Z", "utm_source": "google", "utm_medium": "cpc", "utm_campaign": "retarget", "page_url": "https://cc-phase2c-verify.invalid/4a-fixture/j2/touch4" },
+      { "distinct_id": "cc-4a-j3-visitor", "timestamp": "2026-06-27T20:29:29.315000Z", "utm_source": "google", "utm_medium": "cpc", "utm_campaign": "launch", "page_url": "https://cc-phase2c-verify.invalid/4a-fixture/j3/touch1" },
+      { "distinct_id": "cc-4a-j3-visitor", "timestamp": "2026-06-27T21:29:29.315000Z", "page_url": "https://cc-phase2c-verify.invalid/4a-fixture/j3/touch2" },
+      { "distinct_id": "cc-4a-j3-visitor", "timestamp": "2026-06-28T20:29:29.315000Z", "utm_source": "newsletter", "utm_medium": "email", "utm_campaign": "weekly", "page_url": "https://cc-phase2c-verify.invalid/4a-fixture/j3/touch3" },
+      { "distinct_id": "cc-4a-j3-visitor", "timestamp": "2026-06-28T22:29:29.315000Z", "referrer": "https://www.perplexity.ai/", "ai_source": "Perplexity", "page_url": "https://cc-phase2c-verify.invalid/4a-fixture/j3/touch4" },
+      { "distinct_id": "cc-4a-j3-visitor", "timestamp": "2026-06-29T20:29:29.315000Z", "utm_source": "google", "utm_medium": "cpc", "utm_campaign": "retarget", "page_url": "https://cc-phase2c-verify.invalid/4a-fixture/j3/touch5" }
+    ]
+  },
+  "tinybird": {
+    "conversions": [
+      { "event_id": "de200000-babe-41d4-a716-446655441111:cc-4a-j2-order-1:purchase", "distinct_id": "cc-4a-j2-visitor", "timestamp": "2026-06-27 21:09:28.976" },
+      { "event_id": "de200000-babe-41d4-a716-446655441111:cc-4a-j1-order-1:purchase", "distinct_id": "cc-4a-j1-visitor", "timestamp": "2026-06-28 01:29:28.976" },
+      { "event_id": "de200000-babe-41d4-a716-446655441111:cc-4a-j3-order-1:purchase", "distinct_id": "cc-4a-j3-visitor", "timestamp": "2026-06-29 21:29:28.976" }
+    ],
+    "pageviews": [
+      { "distinct_id": "cc-4a-j1-visitor", "timestamp": "2026-06-27 20:29:28.976", "utm_source": "google", "utm_medium": "cpc", "utm_campaign": "brand", "page_url": "https://cc-phase2c-verify.invalid/4a-fixture/j1/touch1" },
+      { "distinct_id": "cc-4a-j1-visitor", "timestamp": "2026-06-27 22:29:28.976", "page_url": "https://cc-phase2c-verify.invalid/4a-fixture/j1/touch2" },
+      { "distinct_id": "cc-4a-j1-visitor", "timestamp": "2026-06-28 00:29:28.976", "utm_source": "newsletter", "utm_medium": "email", "page_url": "https://cc-phase2c-verify.invalid/4a-fixture/j1/touch3" },
+      { "distinct_id": "cc-4a-j2-visitor", "timestamp": "2026-06-27 20:29:28.976", "utm_source": "facebook", "utm_medium": "paid_social", "page_url": "https://cc-phase2c-verify.invalid/4a-fixture/j2/touch1" },
+      { "distinct_id": "cc-4a-j2-visitor", "timestamp": "2026-06-27 20:39:28.976", "referrer": "https://chatgpt.com/", "ai_source": "ChatGPT", "page_url": "https://cc-phase2c-verify.invalid/4a-fixture/j2/touch2" },
+      { "distinct_id": "cc-4a-j2-visitor", "timestamp": "2026-06-27 20:49:28.976", "page_url": "https://cc-phase2c-verify.invalid/4a-fixture/j2/touch3" },
+      { "distinct_id": "cc-4a-j2-visitor", "timestamp": "2026-06-27 20:59:28.976", "utm_source": "google", "utm_medium": "cpc", "utm_campaign": "retarget", "page_url": "https://cc-phase2c-verify.invalid/4a-fixture/j2/touch4" },
+      { "distinct_id": "cc-4a-j3-visitor", "timestamp": "2026-06-27 20:29:28.976", "utm_source": "google", "utm_medium": "cpc", "utm_campaign": "launch", "page_url": "https://cc-phase2c-verify.invalid/4a-fixture/j3/touch1" },
+      { "distinct_id": "cc-4a-j3-visitor", "timestamp": "2026-06-27 21:29:28.976", "page_url": "https://cc-phase2c-verify.invalid/4a-fixture/j3/touch2" },
+      { "distinct_id": "cc-4a-j3-visitor", "timestamp": "2026-06-28 20:29:28.976", "utm_source": "newsletter", "utm_medium": "email", "utm_campaign": "weekly", "page_url": "https://cc-phase2c-verify.invalid/4a-fixture/j3/touch3" },
+      { "distinct_id": "cc-4a-j3-visitor", "timestamp": "2026-06-28 22:29:28.976", "referrer": "https://www.perplexity.ai/", "ai_source": "Perplexity", "page_url": "https://cc-phase2c-verify.invalid/4a-fixture/j3/touch4" },
+      { "distinct_id": "cc-4a-j3-visitor", "timestamp": "2026-06-29 20:29:28.976", "utm_source": "google", "utm_medium": "cpc", "utm_campaign": "retarget", "page_url": "https://cc-phase2c-verify.invalid/4a-fixture/j3/touch5" }
+    ]
+  }
+}

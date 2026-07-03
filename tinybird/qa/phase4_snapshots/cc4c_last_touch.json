@@ -1,0 +1,23 @@
+{
+  "_meta": {
+    "captured": "2026-07-03",
+    "site_id": "de200000-babe-41d4-a716-446655441111",
+    "window": { "date_from": "2026-06-26", "date_to_exclusive": "2026-07-01" },
+    "sources": {
+      "posthog": "469905, the live lastTouchAttribution INNER argMax subquery (attribution-engine.js:121-146 shape), restricted to cc-4c conversions",
+      "tinybird": "deployed last_touch_by_site pipe (4 independent per-field ASOF LEFT JOINs on distinct_id)"
+    },
+    "tie_distinct_ids": ["cc-4c-visitorZ"],
+    "note": "visitorZ's two touchpoints share an EXACT timestamp in both stores (the 4C §4 tie fixture). Per 4C §5, a tie-row disagreement is a documented ambiguity, not a parity failure — compareLastTouchPicks reports it separately. At capture time both stores picked the same tied touch (google/cpc)."
+  },
+  "posthog_picks": [
+    { "conversion_id": "019f1a62-84e7-71b6-ad19-b03e3a6216e3", "distinct_id": "cc-4c-visitorX", "conversion_timestamp": "2026-06-27T21:18:49.326000Z", "utm_source": "newsletter", "utm_medium": "email", "utm_campaign": null, "ai_source": null },
+    { "conversion_id": "019f1a62-89b3-7e64-884d-add986ff7221", "distinct_id": "cc-4c-visitorY", "conversion_timestamp": "2026-06-27T21:21:49.326000Z", "utm_source": "facebook", "utm_medium": "paid_social", "utm_campaign": null, "ai_source": "ChatGPT" },
+    { "conversion_id": "019f1a62-8f16-7886-a01c-994d0a2a8548", "distinct_id": "cc-4c-visitorZ", "conversion_timestamp": "2026-06-27T21:29:49.326000Z", "utm_source": "google", "utm_medium": "cpc", "utm_campaign": null, "ai_source": null }
+  ],
+  "tinybird_picks": [
+    { "conversion_id": "de200000-babe-41d4-a716-446655441111:cc-4c-x-order-1:purchase", "distinct_id": "cc-4c-visitorX", "conversion_timestamp": "2026-06-27 21:18:49.002", "utm_source": "newsletter", "utm_medium": "email", "utm_campaign": null, "ai_source": null },
+    { "conversion_id": "de200000-babe-41d4-a716-446655441111:cc-4c-y-order-1:purchase", "distinct_id": "cc-4c-visitorY", "conversion_timestamp": "2026-06-27 21:21:49.002", "utm_source": "facebook", "utm_medium": "paid_social", "utm_campaign": null, "ai_source": "ChatGPT" },
+    { "conversion_id": "de200000-babe-41d4-a716-446655441111:cc-4c-z-order-1:purchase", "distinct_id": "cc-4c-visitorZ", "conversion_timestamp": "2026-06-27 21:29:49.002", "utm_source": "google", "utm_medium": "cpc", "utm_campaign": null, "ai_source": null }
+  ]
+}
