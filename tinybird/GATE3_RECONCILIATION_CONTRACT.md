@@ -108,7 +108,7 @@ RULE — compare INTERVALS, not absolute timestamps: the harness compares the wi
 
 ---
 
-## 6. Unverified-by-orchestrator note
+## 8. Unverified-by-orchestrator note
 All `SCOPE_v3.md` and `attribution-engine.js` citations originate from CC's read-only recon (file:line-cited, internally consistent). The orchestrator has no Tinybird MCP and did not independently confirm them. Treat as CC-verified intent until re-confirmed at execution.
 
 **End of contract.**
