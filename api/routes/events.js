@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
+import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { esc } from '../lib/utils.js'
 import { getDedupeSummary } from './conversion.js'
 import { serializeHogQLDateTime } from '../lib/hogql-date.js'
@@ -139,7 +140,21 @@ router.get('/latest', validateSiteKey, async (req, res) => {
     const cacheKey = `latest:${siteId}:${event_type||''}:${source||''}:${date_from||''}:${date_to||''}:${search||''}:${limit||''}`
     const cached = eventsCache.get(cacheKey)
     if (cached) return res.json(cached)
-    const rows = await queryHogQL(sql, 'events_latest')
+    // Tinybird read cutover (flag-gated via TINYBIRD_READ_ENABLED; null -> HogQL fallback).
+    // Filters passed only when set (pipe uses {% if defined %}); date params reuse the same
+    // serializer as the HogQL path; limit clamped in JS before passing (pipe does not re-clamp).
+    const _tbLatest = await queryTinybirdPipe('events_latest', {
+      site_id: String(req.site.id),
+      limit_val: clampLimit(limit),
+      event_type_filter: (event_type && event_type !== 'all') ? String(event_type) : undefined,
+      source_filter: source ? String(source).trim().toLowerCase() : undefined,
+      search_filter: search ? String(search).trim().toLowerCase() : undefined,
+      date_from_ts: date_from ? serializeHogQLDateTime(date_from, { exclusiveEndForDateOnly: false }).match(/'([^']+)'/)?.[1]?.replace('T', ' ').replace('Z', '') : undefined,
+      date_to_ts: date_to ? serializeHogQLDateTime(date_to, { exclusiveEndForDateOnly: true }).match(/'([^']+)'/)?.[1]?.replace('T', ' ').replace('Z', '') : undefined
+    })
+    const rows = _tbLatest !== null
+      ? _tbLatest.map(r => [r.event_type, r.timestamp, r.distinct_id, r.page_url, r.referrer, r.ai_source, r.is_conversion, r.device_type, r.country, r.utm_source, r.utm_medium, r.utm_campaign, r.utm_content, r.utm_term, r.gclid, r.fbclid, r.msclkid, r.ttclid, r.ref_param, r.source_param, r.via_param, r.first_touch_source, r.first_touch_medium, r.first_touch_campaign, r.conversion_type, r.conversion_value, r.ingestion_method, r.browser_name, r.browser_version, r.os_name, r.os_version, r.gbraid, r.wbraid, r.li_fat_id, r.li_fatid, r.twclid, r.dclid, r.snapclid, r.pclid, r.sccid, r.ko_click_id, r.utm_id, r.st_campaign_id, r.st_adgroup_id, r.st_ad_id, r.st_target_id, r.st_network, r.st_device, r.st_matchtype, r.raw_properties])
+      : await queryHogQL(sql, 'events_latest')
 
     const events = rows.map(([
       event, timestamp, distinctId, pageUrl, referrer,
@@ -251,10 +266,11 @@ router.get('/health', validateSiteKey, async (req, res) => {
     if (cachedHealth) {
       ;[lastRows, hourRows, dayRows] = cachedHealth
     } else {
+      // Tinybird read cutover (flag-gated via TINYBIRD_READ_ENABLED; null -> HogQL fallback).
       ;[lastRows, hourRows, dayRows] = await Promise.all([
-        queryHogQL(lastEventSql, 'events_health_last'),
-        queryHogQL(countHourSql, 'events_health_hour'),
-        queryHogQL(countDaySql, 'events_health_day')
+        (async () => { const t = await queryTinybirdPipe('events_health_last', { site_id: String(req.site.id) }); return t !== null ? t.map(r => [r.timestamp]) : queryHogQL(lastEventSql, 'events_health_last') })(),
+        (async () => { const t = await queryTinybirdPipe('events_health_hour', { site_id: String(req.site.id) }); return t !== null ? t.map(r => [r.cnt]) : queryHogQL(countHourSql, 'events_health_hour') })(),
+        (async () => { const t = await queryTinybirdPipe('events_health_day', { site_id: String(req.site.id) }); return t !== null ? t.map(r => [r.cnt]) : queryHogQL(countDaySql, 'events_health_day') })()
       ])
       eventsCache.set(healthCacheKey, [lastRows, hourRows, dayRows], 120)
     }
@@ -329,9 +345,14 @@ router.get('/edge-cases', validateSiteKey, async (req, res) => {
       LIMIT 1
     `
 
-    const domainRows = await queryHogQL(multiDomainSql, 'edge_domains')
-    const aiNoUtmRows = await queryHogQL(aiNoUtmSql, 'edge_ai_no_utm')
-    const utmNoAiRows = await queryHogQL(utmNoAiSql, 'edge_utm_no_ai')
+    // Tinybird read cutover (flag-gated via TINYBIRD_READ_ENABLED; null -> HogQL fallback).
+    const _sid = String(req.site.id)
+    const _tbDomains = await queryTinybirdPipe('edge_domains', { site_id: _sid })
+    const domainRows = _tbDomains !== null ? _tbDomains.map(r => [r.page_url, r.cnt]) : await queryHogQL(multiDomainSql, 'edge_domains')
+    const _tbAiNoUtm = await queryTinybirdPipe('edge_ai_no_utm', { site_id: _sid })
+    const aiNoUtmRows = _tbAiNoUtm !== null ? _tbAiNoUtm.map(r => [r.cnt]) : await queryHogQL(aiNoUtmSql, 'edge_ai_no_utm')
+    const _tbUtmNoAi = await queryTinybirdPipe('edge_utm_no_ai', { site_id: _sid })
+    const utmNoAiRows = _tbUtmNoAi !== null ? _tbUtmNoAi.map(r => [r.cnt]) : await queryHogQL(utmNoAiSql, 'edge_utm_no_ai')
 
     const domains = new Set()
     for (const row of domainRows) {

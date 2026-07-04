@@ -1,6 +1,7 @@
 import express from 'express'
 import crypto from 'crypto'
 import { queryHogQL } from '../lib/posthog.js'
+import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { getSupabase } from '../lib/supabase.js'
 import { esc, encryptSecret } from '../lib/utils.js'
 import { siteCache } from '../middleware/auth.js'
@@ -134,16 +135,18 @@ router.get('/overview', async (req, res) => {
       aiRows,
       recentRows
     ] = await Promise.all([
-      queryHogQL(installSql, 'integ_install'),
-      queryHogQL(missingSourceSql, 'integ_missing_source'),
-      queryHogQL(campaignSql, 'integ_campaigns'),
-      queryHogQL(referrerSql, 'integ_referrers'),
-      queryHogQL(missingConvSql, 'integ_missing_conv'),
-      queryHogQL(lowActivitySql, 'integ_low_activity'),
-      queryHogQL(trafficSql, 'integ_traffic'),
-      queryHogQL(convSql, 'integ_conversions'),
-      queryHogQL(aiSql, 'integ_ai'),
-      queryHogQL(recentSql, 'integ_recent')
+      // Tinybird read cutover (flag-gated via TINYBIRD_READ_ENABLED; null -> HogQL fallback).
+      // Each element resolves to the SAME positional-array shape the destructure above expects.
+      (async () => { const _s = String(req.site.id); const t = await queryTinybirdPipe('integ_install', { site_id: _s }); return t !== null ? t.map(r => [r.event_type, r.timestamp, r.page_url]) : queryHogQL(installSql, 'integ_install') })(),
+      (async () => { const _s = String(req.site.id); const t = await queryTinybirdPipe('integ_missing_source', { site_id: _s }); return t !== null ? t.map(r => [r.cnt]) : queryHogQL(missingSourceSql, 'integ_missing_source') })(),
+      (async () => { const _s = String(req.site.id); const t = await queryTinybirdPipe('integ_campaigns', { site_id: _s }); return t !== null ? t.map(r => [r.campaign, r.cnt]) : queryHogQL(campaignSql, 'integ_campaigns') })(),
+      (async () => { const _s = String(req.site.id); const t = await queryTinybirdPipe('integ_referrers', { site_id: _s }); return t !== null ? t.map(r => [r.referrer, r.cnt]) : queryHogQL(referrerSql, 'integ_referrers') })(),
+      (async () => { const _s = String(req.site.id); const t = await queryTinybirdPipe('integ_missing_conv', { site_id: _s }); return t !== null ? t.map(r => [r.cnt]) : queryHogQL(missingConvSql, 'integ_missing_conv') })(),
+      (async () => { const _s = String(req.site.id); const t = await queryTinybirdPipe('integ_low_activity', { site_id: _s }); return t !== null ? t.map(r => [r.day, r.cnt]) : queryHogQL(lowActivitySql, 'integ_low_activity') })(),
+      (async () => { const _s = String(req.site.id); const t = await queryTinybirdPipe('integ_traffic', { site_id: _s }); return t !== null ? t.map(r => [r.this_week, r.last_week]) : queryHogQL(trafficSql, 'integ_traffic') })(),
+      (async () => { const _s = String(req.site.id); const t = await queryTinybirdPipe('integ_conversions', { site_id: _s }); return t !== null ? t.map(r => [r.today, r.yesterday]) : queryHogQL(convSql, 'integ_conversions') })(),
+      (async () => { const _s = String(req.site.id); const t = await queryTinybirdPipe('integ_ai', { site_id: _s }); return t !== null ? t.map(r => [r.ai_source, r.cnt]) : queryHogQL(aiSql, 'integ_ai') })(),
+      (async () => { const _s = String(req.site.id); const t = await queryTinybirdPipe('integ_recent', { site_id: _s }); return t !== null ? t.map(r => [r.cnt, r.last_ts]) : queryHogQL(recentSql, 'integ_recent') })()
     ])
 
     // Install status
@@ -292,7 +295,13 @@ router.get('/google-ads/checklist', async (req, res) => {
     `
 
     const [rows, { data: connection, error: connError }] = await Promise.all([
-      queryHogQL(checklistSql, 'google_ads_checklist'),
+      // Tinybird read cutover (flag-gated via TINYBIRD_READ_ENABLED; null -> HogQL fallback).
+      (async () => {
+        const t = await queryTinybirdPipe('google_ads_checklist', { site_id: String(req.site.id) })
+        return t !== null
+          ? t.map(r => [r.total_events, r.utms_detected_count, r.click_id_detected_count, r.campaign_id_detected_count, r.adgroup_id_detected_count, r.ad_id_detected_count, r.last_paid_click_seen, r.last_conversion_attributed])
+          : queryHogQL(checklistSql, 'google_ads_checklist')
+      })(),
       getSupabase()
         .from('ad_platform_connections')
         .select('status')
