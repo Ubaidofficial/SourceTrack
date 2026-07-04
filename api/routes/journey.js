@@ -1,4 +1,5 @@
 import { queryHogQL } from '../lib/posthog.js'
+import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { esc } from '../lib/utils.js'
 import { deriveSessions, annotateSessions, sessionAggregates } from '../lib/sessionization.js'
 import { getSupabase } from '../lib/supabase.js'
@@ -82,7 +83,12 @@ export async function journey(req, res) {
       LIMIT ${limit}
     `
 
-    const rows = await queryHogQL(sql, 'journey')
+    // Tinybird read cutover (flag-gated via TINYBIRD_READ_ENABLED; null -> HogQL fallback).
+    // Pipe param is 'visitor_id' (source filters distinct_id = visitorId). 23 fields mapped in SELECT order.
+    const _tb = await queryTinybirdPipe('journey', { site_id: String(req.site.id), visitor_id: String(visitorId) })
+    const rows = _tb !== null
+      ? _tb.map(r => [r.event_type, r.timestamp, r.page_url, r.referrer, r.utm_source, r.utm_medium, r.utm_campaign, r.ai_source, r.is_conversion, r.conversion_value, r.conversion_type, r.device_type, r.browser_name, r.browser_version, r.os_name, r.os_version, r.country, r.user_id, r.order_id, r.destination_domain, r.destination_url, r.source_system, r.ingestion_method])
+      : await queryHogQL(sql, 'journey')
 
     const events = rows.map(([
       event, timestamp, pageUrl, referrer,

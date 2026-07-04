@@ -1,5 +1,6 @@
 import express from 'express'
 import { queryHogQL } from '../lib/posthog.js'
+import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { esc } from '../lib/utils.js'
 
 const router = express.Router()
@@ -19,7 +20,9 @@ router.get('/', async (req, res) => {
         AND properties.site_id = '${esc(req.site.id)}'
         AND timestamp >= now() - INTERVAL 5 MINUTE
     `
-    const rows = await queryHogQL(sql, 'live_visitors')
+    // Tinybird read cutover (flag-gated via TINYBIRD_READ_ENABLED; null -> HogQL fallback).
+    const _tb = await queryTinybirdPipe('live_visitors_bag', { site_id: String(req.site.id) })
+    const rows = _tb !== null ? _tb.map(r => [r.live_visitors]) : await queryHogQL(sql, 'live_visitors')
     const live_visitors = Number(rows?.[0]?.[0] ?? 0)
     res.json({ success: true, data: { live_visitors }, error: null })
   } catch (err) {

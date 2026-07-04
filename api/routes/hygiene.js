@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { validateSiteKey } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
+import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { esc } from '../lib/utils.js'
 
 const router = Router()
@@ -76,11 +77,20 @@ router.get('/utms', validateSiteKey, async (req, res) => {
       LIMIT 30
     `
 
-    const [[missingSource]] = await queryHogQL(missingSourceSql, 'hygiene_missing_source')
-    const campaignRows = await queryHogQL(campaignSql, 'hygiene_campaigns')
-    const referrerRows = await queryHogQL(referrerSql, 'hygiene_referrers')
-    const [[missingConv]] = await queryHogQL(missingConvSql, 'hygiene_missing_conv')
-    const lowActivityRows = await queryHogQL(lowActivitySql, 'hygiene_low_activity')
+    // Tinybird read cutover (flag-gated via TINYBIRD_READ_ENABLED; null -> HogQL fallback).
+    // Pipes are the integ_* ports — byte-identical queries to this hygiene block (§2.6 typed-column
+    // translation only). queryName on the HogQL fallback is unchanged.
+    const _sid = String(req.site.id)
+    const _tbMs = await queryTinybirdPipe('integ_missing_source', { site_id: _sid })
+    const [[missingSource]] = _tbMs !== null ? _tbMs.map(r => [r.cnt]) : await queryHogQL(missingSourceSql, 'hygiene_missing_source')
+    const _tbCamp = await queryTinybirdPipe('integ_campaigns', { site_id: _sid })
+    const campaignRows = _tbCamp !== null ? _tbCamp.map(r => [r.campaign, r.cnt]) : await queryHogQL(campaignSql, 'hygiene_campaigns')
+    const _tbRef = await queryTinybirdPipe('integ_referrers', { site_id: _sid })
+    const referrerRows = _tbRef !== null ? _tbRef.map(r => [r.referrer, r.cnt]) : await queryHogQL(referrerSql, 'hygiene_referrers')
+    const _tbMc = await queryTinybirdPipe('integ_missing_conv', { site_id: _sid })
+    const [[missingConv]] = _tbMc !== null ? _tbMc.map(r => [r.cnt]) : await queryHogQL(missingConvSql, 'hygiene_missing_conv')
+    const _tbLa = await queryTinybirdPipe('integ_low_activity', { site_id: _sid })
+    const lowActivityRows = _tbLa !== null ? _tbLa.map(r => [r.day, r.cnt]) : await queryHogQL(lowActivitySql, 'hygiene_low_activity')
 
     const issues = []
 

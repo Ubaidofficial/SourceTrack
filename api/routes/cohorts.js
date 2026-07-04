@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { validateSiteKey } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
+import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { esc } from '../lib/utils.js'
 import { requireFeature } from '../lib/plan-features.js'
 
@@ -38,7 +39,9 @@ router.get('/weekly', validateSiteKey, async (req, res) => {
       LIMIT 500
     `
 
-    const rows = await queryHogQL(sql, 'cohorts_weekly')
+    // Tinybird read cutover (flag-gated via TINYBIRD_READ_ENABLED; null -> HogQL fallback).
+    const _tb = await queryTinybirdPipe('cohorts_weekly', { site_id: String(req.site.id) })
+    const rows = _tb !== null ? _tb.map(r => [r.cohort_week, r.users, r.converted_users]) : await queryHogQL(sql, 'cohorts_weekly')
 
     const cohorts = rows.map(([week, users, converted]) => ({
       cohort_week: week,
@@ -84,7 +87,9 @@ router.get('/ai-source', validateSiteKey, async (req, res) => {
       LIMIT 1000
     `
 
-    const rows = await queryHogQL(sql, 'cohorts_ai')
+    // Tinybird read cutover (flag-gated via TINYBIRD_READ_ENABLED; null -> HogQL fallback).
+    const _tb = await queryTinybirdPipe('cohorts_ai', { site_id: String(req.site.id) })
+    const rows = _tb !== null ? _tb.map(r => [r.cohort_week, r.ai_source, r.users]) : await queryHogQL(sql, 'cohorts_ai')
 
     const cohorts = rows.map(([week, aiSource, users]) => ({
       cohort_week: week,

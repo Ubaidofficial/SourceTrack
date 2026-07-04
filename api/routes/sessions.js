@@ -1,4 +1,5 @@
 import { queryHogQL } from '../lib/posthog.js'
+import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { deriveSessions, sessionAggregates, annotateSessions } from '../lib/sessionization.js'
 import { esc } from '../lib/utils.js'
 import { serializeHogQLDateRange, buildHogQLTimestampFilter } from '../lib/hogql-date.js'
@@ -25,6 +26,11 @@ export async function sessionsOverview(req, res) {
 
     const dateFilter = buildHogQLTimestampFilter('timestamp', range)
 
+    // Tinybird DateTime boundary strings for the sessions_* pipes (space-separated, no T/Z),
+    // derived from the SAME serialized range the HogQL filter uses — do not hand-roll formatting.
+    const _tbFrom = range.from.match(/'([^']+)'/)?.[1]?.replace('T', ' ').replace('Z', '')
+    const _tbTo = range.to.match(/'([^']+)'/)?.[1]?.replace('T', ' ').replace('Z', '')
+
     // Query all pageviews in range for session derivation
     const pageviewSql = `
       SELECT
@@ -42,7 +48,9 @@ export async function sessionsOverview(req, res) {
       LIMIT 50000
     `
 
-    const pvRows = await queryHogQL(pageviewSql, 'sessions_pageviews')
+    // Tinybird read cutover (flag-gated via TINYBIRD_READ_ENABLED; null -> HogQL fallback).
+    const _tbPv = await queryTinybirdPipe('sessions_pageviews', { site_id: String(req.site.id), date_from_ts: _tbFrom, date_to_ts: _tbTo })
+    const pvRows = _tbPv !== null ? _tbPv.map(r => [r.distinct_id, r.timestamp, r.page_url, r.utm_source, r.utm_medium, r.utm_campaign]) : await queryHogQL(pageviewSql, 'sessions_pageviews')
 
     // Also query conversions to mark converting sessions
     const convSql = `
@@ -58,7 +66,9 @@ export async function sessionsOverview(req, res) {
       LIMIT 50000
     `
 
-    const convRows = await queryHogQL(convSql, 'sessions_conversions')
+    // Tinybird read cutover (flag-gated via TINYBIRD_READ_ENABLED; null -> HogQL fallback).
+    const _tbConv = await queryTinybirdPipe('sessions_conversions', { site_id: String(req.site.id), date_from_ts: _tbFrom, date_to_ts: _tbTo })
+    const convRows = _tbConv !== null ? _tbConv.map(r => [r.distinct_id, r.timestamp, r.conversion_value]) : await queryHogQL(convSql, 'sessions_conversions')
 
     // Merge and sort all events per distinct_id
     const eventsByVisitor = new Map()
@@ -163,7 +173,11 @@ export async function visitorSessions(req, res) {
       LIMIT 500
     `
 
-    const rows = await queryHogQL(sql, 'visitor_sessions')
+    // Tinybird read cutover (flag-gated via TINYBIRD_READ_ENABLED; null -> HogQL fallback).
+    const _tb = await queryTinybirdPipe('visitor_sessions', { site_id: String(req.site.id), distinct_id: String(distinct_id) })
+    const rows = _tb !== null
+      ? _tb.map(r => [r.event_type, r.timestamp, r.page_url, r.utm_source, r.utm_medium, r.utm_campaign, r.conversion_value])
+      : await queryHogQL(sql, 'visitor_sessions')
 
     const events = rows.map(([
       event, timestamp, pageUrl,
