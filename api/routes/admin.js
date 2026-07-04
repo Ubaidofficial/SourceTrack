@@ -207,7 +207,10 @@ router.post('/preview', async (req, res) => {
     const { queryHogQL } = await import('../lib/posthog.js')
     let installInfo = null
     try {
-      const rows = await queryHogQL(`
+      // Tinybird read cutover (flag-gated via TINYBIRD_READ_ENABLED; null -> HogQL fallback).
+      const { queryTinybirdPipe } = await import('../lib/tinybird-read.js')
+      const _tbInst = await queryTinybirdPipe('admin_preview_install', { site_id: String(site.id) })
+      const rows = _tbInst !== null ? _tbInst.map(r => [r.event_type, r.timestamp]) : await queryHogQL(`
         SELECT event, timestamp
         FROM events
         WHERE properties.site_id = '${String(site.id).replace(/'/g, "''")}'
@@ -347,7 +350,10 @@ router.get('/preview/:siteKeyOrId', async (req, res) => {
     // Install status
     let install = { status: 'unknown' }
     try {
-      const instRows = await queryHogQL(`
+      // Tinybird read cutover (flag-gated via TINYBIRD_READ_ENABLED; null -> HogQL fallback).
+      const { queryTinybirdPipe } = await import('../lib/tinybird-read.js')
+      const _tbOv = await queryTinybirdPipe('admin_preview_overview', { site_id: String(posthogSiteId) })
+      const instRows = _tbOv !== null ? _tbOv.map(r => [r.event_type, r.timestamp]) : await queryHogQL(`
         SELECT event, timestamp
         FROM events
         WHERE properties.site_id = '${posthogSiteId}'
@@ -425,7 +431,10 @@ router.get('/site-detail', async (req, res) => {
     const { queryHogQL } = await import('../lib/posthog.js')
     let installStatus = null
     try {
-      const rows = await queryHogQL(`
+      // Tinybird read cutover (flag-gated via TINYBIRD_READ_ENABLED; null -> HogQL fallback).
+      const { queryTinybirdPipe } = await import('../lib/tinybird-read.js')
+      const _tbDetail = await queryTinybirdPipe('admin_site_detail', { site_id: String(site.id) })
+      const rows = _tbDetail !== null ? _tbDetail.map(r => [r.event_type, r.timestamp, r.page_url]) : await queryHogQL(`
         SELECT event, timestamp, properties.page_url AS page_url
         FROM events
         WHERE properties.site_id = '${String(site.id).replace(/'/g, "''")}'
