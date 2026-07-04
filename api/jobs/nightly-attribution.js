@@ -50,6 +50,8 @@ if (isReprocess) {
 
 // Shared channel classifier — single source of truth with the live attribution engine
 import { channelFromEvent } from '../lib/channel-classifier.js'
+// Shared attribution allocation model — single source of truth with the live read path
+import { calculateAttribution } from '../lib/attribution-model.js'
 import { buildSubscriptionIdentitySeed, isSubscriptionCheckoutCarrier } from '../lib/stripe-subscription.js'
 
 const _supabase = getSupabase()
@@ -889,148 +891,9 @@ async function upsertSubscriptionIdentity(site, row) {
   }
 }
 
-function calculateAttribution(touchpoints, conversionValue) {
-  if (!touchpoints || touchpoints.length === 0) {
-    return {
-      first_touch: null,
-      last_touch: null,
-      linear: [],
-      u_shaped: [],
-      time_decay: [],
-      w_shaped: []
-    }
-  }
-
-  const firstTouchpoint = touchpoints[0]
-  const lastTouchpoint = touchpoints[touchpoints.length - 1]
-
-  const tpCh = (tp) => channelFromEvent({
-    utm_source: tp.utm_source, utm_medium: tp.utm_medium,
-    ai_source: tp.ai_source, gclid: tp.gclid, gbraid: tp.gbraid, wbraid: tp.wbraid,
-    fbclid: tp.fbclid, msclkid: tp.msclkid, ttclid: tp.ttclid,
-    li_fat_id: tp.li_fat_id, li_fatid: tp.li_fatid, twclid: tp.twclid,
-    dclid: tp.dclid, snapclid: tp.snapclid, pclid: tp.pclid,
-    sccid: tp.sccid, ko_click_id: tp.ko_click_id,
-    referrer: tp.referrer, page_url: tp.page_url
-  })
-  const tpBase = (tp) => ({
-    source: tp.utm_source || null,
-    medium: tp.utm_medium || null,
-    campaign: tp.utm_campaign || null,
-    channel: tpCh(tp),
-    timestamp: tp.timestamp,
-    country: tp.country || 'unknown',
-    device: tp.device || 'unknown',
-    browser: tp.browser || 'unknown',
-    landing_page: tp.landing_page || 'unknown'
-  })
-
-  // ── Linear ──────────────────────────────────────────────────────────────────
-  const fraction = 1.0 / touchpoints.length
-  const linearValue = conversionValue * fraction
-  const linear = touchpoints.map(tp => ({
-    ...tpBase(tp),
-    fraction: parseFloat(fraction.toFixed(4)),
-    attributed_value: parseFloat(linearValue.toFixed(2))
-  }))
-
-  // ── U-Shaped (40/20/40) ──────────────────────────────────────────────────────
-  const u_shaped = (() => {
-    if (touchpoints.length === 1) {
-      return [{ ...tpBase(firstTouchpoint), fraction: 1.0, attributed_value: parseFloat(conversionValue.toFixed(2)) }]
-    }
-    if (touchpoints.length === 2) {
-      return [
-        { ...tpBase(firstTouchpoint), fraction: 0.5, attributed_value: parseFloat((conversionValue * 0.5).toFixed(2)) },
-        { ...tpBase(lastTouchpoint),  fraction: 0.5, attributed_value: parseFloat((conversionValue * 0.5).toFixed(2)) }
-      ]
-    }
-    const middleCount = touchpoints.length - 2
-    const middleFraction = parseFloat((0.2 / middleCount).toFixed(4))
-    const middleValue = parseFloat((conversionValue * 0.2 / middleCount).toFixed(2))
-    return touchpoints.map((tp, i) => {
-      if (i === 0) return { ...tpBase(tp), fraction: 0.4, attributed_value: parseFloat((conversionValue * 0.4).toFixed(2)) }
-      if (i === touchpoints.length - 1) return { ...tpBase(tp), fraction: 0.4, attributed_value: parseFloat((conversionValue * 0.4).toFixed(2)) }
-      return { ...tpBase(tp), fraction: middleFraction, attributed_value: middleValue }
-    })
-  })()
-
-  // ── Time Decay (7-day half-life) ─────────────────────────────────────────────
-  // Gives progressively more credit to touchpoints closer to the conversion.
-  const time_decay = (() => {
-    const conversionTime = new Date(lastTouchpoint.timestamp).getTime()
-    const halfLifeDays = 7
-    const halfLifeMs = halfLifeDays * 24 * 60 * 60 * 1000
-    const rawWeights = touchpoints.map(tp => {
-      const tpTime = new Date(tp.timestamp).getTime()
-      const daysBack = Math.max(0, (conversionTime - tpTime) / halfLifeMs)
-      return Math.pow(0.5, daysBack) // 0.5^(days/halfLife)
-    })
-    const totalWeight = rawWeights.reduce((s, w) => s + w, 0) || 1
-    return touchpoints.map((tp, i) => {
-      const frac = parseFloat((rawWeights[i] / totalWeight).toFixed(4))
-      return {
-        ...tpBase(tp),
-        fraction: frac,
-        attributed_value: parseFloat((conversionValue * frac).toFixed(2))
-      }
-    })
-  })()
-
-  // ── W-Shaped (30/30/30/10) ───────────────────────────────────────────────────
-  // 30% first touch, 30% lead creation (middle), 30% last touch, 10% spread across rest.
-  const w_shaped = (() => {
-    if (touchpoints.length === 1) {
-      return [{ ...tpBase(firstTouchpoint), fraction: 1.0, attributed_value: parseFloat(conversionValue.toFixed(2)) }]
-    }
-    if (touchpoints.length === 2) {
-      return [
-        { ...tpBase(firstTouchpoint), fraction: 0.5, attributed_value: parseFloat((conversionValue * 0.5).toFixed(2)) },
-        { ...tpBase(lastTouchpoint),  fraction: 0.5, attributed_value: parseFloat((conversionValue * 0.5).toFixed(2)) }
-      ]
-    }
-    if (touchpoints.length === 3) {
-      return touchpoints.map((tp, i) => ({
-        ...tpBase(tp),
-        fraction: 0.333,
-        attributed_value: parseFloat((conversionValue / 3).toFixed(2))
-      }))
-    }
-    // 4+ touchpoints: anchor 30% to first, middle, and last; 10% spread across the rest
-    const middleIdx = Math.floor((touchpoints.length - 1) / 2)
-    const anchorIndices = new Set([0, middleIdx, touchpoints.length - 1])
-    const otherCount = touchpoints.length - anchorIndices.size
-    const otherFrac = otherCount > 0 ? parseFloat((0.1 / otherCount).toFixed(4)) : 0
-    const otherValue = otherCount > 0 ? parseFloat((conversionValue * 0.1 / otherCount).toFixed(2)) : 0
-    return touchpoints.map((tp, i) => {
-      if (anchorIndices.has(i)) {
-        return { ...tpBase(tp), fraction: 0.3, attributed_value: parseFloat((conversionValue * 0.3).toFixed(2)) }
-      }
-      return { ...tpBase(tp), fraction: otherFrac, attributed_value: otherValue }
-    })
-  })()
-
-  return {
-    first_touch: {
-      source: firstTouchpoint.utm_source || null,
-      medium: firstTouchpoint.utm_medium || null,
-      campaign: firstTouchpoint.utm_campaign || null,
-      timestamp: firstTouchpoint.timestamp,
-      derived_source: firstTouchpoint.derived_source || null
-    },
-    last_touch: {
-      source: lastTouchpoint.utm_source || null,
-      medium: lastTouchpoint.utm_medium || null,
-      campaign: lastTouchpoint.utm_campaign || null,
-      timestamp: lastTouchpoint.timestamp,
-      derived_source: lastTouchpoint.derived_source || null
-    },
-    linear,
-    u_shaped,
-    time_decay,
-    w_shaped
-  }
-}
+// calculateAttribution moved to ../lib/attribution-model.js (single source of truth,
+// shared with the live read path). Imported at the top of this file. The prior local
+// copy (with the Level-1+ reconciliation + time_decay NaN-guard) is now the shared one.
 
 // ─── GDPR Retention Auto-Purge ────────────────────────────────────────────────
 // Deletes retention-governed rows older than data_retention_days for each site
