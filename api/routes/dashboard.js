@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
+import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { getSupabase as getSupabaseAdmin } from '../lib/supabase.js'
 import { esc, isValidTimezone, getLocalDateString, getPaddedUtcDateRange, getNow, cappedRate } from '../lib/utils.js'
 import { channelFromEvent } from '../lib/channel-classifier.js'
@@ -66,7 +67,11 @@ router.get('/overview', validateSiteKey, async (req, res) => {
         ORDER BY timestamp DESC
         LIMIT 1
       `, 'dash_install'),
-      queryHogQL(`
+      // Tinybird read cutover (flag-gated via TINYBIRD_READ_ENABLED; null -> HogQL fallback).
+      (async () => {
+        const t = await queryTinybirdPipe('dash_alerts', { site_id: String(req.site.id) })
+        if (t !== null) return t.map(r => [r.this_week, r.last_week, r.count_day, r.count_hour, r.last_event])
+        return queryHogQL(`
         SELECT
           SUM(CASE WHEN timestamp >= now() - INTERVAL 7 DAY THEN 1 ELSE 0 END) AS this_week,
           SUM(CASE WHEN timestamp >= now() - INTERVAL 14 DAY AND timestamp < now() - INTERVAL 7 DAY THEN 1 ELSE 0 END) AS last_week,
@@ -76,7 +81,8 @@ router.get('/overview', validateSiteKey, async (req, res) => {
         FROM events
         WHERE properties.site_id = '${esc(posthogSiteId)}'
           AND event = '$pageview'
-      `, 'dash_alerts'),
+      `, 'dash_alerts')
+      })(),
       queryHogQL(`
         SELECT
           properties.conversion_type AS stage,
@@ -95,7 +101,20 @@ router.get('/overview', validateSiteKey, async (req, res) => {
         ORDER BY count DESC
         LIMIT 100
       `, 'dash_stages'),
-      queryHogQL(`
+      // Tinybird read cutover (flag-gated via TINYBIRD_READ_ENABLED; null -> HogQL fallback).
+      // Date params reuse the exact same boundary strings the HogQL builds (currentPadded.from/to
+      // + localDateFrom/To with 00:00:00/23:59:59 suffixes + tz) — no new date format.
+      (async () => {
+        const t = await queryTinybirdPipe('dash_top_pages', {
+          site_id: String(req.site.id),
+          current_from_ts: `${currentPadded.from} 00:00:00`,
+          current_to_ts: `${currentPadded.to} 23:59:59`,
+          local_from_ts: `${localDateFrom} 00:00:00`,
+          local_to_ts: `${localDateTo} 23:59:59`,
+          tz
+        })
+        if (t !== null) return t.map(r => [r.page_url, r.count])
+        return queryHogQL(`
         SELECT
           properties.page_url AS page_url,
           count() AS count
@@ -110,6 +129,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
         ORDER BY count DESC
         LIMIT 500
       `, 'dash_top_pages')
+      })()
     ])
 
     const rows = acRows || []
@@ -309,7 +329,17 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     let bounceRate = null
     let totalSessions = 0
     try {
-      const br = await queryHogQL(bounceRateSql, 'bounce_rate')
+      // Tinybird read cutover (flag-gated via TINYBIRD_READ_ENABLED; null -> HogQL fallback).
+      // Same date-boundary construction as the HogQL bounceRateSql above.
+      const _tbBr = await queryTinybirdPipe('dashboard_bounce_rate', {
+        site_id: String(req.site.id),
+        current_from_ts: `${currentPadded.from} 00:00:00`,
+        current_to_ts: `${currentPadded.to} 23:59:59`,
+        local_from_ts: `${localDateFrom} 00:00:00`,
+        local_to_ts: `${localDateTo} 23:59:59`,
+        tz
+      })
+      const br = _tbBr !== null ? _tbBr.map(r => [r.bounce_rate_pct, r.total_sessions]) : await queryHogQL(bounceRateSql, 'bounce_rate')
       bounceRate = br?.[0]?.[0] ? parseFloat(Number(br[0][0]).toFixed(1)) : null
       totalSessions = Number(br?.[0]?.[1]) || 0
     } catch (_e) {}
@@ -523,7 +553,9 @@ router.get('/live', validateSiteKey, async (req, res) => {
   try {
     const posthogSiteId = String(req.site.id)
     const sql = `SELECT count(DISTINCT distinct_id) FROM events WHERE event = '$pageview' AND properties.site_id = '${posthogSiteId}' AND timestamp >= now() - INTERVAL 5 MINUTE`
-    const rows = await queryHogQL(sql, 'live_visitors')
+    // Tinybird read cutover (flag-gated via TINYBIRD_READ_ENABLED; null -> HogQL fallback).
+    const _tbLive = await queryTinybirdPipe('dashboard_live_visitors', { site_id: String(req.site.id) })
+    const rows = _tbLive !== null ? _tbLive.map(r => [r.live_visitors]) : await queryHogQL(sql, 'live_visitors')
     const count = Number(rows?.[0]?.[0]) || 0
     res.json({ success: true, data: { live_visitors: count } })
   } catch (err) {
@@ -649,7 +681,11 @@ router.get('/recent-activity', validateSiteKey, requireSiteMembership, async (re
       LIMIT 1000
     `
 
-    const rows = await queryHogQL(sql, 'recent_activity_events')
+    // Tinybird read cutover (flag-gated via TINYBIRD_READ_ENABLED; null -> HogQL fallback). 19 fields in SELECT order.
+    const _tbRecent = await queryTinybirdPipe('dashboard_recent_activity_events', { site_id: String(req.site.id) })
+    const rows = _tbRecent !== null
+      ? _tbRecent.map(r => [r.event_type, r.timestamp, r.page_url, r.referrer, r.utm_medium, r.utm_source, r.first_touch_source, r.first_touch_medium, r.first_touch_campaign, r.gclid, r.fbclid, r.msclkid, r.ttclid, r.li_fat_id, r.ai_source, r.conversion_value, r.user_id, r.anonymous_id, r.distinct_id])
+      : await queryHogQL(sql, 'recent_activity_events')
 
     let pageviewsCount = 0
     let conversionsCount = 0
