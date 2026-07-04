@@ -1,0 +1,44 @@
+DESCRIPTION >
+    Wave 3 tier-3 row-pull. Single conversion row (LIMIT 1, most recent) for one
+    distinct_id — the "conversion" half of getAttributionExplanation
+    (api/lib/attribution-engine.js:1081-1108, queryName 'attribution_explain_conversion').
+    Faithful 1:1 port; 13 columns in the SAME order the caller destructures at :1108:
+      timestamp, conversion_value, utm_source, utm_medium, utm_campaign,
+      first_touch_source, first_touch_medium, first_touch_campaign, ai_source,
+      page_url, user_id, anonymous_id, ingestion_method.
+    Typed-column translation (SCOPE_v3 §2.6): properties.site_id -> site_id, event ->
+    event_type; utm_*, first_touch_*, ai_source, page_url, ingestion_method are typed
+    columns. MONEY FIELD: conversion_value ported as toFloat64OrZero(toString(conversion_value))
+    == the live HogQL toFloatOrZero(toString(properties.conversion_value)) (matches dash_stages/
+    admin_preview_kpis convention). BAG FIELDS: user_id, anonymous_id are §2.6 bag keys read via
+    JSONExtractString(properties, '<key>') — same as journey.pipe / dashboard_recent_activity_events.
+    NOTE ('' vs NULL): JSONExtractString returns '' for an absent key where live HogQL
+    properties.<key> returns NULL; the caller collapses both via `x || null` (:1114-1115), so the
+    divergence is inert at the consumed level — flagged, not "fixed", to stay a faithful port.
+    NOT YET PUSHED — authored only (token lacks WORKSPACE:DEPLOY); founder deploys.
+
+NODE attribution_explain_conversion_node
+SQL >
+    %
+    SELECT
+        timestamp,
+        toFloat64OrZero(toString(conversion_value)) AS conversion_value,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        first_touch_source,
+        first_touch_medium,
+        first_touch_campaign,
+        ai_source,
+        page_url,
+        JSONExtractString(properties, 'user_id') AS user_id,
+        JSONExtractString(properties, 'anonymous_id') AS anonymous_id,
+        ingestion_method
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$conversion'
+      AND distinct_id = {{ String(distinct_id, required=True) }}
+    ORDER BY timestamp DESC
+    LIMIT 1
+
+TYPE endpoint
