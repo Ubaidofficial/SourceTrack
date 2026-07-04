@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { validateSiteKey } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
+import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { esc } from '../lib/utils.js'
 import { requireFeature } from '../lib/plan-features.js'
 
@@ -27,7 +28,8 @@ router.get('/', validateSiteKey, requireAlertsFeature, async (req, res) => {
         AND event = '$pageview'
         AND timestamp >= now() - INTERVAL 14 DAY
     `
-    const trafficRows = await queryHogQL(trafficSql, 'alert_traffic')
+    const _tbTraffic = await queryTinybirdPipe('alert_traffic', { site_id: String(req.site.id) })
+    const trafficRows = _tbTraffic !== null ? _tbTraffic.map(r => [r.this_week, r.last_week]) : await queryHogQL(trafficSql, 'alert_traffic')
     const thisWeek = Number(trafficRows?.[0]?.[0]) || 0
     const lastWeek = Number(trafficRows?.[0]?.[1]) || 0
     if (lastWeek > 0 && thisWeek < lastWeek * 0.5) {
@@ -51,7 +53,8 @@ router.get('/', validateSiteKey, requireAlertsFeature, async (req, res) => {
         AND event = '$conversion'
         AND timestamp >= now() - INTERVAL 2 DAY
     `
-    const convRows = await queryHogQL(convSql, 'alert_conversions')
+    const _tbConv = await queryTinybirdPipe('alert_conversions', { site_id: String(req.site.id) })
+    const convRows = _tbConv !== null ? _tbConv.map(r => [r.today, r.yesterday]) : await queryHogQL(convSql, 'alert_conversions')
     const today = Number(convRows?.[0]?.[0]) || 0
     const yesterday = Number(convRows?.[0]?.[1]) || 0
     if (yesterday > 0 && today < yesterday * 0.3) {
@@ -78,7 +81,8 @@ router.get('/', validateSiteKey, requireAlertsFeature, async (req, res) => {
       ORDER BY cnt DESC
       LIMIT 10
     `
-    const aiRows = await queryHogQL(aiSql, 'alert_ai')
+    const _tbAi = await queryTinybirdPipe('alert_ai', { site_id: String(req.site.id) })
+    const aiRows = _tbAi !== null ? _tbAi.map(r => [r.ai_source, r.cnt]) : await queryHogQL(aiSql, 'alert_ai')
     const aiTotal = aiRows.reduce((s, [, c]) => s + Number(c), 0)
     const threshold = 5
     if (aiTotal > threshold && aiTotal < threshold * 2) {
@@ -99,7 +103,8 @@ router.get('/', validateSiteKey, requireAlertsFeature, async (req, res) => {
       WHERE properties.site_id = '${siteId}'
         AND timestamp >= now() - INTERVAL 24 HOUR
     `
-    const recentRows = await queryHogQL(recentSql, 'alert_recent')
+    const _tbRecent = await queryTinybirdPipe('alert_recent', { site_id: String(req.site.id) })
+    const recentRows = _tbRecent !== null ? _tbRecent.map(r => [r.cnt, r.last_ts]) : await queryHogQL(recentSql, 'alert_recent')
     const recentCount = Number(recentRows?.[0]?.[0]) || 0
     if (recentCount === 0) {
       alerts.push({

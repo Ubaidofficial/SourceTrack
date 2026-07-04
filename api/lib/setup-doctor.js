@@ -1,4 +1,5 @@
 import { queryHogQL } from './posthog.js'
+import { queryTinybirdPipe } from './tinybird-read.js'
 import { esc, sanitizeVerificationToken } from './utils.js'
 
 function normalizeDomain(d) {
@@ -55,8 +56,11 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
 
   // 2. Fetch HogQL queries in parallel
   const queries = [
-    // [0] Pageview count in the last 30 days
-    queryHogQL(`
+    // [0] Pageview count in the last 30 days (Tinybird read cutover; flag-gated, null -> HogQL fallback)
+    (async () => {
+      const tb = await queryTinybirdPipe('doctor_pageviews_30d', { site_id: posthogSiteId })
+      if (tb !== null) return tb.map(r => [r.pageviews_30d])
+      return queryHogQL(`
       SELECT count()
       FROM events
       WHERE properties.site_id = '${esc(posthogSiteId)}'
@@ -65,9 +69,13 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
     `, 'doctor_pageviews_30d').catch(err => {
       console.warn('[setup-doctor] doctor_pageviews_30d query failed:', err?.message || err)
       return null
-    }),
-    // [1] Last conversion in the last 30 days
-    queryHogQL(`
+    })
+    })(),
+    // [1] Last conversion in the last 30 days (Tinybird read cutover; flag-gated, null -> HogQL fallback)
+    (async () => {
+      const tb = await queryTinybirdPipe('doctor_last_conversion', { site_id: posthogSiteId })
+      if (tb !== null) return tb.map(r => [r.timestamp, r.conversion_type])
+      return queryHogQL(`
       SELECT timestamp, properties.conversion_type AS conversion_type
       FROM events
       WHERE properties.site_id = '${esc(posthogSiteId)}'
@@ -78,9 +86,13 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
     `, 'doctor_last_conversion').catch(err => {
       console.warn('[setup-doctor] doctor_last_conversion query failed:', err?.message || err)
       return null
-    }),
-    // [2] Last event with click ID in the last 30 days
-    queryHogQL(`
+    })
+    })(),
+    // [2] Last event with click ID in the last 30 days (Tinybird read cutover; flag-gated, null -> HogQL fallback)
+    (async () => {
+      const tb = await queryTinybirdPipe('doctor_last_click_id', { site_id: posthogSiteId })
+      if (tb !== null) return tb.map(r => [r.gclid, r.gbraid, r.wbraid, r.fbclid, r.msclkid, r.ttclid, r.twclid, r.li_fat_id, r.li_fatid, r.dclid, r.snapclid, r.pclid, r.sccid, r.ko_click_id])
+      return queryHogQL(`
       SELECT properties.gclid, properties.gbraid, properties.wbraid, properties.fbclid, properties.msclkid, properties.ttclid, properties.twclid, properties.li_fat_id, properties.li_fatid, properties.dclid, properties.snapclid, properties.pclid, properties.sccid, properties.ko_click_id
       FROM events
       WHERE properties.site_id = '${esc(posthogSiteId)}'
@@ -106,9 +118,13 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
     `, 'doctor_last_click_id').catch(err => {
       console.warn('[setup-doctor] doctor_last_click_id query failed:', err?.message || err)
       return null
-    }),
-    // [3] Check if any paid params were seen at all in the last 30 days
-    queryHogQL(`
+    })
+    })(),
+    // [3] Check if any paid params were seen at all in the last 30 days (Tinybird read cutover; flag-gated, null -> HogQL fallback)
+    (async () => {
+      const tb = await queryTinybirdPipe('doctor_paid_params_count', { site_id: posthogSiteId })
+      if (tb !== null) return tb.map(r => [r.paid_params_count])
+      return queryHogQL(`
       SELECT count()
       FROM events
       WHERE properties.site_id = '${esc(posthogSiteId)}'
@@ -136,13 +152,18 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
       console.warn('[setup-doctor] doctor_paid_params_count query failed:', err?.message || err)
       return null
     })
+    })()
   ]
 
   // Optional Token Verification Check (HogQL query [4])
   let tokenPromise = null
   const sanitizedToken = verificationToken ? sanitizeVerificationToken(verificationToken) : null
   if (sanitizedToken) {
-    tokenPromise = queryHogQL(`
+    tokenPromise = (async () => {
+      // Tinybird read cutover (flag-gated, null -> HogQL fallback). Second required param st_verify.
+      const tb = await queryTinybirdPipe('doctor_token_verify', { site_id: posthogSiteId, st_verify: sanitizedToken })
+      if (tb !== null) return tb.map(r => [r.token_verify_count])
+      return queryHogQL(`
       SELECT count()
       FROM events
       WHERE properties.site_id = '${esc(posthogSiteId)}'
@@ -152,6 +173,7 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
       console.warn('[setup-doctor] doctor_token_verify query failed:', err?.message || err)
       return null
     })
+    })()
     queries.push(tokenPromise)
   }
 
