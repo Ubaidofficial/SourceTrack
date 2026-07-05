@@ -1,0 +1,40 @@
+DESCRIPTION >
+    Wave 3 aggregated attribution. One row per (source, medium, campaign) with
+    conversions=count() and revenue=SUM(toFloat64OrZero(toString(conversion_value))),
+    serving firstTouchAttribution (api/lib/attribution-engine.js:62-90, queryName
+    'first_touch_attribution'). Faithful 1:1 port.
+    NO JOIN / NO argMin: first-touch here reads the conversion event's OWN stamped
+    first_touch_* fields (the live HogQL uses properties.first_touch_source/medium/campaign
+    on the $conversion row itself), NOT a re-derivation from pageviews — so no touchpoint
+    pick is involved. (This is why #1 is authorable and #3 first_touch_non_direct, which DOES
+    re-derive via argMin over pageviews, is NOT — see the STOP report.)
+    Typed-column translation (SCOPE_v3 §2.6): properties.site_id -> site_id, event ->
+    event_type; first_touch_source (LowCardinality String DEFAULT 'direct'),
+    first_touch_medium (DEFAULT 'none'), first_touch_campaign (String DEFAULT '') are typed
+    columns — same stamped values as the live properties.first_touch_* bag reads. NULLIF/COALESCE
+    reproduce the live 'direct'/'none' fallbacks exactly (absent key -> column DEFAULT -> same
+    COALESCE result as HogQL null -> COALESCE).
+    MONEY: revenue cast toFloat64OrZero(toString(conversion_value)) == live
+    toFloatOrZero(toString(properties.conversion_value)); conversion_value is the typed Float64
+    column (DEFAULT 0), so an absent value yields 0 on both sides.
+    VALUE-PARITY NOT RUN (rate-limited) — founder must value-gate before enabling. NOT DEPLOYED.
+
+NODE first_touch_by_site_node
+SQL >
+    %
+    SELECT
+        COALESCE(NULLIF(first_touch_source, ''), 'direct') AS source,
+        COALESCE(NULLIF(first_touch_medium, ''), 'none') AS medium,
+        first_touch_campaign AS campaign,
+        count() AS conversions,
+        SUM(toFloat64OrZero(toString(conversion_value))) AS revenue
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$conversion'
+      AND timestamp >= {{ DateTime(date_from, required=True) }}
+      AND timestamp < {{ DateTime(date_to, required=True) }}
+    GROUP BY source, medium, campaign
+    ORDER BY revenue DESC
+    LIMIT 50000
+
+TYPE endpoint
