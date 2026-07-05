@@ -25,7 +25,7 @@ SQL >
     SELECT
         COALESCE(NULLIF(first_touch_source, ''), 'direct') AS source,
         COALESCE(NULLIF(first_touch_medium, ''), 'none') AS medium,
-        first_touch_campaign AS campaign,
+        COALESCE(first_touch_campaign, '') AS campaign,
         count() AS conversions,
         SUM(toFloat64OrZero(toString(conversion_value))) AS revenue
     FROM events
