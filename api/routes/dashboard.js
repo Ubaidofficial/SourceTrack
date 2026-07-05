@@ -83,7 +83,19 @@ router.get('/overview', validateSiteKey, async (req, res) => {
           AND event = '$pageview'
       `, 'dash_alerts')
       })(),
-      queryHogQL(`
+      // Tinybird read cutover (flag-gated via TINYBIRD_READ_ENABLED; null -> HogQL fallback).
+      // Date params reuse the exact boundary strings the HogQL builds; tz passed through.
+      (async () => {
+        const t = await queryTinybirdPipe('dash_stages', {
+          site_id: String(req.site.id),
+          current_from_ts: `${currentPadded.from} 00:00:00`,
+          current_to_ts: `${currentPadded.to} 23:59:59`,
+          local_from_ts: `${localDateFrom} 00:00:00`,
+          local_to_ts: `${localDateTo} 23:59:59`,
+          tz
+        })
+        if (t !== null) return t.map(r => [r.stage, r.count, r.revenue])
+        return queryHogQL(`
         SELECT
           properties.conversion_type AS stage,
           count() AS count,
@@ -100,7 +112,8 @@ router.get('/overview', validateSiteKey, async (req, res) => {
         GROUP BY stage
         ORDER BY count DESC
         LIMIT 100
-      `, 'dash_stages'),
+      `, 'dash_stages')
+      })(),
       // Tinybird read cutover (flag-gated via TINYBIRD_READ_ENABLED; null -> HogQL fallback).
       // Date params reuse the exact same boundary strings the HogQL builds (currentPadded.from/to
       // + localDateFrom/To with 00:00:00/23:59:59 suffixes + tz) — no new date format.

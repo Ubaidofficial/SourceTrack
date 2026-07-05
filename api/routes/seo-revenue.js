@@ -2,6 +2,7 @@ import express from 'express'
 import crypto from 'crypto'
 import { getSupabase } from '../lib/supabase.js'
 import { queryHogQL } from '../lib/posthog.js'
+import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { normalizePath } from '../lib/url-normalization.js'
 import { esc } from '../lib/utils.js'
 import { requireFeature } from '../lib/plan-features.js'
@@ -131,7 +132,15 @@ router.get('/', async (req, res) => {
       })
 
       try {
-        const phRows = await Promise.race([
+        const _tb = await queryTinybirdPipe('seo_revenue_landing_pages', {
+          site_id: String(siteId),
+          visitor_ids: cappedVisitorIds,
+          from_ts: `${from} 00:00:00`,
+          to_ts: `${to} 23:59:59`
+        })
+        const phRows = _tb !== null
+          ? _tb.map(r => [r.distinct_id, r.landing_page])
+          : await Promise.race([
           queryHogQL(sql, 'seo-revenue-landing-pages'),
           timeoutPromise
         ])

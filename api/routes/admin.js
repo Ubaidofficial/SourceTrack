@@ -303,7 +303,9 @@ router.get('/preview/:siteKeyOrId', async (req, res) => {
     // KPI summary: revenue, conversions, sessions, leads (last 30 days)
     let kpis = { revenue: 0, conversions: 0, sessions: 0, leads: 0 }
     try {
-      const kpiRows = await queryHogQL(`
+      const { queryTinybirdPipe } = await import('../lib/tinybird-read.js')
+      const _tbKpi = await queryTinybirdPipe('admin_preview_kpis', { site_id: String(site.id) })
+      const kpiRows = _tbKpi !== null ? _tbKpi.map(r => [r.revenue, r.conversions, r.sessions, r.leads]) : await queryHogQL(`
         SELECT
           sumIf(toFloatOrZero(toString(properties.conversion_value)), event = '$conversion') AS revenue,
           countIf(event = '$conversion') AS conversions,
@@ -327,7 +329,9 @@ router.get('/preview/:siteKeyOrId', async (req, res) => {
     // Top 5 sources by revenue
     let sources = []
     try {
-      const srcRows = await queryHogQL(`
+      const { queryTinybirdPipe } = await import('../lib/tinybird-read.js')
+      const _tbSrc = await queryTinybirdPipe('admin_preview_sources', { site_id: String(site.id) })
+      const srcRows = _tbSrc !== null ? _tbSrc.map(r => [r.source, r.revenue, r.conversions]) : await queryHogQL(`
         SELECT
           COALESCE(properties.utm_source, 'direct') AS source,
           sumIf(toFloatOrZero(toString(properties.conversion_value)), event = '$conversion') AS revenue,
