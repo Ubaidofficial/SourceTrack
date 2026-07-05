@@ -237,13 +237,19 @@ router.post('/preview', async (req, res) => {
     // Get recent event count (last 24h)
     let recentEventCount = 0
     try {
-      const ecRows = await queryHogQL(`
+      const { queryTinybirdPipe } = await import('../lib/tinybird-read.js')
+      const _tbEc = await queryTinybirdPipe('events_health_day', { site_id: String(site.id) })
+      if (_tbEc !== null) {
+        recentEventCount = Number(_tbEc?.[0]?.cnt) || 0
+      } else {
+        const ecRows = await queryHogQL(`
         SELECT count()
         FROM events
         WHERE properties.site_id = '${String(site.id).replace(/'/g, "''")}'
           AND timestamp >= now() - INTERVAL 24 HOUR
       `, 'admin_preview_recent')
-      recentEventCount = Number(ecRows?.[0]?.[0]) || 0
+        recentEventCount = Number(ecRows?.[0]?.[0]) || 0
+      }
     } catch { /* non-critical */ }
 
     logAction('preview_dashboard', 'site', site.site_key, { site_name: site.name })
