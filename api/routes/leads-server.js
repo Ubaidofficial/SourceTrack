@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { validateSiteKey } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
+import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { getSupabase } from '../lib/supabase.js'
 import { esc } from '../lib/utils.js'
 import { requireFeature } from '../lib/plan-features.js'
@@ -21,6 +22,7 @@ router.get('/', validateSiteKey, async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit) || 50, 200)
 
     let dateFilter = ''
+    let _tbDateFrom, _tbDateTo
     if (dateFrom || dateTo) {
       if (!dateFrom || !dateTo) {
         return res.status(400).json({
@@ -33,6 +35,8 @@ router.get('/', validateSiteKey, async (req, res) => {
       try {
         const range = serializeHogQLDateRange(dateFrom, dateTo, { exclusiveEnd: true })
         dateFilter = `AND ${buildHogQLTimestampFilter('timestamp', range)}`
+        _tbDateFrom = range.from.match(/'([^']+)'/)?.[1]?.replace('T', ' ').slice(0, 19)
+        _tbDateTo = range.to.match(/'([^']+)'/)?.[1]?.replace('T', ' ').slice(0, 19)
       } catch (err) {
         return res.status(400).json({ success: false, data: null, error: err.message })
       }
@@ -62,7 +66,10 @@ router.get('/', validateSiteKey, async (req, res) => {
       LIMIT ${limit}
     `
 
-    const rows = await queryHogQL(sql, 'leads_list')
+    const _tb = await queryTinybirdPipe('leads_list', { site_id: siteId, date_from_ts: _tbDateFrom, date_to_ts: _tbDateTo, limit_val: limit })
+    const rows = _tb !== null
+      ? _tb.map(r => [r.distinct_id, r.first_seen, r.last_seen, r.pageviews, r.conversions, r.total_revenue, r.source, r.medium, r.campaign, r.ai_source, r.country, r.first_page_url, r.last_conversion_type])
+      : await queryHogQL(sql, 'leads_list')
 
     let leads = rows.map(([
       distinctId, firstSeen, lastSeen, pageviews, conversions, totalRevenue,
@@ -183,7 +190,10 @@ router.get('/', validateSiteKey, async (req, res) => {
     // the same unit the Dashboard KPI uses). Falls back to the page length on error.
     let total = leads.length
     try {
-      const countRows = await queryHogQL(`
+      const _tbc = await queryTinybirdPipe('leads_count', { site_id: siteId, date_from_ts: _tbDateFrom, date_to_ts: _tbDateTo })
+      const countRows = _tbc !== null
+        ? _tbc.map(r => [r.leads_count])
+        : await queryHogQL(`
         SELECT count(DISTINCT distinct_id)
         FROM events
         WHERE properties.site_id = '${esc(siteId)}'
@@ -244,7 +254,10 @@ router.get('/:leadId', validateSiteKey, async (req, res) => {
       LIMIT 1
     `
 
-    const rows = await queryHogQL(sql, 'lead_detail')
+    const _tb = await queryTinybirdPipe('lead_detail', { site_id: String(req.site.id), distinct_id: String(leadId) })
+    const rows = _tb !== null
+      ? _tb.map(r => [r.first_seen, r.last_seen, r.pageviews, r.conversions, r.total_revenue, r.source, r.medium, r.ai_source, r.country, r.first_page_url, r.campaign, r.ft_source, r.ft_medium, r.active_days])
+      : await queryHogQL(sql, 'lead_detail')
 
     if (!rows || rows.length === 0) {
       return res.status(404).json({ success: false, data: null, error: 'Lead not found' })

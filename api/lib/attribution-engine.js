@@ -79,7 +79,12 @@ async function firstTouchAttribution(siteId, dateFrom, dateTo) {
     LIMIT 50000
   `
 
-  const rows = await queryHogQL(sql, 'first_touch_attribution')
+  const _dtFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').slice(0, 19)
+  const _dtTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').slice(0, 19)
+  const _tb = await queryTinybirdPipe('first_touch_by_site', { site_id: String(siteId), date_from: _dtFrom, date_to: _dtTo })
+  const rows = _tb !== null
+    ? _tb.map(r => [r.source, r.medium, r.campaign, r.conversions, r.revenue])
+    : await queryHogQL(sql, 'first_touch_attribution')
   return rows.map(([source, medium, campaign, conversions, revenue]) => ({
     source,
     medium,
@@ -141,7 +146,12 @@ async function lastTouchAttribution(siteId, dateFrom, dateTo) {
     LIMIT 50000
   `
 
-  const rows = await queryHogQL(sql, 'last_touch_attribution')
+  const _dtFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').slice(0, 19)
+  const _dtTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').slice(0, 19)
+  const _tb = await queryTinybirdPipe('last_touch_by_site_agg', { site_id: String(siteId), date_from: _dtFrom, date_to: _dtTo })
+  const rows = _tb !== null
+    ? _tb.map(r => [r.source, r.medium, r.campaign, r.conversions, r.revenue])
+    : await queryHogQL(sql, 'last_touch_attribution')
   return rows.map(([source, medium, campaign, conversions, revenue]) => ({
     source,
     medium,
@@ -267,7 +277,12 @@ async function lastTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
     LIMIT 50000
   `
 
-  const rows = await queryHogQL(sql, 'last_touch_non_direct_attribution')
+  const _dtFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').slice(0, 19)
+  const _dtTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').slice(0, 19)
+  const _tb = await queryTinybirdPipe('last_touch_non_direct_by_site', { site_id: String(siteId), date_from: _dtFrom, date_to: _dtTo })
+  const rows = _tb !== null
+    ? _tb.map(r => [r.source, r.medium, r.campaign, r.conversions, r.revenue])
+    : await queryHogQL(sql, 'last_touch_non_direct_attribution')
   return rows.map(([source, medium, campaign, conversions, revenue]) => ({
     source,
     medium,
@@ -908,7 +923,17 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
     LIMIT 50000
   `
 
-  const rows = await queryHogQL(sql, 'session_report_pageviews')
+  const _dtFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').slice(0, 19)
+  const _dtTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').slice(0, 19)
+  // Tinybird read cutover (flag-gated). The pipe only reproduces the BASE case;
+  // gate on no-filters + no-custom-key so filtered/custom-grouped reports fall through to HogQL.
+  const _canUsePipe = !Object.values(filters).some(Boolean) && !custKey1 && !custKey2
+  const _tbPv = _canUsePipe
+    ? await queryTinybirdPipe('session_report_pageviews', { site_id: String(siteId), date_from_ts: _dtFrom, date_to_ts: _dtTo })
+    : null
+  const rows = _tbPv !== null
+    ? _tbPv.map(r => [r.distinct_id, r.timestamp, r.page_url, r.utm_source, r.utm_medium, r.utm_campaign, r.country, r.device_type])
+    : await queryHogQL(sql, 'session_report_pageviews')
 
   // Also query conversions for conversion_sessions metric
   const convSql = `
@@ -924,7 +949,12 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
     LIMIT 50000
   `
 
-  const convRows = await queryHogQL(convSql, 'session_report_conversions')
+  const _tbConv = _canUsePipe
+    ? await queryTinybirdPipe('session_report_conversions', { site_id: String(siteId), date_from_ts: _dtFrom, date_to_ts: _dtTo })
+    : null
+  const convRows = _tbConv !== null
+    ? _tbConv.map(r => [r.distinct_id, r.timestamp])
+    : await queryHogQL(convSql, 'session_report_conversions')
 
   // Build events array per visitor
   const eventsByVisitor = new Map()
@@ -1100,7 +1130,10 @@ export async function getAttributionExplanation(siteId, model, distinctId) {
     ORDER BY timestamp DESC
     LIMIT 1
   `
-  const convRows = await queryHogQL(convSql, 'attribution_explain_conversion')
+  const _tb = await queryTinybirdPipe('attribution_explain_conversion', { site_id: String(siteId), distinct_id: String(distinctId) })
+  const convRows = _tb !== null
+    ? _tb.map(r => [r.timestamp, r.conversion_value, r.utm_source, r.utm_medium, r.utm_campaign, r.first_touch_source, r.first_touch_medium, r.first_touch_campaign, r.ai_source, r.page_url, r.user_id, r.anonymous_id, r.ingestion_method])
+    : await queryHogQL(convSql, 'attribution_explain_conversion')
   if (!convRows || convRows.length === 0) {
     return null
   }
@@ -1133,7 +1166,10 @@ export async function getAttributionExplanation(siteId, model, distinctId) {
     ORDER BY timestamp ASC
     LIMIT 500
   `
-  const journeyRows = await queryHogQL(journeySql, 'attribution_explain_journey')
+  const _tbj = await queryTinybirdPipe('journey', { site_id: String(siteId), visitor_id: String(distinctId) })
+  const journeyRows = _tbj !== null
+    ? _tbj.map(r => [r.event_type, r.timestamp, r.page_url, r.utm_source, r.utm_medium, r.utm_campaign, r.ai_source, r.conversion_value])
+    : await queryHogQL(journeySql, 'attribution_explain_journey')
   const journey = (journeyRows || []).map(([evt, ts, url, src, med, camp, ais, cv]) => ({
     event: evt,
     timestamp: ts,
