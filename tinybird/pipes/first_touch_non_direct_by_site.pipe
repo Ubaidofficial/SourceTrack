@@ -1,0 +1,71 @@
+DESCRIPTION >
+    Wave 3 aggregated attribution. One row per (source, medium, campaign) with
+    conversions=count() and revenue=SUM(toFloat64OrZero(toString(conversion_value))),
+    serving firstTouchNonDirectAttribution (api/lib/attribution-engine.js:172-229, queryName
+    'first_touch_non_direct_attribution'). Faithful 1:1 port.
+    FIRST-TOUCH via argMinIf-window, NOT ASOF. The last-touch twin (last_touch_non_direct_by_site.pipe)
+    uses per-field ASOF joins, but ASOF always picks the LAST preceding row — it structurally
+    CANNOT produce a FIRST (earliest) touch, so an argMax->argMin swap of the ASOF structure is
+    impossible (the Wave-3 "money-rail STOP"). Resolved with argMinIf(field, timestamp,
+    pv.timestamp <= conv.timestamp): argMinIf picks the field value at the MIN timestamp among
+    rows satisfying the condition = the earliest qualifying pageview. Validated this session via
+    `tb --cloud deploy --check` (+ bogus-column schema check) — the argMinIf-window pattern the
+    flexible_report windowJoin already uses on the live path.
+    PER-FIELD null-skip reproduced by argMinIf's inherent val-null-skip: argMinIf(pv.utm_medium, ...)
+    ignores rows where utm_medium is NULL, so medium/campaign can come from a DIFFERENT (later)
+    touchpoint than source when the earliest non-direct-utm_source pageview has a null in that
+    field — exactly matching the live per-field argMin(pv.utm_medium, pv.timestamp) null-skip
+    (attribution-engine.js:186-188). No explicit IS NOT NULL needed per field (argMinIf skips nulls).
+    NON-DIRECT gate (live :200-202) applied to the whole pageview set: utm_source IS NOT NULL
+    AND != '' AND != 'direct'. Window has NO lower bound (live join is only pv.timestamp <=
+    e_inner.timestamp, no attributionWindow) — argMinIf condition is pv.timestamp <= conv.timestamp.
+    Outer: source = COALESCE(NULLIF(utm_source,''),'direct'), medium = COALESCE(NULLIF(utm_medium,''),
+    'none'), campaign = raw utm_campaign (live :177-179). Equality JOIN on distinct_id (live :204,
+    NOT the mixed-inequality ON which Tinybird rejects — the timestamp bound moves into argMinIf).
+    Typed-column translation (§2.6): properties.site_id -> site_id, event -> event_type; pv fields
+    from `events` self-join (pre-filtered subqueries, the flexible_report windowJoin pattern).
+    MONEY: revenue toFloat64OrZero(toString(conversion_value)) == live toFloatOrZero(toString(
+    e.properties.conversion_value)); conv is 1 row per $conversion (event_id unique) -> value once.
+    VALUE-PARITY NOT RUN — founder/orchestrator must value-gate vs live HogQL before wiring/enabling.
+
+NODE first_touch_non_direct_by_site_node
+SQL >
+    %
+    SELECT
+        COALESCE(NULLIF(utm_source, ''), 'direct') AS source,
+        COALESCE(NULLIF(utm_medium, ''), 'none') AS medium,
+        utm_campaign AS campaign,
+        count() AS conversions,
+        SUM(toFloat64OrZero(toString(conversion_value))) AS revenue
+    FROM
+    (
+        SELECT
+            conv.event_id AS event_id,
+            conv.conversion_value AS conversion_value,
+            argMinIf(pv.utm_source, pv.timestamp, pv.timestamp <= conv.timestamp) AS utm_source,
+            argMinIf(pv.utm_medium, pv.timestamp, pv.timestamp <= conv.timestamp) AS utm_medium,
+            argMinIf(pv.utm_campaign, pv.timestamp, pv.timestamp <= conv.timestamp) AS utm_campaign
+        FROM
+        (
+            SELECT event_id, distinct_id, timestamp, conversion_value
+            FROM events
+            WHERE site_id = {{ String(site_id, required=True) }}
+              AND event_type = '$conversion'
+              AND timestamp >= {{ DateTime(date_from, required=True) }}
+              AND timestamp < {{ DateTime(date_to, required=True) }}
+        ) AS conv
+        LEFT JOIN
+        (
+            SELECT distinct_id, timestamp, utm_source, utm_medium, utm_campaign
+            FROM events
+            WHERE site_id = {{ String(site_id, required=True) }}
+              AND event_type = '$pageview'
+              AND utm_source IS NOT NULL AND utm_source != '' AND utm_source != 'direct'
+        ) AS pv ON pv.distinct_id = conv.distinct_id
+        GROUP BY conv.event_id, conv.conversion_value
+    )
+    GROUP BY source, medium, campaign
+    ORDER BY revenue DESC
+    LIMIT 50000
+
+TYPE endpoint
