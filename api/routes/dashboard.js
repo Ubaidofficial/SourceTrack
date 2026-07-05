@@ -60,13 +60,21 @@ router.get('/overview', validateSiteKey, async (req, res) => {
         .eq('site_id', req.site.id)
         .gte('conversion_date', priorPadded.from)
         .lte('conversion_date', priorPadded.to),
-      queryHogQL(`
+      // Tinybird read cutover (flag-gated via TINYBIRD_READ_ENABLED; null -> HogQL fallback).
+      // Reuse events_latest with limit_val=1; empty filter params are no-ops (verified against the
+      // deployed pipe: '' does not add a spurious event_type='' predicate). Map named fields to the
+      // same positional [event, timestamp, page_url] the HogQL path returns.
+      (async () => {
+        const t = await queryTinybirdPipe('events_latest', { site_id: String(req.site.id), event_type_filter: '', search_filter: '', source_filter: '', limit_val: 1 })
+        if (t !== null) return t.map(r => [r.event_type, r.timestamp, r.page_url])
+        return queryHogQL(`
         SELECT event, timestamp, properties.page_url AS page_url
         FROM events
         WHERE properties.site_id = '${esc(posthogSiteId)}'
         ORDER BY timestamp DESC
         LIMIT 1
-      `, 'dash_install'),
+      `, 'dash_install')
+      })(),
       // Tinybird read cutover (flag-gated via TINYBIRD_READ_ENABLED; null -> HogQL fallback).
       (async () => {
         const t = await queryTinybirdPipe('dash_alerts', { site_id: String(req.site.id) })
