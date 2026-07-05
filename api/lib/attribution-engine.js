@@ -218,7 +218,12 @@ async function firstTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
     LIMIT 50000
   `
 
-  const rows = await queryHogQL(sql, 'first_touch_non_direct_attribution')
+  const _dtFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').slice(0, 19)
+  const _dtTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').slice(0, 19)
+  const _tb = await queryTinybirdPipe('first_touch_non_direct_by_site', { site_id: String(siteId), date_from: _dtFrom, date_to: _dtTo })
+  const rows = _tb !== null
+    ? _tb.map(r => [r.source, r.medium, r.campaign, r.conversions, r.revenue])
+    : await queryHogQL(sql, 'first_touch_non_direct_attribution')
   return rows.map(([source, medium, campaign, conversions, revenue]) => ({
     source,
     medium,
