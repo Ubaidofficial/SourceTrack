@@ -26,17 +26,17 @@ SCHEMA >
     `distinct_id` String `json:$.distinct_id`,
     `visitor_id` String `json:$.visitor_id`,
     `timestamp` DateTime64(3, 'UTC') `json:$.timestamp` CODEC(DoubleDelta, ZSTD(1)),
-    `conversion_value` Float64 DEFAULT 0 `json:$.conversion_value`,
+    `conversion_value` Nullable(Float64) `json:$.conversion_value`,
     `currency` LowCardinality(Nullable(String)) `json:$.currency`,
-    `conversion_type` LowCardinality(String) DEFAULT 'untyped' `json:$.conversion_type`,
+    `conversion_type` LowCardinality(Nullable(String)) `json:$.conversion_type`,
     `ingestion_method` LowCardinality(String) `json:$.ingestion_method`,
     `provider` LowCardinality(Nullable(String)) `json:$.provider`,
     `stitching_method` LowCardinality(Nullable(String)) `json:$.stitching_method`,
     `attribution_status` LowCardinality(Nullable(String)) `json:$.attribution_status`,
     `external_event_id` Nullable(String) `json:$.external_event_id`,
-    `first_touch_source` LowCardinality(String) DEFAULT 'direct' `json:$.first_touch_source`,
-    `first_touch_medium` LowCardinality(String) DEFAULT 'none' `json:$.first_touch_medium`,
-    `first_touch_campaign` String DEFAULT '' `json:$.first_touch_campaign`,
+    `first_touch_source` LowCardinality(Nullable(String)) `json:$.first_touch_source`,
+    `first_touch_medium` LowCardinality(Nullable(String)) `json:$.first_touch_medium`,
+    `first_touch_campaign` Nullable(String) `json:$.first_touch_campaign`,
     `first_touch_timestamp` Nullable(DateTime64(3)) `json:$.first_touch_timestamp`,
     `utm_source` Nullable(String) `json:$.utm_source`,
     `utm_medium` Nullable(String) `json:$.utm_medium`,
@@ -74,3 +74,6 @@ ENGINE "MergeTree"
 ENGINE_SORTING_KEY "site_id, timestamp"
 ENGINE_PARTITION_KEY "toYYYYMM(timestamp)"
 ENGINE_TTL "toDateTime(timestamp) + toIntervalDay(400)"
+
+FORWARD_QUERY >
+  SELECT site_id, event_type, event_id, distinct_id, visitor_id, timestamp, CAST(conversion_value, 'Nullable(Float64)') AS conversion_value, currency, CAST(conversion_type, 'LowCardinality(Nullable(String))') AS conversion_type, ingestion_method, provider, stitching_method, attribution_status, external_event_id, CAST(first_touch_source, 'LowCardinality(Nullable(String))') AS first_touch_source, CAST(first_touch_medium, 'LowCardinality(Nullable(String))') AS first_touch_medium, CAST(first_touch_campaign, 'Nullable(String)') AS first_touch_campaign, first_touch_timestamp, utm_source, utm_medium, utm_campaign, utm_content, utm_term, gclid, gbraid, wbraid, fbclid, msclkid, ttclid, li_fat_id, li_fatid, twclid, dclid, snapclid, pclid, sccid, ko_click_id, ai_source, page_url, referrer, country, device_type, browser_name, server_timestamp, occurred_at, webhook_customer_id, stripe_subscription_id, stripe_invoice_id, properties

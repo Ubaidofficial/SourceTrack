@@ -1,3 +1,279 @@
+# SourceTrack — Session Handoff — 2026-07-03
+
+**Purpose:** consolidate everything confirmed, fixed, and still-pending from this session, so the next session doesn't re-verify or re-litigate settled items — and doesn't skip the ones that are still genuinely open.
+
+**Confidence key, used throughout:**
+- ✅ **VERIFIED-DIRECT** — I read the actual file/diff/output myself this session (via the uploaded repo zip or your own pasted terminal output). Highest confidence available.
+- 🟡 **VERIFIED-RELAY** — reported by CC or Antigravity, and independently corroborated by a second source or method this session.
+- ⚠️ **REPORTED-ONLY** — reported by one agent, not independently checked. Treat as plausible, not confirmed.
+- ❓ **UNKNOWN** — genuinely not checked by anyone this session, or requires a live/runtime check a static repo can't answer.
+
+---
+
+## 0. URGENT — read this first, before anything else in this doc
+
+Two **live, unrotated credentials** were exposed to me (the orchestrator) this session via an uploaded repo zip and must be rotated by the founder immediately, independent of any other work:
+
+1. **A GitHub OAuth token (`gho_...`) embedded in `.git/config`'s `origin` remote URL** — has both fetch AND push access to `Ubaidofficial/SourceTrack`. This is the most serious exposure of the session — push access to the live repo, not a read-scoped credential.
+2. **A Tinybird admin/CLI token in `.tinyb`** (JWT payload resolves to `host: eu_shared`) — same category as the previously-flagged-pending `st_endpoint_read`/CLI token rotation; this file's timestamp predates this session, meaning it was likely still unrotated going into tonight.
+
+Both are logged in project memory as pending. **Rotate before doing anything else.**
+
+---
+
+## 1. Branch / HEAD state
+
+- **Active branch:** `claude/tinybird-phase1-events-schema`
+- **HEAD:** `6b017f9aea85ccb87bab603a0760f1a18e607082` — "fix(security): trust proxy + resolveClientIp (XFF spoofing fix)" ✅ VERIFIED-DIRECT
+- **`origin/main`:** `bc44f81797f54933b4c384d1d1d80b360c6b255e` ✅ VERIFIED-DIRECT
+- **Merge-base:** `b86654e0bd7bff5df69f18ff4d31eb3f6cb7d765` ✅ VERIFIED-DIRECT
+- **Working tree (as of the uploaded zip):** `SESSION_HANDOFF.md` modified (stale, not this file); two untracked files — `tinybird/PHASE4_4C4D_DIFF_HARNESS_BUILD_PLAN.md` (a plan doc, uncommitted) and `tinybird/fixtures/second_tenant.ndjson` (Phase 8 seed data).
+- **Railway staging (`SourceTrack-Api`) deploys from this branch, live** — confirmed via `railway deployment list` earlier this session, deployment succeeded (`SUCCESS` status) on commit `6b017f9`. 🟡 VERIFIED-RELAY (Antigravity, cross-checked twice).
+- **Railway staging (`SourceTrack-Dashboard`) deploys from `main`**, not this branch — noted, reason unconfirmed. ⚠️ REPORTED-ONLY.
+
+---
+
+## 2. Branch reconciliation vs `main` — this session's major deliverable
+
+**Started the session believing this was a large, unscoped problem (56+ commits, +10K lines). It resolved to something much smaller and precisely located, verified directly.**
+
+### 2a. Already fully resolved — do not re-check
+- **XFF/IP-spoofing security fix (`77e6d73`)** — cherry-picked, conflict-resolved, committed directly to this branch as `6b017f9`, deployed and confirmed live on Railway staging. ✅ VERIFIED-DIRECT (diff content, deploy status).
+- **`server-events.js`, `track.js`, `conversion.js`, `SEORevenue.jsx`, `SCOPE_v3.md`** — confirmed **zero** main-side divergence since the fork (`b86654e..origin/main` diff is empty for the first, and the other four show only this branch's own additive Tinybird work). ✅ VERIFIED-DIRECT.
+- **`nightly-attribution.js`'s `processSite()`/`processConversion()` `$0`-carrier exclusion** — already present on this branch (own commit, converges with main's `3b6c92c`). ✅ VERIFIED-DIRECT (`isSubscriptionCheckoutCarrier` confirmed wired at the same line numbers main's diff shows).
+- **`attribution-engine.js`'s `getMultiTouchAttributionLive` `$0`-carrier count-exclusion** — same convergence, confirmed at `:1668`. ✅ VERIFIED-DIRECT.
+- **GATE3 contract duplicate-heading fix (`## 6` → `## 8`)** — committed (`64c36b6`), independently confirmed via `git show --stat`. ✅ VERIFIED-DIRECT.
+- **Isolated TZ-bucketing fix (getUTCMonth/getUTCFullYear)** — committed (`7247628`), independently cherry-picked onto a clean branch off `main`, opened as **PR #90**, CI green. **Still open/unmerged** — founder decision pending.
+
+### 2b. Real, still-open gaps — precisely located, ready to act on
+1. **`nightly-attribution.js`'s `runBackfill()`** lacks the carrier-skip fix main has. **Diff already produced and reviewed** (4 insertions / 9 deletions equivalent region) — ready to apply, not yet applied. ✅ VERIFIED-DIRECT.
+2. **`attribution-engine.js`'s `getAiPlatformAttributionLive` HogQL fallback path still uses OFFSET-based pagination** — confirmed present in the actual fallback loop (`let offset = 0`, `OFFSET ${offset}`). Main's `e078e4a` fix replaced this with keyset-cursor pagination because PostHog's HogQL API rejects OFFSET entirely under personal-API-key auth. **This branch's Tinybird path only avoids the bug as long as it never falls back to HogQL** — the fallback itself is currently broken if it's ever exercised. ✅ VERIFIED-DIRECT (read the actual fallback code).
+3. **`attribution-engine.js`'s `getFlexibleReport` still has the raw, un-prefiltered self-join** at all locations main's `61affb1`/`9d57f57` fix touched. Main's fix exists because this exact pattern caused real, documented 504 timeouts in production. This branch hasn't touched this function — the fix should port cleanly (no Tinybird-side conflict), but hasn't been applied. ✅ VERIFIED-DIRECT.
+
+**No other real divergence found.** The reconciliation problem, as of this session, is these 3 specific ports — not a six-file review, not a full rebase.
+
+---
+
+## 3. Phase-by-phase status (SCOPE_v3.md §13, Phases 0–10)
+
+| Phase | Status | Confidence | Notes |
+|---|---|---|---|
+| 0 — Synthetic generator | Done | 🟡 | Built and used for Phase 8 second-tenant seeding |
+| 1 — Schema + sorting keys + **load test** | Schema done; **load test never run** | 🟡 schema / ❓ load test | `SCOPE_v3.md §15` still lists the sorting-key load test as open; no evidence anyone ran it |
+| 2 — Ingest adapter + dual-write | Done, pageview gap closed | ✅ VERIFIED-DIRECT | All 3 dual-write gap sites (`track.js`, `proxy.js` ×2) confirmed wired |
+| 3 — MVs | Deliberately deferred (by design) | 🟡 | Not a gap — matches SCOPE §0.4's stated strategy |
+| 4 — Copy Pipes / windowed rewrites | **6 gating models, execution status uneven** | mixed, see §4 below | Do not treat as uniformly "done" |
+| 5 — Mechanical endpoint ports | Done, ~49–60 pipes authored | 🟡 | Small count discrepancy across sources (49/54/59/60) never resolved — doesn't block anything, just note if exact count matters |
+| 6 — N+1 rewrites | Partial | 🟡 | `aiplatform:505` built, gated off (`TINYBIRD_READ_ENABLED`); `nightly:565` explicitly deferred with real production-data justification (documented, not an oversight) |
+| 7 — Money rail, refunds, GDPR, quarantine | **Mostly not built** | ✅ VERIFIED-DIRECT | See §5 below — this is the largest remaining phase |
+| 8 — Tenant isolation | Strong for probed surface, incomplete overall | ✅ VERIFIED-DIRECT (static audit content) / 🟡 (runtime, 3 of ~50+ pipes) | Static audit's 3 known gaps (OR-predicates, self-joins, multi-line `{% if %}`) all checked clean against actual pipe files |
+| 9 — Validation harness | 4/9 models proven; 2 have zero harness | ✅ VERIFIED-DIRECT | See §4 below |
+| 10 — Cutover | **Not started; app read paths not switched** | ✅ VERIFIED-DIRECT | See §6 below — this is the big one |
+
+---
+
+## 4. Attribution model validation — precise, per-model status
+
+| Model | Pipe exists/deployed | Execution record | Confidence |
+|---|---|---|---|
+| `linear`, `time_decay`, `u_shaped`, `w_shaped` | Yes (shared row-pull pair) | Claimed PASS, but **only as a prose quotation in `SESSION_HANDOFF.md`** — no committed, re-runnable artifact exists anywhere in the repo | 🟡 corroborated claim, ❓ no artifact |
+| `last_touch` | Yes (`last_touch_by_site.pipe`, confirmed 4 independent per-field ASOF joins on `distinct_id`) | **No execution record found anywhere.** No harness exists | ✅ pipe confirmed / ❓ zero validation |
+| `ai_platforms` | Yes (`pageviews_by_visitors.pipe`) | **No execution record found anywhere.** No harness exists | ✅ pipe confirmed / ❓ zero validation |
+| `first_touch`, `first_touch_non_direct`, `last_touch_non_direct` | Cutover-gate (lower priority per GATE3 §2 Decision 5) | Fixtures recorded, not ingested | ⚠️ not yet needed pre-cutover |
+
+**A plan for closing the `last_touch`/`ai_platforms` gap exists** (`PHASE4_4C4D_DIFF_HARNESS_BUILD_PLAN.md`, uncommitted) — its fixture-presence claims (cc-4c/cc-4d counts, the visitorZ exact-timestamp tie) were independently corroborated via a separate query path this session. 🟡 VERIFIED-RELAY, corroborated.
+
+---
+
+## 5. Phase 7 — precise, code-verified status (not "deferred," stated plainly per item)
+
+| Item | Status | Evidence |
+|---|---|---|
+| Refund handler | **Does not exist** | Zero `refund` matches in any `.js` file under `api/` |
+| GDPR Tinybird erasure | **Does not exist** — old PostHog Persons REST path still the only mechanism | `gdpr.js` has zero Tinybird references; `delete_condition` appears only in a planning doc |
+| Quarantine alarm | **Does not exist** | Zero matches in any `.js`/`.pipe`/`.sql` file; `health-agent.js` still entirely PostHog-based |
+| `nightly:565` N+1 | Unchanged, deliberately deferred | Real production data cited (58 runs/47 days, max 8 conversions in any run, 0 subscription rows ever) — legitimate deferral, not an oversight |
+| `isSubscriptionCheckoutCarrier` count-exclusion (Path A + B) | **Implemented**, confirmed converged with main | See §2a |
+| `tinybird_revenue_idempotency_keys` purge job | Design-only proposal exists, not built; table exists but **unwired to any producer**, 0 rows staging, **does not exist in prod at all** (migration never applied) | ✅ VERIFIED-RELAY (staging), consistent with prod never having been touched |
+
+**Real, concrete new risk from this session's investigation:** the GDPR gap means any row written to Tinybird via `dualWriteEvent` currently has **zero erasure path**. Given most current Tinybird data is synthetic/load-test, near-term real-world exposure is likely small — but the mechanism gap is unconditional and should close before real customer data flows through in volume.
+
+---
+
+## 6. The single biggest reframing from this session: read-path cutover has not started
+
+Confirmed via direct grep against the actual repo: at least **11 live, mounted route files** still call `queryHogQL` (PostHog) directly as their canonical read path — `live.js`, `events.js`, `journey.js`, `integrations.js`, `hygiene.js`, `dashboard.js`, `admin.js`, `leads-server.js`, `alerts.js`, `sessions.js`, `seo-revenue.js`. ✅ VERIFIED-DIRECT.
+
+Only **one** function (`getAiPlatformAttributionLive`, Phase 6's `aiplatform:505` rewrite) actually reads from Tinybird, and only when `TINYBIRD_READ_ENABLED` is on. The ~49–60 deployed pipes exist and answer on staging, but **the app has not been rewired to call them.**
+
+**This means "Phase 10 not started" is not just a checklist label — it's the largest single remaining body of work in the whole migration**, larger than any single item discussed tonight. The exact number of call sites within those 11 files that need switching from `queryHogQL(...)` to a Tinybird pipe call has not been counted.
+
+**N1 (historical backfill) — the checklist's own flagged critical unknown, now checked:** zero backfill tooling found anywhere in `tinybird/`. This appears to be a forward-only dual-write migration with no mechanism to copy pre-cutover PostHog history into Tinybird. **This needs a founder decision before PostHog is ever decommissioned** — if history matters, either a backfill must be built, or PostHog needs to stay as a cold read-only archive.
+
+---
+
+## 7. Other confirmed-done items (don't re-check)
+
+- `TINYBIRD_TEMP_DEBUG` reverted/removed.
+- `tinybird/tools/README.md:114` host fix applied (`https://api.tinybird.co`, with explanatory comment).
+- SEO revenue truth-gate (`revenue > 0`) live in `SEORevenue.jsx`, two call sites.
+- `ai-chat.js` confirmed dead code — unreachable from the running app (zero mounts, zero dashboard routes) — correctly excluded from the live product, even though the file/tests still exist in-repo.
+- Retry-capable Tinybird transport code exists (`createRetryingTinybirdTransport`, bounded backoff, `Retry-After`-aware) — **but is NOT wired at boot**; `boot.js` uses the bare, non-retrying transport. Code exists, isn't active.
+
+---
+
+## 8. Confirmed-still-missing / open (don't assume resolved)
+
+- Merged-identity fixture (`visitor_id ≠ distinct_id`) — zero fixtures found; untested gap remains.
+- Sorting-key load test (Phase 1) — never run, per repo evidence.
+- `posthog-js`/`posthog-node` still present in dependencies — expected pre-cutover, flagged for the eventual removal step.
+- PR #90 (isolated TZ fix) — open, CI green, unmerged. Founder decision pending.
+- Prod Tinybird workspace (N2) — **cannot be verified from a static repo checkout**; local `.env*` files don't reflect real Railway config. Needs a live check.
+
+---
+
+## 9. What genuinely cannot be answered without a live/runtime check
+
+Per the post-migration verification checklist's own framing — these need real execution, not more code reading:
+- Section A (parity across metrics/models/date ranges/tenants)
+- Section C (attribution correctness beyond the 4 models with a claimed-but-unreproducible PASS)
+- Section D (revenue rail live behavior — dedup, idempotency in practice)
+- Section M (go-live smoke test)
+- N2 (prod Tinybird workspace provisioning)
+- N9 (whether Float64 revenue summation has actually drifted from PostHog — the risk surface is confirmed to exist; actual drift is unmeasured)
+
+---
+
+## 10. Recommended priority order for next session (my judgment, not a certainty)
+
+1. **Rotate both exposed credentials** (§0) — before anything else.
+2. **Decide N1 (backfill vs. forward-only)** — this is a product/founder decision, not an engineering task, and it gates any future PostHog decommission.
+3. **Apply the 3 located, ready-to-verify `attribution-engine.js`/`nightly-attribution.js` fixes** (§2b) — small, precisely scoped, no further investigation needed first.
+4. **Decide on PR #90** (merge or hold).
+5. **Turn the Pattern-B "PASS" into a real committed artifact**, and build the `last_touch`/`ai_platforms` harness (plan already exists, partially corroborated) — closes Phase 9's real gap.
+6. **Scope Phase 10's actual read-path cutover** — count the call sites across the 11 live route files, plan the switch from `queryHogQL` to Tinybird pipes file by file. This is the largest remaining task and hasn't been sized yet.
+7. **Phase 7 build-out** (refund handler, GDPR erasure, quarantine alarm) — GDPR erasure is the one I'd personally weight highest given the live dual-write gap, but this is a judgment call, not a fact.
+
+I don't have enough information to give you a time estimate for any of this — that depends on decisions (especially N1) and on the read-path call-site count that hasn't been done yet.
+
+---
+
+*This document reflects direct repository inspection (uploaded zip, HEAD `6b017f9`) plus corroborated agent reports from this session only. It does not supersede or re-verify claims from earlier sessions not touched tonight — treat those per their original confidence markers in project memory.*
+
+
+
+> **Handoff:** Session TINYBIRD-PHASE8-COMPLETE-TZ-FIXES — Phase 8 Runtime Tenant Isolation VERIFIED + Two TZ-Parse Bugs Fixed + Honest Phase 6-10 Status Map — **PASS (Phase 8 runtime, probed pipes only) / PARTIAL (everything else).**
+
+> **⚠️ HEAD SHA CAVEAT (read first):** The most recent SHA reported to the orchestrator during this session was `22ddc9a` (short form; full SHA not captured). This was NOT independently re-verified as the actual current HEAD before this entry was drafted — **run `git log -1` before trusting this as accurate**, and correct this line if HEAD has moved.
+
+> **Context this session opened with:** `SESSION_HANDOFF.md` was confirmed STALE at session start — last touched at commit `8087022`, but HEAD was already 9+ commits ahead (`9dd496c`) covering work never appended here. **Lesson, now doubly-confirmed:** always run `git log -1` before trusting this file for anything recent. Do the same for `SESSION_STATE.md` and `SESSION_LOG.md` — see note at the very end of this entry; both are confirmed STALE-ON-THIS-BRANCH (frozen at pre-Tinybird `main`-branch content, June 19-24 2026, never touched by any Tinybird work) and were deliberately left untouched by this session, not merged into.
+
+---
+
+### 1. Phase 4 diff tool — TZ-local-parse bug found and fixed (commit `9dd496c`)
+
+`tinybird/tools/phase4_touchpoint_diff.js`'s `tsMs()` parsed Tinybird's zoneless timestamp strings (`"2026-06-29 21:29:28.976"`, no `Z`/offset) using bare `new Date()`, which interprets a zoneless string as the **runtime's local time**. On the founder's local machine (`TZ=Europe/Madrid`), this produced a constant, confirmed offset of exactly **7,200,339 ms** (7,200,000ms = the 2-hour Madrid/UTC offset that summer, + 339ms = a separate, real, pre-existing ingestion-timing offset already documented elsewhere in this file) on every compared row — a 100% no-match on the Pattern-B fixture set (`time_decay`/`linear`/`u_shaped`/`w_shaped`).
+
+**Fix:** `tsMs()` now normalizes zoneless strings to explicit UTC (strict no-op for any string already carrying a zone marker, so the HogQL/`Z`-format side is untouched) + switched matching from exact-ms equality to a ±500ms tolerance window (the 339ms real offset needed slack; ±500ms covers it with margin).
+
+**Confirmed PASS, live, founder-run**, on the real cc-4a fixture set after the fix:
+```
+conversionsHogqlOnly=0  conversionsTinybirdOnly=0  touchpointMismatches=0
+```
+Scope of this PASS: **4 of 9 attribution models only** (`time_decay`/`linear`/`u_shaped`/`w_shaped`) — the tool's own output explicitly states it does NOT cover `last_touch`/`ai_platforms`/`aggregate`/`idempotency`.
+
+---
+
+### 2. Same bug class found in LIVE money-rail code — fixed (commit `89dc70e`)
+
+Dispatched a check for whether the fixed `tsMs()` was shared by/needed in other surfaces. Finding, CC-traced and orchestrator-spot-verified against the actual committed diff (not just CC's prose description):
+
+- `tsMs()` is confirmed NOT shared/exported anywhere else — the fix does not propagate automatically.
+- `attribution-engine.js`'s `getAiPlatformAttributionLive` → `toPvObj()` (the shared row-mapper for both the Tinybird-pipe and HogQL-fallback pageview sources) passed Tinybird's raw zoneless timestamp through unmodified. Downstream, `selectAiTouchForConversion`'s window check and a date-grouping step both did bare `new Date()` parsing on this value, compared against HogQL conversions' `Z`-format timestamps — the same **mixed-store, zoneless-vs-zoned** bug class, in live app code, gated behind `TINYBIRD_READ_ENABLED`.
+
+**Fix:** normalized at the `toPvObj()` boundary (same `toUtcSafeTs` no-op-if-already-zoned pattern as `9dd496c`). Orchestrator independently traced the regex (`/[zZ]$|[+-]\d{2}:?\d{2}$/`) against real sample strings from this session and confirmed it correctly no-ops on `Z`-format and correctly converts zoneless format. Orchestrator also independently spot-checked 2 of the 3 code locations CC cited as in-scope directly against the actual file (`sed -n` on the real line ranges) — both matched CC's description. The third (`:1202/:1226`, the non-direct explain-journey comparisons) was only partially corroborated; CC's claim that this path reads HogQL-only and is therefore out of scope was not fully independently re-verified by the orchestrator.
+
+**Exploitability status, CONFIRMED not just inferred:** Railway staging's runtime TZ was checked directly via `railway ssh` + `node -e "console.log(Intl.DateTimeFormat().resolvedOptions().timeZone)"` → **`UTC`**. Under UTC, the bug was producing correct output by environmental coincidence (no local-offset distortion), NOT because the code was correct. **Also confirmed this session: `TINYBIRD_READ_ENABLED=true` is LIVE on Railway staging** — set directly as an env var, not via any commit, meaning code-only audits (checking git history for when the flag was enabled) will silently miss this. Always check the live Railway env directly, not just git log, going forward.
+
+**One item flagged but explicitly NOT fixed** (correctly out of this dispatch's scope): the same file's date-grouping step at ~line 678 uses `.getMonth()`/`.getFullYear()` (local calendar components) rather than UTC-safe equivalents — same latent-bug class (correct today only because staging is UTC), tracked as a separate, low-urgency follow-up, not yet actioned.
+
+---
+
+### 3. Phase 8 — Runtime tenant isolation: RESOLVED this session (major milestone)
+
+**Starting state:** the runtime isolation test (`tinybird/qa/tenant_isolation_runtime_test.mjs`) could not run at all — Tinybird staging had only ONE populated tenant (the gating site, `de200000-...441111`). Confirmed via two independent methods (direct curl to `bench_conversions_by_site`, and the newly-connected Tinybird MCP's `events_latest` tool) that both candidate second-sites — the script's hardcoded default `de400000-...441111`, and `cdf6d291-ac93-488d-a57c-ef65d7f62dad` (the most-recently-active real site per a direct Supabase query against the staging `sites` table) — had zero Tinybird rows.
+
+**Root cause of "no second tenant":** the dual-write mechanism appears to have only ever been exercised against the gating site's deliberately-fired fixtures (`cc-4a`/`cc-4c`/`cc-4d`), never rolled out to any other staging site.
+
+**Founder chose the SHORTCUT seed path** (Tinybird-only direct ingest, explicitly NOT reconciliation-faithful — no PostHog side, bypasses app site_key validation) over the ~half-day faithful app-HTTP-fired alternative CC scoped. Built, dry-run-verified, and founder-executed:
+- `generate_events.js` gained an optional `--site-id <uuid>` override (regression-verified: default/unset behavior unchanged).
+- New `tinybird/tools/ingest_ndjson_to_tinybird.mjs` — dry-run by default, requires explicit `--confirm`, mirrors the real dual-write transport (`POST /v0/events?name=events`, gzip, Bearer append-token), `--only-site-id` safety filter.
+- Orchestrator generated a fresh UUID via `crypto.randomUUID()` (`ff8d5426-1713-48af-811b-5c12bd2257dd`), confirmed zero collision against the real Supabase `sites` table via a live read-only query before use.
+- Founder ran the real `--confirm` ingest: **1,096 rows sent successfully.** Orchestrator independently verified via a separate Tinybird MCP query (not the ingest script's own success message) that real, correctly-tagged synthetic rows exist for this site_id.
+
+**Runtime test then failed at the HARVEST step** — root-caused by CC via direct SQL read of the pipe (not inferred): `dashboard_recent_activity_events.pipe:51` has a hard `timestamp >= now() - INTERVAL 30 MINUTE` window, which excludes the gating site's June-dated fixtures entirely (only the freshly-seeded, recently-timestamped second tenant passed).
+
+**Orchestrator's own manual workaround attempt was tried and PROVEN UNRELIABLE — worth carrying forward as a lesson, not just a footnote.** Using the Tinybird MCP's `events_latest` tool with a `search_filter` parameter (documented as a LIKE-match across several fields including `distinct_id`) silently returned **zero rows for a `distinct_id` independently confirmed, moments earlier, to exist** via an unfiltered query against the same site. This is exactly the "broken query gives a false PASS/false-empty" failure mode the script's own same-tenant sanity check exists to catch — caught here by applying that same discipline to an ad hoc manual method, not by the method itself. **Do not trust `events_latest`'s `search_filter` param for isolation verification** until/unless this discrepancy is explained.
+
+**CC fixed the actual root cause properly** (folded into the session's commits): switched the script's default `HARVEST_PIPE` to `events_latest` (verified via direct SQL read: no mandatory time window, only optional `{% if defined %}` date filters), made `HARVEST_PIPE`/`PROBE_PIPE` env-overridable. Flagged-not-fixed: the prune-sanity step's pipe (`doctor_pageviews_30d`) also has a 30-day window that could misleadingly print `0/0` for older fixtures — harmless since that line is non-asserted/always-PASS in the script's own logic, but a readability follow-up worth doing eventually.
+
+**FINAL RESULT — founder-run, orchestrator-witnessed live, and cross-corroborated against visitor IDs the orchestrator had independently found earlier in the SAME session (genuine independent confirmation, not just trusting the script's own output):**
+```
+✅ PASS sanity: A+ownVisitor>0 — 1 rows
+✅ PASS sanity: B+ownVisitor>0 — 4 rows
+✅ PASS LEAK: A-scope + B-visitor==0 — 0 rows
+✅ PASS LEAK: B-scope + A-visitor==0 — 0 rows
+✅ PASS prune: doctor_pageviews_30d — A={"pageviews_30d":32} B={"pageviews_30d":855}
+RESULT: PASS — site_id param prunes; no cross-tenant leak on the probed pipes.
+```
+The harvested visitor IDs (`cc-verify-pixel-20260630a` for site A, `a9cd6e4b-3f78-4b5c-b7f1-8eac6f9a2ef4` for site B) matched IDs the orchestrator had independently pulled via a separate raw query earlier in the session, before this run — real cross-corroboration, not circular trust in the script.
+
+**Honest scope of what this PASS actually proves — do not round up:**
+- Proves `site_id` PARAM-level pruning works correctly on the **specific pipes probed** (`journey`, `doctor_pageviews_30d`, `events_latest`) — NOT all 59 deployed pipes. The static audit claiming 59/59 pipes have a fail-closed `site_id` predicate is **CC-self-reported this session** (commit message claims `AGENT-VERIFIED... 59/59 endpoint pipes PASS, 0 FAIL`) — the orchestrator has NOT read `tinybird/qa/tenant_isolation_static_audit.mjs`'s actual source code. Treat as CC-verified intent, not orchestrator-confirmed, until someone reads it directly.
+- Does NOT prove token-scope isolation — the `st_endpoint_read` token used throughout is `WORKSPACE:READ_ALL`, which can technically read any tenant's data if the site_id is known. This is explicitly, correctly, deferred to Phase 10 per the script's own documented scope statement — not a gap in this result.
+
+---
+
+### 4. Security — token exposure incidents this session (cumulative, real, not hypothetical)
+
+Multiple real credential exposures occurred in this session's chat transcript, requiring rotation:
+1. `st_endpoint_read` — exposed at least twice (once as a full Tinybird MCP connector URL with embedded token, once as a raw value/fragment).
+2. `dual_write_append` — exposed as a fragment during troubleshooting.
+3. Whatever token backs the now-connected Tinybird MCP server (same underlying credential as #1, most likely).
+
+**None of these were confirmed rotated by the end of this session** — this is carried forward as an outstanding, time-sensitive action item, on top of the admin-token rotation already pending from prior sessions (3+ tokens total now pending rotation).
+
+**Process lesson worth keeping:** the file-based clipboard workaround (`pbpaste` into a shell variable, or paste into a local text editor → save → `cat`) reliably worked around repeated failures of direct terminal paste/`read -s` for capturing token values in this environment — worth using by default for any future credential-entry step, rather than re-discovering the same friction.
+
+---
+
+### 5. Evidence-based Phase 6-10 status map (orchestrator synthesis, cross-checked against CC's grep-based audit — not independently re-verified line-by-line by the orchestrator beyond what's noted above)
+
+| Phase | Status | Confidence |
+|---|---|---|
+| 0-5 | Reported complete in prior handoff entries (this file, above) | Not re-verified this session |
+| 6 | Partial — `aiplatform:505` N+1 rewrite built; the mixed-store TZ bug now fixed (§2 above); full live-app-path correctness under `TINYBIRD_READ_ENABLED=true` still not proven end-to-end against real production-shaped traffic (only sanity-checked + the isolation test's incidental use of it) | Medium |
+| 7 | Barely started — only the $0-carrier count fix has landed (per CC's grep-audit this session: refund handler, GDPR Tinybird erasure, quarantine alarm, and the `nightly:565` N+1 rewrite are all NOT STARTED / proposal-docs-only, confirmed via grep returning empty, not inferred) | Medium (grep-based, not independently re-run) |
+| 8 | Runtime isolation now solid per §3 above, for the probed pipes. Static-audit script itself still unread by the orchestrator. Token-scope isolation correctly deferred to Phase 10. | High for runtime result; low for the unread static-audit claim |
+| 9 | 4 of 9 attribution models RUN-PASS (`time_decay`/`linear`/`u_shaped`/`w_shaped`, per §1). `last_touch`/`ai_platforms` have NO validation harness at all (would need a different comparator — picked-value diff, not touchpoint-set diff, per earlier CC scoping in this session, not repeated in full here). `first_touch` + its 2 non-direct variants have recorded fixtures but are NOT ingested/run. | High on the 4/9; confirmed gap on the other 5 |
+| 10 | Not started. | High confidence of "not started" (no evidence found) |
+
+**Bottom line: PostHog decommission is NOT close.** Phase 7 (money rail) in particular is barely begun and is explicitly the highest-risk phase per this project's own prior notes — reserve for dedicated, unhurried attention, not something to fold into other work.
+
+---
+
+### 6. Note on `SESSION_STATE.md` / `SESSION_LOG.md`
+
+Both confirmed this session (full clean read via `git show ... > file`, uploaded and reviewed directly — not just corrupted terminal-paste fragments) to be **frozen at pre-Tinybird `main`-branch content** (140P/140Z-numbered QA sessions, dates June 19-24 2026, Report Builder / Stripe billing / visual-QA work). Neither file has ever been touched by any Tinybird-migration work on this branch. **Deliberately left untouched this session** rather than merged into — they represent a different, separate workstream's history and don't belong folded into this handoff. A future session should not expect Tinybird context from either file.
+
+---
+
+### 7. Immediate next steps, in the order this session's evidence suggests (not a certainty — founder's call)
+
+1. **Rotate the exposed tokens** (§4) — time-sensitive, not deferred further.
+2. Read `tinybird/qa/tenant_isolation_static_audit.mjs`'s actual source directly, to convert its 59/59-pipes claim from CC-self-reported to independently verified.
+3. Decide Phase 7 vs. Phase 9 harness-extension as the next real work stream — both genuinely unstarted/incomplete; no strong evidence-based reason to prioritize one over the other found this session beyond Phase 7 being the higher-risk, larger body of work.
+4. Fix the low-urgency latent local-timezone item flagged in §2 (`.getMonth()`/`.getFullYear()` at ~line 678) before ever treating that code as portable to a non-UTC environment.
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
 > **Handoff:** Session TINYBIRD-PHASE5-COMPLETE-FIRST-DEPLOY — Phase 5 Endpoint Ports Signed Off + First Live Tinybird Deploy + Phase 6 Partial — **PASS (Phase 5) / PARTIAL (Phase 6).**
