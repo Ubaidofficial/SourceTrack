@@ -22,6 +22,19 @@
 //
 // This module is Supabase-free and token-free-testable: it returns a structured
 // per-datasource result; the caller (gdpr.js) persists it to erasure_log.
+//
+// TWO scopes:
+//   - eraseSubjectFromTinybird — one subject (GDPR /visitor).
+//   - eraseSiteFromTinybird     — a WHOLE site (GDPR /account, when its sites are
+//     being deleted). BROAD delete: `site_id = X` can match millions of rows.
+// The Datasources delete API handles a broad condition the same way as a narrow
+// one (it's just a WHERE): async job, returns rows_affected, suitable for up to
+// a few million rows / ~1000 ops per week (Tinybird docs, 2026-07-06). CAVEAT:
+// there is a limit of ACTIVE delete jobs per workspace (Free 1 / Developer 3 /
+// Enterprise 6). This module fires deletes per-datasource sequentially but does
+// NOT poll each job to completion, so under load a later delete can be rejected;
+// that surfaces as a per-datasource error → status='failed' (retryable via
+// erasure_log), never a silent drop.
 
 import { esc } from '../../api/lib/utils.js'
 
@@ -104,6 +117,95 @@ export async function eraseSubjectFromTinybird ({
   let condition
   try {
     condition = buildDeleteCondition(siteId, subjectId)
+  } catch (err) {
+    return { ...base, status: 'failed', reason: err.message }
+  }
+
+  const wantDelete = confirm === true
+  // LOUD, audited admin-token gate: a confirmed erasure with no admin token
+  // must be a visible skip, never a silent success.
+  if (wantDelete && !adminToken) {
+    return {
+      ...base,
+      status: 'skipped_no_admin_token',
+      reason: 'TINYBIRD_ADMIN_TOKEN not configured — Tinybird erasure NOT performed (dry-run counts only below)',
+      perDatasource: await Promise.all(datasources.map(async (ds) => {
+        try {
+          const matched = await countMatching({ host, token: countToken, datasource: ds, condition, fetchImpl })
+          return { datasource: ds, condition, matched, executed: false, jobId: null, error: null }
+        } catch (err) {
+          return { datasource: ds, condition, matched: null, executed: false, jobId: null, error: err.message }
+        }
+      }))
+    }
+  }
+
+  let anyError = false
+  const perDatasource = []
+  for (const ds of datasources) {
+    try {
+      const matched = await countMatching({ host, token: countToken, datasource: ds, condition, fetchImpl })
+      if (!wantDelete) {
+        perDatasource.push({ datasource: ds, condition, matched, executed: false, jobId: null, error: null })
+        continue
+      }
+      const jobId = await deleteByCondition({ host, adminToken, datasource: ds, condition, fetchImpl })
+      perDatasource.push({ datasource: ds, condition, matched, executed: true, jobId, error: null })
+    } catch (err) {
+      anyError = true
+      perDatasource.push({ datasource: ds, condition, matched: null, executed: false, jobId: null, error: err.message })
+    }
+  }
+
+  const status = anyError ? 'failed' : (wantDelete ? 'executed' : 'dry_run')
+  return { ...base, status, perDatasource }
+}
+
+/**
+ * Build the ClickHouse delete_condition for an ENTIRE site (all subjects on it).
+ * site_id is server-resolved (NOT user input) but is still esc()'d for defence
+ * in depth so it can only ever be a string literal. This is a BROAD delete
+ * (potentially millions of rows) — see the module header on async job behaviour
+ * + the per-workspace active-delete-job limit.
+ */
+export function buildSiteDeleteCondition (siteId) {
+  if (!siteId) throw new Error('buildSiteDeleteCondition: siteId is required')
+  return `site_id = '${esc(siteId)}'`
+}
+
+/**
+ * Erase ALL data for one site from BOTH Tinybird datasources.
+ *
+ * Structural mirror of eraseSubjectFromTinybird — same safety posture (default
+ * dry-run, confirm===true required to delete, LOUD admin-token gate, never
+ * throws) — but the condition is the whole site (no subject).
+ *
+ * @returns {Promise<object>} audit-ready result:
+ *   { status, siteId, datasources: [...], perDatasource: [
+ *       { datasource, condition, matched, executed, jobId, error } ] }
+ *   status ∈ 'skipped_not_configured' | 'skipped_no_admin_token' | 'dry_run'
+ *            | 'executed' | 'failed'
+ *   Never throws — failures are captured per-datasource and reflected in status
+ *   so the caller can persist status='failed' for retry (never silent-swallow).
+ */
+export async function eraseSiteFromTinybird ({
+  host, adminToken, readToken, siteId, confirm = false, fetchImpl,
+  datasources = TINYBIRD_ERASURE_DATASOURCES
+} = {}) {
+  const base = { siteId, datasources, perDatasource: [] }
+
+  if (!host) {
+    return { ...base, status: 'skipped_not_configured', reason: 'TINYBIRD_HOST not set — Tinybird erasure NOT performed' }
+  }
+  // Counting needs a read-capable token; deleting needs the admin token.
+  const countToken = readToken || adminToken
+  if (!countToken) {
+    return { ...base, status: 'skipped_not_configured', reason: 'no Tinybird read/admin token — Tinybird erasure NOT performed' }
+  }
+
+  let condition
+  try {
+    condition = buildSiteDeleteCondition(siteId)
   } catch (err) {
     return { ...base, status: 'failed', reason: err.message }
   }
