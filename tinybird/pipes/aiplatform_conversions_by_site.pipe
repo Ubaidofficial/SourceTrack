@@ -1,0 +1,50 @@
+DESCRIPTION >
+    Flat conversions row-pull (no joins/argMin/window). Faithful 1:1 port of the
+    convSql in aiPlatformAttribution (api/lib/attribution-engine.js, queryName
+    'aiplatform_conversions_live'). One row per $conversion, ORDER BY timestamp DESC
+    LIMIT 10000. Serves the aiplatform conversions fetch.
+    §2.6 typed-column translation: properties.site_id -> site_id, event -> event_type,
+    uuid -> event_id (no `uuid` column; event_id is the Tinybird identifier). conversion_type,
+    utm_source/medium/campaign/term, referrer, ai_source, country, device_type, provider,
+    attribution_status, stitching_method, ingestion_method, browser_name, page_url are all
+    TYPED columns (events.datasource). `browser` is BAG-only (no typed column; schema has
+    browser_name) -> JSONExtractString(properties, 'browser'). ''-vs-NULL trap is INERT: the
+    consumer collapses via `browserName || browser || 'unknown'` (attribution-engine.js
+    consumer), so plain JSONExtractString (no nullIf) is faithful.
+    MONEY: conversion_value = toFloat64OrZero(toString(conversion_value)) (Tinybird dialect)
+    == live toFloatOrZero(toString(properties.conversion_value)).
+    VALUE-PARITY NOT RUN — founder/orchestrator value-gates vs live HogQL before wiring.
+
+NODE aiplatform_conversions_by_site_node
+SQL >
+    %
+    SELECT
+        event_id AS uuid,
+        distinct_id,
+        timestamp,
+        conversion_type,
+        toFloat64OrZero(toString(conversion_value)) AS conversion_value,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        referrer,
+        ai_source,
+        country,
+        device_type,
+        utm_term,
+        provider,
+        attribution_status,
+        stitching_method,
+        ingestion_method,
+        browser_name,
+        JSONExtractString(properties, 'browser') AS browser,
+        page_url
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$conversion'
+      AND timestamp >= {{ DateTime(date_from, required=True) }}
+      AND timestamp < {{ DateTime(date_to, required=True) }}
+    ORDER BY timestamp DESC
+    LIMIT 10000
+
+TYPE endpoint

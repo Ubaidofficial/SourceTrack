@@ -1,0 +1,51 @@
+DESCRIPTION >
+    Flat conversions row-pull (no joins/argMin/window). Faithful 1:1 port of the
+    convSql in multiTouchAttribution (api/lib/attribution-engine.js, queryName
+    'multitouch_conversions_live'). One row per $conversion, ORDER BY timestamp DESC
+    LIMIT 10000. Structural twin of aiplatform_conversions_by_site — same column set
+    except the tail: stripe_subscription_id, stripe_event_type (instead of
+    browser_name/browser/page_url).
+    §2.6 typed-column translation: properties.site_id -> site_id, event -> event_type,
+    uuid -> event_id (no `uuid` column; event_id is the Tinybird identifier). conversion_type,
+    utm_source/medium/campaign/term, referrer, ai_source, country, device_type, provider,
+    attribution_status, stitching_method, ingestion_method, stripe_subscription_id are all
+    TYPED columns (events.datasource). `stripe_event_type` is BAG-only (no typed column;
+    schema has stripe_subscription_id + stripe_invoice_id, NOT stripe_event_type) ->
+    JSONExtractString(properties, 'stripe_event_type'). ''-vs-NULL trap is INERT: the consumer
+    collapses via `stripeEventType || null`, so plain JSONExtractString (no nullIf) is faithful.
+    MONEY: conversion_value = toFloat64OrZero(toString(conversion_value)) (Tinybird dialect)
+    == live toFloatOrZero(toString(properties.conversion_value)).
+    VALUE-PARITY NOT RUN — founder/orchestrator value-gates vs live HogQL before wiring.
+
+NODE multitouch_conversions_by_site_node
+SQL >
+    %
+    SELECT
+        event_id AS uuid,
+        distinct_id,
+        timestamp,
+        conversion_type,
+        toFloat64OrZero(toString(conversion_value)) AS conversion_value,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        referrer,
+        ai_source,
+        country,
+        device_type,
+        utm_term,
+        provider,
+        attribution_status,
+        stitching_method,
+        ingestion_method,
+        stripe_subscription_id,
+        JSONExtractString(properties, 'stripe_event_type') AS stripe_event_type
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$conversion'
+      AND timestamp >= {{ DateTime(date_from, required=True) }}
+      AND timestamp < {{ DateTime(date_to, required=True) }}
+    ORDER BY timestamp DESC
+    LIMIT 10000
+
+TYPE endpoint
