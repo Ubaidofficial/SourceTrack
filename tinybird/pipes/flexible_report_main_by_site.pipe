@@ -1,0 +1,55 @@
+DESCRIPTION >
+    Wave-3 flexible_report MAIN query, BASE-CASE (base-gated, mirrors #111). One row per
+    source with the requested metric. Faithful port of the BASE case of the main `sql` in
+    getFlexibleReport (api/lib/attribution-engine.js, queryName 'flexible_report'). MONEY-RAIL
+    for metric='revenue'.
+
+    BASE CASE ONLY — the live main sql interpolates the full query-compiler machinery
+    (${refJoin}${qualifyingJoin}${windowJoin}${customJoin}, dynamic effectiveDimExpr, dynamic
+    metricCol, filterClauses, havingClause). This pipe reproduces the single narrow slice:
+      - dim = source × first_touch: effectiveDimExpr = dimExpr = GROUP_COLUMNS['source']
+        ['first_touch'] = COALESCE(NULLIF(properties.first_touch_source,''),'direct') (windowedDimExpr
+        null when no attributionWindow). first_touch_source is TYPED (LowCardinality(Nullable(
+        String)), events.datasource:37) -> direct read.
+      - metric ∈ {revenue, conversions} via the `metric` param (default 'conversions'):
+          revenue      -> SUM(toFloat64OrZero(toString(conversion_value)))  (== live
+                          SUM(toFloatOrZero(toString(properties.conversion_value))), :2238)
+          conversions  -> count()                                            (live :2244)
+        both with eventFilter = event_type='$conversion' (:2240/:2246).
+      - ALL joins empty (no refJoin/qualifyingJoin/windowJoin/customJoin), NO filters,
+        havingClause empty, orderClause = ORDER BY metric_value DESC (:2449, non-date).
+      Everything else (other dims/models/metrics, dim2, custom_param, attributionWindow,
+      any of the 9 filters, date groupBy, non-UTC timezone) MUST fall through to HogQL.
+
+    DATE SEMANTICS (verified :2670 getDateFilterExpr('timestamp', tz, dateFrom, dateTo),
+    tz=filters.timezone||'UTC'): base case (tz='UTC') is a PLAIN half-open range
+    `timestamp >= <from> 00:00:00 UTC AND timestamp < <dateTo+1day> 00:00:00 UTC` (whole-day,
+    exclusive end shifted +1 day). This pipe applies plain half-open `>= date_from AND < date_to`;
+    the wiring caller must pass bounds matching getDateFilterExpr(UTC) — serializeHogQLDateRange's
+    fromDate/toDate (attribution-engine.js:1904) produce equivalent +1-day-exclusive bounds for
+    date-only inputs, so the standard _dtFrom/_dtTo extraction is correct. The non-UTC tz branch
+    (toTimeZone padding) is excluded by the no-filters gate (tz derives from filters.timezone).
+    MONEY: revenue cast toFloat64OrZero(toString(conversion_value)) — orchestrator value-verifies
+    revenue PRECISION cross-store before wiring. §2.6: properties.site_id->site_id, event->event_type.
+    VALUE-PARITY NOT RUN.
+
+NODE flexible_report_main_by_site_node
+SQL >
+    %
+    SELECT
+        COALESCE(NULLIF(first_touch_source, ''), 'direct') AS dim_value,
+        {% if String(metric, 'conversions') == 'revenue' %}
+        SUM(toFloat64OrZero(toString(conversion_value)))
+        {% else %}
+        count()
+        {% end %} AS metric_value
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$conversion'
+      AND timestamp >= {{ DateTime(date_from, required=True) }}
+      AND timestamp < {{ DateTime(date_to, required=True) }}
+    GROUP BY dim_value
+    ORDER BY metric_value DESC
+    LIMIT 50000
+
+TYPE endpoint
