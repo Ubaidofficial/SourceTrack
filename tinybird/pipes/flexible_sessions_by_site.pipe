@@ -1,0 +1,45 @@
+DESCRIPTION >
+    Wave-3 flexible_report BASE-CASE (base-gated, mirrors #111 / session_report_pageviews).
+    Sessions denominator for the conversion_rate metric — count of distinct visitors per
+    source, over $pageview. Faithful port of the BASE case of the sessSql in getFlexibleReport
+    (api/lib/attribution-engine.js, queryName 'flexible_sessions', fires only when
+    metric === 'conversion_rate'). NON-MONEY-RAIL (visitor count, no revenue).
+
+    BASE CASE ONLY — the live sessSql interpolates dynamic machinery
+    (${dimExpr}${dim2Expr}${refJoin}${customJoin}${filterClauses}); this pipe reproduces the
+    single narrow slice: dim = source for the FIRST_TOUCH model
+    (GROUP_COLUMNS['source']['first_touch'] = COALESCE(NULLIF(properties.first_touch_source,''),
+    'direct')), single dim (no dim2), NO custom_param (no customJoin/_cust), NO date-refJoin,
+    NO filters. Everything else (other dims, last_touch/linear/ai/non_direct source variants,
+    dim2, custom_param, date attributeBy, any of the 9 filters) MUST fall through to HogQL via
+    the wiring gate.
+
+    MODEL: first_touch is the confirmed-common model for source-grouped sessions in the code
+    callers (api/routes/ai-analytics.js:30-33,187-190 — zero last_touch/linear sessions calls).
+    Supersedes PR #115 (which scoped source=utm_source = the last_touch/linear variant the
+    callers don't exercise). last_touch/linear source stays on HogQL (base-gate A-strategy).
+
+    EXACT-MATCH NOTE: ported verbatim from GROUP_COLUMNS['source']['first_touch'] —
+    COALESCE(NULLIF(first_touch_source,''),'direct'), NO toString() wrapper (the live lookup
+    has none; do not add one). §2.6 typed: properties.site_id->site_id, event->event_type,
+    properties.first_touch_source->first_touch_source (TYPED column, LowCardinality(Nullable(
+    String)) in events.datasource:37 — direct read, not JSONExtractString). ''-vs-NULL collapsed
+    by COALESCE(NULLIF(...),'direct') — no divergence. count(DISTINCT distinct_id) mirrored
+    literally (exact under default count_distinct_implementation=uniqExact). Half-open window.
+    VALUE-PARITY NOT RUN — orchestrator value-gates (count(DISTINCT) match, first_touch) before wiring.
+
+NODE flexible_sessions_by_site_node
+SQL >
+    %
+    SELECT
+        COALESCE(NULLIF(first_touch_source, ''), 'direct') AS dim_value,
+        count(DISTINCT distinct_id) AS sessions
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$pageview'
+      AND timestamp >= {{ DateTime(date_from, required=True) }}
+      AND timestamp < {{ DateTime(date_to, required=True) }}
+    GROUP BY dim_value
+    LIMIT 50000
+
+TYPE endpoint
