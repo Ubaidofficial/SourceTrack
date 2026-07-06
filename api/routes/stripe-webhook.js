@@ -126,7 +126,7 @@ async function handleSubscriptionEvent(event, site, siteKey) {
       conversionProperties.attribution_status = attributionStatus
     }
 
-    await ph.capture({ distinctId, event: '$conversion', properties: conversionProperties })
+    await ph.capture({ distinctId, event: '$conversion', timestamp: new Date(occurredAt), properties: conversionProperties })
 
     // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
     // Subscription path: reached only after signature verify, the persistent claim
@@ -451,6 +451,7 @@ router.post('/:site_key', async (req, res) => {
     await ph.capture({
       distinctId,
       event: '$conversion',
+      timestamp: new Date(occurredAt),
       properties: conversionProperties
     })
 
