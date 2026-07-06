@@ -410,7 +410,12 @@ export async function getAiPlatformAttributionLive({
     ORDER BY timestamp DESC
     LIMIT 10000
   `
-  const convRows = await queryHogQL(convSql, 'aiplatform_conversions_live')
+  const _dtFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').slice(0, 19)
+  const _dtTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').slice(0, 19)
+  const _tb = await queryTinybirdPipe('aiplatform_conversions_by_site', { site_id: String(siteId), date_from: _dtFrom, date_to: _dtTo })
+  const convRows = _tb !== null
+    ? _tb.map(r => [r.uuid, r.distinct_id, r.timestamp, r.conversion_type, r.conversion_value, r.utm_source, r.utm_medium, r.utm_campaign, r.referrer, r.ai_source, r.country, r.device_type, r.utm_term, r.provider, r.attribution_status, r.stitching_method, r.ingestion_method, r.browser_name, r.browser, r.page_url])
+    : await queryHogQL(convSql, 'aiplatform_conversions_live')
 
   const conversions = convRows.map(([
     uuid, distinctId, timestamp, conversionType, conversionValue,
@@ -1549,7 +1554,12 @@ export async function getMultiTouchAttributionLive({
     ORDER BY timestamp DESC
     LIMIT 10000
   `
-  const convRows = await queryHogQL(convSql, 'multitouch_conversions_live')
+  const _dtFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').slice(0, 19)
+  const _dtTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').slice(0, 19)
+  const _tb = await queryTinybirdPipe('multitouch_conversions_by_site', { site_id: String(siteId), date_from: _dtFrom, date_to: _dtTo })
+  const convRows = _tb !== null
+    ? _tb.map(r => [r.uuid, r.distinct_id, r.timestamp, r.conversion_type, r.conversion_value, r.utm_source, r.utm_medium, r.utm_campaign, r.referrer, r.ai_source, r.country, r.device_type, r.utm_term, r.provider, r.attribution_status, r.stitching_method, r.ingestion_method, r.stripe_subscription_id, r.stripe_event_type])
+    : await queryHogQL(convSql, 'multitouch_conversions_live')
 
   const conversions = convRows.map(([uuid, distinctId, timestamp, conversionType, conversionValue, utmSource, utmMedium, utmCampaign, referrer, aiSource, country, deviceType, utmTerm, rawProvider, rawAttrStatus, rawStitchMethod, rawIngestionMethod, stripeSubscriptionId, stripeEventType]) => {
     const ingestionMethod = rawIngestionMethod || null
