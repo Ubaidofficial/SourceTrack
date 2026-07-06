@@ -2021,7 +2021,12 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     LIMIT 50000
   `
 
-    const rows = await queryHogQL(sql, 'flexible_report_days_to_convert')
+    const _dtFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').slice(0, 19)
+    const _dtTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').slice(0, 19)
+    const _tb = await queryTinybirdPipe('flexible_report_days_to_convert_by_site', { site_id: String(siteId), date_from: _dtFrom, date_to: _dtTo })
+    const rows = _tb !== null
+      ? _tb.map(r => [r.dim_value, r.days_to_convert, r.conversions])
+      : await queryHogQL(sql, 'flexible_report_days_to_convert')
     const results = rows.map(([dimValue, daysToConvert, conversions]) => ({
       dim_value: dimValue || 'unknown',
       days_to_convert: Number(daysToConvert) || 0,
@@ -2080,7 +2085,12 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     LIMIT 50000
   `
 
-    const rows = await queryHogQL(sql, 'flexible_report_touchpoints_per_conversion')
+    const _dtFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').slice(0, 19)
+    const _dtTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').slice(0, 19)
+    const _tb = await queryTinybirdPipe('flexible_report_touchpoints_per_conversion_by_site', { site_id: String(siteId), date_from: _dtFrom, date_to: _dtTo })
+    const rows = _tb !== null
+      ? _tb.map(r => [r.dim_value, r.touchpoints_per_conversion, r.conversions])
+      : await queryHogQL(sql, 'flexible_report_touchpoints_per_conversion')
     const results = rows.map(([dimValue, touchpointsPerConversion, conversions]) => ({
       dim_value: dimValue || 'unknown',
       touchpoints_per_conversion: Number(touchpointsPerConversion) || 0,
