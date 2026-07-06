@@ -1646,7 +1646,18 @@ export async function getMultiTouchAttributionLive({
     ORDER BY timestamp ASC
     LIMIT 100000
   `
-  const pvRows = await queryHogQL(pvSql, 'multitouch_pageviews_live')
+  const _pvLookbackFrom = lookbackStr.match(/'([^']+)'/)[1].replace('T', ' ').slice(0, 19)
+  const _pvDtTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').slice(0, 19)
+  // Tinybird read cutover (flag-gated). The pipe only reproduces the BASE (23-col) case;
+  // gate on no-custom-key so custom_param-grouped reports fall through to HogQL (matches the
+  // session_report_pageviews cutover ~:940). The custom path is not value-verified.
+  const _pvCanUsePipe = !custKey1 && !custKey2
+  const _pvTb = _pvCanUsePipe
+    ? await queryTinybirdPipe('pageviews_windowed_by_site', { site_id: String(siteId), lookback_from: _pvLookbackFrom, date_to: _pvDtTo })
+    : null
+  const pvRows = _pvTb !== null
+    ? _tb.map(r => [r.distinct_id, r.timestamp, r.utm_source, r.utm_medium, r.utm_campaign, r.referrer, r.ai_source, r.gclid, r.gbraid, r.wbraid, r.fbclid, r.msclkid, r.ttclid, r.li_fat_id, r.li_fatid, r.twclid, r.dclid, r.snapclid, r.pclid, r.sccid, r.ko_click_id, r.page_url, r.utm_term])
+    : await queryHogQL(pvSql, 'multitouch_pageviews_live')
 
   // Group pageviews by visitor distinct_id
   const pageviewsByVisitor = {}
