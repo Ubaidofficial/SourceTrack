@@ -14,7 +14,7 @@ import { Router } from 'express'
 import { getSupabase } from '../lib/supabase.js'
 import { getStructuralLimits } from '../lib/plan-features.js'
 import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
-import { eraseSubjectFromTinybird } from '../../tinybird/adapter/erase.js'
+import { eraseSubjectFromTinybird, eraseSiteFromTinybird } from '../../tinybird/adapter/erase.js'
 
 export const gdprRouter = Router()
 
@@ -54,6 +54,47 @@ async function eraseFromTinybirdAndAudit(supabase, { siteId, subjectId, confirm 
   } catch (logErr) {
     // If the audit table isn't applied yet (migration pending), don't fail the
     // erasure response — but make the gap loud.
+    console.error('[GDPR] erasure_log write failed (migration applied?):', logErr.message)
+  }
+  return result
+}
+
+// Whole-site variant of eraseFromTinybirdAndAudit: erase EVERY subject's raw
+// events for one site (GDPR /account when the site is being deleted) and record
+// it in erasure_log. NEVER throws — best-effort + audited, so a Tinybird failure
+// leaves a 'failed' row for follow-up rather than blocking the account purge.
+// erasure_log.subject_id is NOT NULL, so whole-site rows use the `site:<id>`
+// sentinel (there is no single subject); detail.scope='site' marks them.
+async function eraseSiteFromTinybirdAndAudit(supabase, { siteId, confirm }) {
+  let result
+  try {
+    result = await eraseSiteFromTinybird({
+      host: process.env.TINYBIRD_HOST,
+      adminToken: process.env.TINYBIRD_ADMIN_TOKEN,
+      readToken: process.env.TINYBIRD_READ_TOKEN,
+      siteId,
+      confirm: confirm === true
+    })
+  } catch (err) {
+    // eraseSiteFromTinybird is designed never to throw; this is a backstop.
+    result = { status: 'failed', siteId, datasources: [], perDatasource: [], reason: err.message }
+  }
+
+  const rowCounts = {}
+  for (const d of result.perDatasource || []) rowCounts[d.datasource] = d.matched
+  try {
+    await supabase.from('erasure_log').insert({
+      subject_id: `site:${siteId}`,
+      site_id: siteId,
+      datasources: result.datasources || [],
+      executed_at: result.status === 'executed' ? new Date().toISOString() : null,
+      status: result.status,
+      row_counts: rowCounts,
+      detail: { reason: result.reason || null, perDatasource: result.perDatasource || [], scope: 'site' }
+    })
+  } catch (logErr) {
+    // If the audit table isn't applied yet (migration pending), don't fail the
+    // erasure/account-delete response — but make the gap loud.
     console.error('[GDPR] erasure_log write failed (migration applied?):', logErr.message)
   }
   return result
@@ -245,6 +286,20 @@ gdprRouter.delete('/account', async (req, res) => {
 
       if (sites?.length) {
         const siteIds = sites.map(s => s.id)
+
+        // 2a. Erase all raw event data for these sites from Tinybird (events +
+        // events_by_visitor), audited to erasure_log. Account deletion is
+        // already confirmed-destructive → confirm=true. Best-effort + audited:
+        // a Tinybird failure records status='failed' for follow-up and does NOT
+        // block the Supabase/account purge (mirrors the /visitor posture) — so
+        // events can be orphaned if the delete fails, recoverable via
+        // erasure_log. Sequential await respects the per-workspace
+        // active-delete-job limit (see erase.js header). This runs ONLY inside
+        // shouldDeleteSites: a shared-workspace non-sole-member keeps the sites,
+        // so their events must NOT be erased.
+        for (const siteId of siteIds) {
+          await eraseSiteFromTinybirdAndAudit(supabase, { siteId, confirm: true })
+        }
 
         // 2. Delete attributed_conversions for all sites
         await supabase
