@@ -2674,7 +2674,20 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     ${orderClause}
     LIMIT 50000
   `
-  const rows = await queryHogQL(sql, 'flexible_report')
+  const _mainDtFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').slice(0, 19)
+  const _mainDtTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').slice(0, 19)
+  // Base-gate (mirrors #111): the pipe reproduces ONLY source×first_touch × {revenue,conversions},
+  // single dim, no joins/custom_param/attributionWindow/filters. UTC only — tz derives from
+  // filters.timezone, so the no-filters gate guarantees getDateFilterExpr's UTC branch. _mainDtTo
+  // carries the +1-day-exclusive upper bound from serializeHogQLDateRange, matching
+  // getDateFilterExpr(UTC) exactly. Anything else falls through to the untouched HogQL sql.
+  const _mainCanUsePipe = (metric === 'revenue' || metric === 'conversions') && model === 'first_touch' && groupBy === 'source' && !groupBy2 && !custKey1 && !custKey2 && !attributionWindow && groupBy !== 'date' && !Object.values(filters).some(Boolean)
+  const _mainTb = _mainCanUsePipe
+    ? await queryTinybirdPipe('flexible_report_main_by_site', { site_id: String(siteId), date_from: _mainDtFrom, date_to: _mainDtTo, metric })
+    : null
+  const rows = _mainTb !== null
+    ? _mainTb.map(r => [r.dim_value, r.metric_value])
+    : await queryHogQL(sql, 'flexible_report')
 
   const results = rows.map((row) => {
     const hasDim2 = dim2Expr != null
