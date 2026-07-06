@@ -1,0 +1,71 @@
+DESCRIPTION >
+    Wave-3 flexible_report. Average pageview touchpoints preceding each conversion, grouped
+    by first-touch source. Faithful 1:1 port of the queryHogQL
+    'flexible_report_touchpoints_per_conversion' in getFlexibleReport
+    (api/lib/attribution-engine.js, the `metric === 'touchpoints_per_conversion'` branch).
+    Group-by first-touch source only; attributionWindow/groupBy2 not supported. NON-MONEY-
+    RAIL: no revenue/conversion_value sum — avg touch_count + conversion count only.
+
+    WINDOWJOIN REWRITE: the live mixed-inequality INNER JOIN
+    (ON pv.distinct_id = cv.distinct_id AND pv.timestamp <= cv.timestamp) is rejected by
+    Tinybird. Rewritten to an EQUALITY INNER JOIN on distinct_id with the
+    `pv.timestamp <= cv.timestamp` bound moved INTO the aggregate filters:
+      - touch_count = countIf(pv.event_type = '$pageview' AND pv.timestamp <= cv.timestamp)
+                      (live countIf(pv.event = '$pageview') over the <=-filtered join rows —
+                      a COUNT, not minIf/argMinIf)
+      - dim_value   = COALESCE(argMinIf(toString(pv.utm_source), pv.timestamp,
+                      pv.utm_source IS NOT NULL AND pv.utm_source != '' AND
+                      pv.timestamp <= cv.timestamp), NULLIF(toString(cv.utm_source),''),
+                      'direct')   (first non-empty-utm touch, else the conversion's own
+                      utm_source, else 'direct')
+    INNER-JOIN exclusion is reproduced by the live HAVING touch_count > 0 itself: a
+    conversion with no preceding pageview yields touch_count = 0 and is dropped (no separate
+    guard needed). pv pulls ALL events for the site (NO event_type/utm/date filter — matches
+    live exactly; the conversion's own event is present but not counted as a $pageview, and
+    can only win argMinIf if it is the sole non-empty-utm event, same as live).
+    GROUP BY cv.event_id, cv.utm_source (cv.utm_source is a grouping key because dim_value's
+    COALESCE fallback reads it — matches live GROUP BY cv.uuid, cv.utm_source).
+    §2.6: properties.site_id->site_id, event->event_type, uuid->event_id, properties.
+    utm_source->utm_source (typed).
+    VALUE-PARITY NOT RUN — founder/orchestrator value-gates (count compare) before wiring.
+
+NODE flexible_report_touchpoints_per_conversion_by_site_node
+SQL >
+    %
+    SELECT
+        dim_value,
+        round(avg(touch_count), 1) AS touchpoints_per_conversion,
+        count() AS conversions
+    FROM
+    (
+        SELECT
+            COALESCE(
+                argMinIf(toString(pv.utm_source), pv.timestamp, pv.utm_source IS NOT NULL AND pv.utm_source != '' AND pv.timestamp <= cv.timestamp),
+                NULLIF(toString(cv.utm_source), ''),
+                'direct'
+            ) AS dim_value,
+            countIf(pv.event_type = '$pageview' AND pv.timestamp <= cv.timestamp) AS touch_count
+        FROM
+        (
+            SELECT event_id, distinct_id, timestamp, utm_source
+            FROM events
+            WHERE site_id = {{ String(site_id, required=True) }}
+              AND event_type = '$conversion'
+              AND timestamp >= {{ DateTime(date_from, required=True) }}
+              AND timestamp < {{ DateTime(date_to, required=True) }}
+        ) AS cv
+        INNER JOIN
+        (
+            SELECT distinct_id, timestamp, event_type, utm_source
+            FROM events
+            WHERE site_id = {{ String(site_id, required=True) }}
+        ) AS pv ON pv.distinct_id = cv.distinct_id
+        GROUP BY cv.event_id, cv.utm_source
+        HAVING touch_count > 0
+    )
+    GROUP BY dim_value
+    HAVING conversions > 0
+    ORDER BY touchpoints_per_conversion DESC
+    LIMIT 50000
+
+TYPE endpoint

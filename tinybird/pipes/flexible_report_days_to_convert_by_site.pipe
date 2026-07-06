@@ -1,0 +1,65 @@
+DESCRIPTION >
+    Wave-3 flexible_report. Average days between the first UTM-tagged pageview and the
+    conversion, grouped by first-touch source. Faithful 1:1 port of the queryHogQL
+    'flexible_report_days_to_convert' in getFlexibleReport (api/lib/attribution-engine.js,
+    the `metric === 'days_to_convert'` branch). Group-by first-touch source only;
+    attributionWindow/groupBy2 not supported (matches live). NON-MONEY-RAIL: no revenue/
+    conversion_value sum — a time metric (avg days_gap) + conversion count only.
+
+    WINDOWJOIN REWRITE: the live mixed-inequality INNER JOIN
+    (ON pv.distinct_id = cv.distinct_id AND pv.timestamp <= cv.timestamp) is rejected by
+    Tinybird ("Unsupported JOIN ON conditions"). Rewritten to an EQUALITY INNER JOIN on
+    distinct_id with the `pv.timestamp <= cv.timestamp` bound moved INTO the aggregate
+    filters:
+      - dim_value  = argMinIf(COALESCE(NULLIF(toString(pv.utm_source),''),'direct'),
+                     pv.timestamp, pv.timestamp <= cv.timestamp)   (live argMin over the
+                     already-<=-filtered join rows)
+      - days_gap   = dateDiff('day', minIf(pv.timestamp, pv.timestamp <= cv.timestamp),
+                     cv.timestamp)   (live min(pv.timestamp) — minIf of the TIMESTAMP, NOT
+                     argMinIf-of-a-field)
+    INNER-JOIN exclusion (conversions with no qualifying pageview produce NO group in the
+    live mixed-ON) is reproduced by HAVING countIf(pv.timestamp <= cv.timestamp) > 0 (the
+    equality join brings pv at ANY timestamp; the guard drops conversions with no pv <= cv).
+    days_gap >= 0 kept from live (always true for qualifying rows; harmless).
+    §2.6: properties.site_id->site_id, event->event_type, uuid->event_id, properties.
+    utm_source->utm_source (typed). pv has NO date filter (matches live — all pageviews).
+    VALUE-PARITY NOT RUN — founder/orchestrator value-gates (count/time compare) before wiring.
+
+NODE flexible_report_days_to_convert_by_site_node
+SQL >
+    %
+    SELECT
+        dim_value,
+        round(avg(days_gap), 1) AS days_to_convert,
+        count() AS conversions
+    FROM
+    (
+        SELECT
+            argMinIf(COALESCE(NULLIF(toString(pv.utm_source), ''), 'direct'), pv.timestamp, pv.timestamp <= cv.timestamp) AS dim_value,
+            dateDiff('day', minIf(pv.timestamp, pv.timestamp <= cv.timestamp), cv.timestamp) AS days_gap
+        FROM
+        (
+            SELECT event_id, distinct_id, timestamp
+            FROM events
+            WHERE site_id = {{ String(site_id, required=True) }}
+              AND event_type = '$conversion'
+              AND timestamp >= {{ DateTime(date_from, required=True) }}
+              AND timestamp < {{ DateTime(date_to, required=True) }}
+        ) AS cv
+        INNER JOIN
+        (
+            SELECT distinct_id, timestamp, utm_source
+            FROM events
+            WHERE site_id = {{ String(site_id, required=True) }}
+              AND event_type = '$pageview'
+              AND utm_source IS NOT NULL AND utm_source != ''
+        ) AS pv ON pv.distinct_id = cv.distinct_id
+        GROUP BY cv.event_id, cv.timestamp
+        HAVING countIf(pv.timestamp <= cv.timestamp) > 0 AND days_gap >= 0
+    )
+    GROUP BY dim_value
+    HAVING conversions > 0
+    ORDER BY days_to_convert ASC
+    LIMIT 50000
+
+TYPE endpoint
