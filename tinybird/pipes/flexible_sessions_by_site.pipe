@@ -1,0 +1,42 @@
+DESCRIPTION >
+    Wave-3 flexible_report BASE-CASE (base-gated, mirrors #111 / session_report_pageviews).
+    Sessions denominator for the conversion_rate metric — count of distinct visitors per
+    source, over $pageview. Faithful port of the BASE case of the sessSql in getFlexibleReport
+    (api/lib/attribution-engine.js, queryName 'flexible_sessions', fires only when
+    metric === 'conversion_rate'). NON-MONEY-RAIL (visitor count, no revenue).
+
+    BASE CASE ONLY — the live sessSql interpolates dynamic machinery
+    (${dimExpr}${dim2Expr}${refJoin}${customJoin}${filterClauses}); this pipe reproduces the
+    single narrow slice: dim = source for the last_touch/linear model
+    (GROUP_COLUMNS['source'].last_touch/linear = COALESCE(NULLIF(utm_source,''),'direct')),
+    single dim (no dim2), NO custom_param (no customJoin/_cust), NO date-refJoin, NO filters.
+    Everything else (other dims, first_touch/ai/non_direct source variants, dim2, custom_param,
+    date attributeBy, any of the 9 filters) MUST fall through to HogQL via the wiring gate.
+
+    ⚠ MODEL CAVEAT: the 'source' dim is MODEL-DEPENDENT. This pipe hardcodes the last_touch/
+    linear variant (utm_source). The dominant model in code callers (api/routes/ai-analytics.js)
+    is first_touch, whose source dim is first_touch_source — NOT covered here. If conversion_rate
+    reports commonly use first_touch, a sibling first_touch_source pipe (or a param) is needed;
+    orchestrator to confirm conversion_rate's actual model before wiring.
+
+    §2.6 typed: properties.site_id->site_id, event->event_type, properties.utm_source->utm_source
+    (typed Nullable). count(DISTINCT distinct_id) mirrored literally (exact under the default
+    count_distinct_implementation=uniqExact). ''-vs-NULL collapsed by COALESCE(NULLIF(...),'direct')
+    — no divergence. Half-open window.
+    VALUE-PARITY NOT RUN — orchestrator value-gates (count(DISTINCT) match) before wiring.
+
+NODE flexible_sessions_by_site_node
+SQL >
+    %
+    SELECT
+        COALESCE(NULLIF(utm_source, ''), 'direct') AS dim_value,
+        count(DISTINCT distinct_id) AS sessions
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$pageview'
+      AND timestamp >= {{ DateTime(date_from, required=True) }}
+      AND timestamp < {{ DateTime(date_to, required=True) }}
+    GROUP BY dim_value
+    LIMIT 50000
+
+TYPE endpoint
