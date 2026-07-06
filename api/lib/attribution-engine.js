@@ -2710,7 +2710,18 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
         GROUP BY dim_value${dim2Expr ? ', dim_value2' : ''}
         LIMIT 50000
       `
-      const sessRows = await queryHogQL(sessSql, 'flexible_sessions')
+      const _sessDtFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').slice(0, 19)
+      const _sessDtTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').slice(0, 19)
+      // Base-gate (mirrors #111): the pipe reproduces ONLY source×first_touch, single dim,
+      // no custom_param, no refJoin, no filters. metric==='conversion_rate' is guaranteed by
+      // the enclosing block. Anything else falls through to the untouched HogQL sessSql.
+      const _sessCanUsePipe = groupBy === 'source' && !groupBy2 && model === 'first_touch' && !custKey1 && !custKey2 && !Object.values(filters).some(Boolean)
+      const _sessTb = _sessCanUsePipe
+        ? await queryTinybirdPipe('flexible_sessions_by_site', { site_id: String(siteId), date_from: _sessDtFrom, date_to: _sessDtTo })
+        : null
+      const sessRows = _sessTb !== null
+        ? _sessTb.map(r => [r.dim_value, r.sessions])
+        : await queryHogQL(sessSql, 'flexible_sessions')
       sessionsByDim = {}
       for (const [d, s] of sessRows) {
         sessionsByDim[d || 'unknown'] = Number(s) || 1
