@@ -5,6 +5,7 @@ import { decryptSecret } from '../lib/utils.js'
 import { claimIdempotencyKeys, logIngestionEvent, rollbackIdempotencyKeys } from '../lib/idempotency.js'
 import { ph } from '../lib/posthog.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
+import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
 
 
 const router = Router()
@@ -259,6 +260,14 @@ router.post('/:site_key', async (req, res) => {
       event: '$conversion',
       properties: conversionProperties
     })
+
+    // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
+    // Reached ONLY after HMAC verify (:57-72), the PERSISTENT claimIdempotencyKeys
+    // duplicate-skip (:138), and the plan-limit block (:249) returned — so a
+    // duplicate the claim skips never dual-writes. No external_event_id on Shopify;
+    // conversionProperties.order_id (= String(payload.id)) lets deriveEventId branch-5
+    // resolve event_id = order_id. site_key in props is dropped by the adapter.
+    dualWriteEvent({ distinctId, event: '$conversion', timestamp: occurredAt, properties: conversionProperties })
 
     await logIngestionEvent(siteKey, 'shopify', {
       providerEventId,

@@ -83,7 +83,10 @@ function isPlaceholder(val) {
   // 3. Strict mock keys and patterns for unit tests
   const isMockTestKey =
     /^[a-z0-9_.-]+@example.com$/i.test(cleanLower) || // Mock emails
-    /^sk_live_(testsite123|site123|abc123|mock123)$/.test(cleanLower) ||
+    // smuggled_in_body: exact-match fixture from tinybird/adapter/__tests__/
+    // dual-write.test.js — a fake site_key that MUST keep the real sk_live_
+    // site_key shape to prove the adapter strips smuggled keys from raw_payload.
+    /^sk_live_(testsite123|site123|abc123|mock123|smuggled_in_body)$/.test(cleanLower) ||
     /^sk_test_(123|secret123|abcdef123456789|secretkey|secret)$/.test(cleanLower) ||
     /^whsec_(testsecret|loadtest_secret_[a-f0-9]*|mock123)$/.test(cleanLower) ||
     /^eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9/.test(val) || // Standard HS256 test JWT

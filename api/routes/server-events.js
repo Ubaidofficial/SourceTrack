@@ -8,6 +8,7 @@ import { getSupabase } from '../lib/supabase.js'
 import { requireFeature } from '../lib/plan-features.js'
 import { storeIdentityLink, resolveAnonymousId } from '../lib/identity-links.js'
 import { trackGlobalIpLimit } from '../middleware/rate-limit.js'
+import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
 import { resolveClientIp } from '../lib/ip-resolver.js'
 
 const router = Router()
@@ -88,32 +89,40 @@ router.post('/event', trackGlobalIpLimit, async (req, res) => {
 
     const eventTimeStr = req.body.timestamp || new Date().toISOString()
 
+    // Properties hoisted to a const (behavior-identical) so the additive Tinybird
+    // dual-write below reuses the exact same object the existing ph.capture sends.
+    const properties = {
+      site_id: siteId,
+      anonymous_id: anonymousId || resolvedAnonymousId || null,
+      user_id: userId || null,
+      has_resolved_anonymous_id: !!resolvedAnonymousId,
+      stitching_method: stitchingMethod,
+      page_url: req.body.page_url || null,
+      referrer: req.body.referrer || null,
+      utm_source: req.body.utm_source || null,
+      utm_medium: req.body.utm_medium || null,
+      utm_campaign: req.body.utm_campaign || null,
+      utm_content: req.body.utm_content || null,
+      utm_term: req.body.utm_term || null,
+      conversion_value: req.body.conversion_value || null,
+      conversion_type: req.body.conversion_type || null,
+      device_type: parser.getDevice().type || 'desktop',
+      country,
+      server_timestamp: eventTimeStr,
+      ingestion_method: 'server_sdk',
+      ...(req.body.properties || {})
+    }
+
     ph.capture({
       distinctId,
       event: req.body.event || '$pageview',
       timestamp: new Date(eventTimeStr),
-      properties: {
-        site_id: siteId,
-        anonymous_id: anonymousId || resolvedAnonymousId || null,
-        user_id: userId || null,
-        has_resolved_anonymous_id: !!resolvedAnonymousId,
-        stitching_method: stitchingMethod,
-        page_url: req.body.page_url || null,
-        referrer: req.body.referrer || null,
-        utm_source: req.body.utm_source || null,
-        utm_medium: req.body.utm_medium || null,
-        utm_campaign: req.body.utm_campaign || null,
-        utm_content: req.body.utm_content || null,
-        utm_term: req.body.utm_term || null,
-        conversion_value: req.body.conversion_value || null,
-        conversion_type: req.body.conversion_type || null,
-        device_type: parser.getDevice().type || 'desktop',
-        country,
-        server_timestamp: eventTimeStr,
-        ingestion_method: 'server_sdk',
-        ...(req.body.properties || {})
-      }
+      properties
     })
+
+    // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
+    // No natural id on the server-events path -> deriveEventId falls to a uuid.
+    dualWriteEvent({ distinctId, event: req.body.event || '$pageview', timestamp: eventTimeStr, properties })
 
     await getSupabase()
       .from('api_keys')

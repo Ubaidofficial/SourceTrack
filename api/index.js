@@ -6,6 +6,7 @@ import cors from 'cors'
 import NodeCache from 'node-cache'
 import { getSupabase } from './lib/supabase.js'
 import { ph } from './lib/posthog.js'
+import { initTinybirdDualWrite } from '../tinybird/adapter/boot.js'
 
 import {
   defaultLimit,
@@ -589,6 +590,11 @@ app.post('/track',
 
 
 
+
+// Optional Tinybird dual-write transport — wired from env ONLY when
+// TINYBIRD_DUAL_WRITE is on AND TINYBIRD_HOST/TINYBIRD_APPEND_TOKEN are set. No-op
+// (and never crashes) otherwise; flag default OFF unchanged.
+initTinybirdDualWrite()
 
 const server = app.listen(PORT, () => {
   process.stdout.write(`TrackIQ running on port ${PORT}\n`)
