@@ -773,7 +773,7 @@ router.post('/proxy-domain', async (req, res) => {
       return res.status(400).json({ success: false, data: null, error: 'Invalid custom domain subdomain format' })
     }
 
-    const cnameTarget = normalizeDnsName(process.env.ST_MANAGED_PROXY_TARGET || 'proxy.sourcetrack.io')
+    const cnameTarget = normalizeDnsName(process.env.ST_MANAGED_PROXY_TARGET || 'proxy.sourcetrack.ai')
     const supabase = getSupabase()
 
     // Enforce uniqueness across different sites
