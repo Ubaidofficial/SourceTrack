@@ -25,7 +25,7 @@ export async function resolveCname(domain) {
   // Dev/Test Mock Mode
   if (process.env.ST_MOCK_DNS_RESOLVE === 'true') {
     if (normalizedDomain === 'track.testcustomer.com' || normalizedDomain === 'ssl-fail.testcustomer.com') {
-      const target = normalizeDnsName(process.env.ST_MANAGED_PROXY_TARGET || 'proxy.sourcetrack.io')
+      const target = normalizeDnsName(process.env.ST_MANAGED_PROXY_TARGET || 'proxy.sourcetrack.ai')
       return [target]
     }
     if (normalizedDomain === 'dns-fail.testcustomer.com') {
