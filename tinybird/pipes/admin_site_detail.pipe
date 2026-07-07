@@ -1,0 +1,24 @@
+DESCRIPTION >
+    Super-admin site inspector: 50 most recent events (any type) with
+    page_url, used to derive install status, pageview/conversion presence,
+    and domain. Tenant-scoped; prunes via (site_id, timestamp). Faithful 1:1
+    port of api/routes/admin.js:428-434 (queryName 'admin_site_detail').
+    Typed-column translation (SCOPE_v3.md §2.6): properties.site_id ->
+    site_id, event -> event_type, properties.page_url -> page_url (typed,
+    String Nullable per §2.6). Source has NO event_type filter (matches any
+    event) — preserved exactly. LIMIT 50 (not LIMIT 1 — the caller scans rows
+    for $pageview/$conversion presence), distinct from the LIMIT-1
+    admin_preview_install/admin_preview_overview shape despite the similar
+    SELECT list — not a duplicate. No JSON-bag fields.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+NODE admin_site_detail_node
+SQL >
+    %
+    SELECT event_type, timestamp, page_url
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+    ORDER BY timestamp DESC
+    LIMIT 50
+
+TYPE endpoint

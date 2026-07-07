@@ -1,0 +1,79 @@
+# SourceTrack — single events table (Tinybird Forward, ST_Staging / Frankfurt).
+# Source of truth: tinybird/SCOPE_v3.md §2.1-2.6. Author-only; do NOT hand-edit
+# the column set without reconciling against §2.6 (typed-vs-bag is load-bearing).
+#
+# MergeTree, append-only. Exactly-once is app-side via Supabase
+# revenue_idempotency_keys on (site_id, event_id) BEFORE emit (§2.5) — so this
+# table stays clean append-only and revenue MVs need no ReplacingMergeTree.
+#
+# Null policy (§2.4): prefer non-nullable + DEFAULT; the read side's
+# COALESCE(NULLIF(x,''),'<default>') becomes the column DEFAULT where the spec
+# specifies one. Columns marked "Nullable->'x' on read" in §2.6 are stored
+# Nullable here (the default is applied at READ time, not as a column DEFAULT).
+#
+# site_key is intentionally DROPPED (§2.6 note + §6.5): never read in HogQL and a
+# customer-facing secret. The adapter must not forward it. No email/name/PII cols.
+
+# Append-only ingest token, scoped to THIS datasource only (no read/admin). The dual-
+# write transport (TINYBIRD_APPEND_TOKEN) uses it. Tinybird mints the value at deploy;
+# never hardcoded. Read it post-deploy via `tb token ls` / the UI.
+TOKEN "dual_write_append" APPEND
+
+SCHEMA >
+    `site_id` String `json:$.site_id`,
+    `event_type` LowCardinality(String) `json:$.event_type`,
+    `event_id` String `json:$.event_id`,
+    `distinct_id` String `json:$.distinct_id`,
+    `visitor_id` String `json:$.visitor_id`,
+    `timestamp` DateTime64(3, 'UTC') `json:$.timestamp` CODEC(DoubleDelta, ZSTD(1)),
+    `conversion_value` Nullable(Float64) `json:$.conversion_value`,
+    `currency` LowCardinality(Nullable(String)) `json:$.currency`,
+    `conversion_type` LowCardinality(Nullable(String)) `json:$.conversion_type`,
+    `ingestion_method` LowCardinality(String) `json:$.ingestion_method`,
+    `provider` LowCardinality(Nullable(String)) `json:$.provider`,
+    `stitching_method` LowCardinality(Nullable(String)) `json:$.stitching_method`,
+    `attribution_status` LowCardinality(Nullable(String)) `json:$.attribution_status`,
+    `external_event_id` Nullable(String) `json:$.external_event_id`,
+    `first_touch_source` LowCardinality(Nullable(String)) `json:$.first_touch_source`,
+    `first_touch_medium` LowCardinality(Nullable(String)) `json:$.first_touch_medium`,
+    `first_touch_campaign` Nullable(String) `json:$.first_touch_campaign`,
+    `first_touch_timestamp` Nullable(DateTime64(3)) `json:$.first_touch_timestamp`,
+    `utm_source` Nullable(String) `json:$.utm_source`,
+    `utm_medium` Nullable(String) `json:$.utm_medium`,
+    `utm_campaign` Nullable(String) `json:$.utm_campaign`,
+    `utm_content` Nullable(String) `json:$.utm_content`,
+    `utm_term` Nullable(String) `json:$.utm_term`,
+    `gclid` Nullable(String) `json:$.gclid`,
+    `gbraid` Nullable(String) `json:$.gbraid`,
+    `wbraid` Nullable(String) `json:$.wbraid`,
+    `fbclid` Nullable(String) `json:$.fbclid`,
+    `msclkid` Nullable(String) `json:$.msclkid`,
+    `ttclid` Nullable(String) `json:$.ttclid`,
+    `li_fat_id` Nullable(String) `json:$.li_fat_id`,
+    `li_fatid` Nullable(String) `json:$.li_fatid`,
+    `twclid` Nullable(String) `json:$.twclid`,
+    `dclid` Nullable(String) `json:$.dclid`,
+    `snapclid` Nullable(String) `json:$.snapclid`,
+    `pclid` Nullable(String) `json:$.pclid`,
+    `sccid` Nullable(String) `json:$.sccid`,
+    `ko_click_id` Nullable(String) `json:$.ko_click_id`,
+    `ai_source` LowCardinality(Nullable(String)) `json:$.ai_source`,
+    `page_url` Nullable(String) `json:$.page_url`,
+    `referrer` Nullable(String) `json:$.referrer`,
+    `country` LowCardinality(Nullable(String)) `json:$.country`,
+    `device_type` LowCardinality(Nullable(String)) `json:$.device_type`,
+    `browser_name` LowCardinality(Nullable(String)) `json:$.browser_name`,
+    `server_timestamp` Nullable(DateTime64(3)) `json:$.server_timestamp`,
+    `occurred_at` Nullable(DateTime64(3)) `json:$.occurred_at`,
+    `webhook_customer_id` Nullable(String) `json:$.webhook_customer_id`,
+    `stripe_subscription_id` Nullable(String) `json:$.stripe_subscription_id`,
+    `stripe_invoice_id` Nullable(String) `json:$.stripe_invoice_id`,
+    `properties` String `json:$`
+
+ENGINE "MergeTree"
+ENGINE_SORTING_KEY "site_id, timestamp"
+ENGINE_PARTITION_KEY "toYYYYMM(timestamp)"
+ENGINE_TTL "toDateTime(timestamp) + toIntervalDay(400)"
+
+FORWARD_QUERY >
+  SELECT site_id, event_type, event_id, distinct_id, visitor_id, timestamp, CAST(conversion_value, 'Nullable(Float64)') AS conversion_value, currency, CAST(conversion_type, 'LowCardinality(Nullable(String))') AS conversion_type, ingestion_method, provider, stitching_method, attribution_status, external_event_id, CAST(first_touch_source, 'LowCardinality(Nullable(String))') AS first_touch_source, CAST(first_touch_medium, 'LowCardinality(Nullable(String))') AS first_touch_medium, CAST(first_touch_campaign, 'Nullable(String)') AS first_touch_campaign, first_touch_timestamp, utm_source, utm_medium, utm_campaign, utm_content, utm_term, gclid, gbraid, wbraid, fbclid, msclkid, ttclid, li_fat_id, li_fatid, twclid, dclid, snapclid, pclid, sccid, ko_click_id, ai_source, page_url, referrer, country, device_type, browser_name, server_timestamp, occurred_at, webhook_customer_id, stripe_subscription_id, stripe_invoice_id, properties

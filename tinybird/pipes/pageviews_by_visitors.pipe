@@ -1,0 +1,88 @@
+DESCRIPTION >
+    Phase 4d (Pattern C row-pull). Pageviews for a SPECIFIC set of converted
+    visitors over the lookback window, replacing HogQL's IN-list-filtered pvSql
+    in getAiPlatformAttributionLive (api/lib/attribution-engine.js:471-503).
+    Feeds the SAME unchanged selectAiTouchForConversion (engine:310-347) and
+    detectAiPlatformFromEvent (channel-classifier.js:103-134) — both confirmed
+    by reading the code to be single-row JS selection (no per-column argMax,
+    no fusion-across-rows risk the way Pattern A's last_touch had; see
+    tinybird/PHASE4_4D_PLAN.md §1). This pipe's job is row-pull parity only.
+
+    CHUNKING KEPT, not removed (tinybird/PHASE4_4D_PLAN.md §2.3 / 4d report):
+    Tinybird's documented SQL-length limit is 128KB
+    (https://www.tinybird.co/docs/forward/pricing/limits). {{Array(...)}}
+    interpolates into the final SQL text, so a large visitor_id array inflates
+    the query toward that ceiling — measured ~91KB for 2000 realistic-length
+    UUIDs from the array alone. The caller MUST chunk visitor_ids at 100 per
+    call (mirroring api/lib/attribution-engine.js's existing
+    AI_ATTRIBUTION_VISITOR_BATCH_SIZE=100 / chunkVisitorIds), looping this pipe
+    once per chunk — NOT pass an unbounded array in one call.
+
+    IDENTITY FIX (rule #19c): this pipe's IN-list filter was `visitor_id IN`,
+    but live HogQL builds the IN-list from `c.distinct_id`
+    (attribution-engine.js:454) and filters with `distinct_id IN (...)`
+    (attribution-engine.js:501) — resolved here from "flagged, not decided"
+    to "distinct_id, matching live HogQL exactly." Changed the WHERE-clause
+    filter and the ORDER BY's leading key from visitor_id to distinct_id.
+    Under single-identity (distinct_id == visitor_id, the only case any
+    producer or fixture currently exercises) this is numerically a no-op, but
+    the pipe's structural filter key now matches the live query.
+
+    SCOPE LIMIT (re-validated, post-fix, only for distinct_id == visitor_id):
+    a merged identity (server-events.js's user_id path) could diverge
+    visitor_id from distinct_id (normalize.js:251-253) — deferred to the
+    $identify / identity-reconciliation backlog item, same as 4c. Merged-
+    identity case remains UNVERIFIED — no fixture exercises it.
+
+    NOT YET PUSHED (no `tb push`/`tb deploy` run — validated via read-only
+    `tb --cloud sql` only, per standing no-push rule).
+
+    PHASE 6 ADDITION (N+1 rewrite, aiplatform:505): added optional
+    page_size/page_offset params, preserving the SAME pagination/continuation
+    safety the old JS loop already had (LIMIT AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE
+    OFFSET offset, stopping when a page returns fewer rows than page_size) —
+    NOT deleting the bound, per the dispatch's explicit caveat. Default
+    page_size (5000) matches the old AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE
+    exactly, so behavior is unchanged for any caller that omits these params.
+
+TOKEN "phase4_pageviews_by_visitors_read" READ
+
+NODE pageviews_by_visitors_node
+SQL >
+    %
+    SELECT
+        visitor_id,
+        distinct_id,
+        timestamp,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        referrer,
+        ai_source,
+        gclid,
+        gbraid,
+        wbraid,
+        fbclid,
+        msclkid,
+        ttclid,
+        li_fat_id,
+        li_fatid,
+        twclid,
+        dclid,
+        snapclid,
+        pclid,
+        sccid,
+        ko_click_id,
+        page_url,
+        utm_term
+    FROM events_by_visitor
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$pageview'
+      AND distinct_id IN {{ Array(visitor_ids, 'String', required=True) }}
+      AND timestamp >= {{ DateTime(lookback_from, required=True) }}
+      AND timestamp < {{ DateTime(date_to, required=True) }}
+    ORDER BY distinct_id, timestamp ASC
+    LIMIT {{ Int32(page_size, 5000) }}
+    OFFSET {{ Int32(page_offset, 0) }}
+
+TYPE endpoint

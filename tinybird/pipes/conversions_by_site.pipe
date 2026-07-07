@@ -1,0 +1,47 @@
+DESCRIPTION >
+    Phase 4 (Pattern B + C row-pull). Flat, site-scoped, date-windowed pull of
+    `$conversion` rows. Replaces the HogQL `convSql` used by both
+    `getMultiTouchAttributionLive` (api/lib/attribution-engine.js:1399, serves
+    linear/u_shaped/time_decay/w_shaped) and `getAiPlatformAttributionLive`
+    (api/lib/attribution-engine.js:374, serves ai_platforms). Column list is the
+    superset of both call sites' SELECTs (browser_name/browser/page_url are
+    AI-platform-only extras; harmless no-ops for the multitouch caller, which
+    simply ignores the extra columns). See tinybird/PHASE4_4A_FIELD_MAPPING.md
+    §1 for the verified per-column mapping.
+    NOT YET VALIDATED against the live schema (no `tb build`/`tb push` run —
+    pending founder go-ahead on cloud-touching CLI commands, see Phase 4a report).
+
+TOKEN "phase4_conversions_read" READ
+
+NODE conversions_by_site_node
+SQL >
+    %
+    SELECT
+        event_id,
+        distinct_id,
+        timestamp,
+        conversion_type,
+        conversion_value,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        referrer,
+        ai_source,
+        country,
+        device_type,
+        utm_term,
+        provider,
+        attribution_status,
+        stitching_method,
+        ingestion_method,
+        browser_name,
+        page_url
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$conversion'
+      AND timestamp >= {{ DateTime(date_from, required=True) }}
+      AND timestamp < {{ DateTime(date_to, required=True) }}
+    ORDER BY timestamp DESC
+    LIMIT 10000
+
+TYPE endpoint

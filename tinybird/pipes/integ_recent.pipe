@@ -1,0 +1,21 @@
+DESCRIPTION >
+    Integrations: install-silent check — event count + most recent timestamp,
+    trailing 24h, any event type (Promise.all batch). Tenant-scoped; prunes
+    via (site_id, timestamp). Faithful 1:1 port of
+    api/routes/integrations.js:113-118 (queryName 'integ_recent').
+    Typed-column translation: properties.site_id -> site_id. Source has NO
+    event_type filter (matches any event) — preserved exactly. No JSON-bag
+    fields. IDENTICAL query text to alert_recent.pipe
+    (api/routes/alerts.js:102) — duplicate logic, Phase-6 consolidation
+    candidate (noted, not acted on).
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+NODE integ_recent_node
+SQL >
+    %
+    SELECT count() AS cnt, MAX(timestamp) AS last_ts
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND timestamp >= now() - INTERVAL 24 HOUR
+
+TYPE endpoint

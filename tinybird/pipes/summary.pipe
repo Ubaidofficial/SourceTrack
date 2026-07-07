@@ -1,0 +1,123 @@
+DESCRIPTION >
+    Analytics: raw pageview rows over a date range with optional drill-down
+    filters, feeding the /analytics/summary route's JS-side aggregation
+    (unique visitors, top pages, top sources, AI sources, device/country
+    breakdowns). Faithful 1:1 port of api/lib/posthog.js:129-146
+    (`fetchPageviews`, shared by 5 call sites) as called from
+    api/routes/analytics.js:187 (queryName 'summary', limit 10000).
+    Tenant-scoped; prunes via (site_id, timestamp).
+
+    IDENTITY CORRECTION (read carefully — the dispatch's assumption for this
+    row was WRONG, verified against the actual source): the dispatch's rule
+    #19b said these 5 fetchPageviews-based reads "dedup on BAG
+    properties.anonymous_id (NOT distinct_id)". That is true for live.js:22
+    (a genuinely different query) but NOT for this one. fetchPageviews'
+    PAGEVIEW_FIELDS table (posthog.js:75-88) maps its OUTPUT column
+    `anonymous_id` to the RAW `distinct_id` COLUMN, not to
+    properties.anonymous_id — confirmed verbatim: `['anonymous_id',
+    'distinct_id']`, with the file's own comment: "NOTE: server-routed
+    events carry no session_id; visitor-dedup uses anonymous_id
+    (distinct_id)." Porting this with JSONExtractString(properties,
+    'anonymous_id') would have been WRONG and would have broken parity —
+    the live query's "anonymous_id" IS distinct_id here. Ported as the typed
+    distinct_id column (no JSONExtract, no cost concern — this is the
+    canonical stitching key, already the sorting-key prefix).
+
+    Typed-column translation (SCOPE_v3.md §2.6): properties.site_id ->
+    site_id, event -> event_type, properties.page_url -> page_url,
+    properties.referrer -> referrer, properties.utm_source -> utm_source,
+    properties.utm_medium -> utm_medium, properties.utm_campaign ->
+    utm_campaign, properties.country -> country, properties.device_type ->
+    device_type, properties.browser_name -> browser_name, properties.
+    ai_source -> ai_source (all Nullable per §2.6).
+    JSON-BAG FIELD HIT (flagged): properties.os_name -> os_name is in §2.6's
+    bag list (alongside browser_version/os_version), NOT a typed column —
+    read via JSONExtractString(properties, 'os_name').
+
+    OPTIONAL DRILL-DOWN FILTERS: the live route builds an arbitrary-length
+    filter list from query params (parseFilters/buildPageviewFilterSql,
+    analytics.js:29-48), ANDing together zero or more {type, value} pairs
+    across 9 possible types (Page/Entry/Exit -> page_url ILIKE;
+    Source -> referrer =; Country -> country =; Device -> device_type =;
+    Browser -> browser_name =; OS -> os_name (bag) =; 'AI Source' ->
+    ai_source =). Ported as 9 independent optional template params
+    (filter_page/filter_entry/filter_exit/filter_source/filter_country/
+    filter_device/filter_browser/filter_os/filter_ai_source), each ANDed in
+    via `{% if defined(...) %}` when the caller supplies it. SIMPLIFICATION
+    (flagged, not hidden): this supports one filter per type simultaneously,
+    matching how every real caller in this codebase invokes it; it does NOT
+    support the live code's theoretical (never-exercised in this app's UI)
+    ability to pass TWO filters of the SAME type in one request.
+
+    SHARED TEMPLATE — this pipe is structurally IDENTICAL to sources_ai.pipe,
+    sources_ref.pipe, browsers.pipe, and os.pipe (all 5 are the same
+    fetchPageviews call, differing only in the caller's default LIMIT and
+    the runtime filter values) — same relationship as the alert_*/integ_*
+    cross-file duplicates from earlier batches: authored separately per the
+    dispatch ("one .pipe each"), not deduped, flagged here as a Phase-6
+    consolidation candidate (a single parameterized pipe could serve all 5
+    call sites).
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+    DEPLOY FIX (tb --cloud deploy --check, ST_Staging v4.6.4): date/datetime
+    params were declared String(param, required=True) then wrapped in
+    toDateTime(...) — that combination failed with CANNOT_PARSE_DATETIME
+    under --check's '__no_value__' placeholder injection (a non-date string
+    toDateTime() can't parse). Fixed by declaring the param itself as
+    DateTime(...) (matching the already-shipped Phase 4 pipes' proven
+    pattern) and dropping the now-redundant toDateTime(...) wrapper — no
+    SQL/filter logic changed, only the param type. Re-validated via
+    tb --cloud sql with real values post-fix; parity held (see batch
+    dispatch report).
+
+NODE summary_node
+SQL >
+    %
+    SELECT
+        page_url AS url,
+        referrer,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        country,
+        device_type AS device,
+        browser_name AS browser,
+        JSONExtractString(properties, 'os_name') AS os,
+        ai_source,
+        distinct_id AS anonymous_id,
+        timestamp
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$pageview'
+      AND timestamp >= {{ DateTime(date_from_ts, required=True) }}
+      AND timestamp < {{ DateTime(date_to_ts, required=True) }}
+      {% if defined(filter_page) %}
+      AND page_url ILIKE concat('%', {{ String(filter_page, required=True) }}, '%')
+      {% end %}
+      {% if defined(filter_entry) %}
+      AND page_url ILIKE concat('%', {{ String(filter_entry, required=True) }}, '%')
+      {% end %}
+      {% if defined(filter_exit) %}
+      AND page_url ILIKE concat('%', {{ String(filter_exit, required=True) }}, '%')
+      {% end %}
+      {% if defined(filter_source) %}
+      AND referrer = {{ String(filter_source, required=True) }}
+      {% end %}
+      {% if defined(filter_country) %}
+      AND country = {{ String(filter_country, required=True) }}
+      {% end %}
+      {% if defined(filter_device) %}
+      AND device_type = {{ String(filter_device, required=True) }}
+      {% end %}
+      {% if defined(filter_browser) %}
+      AND browser_name = {{ String(filter_browser, required=True) }}
+      {% end %}
+      {% if defined(filter_os) %}
+      AND JSONExtractString(properties, 'os_name') = {{ String(filter_os, required=True) }}
+      {% end %}
+      {% if defined(filter_ai_source) %}
+      AND ai_source = {{ String(filter_ai_source, required=True) }}
+      {% end %}
+    ORDER BY timestamp DESC
+    LIMIT {{ Int32(limit_val, 10000) }}
+
+TYPE endpoint

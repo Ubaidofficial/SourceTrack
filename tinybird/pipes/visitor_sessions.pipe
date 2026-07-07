@@ -1,0 +1,32 @@
+DESCRIPTION >
+    Sessions: full pageview+conversion event list for ONE specific visitor
+    (explanation-modal detail read). Tenant-scoped; prunes via (site_id,
+    timestamp). Faithful 1:1 port of api/routes/sessions.js:149-166 (queryName
+    'visitor_sessions'). Identity rule #19a: WHERE distinct_id = <param> is
+    the canonical stitching key filter, no argMin/argMax. Typed-column
+    translation (SCOPE_v3.md §2.6): properties.site_id -> site_id, event ->
+    event_type, properties.page_url -> page_url, properties.utm_source ->
+    utm_source, properties.utm_medium -> utm_medium, properties.utm_campaign
+    -> utm_campaign, properties.conversion_value -> conversion_value (typed
+    Float64 DEFAULT 0). No JSON-bag fields.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+NODE visitor_sessions_node
+SQL >
+    %
+    SELECT
+        event_type,
+        timestamp,
+        page_url,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        conversion_value
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND distinct_id = {{ String(distinct_id, required=True) }}
+      AND (event_type = '$pageview' OR event_type = '$conversion')
+    ORDER BY timestamp ASC
+    LIMIT 500
+
+TYPE endpoint

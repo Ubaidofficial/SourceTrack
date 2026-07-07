@@ -1,0 +1,22 @@
+DESCRIPTION >
+    Alerts: week-over-week pageview comparison. Tenant-scoped; prunes via
+    (site_id, timestamp). Faithful 1:1 port of api/routes/alerts.js:30
+    (queryName 'alert_traffic'). Typed-column translation (SCOPE_v3.md §2.6):
+    properties.site_id -> site_id, event -> event_type. No JSON-bag fields.
+    IDENTICAL query text to integ_traffic.pipe (api/routes/integrations.js:143)
+    — duplicate logic across two route files, flagged as a Phase-6
+    consolidation candidate (noted, not acted on, per the dispatch).
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+NODE alert_traffic_node
+SQL >
+    %
+    SELECT
+        SUM(CASE WHEN timestamp >= now() - INTERVAL 7 DAY THEN 1 ELSE 0 END) AS this_week,
+        SUM(CASE WHEN timestamp >= now() - INTERVAL 14 DAY AND timestamp < now() - INTERVAL 7 DAY THEN 1 ELSE 0 END) AS last_week
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$pageview'
+      AND timestamp >= now() - INTERVAL 14 DAY
+
+TYPE endpoint

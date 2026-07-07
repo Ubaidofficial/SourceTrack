@@ -1,0 +1,65 @@
+# SourceTrack — journey-projection materialized view (Tinybird Forward, ST_Staging).
+# Source of truth: tinybird/SCOPE_v3.md §2.2, §5.
+#
+# Pure re-projection of `events` into `events_by_visitor` (re-sorted by
+# site_id, visitor_id, timestamp). NO joins, NO aggregations — so it passes the
+# deploy-time MV guardrail (§5) and an ingest-time block-only MV stays correct.
+# Last-touch / linear / time-decay are NOT MVs (they need prior touchpoints the
+# inserted block can't see — §5 change E); those go to Copy Pipes / windowed reads.
+
+NODE events_by_visitor_node
+SQL >
+    SELECT
+        site_id,
+        event_type,
+        event_id,
+        distinct_id,
+        visitor_id,
+        timestamp,
+        conversion_value,
+        currency,
+        conversion_type,
+        ingestion_method,
+        provider,
+        stitching_method,
+        attribution_status,
+        external_event_id,
+        first_touch_source,
+        first_touch_medium,
+        first_touch_campaign,
+        first_touch_timestamp,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        utm_content,
+        utm_term,
+        gclid,
+        gbraid,
+        wbraid,
+        fbclid,
+        msclkid,
+        ttclid,
+        li_fat_id,
+        li_fatid,
+        twclid,
+        dclid,
+        snapclid,
+        pclid,
+        sccid,
+        ko_click_id,
+        ai_source,
+        page_url,
+        referrer,
+        country,
+        device_type,
+        browser_name,
+        server_timestamp,
+        occurred_at,
+        webhook_customer_id,
+        stripe_subscription_id,
+        stripe_invoice_id,
+        properties
+    FROM events
+
+TYPE materialized
+DATASOURCE events_by_visitor

@@ -1,0 +1,67 @@
+# SourceTrack — journey projection of `events` (Tinybird Forward, ST_Staging).
+# Source of truth: tinybird/SCOPE_v3.md §2.2. Full second copy of raw events
+# re-sorted by (site_id, visitor_id, timestamp) for visitor-ordered reads
+# (journeys, multitouch, time-to-convert). ~2x raw storage; cheap at this volume.
+#
+# Populated by pipes/events_by_visitor_mv.pipe (pure re-projection, no joins/aggs).
+# No `json:` paths here — rows arrive from the MV SELECT, not from JSON ingest.
+# Column types mirror events.datasource EXACTLY so the MV SELECT type-matches.
+#
+# ⚠️ §2.2: Forward may expose native ClickHouse PROJECTION to avoid this copy
+# (unverified) — default to this documented second-datasource MV path.
+
+SCHEMA >
+    `site_id` String,
+    `event_type` LowCardinality(String),
+    `event_id` String,
+    `distinct_id` String,
+    `visitor_id` String,
+    `timestamp` DateTime64(3, 'UTC') CODEC(DoubleDelta, ZSTD(1)),
+    `conversion_value` Nullable(Float64),
+    `currency` LowCardinality(Nullable(String)),
+    `conversion_type` LowCardinality(Nullable(String)),
+    `ingestion_method` LowCardinality(String),
+    `provider` LowCardinality(Nullable(String)),
+    `stitching_method` LowCardinality(Nullable(String)),
+    `attribution_status` LowCardinality(Nullable(String)),
+    `external_event_id` Nullable(String),
+    `first_touch_source` LowCardinality(Nullable(String)),
+    `first_touch_medium` LowCardinality(Nullable(String)),
+    `first_touch_campaign` Nullable(String),
+    `first_touch_timestamp` Nullable(DateTime64(3)),
+    `utm_source` Nullable(String),
+    `utm_medium` Nullable(String),
+    `utm_campaign` Nullable(String),
+    `utm_content` Nullable(String),
+    `utm_term` Nullable(String),
+    `gclid` Nullable(String),
+    `gbraid` Nullable(String),
+    `wbraid` Nullable(String),
+    `fbclid` Nullable(String),
+    `msclkid` Nullable(String),
+    `ttclid` Nullable(String),
+    `li_fat_id` Nullable(String),
+    `li_fatid` Nullable(String),
+    `twclid` Nullable(String),
+    `dclid` Nullable(String),
+    `snapclid` Nullable(String),
+    `pclid` Nullable(String),
+    `sccid` Nullable(String),
+    `ko_click_id` Nullable(String),
+    `ai_source` LowCardinality(Nullable(String)),
+    `page_url` Nullable(String),
+    `referrer` Nullable(String),
+    `country` LowCardinality(Nullable(String)),
+    `device_type` LowCardinality(Nullable(String)),
+    `browser_name` LowCardinality(Nullable(String)),
+    `server_timestamp` Nullable(DateTime64(3)),
+    `occurred_at` Nullable(DateTime64(3)),
+    `webhook_customer_id` Nullable(String),
+    `stripe_subscription_id` Nullable(String),
+    `stripe_invoice_id` Nullable(String),
+    `properties` String
+
+ENGINE "MergeTree"
+ENGINE_SORTING_KEY "site_id, visitor_id, timestamp"
+ENGINE_PARTITION_KEY "toYYYYMM(timestamp)"
+ENGINE_TTL "toDateTime(timestamp) + toIntervalDay(400)"

@@ -1,0 +1,20 @@
+DESCRIPTION >
+    Integrations overview: most recent event (any type), for install-status
+    display. Tenant-scoped; prunes via (site_id, timestamp). Faithful 1:1 port
+    of api/routes/integrations.js:18-24 (queryName 'integ_install').
+    Typed-column translation: properties.site_id -> site_id; SELECT `event` ->
+    `event_type` (the renamed/typed discriminator column); properties.page_url
+    -> page_url (typed, String Nullable per §2.6). Source has NO event_type
+    filter (matches any event) — preserved exactly. No JSON-bag fields.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+NODE integ_install_node
+SQL >
+    %
+    SELECT event_type, timestamp, page_url
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+    ORDER BY timestamp DESC
+    LIMIT 1
+
+TYPE endpoint

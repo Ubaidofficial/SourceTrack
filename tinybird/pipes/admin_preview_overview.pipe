@@ -1,0 +1,24 @@
+DESCRIPTION >
+    Super-admin preview overview: most recent event (any type), for
+    install-status display. Tenant-scoped; prunes via (site_id, timestamp).
+    Faithful 1:1 port of api/routes/admin.js:350-355 (queryName
+    'admin_preview_overview'). Typed-column translation (SCOPE_v3.md §2.6):
+    properties.site_id -> site_id, event -> event_type. Source has NO
+    event_type filter (matches any event) — preserved exactly. No JSON-bag
+    fields. IDENTICAL query text to admin_preview_install.pipe
+    (api/routes/admin.js:210) — duplicate logic across two handlers in the
+    same file, flagged as a Phase-6 consolidation candidate (noted, not acted
+    on), same treatment as the alert_*/integ_* cross-file duplicates from
+    prior batches.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+NODE admin_preview_overview_node
+SQL >
+    %
+    SELECT event_type, timestamp
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+    ORDER BY timestamp DESC
+    LIMIT 1
+
+TYPE endpoint

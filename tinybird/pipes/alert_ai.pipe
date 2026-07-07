@@ -1,0 +1,26 @@
+DESCRIPTION >
+    Alerts: AI-source pageview traffic, trailing 7d, grouped by platform.
+    Tenant-scoped; prunes via (site_id, timestamp). Faithful 1:1 port of
+    api/routes/alerts.js:81 (queryName 'alert_ai'). Typed-column translation:
+    properties.site_id -> site_id, event -> event_type, properties.ai_source ->
+    ai_source (typed, LowCardinality(String) Nullable per §2.6). No JSON-bag
+    fields. IDENTICAL query text to integ_ai.pipe
+    (api/routes/integrations.js:145) — duplicate logic, Phase-6 consolidation
+    candidate (noted, not acted on).
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+NODE alert_ai_node
+SQL >
+    %
+    SELECT ai_source, count() AS cnt
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$pageview'
+      AND ai_source IS NOT NULL
+      AND ai_source != ''
+      AND timestamp >= now() - INTERVAL 7 DAY
+    GROUP BY ai_source
+    ORDER BY cnt DESC
+    LIMIT 10
+
+TYPE endpoint

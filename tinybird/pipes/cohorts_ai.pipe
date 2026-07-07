@@ -1,0 +1,60 @@
+DESCRIPTION >
+    Cohorts: weekly acquisition cohorts broken down by first-touch AI
+    source, all-time (no date-range param in the source). Tenant-scoped;
+    prunes via (site_id, timestamp). Faithful 1:1 port of
+    api/routes/cohorts.js:65-85 (queryName 'cohorts_ai'). Identity rule
+    #19a: GROUP BY distinct_id in the inner subquery, canonical stitching
+    key. Typed-column translation (SCOPE_v3.md §2.6): properties.site_id ->
+    site_id, event -> event_type, properties.ai_source -> ai_source (typed,
+    LowCardinality Nullable).
+    §7 NULL-SKIP ANALYSIS: argMin(properties.ai_source, timestamp) has no
+    COALESCE, but the query's own WHERE clause pre-filters
+    `ai_source IS NOT NULL AND ai_source != ''` BEFORE the GROUP BY/argMin
+    runs — every candidate row entering the aggregation already has a
+    defined ai_source, so there is nothing left to skip. ai_source is
+    genuinely Nullable in the typed schema (no DEFAULT per §2.6), so the
+    same pre-filter applied to the typed column produces an identical
+    candidate set to the live HogQL bag — no divergence, no fix needed.
+    No JSON-bag fields.
+    DEPLOY FIX (tb --cloud deploy --check, ST_Staging v4.6.4):
+    ILLEGAL_AGGREGATION — "argMin(ai_source, timestamp) is found in WHERE
+    ... While processing argMin(ai_source, timestamp) AS ai_source" — the
+    inner subquery aliased its argMin(...) result AS `ai_source`, the SAME
+    name as the raw column it aggregates and the same name referenced in
+    that subquery's own WHERE clause; ClickHouse's analyzer trips over the
+    self-referential alias when resolving it. Restructured (not a query
+    reshape, purely a naming fix): the inner subquery now aliases the
+    argMin(...) result as `ai_src` (no collision with the raw `ai_source`
+    column), and the outer query re-aliases it back to `ai_source` for the
+    output column name — the aggregation is still fully computed inside the
+    subquery, exactly as before, so this is "structurally legal, not
+    semantically different." Re-validated against live HogQL on the gating
+    site post-fix: W26 intersection still ChatGPT=4/Perplexity=3 both
+    sides, matching the original pre-fix validation exactly (see batch
+    dispatch report).
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+NODE cohorts_ai_node
+SQL >
+    %
+    SELECT
+        formatDateTime(first_seen, '%Y-W%V') AS cohort_week,
+        ai_src AS ai_source,
+        COUNT(DISTINCT distinct_id) AS users
+    FROM (
+        SELECT
+            distinct_id,
+            MIN(timestamp) AS first_seen,
+            argMin(ai_source, timestamp) AS ai_src
+        FROM events
+        WHERE site_id = {{ String(site_id, required=True) }}
+          AND event_type = '$pageview'
+          AND ai_source IS NOT NULL
+          AND ai_source != ''
+        GROUP BY distinct_id
+    )
+    GROUP BY cohort_week, ai_src
+    ORDER BY cohort_week ASC, users DESC
+    LIMIT 1000
+
+TYPE endpoint

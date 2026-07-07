@@ -1,0 +1,22 @@
+DESCRIPTION >
+    Alerts: day-over-day conversion comparison. Tenant-scoped; prunes via
+    (site_id, timestamp). Faithful 1:1 port of api/routes/alerts.js:54
+    (queryName 'alert_conversions'). Typed-column translation: properties.site_id
+    -> site_id, event -> event_type. No JSON-bag fields.
+    IDENTICAL query text to integ_conversions.pipe (api/routes/integrations.js:144)
+    — duplicate logic across two route files, flagged as a Phase-6
+    consolidation candidate (noted, not acted on).
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+NODE alert_conversions_node
+SQL >
+    %
+    SELECT
+        SUM(CASE WHEN timestamp >= now() - INTERVAL 1 DAY THEN 1 ELSE 0 END) AS today,
+        SUM(CASE WHEN timestamp >= now() - INTERVAL 2 DAY AND timestamp < now() - INTERVAL 1 DAY THEN 1 ELSE 0 END) AS yesterday
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$conversion'
+      AND timestamp >= now() - INTERVAL 2 DAY
+
+TYPE endpoint

@@ -1,0 +1,105 @@
+DESCRIPTION >
+    Leads: per-visitor aggregate (first/last seen, pageview+conversion
+    counts, revenue, first-touch attribution fields), any converting-or-
+    active visitor. Tenant-scoped; prunes via (site_id, timestamp). Faithful
+    1:1 port of api/routes/leads-server.js:41-63 (queryName 'leads_list').
+    Identity rule #19a: GROUP BY distinct_id, canonical stitching key.
+    Typed-column translation (SCOPE_v3.md §2.6): properties.site_id ->
+    site_id, event -> event_type, properties.utm_source -> utm_source
+    (Nullable), properties.first_touch_source -> first_touch_source
+    (DEFAULT 'direct'), properties.utm_medium -> utm_medium (Nullable),
+    properties.first_touch_medium -> first_touch_medium (DEFAULT 'none'),
+    properties.ai_source -> ai_source (Nullable), properties.country ->
+    country (Nullable), properties.page_url -> page_url (Nullable),
+    properties.conversion_value -> conversion_value (Float64 DEFAULT 0).
+    toFloatOrZero -> toFloat64OrZero (PostHog sugar isn't a native ClickHouse
+    function; same class of fix as prior batches).
+    §7 NULL-SKIP ANALYSIS (per-field, done before authoring, full table in
+    the batch dispatch report): argMin(source)/argMin(medium) are
+    COALESCE-guarded to a non-null floor ('direct'/'none') on both the live
+    HogQL bag and the typed schema, so they never actually skip — no fix
+    needed. argMin(ai_source) is COALESCE-guarded to '' — same, no fix.
+    argMin(country)/argMin(page_url) are genuinely Nullable typed columns
+    (no DEFAULT), so ClickHouse's null-skip already matches live HogQL
+    exactly — no fix needed.
+    KNOWN, UNRESOLVED RESIDUAL DIVERGENCE — argMin(first_touch_campaign)
+    [campaign]: this field is genuinely irreconcilable at the pipe-SQL level
+    given the current schema. Cross-store testing on the gating site found
+    BOTH populations exist in live (non-legacy) Tinybird data: (1)
+    multi-touch/converting visitors (cc-4c-visitorY etc., routed through
+    /api/track's full attribution computation) where first_touch_campaign is
+    explicitly resolved to '' on every row — argMin correctly returns '' with
+    no skip needed, matching live HogQL exactly; and (2) freshly-arrived,
+    not-yet-attributed visitors (cc-verify-pixel-20260630a etc., single
+    pageview, pre-attribution-backfill) where first_touch_campaign is
+    genuinely NULL in live HogQL (verified: even ingestion_method=
+    'server_routed' via /api/track can be null here) — live HogQL's argMin
+    correctly skips and returns NULL, but the typed column's DEFAULT '' is
+    NOT NULL so Tinybird's argMin does NOT skip, incorrectly returning ''
+    instead of NULL. A nullIf(first_touch_campaign, '') fix was tried and
+    made population (1) wrong instead (verified: nullIf'd cc-4c-visitorY ->
+    NULL, live -> ''); NOT applying it leaves population (2) wrong (typed ->
+    '', live -> NULL). Since the typed schema's null-to-default mapping has
+    already destroyed the "was it genuinely absent, or explicitly set to the
+    default string" distinction at ingest time, NO SQL-level choice in this
+    pipe can be correct for both populations simultaneously — this is a data-
+    model limitation (would need first_touch_campaign to be Nullable rather
+    than DEFAULT-backed in events.datasource to fix properly), not a pipe
+    bug. Left as a plain column reference (correct for the richer,
+    multi-touch/converting population that is the primary use case of a
+    leads list); the divergence for not-yet-attributed single-pageview
+    visitors is flagged, not hidden.
+    SEPARATE, FIXED issue — argMaxIf(conversion_type, ..., event_type =
+    '$conversion') [last_conversion_type]: when a visitor has ZERO
+    conversions (a legitimate, common case here since the HAVING clause
+    admits pageview-only leads), ClickHouse's argMaxIf returns the column
+    type's default ('' for String) rather than NULL — confirmed empirically
+    (cc-verify-pixel-20260630a, 0 conversions: typed argMaxIf -> '', live
+    HogQL -> NULL). This is a distinct, general ClickHouse-vs-HogQL
+    conditional-aggregate-over-empty-set behavior, unrelated to the §2.6
+    DEFAULT-column issue above. Fixed with nullIf(argMaxIf(...), '') — safe
+    because every real $conversion event on the gating site has a genuine
+    non-empty conversion_type (verified: closed_won/lead_created/purchase
+    only, never ''), so there's no legitimate '' value this could wrongly
+    clobber.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+    DEPLOY FIX (tb --cloud deploy --check, ST_Staging v4.6.4): date/datetime
+    params were declared String(param, required=True) then wrapped in
+    toDateTime(...) — that combination failed with CANNOT_PARSE_DATETIME
+    under --check's '__no_value__' placeholder injection (a non-date string
+    toDateTime() can't parse). Fixed by declaring the param itself as
+    DateTime(...) (matching the already-shipped Phase 4 pipes' proven
+    pattern) and dropping the now-redundant toDateTime(...) wrapper — no
+    SQL/filter logic changed, only the param type. Re-validated via
+    tb --cloud sql with real values post-fix; parity held (see batch
+    dispatch report).
+
+NODE leads_list_node
+SQL >
+    %
+    SELECT
+        distinct_id,
+        MIN(timestamp) AS first_seen,
+        MAX(timestamp) AS last_seen,
+        countIf(event_type = '$pageview') AS pageviews,
+        countIf(event_type = '$conversion') AS conversions,
+        SUM(CASE WHEN event_type = '$conversion' THEN toFloat64OrZero(toString(conversion_value)) ELSE 0 END) AS total_revenue,
+        argMin(COALESCE(NULLIF(utm_source, ''), NULLIF(first_touch_source, ''), 'direct'), timestamp) AS source,
+        argMin(COALESCE(NULLIF(utm_medium, ''), NULLIF(first_touch_medium, ''), 'none'), timestamp) AS medium,
+        argMin(first_touch_campaign, timestamp) AS campaign,
+        argMin(COALESCE(NULLIF(ai_source, ''), ''), timestamp) AS ai_source,
+        argMin(country, timestamp) AS country,
+        argMin(page_url, timestamp) AS first_page_url,
+        nullIf(argMaxIf(conversion_type, timestamp, event_type = '$conversion'), '') AS last_conversion_type
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      {% if defined(date_from_ts) %}
+      AND timestamp >= {{ DateTime(date_from_ts, '1970-01-01 00:00:00') }}
+      AND timestamp < {{ DateTime(date_to_ts, '1970-01-01 00:00:00') }}
+      {% end %}
+    GROUP BY distinct_id
+    HAVING conversions > 0 OR pageviews > 0
+    ORDER BY last_seen DESC
+    LIMIT {{ Int32(limit_val, 50) }}
+
+TYPE endpoint

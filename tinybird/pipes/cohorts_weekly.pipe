@@ -1,0 +1,37 @@
+DESCRIPTION >
+    Cohorts: weekly acquisition cohorts with conversion rate, all-time (no
+    date-range param in the source). Tenant-scoped; prunes via (site_id,
+    timestamp is NOT filtered here — matches source exactly, no window bound
+    in the live query). Faithful 1:1 port of api/routes/cohorts.js:20-39
+    (queryName 'cohorts_weekly'). Identity rule #19a: GROUP BY distinct_id in
+    the inner subquery (canonical stitching key) — confirmed NO argMin/argMax
+    (uses MIN/MAX/SUM/CASE WHEN only), bucket-B1-eligible; contrast with
+    cohorts_ai (cohorts.js:87), which DOES use argMin and is correctly
+    excluded from this batch per the dispatch. Typed-column translation
+    (SCOPE_v3.md §2.6): properties.site_id -> site_id, event -> event_type.
+    No JSON-bag fields.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+NODE cohorts_weekly_node
+SQL >
+    %
+    SELECT
+        formatDateTime(min_ts, '%Y-W%V') AS cohort_week,
+        COUNT(DISTINCT distinct_id) AS users,
+        SUM(is_converted) AS converted_users
+    FROM (
+        SELECT
+            distinct_id,
+            MIN(timestamp) AS min_ts,
+            MAX(CASE WHEN event_type = '$conversion' THEN 1 ELSE 0 END) AS is_converted
+        FROM events
+        WHERE site_id = {{ String(site_id, required=True) }}
+          AND (event_type = '$pageview' OR event_type = '$conversion')
+        GROUP BY distinct_id
+        HAVING min_ts IS NOT NULL
+    )
+    GROUP BY cohort_week
+    ORDER BY cohort_week ASC
+    LIMIT 500
+
+TYPE endpoint

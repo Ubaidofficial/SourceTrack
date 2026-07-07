@@ -1,0 +1,78 @@
+DESCRIPTION >
+    Wave 3 tier-3 row-pull. Pageview rows for on-read session derivation — the pvSql in
+    getSessionReport (api/lib/attribution-engine.js:892-911, queryName 'session_report_pageviews').
+    Faithful 1:1 port. 8 base columns in destructure order (:933-940):
+      distinct_id, timestamp, page_url, utm_source, utm_medium, utm_campaign, country, device_type
+    followed by 0-2 dynamic custom columns (consumed at row[8]/row[9], :954-955). Half-open window
+    (>= from AND < to), ORDER BY distinct_id ASC, timestamp ASC, LIMIT 50000.
+    Typed-column translation (SCOPE_v3 §2.6): properties.site_id -> site_id, event -> event_type;
+    page_url/utm_*/country/device_type are typed columns.
+    CUSTOM COLUMNS: the live code appends properties.custom_<key> AS custom_<key> for the 1-2 keys
+    the active groupBy/groupBy2 request (:882-889). Reproduced via the custom_key1/custom_key2
+    {% if defined %} pattern from pageviews_windowed_by_site.pipe — caller passes the FULL property
+    key (e.g. 'custom_plan') and it is read via JSONExtractString(properties, {{ custom_key1 }}).
+    DYNAMIC FILTERS: same ${filterClauses} block as session_report_conversions (:841-880),
+    reproduced as {% if defined %} predicates; the `channel` filter is the inline multiIf snapshot
+    from :844-859 (point-in-time copy of that route's inline classifier, NOT channel-classifier.js —
+    keep in lockstep if :844-859 changes).
+    NOT YET PUSHED — authored only (token lacks WORKSPACE:DEPLOY); founder deploys.
+
+NODE session_report_pageviews_node
+SQL >
+    %
+    SELECT
+        distinct_id,
+        timestamp,
+        page_url,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        country,
+        device_type
+        {% if defined(custom_key1) %}, JSONExtractString(properties, {{ String(custom_key1) }}) AS custom_key1{% end %}
+        {% if defined(custom_key2) %}, JSONExtractString(properties, {{ String(custom_key2) }}) AS custom_key2{% end %}
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$pageview'
+      AND timestamp >= {{ DateTime(date_from_ts, required=True) }}
+      AND timestamp < {{ DateTime(date_to_ts, required=True) }}
+      {% if defined(filter_channel) %}
+      AND COALESCE(
+        multiIf(
+          ai_source IS NOT NULL AND ai_source != '', 'AI Search',
+          lower(COALESCE(utm_medium, '')) IN ('cpc','ppc','paid','paid_search','sem'), 'Paid Search',
+          lower(COALESCE(utm_medium, '')) IN ('paid_social','paidsocial','social_paid'), 'Paid Social',
+          lower(COALESCE(utm_medium, '')) IN ('email','newsletter'), 'Email',
+          lower(COALESCE(utm_medium, '')) IN ('social','organic_social'), 'Organic Social',
+          lower(COALESCE(utm_medium, '')) IN ('organic','seo'), 'Organic Search',
+          lower(COALESCE(utm_source, '')) IN ('google','bing','duckduckgo','yahoo','brave') AND lower(COALESCE(utm_medium, '')) NOT IN ('cpc','ppc','paid','paid_search','sem'), 'Organic Search',
+          lower(COALESCE(utm_source, '')) IN ('facebook','instagram','linkedin','twitter','x','tiktok','youtube','reddit') AND lower(COALESCE(utm_medium, '')) NOT IN ('paid_social','paidsocial','social_paid'), 'Organic Social',
+          lower(COALESCE(utm_source, '')) IN ('mailchimp','klaviyo','hubspot','sendgrid','customer.io'), 'Email',
+          referrer IS NULL OR referrer = '', 'Direct',
+          'Referral'
+        ),
+        'Other'
+      ) = {{ String(filter_channel, required=True) }}
+      {% end %}
+      {% if defined(filter_conversion_type) %}
+      AND conversion_type = {{ String(filter_conversion_type, required=True) }}
+      {% end %}
+      {% if defined(filter_source) %}
+      AND utm_source = {{ String(filter_source, required=True) }}
+      {% end %}
+      {% if defined(filter_medium) %}
+      AND utm_medium = {{ String(filter_medium, required=True) }}
+      {% end %}
+      {% if defined(filter_campaign) %}
+      AND utm_campaign = {{ String(filter_campaign, required=True) }}
+      {% end %}
+      {% if defined(filter_country) %}
+      AND country = {{ String(filter_country, required=True) }}
+      {% end %}
+      {% if defined(filter_device_type) %}
+      AND device_type = {{ String(filter_device_type, required=True) }}
+      {% end %}
+    ORDER BY distinct_id ASC, timestamp ASC
+    LIMIT 50000
+
+TYPE endpoint
