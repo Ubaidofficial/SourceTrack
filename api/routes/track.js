@@ -11,11 +11,7 @@ import { claimConversionUsage } from '../lib/conversion-limits.js'
 
 
 import { getSupabase } from '../lib/supabase.js'
-
-
-// Same crawler pattern used by /api/analytics/collect — keeps PostHog event
-// counts clean (Googlebot, Lighthouse, scripted clients don't represent users).
-const BOT_UA_PATTERN = /bot|crawl|spider|slurp|mediapartners|adsbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot|discordbot|applebot|bingpreview|googleweblight|lighthouse|pagespeed|headlesschrome|phantomjs|selenium|puppeteer|playwright|wget|curl\/|python-requests|axios\/|go-http|java\/|ruby\/|php\/|google-extended|headless/i
+import { isBotUserAgent, logWouldDropBot } from '../lib/bot-filter.js'
 
 async function updateTelemetryMetadata(site, body) {
   try {
@@ -141,11 +137,17 @@ export function isLeadForm({ form_id, form_name, form_action_path, page_path }) 
 
 export async function track(req, res) {
   try {
-    // Silent bot drop — return 200 so crawlers don't retry/spam
+    // Silent bot drop — return 200 so crawlers don't retry/spam.
+    // UA layer unchanged (ua_empty / ua_pattern still drop today).
     const ua = req.headers['user-agent'] || ''
-    if (!ua || BOT_UA_PATTERN.test(ua)) {
+    if (isBotUserAgent(ua)) {
       return res.status(200).json({ success: true, data: { received: true, filtered: 'bot' }, error: null })
     }
+
+    // LOG-ONLY (log-only bot measurement): a request that survived the UA drop
+    // above may still trip the EXPANDED heuristic (ua_extra / header_shape).
+    // Measure what we WOULD catch — do NOT drop. Logs a coarse UA hash only.
+    logWouldDropBot('track', req)
 
     // Check path exclusions
     if (req.body?.page_url && isPathExcluded(req.body.page_url, req.site?.excluded_paths)) {

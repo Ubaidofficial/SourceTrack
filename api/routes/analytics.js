@@ -16,11 +16,9 @@ import {
   trackGlobalIpLimit
 } from '../middleware/rate-limit.js'
 import { resolveClientIp } from '../lib/ip-resolver.js'
+import { isBotUserAgent } from '../lib/bot-filter.js'
 
 const router = express.Router()
-
-// Known bot/crawler UA patterns — silent drop (return 200 so bots don't retry)
-const BOT_UA_PATTERN = /bot|crawl|spider|slurp|mediapartners|adsbot|facebookexternalhit|twitterbot|linkedinbot|whatsapp|telegrambot|discordbot|applebot|bingpreview|googleweblight|lighthouse|pagespeed|headlesschrome|phantomjs|selenium|puppeteer|playwright|wget|curl\/|python-requests|axios\/|go-http|java\/|ruby\/|php\/|google-extended|headless/i
 
 // ─── Filter parsing ──────────────────────────────────────────────────────────
 // Supports two formats:
@@ -98,7 +96,7 @@ router.post('/collect',
 
       // Bot filter — silent drop, 200 so crawlers don't retry
       const ua = req.headers['user-agent'] || ''
-      if (!ua || BOT_UA_PATTERN.test(ua)) return res.json({ ok: true })
+      if (isBotUserAgent(ua)) return res.json({ ok: true })
 
       const supabase = getSupabase()
       // LEGACY ROUTE: select pv_limit for quota enforcement (140G-4)

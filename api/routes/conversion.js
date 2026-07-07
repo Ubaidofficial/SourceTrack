@@ -15,6 +15,7 @@ import { storeIdentityLink } from '../lib/identity-links.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
 import { checkIsDuplicate, registerConversion } from '../lib/shared-dedupe-cache.js'
 import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
+import { logWouldDropBot } from '../lib/bot-filter.js'
 
 
 // In-memory dedup cache — 24h TTL. Fast path that catches the common case
@@ -155,6 +156,11 @@ const getCapiSupabase = getSupabase
 export async function conversion(req, res) {
   try {
     const clientIp = resolveClientIp(req)
+
+    // LOG-ONLY bot measurement (log-only): this route has no UA drop today.
+    // Measure what the EXPANDED heuristic (ua_extra / header_shape) WOULD catch
+    // before we ever enable dropping — do NOT drop. Logs a coarse UA hash only.
+    logWouldDropBot('conversion', req)
 
     // Check path exclusions
     if (req.body?.page_url && isPathExcluded(req.body.page_url, req.site?.excluded_paths)) {

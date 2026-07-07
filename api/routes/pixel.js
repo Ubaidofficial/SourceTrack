@@ -29,6 +29,7 @@ import { getSupabase } from '../lib/supabase.js'
 import { normalizeUtm } from '../lib/utils.js'
 import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
 import { resolveClientIp } from '../lib/ip-resolver.js'
+import { logWouldDropBot } from '../lib/bot-filter.js'
 
 const router = Router()
 
@@ -56,6 +57,11 @@ router.get('/', async (req, res) => {
   sendPixel(res)
 
   try {
+    // LOG-ONLY bot measurement (log-only): this route has no UA drop today.
+    // Measure what the EXPANDED heuristic (ua_extra / header_shape) WOULD catch
+    // before we ever enable dropping — do NOT drop. Logs a coarse UA hash only.
+    logWouldDropBot('pixel', req)
+
     const q = req.query
     const siteKey = q.site_key || q.siteKey || q.sk
 
