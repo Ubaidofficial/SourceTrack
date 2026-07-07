@@ -5,6 +5,7 @@ import { getSupabase } from '../lib/supabase.js'
 import { esc, encryptSecret } from '../lib/utils.js'
 import { siteCache } from '../middleware/auth.js'
 import { resolveCname, verifySslAndRouting, normalizeDnsName } from '../lib/dns-resolver.js'
+import { addPullZoneHostname, loadFreeCertificate, removePullZoneHostname } from '../lib/bunny-edge.js'
 import { invalidateProxyCache } from '../middleware/managed-proxy.js'
 import { validateCrossDomainSettings } from '../lib/cross-domain-validation.js'
 import { requireFeature } from '../lib/plan-features.js'
@@ -814,6 +815,17 @@ router.post('/proxy-domain', async (req, res) => {
 
     invalidateProxyCache(domain)
 
+    // Best-effort: pre-register the hostname on the Bunny edge so the free cert
+    // can be issued at verify time. DNS-first UX is preserved — the customer
+    // still needs to add the CNAME, and we do NOT block or issue a cert here.
+    // Gated OFF in mock mode so DNS-mock tests never hit the network.
+    if (process.env.ST_MOCK_DNS_RESOLVE !== 'true') {
+      const reg = await addPullZoneHostname(domain)
+      if (!reg.ok && !reg.disabled) {
+        console.warn(`[integrations] Bunny hostname pre-registration non-fatal failure (status=${reg.status ?? 'n/a'})`)
+      }
+    }
+
     return res.json({ success: true, data: savedRecord, error: null })
   } catch (err) {
     console.error('[integrations] POST proxy-domain error:', err?.message)
@@ -864,7 +876,19 @@ router.post('/proxy-domain/verify', async (req, res) => {
     let verifiedAt = null
 
     if (dnsValid) {
-      // 2. Perform HTTP/HTTPS health self-check routing verification
+      // 2. CNAME points at us — ask Bunny to register the hostname and issue the
+      // free Let's Encrypt cert. addPullZoneHostname runs first to satisfy the
+      // ordering constraint (loadFreeCertificate 404s if the hostname isn't on
+      // the zone yet); both are idempotent and safe to re-run on every verify.
+      // Cert issuance is ASYNC — we never force-activate on it. Gated OFF in
+      // mock mode. Failures are non-fatal: the HTTPS self-check below is the
+      // authoritative gate, so an unready cert simply keeps status pending.
+      if (process.env.ST_MOCK_DNS_RESOLVE !== 'true') {
+        await addPullZoneHostname(domain)
+        await loadFreeCertificate(domain)
+      }
+
+      // 3. Perform HTTP/HTTPS health self-check routing verification
       const sslValid = await verifySslAndRouting(domain)
       if (sslValid) {
         finalStatus = 'active'
@@ -921,6 +945,13 @@ router.delete('/proxy-domain', async (req, res) => {
 
     if (record) {
       invalidateProxyCache(record.domain)
+
+      // Best-effort: release the hostname from the Bunny edge so it can be
+      // re-added later. Non-fatal and gated OFF in mock mode.
+      if (process.env.ST_MOCK_DNS_RESOLVE !== 'true') {
+        await removePullZoneHostname(record.domain)
+      }
+
       const { error } = await supabase
         .from('managed_proxy_domains')
         .delete()
