@@ -14,6 +14,7 @@ import { claimIdempotencyKeys, rollbackIdempotencyKeys } from '../lib/idempotenc
 import { storeIdentityLink } from '../lib/identity-links.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
 import { checkIsDuplicate, registerConversion } from '../lib/shared-dedupe-cache.js'
+import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
 
 
 // In-memory dedup cache — 24h TTL. Fast path that catches the common case
@@ -383,12 +384,25 @@ export async function conversion(req, res) {
 
     const clientTimestamp = req.body?.timestamp ? sanitizeClientTimestamp(req.body.timestamp) : null
 
+    // distinctId hoisted to a const (behavior-identical) so the inline uuidv4()
+    // fallback is computed ONCE and the additive Tinybird dual-write shares the
+    // exact same distinct_id the existing ph.capture uses.
+    const distinctId = req.body.anonymous_id || uuidv4()
+
     ph.capture({
-      distinctId: req.body.anonymous_id || uuidv4(),
+      distinctId,
       event: '$conversion',
       timestamp: clientTimestamp ? new Date(clientTimestamp) : undefined,
       properties: props
     })
+
+    // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
+    // Reached ONLY after every guard returned: short-window dedup (:261), in-memory
+    // dedupCache (:304), the PERSISTENT claimIdempotencyKeys duplicate skip (:321),
+    // and the plan-limit block (:349) — so a conversion the existing claim SKIPS
+    // never dual-writes. props.external_event_id (:239, resolveCapiEventId) lets
+    // deriveEventId branch-2 resolve the SAME id offline computes -> cross-dedup.
+    dualWriteEvent({ distinctId, event: '$conversion', timestamp: clientTimestamp, properties: props })
 
     // CAPI sync — fire async, never block response. Gated by plan; free tier
     // skips the outbound fan-out entirely to keep costs down.

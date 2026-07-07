@@ -66,6 +66,9 @@ jobs:
       - name: Attribution unit tests
         run: npm run qa:attribution:unit
 
+      - name: Tinybird dual-write unit tests
+        run: npm run qa:tinybird:unit
+
       - name: Build dashboard production target
         run: |
           cd dashboard

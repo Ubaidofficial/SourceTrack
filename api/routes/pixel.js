@@ -27,6 +27,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { ph } from '../lib/posthog.js'
 import { getSupabase } from '../lib/supabase.js'
 import { normalizeUtm } from '../lib/utils.js'
+import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
 import { resolveClientIp } from '../lib/ip-resolver.js'
 
 const router = Router()
@@ -130,6 +131,10 @@ router.get('/', async (req, res) => {
       event: eventName,
       properties,
     })
+
+    // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
+    // No natural id on the pixel path -> deriveEventId falls to a uuid (append-only).
+    dualWriteEvent({ distinctId: userId || anonymousId, event: eventName, properties })
 
   } catch (err) {
     // Swallow — pixel already sent, never error back to the caller

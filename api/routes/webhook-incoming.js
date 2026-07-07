@@ -15,6 +15,7 @@ import { getSupabase } from '../lib/supabase.js'
 import { resolveWebhookAnonymousId } from '../lib/identity-links.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
 import { redactPiiFromObject } from '../lib/utils.js'
+import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
 
 
 const router = express.Router()
@@ -184,6 +185,13 @@ router.post('/:api_key', async (req, res) => {
       event: '$conversion',
       properties: sanitizedProps
     })
+
+    // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
+    // Pass the producer's coalesced natural id (fields.orderId) as raw order_id so
+    // deriveEventId resolves it (else uuid). NOT conversion_event_id, which bakes in
+    // a uuid fallback when orderId is null (per 2b precedence). site_key/email/name
+    // in sanitizedProps are dropped by the adapter.
+    dualWriteEvent({ distinctId, event: '$conversion', order_id: fields.orderId, properties: sanitizedProps })
 
     res.json({ ok: true, received: true, conversion_type: fields.conversionType, value: fields.value })
   } catch (err) {
