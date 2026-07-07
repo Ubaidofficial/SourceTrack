@@ -101,5 +101,6 @@ SQL >
     HAVING conversions > 0 OR pageviews > 0
     ORDER BY last_seen DESC
     LIMIT {{ Int32(limit_val, 50) }}
+    OFFSET {{ Int32(offset_val, 0) }}
 
 TYPE endpoint
