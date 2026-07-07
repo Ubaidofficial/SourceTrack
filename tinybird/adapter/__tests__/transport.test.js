@@ -34,6 +34,18 @@ function mockSleep () {
 }
 const GZ = Buffer.from('fake-gzipped-ndjson') // stand-in for the batcher's gzipped payload
 
+// Poll until `cond()` holds (deterministic on slow CI) or time out. Returns as
+// soon as the condition is true — avoids racing a fixed setTimeout against the
+// async flush/retry chain, which flaked on loaded CI runners.
+async function waitFor (cond, { timeoutMs = 2000, intervalMs = 5 } = {}) {
+  const start = Date.now()
+  while (!cond()) {
+    if (Date.now() - start > timeoutMs) return false
+    await new Promise((r) => setTimeout(r, intervalMs))
+  }
+  return true
+}
+
 // ── POST shape ────────────────────────────────────────────────────────────────
 test('POST shape: URL /v0/events?name=, gzip + bearer headers, body = payload', async () => {
   const fetch = mockFetch([{ status: 202 }])
@@ -161,12 +173,12 @@ test('failure isolation: a throwing transport never breaks the producer; chain r
   assert.strictEqual(ok, true, 'dualWriteEvent returns true; producer path unaffected')
 
   // let the failing flush settle, then prove a LATER batch still flushes (chain recovered)
-  await new Promise((r) => setTimeout(r, 10))
+  await waitFor(() => errs.length >= 1)
   assert.ok(errs.length >= 1, 'transport failure surfaced to onError (not the producer)')
 
   const before = fetch.calls.length
   dualWriteEvent({ site_id: 's', event: '$conversion', properties: { site_id: 's', order_id: 'o2' } })
-  await new Promise((r) => setTimeout(r, 10))
+  await waitFor(() => fetch.calls.length > before)
   assert.ok(fetch.calls.length > before, 'later batch still attempted -> chain not poisoned')
 
   await new Promise((r) => setTimeout(r, 5))
