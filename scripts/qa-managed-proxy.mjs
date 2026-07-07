@@ -49,8 +49,8 @@ async function startTestServer(extraEnv = {}) {
       PORT,
       NODE_ENV: 'test',
       ST_MOCK_DNS_RESOLVE: 'true',
-      ST_MANAGED_PROXY_TARGET: 'proxy.sourcetrack.io',
-      ST_PLATFORM_HOSTS: 'api.sourcetrack.io,localhost,127.0.0.1',
+      ST_MANAGED_PROXY_TARGET: 'proxy.sourcetrack.ai',
+      ST_PLATFORM_HOSTS: 'api.sourcetrack.ai,localhost,127.0.0.1',
       ...extraEnv
     }
   })
@@ -411,7 +411,7 @@ async function runTests() {
         ...process.env,
         NODE_ENV: 'production',
         ST_MANAGED_PROXY_TARGET: '', // missing target
-        ST_PLATFORM_HOSTS: 'api.sourcetrack.io'
+        ST_PLATFORM_HOSTS: 'api.sourcetrack.ai'
       }
     })
 
