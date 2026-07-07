@@ -1,0 +1,57 @@
+DESCRIPTION >
+    Phase 4a (Pattern B row-pull). Flat, site-scoped, lookback-windowed pull of
+    `$pageview` rows — NOT filtered per-visitor (matches today's behavior exactly).
+    Replaces the HogQL `pvSql` in `getMultiTouchAttributionLive`
+    (api/lib/attribution-engine.js:1478), shared by linear/u_shaped/time_decay/
+    w_shaped — see tinybird/PHASE4_BUILD_PLAN.md §0 for why these 4 models share
+    one pipe pair, and tinybird/PHASE4_4A_FIELD_MAPPING.md §2/§4 for the verified
+    column mapping and the window-pin requirement (guardrail 4).
+    Caller MUST compute `lookback_from` using the exact ternary at
+    api/lib/attribution-engine.js:1464-1467 (reusing serializeHogQLDateTime/
+    serializeHogQLDateRange) — do not reimplement the windowDays/'ltv' logic here.
+    `custom_key1`/`custom_key2` are optional — mirrors the dynamic
+    custom_param:<key> SELECT at api/lib/attribution-engine.js:1469-1476 (only the
+    1-2 keys the active groupBy/groupBy2 request actually needs).
+    NOT YET VALIDATED against the live schema (no `tb build`/`tb push` run —
+    pending founder go-ahead on cloud-touching CLI commands, see Phase 4a report).
+
+TOKEN "phase4_pageviews_read" READ
+
+NODE pageviews_windowed_by_site_node
+SQL >
+    %
+    SELECT
+        distinct_id,
+        timestamp,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        referrer,
+        ai_source,
+        gclid,
+        gbraid,
+        wbraid,
+        fbclid,
+        msclkid,
+        ttclid,
+        li_fat_id,
+        li_fatid,
+        twclid,
+        dclid,
+        snapclid,
+        pclid,
+        sccid,
+        ko_click_id,
+        page_url,
+        utm_term
+        {% if defined(custom_key1) %}, JSONExtractString(properties, {{ String(custom_key1) }}) AS custom_key1{% end %}
+        {% if defined(custom_key2) %}, JSONExtractString(properties, {{ String(custom_key2) }}) AS custom_key2{% end %}
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$pageview'
+      AND timestamp >= {{ DateTime(lookback_from, required=True) }}
+      AND timestamp < {{ DateTime(date_to, required=True) }}
+    ORDER BY timestamp ASC
+    LIMIT 100000
+
+TYPE endpoint

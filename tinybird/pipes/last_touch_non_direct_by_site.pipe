@@ -1,0 +1,79 @@
+DESCRIPTION >
+    Wave 3 aggregated attribution. One row per (source, medium, campaign) with
+    conversions=count() and revenue=SUM(toFloat64OrZero(toString(conversion_value))),
+    serving lastTouchNonDirectAttribution (api/lib/attribution-engine.js:221-278, queryName
+    'last_touch_non_direct_attribution'). Faithful 1:1 port.
+    Same LAST-touch argMax structure as last_touch_by_site_agg.pipe (validated ASOF null-skip),
+    with two live-code differences reproduced exactly:
+      1. NON-DIRECT gate on the pageview set: WHERE utm_source IS NOT NULL AND utm_source != ''
+         AND utm_source != 'direct' (live :249-251). Applied to EVERY field's ASOF subquery so
+         all argMax picks are over the same non-direct-utm_source pageview set, then each field
+         null-skips its own column (utm_medium/utm_campaign get an extra IS NOT NULL).
+      2. NO ai_source: the live non-direct inner has only 3 argMax fields (utm_source/medium/
+         campaign, :235-237) and the outer source = COALESCE(NULLIF(utm_source,''), 'direct')
+         with NO ai_source fallback (:226) — unlike last_touch (which has an ai_source field +
+         fallback). campaign = raw utm_campaign (no COALESCE, :228), matching live.
+    ARGMAX NULL-SKIP reproduced via independent ASOF LEFT JOINs (timestamp <= conv = last
+    preceding), the structure validated in last_touch_by_site.pipe. Join key distinct_id (live :253).
+    Typed-column translation (§2.6): properties.site_id -> site_id, event -> event_type; pageview
+    fields from events_by_visitor.
+    MONEY: revenue cast toFloat64OrZero(toString(conversion_value)) == live
+    toFloatOrZero(toString(e.properties.conversion_value)); conv is 1 row per $conversion, each
+    ASOF adds <=1 match -> value counted once, matching the live 1:1 join + SUM.
+    SCOPE LIMIT (inherited): validated only for distinct_id == visitor_id; merged-identity UNVERIFIED.
+    VALUE-PARITY NOT RUN (rate-limited) — founder must value-gate before enabling. NOT DEPLOYED.
+
+NODE last_touch_non_direct_by_site_node
+SQL >
+    %
+    SELECT
+        COALESCE(NULLIF(utm_source, ''), 'direct') AS source,
+        COALESCE(NULLIF(utm_medium, ''), 'none') AS medium,
+        utm_campaign AS campaign,
+        count() AS conversions,
+        SUM(toFloat64OrZero(toString(conversion_value))) AS revenue
+    FROM
+    (
+        SELECT
+            conv.conversion_value AS conversion_value,
+            src.utm_source AS utm_source,
+            med.utm_medium AS utm_medium,
+            camp.utm_campaign AS utm_campaign
+        FROM
+        (
+            SELECT event_id, distinct_id, timestamp, conversion_value
+            FROM events
+            WHERE site_id = {{ String(site_id, required=True) }}
+              AND event_type = '$conversion'
+              AND timestamp >= {{ DateTime(date_from, required=True) }}
+              AND timestamp < {{ DateTime(date_to, required=True) }}
+        ) AS conv
+        ASOF LEFT JOIN
+        (
+            SELECT distinct_id, timestamp, utm_source FROM events_by_visitor
+            WHERE site_id = {{ String(site_id, required=True) }}
+              AND event_type = '$pageview'
+              AND utm_source IS NOT NULL AND utm_source != '' AND utm_source != 'direct'
+        ) AS src ON conv.distinct_id = src.distinct_id AND src.timestamp <= conv.timestamp
+        ASOF LEFT JOIN
+        (
+            SELECT distinct_id, timestamp, utm_medium FROM events_by_visitor
+            WHERE site_id = {{ String(site_id, required=True) }}
+              AND event_type = '$pageview'
+              AND utm_source IS NOT NULL AND utm_source != '' AND utm_source != 'direct'
+              AND utm_medium IS NOT NULL
+        ) AS med ON conv.distinct_id = med.distinct_id AND med.timestamp <= conv.timestamp
+        ASOF LEFT JOIN
+        (
+            SELECT distinct_id, timestamp, utm_campaign FROM events_by_visitor
+            WHERE site_id = {{ String(site_id, required=True) }}
+              AND event_type = '$pageview'
+              AND utm_source IS NOT NULL AND utm_source != '' AND utm_source != 'direct'
+              AND utm_campaign IS NOT NULL
+        ) AS camp ON conv.distinct_id = camp.distinct_id AND camp.timestamp <= conv.timestamp
+    )
+    GROUP BY source, medium, campaign
+    ORDER BY revenue DESC
+    LIMIT 50000
+
+TYPE endpoint

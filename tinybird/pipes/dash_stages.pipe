@@ -1,0 +1,71 @@
+DESCRIPTION >
+    Dashboard overview: offline-conversion funnel stage breakdown (count +
+    revenue) for a caller-supplied UTC-padded window intersected with a
+    timezone-local day range (Promise.all batch). Tenant-scoped; prunes via
+    (site_id, timestamp). Faithful 1:1 port of api/routes/dashboard.js:80-97
+    (queryName 'dash_stages'). Typed-column translation (SCOPE_v3.md §2.6):
+    properties.site_id -> site_id, event -> event_type,
+    properties.ingestion_method -> ingestion_method (typed, LowCardinality
+    String NOT NULL), properties.conversion_type -> conversion_type (typed,
+    DEFAULT 'untyped'), properties.conversion_value -> conversion_value
+    (typed Float64 DEFAULT 0, NOT Nullable).
+    REAL TRANSLATION ISSUE, caught by parity validation (not a blind copy):
+    the live query wraps in toFloatOrZero(toString(...)) -- toFloatOrZero
+    is PostHog HogQL sugar, not a native ClickHouse function; running it
+    verbatim against Tinybird's own ClickHouse (tb --cloud sql) fails with
+    "Unknown function toFloatOrZero". Translated to the equivalent native
+    function toFloat64OrZero, keeping the toString(...) wrap (redundant
+    against the already-Float64 column but harmless) since only the function
+    name is invalid, not the expression shape. No JSON-bag fields.
+    The live query interpolates 4 date-boundary values (built from
+    currentPadded.from/to + ' 00:00:00'/' 23:59:59', and localDateFrom/To +
+    ' 00:00:00'/' 23:59:59') plus tz directly into the SQL string; per
+    doctor_token_verify.pipe's precedent (no raw interpolation of non-tenant
+    runtime values), these are ported as required template params carrying
+    the full boundary string as the caller already builds it
+    (current_from_ts, current_to_ts, tz, local_from_ts, local_to_ts) rather
+    than string-interpolated or re-concatenated inside the pipe.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+    DEPLOY FIX (tb --cloud deploy --check, ST_Staging v4.6.4, round 2): after
+    the date/datetime param fix, --check surfaced the tz twin of the same
+    issue — BAD_ARGUMENTS "Cannot load time zone '__no_value__'" from
+    toTimeZone(timestamp, tz) when tz was declared String(tz, required=True)
+    with no default. Fixed by giving tz a valid default:
+    String(tz, 'UTC') — --check now has a loadable timezone to inject.
+    Real callers passing a real tz behave identically (UTC is only used
+    when the param is genuinely absent, same as --check's placeholder
+    case). Only the tz param changed — no other param or SQL logic touched.
+    Re-validated via tb --cloud sql with the gating site's real tz post-fix;
+    parity held (see batch dispatch report).
+    DEPLOY FIX (tb --cloud deploy --check, ST_Staging v4.6.4): date/datetime
+    params were declared String(param, required=True) then wrapped in
+    toDateTime(...) — that combination failed with CANNOT_PARSE_DATETIME
+    under --check's '__no_value__' placeholder injection (a non-date string
+    toDateTime() can't parse). Fixed by declaring the param itself as
+    DateTime(...) (matching the already-shipped Phase 4 pipes' proven
+    pattern) and dropping the now-redundant toDateTime(...) wrapper — no
+    SQL/filter logic changed, only the param type. Re-validated via
+    tb --cloud sql with real values post-fix; parity held (see batch
+    dispatch report).
+
+NODE dash_stages_node
+SQL >
+    %
+    SELECT
+        conversion_type AS stage,
+        count() AS count,
+        SUM(toFloat64OrZero(toString(conversion_value))) AS revenue
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$conversion'
+      AND ingestion_method = 'offline'
+      AND conversion_type IN ('lead_created', 'qualified', 'opportunity', 'closed_won')
+      AND timestamp >= {{ DateTime(current_from_ts, required=True) }}
+      AND timestamp <= {{ DateTime(current_to_ts, required=True) }}
+      AND toTimeZone(timestamp, {{ String(tz, 'UTC') }}) >= {{ DateTime(local_from_ts, required=True) }}
+      AND toTimeZone(timestamp, {{ String(tz, 'UTC') }}) <= {{ DateTime(local_to_ts, required=True) }}
+    GROUP BY stage
+    ORDER BY count DESC
+    LIMIT 100
+
+TYPE endpoint

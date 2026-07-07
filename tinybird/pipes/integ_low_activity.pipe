@@ -1,0 +1,22 @@
+DESCRIPTION >
+    Integrations hygiene: days in the trailing 30d with fewer than 5 events
+    (any type). Tenant-scoped; prunes via (site_id, timestamp). Faithful 1:1
+    port of api/routes/integrations.js:72-80 (queryName 'integ_low_activity').
+    Typed-column translation: properties.site_id -> site_id, timestamp
+    unchanged (already typed top-level). Source has NO event_type filter
+    (matches any event) — preserved exactly. No JSON-bag fields.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+NODE integ_low_activity_node
+SQL >
+    %
+    SELECT formatDateTime(timestamp, '%Y-%m-%d') AS day, count() AS cnt
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND timestamp >= now() - INTERVAL 30 DAY
+    GROUP BY day
+    HAVING cnt < 5
+    ORDER BY day ASC
+    LIMIT 30
+
+TYPE endpoint

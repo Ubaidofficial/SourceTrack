@@ -1,0 +1,44 @@
+DESCRIPTION >
+    Setup & Health: count of events carrying any paid click ID OR paid UTM/ST
+    param, trailing 30d. Tenant-scoped; prunes via (site_id, timestamp).
+    Faithful 1:1 port of setup-doctor.js's queryHogQL call at
+    api/lib/setup-doctor.js:111 (queryName 'doctor_paid_params_count').
+    Typed-column translation (SCOPE_v3.md §2.6): properties.site_id -> site_id;
+    14 click-id fields are typed columns (see doctor_last_click_id.pipe).
+    JSON-BAG FIELDS HIT (flagged, not silently typed — §2.6 lists these as
+    bag-only, NOT typed columns): utm_id, st_campaign_id, st_adgroup_id — read
+    via JSONExtractString(properties, '<key>'). JSONExtractString returns ''
+    (never NULL) for a missing key, so the live query's `(x != '' AND
+    isNotNull(x))` pattern collapses to `JSONExtractString(...) != ''` for
+    these three fields — semantically equivalent (missing-or-empty both yield
+    ''), not a behavior change, just JSONExtract's null-handling contract.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+NODE doctor_paid_params_count_node
+SQL >
+    %
+    SELECT count() AS paid_params_count
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND timestamp >= now() - INTERVAL 30 DAY
+      AND (
+        (gclid != '' AND isNotNull(gclid)) OR
+        (gbraid != '' AND isNotNull(gbraid)) OR
+        (wbraid != '' AND isNotNull(wbraid)) OR
+        (fbclid != '' AND isNotNull(fbclid)) OR
+        (msclkid != '' AND isNotNull(msclkid)) OR
+        (ttclid != '' AND isNotNull(ttclid)) OR
+        (twclid != '' AND isNotNull(twclid)) OR
+        (li_fat_id != '' AND isNotNull(li_fat_id)) OR
+        (li_fatid != '' AND isNotNull(li_fatid)) OR
+        (dclid != '' AND isNotNull(dclid)) OR
+        (snapclid != '' AND isNotNull(snapclid)) OR
+        (pclid != '' AND isNotNull(pclid)) OR
+        (sccid != '' AND isNotNull(sccid)) OR
+        (ko_click_id != '' AND isNotNull(ko_click_id)) OR
+        (JSONExtractString(properties, 'utm_id') != '') OR
+        (JSONExtractString(properties, 'st_campaign_id') != '') OR
+        (JSONExtractString(properties, 'st_adgroup_id') != '')
+      )
+
+TYPE endpoint

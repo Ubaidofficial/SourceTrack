@@ -1,0 +1,47 @@
+DESCRIPTION >
+    Sessions: raw pageview rows over a caller-supplied range, for on-read
+    session derivation (30-minute inactivity rule applied in JS, unchanged).
+    Tenant-scoped; prunes via (site_id, timestamp), secondary sort by
+    distinct_id matches the source's ORDER BY. Faithful 1:1 port of
+    api/routes/sessions.js:29-45 (queryName 'sessions_pageviews'). Identity
+    rule #19a: distinct_id is the row-grouping key downstream (canonical
+    stitching key), no argMin/argMax in this query itself. Typed-column
+    translation (SCOPE_v3.md §2.6): properties.site_id -> site_id, event ->
+    event_type, properties.page_url -> page_url, properties.utm_source ->
+    utm_source, properties.utm_medium -> utm_medium, properties.utm_campaign
+    -> utm_campaign (all typed, Nullable per §2.6). No JSON-bag fields.
+    Date range is REQUIRED here (the route 400s without both date_from/
+    date_to) — ported as required params (date_from_ts/date_to_ts, full
+    boundary strings), matching leads_count.pipe's naming but always-required
+    per this source's actual validation.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+    DEPLOY FIX (tb --cloud deploy --check, ST_Staging v4.6.4): date/datetime
+    params were declared String(param, required=True) then wrapped in
+    toDateTime(...) — that combination failed with CANNOT_PARSE_DATETIME
+    under --check's '__no_value__' placeholder injection (a non-date string
+    toDateTime() can't parse). Fixed by declaring the param itself as
+    DateTime(...) (matching the already-shipped Phase 4 pipes' proven
+    pattern) and dropping the now-redundant toDateTime(...) wrapper — no
+    SQL/filter logic changed, only the param type. Re-validated via
+    tb --cloud sql with real values post-fix; parity held (see batch
+    dispatch report).
+
+NODE sessions_pageviews_node
+SQL >
+    %
+    SELECT
+        distinct_id,
+        timestamp,
+        page_url,
+        utm_source,
+        utm_medium,
+        utm_campaign
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$pageview'
+      AND timestamp >= {{ DateTime(date_from_ts, required=True) }}
+      AND timestamp < {{ DateTime(date_to_ts, required=True) }}
+    ORDER BY distinct_id ASC, timestamp ASC
+    LIMIT 50000
+
+TYPE endpoint

@@ -1,0 +1,22 @@
+DESCRIPTION >
+    Dashboard: live visitor count, trailing 5 minutes. Tenant-scoped; prunes
+    via (site_id, timestamp). Faithful 1:1 port of api/routes/dashboard.js:524-528
+    (queryName 'live_visitors' in source — renamed dashboard_live_visitors here
+    to avoid collision with live.js:22, which ALSO uses queryName 'live_visitors'
+    but is a DIFFERENT query keyed on bag properties.anonymous_id, not
+    distinct_id; that one is deferred to the bag-anonymous_id batch). Identity
+    rule #19a: count(DISTINCT distinct_id) — canonical stitching key, no
+    argMin/argMax. Typed-column translation (SCOPE_v3.md §2.6):
+    properties.site_id -> site_id, event -> event_type. No JSON-bag fields.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+NODE dashboard_live_visitors_node
+SQL >
+    %
+    SELECT count(DISTINCT distinct_id) AS live_visitors
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$pageview'
+      AND timestamp >= now() - INTERVAL 5 MINUTE
+
+TYPE endpoint

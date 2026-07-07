@@ -1,0 +1,60 @@
+DESCRIPTION >
+    Journey: full event history for ONE specific visitor (journey-explorer
+    view). Tenant-scoped; prunes via (site_id, timestamp). Faithful 1:1 port
+    of api/routes/journey.js:53-83 (queryName 'journey'). Identity rule #19a:
+    WHERE distinct_id = <param> is the canonical stitching key filter, no
+    argMin/argMax.
+    Typed-column translation (SCOPE_v3.md §2.6): properties.site_id ->
+    site_id, event -> event_type, properties.page_url -> page_url,
+    properties.referrer -> referrer, properties.utm_source -> utm_source,
+    properties.utm_medium -> utm_medium, properties.utm_campaign ->
+    utm_campaign, properties.ai_source -> ai_source, properties.conversion_value
+    -> conversion_value (typed Float64 DEFAULT 0), properties.conversion_type
+    -> conversion_type (typed, DEFAULT 'untyped'), properties.device_type ->
+    device_type, properties.browser_name -> browser_name, properties.country
+    -> country, properties.ingestion_method -> ingestion_method.
+    JSON-BAG FIELDS HIT (flagged, not silently typed — §2.6 lists these as
+    bag-only, NOT typed columns): properties.is_conversion, properties.
+    browser_version, properties.os_name, properties.os_version, properties.
+    user_id, properties.order_id, properties.destination_domain, properties.
+    destination_url, properties.source_system — none appear in §2.6's typed
+    column table, so all are read via JSONExtractString(properties, '<key>').
+    destination_domain/destination_url/source_system aren't explicitly named
+    in §2.6's enumerated bag list either, but per the typed-vs-bag rule
+    (anything not in the TYPED table is bag) they're routed the same way.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+NODE journey_node
+SQL >
+    %
+    SELECT
+        event_type,
+        timestamp,
+        page_url,
+        referrer,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        ai_source,
+        JSONExtractString(properties, 'is_conversion') AS is_conversion,
+        conversion_value,
+        conversion_type,
+        device_type,
+        browser_name,
+        JSONExtractString(properties, 'browser_version') AS browser_version,
+        JSONExtractString(properties, 'os_name') AS os_name,
+        JSONExtractString(properties, 'os_version') AS os_version,
+        country,
+        JSONExtractString(properties, 'user_id') AS user_id,
+        JSONExtractString(properties, 'order_id') AS order_id,
+        JSONExtractString(properties, 'destination_domain') AS destination_domain,
+        JSONExtractString(properties, 'destination_url') AS destination_url,
+        JSONExtractString(properties, 'source_system') AS source_system,
+        ingestion_method
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND distinct_id = {{ String(visitor_id, required=True) }}
+    ORDER BY timestamp ASC
+    LIMIT 500
+
+TYPE endpoint

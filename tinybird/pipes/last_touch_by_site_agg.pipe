@@ -1,0 +1,83 @@
+DESCRIPTION >
+    Wave 3 aggregated attribution. One row per (source, medium, campaign) with
+    conversions=count() and revenue=SUM(toFloat64OrZero(toString(conversion_value))),
+    serving lastTouchAttribution (api/lib/attribution-engine.js:92-152, queryName
+    'last_touch_attribution'). Faithful 1:1 port.
+    NOT the same as last_touch_by_site.pipe — that is a per-conversion ROW-PULL (no aggregation,
+    no revenue). This pipe REUSES that pipe's VALIDATED inner ASOF structure (per-field argMax
+    null-skip) and adds (a) conversion_value to the conv subquery and (b) the outer
+    GROUP BY source,medium,campaign + count + SUM(revenue) matching the live HogQL outer.
+    ARGMAX NULL-SKIP (money-critical, reproduced EXACTLY): the live query computes
+    argMax(col, timestamp) SEPARATELY per field (utm_source/medium/campaign/ai_source), and
+    ClickHouse argMax SKIPS rows where the aggregated col is NULL — so different fields can come
+    from different touchpoints. Reproduced as 4 INDEPENDENT ASOF LEFT JOINs, each with
+    `<field> IS NOT NULL` in its pageview subquery so ASOF (timestamp <= conv.timestamp = last
+    preceding) picks the last NON-NULL value per field. This is the exact structure validated in
+    last_touch_by_site.pipe against real fired data (Phase 4c fixture visitor Y); a single
+    whole-row ASOF was proven WRONG there. Join key distinct_id (matches live :127, not visitor_id).
+    Typed-column translation (§2.6): properties.site_id -> site_id, event -> event_type; pageview
+    fields read from events_by_visitor (visitor-ordered projection, required for ASOF).
+    MONEY: revenue cast toFloat64OrZero(toString(conversion_value)) == live
+    toFloatOrZero(toString(e.properties.conversion_value)); conv subquery is 1 row per $conversion
+    (event_id unique), each ASOF LEFT JOIN adds <=1 match, so each conversion contributes its
+    value exactly once — matches the live 1:1 e.uuid = lt.conversion_uuid join + SUM.
+    SCOPE LIMIT (inherited from last_touch_by_site.pipe): validated only for
+    distinct_id == visitor_id; merged-identity case UNVERIFIED.
+    VALUE-PARITY NOT RUN (rate-limited) — founder must value-gate before enabling. NOT DEPLOYED.
+
+NODE last_touch_by_site_agg_node
+SQL >
+    %
+    SELECT
+        COALESCE(NULLIF(utm_source, ''), NULLIF(ai_source, ''), 'direct') AS source,
+        COALESCE(NULLIF(utm_medium, ''), 'none') AS medium,
+        COALESCE(utm_campaign, '') AS campaign,
+        count() AS conversions,
+        SUM(toFloat64OrZero(toString(conversion_value))) AS revenue
+    FROM
+    (
+        SELECT
+            conv.conversion_value AS conversion_value,
+            src.utm_source AS utm_source,
+            med.utm_medium AS utm_medium,
+            camp.utm_campaign AS utm_campaign,
+            ai.ai_source AS ai_source
+        FROM
+        (
+            SELECT event_id, distinct_id, timestamp, conversion_value
+            FROM events
+            WHERE site_id = {{ String(site_id, required=True) }}
+              AND event_type = '$conversion'
+              AND timestamp >= {{ DateTime(date_from, required=True) }}
+              AND timestamp < {{ DateTime(date_to, required=True) }}
+        ) AS conv
+        ASOF LEFT JOIN
+        (
+            SELECT distinct_id, timestamp, utm_source FROM events_by_visitor
+            WHERE site_id = {{ String(site_id, required=True) }}
+              AND event_type = '$pageview' AND utm_source IS NOT NULL
+        ) AS src ON conv.distinct_id = src.distinct_id AND src.timestamp <= conv.timestamp
+        ASOF LEFT JOIN
+        (
+            SELECT distinct_id, timestamp, utm_medium FROM events_by_visitor
+            WHERE site_id = {{ String(site_id, required=True) }}
+              AND event_type = '$pageview' AND utm_medium IS NOT NULL
+        ) AS med ON conv.distinct_id = med.distinct_id AND med.timestamp <= conv.timestamp
+        ASOF LEFT JOIN
+        (
+            SELECT distinct_id, timestamp, utm_campaign FROM events_by_visitor
+            WHERE site_id = {{ String(site_id, required=True) }}
+              AND event_type = '$pageview' AND utm_campaign IS NOT NULL
+        ) AS camp ON conv.distinct_id = camp.distinct_id AND camp.timestamp <= conv.timestamp
+        ASOF LEFT JOIN
+        (
+            SELECT distinct_id, timestamp, ai_source FROM events_by_visitor
+            WHERE site_id = {{ String(site_id, required=True) }}
+              AND event_type = '$pageview' AND ai_source IS NOT NULL
+        ) AS ai ON conv.distinct_id = ai.distinct_id AND ai.timestamp <= conv.timestamp
+    )
+    GROUP BY source, medium, campaign
+    ORDER BY revenue DESC
+    LIMIT 50000
+
+TYPE endpoint

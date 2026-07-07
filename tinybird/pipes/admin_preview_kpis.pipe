@@ -1,0 +1,32 @@
+DESCRIPTION >
+    Super-admin preview: KPI summary (revenue, conversions, sessions, leads),
+    trailing 30d. Tenant-scoped; prunes via (site_id, timestamp). Faithful 1:1
+    port of api/routes/admin.js:303-312 (queryName 'admin_preview_kpis') — this
+    was flagged in the prior batch's census as unassigned to any bucket;
+    closing it here as a plain distinct_id read (identity rule #19a:
+    count(DISTINCT distinct_id) AS leads, canonical stitching key, no
+    argMin/argMax). Typed-column translation (SCOPE_v3.md §2.6):
+    properties.site_id -> site_id, event -> event_type,
+    properties.conversion_value -> conversion_value (typed Float64 DEFAULT 0,
+    NOT Nullable).
+    REAL TRANSLATION ISSUE (same class caught in batch 4): the live query
+    wraps in toFloatOrZero(toString(...)) -- toFloatOrZero is PostHog HogQL
+    sugar, not a native ClickHouse function; fails on Tinybird with "Unknown
+    function toFloatOrZero." Translated to toFloat64OrZero, keeping the
+    toString(...) wrap (redundant but harmless) since only the function name
+    is invalid. No JSON-bag fields.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+NODE admin_preview_kpis_node
+SQL >
+    %
+    SELECT
+        sumIf(toFloat64OrZero(toString(conversion_value)), event_type = '$conversion') AS revenue,
+        countIf(event_type = '$conversion') AS conversions,
+        countIf(event_type = '$pageview') AS sessions,
+        count(DISTINCT distinct_id) AS leads
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND timestamp >= now() - INTERVAL 30 DAY
+
+TYPE endpoint

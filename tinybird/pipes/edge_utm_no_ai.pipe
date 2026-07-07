@@ -1,0 +1,37 @@
+DESCRIPTION >
+    Edge-case check: count of events with a UTM source but no AI source (any
+    event type). Tenant-scoped; prunes via site_id (this query has no
+    timestamp predicate — preserved exactly from source). Faithful 1:1 port of
+    api/routes/events.js:322-330 (queryName 'edge_utm_no_ai'). Typed-column
+    translation: properties.site_id -> site_id, properties.utm_source ->
+    utm_source (typed, Nullable per §2.6), properties.ai_source -> ai_source
+    (typed, LowCardinality Nullable per §2.6). No JSON-bag fields.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+    COST FINDING (Task 1, Phase 6 consolidation pass): checked the LIVE source at
+    api/routes/events.js:301-330 verbatim — the live HogQL query genuinely has
+    NO timestamp predicate either (confirmed at HEAD, not assumed). This is
+    NOT a port bug; the app itself scans the tenant's entire event history
+    for this check, unbounded. Faithful-port rule means NOT adding a bound
+    here — that would diverge from live behavior and break parity. Accepted
+    cost characteristic, documented rather than silently carried: on the
+    deployed endpoint (`tb --cloud endpoint data edge_utm_no_ai --site_id ...`),
+    rows_read = 45 for the gating site's current (small) history; this
+    number scales with the site's LIFETIME event volume, not a bounded
+    recent window, and will grow as sites age. FLAGGED for later, not fixed
+    now (would require an app-caller change, out of scope for this
+    pipe-only pass): add a caller-side date param (e.g. trailing 90d) once
+    events.js is wired to call this pipe instead of live HogQL — that
+    caller-side change is deferred with the rest of the app-coupling work
+    per the standing rule for this batch.
+
+NODE edge_utm_no_ai_node
+SQL >
+    %
+    SELECT count() AS cnt
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND utm_source IS NOT NULL
+      AND utm_source != ''
+      AND (ai_source IS NULL OR ai_source = '')
+
+TYPE endpoint

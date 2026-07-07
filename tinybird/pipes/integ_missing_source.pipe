@@ -1,0 +1,20 @@
+DESCRIPTION >
+    Integrations hygiene: count of pageviews missing utm_source, trailing 30d.
+    Tenant-scoped; prunes via (site_id, timestamp). Faithful 1:1 port of
+    api/routes/integrations.js:28-34 (queryName 'integ_missing_source').
+    Typed-column translation: properties.site_id -> site_id, event ->
+    event_type, properties.utm_source -> utm_source (typed, String
+    Nullable->'direct' on read per §2.6). No JSON-bag fields.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+NODE integ_missing_source_node
+SQL >
+    %
+    SELECT count() AS cnt
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$pageview'
+      AND timestamp >= now() - INTERVAL 30 DAY
+      AND (utm_source IS NULL OR utm_source = '')
+
+TYPE endpoint

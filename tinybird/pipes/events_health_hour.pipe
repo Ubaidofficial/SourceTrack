@@ -1,0 +1,18 @@
+DESCRIPTION >
+    Events health check: event count, trailing 1h (any event type).
+    Tenant-scoped; prunes via (site_id, timestamp). Faithful 1:1 port of
+    api/routes/events.js:234-239 (queryName 'events_health_hour').
+    Typed-column translation: properties.site_id -> site_id; timestamp
+    unchanged (already typed top-level). Source has NO event_type filter
+    (matches any event) — preserved exactly. No JSON-bag fields.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+NODE events_health_hour_node
+SQL >
+    %
+    SELECT count() AS cnt
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND timestamp >= now() - INTERVAL 1 HOUR
+
+TYPE endpoint

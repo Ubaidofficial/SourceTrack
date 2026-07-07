@@ -1,0 +1,18 @@
+DESCRIPTION >
+    Benchmark + template endpoint. Tenant-scoped conversion rollup; site_id filter
+    must prune via the (site_id, timestamp) sorting key. Used to read read_rows from
+    pipe_stats_rt.
+
+TOKEN "bench_read" READ
+
+NODE bench_conversions_by_site_node
+SQL >
+    %
+    SELECT
+        count() AS conversions,
+        sum(conversion_value) AS net_revenue
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$conversion'
+
+TYPE endpoint

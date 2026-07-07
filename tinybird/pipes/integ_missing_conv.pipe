@@ -1,0 +1,32 @@
+DESCRIPTION >
+    Integrations hygiene: count of conversions with missing/zero value,
+    trailing 30d. Tenant-scoped; prunes via (site_id, timestamp). Faithful 1:1
+    port of api/routes/integrations.js:64-70 (queryName 'integ_missing_conv').
+    Typed-column translation: properties.site_id -> site_id, event ->
+    event_type.
+    REAL TRANSLATION ISSUE, not a blind copy (flagged): the live condition is
+    `(properties.conversion_value IS NULL OR properties.conversion_value = ''
+    OR toFloatOrZero(toString(properties.conversion_value)) = 0)` — written
+    for a schemaless bag value that could be absent, an empty string, or a
+    non-numeric string. SCOPE_v3.md §2.6 makes `conversion_value` a typed
+    `Float64 DEFAULT 0` column — explicitly NOT Nullable (it has a DEFAULT, not
+    "Nullable"). Against this typed column, `IS NULL` is structurally
+    impossible and `= ''` is a type mismatch (Float64 can't equal a string).
+    "Missing" and "zero" collapse to the SAME stored value (0) once the column
+    has a NOT-NULL default — so the faithful semantic translation is simply
+    `conversion_value = 0`, not a literal copy of the three-way OR (which
+    isn't even valid SQL against this column's type).
+    No JSON-bag fields.
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+NODE integ_missing_conv_node
+SQL >
+    %
+    SELECT count() AS cnt
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$conversion'
+      AND timestamp >= now() - INTERVAL 30 DAY
+      AND conversion_value = 0
+
+TYPE endpoint

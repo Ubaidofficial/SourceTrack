@@ -1,0 +1,55 @@
+DESCRIPTION >
+    Dashboard: raw recent-activity feed, trailing 30 minutes (any event
+    type). Tenant-scoped; prunes via (site_id, timestamp). Faithful 1:1 port
+    of api/routes/dashboard.js:624-652 (queryName 'recent_activity_events').
+    HYBRID IDENTITY (flagged per dispatch): the live query selects BOTH the
+    typed distinct_id column AND the JSON-bag properties.anonymous_id — ported
+    faithfully as both fields exactly as the live query uses them, not
+    collapsed to one. distinct_id is the canonical stitching key (rule #19a);
+    anonymous_id here is a legacy/bag passenger field, not a second identity
+    join key — no argMin/argMax in this query.
+    Typed-column translation (SCOPE_v3.md §2.6): properties.site_id ->
+    site_id, event -> event_type, properties.page_url -> page_url,
+    properties.referrer -> referrer, properties.utm_medium -> utm_medium,
+    properties.utm_source -> utm_source, properties.first_touch_source ->
+    first_touch_source, properties.first_touch_medium -> first_touch_medium,
+    properties.first_touch_campaign -> first_touch_campaign, properties.gclid
+    -> gclid, properties.fbclid -> fbclid, properties.msclkid -> msclkid,
+    properties.ttclid -> ttclid, properties.li_fat_id -> li_fat_id,
+    properties.ai_source -> ai_source, properties.conversion_value ->
+    conversion_value (typed Float64 DEFAULT 0).
+    JSON-BAG FIELDS HIT (flagged): properties.user_id and properties.
+    anonymous_id are both in §2.6's enumerated bag list, not typed columns —
+    read via JSONExtractString(properties, '<key>').
+    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+
+NODE dashboard_recent_activity_events_node
+SQL >
+    %
+    SELECT
+        event_type,
+        timestamp,
+        page_url,
+        referrer,
+        utm_medium,
+        utm_source,
+        first_touch_source,
+        first_touch_medium,
+        first_touch_campaign,
+        gclid,
+        fbclid,
+        msclkid,
+        ttclid,
+        li_fat_id,
+        ai_source,
+        conversion_value,
+        JSONExtractString(properties, 'user_id') AS user_id,
+        JSONExtractString(properties, 'anonymous_id') AS anonymous_id,
+        distinct_id
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND timestamp >= now() - INTERVAL 30 MINUTE
+    ORDER BY timestamp DESC
+    LIMIT 1000
+
+TYPE endpoint
