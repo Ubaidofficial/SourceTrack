@@ -27,8 +27,20 @@ let _wired = false
  * @returns {boolean} true if a transport was wired this call, false otherwise (no-op).
  */
 export function initTinybirdDualWrite ({ fetch } = {}) {
-  if (_wired) return false                 // idempotent — never double-register
-  if (!isDualWriteEnabled()) return false  // flag OFF (default) → no-op, nothing constructed
+  // TEMP DIAGNOSTIC ([tinybird-diag], remove after root-cause): console.log/warn
+  // are NOT surfacing in this service's Railway log capture, so emit via
+  // process.stdout.write to make the wiring decision visible. NEVER prints the token.
+  const _rawFlag = process.env.TINYBIRD_DUAL_WRITE
+  process.stdout.write(`[tinybird-diag] initTinybirdDualWrite CALLED | TINYBIRD_DUAL_WRITE=${JSON.stringify(_rawFlag)} type=${typeof _rawFlag} | isDualWriteEnabled=${isDualWriteEnabled()} | hasHost=${!!process.env.TINYBIRD_HOST} hasAppendToken=${!!process.env.TINYBIRD_APPEND_TOKEN} host=${process.env.TINYBIRD_HOST || ''}\n`)
+
+  if (_wired) {                            // idempotent — never double-register
+    process.stdout.write('[tinybird-diag] outcome=already-wired (idempotent no-op)\n')
+    return false
+  }
+  if (!isDualWriteEnabled()) {             // flag OFF (default) → no-op, nothing constructed
+    process.stdout.write('[tinybird-diag] outcome=early-return-flag-off\n')
+    return false
+  }
 
   const host = process.env.TINYBIRD_HOST
   const token = process.env.TINYBIRD_APPEND_TOKEN
@@ -36,6 +48,7 @@ export function initTinybirdDualWrite ({ fetch } = {}) {
 
   if (!host || !token) {
     // Flag ON but misconfigured — fail-safe: warn (NO token value) and stay unwired.
+    process.stdout.write('[tinybird-diag] outcome=early-return-missing-host-token\n')
     console.warn('[tinybird] TINYBIRD_DUAL_WRITE is on but TINYBIRD_HOST/TINYBIRD_APPEND_TOKEN are not set — dual-write stays OFF (no-op). Set both to enable.')
     return false
   }
@@ -70,10 +83,12 @@ export function initTinybirdDualWrite ({ fetch } = {}) {
     setDualWriteTransport(transport, { onError })
     _wired = true
     // host + datasource are not secrets; the token is NEVER logged.
+    process.stdout.write(`[tinybird-diag] outcome=wired -> ${host} name=${datasource}\n`)
     console.log(`[tinybird] dual-write transport wired -> ${host} name=${datasource}`)
     return true
   } catch (err) {
     // A wiring error must never break boot — stay unwired.
+    process.stdout.write(`[tinybird-diag] outcome=threw msg=${err && err.message ? err.message : String(err)}\n`)
     console.warn('[tinybird] failed to wire dual-write transport — dual-write stays OFF:', err && err.message ? err.message : err)
     return false
   }

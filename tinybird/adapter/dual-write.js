@@ -20,6 +20,9 @@ import { createSampledLogger, capLabel } from './log-sampler.js'
 let _transport = null
 let _batcher = null
 let _batcherOpts
+// TEMP DIAGNOSTIC ([tinybird-diag], remove after root-cause): latch so the
+// first event's view of the wiring state prints exactly once (never floods).
+let _diagFirstCallLogged = false
 // Sampled, bounded logger for the normalize/enqueue swallow below — so a normalize
 // throw is VISIBLE (once per interval, with a suppressed count) instead of silent.
 let _dropLog = createSampledLogger()
@@ -54,6 +57,14 @@ function getBatcher () {
 //   true  — event normalized (event_id derived) and enqueued to the injected
 //           transport (fire-and-forget; the producer never awaits it).
 export function dualWriteEvent (raw) {
+  // TEMP DIAGNOSTIC ([tinybird-diag], remove after root-cause): at the FIRST
+  // event that arrives, report whether the transport is wired at request time.
+  // process.stdout.write (console.* is not surfacing in Railway logs). Latched
+  // to print once. Does NOT construct a batcher / normalize / mutate `raw`.
+  if (!_diagFirstCallLogged) {
+    _diagFirstCallLogged = true
+    process.stdout.write(`[tinybird-diag] dualWriteEvent first-call | enabled=${isDualWriteEnabled()} hasTransport=${!!_transport} hasBatcher=${!!_batcher}\n`)
+  }
   if (!isDualWriteEnabled()) return false // flag OFF: zero work, no construction
   const batcher = getBatcher()
   if (!batcher) return false              // ON but no transport yet (pre-2d): no-op
