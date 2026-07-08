@@ -77,9 +77,16 @@ SQL >
     ) AS med ON conv.distinct_id = med.distinct_id AND med.timestamp <= conv.timestamp
     ASOF LEFT JOIN
     (
-        SELECT distinct_id, timestamp, utm_campaign FROM events_by_visitor
+        -- nullIf(campaign,'') so the argMax null-skip ENGAGES on Tinybird's empty-string campaign
+        -- (Tinybird stores empty utm_campaign as '', not NULL). LIVE reads PostHog where empty
+        -- campaign is NULL, so argMax skips the empty touch and credits a later REAL campaign; a bare
+        -- `IS NOT NULL` passes '' and diverges. Mirrors #137's non-direct fix. Matches live
+        -- argMax(pv.utm_campaign) null-skip (attribution-engine.js:124). source/medium unchanged.
+        -- LATENT on the cc-4c fixture (no '' campaigns there, so no in-fixture regression); production
+        -- has '' campaigns and would diverge without this.
+        SELECT distinct_id, timestamp, nullIf(utm_campaign, '') AS utm_campaign FROM events_by_visitor
         WHERE site_id = {{ String(site_id, required=True) }}
-          AND event_type = '$pageview' AND utm_campaign IS NOT NULL
+          AND event_type = '$pageview' AND nullIf(utm_campaign, '') IS NOT NULL
     ) AS camp ON conv.distinct_id = camp.distinct_id AND camp.timestamp <= conv.timestamp
     ASOF LEFT JOIN
     (
