@@ -478,7 +478,21 @@ export async function getAiPlatformAttributionLive({
     ORDER BY timestamp DESC
     LIMIT 10000
   `
-  const convRows = await queryHogQL(convSql, 'aiplatform_conversions_live')
+  // LEG 1 — Tinybird cutover (allowlist-gated; null → HogQL fallback). Same window
+  // extraction as the touch models. The pipe returns NAMED rows; remap to the EXACT
+  // 20-field positional array the destructure below consumes, so all downstream
+  // derived logic (provider/attributionStatus/stitchingMethod) stays byte-identical.
+  const _tbFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+  const _tbTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+  const _tbConv = await _queryTinybirdPipe('aiplatform_conversions_by_site', { site_id: String(siteId), date_from: _tbFrom, date_to: _tbTo })
+  const convRows = _tbConv
+    ? _tbConv.map(r => [
+      r.uuid, r.distinct_id, r.timestamp, r.conversion_type, r.conversion_value,
+      r.utm_source, r.utm_medium, r.utm_campaign, r.referrer, r.ai_source,
+      r.country, r.device_type, r.utm_term, r.provider, r.attribution_status,
+      r.stitching_method, r.ingestion_method, r.browser_name, r.browser, r.page_url
+    ])
+    : await _queryHogQL(convSql, 'aiplatform_conversions_live')
 
   const conversions = convRows.map(([
     uuid, distinctId, timestamp, conversionType, conversionValue,
@@ -539,8 +553,73 @@ export async function getAiPlatformAttributionLive({
   const batches = chunkVisitorIds(uniqueIds, AI_ATTRIBUTION_VISITOR_BATCH_SIZE)
   const pageviewsByVisitor = {}
 
+  // Tinybird DateTime params for the pageview leg (same instants HogQL uses).
+  const _tbPvTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+  const _tbLookback = lookbackStr.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+
   for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
     const batchIds = batches[batchIdx]
+
+    // ── LEG 2 Tinybird branch (allowlist-gated): OFFSET paging over
+    // pageviews_by_visitors into a per-batch BUFFER, merged into
+    // pageviewsByVisitor ONLY on a clean full read (a page shorter than
+    // page_size). A gated page-0 null OR any mid-stream null discards the buffer
+    // and this batch falls through to the unchanged HogQL keyset loop below — so
+    // no dropped or duplicated rows. Inert in prod: page-0 returns null when the
+    // flag/allowlist is off, so the HogQL path runs. Independently gated per leg.
+    const _tbBuffer = []
+    let _tbComplete = false
+    let _tbPageOffset = 0
+    while (true) {
+      const _tbPv = await _queryTinybirdPipe('pageviews_by_visitors', {
+        site_id: String(siteId),
+        visitor_ids: batchIds, // array → the client comma-joins it
+        lookback_from: _tbLookback,
+        date_to: _tbPvTo,
+        page_size: AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE,
+        page_offset: _tbPageOffset
+      })
+      if (_tbPv === null) break
+      for (const r of _tbPv) {
+        _tbBuffer.push({
+          distinctId: r.distinct_id,
+          pvObj: {
+            timestamp: r.timestamp,
+            utm_source: r.utm_source || null,
+            utm_medium: r.utm_medium || null,
+            utm_campaign: r.utm_campaign || null,
+            referrer: r.referrer || null,
+            ai_source: r.ai_source || null,
+            gclid: r.gclid || null,
+            gbraid: r.gbraid || null,
+            wbraid: r.wbraid || null,
+            fbclid: r.fbclid || null,
+            msclkid: r.msclkid || null,
+            ttclid: r.ttclid || null,
+            li_fat_id: r.li_fat_id || null,
+            li_fatid: r.li_fatid || null,
+            twclid: r.twclid || null,
+            dclid: r.dclid || null,
+            snapclid: r.snapclid || null,
+            pclid: r.pclid || null,
+            sccid: r.sccid || null,
+            ko_click_id: r.ko_click_id || null,
+            page_url: r.page_url || null,
+            utm_term: r.utm_term || null
+          }
+        })
+      }
+      if (_tbPv.length < AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE) { _tbComplete = true; break }
+      _tbPageOffset += AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE
+    }
+    if (_tbComplete) {
+      for (const { distinctId, pvObj } of _tbBuffer) {
+        if (!pageviewsByVisitor[distinctId]) pageviewsByVisitor[distinctId] = []
+        pageviewsByVisitor[distinctId].push(pvObj)
+      }
+      continue
+    }
+
     const escapedIds = batchIds.map(id => `'${esc(id)}'`)
 
     // Keyset (cursor) pagination, NOT OFFSET: PostHog's HogQL API rejects any
@@ -593,7 +672,7 @@ export async function getAiPlatformAttributionLive({
         ORDER BY _cursor_key ASC
         LIMIT ${AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE}
       `
-      const pvRows = await queryHogQL(batchPvSql, `aiplatform_pageviews_live_batch_${batchIdx}_page_${pageNum}`)
+      const pvRows = await _queryHogQL(batchPvSql, `aiplatform_pageviews_live_batch_${batchIdx}_page_${pageNum}`)
 
       for (const row of pvRows) {
         const distinctId = row[0]
