@@ -18,10 +18,13 @@
 //                  selectAiTouchForConversion over both legs' row sets
 //                  (4D §3), pageviews_by_visitors IN-list pull. cc-4d, incl.
 //                  the no-credit negative case (visitorS presence-guarded).
-// A green run here = 6/9 models' parity confirmed LIVE. It does NOT cover:
-//   - first_touch / *_non_direct (fixtures recorded, not ingested — cutover gate)
-//   - aggregate-layer (groupBy) diff (unbuilt)
-//   - cross-store idempotency
+// Models 7/8/9 (first_touch / first_touch_non_direct / last_touch_non_direct)
+// are now INGESTED (phase9-fixtures-v1, both stores via the app-path injector) and
+// diffed at the AGGREGATE layer on the fixture site — see the block after
+// ai_platforms. So a full green run = all 9 models' parity confirmed LIVE.
+// STILL NOT covered:
+//   - cross-store idempotency (dedup/refund signed-sum) — separate
+//   - flexible_report:2457 windowed path — HARD-SKIP (founder investigation open)
 // OFFLINE COUNTERPART: tinybird/qa/phase4_replay_verify.mjs replays committed
 // snapshots through the same comparators with zero credentials.
 //
@@ -39,7 +42,7 @@
 //   RUN_MODELS=last_touch,ai_platforms node tinybird/tools/run_phase4_diff.mjs
 
 // ── Guards that don't need the tool import ──────────────────────────────────
-const ALL_MODELS = ['pattern_b', 'last_touch', 'ai_platforms']
+const ALL_MODELS = ['pattern_b', 'last_touch', 'ai_platforms', 'first_touch', 'first_touch_non_direct', 'last_touch_non_direct']
 const RUN_MODELS = (process.env.RUN_MODELS ?? ALL_MODELS.join(','))
   .split(',').map(s => s.trim()).filter(Boolean)
 const unknown = RUN_MODELS.filter(m => !ALL_MODELS.includes(m))
@@ -51,7 +54,11 @@ if (unknown.length) {
 const TOKEN_ENV_BY_MODEL = {
   pattern_b: ['PHASE4_CONVERSIONS_READ_TOKEN', 'PHASE4_PAGEVIEWS_READ_TOKEN'],
   last_touch: ['PHASE4_LAST_TOUCH_READ_TOKEN'],
-  ai_platforms: ['PHASE4_CONVERSIONS_READ_TOKEN', 'PHASE4_PAGEVIEWS_BY_VISITORS_READ_TOKEN']
+  ai_platforms: ['PHASE4_CONVERSIONS_READ_TOKEN', 'PHASE4_PAGEVIEWS_BY_VISITORS_READ_TOKEN'],
+  // Phase 9 models 7/8/9 — one READ token scoped to the 3 aggregate pipes.
+  first_touch: ['PHASE9_AGG_READ_TOKEN'],
+  first_touch_non_direct: ['PHASE9_AGG_READ_TOKEN'],
+  last_touch_non_direct: ['PHASE9_AGG_READ_TOKEN']
 }
 const REQUIRED_ENV = [
   'POSTHOG_HOST', 'POSTHOG_PROJECT_ID', 'POSTHOG_PERSONAL_API_KEY', 'TINYBIRD_HOST',
@@ -79,7 +86,9 @@ if (!process.env.POSTHOG_API_KEY) {
 const {
   diffTouchpointSets, fetchTinybirdRows, fetchHogqlLastTouchPicks,
   mapTinybirdLastTouchRow, compareLastTouchPicks, fetchHogqlAiPageviews,
-  compareAiPlatformCredits
+  compareAiPlatformCredits,
+  creditFirstTouch, creditFirstTouchNonDirect, creditLastTouchNonDirect,
+  aggregateModelCredits, compareAggregateBuckets
 } = await import('./phase4_touchpoint_diff.js')
 const { serializeHogQLDateRange, serializeHogQLDateTime } = await import('../../api/lib/hogql-date.js')
 
@@ -104,6 +113,18 @@ const toTinybirdDateTime = (isoWithTZ) => isoWithTZ.replace('T', ' ').replace(/Z
 const fromIso = toTinybirdDateTime(fromDate.match(/'([^']+)'/)[1])
 const toIso = toTinybirdDateTime(toDate.match(/'([^']+)'/)[1])
 const lookbackIso = toTinybirdDateTime(lookbackStr.match(/'([^']+)'/)[1])
+
+// ── Phase 9 fixture site (models 7/8/9): dedicated phase9-fixtures-v1 tenant ──
+// Populated via the app-path injector (both stores, native shape). Scoped by
+// site_id ALONE — the site is DEDICATED to phase9-fixtures-v1 (no cc-* prefix on
+// the UUIDs). If this site ever holds non-phase9 events, this diff is invalid —
+// re-scoping by distinct_id would then be required (see task STOP condition).
+const FIXTURE_SITE_ID = '5e85eb47-aeb6-430d-b847-00c91a861b74'
+const FIXTURE_DATE_FROM = '2026-06-01'
+const FIXTURE_DATE_TO = '2026-06-28'
+const { from: fxFrom, to: fxTo } = serializeHogQLDateRange(FIXTURE_DATE_FROM, FIXTURE_DATE_TO)
+const fxFromIso = toTinybirdDateTime(fxFrom.match(/'([^']+)'/)[1])
+const fxToIso = toTinybirdDateTime(fxTo.match(/'([^']+)'/)[1])
 
 const results = {}
 const hr = () => console.log('─'.repeat(64))
@@ -189,6 +210,73 @@ if (RUN_MODELS.includes('ai_platforms')) {
   if (!results.ai_platforms) console.error(`[phase4-diff] ai_platforms FAIL detail: ${JSON.stringify(r, null, 2)}`)
 }
 
+// ── Phase 9 models 7/8/9 — AGGREGATE-layer parity on the fixture site ─────────
+// The landed pipes (first_touch_by_site / first_touch_non_direct_by_site /
+// last_touch_non_direct_by_site) are AGGREGATE endpoints (GROUP BY source/medium/
+// campaign -> conversions,revenue), so the parity check is at the aggregate
+// layer: the pipe's SQL aggregate (Tinybird leg) vs an INDEPENDENT JS reference
+// model over raw HogQL rows (PostHog leg). Additive — does not touch the 6-model
+// path above.
+const NEW_MODELS = ['first_touch', 'first_touch_non_direct', 'last_touch_non_direct']
+if (RUN_MODELS.some(m => NEW_MODELS.includes(m))) {
+  const { queryHogQL } = await import('../../api/lib/posthog.js')
+  const { esc } = await import('../../api/lib/utils.js')
+
+  // Raw conversions (fixture site + window). site_id-only scope (dedicated site).
+  const convRows = await queryHogQL(`
+    SELECT distinct_id, timestamp,
+      properties.first_touch_source AS fts, properties.first_touch_medium AS ftm,
+      properties.first_touch_campaign AS ftc, properties.conversion_value AS cv
+    FROM events
+    WHERE properties.site_id = '${esc(FIXTURE_SITE_ID)}'
+      AND event = '$conversion'
+      AND timestamp >= ${fxFrom} AND timestamp < ${fxTo}
+    ORDER BY timestamp ASC
+    LIMIT 50000
+  `, 'phase9_conversions_hogql')
+  const conversions = convRows.map(([distinct_id, timestamp, fts, ftm, ftc, cv]) => ({
+    distinct_id, timestamp,
+    first_touch_source: fts || null, first_touch_medium: ftm || null,
+    first_touch_campaign: ftc || null, conversion_value: Number(cv) || 0
+  }))
+
+  // Raw NON-DIRECT pageviews (matches each pipe's pv-subquery filter).
+  const pvRows = await queryHogQL(`
+    SELECT distinct_id, timestamp,
+      properties.utm_source AS us, properties.utm_medium AS um, properties.utm_campaign AS uc
+    FROM events
+    WHERE properties.site_id = '${esc(FIXTURE_SITE_ID)}'
+      AND event = '$pageview'
+      AND properties.utm_source IS NOT NULL AND properties.utm_source != '' AND properties.utm_source != 'direct'
+      AND timestamp >= ${fxFrom} AND timestamp < ${fxTo}
+    ORDER BY timestamp ASC
+    LIMIT 50000
+  `, 'phase9_pageviews_hogql')
+  const pageviews = pvRows.map(([distinct_id, timestamp, us, um, uc]) => ({
+    distinct_id, timestamp, utm_source: us || null, utm_medium: um || null, utm_campaign: uc || null
+  }))
+
+  const NEW_MODEL_SPEC = {
+    first_touch: { pipe: 'first_touch_by_site', credit: creditFirstTouch },
+    first_touch_non_direct: { pipe: 'first_touch_non_direct_by_site', credit: creditFirstTouchNonDirect },
+    last_touch_non_direct: { pipe: 'last_touch_non_direct_by_site', credit: creditLastTouchNonDirect }
+  }
+  for (const model of NEW_MODELS) {
+    if (!RUN_MODELS.includes(model)) continue
+    const spec = NEW_MODEL_SPEC[model]
+    const hogqlAgg = aggregateModelCredits(conversions, pageviews, spec.credit)
+    const tbAgg = await fetchTinybirdRows(spec.pipe, process.env.PHASE9_AGG_READ_TOKEN,
+      { site_id: FIXTURE_SITE_ID, date_from: fxFromIso, date_to: fxToIso })
+    const r = compareAggregateBuckets(hogqlAgg, tbAgg)
+    hr()
+    console.log(`[phase4-diff] ${model}  site=${FIXTURE_SITE_ID}  window=[${FIXTURE_DATE_FROM} .. ${FIXTURE_DATE_TO}]  pipe=${spec.pipe} (AGGREGATE-layer)`)
+    console.log(`[phase4-diff] totalConversions=${r.totalConversions}  buckets=${r.buckets}  bucketsHogqlOnly=${r.bucketsHogqlOnly.length}  bucketsTinybirdOnly=${r.bucketsTinybirdOnly.length}  valueMismatches=${r.valueMismatches.length}`)
+    // FALSE-GREEN GUARD: a zero-conversion window is NOT a pass.
+    results[model] = r.totalConversions > 0 && r.pass
+    if (!results[model]) console.error(`[phase4-diff] ${model} FAIL detail: ${JSON.stringify(r, null, 2)}`)
+  }
+}
+
 // ── Summary ──────────────────────────────────────────────────────────────────
 hr()
 let anyFail = false
@@ -200,5 +288,5 @@ if (anyFail) {
   console.error('[phase4-diff] FAIL — at least one selected model failed (a zero-conversion window also counts as FAIL, never as a pass).')
   process.exit(1)
 }
-console.log(`[phase4-diff] PASS: ${RUN_MODELS.join(', ')} — ${RUN_MODELS.includes('pattern_b') ? '4 Pattern-B models + ' : ''}selected picked-value models parity-confirmed LIVE. NOT first_touch/*_non_direct/aggregate/idempotency — see header.`)
+console.log(`[phase4-diff] PASS: ${RUN_MODELS.join(', ')} — parity-confirmed LIVE (row-level for pattern_b/last_touch/ai_platforms; AGGREGATE-layer for first_touch/*_non_direct). NOT cross-store idempotency / flexible_report:2457 — see header.`)
 process.exit(0)

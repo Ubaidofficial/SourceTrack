@@ -527,3 +527,124 @@ export function compareAiPlatformCredits({ hogqlConversions, hogqlPageviews, tbC
     conversionsTinybirdOnly: tbUnmatched
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 9 — models 7/8/9 AGGREGATE-layer parity (first_touch / first_touch_non_
+// direct / last_touch_non_direct). The landed pipes for these three are
+// AGGREGATE endpoints (GROUP BY source/medium/campaign -> conversions, revenue),
+// not per-visitor row pulls — so the parity check is at the aggregate layer:
+// the pipe's SQL aggregate (Tinybird leg) vs an independent JS reference model
+// computed from raw HogQL rows (PostHog leg). This also fills the spec's
+// "aggregate-layer diff (unbuilt)" gap. Pure + offline-unit-tested; the credit
+// functions mirror each pipe's SQL semantics EXACTLY (COALESCE/NULLIF included).
+
+const tsOf = (x) => new Date(toUtcSafeTs(x?.timestamp ?? x)).getTime()
+const coalesceSource = (s) => (s !== undefined && s !== null && s !== '') ? s : 'direct' // COALESCE(NULLIF(x,''),'direct')
+const coalesceMedium = (m) => (m !== undefined && m !== null && m !== '') ? m : 'none'   // COALESCE(NULLIF(x,''),'none')
+
+// Non-direct pageviews for a conversion's visitor, at/ before the conversion,
+// ascending by ts — the shared population all non-direct joins draw from
+// (pipe subqueries: utm_source IS NOT NULL AND != '' AND != 'direct').
+function nonDirectPvsUpTo(conv, pageviews) {
+  const cutoff = tsOf(conv)
+  return (pageviews || [])
+    .filter(p => p.utm_source && p.utm_source !== '' && p.utm_source !== 'direct' && tsOf(p) <= cutoff)
+    .sort((a, b) => tsOf(a) - tsOf(b))
+}
+
+// Model 7 — first_touch: from the conversion's OWN first_touch_* columns
+// (first_touch_by_site.pipe: COALESCE(NULLIF(first_touch_source,''),'direct'),
+//  COALESCE(NULLIF(first_touch_medium,''),'none'), COALESCE(first_touch_campaign,'')).
+export function creditFirstTouch(conv) {
+  return {
+    source: coalesceSource(conv.first_touch_source),
+    medium: coalesceMedium(conv.first_touch_medium),
+    campaign: conv.first_touch_campaign ?? '' // COALESCE(campaign,'') — null -> ''
+  }
+}
+
+// Model 8 — first_touch_non_direct: EARLIEST non-direct pageview (argMinIf ts <= conv).
+// Outer select COALESCEs source/medium; campaign is the raw utm_campaign (null if no match).
+export function creditFirstTouchNonDirect(conv, pageviews) {
+  const nd = nonDirectPvsUpTo(conv, pageviews)
+  const first = nd[0] || null
+  return {
+    source: coalesceSource(first?.utm_source),
+    medium: coalesceMedium(first?.utm_medium),
+    campaign: first ? (first.utm_campaign ?? null) : null
+  }
+}
+
+// Model 9 — last_touch_non_direct: per-field LATEST non-direct pageview (ASOF ts <= conv).
+// Each field is independently the latest non-direct pv HAVING that field
+// (src: any non-direct; med: + utm_medium not null; camp: + utm_campaign not null).
+export function creditLastTouchNonDirect(conv, pageviews) {
+  const nd = nonDirectPvsUpTo(conv, pageviews)
+  const latest = (pred) => { for (let i = nd.length - 1; i >= 0; i--) if (pred(nd[i])) return nd[i]; return null }
+  const src = latest(() => true)
+  const med = latest(p => p.utm_medium !== undefined && p.utm_medium !== null)
+  const camp = latest(p => p.utm_campaign !== undefined && p.utm_campaign !== null)
+  return {
+    source: coalesceSource(src?.utm_source),
+    medium: coalesceMedium(med?.utm_medium),
+    campaign: camp ? (camp.utm_campaign ?? null) : null
+  }
+}
+
+const bucketKey = (b) => JSON.stringify([b.source, b.medium, b.campaign ?? null])
+
+// Aggregate the reference model over raw HogQL rows into the pipe's output shape:
+// GROUP BY (source, medium, campaign) -> { conversions, revenue }.
+export function aggregateModelCredits(conversions, pageviews, creditFn) {
+  const pvByVisitor = new Map()
+  for (const pv of (pageviews || [])) {
+    if (!pvByVisitor.has(pv.distinct_id)) pvByVisitor.set(pv.distinct_id, [])
+    pvByVisitor.get(pv.distinct_id).push(pv)
+  }
+  const buckets = new Map()
+  for (const conv of conversions) {
+    const c = creditFn(conv, pvByVisitor.get(conv.distinct_id) || [])
+    const k = bucketKey(c)
+    const b = buckets.get(k) || { source: c.source, medium: c.medium, campaign: c.campaign ?? null, conversions: 0, revenue: 0 }
+    b.conversions += 1
+    b.revenue += Number(conv.conversion_value) || 0
+    buckets.set(k, b)
+  }
+  return [...buckets.values()]
+}
+
+// Aggregate-set parity: bucket-key set equality + per-bucket conversions/revenue
+// equality (revenue within a small float tolerance). Symmetric report.
+export function compareAggregateBuckets(hogqlBuckets, tinybirdBuckets, { revenueTolerance = 0.01 } = {}) {
+  const norm = (rows) => {
+    const m = new Map()
+    for (const r of (rows || [])) {
+      m.set(bucketKey(r), {
+        source: r.source, medium: r.medium, campaign: r.campaign ?? null,
+        conversions: Number(r.conversions) || 0, revenue: Number(r.revenue) || 0
+      })
+    }
+    return m
+  }
+  const A = norm(hogqlBuckets)
+  const B = norm(tinybirdBuckets)
+  const bucketsHogqlOnly = [...A.keys()].filter(k => !B.has(k)).map(k => A.get(k))
+  const bucketsTinybirdOnly = [...B.keys()].filter(k => !A.has(k)).map(k => B.get(k))
+  const valueMismatches = []
+  for (const [k, a] of A) {
+    const b = B.get(k)
+    if (!b) continue
+    if (a.conversions !== b.conversions || Math.abs(a.revenue - b.revenue) > revenueTolerance) {
+      valueMismatches.push({ key: k, hogql: a, tinybird: b })
+    }
+  }
+  const totalConversions = [...A.values()].reduce((s, x) => s + x.conversions, 0)
+  return {
+    totalConversions,
+    buckets: A.size,
+    bucketsHogqlOnly,
+    bucketsTinybirdOnly,
+    valueMismatches,
+    pass: bucketsHogqlOnly.length === 0 && bucketsTinybirdOnly.length === 0 && valueMismatches.length === 0
+  }
+}
