@@ -13,6 +13,15 @@
 // Never throws to the caller — a misconfigured or failing Tinybird read must
 // never break a feature that already works via HogQL.
 //
+// PER-PIPE ALLOWLIST (TINYBIRD_READ_PIPES, optional — for incremental cutover):
+// a narrowing filter layered on top of the master flag; master-OFF semantics are
+// unchanged. When TINYBIRD_READ_ENABLED is on: if TINYBIRD_READ_PIPES is unset or
+// empty/whitespace, ALL pipes serve (backward-compatible with today's behavior);
+// if it is set (comma-separated), ONLY the listed pipes serve and every other
+// pipeName returns null (→ HogQL fallback), so groups can be cut over one at a
+// time. Entries are .pipe file names without extension (e.g. 'events_latest'),
+// matched case-sensitively, tolerant of surrounding whitespace and empty entries.
+//
 // WIRE-FORMAT NOTE (VERIFIED against the live deployed pipe, 2026-07-03):
 // Tinybird's public Pipes API convention is `GET {host}/v0/pipes/{name}.json`
 // with query params matching the pipe's declared template params. An
@@ -35,6 +44,14 @@ export function isTinybirdReadEnabled() {
   return String(process.env.TINYBIRD_READ_ENABLED || '').toLowerCase() === 'true'
 }
 
+export function isPipeReadAllowed(pipeName) {
+  if (!isTinybirdReadEnabled()) return false
+  const raw = process.env.TINYBIRD_READ_PIPES
+  if (raw === undefined || raw.trim() === '') return true // no allowlist → master flag governs all (backward compat)
+  const allow = raw.split(',').map(s => s.trim()).filter(Boolean)
+  return allow.includes(pipeName)
+}
+
 /**
  * Query a deployed Tinybird pipe. Returns null on ANY failure (flag off,
  * missing config, network error, non-2xx response) — never throws.
@@ -45,7 +62,7 @@ export function isTinybirdReadEnabled() {
  * @returns {Promise<Array<object>|null>} rows as named objects (Tinybird's own shape), or null
  */
 export async function queryTinybirdPipe(pipeName, params = {}) {
-  if (!isTinybirdReadEnabled()) return null
+  if (!isPipeReadAllowed(pipeName)) return null
 
   const host = process.env.TINYBIRD_HOST
   const token = process.env.TINYBIRD_READ_TOKEN
