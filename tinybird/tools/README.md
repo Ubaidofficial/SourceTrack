@@ -123,3 +123,73 @@ curl -X POST 'https://api.tinybird.co/v0/events?name=events' \
 Per `SCOPE_v3.md` §3.2: rows-per-request don't count against the rate limit
 (batching is the throughput lever); the Events API is **not** idempotent — the
 app-side `event_id` dedup (§2.5) is the guard; `429` is retriable with backoff.
+
+---
+
+# Phase-9 app-path injector — populate BOTH stores natively (Option 1)
+
+`phase9_app_path_injector.mjs` sends synthetic `phase9-fixtures-v1` events through
+the **real app HTTP ingestion endpoints**, so the app's own **dual-write** fans
+each event out to **PostHog (469905)** AND **Tinybird (ST_Staging)** in each
+store's native shape — the exact path the Phase-9 harness validates. Contrast
+`ingest_ndjson_to_tinybird.mjs`, which writes Tinybird-only and is **not**
+reconciliation-faithful.
+
+**Which store gets what:** you POST once per event; the app writes PostHog via
+`ph.capture` and Tinybird via the flag-gated `dualWriteEvent` — one call, both
+stores, natively. (Tinybird only actually receives rows when
+`TINYBIRD_DUAL_WRITE` is enabled on the target API; otherwise only PostHog is
+populated — confirm the staging flag with the founder.)
+
+### Target endpoints (traced from `api/index.js` — CONFIRMED)
+
+| flat `event_type` | endpoint | auth | drop guard |
+|---|---|---|---|
+| `$pageview` | `POST {ST_INJECT_BASE_URL}/api/track` (`api/index.js:383`) | `site_key` in **body** (`auth.js:26`) | bot UA (`bot-filter.js`) |
+| `$conversion` | `POST {ST_INJECT_BASE_URL}/api/conversion` (`api/index.js:437`) | `site_key` in **body** | — |
+
+The injector sends a realistic desktop-Chrome `User-Agent` that clears
+`BOT_UA_PATTERN` (asserted at run start and in the test suite) — a bot UA would be
+**silently dropped** by the routes.
+
+### Env (founder-supplied — NEVER committed/logged in full; masked in all output)
+
+| var | meaning |
+|---|---|
+| `ST_INJECT_BASE_URL` | staging API base, e.g. `https://…up.railway.app` |
+| `ST_INJECT_SITE_KEY` | the test site's `site_key` (masked to a short prefix in logs) |
+
+### Usage — DRY-RUN by default, `--confirm` is FOUNDER-ONLY
+
+```
+# 1. Generate the deterministic fixtures (disk-only):
+node tinybird/tools/generate_events.js \
+  --seed phase9-fixtures-v1 --visitors 400 --sites 3 --days 30 --conversion-rate 0.5 \
+  --out /tmp/phase9-fixtures-v1.ndjson
+
+# 2. DRY-RUN (default — reshapes + prints WOULD-POST summary, sends NOTHING):
+node tinybird/tools/phase9_app_path_injector.mjs --in /tmp/phase9-fixtures-v1.ndjson
+
+# 3. SEND (FOUNDER-ONLY — agents do not run --confirm):
+ST_INJECT_BASE_URL=https://<staging-api> ST_INJECT_SITE_KEY=<test-site-key> \
+  node tinybird/tools/phase9_app_path_injector.mjs --in /tmp/phase9-fixtures-v1.ndjson --confirm
+```
+
+Optional flags: `--only-site-id <id>` (filter generator sites), `--limit <N>`.
+
+### Re-run safety (flagged)
+
+`/api/track` pageviews have **no natural-id dedup** (the dual-write derives a
+uuid), so **re-running DUPLICATES pageviews**. `/api/conversion` dedups on
+`order_id`. → Run **once** against a **clean test site**, or purge the test site
+between runs. The seed keeps event *content* identical across runs but does not
+prevent pageview duplication.
+
+### Notes
+
+- `ai_source` is **app-derived from the referrer** (`detectAIPlatform` middleware),
+  not from the generator's `ai_source` column — this does not affect the three
+  target models (`first_touch`, `first_touch_non_direct`, `last_touch_non_direct`),
+  which key off utm/referrer sources, and the harness compares store-vs-store.
+- All three fixtures are single-identity (`distinct_id == visitor_id`) per
+  `PHASE9_VALIDATION_HARNESS_SPEC.md §3`.
