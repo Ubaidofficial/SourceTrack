@@ -8,7 +8,9 @@ DESCRIPTION >
       1. NON-DIRECT gate on the pageview set: WHERE utm_source IS NOT NULL AND utm_source != ''
          AND utm_source != 'direct' (live :249-251). Applied to EVERY field's ASOF subquery so
          all argMax picks are over the same non-direct-utm_source pageview set, then each field
-         null-skips its own column (utm_medium/utm_campaign get an extra IS NOT NULL).
+         null-skips its own column (utm_medium gets an extra IS NOT NULL; utm_campaign uses
+         nullIf(utm_campaign,'') IS NOT NULL so the skip ENGAGES on Tinybird's empty-string campaign
+         — '' here vs NULL in PostHog — crediting the latest REAL campaign like LIVE argMax, not '').
       2. NO ai_source: the live non-direct inner has only 3 argMax fields (utm_source/medium/
          campaign, :235-237) and the outer source = COALESCE(NULLIF(utm_source,''), 'direct')
          with NO ai_source fallback (:226) — unlike last_touch (which has an ai_source field +
@@ -65,11 +67,17 @@ SQL >
         ) AS med ON conv.distinct_id = med.distinct_id AND med.timestamp <= conv.timestamp
         ASOF LEFT JOIN
         (
-            SELECT distinct_id, timestamp, utm_campaign FROM events_by_visitor
+            -- nullIf(campaign,'') so the null-skip ENGAGES on Tinybird's empty-string campaign
+            -- representation (Tinybird stores empty utm_campaign as '', not NULL). LIVE reads PostHog
+            -- where empty campaign is NULL, so argMax skips the empty touch and credits a later REAL
+            -- campaign; the bare `IS NOT NULL` here would pass '' and diverge. WHERE excludes ''+NULL;
+            -- the SELECT nullIf keeps the picked value consistent. Matches live argMax(pv.utm_campaign)
+            -- null-skip (attribution-engine.js:249). source/medium unchanged (see first_touch twin).
+            SELECT distinct_id, timestamp, nullIf(utm_campaign, '') AS utm_campaign FROM events_by_visitor
             WHERE site_id = {{ String(site_id, required=True) }}
               AND event_type = '$pageview'
               AND utm_source IS NOT NULL AND utm_source != '' AND utm_source != 'direct'
-              AND utm_campaign IS NOT NULL
+              AND nullIf(utm_campaign, '') IS NOT NULL
         ) AS camp ON conv.distinct_id = camp.distinct_id AND camp.timestamp <= conv.timestamp
     )
     GROUP BY source, medium, campaign

@@ -20,7 +20,9 @@ DESCRIPTION >
     AND != '' AND != 'direct'. Window has NO lower bound (live join is only pv.timestamp <=
     e_inner.timestamp, no attributionWindow) — argMinIf condition is pv.timestamp <= conv.timestamp.
     Outer: source = COALESCE(NULLIF(utm_source,''),'direct'), medium = COALESCE(NULLIF(utm_medium,''),
-    'none'), campaign = raw utm_campaign (live :177-179). Equality JOIN on distinct_id (live :204,
+    'none'), campaign = argMinIf over nullIf(utm_campaign,'') (live :177-179 emits campaign||null).
+    nullIf makes argMinIf's null-skip ENGAGE on Tinybird's empty-string campaign ('' here vs NULL in
+    PostHog) so it credits the earliest REAL campaign like LIVE, not the empty touch. Equality JOIN on distinct_id (live :204,
     NOT the mixed-inequality ON which Tinybird rejects — the timestamp bound moves into argMinIf).
     Typed-column translation (§2.6): properties.site_id -> site_id, event -> event_type; pv fields
     from `events` self-join (pre-filtered subqueries, the flexible_report windowJoin pattern).
@@ -44,7 +46,13 @@ SQL >
             conv.conversion_value AS conversion_value,
             argMinIf(pv.utm_source, pv.timestamp, pv.timestamp <= conv.timestamp) AS utm_source,
             argMinIf(pv.utm_medium, pv.timestamp, pv.timestamp <= conv.timestamp) AS utm_medium,
-            argMinIf(pv.utm_campaign, pv.timestamp, pv.timestamp <= conv.timestamp) AS utm_campaign
+            -- nullIf(campaign,'') so argMinIf's val-null-skip ENGAGES on Tinybird's empty-string
+            -- campaign representation (Tinybird stores empty utm_campaign as '', not NULL). LIVE reads
+            -- PostHog where empty campaign is NULL, so its argMin skips the empty touch and credits a
+            -- later REAL campaign; without nullIf, argMinIf here would include '' and diverge. Matches
+            -- live argMin(pv.utm_campaign) null-skip (attribution-engine.js:190). source/medium need
+            -- no nullIf: medium empties already read as NULL in Tinybird; both COALESCE to a floor.
+            argMinIf(nullIf(pv.utm_campaign, ''), pv.timestamp, pv.timestamp <= conv.timestamp) AS utm_campaign
         FROM
         (
             SELECT event_id, distinct_id, timestamp, conversion_value
