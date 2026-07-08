@@ -1,10 +1,38 @@
 import { Router } from 'express'
 import { validateSiteKey } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
+import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { esc } from '../lib/utils.js'
 import { requireFeature } from '../lib/plan-features.js'
 
 const router = Router()
+
+// ── Test seam ────────────────────────────────────────────────────────────────
+// Mirrors the merged live.js/hygiene.js pattern (no ESM module mocker): unit
+// tests inject stubs for the two read backends; production uses the real imports.
+let _queryTinybirdPipe = queryTinybirdPipe
+let _queryHogQL = queryHogQL
+export function __setAlertsReadDeps ({ queryTinybird, queryHog } = {}) {
+  if (queryTinybird) _queryTinybirdPipe = queryTinybird
+  if (queryHog) _queryHogQL = queryHog
+}
+export function __resetAlertsReadDeps () {
+  _queryTinybirdPipe = queryTinybirdPipe
+  _queryHogQL = queryHogQL
+}
+
+// Tinybird-first read helper: null (flag off / error) -> HogQL fallback; rows
+// remapped to the HogQL positional shape so downstream is byte-identical.
+// Fail-closed under the test-only TINYBIRD_FORCE_READ. Tenant isolation: pipes
+// called with the authenticated site_id, never client-supplied.
+async function readTb (pipeName, params, hogSql, hogName, mapRows) {
+  const tb = await _queryTinybirdPipe(pipeName, params)
+  if (tb !== null) return mapRows(tb)
+  if (process.env.TINYBIRD_FORCE_READ === 'true') {
+    throw new Error(`[tinybird-force-read] ${pipeName} returned null under TINYBIRD_FORCE_READ — dispatch path not exercised`)
+  }
+  return _queryHogQL(hogSql, hogName)
+}
 
 const requireAlertsFeature = (req, res, next) => {
   const block = requireFeature(req.site?.plan, 'alerts', 'Alerts')
@@ -27,7 +55,8 @@ router.get('/', validateSiteKey, requireAlertsFeature, async (req, res) => {
         AND event = '$pageview'
         AND timestamp >= now() - INTERVAL 14 DAY
     `
-    const trafficRows = await queryHogQL(trafficSql, 'alert_traffic')
+    // WIRED (pageview counts, week-over-week).
+    const trafficRows = await readTb('alert_traffic', { site_id: req.site.id }, trafficSql, 'alert_traffic', tb => [[tb?.[0]?.this_week ?? 0, tb?.[0]?.last_week ?? 0]])
     const thisWeek = Number(trafficRows?.[0]?.[0]) || 0
     const lastWeek = Number(trafficRows?.[0]?.[1]) || 0
     if (lastWeek > 0 && thisWeek < lastWeek * 0.5) {
@@ -51,7 +80,9 @@ router.get('/', validateSiteKey, requireAlertsFeature, async (req, res) => {
         AND event = '$conversion'
         AND timestamp >= now() - INTERVAL 2 DAY
     `
-    const convRows = await queryHogQL(convSql, 'alert_conversions')
+    // MONEY-RAIL (NOT wired): reads event='$conversion' + computes a conversion
+    // drop metric. Held on HogQL, flagged for separate review.
+    const convRows = await _queryHogQL(convSql, 'alert_conversions')
     const today = Number(convRows?.[0]?.[0]) || 0
     const yesterday = Number(convRows?.[0]?.[1]) || 0
     if (yesterday > 0 && today < yesterday * 0.3) {
@@ -78,7 +109,8 @@ router.get('/', validateSiteKey, requireAlertsFeature, async (req, res) => {
       ORDER BY cnt DESC
       LIMIT 10
     `
-    const aiRows = await queryHogQL(aiSql, 'alert_ai')
+    // MONEY-RAIL (NOT wired): reads ai_source. Held on HogQL, flagged.
+    const aiRows = await _queryHogQL(aiSql, 'alert_ai')
     const aiTotal = aiRows.reduce((s, [, c]) => s + Number(c), 0)
     const threshold = 5
     if (aiTotal > threshold && aiTotal < threshold * 2) {
@@ -99,7 +131,8 @@ router.get('/', validateSiteKey, requireAlertsFeature, async (req, res) => {
       WHERE properties.site_id = '${siteId}'
         AND timestamp >= now() - INTERVAL 24 HOUR
     `
-    const recentRows = await queryHogQL(recentSql, 'alert_recent')
+    // WIRED (event count + last timestamp, trailing 24h).
+    const recentRows = await readTb('alert_recent', { site_id: req.site.id }, recentSql, 'alert_recent', tb => [[tb?.[0]?.cnt ?? 0, tb?.[0]?.last_ts ?? null]])
     const recentCount = Number(recentRows?.[0]?.[0]) || 0
     if (recentCount === 0) {
       alerts.push({
