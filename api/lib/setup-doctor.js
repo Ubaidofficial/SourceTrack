@@ -1,5 +1,21 @@
 import { queryHogQL } from './posthog.js'
+import { queryTinybirdPipe } from './tinybird-read.js'
 import { esc, sanitizeVerificationToken } from './utils.js'
+
+// ── Test seam ────────────────────────────────────────────────────────────────
+// Mirrors live.js's __setLiveReadDeps (no ESM module mocker in the repo): lets
+// unit tests inject stubs for the two read backends. Production never calls the
+// setter, so it uses the real imports and behaves identically.
+let _queryTinybirdPipe = queryTinybirdPipe
+let _queryHogQL = queryHogQL
+export function __setSetupDoctorReadDeps ({ queryTinybird, queryHog } = {}) {
+  if (queryTinybird) _queryTinybirdPipe = queryTinybird
+  if (queryHog) _queryHogQL = queryHog
+}
+export function __resetSetupDoctorReadDeps () {
+  _queryTinybirdPipe = queryTinybirdPipe
+  _queryHogQL = queryHogQL
+}
 
 function normalizeDomain(d) {
   return String(d || '').trim().toLowerCase().replace(/^www\./i, '')
@@ -53,21 +69,37 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
     domainStatus = 'warning'
   }
 
+  // Tinybird-first read helper (Wave-2 read-cutover). Returns the HogQL
+  // positional shape so downstream positional access stays byte-identical; a
+  // null Tinybird return (flag off / missing config / error) falls back to the
+  // unchanged HogQL query. Fail-closed under the test-only TINYBIRD_FORCE_READ
+  // (throws instead of silently bypassing to HogQL). Tenant isolation: the
+  // pipe's required site_id is the authenticated site.id, never client-supplied.
+  const forceRead = process.env.TINYBIRD_FORCE_READ === 'true'
+  const readTb = async (pipeName, params, hogSql, hogName, mapRows) => {
+    const tb = await _queryTinybirdPipe(pipeName, params)
+    if (tb !== null) return mapRows(tb)
+    if (forceRead) throw new Error(`[tinybird-force-read] ${pipeName} returned null under TINYBIRD_FORCE_READ — dispatch path not exercised`)
+    return _queryHogQL(hogSql, hogName)
+  }
+
   // 2. Fetch HogQL queries in parallel
   const queries = [
-    // [0] Pageview count in the last 30 days
-    queryHogQL(`
+    // [0] Pageview count in the last 30 days — WIRED (pure pageview count).
+    readTb('doctor_pageviews_30d', { site_id: posthogSiteId }, `
       SELECT count()
       FROM events
       WHERE properties.site_id = '${esc(posthogSiteId)}'
         AND event = '$pageview'
         AND timestamp >= now() - INTERVAL 30 DAY
-    `, 'doctor_pageviews_30d').catch(err => {
+    `, 'doctor_pageviews_30d', tb => [[tb?.[0]?.pageviews_30d ?? 0]]).catch(err => {
+      if (forceRead) throw err
       console.warn('[setup-doctor] doctor_pageviews_30d query failed:', err?.message || err)
       return null
     }),
-    // [1] Last conversion in the last 30 days
-    queryHogQL(`
+    // [1] Last conversion in the last 30 days — MONEY-RAIL (NOT wired): reads
+    // event='$conversion' + conversion_type. HogQL only; flagged for review.
+    _queryHogQL(`
       SELECT timestamp, properties.conversion_type AS conversion_type
       FROM events
       WHERE properties.site_id = '${esc(posthogSiteId)}'
@@ -79,8 +111,9 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
       console.warn('[setup-doctor] doctor_last_conversion query failed:', err?.message || err)
       return null
     }),
-    // [2] Last event with click ID in the last 30 days
-    queryHogQL(`
+    // [2] Last event with click ID in the last 30 days — MONEY-RAIL (NOT wired):
+    // reads click-ID attribution params. HogQL only; flagged for review.
+    _queryHogQL(`
       SELECT properties.gclid, properties.gbraid, properties.wbraid, properties.fbclid, properties.msclkid, properties.ttclid, properties.twclid, properties.li_fat_id, properties.li_fatid, properties.dclid, properties.snapclid, properties.pclid, properties.sccid, properties.ko_click_id
       FROM events
       WHERE properties.site_id = '${esc(posthogSiteId)}'
@@ -107,8 +140,10 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
       console.warn('[setup-doctor] doctor_last_click_id query failed:', err?.message || err)
       return null
     }),
-    // [3] Check if any paid params were seen at all in the last 30 days
-    queryHogQL(`
+    // [3] Check if any paid params were seen at all in the last 30 days —
+    // MONEY-RAIL (NOT wired): reads click-ID + campaign-ID attribution params.
+    // HogQL only; flagged for review.
+    _queryHogQL(`
       SELECT count()
       FROM events
       WHERE properties.site_id = '${esc(posthogSiteId)}'
@@ -142,13 +177,15 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
   let tokenPromise = null
   const sanitizedToken = verificationToken ? sanitizeVerificationToken(verificationToken) : null
   if (sanitizedToken) {
-    tokenPromise = queryHogQL(`
+    // [4] Verification-token presence, trailing 15 min — WIRED (pure count).
+    tokenPromise = readTb('doctor_token_verify', { site_id: posthogSiteId, st_verify: sanitizedToken }, `
       SELECT count()
       FROM events
       WHERE properties.site_id = '${esc(posthogSiteId)}'
         AND properties.st_verify = '${esc(sanitizedToken)}'
         AND timestamp >= now() - INTERVAL 15 MINUTE
-    `, 'doctor_token_verify').catch(err => {
+    `, 'doctor_token_verify', tb => [[tb?.[0]?.token_verify_count ?? 0]]).catch(err => {
+      if (forceRead) throw err
       console.warn('[setup-doctor] doctor_token_verify query failed:', err?.message || err)
       return null
     })
