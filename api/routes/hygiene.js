@@ -1,13 +1,44 @@
 import { Router } from 'express'
 import { validateSiteKey } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
+import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { esc } from '../lib/utils.js'
 
 const router = Router()
 
+// ── Test seam ────────────────────────────────────────────────────────────────
+// Mirrors live.js's __setLiveReadDeps (the repo has no ESM module mocker): lets
+// unit tests inject stubs for the two read backends. Production never calls the
+// setter, so it uses the real imports and behaves identically.
+let _queryTinybirdPipe = queryTinybirdPipe
+let _queryHogQL = queryHogQL
+export function __setHygieneReadDeps ({ queryTinybird, queryHog } = {}) {
+  if (queryTinybird) _queryTinybirdPipe = queryTinybird
+  if (queryHog) _queryHogQL = queryHog
+}
+export function __resetHygieneReadDeps () {
+  _queryTinybirdPipe = queryTinybirdPipe
+  _queryHogQL = queryHogQL
+}
+
 router.get('/utms', validateSiteKey, async (req, res) => {
+  const forceRead = process.env.TINYBIRD_FORCE_READ === 'true'
   try {
     const siteId = esc(req.site.id)
+    const tbSiteId = String(req.site.id)
+
+    // Tinybird-first per read; a null return (flag off / missing config / error)
+    // falls back to the unchanged HogQL query. Tinybird rows (named objects) are
+    // remapped to the HogQL positional shape so ALL downstream logic stays
+    // byte-identical. Fail-closed under TINYBIRD_FORCE_READ (test-only) so the
+    // dispatch path can't be silently bypassed. Tenant isolation: the pipe's
+    // required site_id is the authenticated req.site.id, never client-supplied.
+    const readTb = async (pipeName, hogSql, hogName, toRows) => {
+      const tb = await _queryTinybirdPipe(pipeName, { site_id: tbSiteId })
+      if (tb !== null) return toRows(tb)
+      if (forceRead) throw new Error(`[tinybird-force-read] ${pipeName} returned null under TINYBIRD_FORCE_READ — dispatch path not exercised`)
+      return _queryHogQL(hogSql, hogName)
+    }
 
     // Missing UTM source on pageviews
     const missingSourceSql = `
@@ -76,11 +107,15 @@ router.get('/utms', validateSiteKey, async (req, res) => {
       LIMIT 30
     `
 
-    const [[missingSource]] = await queryHogQL(missingSourceSql, 'hygiene_missing_source')
-    const campaignRows = await queryHogQL(campaignSql, 'hygiene_campaigns')
-    const referrerRows = await queryHogQL(referrerSql, 'hygiene_referrers')
-    const [[missingConv]] = await queryHogQL(missingConvSql, 'hygiene_missing_conv')
-    const lowActivityRows = await queryHogQL(lowActivitySql, 'hygiene_low_activity')
+    const [[missingSource]] = await readTb('integ_missing_source', missingSourceSql, 'hygiene_missing_source', tb => [[tb?.[0]?.cnt ?? 0]])
+    const campaignRows = await readTb('integ_campaigns', campaignSql, 'hygiene_campaigns', tb => tb.map(r => [r.campaign, r.cnt]))
+    const referrerRows = await readTb('integ_referrers', referrerSql, 'hygiene_referrers', tb => tb.map(r => [r.referrer, r.cnt]))
+    // MONEY-RAIL (deliberately NOT wired): hygiene_missing_conv filters on
+    // properties.conversion_value AND event='$conversion' — a conversion-value-
+    // coupled read. Per the Wave-2 money-rail STOP rule it stays on HogQL only
+    // and is flagged for separate review. Behavior here is unchanged.
+    const [[missingConv]] = await _queryHogQL(missingConvSql, 'hygiene_missing_conv')
+    const lowActivityRows = await readTb('integ_low_activity', lowActivitySql, 'hygiene_low_activity', tb => tb.map(r => [r.day, r.cnt]))
 
     const issues = []
 
