@@ -64,7 +64,35 @@ test('aggregateModelCredits — groups by (source,medium,campaign), sums revenue
   ]
   const agg = aggregateModelCredits(conversions, [], creditFirstTouch)
   assert.strictEqual(agg.length, 1)
-  assert.deepStrictEqual(agg[0], { source: 'tiktok', medium: 'paid', campaign: '', conversions: 2, revenue: 484.16 })
+  // campaign '' canonicalized to null at bucket time ('' <-> null collapse to one key)
+  assert.deepStrictEqual(agg[0], { source: 'tiktok', medium: 'paid', campaign: null, conversions: 2, revenue: 484.16 })
+})
+
+test("empty-string campaign is picked (not skipped) then canonicalized '' <-> null", () => {
+  const conv = { distinct_id: 'v', timestamp: '2026-06-10T01:00:00Z' }
+  // latest non-direct pv has an EMPTY campaign; an earlier one has a real campaign.
+  const pvs = [
+    pv('v', '2026-06-10T00:20:00Z', 'reddit', 'social', 'brand'),
+    pv('v', '2026-06-10T00:50:00Z', 'twitter', 'paid', '') // latest: empty campaign, NOT skipped (mirrors LIVE argMax)
+  ]
+  // last_touch_non_direct: latest non-null campaign INCLUDING '' -> '' (was wrongly 'brand' pre-fix)
+  assert.deepStrictEqual(creditLastTouchNonDirect(conv, pvs), { source: 'twitter', medium: 'paid', campaign: '' })
+  // first_touch_non_direct per-field: earliest non-null campaign -> 'brand'
+  assert.deepStrictEqual(creditFirstTouchNonDirect(conv, pvs), { source: 'reddit', medium: 'social', campaign: 'brand' })
+  // aggregate canonicalizes '' -> null
+  const agg = aggregateModelCredits([{ ...conv, conversion_value: 10 }], pvs, creditLastTouchNonDirect)
+  assert.deepStrictEqual(agg, [{ source: 'twitter', medium: 'paid', campaign: null, conversions: 1, revenue: 10 }])
+  // '' and null collapse to the same bucket in the comparator -> parity
+  assert.strictEqual(compareAggregateBuckets(
+    [{ source: 's', medium: 'm', campaign: '', conversions: 1, revenue: 5 }],
+    [{ source: 's', medium: 'm', campaign: null, conversions: 1, revenue: 5 }]).pass, true)
+  // two pipe rows ('' and null) for the same (source,medium) ACCUMULATE, not overwrite
+  const acc = compareAggregateBuckets(
+    [{ source: 's', medium: 'm', campaign: null, conversions: 3, revenue: 30 }],
+    [{ source: 's', medium: 'm', campaign: '', conversions: 1, revenue: 10 },
+     { source: 's', medium: 'm', campaign: null, conversions: 2, revenue: 20 }])
+  assert.strictEqual(acc.pass, true)
+  assert.strictEqual(acc.totalConversions, 3)
 })
 
 test('compareAggregateBuckets — parity, plus only-side + value mismatch reporting', () => {

@@ -119,9 +119,9 @@ const lookbackIso = toTinybirdDateTime(lookbackStr.match(/'([^']+)'/)[1])
 // site_id ALONE — the site is DEDICATED to phase9-fixtures-v1 (no cc-* prefix on
 // the UUIDs). If this site ever holds non-phase9 events, this diff is invalid —
 // re-scoping by distinct_id would then be required (see task STOP condition).
-const FIXTURE_SITE_ID = '5e85eb47-aeb6-430d-b847-00c91a861b74'
+const FIXTURE_SITE_ID = '13777fda-3d1e-48eb-a1d3-6b3bdb18f609'
 const FIXTURE_DATE_FROM = '2026-06-01'
-const FIXTURE_DATE_TO = '2026-06-28'
+const FIXTURE_DATE_TO = '2026-07-08' // full fixture span (data runs into July); exclusive-end +1 -> < 2026-07-09
 const { from: fxFrom, to: fxTo } = serializeHogQLDateRange(FIXTURE_DATE_FROM, FIXTURE_DATE_TO)
 const fxFromIso = toTinybirdDateTime(fxFrom.match(/'([^']+)'/)[1])
 const fxToIso = toTinybirdDateTime(fxTo.match(/'([^']+)'/)[1])
@@ -252,8 +252,13 @@ if (RUN_MODELS.some(m => NEW_MODELS.includes(m))) {
     ORDER BY timestamp ASC
     LIMIT 50000
   `, 'phase9_pageviews_hogql')
+  // Preserve '' (empty string) as a PRESENT-but-empty value; nullify only genuine absence
+  // (null/undefined). LIVE/pipe use argMin/argMax which skip only NULL — '' is a valid pick.
+  // Pre-mapping ''->null (the old `|| null`) made the reference skip empty-campaign/-medium pvs
+  // and pick a later real value, diverging from LIVE. Empty is normalized AFTER the pick
+  // (coalesceMedium; campaign ''<->null canonicalized at bucket time). '?? null' keeps ''.
   const pageviews = pvRows.map(([distinct_id, timestamp, us, um, uc]) => ({
-    distinct_id, timestamp, utm_source: us || null, utm_medium: um || null, utm_campaign: uc || null
+    distinct_id, timestamp, utm_source: us ?? null, utm_medium: um ?? null, utm_campaign: uc ?? null
   }))
 
   const NEW_MODEL_SPEC = {

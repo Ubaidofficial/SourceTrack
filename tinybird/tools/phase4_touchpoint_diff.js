@@ -563,21 +563,30 @@ export function creditFirstTouch(conv) {
   }
 }
 
-// Model 8 — first_touch_non_direct: EARLIEST non-direct pageview (argMinIf ts <= conv).
-// Outer select COALESCEs source/medium; campaign is the raw utm_campaign (null if no match).
+// Model 8 — first_touch_non_direct: PER-FIELD earliest non-direct pageview, mirroring
+// LIVE (attribution-engine.js:188-190) argMin(pv.utm_source/medium/campaign, ts). ClickHouse
+// argMin skips only NULL args (not ''), so each field is independently the EARLIEST
+// non-direct pv HAVING that field non-null (incl ''): medium/campaign can come from a later
+// pv than source when the earliest pv's field is null. (Was whole-row nd[0] — wrong vs LIVE.)
 export function creditFirstTouchNonDirect(conv, pageviews) {
-  const nd = nonDirectPvsUpTo(conv, pageviews)
-  const first = nd[0] || null
+  const nd = nonDirectPvsUpTo(conv, pageviews) // ascending by ts
+  const earliest = (pred) => { for (let i = 0; i < nd.length; i++) if (pred(nd[i])) return nd[i]; return null }
+  const src = earliest(() => true) // utm_source guaranteed present by the non-direct filter
+  const med = earliest(p => p.utm_medium !== undefined && p.utm_medium !== null)   // non-null incl ''
+  const camp = earliest(p => p.utm_campaign !== undefined && p.utm_campaign !== null) // non-null incl ''
   return {
-    source: coalesceSource(first?.utm_source),
-    medium: coalesceMedium(first?.utm_medium),
-    campaign: first ? (first.utm_campaign ?? null) : null
+    source: coalesceSource(src?.utm_source),
+    medium: coalesceMedium(med?.utm_medium),
+    campaign: camp ? (camp.utm_campaign ?? null) : null
   }
 }
 
-// Model 9 — last_touch_non_direct: per-field LATEST non-direct pageview (ASOF ts <= conv).
-// Each field is independently the latest non-direct pv HAVING that field
-// (src: any non-direct; med: + utm_medium not null; camp: + utm_campaign not null).
+// Model 9 — last_touch_non_direct: PER-FIELD latest non-direct pageview, mirroring LIVE
+// (attribution-engine.js:247-249) argMax(pv.utm_source/medium/campaign, ts). argMax skips only
+// NULL (not ''), so each field is the LATEST non-direct pv HAVING that field non-null INCLUDING
+// '' — do NOT skip empty-string campaigns pre-pick. This relies on the HogQL pageview read
+// preserving '' (run_phase4_diff.mjs keeps '' via ?? null); the '' is normalized AFTER the pick
+// (coalesceMedium ''->'none'; campaign '' canonicalized ''<->null at bucket time, see bucketKey).
 export function creditLastTouchNonDirect(conv, pageviews) {
   const nd = nonDirectPvsUpTo(conv, pageviews)
   const latest = (pred) => { for (let i = nd.length - 1; i >= 0; i--) if (pred(nd[i])) return nd[i]; return null }
@@ -591,7 +600,12 @@ export function creditLastTouchNonDirect(conv, pageviews) {
   }
 }
 
-const bucketKey = (b) => JSON.stringify([b.source, b.medium, b.campaign ?? null])
+// Campaign canonicalization: '' and null both mean "no campaign" — collapse to ONE key on
+// BOTH legs. LIVE emits null (campaign || null); the pipes emit raw '' (no nullIf); the reference
+// picks '' at pick time (fixes #1/#3/#4) then normalizes here. Treating ''<->null as equal makes
+// the representational difference vanish without touching pipes or attribution math.
+const canonCampaign = (c) => (c === undefined || c === null || c === '') ? null : c
+const bucketKey = (b) => JSON.stringify([b.source, b.medium, canonCampaign(b.campaign)])
 
 // Aggregate the reference model over raw HogQL rows into the pipe's output shape:
 // GROUP BY (source, medium, campaign) -> { conversions, revenue }.
@@ -605,7 +619,7 @@ export function aggregateModelCredits(conversions, pageviews, creditFn) {
   for (const conv of conversions) {
     const c = creditFn(conv, pvByVisitor.get(conv.distinct_id) || [])
     const k = bucketKey(c)
-    const b = buckets.get(k) || { source: c.source, medium: c.medium, campaign: c.campaign ?? null, conversions: 0, revenue: 0 }
+    const b = buckets.get(k) || { source: c.source, medium: c.medium, campaign: canonCampaign(c.campaign), conversions: 0, revenue: 0 }
     b.conversions += 1
     b.revenue += Number(conv.conversion_value) || 0
     buckets.set(k, b)
@@ -619,10 +633,20 @@ export function compareAggregateBuckets(hogqlBuckets, tinybirdBuckets, { revenue
   const norm = (rows) => {
     const m = new Map()
     for (const r of (rows || [])) {
-      m.set(bucketKey(r), {
-        source: r.source, medium: r.medium, campaign: r.campaign ?? null,
-        conversions: Number(r.conversions) || 0, revenue: Number(r.revenue) || 0
-      })
+      const k = bucketKey(r)
+      const existing = m.get(k)
+      // Accumulate: a pipe leg can return SEPARATE campaign='' and campaign=null rows for the
+      // same (source, medium); canonicalizing collapses them to one key, so sum instead of
+      // overwrite (otherwise the second silently drops the first's conversions/revenue).
+      if (existing) {
+        existing.conversions += Number(r.conversions) || 0
+        existing.revenue += Number(r.revenue) || 0
+      } else {
+        m.set(k, {
+          source: r.source, medium: r.medium, campaign: canonCampaign(r.campaign),
+          conversions: Number(r.conversions) || 0, revenue: Number(r.revenue) || 0
+        })
+      }
     }
     return m
   }
