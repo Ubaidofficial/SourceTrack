@@ -1,11 +1,39 @@
 import { Router } from 'express'
 import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
+import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { esc } from '../lib/utils.js'
 import { getDedupeSummary } from './conversion.js'
 import { serializeHogQLDateTime } from '../lib/hogql-date.js'
 
 const router = Router()
+
+// ── Test seam ────────────────────────────────────────────────────────────────
+// Mirrors the merged live.js/hygiene.js pattern (no ESM module mocker): unit
+// tests inject stubs for the two read backends; production uses the real imports.
+let _queryTinybirdPipe = queryTinybirdPipe
+let _queryHogQL = queryHogQL
+export function __setEventsReadDeps ({ queryTinybird, queryHog } = {}) {
+  if (queryTinybird) _queryTinybirdPipe = queryTinybird
+  if (queryHog) _queryHogQL = queryHog
+}
+export function __resetEventsReadDeps () {
+  _queryTinybirdPipe = queryTinybirdPipe
+  _queryHogQL = queryHogQL
+}
+
+// Tinybird-first read helper: null (flag off / error) -> HogQL fallback; rows
+// remapped to the HogQL positional shape so downstream is byte-identical.
+// Fail-closed under the test-only TINYBIRD_FORCE_READ. Tenant isolation: pipes
+// called with the authenticated site_id, never client-supplied.
+async function readTb (pipeName, params, hogSql, hogName, mapRows) {
+  const tb = await _queryTinybirdPipe(pipeName, params)
+  if (tb !== null) return mapRows(tb)
+  if (process.env.TINYBIRD_FORCE_READ === 'true') {
+    throw new Error(`[tinybird-force-read] ${pipeName} returned null under TINYBIRD_FORCE_READ — dispatch path not exercised`)
+  }
+  return _queryHogQL(hogSql, hogName)
+}
 import NodeCache from 'node-cache'
 const eventsCache = new NodeCache({ stdTTL: 60, checkperiod: 30 })
 
@@ -139,7 +167,10 @@ router.get('/latest', validateSiteKey, async (req, res) => {
     const cacheKey = `latest:${siteId}:${event_type||''}:${source||''}:${date_from||''}:${date_to||''}:${search||''}:${limit||''}`
     const cached = eventsCache.get(cacheKey)
     if (cached) return res.json(cached)
-    const rows = await queryHogQL(sql, 'events_latest')
+    // MONEY-RAIL (NOT wired): the raw event log selects conversion_value,
+    // conversion_type, ai_source, first_touch_* attribution. Held on HogQL,
+    // flagged for separate review.
+    const rows = await _queryHogQL(sql, 'events_latest')
 
     const events = rows.map(([
       event, timestamp, distinctId, pageUrl, referrer,
@@ -251,10 +282,11 @@ router.get('/health', validateSiteKey, async (req, res) => {
     if (cachedHealth) {
       ;[lastRows, hourRows, dayRows] = cachedHealth
     } else {
+      // WIRED (pure health: last-event timestamp + hourly/daily event counts).
       ;[lastRows, hourRows, dayRows] = await Promise.all([
-        queryHogQL(lastEventSql, 'events_health_last'),
-        queryHogQL(countHourSql, 'events_health_hour'),
-        queryHogQL(countDaySql, 'events_health_day')
+        readTb('events_health_last', { site_id: req.site.id }, lastEventSql, 'events_health_last', tb => [[tb?.[0]?.timestamp ?? null]]),
+        readTb('events_health_hour', { site_id: req.site.id }, countHourSql, 'events_health_hour', tb => [[tb?.[0]?.cnt ?? 0]]),
+        readTb('events_health_day', { site_id: req.site.id }, countDaySql, 'events_health_day', tb => [[tb?.[0]?.cnt ?? 0]])
       ])
       eventsCache.set(healthCacheKey, [lastRows, hourRows, dayRows], 120)
     }
@@ -329,9 +361,11 @@ router.get('/edge-cases', validateSiteKey, async (req, res) => {
       LIMIT 1
     `
 
-    const domainRows = await queryHogQL(multiDomainSql, 'edge_domains')
-    const aiNoUtmRows = await queryHogQL(aiNoUtmSql, 'edge_ai_no_utm')
-    const utmNoAiRows = await queryHogQL(utmNoAiSql, 'edge_utm_no_ai')
+    // WIRED (page_url + counts; no money-rail columns).
+    const domainRows = await readTb('edge_domains', { site_id: req.site.id }, multiDomainSql, 'edge_domains', tb => tb.map(r => [r.page_url, r.cnt]))
+    // MONEY-RAIL (NOT wired): both read ai_source. Held on HogQL, flagged.
+    const aiNoUtmRows = await _queryHogQL(aiNoUtmSql, 'edge_ai_no_utm')
+    const utmNoAiRows = await _queryHogQL(utmNoAiSql, 'edge_utm_no_ai')
 
     const domains = new Set()
     for (const row of domainRows) {

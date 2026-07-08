@@ -1,7 +1,37 @@
 import { queryHogQL } from '../lib/posthog.js'
+import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { deriveSessions, sessionAggregates, annotateSessions } from '../lib/sessionization.js'
 import { esc } from '../lib/utils.js'
 import { serializeHogQLDateRange, buildHogQLTimestampFilter } from '../lib/hogql-date.js'
+
+// ── Test seam ────────────────────────────────────────────────────────────────
+// Mirrors the merged live.js/hygiene.js pattern (no ESM module mocker): unit
+// tests inject stubs for the two read backends. Production never calls the
+// setter, so it uses the real imports and behaves identically.
+let _queryTinybirdPipe = queryTinybirdPipe
+let _queryHogQL = queryHogQL
+export function __setSessionsReadDeps ({ queryTinybird, queryHog } = {}) {
+  if (queryTinybird) _queryTinybirdPipe = queryTinybird
+  if (queryHog) _queryHogQL = queryHog
+}
+export function __resetSessionsReadDeps () {
+  _queryTinybirdPipe = queryTinybirdPipe
+  _queryHogQL = queryHogQL
+}
+
+// Tinybird-first read helper: null return (flag off / error) -> HogQL fallback;
+// rows remapped to the HogQL positional shape so downstream is byte-identical.
+// Fail-closed under the test-only TINYBIRD_FORCE_READ (throws instead of a
+// silent HogQL bypass). Tenant isolation: pipes are called with the
+// authenticated site_id, never client-supplied.
+async function readTb (pipeName, params, hogSql, hogName, mapRows) {
+  const tb = await _queryTinybirdPipe(pipeName, params)
+  if (tb !== null) return mapRows(tb)
+  if (process.env.TINYBIRD_FORCE_READ === 'true') {
+    throw new Error(`[tinybird-force-read] ${pipeName} returned null under TINYBIRD_FORCE_READ — dispatch path not exercised`)
+  }
+  return _queryHogQL(hogSql, hogName)
+}
 
 /**
  * GET /api/sessions/overview?site_key=X&date_from=Y&date_to=Z
@@ -24,6 +54,18 @@ export async function sessionsOverview(req, res) {
     }
 
     const dateFilter = buildHogQLTimestampFilter('timestamp', range)
+    // DateTime boundaries for the Tinybird pipe's DateTime(date_from_ts/date_to_ts)
+    // params. The serialized HogQL expr carries an ISO datetime; the pipe's
+    // ClickHouse DateTime param needs the canonical 'YYYY-MM-DD HH:MM:SS' literal
+    // (UTC, second precision) — ISO's 'T'/'Z'/millis are not accepted. The HogQL
+    // dateFilter (using range.from/to verbatim) remains the fallback.
+    const toChDateTime = (expr) => {
+      const iso = expr.match(/'([^']+)'/)?.[1]
+      const d = iso ? new Date(iso) : null
+      return d && !Number.isNaN(d.getTime()) ? d.toISOString().slice(0, 19).replace('T', ' ') : null
+    }
+    const dateFromTs = toChDateTime(range.from)
+    const dateToTs = toChDateTime(range.to)
 
     // Query all pageviews in range for session derivation
     const pageviewSql = `
@@ -42,7 +84,14 @@ export async function sessionsOverview(req, res) {
       LIMIT 50000
     `
 
-    const pvRows = await queryHogQL(pageviewSql, 'sessions_pageviews')
+    // WIRED (pure pageview read for session derivation): utm_* are campaign
+    // dimensions on pageviews, not the attribution engine / ai_source / conversion.
+    const pvRows = await readTb(
+      'sessions_pageviews',
+      { site_id: posthogSiteId, date_from_ts: dateFromTs, date_to_ts: dateToTs },
+      pageviewSql, 'sessions_pageviews',
+      tb => tb.map(r => [r.distinct_id, r.timestamp, r.page_url, r.utm_source, r.utm_medium, r.utm_campaign])
+    )
 
     // Also query conversions to mark converting sessions
     const convSql = `
@@ -58,7 +107,9 @@ export async function sessionsOverview(req, res) {
       LIMIT 50000
     `
 
-    const convRows = await queryHogQL(convSql, 'sessions_conversions')
+    // MONEY-RAIL (NOT wired): reads event='$conversion' + conversion_value.
+    // Held on HogQL, flagged for separate review.
+    const convRows = await _queryHogQL(convSql, 'sessions_conversions')
 
     // Merge and sort all events per distinct_id
     const eventsByVisitor = new Map()
@@ -163,7 +214,9 @@ export async function visitorSessions(req, res) {
       LIMIT 500
     `
 
-    const rows = await queryHogQL(sql, 'visitor_sessions')
+    // MONEY-RAIL (NOT wired): reads event='$conversion' + conversion_value.
+    // Held on HogQL, flagged for separate review.
+    const rows = await _queryHogQL(sql, 'visitor_sessions')
 
     const events = rows.map(([
       event, timestamp, pageUrl,
