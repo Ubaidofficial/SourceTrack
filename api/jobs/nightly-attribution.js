@@ -889,7 +889,7 @@ async function upsertSubscriptionIdentity(site, row) {
   }
 }
 
-function calculateAttribution(touchpoints, conversionValue) {
+export function calculateAttribution(touchpoints, conversionValue) {
   if (!touchpoints || touchpoints.length === 0) {
     return {
       first_touch: null,
@@ -959,13 +959,28 @@ function calculateAttribution(touchpoints, conversionValue) {
   // Gives progressively more credit to touchpoints closer to the conversion.
   const time_decay = (() => {
     const conversionTime = new Date(lastTouchpoint.timestamp).getTime()
+    const isConversionTimeValid = !isNaN(conversionTime)
+
+    // Check if any touchpoint has an invalid timestamp
+    let hasInvalid = !isConversionTimeValid
+    const tpTimes = touchpoints.map(tp => {
+      const t = new Date(tp.timestamp).getTime()
+      if (isNaN(t)) hasInvalid = true
+      return t
+    })
+
     const halfLifeDays = 7
     const halfLifeMs = halfLifeDays * 24 * 60 * 60 * 1000
-    const rawWeights = touchpoints.map(tp => {
-      const tpTime = new Date(tp.timestamp).getTime()
-      const daysBack = Math.max(0, (conversionTime - tpTime) / halfLifeMs)
+
+    const rawWeights = touchpoints.map((tp, i) => {
+      if (hasInvalid) {
+        // Fall back to equal decay weights when valid ordering/dates cannot be computed
+        return 1.0
+      }
+      const daysBack = Math.max(0, (conversionTime - tpTimes[i]) / halfLifeMs)
       return Math.pow(0.5, daysBack) // 0.5^(days/halfLife)
     })
+
     const totalWeight = rawWeights.reduce((s, w) => s + w, 0) || 1
     return touchpoints.map((tp, i) => {
       const frac = parseFloat((rawWeights[i] / totalWeight).toFixed(4))
@@ -1010,6 +1025,15 @@ function calculateAttribution(touchpoints, conversionValue) {
     })
   })()
 
+  const adjustReconciliation = (shares) => {
+    if (!shares || shares.length === 0) return shares
+    const sumOthers = shares.slice(0, -1).reduce((s, x) => s + x.attributed_value, 0)
+    shares[shares.length - 1].attributed_value = parseFloat((conversionValue - sumOthers).toFixed(2))
+    const fracOthers = shares.slice(0, -1).reduce((s, x) => s + x.fraction, 0)
+    shares[shares.length - 1].fraction = parseFloat((1.0 - fracOthers).toFixed(4))
+    return shares
+  }
+
   return {
     first_touch: {
       source: firstTouchpoint.utm_source || null,
@@ -1025,10 +1049,10 @@ function calculateAttribution(touchpoints, conversionValue) {
       timestamp: lastTouchpoint.timestamp,
       derived_source: lastTouchpoint.derived_source || null
     },
-    linear,
-    u_shaped,
-    time_decay,
-    w_shaped
+    linear:     adjustReconciliation(linear),
+    u_shaped:   adjustReconciliation(u_shaped),
+    time_decay: adjustReconciliation(time_decay),
+    w_shaped:   adjustReconciliation(w_shaped)
   }
 }
 
@@ -1201,23 +1225,28 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-main()
-  .then(() => {
-    // Backfill is a manual, single-site op — it must NOT write a nightly job_run
-    // (health-agent/data-quality treat that as "nightly ran"). Log only.
-    if (isBackfill) {
-      log(`Backfill complete (${_processed} upserted)`)
-      return
-    }
-    _writeJobRun({ status: 'success', conversions_processed: _processed, duration_ms: Date.now() - _t0 })
-    _slackAlert('✅', 'Attribution Job — SUCCESS', `Processed ${_processed} conversions in ${Date.now() - _t0}ms`)
-  })
-  .catch(err => {
-    if (isBackfill) {
-      logError('Backfill failed', err)
+// Auto-run the nightly job ONLY when executed directly (node api/jobs/nightly-attribution.js /
+// cron), NOT when imported (unit tests importing calculateAttribution). Standard ESM idiom; no
+// change to production run behavior. Required so the reconciliation unit test can import this module.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main()
+    .then(() => {
+      // Backfill is a manual, single-site op — it must NOT write a nightly job_run
+      // (health-agent/data-quality treat that as "nightly ran"). Log only.
+      if (isBackfill) {
+        log(`Backfill complete (${_processed} upserted)`)
+        return
+      }
+      _writeJobRun({ status: 'success', conversions_processed: _processed, duration_ms: Date.now() - _t0 })
+      _slackAlert('✅', 'Attribution Job — SUCCESS', `Processed ${_processed} conversions in ${Date.now() - _t0}ms`)
+    })
+    .catch(err => {
+      if (isBackfill) {
+        logError('Backfill failed', err)
+        process.exit(1)
+      }
+      _writeJobRun({ status: 'failed', conversions_processed: _processed, error_message: err.message, duration_ms: Date.now() - _t0 })
+      _slackAlert('🔴', 'Attribution Job — FAILED', err.message)
       process.exit(1)
-    }
-    _writeJobRun({ status: 'failed', conversions_processed: _processed, error_message: err.message, duration_ms: Date.now() - _t0 })
-    _slackAlert('🔴', 'Attribution Job — FAILED', err.message)
-    process.exit(1)
-  })
+    })
+}
