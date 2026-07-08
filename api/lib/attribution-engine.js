@@ -834,7 +834,7 @@ export async function getAiPlatformAttributionLive({
   return results.sort((a, b) => b.revenue - a.revenue)
 }
 
-async function aiPlatformAttribution(siteId, dateFrom, dateTo) {
+export async function aiPlatformAttribution(siteId, dateFrom, dateTo) {
   let windowDays = 30
   try {
     const supabase = getSupabase()
