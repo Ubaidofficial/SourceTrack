@@ -7,6 +7,22 @@ import { esc, isGoogleSource, isValidTimezone, getLocalDateString, getPaddedUtcD
 import { serializeHogQLDateRange, serializeHogQLDateTime, buildHogQLTimestampFilter } from './hogql-date.js'
 import { LEAD_TYPES, classifyConversionType } from './conversion-classifier.js'
 import { isSubscriptionCheckoutCarrier } from './stripe-subscription.js'
+import { queryTinybirdPipe } from './tinybird-read.js'
+
+// Read-backend injection seam (test-only; production uses the real modules).
+// Tinybird reads are inert unless TINYBIRD_READ_ENABLED (+ optional
+// TINYBIRD_READ_PIPES allowlist) is on — queryTinybirdPipe returns null when
+// gated, and the 4 touch models fall back to _queryHogQL exactly as before.
+let _queryTinybirdPipe = queryTinybirdPipe
+let _queryHogQL = queryHogQL
+export function __setAttributionReadDeps ({ queryTinybird, queryHog } = {}) {
+  if (queryTinybird) _queryTinybirdPipe = queryTinybird
+  if (queryHog) _queryHogQL = queryHog
+}
+export function __resetAttributionReadDeps () {
+  _queryTinybirdPipe = queryTinybirdPipe
+  _queryHogQL = queryHogQL
+}
 
 export function getDateFilterExpr(timestampCol, tz, dateFrom, dateTo) {
   const startStr = typeof dateFrom === 'string' ? dateFrom.trim() : new Date(dateFrom).toISOString().slice(0, 10)
@@ -71,7 +87,7 @@ function cacheKey(model, siteId, dateFrom, dateTo) {
   return `${model}:${siteId}:${dateFrom}:${dateTo}`
 }
 
-async function firstTouchAttribution(siteId, dateFrom, dateTo) {
+export async function firstTouchAttribution(siteId, dateFrom, dateTo) {
   const { from: fromDate, to: toDate } = serializeHogQLDateRange(dateFrom, dateTo)
 
   const sql = `
@@ -91,7 +107,22 @@ async function firstTouchAttribution(siteId, dateFrom, dateTo) {
     LIMIT 50000
   `
 
-  const rows = await queryHogQL(sql, 'first_touch_attribution')
+  // Tinybird cutover (allowlist-gated; null → HogQL fallback). Reuse the SAME
+  // window bounds HogQL uses to guarantee date-parity; format for ClickHouse DateTime params.
+  const _tbFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+  const _tbTo   = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+  const _tbRows = await _queryTinybirdPipe('first_touch_by_site', { site_id: String(siteId), date_from: _tbFrom, date_to: _tbTo })
+  if (_tbRows) {
+    return _tbRows.map(r => ({
+      source: r.source,
+      medium: r.medium,
+      campaign: r.campaign || null,
+      conversions: Number(r.conversions) || 0,
+      revenue: Number(r.revenue) || 0
+    }))
+  }
+
+  const rows = await _queryHogQL(sql, 'first_touch_attribution')
   return rows.map(([source, medium, campaign, conversions, revenue]) => ({
     source,
     medium,
@@ -101,7 +132,7 @@ async function firstTouchAttribution(siteId, dateFrom, dateTo) {
   }))
 }
 
-async function lastTouchAttribution(siteId, dateFrom, dateTo) {
+export async function lastTouchAttribution(siteId, dateFrom, dateTo) {
   const { from: fromDate, to: toDate } = serializeHogQLDateRange(dateFrom, dateTo)
 
   const sql = `
@@ -153,7 +184,22 @@ async function lastTouchAttribution(siteId, dateFrom, dateTo) {
     LIMIT 50000
   `
 
-  const rows = await queryHogQL(sql, 'last_touch_attribution')
+  // Tinybird cutover (allowlist-gated; null → HogQL fallback). Reuse the SAME
+  // window bounds HogQL uses to guarantee date-parity; format for ClickHouse DateTime params.
+  const _tbFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+  const _tbTo   = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+  const _tbRows = await _queryTinybirdPipe('last_touch_by_site_agg', { site_id: String(siteId), date_from: _tbFrom, date_to: _tbTo })
+  if (_tbRows) {
+    return _tbRows.map(r => ({
+      source: r.source,
+      medium: r.medium,
+      campaign: r.campaign || null,
+      conversions: Number(r.conversions) || 0,
+      revenue: Number(r.revenue) || 0
+    }))
+  }
+
+  const rows = await _queryHogQL(sql, 'last_touch_attribution')
   return rows.map(([source, medium, campaign, conversions, revenue]) => ({
     source,
     medium,
@@ -171,7 +217,7 @@ function isDirectCondition(tableAlias = 'events') {
   return `(${tableAlias}.properties.utm_source IS NULL OR ${tableAlias}.properties.utm_source = '' OR ${tableAlias}.properties.utm_source = 'direct')`
 }
 
-async function firstTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
+export async function firstTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
   const { from: fromDate, to: toDate } = serializeHogQLDateRange(dateFrom, dateTo)
 
   const sql = `
@@ -220,7 +266,22 @@ async function firstTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
     LIMIT 50000
   `
 
-  const rows = await queryHogQL(sql, 'first_touch_non_direct_attribution')
+  // Tinybird cutover (allowlist-gated; null → HogQL fallback). Reuse the SAME
+  // window bounds HogQL uses to guarantee date-parity; format for ClickHouse DateTime params.
+  const _tbFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+  const _tbTo   = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+  const _tbRows = await _queryTinybirdPipe('first_touch_non_direct_by_site', { site_id: String(siteId), date_from: _tbFrom, date_to: _tbTo })
+  if (_tbRows) {
+    return _tbRows.map(r => ({
+      source: r.source,
+      medium: r.medium,
+      campaign: r.campaign || null,
+      conversions: Number(r.conversions) || 0,
+      revenue: Number(r.revenue) || 0
+    }))
+  }
+
+  const rows = await _queryHogQL(sql, 'first_touch_non_direct_attribution')
   return rows.map(([source, medium, campaign, conversions, revenue]) => ({
     source,
     medium,
@@ -230,7 +291,7 @@ async function firstTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
   }))
 }
 
-async function lastTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
+export async function lastTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
   const { from: fromDate, to: toDate } = serializeHogQLDateRange(dateFrom, dateTo)
 
   const sql = `
@@ -279,7 +340,22 @@ async function lastTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
     LIMIT 50000
   `
 
-  const rows = await queryHogQL(sql, 'last_touch_non_direct_attribution')
+  // Tinybird cutover (allowlist-gated; null → HogQL fallback). Reuse the SAME
+  // window bounds HogQL uses to guarantee date-parity; format for ClickHouse DateTime params.
+  const _tbFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+  const _tbTo   = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+  const _tbRows = await _queryTinybirdPipe('last_touch_non_direct_by_site', { site_id: String(siteId), date_from: _tbFrom, date_to: _tbTo })
+  if (_tbRows) {
+    return _tbRows.map(r => ({
+      source: r.source,
+      medium: r.medium,
+      campaign: r.campaign || null,
+      conversions: Number(r.conversions) || 0,
+      revenue: Number(r.revenue) || 0
+    }))
+  }
+
+  const rows = await _queryHogQL(sql, 'last_touch_non_direct_attribution')
   return rows.map(([source, medium, campaign, conversions, revenue]) => ({
     source,
     medium,
