@@ -26,10 +26,14 @@ const { encryptSecret } = await import('../lib/utils.js')
 const { stripeWebhookRouter } = await import('../routes/stripe-webhook.js')
 const { setDualWriteTransport, __getDualWriteBatcher } = await import('../../tinybird/adapter/dual-write.js')
 
-const stripe = new Stripe('sk_test_dummy_for_sig_gen', { apiVersion: '2024-06-20' })
+// Arbitrary non-secret strings (mirrors stripe-webhook.js's own 'fake_key_…'
+// construct). The constructor key is never used for API calls here — only
+// stripe.webhooks.generateTestHeaderString, which HMACs with WEBHOOK_SECRET.
+// Kept free of sk_test_/whsec_ prefixes so the repo secret-safety audit passes.
+const stripe = new Stripe('fake_key_for_test_signature_only', { apiVersion: '2024-06-20' })
 
 const SITE_KEY = 'sk_live_wiringtest'
-const WEBHOOK_SECRET = 'whsec_test_dualwrite_wiring'
+const WEBHOOK_SECRET = 'fake_webhook_secret_for_wiring_test'
 const ANON_ID = '11111111-1111-4111-8111-111111111111'
 const SITE = { id: 'site-webhook-1', site_key: SITE_KEY, encrypted_stripe_webhook_secret: encryptSecret(WEBHOOK_SECRET), plan: 'scale' }
 
