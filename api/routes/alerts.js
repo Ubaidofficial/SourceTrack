@@ -80,9 +80,10 @@ router.get('/', validateSiteKey, requireAlertsFeature, async (req, res) => {
         AND event = '$conversion'
         AND timestamp >= now() - INTERVAL 2 DAY
     `
-    // MONEY-RAIL (NOT wired): reads event='$conversion' + computes a conversion
-    // drop metric. Held on HogQL, flagged for separate review.
-    const convRows = await _queryHogQL(convSql, 'alert_conversions')
+    // MONEY-RAIL: wired Tinybird-first (alert_conversions) with HogQL fallback, via
+    // readTb. Pipe named {today, yesterday} remapped to the single [[today, yesterday]]
+    // positional row the consumer reads, byte-identical to the HogQL path.
+    const convRows = await readTb('alert_conversions', { site_id: req.site.id }, convSql, 'alert_conversions', tb => [[tb?.[0]?.today ?? 0, tb?.[0]?.yesterday ?? 0]])
     const today = Number(convRows?.[0]?.[0]) || 0
     const yesterday = Number(convRows?.[0]?.[1]) || 0
     if (yesterday > 0 && today < yesterday * 0.3) {

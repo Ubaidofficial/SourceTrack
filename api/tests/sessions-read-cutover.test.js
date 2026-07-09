@@ -1,6 +1,6 @@
 // Wave-3 read-cutover — sessions.js dispatch/fallback tests.
-// Wires only sessions_pageviews (pure pageview read); sessions_conversions and
-// visitor_sessions stay on HogQL (money-rail: $conversion + conversion_value).
+// Wired: sessions_pageviews (pageview read) + sessions_conversions (money-rail
+// $conversion + conversion_value). visitor_sessions stays on HogQL.
 
 import test from 'node:test'
 import assert from 'node:assert'
@@ -42,8 +42,34 @@ test('sessions overview — FALLBACK: flag off (pipe null) -> HogQL for pageview
     await sessionsOverview(req(), res)
     assert.strictEqual(res.body.success, true)
     assert.deepStrictEqual(hog.sort(), ['sessions_conversions', 'sessions_pageviews'])
-    assert.deepStrictEqual(tb.map(c => c.pipe), ['sessions_pageviews'], 'only the wired read attempts Tinybird')
+    assert.deepStrictEqual(tb.map(c => c.pipe), ['sessions_pageviews', 'sessions_conversions'], 'both wired reads attempt Tinybird')
   } finally { __resetSessionsReadDeps() }
+})
+
+test('sessions overview — DISPATCH conversions: sessions_conversions served from Tinybird; named→consumer shape == HogQL positional', async () => {
+  const PV_NAMED = { distinct_id: 'v1', timestamp: '2026-07-01T10:00:00Z', page_url: '/x', utm_source: 'g', utm_medium: 'cpc', utm_campaign: 'camp' }
+  const CONV_NAMED = { distinct_id: 'v1', timestamp: '2026-07-01T11:00:00Z', conversion_value: 42.5 }
+  const CONV_POS = ['v1', '2026-07-01T11:00:00Z', 42.5] // HogQL positional equivalent
+
+  // Run A: both reads via Tinybird (conversions named rows through readTb mapRows).
+  const hogA = []
+  __setSessionsReadDeps({
+    queryTinybird: tbStub([], { sessions_pageviews: [PV_NAMED], sessions_conversions: [CONV_NAMED] }),
+    queryHog: hogStub(hogA)
+  })
+  const resA = mockRes(); await sessionsOverview(req(), resA); __resetSessionsReadDeps()
+
+  // Run B: conversions via HogQL positional (identical data); pageviews via Tinybird.
+  const hogB = []
+  __setSessionsReadDeps({
+    queryTinybird: tbStub([], { sessions_pageviews: [PV_NAMED] }), // conversions pipe null -> HogQL
+    queryHog: async (_sql, name) => { hogB.push(name); return name === 'sessions_conversions' ? [CONV_POS] : [] }
+  })
+  const resB = mockRes(); await sessionsOverview(req(), resB); __resetSessionsReadDeps()
+
+  assert.strictEqual(hogA.length, 0, 'conversions served from Tinybird — no HogQL call')
+  assert.strictEqual(resA.body.success, true)
+  assert.deepStrictEqual(resA.body, resB.body, 'named→positional conv remap yields identical session output')
 })
 
 test('sessions overview — DISPATCH: flag on -> Tinybird for pageviews, HogQL only for conversions (money-rail)', async () => {
