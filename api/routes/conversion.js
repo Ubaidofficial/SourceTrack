@@ -2,7 +2,6 @@ import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { v4 as uuidv4 } from 'uuid'
 import NodeCache from 'node-cache'
-import { ph } from '../lib/posthog.js'
 import { dispatchWebhook } from '../lib/webhook.js'
 import { dispatchCapi } from '../lib/conversion-sync.js'
 import { resolveCapiEventId } from '../lib/capi-event-id.js'
@@ -391,18 +390,12 @@ export async function conversion(req, res) {
     const clientTimestamp = req.body?.timestamp ? sanitizeClientTimestamp(req.body.timestamp) : null
 
     // distinctId hoisted to a const (behavior-identical) so the inline uuidv4()
-    // fallback is computed ONCE and the additive Tinybird dual-write shares the
-    // exact same distinct_id the existing ph.capture uses.
+    // fallback is computed ONCE and the Tinybird dual-write uses a single, stable
+    // distinct_id (Wave-1: Tinybird is now the sole writer for $conversion here).
     const distinctId = req.body.anonymous_id || uuidv4()
 
-    ph.capture({
-      distinctId,
-      event: '$conversion',
-      timestamp: clientTimestamp ? new Date(clientTimestamp) : undefined,
-      properties: props
-    })
-
-    // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
+    // Wave-1 revenue cutover: Tinybird is the SOLE writer for $conversion (ph.capture removed).
+    // Flag-gated OFF -> no-op + no network when off.
     // Reached ONLY after every guard returned: short-window dedup (:261), in-memory
     // dedupCache (:304), the PERSISTENT claimIdempotencyKeys duplicate skip (:321),
     // and the plan-limit block (:349) — so a conversion the existing claim SKIPS

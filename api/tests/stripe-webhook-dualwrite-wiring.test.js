@@ -1,8 +1,10 @@
 // Stripe-webhook dual-write wiring regression tests — TOKEN-FREE, NO network.
 // Mirrors api/tests/pageview-dualwrite-wiring.test.js: drives the real webhook
 // route, mocks ph.capture + the dual-write transport, and asserts BOTH
-// $conversion sites (subscription + checkout) additively dual-write to Tinybird
-// with the SAME distinctId + properties ph.capture received. Flag-OFF => no-op.
+// $conversion sites (subscription + checkout) dual-write to Tinybird with the
+// resolved distinctId + conversionProperties. Wave-1 cutover: ph.capture is
+// REMOVED on the revenue rail, so it must NOT be called; Tinybird is the sole
+// $conversion writer. Flag-OFF => no capture AND no dual-write.
 //
 // Signature verification is satisfied for real via stripe.webhooks
 // .generateTestHeaderString + a webhook secret encrypted with the test
@@ -103,7 +105,7 @@ const subscriptionEvent = () => ({
 })
 
 for (const [label, makeEvent] of [['checkout.session.completed', checkoutEvent], ['invoice.paid (subscription)', subscriptionEvent]]) {
-  test(`stripe-webhook dual-write — ${label}: dual-write fires once with ph.capture's distinctId + properties`, async (t) => {
+  test(`stripe-webhook dual-write — ${label}: Tinybird dual-write fires once; ph.capture NOT called (Wave-1 cutover)`, async (t) => {
     t.after(() => { restoreCapture(); restoreSupabase(); resetDualWrite() })
     mockCapture(); mockSupabase(); resetDualWrite()
     process.env.TINYBIRD_DUAL_WRITE = 'true'
@@ -112,21 +114,18 @@ for (const [label, makeEvent] of [['checkout.session.completed', checkoutEvent],
     const res = await drive(makeEvent())
 
     assert.strictEqual(res.statusCode, 200, `2xx (body: ${JSON.stringify(res.body)})`)
-    assert.strictEqual(captureCalls.length, 1, 'ph.capture called once')
-    const captured = captureCalls[0]
-    assert.strictEqual(captured.event, '$conversion')
-    assert.strictEqual(captured.distinctId, ANON_ID)
+    assert.strictEqual(captureCalls.length, 0, 'ph.capture must NOT be called (Wave-1: Tinybird is the sole $conversion writer)')
 
     await __getDualWriteBatcher().flush()
     const lines = rec.lines()
     assert.strictEqual(lines.length, 1, 'dual-write fired exactly once')
     assert.strictEqual(lines[0].event_type, '$conversion', 'canonical event_type')
-    assert.strictEqual(lines[0].distinct_id, captured.distinctId, 'dual-write distinct_id === ph.capture distinctId')
-    assert.strictEqual(lines[0].site_id, captured.properties.site_id, 'properties carried through (same conversionProperties object)')
+    assert.strictEqual(lines[0].distinct_id, ANON_ID, 'dual-write distinct_id === the resolved conversion distinctId')
+    assert.strictEqual(lines[0].site_id, SITE.id, 'conversionProperties carried through (site_id)')
     assert.ok(!('site_key' in lines[0]), 'site_key dropped by the adapter')
   })
 
-  test(`stripe-webhook dual-write — ${label}: flag OFF => ph.capture still fires, no dual-write`, async (t) => {
+  test(`stripe-webhook dual-write — ${label}: flag OFF => no ph.capture AND no dual-write`, async (t) => {
     t.after(() => { restoreCapture(); restoreSupabase(); resetDualWrite() })
     mockCapture(); mockSupabase(); resetDualWrite() // TINYBIRD_DUAL_WRITE unset
     const rec = recorder(); setDualWriteTransport(rec.transport, BATCH_OPTS)
@@ -134,8 +133,9 @@ for (const [label, makeEvent] of [['checkout.session.completed', checkoutEvent],
     const res = await drive(makeEvent())
 
     assert.strictEqual(res.statusCode, 200)
-    assert.strictEqual(captureCalls.length, 1, 'live ph.capture path unaffected by the dual-write flag')
-    // Flag off => dualWriteEvent no-ops (no batcher created), so nothing to flush.
+    assert.strictEqual(captureCalls.length, 0, 'ph.capture removed — never called')
+    // Post-cutover: with the flag off, $conversion is written NOWHERE (Tinybird is the
+    // sole writer and it is gated). Prod runs with TINYBIRD_DUAL_WRITE=true (Gate 0).
     assert.strictEqual(rec.lines().length, 0, 'no dual-write when flag is off')
   })
 }

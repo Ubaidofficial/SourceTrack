@@ -1,5 +1,4 @@
 import { v4 as uuidv4 } from 'uuid'
-import { ph } from '../lib/posthog.js'
 import { dispatchWebhook } from '../lib/webhook.js'
 import { dispatchCapi } from '../lib/conversion-sync.js'
 import { resolveCapiEventId } from '../lib/capi-event-id.js'
@@ -234,14 +233,8 @@ export async function conversionOffline(req, res) {
       })
     }
 
-    ph.capture({
-      distinctId,
-      event: '$conversion',
-      timestamp: new Date(occurredAt),
-      properties: props
-    })
-
-    // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
+    // Wave-1 revenue cutover: Tinybird is the SOLE writer for $conversion (ph.capture removed).
+    // Flag-gated OFF -> no-op + no network when off.
     // Reached ONLY after the PERSISTENT claimIdempotencyKeys duplicate skip (:95)
     // and the plan-limit block (:222) returned — so a duplicate the claim skips
     // never dual-writes. props.external_event_id (:178, resolveCapiEventId) lets
