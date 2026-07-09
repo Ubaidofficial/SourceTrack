@@ -357,11 +357,40 @@ test('Form Capture Cookieless Tracker Unit Tests', async (t) => {
   })
 })
 
+// Wave-2 pageview cutover: track.js writes to Tinybird (dualWriteEvent), not
+// ph.capture. Drive the route with the dual-write transport recorded and return
+// the normalized line(s). ph.capture must NOT fire. The sanitized field values
+// (form_id/form_name/form_action_*/page_path/custom_properties) survive
+// normalization unchanged (normalize.js:242 passes null/strings through, and
+// sanitizeDeep only strips PII/forbidden keys from nested bags). event_type is
+// the canonical top-level discriminator, always set from the event name.
+async function driveTrackDW (reqMock, resMock) {
+  const { track } = await import('../routes/track.js')
+  const { ph } = await import('../lib/posthog.js')
+  const { setDualWriteTransport, __getDualWriteBatcher } = await import('../../tinybird/adapter/dual-write.js')
+  const { gunzipSync } = await import('node:zlib')
+  const originalCapture = ph.capture
+  let phCalled = false
+  ph.capture = () => { phCalled = true }
+  const payloads = []
+  const prevFlag = process.env.TINYBIRD_DUAL_WRITE
+  process.env.TINYBIRD_DUAL_WRITE = 'true'
+  setDualWriteTransport(async (p) => { payloads.push(p) }, { flushAt: 1000, flushInterval: 0 })
+  try {
+    await track(reqMock, resMock)
+    const b = __getDualWriteBatcher(); if (b) await b.flush()
+  } finally {
+    ph.capture = originalCapture
+    setDualWriteTransport(null)
+    if (prevFlag === undefined) delete process.env.TINYBIRD_DUAL_WRITE
+    else process.env.TINYBIRD_DUAL_WRITE = prevFlag
+  }
+  const lines = payloads.flatMap(p => gunzipSync(p).toString('utf8').trim().split('\n').filter(Boolean).map(l => JSON.parse(l)))
+  return { lines, phCalled }
+}
+
 test('Form Ingestion Backend Route Integration Tests', async (t) => {
   await t.test('15. Backend PII sanitization remains intact', async () => {
-    const { track } = await import('../routes/track.js')
-
-    // Mock the Express request and response object
     const siteMock = {
       id: 99,
       site_key: 'sk-test',
@@ -369,69 +398,132 @@ test('Form Ingestion Backend Route Integration Tests', async (t) => {
       custom_url_params: null
     }
 
-    const captureCalls = []
-    // Mock PostHog capturing
-    const { ph } = await import('../lib/posthog.js')
-    const originalCapture = ph.capture
-    ph.capture = (payload) => {
-      captureCalls.push(payload)
+    const reqMock = {
+      headers: { 'user-agent': 'Mozilla/5.0' },
+      site: siteMock,
+      body: {
+        event: 'form_submit',
+        anonymous_id: 'anon-123',
+        properties: {
+          form_provider: 'webflow',
+          form_id: '  lead-email-john@example.com  ', // email bypass attempt
+          form_name: 'pass-sk_test_123', // secret keyword bypass attempt
+          form_action_host: 'javascript:alert(1)', // unsafe script
+          form_action_path: '/submit-form?q=123#hash',
+          page_path: '/register',
+          ignore_conversion: true
+        }
+      }
     }
 
-    try {
-      const reqMock = {
-        headers: { 'user-agent': 'Mozilla/5.0' },
-        site: siteMock,
-        body: {
-          event: 'form_submit',
-          anonymous_id: 'anon-123',
-          properties: {
-            form_provider: 'webflow',
-            form_id: '  lead-email-john@example.com  ', // email bypass attempt
-            form_name: 'pass-sk_test_123', // secret keyword bypass attempt
-            form_action_host: 'javascript:alert(1)', // unsafe script
-            form_action_path: '/submit-form?q=123#hash',
-            page_path: '/register',
-            ignore_conversion: true
+    const resMock = {
+      status: (code) => {
+        assert.strictEqual(code, 200)
+        return {
+          json: (data) => {
+            assert.strictEqual(data.success, true)
           }
         }
       }
-
-      const resMock = {
-        status: (code) => {
-          assert.strictEqual(code, 200)
-          return {
-            json: (data) => {
-              assert.strictEqual(data.success, true)
-            }
-          }
-        }
-      }
-
-      await track(reqMock, resMock)
-
-      assert.strictEqual(captureCalls.length, 1)
-      const props = captureCalls[0].properties
-      assert.strictEqual(props.event_type, 'form_submit')
-      assert.strictEqual(props.form_provider, 'webflow')
-      assert.strictEqual(props.form_id, null) // Sanitized to null
-      assert.strictEqual(props.form_name, null) // Sanitized to null
-      assert.strictEqual(props.form_action_host, null) // JavaScript: action rejected
-      assert.strictEqual(props.form_action_path, '/submit-form') // Query/hash stripped
-      assert.strictEqual(props.page_path, '/register')
-    } finally {
-      ph.capture = originalCapture
     }
+
+    const { lines, phCalled } = await driveTrackDW(reqMock, resMock)
+
+    assert.strictEqual(phCalled, false, 'Wave-2: ph.capture removed (Tinybird sole writer)')
+    assert.strictEqual(lines.length, 1)
+    const props = lines[0]
+    assert.strictEqual(props.event_type, 'form_submit')
+    assert.strictEqual(props.form_provider, 'webflow')
+    assert.strictEqual(props.form_id, null) // Sanitized to null
+    assert.strictEqual(props.form_name, null) // Sanitized to null
+    assert.strictEqual(props.form_action_host, null) // JavaScript: action rejected
+    assert.strictEqual(props.form_action_path, '/submit-form') // Query/hash stripped
+    assert.strictEqual(props.page_path, '/register')
   })
 
   await t.test('15-B. Form submits do not leak unsafe fields through custom_properties', async () => {
-    const { track } = await import('../routes/track.js')
     const siteMock = { id: 99, site_key: 'sk-test', excluded_paths: null, custom_url_params: null }
-    const captureCalls = []
-    const { ph } = await import('../lib/posthog.js')
-    const originalCapture = ph.capture
-    ph.capture = (payload) => { captureCalls.push(payload) }
 
-    try {
+    const reqMock = {
+      headers: { 'user-agent': 'Mozilla/5.0' },
+      site: siteMock,
+      body: {
+        event: 'form_submit',
+        anonymous_id: 'anon-123',
+        properties: {
+          form_provider: 'webflow',
+          form_id: 'john@example.com',
+          form_name: 'lead-phone-123456789',
+          message: 'private message body',
+          email: 'unsafe-email@test.com',
+          phone: '123456',
+          hidden_field: 'token_secret_value',
+          some_other_value: 'arbitrary',
+          ignore_conversion: true
+        }
+      }
+    }
+
+    const resMock = {
+      status: (code) => {
+        assert.strictEqual(code, 200)
+        return { json: (data) => assert.strictEqual(data.success, true) }
+      }
+    }
+
+    const { lines, phCalled } = await driveTrackDW(reqMock, resMock)
+
+    assert.strictEqual(phCalled, false, 'Wave-2: ph.capture removed (Tinybird sole writer)')
+    assert.strictEqual(lines.length, 1)
+    const props = lines[0]
+    assert.strictEqual(props.form_id, null)
+    assert.strictEqual(props.form_name, null)
+
+    // Assert custom_properties is entirely absent/not forwarded
+    assert.strictEqual(props.custom_properties, undefined)
+  })
+
+  await t.test('15-C. Non-form custom events preserve custom_properties', async () => {
+    const siteMock = { id: 99, site_key: 'sk-test', excluded_paths: null, custom_url_params: null }
+
+    const reqMock = {
+      headers: { 'user-agent': 'Mozilla/5.0' },
+      site: siteMock,
+      body: {
+        event: 'custom_button_click',
+        anonymous_id: 'anon-123',
+        properties: {
+          button_id: 'cta-signup',
+          page: 'homepage'
+        }
+      }
+    }
+
+    const resMock = {
+      status: (code) => {
+        assert.strictEqual(code, 200)
+        return { json: (data) => assert.strictEqual(data.success, true) }
+      }
+    }
+
+    const { lines, phCalled } = await driveTrackDW(reqMock, resMock)
+
+    assert.strictEqual(phCalled, false, 'Wave-2: ph.capture removed (Tinybird sole writer)')
+    assert.strictEqual(lines.length, 1)
+    const props = lines[0]
+    // event_type is the canonical top-level discriminator on the Tinybird row —
+    // it carries the raw custom event name (no spurious form event_type is added).
+    assert.strictEqual(props.event_type, 'custom_button_click')
+    assert.deepStrictEqual(props.custom_properties, {
+      button_id: 'cta-signup',
+      page: 'homepage'
+    })
+  })
+
+  await t.test('15-D. Backend ingestion host and path validation logic', async () => {
+    const siteMock = { id: 99, site_key: 'sk-test', excluded_paths: null, custom_url_params: null }
+
+    const runTest = async (properties) => {
       const reqMock = {
         headers: { 'user-agent': 'Mozilla/5.0' },
         site: siteMock,
@@ -439,142 +531,45 @@ test('Form Ingestion Backend Route Integration Tests', async (t) => {
           event: 'form_submit',
           anonymous_id: 'anon-123',
           properties: {
-            form_provider: 'webflow',
-            form_id: 'john@example.com',
-            form_name: 'lead-phone-123456789',
-            message: 'private message body',
-            email: 'unsafe-email@test.com',
-            phone: '123456',
-            hidden_field: 'token_secret_value',
-            some_other_value: 'arbitrary',
+            ...properties,
             ignore_conversion: true
           }
         }
       }
-
       const resMock = {
         status: (code) => {
           assert.strictEqual(code, 200)
           return { json: (data) => assert.strictEqual(data.success, true) }
         }
       }
-
-      await track(reqMock, resMock)
-
-      assert.strictEqual(captureCalls.length, 1)
-      const props = captureCalls[0].properties
-      assert.strictEqual(props.form_id, null)
-      assert.strictEqual(props.form_name, null)
-
-      // Assert custom_properties is entirely absent/not forwarded
-      assert.strictEqual(props.custom_properties, undefined)
-    } finally {
-      ph.capture = originalCapture
+      const { lines, phCalled } = await driveTrackDW(reqMock, resMock)
+      assert.strictEqual(phCalled, false, 'Wave-2: ph.capture removed (Tinybird sole writer)')
+      return lines[0]
     }
-  })
 
-  await t.test('15-C. Non-form custom events preserve custom_properties', async () => {
-    const { track } = await import('../routes/track.js')
-    const siteMock = { id: 99, site_key: 'sk-test', excluded_paths: null, custom_url_params: null }
-    const captureCalls = []
-    const { ph } = await import('../lib/posthog.js')
-    const originalCapture = ph.capture
-    ph.capture = (payload) => { captureCalls.push(payload) }
+    // Test 1: form_action_host: "john@example.com" is rejected (null)
+    const res1 = await runTest({ form_action_host: 'john@example.com' })
+    assert.strictEqual(res1.form_action_host, null)
 
-    try {
-      const reqMock = {
-        headers: { 'user-agent': 'Mozilla/5.0' },
-        site: siteMock,
-        body: {
-          event: 'custom_button_click',
-          anonymous_id: 'anon-123',
-          properties: {
-            button_id: 'cta-signup',
-            page: 'homepage'
-          }
-        }
-      }
+    // Test 2: form_action_host: "example.com/path?email=john@example.com" is rejected (null)
+    const res2 = await runTest({ form_action_host: 'example.com/path?email=john@example.com' })
+    assert.strictEqual(res2.form_action_host, null)
 
-      const resMock = {
-        status: (code) => {
-          assert.strictEqual(code, 200)
-          return { json: (data) => assert.strictEqual(data.success, true) }
-        }
-      }
+    // Test 3: form_action_host: "javascript:alert(1)" is rejected (null)
+    const res3 = await runTest({ form_action_host: 'javascript:alert(1)' })
+    assert.strictEqual(res3.form_action_host, null)
 
-      await track(reqMock, resMock)
+    // Test 4: form_action_path: "/submit?email=john@example.com#x" becomes "/submit"
+    const res4 = await runTest({ form_action_path: '/submit?email=john@example.com#x' })
+    assert.strictEqual(res4.form_action_path, '/submit')
 
-      assert.strictEqual(captureCalls.length, 1)
-      const props = captureCalls[0].properties
-      assert.strictEqual(props.event_type, undefined)
-      assert.deepStrictEqual(props.custom_properties, {
-        button_id: 'cta-signup',
-        page: 'homepage'
-      })
-    } finally {
-      ph.capture = originalCapture
-    }
-  })
+    // Test 5: page_path: "/pricing?email=john@example.com#x" becomes "/pricing"
+    const res5 = await runTest({ page_path: '/pricing?email=john@example.com#x' })
+    assert.strictEqual(res5.page_path, '/pricing')
 
-  await t.test('15-D. Backend ingestion host and path validation logic', async () => {
-    const { track } = await import('../routes/track.js')
-    const siteMock = { id: 99, site_key: 'sk-test', excluded_paths: null, custom_url_params: null }
-    const captureCalls = []
-    const { ph } = await import('../lib/posthog.js')
-    const originalCapture = ph.capture
-    ph.capture = (payload) => { captureCalls.push(payload) }
-
-    try {
-      const runTest = async (properties) => {
-        captureCalls.length = 0
-        const reqMock = {
-          headers: { 'user-agent': 'Mozilla/5.0' },
-          site: siteMock,
-          body: {
-            event: 'form_submit',
-            anonymous_id: 'anon-123',
-            properties: {
-              ...properties,
-              ignore_conversion: true
-            }
-          }
-        }
-        const resMock = {
-          status: (code) => {
-            assert.strictEqual(code, 200)
-            return { json: (data) => assert.strictEqual(data.success, true) }
-          }
-        }
-        await track(reqMock, resMock)
-        return captureCalls[0].properties
-      }
-
-      // Test 1: form_action_host: "john@example.com" is rejected (null)
-      const res1 = await runTest({ form_action_host: 'john@example.com' })
-      assert.strictEqual(res1.form_action_host, null)
-
-      // Test 2: form_action_host: "example.com/path?email=john@example.com" is rejected (null)
-      const res2 = await runTest({ form_action_host: 'example.com/path?email=john@example.com' })
-      assert.strictEqual(res2.form_action_host, null)
-
-      // Test 3: form_action_host: "javascript:alert(1)" is rejected (null)
-      const res3 = await runTest({ form_action_host: 'javascript:alert(1)' })
-      assert.strictEqual(res3.form_action_host, null)
-
-      // Test 4: form_action_path: "/submit?email=john@example.com#x" becomes "/submit"
-      const res4 = await runTest({ form_action_path: '/submit?email=john@example.com#x' })
-      assert.strictEqual(res4.form_action_path, '/submit')
-
-      // Test 5: page_path: "/pricing?email=john@example.com#x" becomes "/pricing"
-      const res5 = await runTest({ page_path: '/pricing?email=john@example.com#x' })
-      assert.strictEqual(res5.page_path, '/pricing')
-
-      // Test 6: page_path or form_action_path containing @ are rejected (null)
-      const res6 = await runTest({ page_path: '/pricing/john@example.com' })
-      assert.strictEqual(res6.page_path, null)
-    } finally {
-      ph.capture = originalCapture
-    }
+    // Test 6: page_path or form_action_path containing @ are rejected (null)
+    const res6 = await runTest({ page_path: '/pricing/john@example.com' })
+    assert.strictEqual(res6.page_path, null)
   })
 
   await t.test('16. api/routes/conversion.js remains unchanged', () => {

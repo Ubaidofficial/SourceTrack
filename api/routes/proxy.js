@@ -8,7 +8,6 @@ import express from 'express'
 import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { v4 as uuidv4 } from 'uuid'
-import { ph } from '../lib/posthog.js'
 import { getSupabase } from '../lib/supabase.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
 import { claimPageviewUsage } from '../lib/pageview-limits.js'
@@ -118,9 +117,8 @@ router.post('/e',
       proxy: true,
     }
 
-    await ph.capture({ distinctId, event, properties: pageviewProps })
-
-    // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
+    // Wave-2 pageview cutover: Tinybird is the SOLE writer here (ph.capture removed;
+    // flag-gated OFF -> no-op + no network when off).
     // No natural id on this path -> deriveEventId falls to a uuid. site_key in
     // the payload is dropped by the adapter.
     dualWriteEvent({ distinctId, event, properties: pageviewProps })
@@ -183,13 +181,8 @@ router.post('/c',
       proxy: true,
     }
 
-    await ph.capture({
-      distinctId,
-      event: '$conversion',
-      properties: captureProperties
-    })
-
-    // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
+    // Wave-2 cutover: Tinybird is the SOLE writer for this $conversion (ph.capture
+    // removed; flag-gated OFF -> no-op + no network when off).
     // order_id (when present) is exposed at the raw root so deriveEventId keys on
     // it (else a uuid). site_key in the payload is dropped by the adapter.
     dualWriteEvent({ distinctId, event: '$conversion', order_id, properties: captureProperties })
@@ -240,9 +233,8 @@ router.get('/pixel.gif',
     const distinctId = uid || uuidv4()
     const pageviewProps = { site_id: site.id, site_key, event_type: 'pixel', country: enriched.country, device_type: enriched.device_type, server_timestamp: enriched.server_timestamp, proxy: true }
 
-    await ph.capture({ distinctId, event: '$pageview', properties: pageviewProps })
-
-    // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
+    // Wave-2 pixel cutover: Tinybird is the SOLE writer here (ph.capture removed;
+    // flag-gated OFF -> no-op + no network when off).
     // No natural id on the pixel path -> deriveEventId falls to a uuid. site_key
     // in the payload is dropped by the adapter. `event_type: 'pixel'` is a
     // PostHog-only analytics label, NOT the canonical Tinybird discriminator —
@@ -250,7 +242,7 @@ router.get('/pixel.gif',
     // (tinybird/adapter/normalize.js:250), so passing it through as-is would
     // silently relabel every dual-written row 'pixel' instead of '$pageview'.
     // Renamed to `tracking_method` (matching pixel.js's own convention) for the
-    // Tinybird-bound payload only — ph.capture above is unaffected.
+    // Tinybird-bound payload.
     const { event_type: _pixelLabel, ...dualWriteProps } = pageviewProps
     dualWriteEvent({ distinctId, event: '$pageview', properties: { ...dualWriteProps, tracking_method: 'pixel' } })
   } catch (err) { console.error('[proxy/pixel]', err.message) }
