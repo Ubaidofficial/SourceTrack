@@ -330,8 +330,10 @@ for (const file of gatedFiles) {
 // 6. Ingestion URL redaction call
 const ingestFiles = [
   'api/routes/track.js',
-  'api/routes/conversion.js',
-  'api/routes/identify.js'
+  'api/routes/conversion.js'
+  // identify.js removed (W2a): the $identify PostHog writes were decommissioned —
+  // it no longer forwards traits/email/PII to any store, only writing validated
+  // ids to the Supabase identity link, so there is no PII payload to redact.
 ];
 for (const file of ingestFiles) {
   if (checkFileExists(file)) {
