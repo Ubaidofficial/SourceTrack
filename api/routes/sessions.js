@@ -107,9 +107,16 @@ export async function sessionsOverview(req, res) {
       LIMIT 50000
     `
 
-    // MONEY-RAIL (NOT wired): reads event='$conversion' + conversion_value.
-    // Held on HogQL, flagged for separate review.
-    const convRows = await _queryHogQL(convSql, 'sessions_conversions')
+    // MONEY-RAIL: wired Tinybird-first (sessions_conversions) with HogQL fallback,
+    // via readTb — same (site_id, date range) params as the sessions_pageviews read
+    // above. Pipe named rows remapped to the [distinct_id, timestamp, conversion_value]
+    // positional shape the consumer destructures, byte-identical to the HogQL path.
+    const convRows = await readTb(
+      'sessions_conversions',
+      { site_id: posthogSiteId, date_from_ts: dateFromTs, date_to_ts: dateToTs },
+      convSql, 'sessions_conversions',
+      tb => tb.map(r => [r.distinct_id, r.timestamp, r.conversion_value])
+    )
 
     // Merge and sort all events per distinct_id
     const eventsByVisitor = new Map()

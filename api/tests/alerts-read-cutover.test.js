@@ -1,6 +1,6 @@
 // Wave-3 read-cutover — alerts.js dispatch/fallback tests.
-// Wired: alert_traffic (pageview counts), alert_recent (event count).
-// Held (money-rail): alert_conversions ($conversion), alert_ai (ai_source).
+// Wired: alert_traffic (pageview counts), alert_recent (event count),
+// alert_conversions (money-rail $conversion). Held: alert_ai (ai_source).
 
 import test from 'node:test'
 import assert from 'node:assert'
@@ -48,7 +48,24 @@ test('alerts — FALLBACK: flag off -> HogQL for wired + held reads', async () =
     await handler(reqSite(), res)
     assert.strictEqual(res.body.success, true)
     assert.deepStrictEqual(hog.sort(), ['alert_ai', 'alert_conversions', 'alert_recent', 'alert_traffic'])
-    assert.deepStrictEqual(tb.map(c => c.pipe).sort(), ['alert_recent', 'alert_traffic'], 'only wired reads attempt Tinybird')
+    assert.deepStrictEqual(tb.map(c => c.pipe).sort(), ['alert_conversions', 'alert_recent', 'alert_traffic'], 'wired reads attempt Tinybird')
+  } finally { __resetAlertsReadDeps() }
+})
+
+test('alerts — DISPATCH conversions: alert_conversions served from Tinybird triggers conversion_drop', async () => {
+  const tb = []; const hog = []
+  __setAlertsReadDeps({
+    queryTinybird: tbStub(tb, { alert_conversions: [{ today: 1, yesterday: 10 }] }), // 1 < 10*0.3 -> conversion_drop
+    queryHog: hogStub(hog)
+  })
+  try {
+    const res = mockRes()
+    await handler(reqSite(), res)
+    const ids = res.body.data.alerts.map(a => a.id)
+    assert.ok(ids.includes('conversion_drop'), 'conversion_drop from Tinybird alert_conversions (1 vs 10)')
+    assert.ok(!hog.includes('alert_conversions'), 'alert_conversions bypassed HogQL (served from Tinybird)')
+    const cc = tb.find(c => c.pipe === 'alert_conversions')
+    assert.deepStrictEqual(cc.params, { site_id: 'site-00' }, 'alert_conversions scoped to authenticated site_id')
   } finally { __resetAlertsReadDeps() }
 })
 
