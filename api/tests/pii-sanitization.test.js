@@ -518,7 +518,7 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     restoreMocks()
   })
 
-  await t.test('webhook-incoming sanitizes raw_payload before ph.capture', async () => {
+  await t.test('webhook-incoming drops raw_payload + PII from the dual-write payload', async () => {
     setupMocks()
     const { default: webhookRouter } = await import('../routes/webhook-incoming.js')
     const layer = webhookRouter.stack.find(s => s.route?.path === '/:api_key' && s.route?.methods.post)
@@ -536,15 +536,18 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     const res = makeMockRes()
     await handler(req, res)
 
-    assert.strictEqual(captureCalled, true)
-    const capturedProps = lastCaptureArgs.properties
-    const rawPayload = JSON.parse(capturedProps.raw_payload)
-    assert.strictEqual(rawPayload.email, '[REDACTED]')
-    assert.strictEqual(rawPayload.phone, '[REDACTED]')
+    assert.strictEqual(captureCalled, false, 'Wave-2b: ph.capture removed (Tinybird sole writer)')
+    const capturedProps = await dwLine()
+    // raw_payload is a FORBIDDEN key (normalize.js FORBIDDEN_KEYS) — the adapter drops
+    // it entirely, so the redacted webhook body (and any PII embedded in it) never
+    // reaches Tinybird. The webhook's top-level email/phone are likewise dropped.
+    assert.ok(!('raw_payload' in capturedProps), 'raw_payload dropped by the adapter (forbidden key)')
+    assert.ok(!('email' in capturedProps), 'email dropped from dual-write payload (adapter PII strip)')
+    assert.ok(!('phone' in capturedProps), 'phone dropped from dual-write payload (adapter PII strip)')
     restoreMocks()
   })
 
-  await t.test('webhook-incoming redacts mapped customer name before ph.capture', async () => {
+  await t.test('webhook-incoming drops mapped customer name from the dual-write payload', async () => {
     setupMocks()
     const { default: webhookRouter } = await import('../routes/webhook-incoming.js')
     const layer = webhookRouter.stack.find(s => s.route?.path === '/:api_key' && s.route?.methods.post)
@@ -562,9 +565,10 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     const res = makeMockRes()
     await handler(req, res)
 
-    assert.strictEqual(captureCalled, true)
-    const capturedProps = lastCaptureArgs.properties
-    assert.strictEqual(capturedProps.name, '[REDACTED]')
+    assert.strictEqual(captureCalled, false, 'Wave-2b: ph.capture removed (Tinybird sole writer)')
+    const capturedProps = await dwLine()
+    assert.ok(!('name' in capturedProps), 'name dropped from dual-write payload (adapter PII strip)')
+    assert.ok(!('email' in capturedProps), 'email dropped from dual-write payload (adapter PII strip)')
     restoreMocks()
   })
 
@@ -586,14 +590,14 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     const res = makeMockRes()
     await handler(req, res)
 
-    assert.strictEqual(captureCalled, true)
-    const capturedProps = lastCaptureArgs.properties
+    assert.strictEqual(captureCalled, false, 'Wave-2b: ph.capture removed (Tinybird sole writer)')
+    const capturedProps = await dwLine()
     assert.strictEqual(capturedProps.conversion_value, 120.00)
     assert.strictEqual(capturedProps.conversion_event_id, 'ORD-777')
     restoreMocks()
   })
 
-  await t.test('webhook-incoming raw_payload remains sliced/truncated to 500 characters', async () => {
+  await t.test('webhook-incoming raw_payload never reaches the dual-write payload (dropped)', async () => {
     setupMocks()
     const { default: webhookRouter } = await import('../routes/webhook-incoming.js')
     const layer = webhookRouter.stack.find(s => s.route?.path === '/:api_key' && s.route?.methods.post)
@@ -611,9 +615,12 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     const res = makeMockRes()
     await handler(req, res)
 
-    assert.strictEqual(captureCalled, true)
-    const capturedProps = lastCaptureArgs.properties
-    assert.ok(capturedProps.raw_payload.length <= 500, 'raw_payload should be max 500 characters')
+    assert.strictEqual(captureCalled, false, 'Wave-2b: ph.capture removed (Tinybird sole writer)')
+    const capturedProps = await dwLine()
+    // The route still truncates raw_payload to 500 chars before handing it off, but
+    // the adapter drops the FORBIDDEN raw_payload key outright — so no raw webhook
+    // body (truncated or not) ever lands in the Tinybird event.
+    assert.ok(!('raw_payload' in capturedProps), 'raw_payload dropped by the adapter (forbidden key)')
     restoreMocks()
   })
 

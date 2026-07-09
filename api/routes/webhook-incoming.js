@@ -10,7 +10,6 @@
 import express from 'express'
 import crypto from 'crypto'
 import { v4 as uuidv4 } from 'uuid'
-import { ph } from '../lib/posthog.js'
 import { getSupabase } from '../lib/supabase.js'
 import { resolveWebhookAnonymousId } from '../lib/identity-links.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
@@ -180,13 +179,8 @@ router.post('/:api_key', async (req, res) => {
 
     const sanitizedProps = redactPiiFromObject(propertiesObject)
 
-    await ph.capture({
-      distinctId,
-      event: '$conversion',
-      properties: sanitizedProps
-    })
-
-    // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
+    // Wave-2b cutover: Tinybird is the SOLE writer for this $conversion (ph.capture
+    // removed; flag-gated OFF -> no-op + no network when off).
     // Pass the producer's coalesced natural id (fields.orderId) as raw order_id so
     // deriveEventId resolves it (else uuid). NOT conversion_event_id, which bakes in
     // a uuid fallback when orderId is null (per 2b precedence). site_key/email/name
