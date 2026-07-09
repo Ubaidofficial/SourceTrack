@@ -8,6 +8,7 @@ import { ph } from '../lib/posthog.js'
 import { resolveWebhookAnonymousId } from '../lib/identity-links.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
 import { SUBSCRIPTION_EVENTS, mapSubscriptionEvent, buildSubscriptionIdempotencyKeys, checkoutConversionValue } from '../lib/stripe-subscription.js'
+import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
 
 
 
@@ -125,6 +126,10 @@ async function handleSubscriptionEvent(event, site, siteKey) {
     }
 
     await ph.capture({ distinctId, event: '$conversion', properties: conversionProperties })
+    // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
+    // Reached only after the idempotency claim succeeded (claim→capture→rollback-on-fail),
+    // so a claim-skipped conversion never dual-writes. Mirrors conversion.js:411.
+    dualWriteEvent({ distinctId, event: '$conversion', properties: conversionProperties })
     await logIngestionEvent(siteKey, 'stripe', { providerEventId, orderId: invoiceId || subscriptionId, value, currency, status: 'success' })
     return { status: 200, body: { received: true } }
   } catch (err) {
@@ -392,6 +397,10 @@ router.post('/:site_key', async (req, res) => {
       event: '$conversion',
       properties: conversionProperties
     })
+    // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
+    // Reached only after the idempotency claim succeeded (claim→capture→rollback-on-fail),
+    // so a claim-skipped conversion never dual-writes. Mirrors conversion.js:411.
+    dualWriteEvent({ distinctId, event: '$conversion', properties: conversionProperties })
 
     await logIngestionEvent(siteKey, 'stripe', {
       providerEventId,
