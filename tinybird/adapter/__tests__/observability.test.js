@@ -78,7 +78,10 @@ test('boot onError: a failing POST is LOGGED (msg+count+types), not silent, and 
   process.env.TINYBIRD_APPEND_TOKEN = 'SECRET_TOKEN_should_never_log'
   process.env.TINYBIRD_FLUSH_AT = '1000' // buffer; we flush MANUALLY and await the deliver (so onError fires before restore)
   const fetch = async () => { throw new Error('getaddrinfo ENOTFOUND boom-host') }
-  assert.strictEqual(initTinybirdDualWrite({ fetch }), true, 'wired')
+  // retry.sleep no-op: boot now wraps the transport in withRetry; a network error is
+  // retryable, so inject an instant sleep to keep the deliver deterministic (no real
+  // backoff). onError still fires ONCE per batch (after withRetry surrenders).
+  assert.strictEqual(initTinybirdDualWrite({ fetch, retry: { sleep: () => Promise.resolve() } }), true, 'wired')
 
   const cap = capWarn()
   dualWriteEvent({
@@ -106,7 +109,10 @@ test('boot onError: high failure volume does NOT flood the log (sampled to 1 lin
   process.env.TINYBIRD_APPEND_TOKEN = 't'
   process.env.TINYBIRD_FLUSH_AT = '1000' // buffer; flush+await per event so each deliver failure is observed
   const fetch = async () => { throw new Error('boom') }
-  initTinybirdDualWrite({ fetch })
+  // retry.sleep no-op (see above): instant retries so all 50 failures land within the
+  // sampler interval — otherwise real backoff would stretch the loop across intervals
+  // and emit more than the 1 expected line.
+  initTinybirdDualWrite({ fetch, retry: { sleep: () => Promise.resolve() } })
 
   const cap = capWarn()
   for (let i = 0; i < 50; i++) {

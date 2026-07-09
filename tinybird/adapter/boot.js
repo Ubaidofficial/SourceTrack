@@ -15,7 +15,7 @@
 // Idempotent: a second call is a no-op (never double-registers a transport/batcher).
 
 import { setDualWriteTransport, isDualWriteEnabled } from './dual-write.js'
-import { createTinybirdTransport } from './transport.js'
+import { createTinybirdTransport, withRetry } from './transport.js'
 import { createSampledLogger, capLabel } from './log-sampler.js'
 
 let _wired = false
@@ -24,9 +24,12 @@ let _wired = false
  * @param {object} [opts]
  * @param {Function} [opts.fetch] - injected fetch for the transport (tests use a mock;
  *                                  production uses the global fetch). NEVER a token/host.
+ * @param {object} [opts.retry] - optional withRetry() overrides (tests inject a no-op
+ *                                sleep for deterministic retries). Prod passes nothing →
+ *                                withRetry uses its defaults (maxRetries=4, backoff+jitter).
  * @returns {boolean} true if a transport was wired this call, false otherwise (no-op).
  */
-export function initTinybirdDualWrite ({ fetch } = {}) {
+export function initTinybirdDualWrite ({ fetch, retry } = {}) {
   if (_wired) return false                 // idempotent — never double-register
   if (!isDualWriteEnabled()) return false  // flag OFF (default) → no-op, nothing constructed
 
@@ -48,7 +51,15 @@ export function initTinybirdDualWrite ({ fetch } = {}) {
       const q = Number(body && body.quarantined_rows) || 0
       if (q > 0) logQuarantine(`[tinybird] Events API quarantined ${q} row(s) in an accepted batch (successful_rows=${Number(body.successful_rows) || 0}) — check events_quarantine; a quarantined $conversion is silent revenue loss`)
     }
-    const transport = createTinybirdTransport({ host, token, datasource, fetch, onResult })
+    // Wrap the SAME transport (onResult preserved — NOT createRetryingTinybirdTransport(),
+    // which drops onResult and would silence §11 Layer A quarantine observability) so
+    // 429/5xx get bounded retry instead of being logged-and-dropped. Tinybird is the SOLE
+    // writer, so a rate-limit burst without retry = silent PERMANENT event loss. Prod passes
+    // no `retry` → withRetry defaults (maxRetries=4, exp backoff+jitter, Retry-After capped).
+    const transport = withRetry(
+      createTinybirdTransport({ host, token, datasource, fetch, onResult }),
+      retry
+    )
     // Observability: a failing POST (deliver throws after retries) was previously
     // 100% silent — no onError was wired, so "zero POST attempts" was invisible.
     // Wire a SAMPLED, never-throwing onError that logs ONLY err.message + batch
