@@ -4,7 +4,6 @@ import { v4 as uuidv4 } from 'uuid'
 import { getSupabase } from '../lib/supabase.js'
 import { decryptSecret } from '../lib/utils.js'
 import { claimIdempotencyKeys, logIngestionEvent, rollbackIdempotencyKeys } from '../lib/idempotency.js'
-import { ph } from '../lib/posthog.js'
 import { resolveWebhookAnonymousId } from '../lib/identity-links.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
 import { SUBSCRIPTION_EVENTS, mapSubscriptionEvent, buildSubscriptionIdempotencyKeys, checkoutConversionValue } from '../lib/stripe-subscription.js'
@@ -125,10 +124,10 @@ async function handleSubscriptionEvent(event, site, siteKey) {
       conversionProperties.attribution_status = attributionStatus
     }
 
-    await ph.capture({ distinctId, event: '$conversion', properties: conversionProperties })
-    // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
-    // Reached only after the idempotency claim succeeded (claim→capture→rollback-on-fail),
-    // so a claim-skipped conversion never dual-writes. Mirrors conversion.js:411.
+    // Wave-1 revenue cutover: Tinybird is the SOLE writer for $conversion here
+    // (ph.capture removed). Flag-gated OFF -> no-op + no network when off. Reached
+    // only after the idempotency claim succeeded (claim→rollback-on-fail), so a
+    // claim-skipped conversion never dual-writes.
     dualWriteEvent({ distinctId, event: '$conversion', properties: conversionProperties })
     await logIngestionEvent(siteKey, 'stripe', { providerEventId, orderId: invoiceId || subscriptionId, value, currency, status: 'success' })
     return { status: 200, body: { received: true } }
@@ -392,14 +391,10 @@ router.post('/:site_key', async (req, res) => {
       })
     }
 
-    await ph.capture({
-      distinctId,
-      event: '$conversion',
-      properties: conversionProperties
-    })
-    // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
-    // Reached only after the idempotency claim succeeded (claim→capture→rollback-on-fail),
-    // so a claim-skipped conversion never dual-writes. Mirrors conversion.js:411.
+    // Wave-1 revenue cutover: Tinybird is the SOLE writer for $conversion here
+    // (ph.capture removed). Flag-gated OFF -> no-op + no network when off. Reached
+    // only after the idempotency claim succeeded (claim→rollback-on-fail), so a
+    // claim-skipped conversion never dual-writes.
     dualWriteEvent({ distinctId, event: '$conversion', properties: conversionProperties })
 
     await logIngestionEvent(siteKey, 'stripe', {
