@@ -1,6 +1,3 @@
-import crypto from 'crypto'
-import { ph } from '../lib/posthog.js'
-import { redactPiiFromObject } from '../lib/utils.js'
 import { storeIdentityLink } from '../lib/identity-links.js'
 
 /**
@@ -134,112 +131,12 @@ export async function identify(req, res) {
       typeof rawBody.visitor_id === 'string' ? rawBody.visitor_id : rawTraits.visitor_id
     )
 
-    // Email extraction (contact_email or email, top-level or traits)
-    let contact_email = null
-    const possibleEmails = [
-      rawBody.contact_email,
-      rawTraits.contact_email,
-      rawBody.email,
-      rawTraits.email
-    ]
-    for (const val of possibleEmails) {
-      if (typeof val === 'string') {
-        const normalizedEmail = normalizeEmailForHash(val)
-        if (normalizedEmail) {
-          contact_email = normalizedEmail
-          break
-        }
-      }
-    }
-
-    // Email hash extraction (email_hash, top-level or traits)
-    let email_hash = null
-    const possibleEmailHashes = [
-      rawBody.email_hash,
-      rawTraits.email_hash
-    ]
-    for (const val of possibleEmailHashes) {
-      if (typeof val === 'string') {
-        const validated = normalizeSha256Hex(val)
-        if (validated) {
-          email_hash = validated
-          break
-        }
-      }
-    }
-
-    // If contact_email is provided, we derive email_hash internally if not explicitly provided (or if provided was invalid)
-    if (contact_email && !email_hash) {
-      email_hash = crypto.createHash('sha256').update(contact_email).digest('hex')
-    }
-
-    // 2. Redact/sanitize custom traits (excluding allowed fields to avoid leaking raw values)
-    const traitsCopy = { ...rawTraits }
-    delete traitsCopy.user_id
-    delete traitsCopy.anonymous_id
-    delete traitsCopy.visitor_id
-    delete traitsCopy.contact_email
-    delete traitsCopy.email
-    delete traitsCopy.email_hash
-
-    const setProps = redactPiiFromObject(traitsCopy)
-
-    // 3. Inject validated identity/metadata fields (excluding raw contact_email to prevent leak to PostHog)
-    if (email_hash) {
-      setProps.email_hash = email_hash
-    }
-    if (user_id) {
-      setProps.user_id = user_id
-    }
-    if (anonymous_id) {
-      setProps.anonymous_id = anonymous_id
-    }
-    if (visitor_id) {
-      setProps.visitor_id = visitor_id
-    }
-
-    if (typeof rawBody.source_system === 'string') {
-      const ss = rawBody.source_system.trim()
-      if (ss.length > 0) setProps.source_system = ss
-    }
-
-    // Validate external_id using validateAndSanitizeUserId before passthrough to prevent leakage
-    if (typeof rawBody.external_id === 'string') {
-      const ext = validateAndSanitizeUserId(rawBody.external_id)
-      if (ext && ext.length > 0) setProps.external_id = ext
-    }
-
-    const setOnceProps = {}
-    if (rawBody.first_touch_source) {
-      setOnceProps.first_touch_source = rawBody.first_touch_source
-    }
-    if (rawBody.first_touch_medium) {
-      setOnceProps.first_touch_medium = rawBody.first_touch_medium
-    }
-    if (rawBody.first_touch_campaign) {
-      setOnceProps.first_touch_campaign = rawBody.first_touch_campaign
-    }
-
-    // 4. Forward to PostHog
-    const distinctId = anonymous_id || visitor_id || user_id
-
-    ph.capture({
-      distinctId,
-      event: '$identify',
-      properties: {
-        site_id: req.site.id,
-        $set: setProps,
-        ...(Object.keys(setOnceProps).length > 0 ? { $set_once: setOnceProps } : {})
-      }
-    })
-
-    // 5. Database lead/contact storage & Identity resolution
-    // Storing identity link (user_id ↔ anonymous_id) is tenant-scoped by req.site.id.
+    // Identity resolution is 100% Supabase-backed (site_identity_links, read by
+    // resolveWebhookAnonymousId); no read consumes PostHog person data. So the
+    // $identify PostHog writes (ph.capture $set + ph.alias person-merge) are
+    // decommissioned — only the durable Supabase link is written, tenant-scoped
+    // by req.site.id. $identify is NOT an analytics event, so NO Tinybird dual-write.
     if (user_id && anonymous_id && user_id !== anonymous_id) {
-      ph.alias({
-        distinctId: user_id,
-        alias: anonymous_id
-      })
       // Non-blocking storage
       storeIdentityLink(req.site.id, user_id, anonymous_id, 'identify')
     }
