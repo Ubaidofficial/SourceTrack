@@ -5,23 +5,42 @@ import path from 'path'
 import vm from 'node:vm'
 import { fileURLToPath } from 'url'
 
-// Spy on the PostHog singleton so backend allowlist tests can observe the
-// ACTUAL persisted properties (not just that the request was accepted).
-// ph.capture is called synchronously inside track(), so capturing the last
-// call is sufficient. Restored after each use to avoid cross-test leakage.
-// ph is imported dynamically (after env is set below) — a static top-level
-// import would construct the PostHog client before POSTHOG_API_KEY exists.
+// Observe the ACTUAL persisted properties (not just that the request was
+// accepted). Wave-2 pageview cutover: track.js no longer calls ph.capture — it
+// writes to Tinybird via dualWriteEvent, so we inspect the normalized dual-write
+// line instead. The first dual-write line (track.js:406, the event line) always
+// fires and carries form_provider/booking_provider. Returned in the same
+// { event, distinctId, properties } shape the ph.capture args used, so existing
+// `captured.properties.X` assertions keep working (normalize flattens the bag to
+// the row top level, and null values pass through unchanged — normalize.js:242).
+// The helper also enforces the cutover: ph.capture must NOT fire on this path.
+// Modules are imported dynamically (after env is set below) so the PostHog client
+// isn't constructed before POSTHOG_API_KEY exists.
 async function withCaptureSpy(fn) {
   const { ph } = await import('../../api/lib/posthog.js')
-  const original = ph.capture.bind(ph)
-  let captured = null
-  ph.capture = (event) => { captured = event }
+  const { setDualWriteTransport, __getDualWriteBatcher } = await import('../../tinybird/adapter/dual-write.js')
+  const { gunzipSync } = await import('node:zlib')
+  const originalCapture = ph.capture.bind(ph)
+  let phCalled = false
+  ph.capture = () => { phCalled = true }
+  const payloads = []
+  const prevFlag = process.env.TINYBIRD_DUAL_WRITE
+  process.env.TINYBIRD_DUAL_WRITE = 'true'
+  setDualWriteTransport(async (p) => { payloads.push(p) }, { flushAt: 1000, flushInterval: 0 })
   try {
     await fn()
+    const b = __getDualWriteBatcher(); if (b) await b.flush()
   } finally {
-    ph.capture = original
+    ph.capture = originalCapture
+    setDualWriteTransport(null)
+    if (prevFlag === undefined) delete process.env.TINYBIRD_DUAL_WRITE
+    else process.env.TINYBIRD_DUAL_WRITE = prevFlag
   }
-  return captured
+  assert.strictEqual(phCalled, false, 'Wave-2: ph.capture must NOT fire on track.js paths (Tinybird is the sole writer)')
+  const lines = payloads.flatMap(p => gunzipSync(p).toString('utf8').trim().split('\n').filter(Boolean).map(l => JSON.parse(l)))
+  const line = lines[0]
+  if (!line) return null
+  return { event: line.event_type, distinctId: line.distinct_id, properties: line }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

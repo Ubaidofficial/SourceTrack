@@ -1950,12 +1950,18 @@ test('claimPageviewUsage — pageview limit enforcement helper (140G-4)', async 
 test('track.js handler — pageview quota integration (140G-4)', async (t) => {
   const { track } = await import('../routes/track.js')
   const { ph } = await import('../lib/posthog.js')
+  const { setDualWriteTransport, __getDualWriteBatcher } = await import('../../tinybird/adapter/dual-write.js')
   const client = getSupabase()
 
   const originalCapture = ph.capture
   let captureCalled = false
   let lastCaptureArgs = null
   ph.capture = (args) => { captureCalled = true; lastCaptureArgs = args }
+  // Wave-2: pageviews are written to Tinybird only. Spy the dual-write to assert it fires.
+  let dualWriteFired = false
+  process.env.TINYBIRD_DUAL_WRITE = 'true'
+  setDualWriteTransport(async () => { dualWriteFired = true }, { flushAt: 1000, flushInterval: 0 })
+  const flushDW = async () => { const b = __getDualWriteBatcher(); if (b) await b.flush() }
 
   const originalRpc = client.rpc
   let mockRpcResult = null
@@ -1983,12 +1989,15 @@ test('track.js handler — pageview quota integration (140G-4)', async (t) => {
   t.afterEach(() => {
     captureCalled = false
     lastCaptureArgs = null
+    dualWriteFired = false
     mockRpcResult = null
     mockRpcError = null
   })
 
   t.after(() => {
     ph.capture = originalCapture
+    setDualWriteTransport(null)
+    delete process.env.TINYBIRD_DUAL_WRITE
     client.rpc = originalRpc
     client.from = originalFrom
   })
@@ -2018,7 +2027,9 @@ test('track.js handler — pageview quota integration (140G-4)', async (t) => {
     const req = makeReq('$pageview')
     const res = makeRes()
     await track(req, res)
-    assert.strictEqual(captureCalled, true, '$pageview should call ph.capture')
+    assert.strictEqual(captureCalled, false, 'Wave-2: ph.capture removed from the pageview rail')
+    await flushDW()
+    assert.strictEqual(dualWriteFired, true, '$pageview dual-writes to Tinybird')
   })
 
   await t.test('$pageview at limit: 402 returned, ph.capture NOT called', async () => {
@@ -2043,7 +2054,9 @@ test('track.js handler — pageview quota integration (140G-4)', async (t) => {
     const res = makeRes()
     await track(req, res)
     assert.strictEqual(pvRpcCalled, false, 'custom event must NOT claim pageview quota')
-    assert.strictEqual(captureCalled, true, 'custom event must still be captured')
+    assert.strictEqual(captureCalled, false, 'Wave-2: ph.capture removed from the pageview rail')
+    await flushDW()
+    assert.strictEqual(dualWriteFired, true, 'custom event dual-writes to Tinybird')
     client.rpc = savedRpc
   })
 
@@ -2086,7 +2099,9 @@ test('track.js handler — pageview quota integration (140G-4)', async (t) => {
     const res = makeRes()
     await track(req, res)
     // Fail open: despite RPC error, capture must still proceed
-    assert.strictEqual(captureCalled, true, 'fail-open: ph.capture must proceed on RPC error')
+    assert.strictEqual(captureCalled, false, 'Wave-2: ph.capture removed from the pageview rail')
+    await flushDW()
+    assert.strictEqual(dualWriteFired, true, 'fail-open: dual-write must proceed on RPC error')
     assert.notStrictEqual(res.statusCode, 402, 'fail-open: must not return 402 on RPC error')
   })
 })
@@ -2095,6 +2110,7 @@ test('Proxy and Legacy Ingestion Quota & Status Enforcement Tests (140G-4)', asy
   const { default: proxyRouter } = await import('../routes/proxy.js')
   const { default: analyticsRouter } = await import('../routes/analytics.js')
   const { ph } = await import('../lib/posthog.js')
+  const { setDualWriteTransport, __getDualWriteBatcher } = await import('../../tinybird/adapter/dual-write.js')
   const client = getSupabase()
 
   // Mock PostHog capture
@@ -2102,6 +2118,11 @@ test('Proxy and Legacy Ingestion Quota & Status Enforcement Tests (140G-4)', asy
   let captureCalled = false
   let lastCaptureArgs = null
   ph.capture = (args) => { captureCalled = true; lastCaptureArgs = args }
+  // Wave-2: pageviews are written to Tinybird only. Spy the dual-write to assert it fires.
+  let dualWriteFired = false
+  process.env.TINYBIRD_DUAL_WRITE = 'true'
+  setDualWriteTransport(async () => { dualWriteFired = true }, { flushAt: 1000, flushInterval: 0 })
+  const flushDW = async () => { const b = __getDualWriteBatcher(); if (b) await b.flush() }
 
   // Mock Supabase client
   const originalRpc = client.rpc
@@ -2160,6 +2181,7 @@ test('Proxy and Legacy Ingestion Quota & Status Enforcement Tests (140G-4)', asy
   t.afterEach(() => {
     captureCalled = false
     lastCaptureArgs = null
+    dualWriteFired = false
     mockRpcResult = null
     mockRpcError = null
     rpcCalls = []
@@ -2171,6 +2193,8 @@ test('Proxy and Legacy Ingestion Quota & Status Enforcement Tests (140G-4)', asy
 
   t.after(() => {
     ph.capture = originalCapture
+    setDualWriteTransport(null)
+    delete process.env.TINYBIRD_DUAL_WRITE
     client.rpc = originalRpc
     client.from = originalFrom
   })
@@ -2224,7 +2248,9 @@ test('Proxy and Legacy Ingestion Quota & Status Enforcement Tests (140G-4)', asy
     const handler = layer.route.stack[layer.route.stack.length - 1].handle
     await handler(req, res)
 
-    assert.strictEqual(captureCalled, true, 'non-pageview event should be captured')
+    assert.strictEqual(captureCalled, false, 'Wave-2: ph.capture removed from the pageview rail')
+    await flushDW()
+    assert.strictEqual(dualWriteFired, true, 'non-pageview event dual-writes to Tinybird')
     assert.strictEqual(rpcCalls.length, 0, 'must not call pageview quota RPC')
   })
 

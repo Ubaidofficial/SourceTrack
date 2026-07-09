@@ -19,6 +19,21 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
   const { redactPiiFromUrl, redactPiiFromObject } = await import('../lib/utils.js')
   const { ph } = await import('../lib/posthog.js')
   const { getSupabase } = await import('../lib/supabase.js')
+  // Wave-2 pageview cutover: the proxy /sp/e, /sp/c and /api/track producers write
+  // to Tinybird via dualWriteEvent (ph.capture removed). Those tests inspect the
+  // normalized dual-write line via dwLine() instead of lastCaptureArgs. The adapter
+  // DROPS PII keys (email/phone/name) — asserted absent — while sanitized survivors
+  // (page_url/referrer/utm_*/ai_source) carry through with their redacted value.
+  // NOTE: webhook-incoming, analytics/collect and identify tests below are NOT part
+  // of this wave — their routes still call ph.capture, so they keep asserting it.
+  const { setDualWriteTransport, __getDualWriteBatcher } = await import('../../tinybird/adapter/dual-write.js')
+  const { gunzipSync } = await import('node:zlib')
+  let dwPayloads = []
+  const dwLine = async () => {
+    const b = __getDualWriteBatcher(); if (b) await b.flush()
+    const lines = dwPayloads.flatMap(p => gunzipSync(p).toString('utf8').trim().split('\n').filter(Boolean).map(l => JSON.parse(l)))
+    return lines[lines.length - 1] || {}
+  }
 
   // --- URL Sanitization Tests ---
   await t.test('redactPiiFromUrl redacts email query param', () => {
@@ -220,6 +235,9 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
       lastCaptureArgs = args
     }
     ph.alias = () => { aliasCalled = true }
+    dwPayloads = []
+    process.env.TINYBIRD_DUAL_WRITE = 'true'
+    setDualWriteTransport(async (p) => { dwPayloads.push(p) }, { flushAt: 1000, flushInterval: 0 })
 
     client.rpc = async (fn, args) => {
       rpcCalls.push({ fn, args })
@@ -302,6 +320,8 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
   const restoreMocks = () => {
     ph.capture = originalCapture
     ph.alias = originalAlias
+    setDualWriteTransport(null)
+    delete process.env.TINYBIRD_DUAL_WRITE
     client.from = originalFrom
     client.rpc = originalRpc
   }
@@ -346,11 +366,11 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     const res = makeMockRes()
     await handler(req, res)
 
-    assert.strictEqual(captureCalled, true)
-    const capturedProps = lastCaptureArgs.properties
-    assert.strictEqual(capturedProps.email, '[REDACTED]')
-    assert.strictEqual(capturedProps.phone, '[REDACTED]')
-    assert.strictEqual(capturedProps.name, '[REDACTED]')
+    assert.strictEqual(captureCalled, false, 'Wave-2: ph.capture removed (Tinybird sole writer)')
+    const capturedProps = await dwLine()
+    assert.ok(!('email' in capturedProps), 'email dropped from dual-write payload (adapter PII strip)')
+    assert.ok(!('phone' in capturedProps), 'phone dropped from dual-write payload (adapter PII strip)')
+    assert.ok(!('name' in capturedProps), 'name dropped from dual-write payload (adapter PII strip)')
     assert.strictEqual(capturedProps.page_url, 'https://example.com/?phone=%5BREDACTED%5D')
     restoreMocks()
   })
@@ -377,8 +397,8 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     const res = makeMockRes()
     await handler(req, res)
 
-    assert.strictEqual(captureCalled, true)
-    const capturedProps = lastCaptureArgs.properties
+    assert.strictEqual(captureCalled, false, 'Wave-2: ph.capture removed (Tinybird sole writer)')
+    const capturedProps = await dwLine()
     assert.strictEqual(capturedProps.utm_source, 'google')
     assert.strictEqual(capturedProps.utm_medium, 'cpc')
     assert.strictEqual(capturedProps.gclid, 'g-123')
@@ -409,11 +429,11 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     const res = makeMockRes()
     await handler(req, res)
 
-    assert.strictEqual(captureCalled, true)
-    const capturedProps = lastCaptureArgs.properties
-    assert.strictEqual(capturedProps.email, '[REDACTED]')
-    assert.strictEqual(capturedProps.name, '[REDACTED]')
-    assert.strictEqual(capturedProps.phone, '[REDACTED]')
+    assert.strictEqual(captureCalled, false, 'Wave-2: ph.capture removed (Tinybird sole writer)')
+    const capturedProps = await dwLine()
+    assert.ok(!('email' in capturedProps), 'email dropped from dual-write payload (adapter PII strip)')
+    assert.ok(!('name' in capturedProps), 'name dropped from dual-write payload (adapter PII strip)')
+    assert.ok(!('phone' in capturedProps), 'phone dropped from dual-write payload (adapter PII strip)')
     restoreMocks()
   })
 
@@ -439,8 +459,8 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     const res = makeMockRes()
     await handler(req, res)
 
-    assert.strictEqual(captureCalled, true)
-    const capturedProps = lastCaptureArgs.properties
+    assert.strictEqual(captureCalled, false, 'Wave-2: ph.capture removed (Tinybird sole writer)')
+    const capturedProps = await dwLine()
     assert.strictEqual(capturedProps.conversion_value, 50.00)
     assert.strictEqual(capturedProps.conversion_type, 'purchase')
     assert.strictEqual(capturedProps.conversion_event_id, 'ORD-555')
@@ -464,8 +484,8 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     const res = makeMockRes()
     await track(req, res)
 
-    assert.strictEqual(captureCalled, true)
-    const capturedProps = lastCaptureArgs.properties
+    assert.strictEqual(captureCalled, false, 'Wave-2: ph.capture removed (Tinybird sole writer)')
+    const capturedProps = await dwLine()
     assert.strictEqual(capturedProps.page_url, 'https://example.com/?email=%5BREDACTED%5D')
     assert.strictEqual(capturedProps.referrer, 'https://example.com/?phone=%5BREDACTED%5D')
     restoreMocks()
@@ -489,10 +509,12 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     const res = makeMockRes()
     await track(req, res)
 
-    assert.strictEqual(captureCalled, true)
-    const capturedProps = lastCaptureArgs.properties
-    assert.strictEqual(capturedProps.custom_properties.email, '[REDACTED]')
-    assert.strictEqual(capturedProps.custom_properties.phone, '[REDACTED]')
+    assert.strictEqual(captureCalled, false, 'Wave-2: ph.capture removed (Tinybird sole writer)')
+    const capturedProps = await dwLine()
+    // custom_properties is a nested bag — sanitizeDeep drops PII keys at every depth
+    // (normalize.js:191), so email/phone never reach the Tinybird row at all.
+    assert.ok(!('email' in (capturedProps.custom_properties || {})), 'nested email dropped from custom_properties')
+    assert.ok(!('phone' in (capturedProps.custom_properties || {})), 'nested phone dropped from custom_properties')
     restoreMocks()
   })
 
@@ -660,8 +682,8 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     const res = makeMockRes()
     await handler(req, res)
 
-    assert.strictEqual(captureCalled, true)
-    const capturedProps = lastCaptureArgs.properties
+    assert.strictEqual(captureCalled, false, 'Wave-2: ph.capture removed (Tinybird sole writer)')
+    const capturedProps = await dwLine()
     assert.strictEqual(capturedProps.referrer, 'https://example.com/?email=%5BREDACTED%5D')
     restoreMocks()
   })
@@ -686,8 +708,8 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     const res = makeMockRes()
     await handler(req, res)
 
-    assert.strictEqual(captureCalled, true)
-    const capturedProps = lastCaptureArgs.properties
+    assert.strictEqual(captureCalled, false, 'Wave-2: ph.capture removed (Tinybird sole writer)')
+    const capturedProps = await dwLine()
     assert.strictEqual(capturedProps.referrer, 'https://example.com/?phone=%5BREDACTED%5D')
     restoreMocks()
   })
@@ -714,8 +736,8 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     const res = makeMockRes()
     await handler(req, res)
 
-    assert.strictEqual(captureCalled, true)
-    const capturedProps = lastCaptureArgs.properties
+    assert.strictEqual(captureCalled, false, 'Wave-2: ph.capture removed (Tinybird sole writer)')
+    const capturedProps = await dwLine()
     assert.strictEqual(capturedProps.referrer, 'https://example.com/?email=%5BREDACTED%5D')
     restoreMocks()
   })
@@ -744,8 +766,8 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     const res = makeMockRes()
     await handler(req, res)
 
-    assert.strictEqual(captureCalled, true)
-    const capturedProps = lastCaptureArgs.properties
+    assert.strictEqual(captureCalled, false, 'Wave-2: ph.capture removed (Tinybird sole writer)')
+    const capturedProps = await dwLine()
     assert.strictEqual(capturedProps.referrer, 'https://example.com/?email=%5BREDACTED%5D')
     restoreMocks()
   })
@@ -788,8 +810,8 @@ test('PII Sanitization Hardening Test Suite', async (t) => {
     const res = makeMockRes()
     await handler(req, res)
 
-    assert.strictEqual(captureCalled, true)
-    const capturedProps = lastCaptureArgs.properties
+    assert.strictEqual(captureCalled, false, 'Wave-2: ph.capture removed (Tinybird sole writer)')
+    const capturedProps = await dwLine()
     assert.strictEqual(capturedProps.ai_source, 'ChatGPT')
     restoreMocks()
   })

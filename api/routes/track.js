@@ -3,7 +3,6 @@ import geoip from 'geoip-lite'
 import { v4 as uuidv4 } from 'uuid'
 import { normalizeUtm, redactPiiFromObject, isPathExcluded, extractCustomParams, sanitizeClientTimestamp, sanitizeValueTrack, sanitizeVerificationToken, normalizeClickIds } from '../lib/utils.js'
 import { resolveClientIp } from '../lib/ip-resolver.js'
-import { ph } from '../lib/posthog.js'
 import { claimPageviewUsage } from '../lib/pageview-limits.js'
 import { checkIsDuplicate, registerConversion } from '../lib/shared-dedupe-cache.js'
 import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
@@ -401,14 +400,8 @@ export async function track(req, res) {
       ...customParams
     }
 
-    ph.capture({
-      distinctId,
-      event: req.body.event || '$pageview',
-      timestamp: clientTimestamp ? new Date(clientTimestamp) : undefined,
-      properties: pageviewProps
-    })
-
-    // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
+    // Wave-2 pageview cutover: Tinybird is the SOLE writer here (ph.capture removed;
+    // flag-gated OFF -> no-op + no network when off).
     // No natural id on this path -> deriveEventId falls to a uuid.
     dualWriteEvent({ distinctId, event: req.body.event || '$pageview', timestamp: clientTimestamp, properties: pageviewProps })
 
@@ -484,17 +477,10 @@ export async function track(req, res) {
               ...customParams
             }
 
-            ph.capture({
-              distinctId: anonId,
-              event: '$conversion',
-              timestamp: clientTimestamp ? new Date(clientTimestamp) : undefined,
-              properties: conversionProps
-            })
-
-            // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when
-            // off). Placed INSIDE the !isDup + limitAllowed guards, AFTER ph.capture,
-            // so a deduped/limited form never dual-writes. No natural id on the form
-            // path -> deriveEventId falls to a uuid.
+            // Wave-2 cutover: Tinybird is the SOLE writer for this form $conversion
+            // (ph.capture removed; flag-gated OFF -> no-op + no network when off).
+            // Placed INSIDE the !isDup + limitAllowed guards, so a deduped/limited
+            // form never dual-writes. No natural id on the form path -> uuid.
             dualWriteEvent({ distinctId: anonId, event: '$conversion', timestamp: clientTimestamp, properties: conversionProps })
           }
         }

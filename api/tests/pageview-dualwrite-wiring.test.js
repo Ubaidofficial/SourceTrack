@@ -97,19 +97,16 @@ test('pageview dual-write wiring — track.js POST /api/track', async (t) => {
 
     await track(reqMock, resMock)
 
-    assert.strictEqual(captureCalls.length, 1, 'ph.capture called once')
-    const captured = captureCalls[0]
-    assert.strictEqual(captured.event, '$pageview')
-    assert.match(captured.distinctId, /^[0-9a-f-]{36}$/, 'anonymous -> generated uuid distinctId')
+    assert.strictEqual(captureCalls.length, 0, 'ph.capture removed (Wave-2 pageview cutover)')
 
     await __getDualWriteBatcher().flush()
     const lines = rec.lines()
     assert.strictEqual(lines.length, 1, 'dual-write fired exactly once')
     assert.strictEqual(lines[0].event_type, '$pageview')
-    assert.strictEqual(lines[0].distinct_id, captured.distinctId, 'dual-write distinct_id === ph.capture distinctId (the regression guard)')
+    assert.match(lines[0].distinct_id, /^[0-9a-f-]{36}$/, 'anonymous -> dual-write got a single generated uuid distinct_id')
   })
 
-  await t.test('flag OFF: ph.capture still fires, dual-write does not (zero behavior change)', async () => {
+  await t.test('flag OFF: no ph.capture AND no dual-write', async () => {
     resetDualWrite() // TINYBIRD_DUAL_WRITE unset
     const rec = recorder()
     setDualWriteTransport(rec.transport, BATCH_OPTS) // transport injected, but flag is OFF
@@ -123,7 +120,7 @@ test('pageview dual-write wiring — track.js POST /api/track', async (t) => {
 
     await track(reqMock, resMock)
 
-    assert.strictEqual(captureCalls.length, 1, 'live ph.capture path unaffected by the dual-write flag')
+    assert.strictEqual(captureCalls.length, 0, 'ph.capture removed — never called')
     assert.strictEqual(rec.lines().length, 0, 'no dual-write when flag is off')
   })
 })
@@ -145,18 +142,16 @@ test('pageview dual-write wiring — proxy.js POST /sp/e', async (t) => {
 
     await handler(req, res)
 
-    assert.strictEqual(captureCalls.length, 1)
-    const captured = captureCalls[0]
-    assert.match(captured.distinctId, /^[0-9a-f-]{36}$/, 'anonymous -> generated uuid distinctId')
+    assert.strictEqual(captureCalls.length, 0, 'ph.capture removed (Wave-2 pageview cutover)')
 
     await __getDualWriteBatcher().flush()
     const lines = rec.lines()
     assert.strictEqual(lines.length, 1)
-    assert.strictEqual(lines[0].distinct_id, captured.distinctId, 'dual-write distinct_id === ph.capture distinctId (the regression guard)')
+    assert.match(lines[0].distinct_id, /^[0-9a-f-]{36}$/, 'anonymous -> dual-write got a single generated uuid distinct_id')
     assert.ok(!('site_key' in lines[0]), 'site_key dropped by the adapter')
   })
 
-  await t.test('flag OFF: ph.capture still fires, dual-write does not', async () => {
+  await t.test('flag OFF: no ph.capture AND no dual-write', async () => {
     resetDualWrite()
     const rec = recorder()
     setDualWriteTransport(rec.transport, BATCH_OPTS)
@@ -166,7 +161,7 @@ test('pageview dual-write wiring — proxy.js POST /sp/e', async (t) => {
 
     await handler(req, res)
 
-    assert.strictEqual(captureCalls.length, 1, 'live ph.capture path unaffected by the dual-write flag')
+    assert.strictEqual(captureCalls.length, 0, 'ph.capture removed — never called')
     assert.strictEqual(rec.lines().length, 0)
   })
 })
@@ -188,21 +183,18 @@ test('pageview dual-write wiring — proxy.js GET /sp/pixel.gif', async (t) => {
 
     await handler(req, res)
 
-    assert.strictEqual(captureCalls.length, 1)
-    const captured = captureCalls[0]
-    assert.strictEqual(captured.event, '$pageview')
-    assert.match(captured.distinctId, /^[0-9a-f-]{36}$/, 'anonymous -> generated uuid distinctId')
+    assert.strictEqual(captureCalls.length, 0, 'ph.capture removed (Wave-2 pageview cutover)')
 
     await __getDualWriteBatcher().flush()
     const lines = rec.lines()
     assert.strictEqual(lines.length, 1)
     assert.strictEqual(lines[0].event_type, '$pageview', 'canonical event_type must be $pageview, NOT the bag event_type:"pixel" analytics label (regression guard for the event_type collision fix)')
     assert.strictEqual(lines[0].tracking_method, 'pixel', 'the pixel label survives, renamed to tracking_method (matching pixel.js convention)')
-    assert.strictEqual(lines[0].distinct_id, captured.distinctId, 'dual-write distinct_id === ph.capture distinctId (the regression guard)')
+    assert.match(lines[0].distinct_id, /^[0-9a-f-]{36}$/, 'anonymous -> dual-write got a single generated uuid distinct_id')
     assert.ok(!('site_key' in lines[0]), 'site_key dropped by the adapter')
   })
 
-  await t.test('flag OFF: ph.capture still fires, dual-write does not', async () => {
+  await t.test('flag OFF: no ph.capture AND no dual-write', async () => {
     resetDualWrite()
     const rec = recorder()
     setDualWriteTransport(rec.transport, BATCH_OPTS)
@@ -212,7 +204,7 @@ test('pageview dual-write wiring — proxy.js GET /sp/pixel.gif', async (t) => {
 
     await handler(req, res)
 
-    assert.strictEqual(captureCalls.length, 1, 'live ph.capture path unaffected by the dual-write flag')
+    assert.strictEqual(captureCalls.length, 0, 'ph.capture removed — never called')
     assert.strictEqual(rec.lines().length, 0)
   })
 })
