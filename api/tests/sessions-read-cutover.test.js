@@ -13,6 +13,7 @@ process.env.ENCRYPTION_KEY = '00000000000000000000000000000000000000000000000000
 
 const mod = await import('../routes/sessions.js')
 const { sessionsOverview, __setSessionsReadDeps, __resetSessionsReadDeps } = mod
+const { normalizePipeTimestamp } = await import('../lib/tinybird-read.js')
 
 function mockRes () {
   const res = { statusCode: 200, body: null }
@@ -109,4 +110,59 @@ test('sessions overview — validation guard: missing date range -> 400', async 
   await sessionsOverview({ site: { id: 'site-00' }, query: {} }, res)
   assert.strictEqual(res.statusCode, 400)
   assert.strictEqual(res.body.success, false)
+})
+
+// ── ClickHouse ts normalization (money-rail parity fix) ──────────────────────
+test('normalizePipeTimestamp — every contract row (ClickHouse space -> ISO-UTC, idempotent on ISO)', () => {
+  assert.strictEqual(normalizePipeTimestamp('2026-07-01 20:29:28.976'), '2026-07-01T20:29:28.976Z', 'space+millis -> T…Z')
+  assert.strictEqual(normalizePipeTimestamp('2026-07-01 20:29:28'), '2026-07-01T20:29:28Z', 'space, no millis -> T…Z')
+  assert.strictEqual(normalizePipeTimestamp('2026-07-01T20:29:28.976Z'), '2026-07-01T20:29:28.976Z', 'already ISO-UTC -> unchanged')
+  assert.strictEqual(normalizePipeTimestamp('2026-07-01T20:29:28.976'), '2026-07-01T20:29:28.976Z', 'ISO w/o Z -> add Z (else new Date() = local skew)')
+  assert.strictEqual(normalizePipeTimestamp('2026-07-01T20:29:28.976+00:00'), '2026-07-01T20:29:28.976+00:00', 'explicit offset -> unchanged')
+  for (const v of [null, undefined, '']) assert.strictEqual(normalizePipeTimestamp(v), v, `passthrough ${JSON.stringify(v)} (never throws)`)
+  // idempotent: normalizing an already-normalized value is a no-op
+  assert.strictEqual(normalizePipeTimestamp(normalizePipeTimestamp('2026-07-01 20:29:28.976')), '2026-07-01T20:29:28.976Z')
+})
+
+test('sessions overview — TS-NORMALIZE parity: SPACE-form pipe ts == ISO HogQL ts (identical daily buckets AND durations)', async () => {
+  // Same logical events, two wire formats: the ON/pipe leg emits ClickHouse SPACE
+  // timestamps; the OFF/HogQL leg emits the ISO-UTC equivalents. v1 has a 2-pageview
+  // session on 07-01 (a real duration) plus a 07-02 session; v2 converts on 07-01.
+  // Pre-fix, the space form broke both new Date() (duration) and started_at.split('T')
+  // (daily bucket keyed by the whole string) — this locks that regression.
+  const EV = [
+    { did: 'v1', space: '2026-07-01 20:29:28.976', iso: '2026-07-01T20:29:28.976Z', url: '/a' },
+    { did: 'v1', space: '2026-07-01 20:35:00', iso: '2026-07-01T20:35:00Z', url: '/b' },
+    { did: 'v1', space: '2026-07-02 09:00:00', iso: '2026-07-02T09:00:00Z', url: '/c' },
+    { did: 'v2', space: '2026-07-01 21:00:00', iso: '2026-07-01T21:00:00Z', url: '/d' }
+  ]
+  const CONV = { did: 'v2', space: '2026-07-01 21:05:00', iso: '2026-07-01T21:05:00Z', val: 42.5 }
+
+  const pvNamedSpace = EV.map(e => ({ distinct_id: e.did, timestamp: e.space, page_url: e.url, utm_source: null, utm_medium: null, utm_campaign: null }))
+  const convNamedSpace = [{ distinct_id: CONV.did, timestamp: CONV.space, conversion_value: CONV.val }]
+  const pvPosIso = EV.map(e => [e.did, e.iso, e.url, null, null, null])
+  const convPosIso = [[CONV.did, CONV.iso, CONV.val]]
+
+  // OFF leg (baseline): HogQL serves ISO positional rows; pipe null.
+  __setSessionsReadDeps({
+    queryTinybird: async () => null,
+    queryHog: async (_sql, name) => name === 'sessions_pageviews' ? pvPosIso : name === 'sessions_conversions' ? convPosIso : []
+  })
+  const resA = mockRes(); await sessionsOverview(req(), resA); __resetSessionsReadDeps()
+
+  // ON leg: Tinybird serves SPACE-form named rows; HogQL must NOT be called.
+  __setSessionsReadDeps({
+    queryTinybird: async (pipe) => pipe === 'sessions_pageviews' ? pvNamedSpace : pipe === 'sessions_conversions' ? convNamedSpace : null,
+    queryHog: async (_sql, name) => { throw new Error(`HogQL called for ${name} on the ON leg (zero-fallback violated)`) }
+  })
+  const resB = mockRes(); await sessionsOverview(req(), resB); __resetSessionsReadDeps()
+
+  assert.strictEqual(resA.body.success, true)
+  assert.strictEqual(resB.body.success, true)
+  // Buckets are plain YYYY-MM-DD (proves started_at.split('T') works on the normalized ts)
+  assert.ok(resA.body.data.time_series.length >= 2, 'events span two days -> at least two daily buckets')
+  for (const t of resB.body.data.time_series) assert.match(t.date, /^\d{4}-\d{2}-\d{2}$/, 'daily bucket is a plain date, not the whole timestamp string')
+  // Full parity: identical daily buckets AND identical aggregates (durations, etc.)
+  assert.deepStrictEqual(resB.body.data.time_series, resA.body.data.time_series, 'identical daily buckets')
+  assert.deepStrictEqual(resB.body, resA.body, 'SPACE pipe ts normalized to ISO -> byte-identical session output vs the HogQL ISO leg')
 })

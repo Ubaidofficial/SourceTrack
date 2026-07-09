@@ -40,6 +40,25 @@
 
 const DEFAULT_TIMEOUT_MS = 15_000
 
+// Normalize a Tinybird/ClickHouse timestamp to ISO-8601 UTC before it flows into
+// any `new Date()` / `.split('T')` consumer. ClickHouse returns 'YYYY-MM-DD HH:MM:SS[.sss]'
+// (space, no 'T', no 'Z'); PostHog/HogQL returns ISO '…T…Z'. Feeding the space form to
+// `new Date()` parses as LOCAL time (duration/timezone skew), and `.split('T')[0]` returns
+// the whole string (daily-bucket break). ClickHouse stores UTC, so a value with no timezone
+// designator is assumed UTC (append 'Z'). Idempotent on already-ISO-UTC input, so it is
+// safe to apply to the HogQL leg too. Null/undefined/''/non-string pass through unchanged
+// (never throws — downstream guards handle absence).
+export function normalizePipeTimestamp(ts) {
+  if (typeof ts !== 'string' || ts === '') return ts
+  // ClickHouse space form -> ISO 'T' separator (only when there is no 'T' already).
+  const s = (ts.includes(' ') && !ts.includes('T')) ? ts.replace(' ', 'T') : ts
+  // Already carries a timezone (trailing 'Z' or a ±HH:MM offset in the time portion)? Leave it.
+  const tIdx = s.indexOf('T')
+  const timePart = tIdx >= 0 ? s.slice(tIdx + 1) : s
+  const hasTz = /[zZ]$/.test(timePart) || /[+-]\d{2}:?\d{2}$/.test(timePart)
+  return hasTz ? s : s + 'Z'
+}
+
 export function isTinybirdReadEnabled() {
   return String(process.env.TINYBIRD_READ_ENABLED || '').toLowerCase() === 'true'
 }
