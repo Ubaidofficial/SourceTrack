@@ -1,5 +1,5 @@
 import { queryHogQL } from '../lib/posthog.js'
-import { queryTinybirdPipe } from '../lib/tinybird-read.js'
+import { queryTinybirdPipe, normalizePipeTimestamp } from '../lib/tinybird-read.js'
 import { deriveSessions, sessionAggregates, annotateSessions } from '../lib/sessionization.js'
 import { esc } from '../lib/utils.js'
 import { serializeHogQLDateRange, buildHogQLTimestampFilter } from '../lib/hogql-date.js'
@@ -90,7 +90,9 @@ export async function sessionsOverview(req, res) {
       'sessions_pageviews',
       { site_id: posthogSiteId, date_from_ts: dateFromTs, date_to_ts: dateToTs },
       pageviewSql, 'sessions_pageviews',
-      tb => tb.map(r => [r.distinct_id, r.timestamp, r.page_url, r.utm_source, r.utm_medium, r.utm_campaign])
+      // ClickHouse ts ('YYYY-MM-DD HH:MM:SS.sss') -> ISO-UTC before deriveSessions'
+      // new Date() (local-time skew) and the started_at.split('T') daily bucket.
+      tb => tb.map(r => [r.distinct_id, normalizePipeTimestamp(r.timestamp), r.page_url, r.utm_source, r.utm_medium, r.utm_campaign])
     )
 
     // Also query conversions to mark converting sessions
@@ -115,7 +117,7 @@ export async function sessionsOverview(req, res) {
       'sessions_conversions',
       { site_id: posthogSiteId, date_from_ts: dateFromTs, date_to_ts: dateToTs },
       convSql, 'sessions_conversions',
-      tb => tb.map(r => [r.distinct_id, r.timestamp, r.conversion_value])
+      tb => tb.map(r => [r.distinct_id, normalizePipeTimestamp(r.timestamp), r.conversion_value])
     )
 
     // Merge and sort all events per distinct_id
