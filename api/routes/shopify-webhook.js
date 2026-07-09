@@ -3,7 +3,6 @@ import { Router } from 'express'
 import { getSupabase } from '../lib/supabase.js'
 import { decryptSecret } from '../lib/utils.js'
 import { claimIdempotencyKeys, logIngestionEvent, rollbackIdempotencyKeys } from '../lib/idempotency.js'
-import { ph } from '../lib/posthog.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
 import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
 
@@ -255,13 +254,8 @@ router.post('/:site_key', async (req, res) => {
       })
     }
 
-    await ph.capture({
-      distinctId,
-      event: '$conversion',
-      properties: conversionProperties
-    })
-
-    // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
+    // Wave-2b cutover: Tinybird is the SOLE writer for this $conversion (ph.capture
+    // removed; flag-gated OFF -> no-op + no network when off).
     // Reached ONLY after HMAC verify (:57-72), the PERSISTENT claimIdempotencyKeys
     // duplicate-skip (:138), and the plan-limit block (:249) returned — so a
     // duplicate the claim skips never dual-writes. No external_event_id on Shopify;

@@ -3,7 +3,6 @@ import { createHash } from 'crypto'
 import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { v4 as uuidv4 } from 'uuid'
-import { ph } from '../lib/posthog.js'
 import { getSupabase } from '../lib/supabase.js'
 import { requireFeature } from '../lib/plan-features.js'
 import { storeIdentityLink, resolveAnonymousId } from '../lib/identity-links.js'
@@ -113,14 +112,8 @@ router.post('/event', trackGlobalIpLimit, async (req, res) => {
       ...(req.body.properties || {})
     }
 
-    ph.capture({
-      distinctId,
-      event: req.body.event || '$pageview',
-      timestamp: new Date(eventTimeStr),
-      properties
-    })
-
-    // Additive Tinybird dual-write (flag-gated OFF; no-op + no network when off).
+    // Wave-2b cutover: Tinybird is the SOLE writer here (ph.capture removed;
+    // flag-gated OFF -> no-op + no network when off).
     // No natural id on the server-events path -> deriveEventId falls to a uuid.
     dualWriteEvent({ distinctId, event: req.body.event || '$pageview', timestamp: eventTimeStr, properties })
 
