@@ -22,7 +22,7 @@ process.env.ENCRYPTION_KEY = '00000000000000000000000000000000000000000000000000
 import {
   deepDiff, summarize, hitGuardResult, classifyKey, toCents, intervalOf,
   runStubScenario, SELFTEST_SCENARIOS,
-  TARGETS, runParity, __makeCacheTrapHarness
+  TARGETS, runParity, __makeCacheTrapHarness, STUB_HARNESS
 } from '../route_ab_diff.mjs'
 
 // ── pure engine ──────────────────────────────────────────────────────────────
@@ -151,4 +151,53 @@ test('cache trap: without beforeLeg the ON leg cannot dispatch (hit-guard fails)
   assert.strictEqual(withEvict.guard.tbCalls, 1, 'ON leg dispatched the pipe exactly once')
   assert.ok(withEvict.guard.valid && !withEvict.guard.fail, 'hit-guard clean: pipe served, no HogQL fallback')
   assert.ok(withEvict.summary.fails.some((f) => f.path.includes('revenue')), 'the real 100-vs-200 divergence is SURFACED with eviction')
+})
+
+// ── empty-window (all-zero meaningful field) guard: three-state verdict ───────
+test('empty window: parity holds but meaningful field 0/0 -> INCONCLUSIVE (verdict NOT green)', async () => {
+  const meaningful = (A, B) => (Number(A?.data?.count) || 0) > 0 || (Number(B?.data?.count) || 0) > 0
+  const base = {
+    setDeps: STUB_HARNESS.setDeps, resetDeps: STUB_HARNESS.resetDeps,
+    handlerFn: STUB_HARNESS.handlerFn, mockReq: STUB_HARNESS.mockReq,
+    siteId: 'mn-site', params: {}, meaningful
+  }
+  const R = { distinct_id: 'a', timestamp: '2026-07-01T10:00:00Z', conversion_value: 5 }
+
+  // both legs return NO rows -> count 0/0 -> 0==0 parity, but nothing exercised
+  const empty = await runParity({ ...base, label: 'empty', offLeg: { queryHog: async () => [] }, onLeg: { queryTinybird: async () => [] } })
+  assert.strictEqual(empty.summary.pass, true, 'the trivial 0==0 diff "passes"')
+  assert.strictEqual(empty.state, 'INCONCLUSIVE', 'but no data exercised -> INCONCLUSIVE, not GREEN')
+  assert.strictEqual(empty.verdict, false, 'verdict boolean is NOT true for an empty window')
+
+  // non-zero + matching -> real GREEN
+  const green = await runParity({
+    ...base, label: 'green',
+    offLeg: { queryHog: async () => [[R.distinct_id, R.timestamp, R.conversion_value]] },
+    onLeg: { queryTinybird: async () => [{ distinct_id: R.distinct_id, timestamp: R.timestamp, conversion_value: R.conversion_value }] }
+  })
+  assert.strictEqual(green.state, 'GREEN')
+  assert.strictEqual(green.verdict, true)
+
+  // non-zero + divergent -> RED (RED dominates; meaningfulness never rescues a divergence)
+  const red = await runParity({
+    ...base, label: 'red',
+    offLeg: { queryHog: async () => [[R.distinct_id, R.timestamp, 5]] },
+    onLeg: { queryTinybird: async () => [{ distinct_id: R.distinct_id, timestamp: R.timestamp, conversion_value: 6 }] }
+  })
+  assert.strictEqual(red.state, 'RED')
+})
+
+test('per-target meaningful checks: events-health treats last_event-present as meaningful even at count 0/0', async () => {
+  const eh = (await TARGETS['events-health']()).meaningful
+  assert.strictEqual(typeof eh, 'function')
+  assert.strictEqual(eh({ data: { last_event: '2026-07-01T00:00:00Z', count_hour: 0, count_day: 0 } }, { data: { last_event: '2026-07-01T00:00:00Z', count_hour: 0, count_day: 0 } }), true, 'last_event present -> meaningful despite 0/0 hour/day (stale-fixture case)')
+  assert.strictEqual(eh({ data: { last_event: null, count_hour: 0, count_day: 0 } }, { data: { last_event: null, count_hour: 0, count_day: 0 } }), false, 'no last_event + 0/0 -> empty window')
+
+  const s = (await TARGETS.sessions()).meaningful
+  assert.strictEqual(s({ data: { total_sessions: 0 } }, { data: { total_sessions: 0 } }), false)
+  assert.strictEqual(s({ data: { total_sessions: 72 } }, { data: { total_sessions: 72 } }), true)
+
+  const a = (await TARGETS.alerts()).meaningful
+  assert.strictEqual(a({ data: { count: 0 } }, { data: { count: 0 } }), false)
+  assert.strictEqual(a({ data: { count: 3 } }, { data: { count: 3 } }), true)
 })

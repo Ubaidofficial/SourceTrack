@@ -185,7 +185,7 @@ function mkRes () {
   return res
 }
 
-export async function runParity ({ label = 'parity', setDeps, resetDeps, handlerFn, mockReq, siteId, params, offLeg, onLeg, cfg = DEFAULT_CFG, beforeLeg }) {
+export async function runParity ({ label = 'parity', setDeps, resetDeps, handlerFn, mockReq, siteId, params, offLeg, onLeg, cfg = DEFAULT_CFG, beforeLeg, meaningful }) {
   // beforeLeg (optional): run before EACH leg to reset per-request state a target
   // caches by siteId — e.g. events-health's 120s NodeCache. Without it the ON leg
   // can read the OFF leg's cached result: the tbCalls===0 hit-guard still refuses to
@@ -212,8 +212,17 @@ export async function runParity ({ label = 'parity', setDeps, resetDeps, handler
   const guard = hitGuardResult({ hogCalls: hogOn, tbNull, tbCalls })
   const findings = deepDiff(resA.body, resB.body, cfg)
   const summary = summarize(findings)
-  const verdict = guard.valid && !guard.fail && summary.pass
-  return { label, guard, findings, summary, verdict, A: resA.body, B: resB.body }
+  // Three-state verdict. RED is strictly dominant (any divergence / hit-guard failure).
+  // Only when parity ALREADY holds do we ask whether the window exercised real data:
+  // meaningful(A,B) false on both legs = empty window -> INCONCLUSIVE (a hollow 0==0
+  // green that proves nothing about the pipe↔HogQL translation). meaningful is optional;
+  // without it a clean parity is GREEN as before.
+  let state
+  if (!guard.valid || guard.fail || !summary.pass) state = 'RED'
+  else if (typeof meaningful === 'function' && !meaningful(resA.body, resB.body)) state = 'INCONCLUSIVE'
+  else state = 'GREEN'
+  const verdict = state === 'GREEN' // back-compat boolean: true ONLY on a real green
+  return { label, guard, findings, summary, state, verdict, A: resA.body, B: resB.body }
 }
 
 export function formatReport (r) {
@@ -226,7 +235,12 @@ export function formatReport (r) {
     const tag = f.pass === false ? 'FAIL' : (f.lag ? 'LAG ' : 'PASS')
     lines.push(`  [${tag}] ${f.path} (${f.kind})  A=${JSON.stringify(f.a)}  B=${JSON.stringify(f.b)}${f.note ? '  — ' + f.note : ''}`)
   }
-  lines.push(`VERDICT: ${r.verdict ? 'GREEN (parity)' : 'RED (divergence/invalid)'}`)
+  const verdictLine = r.state === 'GREEN'
+    ? 'GREEN (parity, data exercised)'
+    : r.state === 'INCONCLUSIVE'
+      ? 'INCONCLUSIVE — empty window, no data exercised; seed recent data and re-run'
+      : 'RED (divergence/invalid)'
+  lines.push(`VERDICT: ${verdictLine}`)
   return lines.join('\n')
 }
 
@@ -311,10 +325,14 @@ const LIVE_ENV = {
   posthog: ['POSTHOG_HOST', 'POSTHOG_PROJECT_ID', 'POSTHOG_PERSONAL_API_KEY']
 }
 
+const _num = (x) => Number(x) || 0
+
 // --live TARGET registry. Each loader dynamically imports the route module (so
 // --stub-selftest stays creds/import-free) and returns a uniform shape:
-// { handlerFn, setDeps, resetDeps, mockReq, realTb, realHog, beforeLeg? }.
+// { handlerFn, setDeps, resetDeps, mockReq, realTb, realHog, beforeLeg?, meaningful? }.
 // Handler-reach + mockReq mirror the corresponding read-cutover test EXACTLY.
+// meaningful(A,B): true when the trailing window actually exercised data (a non-zero
+// field on either leg). false on BOTH legs -> INCONCLUSIVE (empty-window hollow green).
 export const TARGETS = {
   // sessions_pageviews + sessions_conversions via sessionsOverview.
   sessions: async () => {
@@ -327,7 +345,8 @@ export const TARGETS = {
       resetDeps: mod.__resetSessionsReadDeps,
       mockReq: (siteId, params) => ({ site: { id: siteId }, query: { date_from: params.date_from, date_to: params.date_to } }),
       realTb: tb.queryTinybirdPipe,
-      realHog: ph.queryHogQL
+      realHog: ph.queryHogQL,
+      meaningful: (A, B) => _num(A?.data?.total_sessions) > 0 || _num(B?.data?.total_sessions) > 0
     }
   },
   // alert_traffic + alert_conversions + alert_recent via the alerts '/' handler
@@ -348,7 +367,9 @@ export const TARGETS = {
       // pipes window on now() - INTERVAL server-side).
       mockReq: (siteId) => ({ site: { id: siteId, plan: 'business' }, query: {} }),
       realTb: tb.queryTinybirdPipe,
-      realHog: ph.queryHogQL
+      realHog: ph.queryHogQL,
+      // count = number of alerts fired; 0 on both legs = trailing window had no data.
+      meaningful: (A, B) => _num(A?.data?.count) > 0 || _num(B?.data?.count) > 0
     }
   },
   // events_health_last + _hour + _day via the events '/health' handler.
@@ -368,7 +389,11 @@ export const TARGETS = {
       // leg's cached result. Without this the run is a hit-guard failure, not real parity.
       beforeLeg: (siteId) => mod.__evictHealthCache(siteId),
       realTb: tb.queryTinybirdPipe,
-      realHog: ph.queryHogQL
+      realHog: ph.queryHogQL,
+      // last_event PRESENT (most-recent-event ts) is the meaningfulness signal — it
+      // exercises the timestamp normalize even on stale fixtures. count_hour/count_day
+      // may legitimately be 0 on a stale window, so they are NOT required.
+      meaningful: (A, B) => A?.data?.last_event != null || B?.data?.last_event != null
     }
   }
 }
@@ -448,10 +473,13 @@ async function runLive (args) {
     params: { date_from: dateFrom, date_to: dateTo },
     offLeg: { queryHog: t.realHog },
     onLeg: { queryTinybird: t.realTb },
-    beforeLeg: t.beforeLeg
+    beforeLeg: t.beforeLeg,
+    meaningful: t.meaningful
   })
   console.log(formatReport(report))
-  process.exit(report.verdict ? 0 : 1)
+  // Exit codes: GREEN=0, RED=1, INCONCLUSIVE=4 (empty window — NOT a success; must not
+  // be read as a pass by a caller that only checks exit 0).
+  process.exit(report.state === 'GREEN' ? 0 : report.state === 'INCONCLUSIVE' ? 4 : 1)
 }
 
 const invokedDirectly = process.argv[1] && import.meta.url === `file://${process.argv[1]}`
