@@ -108,7 +108,7 @@ test('every declared self-test scenario meets its expected verdict', async () =>
 // ── target registry (catches a seam-name typo in CI, not at --live) ──────────
 test('every --live target loader resolves to a drivable shape (handlerFn OR callFn) + seams', async () => {
   const names = Object.keys(TARGETS)
-  assert.deepStrictEqual(names.sort(), ['ai-platform', 'alerts', 'events-health', 'first-touch', 'first-touch-non-direct', 'last-touch', 'last-touch-non-direct', 'multitouch', 'sessions'], 'expected exactly these nine targets')
+  assert.deepStrictEqual(names.sort(), ['ai-platform', 'alerts', 'events-health', 'first-touch', 'first-touch-non-direct', 'last-touch', 'last-touch-non-direct', 'multitouch', 'session-report', 'sessions'], 'expected exactly these ten targets')
   for (const name of names) {
     const t = await TARGETS[name]()
     // a target is EITHER a route handler (handlerFn) OR a lib function (callFn)
@@ -332,4 +332,81 @@ test('multitouch target: allowedHogReads passes the un-wired pageviews leg; GREE
   assert.strictEqual(invalid.state, 'RED')
   assert.strictEqual(invalid.guard.valid, false, 'conversions fallback trips the guard')
   assert.ok(invalid.guard.hogCalls.includes('multitouch_conversions_live'), 'the wired read is the one flagged, not pageviews')
+})
+
+// ── session-report function target (both reads wired; NodeCache trap) ─────────
+// Drives the REAL target through callFn with stub deps. Proves GREEN / RED / INCONCLUSIVE
+// / hit-guard, then that the beforeLeg cache eviction is load-bearing (masked vs surfaced).
+test('session-report target: GREEN / RED / INCONCLUSIVE / hit-guard via callFn', async () => {
+  const t = await TARGETS['session-report']()
+  const pvNamed = (src, did) => ({ distinct_id: did, timestamp: '2026-07-01T10:00:00Z', page_url: '/a', utm_source: src, utm_medium: 'cpc', utm_campaign: 'brand', country: 'US', device_type: 'desktop' })
+  const PV_KEYS = ['distinct_id', 'timestamp', 'page_url', 'utm_source', 'utm_medium', 'utm_campaign', 'country', 'device_type']
+  const pvPos = (o) => PV_KEYS.map((k) => o[k])
+  const base = {
+    setDeps: t.setDeps, resetDeps: t.resetDeps, callFn: t.callFn, cfg: t.cfg, meaningful: t.meaningful, beforeLeg: t.beforeLeg,
+    siteId: 'sr1', params: { date_from: '2026-07-01', date_to: '2026-07-06' }
+  }
+  // GREEN: same one google session on both legs
+  const green = await runParity({
+    ...base, label: 'sr-green',
+    offLeg: { queryHog: async (_s, name) => name === 'session_report_pageviews' ? [pvPos(pvNamed('google', 'v1'))] : name === 'session_report_conversions' ? [] : [] },
+    onLeg: { queryTinybird: async (p) => p === 'session_report_pageviews' ? [pvNamed('google', 'v1')] : p === 'session_report_conversions' ? [] : null }
+  })
+  assert.strictEqual(green.state, 'GREEN')
+  assert.strictEqual(green.guard.hogCalls.length, 0, 'both reads from the pipe — zero HogQL fallback')
+  assert.ok(green.guard.tbCalls >= 1)
+
+  // RED: matched dim 'google' but ON has 2 sessions vs OFF 1 -> session_count divergence
+  const red = await runParity({
+    ...base, siteId: 'sr2', label: 'sr-red',
+    offLeg: { queryHog: async (_s, name) => name === 'session_report_pageviews' ? [pvPos(pvNamed('google', 'v1'))] : [] },
+    onLeg: { queryTinybird: async (p) => p === 'session_report_pageviews' ? [pvNamed('google', 'v1'), pvNamed('google', 'v2')] : p === 'session_report_conversions' ? [] : null }
+  })
+  assert.strictEqual(red.state, 'RED')
+  assert.ok(red.summary.fails.some((f) => f.path.includes('session_count')), 'divergent session_count flagged')
+
+  // INCONCLUSIVE: both legs empty -> no sessions
+  const empty = await runParity({
+    ...base, siteId: 'sr3', label: 'sr-empty',
+    offLeg: { queryHog: async () => [] },
+    onLeg: { queryTinybird: async (p) => (p === 'session_report_pageviews' || p === 'session_report_conversions') ? [] : null }
+  })
+  assert.strictEqual(empty.state, 'INCONCLUSIVE')
+
+  // hit-guard: ON pipe null -> the WIRED pageviews read falls back to HogQL -> INVALID
+  const invalid = await runParity({
+    ...base, siteId: 'sr4', label: 'sr-hitguard',
+    offLeg: { queryHog: async (_s, name) => name === 'session_report_pageviews' ? [pvPos(pvNamed('google', 'v1'))] : [] },
+    onLeg: { queryTinybird: async () => null }
+  })
+  assert.strictEqual(invalid.state, 'RED')
+  assert.strictEqual(invalid.guard.valid, false, 'wired read fell back to HogQL -> INVALID')
+})
+
+test('session-report cache trap: beforeLeg eviction is load-bearing (masked without it, surfaced with it)', async () => {
+  const t = await TARGETS['session-report']()
+  const pvNamed = (did) => ({ distinct_id: did, timestamp: '2026-07-01T10:00:00Z', page_url: '/a', utm_source: 'google', utm_medium: 'cpc', utm_campaign: 'brand', country: 'US', device_type: 'desktop' })
+  const PV_KEYS = ['distinct_id', 'timestamp', 'page_url', 'utm_source', 'utm_medium', 'utm_campaign', 'country', 'device_type']
+  const pvPos = (o) => PV_KEYS.map((k) => o[k])
+  // OFF: 1 google session; ON pipe (if dispatched): 2 google sessions -> would diverge.
+  const common = {
+    setDeps: t.setDeps, resetDeps: t.resetDeps, callFn: t.callFn, cfg: t.cfg, meaningful: t.meaningful,
+    siteId: 'sr-cache', params: { date_from: '2026-07-01', date_to: '2026-07-06' },
+    offLeg: { queryHog: async (_s, name) => name === 'session_report_pageviews' ? [pvPos(pvNamed('v1'))] : [] },
+    onLeg: { queryTinybird: async (p) => p === 'session_report_pageviews' ? [pvNamed('v1'), pvNamed('v2')] : p === 'session_report_conversions' ? [] : null }
+  }
+  // clear any residue so the OFF leg actually computes + caches
+  t.beforeLeg('sr-cache', 'x', common.params)
+
+  // (a) NO beforeLeg -> ON cache-hits the OFF result -> pipe never dispatched, divergence masked
+  const masked = await runParity({ ...common, label: 'masked' })
+  assert.strictEqual(masked.guard.tbCalls, 0, 'ON leg cache-hit -> pipe not dispatched')
+  assert.strictEqual(masked.guard.fail, true, 'hit-guard fails (dispatch not exercised)')
+  assert.ok(!masked.summary.fails.some((f) => f.path.includes('session_count')), 'the divergence is MASKED by the cache')
+
+  // (b) WITH beforeLeg evicting -> ON dispatches the pipe -> real divergence surfaces
+  const surfaced = await runParity({ ...common, label: 'surfaced', beforeLeg: t.beforeLeg })
+  assert.ok(surfaced.guard.tbCalls >= 1, 'ON leg dispatched the pipe')
+  assert.strictEqual(surfaced.state, 'RED')
+  assert.ok(surfaced.summary.fails.some((f) => f.path.includes('session_count')), 'the divergence is SURFACED with eviction')
 })
