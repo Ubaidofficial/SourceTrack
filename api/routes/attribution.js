@@ -276,19 +276,18 @@ export async function attribution(req, res) {
       error: null
     })
   } catch (err) {
+    // A THROWN error here is UNEXPECTED (a real failure — e.g. a Tinybird read-wiring bug,
+    // or the tz ReferenceError this replaced), NOT the honest "query succeeded, zero rows"
+    // case — that returns via the normal success path above with results:[]. Previously
+    // this masked every throw as { success:true, analytics_unavailable:true } HTTP 200,
+    // conflating a 500 with legit-empty and hiding real failures mid-migration. Surface it
+    // as a real 500: the dashboard's fetchApi throws on !res.ok, so React Query treats it as
+    // an error (data undefined -> empty render, no crash) instead of silent empty success.
     console.error('[attribution] query failed:', err?.message || err)
-    res.status(200).json({
-      success: true,
-      data: {
-        model: req.query?.model || null,
-        date_from: req.query?.date_from || null,
-        date_to: req.query?.date_to || null,
-        group_by: req.query?.group_by || null,
-        metric: req.query?.metric || null,
-        results: [],
-        analytics_unavailable: true
-      },
-      error: null
+    res.status(500).json({
+      success: false,
+      data: null,
+      error: 'Attribution query failed'
     })
   }
 }
