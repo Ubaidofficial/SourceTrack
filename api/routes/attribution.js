@@ -1,6 +1,7 @@
 import { getAttribution, getFlexibleReport, getAttributionExplanation, getPreAggregatedAttribution, getLinearAttribution, getUShapedAttribution, getTimeDecayAttribution, getWShapedAttribution } from '../lib/attribution-engine.js'
 import { requireFeature } from '../lib/plan-features.js'
 import { serializeHogQLDateRange } from '../lib/hogql-date.js'
+import { isValidTimezone } from '../lib/utils.js'
 
 const ALLOWED_MODELS = new Set(['first_touch', 'last_touch', 'first_touch_non_direct', 'last_touch_non_direct', 'ai_platforms', 'linear', 'u_shaped', 'time_decay', 'w_shaped'])
 const ALLOWED_GROUPS = new Set(['channel', 'source', 'medium', 'campaign', 'keyword', 'referrer_domain', 'ai_source', 'landing_page', 'country', 'device', 'browser', 'conversion_type', 'date', 'provider', 'attribution_status', 'stitching_method'])
@@ -116,6 +117,12 @@ export async function attribution(req, res) {
       }
 
       const filters = {}
+      // Site timezone drives the flexible path's local-date bucketing (filters.timezone ->
+      // getSessionReport/getFlexibleReport -> getDateFilterExpr). Same convention as
+      // campaigns/dashboard/analytics. Was referenced un-defined at the getFlexibleReport
+      // call below (`filters.timezone = tz`), throwing `tz is not defined` on every
+      // non-pre-aggregated model and getting swallowed into analytics_unavailable:true.
+      const tz = isValidTimezone(req.site?.timezone) ? req.site.timezone : 'UTC'
       if (req.query.filter_channel) filters.channel = req.query.filter_channel
       if (req.query.filter_source) filters.source = req.query.filter_source
       if (req.query.filter_medium) filters.medium = req.query.filter_medium
