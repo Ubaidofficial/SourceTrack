@@ -918,6 +918,15 @@ export async function getAttribution(siteId, model, dateFrom, dateTo) {
 // channelFromEvent is imported from ./channel-classifier.js (shared with nightly job)
 export { channelFromEvent }
 
+// Tool/test-only seam: evict getSessionReport's NodeCache entry for a report so an A/B
+// parity run forces a fresh OFF-vs-ON dispatch — otherwise the ON leg reads the OFF leg's
+// cached result within the 60s TTL and masks divergence (route_ab_diff.mjs session-report
+// target, mirroring events-health's __evictHealthCache). Must reproduce the cacheKey below
+// EXACTLY. Never used on a live request path.
+export function __evictSessionReportCache (siteId, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null) {
+  cache.del(cacheKey(`session:${groupBy}:${metric}:${JSON.stringify(filters)}:${groupBy2 || ''}`, siteId, dateFrom, dateTo))
+}
+
 export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null) {
   const key = cacheKey(`session:${groupBy}:${metric}:${JSON.stringify(filters)}:${groupBy2 || ''}`, siteId, dateFrom, dateTo)
   const cached = cache.get(key)
@@ -997,7 +1006,25 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
     LIMIT 50000
   `
 
-  const rows = await queryHogQL(sql, 'session_report_pageviews')
+  // Tinybird cutover (allowlist-gated; null -> HogQL fallback). SAME window bounds HogQL
+  // uses; format for ClickHouse DateTime params. Pipe named rows -> HogQL positional order
+  // so the mapRows below is byte-identical. #155 central-normalizes the pipe timestamp at
+  // the boundary, so the started_at.split('T') daily bucket stays correct — no raw
+  // new Date()/.split('T') is reintroduced here.
+  const _tbFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+  const _tbTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+  const _tbPvParams = { site_id: String(siteId), date_from_ts: _tbFrom, date_to_ts: _tbTo }
+  if (custKey1) _tbPvParams.custom_key1 = custKey1
+  if (custKey2 && custKey2 !== custKey1) _tbPvParams.custom_key2 = custKey2
+  const _tbPv = await _queryTinybirdPipe('session_report_pageviews', _tbPvParams)
+  const rows = _tbPv
+    ? _tbPv.map(r => {
+        const base = [r.distinct_id, r.timestamp, r.page_url, r.utm_source, r.utm_medium, r.utm_campaign, r.country, r.device_type]
+        if (custKey1) base.push(r.custom_key1)
+        if (custKey2 && custKey2 !== custKey1) base.push(r.custom_key2)
+        return base
+      })
+    : await _queryHogQL(sql, 'session_report_pageviews')
 
   // Also query conversions for conversion_sessions metric
   const convSql = `
@@ -1013,7 +1040,10 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
     LIMIT 50000
   `
 
-  const convRows = await queryHogQL(convSql, 'session_report_conversions')
+  const _tbConv = await _queryTinybirdPipe('session_report_conversions', { site_id: String(siteId), date_from_ts: _tbFrom, date_to_ts: _tbTo })
+  const convRows = _tbConv
+    ? _tbConv.map(r => [r.distinct_id, r.timestamp])
+    : await _queryHogQL(convSql, 'session_report_conversions')
 
   // Build events array per visitor
   const eventsByVisitor = new Map()

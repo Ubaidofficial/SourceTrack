@@ -211,13 +211,13 @@ export async function runParity ({ label = 'parity', setDeps, resetDeps, handler
   // by siteId — e.g. events-health's 120s NodeCache (see the cache-trap self-test).
 
   // OFF leg (baseline): the wired reads fall through to HogQL (queryTinybird -> null).
-  if (beforeLeg) await beforeLeg(siteId, 'OFF')
+  if (beforeLeg) await beforeLeg(siteId, 'OFF', params)
   const hogOff = []
   let bodyA
   try { bodyA = await invoke({ queryTinybird: async () => null, queryHog: async (sql, name) => { hogOff.push(name); return offLeg.queryHog(sql, name) } }) } finally { resetDeps() }
 
   // ON leg: the wired reads are served by Tinybird; HogQL is a hit-guard spy (must be 0).
-  if (beforeLeg) await beforeLeg(siteId, 'ON')
+  if (beforeLeg) await beforeLeg(siteId, 'ON', params)
   const hogOn = []; let tbNull = false; let tbCalls = 0
   let bodyB
   try {
@@ -490,6 +490,33 @@ export const TARGETS = {
       realHog: ph.queryHogQL
     }
   },
+  // Session report (W1-bc1): revenue/metric-by-dimension. FUNCTION target. BOTH reads
+  // (session_report_pageviews + session_report_conversions) have pipes -> no allowedHogReads.
+  // TRAP: getSessionReport caches on its full key and returns cached -> the ON leg would read
+  // the OFF result. beforeLeg evicts that key before EACH leg (mirrors events-health).
+  'session-report': async () => {
+    const mod = await import('../../api/lib/attribution-engine.js')
+    const tb = await import('../../api/lib/tinybird-read.js')
+    const ph = await import('../../api/lib/posthog.js')
+    // Fixed report shape for the proof; callFn AND beforeLeg must use the SAME params so the
+    // evicted cache key matches the one getSessionReport writes.
+    const R = { groupBy: 'source', metric: 'session_count', filters: {}, groupBy2: null }
+    return {
+      setDeps: mod.__setAttributionReadDeps,
+      resetDeps: mod.__resetAttributionReadDeps,
+      callFn: (deps, { siteId, params }) => {
+        mod.__setAttributionReadDeps(deps)
+        return mod.getSessionReport(siteId, params.date_from, params.date_to, R.groupBy, R.metric, R.filters, R.groupBy2)
+      },
+      beforeLeg: (siteId, _leg, params) => mod.__evictSessionReportCache(siteId, params.date_from, params.date_to, R.groupBy, R.metric, R.filters, R.groupBy2),
+      // grouped by dim_value (the source dimension) — intersect on it.
+      cfg: { ...DEFAULT_CFG, idKeys: [...DEFAULT_CFG.idKeys, 'dim_value', 'dim_value2'] },
+      // metric rows non-empty on either leg = the window exercised sessions.
+      meaningful: (A, B) => (Array.isArray(A) && A.length > 0) || (Array.isArray(B) && B.length > 0),
+      realTb: tb.queryTinybirdPipe,
+      realHog: ph.queryHogQL
+    }
+  },
   // The 4 touch-model reads — already wired/flipped in prod (pipes in the 6-pipe
   // allowlist), but never validated by this harness's cent/intersection/hit-guard/
   // empty-window guards. Tool-only: proof, no wiring change.
@@ -553,8 +580,8 @@ async function runStubSelfTest () {
 }
 
 // Targets that require an explicit <date_from> <date_to> window (the rest window on now()).
-const WINDOWED_TARGETS = new Set(['sessions', 'ai-platform', 'multitouch', 'first-touch', 'last-touch', 'first-touch-non-direct', 'last-touch-non-direct'])
-const USAGE = 'usage: node route_ab_diff.mjs [--stub-selftest | --live <site_id> [<date_from> <date_to>] [--target sessions|alerts|events-health|ai-platform|multitouch|first-touch|last-touch|first-touch-non-direct|last-touch-non-direct]]'
+const WINDOWED_TARGETS = new Set(['sessions', 'ai-platform', 'multitouch', 'session-report', 'first-touch', 'last-touch', 'first-touch-non-direct', 'last-touch-non-direct'])
+const USAGE = 'usage: node route_ab_diff.mjs [--stub-selftest | --live <site_id> [<date_from> <date_to>] [--target sessions|alerts|events-health|ai-platform|multitouch|session-report|first-touch|last-touch|first-touch-non-direct|last-touch-non-direct]]'
 
 async function runLive (args) {
   const tIdx = args.indexOf('--target')
