@@ -185,32 +185,41 @@ function mkRes () {
   return res
 }
 
-export async function runParity ({ label = 'parity', setDeps, resetDeps, handlerFn, mockReq, siteId, params, offLeg, onLeg, cfg = DEFAULT_CFG, beforeLeg, meaningful }) {
-  // beforeLeg (optional): run before EACH leg to reset per-request state a target
-  // caches by siteId — e.g. events-health's 120s NodeCache. Without it the ON leg
-  // can read the OFF leg's cached result: the tbCalls===0 hit-guard still refuses to
-  // green that run, but eviction is required for the ON leg to actually DISPATCH and
-  // surface real divergence instead of a dispatch-looking failure. See the cache-trap
-  // self-test.
+export async function runParity ({ label = 'parity', setDeps, resetDeps, handlerFn, mockReq, callFn, siteId, params, offLeg, onLeg, cfg = DEFAULT_CFG, beforeLeg, meaningful }) {
+  // A target is EITHER a route handler ({ handlerFn, mockReq } — drive req/res, capture
+  // res.body) OR a function ({ callFn } — a lib fn like getAiPlatformAttributionLive that
+  // returns the result object directly; callFn sets the injected deps on its module and
+  // returns the value). Both go through the SAME wrapped deps, so every guard (cent
+  // precision, intersection, hit-guard, #157 meaningful/empty-window) is identical.
+  const invoke = async (wrapped) => {
+    if (typeof callFn === 'function') return await callFn(wrapped, { siteId, params })
+    setDeps(wrapped)
+    const res = mkRes()
+    await handlerFn(mockReq(siteId, params), res)
+    return res.body
+  }
+  // beforeLeg (optional): run before EACH leg to reset per-request state a target caches
+  // by siteId — e.g. events-health's 120s NodeCache (see the cache-trap self-test).
+
   // OFF leg (baseline): the wired reads fall through to HogQL (queryTinybird -> null).
   if (beforeLeg) await beforeLeg(siteId, 'OFF')
   const hogOff = []
-  setDeps({ queryTinybird: async () => null, queryHog: async (sql, name) => { hogOff.push(name); return offLeg.queryHog(sql, name) } })
-  const resA = mkRes()
-  try { await handlerFn(mockReq(siteId, params), resA) } finally { resetDeps() }
+  let bodyA
+  try { bodyA = await invoke({ queryTinybird: async () => null, queryHog: async (sql, name) => { hogOff.push(name); return offLeg.queryHog(sql, name) } }) } finally { resetDeps() }
 
   // ON leg: the wired reads are served by Tinybird; HogQL is a hit-guard spy (must be 0).
   if (beforeLeg) await beforeLeg(siteId, 'ON')
   const hogOn = []; let tbNull = false; let tbCalls = 0
-  setDeps({
-    queryTinybird: async (pipe, p) => { tbCalls++; const r = await onLeg.queryTinybird(pipe, p); if (r === null) tbNull = true; return r },
-    queryHog: async (_sql, name) => { hogOn.push(name); return [] } // any call here = fallback = INVALID
-  })
-  const resB = mkRes()
-  try { await handlerFn(mockReq(siteId, params), resB) } finally { resetDeps() }
+  let bodyB
+  try {
+    bodyB = await invoke({
+      queryTinybird: async (pipe, p) => { tbCalls++; const r = await onLeg.queryTinybird(pipe, p); if (r === null) tbNull = true; return r },
+      queryHog: async (_sql, name) => { hogOn.push(name); return [] } // any call here = fallback = INVALID
+    })
+  } finally { resetDeps() }
 
   const guard = hitGuardResult({ hogCalls: hogOn, tbNull, tbCalls })
-  const findings = deepDiff(resA.body, resB.body, cfg)
+  const findings = deepDiff(bodyA, bodyB, cfg)
   const summary = summarize(findings)
   // Three-state verdict. RED is strictly dominant (any divergence / hit-guard failure).
   // Only when parity ALREADY holds do we ask whether the window exercised real data:
@@ -219,10 +228,10 @@ export async function runParity ({ label = 'parity', setDeps, resetDeps, handler
   // without it a clean parity is GREEN as before.
   let state
   if (!guard.valid || guard.fail || !summary.pass) state = 'RED'
-  else if (typeof meaningful === 'function' && !meaningful(resA.body, resB.body)) state = 'INCONCLUSIVE'
+  else if (typeof meaningful === 'function' && !meaningful(bodyA, bodyB)) state = 'INCONCLUSIVE'
   else state = 'GREEN'
   const verdict = state === 'GREEN' // back-compat boolean: true ONLY on a real green
-  return { label, guard, findings, summary, state, verdict, A: resA.body, B: resB.body }
+  return { label, guard, findings, summary, state, verdict, A: bodyA, B: bodyB }
 }
 
 export function formatReport (r) {
@@ -326,6 +335,7 @@ const LIVE_ENV = {
 }
 
 const _num = (x) => Number(x) || 0
+const _sumConv = (rows) => Array.isArray(rows) ? rows.reduce((s, r) => s + (Number(r?.conversions) || 0), 0) : 0
 
 // --live TARGET registry. Each loader dynamically imports the route module (so
 // --stub-selftest stays creds/import-free) and returns a uniform shape:
@@ -395,6 +405,33 @@ export const TARGETS = {
       // may legitimately be 0 on a stale window, so they are NOT required.
       meaningful: (A, B) => A?.data?.last_event != null || B?.data?.last_event != null
     }
+  },
+  // FUNCTION target (breaker #2): getAiPlatformAttributionLive is a LIB fn (returns a
+  // value), not a route handler — driven via callFn, not handlerFn/mockReq. Format-fixed
+  // by #155 but never parity-proven. Seam (__setAttributionReadDeps) already exists.
+  'ai-platform': async () => {
+    const mod = await import('../../api/lib/attribution-engine.js')
+    const tb = await import('../../api/lib/tinybird-read.js')
+    const ph = await import('../../api/lib/posthog.js')
+    return {
+      setDeps: mod.__setAttributionReadDeps,
+      resetDeps: mod.__resetAttributionReadDeps,
+      // callFn sets the injected (wrapped) deps on the module then returns the result
+      // array directly. Takes a date window like sessions. The ON leg's pipe calls flow
+      // through the wrapped queryTinybird (tbCalls counted); any HogQL touch is recorded
+      // by the wrapped queryHog -> hit-guard INVALID, exactly as for route targets.
+      callFn: (deps, { siteId, params }) => {
+        mod.__setAttributionReadDeps(deps)
+        return mod.getAiPlatformAttributionLive({ siteId, dateFrom: params.date_from, dateTo: params.date_to })
+      },
+      // Rows are grouped by dim_value (the AI source), not distinct_id — intersect on it.
+      cfg: { ...DEFAULT_CFG, idKeys: [...DEFAULT_CFG.idKeys, 'dim_value', 'dim_value2'] },
+      // No AI-source conversions in the window -> empty rows -> INCONCLUSIVE, not a hollow
+      // green. (The seeded window may lack AI-source data — expect INCONCLUSIVE until seeded.)
+      meaningful: (A, B) => _sumConv(A) > 0 || _sumConv(B) > 0,
+      realTb: tb.queryTinybirdPipe,
+      realHog: ph.queryHogQL
+    }
   }
 }
 
@@ -422,6 +459,23 @@ export function __makeCacheTrapHarness () {
   }
 }
 
+// Tool-internal fixture for the FUNCTION-target self-test: a callFn that mirrors the
+// getAiPlatformAttributionLive dispatch (read a pipe via the injected deps, fall back to
+// HogQL, return an array of { dim_value, revenue, conversions }) WITHOUT importing the
+// real lib. Proves the callFn path threads every guard. cfg intersects on dim_value.
+export function __makeFnTargetHarness () {
+  return {
+    setDeps: () => {}, // deps arrive per-call via callFn(deps); no module state to set
+    resetDeps: () => {},
+    cfg: { ...DEFAULT_CFG, idKeys: [...DEFAULT_CFG.idKeys, 'dim_value'] },
+    meaningful: (A, B) => _sumConv(A) > 0 || _sumConv(B) > 0,
+    callFn: async (deps) => {
+      const tb = await deps.queryTinybird('aiplatform_conversions_by_site', {})
+      return tb !== null ? tb : await deps.queryHog('', 'aiplatform_conversions_live') // null pipe -> HogQL (INVALID on ON leg)
+    }
+  }
+}
+
 async function runStubSelfTest () {
   let allOk = true
   for (const name of Object.keys(SELFTEST_SCENARIOS)) {
@@ -434,7 +488,7 @@ async function runStubSelfTest () {
   process.exit(allOk ? 0 : 1)
 }
 
-const USAGE = 'usage: node route_ab_diff.mjs [--stub-selftest | --live <site_id> [<date_from> <date_to>] [--target sessions|alerts|events-health]]'
+const USAGE = 'usage: node route_ab_diff.mjs [--stub-selftest | --live <site_id> [<date_from> <date_to>] [--target sessions|alerts|events-health|ai-platform]]'
 
 async function runLive (args) {
   const tIdx = args.indexOf('--target')
@@ -447,8 +501,8 @@ async function runLive (args) {
   const positionals = args.slice(liveIdx + 1).filter((a, idx, arr) => a !== '--target' && arr[idx - 1] !== '--target' && !a.startsWith('--'))
   const [siteId, dateFrom, dateTo] = positionals
   if (!siteId) { console.error(USAGE); process.exit(2) }
-  if (target === 'sessions' && (!dateFrom || !dateTo)) {
-    console.error("target 'sessions' requires <date_from> <date_to> (alerts/events-health window on now() server-side)")
+  if ((target === 'sessions' || target === 'ai-platform') && (!dateFrom || !dateTo)) {
+    console.error(`target '${target}' requires <date_from> <date_to> (alerts/events-health window on now() server-side)`)
     process.exit(2)
   }
   // Preflight: names only — NEVER print token values. Missing -> STOP (founder provides).
@@ -469,6 +523,8 @@ async function runLive (args) {
     resetDeps: t.resetDeps,
     handlerFn: t.handlerFn,
     mockReq: t.mockReq,
+    callFn: t.callFn,
+    cfg: t.cfg || DEFAULT_CFG,
     siteId,
     params: { date_from: dateFrom, date_to: dateTo },
     offLeg: { queryHog: t.realHog },

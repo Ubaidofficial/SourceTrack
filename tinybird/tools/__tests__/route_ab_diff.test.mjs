@@ -22,7 +22,7 @@ process.env.ENCRYPTION_KEY = '00000000000000000000000000000000000000000000000000
 import {
   deepDiff, summarize, hitGuardResult, classifyKey, toCents, intervalOf,
   runStubScenario, SELFTEST_SCENARIOS,
-  TARGETS, runParity, __makeCacheTrapHarness, STUB_HARNESS
+  TARGETS, runParity, __makeCacheTrapHarness, STUB_HARNESS, __makeFnTargetHarness
 } from '../route_ab_diff.mjs'
 
 // ── pure engine ──────────────────────────────────────────────────────────────
@@ -106,17 +106,23 @@ test('every declared self-test scenario meets its expected verdict', async () =>
 })
 
 // ── target registry (catches a seam-name typo in CI, not at --live) ──────────
-test('every --live target loader resolves to { handlerFn, setDeps, resetDeps } without throwing', async () => {
+test('every --live target loader resolves to a drivable shape (handlerFn OR callFn) + seams', async () => {
   const names = Object.keys(TARGETS)
-  assert.deepStrictEqual(names.sort(), ['alerts', 'events-health', 'sessions'], 'expected exactly these three targets')
+  assert.deepStrictEqual(names.sort(), ['ai-platform', 'alerts', 'events-health', 'sessions'], 'expected exactly these four targets')
   for (const name of names) {
     const t = await TARGETS[name]()
-    assert.strictEqual(typeof t.handlerFn, 'function', `${name}: handlerFn resolved (route layer + seam names correct)`)
+    // a target is EITHER a route handler (handlerFn) OR a lib function (callFn)
+    const drivable = typeof t.handlerFn === 'function' || typeof t.callFn === 'function'
+    assert.ok(drivable, `${name}: resolves handlerFn or callFn (route layer / lib fn + seam names correct)`)
     assert.strictEqual(typeof t.setDeps, 'function', `${name}: setDeps seam exists`)
     assert.strictEqual(typeof t.resetDeps, 'function', `${name}: resetDeps seam exists`)
     assert.strictEqual(typeof t.realTb, 'function', `${name}: realTb (queryTinybirdPipe) resolved`)
     assert.strictEqual(typeof t.realHog, 'function', `${name}: realHog (queryHogQL) resolved`)
   }
+  // ai-platform is the function target; sessions/alerts/events-health are route handlers.
+  assert.strictEqual(typeof (await TARGETS['ai-platform']()).callFn, 'function', 'ai-platform is a function target (callFn)')
+  assert.strictEqual((await TARGETS['ai-platform']()).handlerFn, undefined, 'ai-platform has no route handler')
+  assert.strictEqual(typeof (await TARGETS.sessions()).handlerFn, 'function', 'sessions is a route-handler target')
   // events-health MUST supply the cache-eviction hook; sessions/alerts must not need one.
   assert.strictEqual(typeof (await TARGETS['events-health']()).beforeLeg, 'function', 'events-health provides the NodeCache eviction beforeLeg')
   assert.strictEqual((await TARGETS.sessions()).beforeLeg, undefined, 'sessions needs no beforeLeg')
@@ -200,4 +206,58 @@ test('per-target meaningful checks: events-health treats last_event-present as m
   const a = (await TARGETS.alerts()).meaningful
   assert.strictEqual(a({ data: { count: 0 } }, { data: { count: 0 } }), false)
   assert.strictEqual(a({ data: { count: 3 } }, { data: { count: 3 } }), true)
+
+  // ai-platform meaningful = total AI-source conversions > 0 (array response)
+  const aip = (await TARGETS['ai-platform']()).meaningful
+  assert.strictEqual(aip([], []), false, 'no AI-source rows -> empty window')
+  assert.strictEqual(aip([{ dim_value: 'ChatGPT', revenue: 100, conversions: 0 }], []), false, '0 conversions -> not meaningful')
+  assert.strictEqual(aip([{ dim_value: 'ChatGPT', revenue: 100, conversions: 5 }], []), true, 'conversions>0 -> meaningful')
+})
+
+// ── FUNCTION-target mode (breaker #2, ai-platform is a lib fn not a route handler) ──
+// The callFn path returns the result object directly; prove every guard threads through it.
+test('function target: GREEN / RED-dominates / INCONCLUSIVE + hit-guard through callFn', async () => {
+  const h = __makeFnTargetHarness()
+  const base = {
+    setDeps: h.setDeps, resetDeps: h.resetDeps, callFn: h.callFn, cfg: h.cfg, meaningful: h.meaningful,
+    siteId: 'aip-site', params: { date_from: '2026-07-01', date_to: '2026-07-06' }
+  }
+  const ROW = (rev, conv) => ({ dim_value: 'ChatGPT', revenue: rev, conversions: conv })
+
+  // GREEN: ON pipe rows match OFF HogQL rows, non-zero conversions -> data exercised
+  const green = await runParity({
+    ...base, label: 'aip-green',
+    offLeg: { queryHog: async () => [ROW(100, 5)] },
+    onLeg: { queryTinybird: async () => [ROW(100, 5)] }
+  })
+  assert.strictEqual(green.state, 'GREEN')
+  assert.strictEqual(green.guard.hogCalls.length, 0, 'ON leg served by the pipe — HogQL not called')
+  assert.ok(green.guard.tbCalls >= 1, 'ON leg dispatched the pipe via callFn')
+
+  // RED: matched dim_value 'ChatGPT' with divergent revenue -> cent fail dominates
+  const red = await runParity({
+    ...base, label: 'aip-red',
+    offLeg: { queryHog: async () => [ROW(100, 5)] },
+    onLeg: { queryTinybird: async () => [ROW(200, 5)] }
+  })
+  assert.strictEqual(red.state, 'RED')
+  assert.ok(red.summary.fails.some((f) => f.path.includes('revenue')), 'the divergent AI-source revenue is flagged')
+
+  // INCONCLUSIVE: both legs empty (no AI-source conversions in the window) -> not a hollow green
+  const inconclusive = await runParity({
+    ...base, label: 'aip-empty',
+    offLeg: { queryHog: async () => [] },
+    onLeg: { queryTinybird: async () => [] }
+  })
+  assert.strictEqual(inconclusive.state, 'INCONCLUSIVE')
+  assert.strictEqual(inconclusive.verdict, false)
+
+  // hit-guard: ON pipe returns null -> callFn falls back to HogQL -> INVALID -> RED
+  const invalid = await runParity({
+    ...base, label: 'aip-hitguard',
+    offLeg: { queryHog: async () => [ROW(100, 5)] },
+    onLeg: { queryTinybird: async () => null }
+  })
+  assert.strictEqual(invalid.state, 'RED')
+  assert.strictEqual(invalid.guard.valid, false, 'ON leg touched HogQL via fallback -> INVALID')
 })
