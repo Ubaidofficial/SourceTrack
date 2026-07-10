@@ -1597,7 +1597,19 @@ export async function getMultiTouchAttributionLive({
     ORDER BY timestamp DESC
     LIMIT 10000
   `
-  const convRows = await queryHogQL(convSql, 'multitouch_conversions_live')
+  // Tinybird cutover (allowlist-gated; null -> HogQL fallback). Reuse the SAME window
+  // bounds HogQL uses to guarantee date-parity; format for ClickHouse DateTime params.
+  // Pipe named rows are remapped to the HogQL POSITIONAL order so the mapRows below is
+  // byte-identical — preserving ALL 5 $0-carrier discriminator fields (provider,
+  // conversion_type, conversion_value, stripe_subscription_id, stripe_event_type) that
+  // isSubscriptionCheckoutCarrier reads. #155 central-normalizes the pipe timestamp;
+  // no raw new Date()/.split('T') is (re)introduced here.
+  const _tbFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+  const _tbTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+  const _tbConv = await _queryTinybirdPipe('multitouch_conversions_by_site', { site_id: String(siteId), date_from: _tbFrom, date_to: _tbTo })
+  const convRows = _tbConv
+    ? _tbConv.map(r => [r.uuid, r.distinct_id, r.timestamp, r.conversion_type, r.conversion_value, r.utm_source, r.utm_medium, r.utm_campaign, r.referrer, r.ai_source, r.country, r.device_type, r.utm_term, r.provider, r.attribution_status, r.stitching_method, r.ingestion_method, r.stripe_subscription_id, r.stripe_event_type])
+    : await _queryHogQL(convSql, 'multitouch_conversions_live')
 
   const conversions = convRows.map(([uuid, distinctId, timestamp, conversionType, conversionValue, utmSource, utmMedium, utmCampaign, referrer, aiSource, country, deviceType, utmTerm, rawProvider, rawAttrStatus, rawStitchMethod, rawIngestionMethod, stripeSubscriptionId, stripeEventType]) => {
     const ingestionMethod = rawIngestionMethod || null
@@ -1684,7 +1696,12 @@ export async function getMultiTouchAttributionLive({
     ORDER BY timestamp ASC
     LIMIT 100000
   `
-  const pvRows = await queryHogQL(pvSql, 'multitouch_pageviews_live')
+  // Pageviews stay on HogQL (no pipe wired for this leg) but go through the injectable
+  // _queryHogQL seam so the A/B harness controls both legs. On the harness ON leg this
+  // is an EXPECTED HogQL read (the multitouch target allowlists 'multitouch_pageviews_live'),
+  // so it does NOT trip the zero-fallback hit-guard — only the wired conversions read
+  // falling back would.
+  const pvRows = await _queryHogQL(pvSql, 'multitouch_pageviews_live')
 
   // Group pageviews by visitor distinct_id
   const pageviewsByVisitor = {}
