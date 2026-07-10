@@ -59,6 +59,9 @@ export function tsToMs (v) {
 
 export function rowKey (o, cfg = DEFAULT_CFG) {
   if (!o || typeof o !== 'object') return null
+  // cfg.rowKeyFn: composite key for rows with no single id column — e.g. the touch
+  // models key on the (source, medium, campaign) tuple, not one dimension field.
+  if (typeof cfg.rowKeyFn === 'function') return cfg.rowKeyFn(o)
   for (const k of cfg.idKeys) if (k in o && o[k] != null) return o[k]
   return null
 }
@@ -337,6 +340,29 @@ const LIVE_ENV = {
 const _num = (x) => Number(x) || 0
 const _sumConv = (rows) => Array.isArray(rows) ? rows.reduce((s, r) => s + (Number(r?.conversions) || 0), 0) : 0
 
+// Function-target factory for the 4 touch-model attribution reads (already dual-wired &
+// flipped in prod, but never validated by this harness). Each is a lib fn returning an
+// array of { source, medium, campaign, conversions, revenue } keyed by the (source,
+// medium, campaign) tuple — so cfg.rowKeyFn intersects on that composite (not one field).
+const _touchModelTarget = (fnName) => async () => {
+  const mod = await import('../../api/lib/attribution-engine.js')
+  const tb = await import('../../api/lib/tinybird-read.js')
+  const ph = await import('../../api/lib/posthog.js')
+  return {
+    setDeps: mod.__setAttributionReadDeps,
+    resetDeps: mod.__resetAttributionReadDeps,
+    callFn: (deps, { siteId, params }) => {
+      mod.__setAttributionReadDeps(deps)
+      return mod[fnName](siteId, params.date_from, params.date_to)
+    },
+    cfg: { ...DEFAULT_CFG, rowKeyFn: (r) => `${r?.source}|${r?.medium}|${r?.campaign}` },
+    // empty window (no conversions across sources) -> INCONCLUSIVE, not a hollow green.
+    meaningful: (A, B) => _sumConv(A) > 0 || _sumConv(B) > 0,
+    realTb: tb.queryTinybirdPipe,
+    realHog: ph.queryHogQL
+  }
+}
+
 // --live TARGET registry. Each loader dynamically imports the route module (so
 // --stub-selftest stays creds/import-free) and returns a uniform shape:
 // { handlerFn, setDeps, resetDeps, mockReq, realTb, realHog, beforeLeg?, meaningful? }.
@@ -432,7 +458,14 @@ export const TARGETS = {
       realTb: tb.queryTinybirdPipe,
       realHog: ph.queryHogQL
     }
-  }
+  },
+  // The 4 touch-model reads — already wired/flipped in prod (pipes in the 6-pipe
+  // allowlist), but never validated by this harness's cent/intersection/hit-guard/
+  // empty-window guards. Tool-only: proof, no wiring change.
+  'first-touch': _touchModelTarget('firstTouchAttribution'),
+  'last-touch': _touchModelTarget('lastTouchAttribution'),
+  'first-touch-non-direct': _touchModelTarget('firstTouchNonDirectAttribution'),
+  'last-touch-non-direct': _touchModelTarget('lastTouchNonDirectAttribution')
 }
 
 // Tool-internal fixture for the cache-trap self-test: a handler that caches its
@@ -488,7 +521,9 @@ async function runStubSelfTest () {
   process.exit(allOk ? 0 : 1)
 }
 
-const USAGE = 'usage: node route_ab_diff.mjs [--stub-selftest | --live <site_id> [<date_from> <date_to>] [--target sessions|alerts|events-health|ai-platform]]'
+// Targets that require an explicit <date_from> <date_to> window (the rest window on now()).
+const WINDOWED_TARGETS = new Set(['sessions', 'ai-platform', 'first-touch', 'last-touch', 'first-touch-non-direct', 'last-touch-non-direct'])
+const USAGE = 'usage: node route_ab_diff.mjs [--stub-selftest | --live <site_id> [<date_from> <date_to>] [--target sessions|alerts|events-health|ai-platform|first-touch|last-touch|first-touch-non-direct|last-touch-non-direct]]'
 
 async function runLive (args) {
   const tIdx = args.indexOf('--target')
@@ -501,7 +536,7 @@ async function runLive (args) {
   const positionals = args.slice(liveIdx + 1).filter((a, idx, arr) => a !== '--target' && arr[idx - 1] !== '--target' && !a.startsWith('--'))
   const [siteId, dateFrom, dateTo] = positionals
   if (!siteId) { console.error(USAGE); process.exit(2) }
-  if ((target === 'sessions' || target === 'ai-platform') && (!dateFrom || !dateTo)) {
+  if (WINDOWED_TARGETS.has(target) && (!dateFrom || !dateTo)) {
     console.error(`target '${target}' requires <date_from> <date_to> (alerts/events-health window on now() server-side)`)
     process.exit(2)
   }

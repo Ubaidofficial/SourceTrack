@@ -108,7 +108,7 @@ test('every declared self-test scenario meets its expected verdict', async () =>
 // ── target registry (catches a seam-name typo in CI, not at --live) ──────────
 test('every --live target loader resolves to a drivable shape (handlerFn OR callFn) + seams', async () => {
   const names = Object.keys(TARGETS)
-  assert.deepStrictEqual(names.sort(), ['ai-platform', 'alerts', 'events-health', 'sessions'], 'expected exactly these four targets')
+  assert.deepStrictEqual(names.sort(), ['ai-platform', 'alerts', 'events-health', 'first-touch', 'first-touch-non-direct', 'last-touch', 'last-touch-non-direct', 'sessions'], 'expected exactly these eight targets')
   for (const name of names) {
     const t = await TARGETS[name]()
     // a target is EITHER a route handler (handlerFn) OR a lib function (callFn)
@@ -260,4 +260,45 @@ test('function target: GREEN / RED-dominates / INCONCLUSIVE + hit-guard through 
   })
   assert.strictEqual(invalid.state, 'RED')
   assert.strictEqual(invalid.guard.valid, false, 'ON leg touched HogQL via fallback -> INVALID')
+})
+
+// ── touch-model function targets (4 already-wired attribution reads) ─────────
+// Drive the REAL targets through the callFn path with STUB deps (named pipe rows on
+// the ON leg, positional HogQL rows on the OFF leg — the fn itself maps both to the
+// same { source, medium, campaign, conversions, revenue } shape). Proves the composite
+// (source,medium,campaign) rowKeyFn + every guard threads through, no creds.
+test('touch-model targets: GREEN / RED-dominates / INCONCLUSIVE / hit-guard via callFn + composite key', async () => {
+  const NAMES = ['first-touch', 'last-touch', 'first-touch-non-direct', 'last-touch-non-direct']
+  // fn maps named pipe rows AND positional HogQL rows [source,medium,campaign,conversions,revenue].
+  const tbRow = (rev, conv, src = 'google', med = 'cpc', camp = 'c1') => ({ source: src, medium: med, campaign: camp, conversions: conv, revenue: rev })
+  const hogRow = (rev, conv, src = 'google', med = 'cpc', camp = 'c1') => [src, med, camp, conv, rev]
+
+  for (const name of NAMES) {
+    const t = await TARGETS[name]()
+    assert.strictEqual(typeof t.callFn, 'function', `${name}: function target`)
+    assert.strictEqual(typeof t.cfg.rowKeyFn, 'function', `${name}: composite rowKeyFn`)
+    const base = {
+      setDeps: t.setDeps, resetDeps: t.resetDeps, callFn: t.callFn, cfg: t.cfg, meaningful: t.meaningful,
+      siteId: 's', params: { date_from: '2026-07-08', date_to: '2026-07-10' }
+    }
+
+    // GREEN: pipe (ON) and HogQL (OFF) map to identical rows, conversions>0
+    const green = await runParity({ ...base, label: `${name}-green`, offLeg: { queryHog: async () => [hogRow(100, 5)] }, onLeg: { queryTinybird: async () => [tbRow(100, 5)] } })
+    assert.strictEqual(green.state, 'GREEN', `${name}: matching legs -> GREEN`)
+    assert.ok(green.guard.tbCalls >= 1 && green.guard.hogCalls.length === 0, `${name}: ON dispatched pipe, no HogQL`)
+
+    // RED: same (source,medium,campaign) key, divergent revenue -> cent fail dominates
+    const red = await runParity({ ...base, label: `${name}-red`, offLeg: { queryHog: async () => [hogRow(100, 5)] }, onLeg: { queryTinybird: async () => [tbRow(200, 5)] } })
+    assert.strictEqual(red.state, 'RED', `${name}: divergent revenue -> RED`)
+    assert.ok(red.summary.fails.some((f) => f.path.includes('revenue')), `${name}: revenue flagged`)
+
+    // INCONCLUSIVE: both legs empty -> no conversions exercised
+    const empty = await runParity({ ...base, label: `${name}-empty`, offLeg: { queryHog: async () => [] }, onLeg: { queryTinybird: async () => [] } })
+    assert.strictEqual(empty.state, 'INCONCLUSIVE', `${name}: empty window -> INCONCLUSIVE`)
+
+    // hit-guard: ON pipe null -> fn falls back to HogQL on the ON leg -> INVALID
+    const invalid = await runParity({ ...base, label: `${name}-hitguard`, offLeg: { queryHog: async () => [hogRow(100, 5)] }, onLeg: { queryTinybird: async () => null } })
+    assert.strictEqual(invalid.state, 'RED', `${name}: pipe null -> RED`)
+    assert.strictEqual(invalid.guard.valid, false, `${name}: ON fell back to HogQL -> INVALID`)
+  }
 })
