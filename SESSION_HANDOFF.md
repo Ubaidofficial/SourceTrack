@@ -1,5 +1,17 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
+> **Handoff:** Session 141-SESSIONS-READ-FLIP-VERIFY — Staging Live Sessions-Path Read Flip Verification — **PASS.**
+> - **Verified Staging Live Read Flip**: Verified that the sessions-path read flip is active and fully functional on the deployed staging environment (`https://sourcetrack-dashboard-staging.up.railway.app`).
+> - **API Parity Verification**: Direct API calls to `/api/sessions/overview` for the realistic SaaS test site (`de200000-babe-41d4-a716-446655440000` / ID `de200000-babe-41d4-a716-446655441111`) for the window `2026-07-01` to `2026-07-06` return results matching the A/B parity proof baseline exactly:
+>   - Total Sessions: **72**
+>   - Conversion Sessions: **12**
+>   - Total Conversion Value: **$962**
+>   - Average Pageviews per Session: **1.3**
+>   - Daily series: **Intact** (51 sessions on July 4, 20 on July 5, 1 on July 6 — one bar per day, no timestamp fragmentation).
+>   - Average Duration: **11s** (matching the Leg B Tinybird calculation cleanly).
+> - **Staging Dashboard Verification**: Logged in to the staging dashboard and verified the visual components. Navigated to `/leads` (Leads view) and `/report-builder` (Report Builder view). Confirmed leads lists are loading with accurate conversion totals, and the report builder successfully updates ranges and displays metrics.
+> - **Evidence & Logs**: Captured screenshots `staging_leads_page_loaded.png`, `staging_sessions_report_loaded.png`, and `staging_sessions_report_perfect.png`. Audited the live Railway staging logs (`SourceTrack-Api` service) to confirm zero errors or warning traces are generated under the live sessions overview query traffic.
+>
 > **Handoff:** Session 140P-MS-JOIN-CLOCK-SKEW-FIX — Clock Skew Join Hardening & CI Hardening Audit — **PASS.**
 > - **Exposed & Diagnosed Production MS-Join Bug**: Identified that `/api/analytics/sources` performed a strict millisecond join (`pvMap[first_touch_timestamp.getTime()]`) between Supabase `pageviews` and `attributed_conversions` (sourced from PostHog). In production, PostHog pageviews are captured with client-side/PostHog-adjusted timestamps (millisecond precision & drift corrections), whereas legacy Supabase pageviews are inserted with server-side ingestion timestamps. Network latency and clock skew make a strict millisecond join fail in production, resulting in silently dropping AI source details and returning $0 AI revenue.
 > - **Implemented Source-Prioritized Tolerant Pageview Matcher**: Hardened `findMatchingPageview` in `api/routes/analytics.js` to use a 5-second tolerance window and check source alignment (comparing the conversion's `first_touch_source` / `first_touch_channel` against the pageview's `utm_source`, `referrer` hostname, or `ai_source`). This prioritizes matching traffic sources over pure timestamp minimums, eliminating the misattribution risk of matching nearby direct/internal pageviews.

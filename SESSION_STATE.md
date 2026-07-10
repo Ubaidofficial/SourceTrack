@@ -1,4 +1,5 @@
-Session: Session 140P-MS-JOIN-CLOCK-SKEW-FIX — Clock Skew Join Hardening & CI Hardening Audit — PASS. Regression tests green. Production build compiles successfully.
+Session: Session 141-SESSIONS-READ-FLIP-VERIFY — Staging Live Sessions-Path Read Flip Verification — PASS. Verbatim A/B baseline numbers match exactly. Staging dashboard smoke test successful.
+Prior Completed: Session 140P-MS-JOIN-CLOCK-SKEW-FIX — Clock Skew Join Hardening & CI Hardening Audit — PASS. Regression tests green. Production build compiles successfully.
 Prior Completed: Session 140P-RB-FIX-3 — Report Builder Frontend Chart/Table Metric Mismatch — PASS. Production build passes.
 Prior Completed: Session 140P-RB-FIX-1-2 — Report Builder Leads & Timezone Boundaries — PASS. Local tests green. Timezone boundary UTC coercion resolved.
 Prior Completed: Session 140P-A3-A4 — Timezone Consistency (A3/Campaigns + A4/Analytics) — PASS. Staging site key de400000 verified. CI green.
