@@ -9,9 +9,20 @@
 
 import test from 'node:test'
 import assert from 'node:assert'
+
+// Mock env so the --live TARGET loaders can dynamically import the real route
+// modules (posthog.js constructs a client from POSTHOG_API_KEY at import). No creds,
+// no network — the loader test only resolves the seam shape, never calls the deps.
+process.env.NODE_ENV = 'test'
+process.env.SUPABASE_URL = 'https://mock-proj.supabase.co'
+process.env.SUPABASE_SERVICE_KEY = 'mock-service-role-key-value'
+process.env.POSTHOG_API_KEY = 'mock-posthog-key'
+process.env.ENCRYPTION_KEY = '0000000000000000000000000000000000000000000000000000000000000000'
+
 import {
   deepDiff, summarize, hitGuardResult, classifyKey, toCents, intervalOf,
-  runStubScenario, SELFTEST_SCENARIOS
+  runStubScenario, SELFTEST_SCENARIOS,
+  TARGETS, runParity, __makeCacheTrapHarness
 } from '../route_ab_diff.mjs'
 
 // ── pure engine ──────────────────────────────────────────────────────────────
@@ -92,4 +103,52 @@ test('every declared self-test scenario meets its expected verdict', async () =>
     const { ok, report, expectVerdict } = await runStubScenario(name)
     assert.ok(ok, `scenario ${name}: expected verdict ${expectVerdict}, got ${report.verdict}`)
   }
+})
+
+// ── target registry (catches a seam-name typo in CI, not at --live) ──────────
+test('every --live target loader resolves to { handlerFn, setDeps, resetDeps } without throwing', async () => {
+  const names = Object.keys(TARGETS)
+  assert.deepStrictEqual(names.sort(), ['alerts', 'events-health', 'sessions'], 'expected exactly these three targets')
+  for (const name of names) {
+    const t = await TARGETS[name]()
+    assert.strictEqual(typeof t.handlerFn, 'function', `${name}: handlerFn resolved (route layer + seam names correct)`)
+    assert.strictEqual(typeof t.setDeps, 'function', `${name}: setDeps seam exists`)
+    assert.strictEqual(typeof t.resetDeps, 'function', `${name}: resetDeps seam exists`)
+    assert.strictEqual(typeof t.realTb, 'function', `${name}: realTb (queryTinybirdPipe) resolved`)
+    assert.strictEqual(typeof t.realHog, 'function', `${name}: realHog (queryHogQL) resolved`)
+  }
+  // events-health MUST supply the cache-eviction hook; sessions/alerts must not need one.
+  assert.strictEqual(typeof (await TARGETS['events-health']()).beforeLeg, 'function', 'events-health provides the NodeCache eviction beforeLeg')
+  assert.strictEqual((await TARGETS.sessions()).beforeLeg, undefined, 'sessions needs no beforeLeg')
+})
+
+// ── events-health cache trap: eviction is load-bearing ───────────────────────
+// A handler that caches by siteId (like events '/health') would let the ON leg read
+// the OFF leg's cached result. Prove the harness catches a stale cache and that the
+// beforeLeg eviction is what lets the ON leg actually dispatch and surface divergence.
+test('cache trap: without beforeLeg the ON leg cannot dispatch (hit-guard fails); with it, real divergence surfaces', async () => {
+  const h = __makeCacheTrapHarness()
+  const common = {
+    setDeps: h.setDeps, resetDeps: h.resetDeps, handlerFn: h.handlerFn, mockReq: h.mockReq,
+    siteId: 'cache-site', params: {},
+    offLeg: { queryHog: async () => [[100]] },                      // OFF revenue = 100
+    onLeg: { queryTinybird: async () => [{ conversion_value: 200 }] } // ON revenue = 200 (divergent!)
+  }
+
+  // (a) NO eviction: OFF warms the cache; the ON leg cache-HITs, never calling the pipe
+  // -> tbCalls===0 -> hit-guard FAILS. The harness refuses to green a cache-masked run
+  // (NOT a false green), but the real 100-vs-200 divergence stays hidden (B is the cached 100).
+  const noEvict = await runParity({ ...common, label: 'no-evict' })
+  assert.strictEqual(noEvict.verdict, false, 'stale cache -> not green')
+  assert.strictEqual(noEvict.guard.tbCalls, 0, 'ON leg never dispatched (cache hit)')
+  assert.strictEqual(noEvict.guard.fail, true, 'hit-guard fails on tbCalls===0 (dispatch not exercised)')
+  assert.ok(!noEvict.summary.fails.some((f) => f.path.includes('revenue')), 'the real divergence is MASKED without eviction')
+
+  // (b) WITH eviction: the ON leg cache-misses, dispatches the pipe (200), and the
+  // real divergence is caught -> RED for the RIGHT reason.
+  const withEvict = await runParity({ ...common, label: 'evict', beforeLeg: (siteId) => h.evict(siteId) })
+  assert.strictEqual(withEvict.verdict, false, 'divergent pipe value -> RED')
+  assert.strictEqual(withEvict.guard.tbCalls, 1, 'ON leg dispatched the pipe exactly once')
+  assert.ok(withEvict.guard.valid && !withEvict.guard.fail, 'hit-guard clean: pipe served, no HogQL fallback')
+  assert.ok(withEvict.summary.fails.some((f) => f.path.includes('revenue')), 'the real 100-vs-200 divergence is SURFACED with eviction')
 })

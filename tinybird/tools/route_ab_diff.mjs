@@ -14,9 +14,10 @@
 //   node route_ab_diff.mjs --stub-selftest
 //     Deterministic, NO live creds (CI runs this via the node --test companion).
 //     Proves the diff/tolerance/hit-guard logic on known matching/divergent stubs.
-//   node route_ab_diff.mjs --live <site_id> <date_from> <date_to>
+//   node route_ab_diff.mjs --live <site_id> [<date_from> <date_to>] [--target sessions|alerts|events-health]
 //     Reads REAL staging (ST_Staging pipe vs PostHog 469905 HogQL) for one seeded
-//     site+window and emits a structured parity report. READ-ONLY. No prod, no writes.
+//     site (+ window for sessions) and emits a structured parity report. READ-ONLY.
+//     No prod, no writes. --target selects the route handler (default sessions).
 //
 // Tolerance rules (single source of truth, unit-tested below):
 //   - integer counts/ids -> EXACT match
@@ -184,14 +185,22 @@ function mkRes () {
   return res
 }
 
-export async function runParity ({ label = 'parity', setDeps, resetDeps, handlerFn, mockReq, siteId, params, offLeg, onLeg, cfg = DEFAULT_CFG }) {
+export async function runParity ({ label = 'parity', setDeps, resetDeps, handlerFn, mockReq, siteId, params, offLeg, onLeg, cfg = DEFAULT_CFG, beforeLeg }) {
+  // beforeLeg (optional): run before EACH leg to reset per-request state a target
+  // caches by siteId — e.g. events-health's 120s NodeCache. Without it the ON leg
+  // can read the OFF leg's cached result: the tbCalls===0 hit-guard still refuses to
+  // green that run, but eviction is required for the ON leg to actually DISPATCH and
+  // surface real divergence instead of a dispatch-looking failure. See the cache-trap
+  // self-test.
   // OFF leg (baseline): the wired reads fall through to HogQL (queryTinybird -> null).
+  if (beforeLeg) await beforeLeg(siteId, 'OFF')
   const hogOff = []
   setDeps({ queryTinybird: async () => null, queryHog: async (sql, name) => { hogOff.push(name); return offLeg.queryHog(sql, name) } })
   const resA = mkRes()
   try { await handlerFn(mockReq(siteId, params), resA) } finally { resetDeps() }
 
   // ON leg: the wired reads are served by Tinybird; HogQL is a hit-guard spy (must be 0).
+  if (beforeLeg) await beforeLeg(siteId, 'ON')
   const hogOn = []; let tbNull = false; let tbCalls = 0
   setDeps({
     queryTinybird: async (pipe, p) => { tbCalls++; const r = await onLeg.queryTinybird(pipe, p); if (r === null) tbNull = true; return r },
@@ -302,17 +311,89 @@ const LIVE_ENV = {
   posthog: ['POSTHOG_HOST', 'POSTHOG_PROJECT_ID', 'POSTHOG_PERSONAL_API_KEY']
 }
 
-async function loadSessionsTarget () {
-  const mod = await import('../../api/routes/sessions.js')
-  const tb = await import('../../api/lib/tinybird-read.js')
-  const ph = await import('../../api/lib/posthog.js')
+// --live TARGET registry. Each loader dynamically imports the route module (so
+// --stub-selftest stays creds/import-free) and returns a uniform shape:
+// { handlerFn, setDeps, resetDeps, mockReq, realTb, realHog, beforeLeg? }.
+// Handler-reach + mockReq mirror the corresponding read-cutover test EXACTLY.
+export const TARGETS = {
+  // sessions_pageviews + sessions_conversions via sessionsOverview.
+  sessions: async () => {
+    const mod = await import('../../api/routes/sessions.js')
+    const tb = await import('../../api/lib/tinybird-read.js')
+    const ph = await import('../../api/lib/posthog.js')
+    return {
+      handlerFn: mod.sessionsOverview,
+      setDeps: mod.__setSessionsReadDeps,
+      resetDeps: mod.__resetSessionsReadDeps,
+      mockReq: (siteId, params) => ({ site: { id: siteId }, query: { date_from: params.date_from, date_to: params.date_to } }),
+      realTb: tb.queryTinybirdPipe,
+      realHog: ph.queryHogQL
+    }
+  },
+  // alert_traffic + alert_conversions + alert_recent via the alerts '/' handler
+  // (the handler reads all three, so they flip together).
+  alerts: async () => {
+    const mod = await import('../../api/routes/alerts.js')
+    const tb = await import('../../api/lib/tinybird-read.js')
+    const ph = await import('../../api/lib/posthog.js')
+    const layer = mod.alertsRouter.stack.find((l) => l.route && l.route.path === '/')
+    const handlerFn = layer.route.stack[layer.route.stack.length - 1].handle
+    return {
+      handlerFn,
+      setDeps: mod.__setAlertsReadDeps,
+      resetDeps: mod.__resetAlertsReadDeps,
+      // TRAP: the handler calls requireFeature(req.site?.plan, 'alerts', ...) and 403s
+      // early on a plan without Alerts. Plan 'business' HAS it (mirrors the read-cutover
+      // reqSite) — otherwise we'd "prove" parity on two error pages. No date params (the
+      // pipes window on now() - INTERVAL server-side).
+      mockReq: (siteId) => ({ site: { id: siteId, plan: 'business' }, query: {} }),
+      realTb: tb.queryTinybirdPipe,
+      realHog: ph.queryHogQL
+    }
+  },
+  // events_health_last + _hour + _day via the events '/health' handler.
+  'events-health': async () => {
+    const mod = await import('../../api/routes/events.js')
+    const tb = await import('../../api/lib/tinybird-read.js')
+    const ph = await import('../../api/lib/posthog.js')
+    const layer = mod.eventsRouter.stack.find((l) => l.route && l.route.path === '/health')
+    const handlerFn = layer.route.stack[layer.route.stack.length - 1].handle
+    return {
+      handlerFn,
+      setDeps: mod.__setEventsReadDeps,
+      resetDeps: mod.__resetEventsReadDeps,
+      mockReq: (siteId) => ({ site: { id: siteId }, query: {} }),
+      // CRITICAL: /health caches [last,hour,day] under health:<siteId> for 120s. Evict
+      // before each leg so the ON leg actually dispatches instead of returning the OFF
+      // leg's cached result. Without this the run is a hit-guard failure, not real parity.
+      beforeLeg: (siteId) => mod.__evictHealthCache(siteId),
+      realTb: tb.queryTinybirdPipe,
+      realHog: ph.queryHogQL
+    }
+  }
+}
+
+// Tool-internal fixture for the cache-trap self-test: a handler that caches its
+// result by siteId exactly like events '/health', so the test can prove eviction is
+// load-bearing WITHOUT importing the real route (deterministic, no creds).
+export function __makeCacheTrapHarness () {
+  const cache = new Map()
+  let _tb = async () => null
+  let _hog = async () => []
   return {
-    handlerFn: mod.sessionsOverview,
-    setDeps: mod.__setSessionsReadDeps,
-    resetDeps: mod.__resetSessionsReadDeps,
-    mockReq: (siteId, params) => ({ site: { id: siteId }, query: { date_from: params.date_from, date_to: params.date_to } }),
-    realTb: tb.queryTinybirdPipe,
-    realHog: ph.queryHogQL
+    setDeps: ({ queryTinybird, queryHog } = {}) => { if (queryTinybird) _tb = queryTinybird; if (queryHog) _hog = queryHog },
+    resetDeps: () => { _tb = async () => null; _hog = async () => [] },
+    evict: (siteId) => cache.delete(siteId),
+    mockReq: (siteId) => ({ site: { id: siteId }, query: {} }),
+    handlerFn: async (req, res) => {
+      const k = req.site.id
+      if (cache.has(k)) { res.json(cache.get(k)); return } // cache HIT: no dep call (mirrors /health)
+      const tb = await _tb('cache_demo', { site_id: k })
+      const revenue = tb !== null ? Number(tb[0].conversion_value) : Number((await _hog('', 'cache_demo'))[0][0])
+      const body = { success: true, data: { revenue } }
+      cache.set(k, body)
+      res.json(body)
+    }
   }
 }
 
@@ -328,11 +409,21 @@ async function runStubSelfTest () {
   process.exit(allOk ? 0 : 1)
 }
 
+const USAGE = 'usage: node route_ab_diff.mjs [--stub-selftest | --live <site_id> [<date_from> <date_to>] [--target sessions|alerts|events-health]]'
+
 async function runLive (args) {
-  const i = args.indexOf('--live')
-  const [siteId, dateFrom, dateTo] = args.slice(i + 1)
-  if (!siteId || !dateFrom || !dateTo) {
-    console.error('usage: node route_ab_diff.mjs --live <site_id> <date_from> <date_to>')
+  const tIdx = args.indexOf('--target')
+  const target = tIdx >= 0 ? args[tIdx + 1] : 'sessions'
+  if (!TARGETS[target]) {
+    console.error(`unknown --target '${target}'. Known: ${Object.keys(TARGETS).join(', ')}`)
+    process.exit(2)
+  }
+  const liveIdx = args.indexOf('--live')
+  const positionals = args.slice(liveIdx + 1).filter((a, idx, arr) => a !== '--target' && arr[idx - 1] !== '--target' && !a.startsWith('--'))
+  const [siteId, dateFrom, dateTo] = positionals
+  if (!siteId) { console.error(USAGE); process.exit(2) }
+  if (target === 'sessions' && (!dateFrom || !dateTo)) {
+    console.error("target 'sessions' requires <date_from> <date_to> (alerts/events-health window on now() server-side)")
     process.exit(2)
   }
   // Preflight: names only — NEVER print token values. Missing -> STOP (founder provides).
@@ -346,9 +437,9 @@ async function runLive (args) {
     console.error(`REFUSING: POSTHOG_PROJECT_ID=${process.env.POSTHOG_PROJECT_ID} is not the staging project (469905). Won't verify against the wrong environment.`)
     process.exit(3)
   }
-  const t = await loadSessionsTarget()
+  const t = await TARGETS[target]()
   const report = await runParity({
-    label: `sessions_conversions @ site=${siteId} [${dateFrom}..${dateTo}] (ST_Staging vs PostHog 469905)`,
+    label: `${target} @ site=${siteId}${dateFrom ? ` [${dateFrom}..${dateTo}]` : ''} (ST_Staging vs PostHog 469905)`,
     setDeps: t.setDeps,
     resetDeps: t.resetDeps,
     handlerFn: t.handlerFn,
@@ -356,7 +447,8 @@ async function runLive (args) {
     siteId,
     params: { date_from: dateFrom, date_to: dateTo },
     offLeg: { queryHog: t.realHog },
-    onLeg: { queryTinybird: t.realTb }
+    onLeg: { queryTinybird: t.realTb },
+    beforeLeg: t.beforeLeg
   })
   console.log(formatReport(report))
   process.exit(report.verdict ? 0 : 1)
@@ -367,5 +459,5 @@ if (invokedDirectly) {
   const args = process.argv.slice(2)
   if (args.includes('--stub-selftest')) await runStubSelfTest()
   else if (args.includes('--live')) await runLive(args)
-  else { console.error('usage: node route_ab_diff.mjs [--stub-selftest | --live <site_id> <date_from> <date_to>]'); process.exit(2) }
+  else { console.error(USAGE); process.exit(2) }
 }
