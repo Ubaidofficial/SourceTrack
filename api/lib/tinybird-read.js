@@ -164,7 +164,13 @@ export async function queryTinybirdPipe(pipeName, params = {}) {
     const body = await res.json()
     // CENTRAL timestamp normalization at the read boundary — no consumer sees a raw
     // ClickHouse 'YYYY-MM-DD HH:MM:SS' timestamp (see normalizePipeRowTimestamps).
-    return Array.isArray(body.data) ? normalizePipeRowTimestamps(body.data) : null
+    const rows = Array.isArray(body.data) ? normalizePipeRowTimestamps(body.data) : null
+    // POSITIVE dispatch signal (W4 decommission prereq): a NON-NULL array is the genuine
+    // pipe-served branch; a null result takes the HogQL fallback and MUST stay silent here.
+    // Mirrors this module's bare-console '[tinybird-read]' convention (not safe-logger). Pipe
+    // name + ROW COUNT only — never row content/values (no PII). Count guarded null-safely.
+    if (rows) console.debug(`[tinybird-read] served pipe '${pipeName}' rows=${Array.isArray(rows) ? rows.length : 0}`)
+    return rows
   } catch (err) {
     const msg = err?.name === 'AbortError' ? 'timed out' : (err?.message || String(err))
     console.warn(`[tinybird-read] pipe '${pipeName}' threw (${msg}) — falling back to HogQL.`)
