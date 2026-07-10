@@ -188,7 +188,13 @@ function mkRes () {
   return res
 }
 
-export async function runParity ({ label = 'parity', setDeps, resetDeps, handlerFn, mockReq, callFn, siteId, params, offLeg, onLeg, cfg = DEFAULT_CFG, beforeLeg, meaningful }) {
+export async function runParity ({ label = 'parity', setDeps, resetDeps, handlerFn, mockReq, callFn, siteId, params, offLeg, onLeg, cfg = DEFAULT_CFG, beforeLeg, meaningful, allowedHogReads = [] }) {
+  // allowedHogReads: HogQL query NAMES that are EXPECTED on the ON leg because the target
+  // reads them from an un-wired leg (e.g. multitouch's 'multitouch_pageviews_live' — only
+  // the conversions read has a pipe). These are served identically to the OFF leg and do
+  // NOT count as a hit-guard violation; ONLY an unexpected HogQL call (the WIRED read
+  // falling back) trips the guard. Keep this narrow — it's per-target, not a blanket bypass.
+  const allowedHog = new Set(allowedHogReads)
   // A target is EITHER a route handler ({ handlerFn, mockReq } — drive req/res, capture
   // res.body) OR a function ({ callFn } — a lib fn like getAiPlatformAttributionLive that
   // returns the result object directly; callFn sets the injected deps on its module and
@@ -217,7 +223,10 @@ export async function runParity ({ label = 'parity', setDeps, resetDeps, handler
   try {
     bodyB = await invoke({
       queryTinybird: async (pipe, p) => { tbCalls++; const r = await onLeg.queryTinybird(pipe, p); if (r === null) tbNull = true; return r },
-      queryHog: async (_sql, name) => { hogOn.push(name); return [] } // any call here = fallback = INVALID
+      queryHog: async (sql, name) => {
+        if (allowedHog.has(name)) return offLeg.queryHog(sql, name) // expected un-wired read — serve like OFF, not a violation
+        hogOn.push(name); return [] // unexpected: the wired read fell back to HogQL = INVALID
+      }
     })
   } finally { resetDeps() }
 
@@ -459,6 +468,28 @@ export const TARGETS = {
       realHog: ph.queryHogQL
     }
   },
+  // Multi-touch (W1-bb): the biggest unwired money-rail read. FUNCTION target. Only the
+  // CONVERSIONS read has a pipe (multitouch_conversions_by_site); the pageviews read stays
+  // HogQL on BOTH legs, so it's allowlisted (allowedHogReads) — it must not trip the guard.
+  multitouch: async () => {
+    const mod = await import('../../api/lib/attribution-engine.js')
+    const tb = await import('../../api/lib/tinybird-read.js')
+    const ph = await import('../../api/lib/posthog.js')
+    return {
+      setDeps: mod.__setAttributionReadDeps,
+      resetDeps: mod.__resetAttributionReadDeps,
+      callFn: (deps, { siteId, params }) => {
+        mod.__setAttributionReadDeps(deps)
+        return mod.getMultiTouchAttributionLive({ siteId, model: 'linear', groupBy: 'source', dateFrom: params.date_from, dateTo: params.date_to })
+      },
+      // result is grouped by dim_value (the source) — intersect on it, like ai-platform.
+      cfg: { ...DEFAULT_CFG, idKeys: [...DEFAULT_CFG.idKeys, 'dim_value', 'dim_value2'] },
+      allowedHogReads: ['multitouch_pageviews_live'],
+      meaningful: (A, B) => _sumConv(A) > 0 || _sumConv(B) > 0,
+      realTb: tb.queryTinybirdPipe,
+      realHog: ph.queryHogQL
+    }
+  },
   // The 4 touch-model reads — already wired/flipped in prod (pipes in the 6-pipe
   // allowlist), but never validated by this harness's cent/intersection/hit-guard/
   // empty-window guards. Tool-only: proof, no wiring change.
@@ -522,8 +553,8 @@ async function runStubSelfTest () {
 }
 
 // Targets that require an explicit <date_from> <date_to> window (the rest window on now()).
-const WINDOWED_TARGETS = new Set(['sessions', 'ai-platform', 'first-touch', 'last-touch', 'first-touch-non-direct', 'last-touch-non-direct'])
-const USAGE = 'usage: node route_ab_diff.mjs [--stub-selftest | --live <site_id> [<date_from> <date_to>] [--target sessions|alerts|events-health|ai-platform|first-touch|last-touch|first-touch-non-direct|last-touch-non-direct]]'
+const WINDOWED_TARGETS = new Set(['sessions', 'ai-platform', 'multitouch', 'first-touch', 'last-touch', 'first-touch-non-direct', 'last-touch-non-direct'])
+const USAGE = 'usage: node route_ab_diff.mjs [--stub-selftest | --live <site_id> [<date_from> <date_to>] [--target sessions|alerts|events-health|ai-platform|multitouch|first-touch|last-touch|first-touch-non-direct|last-touch-non-direct]]'
 
 async function runLive (args) {
   const tIdx = args.indexOf('--target')
@@ -565,7 +596,8 @@ async function runLive (args) {
     offLeg: { queryHog: t.realHog },
     onLeg: { queryTinybird: t.realTb },
     beforeLeg: t.beforeLeg,
-    meaningful: t.meaningful
+    meaningful: t.meaningful,
+    allowedHogReads: t.allowedHogReads
   })
   console.log(formatReport(report))
   // Exit codes: GREEN=0, RED=1, INCONCLUSIVE=4 (empty window — NOT a success; must not
