@@ -48,8 +48,15 @@ const DEFAULT_TIMEOUT_MS = 15_000
 // designator is assumed UTC (append 'Z'). Idempotent on already-ISO-UTC input, so it is
 // safe to apply to the HogQL leg too. Null/undefined/''/non-string pass through unchanged
 // (never throws — downstream guards handle absence).
+//
+// DATE-TIME-SHAPE GUARD: only values shaped like a date WITH a time component
+// ('YYYY-MM-DD' + [space|T] + 'HH:MM'…) are transformed. A date-only string
+// ('2026-07-01'), a label ('active'), an id, etc. pass through UNCHANGED — so the
+// central row-walk (normalizePipeRowTimestamps) can never mangle a non-datetime value
+// that happens to sit under a timestamp-named key (e.g. append a bogus 'Z').
 export function normalizePipeTimestamp(ts) {
   if (typeof ts !== 'string' || ts === '') return ts
+  if (!/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/.test(ts)) return ts // not a date-time -> passthrough
   // ClickHouse space form -> ISO 'T' separator (only when there is no 'T' already).
   const s = (ts.includes(' ') && !ts.includes('T')) ? ts.replace(' ', 'T') : ts
   // Already carries a timezone (trailing 'Z' or a ±HH:MM offset in the time portion)? Leave it.
@@ -57,6 +64,40 @@ export function normalizePipeTimestamp(ts) {
   const timePart = tIdx >= 0 ? s.slice(tIdx + 1) : s
   const hasTz = /[zZ]$/.test(timePart) || /[+-]\d{2}:?\d{2}$/.test(timePart)
   return hasTz ? s : s + 'Z'
+}
+
+// Recognized per-row TIMESTAMP column names emitted by wired pipes. Seeded from the
+// audit + harness tsKeys and the pipe-alias scan (see the allowlist-completeness test in
+// api/tests/tinybird-central-ts-normalize.test.js, which FAILS if a wired pipe emits a
+// timestamp-shaped column under a name not listed here). The central row-walk normalizes
+// ONLY these keys, so a novel timestamp column is a LOUD test failure — never a silent miss.
+export const PIPE_TIMESTAMP_KEYS = new Set([
+  'timestamp', 'server_timestamp', 'first_touch_timestamp', 'conversion_timestamp',
+  'occurred_at', 'started_at',
+  'last_ts', 'min_ts', 'max_ts',
+  'first_seen', 'last_seen', 'last_paid_click_seen',
+  'earliest', 'latest'
+])
+
+// CENTRAL timestamp normalization at the pipe-read boundary (kills the W1 format-trap
+// class — docs/TIMESTAMP_TRAP_AUDIT.md). Walks pipe result rows (array of flat named
+// objects; defends nested objects / arrays-of-rows too) and normalizes every recognized-
+// timestamp-key string value to ISO-UTC IN PLACE, so no route/lib consumer ever sees a
+// raw ClickHouse 'YYYY-MM-DD HH:MM:SS' timestamp again. Idempotent; the date-time-shape
+// guard above means non-datetime values under a listed key are left untouched.
+export function normalizePipeRowTimestamps(node) {
+  if (Array.isArray(node)) {
+    for (const item of node) normalizePipeRowTimestamps(item)
+    return node
+  }
+  if (node && typeof node === 'object') {
+    for (const k of Object.keys(node)) {
+      const v = node[k]
+      if (typeof v === 'string' && PIPE_TIMESTAMP_KEYS.has(k)) node[k] = normalizePipeTimestamp(v)
+      else if (v && typeof v === 'object') normalizePipeRowTimestamps(v)
+    }
+  }
+  return node
 }
 
 export function isTinybirdReadEnabled() {
@@ -121,7 +162,9 @@ export async function queryTinybirdPipe(pipeName, params = {}) {
     }
 
     const body = await res.json()
-    return Array.isArray(body.data) ? body.data : null
+    // CENTRAL timestamp normalization at the read boundary — no consumer sees a raw
+    // ClickHouse 'YYYY-MM-DD HH:MM:SS' timestamp (see normalizePipeRowTimestamps).
+    return Array.isArray(body.data) ? normalizePipeRowTimestamps(body.data) : null
   } catch (err) {
     const msg = err?.name === 'AbortError' ? 'timed out' : (err?.message || String(err))
     console.warn(`[tinybird-read] pipe '${pipeName}' threw (${msg}) — falling back to HogQL.`)
