@@ -1219,7 +1219,16 @@ export async function getAttributionExplanation(siteId, model, distinctId) {
     ORDER BY timestamp DESC
     LIMIT 1
   `
-  const convRows = await queryHogQL(convSql, 'attribution_explain_conversion')
+  // Tinybird cutover (allowlist-gated; null -> HogQL fallback). No date window — keyed by
+  // distinct_id, LIMIT 1. Pipe named rows -> HogQL positional order so the destructure below
+  // is byte-identical. #155 central-normalizes the pipe timestamp; no raw new Date()/.split('T')
+  // reintroduced. An empty pipe result ([], not null) = no conversion for this visitor -> the
+  // length-0 guard below returns null exactly as HogQL does; a null pipe result = flag off/error
+  // -> HogQL fallback.
+  const _tbConv = await _queryTinybirdPipe('attribution_explain_conversion', { site_id: String(siteId), distinct_id: String(distinctId) })
+  const convRows = _tbConv
+    ? _tbConv.map(r => [r.timestamp, r.conversion_value, r.utm_source, r.utm_medium, r.utm_campaign, r.first_touch_source, r.first_touch_medium, r.first_touch_campaign, r.ai_source, r.page_url, r.user_id, r.anonymous_id, r.ingestion_method])
+    : await _queryHogQL(convSql, 'attribution_explain_conversion')
   if (!convRows || convRows.length === 0) {
     return null
   }
@@ -1252,7 +1261,11 @@ export async function getAttributionExplanation(siteId, model, distinctId) {
     ORDER BY timestamp ASC
     LIMIT 500
   `
-  const journeyRows = await queryHogQL(journeySql, 'attribution_explain_journey')
+  // Journey stays on HogQL (no pipe for this leg) but via the injectable _queryHogQL seam so
+  // the A/B harness controls both legs. On the harness ON leg this is an EXPECTED HogQL read
+  // (the explain target allowlists 'attribution_explain_journey'), so it does NOT trip the
+  // zero-fallback hit-guard — only the wired conversion read falling back would.
+  const journeyRows = await _queryHogQL(journeySql, 'attribution_explain_journey')
   const journey = (journeyRows || []).map(([evt, ts, url, src, med, camp, ais, cv]) => ({
     event: evt,
     timestamp: ts,

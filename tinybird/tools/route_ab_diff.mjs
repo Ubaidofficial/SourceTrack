@@ -517,6 +517,29 @@ export const TARGETS = {
       realHog: ph.queryHogQL
     }
   },
+  // Attribution explanation (W1-bc2): single-conversion "why". FUNCTION target, and unlike
+  // every other target it is NON-WINDOWED (keyed by --distinct-id) and returns a SINGLE
+  // OBJECT (or null). deepDiff compares object-vs-object directly (no rowKey/intersection);
+  // null on both legs -> INCONCLUSIVE. Only the CONVERSION read has a pipe; the journey read
+  // stays HogQL on both legs (allowedHogReads).
+  explain: async () => {
+    const mod = await import('../../api/lib/attribution-engine.js')
+    const tb = await import('../../api/lib/tinybird-read.js')
+    const ph = await import('../../api/lib/posthog.js')
+    return {
+      setDeps: mod.__setAttributionReadDeps,
+      resetDeps: mod.__resetAttributionReadDeps,
+      callFn: (deps, { siteId, params }) => {
+        mod.__setAttributionReadDeps(deps)
+        return mod.getAttributionExplanation(siteId, 'last_touch', params.distinct_id)
+      },
+      allowedHogReads: ['attribution_explain_journey'],
+      // a conversion exists for this visitor -> meaningful; null (no conversion) -> INCONCLUSIVE.
+      meaningful: (A, B) => A != null || B != null,
+      realTb: tb.queryTinybirdPipe,
+      realHog: ph.queryHogQL
+    }
+  },
   // The 4 touch-model reads — already wired/flipped in prod (pipes in the 6-pipe
   // allowlist), but never validated by this harness's cent/intersection/hit-guard/
   // empty-window guards. Tool-only: proof, no wiring change.
@@ -581,7 +604,10 @@ async function runStubSelfTest () {
 
 // Targets that require an explicit <date_from> <date_to> window (the rest window on now()).
 const WINDOWED_TARGETS = new Set(['sessions', 'ai-platform', 'multitouch', 'session-report', 'first-touch', 'last-touch', 'first-touch-non-direct', 'last-touch-non-direct'])
-const USAGE = 'usage: node route_ab_diff.mjs [--stub-selftest | --live <site_id> [<date_from> <date_to>] [--target sessions|alerts|events-health|ai-platform|multitouch|session-report|first-touch|last-touch|first-touch-non-direct|last-touch-non-direct]]'
+const USAGE = 'usage: node route_ab_diff.mjs [--stub-selftest | --live <site_id> [<date_from> <date_to>] [--target sessions|alerts|events-health|ai-platform|multitouch|session-report|explain|first-touch|last-touch|first-touch-non-direct|last-touch-non-direct] [--distinct-id <id> (explain only)]]'
+
+// Flags that take a value; their value token must be dropped from the positionals.
+const VALUE_FLAGS = new Set(['--target', '--distinct-id'])
 
 async function runLive (args) {
   const tIdx = args.indexOf('--target')
@@ -590,12 +616,19 @@ async function runLive (args) {
     console.error(`unknown --target '${target}'. Known: ${Object.keys(TARGETS).join(', ')}`)
     process.exit(2)
   }
+  const dIdx = args.indexOf('--distinct-id')
+  const distinctId = dIdx >= 0 ? args[dIdx + 1] : null
   const liveIdx = args.indexOf('--live')
-  const positionals = args.slice(liveIdx + 1).filter((a, idx, arr) => a !== '--target' && arr[idx - 1] !== '--target' && !a.startsWith('--'))
+  const positionals = args.slice(liveIdx + 1).filter((a, idx, arr) => !VALUE_FLAGS.has(a) && !VALUE_FLAGS.has(arr[idx - 1]) && !a.startsWith('--'))
   const [siteId, dateFrom, dateTo] = positionals
   if (!siteId) { console.error(USAGE); process.exit(2) }
   if (WINDOWED_TARGETS.has(target) && (!dateFrom || !dateTo)) {
     console.error(`target '${target}' requires <date_from> <date_to> (alerts/events-health window on now() server-side)`)
+    process.exit(2)
+  }
+  // explain is non-windowed and keyed by a single visitor.
+  if (target === 'explain' && !distinctId) {
+    console.error("target 'explain' requires --distinct-id <id> (a visitor that HAS a conversion in the fixture)")
     process.exit(2)
   }
   // Preflight: names only — NEVER print token values. Missing -> STOP (founder provides).
@@ -611,7 +644,7 @@ async function runLive (args) {
   }
   const t = await TARGETS[target]()
   const report = await runParity({
-    label: `${target} @ site=${siteId}${dateFrom ? ` [${dateFrom}..${dateTo}]` : ''} (ST_Staging vs PostHog 469905)`,
+    label: `${target} @ site=${siteId}${distinctId ? ` visitor=${distinctId}` : ''}${dateFrom ? ` [${dateFrom}..${dateTo}]` : ''} (ST_Staging vs PostHog 469905)`,
     setDeps: t.setDeps,
     resetDeps: t.resetDeps,
     handlerFn: t.handlerFn,
@@ -619,7 +652,7 @@ async function runLive (args) {
     callFn: t.callFn,
     cfg: t.cfg || DEFAULT_CFG,
     siteId,
-    params: { date_from: dateFrom, date_to: dateTo },
+    params: { date_from: dateFrom, date_to: dateTo, distinct_id: distinctId },
     offLeg: { queryHog: t.realHog },
     onLeg: { queryTinybird: t.realTb },
     beforeLeg: t.beforeLeg,
