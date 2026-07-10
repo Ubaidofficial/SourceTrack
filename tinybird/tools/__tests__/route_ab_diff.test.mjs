@@ -108,7 +108,7 @@ test('every declared self-test scenario meets its expected verdict', async () =>
 // ── target registry (catches a seam-name typo in CI, not at --live) ──────────
 test('every --live target loader resolves to a drivable shape (handlerFn OR callFn) + seams', async () => {
   const names = Object.keys(TARGETS)
-  assert.deepStrictEqual(names.sort(), ['ai-platform', 'alerts', 'events-health', 'first-touch', 'first-touch-non-direct', 'last-touch', 'last-touch-non-direct', 'multitouch', 'session-report', 'sessions'], 'expected exactly these ten targets')
+  assert.deepStrictEqual(names.sort(), ['ai-platform', 'alerts', 'events-health', 'explain', 'first-touch', 'first-touch-non-direct', 'last-touch', 'last-touch-non-direct', 'multitouch', 'session-report', 'sessions'], 'expected exactly these eleven targets')
   for (const name of names) {
     const t = await TARGETS[name]()
     // a target is EITHER a route handler (handlerFn) OR a lib function (callFn)
@@ -409,4 +409,41 @@ test('session-report cache trap: beforeLeg eviction is load-bearing (masked with
   assert.ok(surfaced.guard.tbCalls >= 1, 'ON leg dispatched the pipe')
   assert.strictEqual(surfaced.state, 'RED')
   assert.ok(surfaced.summary.fails.some((f) => f.path.includes('session_count')), 'the divergence is SURFACED with eviction')
+})
+
+// ── explain function target (single-object, non-windowed, partially-wired) ────
+// Object-vs-object compare (deepDiff handles it directly). Conversion read is wired;
+// the journey read stays HogQL (allowedHogReads). null (no conversion) -> INCONCLUSIVE.
+test('explain target: object-compare GREEN / RED / INCONCLUSIVE(null) / hit-guard flags the WIRED read', async () => {
+  const t = await TARGETS.explain()
+  const CONV_KEYS = ['timestamp', 'conversion_value', 'utm_source', 'utm_medium', 'utm_campaign', 'first_touch_source', 'first_touch_medium', 'first_touch_campaign', 'ai_source', 'page_url', 'user_id', 'anonymous_id', 'ingestion_method']
+  const conv = (val) => ({ timestamp: '2026-07-01T11:00:00Z', conversion_value: val, utm_source: 'google', utm_medium: 'cpc', utm_campaign: 'brand', first_touch_source: 'google', first_touch_medium: 'cpc', first_touch_campaign: 'brand', ai_source: null, page_url: '/checkout', user_id: null, anonymous_id: 'v1', ingestion_method: 'server_routed' })
+  const toPos = (o) => CONV_KEYS.map((k) => o[k])
+  const JOURNEY = [['$pageview', '2026-07-01T10:00:00Z', '/a', 'google', 'cpc', 'brand', null, null], ['$conversion', '2026-07-01T11:00:00Z', '/checkout', 'google', 'cpc', 'brand', null, 49]]
+  const base = { setDeps: t.setDeps, resetDeps: t.resetDeps, callFn: t.callFn, meaningful: t.meaningful, allowedHogReads: t.allowedHogReads, siteId: 's', params: { distinct_id: 'v1' } }
+  const offHog = (val) => async (_sql, name) => name === 'attribution_explain_conversion' ? [toPos(conv(val))] : name === 'attribution_explain_journey' ? JOURNEY : []
+
+  // GREEN: pipe conversion == HogQL conversion; journey (allowed) served on both legs
+  const green = await runParity({ ...base, offLeg: { queryHog: offHog(49) }, onLeg: { queryTinybird: async (p) => p === 'attribution_explain_conversion' ? [conv(49)] : null } })
+  assert.strictEqual(green.state, 'GREEN', 'matching object -> GREEN')
+  assert.strictEqual(green.guard.hogCalls.length, 0, 'journey (allowed) not a violation; conversion from pipe -> zero fallback')
+  assert.ok(green.guard.tbCalls >= 1, 'ON leg dispatched the conversion pipe')
+
+  // RED: divergent conversion value -> conversion.value cent fail
+  const red = await runParity({ ...base, offLeg: { queryHog: offHog(49) }, onLeg: { queryTinybird: async (p) => p === 'attribution_explain_conversion' ? [conv(200)] : null } })
+  assert.strictEqual(red.state, 'RED', 'divergent conversion value -> RED')
+  assert.ok(red.summary.fails.some((f) => f.path.includes('value')), 'the conversion value divergence is flagged')
+
+  // INCONCLUSIVE: no conversion for the visitor on either leg -> null both -> not a pass
+  const empty = await runParity({ ...base, offLeg: { queryHog: async () => [] }, onLeg: { queryTinybird: async (p) => p === 'attribution_explain_conversion' ? [] : null } })
+  assert.strictEqual(empty.state, 'INCONCLUSIVE', 'null (no conversion) -> INCONCLUSIVE')
+
+  // hit-guard: pipe null -> the WIRED conversion read falls back to HogQL -> INVALID; the
+  // flagged read is the conversion one, NOT the allowlisted journey (which is never reached
+  // because a null conversion short-circuits before the journey read).
+  const invalid = await runParity({ ...base, offLeg: { queryHog: offHog(49) }, onLeg: { queryTinybird: async () => null } })
+  assert.strictEqual(invalid.state, 'RED')
+  assert.strictEqual(invalid.guard.valid, false, 'conversion fallback trips the guard')
+  assert.ok(invalid.guard.hogCalls.includes('attribution_explain_conversion'), 'the WIRED conversion read is flagged')
+  assert.ok(!invalid.guard.hogCalls.includes('attribution_explain_journey'), 'the allowlisted journey read is NOT flagged')
 })
