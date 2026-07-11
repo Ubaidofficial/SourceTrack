@@ -717,6 +717,29 @@ export const TARGETS = {
       realHog: ph.queryHogQL
     }
   },
+  // flexible_report CONVERSION_TYPE (Class-A sibling #4, FINAL, INERT): conversion-property dim (plain
+  // COALESCE(...,'untyped'), model-independent, no _nd) — same window-tolerant treatment. Route-faithful
+  // args (windowed + filters.timezone) via buildRouteArgs; ON leg reads ONLY the pipe -> NO allowedHogReads.
+  'flexible-report-conversion-type': async () => {
+    const mod = await import('../../api/lib/attribution-engine.js')
+    const tb = await import('../../api/lib/tinybird-read.js')
+    const ph = await import('../../api/lib/posthog.js')
+    const A = buildRouteArgs({})
+    const R = { model: 'last_touch_non_direct', groupBy: 'conversion_type', metric: 'conversions' }
+    return {
+      setDeps: mod.__setAttributionReadDeps,
+      resetDeps: mod.__resetAttributionReadDeps,
+      callFn: (deps, { siteId, params }) => {
+        mod.__setAttributionReadDeps(deps)
+        return mod.getFlexibleReport(siteId, R.model, params.date_from, params.date_to, R.groupBy, R.metric, A.filters, A.groupBy2, A.granularity, A.attributionWindow, A.attributeBy)
+      },
+      beforeLeg: (siteId, _leg, params) => mod.__evictFlexibleReportCache(siteId, R.model, params.date_from, params.date_to, R.groupBy, R.metric, A.filters, A.groupBy2, A.granularity, A.attributionWindow, A.attributeBy),
+      cfg: { ...DEFAULT_CFG, rowKeyFn: (r) => String(r?.dim_value) },
+      meaningful: (A, B) => (Array.isArray(A) && A.length > 0) || (Array.isArray(B) && B.length > 0),
+      realTb: tb.queryTinybirdPipe,
+      realHog: ph.queryHogQL
+    }
+  },
   // The 4 touch-model reads — already wired/flipped in prod (pipes in the 6-pipe
   // allowlist), but never validated by this harness's cent/intersection/hit-guard/
   // empty-window guards. Tool-only: proof, no wiring change.

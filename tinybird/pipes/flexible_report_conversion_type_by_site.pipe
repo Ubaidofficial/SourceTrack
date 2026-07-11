@@ -1,0 +1,67 @@
+DESCRIPTION >
+    Wave-3 flexible_report Class-A dim-swap: group_by=CONVERSION_TYPE (FINAL Class-A sibling). Clone of
+    flexible_report_stitching_method_by_site with the dim expr swapped to GROUP_COLUMNS.conversion_type
+    and the SAME external_event_id dedup carried from birth (#170). One row per conversion_type.
+
+    DIFFERENT SHAPE (verified — NOT the multiIf mould of provider/attribution_status/stitching_method):
+    GROUP_COLUMNS.conversion_type is an INLINE expr (not a named _SQL const) and is a PLAIN column read
+    with a STATIC fallback: COALESCE(NULLIF(properties.conversion_type, ''), 'untyped') — an empty/absent
+    conversion_type buckets as 'untyped'. NO multiIf, NO ingestion_method/stitching_method reference.
+    Still Class-A: model-independent (same expr for all 4 touch models + ai_platforms), references ONLY
+    the conversion event's own conversion_type, NO _nd touchpoint columns. So the window is a no-op (same
+    reasoning as the siblings, proven GREEN on --live) and this ONE pipe serves group_by=conversion_type
+    for all 4 touch models.
+
+    dim = the conversion_type dim expr, typed-translated (§2.6): properties.conversion_type ->
+    conversion_type (LowCardinality(Nullable(String)), events.datasource:31). EMPTY/NULL convention
+    replicated EXACTLY (its own: static 'untyped', NOT a multiIf): COALESCE(NULLIF(conversion_type,''),
+    'untyped'). metric in {revenue, conversions} via the `metric` param. BASE-CASE GATE ONLY (no
+    dim2/custom/filters, UTC, conversion_date); window-tolerant. NOTE: group_by=conversion_type (the
+    DIM) is distinct from filter_conversion_type (a content filter) — a filtered request is gated to
+    HogQL (filterClauses!==''), so this pipe never sees one. Same params/output columns (dim_value,
+    metric_value) so the wiring's positional remap stays byte-identical.
+
+    external_event_id DEDUP (identical to the sibling pipes, #170): keep all null/empty-keyed rows; for a
+    non-null key keep the GLOBAL-earliest-by-timestamp row (inner subquery NOT date-filtered, matching
+    HogQL). Tie-break Tinybird event_id (HogQL uses uuid) — identical bucket for a genuine duplicate (it
+    shares conversion_type+value). PARAM SHAPE: {{ String(site_id) }} referenced TWICE (outer + dedup
+    subquery); date params once. MANDATORY before deploy: `tb --cloud deploy --check` (ST_Staging, NOT
+    prod). VALUE-PARITY NOT RUN.
+
+NODE flexible_report_conversion_type_by_site_node
+SQL >
+    %
+    SELECT
+        COALESCE(NULLIF(conversion_type, ''), 'untyped') AS dim_value,
+        {% if String(metric, 'conversions') == 'revenue' %}
+        SUM(toFloat64OrZero(toString(conversion_value)))
+        {% else %}
+        count()
+        {% end %} AS metric_value
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$conversion'
+      AND timestamp >= {{ DateTime(date_from, required=True) }}
+      AND timestamp < {{ DateTime(date_to, required=True) }}
+      -- external_event_id dedup — carried from the sibling pipes (#170), faithful port of the HogQL
+      -- leg (attribution-engine.js:2397-2409). KEEP every null/empty-keyed row; for a non-null key
+      -- keep the GLOBAL-earliest-by-timestamp row (inner subquery NOT date-filtered). Tie-break Tinybird
+      -- event_id (HogQL uses uuid) — identical bucket for a genuine duplicate.
+      AND (
+        external_event_id IS NULL
+        OR external_event_id = ''
+        OR event_id IN (
+          SELECT argMin(event_id, timestamp)
+          FROM events
+          WHERE site_id = {{ String(site_id, required=True) }}
+            AND event_type = '$conversion'
+            AND external_event_id IS NOT NULL
+            AND external_event_id != ''
+          GROUP BY external_event_id
+        )
+      )
+    GROUP BY dim_value
+    ORDER BY metric_value DESC
+    LIMIT 50000
+
+TYPE endpoint
