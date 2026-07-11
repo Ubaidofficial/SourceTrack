@@ -2927,6 +2927,21 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
   return finalResult
 }
 
+// The nightly job freezes each conversion's touchpoint attribution at the SITE's configured
+// window (attribution_window_days, clamped [1,90]) into attributed_conversions — one row per
+// conversion, no window dimension (nightly-attribution.js:557). Every pre-aggregated reader below
+// (getPreAggregatedAttribution + the four multi-touch readers) therefore serves ONLY that one
+// materialized window; none take a window param and none can re-window. So the route may
+// short-circuit to them ONLY when the window it is about to serve equals the materialized one.
+// If they differ (a user picked a non-default lookback), the pre-agg would return the SITE-window
+// numbers labeled as the REQUESTED window — a fake-window lie on the money rail (§6). In that case
+// the caller must fall through to the live re-attributing path instead. The clamp here mirrors
+// nightly-attribution.js:557 exactly so the comparison is against the true materialized window.
+export function preAggregatedWindowMatches (resolvedWindow, attributionWindowDays) {
+  const materialized = String(Math.min(90, Math.max(1, Number(attributionWindowDays) || 30)))
+  return String(resolvedWindow) === materialized
+}
+
 // Get pre-aggregated attribution from batch job results
 export async function getPreAggregatedAttribution({
   siteId,

@@ -1,4 +1,4 @@
-import { getAttribution, getFlexibleReport, getAttributionExplanation, getPreAggregatedAttribution, getLinearAttribution, getUShapedAttribution, getTimeDecayAttribution, getWShapedAttribution } from '../lib/attribution-engine.js'
+import { getAttribution, getFlexibleReport, getAttributionExplanation, getPreAggregatedAttribution, getLinearAttribution, getUShapedAttribution, getTimeDecayAttribution, getWShapedAttribution, preAggregatedWindowMatches } from '../lib/attribution-engine.js'
 import { requireFeature } from '../lib/plan-features.js'
 import { serializeHogQLDateRange } from '../lib/hogql-date.js'
 import { isValidTimezone } from '../lib/utils.js'
@@ -108,6 +108,15 @@ export async function attribution(req, res) {
       // Inject resolved window back so downstream engine functions can use req.query.attribution_window
       req.query.attribution_window = resolvedWindow
 
+      // The pre-aggregated readers below (getPreAggregatedAttribution + the multi-touch readers) serve
+      // the SINGLE window the nightly job materialized (the site's attribution_window_days) and cannot
+      // re-window. Short-circuit to them ONLY when the window we're serving equals that materialized
+      // window; otherwise a non-default lookback would be answered with site-window numbers labeled as
+      // the requested window — a fake-window lie on the money rail (§6). On mismatch we fall through to
+      // the live re-attributing flexible path (correct numbers; #180 honest-timeout is the backstop).
+      // Default views/presets resolve to the site window, so the common fast path is unaffected.
+      const preAggWindowMatches = preAggregatedWindowMatches(resolvedWindow, req.site?.attribution_window_days)
+
       if (req.query.attribute_by && !ALLOWED_ATTRIBUTE_BY.has(req.query.attribute_by)) {
         return res.status(400).json({
           success: false,
@@ -139,7 +148,7 @@ export async function attribution(req, res) {
       }
 
       // Use pre-aggregated data for first_touch, last_touch, and linear
-      if ((model === "first_touch" || model === "last_touch") && group_by !== "keyword" && req.query.group_by2 !== "keyword" && group_by !== "referrer_domain" && req.query.group_by2 !== "referrer_domain" && group_by !== "provider" && req.query.group_by2 !== "provider" && group_by !== "attribution_status" && req.query.group_by2 !== "attribution_status" && group_by !== "stitching_method" && req.query.group_by2 !== "stitching_method" && !group_by.startsWith('custom_param:') && !(req.query.group_by2 && req.query.group_by2.startsWith('custom_param:'))) {
+      if ((model === "first_touch" || model === "last_touch") && preAggWindowMatches && group_by !== "keyword" && req.query.group_by2 !== "keyword" && group_by !== "referrer_domain" && req.query.group_by2 !== "referrer_domain" && group_by !== "provider" && req.query.group_by2 !== "provider" && group_by !== "attribution_status" && req.query.group_by2 !== "attribution_status" && group_by !== "stitching_method" && req.query.group_by2 !== "stitching_method" && !group_by.startsWith('custom_param:') && !(req.query.group_by2 && req.query.group_by2.startsWith('custom_param:'))) {
         try {
           const results = await getPreAggregatedAttribution({
             siteId: req.site.id,
@@ -160,7 +169,7 @@ export async function attribution(req, res) {
       // instead of silently rendering a blank chart.
       const NIGHTLY_NOTICE = 'This model is calculated by the nightly attribution job (runs ~2 AM UTC). Results will appear after the first run. If you have recent conversions and still see no data, the job may not be configured — contact support.'
 
-      if (model === "linear" && group_by !== "keyword" && req.query.group_by2 !== "keyword" && group_by !== "referrer_domain" && req.query.group_by2 !== "referrer_domain" && group_by !== "provider" && req.query.group_by2 !== "provider" && group_by !== "attribution_status" && req.query.group_by2 !== "attribution_status" && group_by !== "stitching_method" && req.query.group_by2 !== "stitching_method" && !group_by.startsWith('custom_param:') && !(req.query.group_by2 && req.query.group_by2.startsWith('custom_param:'))) {
+      if (model === "linear" && preAggWindowMatches && group_by !== "keyword" && req.query.group_by2 !== "keyword" && group_by !== "referrer_domain" && req.query.group_by2 !== "referrer_domain" && group_by !== "provider" && req.query.group_by2 !== "provider" && group_by !== "attribution_status" && req.query.group_by2 !== "attribution_status" && group_by !== "stitching_method" && req.query.group_by2 !== "stitching_method" && !group_by.startsWith('custom_param:') && !(req.query.group_by2 && req.query.group_by2.startsWith('custom_param:'))) {
         try {
           const results = await getLinearAttribution({
             siteId: req.site.id,
@@ -176,7 +185,7 @@ export async function attribution(req, res) {
           return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results: [], _notice: NIGHTLY_NOTICE } })
         }
       }
-      if (model === "u_shaped" && group_by !== "keyword" && req.query.group_by2 !== "keyword" && group_by !== "referrer_domain" && req.query.group_by2 !== "referrer_domain" && group_by !== "provider" && req.query.group_by2 !== "provider" && group_by !== "attribution_status" && req.query.group_by2 !== "attribution_status" && group_by !== "stitching_method" && req.query.group_by2 !== "stitching_method" && !group_by.startsWith('custom_param:') && !(req.query.group_by2 && req.query.group_by2.startsWith('custom_param:'))) {
+      if (model === "u_shaped" && preAggWindowMatches && group_by !== "keyword" && req.query.group_by2 !== "keyword" && group_by !== "referrer_domain" && req.query.group_by2 !== "referrer_domain" && group_by !== "provider" && req.query.group_by2 !== "provider" && group_by !== "attribution_status" && req.query.group_by2 !== "attribution_status" && group_by !== "stitching_method" && req.query.group_by2 !== "stitching_method" && !group_by.startsWith('custom_param:') && !(req.query.group_by2 && req.query.group_by2.startsWith('custom_param:'))) {
         try {
           const results = await getUShapedAttribution({
             siteId: req.site.id,
@@ -192,7 +201,7 @@ export async function attribution(req, res) {
           return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results: [], _notice: NIGHTLY_NOTICE } })
         }
       }
-      if (model === "time_decay" && group_by !== "keyword" && req.query.group_by2 !== "keyword" && group_by !== "referrer_domain" && req.query.group_by2 !== "referrer_domain" && group_by !== "provider" && req.query.group_by2 !== "provider" && group_by !== "attribution_status" && req.query.group_by2 !== "attribution_status" && group_by !== "stitching_method" && req.query.group_by2 !== "stitching_method" && !group_by.startsWith('custom_param:') && !(req.query.group_by2 && req.query.group_by2.startsWith('custom_param:'))) {
+      if (model === "time_decay" && preAggWindowMatches && group_by !== "keyword" && req.query.group_by2 !== "keyword" && group_by !== "referrer_domain" && req.query.group_by2 !== "referrer_domain" && group_by !== "provider" && req.query.group_by2 !== "provider" && group_by !== "attribution_status" && req.query.group_by2 !== "attribution_status" && group_by !== "stitching_method" && req.query.group_by2 !== "stitching_method" && !group_by.startsWith('custom_param:') && !(req.query.group_by2 && req.query.group_by2.startsWith('custom_param:'))) {
         try {
           const results = await getTimeDecayAttribution({
             siteId: req.site.id,
@@ -208,7 +217,7 @@ export async function attribution(req, res) {
           return res.json({ success: true, data: { model, date_from, date_to, group_by, metric, results: [], _notice: NIGHTLY_NOTICE } })
         }
       }
-      if (model === "w_shaped" && group_by !== "keyword" && req.query.group_by2 !== "keyword" && group_by !== "referrer_domain" && req.query.group_by2 !== "referrer_domain" && group_by !== "provider" && req.query.group_by2 !== "provider" && group_by !== "attribution_status" && req.query.group_by2 !== "attribution_status" && group_by !== "stitching_method" && req.query.group_by2 !== "stitching_method" && !group_by.startsWith('custom_param:') && !(req.query.group_by2 && req.query.group_by2.startsWith('custom_param:'))) {
+      if (model === "w_shaped" && preAggWindowMatches && group_by !== "keyword" && req.query.group_by2 !== "keyword" && group_by !== "referrer_domain" && req.query.group_by2 !== "referrer_domain" && group_by !== "provider" && req.query.group_by2 !== "provider" && group_by !== "attribution_status" && req.query.group_by2 !== "attribution_status" && group_by !== "stitching_method" && req.query.group_by2 !== "stitching_method" && !group_by.startsWith('custom_param:') && !(req.query.group_by2 && req.query.group_by2.startsWith('custom_param:'))) {
         try {
           const results = await getWShapedAttribution({
             siteId: req.site.id,
