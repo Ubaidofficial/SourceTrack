@@ -185,21 +185,30 @@ export function summarize (findings) {
 }
 
 // Zero-fallback hit-guard. ON leg touching HogQL = INVALID; pipe null / never called = FAIL.
-export function hitGuardResult ({ hogCalls = [], tbNull = false, tbCalls = 0 } = {}) {
+export function hitGuardResult ({ hogCalls = [], tbNull = false, tbCalls = 0, expectNoPipe = false } = {}) {
   const hogHit = hogCalls.length > 0
   return {
     valid: !hogHit,
-    fail: tbNull || tbCalls === 0,
+    // Normal targets: the pipe MUST serve (tbCalls>0, non-null) — tbCalls===0 = dispatch not exercised.
+    // expectNoPipe targets (a GATE that must divert to HogQL, e.g. a filtered session-report): the pipe
+    // must NOT be called — tbCalls>0 means the gate LEAKED (the pipe served a request it should have
+    // refused). allowedHogReads still governs the (expected) HogQL calls on the ON leg.
+    fail: expectNoPipe ? (tbCalls > 0) : (tbNull || tbCalls === 0),
     hogCalls: [...hogCalls],
     tbNull,
     tbCalls,
+    expectNoPipe,
     reason: hogHit
       ? `INVALID: ON leg called HogQL for [${hogCalls.join(',')}] — zero-fallback violated`
-      : tbNull
-        ? 'FAIL: Tinybird pipe returned null (would fall back — never pass by fallback)'
-        : tbCalls === 0
-          ? 'FAIL: Tinybird pipe never called (dispatch not exercised)'
-          : 'OK: pipe served non-null and HogQL was not called'
+      : expectNoPipe
+        ? (tbCalls > 0
+            ? `FAIL: gate leaked — pipe called ${tbCalls}x for a request that must NOT dispatch`
+            : 'OK: gate held — pipe never called (both legs on HogQL, as expected)')
+        : tbNull
+          ? 'FAIL: Tinybird pipe returned null (would fall back — never pass by fallback)'
+          : tbCalls === 0
+            ? 'FAIL: Tinybird pipe never called (dispatch not exercised)'
+            : 'OK: pipe served non-null and HogQL was not called'
   }
 }
 
@@ -214,7 +223,7 @@ function mkRes () {
   return res
 }
 
-export async function runParity ({ label = 'parity', setDeps, resetDeps, handlerFn, mockReq, callFn, siteId, params, offLeg, onLeg, cfg = DEFAULT_CFG, beforeLeg, meaningful, allowedHogReads = [] }) {
+export async function runParity ({ label = 'parity', setDeps, resetDeps, handlerFn, mockReq, callFn, siteId, params, offLeg, onLeg, cfg = DEFAULT_CFG, beforeLeg, meaningful, allowedHogReads = [], expectNoPipe = false }) {
   // allowedHogReads: HogQL query NAMES that are EXPECTED on the ON leg because the target
   // reads them from an un-wired leg (e.g. multitouch's 'multitouch_pageviews_live' — only
   // the conversions read has a pipe). These are served identically to the OFF leg and do
@@ -256,7 +265,7 @@ export async function runParity ({ label = 'parity', setDeps, resetDeps, handler
     })
   } finally { resetDeps() }
 
-  const guard = hitGuardResult({ hogCalls: hogOn, tbNull, tbCalls })
+  const guard = hitGuardResult({ hogCalls: hogOn, tbNull, tbCalls, expectNoPipe })
   const findings = deepDiff(bodyA, bodyB, cfg)
   const summary = summarize(findings)
   // Three-state verdict. RED is strictly dominant (any divergence / hit-guard failure).
@@ -562,8 +571,13 @@ export const TARGETS = {
         return mod.getSessionReport(siteId, params.date_from, params.date_to, R.groupBy, R.metric, R.filters, R.groupBy2)
       },
       beforeLeg: (siteId, _leg, params) => mod.__evictSessionReportCache(siteId, params.date_from, params.date_to, R.groupBy, R.metric, R.filters, R.groupBy2),
-      // With the gate, the ON leg serves this from HogQL (pipe skipped) — so the session reads are
-      // EXPECTED HogQL and must not trip the hit-guard.
+      // ⚠️ THIS TARGET IS NOT A PARITY PROOF. Its ONLY job is to prove the FILTER GATE (#174) diverts a
+      // filtered request AWAY from the pipe. With the gate, BOTH legs run HogQL, so identical values are
+      // trivially true (HogQL==HogQL) and prove NOTHING about the pipe — do NOT read its GREEN as
+      // pipe-parity. The real signal is expectNoPipe: the guard REQUIRES tbCalls===0 (gate held) and
+      // FAILS if the pipe is called (gate leaked -> a filtered request would over-count). allowedHogReads
+      // makes the expected both-legs-HogQL legal.
+      expectNoPipe: true,
       allowedHogReads: ['session_report_pageviews', 'session_report_conversions'],
       cfg: { ...DEFAULT_CFG, idKeys: [...DEFAULT_CFG.idKeys, 'dim_value', 'dim_value2'] },
       meaningful: (A, B) => (Array.isArray(A) && A.length > 0) || (Array.isArray(B) && B.length > 0),
@@ -772,7 +786,8 @@ async function runLive (args) {
     onLeg: { queryTinybird: t.realTb },
     beforeLeg: t.beforeLeg,
     meaningful: t.meaningful,
-    allowedHogReads: t.allowedHogReads
+    allowedHogReads: t.allowedHogReads,
+    expectNoPipe: t.expectNoPipe
   })
   console.log(formatReport(report))
   // Exit codes: GREEN=0, RED=1, INCONCLUSIVE=4 (empty window — NOT a success; must not

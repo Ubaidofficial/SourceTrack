@@ -77,6 +77,16 @@ test('hit-guard: ON→HogQL = INVALID; pipe null / never-called = FAIL; clean = 
   assert.ok(ok.valid && !ok.fail, 'pipe served, HogQL untouched -> OK')
 })
 
+test('hit-guard expectNoPipe: gate targets INVERT the tbCalls check (0 = PASS, >0 = FAIL)', () => {
+  // A gate target (e.g. filtered session-report) MUST divert away from the pipe.
+  const held = hitGuardResult({ hogCalls: [], tbCalls: 0, expectNoPipe: true })
+  assert.ok(held.valid && !held.fail, 'gate held: pipe never called -> PASS (this was a false RED before)')
+  const leaked = hitGuardResult({ hogCalls: [], tbCalls: 1, expectNoPipe: true })
+  assert.strictEqual(leaked.fail, true, 'gate leaked: pipe called for a must-not-dispatch request -> FAIL')
+  // regression: WITHOUT the flag, tbCalls===0 is still a FAIL (normal targets must dispatch).
+  assert.strictEqual(hitGuardResult({ hogCalls: [], tbCalls: 0 }).fail, true, 'normal target: no dispatch = FAIL')
+})
+
 // ── runner through the fake wired handler (known stub pairs) ──────────────────
 test('runParity: MATCHING stub pair -> GREEN, hit-guard clean', async () => {
   const { report, ok } = await runStubScenario('match')
