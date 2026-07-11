@@ -118,7 +118,7 @@ test('every declared self-test scenario meets its expected verdict', async () =>
 // ── target registry (catches a seam-name typo in CI, not at --live) ──────────
 test('every --live target loader resolves to a drivable shape (handlerFn OR callFn) + seams', async () => {
   const names = Object.keys(TARGETS)
-  assert.deepStrictEqual(names.sort(), ['ai-platform', 'alerts', 'events-health', 'explain', 'first-touch', 'first-touch-non-direct', 'flexible-report', 'flexible-report-attribution-status', 'flexible-report-provider', 'last-touch', 'last-touch-non-direct', 'multitouch', 'session-report', 'session-report-filtered', 'sessions'], 'expected exactly these fifteen targets')
+  assert.deepStrictEqual(names.sort(), ['ai-platform', 'alerts', 'events-health', 'explain', 'first-touch', 'first-touch-non-direct', 'flexible-report', 'flexible-report-attribution-status', 'flexible-report-provider', 'flexible-report-stitching-method', 'last-touch', 'last-touch-non-direct', 'multitouch', 'session-report', 'session-report-filtered', 'sessions'], 'expected exactly these sixteen targets')
   for (const name of names) {
     const t = await TARGETS[name]()
     // a target is EITHER a route handler (handlerFn) OR a lib function (callFn)
