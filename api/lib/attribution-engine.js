@@ -1933,6 +1933,13 @@ export async function getMultiTouchAttributionLive({
   return results.sort((a, b) => b.revenue - a.revenue)
 }
 
+// Test/harness seam: evict the exact getFlexibleReport cache entry so the A/B parity harness
+// recomputes each leg (mirrors __evictSessionReportCache). Key reconstruction MUST match below.
+export function __evictFlexibleReportCache (siteId, model, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null, granularity = 'day', attributionWindow = null, attributeBy = 'conversion_date') {
+  const filterKey = JSON.stringify(filters) + groupBy2 + granularity + attributionWindow + attributeBy
+  cache.del(cacheKey(`${model}:${groupBy}:${metric}:${filterKey}`, siteId, dateFrom, dateTo))
+}
+
 export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null, granularity = 'day', attributionWindow = null, attributeBy = 'conversion_date') {
   const filterKey = JSON.stringify(filters) + groupBy2 + granularity + attributionWindow + attributeBy
   const key = cacheKey(`${model}:${groupBy}:${metric}:${filterKey}`, siteId, dateFrom, dateTo)
@@ -2751,7 +2758,31 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     ${orderClause}
     LIMIT 50000
   `
-  const rows = await queryHogQL(sql, 'flexible_report')
+  // flexible_report BASE-CASE parity wiring (pipe-first, allowlist-gated, HogQL fallback).
+  // STRICT base-case gate — matches flexible_report_main_by_site.pipe's declared coverage EXACTLY:
+  // source × first_touch × {revenue|conversions}, single dim, no _nd/window/custom joins, no filters,
+  // conversion_date, UTC. EVERYTHING else falls through to the unchanged HogQL `sql`. NOTE: the live
+  // `sql` also applies an external_event_id conversion-dedup (see above) that the pipe does NOT
+  // replicate — the `--live --target flexible-report` value-parity proves whether that (or anything)
+  // diverges BEFORE any Class-A dim-swap pipe is authored on this pattern.
+  const _flexBaseCase =
+    model === 'first_touch' && groupBy === 'source' && !groupBy2 &&
+    (metric === 'revenue' || metric === 'conversions') &&
+    !hasAttributionWindow && attributeBy === 'conversion_date' &&
+    !custKey1 && !custKey2 && tz === 'UTC' && filterClauses === ''
+  let rows
+  if (_flexBaseCase) {
+    // Same +1-day-exclusive UTC bounds the HogQL `sql` uses (serializeHogQLDateRange), formatted for
+    // the pipe's DateTime params — guarantees date-parity.
+    const _fbFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+    const _fbTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+    const _fbTb = await _queryTinybirdPipe('flexible_report_main_by_site', { site_id: String(siteId), date_from: _fbFrom, date_to: _fbTo, metric })
+    // Named pipe rows -> positional [dim_value, metric_value] so the unchanged consumer (row[0]/row[1],
+    // !hasDim2) stays byte-identical. Null -> injectable HogQL fallback (harness controls both legs).
+    rows = _fbTb ? _fbTb.map(r => [r.dim_value, r.metric_value]) : await _queryHogQL(sql, 'flexible_report')
+  } else {
+    rows = await _queryHogQL(sql, 'flexible_report')
+  }
 
   const results = rows.map((row) => {
     const hasDim2 = dim2Expr != null

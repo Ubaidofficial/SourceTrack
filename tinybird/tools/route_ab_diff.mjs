@@ -540,6 +540,33 @@ export const TARGETS = {
       realHog: ph.queryHogQL
     }
   },
+  // flexible_report BASE CASE (parity proof, INERT): source × first_touch × conversions, wired
+  // pipe-first to flexible_report_main_by_site. The ON leg reads ONLY the pipe for the base case
+  // (no pageviews/HogQL leg) -> NO allowedHogReads; any HogQL 'flexible_report' on the ON leg
+  // trips the hit-guard (correct — the base case must not fall back). getFlexibleReport caches by
+  // full key, so beforeLeg evicts it before EACH leg (mirrors session-report). NOTE: the live sql
+  // applies an external_event_id conversion-dedup the pipe omits — this target is exactly what
+  // proves whether that (or anything) diverges before Class-A pipes scale the pattern.
+  'flexible-report': async () => {
+    const mod = await import('../../api/lib/attribution-engine.js')
+    const tb = await import('../../api/lib/tinybird-read.js')
+    const ph = await import('../../api/lib/posthog.js')
+    const R = { model: 'first_touch', groupBy: 'source', metric: 'conversions', filters: {}, groupBy2: null }
+    return {
+      setDeps: mod.__setAttributionReadDeps,
+      resetDeps: mod.__resetAttributionReadDeps,
+      callFn: (deps, { siteId, params }) => {
+        mod.__setAttributionReadDeps(deps)
+        return mod.getFlexibleReport(siteId, R.model, params.date_from, params.date_to, R.groupBy, R.metric, R.filters, R.groupBy2)
+      },
+      beforeLeg: (siteId, _leg, params) => mod.__evictFlexibleReportCache(siteId, R.model, params.date_from, params.date_to, R.groupBy, R.metric, R.filters, R.groupBy2),
+      // rows are { dim_value, conversions } — intersect on dim_value; DEFAULT_CFG cent-precision on values.
+      cfg: { ...DEFAULT_CFG, rowKeyFn: (r) => String(r?.dim_value) },
+      meaningful: (A, B) => (Array.isArray(A) && A.length > 0) || (Array.isArray(B) && B.length > 0),
+      realTb: tb.queryTinybirdPipe,
+      realHog: ph.queryHogQL
+    }
+  },
   // The 4 touch-model reads — already wired/flipped in prod (pipes in the 6-pipe
   // allowlist), but never validated by this harness's cent/intersection/hit-guard/
   // empty-window guards. Tool-only: proof, no wiring change.
