@@ -60,6 +60,7 @@ export async function fetchApi(path, options = {}) {
   if (!res.ok || !data.success) {
     const err = new Error(data.error || `Request failed with status ${res.status}`)
     err.status = res.status
+    err.error_code = data.error_code || null // structured code (e.g. 'query_timeout') so callers can render an honest, specific state
     throw err
   }
 

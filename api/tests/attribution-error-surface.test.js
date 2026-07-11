@@ -56,3 +56,29 @@ test('a read returning [] stays the HONEST empty shape — 200 success, no analy
   assert.deepStrictEqual(res.body.data.results, [], 'honest empty results')
   assert.ok(!res.body.data.analytics_unavailable, 'zero-rows is not an error — no analytics_unavailable flag')
 })
+
+test('a ClickHouse max-execution-time (504) surfaces error_code: query_timeout — honest, no raw leak, not empty', async () => {
+  __setAttributionReadDeps({
+    queryTinybird: async () => null, // force the HogQL leg
+    queryHog: async () => { throw new Error('HogQL flexible_report failed (504): "Query has hit the max execution time before completing... You may need to materialize."') }
+  })
+  const res = mockRes()
+  try { await attribution(req('site-timeout'), res) } finally { __resetAttributionReadDeps() }
+
+  assert.strictEqual(res.statusCode, 500, 'real error status -> fetchApi throws (not a silent 200 empty)')
+  assert.strictEqual(res.body.success, false)
+  assert.strictEqual(res.body.error_code, 'query_timeout', 'structured timeout code so the dashboard renders an honest state, not "no data"')
+  assert.match(res.body.error, /narrower date range|timed out/i, 'actionable message')
+  assert.ok(!/max execution time|504/i.test(res.body.error), 'raw ClickHouse message NOT leaked to the client')
+  assert.ok(!res.body.data?.analytics_unavailable, 'NOT masked as empty')
+})
+
+test('a non-timeout failure gets error_code: query_failed (not mislabeled as timeout)', async () => {
+  __setAttributionReadDeps({
+    queryTinybird: async () => null,
+    queryHog: async () => { throw new Error('simulated read-wiring failure') }
+  })
+  const res = mockRes()
+  try { await attribution(req('site-generic'), res) } finally { __resetAttributionReadDeps() }
+  assert.strictEqual(res.body.error_code, 'query_failed', 'generic failures classified distinctly')
+})

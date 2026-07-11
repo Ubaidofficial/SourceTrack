@@ -21,7 +21,7 @@ import {
 import {
   RefreshCw, Bookmark, Trash2, Download, Copy,
   Search, ChevronDown, ArrowRight, Plus, HelpCircle,
-  BarChart3, X, Lock, Settings, Sparkles
+  BarChart3, X, Lock, Settings, Sparkles, AlertTriangle
 } from 'lucide-react'
 import ConversionExplanationModal from '../components/ConversionExplanationModal'
 import { hasFeature } from '../lib/planFeatures'
@@ -663,11 +663,18 @@ export default function ReportBuilder() {
   const effectiveDateTo = effectiveDateRange.to
 
   const filterKey = JSON.stringify(filters)
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ['report', site?.site_key, model, groupBy, metric, effectiveDateFrom, effectiveDateTo, filterKey, groupBy2, granularity, attributionWindow, attributeBy],
     queryFn: () => getFlexibleReport(site?.site_key, model, effectiveDateFrom, effectiveDateTo, groupBy, metric, filters, groupBy2, granularity, attributionWindow, attributeBy),
     enabled: !!site && !activeGateError
   })
+  // A failed query must NEVER render as an empty "no data" state — that is a silent lie about the
+  // customer's business. A timeout (Class-B shapes with no pipe: this dim × range is too expensive on
+  // the live HogQL query) gets a specific, honest message; any other failure gets a generic one.
+  const isTimeoutError = isError && error?.error_code === 'query_timeout'
+  const reportErrorMessage = isTimeoutError
+    ? 'This query timed out for the selected range. Try a narrower date range or a different dimension.'
+    : (isError ? "Couldn't load this report. Please try again, or pick a narrower range." : null)
 
   const { data: savedReports, isLoading: reportsLoading, refetch: refetchReports } = useQuery({
     queryKey: ['saved-reports', site?.site_key],
@@ -2142,6 +2149,12 @@ export default function ReportBuilder() {
                       <div className="h-72 flex flex-col items-center justify-center gap-2">
                         <RefreshCw className="w-6 h-6 animate-spin text-st-gray dark:text-gray-400" />
                         <p className="text-xs text-st-gray dark:text-gray-400">Loading report data...</p>
+                      </div>
+                    ) : isError ? (
+                      <div className="h-72 flex flex-col items-center justify-center gap-2 px-6 text-center">
+                        <AlertTriangle className="w-6 h-6 text-amber-500" />
+                        <p className="text-sm font-medium text-st-black dark:text-dark-primary">{isTimeoutError ? 'Query timed out' : "Couldn't load this report"}</p>
+                        <p className="text-xs text-st-gray dark:text-gray-400 max-w-md">{reportErrorMessage}</p>
                       </div>
                     ) : results.length === 0 ? (
                       <div className="h-72 flex items-center justify-center text-st-gray dark:text-gray-400 text-sm">

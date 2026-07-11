@@ -2505,6 +2505,14 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
           AND event = '$pageview'
           AND properties.utm_source IS NOT NULL
           AND properties.utm_source != ''${ndFilter}
+          -- (c)-safe scan reduction: a qualifying touchpoint must be within windowDays BEFORE an
+          -- in-window conversion (cv.timestamp in [fromDate, toDate)), so a pageview outside
+          -- [fromDate - windowDays, toDate) can NEVER be within N days of any conversion in the set
+          -- -> pruning it cannot change any argMaxIf result. Cuts the full-pageview-history scan.
+          -- (Only the inherently-windowed _win join; _nd is an ALL-TIME lookback and is deliberately
+          -- NOT bounded — date-bounding it would change non-direct attribution for no-window requests.)
+          AND timestamp >= ${fromDate} - INTERVAL ${windowDays} DAY
+          AND timestamp < ${toDate}
       ) AS _pv
         ON _pv.distinct_id = cv.distinct_id
       GROUP BY cv.uuid
