@@ -1016,7 +1016,15 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
   const _tbPvParams = { site_id: String(siteId), date_from_ts: _tbFrom, date_to_ts: _tbTo }
   if (custKey1) _tbPvParams.custom_key1 = custKey1
   if (custKey2 && custKey2 !== custKey1) _tbPvParams.custom_key2 = custKey2
-  const _tbPv = await _queryTinybirdPipe('session_report_pageviews', _tbPvParams)
+  // FILTER GATE: getSessionReport calls the pipes WITHOUT the content-filter params (channel/source/
+  // medium/campaign/country/device_type/conversion_type), while the HogQL leg applies them via
+  // filterClauses — so a FILTERED request would over-count from the pipe (unfiltered rows). Fall back
+  // to HogQL whenever any content filter is active (mirrors the flexible_report filterClauses gate).
+  // Unfiltered requests still serve from the pipe; custom-param GROUPING is not a content filter and
+  // stays pipe-eligible (custom_key1/2 are the group dims, passed above). ReportBuilder lets a user
+  // combine a session metric with a filter, so this path is live-reachable.
+  const _sessionPipeEligible = filterClauses === ''
+  const _tbPv = _sessionPipeEligible ? await _queryTinybirdPipe('session_report_pageviews', _tbPvParams) : null
   const rows = _tbPv
     ? _tbPv.map(r => {
         const base = [r.distinct_id, r.timestamp, r.page_url, r.utm_source, r.utm_medium, r.utm_campaign, r.country, r.device_type]
@@ -1040,7 +1048,7 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
     LIMIT 50000
   `
 
-  const _tbConv = await _queryTinybirdPipe('session_report_conversions', { site_id: String(siteId), date_from_ts: _tbFrom, date_to_ts: _tbTo })
+  const _tbConv = _sessionPipeEligible ? await _queryTinybirdPipe('session_report_conversions', { site_id: String(siteId), date_from_ts: _tbFrom, date_to_ts: _tbTo }) : null
   const convRows = _tbConv
     ? _tbConv.map(r => [r.distinct_id, r.timestamp])
     : await _queryHogQL(convSql, 'session_report_conversions')
