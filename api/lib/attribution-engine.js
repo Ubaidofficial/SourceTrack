@@ -2788,7 +2788,16 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
   // !hasAttributionWindow here: this is what lets the prod route (which always injects a window)
   // dispatch the pipe. last_touch_non_direct+provider is the live prod 504 this fixes.
   const _flexProviderCase = _flexPipeCommon && groupBy === 'provider' && isTouchModel
-  const _flexPipe = _flexMainCase ? 'flexible_report_main_by_site' : _flexProviderCase ? 'flexible_report_provider_by_site' : null
+  // attribution_status is another CONVERSION-PROPERTY dim (ATTRIBUTION_STATUS_SQL, model-independent,
+  // no _nd) -> same window-tolerant Class-A treatment as provider (proven GREEN on --live).
+  const _flexAttributionStatusCase = _flexPipeCommon && groupBy === 'attribution_status' && isTouchModel
+  const _flexPipe = _flexMainCase
+    ? 'flexible_report_main_by_site'
+    : _flexProviderCase
+      ? 'flexible_report_provider_by_site'
+      : _flexAttributionStatusCase
+        ? 'flexible_report_attribution_status_by_site'
+        : null
   // TEMP diagnostic (debug/flex-gate-instrument — removable once diagnosed): fires on EVERY
   // getFlexibleReport call that reaches the pipe-dispatch point. If ABSENT from prod logs for the
   // provider request, the request never reached here — an earlier branch served it (route fast-path,

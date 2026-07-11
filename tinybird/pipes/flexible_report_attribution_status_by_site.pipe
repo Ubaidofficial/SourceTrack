@@ -1,0 +1,68 @@
+DESCRIPTION >
+    Wave-3 flexible_report Class-A dim-swap: group_by=ATTRIBUTION_STATUS. Clone of
+    flexible_report_provider_by_site with the dim expr swapped to GROUP_COLUMNS.attribution_status
+    (ATTRIBUTION_STATUS_SQL, attribution-engine.js:81) and the SAME external_event_id dedup carried
+    from birth (#170). One row per attribution_status with the metric.
+
+    MODEL-INDEPENDENT (verified): attribution_status is a CONVERSION-PROPERTY group_by —
+    GROUP_COLUMNS.attribution_status = ATTRIBUTION_STATUS_SQL for all 4 touch models (first_touch/
+    last_touch/first_touch_non_direct/last_touch_non_direct), and it references NO _nd touchpoint
+    columns (only attribution_status/ingestion_method/stitching_method — all conversion props). For the
+    *_non_direct models the live sql adds a _nd LEFT JOIN this dim never reads; it is 1:<=1 by
+    distinct_id (non-fanning), so count()/SUM per attribution_status is identical whether or not it
+    runs. WINDOW is a no-op (same reasoning as provider, proven GREEN on --live). So this ONE pipe
+    serves group_by=attribution_status for all 4 touch models.
+
+    dim = ATTRIBUTION_STATUS_SQL, typed-translated (§2.6): properties.attribution_status ->
+    attribution_status (LowCardinality(Nullable(String)), events.datasource:35); properties.
+    ingestion_method -> ingestion_method (LowCardinality(String), :32); properties.stitching_method ->
+    stitching_method (LowCardinality(Nullable(String)), :34). EMPTY/NULL convention replicated exactly:
+    COALESCE(NULLIF(attribution_status,''), multiIf(...)) — an empty/absent status falls through to the
+    same multiIf fallback the HogQL uses, so buckets match. metric in {revenue, conversions} via the
+    `metric` param. BASE-CASE GATE ONLY (no dim2/custom/filters, UTC, conversion_date); window-tolerant.
+    Same params/output columns (dim_value, metric_value) so the wiring's positional remap is byte-identical.
+
+    external_event_id DEDUP (identical to flexible_report_provider_by_site, #170): keep all
+    null/empty-keyed rows; for a non-null key keep the GLOBAL-earliest-by-timestamp row (inner subquery
+    NOT date-filtered, matching HogQL). Tie-break Tinybird event_id (HogQL uses uuid) — identical bucket
+    for a genuine duplicate (it shares attribution_status+value). PARAM SHAPE: {{ String(site_id) }}
+    referenced TWICE (outer + dedup subquery); date params once. MANDATORY before deploy:
+    `tb --cloud deploy --check` (ST_Staging, NOT prod). VALUE-PARITY NOT RUN.
+
+NODE flexible_report_attribution_status_by_site_node
+SQL >
+    %
+    SELECT
+        COALESCE(NULLIF(attribution_status, ''), multiIf(ingestion_method = 'server_routed', 'attributed', stitching_method IS NOT NULL AND stitching_method != '' AND stitching_method != 'none', 'attributed', stitching_method = 'none', 'unattributed', 'unknown')) AS dim_value,
+        {% if String(metric, 'conversions') == 'revenue' %}
+        SUM(toFloat64OrZero(toString(conversion_value)))
+        {% else %}
+        count()
+        {% end %} AS metric_value
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$conversion'
+      AND timestamp >= {{ DateTime(date_from, required=True) }}
+      AND timestamp < {{ DateTime(date_to, required=True) }}
+      -- external_event_id dedup — carried from flexible_report_provider_by_site (#170), faithful port
+      -- of the HogQL leg (attribution-engine.js:2397-2409). KEEP every null/empty-keyed row; for a
+      -- non-null key keep the GLOBAL-earliest-by-timestamp row (inner subquery NOT date-filtered).
+      -- Tie-break Tinybird event_id (HogQL uses uuid) — identical bucket for a genuine duplicate.
+      AND (
+        external_event_id IS NULL
+        OR external_event_id = ''
+        OR event_id IN (
+          SELECT argMin(event_id, timestamp)
+          FROM events
+          WHERE site_id = {{ String(site_id, required=True) }}
+            AND event_type = '$conversion'
+            AND external_event_id IS NOT NULL
+            AND external_event_id != ''
+          GROUP BY external_event_id
+        )
+      )
+    GROUP BY dim_value
+    ORDER BY metric_value DESC
+    LIMIT 50000
+
+TYPE endpoint
