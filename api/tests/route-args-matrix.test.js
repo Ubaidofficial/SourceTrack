@@ -49,6 +49,11 @@ const MATRIX = [
   { name: 'provider · FILTERED · windowed · UTC', in: { model: 'last_touch_non_direct', groupBy: 'provider', over: { filters: { source: 'google' } } }, expect: 'NONE' },
   { name: 'provider · unfiltered · windowed · NON-UTC', in: { model: 'last_touch_non_direct', groupBy: 'provider', over: { timezone: 'America/New_York' } }, expect: 'NONE' },
   { name: 'provider · serves all 4 touch models (windowed, UTC)', in: { model: 'first_touch', groupBy: 'provider' }, expect: 'flexible_report_provider_by_site' },
+  // attribution_status = conversion-property dim (Class-A sibling #2): same window-tolerant gate as provider.
+  { name: 'attribution_status · unfiltered · windowed · UTC', in: { model: 'last_touch_non_direct', groupBy: 'attribution_status' }, expect: 'flexible_report_attribution_status_by_site' },
+  { name: 'attribution_status · FILTERED · windowed · UTC', in: { model: 'last_touch_non_direct', groupBy: 'attribution_status', over: { filters: { source: 'google' } } }, expect: 'NONE' },
+  { name: 'attribution_status · unfiltered · windowed · NON-UTC', in: { model: 'last_touch_non_direct', groupBy: 'attribution_status', over: { timezone: 'America/New_York' } }, expect: 'NONE' },
+  { name: 'attribution_status · serves all 4 touch models (windowed, UTC)', in: { model: 'first_touch', groupBy: 'attribution_status' }, expect: 'flexible_report_attribution_status_by_site' },
   // source × first_touch = touchpoint dim: the window RE-ATTRIBUTES source, so ONLY no-window UTC unfiltered serves.
   { name: 'source · unfiltered · no-window · UTC', in: { model: 'first_touch', groupBy: 'source', over: { attributionWindow: null } }, expect: 'flexible_report_main_by_site' },
   { name: 'source · unfiltered · WINDOWED · UTC (route default!)', in: { model: 'first_touch', groupBy: 'source' }, expect: 'NONE' },
