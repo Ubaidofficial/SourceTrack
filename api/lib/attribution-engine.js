@@ -2942,6 +2942,37 @@ export function preAggregatedWindowMatches (resolvedWindow, attributionWindowDay
   return String(resolvedWindow) === materialized
 }
 
+// The genuinely un-materialized report dims — keyword, referrer_domain, custom_param:* — have no
+// pre-agg column and no Tinybird pipe, so they always run the live HogQL windowJoin, which times
+// out at volume over long ranges (#180 makes that failure honest but the customer still gets NO
+// data). To return DATA instead of a 504, the route caps the lookback for these shapes to a range
+// HogQL can complete and labels the response truthfully.
+// NOTE: 31 is a CONSERVATIVE pre-fixture default — it covers the dominant "Last 30 days" preset, so
+// only longer (60/90-day) requests on these dims are trimmed. The real safe ceiling must be measured
+// against the ~1M-pageview/90d volume fixture and tuned here; this is a safety valve, not a
+// calibrated limit.
+export const UNMATERIALIZED_DIM_MAX_DAYS = 31
+
+export function isUnmaterializedReportDim (dim) {
+  return dim === 'keyword' || dim === 'referrer_domain' || (typeof dim === 'string' && dim.startsWith('custom_param:'))
+}
+
+// Pure. When the report groups by an un-materialized dim (primary OR secondary), clamp dateFrom to
+// at most maxDays before dateTo. Returns { dateFrom, capped }. Dates are 'YYYY-MM-DD' (UTC midnight).
+// A shape that isn't un-materialized, or is already within range, is returned unchanged (capped:false).
+export function capUnmaterializedRange ({ groupBy, groupBy2, dateFrom, dateTo, maxDays = UNMATERIALIZED_DIM_MAX_DAYS }) {
+  if (!isUnmaterializedReportDim(groupBy) && !isUnmaterializedReportDim(groupBy2)) {
+    return { dateFrom, capped: false }
+  }
+  const to = new Date(`${dateTo}T00:00:00Z`)
+  const from = new Date(`${dateFrom}T00:00:00Z`)
+  if (Number.isNaN(to.getTime()) || Number.isNaN(from.getTime())) return { dateFrom, capped: false }
+  const spanDays = Math.round((to.getTime() - from.getTime()) / 86400000)
+  if (spanDays <= maxDays) return { dateFrom, capped: false }
+  const cappedFrom = new Date(to.getTime() - maxDays * 86400000).toISOString().slice(0, 10)
+  return { dateFrom: cappedFrom, capped: true }
+}
+
 // Get pre-aggregated attribution from batch job results
 export async function getPreAggregatedAttribution({
   siteId,

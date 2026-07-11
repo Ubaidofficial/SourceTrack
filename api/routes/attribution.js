@@ -1,4 +1,4 @@
-import { getAttribution, getFlexibleReport, getAttributionExplanation, getPreAggregatedAttribution, getLinearAttribution, getUShapedAttribution, getTimeDecayAttribution, getWShapedAttribution, preAggregatedWindowMatches } from '../lib/attribution-engine.js'
+import { getAttribution, getFlexibleReport, getAttributionExplanation, getPreAggregatedAttribution, getLinearAttribution, getUShapedAttribution, getTimeDecayAttribution, getWShapedAttribution, preAggregatedWindowMatches, capUnmaterializedRange, UNMATERIALIZED_DIM_MAX_DAYS } from '../lib/attribution-engine.js'
 import { requireFeature } from '../lib/plan-features.js'
 import { serializeHogQLDateRange } from '../lib/hogql-date.js'
 import { isValidTimezone } from '../lib/utils.js'
@@ -234,7 +234,14 @@ export async function attribution(req, res) {
         }
       }
       filters.timezone = tz
-      const reportResult = await getFlexibleReport(posthogSiteId, model, date_from, date_to, group_by, metric, filters,
+      // Un-materialized dims (keyword/referrer_domain/custom_param:*, incl. as a cross-tab dim2) have no
+      // pre-agg and no pipe → always the live HogQL windowJoin, which 504s at volume over long ranges.
+      // Cap the lookback so the query COMPLETES and returns data, and report the served range honestly
+      // (#180's timeout stays as the backstop if even the capped range is too heavy).
+      const { dateFrom: servedFrom, capped: rangeCapped } = capUnmaterializedRange({
+        groupBy: group_by, groupBy2: req.query.group_by2 || null, dateFrom: date_from, dateTo: date_to
+      })
+      const reportResult = await getFlexibleReport(posthogSiteId, model, servedFrom, date_to, group_by, metric, filters,
         req.query.group_by2 || null,
         req.query.time_granularity || 'day',
         req.query.attribution_window || null,
@@ -256,12 +263,14 @@ export async function attribution(req, res) {
         success: true,
         data: {
           model,
-          date_from,
+          // Echo the range actually served, not the requested one — honest when the cap trimmed it.
+          date_from: servedFrom,
           date_to,
           group_by,
           metric,
           filters: Object.keys(filters).length > 0 ? filters : undefined,
           results,
+          ...(rangeCapped ? { range_capped: true, range_cap_notice: `This breakdown runs on live data and is limited to the last ${UNMATERIALIZED_DIM_MAX_DAYS} days for a longer requested range. Showing ${servedFrom} to ${date_to}.` } : {}),
           ...(truncated ? { truncated, truncation_warning: 'Results are limited to 50,000 events. Use a shorter date range for complete data.' } : {})
         },
         error: null
