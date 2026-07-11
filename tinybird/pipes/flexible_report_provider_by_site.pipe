@@ -1,0 +1,63 @@
+DESCRIPTION >
+    Wave-3 flexible_report Class-A dim-swap: group_by=PROVIDER. Clone of flexible_report_main_by_site
+    with the dim expr swapped to GROUP_COLUMNS.provider (PROVIDER_SQL, attribution-engine.js:79) and
+    the SAME external_event_id dedup carried from birth (#170). One row per provider with the metric.
+
+    MODEL-INDEPENDENT: provider is a CONVERSION-PROPERTY group_by — GROUP_COLUMNS.provider = PROVIDER_SQL
+    for all 4 touch models (first_touch/last_touch/first_touch_non_direct/last_touch_non_direct), and it
+    references NO _nd touchpoint columns. For the *_non_direct models the live sql adds a _nd LEFT JOIN
+    that the provider dim never reads; that join is 1:<=1 by distinct_id (non-fanning), so count()/SUM
+    per provider is identical whether or not it runs. Omitting it here is value-identical -> this ONE
+    pipe serves group_by=provider for all 4 touch models. (last_touch_non_direct+provider is the live
+    prod 504 this pipe fixes.)
+
+    dim = PROVIDER_SQL, typed-translated (§2.6): properties.provider -> provider (LowCardinality(
+    Nullable(String)), events.datasource:33); properties.ingestion_method -> ingestion_method
+    (LowCardinality(String), :32). metric in {revenue, conversions} via the `metric` param.
+    BASE-CASE GATE ONLY (no dim2/custom/window/filters, UTC, conversion_date) — everything else falls
+    to HogQL. Same params/output columns (dim_value, metric_value) as the base pipe so the wiring's
+    positional remap stays byte-identical.
+
+    external_event_id DEDUP (identical to flexible_report_main_by_site, #170): keep all null/empty-keyed
+    rows; for a non-null key keep the GLOBAL-earliest-by-timestamp row (inner subquery NOT date-filtered,
+    matching HogQL). Tie-break event_id (HogQL uses uuid) — parity holds because a genuine duplicate
+    shares provider+value. PARAM SHAPE: {{ String(site_id) }} referenced TWICE (outer + dedup subquery);
+    date params once. MANDATORY before deploy: `tb --cloud deploy --check`. VALUE-PARITY NOT RUN.
+
+NODE flexible_report_provider_by_site_node
+SQL >
+    %
+    SELECT
+        COALESCE(NULLIF(provider, ''), multiIf(ingestion_method = 'server_routed', 'browser', ingestion_method = 'offline', 'payments_api', 'unknown')) AS dim_value,
+        {% if String(metric, 'conversions') == 'revenue' %}
+        SUM(toFloat64OrZero(toString(conversion_value)))
+        {% else %}
+        count()
+        {% end %} AS metric_value
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$conversion'
+      AND timestamp >= {{ DateTime(date_from, required=True) }}
+      AND timestamp < {{ DateTime(date_to, required=True) }}
+      -- external_event_id dedup — carried from flexible_report_main_by_site (#170), faithful port of
+      -- the HogQL leg (attribution-engine.js:2397-2409). KEEP every null/empty-keyed row; for a
+      -- non-null key keep the GLOBAL-earliest-by-timestamp row (inner subquery NOT date-filtered).
+      -- Tie-break Tinybird event_id (HogQL uses uuid) — identical bucket for a genuine duplicate.
+      AND (
+        external_event_id IS NULL
+        OR external_event_id = ''
+        OR event_id IN (
+          SELECT argMin(event_id, timestamp)
+          FROM events
+          WHERE site_id = {{ String(site_id, required=True) }}
+            AND event_type = '$conversion'
+            AND external_event_id IS NOT NULL
+            AND external_event_id != ''
+          GROUP BY external_event_id
+        )
+      )
+    GROUP BY dim_value
+    ORDER BY metric_value DESC
+    LIMIT 50000
+
+TYPE endpoint

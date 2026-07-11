@@ -567,6 +567,30 @@ export const TARGETS = {
       realHog: ph.queryHogQL
     }
   },
+  // flexible_report PROVIDER (Class-A dim-swap, INERT): group_by=provider on last_touch_non_direct —
+  // the LIVE PROD 504 this pipe fixes. provider is a conversion-property dim (model-independent, no
+  // _nd), so the pipe omits the dead _nd join the HogQL leg adds; this target proves that omission is
+  // value-identical. ON leg reads ONLY flexible_report_provider_by_site -> NO allowedHogReads (any
+  // HogQL 'flexible_report' on the ON leg trips the hit-guard). Cache-evict beforeLeg like the base case.
+  'flexible-report-provider': async () => {
+    const mod = await import('../../api/lib/attribution-engine.js')
+    const tb = await import('../../api/lib/tinybird-read.js')
+    const ph = await import('../../api/lib/posthog.js')
+    const R = { model: 'last_touch_non_direct', groupBy: 'provider', metric: 'conversions', filters: {}, groupBy2: null }
+    return {
+      setDeps: mod.__setAttributionReadDeps,
+      resetDeps: mod.__resetAttributionReadDeps,
+      callFn: (deps, { siteId, params }) => {
+        mod.__setAttributionReadDeps(deps)
+        return mod.getFlexibleReport(siteId, R.model, params.date_from, params.date_to, R.groupBy, R.metric, R.filters, R.groupBy2)
+      },
+      beforeLeg: (siteId, _leg, params) => mod.__evictFlexibleReportCache(siteId, R.model, params.date_from, params.date_to, R.groupBy, R.metric, R.filters, R.groupBy2),
+      cfg: { ...DEFAULT_CFG, rowKeyFn: (r) => String(r?.dim_value) },
+      meaningful: (A, B) => (Array.isArray(A) && A.length > 0) || (Array.isArray(B) && B.length > 0),
+      realTb: tb.queryTinybirdPipe,
+      realHog: ph.queryHogQL
+    }
+  },
   // The 4 touch-model reads — already wired/flipped in prod (pipes in the 6-pipe
   // allowlist), but never validated by this harness's cent/intersection/hit-guard/
   // empty-window guards. Tool-only: proof, no wiring change.
