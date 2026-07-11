@@ -23,10 +23,10 @@ const PIPE = 'flexible_report_provider_by_site'
 const PIPE_ROWS = [{ dim_value: 'stripe', metric_value: 5 }, { dim_value: 'browser', metric_value: 3 }]
 const HOG_ROWS = [['stripe', 5], ['browser', 3]]
 
-async function run (deps, { model = 'last_touch_non_direct', groupBy = 'provider', metric = 'conversions', filters = {}, groupBy2 = null, site = 'site-prov' } = {}) {
-  __evictFlexibleReportCache(site, model, FROM, TO, groupBy, metric, filters, groupBy2)
+async function run (deps, { model = 'last_touch_non_direct', groupBy = 'provider', metric = 'conversions', filters = {}, groupBy2 = null, window = null, site = 'site-prov' } = {}) {
+  __evictFlexibleReportCache(site, model, FROM, TO, groupBy, metric, filters, groupBy2, 'day', window, 'conversion_date')
   __setAttributionReadDeps(deps)
-  try { return await getFlexibleReport(site, model, FROM, TO, groupBy, metric, filters, groupBy2) } finally { __resetAttributionReadDeps() }
+  try { return await getFlexibleReport(site, model, FROM, TO, groupBy, metric, filters, groupBy2, 'day', window, 'conversion_date') } finally { __resetAttributionReadDeps() }
 }
 
 test('DISPATCH: last_touch_non_direct + provider — pipe named rows == HogQL positional (byte-identical)', async () => {
@@ -54,6 +54,23 @@ test('DISPATCH: provider serves WITHOUT any HogQL flexible_report read (ON leg i
   const hogNames = []
   await run({ queryTinybird: async (p) => p === PIPE ? PIPE_ROWS : null, queryHog: async (_sql, name) => { hogNames.push(name); return [] } })
   assert.ok(!hogNames.includes('flexible_report'), 'no HogQL flexible_report read on the pipe-served provider case')
+})
+
+// ── WINDOW TOLERANCE: provider dispatches WITH a window (route always injects one); source does NOT ──
+test('WINDOW: provider + attribution window (the route ALWAYS injects >=30d) STILL dispatches the pipe', async () => {
+  const pipes = []
+  await run({ queryTinybird: async (p) => { pipes.push(p); return p === PIPE ? PIPE_ROWS : null }, queryHog: async () => [] }, { window: '30' })
+  assert.ok(pipes.includes(PIPE), 'provider pipe dispatches WITH a window — the window is a no-op for a conversion-property dim')
+})
+
+test('WINDOW: source + first_touch + window does NOT dispatch (window re-attributes source; pipe would diverge)', async () => {
+  const pipes = []
+  await run({
+    queryTinybird: async (p) => { pipes.push(p); return null },
+    queryHog: async (_sql, name) => name === 'flexible_report' ? HOG_ROWS : []
+  }, { model: 'first_touch', groupBy: 'source', window: '30', site: 'site-src-window' })
+  assert.ok(!pipes.includes('flexible_report_main_by_site'), 'main/source pipe MUST NOT dispatch with a window (windowedDimExpr re-attributes source)')
+  assert.ok(!pipes.includes(PIPE), 'provider pipe not involved for a source group_by')
 })
 
 // ── THE GATE: non-provider / non-base shapes MUST fall through and NEVER hit the provider pipe ──

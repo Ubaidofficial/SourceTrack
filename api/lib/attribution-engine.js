@@ -2764,12 +2764,21 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
   // pipes carry the external_event_id dedup for parity with the HogQL leg (#170).
   const _flexPipeCommon =
     !groupBy2 && (metric === 'revenue' || metric === 'conversions') &&
-    !hasAttributionWindow && attributeBy === 'conversion_date' &&
+    attributeBy === 'conversion_date' &&
     !custKey1 && !custKey2 && tz === 'UTC' && filterClauses === ''
-  // source × first_touch -> flexible_report_main_by_site (#168).
-  const _flexMainCase = _flexPipeCommon && model === 'first_touch' && groupBy === 'source'
-  // provider is a CONVERSION-PROPERTY dim (PROVIDER_SQL, model-independent, no _nd) -> ONE pipe
-  // serves all 4 touch models. last_touch_non_direct+provider is the live prod 504 this fixes.
+  // source × first_touch -> flexible_report_main_by_site (#168). The attribution window RE-ATTRIBUTES
+  // source (windowedDimExpr is set for source), so this pipe — which reads the conversion's stored
+  // first_touch_source, UNwindowed — can only match HogQL when NO window is active. Hence the extra
+  // !hasAttributionWindow here. (The prod route always injects a >=30d window, so this case rarely
+  // dispatches in prod — a separate base-case decision.)
+  const _flexMainCase = _flexPipeCommon && !hasAttributionWindow && model === 'first_touch' && groupBy === 'source'
+  // provider is a CONVERSION-PROPERTY dim (PROVIDER_SQL, model-independent, no _nd) -> ONE pipe serves
+  // all 4 touch models. The window is a NO-OP for provider: windowedDimExpr is null for it (only
+  // source/medium/campaign/keyword/referrer_domain are windowed), and the windowJoin is a non-fanning
+  // 1:1 LEFT JOIN (`_win` GROUP BY cv.uuid ... ON events.uuid = _win._win_uuid) that neither filters nor
+  // fans conversions — so count()/revenue per provider is identical with or without it. So NO
+  // !hasAttributionWindow here: this is what lets the prod route (which always injects a window)
+  // dispatch the pipe. last_touch_non_direct+provider is the live prod 504 this fixes.
   const _flexProviderCase = _flexPipeCommon && groupBy === 'provider' && isTouchModel
   const _flexPipe = _flexMainCase ? 'flexible_report_main_by_site' : _flexProviderCase ? 'flexible_report_provider_by_site' : null
   // TEMP diagnostic (debug/flex-gate-instrument — removable once diagnosed): fires on EVERY
