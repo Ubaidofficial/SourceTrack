@@ -576,15 +576,18 @@ export const TARGETS = {
     const mod = await import('../../api/lib/attribution-engine.js')
     const tb = await import('../../api/lib/tinybird-read.js')
     const ph = await import('../../api/lib/posthog.js')
-    const R = { model: 'last_touch_non_direct', groupBy: 'provider', metric: 'conversions', filters: {}, groupBy2: null }
+    // window='30' is THE ROUTE'S REAL ARG (attribution.js injects a >=30d default). The prior target
+    // passed null and never exercised the windowed path — the reason the 504 wasn't caught. This run
+    // compares the pipe against the WINDOWED HogQL, proving the window is a no-op for provider.
+    const R = { model: 'last_touch_non_direct', groupBy: 'provider', metric: 'conversions', filters: {}, groupBy2: null, gran: 'day', window: '30', attributeBy: 'conversion_date' }
     return {
       setDeps: mod.__setAttributionReadDeps,
       resetDeps: mod.__resetAttributionReadDeps,
       callFn: (deps, { siteId, params }) => {
         mod.__setAttributionReadDeps(deps)
-        return mod.getFlexibleReport(siteId, R.model, params.date_from, params.date_to, R.groupBy, R.metric, R.filters, R.groupBy2)
+        return mod.getFlexibleReport(siteId, R.model, params.date_from, params.date_to, R.groupBy, R.metric, R.filters, R.groupBy2, R.gran, R.window, R.attributeBy)
       },
-      beforeLeg: (siteId, _leg, params) => mod.__evictFlexibleReportCache(siteId, R.model, params.date_from, params.date_to, R.groupBy, R.metric, R.filters, R.groupBy2),
+      beforeLeg: (siteId, _leg, params) => mod.__evictFlexibleReportCache(siteId, R.model, params.date_from, params.date_to, R.groupBy, R.metric, R.filters, R.groupBy2, R.gran, R.window, R.attributeBy),
       cfg: { ...DEFAULT_CFG, rowKeyFn: (r) => String(r?.dim_value) },
       meaningful: (A, B) => (Array.isArray(A) && A.length > 0) || (Array.isArray(B) && B.length > 0),
       realTb: tb.queryTinybirdPipe,
