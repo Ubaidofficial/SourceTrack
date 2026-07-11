@@ -27,6 +27,38 @@ import { logWouldDropBot } from '../lib/bot-filter.js'
 const dedupCache = new NodeCache({ stdTTL: 86400, checkperiod: 3600 })
 const BROWSER_CONVERSION_PROVIDER = 'browser_conversion'
 
+// Durable idempotency key for a conversion, or null when it can't be durably keyed.
+// Fires for ANY non-null external_event_id (client-supplied event_id OR order-derived) — NOT
+// only when order_id exists (the fixed bug: a client event_id with no order_id was guarded by
+// the per-replica in-memory cache alone, so duplicates crossed replicas/redeploys). Distinct
+// key_type namespaces the no-order_id case so a client event_id can never COLLIDE with an
+// order-derived key_value — the unique constraint is (site_key, provider, key_type, key_value).
+export function buildConversionDedupeKey (externalEventId, orderId) {
+  if (!externalEventId) return null
+  return { key_type: orderId ? 'order_event' : 'capi_event_id', key_value: externalEventId }
+}
+
+// Test seam (mirrors attribution-engine's __setAttributionReadDeps): inject the durable claim /
+// rollback / usage-limit / dual-write deps so the two-layer dedupe can be driven deterministically
+// without a live DB. Defaults to the real implementations — inert in production.
+let _claimIdempotencyKeys = claimIdempotencyKeys
+let _rollbackIdempotencyKeys = rollbackIdempotencyKeys
+let _claimConversionUsage = claimConversionUsage
+let _dualWriteEvent = dualWriteEvent
+export function __setConversionDedupeDeps ({ claim, rollback, usage, dualWrite } = {}) {
+  if (claim) _claimIdempotencyKeys = claim
+  if (rollback) _rollbackIdempotencyKeys = rollback
+  if (usage) _claimConversionUsage = usage
+  if (dualWrite) _dualWriteEvent = dualWrite
+}
+export function __resetConversionDedupeDeps () {
+  _claimIdempotencyKeys = claimIdempotencyKeys
+  _rollbackIdempotencyKeys = rollbackIdempotencyKeys
+  _claimConversionUsage = claimConversionUsage
+  _dualWriteEvent = dualWriteEvent
+}
+export function __flushConversionDedupeCache () { dedupCache.flushAll() }
+
 // In-memory per-site dedupe log/map. Stores Timestamp + Key Type per site ID.
 // Structure: siteId (Number) -> Array of { timestamp: Number, keyType: String }
 const dedupeEventsLog = new Map()
@@ -281,14 +313,15 @@ export async function conversion(req, res) {
       return res.status(200).json({ success: true, data: { received: true, dedup_skipped: true, short_window: true }, error: null })
     }
 
-    // Deduplication — two layers, both keyed on (site, order_id, type):
-    //   1. In-memory NodeCache — fast path for the common double-click case.
-    //   2. Persistent revenue_idempotency_keys table — survives restarts and
-    //      catches duplicates whose first event predates the current process.
+    // Deduplication — two layers, keyed on external_event_id (client event_id OR order-derived):
+    //   1. In-memory NodeCache — fast path for the common double-click case (per-replica only).
+    //   2. Persistent revenue_idempotency_keys table — survives restarts/redeploys AND works
+    //      across replicas; the correctness backstop. Now fires whenever external_event_id is
+    //      non-null (not only when order_id exists — that gap let duplicates through).
     //
-    // Anonymous, no-order_id "button click" conversions are NOT deduped here
-    // — they have no stable key and merging them would silently drop real
-    // events. We only dedupe when the client gave us an order_id.
+    // Truly keyless conversions (no client event_id AND no order_id -> external_event_id null)
+    // are NOT deduped — no stable key, and merging them would silently drop real events.
+    const durableKey = buildConversionDedupeKey(externalEventId, orderId)
     if (externalEventId) {
       const recordDuplicate = () => {
         try {
@@ -312,18 +345,13 @@ export async function conversion(req, res) {
         return res.status(200).json({ success: true, data: { received: true, dedup_skipped: true }, error: null })
       }
 
-      // Persistent claim — fail-open on DB error: a Supabase/RPC failure
-      // falls through to "not a duplicate" so we never drop legitimate
-      // revenue on an outage. The fast cache is set only AFTER a successful
-      // claim so a duplicate can't poison the cache on a transient DB
-      // failure.
+      // Persistent (durable) claim — the correctness backstop the per-replica in-memory cache
+      // cannot provide. Fires whenever external_event_id is non-null (client event_id OR
+      // order-derived) via durableKey — closing the no-order_id gap.
       const siteKey = req.site?.site_key
-      if (siteKey && (req.body.order_id || req.body.orderId)) {
+      if (siteKey && durableKey) {
         try {
-          const claim = await claimIdempotencyKeys(siteKey, BROWSER_CONVERSION_PROVIDER, [{
-            key_type: 'order_event',
-            key_value: externalEventId
-          }])
+          const claim = await _claimIdempotencyKeys(siteKey, BROWSER_CONVERSION_PROVIDER, [durableKey])
           if (claim.duplicate) {
             dedupCache.set(externalEventId, true)
             recordDuplicate()
@@ -334,8 +362,11 @@ export async function conversion(req, res) {
             })
           }
         } catch (err) {
-          console.error('[conversion-dedupe] persistent claim failed:', err?.message)
-          // Fall through — better to risk a duplicate than drop revenue on a DB hiccup.
+          // FAIL-OPEN, LOUD (deliberate): a claim-RPC failure means "duplicate status unknown".
+          // Proceeding risks a rare, RECOVERABLE duplicate (read-side dedup + the CHECK 7 monitor);
+          // failing closed would DROP real revenue on a transient Supabase outage — unrecoverable
+          // and worse. Logged so the fail-open is observable, not silent. Mirrors the prior contract.
+          console.error('[conversion-dedupe] persistent claim failed (failing OPEN, possible duplicate):', err?.message)
         }
       }
 
@@ -344,7 +375,7 @@ export async function conversion(req, res) {
     // Enforce monthly conversion limits (fail-open on DB errors)
     let limitCheckAllowed = true
     try {
-      const limitCheck = await claimConversionUsage(req.site)
+      const limitCheck = await _claimConversionUsage(req.site)
       if (!limitCheck.allowed) {
         limitCheckAllowed = false
       }
@@ -353,12 +384,11 @@ export async function conversion(req, res) {
     }
 
     if (!limitCheckAllowed) {
-      if (externalEventId && req.site?.site_key && (req.body.order_id || req.body.orderId)) {
+      // Roll back the SAME key we durably claimed (order_event OR capi_event_id) so a
+      // limit-blocked conversion doesn't leave a claim that would drop a later retry.
+      if (durableKey && req.site?.site_key) {
         try {
-          await rollbackIdempotencyKeys(req.site.site_key, BROWSER_CONVERSION_PROVIDER, [{
-            key_type: 'order_event',
-            key_value: externalEventId
-          }])
+          await _rollbackIdempotencyKeys(req.site.site_key, BROWSER_CONVERSION_PROVIDER, [durableKey])
         } catch (rollbackErr) {
           console.error('[conversion] Failed to rollback idempotency keys after conversion limit block:', rollbackErr.message || rollbackErr)
         }
@@ -401,7 +431,7 @@ export async function conversion(req, res) {
     // and the plan-limit block (:349) — so a conversion the existing claim SKIPS
     // never dual-writes. props.external_event_id (:239, resolveCapiEventId) lets
     // deriveEventId branch-2 resolve the SAME id offline computes -> cross-dedup.
-    dualWriteEvent({ distinctId, event: '$conversion', timestamp: clientTimestamp, properties: props })
+    _dualWriteEvent({ distinctId, event: '$conversion', timestamp: clientTimestamp, properties: props })
 
     // CAPI sync — fire async, never block response. Gated by plan; free tier
     // skips the outbound fan-out entirely to keep costs down.
