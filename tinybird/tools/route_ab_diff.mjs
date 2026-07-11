@@ -39,6 +39,32 @@ export const DEFAULT_CFG = {
   moneyKeys: ['conversion_value', 'revenue', 'value', 'amount', 'mrr', 'total_revenue', 'conversion_value_sum', 'spend', 'net_profit', 'cac', 'cpl']
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ROUTE-ARGS CONVENTION — the single source of truth for the args the ROUTE injects.
+//
+// Three prod false-GREENs came from `callFn` targets hand-supplying args the route actually
+// varies: (1) the console.debug log channel, (2) the ALWAYS-injected attribution_window (→ the
+// live 504), (3) session-report ignoring filter_* (→ wrong numbers). Root cause: targets tested
+// ONE point of the route's arg space. attribution.js (:96-231) injects these on EVERY flexible
+// request. Targets and the route-args MATRIX test build args THIS way so a target cannot silently
+// omit a dimension. Pair with api/tests/route-args-matrix.test.js (the enforced CI gate).
+export const ROUTE_ARG_DEFAULTS = { granularity: 'day', attributionWindow: '30', attributeBy: 'conversion_date', timezone: 'UTC' }
+
+// Build the getFlexibleReport/getSessionReport arg tail exactly as the route does. Overrides:
+//   { filters, groupBy2, granularity, attributionWindow (pass null to force no-window), attributeBy, timezone }.
+// filters.timezone is ALWAYS present (the route injects it at attribution.js:227) — targets that
+// omitted it never exercised the tz gate.
+export function buildRouteArgs (over = {}) {
+  const timezone = over.timezone ?? ROUTE_ARG_DEFAULTS.timezone
+  return {
+    filters: { timezone, ...(over.filters || {}) },
+    groupBy2: over.groupBy2 ?? null,
+    granularity: over.granularity ?? ROUTE_ARG_DEFAULTS.granularity,
+    attributionWindow: ('attributionWindow' in over) ? over.attributionWindow : ROUTE_ARG_DEFAULTS.attributionWindow,
+    attributeBy: over.attributeBy ?? ROUTE_ARG_DEFAULTS.attributeBy
+  }
+}
+
 export const toCents = (n) => Math.round(Number(n) * 100)   // integer cents; NaN-safe compare below
 export const round2 = (n) => Math.round(Number(n) * 100) / 100
 
@@ -579,15 +605,20 @@ export const TARGETS = {
     const mod = await import('../../api/lib/attribution-engine.js')
     const tb = await import('../../api/lib/tinybird-read.js')
     const ph = await import('../../api/lib/posthog.js')
-    const R = { model: 'first_touch', groupBy: 'source', metric: 'conversions', filters: {}, groupBy2: null }
+    // Base case (source×first_touch) can ONLY serve when NO window is active — the window re-attributes
+    // source. The route ALWAYS injects a window, so this path is rarely hit in prod (#168). Route-faithful
+    // args via buildRouteArgs, with attributionWindow=null (the only window value the base pipe serves)
+    // and filters.timezone included.
+    const A = buildRouteArgs({ attributionWindow: null })
+    const R = { model: 'first_touch', groupBy: 'source', metric: 'conversions' }
     return {
       setDeps: mod.__setAttributionReadDeps,
       resetDeps: mod.__resetAttributionReadDeps,
       callFn: (deps, { siteId, params }) => {
         mod.__setAttributionReadDeps(deps)
-        return mod.getFlexibleReport(siteId, R.model, params.date_from, params.date_to, R.groupBy, R.metric, R.filters, R.groupBy2)
+        return mod.getFlexibleReport(siteId, R.model, params.date_from, params.date_to, R.groupBy, R.metric, A.filters, A.groupBy2, A.granularity, A.attributionWindow, A.attributeBy)
       },
-      beforeLeg: (siteId, _leg, params) => mod.__evictFlexibleReportCache(siteId, R.model, params.date_from, params.date_to, R.groupBy, R.metric, R.filters, R.groupBy2),
+      beforeLeg: (siteId, _leg, params) => mod.__evictFlexibleReportCache(siteId, R.model, params.date_from, params.date_to, R.groupBy, R.metric, A.filters, A.groupBy2, A.granularity, A.attributionWindow, A.attributeBy),
       // rows are { dim_value, conversions } — intersect on dim_value; DEFAULT_CFG cent-precision on values.
       cfg: { ...DEFAULT_CFG, rowKeyFn: (r) => String(r?.dim_value) },
       meaningful: (A, B) => (Array.isArray(A) && A.length > 0) || (Array.isArray(B) && B.length > 0),
@@ -604,18 +635,20 @@ export const TARGETS = {
     const mod = await import('../../api/lib/attribution-engine.js')
     const tb = await import('../../api/lib/tinybird-read.js')
     const ph = await import('../../api/lib/posthog.js')
-    // window='30' is THE ROUTE'S REAL ARG (attribution.js injects a >=30d default). The prior target
-    // passed null and never exercised the windowed path — the reason the 504 wasn't caught. This run
-    // compares the pipe against the WINDOWED HogQL, proving the window is a no-op for provider.
-    const R = { model: 'last_touch_non_direct', groupBy: 'provider', metric: 'conversions', filters: {}, groupBy2: null, gran: 'day', window: '30', attributeBy: 'conversion_date' }
+    // Route-faithful args via buildRouteArgs: attributionWindow='30' (the route's injected default —
+    // the prior target passed null and never exercised the windowed path, the reason the 504 wasn't
+    // caught) and filters.timezone. This run compares the pipe against the WINDOWED HogQL, proving the
+    // window is a no-op for a conversion-property dim.
+    const A = buildRouteArgs({})
+    const R = { model: 'last_touch_non_direct', groupBy: 'provider', metric: 'conversions' }
     return {
       setDeps: mod.__setAttributionReadDeps,
       resetDeps: mod.__resetAttributionReadDeps,
       callFn: (deps, { siteId, params }) => {
         mod.__setAttributionReadDeps(deps)
-        return mod.getFlexibleReport(siteId, R.model, params.date_from, params.date_to, R.groupBy, R.metric, R.filters, R.groupBy2, R.gran, R.window, R.attributeBy)
+        return mod.getFlexibleReport(siteId, R.model, params.date_from, params.date_to, R.groupBy, R.metric, A.filters, A.groupBy2, A.granularity, A.attributionWindow, A.attributeBy)
       },
-      beforeLeg: (siteId, _leg, params) => mod.__evictFlexibleReportCache(siteId, R.model, params.date_from, params.date_to, R.groupBy, R.metric, R.filters, R.groupBy2, R.gran, R.window, R.attributeBy),
+      beforeLeg: (siteId, _leg, params) => mod.__evictFlexibleReportCache(siteId, R.model, params.date_from, params.date_to, R.groupBy, R.metric, A.filters, A.groupBy2, A.granularity, A.attributionWindow, A.attributeBy),
       cfg: { ...DEFAULT_CFG, rowKeyFn: (r) => String(r?.dim_value) },
       meaningful: (A, B) => (Array.isArray(A) && A.length > 0) || (Array.isArray(B) && B.length > 0),
       realTb: tb.queryTinybirdPipe,
