@@ -2772,6 +2772,17 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
   // serves all 4 touch models. last_touch_non_direct+provider is the live prod 504 this fixes.
   const _flexProviderCase = _flexPipeCommon && groupBy === 'provider' && isTouchModel
   const _flexPipe = _flexMainCase ? 'flexible_report_main_by_site' : _flexProviderCase ? 'flexible_report_provider_by_site' : null
+  // TEMP diagnostic (debug/flex-gate-instrument — removable once diagnosed): fires on EVERY
+  // getFlexibleReport call that reaches the pipe-dispatch point. If ABSENT from prod logs for the
+  // provider request, the request never reached here — an earlier branch served it (route fast-path,
+  // a shadowing handler, or an HTTP/edge cache). Emitted via console.LOG (the proven-visible channel),
+  // NOT console.debug (didn't surface in prod) and NOT logInfo (its sanitizer mangles last_touch/
+  // first_touch model names to [REDACTED_KEY]). Names/booleans/lengths ONLY — no values, no PII.
+  // (isTouchModel is a const boolean.)
+  console.log(`[flex-gate] model=${model} groupBy=${groupBy} metric=${metric} tz=${tz} ` +
+    `filterClauses.len=${filterClauses.length} groupBy2=${!!groupBy2} window=${!!hasAttributionWindow} ` +
+    `attributeBy=${attributeBy} cust1=${!!custKey1} cust2=${!!custKey2} isTouch=${isTouchModel} ` +
+    `-> pipe=${_flexPipe ?? 'NONE'}`)
   let rows
   if (_flexPipe) {
     // Same +1-day-exclusive UTC bounds the HogQL `sql` uses (serializeHogQLDateRange), formatted for

@@ -167,9 +167,12 @@ export async function queryTinybirdPipe(pipeName, params = {}) {
     const rows = Array.isArray(body.data) ? normalizePipeRowTimestamps(body.data) : null
     // POSITIVE dispatch signal (W4 decommission prereq): a NON-NULL array is the genuine
     // pipe-served branch; a null result takes the HogQL fallback and MUST stay silent here.
-    // Mirrors this module's bare-console '[tinybird-read]' convention (not safe-logger). Pipe
-    // name + ROW COUNT only — never row content/values (no PII). Count guarded null-safely.
-    if (rows) console.debug(`[tinybird-read] served pipe '${pipeName}' rows=${Array.isArray(rows) ? rows.length : 0}`)
+    // Emitted via console.LOG (not console.debug): per the runtime finding, console.debug lines did
+    // not surface in the prod log pipeline while console.log (request_completed) did — so an absent
+    // served-log was wrongly read as "pipe never called". NOT logInfo either: its PII-sanitizer's
+    // Stripe `st_`-prefix regex false-positives on first_touch/last_touch pipe names, mangling them
+    // to [REDACTED_KEY]. Pipe name + ROW COUNT only — never row content/values (no PII).
+    if (rows) console.log(`[tinybird-read] served pipe '${pipeName}' rows=${Array.isArray(rows) ? rows.length : 0}`)
     return rows
   } catch (err) {
     const msg = err?.name === 'AbortError' ? 'timed out' : (err?.message || String(err))
