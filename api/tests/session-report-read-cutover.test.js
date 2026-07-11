@@ -61,6 +61,31 @@ test('DISPATCH: pipe path serves WITHOUT touching HogQL (zero fallback)', async 
   assert.strictEqual(hogCalled, false, 'both wired reads served from the pipe; HogQL untouched')
 })
 
+test('FILTER GATE: a content filter (filters.source) does NOT dispatch the pipe (would over-count) -> HogQL', async () => {
+  const F = ['source', 'session_count', { source: 'google' }, null]
+  __evictSessionReportCache(SITE, FROM, TO, ...F)
+  const pipes = []; const hogNames = []
+  __setAttributionReadDeps({
+    queryTinybird: async (pipe) => { pipes.push(pipe); return pipe === 'session_report_pageviews' ? PV : pipe === 'session_report_conversions' ? CONV : null },
+    queryHog: async (_sql, name) => { hogNames.push(name); return name === 'session_report_pageviews' ? PV.map(pvPos) : name === 'session_report_conversions' ? CONV.map(convPos) : [] }
+  })
+  try { await getSessionReport(SITE, FROM, TO, ...F) } finally { __resetAttributionReadDeps() }
+  assert.ok(!pipes.includes('session_report_pageviews'), 'filtered -> pageviews pipe NOT queried (pipe ignores filter_* params)')
+  assert.ok(!pipes.includes('session_report_conversions'), 'filtered -> conversions pipe NOT queried')
+  assert.ok(hogNames.includes('session_report_pageviews'), 'filtered -> falls back to HogQL, which applies filterClauses')
+})
+
+test('FILTER GATE: unfiltered request STILL dispatches the pipe (gate only diverts filtered)', async () => {
+  const pipes = []
+  __evictSessionReportCache(SITE, FROM, TO, ...R)
+  __setAttributionReadDeps({
+    queryTinybird: async (pipe) => { pipes.push(pipe); return pipe === 'session_report_pageviews' ? PV : pipe === 'session_report_conversions' ? CONV : null },
+    queryHog: async () => { throw new Error('unfiltered must serve from the pipe, not HogQL') }
+  })
+  try { await getSessionReport(SITE, FROM, TO, ...R) } finally { __resetAttributionReadDeps() }
+  assert.ok(pipes.includes('session_report_pageviews') && pipes.includes('session_report_conversions'), 'unfiltered -> both pipes serve')
+})
+
 test('daily-bucket safety: pipe timestamps (ISO via #155) keep started_at.split(T) correct', async () => {
   // groupBy=date exercises sess.started_at.split('T')[0]; ISO pipe ts -> plain YYYY-MM-DD.
   __evictSessionReportCache(SITE, FROM, TO, 'date', 'session_count', {}, null)

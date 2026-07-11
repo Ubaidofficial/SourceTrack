@@ -517,6 +517,34 @@ export const TARGETS = {
       realHog: ph.queryHogQL
     }
   },
+  // Session report with a CONTENT FILTER — proves the filter gate. getSessionReport calls the pipes
+  // WITHOUT filter_* params, so a filtered request must fall back to HogQL (which applies the filter);
+  // otherwise the pipe returns UNFILTERED rows and over-counts. WITHOUT the gate: ON-leg pipe
+  // (unfiltered) vs OFF-leg HogQL (filtered) -> RED. WITH the gate: the pipe is never called for a
+  // filtered request, so BOTH legs use HogQL (allowedHogReads) -> identical. The filter value must
+  // match rows in the --live fixture for meaningful() to hold.
+  'session-report-filtered': async () => {
+    const mod = await import('../../api/lib/attribution-engine.js')
+    const tb = await import('../../api/lib/tinybird-read.js')
+    const ph = await import('../../api/lib/posthog.js')
+    const R = { groupBy: 'source', metric: 'session_count', filters: { source: 'google' }, groupBy2: null }
+    return {
+      setDeps: mod.__setAttributionReadDeps,
+      resetDeps: mod.__resetAttributionReadDeps,
+      callFn: (deps, { siteId, params }) => {
+        mod.__setAttributionReadDeps(deps)
+        return mod.getSessionReport(siteId, params.date_from, params.date_to, R.groupBy, R.metric, R.filters, R.groupBy2)
+      },
+      beforeLeg: (siteId, _leg, params) => mod.__evictSessionReportCache(siteId, params.date_from, params.date_to, R.groupBy, R.metric, R.filters, R.groupBy2),
+      // With the gate, the ON leg serves this from HogQL (pipe skipped) — so the session reads are
+      // EXPECTED HogQL and must not trip the hit-guard.
+      allowedHogReads: ['session_report_pageviews', 'session_report_conversions'],
+      cfg: { ...DEFAULT_CFG, idKeys: [...DEFAULT_CFG.idKeys, 'dim_value', 'dim_value2'] },
+      meaningful: (A, B) => (Array.isArray(A) && A.length > 0) || (Array.isArray(B) && B.length > 0),
+      realTb: tb.queryTinybirdPipe,
+      realHog: ph.queryHogQL
+    }
+  },
   // Attribution explanation (W1-bc2): single-conversion "why". FUNCTION target, and unlike
   // every other target it is NON-WINDOWED (keyed by --distinct-id) and returns a SINGLE
   // OBJECT (or null). deepDiff compares object-vs-object directly (no rowKey/intersection);
