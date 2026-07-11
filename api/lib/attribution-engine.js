@@ -2794,6 +2794,9 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
   // stitching_method — independent CONVERSION-PROPERTY dim (STITCHING_METHOD_SQL, own fallback,
   // model-independent, no _nd) -> same Class-A treatment.
   const _flexStitchingMethodCase = _flexPipeCommon && groupBy === 'stitching_method' && isTouchModel
+  // conversion_type — CONVERSION-PROPERTY dim (plain COALESCE(...,'untyped'), no multiIf, no _nd,
+  // model-independent) -> same Class-A treatment. (group_by=conversion_type, not filter_conversion_type.)
+  const _flexConversionTypeCase = _flexPipeCommon && groupBy === 'conversion_type' && isTouchModel
   const _flexPipe = _flexMainCase
     ? 'flexible_report_main_by_site'
     : _flexProviderCase
@@ -2802,7 +2805,9 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
         ? 'flexible_report_attribution_status_by_site'
         : _flexStitchingMethodCase
           ? 'flexible_report_stitching_method_by_site'
-          : null
+          : _flexConversionTypeCase
+            ? 'flexible_report_conversion_type_by_site'
+            : null
   // TEMP diagnostic (debug/flex-gate-instrument — removable once diagnosed): fires on EVERY
   // getFlexibleReport call that reaches the pipe-dispatch point. If ABSENT from prod logs for the
   // provider request, the request never reached here — an earlier branch served it (route fast-path,
