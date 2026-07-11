@@ -24,6 +24,7 @@ import MetricTile from '../components/MetricTile'
 import DashboardCard from '../components/DashboardCard'
 import DashboardTable from '../components/DashboardTable'
 import EmptyState from '../components/EmptyState'
+import QueryError from '../components/QueryError'
 import FilterBar from '../components/FilterBar'
 
 import ConversionExplanationModal from '../components/ConversionExplanationModal'
@@ -141,7 +142,7 @@ export default function Dashboard() {
     }
   }, [user, activeSite])
 
-  const { data: overview, isLoading } = useQuery({
+  const { data: overview, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['dashboard-overview', site?.site_key, timeRange, previewMode],
     queryFn: async () => {
       if (!site?.site_key) return null
@@ -360,6 +361,8 @@ export default function Dashboard() {
         <div className="flex items-center justify-center py-20">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black dark:border-white" />
         </div>
+      ) : isError ? (
+        <QueryError isError={isError} error={error} onRetry={refetch} />
       ) : (
         <>
           {/* Onboarding / Installation Alert Banner */}

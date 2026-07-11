@@ -7,6 +7,7 @@ import { format, subDays } from 'date-fns'
 import { useAuth } from '../contexts/AuthContext'
 import { ArrowRight, Search, Download, AlertTriangle } from 'lucide-react'
 import DashboardCard from '../components/DashboardCard'
+import QueryError from '../components/QueryError'
 import MetricTile from '../components/MetricTile'
 import JourneyModal from '../components/JourneyModal'
 import { SourceChip } from '../components/SourceIcon'
@@ -67,7 +68,7 @@ export default function Leads() {
     return () => clearTimeout(timer)
   }, [search])
 
-  const { data: leadsData, isLoading, refetch } = useQuery({
+  const { data: leadsData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['leads-page', site?.site_key, debouncedSearch, filterAI, attributionModel, dateFrom, dateTo],
     queryFn: async () => {
       if (!site?.site_key) return null
@@ -291,6 +292,8 @@ export default function Leads() {
           <div className="py-12 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black mx-auto" />
           </div>
+        ) : isError ? (
+          <QueryError isError={isError} error={error} onRetry={refetch} />
         ) : leads.length === 0 ? (
           <div className="py-12 text-center space-y-2">
             {search || filterAI !== 'all' ? (

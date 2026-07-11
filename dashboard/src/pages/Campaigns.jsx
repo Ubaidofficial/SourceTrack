@@ -13,6 +13,7 @@ import {
 import DashboardCard from '../components/DashboardCard'
 import MetricTile from '../components/MetricTile'
 import StatusBadge from '../components/StatusBadge'
+import QueryError from '../components/QueryError'
 import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
 import { safeNumber, formatCurrency, formatCurrencyDecimal, formatNumber, formatMultiplier } from '../utils/numbers'
 
@@ -705,16 +706,16 @@ export default function Campaigns() {
               <p className="text-xs text-st-gray mt-3">Loading campaign data…</p>
             </div>
           ) : isError ? (
-            <div className="py-12 text-center px-4">
-              <p className="text-sm text-gray-500">Campaign data is temporarily unavailable.</p>
+            <div className="py-12 px-4">
+              <QueryError isError={isError} error={error} onRetry={refetchOverview} />
               {!isPreview && (
-                <>
-                  <p className="text-xs text-st-gray mt-1">Imported costs can still be managed below.</p>
+                <div className="text-center mt-2">
+                  <p className="text-xs text-st-gray">Imported costs can still be managed below.</p>
                   <button onClick={() => setImportModalOpen(true)}
                     className="mt-4 px-4 py-2 text-sm text-st-black bg-st-lime hover:bg-st-lime-dark dark:bg-st-lime-dark dark:hover:bg-st-lime rounded-lg transition-colors font-semibold inline-flex items-center gap-1.5">
                     <UploadCloud className="w-4 h-4" /> Import Costs
                   </button>
-                </>
+                </div>
               )}
             </div>
           ) : rows.length === 0 ? (

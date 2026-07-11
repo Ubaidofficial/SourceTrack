@@ -14,6 +14,7 @@ import { tooltipPlugin, CHART_COLORS } from '../utils/chartTooltip'
 import { SourceIcon, normalizeSource } from '../components/SourceIcon'
 import { useSite } from '../contexts/SiteContext'
 import MetricTile from '../components/MetricTile'
+import QueryError from '../components/QueryError'
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Filler)
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -123,7 +124,7 @@ export default function Analytics() {
   )
 
   // ─── Summary ──────────────────────────────────────────────────────────────
-  const { data: summary, isLoading } = useQuery({
+  const { data: summary, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['analytics-summary', site?.site_key, days, 'daily', filters],
     queryFn: () => fetchApi(`/analytics/summary?site_key=${site.site_key}&days=${days}&granularity=daily${filterQuery}`),
     enabled: !!site?.site_key
@@ -363,6 +364,8 @@ export default function Analytics() {
         <div className="flex items-center justify-center py-20">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-lime" />
         </div>
+      ) : isError ? (
+        <QueryError isError={isError} error={error} onRetry={refetch} />
       ) : !hasData ? (
 
         /* ─── Empty state ──────────────────────────────────────────────── */
