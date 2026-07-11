@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { Search, AlertTriangle, RefreshCw, BarChart2, MousePointer, Eye, DollarSign, Award, ChevronRight } from 'lucide-react'
 import { formatCurrency, formatPercent } from '../utils/numbers'
 import { hasRevenueData } from './seoRevenueTruthGate'
+import QueryError from '../components/QueryError'
 
 export default function SEORevenue() {
   const { user } = useAuth()
@@ -50,7 +51,7 @@ export default function SEORevenue() {
   }, [days])
 
   // 2. Fetch SEO revenue allocation report data
-  const { data: reportData, isLoading, refetch } = useQuery({
+  const { data: reportData, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['seo-revenue-report', site?.site_key, dateRange.from, dateRange.to],
     queryFn: () =>
       fetchApi(`/seo-revenue?site_key=${site.site_key}&from=${dateRange.from}&to=${dateRange.to}`),
@@ -70,6 +71,10 @@ export default function SEORevenue() {
         <RefreshCw className="w-8 h-8 text-st-lime animate-spin" />
       </div>
     )
+  }
+
+  if (isError) {
+    return <QueryError isError={isError} error={error} onRetry={refetch} className="min-h-[400px]" />
   }
 
   const gscConnected = !!reportData?.gsc_connected

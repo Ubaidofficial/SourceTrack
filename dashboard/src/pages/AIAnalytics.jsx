@@ -14,6 +14,7 @@ import { Bot, DollarSign, TrendingUp, BarChart3, Sparkles, ArrowUpRight, ArrowDo
 import MetricTile from '../components/MetricTile'
 import DashboardCard from '../components/DashboardCard'
 import StatusBadge from '../components/StatusBadge'
+import QueryError from '../components/QueryError'
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend)
 
@@ -53,7 +54,7 @@ export default function AIAnalytics() {
     load()
   }, [user])
 
-  const { data: analytics, isLoading } = useQuery({
+  const { data: analytics, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['ai-analytics', site?.site_key],
     queryFn: async () => {
       if (!site?.site_key) return null
@@ -145,6 +146,8 @@ export default function AIAnalytics() {
         <div className="flex items-center justify-center py-20">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black" />
         </div>
+      ) : isError ? (
+        <QueryError isError={isError} error={error} onRetry={refetch} />
       ) : !hasData ? (
         <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#333838] p-12 text-center">
           <Sparkles className="w-12 h-12 text-lime-300 mx-auto mb-4" />
