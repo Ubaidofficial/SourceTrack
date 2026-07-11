@@ -2791,13 +2791,18 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
   // attribution_status is another CONVERSION-PROPERTY dim (ATTRIBUTION_STATUS_SQL, model-independent,
   // no _nd) -> same window-tolerant Class-A treatment as provider (proven GREEN on --live).
   const _flexAttributionStatusCase = _flexPipeCommon && groupBy === 'attribution_status' && isTouchModel
+  // stitching_method — independent CONVERSION-PROPERTY dim (STITCHING_METHOD_SQL, own fallback,
+  // model-independent, no _nd) -> same Class-A treatment.
+  const _flexStitchingMethodCase = _flexPipeCommon && groupBy === 'stitching_method' && isTouchModel
   const _flexPipe = _flexMainCase
     ? 'flexible_report_main_by_site'
     : _flexProviderCase
       ? 'flexible_report_provider_by_site'
       : _flexAttributionStatusCase
         ? 'flexible_report_attribution_status_by_site'
-        : null
+        : _flexStitchingMethodCase
+          ? 'flexible_report_stitching_method_by_site'
+          : null
   // TEMP diagnostic (debug/flex-gate-instrument — removable once diagnosed): fires on EVERY
   // getFlexibleReport call that reaches the pipe-dispatch point. If ABSENT from prod logs for the
   // provider request, the request never reached here — an earlier branch served it (route fast-path,
