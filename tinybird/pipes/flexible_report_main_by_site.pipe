@@ -31,7 +31,15 @@ DESCRIPTION >
     (toTimeZone padding) is excluded by the no-filters gate (tz derives from filters.timezone).
     MONEY: revenue cast toFloat64OrZero(toString(conversion_value)) — orchestrator value-verifies
     revenue PRECISION cross-store before wiring. §2.6: properties.site_id->site_id, event->event_type.
-    VALUE-PARITY NOT RUN.
+
+    external_event_id DEDUP (ported from the HogQL leg attribution-engine.js:2397-2409): keep all
+    null/empty-keyed rows; for a non-null key keep the GLOBAL-earliest-by-timestamp row (inner
+    subquery NOT date-filtered, matching HogQL). Tie-break on event_id (HogQL uses uuid) — parity
+    holds for the base case because a genuine duplicate shares source+value (see PR reasoning).
+    PARAM SHAPE: {{ String(site_id) }} is now referenced TWICE (outer + dedup subquery); date params
+    once. MANDATORY before deploy: `tb --cloud deploy --check` (injects __no_value__ placeholders,
+    catches param/SQL-structure errors `tb sql` cannot). VALUE-PARITY NOT RUN (needs a seeded
+    duplicate fixture + --live --target flexible-report to prove the collapse).
 
 NODE flexible_report_main_by_site_node
 SQL >
@@ -48,6 +56,27 @@ SQL >
       AND event_type = '$conversion'
       AND timestamp >= {{ DateTime(date_from, required=True) }}
       AND timestamp < {{ DateTime(date_to, required=True) }}
+      -- external_event_id dedup — faithful port of the HogQL leg (attribution-engine.js:2397-2409).
+      -- KEEP every null/empty-keyed row (legitimately un-keyed — never merge). For a non-null key,
+      -- keep exactly the GLOBAL-earliest-by-timestamp row: the inner subquery is intentionally NOT
+      -- date-filtered (matches HogQL exactly), so an in-window duplicate is dropped when an earlier
+      -- occurrence of the same key owns it. Tie-break id: Tinybird `event_id` (HogQL uses PostHog
+      -- `uuid`). Different id, but for the base case (dim=source, metric=conversions|revenue) a genuine
+      -- duplicate shares source+value, so the surviving row's bucket contribution is identical no
+      -- matter which id wins -> parity holds (see PR). §2.6: properties.site_id->site_id, uuid->event_id.
+      AND (
+        external_event_id IS NULL
+        OR external_event_id = ''
+        OR event_id IN (
+          SELECT argMin(event_id, timestamp)
+          FROM events
+          WHERE site_id = {{ String(site_id, required=True) }}
+            AND event_type = '$conversion'
+            AND external_event_id IS NOT NULL
+            AND external_event_id != ''
+          GROUP BY external_event_id
+        )
+      )
     GROUP BY dim_value
     ORDER BY metric_value DESC
     LIMIT 50000
