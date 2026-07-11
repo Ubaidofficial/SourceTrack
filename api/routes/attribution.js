@@ -283,11 +283,21 @@ export async function attribution(req, res) {
     // conflating a 500 with legit-empty and hiding real failures mid-migration. Surface it
     // as a real 500: the dashboard's fetchApi throws on !res.ok, so React Query treats it as
     // an error (data undefined -> empty render, no crash) instead of silent empty success.
-    console.error('[attribution] query failed:', err?.message || err)
+    const msg = err?.message || String(err)
+    // ClickHouse max-execution-time on the expensive live HogQL flexible_report query (Class-B shapes
+    // with no pipe: source/medium/campaign windowed, keyword, referrer_domain, filtered, cross-tabs).
+    // Surface a STRUCTURED code so the dashboard shows an honest "narrow the range" message instead of
+    // rendering the failure as an empty "no data" state (a silent lie about the customer's business).
+    // NEVER leak the raw ClickHouse message to the client.
+    const isTimeout = /max execution time|timed out|timeout|\b504\b|TIMEOUT_EXCEEDED/i.test(msg)
+    console.error('[attribution] query failed:', msg)
     res.status(500).json({
       success: false,
       data: null,
-      error: 'Attribution query failed'
+      error_code: isTimeout ? 'query_timeout' : 'query_failed',
+      error: isTimeout
+        ? 'This query timed out for the selected range. Try a narrower date range or a different dimension.'
+        : 'Attribution query failed'
     })
   }
 }
