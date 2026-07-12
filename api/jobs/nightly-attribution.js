@@ -76,9 +76,24 @@ async function _writeJobRun({ status, conversions_processed, error_message, dura
 }
 
 let _processed = 0
+let _fetched = 0        // event-store rows returned across all sites
+let _hardFailures = 0   // sites whose query threw (or that threw) — a real failure, not a no-op
+let _lockAborted = false // another run held the lock: this run wrote nothing, must not claim a terminal row
 const _t0 = Date.now()
 
 const supabase = _supabase
+
+// Terminal status for the money rail. A job that materializes the money rail must NOT
+// report success on a structural no-op. Rules:
+//   - any hard failure (thrown event-store query / thrown site)     -> 'failed'
+//   - processed 0 while the store returned rows (fetched > 0)        -> 'failed'
+//   - processed 0 while the store genuinely returned 0 (fetched 0)   -> 'success' (a real empty day is legitimate)
+//   - processed > 0                                                  -> 'success'
+export function computeTerminalStatus({ processed = 0, fetched = 0, hardFailures = 0 } = {}) {
+  if (hardFailures > 0) return 'failed'
+  if (processed === 0 && fetched > 0) return 'failed'
+  return 'success'
+}
 
 function parsePathname(urlStr) {
   if (!urlStr) return 'unknown'
@@ -126,6 +141,7 @@ async function main() {
     if (lastRun?.status === 'running' &&
         Date.now() - new Date(lastRun.ran_at).getTime() < LOCK_TTL_HOURS * 3600 * 1000) {
       log(`Another nightly-attribution run is in progress (started ${lastRun.ran_at}) — aborting`)
+      _lockAborted = true
       return
     }
   } catch (lockErr) {
@@ -172,6 +188,8 @@ async function main() {
     const CONCURRENCY = Math.max(1, Math.min(8, parseInt(process.env.NIGHTLY_CONCURRENCY || '4', 10)))
     let totalProcessed = 0
     let totalFailed = 0
+    let totalFetched = 0        // rows the event store actually returned (across sites)
+    let totalHardFailures = 0   // sites whose query threw, or that threw outright
     let cursor = 0
 
     async function worker() {
@@ -181,9 +199,12 @@ async function main() {
           const result = await processSite(site)
           totalProcessed += result.processed
           totalFailed += result.failed
+          totalFetched += result.fetched || 0
+          if (result.queryFailed) totalHardFailures++
         } catch (error) {
           logWarn(`Site ${site.site_key} failed: ${error.message}`)
           totalFailed++
+          totalHardFailures++     // an unhandled site failure is a hard failure, not a no-op
         }
         // Small jitter prevents all workers from hammering PostHog at the same
         // moment when one site finishes — spreads load across the rate window.
@@ -198,6 +219,8 @@ async function main() {
     const duration = ((Date.now() - startTime) / 1000).toFixed(2)
     log(`Completed: ${totalProcessed} conversions processed, ${totalFailed} failed, ${duration}s`)
     _processed = totalProcessed
+    _fetched = totalFetched
+    _hardFailures = totalHardFailures
 
     // GDPR retention auto-purge (best-effort — never fail the whole job)
     try {
@@ -352,7 +375,7 @@ async function runBackfill() {
   log(`Journey completeness: complete=${journey.complete}, possibly_truncated=${journey.possibly_truncated}, no_journey=${journey.no_journey}`)
 }
 
-async function processSite(site) {
+export async function processSite(site) {
   log(`Processing site: ${site.site_key}`)
 
   const lookbackInterval = isReprocess ? '90 DAY' : '24 HOUR'
@@ -395,13 +418,17 @@ async function processSite(site) {
     rows = await queryPostHog(conversionsQuery)
     log(`conversionsQuery returned ${rows ? rows.length : 0} rows`)
   } catch (error) {
+    // A THROWN query is a FAILURE, not "no conversions". Returning failed:0 here was
+    // THE ROOT LIE: a total PostHog outage was byte-identical, in job_runs, to a real
+    // empty day. Report failed>=1 and flag queryFailed so the terminal status can tell
+    // an outage apart from an empty day.
     logWarn(`PostHog query failed for site ${site.site_key}: ${error.message}`)
-    return { processed: 0, failed: 0 }
+    return { processed: 0, failed: 1, fetched: 0, queryFailed: true }
   }
-  
+
   if (!rows || rows.length === 0) {
     log(`No conversions found for site ${site.site_key}`)
-    return { processed: 0, failed: 0 }
+    return { processed: 0, failed: 0, fetched: 0, queryFailed: false }
   }
   
   let processed = 0
@@ -479,7 +506,7 @@ async function processSite(site) {
   await backfillSubscriptionRevenueSource(site)
 
   log(`Site ${site.site_key}: ${processed} processed, ${failed} failed`)
-  return { processed, failed }
+  return { processed, failed, fetched: rows.length, queryFailed: false }
 }
 
 // Guarded source backfill for subscription_revenue: the ONLY path that can
@@ -1237,8 +1264,26 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         log(`Backfill complete (${_processed} upserted)`)
         return
       }
-      _writeJobRun({ status: 'success', conversions_processed: _processed, duration_ms: Date.now() - _t0 })
-      _slackAlert('✅', 'Attribution Job — SUCCESS', `Processed ${_processed} conversions in ${Date.now() - _t0}ms`)
+      // Another run held the lock — this run did nothing and must NOT write a terminal
+      // row (the in-flight run owns the outcome).
+      if (_lockAborted) {
+        log('Aborted: another nightly run in progress — no terminal job_run written')
+        return
+      }
+      // Honest terminal status — a money-rail job cannot report success on a structural
+      // no-op (a swallowed outage). See computeTerminalStatus.
+      const status = computeTerminalStatus({ processed: _processed, fetched: _fetched, hardFailures: _hardFailures })
+      const dur = Date.now() - _t0
+      const errMsg = status !== 'failed' ? null
+        : _hardFailures > 0
+          ? `${_hardFailures} site event-store query(ies) failed — a real failure, not an empty day`
+          : `Processed 0 conversions while the event store returned ${_fetched} row(s) — nothing was written`
+      _writeJobRun({ status, conversions_processed: _processed, error_message: errMsg, duration_ms: dur })
+      if (status === 'success') {
+        _slackAlert('✅', 'Attribution Job — SUCCESS', `Processed ${_processed} conversions in ${dur}ms`)
+      } else {
+        _slackAlert('🔴', 'Attribution Job — FAILED', errMsg)
+      }
     })
     .catch(err => {
       if (isBackfill) {
