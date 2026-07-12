@@ -19,4 +19,3 @@ CREATE INDEX IF NOT EXISTS idx_attr_conv_first_browser ON public.attributed_conv
 CREATE INDEX IF NOT EXISTS idx_attr_conv_last_browser ON public.attributed_conversions(site_id, last_touch_browser);
 CREATE INDEX IF NOT EXISTS idx_attr_conv_first_lp ON public.attributed_conversions(site_id, first_touch_landing_page);
 CREATE INDEX IF NOT EXISTS idx_attr_conv_last_lp ON public.attributed_conversions(site_id, last_touch_landing_page);
-
