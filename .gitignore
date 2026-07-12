@@ -35,3 +35,5 @@ scratch/
 # Tinybird CLI local auth state — contains live workspace tokens. NEVER commit.
 .tinyb
 **/.tinyb
+supabase/.branches/
+supabase/.temp/
