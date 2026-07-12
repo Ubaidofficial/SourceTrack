@@ -1,0 +1,10 @@
+[
+  {"table_name":"sites","column_name":"id","data_type":"uuid","is_nullable":"NO","column_default":"gen_random_uuid()"},
+  {"table_name":"sites","column_name":"site_key","data_type":"uuid","is_nullable":"NO","column_default":null},
+  {"table_name":"sites","column_name":"meta_capi_token","data_type":"text","is_nullable":"YES","column_default":null},
+  {"table_name":"sites","column_name":"google_ads_customer_id","data_type":"text","is_nullable":"YES","column_default":null},
+  {"table_name":"sites","column_name":"public_share_token","data_type":"text","is_nullable":"YES","column_default":null},
+  {"table_name":"site_alerts","column_name":"id","data_type":"uuid","is_nullable":"NO","column_default":"gen_random_uuid()"},
+  {"table_name":"site_alerts","column_name":"site_id","data_type":"uuid","is_nullable":"NO","column_default":null},
+  {"table_name":"tinybird_revenue_idempotency_keys","column_name":"event_id","data_type":"text","is_nullable":"NO","column_default":null}
+]

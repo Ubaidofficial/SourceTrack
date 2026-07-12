@@ -1,0 +1,26 @@
+-- ORPHAN SCHEMA REGISTER (documentation migration — applies NO DDL).
+--
+-- Two objects exist in PROD only, were hand-applied, have NO committed migration, and
+-- have ZERO code references anywhere (git grep across api/ + dashboard/ = empty):
+--
+--   1. sites.custom_domain*   — prod-only columns. UNUSED by code.
+--   2. site_annotations        — prod-only table.   UNUSED by code.
+--
+-- CC deliberately did NOT fabricate CREATE/ALTER DDL for these: their exact column
+-- names/types are not knowable from the repo, and inventing them would corrupt the very
+-- schema-drift check this branch introduces (the migrations-shadow would diverge from
+-- prod's real types). They are instead DEFERRED, explicitly, in
+-- scripts/schema-drift-ignore.json so the drift check stays green while flagging them as
+-- a pending decision.
+--
+-- FOUNDER DECISION REQUIRED (you have prod access; CC does not):
+--   • KEEP  → `pg_dump --schema-only -t public.sites -t public.site_annotations` from
+--             prod, extract the exact DDL, replace this file with the real CREATE/ALTER
+--             (IF NOT EXISTS), and delete the matching scripts/schema-drift-ignore.json
+--             entries so the check re-enforces them.
+--   • DROP  → author a migration that DROPs them from prod (they are unused), and delete
+--             the ignore entries.
+--
+-- This file intentionally contains no executable DDL — it is a committed record so the
+-- orphans are never silently forgotten again.
+SELECT 1;  -- no-op: a valid, side-effect-free applied migration
