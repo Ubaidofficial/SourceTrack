@@ -79,13 +79,17 @@ jobs:
   #
   # FOUNDER SETUP (one-time; jobs no-op until done):
   #   1. Repository → Settings → Secrets and variables → Actions:
-  #        - Secrets:  STAGING_DB_URL, PROD_DB_URL   (postgres connection strings; prod
-  #                    is used READ-ONLY by schema-drift — only migrate-prod writes DDL)
+  #        - Secrets:  STAGING_DB_URL, PROD_DB_URL   (postgres connection strings; PROD_DB_URL
+  #                    is used READ-ONLY by schema-drift — no job auto-writes DDL to prod)
   #        - Variable: SCHEMA_CI_ENABLED = "true"    (master switch — leave unset/false
   #                    and every job below is skipped, so this PR is safe to merge first)
-  #   2. Settings → Environments → create "production" with REQUIRED REVIEWERS.
-  #        That review IS the manual approval gate: migrate-prod is held until a human
-  #        approves. Prod DDL is NEVER auto-applied.
+  #
+  # PROD DDL IS MANUAL. The migrate-prod job is HARD-DISABLED (`if: false`) because
+  # GitHub Free + a PRIVATE repo has NO environment protection rules — an
+  # `environment: production` reviewer gate is unavailable, so the job would auto-apply
+  # DDL to prod with zero approval. Instead: schema-drift flags divergence, and the
+  # founder hand-applies to prod after review. (Re-arm migrate-prod only once the repo
+  # has real environment protection — Team/Enterprise, or public.)
   # ────────────────────────────────────────────────────────────────────────────
 
   # Fails the build on ANY divergence between the migrations (source of truth), staging,
@@ -129,17 +133,27 @@ jobs:
       - name: Apply migrations to STAGING
         run: supabase db push --db-url "${{ secrets.STAGING_DB_URL }}"
 
-  # Apply to PROD ONLY behind the "production" environment's required-reviewer gate.
-  # GitHub holds this job until a human approves — DDL is NEVER auto-applied to prod.
+  # PROD migrations are MANUAL — this job is HARD-DISABLED (`if: false`), never runs.
+  #
+  # WHY: the `environment: production` required-reviewer gate is the ONLY thing that would
+  # hold a prod-DDL apply for human approval — and deployment protection rules
+  # (required reviewers on an environment) are NOT available on GitHub Free for a PRIVATE
+  # repo. Without that gate the job would AUTO-APPLY DDL to the production database with
+  # zero human approval. Unacceptable. Until the repo is on a plan that supports
+  # environment protection rules (Team/Enterprise, or public), prod DDL stays manual:
+  # the `schema-drift` job flags any divergence, and the founder hand-applies the
+  # migration to prod (`supabase db push --db-url <PROD_DB_URL>`) after review.
+  #
+  # Kept (disabled, not deleted) as the ready-to-arm template: once real environment
+  # protection exists, restore the guarded `if:` + `environment: production` below.
   migrate-prod:
-    if: ${{ vars.SCHEMA_CI_ENABLED == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    if: false   # HARD-DISABLED — no reviewer gate on GitHub Free/private; never auto-apply prod DDL. Do NOT enable without environment protection rules.
     needs: [migrate-staging]
     runs-on: ubuntu-latest
-    environment: production   # ← manual approval gate (required reviewers). Do NOT remove.
     steps:
       - uses: actions/checkout@v4
       - uses: supabase/setup-cli@v1
         with:
           version: latest
-      - name: Apply migrations to PROD (requires the manual approval above)
+      - name: Apply migrations to PROD (DISABLED — see the job comment; prod DDL is manual)
         run: supabase db push --db-url "${{ secrets.PROD_DB_URL }}"
