@@ -1,4 +1,11 @@
-
+-- ci_readonly is a cluster-level role: it exists in prod/staging but pg_dump
+-- does not emit it (roles are cluster-scoped, not database-scoped).
+-- Idempotent: no-ops where it exists, creates it on a fresh local/CI cluster.
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'ci_readonly') THEN
+    CREATE ROLE ci_readonly NOLOGIN;
+  END IF;
+END $$;
 
 
 SET statement_timeout = 0;
