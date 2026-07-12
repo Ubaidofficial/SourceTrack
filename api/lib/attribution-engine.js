@@ -24,6 +24,22 @@ export function __resetAttributionReadDeps () {
   _queryHogQL = queryHogQL
 }
 
+// Fail-closed dispatch guard — mirrors readTb() in api/routes/{alerts,sessions,live,
+// hygiene,events}.js + api/lib/setup-doctor.js EXACTLY. Under the TEST-ONLY
+// TINYBIRD_FORCE_READ, a pipe that was ATTEMPTED but returned null THROWS (proving the
+// dispatch path was actually exercised) instead of a silent HogQL bypass. Flag UNSET →
+// returns the pipe result unchanged (non-null → served; null → each site's existing
+// inline HogQL fallback), so production behavior is byte-identical to today. `pipeName`
+// is falsy ONLY when no pipe was attempted for this shape (the flexible_report NONE case;
+// a filter-ineligible session read) — a legitimate no-dispatch, never a failure.
+async function _pipeRead (pipeName, params) {
+  const tb = pipeName ? await _queryTinybirdPipe(pipeName, params) : null
+  if (pipeName && tb === null && process.env.TINYBIRD_FORCE_READ === 'true') {
+    throw new Error(`[tinybird-force-read] ${pipeName} returned null under TINYBIRD_FORCE_READ — dispatch path not exercised`)
+  }
+  return tb
+}
+
 export function getDateFilterExpr(timestampCol, tz, dateFrom, dateTo) {
   const startStr = typeof dateFrom === 'string' ? dateFrom.trim() : new Date(dateFrom).toISOString().slice(0, 10)
   const endStr = typeof dateTo === 'string' ? dateTo.trim() : new Date(dateTo).toISOString().slice(0, 10)
@@ -111,7 +127,7 @@ export async function firstTouchAttribution(siteId, dateFrom, dateTo) {
   // window bounds HogQL uses to guarantee date-parity; format for ClickHouse DateTime params.
   const _tbFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
   const _tbTo   = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
-  const _tbRows = await _queryTinybirdPipe('first_touch_by_site', { site_id: String(siteId), date_from: _tbFrom, date_to: _tbTo })
+  const _tbRows = await _pipeRead('first_touch_by_site', { site_id: String(siteId), date_from: _tbFrom, date_to: _tbTo })
   if (_tbRows) {
     return _tbRows.map(r => ({
       source: r.source,
@@ -188,7 +204,7 @@ export async function lastTouchAttribution(siteId, dateFrom, dateTo) {
   // window bounds HogQL uses to guarantee date-parity; format for ClickHouse DateTime params.
   const _tbFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
   const _tbTo   = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
-  const _tbRows = await _queryTinybirdPipe('last_touch_by_site_agg', { site_id: String(siteId), date_from: _tbFrom, date_to: _tbTo })
+  const _tbRows = await _pipeRead('last_touch_by_site_agg', { site_id: String(siteId), date_from: _tbFrom, date_to: _tbTo })
   if (_tbRows) {
     return _tbRows.map(r => ({
       source: r.source,
@@ -270,7 +286,7 @@ export async function firstTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
   // window bounds HogQL uses to guarantee date-parity; format for ClickHouse DateTime params.
   const _tbFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
   const _tbTo   = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
-  const _tbRows = await _queryTinybirdPipe('first_touch_non_direct_by_site', { site_id: String(siteId), date_from: _tbFrom, date_to: _tbTo })
+  const _tbRows = await _pipeRead('first_touch_non_direct_by_site', { site_id: String(siteId), date_from: _tbFrom, date_to: _tbTo })
   if (_tbRows) {
     return _tbRows.map(r => ({
       source: r.source,
@@ -344,7 +360,7 @@ export async function lastTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
   // window bounds HogQL uses to guarantee date-parity; format for ClickHouse DateTime params.
   const _tbFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
   const _tbTo   = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
-  const _tbRows = await _queryTinybirdPipe('last_touch_non_direct_by_site', { site_id: String(siteId), date_from: _tbFrom, date_to: _tbTo })
+  const _tbRows = await _pipeRead('last_touch_non_direct_by_site', { site_id: String(siteId), date_from: _tbFrom, date_to: _tbTo })
   if (_tbRows) {
     return _tbRows.map(r => ({
       source: r.source,
@@ -484,7 +500,7 @@ export async function getAiPlatformAttributionLive({
   // derived logic (provider/attributionStatus/stitchingMethod) stays byte-identical.
   const _tbFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
   const _tbTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
-  const _tbConv = await _queryTinybirdPipe('aiplatform_conversions_by_site', { site_id: String(siteId), date_from: _tbFrom, date_to: _tbTo })
+  const _tbConv = await _pipeRead('aiplatform_conversions_by_site', { site_id: String(siteId), date_from: _tbFrom, date_to: _tbTo })
   const convRows = _tbConv
     ? _tbConv.map(r => [
       r.uuid, r.distinct_id, r.timestamp, r.conversion_type, r.conversion_value,
@@ -571,7 +587,7 @@ export async function getAiPlatformAttributionLive({
     let _tbComplete = false
     let _tbPageOffset = 0
     while (true) {
-      const _tbPv = await _queryTinybirdPipe('pageviews_by_visitors', {
+      const _tbPv = await _pipeRead('pageviews_by_visitors', {
         site_id: String(siteId),
         visitor_ids: batchIds, // array → the client comma-joins it
         lookback_from: _tbLookback,
@@ -1024,7 +1040,7 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
   // stays pipe-eligible (custom_key1/2 are the group dims, passed above). ReportBuilder lets a user
   // combine a session metric with a filter, so this path is live-reachable.
   const _sessionPipeEligible = filterClauses === ''
-  const _tbPv = _sessionPipeEligible ? await _queryTinybirdPipe('session_report_pageviews', _tbPvParams) : null
+  const _tbPv = _sessionPipeEligible ? await _pipeRead('session_report_pageviews', _tbPvParams) : null
   const rows = _tbPv
     ? _tbPv.map(r => {
         const base = [r.distinct_id, r.timestamp, r.page_url, r.utm_source, r.utm_medium, r.utm_campaign, r.country, r.device_type]
@@ -1048,7 +1064,7 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
     LIMIT 50000
   `
 
-  const _tbConv = _sessionPipeEligible ? await _queryTinybirdPipe('session_report_conversions', { site_id: String(siteId), date_from_ts: _tbFrom, date_to_ts: _tbTo }) : null
+  const _tbConv = _sessionPipeEligible ? await _pipeRead('session_report_conversions', { site_id: String(siteId), date_from_ts: _tbFrom, date_to_ts: _tbTo }) : null
   const convRows = _tbConv
     ? _tbConv.map(r => [r.distinct_id, r.timestamp])
     : await _queryHogQL(convSql, 'session_report_conversions')
@@ -1233,7 +1249,7 @@ export async function getAttributionExplanation(siteId, model, distinctId) {
   // reintroduced. An empty pipe result ([], not null) = no conversion for this visitor -> the
   // length-0 guard below returns null exactly as HogQL does; a null pipe result = flag off/error
   // -> HogQL fallback.
-  const _tbConv = await _queryTinybirdPipe('attribution_explain_conversion', { site_id: String(siteId), distinct_id: String(distinctId) })
+  const _tbConv = await _pipeRead('attribution_explain_conversion', { site_id: String(siteId), distinct_id: String(distinctId) })
   const convRows = _tbConv
     ? _tbConv.map(r => [r.timestamp, r.conversion_value, r.utm_source, r.utm_medium, r.utm_campaign, r.first_touch_source, r.first_touch_medium, r.first_touch_campaign, r.ai_source, r.page_url, r.user_id, r.anonymous_id, r.ingestion_method])
     : await _queryHogQL(convSql, 'attribution_explain_conversion')
@@ -1657,7 +1673,7 @@ export async function getMultiTouchAttributionLive({
   // no raw new Date()/.split('T') is (re)introduced here.
   const _tbFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
   const _tbTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
-  const _tbConv = await _queryTinybirdPipe('multitouch_conversions_by_site', { site_id: String(siteId), date_from: _tbFrom, date_to: _tbTo })
+  const _tbConv = await _pipeRead('multitouch_conversions_by_site', { site_id: String(siteId), date_from: _tbFrom, date_to: _tbTo })
   const convRows = _tbConv
     ? _tbConv.map(r => [r.uuid, r.distinct_id, r.timestamp, r.conversion_type, r.conversion_value, r.utm_source, r.utm_medium, r.utm_campaign, r.referrer, r.ai_source, r.country, r.device_type, r.utm_term, r.provider, r.attribution_status, r.stitching_method, r.ingestion_method, r.stripe_subscription_id, r.stripe_event_type])
     : await _queryHogQL(convSql, 'multitouch_conversions_live')
@@ -2833,7 +2849,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     // the pipe's DateTime params — guarantees date-parity.
     const _fbFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
     const _fbTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
-    const _fbTb = await _queryTinybirdPipe(_flexPipe, { site_id: String(siteId), date_from: _fbFrom, date_to: _fbTo, metric })
+    const _fbTb = await _pipeRead(_flexPipe, { site_id: String(siteId), date_from: _fbFrom, date_to: _fbTo, metric })
     // Named pipe rows -> positional [dim_value, metric_value] so the unchanged consumer (row[0]/row[1],
     // !hasDim2) stays byte-identical. Null -> injectable HogQL fallback (harness controls both legs).
     rows = _fbTb ? _fbTb.map(r => [r.dim_value, r.metric_value]) : await _queryHogQL(sql, 'flexible_report')
