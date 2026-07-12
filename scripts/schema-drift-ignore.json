@@ -1,0 +1,11 @@
+{
+  "_doc": "KNOWN, REVIEWED schema-drift exceptions consumed by scripts/schema-drift-check.mjs (--ignore). Every entry is an explicit decision, never a silent skip. Entries here are prod ORPHANS with NO code references whose exact DDL could not be committed by CC (no prod-DDL access); they await a founder decision: capture-from-prod (pg_dump -t) and formalize as a migration, OR DROP from prod. Remove the entry the moment the object is formalized or dropped — the check then re-enforces it.",
+  "ignore": [
+    "sites.custom_domain*",
+    "site_annotations.*"
+  ],
+  "_rationale": {
+    "sites.custom_domain*": "Prod-only columns, NO code reference anywhere (git grep custom_domain in api/dashboard = empty). Exact column names/types unknown to CC. Capture via `pg_dump --schema-only -t sites` from prod, or DROP.",
+    "site_annotations.*": "Table exists in prod only, NO code reference anywhere, NO CREATE migration. Exact DDL unknown to CC. Capture via `pg_dump --schema-only -t site_annotations` from prod, or DROP."
+  }
+}

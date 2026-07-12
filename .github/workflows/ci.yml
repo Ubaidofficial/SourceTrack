@@ -73,3 +73,73 @@ jobs:
         run: |
           cd dashboard
           npm run build
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # SCHEMA DRIFT / MIGRATIONS — the cure for hand-applied, per-env migration drift.
+  #
+  # FOUNDER SETUP (one-time; jobs no-op until done):
+  #   1. Repository → Settings → Secrets and variables → Actions:
+  #        - Secrets:  STAGING_DB_URL, PROD_DB_URL   (postgres connection strings; prod
+  #                    is used READ-ONLY by schema-drift — only migrate-prod writes DDL)
+  #        - Variable: SCHEMA_CI_ENABLED = "true"    (master switch — leave unset/false
+  #                    and every job below is skipped, so this PR is safe to merge first)
+  #   2. Settings → Environments → create "production" with REQUIRED REVIEWERS.
+  #        That review IS the manual approval gate: migrate-prod is held until a human
+  #        approves. Prod DDL is NEVER auto-applied.
+  # ────────────────────────────────────────────────────────────────────────────
+
+  # Fails the build on ANY divergence between the migrations (source of truth), staging,
+  # and prod. Runs on every PR + push — silence behind a green check is what let drift
+  # run for weeks; this makes drift loud.
+  schema-drift:
+    if: ${{ vars.SCHEMA_CI_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Build migrations-shadow DB (LOCAL — replays supabase/migrations/ ONLY)
+        run: |
+          supabase init --force || true
+          supabase start
+          supabase db reset --local   # wipe + replay every committed migration = the intended schema
+      - name: Snapshot migrations-shadow
+        run: psql "$(supabase status -o json | jq -r '.DB_URL')" -tAqX -f scripts/schema-snapshot.sql > /tmp/migrations.json
+      - name: Snapshot STAGING (read-only)
+        run: psql "${{ secrets.STAGING_DB_URL }}" -tAqX -f scripts/schema-snapshot.sql > /tmp/staging.json
+      - name: Snapshot PROD (read-only — SELECT on information_schema only, no writes)
+        run: psql "${{ secrets.PROD_DB_URL }}" -tAqX -f scripts/schema-snapshot.sql > /tmp/prod.json
+      - name: Diff migrations vs staging vs prod — RED on any drift
+        run: node scripts/schema-drift-check.mjs --ignore=scripts/schema-drift-ignore.json migrations=/tmp/migrations.json staging=/tmp/staging.json prod=/tmp/prod.json
+
+  # Auto-apply pending migrations to STAGING on merge to main (after tests + drift pass).
+  migrate-staging:
+    if: ${{ vars.SCHEMA_CI_ENABLED == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    needs: [build-and-test, schema-drift]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Apply migrations to STAGING
+        run: supabase db push --db-url "${{ secrets.STAGING_DB_URL }}"
+
+  # Apply to PROD ONLY behind the "production" environment's required-reviewer gate.
+  # GitHub holds this job until a human approves — DDL is NEVER auto-applied to prod.
+  migrate-prod:
+    if: ${{ vars.SCHEMA_CI_ENABLED == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    needs: [migrate-staging]
+    runs-on: ubuntu-latest
+    environment: production   # ← manual approval gate (required reviewers). Do NOT remove.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Apply migrations to PROD (requires the manual approval above)
+        run: supabase db push --db-url "${{ secrets.PROD_DB_URL }}"
