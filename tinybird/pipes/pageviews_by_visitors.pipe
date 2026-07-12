@@ -45,6 +45,14 @@ DESCRIPTION >
     page_size (5000) matches the old AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE
     exactly, so behavior is unchanged for any caller that omits these params.
 
+    NIGHTLY ADDITION (fix/nightly-onto-tinybird): country, device_type, browser_name
+    appended so this pipe can serve the nightly touchpoint leg byte-identically —
+    the nightly writes first/last_touch_country/device/browser from touchpoints
+    (nightly-attribution.js:803-808), which the live AI reader never needed. ADDITIVE
+    and by-NAME: the existing AI-platform consumer (attribution-engine.js:~585) maps
+    r.<field> and ignores extra columns, so it is unaffected. Requires a re-deploy of
+    this already-allowlisted pipe (no allowlist change).
+
 TOKEN "phase4_pageviews_by_visitors_read" READ
 
 NODE pageviews_by_visitors_node
@@ -74,7 +82,10 @@ SQL >
         sccid,
         ko_click_id,
         page_url,
-        utm_term
+        utm_term,
+        country,
+        device_type,
+        browser_name
     FROM events_by_visitor
     WHERE site_id = {{ String(site_id, required=True) }}
       AND event_type = '$pageview'

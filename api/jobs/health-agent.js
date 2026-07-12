@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import WebSocket from 'ws'
 import { getSupabase } from '../lib/supabase.js'
+import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 
 const SLACK = process.env.SLACK_WEBHOOK_URL
 const API_URL = process.env.API_URL || 'http://localhost:3000'
@@ -11,23 +12,39 @@ const API_URL = process.env.API_URL || 'http://localhost:3000'
 // nothing must be able to turn this monitor red.
 const CRITICAL_CHECKS = new Set(['supabase', 'posthog', 'nightly_job', 'conversions'])
 
-// Count $conversion events the event store received in the last 48h. Returns a
-// number, or null when the store can't be reached (caller treats null as "unknown"
-// and does not assert the silent-zero rule on it — the `posthog` check covers
-// connectivity separately). Deterministic; no LLM.
+// Sum recent $conversion rows across the monitored sites via the SAME pipe + token the
+// nightly reads (nightly_conversions_by_site) — so the monitor can NEVER measure a
+// different store than the thing it monitors. Returns a number, or null when NOT ONE
+// site was pipe-served (store unreachable → "unknown"; the evaluators do not assert the
+// silent-zero rule on null, and the `posthog`/connectivity checks cover reachability).
+// Exported + dependency-injected so a test can assert it hits nightly_conversions_by_site.
+export async function sumStoreConversions({ sites, queryPipe, date_from, date_to }) {
+  let total = 0
+  let served = 0
+  for (const s of sites) {
+    const rows = await queryPipe('nightly_conversions_by_site', { site_id: String(s.id), date_from, date_to })
+    if (rows) { served++; total += rows.length }
+  }
+  return served === 0 ? null : total
+}
+
+// Count $conversion events the SAME Tinybird store the nightly reads received in the
+// last 48h. Deterministic; no LLM; never throws.
 async function storeConversionCount() {
   try {
-    const host = (process.env.POSTHOG_HOST || '').replace(/\/$/, '')
-    if (!host) return null
-    const res = await fetch(`${host}/api/projects/${process.env.POSTHOG_PROJECT_ID}/query/`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${process.env.POSTHOG_PERSONAL_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: { kind: 'HogQLQuery', query: "SELECT count() FROM events WHERE event = '$conversion' AND timestamp >= now() - INTERVAL 48 HOUR" } }),
-      signal: AbortSignal.timeout(15000)
+    const supabase = getSupabase()
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString()
+    const { data: sites } = await supabase.from('sites')
+      .select('id')
+      .not('plan', 'in', '(free,inactive,archived)')
+      .or(`last_seen_at.gte.${sevenDaysAgo},last_seen_at.is.null`)
+    if (!sites || sites.length === 0) return 0
+    const now = Date.now()
+    const fmt = (m) => new Date(m).toISOString().slice(0, 19).replace('T', ' ')
+    return await sumStoreConversions({
+      sites, queryPipe: queryTinybirdPipe,
+      date_from: fmt(now - 48 * 3600 * 1000), date_to: fmt(now + 3600 * 1000)
     })
-    if (!res.ok) return null
-    const data = await res.json()
-    return Number(data.results?.[0]?.[0]) || 0
   } catch {
     return null
   }
