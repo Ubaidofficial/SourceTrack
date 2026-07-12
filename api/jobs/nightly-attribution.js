@@ -368,7 +368,12 @@ async function runBackfill() {
     ORDER BY timestamp ASC
     LIMIT 5000
   `
-  const rows = await queryPostHog(conversionsQuery)
+  // Read the SAME Tinybird store the cron reads, over the backfill's OWN --days=N window
+  // (fallback to HogQL on null). This is the ONLY path that can reach a conversion older
+  // than the 24h cron window (e.g. wave1_454a720e, 2026-07-09).
+  const { rows, served, fellBack } = await fetchBackfillConversions({ site, days, hogqlQuery: conversionsQuery })
+  if (served) log(`BACKFILL: nightly_conversions_by_site SERVED ${rows.length} rows (${days}d window)`)
+  if (fellBack) logWarn(`BACKFILL: nightly_conversions_by_site returned null → fell back to HogQL/PostHog (a dead store would over-report "${rows.length} found"; require the served-pipe log line)`)
   log(`Found ${rows?.length || 0} $conversion event(s) in the ${days}d window`)
 
   const records = []
@@ -476,7 +481,7 @@ export async function processSite(site) {
   let fellBack = false
   const usePipe = _tbReadEnabled() && !suffixFilterClause && !isReprocess
   if (usePipe) {
-    const { from, to } = conversionPipeWindow(lookbackInterval)
+    const { from, to } = conversionPipeWindow(1) // non-reprocess cron = 24h = 1 day (usePipe excludes reprocess)
     const pipeRows = await _queryPipe('nightly_conversions_by_site', { site_id: String(site.id), date_from: from, date_to: to })
     if (pipeRows) {                       // POSITIVE served signal (non-null array), even if empty
       served = true
@@ -581,13 +586,35 @@ export async function processSite(site) {
 }
 
 // ClickHouse DateTime window ('YYYY-MM-DD HH:MM:SS', UTC) for the conversion pipe,
-// reproducing the HogQL `timestamp >= now() - INTERVAL <lookback>` (up to now). The
-// upper bound carries a +1h buffer so rows at "now" fall inside the pipe's `< date_to`.
-function conversionPipeWindow (lookbackInterval) {
+// reproducing the HogQL `timestamp >= now() - INTERVAL <days> DAY` (up to now).
+// `days` is the CALLER's window: 1 for the 24h cron, or the backfill's own --days=N —
+// NOT hardcoded. The upper bound carries a +1h buffer so rows at "now" fall inside the
+// pipe's `< date_to`.
+export function conversionPipeWindow (days) {
   const nowMs = Date.now()
-  const ms = lookbackInterval === '90 DAY' ? 90 * 24 * 3600 * 1000 : 24 * 3600 * 1000
+  const ms = Number(days) * 24 * 3600 * 1000
   const fmt = (m) => new Date(m).toISOString().slice(0, 19).replace('T', ' ')
   return { from: fmt(nowMs - ms), to: fmt(nowMs + 3600 * 1000) }
+}
+
+// The backfill conversion read (--backfill-site + --days=N). Backfill targets ONE site
+// by id — no suffix/reprocess LIKE — so the Tinybird pipe fits, over the backfill's OWN
+// --days=N window (NOT the cron lookback). Returns { rows: positional[], served, fellBack }
+// with HogQL fallback on a null pipe. served/fellBack make a silent fallback to a dead
+// PostHog VISIBLE — a backfill that falls back and reports "N upserted" off an empty
+// store is the same lie as the nightly's swallowed outage.
+export async function fetchBackfillConversions ({ site, days, hogqlQuery }) {
+  let rows = null
+  let served = false
+  let fellBack = false
+  if (_tbReadEnabled()) {
+    const { from, to } = conversionPipeWindow(days)
+    const pipeRows = await _queryPipe('nightly_conversions_by_site', { site_id: String(site.id), date_from: from, date_to: to })
+    if (pipeRows) { served = true; rows = pipeRows.map(mapConversionPipeRow) }
+    else { fellBack = true }
+  }
+  if (rows === null) rows = await queryPostHog(hogqlQuery)
+  return { rows: rows || [], served, fellBack }
 }
 
 // Guarded source backfill for subscription_revenue: the ONLY path that can
