@@ -103,9 +103,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
         with:
-          version: latest
+          version: 2.101.0   # PINNED (deterministic). `latest` does an unauthenticated GitHub API lookup that gets rate-limited ("Failed to resolve latest Supabase CLI release: rate limit exceeded"). Bump deliberately.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # authenticate any release lookup/download so it isn't anonymous-rate-limited
       - name: Build migrations-shadow DB (LOCAL — replays supabase/migrations/ ONLY)
         run: |
           supabase init --force || true
@@ -127,9 +129,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
         with:
-          version: latest
+          version: 2.101.0   # PINNED (deterministic). `latest` does an unauthenticated GitHub API lookup that gets rate-limited ("Failed to resolve latest Supabase CLI release: rate limit exceeded"). Bump deliberately.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # authenticate any release lookup/download so it isn't anonymous-rate-limited
       - name: Apply migrations to STAGING
         run: supabase db push --db-url "${{ secrets.STAGING_DB_URL }}"
 
@@ -152,8 +156,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v1
+      - uses: supabase/setup-cli@v3
         with:
-          version: latest
+          version: 2.101.0   # PINNED (deterministic). `latest` does an unauthenticated GitHub API lookup that gets rate-limited ("Failed to resolve latest Supabase CLI release: rate limit exceeded"). Bump deliberately.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}   # authenticate any release lookup/download so it isn't anonymous-rate-limited
       - name: Apply migrations to PROD (DISABLED — see the job comment; prod DDL is manual)
         run: supabase db push --db-url "${{ secrets.PROD_DB_URL }}"
