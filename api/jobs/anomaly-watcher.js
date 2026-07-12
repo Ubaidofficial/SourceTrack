@@ -24,7 +24,17 @@ const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL
 const DAY_MS = 24 * 60 * 60 * 1000
 
 let _alertsCreated = 0
+let _scanFailures = 0   // sites whose scan threw — a swallowed failure must not report success
+let _sitesScanned = 0
 const _t0 = Date.now()
+
+// A zero-alert run is legitimate (no anomalies = good). But a run whose per-site scans
+// THREW (the same swallow that hid the nightly outage) must NOT report success. Fail
+// when every scanned site failed, or when there were sites to scan but all of them failed.
+export function computeAnomalyStatus({ sitesScanned = 0, scanFailures = 0 } = {}) {
+  if (scanFailures > 0 && scanFailures >= sitesScanned) return 'failed'
+  return 'success'
+}
 
 function log(message) {
   console.log(`[${new Date().toISOString()}] ${message}`)
@@ -200,6 +210,7 @@ async function main() {
   }
 
   log(`Scanning ${sites.length} site(s)`)
+  _sitesScanned = sites.length
   for (const site of sites) {
     try {
       const { data: rows, error: rowsErr } = await _supabase
@@ -214,20 +225,35 @@ async function main() {
       await watchSourceSilent(site.id, rows)
       await watchCoverageDrop(site.id, rows)
     } catch (err) {
+      // Swallowing a thrown scan into a green run is the same lie the nightly job told.
       logWarn(`Site ${site.site_key} scan failed: ${err.message}`)
+      _scanFailures++
     }
   }
 
-  log(`Anomaly-watcher complete — ${_alertsCreated} alert(s) created`)
+  log(`Anomaly-watcher complete — ${_alertsCreated} alert(s) created, ${_scanFailures}/${_sitesScanned} scans failed`)
 }
 
-main()
-  .then(() => {
-    _writeJobRun({ status: 'success', conversions_processed: _alertsCreated, duration_ms: Date.now() - _t0 })
-    _slackAlert('✅', 'Anomaly Watcher — SUCCESS', `Created ${_alertsCreated} alert(s) in ${Date.now() - _t0}ms`)
-  })
-  .catch(err => {
-    _writeJobRun({ status: 'failed', conversions_processed: _alertsCreated, error_message: err.message, duration_ms: Date.now() - _t0 })
-    _slackAlert('🔴', 'Anomaly Watcher — FAILED', err.message)
-    process.exit(1)
-  })
+// Auto-run ONLY when executed directly (cron), NOT when imported by tests — so the
+// exported computeAnomalyStatus can be unit-tested without hitting the network.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main()
+    .then(() => {
+      const status = computeAnomalyStatus({ sitesScanned: _sitesScanned, scanFailures: _scanFailures })
+      const dur = Date.now() - _t0
+      if (status === 'success') {
+        _writeJobRun({ status, conversions_processed: _alertsCreated, duration_ms: dur })
+        _slackAlert('✅', 'Anomaly Watcher — SUCCESS', `Created ${_alertsCreated} alert(s) in ${dur}ms`)
+      } else {
+        const msg = `${_scanFailures}/${_sitesScanned} site scans failed — anomaly detection did not run`
+        _writeJobRun({ status, conversions_processed: _alertsCreated, error_message: msg, duration_ms: dur })
+        _slackAlert('🔴', 'Anomaly Watcher — FAILED', msg)
+        process.exit(1)
+      }
+    })
+    .catch(err => {
+      _writeJobRun({ status: 'failed', conversions_processed: _alertsCreated, error_message: err.message, duration_ms: Date.now() - _t0 })
+      _slackAlert('🔴', 'Anomaly Watcher — FAILED', err.message)
+      process.exit(1)
+    })
+}
