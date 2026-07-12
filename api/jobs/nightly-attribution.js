@@ -3,6 +3,7 @@ dotenv.config()
 
 import { getSupabase } from '../lib/supabase.js'
 import { esc } from '../lib/utils.js'
+import { queryTinybirdPipe, isTinybirdReadEnabled } from '../lib/tinybird-read.js'
 import { clampDays, classifyJourney, applyBackfill } from '../lib/backfill.js'
 import { purgeSiteRetention } from '../lib/retention-purge.js'
 import { runGscDailySync } from '../lib/gsc-daily-sync.js'
@@ -78,20 +79,66 @@ async function _writeJobRun({ status, conversions_processed, error_message, dura
 let _processed = 0
 let _fetched = 0        // event-store rows returned across all sites
 let _hardFailures = 0   // sites whose query threw (or that threw) — a real failure, not a no-op
+let _suspectEmpty = false // reads enabled but NO site pipe-served → a fetched=0 is a suspect dead read, not an empty day
 let _lockAborted = false // another run held the lock: this run wrote nothing, must not claim a terminal row
 const _t0 = Date.now()
 
 const supabase = _supabase
 
+// ── Tinybird read seam (swappable for tests) ─────────────────────────────────
+// The conversion + touchpoint reads are cut over to Tinybird (all producers write
+// there only, post-Wave-1/2 cutover). Both fall back to the existing HogQL path on a
+// null pipe return, exactly like every other read cutover — fail-safe to the old path
+// when TINYBIRD_READ_ENABLED is off. Verification is the POSITIVE served-pipe signal
+// (queryTinybirdPipe logs `served pipe … rows=N`), never the absence of a fallback warning.
+let _queryPipe = queryTinybirdPipe
+let _tbReadEnabled = isTinybirdReadEnabled
+export function __setNightlyReadDeps ({ queryPipe, tbReadEnabled } = {}) {
+  if (queryPipe) _queryPipe = queryPipe
+  if (tbReadEnabled) _tbReadEnabled = tbReadEnabled
+}
+export function __resetNightlyReadDeps () { _queryPipe = queryTinybirdPipe; _tbReadEnabled = isTinybirdReadEnabled }
+
+// Map a nightly_conversions_by_site pipe row (named) to the EXACT positional array the
+// processSite loop consumes (row[0..13]) — so the downstream mapping is byte-identical
+// whether the rows came from the pipe or the HogQL fallback.
+export function mapConversionPipeRow (r) {
+  return [
+    r.uuid, r.distinct_id, r.timestamp, r.conversion_type, r.conversion_value,
+    r.external_event_id, r.webhook_customer_id, r.stripe_subscription_id,
+    r.stripe_invoice_id, r.currency, r.provider_event_id, r.occurred_at,
+    r.stripe_event_type, r.provider
+  ]
+}
+
+// Map a pageviews_by_visitors pipe row (named) to the EXACT positional array the
+// touchpoint mapping consumes (row[0..23]). utm_term (pipe col) is intentionally not
+// in the nightly's touchpoint shape and is dropped.
+export function mapTouchpointPipeRow (r) {
+  return [
+    r.timestamp, r.utm_source, r.utm_medium, r.utm_campaign, r.referrer, r.ai_source,
+    r.gclid, r.gbraid, r.wbraid, r.fbclid, r.msclkid, r.ttclid, r.li_fat_id, r.li_fatid,
+    r.twclid, r.dclid, r.snapclid, r.pclid, r.sccid, r.ko_click_id, r.page_url,
+    r.country, r.device_type, r.browser_name
+  ]
+}
+
 // Terminal status for the money rail. A job that materializes the money rail must NOT
 // report success on a structural no-op. Rules:
 //   - any hard failure (thrown event-store query / thrown site)     -> 'failed'
 //   - processed 0 while the store returned rows (fetched > 0)        -> 'failed'
-//   - processed 0 while the store genuinely returned 0 (fetched 0)   -> 'success' (a real empty day is legitimate)
+//   - processed 0, store returned 0, but the read SILENTLY FELL BACK to HogQL for every
+//     site (suspectEmpty) -> 'failed'. Against a dead/empty store a fetched=0 is
+//     INDISTINGUISHABLE from a real empty day (the #184 blind spot); the positive
+//     served-pipe signal is the tell — if NO site was pipe-served while reads are
+//     enabled, a 0 is SUSPECT, not an empty day.
+//   - processed 0, store returned 0, and at least one site WAS pipe-served (or reads are
+//     off by design) -> 'success' (a real empty day is legitimate)
 //   - processed > 0                                                  -> 'success'
-export function computeTerminalStatus({ processed = 0, fetched = 0, hardFailures = 0 } = {}) {
+export function computeTerminalStatus({ processed = 0, fetched = 0, hardFailures = 0, suspectEmpty = false } = {}) {
   if (hardFailures > 0) return 'failed'
   if (processed === 0 && fetched > 0) return 'failed'
+  if (processed === 0 && fetched === 0 && suspectEmpty) return 'failed'
   return 'success'
 }
 
@@ -190,6 +237,7 @@ async function main() {
     let totalFailed = 0
     let totalFetched = 0        // rows the event store actually returned (across sites)
     let totalHardFailures = 0   // sites whose query threw, or that threw outright
+    let totalServed = 0         // sites whose conversion read was PIPE-SERVED (positive signal)
     let cursor = 0
 
     async function worker() {
@@ -201,6 +249,7 @@ async function main() {
           totalFailed += result.failed
           totalFetched += result.fetched || 0
           if (result.queryFailed) totalHardFailures++
+          if (result.served) totalServed++
         } catch (error) {
           logWarn(`Site ${site.site_key} failed: ${error.message}`)
           totalFailed++
@@ -221,6 +270,10 @@ async function main() {
     _processed = totalProcessed
     _fetched = totalFetched
     _hardFailures = totalHardFailures
+    // Dead-store guard (item 5): reads are enabled and there ARE sites, but NOT ONE was
+    // pipe-served → every conversion read silently fell back to HogQL (empty PostHog). A
+    // 0 here is SUSPECT, not a real empty day. (Genuine empty day: the pipe SERVES [].)
+    _suspectEmpty = _tbReadEnabled() && sites.length > 0 && totalServed === 0
 
     // GDPR retention auto-purge (best-effort — never fail the whole job)
     try {
@@ -315,7 +368,12 @@ async function runBackfill() {
     ORDER BY timestamp ASC
     LIMIT 5000
   `
-  const rows = await queryPostHog(conversionsQuery)
+  // Read the SAME Tinybird store the cron reads, over the backfill's OWN --days=N window
+  // (fallback to HogQL on null). This is the ONLY path that can reach a conversion older
+  // than the 24h cron window (e.g. wave1_454a720e, 2026-07-09).
+  const { rows, served, fellBack } = await fetchBackfillConversions({ site, days, hogqlQuery: conversionsQuery })
+  if (served) log(`BACKFILL: nightly_conversions_by_site SERVED ${rows.length} rows (${days}d window)`)
+  if (fellBack) logWarn(`BACKFILL: nightly_conversions_by_site returned null → fell back to HogQL/PostHog (a dead store would over-report "${rows.length} found"; require the served-pipe log line)`)
   log(`Found ${rows?.length || 0} $conversion event(s) in the ${days}d window`)
 
   const records = []
@@ -413,22 +471,40 @@ export async function processSite(site) {
   `
 
   log(`conversionsQuery: ${conversionsQuery}`)
-  let rows
-  try {
-    rows = await queryPostHog(conversionsQuery)
-    log(`conversionsQuery returned ${rows ? rows.length : 0} rows`)
-  } catch (error) {
-    // A THROWN query is a FAILURE, not "no conversions". Returning failed:0 here was
-    // THE ROOT LIE: a total PostHog outage was byte-identical, in job_runs, to a real
-    // empty day. Report failed>=1 and flag queryFailed so the terminal status can tell
-    // an outage apart from an empty day.
-    logWarn(`PostHog query failed for site ${site.site_key}: ${error.message}`)
-    return { processed: 0, failed: 1, fetched: 0, queryFailed: true }
+
+  // CONVERSION READ CUTOVER → Tinybird. All producers write $conversion to Tinybird
+  // only (Wave-1 cutover); PostHog is a dead store for new events. The pipe cannot
+  // express the '_mv' suffix filter or the reprocess LIKE, so those two paths keep the
+  // HogQL query. `served`/`fellBack` feed the dead-store guard (computeTerminalStatus).
+  let rows = null
+  let served = false
+  let fellBack = false
+  const usePipe = _tbReadEnabled() && !suffixFilterClause && !isReprocess
+  if (usePipe) {
+    const { from, to } = conversionPipeWindow(1) // non-reprocess cron = 24h = 1 day (usePipe excludes reprocess)
+    const pipeRows = await _queryPipe('nightly_conversions_by_site', { site_id: String(site.id), date_from: from, date_to: to })
+    if (pipeRows) {                       // POSITIVE served signal (non-null array), even if empty
+      served = true
+      rows = pipeRows.map(mapConversionPipeRow)
+    } else {
+      fellBack = true                     // pipe expected but returned null → HogQL fallback; a 0 here is SUSPECT
+    }
+  }
+  if (rows === null) {
+    try {
+      rows = await queryPostHog(conversionsQuery)
+      log(`conversionsQuery returned ${rows ? rows.length : 0} rows`)
+    } catch (error) {
+      // A THROWN query is a FAILURE, not "no conversions" (the #184 root lie: an outage
+      // was byte-identical, in job_runs, to a real empty day). failed>=1 + queryFailed.
+      logWarn(`Conversion read failed for site ${site.site_key}: ${error.message}`)
+      return { processed: 0, failed: 1, fetched: 0, queryFailed: true, served, fellBack }
+    }
   }
 
   if (!rows || rows.length === 0) {
     log(`No conversions found for site ${site.site_key}`)
-    return { processed: 0, failed: 0, fetched: 0, queryFailed: false }
+    return { processed: 0, failed: 0, fetched: 0, queryFailed: false, served, fellBack }
   }
   
   let processed = 0
@@ -506,7 +582,39 @@ export async function processSite(site) {
   await backfillSubscriptionRevenueSource(site)
 
   log(`Site ${site.site_key}: ${processed} processed, ${failed} failed`)
-  return { processed, failed, fetched: rows.length, queryFailed: false }
+  return { processed, failed, fetched: rows.length, queryFailed: false, served, fellBack }
+}
+
+// ClickHouse DateTime window ('YYYY-MM-DD HH:MM:SS', UTC) for the conversion pipe,
+// reproducing the HogQL `timestamp >= now() - INTERVAL <days> DAY` (up to now).
+// `days` is the CALLER's window: 1 for the 24h cron, or the backfill's own --days=N —
+// NOT hardcoded. The upper bound carries a +1h buffer so rows at "now" fall inside the
+// pipe's `< date_to`.
+export function conversionPipeWindow (days) {
+  const nowMs = Date.now()
+  const ms = Number(days) * 24 * 3600 * 1000
+  const fmt = (m) => new Date(m).toISOString().slice(0, 19).replace('T', ' ')
+  return { from: fmt(nowMs - ms), to: fmt(nowMs + 3600 * 1000) }
+}
+
+// The backfill conversion read (--backfill-site + --days=N). Backfill targets ONE site
+// by id — no suffix/reprocess LIKE — so the Tinybird pipe fits, over the backfill's OWN
+// --days=N window (NOT the cron lookback). Returns { rows: positional[], served, fellBack }
+// with HogQL fallback on a null pipe. served/fellBack make a silent fallback to a dead
+// PostHog VISIBLE — a backfill that falls back and reports "N upserted" off an empty
+// store is the same lie as the nightly's swallowed outage.
+export async function fetchBackfillConversions ({ site, days, hogqlQuery }) {
+  let rows = null
+  let served = false
+  let fellBack = false
+  if (_tbReadEnabled()) {
+    const { from, to } = conversionPipeWindow(days)
+    const pipeRows = await _queryPipe('nightly_conversions_by_site', { site_id: String(site.id), date_from: from, date_to: to })
+    if (pipeRows) { served = true; rows = pipeRows.map(mapConversionPipeRow) }
+    else { fellBack = true }
+  }
+  if (rows === null) rows = await queryPostHog(hogqlQuery)
+  return { rows: rows || [], served, fellBack }
 }
 
 // Guarded source backfill for subscription_revenue: the ONLY path that can
@@ -572,7 +680,7 @@ function calculateConfidence(touchpoints, channel) {
   return Math.min(100, Math.max(0, score))
 }
 
-async function processConversion(site, conversion) {
+export async function processConversion(site, conversion) {
   const convValue = parseFloat(conversion.conversion_value || 0)
 
   if (convValue < 0 || !conversion.distinct_id) {
@@ -619,12 +727,43 @@ async function processConversion(site, conversion) {
     LIMIT 500
   `
 
-  let touchpointRows
-  try {
-    touchpointRows = await queryPostHog(touchpointsQuery)
-  } catch (error) {
-    logWarn(`Failed to fetch touchpoints for ${conversion.uuid}: ${error.message}`)
-    touchpointRows = []
+  // TOUCHPOINT READ CUTOVER → Tinybird (pageviews are Tinybird-only post-Wave-2). The
+  // pipe takes a SHARED lookback_from/date_to, which is NOT equivalent to the per-
+  // conversion window — so we fetch a SUPERSET for this ONE visitor and re-apply the
+  // EXACT window (<= conversion.timestamp AND >= conversion.timestamp - windowDays) in
+  // JS. That reproduces the HogQL query's window regardless of the pipe's `< date_to`
+  // boundary. Single-element visitor_ids → the array wire-format ambiguity is moot.
+  let touchpointRows = null
+  if (_tbReadEnabled()) {
+    const convMs = new Date(conversion.timestamp).getTime()
+    const windowMs = windowDays * 24 * 3600 * 1000
+    const fmt = (m) => new Date(m).toISOString().slice(0, 19).replace('T', ' ')
+    const pv = await _queryPipe('pageviews_by_visitors', {
+      site_id: String(site.id),
+      visitor_ids: [conversion.distinct_id],           // IDENTITY: Tinybird distinct_id == conversion distinct_id (both anonymous_id)
+      lookback_from: fmt(convMs - windowMs),
+      date_to: fmt(convMs + 24 * 3600 * 1000),         // +1d superset; the JS clamp below is the source of truth
+      page_size: 500,
+      page_offset: 0
+    })
+    if (pv) {
+      touchpointRows = pv
+        .filter(r => {
+          const t = new Date(r.timestamp).getTime()
+          return t <= convMs && t >= convMs - windowMs  // PRESERVE the exact per-conversion window
+        })
+        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))  // ORDER BY timestamp ASC
+        .slice(0, 500)                                                   // LIMIT 500
+        .map(mapTouchpointPipeRow)
+    }
+  }
+  if (touchpointRows === null) {
+    try {
+      touchpointRows = await queryPostHog(touchpointsQuery)
+    } catch (error) {
+      logWarn(`Failed to fetch touchpoints for ${conversion.uuid}: ${error.message}`)
+      touchpointRows = []
+    }
   }
 
   const touchpoints = (touchpointRows || []).map(row => {
@@ -1272,12 +1411,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       }
       // Honest terminal status — a money-rail job cannot report success on a structural
       // no-op (a swallowed outage). See computeTerminalStatus.
-      const status = computeTerminalStatus({ processed: _processed, fetched: _fetched, hardFailures: _hardFailures })
+      const status = computeTerminalStatus({ processed: _processed, fetched: _fetched, hardFailures: _hardFailures, suspectEmpty: _suspectEmpty })
       const dur = Date.now() - _t0
       const errMsg = status !== 'failed' ? null
         : _hardFailures > 0
           ? `${_hardFailures} site event-store query(ies) failed — a real failure, not an empty day`
-          : `Processed 0 conversions while the event store returned ${_fetched} row(s) — nothing was written`
+          : _suspectEmpty
+            ? 'Conversion read fell back to HogQL for EVERY site (Tinybird pipe never served) and returned 0 — SUSPECT dead read, not an empty day'
+            : `Processed 0 conversions while the event store returned ${_fetched} row(s) — nothing was written`
       _writeJobRun({ status, conversions_processed: _processed, error_message: errMsg, duration_ms: dur })
       if (status === 'success') {
         _slackAlert('✅', 'Attribution Job — SUCCESS', `Processed ${_processed} conversions in ${dur}ms`)

@@ -1,0 +1,52 @@
+DESCRIPTION >
+    Nightly-attribution conversion row-pull. Faithful 1:1 port of the nightly's
+    per-site conversionsQuery (api/jobs/nightly-attribution.js processSite, :396-413)
+    — the 14-column shape the nightly maps positionally: uuid, distinct_id, timestamp
+    + the 11 properties at :396-405. One row per $conversion, site-scoped, windowed,
+    ORDER BY timestamp ASC LIMIT 1000 (matching the nightly exactly, NOT the DESC/10000
+    of the live-read siblings).
+
+    §2.6 typed-column translation (events.datasource): properties.site_id -> site_id,
+    event -> event_type, uuid -> event_id (no `uuid` column; event_id is the Tinybird
+    identifier). TYPED columns: distinct_id, timestamp, conversion_type, conversion_value,
+    external_event_id, webhook_customer_id, stripe_subscription_id, stripe_invoice_id,
+    currency, occurred_at, provider. BAG-only (no typed column, JSONExtractString):
+    provider_event_id, stripe_event_type. The ''-vs-NULL bag trap is INERT for both —
+    the nightly consumer collapses via `row[10] || null` / `row[12] || null`, so plain
+    JSONExtractString (no nullIf) is faithful; there is no count(DISTINCT ...) here.
+    MONEY: conversion_value = toFloat64OrZero(toString(conversion_value)) (ClickHouse
+    dialect) == the live parseFloat(properties.conversion_value) the nightly applies.
+
+    DateTime params interpolate directly ({{DateTime(p, required=True)}}, no toDateTime
+    wrapper). site_id is required=True — a conversions row-pull must NEVER fall through
+    to a default/all-tenant scope (§6.5).
+
+    VALUE-PARITY NOT RUN — founder/orchestrator value-gates vs live HogQL before wiring.
+
+NODE nightly_conversions_by_site_node
+SQL >
+    %
+    SELECT
+        event_id AS uuid,
+        distinct_id,
+        timestamp,
+        conversion_type,
+        toFloat64OrZero(toString(conversion_value)) AS conversion_value,
+        external_event_id,
+        webhook_customer_id,
+        stripe_subscription_id,
+        stripe_invoice_id,
+        currency,
+        JSONExtractString(properties, 'provider_event_id') AS provider_event_id,
+        occurred_at,
+        JSONExtractString(properties, 'stripe_event_type') AS stripe_event_type,
+        provider
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$conversion'
+      AND timestamp >= {{ DateTime(date_from, required=True) }}
+      AND timestamp < {{ DateTime(date_to, required=True) }}
+    ORDER BY timestamp ASC
+    LIMIT 1000
+
+TYPE endpoint
