@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
+import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { getSupabase as getSupabaseAdmin } from '../lib/supabase.js'
 import { esc, isValidTimezone, getLocalDateString, getPaddedUtcDateRange, getNow, cappedRate } from '../lib/utils.js'
 import { channelFromEvent } from '../lib/channel-classifier.js'
@@ -11,6 +12,39 @@ import { normalizeSource } from '../lib/source-normalizer.js'
 
 
 const router = Router()
+
+// ── Tinybird read seam (Grade B dashboard cutover) — mirrors analytics.js/seo-revenue.js.
+// Unit tests inject stubs for the two read backends; production uses the real imports.
+let _queryTinybirdPipe = queryTinybirdPipe
+let _queryHogQL = queryHogQL
+export function __setDashboardReadDeps ({ queryTinybird, queryHog } = {}) {
+  if (queryTinybird) _queryTinybirdPipe = queryTinybird
+  if (queryHog) _queryHogQL = queryHog
+}
+export function __resetDashboardReadDeps () {
+  _queryTinybirdPipe = queryTinybirdPipe
+  _queryHogQL = queryHogQL
+}
+// Tinybird-first read: null (flag off / error) -> HogQL fallback; the pipe's NAMED rows are
+// remapped to the HogQL POSITIONAL shape (mapRows) so every downstream consumer is
+// byte-identical. Fail-closed under the test-only TINYBIRD_FORCE_READ. Tenant isolation:
+// pipes are called with the authenticated site_id (req.site.id), never client-supplied.
+async function readTb (pipeName, params, hogSql, hogName, mapRows) {
+  const tb = await _queryTinybirdPipe(pipeName, params)
+  if (tb !== null) return mapRows(tb)
+  if (process.env.TINYBIRD_FORCE_READ === 'true') {
+    throw new Error(`[tinybird-force-read] ${pipeName} returned null under TINYBIRD_FORCE_READ — dispatch path not exercised`)
+  }
+  return _queryHogQL(hogSql, hogName)
+}
+// Under the test-only TINYBIRD_FORCE_READ, a route's graceful catch would otherwise swallow
+// the fail-closed throw into a 200 with empty data. This makes the failure visible (500).
+// Flag OFF (production) → returns false, so the existing graceful path is byte-identical.
+function forceReadFailure (res) {
+  if (process.env.TINYBIRD_FORCE_READ !== 'true') return false
+  res.status(500).json({ success: false, error: 'tinybird-force-read: dispatch path not exercised' })
+  return true
+}
 
 const AI_SOURCE_PATTERNS = ['chatgpt', 'claude', 'perplexity', 'gemini', 'grok', 'copilot', 'deepseek', 'meta ai', 'you.com', 'bing ai', 'bard', 'mistral']
 function isAISource(source) {
@@ -59,14 +93,16 @@ router.get('/overview', validateSiteKey, async (req, res) => {
         .eq('site_id', req.site.id)
         .gte('conversion_date', priorPadded.from)
         .lte('conversion_date', priorPadded.to),
-      queryHogQL(`
+      // :62 dash_install → integ_install pipe (VERIFIED exact-SQL match: event_type,
+      // timestamp, page_url; same WHERE any-event, ORDER BY timestamp DESC, LIMIT 1).
+      readTb('integ_install', { site_id: posthogSiteId }, `
         SELECT event, timestamp, properties.page_url AS page_url
         FROM events
         WHERE properties.site_id = '${esc(posthogSiteId)}'
         ORDER BY timestamp DESC
         LIMIT 1
-      `, 'dash_install'),
-      queryHogQL(`
+      `, 'dash_install', tb => tb.map(r => [r.event_type, r.timestamp, r.page_url])),
+      readTb('dash_alerts', { site_id: posthogSiteId }, `
         SELECT
           SUM(CASE WHEN timestamp >= now() - INTERVAL 7 DAY THEN 1 ELSE 0 END) AS this_week,
           SUM(CASE WHEN timestamp >= now() - INTERVAL 14 DAY AND timestamp < now() - INTERVAL 7 DAY THEN 1 ELSE 0 END) AS last_week,
@@ -76,8 +112,8 @@ router.get('/overview', validateSiteKey, async (req, res) => {
         FROM events
         WHERE properties.site_id = '${esc(posthogSiteId)}'
           AND event = '$pageview'
-      `, 'dash_alerts'),
-      queryHogQL(`
+      `, 'dash_alerts', tb => tb.map(r => [r.this_week, r.last_week, r.count_day, r.count_hour, r.last_event])),
+      readTb('dash_stages', { site_id: posthogSiteId, current_from_ts: `${currentPadded.from} 00:00:00`, current_to_ts: `${currentPadded.to} 23:59:59`, local_from_ts: `${localDateFrom} 00:00:00`, local_to_ts: `${localDateTo} 23:59:59`, tz }, `
         SELECT
           properties.conversion_type AS stage,
           count() AS count,
@@ -94,8 +130,8 @@ router.get('/overview', validateSiteKey, async (req, res) => {
         GROUP BY stage
         ORDER BY count DESC
         LIMIT 100
-      `, 'dash_stages'),
-      queryHogQL(`
+      `, 'dash_stages', tb => tb.map(r => [r.stage, r.count, r.revenue])),
+      readTb('dash_top_pages', { site_id: posthogSiteId, current_from_ts: `${currentPadded.from} 00:00:00`, current_to_ts: `${currentPadded.to} 23:59:59`, local_from_ts: `${localDateFrom} 00:00:00`, local_to_ts: `${localDateTo} 23:59:59`, tz }, `
         SELECT
           properties.page_url AS page_url,
           count() AS count
@@ -109,7 +145,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
         GROUP BY page_url
         ORDER BY count DESC
         LIMIT 500
-      `, 'dash_top_pages')
+      `, 'dash_top_pages', tb => tb.map(r => [r.page_url, r.count]))
     ])
 
     const rows = acRows || []
@@ -309,10 +345,18 @@ router.get('/overview', validateSiteKey, async (req, res) => {
     let bounceRate = null
     let totalSessions = 0
     try {
-      const br = await queryHogQL(bounceRateSql, 'bounce_rate')
+      const br = await readTb(
+        'dashboard_bounce_rate',
+        { site_id: posthogSiteId, current_from_ts: `${currentPadded.from} 00:00:00`, current_to_ts: `${currentPadded.to} 23:59:59`, local_from_ts: `${localDateFrom} 00:00:00`, local_to_ts: `${localDateTo} 23:59:59`, tz },
+        bounceRateSql, 'bounce_rate',
+        tb => tb.map(r => [r.bounce_rate_pct, r.total_sessions])
+      )
       bounceRate = br?.[0]?.[0] ? parseFloat(Number(br[0][0]).toFixed(1)) : null
       totalSessions = Number(br?.[0]?.[1]) || 0
-    } catch (_e) {}
+    } catch (_e) {
+      // Fail-closed: don't swallow the FORCE_READ signal into a null bounce rate.
+      if (process.env.TINYBIRD_FORCE_READ === 'true') throw _e
+    }
 
     // ── Install status ──────────────────────────────────────────────────────
     let installData = null
@@ -393,6 +437,7 @@ router.get('/overview', validateSiteKey, async (req, res) => {
       error: null
     })
   } catch (_err) {
+    if (forceReadFailure(res)) return
     console.error('[dashboard/overview] query failed:', _err?.message || _err)
     return res.status(200).json({
       success: true,
@@ -523,10 +568,11 @@ router.get('/live', validateSiteKey, async (req, res) => {
   try {
     const posthogSiteId = String(req.site.id)
     const sql = `SELECT count(DISTINCT distinct_id) FROM events WHERE event = '$pageview' AND properties.site_id = '${posthogSiteId}' AND timestamp >= now() - INTERVAL 5 MINUTE`
-    const rows = await queryHogQL(sql, 'live_visitors')
+    const rows = await readTb('dashboard_live_visitors', { site_id: posthogSiteId }, sql, 'live_visitors', tb => tb.map(r => [r.live_visitors]))
     const count = Number(rows?.[0]?.[0]) || 0
     res.json({ success: true, data: { live_visitors: count } })
   } catch (err) {
+    if (forceReadFailure(res)) return
     res.json({ success: true, data: { live_visitors: 0 } })
   }
 })
@@ -649,7 +695,11 @@ router.get('/recent-activity', validateSiteKey, requireSiteMembership, async (re
       LIMIT 1000
     `
 
-    const rows = await queryHogQL(sql, 'recent_activity_events')
+    const rows = await readTb('dashboard_recent_activity_events', { site_id: posthogSiteId }, sql, 'recent_activity_events', tb => tb.map(r => [
+      r.event_type, r.timestamp, r.page_url, r.referrer, r.utm_medium, r.utm_source,
+      r.first_touch_source, r.first_touch_medium, r.first_touch_campaign, r.gclid, r.fbclid,
+      r.msclkid, r.ttclid, r.li_fat_id, r.ai_source, r.conversion_value, r.user_id, r.anonymous_id, r.distinct_id
+    ]))
 
     let pageviewsCount = 0
     let conversionsCount = 0
@@ -761,6 +811,7 @@ router.get('/recent-activity', validateSiteKey, requireSiteMembership, async (re
       error: null
     })
   } catch (err) {
+    if (forceReadFailure(res)) return
     console.error('[dashboard/recent-activity] failed:', err.message)
     return res.status(200).json({
       success: true,
