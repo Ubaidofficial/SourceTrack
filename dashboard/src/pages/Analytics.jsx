@@ -7,7 +7,7 @@ import { fetchApi } from '../lib/api'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
-import { Eye, RefreshCw, Copy, Check, BarChart3, Globe, Monitor, Smartphone } from 'lucide-react'
+import { Eye, RefreshCw, Copy, Check, BarChart3, Globe, Monitor } from 'lucide-react'
 import { safeNumber } from '../utils/numbers'
 import { tooltipPlugin, CHART_COLORS } from '../utils/chartTooltip'
 import { SourceIcon, normalizeSource } from '../components/SourceIcon'
@@ -18,6 +18,21 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarEleme
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function stripOrigin(url = '') { return url.replace(/^https?:\/\/[^/]+/, '') || '/' }
+
+// Money is EXACT — always 2 decimals, never rounded (§5.2: $999.99 is not "$1,000").
+function fmtMoney(n) { return '$' + safeNumber(n, 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+
+// Lime vertical fill under the visitors line: 18% at the line fading to transparent at
+// the bottom. A Chart.js scriptable backgroundColor (needs chartArea, so it's a function).
+function visitorAreaGradient(ctx) {
+  const chart = ctx.chart
+  const area = chart.chartArea
+  if (!area) return 'rgba(200,240,63,0.10)' // pre-layout first paint
+  const g = chart.ctx.createLinearGradient(0, area.top, 0, area.bottom)
+  g.addColorStop(0, 'rgba(200,240,63,0.18)')
+  g.addColorStop(1, 'rgba(200,240,63,0)')
+  return g
+}
 
 // Emoji flag from an ISO-3166 alpha-2 code (regional indicators). NO network.
 function flagEmoji(code) {
@@ -37,12 +52,29 @@ function titleCase(s = '') {
   return String(s).trim().split(/\s+/).map(w => (w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w)).join(' ')
 }
 function properName(s = '') { const k = String(s).toLowerCase().trim(); return PROPER[k] || titleCase(s) || 'Unknown' }
-// OS icon (lucide category glyph — SourceIcon has no OS brands).
-function osIcon(name = '') {
-  const n = String(name).toLowerCase()
-  if (n.includes('ios') || n.includes('ipad') || n.includes('android')) return <Smartphone className="w-3.5 h-3.5 text-st-gray dark:text-gray-400" />
-  return <Monitor className="w-3.5 h-3.5 text-st-gray dark:text-gray-400" />
+// Favicon-by-domain with a NEUTRAL-DOT fallback (never a globe). SourceIcon resolves SVG
+// brand logos by key and can't resolve arbitrary domains or OS names, so Pages (the site
+// favicon) and Devices (per-browser / per-OS brand) use the favicon service — the same
+// approach the page already used for the site favicon, consolidated into one helper.
+function BrandFavicon({ domain, className = 'w-3.5 h-3.5' }) {
+  const [failed, setFailed] = useState(false)
+  if (!domain || failed) {
+    return <span className="inline-block rounded-full bg-st-gray/40 dark:bg-gray-500/50" style={{ width: 7, height: 7 }} aria-hidden="true" />
+  }
+  return <img src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`} alt="" className={`${className} rounded-sm`} onError={() => setFailed(true)} />
 }
+// Map a raw browser/OS name to the brand's domain (whose favicon we resolve).
+const BROWSER_DOMAIN = {
+  chrome: 'google.com', 'google chrome': 'google.com', safari: 'apple.com', 'mobile safari': 'apple.com',
+  edge: 'microsoft.com', 'microsoft edge': 'microsoft.com', firefox: 'mozilla.org', 'mozilla firefox': 'mozilla.org',
+  opera: 'opera.com', brave: 'brave.com', samsung: 'samsung.com', 'samsung internet': 'samsung.com', yandex: 'yandex.com',
+}
+const OS_DOMAIN = {
+  windows: 'microsoft.com', macos: 'apple.com', 'mac os': 'apple.com', ios: 'apple.com', ipados: 'apple.com',
+  android: 'android.com', 'chrome os': 'google.com', chromeos: 'google.com', linux: null,
+}
+function browserDomain(name = '') { return BROWSER_DOMAIN[String(name).toLowerCase().trim()] || null }
+function osDomain(name = '') { return OS_DOMAIN[String(name).toLowerCase().trim()] || null }
 
 // ─── Bar-behind-label row (visitors bar; optional revenue accent bar) ──────────
 function DataRow({ label, count, max, icon, onClick, active, revenue, maxRevenue }) {
@@ -67,7 +99,7 @@ function DataRow({ label, count, max, icon, onClick, active, revenue, maxRevenue
       </div>
       <div className="flex-shrink-0 text-right w-20">
         <span className="text-sm font-medium text-st-black dark:text-dark-primary tabular-nums block">{n.toLocaleString()}</span>
-        {rev > 0 && <span className="text-[10px] text-st-gray dark:text-gray-400 tabular-nums">${Math.round(rev).toLocaleString()}</span>}
+        {rev > 0 && <span className="text-[10px] text-st-gray dark:text-gray-400 tabular-nums">{fmtMoney(rev)}</span>}
       </div>
     </div>
   )
@@ -280,12 +312,15 @@ export default function Analytics() {
 
   const hasData    = safeNumber(kpis.pageviews, 0) > 0
   const rangeRevenue = useMemo(() => (ts.revenue ? ts.revenue.reduce((a, b) => a + safeNumber(b, 0), 0) : 0), [ts.revenue])
-  const hasRevenue = safeNumber(kpis.revenue, 0) > 0 || rangeRevenue > 0
+  const hasRevenue = safeNumber(kpis.total_revenue, 0) > 0 || rangeRevenue > 0
 
-  // Revenue formatting (the crash-culprits — now DECLARED).
-  const formattedRevenue = `$${Math.round(safeNumber(kpis.revenue, 0)).toLocaleString()}`
+  // Revenue reads the SAME field the Sources panel / chart use: the backend puts revenue at
+  // kpis.total_revenue + kpis.revenue_per_visitor (analytics.js:386/389), NOT kpis.revenue.
+  // Exact money, never rounded.
+  const totalRevenue = safeNumber(kpis.total_revenue, 0)
   const uniqVis = safeNumber(kpis.unique_visitors, 0)
-  const formattedRevenuePerVisitor = `$${(uniqVis > 0 ? safeNumber(kpis.revenue, 0) / uniqVis : 0).toFixed(2)}`
+  const formattedRevenue = fmtMoney(totalRevenue)
+  const formattedRevenuePerVisitor = fmtMoney(kpis.revenue_per_visitor != null ? kpis.revenue_per_visitor : (uniqVis > 0 ? totalRevenue / uniqVis : 0))
 
   // Animated KPI counters (hooks — unconditional, before any early return).
   const animUniqueVisitors = useCountUp(kpis.unique_visitors ?? null)
@@ -324,7 +359,7 @@ export default function Analytics() {
   const chartData = useMemo(() => {
     const datasets = [{
       type: 'line', label: 'Visitors', data: ts.visitors || [],
-      borderColor: 'rgba(17,24,39,1)', backgroundColor: 'rgba(17,24,39,0.05)', fill: false,
+      borderColor: 'rgba(17,24,39,1)', backgroundColor: visitorAreaGradient, fill: true,
       tension: 0.4, pointRadius: 2, pointBackgroundColor: '#111827', pointHoverRadius: 5, yAxisID: 'y', order: 2
     }]
     if (hasRevenue) {
@@ -340,7 +375,7 @@ export default function Analytics() {
     const vis = safeNumber(ts.visitors?.[i], 0)
     const rev = safeNumber(ts.revenue?.[i], 0)
     const rows = []
-    if (rev > 0) rows.push({ label: 'Revenue', value: `$${Math.round(rev).toLocaleString()}` })
+    if (rev > 0) rows.push({ label: 'Revenue', value: fmtMoney(rev) })
     rows.push({ label: 'Visitors', value: vis.toLocaleString(), accent: true })
     if (rev > 0 && vis > 0) rows.push({ label: 'Revenue/visitor', value: `$${(rev / vis).toFixed(2)}` })
     return rows
@@ -366,9 +401,8 @@ export default function Analytics() {
   function copySnippet() { navigator.clipboard.writeText(snippetUrl); setCopied(true); setTimeout(() => setCopied(false), 2000) }
 
   // ─── Icon builders (reuse SourceIcon; flags/OS need no brand resolver) ───────
-  const siteFavicon = site?.domain
-    ? <img src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(site.domain)}&sz=32`} alt="" className="w-3.5 h-3.5 rounded-sm flex-shrink-0" onError={(e) => { e.currentTarget.style.display = 'none' }} />
-    : <Globe className="w-3.5 h-3.5 text-st-gray dark:text-gray-400" />
+  // Pages: the SITE's own favicon on every row (one site, one favicon), dot fallback.
+  const siteFavicon = <BrandFavicon domain={site?.domain} />
   function countryFlagIcon(code) {
     const flag = flagEmoji(code)
     return flag ? <span className="text-sm leading-none">{flag}</span> : <Globe className="w-3.5 h-3.5 text-st-gray dark:text-gray-400" />
@@ -381,8 +415,8 @@ export default function Analytics() {
   const getDeviceLabel = (r) => deviceTab === 'browser' ? properName(r.browser) : deviceTab === 'os' ? properName(r.os) : properName(r.device)
   const getDeviceCount = (r) => deviceTab === 'device' ? r.count : r.visitors
   const getDeviceIcon = (r) => deviceTab === 'browser'
-    ? <SourceIcon source={r.browser || ''} className="w-3.5 h-3.5" />
-    : deviceTab === 'os' ? osIcon(r.os) : <Monitor className="w-3.5 h-3.5 text-st-gray dark:text-gray-400" />
+    ? <BrandFavicon domain={browserDomain(r.browser)} />
+    : deviceTab === 'os' ? <BrandFavicon domain={osDomain(r.os)} /> : <Monitor className="w-3.5 h-3.5 text-st-gray dark:text-gray-400" />
   const onDeviceClick = (r) => deviceTab === 'browser' ? toggleFilter('Browser', r.browser) : deviceTab === 'os' ? toggleFilter('OS', r.os) : toggleFilter('Device', r.device)
   const isDeviceActive = (r) => deviceTab === 'browser' ? isActive('Browser', r.browser) : deviceTab === 'os' ? isActive('OS', r.os) : isActive('Device', r.device)
 
@@ -481,7 +515,7 @@ export default function Analytics() {
                   <p className="text-2xl sm:text-3xl font-bold text-st-black dark:text-dark-primary tabular-nums tracking-tight">{formattedRevenue}</p>
                 </div>
                 <div className="flex items-center gap-1.5 flex-wrap mt-2">
-                  <DeltaBadge d={delta(kpis.revenue, priorKpis.revenue)} />
+                  <DeltaBadge d={delta(kpis.total_revenue, priorKpis.total_revenue)} />
                   <span className="text-[10px] text-st-gray dark:text-gray-400 font-medium">vs prior</span>
                 </div>
               </div>
