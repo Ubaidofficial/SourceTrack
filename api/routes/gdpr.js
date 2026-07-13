@@ -15,6 +15,7 @@ import { getSupabase } from '../lib/supabase.js'
 import { getStructuralLimits } from '../lib/plan-features.js'
 import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import { eraseSubjectFromTinybird, eraseSiteFromTinybird } from '../../tinybird/adapter/erase.js'
+import { fetchSubjectEventsFromTinybird } from '../../tinybird/adapter/export.js'
 
 export const gdprRouter = Router()
 
@@ -61,6 +62,14 @@ export function __setGdprEraseDeps ({ eraseSubject, eraseSite } = {}) {
   if (eraseSite) _eraseSite = eraseSite
 }
 export function __resetGdprEraseDeps () { _eraseSubject = eraseSubjectFromTinybird; _eraseSite = eraseSiteFromTinybird }
+
+// Test-only injection seam for the SUBJECT ACCESS reader (production uses the real
+// READ-token Tinybird reader). Mirrors the erase seam above.
+let _fetchSubjectEvents = fetchSubjectEventsFromTinybird
+export function __setGdprExportDeps ({ fetchSubjectEvents } = {}) {
+  if (fetchSubjectEvents) _fetchSubjectEvents = fetchSubjectEvents
+}
+export function __resetGdprExportDeps () { _fetchSubjectEvents = fetchSubjectEventsFromTinybird }
 
 // Tinybird connection from env — NEVER hardcode, NEVER log a token value.
 const tinybirdEnv = () => ({
@@ -184,6 +193,94 @@ gdprRouter.delete('/visitor', async (req, res) => {
   } catch (err) {
     console.error('[GDPR] visitor delete error:', err)
     return res.status(500).json({ success: false, error: 'Failed to delete visitor data' })
+  }
+})
+
+// ────────────────────────────────────────────────────────────────────────────
+// GET /api/gdpr/subject?site_key=<key>&anonymous_id=<subject>
+// The Art. 15 (right of access) counterpart to DELETE /visitor: returns ONE
+// data subject's data so a controller can answer a subject access request.
+// Auth path is identical to /visitor (getSiteForUser — a DB error now surfaces as
+// 500, a real access failure as 403). Reads the SAME rows the eraser would delete
+// (buildDeleteCondition, reused) using the READ token only.
+// ────────────────────────────────────────────────────────────────────────────
+gdprRouter.get('/subject', async (req, res) => {
+  try {
+    const userId = req.user?.id
+    const { site_key, anonymous_id } = req.query
+
+    if (!site_key || !anonymous_id) {
+      return res.status(400).json({ success: false, error: 'site_key and anonymous_id are required' })
+    }
+
+    const supabase = getSupabase()
+    const site = await getSiteForUser(supabase, userId, site_key)
+    if (!site) {
+      return res.status(403).json({ success: false, error: 'Site not found or access denied' })
+    }
+
+    // 1. Event data from Tinybird — READ token ONLY (an access path must not hold
+    // delete capability). Never swallowed: a store that is unavailable or errors is
+    // reported loudly below, never returned as a complete-looking empty bundle.
+    const { host, readToken } = tinybirdEnv()
+    const events = await _fetchSubjectEvents({ host, readToken, siteId: site.id, subjectId: anonymous_id })
+
+    if (events.status === 'failed') {
+      return res.status(502).json({
+        success: false,
+        error: 'Event store read failed — subject export is incomplete and was NOT returned',
+        tinybird_status: events.status,
+        tinybird_events: events
+      })
+    }
+    if (events.status === 'skipped_not_configured') {
+      return res.status(503).json({
+        success: false,
+        error: 'Event store not configured — subject export cannot be produced',
+        tinybird_status: events.status,
+        tinybird_events: events
+      })
+    }
+
+    // 2. Supabase subject-scoped rows — explicit allowlist selects (never select('*')),
+    // scoped by anonymous_id (the SAME key the eraser deletes on). The error is NEVER
+    // swallowed: a query error throws → 500, so a DB failure can never masquerade as an
+    // empty subject.
+    const { data: conversions, error: convErr } = await supabase
+      .from('attributed_conversions')
+      .select('conversion_event_id, distinct_id, anonymous_id, conversion_date, conversion_timestamp, conversion_type, conversion_value, channel, status, first_touch_source, first_touch_medium, first_touch_campaign, first_touch_timestamp, last_touch_source, last_touch_medium, last_touch_campaign, last_touch_timestamp, touchpoint_count, processed_at')
+      .eq('site_id', site.id)
+      .eq('anonymous_id', anonymous_id)
+    if (convErr) throw convErr
+
+    const { data: links, error: linkErr } = await supabase
+      .from('site_identity_links')
+      .select('anonymous_id, user_id, source, first_seen_at, last_seen_at, created_at')
+      .eq('site_id', site.id)
+      .eq('anonymous_id', anonymous_id)
+    if (linkErr) throw linkErr
+
+    return res.json({
+      success: true,
+      subject: { site_key: site.site_key, anonymous_id },
+      generated_at: new Date().toISOString(),
+      sources: {
+        tinybird_events: events,
+        attributed_conversions: { count: conversions.length, rows: conversions },
+        site_identity_links: { count: links.length, rows: links },
+        // EXCLUDED, stated (not silently omitted): lead_qualifications is scoped by
+        // visitor_id — a different identifier than the anonymous_id subject key used
+        // here and by the /visitor eraser — so matching it against anonymous_id is an
+        // unverified mapping, and the erasure counterpart does not touch it.
+        lead_qualifications: {
+          included: false,
+          reason: 'Scoped by visitor_id, not the anonymous_id subject key used by this endpoint and the erasure counterpart; excluded to avoid an unverified anonymous_id↔visitor_id match.'
+        }
+      }
+    })
+  } catch (err) {
+    console.error('[GDPR] subject export error:', err)
+    return res.status(500).json({ success: false, error: 'Failed to export subject data' })
   }
 })
 
