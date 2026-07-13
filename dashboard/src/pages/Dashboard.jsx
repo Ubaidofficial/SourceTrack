@@ -30,7 +30,7 @@ import FilterBar from '../components/FilterBar'
 import ConversionExplanationModal from '../components/ConversionExplanationModal'
 import JourneyModal from '../components/JourneyModal'
 import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
-import { SourceIcon, SourceChip } from '../components/SourceIcon'
+import { SourceIcon, SourceChip, normalizeSource } from '../components/SourceIcon'
 import { safeNumber } from '../utils/numbers'
 import { limeAreaGradient } from '../utils/limeAreaGradient'
 import { tooltipPlugin, CHART_COLORS } from '../utils/chartTooltip'
@@ -224,6 +224,24 @@ export default function Dashboard() {
   const customersDelta = formatDeltaVal(kpis.customers, kpis.customers_prev)
 
   const aiRevResults = overview?.ai_sources || []
+
+  // AI Source Performance = AI TRAFFIC (analytics summary — same site/window, the verified
+  // sources_ai path) MERGED with AI CONVERSIONS (overview attributed_conversions). The card's
+  // subtitle promises "Traffic and conversions"; before, it read only conversions, so a site
+  // with AI pageviews but no AI conversions (e.g. Kagi=1, ChatGPT=1) wrongly showed "none".
+  const aiSourceRows = (() => {
+    const aiTraffic = analyticsSummary?.ai_sources || []   // [{ source, visits }]
+    const keyOf = (s) => normalizeSource(s || '').name || String(s || '').trim() || 'Unknown'
+    const map = {}
+    const bucket = (k) => (map[k] = map[k] || { name: k, visitors: 0, conversions: 0, revenue: 0 })
+    for (const t of aiTraffic) bucket(keyOf(t.source)).visitors += safeNumber(t.visits, 0)
+    for (const c of aiRevResults) {
+      const b = bucket(keyOf(c.dim_value || c.source))
+      b.conversions += safeNumber(c.ai_conversions ?? c.ai_leads, 0)
+      b.revenue += safeNumber(c.ai_revenue, 0)
+    }
+    return Object.values(map).sort((a, b) => (b.visitors - a.visitors) || (b.revenue - a.revenue))
+  })()
   const activeResults = overview?.sources || []
   const topPagesResults = overview?.top_pages || []
   const timeResults = overview?.revenue_trend || []
@@ -614,16 +632,16 @@ export default function Dashboard() {
                 </DashboardCard>
               </div>
 
-              {/* AI Source Performance (Only if real data exists) */}
-              {aiRevResults.length > 0 && (
+              {/* AI Source Performance (Only if real AI traffic or conversions exist) */}
+              {aiSourceRows.length > 0 && (
                 <DashboardCard title="AI Source Performance" subtitle="Traffic and conversions from AI engines">
                   <DashboardTable
                     columns={[
-                      { key: 'source', label: 'AI Platform', render: (r) => <SourceChip source={r.dim_value || r.source} /> },
-                      { key: 'leads', label: 'Leads', render: (r) => r.ai_leads || r.conversions || 0 },
-                      { key: 'revenue', label: 'Revenue', render: (r) => hasRevenue ? `$${(r.ai_revenue || 0).toFixed(2)}` : '—' }
-                    ].filter(c => hasRevenue || c.key !== 'revenue')}
-                    rows={aiRevResults}
+                      { key: 'source', label: 'AI Platform', render: (r) => <SourceChip source={r.name} /> },
+                      { key: 'visitors', label: 'Traffic', render: (r) => safeNumber(r.visitors, 0).toLocaleString() },
+                      { key: 'revenue', label: 'Revenue', render: (r) => r.revenue > 0 ? `$${r.revenue.toFixed(2)}` : '—' }
+                    ]}
+                    rows={aiSourceRows}
                   />
                 </DashboardCard>
               )}
@@ -715,16 +733,16 @@ export default function Dashboard() {
 
               {/* 5. AI Source Performance */}
               <DashboardCard title="AI Source Performance" subtitle="Traffic and conversions from AI engines">
-                {aiRevResults.length === 0 ? (
+                {aiSourceRows.length === 0 ? (
                   <p className="text-sm text-st-gray dark:text-gray-400 py-6 text-center">No AI referrals detected yet.</p>
                 ) : (
                   <DashboardTable
                     columns={[
-                      { key: 'source', label: 'AI Platform', render: (r) => <SourceChip source={r.dim_value || r.source} /> },
-                      { key: 'leads', label: 'Leads', render: (r) => r.ai_leads || r.conversions || 0 },
-                      { key: 'revenue', label: 'Revenue', render: (r) => hasRevenue ? `$${(r.ai_revenue || 0).toFixed(2)}` : '—' }
-                    ].filter(c => hasRevenue || c.key !== 'revenue')}
-                    rows={aiRevResults}
+                      { key: 'source', label: 'AI Platform', render: (r) => <SourceChip source={r.name} /> },
+                      { key: 'visitors', label: 'Traffic', render: (r) => safeNumber(r.visitors, 0).toLocaleString() },
+                      { key: 'revenue', label: 'Revenue', render: (r) => r.revenue > 0 ? `$${r.revenue.toFixed(2)}` : '—' }
+                    ]}
+                    rows={aiSourceRows}
                   />
                 )}
               </DashboardCard>
