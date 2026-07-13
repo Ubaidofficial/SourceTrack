@@ -14,6 +14,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import SetupDoctorCard from '../components/SetupDoctorCard'
 import AttributionCoverageCard from '../components/AttributionCoverageCard'
 import CapiDeliveryStatus from '../components/CapiDeliveryStatus'
+import EventDebugger from './EventDebugger'
 
 
 export default function Setup() {
@@ -631,6 +632,8 @@ export default function Setup() {
                   </div>
                 )}
               </div>
+
+              <EventDebugger isEmbedded />
             </div>
           )}
 
