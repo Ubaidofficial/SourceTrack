@@ -241,7 +241,7 @@ function installSupabase (cfg) {
   const erasureInserts = []
   const result = (table, mode) => {
     if (table === 'company_members') return mode === 'maybeSingle' ? { data: cfg.memberRow ?? null } : { data: cfg.members ?? [], count: cfg.count ?? 0 }
-    if (table === 'sites') return mode === 'maybeSingle' ? { data: cfg.site ?? null } : { data: cfg.sites ?? [] }
+    if (table === 'sites') return mode === 'maybeSingle' ? { data: cfg.site ?? null, error: cfg.siteError ?? null } : { data: cfg.sites ?? [] }
     if (table === 'site_identity_links') return { data: cfg.links ?? [] }
     return { data: [], error: null, count: cfg.count ?? 0 }
   }
@@ -374,6 +374,20 @@ test('🔴 (f2) /account with a non-executed site -> response does NOT claim ful
   await accountHandler({ user: { id: 'u1' } }, res)
   assert.equal(res.body.success, false, 'must not claim full deletion when a site event-erase failed')
   assert.doesNotMatch(res.body.message, /permanently deleted/i)
+})
+
+test('🔴 (i) getSiteForUser DB error -> route returns 500, NOT 403 (load-bearing: fails if the error is swallowed)', async (t) => {
+  t.after(() => { restoreSupabase(); __resetGdprEraseDeps() })
+  // The sites lookup fails at the DB (e.g. a dropped column). If getSiteForUser swallows
+  // the error and returns null, the route answers 403 "access denied" — masking an outage
+  // as a permissions bug. This test pins the fix: a DB failure surfaces as 500.
+  installSupabase({ site: null, siteError: { message: 'column sites.posthog_site_id does not exist' } })
+  const calls = installEraser(null, 'executed') // must never be reached
+  const res = mockRes()
+  await visitorHandler(visitorReq(), res)
+  assert.equal(res.statusCode, 500, 'a DB error must surface as 500, not be swallowed')
+  assert.notEqual(res.statusCode, 403, 'DB failure must be distinguishable from an authorization failure')
+  assert.equal(calls.length, 0, 'no erase attempted when the site lookup errored')
 })
 
 test('(g) the dead-store PostHog-person delete is removed from gdpr.js', () => {
