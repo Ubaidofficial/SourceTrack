@@ -655,7 +655,6 @@ router.post('/feature-status/recheck', async (req, res) => {
   const probes = {
     attribution_route: routeExists('attribution.js'),
     ai_analytics_route: routeExists('ai-analytics.js'),
-    ai_chat_route: routeExists('ai-chat.js'),
     offline_conversion_route: routeExists('conversion-offline.js'),
     webhook_lib: routeExists('../lib/webhook.js'),
     saved_reports_route: routeExists('saved-reports.js'),
@@ -671,7 +670,6 @@ router.post('/feature-status/recheck', async (req, res) => {
     { name: 'last_touch_non_direct', status: probes.attribution_route ? 'live' : 'dormant', notes: 'Probed: attribution route exists (non-direct models added Session 54)', verification_method: 'server-probe' },
     { name: 'LTV', status: probes.attribution_route ? 'live' : 'dormant', notes: 'Probed: attribution route exists (LTV metric in engine)', verification_method: 'server-probe' },
     { name: 'AI Analytics', status: probes.ai_analytics_route ? 'live' : 'dormant', notes: `Probed: ai-analytics route ${probes.ai_analytics_route ? 'exists' : 'not found'}`, verification_method: 'server-probe' },
-    { name: 'AI Chat', status: probes.ai_chat_route ? 'live' : 'dormant', notes: `Probed: ai-chat route ${probes.ai_chat_route ? 'exists' : 'not found'}`, verification_method: 'server-probe' },
     { name: 'offline conversions', status: probes.offline_conversion_route ? 'live' : 'dormant', notes: `Probed: offline conversion route ${probes.offline_conversion_route ? 'exists' : 'not found'}`, verification_method: 'server-probe' },
     { name: 'pipeline stages', status: probes.dashboard_route ? 'live' : 'dormant', notes: 'Probed: dashboard route exists (pipeline stages query)', verification_method: 'server-probe' },
     { name: 'webhooks', status: probes.webhook_lib ? 'live' : 'dormant', notes: `Probed: webhook lib ${probes.webhook_lib ? 'exists' : 'not found'}`, verification_method: 'server-probe' },
