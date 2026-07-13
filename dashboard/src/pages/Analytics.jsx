@@ -1,35 +1,55 @@
 import { useState, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Filler } from 'chart.js'
-import { Line } from 'react-chartjs-2'
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Filler } from 'chart.js'
+import { Chart } from 'react-chartjs-2'
 import { fetchApi } from '../lib/api'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
-import { Eye, RefreshCw, Copy, Check, BarChart3 } from 'lucide-react'
+import { Eye, RefreshCw, Copy, Check, BarChart3, Globe, Monitor, Smartphone } from 'lucide-react'
 import { safeNumber } from '../utils/numbers'
-import { limeAreaGradient } from '../utils/limeAreaGradient'
 import { tooltipPlugin, CHART_COLORS } from '../utils/chartTooltip'
 import { SourceIcon, normalizeSource } from '../components/SourceIcon'
 import { useSite } from '../contexts/SiteContext'
-import MetricTile from '../components/MetricTile'
+import { useCountUp } from '../utils/useCountUp'
 import QueryError from '../components/QueryError'
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Filler)
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Filler)
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-function fmtDuration(s) {
-  const n = safeNumber(s, 0)
-  if (n === 0) return '—'
-  if (n < 60) return `${Math.round(n)}s`
-  return `${Math.floor(n / 60)}m ${Math.round(n % 60)}s`
-}
 function stripOrigin(url = '') { return url.replace(/^https?:\/\/[^/]+/, '') || '/' }
 
-// ─── Visitors-only bar row ────────────────────────────────────────────────────
-function DataRow({ label, count, max, icon, onClick, active }) {
+// Emoji flag from an ISO-3166 alpha-2 code (regional indicators). NO network.
+function flagEmoji(code) {
+  if (!code || !/^[a-zA-Z]{2}$/.test(code)) return null
+  const cp = [...code.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65)
+  return String.fromCodePoint(...cp)
+}
+// Country NAME from an ISO code via Intl.DisplayNames (built-in, NO network).
+const REGION_NAMES = (() => { try { return new Intl.DisplayNames(['en'], { type: 'region' }) } catch { return null } })()
+function countryName(code) {
+  if (!code || code === 'Unknown') return 'Unknown'
+  try { return (REGION_NAMES && REGION_NAMES.of(String(code).toUpperCase())) || code } catch { return code }
+}
+// Title Case a raw DB value; proper-cased overrides for names that aren't simple words.
+const PROPER = { ios: 'iOS', ipados: 'iPadOS', macos: 'macOS', 'mac os': 'macOS', 'chrome os': 'ChromeOS', chromeos: 'ChromeOS' }
+function titleCase(s = '') {
+  return String(s).trim().split(/\s+/).map(w => (w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w)).join(' ')
+}
+function properName(s = '') { const k = String(s).toLowerCase().trim(); return PROPER[k] || titleCase(s) || 'Unknown' }
+// OS icon (lucide category glyph — SourceIcon has no OS brands).
+function osIcon(name = '') {
+  const n = String(name).toLowerCase()
+  if (n.includes('ios') || n.includes('ipad') || n.includes('android')) return <Smartphone className="w-3.5 h-3.5 text-st-gray dark:text-gray-400" />
+  return <Monitor className="w-3.5 h-3.5 text-st-gray dark:text-gray-400" />
+}
+
+// ─── Bar-behind-label row (visitors bar; optional revenue accent bar) ──────────
+function DataRow({ label, count, max, icon, onClick, active, revenue, maxRevenue }) {
   const n = safeNumber(count, 0)
   const pct = max > 0 ? (n / max) * 100 : 0
+  const rev = safeNumber(revenue, 0)
+  const revPct = maxRevenue > 0 ? (rev / maxRevenue) * 100 : 0
   return (
     <div
       onClick={onClick}
@@ -37,33 +57,49 @@ function DataRow({ label, count, max, icon, onClick, active }) {
         onClick ? 'cursor-pointer' : ''
       } ${active ? 'bg-st-lime/5' : 'hover:bg-gray-50 dark:hover:bg-dark-hover'}`}
     >
-      {icon && <span className="flex-shrink-0 w-4 flex items-center">{icon}</span>}
+      {icon && <span className="flex-shrink-0 w-4 flex items-center justify-center">{icon}</span>}
       <div className="flex-1 min-w-0">
         <span className="text-xs truncate text-st-black dark:text-dark-primary block">{label}</span>
         <div style={{ height: '2px', width: `${pct.toFixed(1)}%`, background: 'rgba(204,240,63,0.6)', borderRadius: '1px', marginTop: '3px' }} />
+        {rev > 0 && (
+          <div style={{ height: '2px', width: `${revPct.toFixed(1)}%`, background: '#C8F000', borderRadius: '1px', marginTop: '2px' }} />
+        )}
       </div>
-      <span className="text-sm font-medium text-st-black dark:text-dark-primary w-14 text-right flex-shrink-0 tabular-nums">{n.toLocaleString()}</span>
+      <div className="flex-shrink-0 text-right w-20">
+        <span className="text-sm font-medium text-st-black dark:text-dark-primary tabular-nums block">{n.toLocaleString()}</span>
+        {rev > 0 && <span className="text-[10px] text-st-gray dark:text-gray-400 tabular-nums">${Math.round(rev).toLocaleString()}</span>}
+      </div>
     </div>
   )
 }
 
-// ─── Section card ─────────────────────────────────────────────────────────────
-function ListSection({ title, rows, getLabel, getCount, getIcon, onRowClick, isRowActive, emptyText = 'No data yet', unit }) {
+// ─── Section card (optional internal tabs) ─────────────────────────────────────
+function ListSection({ title, rows, getLabel, getCount, getIcon, onRowClick, isRowActive, emptyText = 'No data yet', tabs, activeTab, onTabChange }) {
   const [showAll, setShowAll] = useState(false)
   const visible = showAll ? rows : rows.slice(0, 8)
   const max = useMemo(() => Math.max(1, ...rows.map(r => safeNumber(getCount(r), 0))), [rows, getCount])
-
   return (
-    <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm">
-      <div className="px-4 py-3 border-b border-gray-100 dark:border-dark-border flex items-center justify-between gap-2">
+    <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 motion-reduce:transition-none flex flex-col h-full">
+      <div className="px-4 py-3 border-b border-gray-100 dark:border-dark-border flex items-center justify-between flex-wrap gap-2">
         <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">{title}</h3>
-        {unit && <span className="text-[10px] uppercase tracking-wide text-st-gray dark:text-gray-400 font-medium flex-shrink-0">{unit}</span>}
+        {tabs && (
+          <div className="flex gap-1">
+            {tabs.map(tab => (
+              <button key={tab.key} onClick={() => onTabChange(tab.key)}
+                className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors duration-150 motion-reduce:transition-none ${
+                  activeTab === tab.key ? 'bg-st-lime text-st-black' : 'text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text'
+                }`}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-      {rows.length === 0 ? (
-        <p className="text-xs text-st-gray dark:text-gray-400 py-10 text-center">{emptyText}</p>
-      ) : (
-        <>
-          {visible.map((r, i) => (
+      <div className="flex-1">
+        {rows.length === 0 ? (
+          <p className="text-xs text-st-gray dark:text-gray-400 py-10 text-center">{emptyText}</p>
+        ) : (
+          visible.map((r, i) => (
             <DataRow
               key={i}
               label={getLabel(r)}
@@ -73,22 +109,70 @@ function ListSection({ title, rows, getLabel, getCount, getIcon, onRowClick, isR
               onClick={onRowClick ? () => onRowClick(r) : null}
               active={isRowActive ? isRowActive(r) : false}
             />
-          ))}
-          {rows.length > 8 && (
-            <button
-              onClick={() => setShowAll(s => !s)}
-              className="w-full py-2 text-xs text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text border-t border-gray-100 dark:border-dark-border transition-colors"
-            >
-              {showAll ? '↑ Show less' : `↓ Show all ${rows.length}`}
-            </button>
-          )}
-        </>
+          ))
+        )}
+      </div>
+      {rows.length > 8 && (
+        <button onClick={() => setShowAll(s => !s)}
+          className="w-full py-2 text-xs text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text border-t border-gray-100 dark:border-dark-border transition-colors duration-150 motion-reduce:transition-none">
+          {showAll ? '↑ Show less' : `↓ Show all ${rows.length}`}
+        </button>
       )}
     </div>
   )
 }
 
+// ─── Sources tab list (revenue-aware rows) ─────────────────────────────────────
+function SourceTabList({ rows, tab, toggleFilter, isActive, faviconEl }) {
+  const [showAll, setShowAll] = useState(false)
+  const visible = showAll ? rows : rows.slice(0, 8)
+  const max = useMemo(() => Math.max(1, ...(rows || []).map(r => safeNumber(r.visitors, 0))), [rows])
+  const maxRevenue = useMemo(() => Math.max(1, ...(rows || []).map(r => safeNumber(r.revenue, 0))), [rows])
 
+  if (!rows || rows.length === 0) {
+    if (tab === 'ai_source') {
+      return (
+        <div className="text-center py-12 px-4 space-y-2">
+          <p className="text-sm font-medium text-st-black dark:text-dark-primary">No AI traffic detected yet</p>
+          <p className="text-xs text-st-gray dark:text-gray-400 max-w-sm mx-auto">When visitors arrive from ChatGPT, Claude, Perplexity, or other AI platforms, they'll appear here.</p>
+        </div>
+      )
+    }
+    return <p className="text-xs text-st-gray dark:text-gray-400 py-10 text-center">No {tab} data yet</p>
+  }
+
+  return (
+    <>
+      {visible.map((r, i) => (
+        <DataRow
+          key={i}
+          label={normalizeSource(r.name || '').name}
+          count={r.visitors}
+          max={max}
+          revenue={r.revenue}
+          maxRevenue={maxRevenue}
+          icon={<SourceIcon source={r.name || ''} className="w-3.5 h-3.5" />}
+          onClick={() => {
+            if (tab === 'referrer') toggleFilter('Source', r.name)
+            if (tab === 'ai_source') toggleFilter('AI Source', r.name)
+            if (tab === 'channel') toggleFilter('Channel', r.name)
+          }}
+          active={
+            tab === 'referrer' ? isActive('Source', r.name) :
+            tab === 'ai_source' ? isActive('AI Source', r.name) :
+            tab === 'channel' ? isActive('Channel', r.name) : false
+          }
+        />
+      ))}
+      {rows.length > 8 && (
+        <button onClick={() => setShowAll(s => !s)}
+          className="w-full py-2 text-xs text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text border-t border-gray-100 dark:border-dark-border transition-colors">
+          {showAll ? '↑ Show less' : `↓ Show all ${rows.length}`}
+        </button>
+      )}
+    </>
+  )
+}
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function Analytics() {
@@ -99,9 +183,12 @@ export default function Analytics() {
   const [days, setDays] = useState(30)
   const [filters, setFilters] = useState([])
   const [sourceTab, setSourceTab] = useState(
-    ['referrer', 'medium', 'ai_source'].includes(searchParams.get('tab')) ? searchParams.get('tab') : 'referrer'
+    ['referrer', 'channel', 'ai_source'].includes(searchParams.get('tab')) ? searchParams.get('tab') : 'referrer'
   )
+  const [deviceTab, setDeviceTab] = useState('browser')
   const [copied, setCopied] = useState(false)
+
+  const filterQuery = filters.length ? '&' + filters.map(f => `f=${encodeURIComponent(`${f.type}:${f.value}`)}`).join('&') : ''
 
   // ─── Site ──────────────────────────────────────────────────────────────────
   const { data: site } = useQuery({
@@ -118,12 +205,7 @@ export default function Analytics() {
     enabled: !!user
   })
 
-  const filterQuery = useMemo(
-    () => filters.map(f => `&f=${encodeURIComponent(f.type + ':' + f.value)}`).join(''),
-    [filters]
-  )
-
-  // ─── Summary ──────────────────────────────────────────────────────────────
+  // ─── Summary ─────────────────────────────────────────────────────────────────
   const { data: summary, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['analytics-summary', site?.site_key, days, 'daily', filters],
     queryFn: () => fetchApi(`/analytics/summary?site_key=${site.site_key}&days=${days}&granularity=daily${filterQuery}`),
@@ -138,7 +220,6 @@ export default function Analytics() {
     enabled: !!site?.site_key
   })
 
-  // ─── Live ──────────────────────────────────────────────────────────────────
   const { data: liveData, refetch: refetchLive } = useQuery({
     queryKey: ['analytics-live', site?.site_key],
     queryFn: () => fetchApi(`/live?site_key=${site.site_key}`),
@@ -146,21 +227,18 @@ export default function Analytics() {
     refetchInterval: 30000
   })
 
-  // ─── Sources ──────────────────────────────────────────────────────────────
   const { data: sourcesData } = useQuery({
     queryKey: ['analytics-sources', site?.site_key, days, sourceTab, filters],
     queryFn: () => fetchApi(`/analytics/sources?site_key=${site.site_key}&days=${days}&tab=${sourceTab}${filterQuery}`),
     enabled: !!site?.site_key
   })
 
-  // ─── Entry/Exit ────────────────────────────────────────────────────────────
   const { data: entryExitData } = useQuery({
     queryKey: ['analytics-entry-exit', site?.site_key, days, filters],
     queryFn: () => fetchApi(`/analytics/entry-exit?site_key=${site.site_key}&days=${days}${filterQuery}`),
     enabled: !!site?.site_key
   })
 
-  // ─── Browsers + OS ────────────────────────────────────────────────────────
   const { data: browserData } = useQuery({
     queryKey: ['analytics-browsers', site?.site_key, days, filters],
     queryFn: () => fetchApi(`/analytics/browsers?site_key=${site.site_key}&days=${days}${filterQuery}`),
@@ -172,8 +250,6 @@ export default function Analytics() {
     enabled: !!site?.site_key
   })
 
-  // ─── SEO Traffic (Search Console, traffic-only) ─────────────────────────────
-  // GSC finalizes data on a 2-3 day lag, so bound the window at yesterday.
   const { data: seoTraffic } = useQuery({
     queryKey: ['analytics-seo-traffic', site?.site_key, days],
     queryFn: () => {
@@ -185,40 +261,53 @@ export default function Analytics() {
     retry: false
   })
 
-  // ─── Shape data ────────────────────────────────────────────────────────────
+  // ─── Shape data (data layer unchanged; entryExitData intentionally unused —
+  //     Entry/Exit panels removed, query kept byte-identical per the brief) ──────
   const d            = summary || {}
   const kpis         = d.kpis || {}
   const priorKpis    = (priorSummary || {}).kpis || {}
   const topPages     = d.top_pages || []
-  const aiSources    = d.ai_sources || []
   const devices      = d.devices || {}
   const topCountries = d.top_countries || []
   const liveCount    = safeNumber(liveData?.live_visitors, 0)
-  const entryPages   = entryExitData?.entry_pages || []
-  const exitPages    = entryExitData?.exit_pages  || []
   const browsers     = browserData || []
   const osList       = osData || []
   const sourcesRows  = sourcesData?.rows || []
   const ts           = d.timeseries || { labels: [], visitors: [] }
 
-  // SEO Traffic surface only renders when GSC is connected AND a property is selected.
-  const seoConnected = !!(seoTraffic?.gsc_connected && seoTraffic?.gsc_property_selected)
-  const seoQueries   = seoTraffic?.queries || []
+  const convCount = safeNumber(kpis.conversion_count, 0)
+  const convRate  = safeNumber(kpis.conversion_rate, 0)
 
-  const convCount  = safeNumber(kpis.conversion_count, 0)
-  const convRate   = safeNumber(kpis.conversion_rate, 0)
+  const hasData    = safeNumber(kpis.pageviews, 0) > 0
+  const rangeRevenue = useMemo(() => (ts.revenue ? ts.revenue.reduce((a, b) => a + safeNumber(b, 0), 0) : 0), [ts.revenue])
+  const hasRevenue = safeNumber(kpis.revenue, 0) > 0 || rangeRevenue > 0
+
+  // Revenue formatting (the crash-culprits — now DECLARED).
+  const formattedRevenue = `$${Math.round(safeNumber(kpis.revenue, 0)).toLocaleString()}`
+  const uniqVis = safeNumber(kpis.unique_visitors, 0)
+  const formattedRevenuePerVisitor = `$${(uniqVis > 0 ? safeNumber(kpis.revenue, 0) / uniqVis : 0).toFixed(2)}`
+
+  // Animated KPI counters (hooks — unconditional, before any early return).
+  const animUniqueVisitors = useCountUp(kpis.unique_visitors ?? null)
+  const animConversions    = useCountUp(kpis.conversion_count ?? null)
+  const animConvRate       = useCountUp(kpis.conversion_rate ?? null)
 
   // ─── Delta calc ────────────────────────────────────────────────────────────
-  function delta(current, prior, invertedIsGood = false) {
+  function delta(current, prior) {
     const c = safeNumber(current, 0), p = safeNumber(prior, 0)
     if (p === 0) return null
     const pct = ((c - p) / Math.abs(p)) * 100
-    const isGood = invertedIsGood ? pct < 0 : pct > 0
-    return {
-      pct: Math.abs(pct).toFixed(1),
-      color: pct === 0 ? 'text-st-gray' : isGood ? 'text-green-400' : 'text-red-400',
-      arrow: pct === 0 ? '·' : pct > 0 ? '▲' : '▼'
-    }
+    return { pct: Math.abs(pct).toFixed(1), arrow: pct === 0 ? '·' : pct > 0 ? '▲' : '▼' }
+  }
+  function DeltaBadge({ d }) {
+    if (!d) return null
+    const up = d.arrow === '▲'
+    return (
+      <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px] font-semibold leading-none shadow-sm ${
+        up ? 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 border border-green-100 dark:border-green-900/30'
+           : 'bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400 border border-red-100 dark:border-red-900/20'
+      }`}>{d.arrow} {d.pct}%</span>
+    )
   }
 
   // ─── Filter helpers ────────────────────────────────────────────────────────
@@ -231,68 +320,73 @@ export default function Analytics() {
   }
   function isActive(type, value) { return filters.some(f => f.type === type && f.value === value) }
 
-  // ─── Visitors chart ────────────────────────────────────────────────────────
-  // Dark line (matches the Dashboard trend) so it stays readable over the lime
-  // area gradient; lime points + hover dot for the accent.
-  const chartData = useMemo(() => ({
-    labels: ts.labels || [],
-    datasets: [{
-      label: 'Visitors',
-      data: ts.visitors || [],
-      borderColor: 'rgba(17,24,39,1)',
-      backgroundColor: limeAreaGradient,
-      fill: true,
-      tension: 0.4,
-      pointRadius: 2,
-      pointBackgroundColor: CHART_COLORS.lime,
-      pointHoverRadius: 5,
-      pointHoverBackgroundColor: CHART_COLORS.lime,
-      pointHoverBorderColor: CHART_COLORS.lime,
+  // ─── Dual-axis chart: dark visitors LINE (left) + lime revenue BARS (right) ──
+  const chartData = useMemo(() => {
+    const datasets = [{
+      type: 'line', label: 'Visitors', data: ts.visitors || [],
+      borderColor: 'rgba(17,24,39,1)', backgroundColor: 'rgba(17,24,39,0.05)', fill: false,
+      tension: 0.4, pointRadius: 2, pointBackgroundColor: '#111827', pointHoverRadius: 5, yAxisID: 'y', order: 2
     }]
-  }), [ts])
+    if (hasRevenue) {
+      datasets.push({
+        type: 'bar', label: 'Revenue', data: ts.revenue || [],
+        backgroundColor: '#C8F000', hoverBackgroundColor: '#B8DE00', borderRadius: 4, yAxisID: 'y1', order: 1
+      })
+    }
+    return { labels: ts.labels || [], datasets }
+  }, [ts, hasRevenue])
 
-  // Truth-gated tooltip: Visitors always; Revenue ONLY when that point's
-  // revenue > 0. timeseries has no new/returning split (null by design) and no
-  // per-point conversions, so no such rows are rendered. No fabricated values.
   const visitorsTooltipRows = (i) => {
-    const rows = [{ label: 'Visitors', value: safeNumber(ts.visitors?.[i], 0).toLocaleString(), accent: true }]
-    const rev = ts.revenue?.[i]
-    if (rev > 0) rows.push({ label: 'Revenue', value: `$${safeNumber(rev, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}` })
+    const vis = safeNumber(ts.visitors?.[i], 0)
+    const rev = safeNumber(ts.revenue?.[i], 0)
+    const rows = []
+    if (rev > 0) rows.push({ label: 'Revenue', value: `$${Math.round(rev).toLocaleString()}` })
+    rows.push({ label: 'Visitors', value: vis.toLocaleString(), accent: true })
+    if (rev > 0 && vis > 0) rows.push({ label: 'Revenue/visitor', value: `$${(rev / vis).toFixed(2)}` })
     return rows
   }
 
   const chartOptions = useMemo(() => {
     const isDark = theme === 'dark'
     return {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: { display: false },
-        tooltip: tooltipPlugin(visitorsTooltipRows)
-      },
+      responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { display: false }, tooltip: tooltipPlugin(visitorsTooltipRows) },
       scales: {
         x: { grid: { display: false }, ticks: { color: isDark ? CHART_COLORS.tick.dark : CHART_COLORS.tick.light, maxRotation: 0, maxTicksLimit: 8 } },
-        y: { grid: { color: isDark ? CHART_COLORS.grid.dark : CHART_COLORS.grid.light }, ticks: { color: isDark ? CHART_COLORS.tick.dark : CHART_COLORS.tick.light, precision: 0 } }
+        y: { type: 'linear', position: 'left', grid: { color: isDark ? CHART_COLORS.grid.dark : CHART_COLORS.grid.light }, ticks: { color: isDark ? CHART_COLORS.tick.dark : CHART_COLORS.tick.light, precision: 0 } },
+        y1: { type: 'linear', position: 'right', display: hasRevenue, grid: { display: false }, ticks: { color: isDark ? CHART_COLORS.tick.dark : CHART_COLORS.tick.light, precision: 0, callback: (v) => `$${Math.round(v).toLocaleString()}` } }
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [theme, ts])
+  }, [theme, ts, hasRevenue])
 
   // ─── Snippet ───────────────────────────────────────────────────────────────
   const trackerFile = site?.cookieless_mode ? 'tracker.cookieless.min.js' : 'tracker.min.js'
-  const snippetUrl  = site
-    ? `<script async src="${window.location.origin}/${trackerFile}" data-site-key="${site.site_key}"></script>`
-    : ''
-  function copySnippet() {
-    navigator.clipboard.writeText(snippetUrl)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+  const snippetUrl  = site ? `<script async src="${window.location.origin}/${trackerFile}" data-site-key="${site.site_key}"></script>` : ''
+  function copySnippet() { navigator.clipboard.writeText(snippetUrl); setCopied(true); setTimeout(() => setCopied(false), 2000) }
+
+  // ─── Icon builders (reuse SourceIcon; flags/OS need no brand resolver) ───────
+  const siteFavicon = site?.domain
+    ? <img src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(site.domain)}&sz=32`} alt="" className="w-3.5 h-3.5 rounded-sm flex-shrink-0" onError={(e) => { e.currentTarget.style.display = 'none' }} />
+    : <Globe className="w-3.5 h-3.5 text-st-gray dark:text-gray-400" />
+  function countryFlagIcon(code) {
+    const flag = flagEmoji(code)
+    return flag ? <span className="text-sm leading-none">{flag}</span> : <Globe className="w-3.5 h-3.5 text-st-gray dark:text-gray-400" />
   }
 
-  const hasData = safeNumber(kpis.pageviews, 0) > 0
-  const isPreview = activeSite?.support_preview || false
+  // ─── Devices tab plumbing ────────────────────────────────────────────────────
+  const deviceRows = deviceTab === 'browser' ? browsers
+    : deviceTab === 'os' ? osList
+    : Object.entries(devices).sort((a, b) => safeNumber(b[1], 0) - safeNumber(a[1], 0)).map(([k, v]) => ({ device: k, count: v }))
+  const getDeviceLabel = (r) => deviceTab === 'browser' ? properName(r.browser) : deviceTab === 'os' ? properName(r.os) : properName(r.device)
+  const getDeviceCount = (r) => deviceTab === 'device' ? r.count : r.visitors
+  const getDeviceIcon = (r) => deviceTab === 'browser'
+    ? <SourceIcon source={r.browser || ''} className="w-3.5 h-3.5" />
+    : deviceTab === 'os' ? osIcon(r.os) : <Monitor className="w-3.5 h-3.5 text-st-gray dark:text-gray-400" />
+  const onDeviceClick = (r) => deviceTab === 'browser' ? toggleFilter('Browser', r.browser) : deviceTab === 'os' ? toggleFilter('OS', r.os) : toggleFilter('Device', r.device)
+  const isDeviceActive = (r) => deviceTab === 'browser' ? isActive('Browser', r.browser) : deviceTab === 'os' ? isActive('OS', r.os) : isActive('Device', r.device)
 
+  const isPreview = activeSite?.support_preview || false
   if (!site) {
     if (isPreview) {
       return (
@@ -303,9 +397,7 @@ export default function Analytics() {
             </div>
             <div>
               <h2 className="text-sm font-semibold text-st-black dark:text-dark-primary mb-1">Analytics View Disabled</h2>
-              <p className="text-xs text-st-gray/80 dark:text-gray-400/80 leading-relaxed">
-                Analytics is not available in Support Preview. Use Dashboard and Attribution for read-only customer context.
-              </p>
+              <p className="text-xs text-st-gray/80 dark:text-gray-400/80 leading-relaxed">Analytics is not available in Support Preview. Use Dashboard and Attribution for read-only customer context.</p>
             </div>
           </div>
         </div>
@@ -316,7 +408,6 @@ export default function Analytics() {
 
   return (
     <div className="st-container space-y-4">
-
       {/* ─── Header ──────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
@@ -325,7 +416,7 @@ export default function Analytics() {
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg shadow-sm">
-            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${liveCount > 0 ? 'bg-green-500 animate-pulse' : 'bg-gray-600'}`} />
+            <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${liveCount > 0 ? 'bg-green-500 animate-pulse motion-reduce:animate-none' : 'bg-gray-600'}`} />
             <span className="text-xs font-medium text-st-black dark:text-dark-primary tabular-nums">{liveCount}</span>
             <span className="text-xs text-st-gray dark:text-gray-400">live</span>
             <button onClick={() => refetchLive()} className="text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text ml-0.5 transition-colors">
@@ -333,11 +424,9 @@ export default function Analytics() {
             </button>
           </div>
           <div className="flex items-center gap-1 bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-lg p-1 shadow-sm">
-            {[{l:'24h',d:1},{l:'7d',d:7},{l:'30d',d:30},{l:'90d',d:90}].map(t => (
+            {[{ l: '24h', d: 1 }, { l: '7d', d: 7 }, { l: '30d', d: 30 }, { l: '90d', d: 90 }].map(t => (
               <button key={t.d} onClick={() => setDays(t.d)}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                  days === t.d ? 'bg-st-lime text-st-black font-semibold' : 'text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text'
-                }`}>
+                className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${days === t.d ? 'bg-st-lime text-st-black font-semibold' : 'text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text'}`}>
                 {t.l}
               </button>
             ))}
@@ -361,14 +450,10 @@ export default function Analytics() {
       )}
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-lime" />
-        </div>
+        <div className="flex items-center justify-center py-20"><div className="animate-spin motion-reduce:animate-none rounded-full h-8 w-8 border-b-2 border-st-lime" /></div>
       ) : isError ? (
         <QueryError isError={isError} error={error} onRetry={refetch} />
       ) : !hasData ? (
-
-        /* ─── Empty state ──────────────────────────────────────────────── */
         <div className="max-w-md mx-auto py-16 text-center space-y-6">
           <Eye className="w-10 h-10 text-st-gray/40 dark:text-gray-500/40 mx-auto" />
           <div>
@@ -383,243 +468,149 @@ export default function Analytics() {
                 {copied ? <Check className="w-3.5 h-3.5 text-st-lime" /> : <Copy className="w-3.5 h-3.5" />}
               </button>
             </div>
-            <p className="text-[11px] text-st-gray dark:text-gray-400">Pageviews appear here once the tracker fires on your site. Conversions appear after your site sends conversion events.</p>
           </div>
         </div>
-
       ) : (
         <>
-          {/* ─── KPIs ────────────────────────────────────────────────────── */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-            <MetricTile
-              label="Visitors"
-              value={safeNumber(kpis.unique_visitors, 0).toLocaleString()}
-              delta={delta(kpis.unique_visitors, priorKpis.unique_visitors)}
-              compact
-            />
-            <MetricTile
-              label="Pageviews"
-              value={safeNumber(kpis.pageviews, 0).toLocaleString()}
-              delta={delta(kpis.pageviews, priorKpis.pageviews)}
-              compact
-            />
-            <MetricTile
-              label="Online now"
-              value={liveCount.toLocaleString()}
-              sub="refreshed every 30s"
-              compact
-            />
-            <MetricTile
-              label="Conversions"
-              value={convCount > 0 ? convCount.toLocaleString() : '—'}
-              sub={convCount === 0 ? 'No conversion events yet' : null}
-              delta={convCount > 0 ? delta(kpis.conversion_count, priorKpis.conversion_count) : null}
-              compact
-            />
-            <MetricTile
-              label="Conv Rate"
-              value={convRate > 0 ? `${convRate.toFixed(2)}%` : '—'}
-              sub={convRate === 0 ? 'Send conversion events to track' : null}
-              delta={convRate > 0 ? delta(kpis.conversion_rate, priorKpis.conversion_rate) : null}
-              compact
-            />
-            <MetricTile
-              label="Avg Duration"
-              value={fmtDuration(kpis.avg_duration_seconds)}
-              sub={kpis.avg_duration_seconds == null ? 'Not available' : null}
-              delta={kpis.avg_duration_seconds == null ? null : delta(kpis.avg_duration_seconds, priorKpis.avg_duration_seconds)}
-              compact
-            />
-          </div>
-
-          {/* ─── Visitors chart ─────────────────────────────────────────── */}
-          <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-4 shadow-sm">
-            <p className="text-[11px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wide mb-3">Visitors over time</p>
-            <div style={{ height: 200 }}>
-              {ts.labels && ts.labels.length > 0 ? (
-                <Line data={chartData} options={chartOptions} />
-              ) : (
-                <p className="text-xs text-st-gray dark:text-gray-400 text-center py-12">No time-series data yet</p>
-              )}
+          {/* ─── KPI strip (Revenue first + largest; Avg-duration removed) ──── */}
+          <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-gray-100 dark:divide-dark-border overflow-hidden shadow-sm">
+            {hasRevenue && (
+              <div className="flex-1 p-4 flex flex-col justify-between min-w-[150px] transition-transform duration-200 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:transform-none">
+                <div>
+                  <p className="text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">Revenue</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-st-black dark:text-dark-primary tabular-nums tracking-tight">{formattedRevenue}</p>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                  <DeltaBadge d={delta(kpis.revenue, priorKpis.revenue)} />
+                  <span className="text-[10px] text-st-gray dark:text-gray-400 font-medium">vs prior</span>
+                </div>
+              </div>
+            )}
+            <div className="flex-1 p-4 flex flex-col justify-between min-w-[120px] transition-transform duration-200 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:transform-none">
+              <div>
+                <p className="text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">Visitors</p>
+                <p className="text-xl font-bold text-st-black dark:text-dark-primary tabular-nums tracking-tight">{animUniqueVisitors != null ? Math.round(animUniqueVisitors).toLocaleString() : '—'}</p>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                <DeltaBadge d={delta(kpis.unique_visitors, priorKpis.unique_visitors)} />
+                <span className="text-[10px] text-st-gray dark:text-gray-400 font-medium">vs prior</span>
+              </div>
+            </div>
+            <div className="flex-1 p-4 flex flex-col justify-between min-w-[120px] transition-transform duration-200 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:transform-none">
+              <div>
+                <p className="text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">Conversions</p>
+                <p className="text-xl font-bold text-st-black dark:text-dark-primary tabular-nums tracking-tight">{animConversions != null && animConversions > 0 ? Math.round(animConversions).toLocaleString() : '—'}</p>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                {convCount > 0 ? <DeltaBadge d={delta(kpis.conversion_count, priorKpis.conversion_count)} /> : <p className="text-[10px] text-st-gray dark:text-gray-400 font-medium truncate">No conversion events yet</p>}
+              </div>
+            </div>
+            <div className="flex-1 p-4 flex flex-col justify-between min-w-[120px] transition-transform duration-200 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:transform-none">
+              <div>
+                <p className="text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">Conv Rate</p>
+                <p className="text-xl font-bold text-st-black dark:text-dark-primary tabular-nums tracking-tight">{animConvRate != null && animConvRate > 0 ? `${animConvRate.toFixed(2)}%` : '—'}</p>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                {convRate > 0 ? <DeltaBadge d={delta(kpis.conversion_rate, priorKpis.conversion_rate)} /> : <p className="text-[10px] text-st-gray dark:text-gray-400 font-medium truncate">Send events to track</p>}
+              </div>
+            </div>
+            {hasRevenue && (
+              <div className="flex-1 p-4 flex flex-col justify-between min-w-[120px] transition-transform duration-200 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:transform-none">
+                <div>
+                  <p className="text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">Rev/visitor</p>
+                  <p className="text-xl font-bold text-st-black dark:text-dark-primary tabular-nums tracking-tight">{formattedRevenuePerVisitor}</p>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap mt-2"><span className="text-[10px] text-st-gray dark:text-gray-400 font-medium">calculated</span></div>
+              </div>
+            )}
+            <div className="flex-1 p-4 flex flex-col justify-between min-w-[120px] transition-transform duration-200 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:transform-none">
+              <div>
+                <p className="text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">Online now</p>
+                <p className="text-xl font-bold text-st-black dark:text-dark-primary tabular-nums tracking-tight">{liveCount.toLocaleString()}</p>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap mt-2"><p className="text-[10px] text-st-gray dark:text-gray-400 font-medium truncate">refreshed every 30s</p></div>
             </div>
           </div>
 
-          {/* ─── Pages + Sources ─────────────────────────────────────────── */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <ListSection
-              title="Top Pages"
-              rows={topPages}
-              getLabel={r => stripOrigin(r.page)}
-              getCount={r => r.views}
-              onRowClick={r => toggleFilter('Page', stripOrigin(r.page))}
-              isRowActive={r => isActive('Page', stripOrigin(r.page))}
-              emptyText="No page data yet"
-            />
+          {/* ─── Dual-axis chart ─────────────────────────────────────────── */}
+          <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-4 shadow-sm">
+            <p className="text-[11px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wide mb-3">{hasRevenue ? 'Traffic & Revenue over time' : 'Visitors over time'}</p>
+            <div style={{ height: 220 }}>
+              {ts.labels && ts.labels.length > 0 ? <Chart type="line" data={chartData} options={chartOptions} /> : <p className="text-xs text-st-gray dark:text-gray-400 text-center py-12">No time-series data yet</p>}
+            </div>
+          </div>
 
-            {/* Sources — referrers, medium, AI */}
-            <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm">
+          {/* ─── Contextual handoff (only when revenue exists) ───────────── */}
+          {hasRevenue && (
+            <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-3 flex items-center justify-between flex-wrap gap-2 text-xs text-st-gray dark:text-gray-400 shadow-sm">
+              <span>
+                <strong className="text-st-black dark:text-dark-primary font-semibold">{formattedRevenue}</strong> from{' '}
+                <strong className="text-st-black dark:text-dark-primary font-semibold">{convCount}</strong> conversions — which touchpoint earned it?
+              </span>
+              <div className="flex items-center gap-3">
+                <a href="/app/attribution" className="font-semibold text-st-black dark:text-dark-primary hover:underline">Attribution →</a>
+                <a href={`/leads?site_key=${site.site_key}`} className="font-semibold text-st-black dark:text-dark-primary hover:underline">{convCount} leads →</a>
+              </div>
+            </div>
+          )}
+
+          {/* ─── Panels: Sources / Pages / Locations / Devices ───────────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Sources (internal tabs) */}
+            <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 motion-reduce:transition-none flex flex-col h-full">
               <div className="px-4 py-3 border-b border-gray-100 dark:border-dark-border flex items-center justify-between flex-wrap gap-2">
                 <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">Sources</h3>
                 <div className="flex gap-1">
-                  {[
-                    { key: 'referrer',  label: 'Referrers' },
-                    { key: 'medium',    label: 'Medium' },
-                    { key: 'ai_source', label: 'AI' },
-                  ].map(tab => (
-                    <button key={tab.key}
-                      onClick={() => { setSourceTab(tab.key); setSearchParams({ tab: tab.key }) }}
-                      className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${
-                        sourceTab === tab.key ? 'bg-st-lime text-st-black font-semibold' : 'text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text'
-                      }`}>
+                  {[{ key: 'referrer', label: 'Referrer' }, { key: 'channel', label: 'Channel' }, { key: 'ai_source', label: 'AI' }].map(tab => (
+                    <button key={tab.key} onClick={() => { setSourceTab(tab.key); setSearchParams({ tab: tab.key }) }}
+                      className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors duration-150 motion-reduce:transition-none ${sourceTab === tab.key ? 'bg-st-lime text-st-black' : 'text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text'}`}>
                       {tab.label}
                     </button>
                   ))}
                 </div>
               </div>
-              <SourceTabList
-                rows={sourcesRows}
-                tab={sourceTab}
-                toggleFilter={toggleFilter}
-                isActive={isActive}
-              />
+              <div className="flex-1"><SourceTabList rows={sourcesRows} tab={sourceTab} toggleFilter={toggleFilter} isActive={isActive} /></div>
             </div>
-          </div>
 
-          {/* ─── Countries + Devices ─────────────────────────────────────── */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* Pages (site favicon per row) */}
             <ListSection
-              title="Top Countries"
-              unit="pageviews"
+              title="Pages"
+              rows={topPages}
+              getLabel={r => stripOrigin(r.page)}
+              getCount={r => r.views}
+              getIcon={() => siteFavicon}
+              onRowClick={r => toggleFilter('Page', stripOrigin(r.page))}
+              isRowActive={r => isActive('Page', stripOrigin(r.page))}
+              emptyText="No page data yet"
+            />
+
+            {/* Locations (emoji flag + country name) */}
+            <ListSection
+              title="Locations"
               rows={topCountries}
-              getLabel={r => r.country || 'Unknown'}
+              getLabel={r => countryName(r.country)}
               getCount={r => r.visits}
+              getIcon={r => countryFlagIcon(r.country)}
               onRowClick={r => toggleFilter('Country', r.country)}
               isRowActive={r => isActive('Country', r.country)}
               emptyText="No country data yet"
             />
+
+            {/* Devices (Browser / OS / Device tabs; icons + Title Case) */}
             <ListSection
               title="Devices"
-              unit="pageviews"
-              rows={Object.entries(devices).sort((a,b) => safeNumber(b[1],0) - safeNumber(a[1],0)).map(([k,v]) => ({ device: k, count: v }))}
-              getLabel={r => r.device.charAt(0).toUpperCase() + r.device.slice(1)}
-              getCount={r => r.count}
-              onRowClick={r => toggleFilter('Device', r.device)}
-              isRowActive={r => isActive('Device', r.device)}
-              emptyText="No device data yet"
+              rows={deviceRows}
+              getLabel={getDeviceLabel}
+              getCount={getDeviceCount}
+              getIcon={getDeviceIcon}
+              onRowClick={onDeviceClick}
+              isRowActive={isDeviceActive}
+              emptyText={`No ${deviceTab} data yet`}
+              tabs={[{ key: 'browser', label: 'Browser' }, { key: 'os', label: 'OS' }, { key: 'device', label: 'Device' }]}
+              activeTab={deviceTab}
+              onTabChange={setDeviceTab}
             />
           </div>
-
-          {/* ─── Browsers + OS ───────────────────────────────────────────── */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <ListSection
-              title="Browsers"
-              unit="visitors"
-              rows={browsers}
-              getLabel={r => r.browser}
-              getCount={r => r.visitors}
-              onRowClick={r => toggleFilter('Browser', r.browser)}
-              isRowActive={r => isActive('Browser', r.browser)}
-              emptyText="No browser data yet"
-            />
-            <ListSection
-              title="Operating Systems"
-              unit="visitors"
-              rows={osList}
-              getLabel={r => r.os}
-              getCount={r => r.visitors}
-              onRowClick={r => toggleFilter('OS', r.os)}
-              isRowActive={r => isActive('OS', r.os)}
-              emptyText="No OS data yet"
-            />
-          </div>
-
-          {/* ─── Entry / Exit ─────────────────────────────────────────────── */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <ListSection
-              title="Entry Pages"
-              rows={entryPages}
-              getLabel={r => stripOrigin(r.page)}
-              getCount={r => r.count}
-              onRowClick={r => toggleFilter('Entry', stripOrigin(r.page))}
-              isRowActive={r => isActive('Entry', stripOrigin(r.page))}
-              emptyText="No entry data yet"
-            />
-            <ListSection
-              title="Exit Pages"
-              rows={exitPages}
-              getLabel={r => stripOrigin(r.page)}
-              getCount={r => r.count}
-              onRowClick={r => toggleFilter('Exit', stripOrigin(r.page))}
-              isRowActive={r => isActive('Exit', stripOrigin(r.page))}
-              emptyText="No exit data yet"
-            />
-          </div>
-
-          {/* ─── AI Traffic (conditional) ─────────────────────────────────── */}
-          {aiSources.length > 0 && (
-            <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm">
-              <div className="px-4 py-3 border-b border-gray-100 dark:border-dark-border flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">AI Traffic</h3>
-                <span className="text-[10px] text-st-gray dark:text-gray-400">
-                  {Math.round(aiSources.reduce((s,r) => s + safeNumber(r.visits,0), 0) / Math.max(1, safeNumber(kpis.unique_visitors, 1)) * 100)}% of all visitors
-                </span>
-              </div>
-              {(() => {
-                const max = Math.max(1, ...aiSources.map(r => safeNumber(r.visits, 0)))
-                return aiSources.map((r, i) => (
-                  <DataRow
-                    key={i}
-                    label={normalizeSource(r.source).name}
-                    count={r.visits}
-                    max={max}
-                    icon={<SourceIcon source={r.source} className="w-3.5 h-3.5" />}
-                    onClick={() => toggleFilter('AI Source', r.source)}
-                    active={isActive('AI Source', r.source)}
-                  />
-                ))
-              })()}
-            </div>
-          )}
-
-          {/* ─── SEO Traffic — Search Console (conditional, traffic-only) ──── */}
-          {seoConnected && (
-            <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm">
-              <div className="px-4 py-3 border-b border-gray-100 dark:border-dark-border flex items-center justify-between gap-2">
-                <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">SEO Traffic</h3>
-                <span className="text-[10px] text-st-gray dark:text-gray-400 flex-shrink-0">
-                  {safeNumber(seoTraffic?.summary?.gsc_clicks, 0).toLocaleString()} Search Console clicks
-                </span>
-              </div>
-              {seoQueries.length === 0 ? (
-                <p className="text-xs text-st-gray dark:text-gray-400 py-10 text-center">No Search Console queries in this period</p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-gray-100 dark:border-dark-border text-st-gray dark:text-gray-400 text-[10px] uppercase tracking-wide">
-                        <th className="py-2 px-4 font-medium">Query</th>
-                        <th className="py-2 px-3 font-medium text-right">Clicks</th>
-                        <th className="py-2 px-3 font-medium text-right">Impressions</th>
-                        <th className="py-2 px-3 font-medium text-right">CTR</th>
-                        <th className="py-2 px-4 font-medium text-right">Avg Pos</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {seoQueries.slice(0, 10).map((q, i) => (
-                        <tr key={i} className="border-b border-gray-100 dark:border-dark-border last:border-0 text-xs">
-                          <td className="py-2.5 px-4 font-mono text-st-black dark:text-dark-primary max-w-[240px] truncate" title={q.query}>{q.query}</td>
-                          <td className="py-2.5 px-3 text-right tabular-nums text-st-black dark:text-dark-primary">{safeNumber(q.clicks, 0).toLocaleString()}</td>
-                          <td className="py-2.5 px-3 text-right tabular-nums text-st-gray dark:text-gray-400">{safeNumber(q.impressions, 0).toLocaleString()}</td>
-                          <td className="py-2.5 px-3 text-right tabular-nums text-st-gray dark:text-gray-400">{(safeNumber(q.ctr, 0) * 100).toFixed(1)}%</td>
-                          <td className="py-2.5 px-4 text-right tabular-nums text-st-gray dark:text-gray-400">{safeNumber(q.position, 0).toFixed(1)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* ─── Conversions notice ───────────────────────────────────────── */}
           {convCount === 0 && (
@@ -627,65 +618,12 @@ export default function Analytics() {
               <span className="w-1.5 h-1.5 mt-1.5 rounded-full bg-st-gray dark:bg-gray-400 flex-shrink-0" />
               <div>
                 <p className="text-sm font-medium text-st-black dark:text-dark-primary">No conversions in this period</p>
-                <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">
-                  Conversions appear after your site sends conversion events. See the <a href="/developers/conversions" className="underline hover:text-st-black dark:hover:text-dark-text transition-colors">conversion events docs</a> for setup instructions.
-                </p>
+                <p className="text-xs text-st-gray dark:text-gray-400 mt-0.5">Conversions appear after your site sends conversion events.</p>
               </div>
             </div>
           )}
         </>
       )}
     </div>
-  )
-}
-
-// ─── Sources tab list ─────────────────────────────────────────────────────────
-function SourceTabList({ rows, tab, toggleFilter, isActive }) {
-  const [showAll, setShowAll] = useState(false)
-  const visible = showAll ? rows : rows.slice(0, 8)
-  const max = useMemo(() => Math.max(1, ...(rows || []).map(r => safeNumber(r.visitors, 0))), [rows])
-
-  if (!rows || rows.length === 0) {
-    if (tab === 'ai_source') {
-      return (
-        <div className="text-center py-12 px-4 space-y-2">
-          <p className="text-sm font-medium text-st-black dark:text-dark-primary">No AI traffic detected yet</p>
-          <p className="text-xs text-st-gray dark:text-gray-400 max-w-sm mx-auto">
-            When visitors arrive from ChatGPT, Claude, Perplexity, or other AI platforms, they'll appear here.
-          </p>
-        </div>
-      )
-    }
-    return <p className="text-xs text-st-gray dark:text-gray-400 py-10 text-center">No {tab} data yet</p>
-  }
-
-  return (
-    <>
-      {visible.map((r, i) => (
-        <DataRow
-          key={i}
-          label={normalizeSource(r.name || '').name}
-          count={r.visitors}
-          max={max}
-          icon={<SourceIcon source={r.name || ''} className="w-3.5 h-3.5" />}
-          onClick={() => {
-            if (tab === 'referrer')  toggleFilter('Source', r.name)
-            if (tab === 'ai_source') toggleFilter('AI Source', r.name)
-          }}
-          active={
-            tab === 'referrer'  ? isActive('Source', r.name) :
-            tab === 'ai_source' ? isActive('AI Source', r.name) : false
-          }
-        />
-      ))}
-      {rows.length > 8 && (
-        <button
-          onClick={() => setShowAll(s => !s)}
-          className="w-full py-2 text-xs text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text border-t border-gray-100 dark:border-dark-border transition-colors"
-        >
-          {showAll ? '↑ Show less' : `↓ Show all ${rows.length}`}
-        </button>
-      )}
-    </>
   )
 }
