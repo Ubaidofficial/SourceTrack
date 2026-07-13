@@ -46,7 +46,7 @@ function normalizeEventName(eventName = '') {
   return String(eventName).replace(/^\$/, '').toLowerCase()
 }
 
-export default function EventDebugger() {
+export default function EventDebugger({ isEmbedded = false }) {
   const { user } = useAuth()
   const [site, setSite] = useState(null)
   const [events, setEvents] = useState([])
@@ -211,6 +211,7 @@ export default function EventDebugger() {
 
   return (
     <div className="space-y-6">
+      {!isEmbedded && (
       <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-st-black">Live Events</h2>
@@ -225,6 +226,7 @@ export default function EventDebugger() {
           Refresh
         </button>
       </div>
+      )}
 
       <div className="bg-white dark:bg-[#1A1D1D] rounded-xl shadow-sm border border-gray-200 dark:border-[#333838] p-5">
         <div className="flex items-center gap-2 mb-3">
