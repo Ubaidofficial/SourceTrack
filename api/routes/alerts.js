@@ -110,8 +110,12 @@ router.get('/', validateSiteKey, requireAlertsFeature, async (req, res) => {
       ORDER BY cnt DESC
       LIMIT 10
     `
-    // MONEY-RAIL (NOT wired): reads ai_source. Held on HogQL, flagged.
-    const aiRows = await _queryHogQL(aiSql, 'alert_ai')
+    // MONEY-RAIL: wired Tinybird-first (alert_ai) with HogQL fallback, via readTb.
+    // Pipe named {ai_source, cnt} remapped to the positional [ai_source, cnt] rows the
+    // consumer reduces over, byte-identical to the HogQL path. ai_source is a Nullable
+    // typed column; the pipe's own `IS NOT NULL AND != ''` matches HogQL's bag `!= ''`
+    // (JSONExtractString yields '' not NULL), so the filtered row set is identical.
+    const aiRows = await readTb('alert_ai', { site_id: req.site.id }, aiSql, 'alert_ai', tb => tb.map(r => [r.ai_source, r.cnt]))
     const aiTotal = aiRows.reduce((s, [, c]) => s + Number(c), 0)
     const threshold = 5
     if (aiTotal > threshold && aiTotal < threshold * 2) {
