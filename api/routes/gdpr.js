@@ -28,7 +28,7 @@ async function getSiteForUser(supabase, userId, siteKey) {
 
   const query = supabase
     .from('sites')
-    .select('id, site_key, owner_id, company_id, posthog_site_id, plan')
+    .select('id, site_key, owner_id, company_id, plan')
     .eq('site_key', siteKey)
     .limit(1)
 
@@ -38,7 +38,12 @@ async function getSiteForUser(supabase, userId, siteKey) {
     query.eq('owner_id', userId)
   }
 
-  const { data } = await query.maybeSingle()
+  // A DB error MUST NOT be swallowed into a null result — that made a query failure
+  // (e.g. a dropped column) surface as a 403 "access denied", masking outages as
+  // permissions bugs. Surface it so the route returns 500; a DB failure and an
+  // authorization failure must stay distinguishable.
+  const { data, error } = await query.maybeSingle()
+  if (error) throw new Error(`getSiteForUser query failed: ${error.message}`)
   return data
 }
 
