@@ -5,6 +5,8 @@ import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { getSupabase } from '../lib/supabase.js'
 import { fetchPageviews } from '../lib/posthog.js'
+import { queryTinybirdPipe } from '../lib/tinybird-read.js'
+import { serializeHogQLDateRange } from '../lib/hogql-date.js'
 import { sourceFromEvent, topSourcesByVisitor } from '../lib/channel-classifier.js'
 import { redactPiiFromUrl, redactPiiFromObject, isGoogleSource, isValidTimezone, getLocalDateString, getLocalMonthString, getLocalWeekString, getPaddedUtcDateRange, getNow, bucketUniqueVisitors, countDistinctConverters, cappedRate } from '../lib/utils.js'
 import { requireFeature, isSiteStatusBlocked } from '../lib/plan-features.js'
@@ -19,6 +21,80 @@ import { resolveClientIp } from '../lib/ip-resolver.js'
 import { isBotUserAgent } from '../lib/bot-filter.js'
 
 const router = express.Router()
+
+// ── Tinybird read seam (Grade B pageviews cutover) ───────────────────────────
+// Mirrors the seo-revenue.js/sessions.js pattern. The HogQL leg here is
+// fetchPageviews() itself (it wraps queryHogQL). The 5 pipes SELECT their columns
+// with the SAME output aliases fetchPageviews produces (url, referrer, …, os,
+// ai_source, anonymous_id, timestamp), so pipe rows are consumed with NO remap.
+let _queryTinybirdPipe = queryTinybirdPipe
+let _fetchPageviews = fetchPageviews
+export function __setAnalyticsReadDeps ({ queryTinybird, fetchPv } = {}) {
+  if (queryTinybird) _queryTinybirdPipe = queryTinybird
+  if (fetchPv) _fetchPageviews = fetchPv
+}
+export function __resetAnalyticsReadDeps () {
+  _queryTinybirdPipe = queryTinybirdPipe
+  _fetchPageviews = fetchPageviews
+}
+
+// A drill-down {type} -> the pipe's optional filter param name. The 9 types are
+// exactly buildPageviewFilterSql's PAGEVIEW_FILTER_COLUMNS (posthog.js).
+const PIPE_FILTER_PARAM = {
+  Page: 'filter_page', Entry: 'filter_entry', Exit: 'filter_exit',
+  Source: 'filter_source', Country: 'filter_country', Device: 'filter_device',
+  Browser: 'filter_browser', OS: 'filter_os', 'AI Source': 'filter_ai_source'
+}
+
+// HogQL serialized `toDateTime('ISO')` expr -> the pipe's ClickHouse DateTime
+// literal 'YYYY-MM-DD HH:MM:SS' (UTC, second precision). Same helper as sessions.js.
+function toChDateTime (expr) {
+  const iso = expr.match(/'([^']+)'/)?.[1]
+  const d = iso ? new Date(iso) : null
+  return d && !Number.isNaN(d.getTime()) ? d.toISOString().slice(0, 19).replace('T', ' ') : null
+}
+
+// Build the pipe params from the SAME serializeHogQLDateRange fetchPageviews uses,
+// so the pipe's `timestamp >= date_from_ts AND < date_to_ts` window is byte-identical
+// to the HogQL `>= from AND < to` window (both half-open, +1-day exclusive end).
+// Returns null (→ HogQL fallback, NOT the pipe) when the request can't be faithfully
+// represented: an unknown filter type, or two filters of the SAME type (the pipe
+// carries one param per type — matching every real caller; a duplicate would silently
+// drop a filter and skew counts, so we fall back instead).
+export function buildPageviewPipeParams (siteId, dateFrom, dateTo, { limit = 50000, filters = [] } = {}) {
+  let range
+  try { range = serializeHogQLDateRange(dateFrom, dateTo) } catch (_e) { return null }
+  const dateFromTs = toChDateTime(range.from)
+  const dateToTs = toChDateTime(range.to)
+  if (!dateFromTs || !dateToTs) return null
+  const params = { site_id: siteId, date_from_ts: dateFromTs, date_to_ts: dateToTs, limit_val: Number(limit) || 50000 }
+  const seen = new Set()
+  for (const f of (filters || [])) {
+    const key = PIPE_FILTER_PARAM[f.type]
+    if (!key || seen.has(key)) return null
+    seen.add(key)
+    params[key] = f.value
+  }
+  return params
+}
+
+// Tinybird-first pageviews read. Pipe name == opts.queryName (summary / sources_ai /
+// sources_ref / browsers / os). null pipe result (flag off / error) -> fetchPageviews
+// (HogQL). Fail-closed under the test-only TINYBIRD_FORCE_READ. Tenant isolation:
+// site_id is the authenticated req.site.id, never client-supplied.
+async function dispatchPageviews (siteId, dateFrom, dateTo, opts = {}) {
+  const pipeName = opts.queryName
+  const params = buildPageviewPipeParams(siteId, dateFrom, dateTo, opts)
+  if (params !== null) {
+    const tb = await _queryTinybirdPipe(pipeName, params)
+    if (tb !== null) return tb
+    if (process.env.TINYBIRD_FORCE_READ === 'true') {
+      throw new Error(`[tinybird-force-read] ${pipeName} returned null under TINYBIRD_FORCE_READ — dispatch path not exercised`)
+    }
+  }
+  // params === null (request not representable as a pipe call) OR pipe null: HogQL.
+  return _fetchPageviews(siteId, dateFrom, dateTo, opts)
+}
 
 // ─── Filter parsing ──────────────────────────────────────────────────────────
 // Supports two formats:
@@ -183,7 +259,7 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
     const filters = parseFilters(req)
 
     // Pageviews come from PostHog ($pageview), not the legacy Supabase table.
-    const rows = await fetchPageviews(siteId, currentPadded.from, currentPadded.to, { filters, limit: 10000, queryName: 'summary' })
+    const rows = await dispatchPageviews(siteId, currentPadded.from, currentPadded.to, { filters, limit: 10000, queryName: 'summary' })
 
     const pv = rows.filter(r => {
       const localDate = getLocalDateString(new Date(r.timestamp), tz)
@@ -419,7 +495,7 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
     }
 
     if (tab === 'ai_source') {
-      const rawRows = await fetchPageviews(siteId, padded.from, padded.to, { filters, limit: 50000, queryName: 'sources_ai' })
+      const rawRows = await dispatchPageviews(siteId, padded.from, padded.to, { filters, limit: 50000, queryName: 'sources_ai' })
 
       const rows = rawRows.filter(r => {
         if (!r.ai_source) return false
@@ -511,7 +587,7 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
     }
 
     // referrer / medium — group by pageviews
-    const rawRows = await fetchPageviews(siteId, padded.from, padded.to, { filters, limit: 50000, queryName: 'sources_ref' })
+    const rawRows = await dispatchPageviews(siteId, padded.from, padded.to, { filters, limit: 50000, queryName: 'sources_ref' })
 
     const rows = rawRows.filter(r => {
       const localDate = getLocalDateString(new Date(r.timestamp), tz)
@@ -800,7 +876,7 @@ router.get('/browsers', requireUserAuth, validateSiteKey, requireSiteMembership,
     const to = new Date().toISOString()
     const filters = parseFilters(req)
 
-    const rows = await fetchPageviews(siteId, from, to, { filters, limit: 50000, queryName: 'browsers' })
+    const rows = await dispatchPageviews(siteId, from, to, { filters, limit: 50000, queryName: 'browsers' })
 
     const counts = {}
     for (const r of rows) {
@@ -831,7 +907,7 @@ router.get('/os', requireUserAuth, validateSiteKey, requireSiteMembership, async
     const to = new Date().toISOString()
     const filters = parseFilters(req)
 
-    const rows = await fetchPageviews(siteId, from, to, { filters, limit: 50000, queryName: 'os' })
+    const rows = await dispatchPageviews(siteId, from, to, { filters, limit: 50000, queryName: 'os' })
 
     const counts = {}
     for (const r of rows) {
