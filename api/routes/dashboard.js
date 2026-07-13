@@ -227,10 +227,11 @@ router.get('/overview', validateSiteKey, async (req, res) => {
         revTrendMap[localDate].revenue += val
       }
 
-      // channel/leads trend by date
-      if (localDate && typeClass === 'lead') {
-        if (!channelTrendMap[localDate]) channelTrendMap[localDate] = { dim_value: localDate, leads: 0 }
-        channelTrendMap[localDate].leads++
+      // conversions trend by date — ALL attributed conversions, not just leads
+      // (a customer-only site has no leads, so a leads-only trend read empty).
+      if (localDate) {
+        if (!channelTrendMap[localDate]) channelTrendMap[localDate] = { dim_value: localDate, conversions: 0 }
+        channelTrendMap[localDate].conversions++
       }
 
       // AI source breakdown

@@ -265,13 +265,13 @@ export default function Dashboard() {
     }]
   }
 
-  // T5.4 — Leads over time (channel states)
+  // T5.4 — Conversions over time (channel states)
   const channelTrendResults = overview?.channel_trend || []
   const channelTrendData = {
     labels: channelTrendResults.map(r => r.dim_value || ''),
     datasets: [{
-      label: 'Leads',
-      data: channelTrendResults.map(r => r.leads || 0),
+      label: 'Conversions',
+      data: channelTrendResults.map(r => r.conversions || 0),
       borderColor: 'rgba(17,24,39,0.85)',
       backgroundColor: limeAreaGradient,
       borderWidth: 2,
@@ -284,13 +284,13 @@ export default function Dashboard() {
 
   // Truth-gated tooltip rows — render ONLY fields present in the data source.
   // revenue_trend rows are { dim_value, revenue }; channel_trend rows are
-  // { dim_value, leads }. No fabricated metrics.
+  // { dim_value, conversions }. No fabricated metrics.
   const revTooltipRows = (i) => {
     const rev = timeResults[i]?.revenue
     return rev > 0 ? [{ label: 'Revenue', value: `$${safeNumber(rev, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`, accent: true }] : []
   }
-  const leadTooltipRows = (i) => [
-    { label: 'Leads', value: safeNumber(channelTrendResults[i]?.leads, 0).toLocaleString(), accent: true }
+  const convTooltipRows = (i) => [
+    { label: 'Conversions', value: safeNumber(channelTrendResults[i]?.conversions, 0).toLocaleString(), accent: true }
   ]
 
   const chartOpts = (prefix = '$', getRows = revTooltipRows) => {
@@ -577,7 +577,7 @@ export default function Dashboard() {
               {/* Performance Trend Chart */}
               <DashboardCard title="Performance Trend" subtitle={`Last ${timeRange} days • ${site?.timezone || 'UTC'}`}>
                 <div className="h-64">
-                  <Line data={hasRevenue ? revTrendData : channelTrendData} options={chartOpts(hasRevenue ? '$' : '', hasRevenue ? revTooltipRows : leadTooltipRows)} />
+                  <Line data={hasRevenue ? revTrendData : channelTrendData} options={chartOpts(hasRevenue ? '$' : '', hasRevenue ? revTooltipRows : convTooltipRows)} />
                 </div>
               </DashboardCard>
 
@@ -675,7 +675,7 @@ export default function Dashboard() {
               {/* 1. Source performance trend chart */}
               <DashboardCard title="Source Performance Trend" subtitle="Conversions by source over time">
                 <div className="h-64">
-                  <Line data={channelTrendData} options={chartOpts('', leadTooltipRows)} />
+                  <Line data={channelTrendData} options={chartOpts('', convTooltipRows)} />
                 </div>
               </DashboardCard>
 
