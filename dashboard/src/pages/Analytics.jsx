@@ -1,21 +1,21 @@
 import { useState, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Filler, BarElement, BarController } from 'chart.js'
-import { Chart } from 'react-chartjs-2'
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Filler } from 'chart.js'
+import { Line } from 'react-chartjs-2'
 import { fetchApi } from '../lib/api'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
-import { Eye, RefreshCw, Copy, Check, BarChart3, Globe } from 'lucide-react'
+import { Eye, RefreshCw, Copy, Check, BarChart3 } from 'lucide-react'
 import { safeNumber } from '../utils/numbers'
 import { limeAreaGradient } from '../utils/limeAreaGradient'
 import { tooltipPlugin, CHART_COLORS } from '../utils/chartTooltip'
 import { SourceIcon, normalizeSource } from '../components/SourceIcon'
 import { useSite } from '../contexts/SiteContext'
-import { useCountUp } from '../utils/useCountUp'
+import MetricTile from '../components/MetricTile'
 import QueryError from '../components/QueryError'
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Filler, BarElement, BarController)
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Filler)
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmtDuration(s) {
@@ -27,55 +27,66 @@ function fmtDuration(s) {
 function stripOrigin(url = '') { return url.replace(/^https?:\/\/[^/]+/, '') || '/' }
 
 // ─── Visitors-only bar row ────────────────────────────────────────────────────
-// ─── Visitors/Revenue bar row ─────────────────────────────────────────────────
-function DataRow({ label, count, max, icon, onClick, active, revenue, maxRevenue }) {
+function DataRow({ label, count, max, icon, onClick, active }) {
   const n = safeNumber(count, 0)
-  const pctVis = max > 0 ? (n / max) * 100 : 0
-  const rev = safeNumber(revenue, 0)
-  const pctRev = maxRevenue > 0 ? (rev / maxRevenue) * 100 : 0
-  const showRevenueBar = rev > 0
-
+  const pct = max > 0 ? (n / max) * 100 : 0
   return (
     <div
       onClick={onClick}
-      className={`group relative flex items-center justify-between px-4 py-2.5 border-b border-gray-100 dark:border-dark-border last:border-0 overflow-hidden transition-all duration-200 motion-reduce:transition-none ${
-        onClick ? 'cursor-pointer hover:translate-x-0.5' : ''
-      } ${active ? 'bg-st-lime/10' : 'hover:bg-gray-50/40 dark:hover:bg-dark-hover/40'}`}
+      className={`flex items-center gap-3 px-4 py-2.5 border-b border-gray-100 dark:border-dark-border last:border-0 transition-colors ${
+        onClick ? 'cursor-pointer' : ''
+      } ${active ? 'bg-st-lime/5' : 'hover:bg-gray-50 dark:hover:bg-dark-hover'}`}
     >
-      {/* Visitors fill bar behind label */}
-      <div
-        className="absolute inset-y-0 left-0 pointer-events-none transition-all duration-500 ease-out motion-reduce:transition-none"
-        style={{ width: `${pctVis.toFixed(1)}%`, backgroundColor: 'rgba(17, 24, 39, 0.07)' }}
-      />
-      {/* Revenue fill bar overlay behind label (Sources panel only) */}
-      {showRevenueBar && (
-        <div
-          className="absolute inset-y-0 left-0 pointer-events-none transition-all duration-500 ease-out motion-reduce:transition-none"
-          style={{ width: `${pctRev.toFixed(1)}%`, backgroundColor: 'rgba(200, 240, 0, 0.30)' }}
-        />
-      )}
-
-      {/* Label and Icon */}
-      <div className="relative flex items-center gap-3 min-w-0 z-10">
-        {icon && <span className="flex-shrink-0 w-4 flex items-center justify-center">{icon}</span>}
-        <span className="text-xs font-medium text-st-black dark:text-dark-primary truncate block">{label}</span>
+      {icon && <span className="flex-shrink-0 w-4 flex items-center">{icon}</span>}
+      <div className="flex-1 min-w-0">
+        <span className="text-xs truncate text-st-black dark:text-dark-primary block">{label}</span>
+        <div style={{ height: '2px', width: `${pct.toFixed(1)}%`, background: 'rgba(204,240,63,0.6)', borderRadius: '1px', marginTop: '3px' }} />
       </div>
-
-      {/* Right-aligned Stats & Hover Trigger */}
-      <div className="relative flex items-center gap-4 z-10">
-        <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 motion-reduce:transition-none flex items-center gap-2 text-[10px] font-bold text-st-gray dark:text-gray-400">
-          <span>Attribution →</span>
-          {rev > 0 && <span>Leads →</span>}
-        </span>
-        <span className="text-sm font-semibold text-st-black dark:text-dark-primary w-16 text-right flex-shrink-0 tabular-nums">
-          {rev > 0 ? `$${Math.round(rev).toLocaleString()}` : n.toLocaleString()}
-        </span>
-      </div>
+      <span className="text-sm font-medium text-st-black dark:text-dark-primary w-14 text-right flex-shrink-0 tabular-nums">{n.toLocaleString()}</span>
     </div>
   )
 }
 
+// ─── Section card ─────────────────────────────────────────────────────────────
+function ListSection({ title, rows, getLabel, getCount, getIcon, onRowClick, isRowActive, emptyText = 'No data yet', unit }) {
+  const [showAll, setShowAll] = useState(false)
+  const visible = showAll ? rows : rows.slice(0, 8)
+  const max = useMemo(() => Math.max(1, ...rows.map(r => safeNumber(getCount(r), 0))), [rows, getCount])
 
+  return (
+    <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm">
+      <div className="px-4 py-3 border-b border-gray-100 dark:border-dark-border flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">{title}</h3>
+        {unit && <span className="text-[10px] uppercase tracking-wide text-st-gray dark:text-gray-400 font-medium flex-shrink-0">{unit}</span>}
+      </div>
+      {rows.length === 0 ? (
+        <p className="text-xs text-st-gray dark:text-gray-400 py-10 text-center">{emptyText}</p>
+      ) : (
+        <>
+          {visible.map((r, i) => (
+            <DataRow
+              key={i}
+              label={getLabel(r)}
+              count={getCount(r)}
+              max={max}
+              icon={getIcon ? getIcon(r) : null}
+              onClick={onRowClick ? () => onRowClick(r) : null}
+              active={isRowActive ? isRowActive(r) : false}
+            />
+          ))}
+          {rows.length > 8 && (
+            <button
+              onClick={() => setShowAll(s => !s)}
+              className="w-full py-2 text-xs text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text border-t border-gray-100 dark:border-dark-border transition-colors"
+            >
+              {showAll ? '↑ Show less' : `↓ Show all ${rows.length}`}
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
 
 
 
@@ -91,7 +102,6 @@ export default function Analytics() {
     ['referrer', 'medium', 'ai_source'].includes(searchParams.get('tab')) ? searchParams.get('tab') : 'referrer'
   )
   const [copied, setCopied] = useState(false)
-  const [deviceTab, setDeviceTab] = useState('browser')
 
   // ─── Site ──────────────────────────────────────────────────────────────────
   const { data: site } = useQuery({
@@ -221,66 +231,33 @@ export default function Analytics() {
   }
   function isActive(type, value) { return filters.some(f => f.type === type && f.value === value) }
 
-  // ─── Visitors chart ───
-  const rangeRevenue = useMemo(() => ts.revenue ? ts.revenue.reduce((a, b) => a + safeNumber(b, 0), 0) : 0, [ts.revenue])
-  const hasRevenue = rangeRevenue > 0
+  // ─── Visitors chart ────────────────────────────────────────────────────────
+  // Dark line (matches the Dashboard trend) so it stays readable over the lime
+  // area gradient; lime points + hover dot for the accent.
+  const chartData = useMemo(() => ({
+    labels: ts.labels || [],
+    datasets: [{
+      label: 'Visitors',
+      data: ts.visitors || [],
+      borderColor: 'rgba(17,24,39,1)',
+      backgroundColor: limeAreaGradient,
+      fill: true,
+      tension: 0.4,
+      pointRadius: 2,
+      pointBackgroundColor: CHART_COLORS.lime,
+      pointHoverRadius: 5,
+      pointHoverBackgroundColor: CHART_COLORS.lime,
+      pointHoverBorderColor: CHART_COLORS.lime,
+    }]
+  }), [ts])
 
-  const chartData = useMemo(() => {
-    const datasets = [
-      {
-        type: 'line',
-        label: 'Visitors',
-        data: ts.visitors || [],
-        borderColor: 'rgba(17,24,39,1)',
-        backgroundColor: 'rgba(17,24,39,0.05)',
-        fill: false,
-        tension: 0.4,
-        pointRadius: 2,
-        pointBackgroundColor: '#111827',
-        pointHoverRadius: 5,
-        pointHoverBackgroundColor: '#111827',
-        pointHoverBorderColor: '#111827',
-        yAxisID: 'y',
-        order: 1
-      }
-    ]
-
-    if (hasRevenue) {
-      datasets.push({
-        type: 'bar',
-        label: 'Revenue',
-        data: ts.revenue || [],
-        backgroundColor: '#C8F000',
-        hoverBackgroundColor: '#B8DE00',
-        borderRadius: 4,
-        yAxisID: 'y1',
-        order: 2
-      })
-    }
-
-    return {
-      labels: ts.labels || [],
-      datasets
-    }
-  }, [ts, hasRevenue])
-
-  // Custom dual-axis tooltip: Revenue (if > 0) | Visitors | Revenue/visitor
+  // Truth-gated tooltip: Visitors always; Revenue ONLY when that point's
+  // revenue > 0. timeseries has no new/returning split (null by design) and no
+  // per-point conversions, so no such rows are rendered. No fabricated values.
   const visitorsTooltipRows = (i) => {
-    const vis = safeNumber(ts.visitors?.[i], 0)
-    const rev = safeNumber(ts.revenue?.[i], 0)
-    const rows = []
-
-    if (rev > 0) {
-      rows.push({ label: 'Revenue', value: `$${Math.round(rev).toLocaleString()}` })
-    }
-
-    rows.push({ label: 'Visitors', value: vis.toLocaleString(), accent: true })
-
-    if (rev > 0 && vis > 0) {
-      const rpv = rev / vis
-      rows.push({ label: 'Revenue/visitor', value: `$${rpv.toFixed(2)}` })
-    }
-
+    const rows = [{ label: 'Visitors', value: safeNumber(ts.visitors?.[i], 0).toLocaleString(), accent: true }]
+    const rev = ts.revenue?.[i]
+    if (rev > 0) rows.push({ label: 'Revenue', value: `$${safeNumber(rev, 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}` })
     return rows
   }
 
@@ -295,32 +272,12 @@ export default function Analytics() {
         tooltip: tooltipPlugin(visitorsTooltipRows)
       },
       scales: {
-        x: {
-          grid: { display: false },
-          ticks: { color: isDark ? CHART_COLORS.tick.dark : CHART_COLORS.tick.light, maxRotation: 0, maxTicksLimit: 8 }
-        },
-        y: {
-          type: 'linear',
-          display: true,
-          position: 'left',
-          grid: { color: isDark ? CHART_COLORS.grid.dark : CHART_COLORS.grid.light },
-          ticks: { color: isDark ? CHART_COLORS.tick.dark : CHART_COLORS.tick.light, precision: 0 }
-        },
-        y1: {
-          type: 'linear',
-          display: hasRevenue,
-          position: 'right',
-          grid: { display: false },
-          ticks: {
-            color: isDark ? CHART_COLORS.tick.dark : CHART_COLORS.tick.light,
-            precision: 0,
-            callback: (val) => `$${Math.round(val).toLocaleString()}`
-          }
-        }
+        x: { grid: { display: false }, ticks: { color: isDark ? CHART_COLORS.tick.dark : CHART_COLORS.tick.light, maxRotation: 0, maxTicksLimit: 8 } },
+        y: { grid: { color: isDark ? CHART_COLORS.grid.dark : CHART_COLORS.grid.light }, ticks: { color: isDark ? CHART_COLORS.tick.dark : CHART_COLORS.tick.light, precision: 0 } }
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [theme, ts, hasRevenue])
+  }, [theme, ts])
 
   // ─── Snippet ───────────────────────────────────────────────────────────────
   const trackerFile = site?.cookieless_mode ? 'tracker.cookieless.min.js' : 'tracker.min.js'
@@ -432,206 +389,65 @@ export default function Analytics() {
 
       ) : (
         <>
-          {/* ─── KPIs Strip ────────────────────────────────────────────────── */}
-          <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-gray-100 dark:divide-dark-border overflow-hidden shadow-sm mb-4">
-            {/* Revenue Hero KPI (only if revenue > 0) */}
-            {hasRevenue && (
-              <div className="flex-1 p-4 flex flex-col justify-between min-w-[150px] transition-transform duration-200 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:transform-none">
-                <div>
-                  <p className="text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">Revenue</p>
-                  <p className="text-2xl sm:text-3xl font-bold text-st-black dark:text-dark-primary tabular-nums tracking-tight">
-                    {formattedRevenue}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5 flex-wrap mt-2">
-                  {delta(kpis.revenue, priorKpis.revenue) && (
-                    <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px] font-semibold leading-none shadow-sm ${
-                      delta(kpis.revenue, priorKpis.revenue).arrow === '▲'
-                        ? 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 border border-green-100 dark:border-green-900/30'
-                        : 'bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400 border border-red-100 dark:border-red-900/20'
-                    }`}>
-                      {delta(kpis.revenue, priorKpis.revenue).arrow} {delta(kpis.revenue, priorKpis.revenue).pct}%
-                    </span>
-                  )}
-                  <span className="text-[10px] text-st-gray dark:text-gray-400 font-medium">vs prior</span>
-                </div>
-              </div>
-            )}
-
-            {/* Visitors KPI */}
-            <div className="flex-1 p-4 flex flex-col justify-between min-w-[120px] transition-transform duration-200 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:transform-none">
-              <div>
-                <p className="text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">Visitors</p>
-                <p className="text-xl font-bold text-st-black dark:text-dark-primary tabular-nums tracking-tight">
-                  {animUniqueVisitors != null ? Math.round(animUniqueVisitors).toLocaleString() : '—'}
-                </p>
-              </div>
-              <div className="flex items-center gap-1.5 flex-wrap mt-2">
-                {delta(kpis.unique_visitors, priorKpis.unique_visitors) && (
-                  <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px] font-semibold leading-none shadow-sm ${
-                    delta(kpis.unique_visitors, priorKpis.unique_visitors).arrow === '▲'
-                      ? 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 border border-green-100 dark:border-green-900/30'
-                      : 'bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400 border border-red-100 dark:border-red-900/20'
-                  }`}>
-                    {delta(kpis.unique_visitors, priorKpis.unique_visitors).arrow} {delta(kpis.unique_visitors, priorKpis.unique_visitors).pct}%
-                  </span>
-                )}
-                <span className="text-[10px] text-st-gray dark:text-gray-400 font-medium">vs prior</span>
-              </div>
-            </div>
-
-            {/* Conversions KPI */}
-            <div className="flex-1 p-4 flex flex-col justify-between min-w-[120px] transition-transform duration-200 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:transform-none">
-              <div>
-                <p className="text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">Conversions</p>
-                <p className="text-xl font-bold text-st-black dark:text-dark-primary tabular-nums tracking-tight">
-                  {animConversions != null && animConversions > 0 ? Math.round(animConversions).toLocaleString() : '—'}
-                </p>
-              </div>
-              <div className="flex items-center gap-1.5 flex-wrap mt-2">
-                {convCount > 0 && delta(kpis.conversion_count, priorKpis.conversion_count) ? (
-                  <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px] font-semibold leading-none shadow-sm ${
-                    delta(kpis.conversion_count, priorKpis.conversion_count).arrow === '▲'
-                      ? 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 border border-green-100 dark:border-green-900/30'
-                      : 'bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400 border border-red-100 dark:border-red-900/20'
-                  }`}>
-                    {delta(kpis.conversion_count, priorKpis.conversion_count).arrow} {delta(kpis.conversion_count, priorKpis.conversion_count).pct}%
-                  </span>
-                ) : (
-                  <p className="text-[10px] text-st-gray dark:text-gray-400 font-medium truncate">No conversion events yet</p>
-                )}
-              </div>
-            </div>
-
-            {/* Conv Rate KPI */}
-            <div className="flex-1 p-4 flex flex-col justify-between min-w-[120px] transition-transform duration-200 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:transform-none">
-              <div>
-                <p className="text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">Conv Rate</p>
-                <p className="text-xl font-bold text-st-black dark:text-dark-primary tabular-nums tracking-tight">
-                  {animConvRate != null && animConvRate > 0 ? `${animConvRate.toFixed(2)}%` : '—'}
-                </p>
-              </div>
-              <div className="flex items-center gap-1.5 flex-wrap mt-2">
-                {convRate > 0 && delta(kpis.conversion_rate, priorKpis.conversion_rate) ? (
-                  <span className={`inline-flex items-center gap-0.5 px-1 py-0.5 rounded text-[10px] font-semibold leading-none shadow-sm ${
-                    delta(kpis.conversion_rate, priorKpis.conversion_rate).arrow === '▲'
-                      ? 'bg-green-50 text-green-700 dark:bg-green-950/20 dark:text-green-400 border border-green-100 dark:border-green-900/30'
-                      : 'bg-red-50 text-red-700 dark:bg-red-950/20 dark:text-red-400 border border-red-100 dark:border-red-900/20'
-                  }`}>
-                    {delta(kpis.conversion_rate, priorKpis.conversion_rate).arrow} {delta(kpis.conversion_rate, priorKpis.conversion_rate).pct}%
-                  </span>
-                ) : (
-                  <p className="text-[10px] text-st-gray dark:text-gray-400 font-medium truncate">Send events to track</p>
-                )}
-              </div>
-            </div>
-
-            {/* Revenue per Visitor KPI (only if revenue > 0) */}
-            {hasRevenue && (
-              <div className="flex-1 p-4 flex flex-col justify-between min-w-[120px] transition-transform duration-200 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:transform-none">
-                <div>
-                  <p className="text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">Rev/visitor</p>
-                  <p className="text-xl font-bold text-st-black dark:text-dark-primary tabular-nums tracking-tight">
-                    {formattedRevenuePerVisitor}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1.5 flex-wrap mt-2">
-                  <span className="text-[10px] text-st-gray dark:text-gray-400 font-medium">calculated</span>
-                </div>
-              </div>
-            )}
-
-            {/* Online Now KPI */}
-            <div className="flex-1 p-4 flex flex-col justify-between min-w-[120px] transition-transform duration-200 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:transform-none">
-              <div>
-                <p className="text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wider mb-1">Online now</p>
-                <p className="text-xl font-bold text-st-black dark:text-dark-primary tabular-nums tracking-tight">
-                  {liveCount.toLocaleString()}
-                </p>
-              </div>
-              <div className="flex items-center gap-1.5 flex-wrap mt-2">
-                <p className="text-[10px] text-st-gray dark:text-gray-400 font-medium truncate">refreshed every 30s</p>
-              </div>
-            </div>
+          {/* ─── KPIs ────────────────────────────────────────────────────── */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            <MetricTile
+              label="Visitors"
+              value={safeNumber(kpis.unique_visitors, 0).toLocaleString()}
+              delta={delta(kpis.unique_visitors, priorKpis.unique_visitors)}
+              compact
+            />
+            <MetricTile
+              label="Pageviews"
+              value={safeNumber(kpis.pageviews, 0).toLocaleString()}
+              delta={delta(kpis.pageviews, priorKpis.pageviews)}
+              compact
+            />
+            <MetricTile
+              label="Online now"
+              value={liveCount.toLocaleString()}
+              sub="refreshed every 30s"
+              compact
+            />
+            <MetricTile
+              label="Conversions"
+              value={convCount > 0 ? convCount.toLocaleString() : '—'}
+              sub={convCount === 0 ? 'No conversion events yet' : null}
+              delta={convCount > 0 ? delta(kpis.conversion_count, priorKpis.conversion_count) : null}
+              compact
+            />
+            <MetricTile
+              label="Conv Rate"
+              value={convRate > 0 ? `${convRate.toFixed(2)}%` : '—'}
+              sub={convRate === 0 ? 'Send conversion events to track' : null}
+              delta={convRate > 0 ? delta(kpis.conversion_rate, priorKpis.conversion_rate) : null}
+              compact
+            />
+            <MetricTile
+              label="Avg Duration"
+              value={fmtDuration(kpis.avg_duration_seconds)}
+              sub={kpis.avg_duration_seconds == null ? 'Not available' : null}
+              delta={kpis.avg_duration_seconds == null ? null : delta(kpis.avg_duration_seconds, priorKpis.avg_duration_seconds)}
+              compact
+            />
           </div>
 
-          {/* ─── Mixed Dual-Axis Chart ────────────────────────────────────── */}
-          <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-4 shadow-sm mb-4">
-            <p className="text-[11px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wide mb-3">Traffic & Revenue over time</p>
-            <div style={{ height: 220 }}>
+          {/* ─── Visitors chart ─────────────────────────────────────────── */}
+          <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-4 shadow-sm">
+            <p className="text-[11px] font-semibold text-st-gray dark:text-gray-400 uppercase tracking-wide mb-3">Visitors over time</p>
+            <div style={{ height: 200 }}>
               {ts.labels && ts.labels.length > 0 ? (
-                <Chart type="line" data={chartData} options={chartOptions} />
+                <Line data={chartData} options={chartOptions} />
               ) : (
                 <p className="text-xs text-st-gray dark:text-gray-400 text-center py-12">No time-series data yet</p>
               )}
             </div>
           </div>
 
-          {/* ─── Contextual Handoff Strip ─────────────────────────────────── */}
-          {hasRevenue && (
-            <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl p-3 flex items-center justify-between text-xs text-st-gray dark:text-gray-400 mb-4 shadow-sm">
-              <span>
-                <strong className="text-st-black dark:text-dark-primary font-semibold">${Math.round(kpis.revenue).toLocaleString()}</strong> came from{' '}
-                <strong className="text-st-black dark:text-dark-primary font-semibold">{kpis.conversion_count}</strong> conversions — which touchpoint earned it?
-              </span>
-              <div className="flex items-center gap-3">
-                <a href="/attribution" className="font-semibold text-st-black dark:text-dark-primary hover:underline flex items-center gap-1">
-                  Attribution →
-                </a>
-                <a href={`/leads?site_key=${site.site_key}`} className="font-semibold text-st-black dark:text-dark-primary hover:underline flex items-center gap-1">
-                  {kpis.conversion_count} leads →
-                </a>
-              </div>
-            </div>
-          )}
-
-          {/* ─── Redesigned 2x2 Panels Grid ───────────────────────────────── */}
+          {/* ─── Pages + Sources ─────────────────────────────────────────── */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Card 1: Sources */}
-            <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 motion-reduce:transition-none flex flex-col h-full">
-              <div className="px-4 py-3 border-b border-gray-100 dark:border-dark-border flex items-center justify-between flex-wrap gap-2">
-                <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">Sources</h3>
-                <div className="flex gap-1">
-                  {[
-                    { key: 'referrer',  label: 'Referrer' },
-                    { key: 'channel',   label: 'Channel' },
-                    { key: 'ai_source', label: 'AI' },
-                  ].map(tab => (
-                    <button key={tab.key}
-                      onClick={() => { setSourceTab(tab.key); setSearchParams({ tab: tab.key }) }}
-                      className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors duration-150 motion-reduce:transition-none ${
-                        sourceTab === tab.key ? 'bg-st-lime text-st-black' : 'text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text'
-                      }`}>
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="flex-1">
-                <SourceTabList
-                  rows={sourcesRows}
-                  tab={sourceTab}
-                  toggleFilter={toggleFilter}
-                  isActive={isActive}
-                />
-              </div>
-            </div>
-
-            {/* Card 2: Locations (Country only, No Tabs) */}
-            <ListSectionRedesign
-              title="Locations"
-              rows={topCountries}
-              getLabel={r => r.country || 'Unknown'}
-              getCount={r => r.visits}
-              getIcon={r => countryFlagIcon(r.country)}
-              onRowClick={r => toggleFilter('Country', r.country)}
-              isRowActive={r => isActive('Country', r.country)}
-              emptyText="No country data yet"
-            />
-
-            {/* Card 3: Pages (Page list only, No Tabs) */}
-            <ListSectionRedesign
-              title="Pages"
+            <ListSection
+              title="Top Pages"
               rows={topPages}
               getLabel={r => stripOrigin(r.page)}
               getCount={r => r.views}
@@ -640,239 +456,174 @@ export default function Analytics() {
               emptyText="No page data yet"
             />
 
-            {/* Card 4: Devices */}
-            <ListSectionRedesign
+            {/* Sources — referrers, medium, AI */}
+            <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm">
+              <div className="px-4 py-3 border-b border-gray-100 dark:border-dark-border flex items-center justify-between flex-wrap gap-2">
+                <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">Sources</h3>
+                <div className="flex gap-1">
+                  {[
+                    { key: 'referrer',  label: 'Referrers' },
+                    { key: 'medium',    label: 'Medium' },
+                    { key: 'ai_source', label: 'AI' },
+                  ].map(tab => (
+                    <button key={tab.key}
+                      onClick={() => { setSourceTab(tab.key); setSearchParams({ tab: tab.key }) }}
+                      className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${
+                        sourceTab === tab.key ? 'bg-st-lime text-st-black font-semibold' : 'text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text'
+                      }`}>
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <SourceTabList
+                rows={sourcesRows}
+                tab={sourceTab}
+                toggleFilter={toggleFilter}
+                isActive={isActive}
+              />
+            </div>
+          </div>
+
+          {/* ─── Countries + Devices ─────────────────────────────────────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <ListSection
+              title="Top Countries"
+              unit="pageviews"
+              rows={topCountries}
+              getLabel={r => r.country || 'Unknown'}
+              getCount={r => r.visits}
+              onRowClick={r => toggleFilter('Country', r.country)}
+              isRowActive={r => isActive('Country', r.country)}
+              emptyText="No country data yet"
+            />
+            <ListSection
               title="Devices"
-              rows={deviceRowsToRender}
-              getLabel={getDeviceLabel}
-              getCount={getDeviceCount}
-              getIcon={getDeviceIcon}
-              onRowClick={handleDeviceClick}
-              isRowActive={getDeviceActive}
-              emptyText={`No ${deviceTab} data yet`}
-              tabs={[
-                { key: 'browser', label: 'Browser' },
-                { key: 'os',      label: 'OS' },
-                { key: 'device',  label: 'Device' }
-              ]}
-              activeTab={deviceTab}
-              onTabChange={setDeviceTab}
+              unit="pageviews"
+              rows={Object.entries(devices).sort((a,b) => safeNumber(b[1],0) - safeNumber(a[1],0)).map(([k,v]) => ({ device: k, count: v }))}
+              getLabel={r => r.device.charAt(0).toUpperCase() + r.device.slice(1)}
+              getCount={r => r.count}
+              onRowClick={r => toggleFilter('Device', r.device)}
+              isRowActive={r => isActive('Device', r.device)}
+              emptyText="No device data yet"
             />
           </div>
 
-          {/* Helper container function for redesigned panels */}
-          {(() => {
-            // Define country flag helper locally to keep component pure
-            function countryFlagIcon(code) {
-              if (!code || code === 'Unknown') return null
-              return (
-                <img
-                  src={`https://flagcdn.com/16x12/${code.toLowerCase()}.png`}
-                  alt={code}
-                  className="w-3.5 h-2.5 object-cover rounded-sm flex-shrink-0"
-                  onError={(e) => e.target.style.display = 'none'}
-                />
-              )
-            }
+          {/* ─── Browsers + OS ───────────────────────────────────────────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <ListSection
+              title="Browsers"
+              unit="visitors"
+              rows={browsers}
+              getLabel={r => r.browser}
+              getCount={r => r.visitors}
+              onRowClick={r => toggleFilter('Browser', r.browser)}
+              isRowActive={r => isActive('Browser', r.browser)}
+              emptyText="No browser data yet"
+            />
+            <ListSection
+              title="Operating Systems"
+              unit="visitors"
+              rows={osList}
+              getLabel={r => r.os}
+              getCount={r => r.visitors}
+              onRowClick={r => toggleFilter('OS', r.os)}
+              isRowActive={r => isActive('OS', r.os)}
+              emptyText="No OS data yet"
+            />
+          </div>
 
-            // Define device logic variables
-            const devicesRows = Object.entries(devices).sort((a,b) => safeNumber(b[1],0) - safeNumber(a[1],0)).map(([k,v]) => ({ device: k, count: v }))
-            const deviceRowsToRender = deviceTab === 'browser' ? browsers : deviceTab === 'os' ? osList : devicesRows
+          {/* ─── Entry / Exit ─────────────────────────────────────────────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <ListSection
+              title="Entry Pages"
+              rows={entryPages}
+              getLabel={r => stripOrigin(r.page)}
+              getCount={r => r.count}
+              onRowClick={r => toggleFilter('Entry', stripOrigin(r.page))}
+              isRowActive={r => isActive('Entry', stripOrigin(r.page))}
+              emptyText="No entry data yet"
+            />
+            <ListSection
+              title="Exit Pages"
+              rows={exitPages}
+              getLabel={r => stripOrigin(r.page)}
+              getCount={r => r.count}
+              onRowClick={r => toggleFilter('Exit', stripOrigin(r.page))}
+              isRowActive={r => isActive('Exit', stripOrigin(r.page))}
+              emptyText="No exit data yet"
+            />
+          </div>
 
-            function getDeviceLabel(r) {
-              if (deviceTab === 'browser') return r.browser
-              if (deviceTab === 'os') return r.os
-              return r.device.charAt(0).toUpperCase() + r.device.slice(1)
-            }
-            function getDeviceCount(r) {
-              if (deviceTab === 'browser') return r.visitors
-              if (deviceTab === 'os') return r.visitors
-              return r.count
-            }
-            function getDeviceIcon(r) {
-              if (deviceTab === 'browser') {
-                const name = (r.browser || '').toLowerCase()
-                if (name.includes('chrome')) return <SourceIcon source="chrome" className="w-3.5 h-3.5" />
-                if (name.includes('firefox')) return <SourceIcon source="firefox" className="w-3.5 h-3.5" />
-                if (name.includes('safari')) return <SourceIcon source="safari" className="w-3.5 h-3.5" />
-                if (name.includes('edge')) return <SourceIcon source="edge" className="w-3.5 h-3.5" />
-                return <Globe className="w-3.5 h-3.5 text-gray-400" />
-              }
-              return null
-            }
-            function getDeviceActive(r) {
-              if (deviceTab === 'browser') return isActive('Browser', r.browser)
-              if (deviceTab === 'os') return isActive('OS', r.os)
-              return isActive('Device', r.device)
-            }
-            function handleDeviceClick(r) {
-              if (deviceTab === 'browser') toggleFilter('Browser', r.browser)
-              else if (deviceTab === 'os') toggleFilter('OS', r.os)
-              else toggleFilter('Device', r.device)
-            }
-
-            // Return custom render block to inject the redesign ListSection helper
-            window.__ListSectionRedesign = function ListSectionRedesign({ title, rows, getLabel, getCount, getIcon, onRowClick, isRowActive, emptyText, tabs, activeTab, onTabChange }) {
-              const [showAll, setShowAll] = useState(false)
-              const visible = showAll ? rows : rows.slice(0, 8)
-              const max = useMemo(() => Math.max(1, ...rows.map(r => safeNumber(getCount(r), 0))), [rows, getCount])
-
-              return (
-                <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 motion-reduce:transition-none flex flex-col h-full">
-                  <div className="px-4 py-3 border-b border-gray-100 dark:border-dark-border flex items-center justify-between flex-wrap gap-2">
-                    <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">{title}</h3>
-                    {tabs && (
-                      <div className="flex gap-1">
-                        {tabs.map(tab => (
-                          <button
-                            key={tab.key}
-                            onClick={() => onTabChange(tab.key)}
-                            className={`px-2.5 py-1 rounded text-[11px] font-semibold transition-colors duration-150 motion-reduce:transition-none ${
-                              activeTab === tab.key
-                                ? 'bg-st-lime text-st-black'
-                                : 'text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text'
-                            }`}
-                          >
-                            {tab.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    {rows.length === 0 ? (
-                      <p className="text-xs text-st-gray dark:text-gray-400 py-10 text-center">{emptyText}</p>
-                    ) : (
-                      <div className="flex flex-col">
-                        {visible.map((r, i) => (
-                          <DataRow
-                            key={i}
-                            label={getLabel(r)}
-                            count={getCount(r)}
-                            max={max}
-                            icon={getIcon ? getIcon(r) : null}
-                            onClick={onRowClick ? () => onRowClick(r) : null}
-                            active={isRowActive ? isRowActive(r) : false}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {rows.length > 8 && (
-                    <button
-                      onClick={() => setShowAll(s => !s)}
-                      className="w-full py-2 text-xs text-st-gray dark:text-gray-400 hover:text-st-black dark:hover:text-dark-text border-t border-gray-100 dark:border-dark-border transition-colors duration-150 motion-reduce:transition-none"
-                    >
-                      {showAll ? '↑ Show less' : `↓ Show all ${rows.length}`}
-                    </button>
-                  )}
-                </div>
-              )
-            }
-            return null
-          })()}
-
-          {/* Render ListSectionRedesign wrapper */}
-          {(() => {
-            const countryFlagIcon = (code) => {
-              if (!code || code === 'Unknown') return null
-              return (
-                <img
-                  src={`https://flagcdn.com/16x12/${code.toLowerCase()}.png`}
-                  alt={code}
-                  className="w-3.5 h-2.5 object-cover rounded-sm flex-shrink-0"
-                  onError={(e) => e.target.style.display = 'none'}
-                />
-              )
-            }
-            const devicesRows = Object.entries(devices).sort((a,b) => safeNumber(b[1],0) - safeNumber(a[1],0)).map(([k,v]) => ({ device: k, count: v }))
-            const deviceRowsToRender = deviceTab === 'browser' ? browsers : deviceTab === 'os' ? osList : devicesRows
-
-            const getDeviceLabel = (r) => {
-              if (deviceTab === 'browser') return r.browser
-              if (deviceTab === 'os') return r.os
-              return r.device.charAt(0).toUpperCase() + r.device.slice(1)
-            }
-            const getDeviceCount = (r) => {
-              if (deviceTab === 'browser') return r.visitors
-              if (deviceTab === 'os') return r.visitors
-              return r.count
-            }
-            const getDeviceIcon = (r) => {
-              if (deviceTab === 'browser') {
-                const name = (r.browser || '').toLowerCase()
-                if (name.includes('chrome')) return <SourceIcon source="chrome" className="w-3.5 h-3.5" />
-                if (name.includes('firefox')) return <SourceIcon source="firefox" className="w-3.5 h-3.5" />
-                if (name.includes('safari')) return <SourceIcon source="safari" className="w-3.5 h-3.5" />
-                if (name.includes('edge')) return <SourceIcon source="edge" className="w-3.5 h-3.5" />
-                return <Globe className="w-3.5 h-3.5 text-gray-400" />
-              }
-              return null
-            }
-            const getDeviceActive = (r) => {
-              if (deviceTab === 'browser') return isActive('Browser', r.browser)
-              if (deviceTab === 'os') return isActive('OS', r.os)
-              return isActive('Device', r.device)
-            }
-            const handleDeviceClick = (r) => {
-              if (deviceTab === 'browser') toggleFilter('Browser', r.browser)
-              else if (deviceTab === 'os') toggleFilter('OS', r.os)
-              else toggleFilter('Device', r.device)
-            }
-
-            const L = window.__ListSectionRedesign
-            if (!L) return null
-
-            return (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* Pages Card */}
-                <L
-                  title="Pages"
-                  rows={topPages}
-                  getLabel={r => stripOrigin(r.page)}
-                  getCount={r => r.views}
-                  onRowClick={r => toggleFilter('Page', stripOrigin(r.page))}
-                  isRowActive={r => isActive('Page', stripOrigin(r.page))}
-                  emptyText="No page data yet"
-                />
-
-                {/* Locations Card */}
-                <L
-                  title="Locations"
-                  rows={topCountries}
-                  getLabel={r => r.country || 'Unknown'}
-                  getCount={r => r.visits}
-                  getIcon={countryFlagIcon}
-                  onRowClick={r => toggleFilter('Country', r.country)}
-                  isRowActive={r => isActive('Country', r.country)}
-                  emptyText="No country data yet"
-                />
-
-                {/* Devices Card */}
-                <L
-                  title="Devices"
-                  rows={deviceRowsToRender}
-                  getLabel={getDeviceLabel}
-                  getCount={getDeviceCount}
-                  getIcon={getDeviceIcon}
-                  onRowClick={handleDeviceClick}
-                  isRowActive={getDeviceActive}
-                  emptyText={`No ${deviceTab} data yet`}
-                  tabs={[
-                    { key: 'browser', label: 'Browser' },
-                    { key: 'os',      label: 'OS' },
-                    { key: 'device',  label: 'Device' }
-                  ]}
-                  activeTab={deviceTab}
-                  onTabChange={setDeviceTab}
-                />
+          {/* ─── AI Traffic (conditional) ─────────────────────────────────── */}
+          {aiSources.length > 0 && (
+            <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm">
+              <div className="px-4 py-3 border-b border-gray-100 dark:border-dark-border flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">AI Traffic</h3>
+                <span className="text-[10px] text-st-gray dark:text-gray-400">
+                  {Math.round(aiSources.reduce((s,r) => s + safeNumber(r.visits,0), 0) / Math.max(1, safeNumber(kpis.unique_visitors, 1)) * 100)}% of all visitors
+                </span>
               </div>
-            )
-          })()}
+              {(() => {
+                const max = Math.max(1, ...aiSources.map(r => safeNumber(r.visits, 0)))
+                return aiSources.map((r, i) => (
+                  <DataRow
+                    key={i}
+                    label={normalizeSource(r.source).name}
+                    count={r.visits}
+                    max={max}
+                    icon={<SourceIcon source={r.source} className="w-3.5 h-3.5" />}
+                    onClick={() => toggleFilter('AI Source', r.source)}
+                    active={isActive('AI Source', r.source)}
+                  />
+                ))
+              })()}
+            </div>
+          )}
+
+          {/* ─── SEO Traffic — Search Console (conditional, traffic-only) ──── */}
+          {seoConnected && (
+            <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl overflow-hidden shadow-sm">
+              <div className="px-4 py-3 border-b border-gray-100 dark:border-dark-border flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-st-black dark:text-dark-primary">SEO Traffic</h3>
+                <span className="text-[10px] text-st-gray dark:text-gray-400 flex-shrink-0">
+                  {safeNumber(seoTraffic?.summary?.gsc_clicks, 0).toLocaleString()} Search Console clicks
+                </span>
+              </div>
+              {seoQueries.length === 0 ? (
+                <p className="text-xs text-st-gray dark:text-gray-400 py-10 text-center">No Search Console queries in this period</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-gray-100 dark:border-dark-border text-st-gray dark:text-gray-400 text-[10px] uppercase tracking-wide">
+                        <th className="py-2 px-4 font-medium">Query</th>
+                        <th className="py-2 px-3 font-medium text-right">Clicks</th>
+                        <th className="py-2 px-3 font-medium text-right">Impressions</th>
+                        <th className="py-2 px-3 font-medium text-right">CTR</th>
+                        <th className="py-2 px-4 font-medium text-right">Avg Pos</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {seoQueries.slice(0, 10).map((q, i) => (
+                        <tr key={i} className="border-b border-gray-100 dark:border-dark-border last:border-0 text-xs">
+                          <td className="py-2.5 px-4 font-mono text-st-black dark:text-dark-primary max-w-[240px] truncate" title={q.query}>{q.query}</td>
+                          <td className="py-2.5 px-3 text-right tabular-nums text-st-black dark:text-dark-primary">{safeNumber(q.clicks, 0).toLocaleString()}</td>
+                          <td className="py-2.5 px-3 text-right tabular-nums text-st-gray dark:text-gray-400">{safeNumber(q.impressions, 0).toLocaleString()}</td>
+                          <td className="py-2.5 px-3 text-right tabular-nums text-st-gray dark:text-gray-400">{(safeNumber(q.ctr, 0) * 100).toFixed(1)}%</td>
+                          <td className="py-2.5 px-4 text-right tabular-nums text-st-gray dark:text-gray-400">{safeNumber(q.position, 0).toFixed(1)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ─── Conversions notice ───────────────────────────────────────── */}
           {convCount === 0 && (
-            <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl px-4 py-4 flex items-start gap-3 shadow-sm mt-4">
+            <div className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-xl px-4 py-4 flex items-start gap-3 shadow-sm">
               <span className="w-1.5 h-1.5 mt-1.5 rounded-full bg-st-gray dark:bg-gray-400 flex-shrink-0" />
               <div>
                 <p className="text-sm font-medium text-st-black dark:text-dark-primary">No conversions in this period</p>
@@ -893,7 +644,6 @@ function SourceTabList({ rows, tab, toggleFilter, isActive }) {
   const [showAll, setShowAll] = useState(false)
   const visible = showAll ? rows : rows.slice(0, 8)
   const max = useMemo(() => Math.max(1, ...(rows || []).map(r => safeNumber(r.visitors, 0))), [rows])
-  const maxRevenue = useMemo(() => Math.max(1, ...(rows || []).map(r => safeNumber(r.revenue, 0))), [rows])
 
   if (!rows || rows.length === 0) {
     if (tab === 'ai_source') {
@@ -917,18 +667,14 @@ function SourceTabList({ rows, tab, toggleFilter, isActive }) {
           label={normalizeSource(r.name || '').name}
           count={r.visitors}
           max={max}
-          revenue={r.revenue}
-          maxRevenue={maxRevenue}
           icon={<SourceIcon source={r.name || ''} className="w-3.5 h-3.5" />}
           onClick={() => {
             if (tab === 'referrer')  toggleFilter('Source', r.name)
             if (tab === 'ai_source') toggleFilter('AI Source', r.name)
-            if (tab === 'channel')   toggleFilter('Channel', r.name)
           }}
           active={
             tab === 'referrer'  ? isActive('Source', r.name) :
-            tab === 'ai_source' ? isActive('AI Source', r.name) :
-            tab === 'channel'   ? isActive('Channel', r.name) : false
+            tab === 'ai_source' ? isActive('AI Source', r.name) : false
           }
         />
       ))}
