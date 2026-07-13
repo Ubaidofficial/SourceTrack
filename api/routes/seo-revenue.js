@@ -2,12 +2,40 @@ import express from 'express'
 import crypto from 'crypto'
 import { getSupabase } from '../lib/supabase.js'
 import { queryHogQL } from '../lib/posthog.js'
+import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { normalizePath } from '../lib/url-normalization.js'
 import { esc } from '../lib/utils.js'
 import { requireFeature } from '../lib/plan-features.js'
 import { ORGANIC_SEARCH_ENGINE_HOSTS, ORGANIC_SEARCH_SOURCES } from '../lib/channel-classifier.js'
 
 const router = express.Router()
+
+// ── Test seam ────────────────────────────────────────────────────────────────
+// Mirrors the merged live.js/hygiene.js pattern (no ESM module mocker): unit
+// tests inject stubs for the two read backends; production uses the real imports.
+let _queryTinybirdPipe = queryTinybirdPipe
+let _queryHogQL = queryHogQL
+export function __setSeoRevenueReadDeps ({ queryTinybird, queryHog } = {}) {
+  if (queryTinybird) _queryTinybirdPipe = queryTinybird
+  if (queryHog) _queryHogQL = queryHog
+}
+export function __resetSeoRevenueReadDeps () {
+  _queryTinybirdPipe = queryTinybirdPipe
+  _queryHogQL = queryHogQL
+}
+
+// Tinybird-first read helper: null (flag off / error) -> HogQL fallback; rows
+// remapped to the HogQL positional shape so downstream is byte-identical.
+// Fail-closed under the test-only TINYBIRD_FORCE_READ. Tenant isolation: pipes
+// called with the authenticated site_id, never client-supplied.
+async function readTb (pipeName, params, hogSql, hogName, mapRows) {
+  const tb = await _queryTinybirdPipe(pipeName, params)
+  if (tb !== null) return mapRows(tb)
+  if (process.env.TINYBIRD_FORCE_READ === 'true') {
+    throw new Error(`[tinybird-force-read] ${pipeName} returned null under TINYBIRD_FORCE_READ — dispatch path not exercised`)
+  }
+  return _queryHogQL(hogSql, hogName)
+}
 
 // Helper: hashed site identifier for privacy-hardened logging (mirrors the
 // getLogHash used in google-search-console.js / ad-platforms.js).
@@ -125,6 +153,19 @@ router.get('/', async (req, res) => {
         GROUP BY distinct_id
       `
 
+      // Tinybird-first dispatch. Pipe params mirror the HogQL bounds exactly
+      // (from/to inclusive-day window). The pipe returns named rows
+      // {distinct_id, landing_page}; remap to the HogQL positional [distinct_id,
+      // page_url] shape so the row-walk below is byte-identical. `sql` (unchanged)
+      // stays the flag-off HogQL fallback.
+      const params = {
+        site_id: siteId,
+        visitor_ids: cappedVisitorIds,
+        from_ts: `${from} 00:00:00`,
+        to_ts: `${to} 23:59:59`
+      }
+      const mapRows = (rows) => rows.map(r => [r.distinct_id, r.landing_page])
+
       // 10-second timeout Promise
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('HogQL query timed out')), 10000)
@@ -132,7 +173,7 @@ router.get('/', async (req, res) => {
 
       try {
         const phRows = await Promise.race([
-          queryHogQL(sql, 'seo-revenue-landing-pages'),
+          readTb('seo_revenue_landing_pages', params, sql, 'seo-revenue-landing-pages', mapRows),
           timeoutPromise
         ])
 
@@ -144,6 +185,14 @@ router.get('/', async (req, res) => {
           }
         }
       } catch (phErr) {
+        // Fail-closed: under the test-only TINYBIRD_FORCE_READ, a dispatch failure
+        // must NOT be swallowed into a degraded 200 — propagate so the route 500s
+        // (the sessions/alerts fail-closed contract). This inner catch is unique to
+        // seo-revenue (graceful landing-lookup degradation); without this guard it
+        // would silently absorb the FORCE_READ signal. Flag off (production): a
+        // landing-lookup timeout/error still degrades to the 'unknown' bucket exactly
+        // as before.
+        if (process.env.TINYBIRD_FORCE_READ === 'true') throw phErr
         landingLookupFailed = true
         console.error('[SEO Revenue] PostHog landing page query failed or timed out:', phErr.message)
       }
