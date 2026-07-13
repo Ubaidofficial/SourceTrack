@@ -381,3 +381,24 @@ test('(g) the dead-store PostHog-person delete is removed from gdpr.js', () => {
   assert.doesNotMatch(src, /deletePostHogPerson/, 'no reference to the removed PostHog-person delete')
   assert.doesNotMatch(src, /POSTHOG_PERSONAL_API_KEY/, 'no PostHog person REST call remains')
 })
+
+// ── (h) multi-member workspace: sites are NOT deleted -> event data is NOT erased ──
+// The ONLY test that exercises shouldDeleteSites=false. _eraseSite is correctly nested
+// inside that guard; this test FAILS if it is ever hoisted out — which would wipe the
+// event data of a shared workspace whose OTHER members still use it.
+test('🔴 (h) /account multi-member (not sole admin): NO site delete, ZERO eraseSite calls, no erasure_log, no event-erasure claim', async (t) => {
+  t.after(() => { restoreSupabase(); __resetGdprEraseDeps() })
+  const { seq, erasureInserts } = installSupabase({
+    memberRow: { company_id: 'co1', role: 'member' },              // caller is a plain member…
+    members: [{ user_id: 'u1', role: 'member' }, { user_id: 'u2', role: 'admin' }], // …workspace has others (len>1, an admin remains) -> no 409
+    sites: [{ id: 'shared-site-1' }]                               // the shared workspace HAS a site — which a hoisted _eraseSite WOULD wrongly erase
+  })
+  const calls = installEraser(seq, 'executed') // status irrelevant: must never be called
+  const res = mockRes()
+  await accountHandler({ user: { id: 'u1' } }, res)
+
+  assert.equal(calls.filter(c => c.kind === 'site').length, 0, 'eraseSite must NOT run when the shared sites are not deleted')
+  assert.ok(!seq.includes('delete:sites'), 'the shared workspace sites are NOT deleted')
+  assert.equal(erasureInserts.length, 0, 'no erasure_log row — nothing was erased')
+  assert.deepEqual(res.body.tinybird ?? [], [], 'response claims NO Tinybird/event-data erasure')
+})
