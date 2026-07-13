@@ -7,7 +7,7 @@ import { claimIdempotencyKeys, logIngestionEvent, rollbackIdempotencyKeys } from
 import { resolveWebhookAnonymousId } from '../lib/identity-links.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
 import { SUBSCRIPTION_EVENTS, mapSubscriptionEvent, buildSubscriptionIdempotencyKeys, checkoutConversionValue } from '../lib/stripe-subscription.js'
-import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
+import { writeConversionDirect } from '../../tinybird/adapter/conversion-write.js'
 
 
 
@@ -124,11 +124,13 @@ async function handleSubscriptionEvent(event, site, siteKey) {
       conversionProperties.attribution_status = attributionStatus
     }
 
-    // Wave-1 revenue cutover: Tinybird is the SOLE writer for $conversion here
-    // (ph.capture removed). Flag-gated OFF -> no-op + no network when off. Reached
-    // only after the idempotency claim succeeded (claim→rollback-on-fail), so a
-    // claim-skipped conversion never dual-writes.
-    dualWriteEvent({ distinctId, event: '$conversion', properties: conversionProperties })
+    // Wave-1 revenue cutover: Tinybird is the SOLE writer for $conversion, and this is
+    // the MONEY PATH — a DIRECT, AWAITED, RETRIED write (NOT the fire-and-forget batcher,
+    // whose enqueue resolves before the Tinybird ack: batch.js:90/94). On failure it
+    // THROWS, so the catch below rolls the idempotency claim back and returns 500 →
+    // Stripe redelivers (the recovery path). Flag-OFF → skip (no-op, no network). Reached
+    // only after the claim succeeded (claim→rollback-on-fail).
+    await writeConversionDirect({ distinctId, event: '$conversion', properties: conversionProperties })
     await logIngestionEvent(siteKey, 'stripe', { providerEventId, orderId: invoiceId || subscriptionId, value, currency, status: 'success' })
     return { status: 200, body: { received: true } }
   } catch (err) {
@@ -391,11 +393,13 @@ router.post('/:site_key', async (req, res) => {
       })
     }
 
-    // Wave-1 revenue cutover: Tinybird is the SOLE writer for $conversion here
-    // (ph.capture removed). Flag-gated OFF -> no-op + no network when off. Reached
-    // only after the idempotency claim succeeded (claim→rollback-on-fail), so a
-    // claim-skipped conversion never dual-writes.
-    dualWriteEvent({ distinctId, event: '$conversion', properties: conversionProperties })
+    // Wave-1 revenue cutover: Tinybird is the SOLE writer for $conversion, and this is
+    // the MONEY PATH — a DIRECT, AWAITED, RETRIED write (NOT the fire-and-forget batcher,
+    // whose enqueue resolves before the Tinybird ack: batch.js:90/94). On failure it
+    // THROWS, so the catch below rolls the idempotency claim back and returns 500 →
+    // Stripe redelivers (the recovery path). Flag-OFF → skip (no-op, no network). Reached
+    // only after the claim succeeded (claim→rollback-on-fail).
+    await writeConversionDirect({ distinctId, event: '$conversion', properties: conversionProperties })
 
     await logIngestionEvent(siteKey, 'stripe', {
       providerEventId,
@@ -407,14 +411,19 @@ router.post('/:site_key', async (req, res) => {
 
     return res.status(200).json({ received: true })
   } catch (phErr) {
-    console.error('[stripe-webhook] PostHog capture conversion ingestion failed:', phErr.message)
+    // Roll the idempotency claim back so Stripe's redelivery re-attempts instead of
+    // being skipped as a duplicate — the recovery path for a failed $conversion write.
+    // (Previously absent here: a failed write returned 500 with the claim still held,
+    // so redelivery hit claim.duplicate and the revenue event was lost forever.)
+    try { await rollbackIdempotencyKeys(siteKey, 'stripe', keys) } catch (_) { /* best-effort */ }
+    console.error('[stripe-webhook] $conversion ingestion failed:', phErr.message)
     await logIngestionEvent(siteKey, 'stripe', {
       providerEventId,
       orderId: orderId || paymentId,
       value,
       currency,
       status: 'error',
-      errorMessage: phErr.message || 'PostHog capture failed'
+      errorMessage: phErr.message || 'Conversion write failed'
     })
     return res.status(500).json({ error: 'Temporary processing failure' })
   }
