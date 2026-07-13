@@ -165,6 +165,23 @@ test('(overview-a) 4 pipes + bounce served -> kpis present, install/stages/pages
   assert.ok(JSON.stringify(res.body.data).includes('techrupt.pk/pricing') || JSON.stringify(res.body.data).includes('/pricing'), 'dash_top_pages positional mapRows consumed')
 })
 
+test('(overview-trend) channel_trend counts ALL conversions per date, not just leads (load-bearing)', async (t) => {
+  t.after(() => { restoreSupabase(); reset() })
+  // CONV_ROWS is a single CUSTOMER conversion (closed_won) with zero leads. The old
+  // leads-only trend dropped it, so a customer-only site charted an empty trend even
+  // though the card promises "Conversions by source over time".
+  installSupabase(CONV_ROWS)
+  __setDashboardReadDeps({
+    queryTinybird: async (pipe) => TB_BY_PIPE[pipe] ?? null,
+    queryHog: async () => { throw new Error('HogQL called — a pipe was not served') },
+  })
+  const res = mockRes()
+  await overviewHandler(req(), res)
+  assert.strictEqual(res.statusCode, 200)
+  assert.deepStrictEqual(res.body.data.channel_trend, [{ dim_value: today, conversions: 1 }],
+    'the customer conversion contributes to the conversions trend (count, not leads)')
+})
+
 test('(overview-b) FAIL-CLOSED: FORCE_READ + pipes null -> 500', async (t) => {
   t.after(() => { restoreSupabase(); reset() })
   installSupabase(CONV_ROWS)
