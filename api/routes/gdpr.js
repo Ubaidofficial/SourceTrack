@@ -14,6 +14,7 @@ import { Router } from 'express'
 import { getSupabase } from '../lib/supabase.js'
 import { getStructuralLimits } from '../lib/plan-features.js'
 import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
+import { eraseSubjectFromTinybird, eraseSiteFromTinybird } from '../../tinybird/adapter/erase.js'
 
 export const gdprRouter = Router()
 
@@ -41,37 +42,65 @@ async function getSiteForUser(supabase, userId, siteKey) {
   return data
 }
 
-// Helper: delete a PostHog person by distinct_id (best-effort)
-async function deletePostHogPerson(distinctId, posthogSiteId) {
-  if (!distinctId || !posthogSiteId) return
+// Tinybird is the SOLE event store (PostHog is a dead store — no live ph.capture in
+// api/). The old best-effort PostHog-person delete erased nothing real and made this
+// endpoint LOOK like it deleted events; it is removed. Event erasure now goes through
+// the Tinybird eraser, whose result MUST NOT be swallowed (that swallow is how the LIE
+// survived).
+
+// Test-only injection seam (production uses the real eraser).
+let _eraseSubject = eraseSubjectFromTinybird
+let _eraseSite = eraseSiteFromTinybird
+export function __setGdprEraseDeps ({ eraseSubject, eraseSite } = {}) {
+  if (eraseSubject) _eraseSubject = eraseSubject
+  if (eraseSite) _eraseSite = eraseSite
+}
+export function __resetGdprEraseDeps () { _eraseSubject = eraseSubjectFromTinybird; _eraseSite = eraseSiteFromTinybird }
+
+// Tinybird connection from env — NEVER hardcode, NEVER log a token value.
+const tinybirdEnv = () => ({
+  host: process.env.TINYBIRD_HOST,
+  adminToken: process.env.TINYBIRD_ADMIN_TOKEN,
+  readToken: process.env.TINYBIRD_READ_TOKEN
+})
+
+// { events: N, events_by_visitor: M } from the per-datasource matched counts.
+function rowCountsOf (result) {
+  const rc = {}
+  for (const d of (result?.perDatasource || [])) rc[d.datasource] = d.matched
+  return rc
+}
+
+// A real, confirmed delete happened ONLY when status === 'executed'. Every other status
+// (skipped_not_configured | skipped_no_admin_token | dry_run | failed) means the event
+// data was NOT erased — the response must not claim otherwise.
+const eraseExecuted = (status) => status === 'executed'
+
+// Persist the erase result to erasure_log (service-role write) — the POSITIVE, provable
+// signal that the attempt happened, so a failed/skipped delete is retryable rather than
+// silently swallowed. Never throws into the response path.
+async function logErasure (supabase, { subjectId, siteId, result }) {
   try {
-    const host = (process.env.POSTHOG_HOST || 'https://app.posthog.com').replace(/\/$/, '')
-    const projectId = process.env.POSTHOG_PROJECT_ID
-    const apiKey = process.env.POSTHOG_PERSONAL_API_KEY
-    if (!projectId || !apiKey) return
-
-    // First fetch person UUID by distinct_id
-    const searchRes = await fetch(
-      `${host}/api/projects/${projectId}/persons/?distinct_id=${encodeURIComponent(distinctId)}`,
-      { headers: { Authorization: `Bearer ${apiKey}` } }
-    )
-    if (!searchRes.ok) return
-    const { results } = await searchRes.json()
-    if (!results?.length) return
-
-    const personId = results[0].id
-    await fetch(
-      `${host}/api/projects/${projectId}/persons/${personId}/?delete_events=true`,
-      { method: 'DELETE', headers: { Authorization: `Bearer ${apiKey}` } }
-    )
-  } catch (_e) { /* best-effort — never block the response */ }
+    const { error } = await supabase.from('erasure_log').insert({
+      subject_id: subjectId,
+      site_id: siteId,
+      datasources: result?.datasources || [],
+      status: result?.status,
+      row_counts: rowCountsOf(result),
+      detail: { reason: result?.reason ?? null, perDatasource: result?.perDatasource ?? [] },
+      executed_at: eraseExecuted(result?.status) ? new Date().toISOString() : null
+    })
+    if (error) console.error('[GDPR] erasure_log write failed:', error.message)
+  } catch (e) {
+    console.error('[GDPR] erasure_log write threw:', e.message)
+  }
 }
 
 // ────────────────────────────────────────────────────────────────────────────
 // DELETE /api/gdpr/visitor
 // Body: { site_key, anonymous_id }
-// Erases: attributed_conversions rows for this visitor
-//         PostHog person + events for this distinct_id
+// Erases: attributed_conversions + site_identity_links (Supabase) for this visitor,
+//         AND the subject's event data from Tinybird (events + events_by_visitor).
 // ────────────────────────────────────────────────────────────────────────────
 gdprRouter.delete('/visitor', async (req, res) => {
   try {
@@ -122,12 +151,30 @@ gdprRouter.delete('/visitor', async (req, res) => {
         .in('user_id', linkedUserIds)
     }
 
-    // 2. Delete from PostHog (best-effort, don't fail the response)
-    await deletePostHogPerson(anonymous_id, site.posthog_site_id)
+    // 2. Erase the subject's EVENT data from Tinybird (the sole event store). The
+    // result is NEVER swallowed: it drives an erasure_log audit row AND an honest
+    // response. eraseSubjectFromTinybird never throws — it returns a status enum.
+    const { host, adminToken, readToken } = tinybirdEnv()
+    const erase = await _eraseSubject({ host, adminToken, readToken, siteId: site.id, subjectId: anonymous_id, confirm: true })
+    await logErasure(supabase, { subjectId: anonymous_id, siteId: site.id, result: erase })
 
-    return res.json({
-      success: true,
-      message: `Visitor data for anonymous_id "${anonymous_id}" has been erased.`
+    if (eraseExecuted(erase.status)) {
+      return res.json({
+        success: true,
+        message: `Visitor data for anonymous_id "${anonymous_id}" has been erased.`,
+        tinybird_status: erase.status,
+        row_counts: rowCountsOf(erase)
+      })
+    }
+    // Tinybird did NOT erase the event data — DO NOT claim erasure. Honest partial:
+    // Supabase records were deleted; the event data was not. Logged for retry.
+    return res.status(200).json({
+      success: false,
+      partial: true,
+      message: `Supabase records for anonymous_id "${anonymous_id}" were deleted, but event data in Tinybird was NOT erased (status: ${erase.status}). This has been recorded for retry.`,
+      erased: { supabase: true, tinybird_events: false },
+      tinybird_status: erase.status,
+      detail: erase.reason ?? null
     })
   } catch (err) {
     console.error('[GDPR] visitor delete error:', err)
@@ -157,6 +204,7 @@ gdprRouter.delete('/account', async (req, res) => {
 
     let shouldDeleteSites = true
     let isSoleMember = true
+    const accountErase = [] // per-site Tinybird erase outcomes → drives the honest response
 
     if (memberRow?.company_id) {
       // Look up all members in the company
@@ -186,7 +234,7 @@ gdprRouter.delete('/account', async (req, res) => {
     }
 
     if (shouldDeleteSites) {
-      const sitesQuery = supabase.from('sites').select('id, posthog_site_id')
+      const sitesQuery = supabase.from('sites').select('id')
       if (memberRow?.company_id) sitesQuery.eq('company_id', memberRow.company_id)
       else sitesQuery.eq('owner_id', userId)
 
@@ -200,6 +248,16 @@ gdprRouter.delete('/account', async (req, res) => {
           .from('attributed_conversions')
           .delete()
           .in('site_id', siteIds)
+
+        // 2b. Erase each site's EVENT data from Tinybird (the sole event store) BEFORE
+        // deleting the sites — after the delete we've lost site.id. Result is never
+        // swallowed: one erasure_log row per site + the outcome feeds the response.
+        const { host, adminToken, readToken } = tinybirdEnv()
+        for (const s of sites) {
+          const erase = await _eraseSite({ host, adminToken, readToken, siteId: s.id, confirm: true })
+          accountErase.push({ site_id: s.id, status: erase.status })
+          await logErasure(supabase, { subjectId: `account:${userId}`, siteId: s.id, result: erase })
+        }
 
         // 3. Delete sites. This CASCADE-deletes all site-scoped GSC data via the
         // FK `... REFERENCES sites(site_key) ON DELETE CASCADE` on each table:
@@ -236,9 +294,23 @@ gdprRouter.delete('/account', async (req, res) => {
     const { error: authErr } = await supabase.auth.admin.deleteUser(userId)
     if (authErr) throw authErr
 
-    return res.json({
-      success: true,
-      message: 'Your account and all associated data have been permanently deleted.'
+    // Honest response: only claim full erasure if EVERY site's event data was actually
+    // erased from Tinybird (or there were no sites to erase). Any non-'executed' site →
+    // partial success naming what was and was not erased (logged for retry).
+    const allEventDataErased = accountErase.every(e => e.status === 'executed')
+    if (allEventDataErased) {
+      return res.json({
+        success: true,
+        message: 'Your account and all associated data have been permanently deleted.',
+        tinybird: accountErase
+      })
+    }
+    return res.status(200).json({
+      success: false,
+      partial: true,
+      message: 'Your account records were deleted, but event data in Tinybird was NOT fully erased for one or more sites. This has been recorded for retry.',
+      erased: { supabase: true, tinybird_events: false },
+      tinybird: accountErase
     })
   } catch (err) {
     console.error('[GDPR] account delete error:', err)
