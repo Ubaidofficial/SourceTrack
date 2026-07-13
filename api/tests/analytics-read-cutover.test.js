@@ -11,7 +11,7 @@ process.env.NODE_ENV = 'test'
 process.env.SUPABASE_URL = 'https://mock-proj.supabase.co'
 process.env.SUPABASE_SERVICE_KEY = 'mock-service-role-key-value'
 process.env.POSTHOG_API_KEY = 'mock-posthog-key'
-process.env.ENCRYPTION_KEY = '0'.repeat(64)
+process.env.ENCRYPTION_KEY = '0000000000000000000000000000000000000000000000000000000000000000'
 
 const mod = await import('../routes/analytics.js')
 const router = mod.default
