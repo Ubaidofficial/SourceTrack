@@ -461,8 +461,16 @@ export async function buildGdprExport(supabase, site, { now = () => new Date() }
     tables.company_members = []
   }
 
-  // PostHog events deferred — not queried this release.
-  tables.posthog_events = 'available on request'
+  // Event-level data (pageviews, conversions) lives in Tinybird, the sole event
+  // store — PostHog is a dead store that holds none of it. This bundle does NOT
+  // include event data, and there is no self-serve retrieval path for it yet, so
+  // we say exactly that instead of pointing the caller at a store that holds
+  // nothing (the old `posthog_events: 'available on request'` did the latter).
+  tables.events = {
+    included: false,
+    store: 'tinybird',
+    note: 'Event-level data (pageviews, conversions) is not part of this export. No self-serve retrieval path for it exists yet.'
+  }
 
   return { generated_at: now().toISOString(), site_key: siteKey, tables }
 }
