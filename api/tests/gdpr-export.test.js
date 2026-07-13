@@ -83,11 +83,25 @@ test('buildGdprExport — bundle shape matches the locked table list', async () 
   assert.strictEqual(out.site_key, 'kA')
   assert.ok(out.generated_at)
   assert.deepStrictEqual(Object.keys(out.tables).sort(), [
-    'attributed_conversions', 'capi_deliveries', 'companies', 'company_members', 'gsc_connections',
-    'gsc_performance_daily', 'lead_qualifications', 'posthog_events',
+    'attributed_conversions', 'capi_deliveries', 'companies', 'company_members', 'events',
+    'gsc_connections', 'gsc_performance_daily', 'lead_qualifications',
     'site_identity_links', 'sites', 'webhook_destinations'
   ])
-  assert.strictEqual(out.tables.posthog_events, 'available on request')
+  // The dead-store PostHog key is gone; the events field is structured + honest.
+  assert.ok(!('posthog_events' in out.tables), 'no dead-store posthog_events key')
+  assert.strictEqual(out.tables.events.included, false)
+  assert.strictEqual(out.tables.events.store, 'tinybird')
+})
+
+test('buildGdprExport — no field names a dead store or claims event data is retrievable', async () => {
+  const out = await buildGdprExport(makeDb(seed()), SITE)
+  const json = JSON.stringify(out)
+  // No reference to PostHog (a dead store holding no events) anywhere in the bundle.
+  assert.ok(!/posthog/i.test(json), 'no reference to the dead PostHog store')
+  // No promise of retrieval when no retrieval path exists.
+  assert.ok(!/available on request/i.test(json), 'must not promise retrieval that has no path')
+  // The only event-data field must explicitly mark it NOT included.
+  assert.strictEqual(out.tables.events.included, false, 'event data must not be marked included')
 })
 
 test('buildGdprExport — capi_deliveries included, scoped to the caller site only', async () => {
