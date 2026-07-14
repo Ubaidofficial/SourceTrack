@@ -55,7 +55,7 @@ test('setup-doctor — FALLBACK: flag off (pipe null) -> HogQL for wired + held 
     const r = await getSetupDiagnostics({ site: site(), verificationToken: 'verifyabc123' })
     assert.strictEqual(r.verification_token.token_matched, true, 'HogQL token count (5) surfaces')
     // Both wired reads attempted Tinybird first, then fell back to HogQL.
-    assert.deepStrictEqual(tb.map(c => c.pipe).sort(), ['doctor_pageviews_30d', 'doctor_token_verify'])
+    assert.deepStrictEqual(tb.map(c => c.pipe).sort(), ['doctor_pageviews_30d', 'doctor_privacy_signals_30d', 'doctor_token_verify'])
     assert.ok(hog.includes('doctor_pageviews_30d') && hog.includes('doctor_token_verify'), 'wired reads fell back to HogQL')
     assert.ok(hog.includes('doctor_last_conversion') && hog.includes('doctor_last_click_id') && hog.includes('doctor_paid_params_count'), 'held reads on HogQL')
   } finally { __resetSetupDoctorReadDeps() }
@@ -109,5 +109,64 @@ test('setup-doctor — no verification token -> token_verify pipe not attempted'
     assert.strictEqual(r.verification_token.token_supplied, false)
     assert.ok(!tb.some(c => c.pipe === 'doctor_token_verify'), 'token pipe skipped when no token supplied')
     assert.ok(tb.some(c => c.pipe === 'doctor_pageviews_30d'), 'pageviews pipe still attempted')
+  } finally { __resetSetupDoctorReadDeps() }
+})
+
+test('setup-doctor — privacy suppression: pipe unwired/returns null -> checks list and status unaffected', async () => {
+  const tb = []; const hog = []
+  const freshSite = { ...site(), last_seen_at: new Date(Date.now() - 60000).toISOString() }
+  __setSetupDoctorReadDeps({
+    queryTinybird: tbStub(tb, {
+      doctor_pageviews_30d: [{ pageviews_30d: 100 }]
+    }),
+    queryHog: hogStub(hog)
+  })
+  try {
+    const r = await getSetupDiagnostics({ site: freshSite, verificationToken: null })
+    assert.strictEqual(r.privacy_suppression, null, 'privacy_suppression is null when unwired')
+    assert.ok(!r.checks.some(c => c.label.includes('Privacy')), 'no privacy check pushed')
+    assert.strictEqual(r.status, 'healthy')
+  } finally { __resetSetupDoctorReadDeps() }
+})
+
+test('setup-doctor — privacy suppression: partial -> warning check, status healthy', async () => {
+  const tb = []; const hog = []
+  const freshSite = { ...site(), last_seen_at: new Date(Date.now() - 60000).toISOString() }
+  __setSetupDoctorReadDeps({
+    queryTinybird: tbStub(tb, {
+      doctor_pageviews_30d: [{ pageviews_30d: 100 }],
+      doctor_privacy_signals_30d: [{ privacy_signals_30d: 5 }]
+    }),
+    queryHog: hogStub(hog)
+  })
+  try {
+    const r = await getSetupDiagnostics({ site: freshSite, verificationToken: null })
+    assert.deepStrictEqual(r.privacy_suppression, { suppressed_count: 5 })
+    const check = r.checks.find(c => c.label === 'Privacy signals (GPC/DNT)')
+    assert.ok(check, 'privacy check pushed')
+    assert.strictEqual(check.status, 'warning')
+    assert.ok(check.detail.includes('At least 5 browsers'))
+    assert.strictEqual(r.status, 'healthy')
+  } finally { __resetSetupDoctorReadDeps() }
+})
+
+test('setup-doctor — privacy suppression: 100% (zero pageviews) -> failed check, overall status warning', async () => {
+  const tb = []; const hog = []
+  __setSetupDoctorReadDeps({
+    queryTinybird: tbStub(tb, {
+      doctor_pageviews_30d: [{ pageviews_30d: 0 }],
+      doctor_privacy_signals_30d: [{ privacy_signals_30d: 12 }]
+    }),
+    queryHog: hogStub(hog)
+  })
+  try {
+    const r = await getSetupDiagnostics({ site: site(), verificationToken: null })
+    assert.deepStrictEqual(r.privacy_suppression, { suppressed_count: 12 })
+    const check = r.checks.find(c => c.label === 'Privacy signals (GPC/DNT)')
+    assert.ok(check, 'privacy check pushed')
+    assert.strictEqual(check.status, 'failed')
+    assert.strictEqual(r.status, 'warning')
+    assert.strictEqual(r.severity, 'warning')
+    assert.ok(r.message.includes('At least 12 browsers sent a privacy signal'))
   } finally { __resetSetupDoctorReadDeps() }
 })

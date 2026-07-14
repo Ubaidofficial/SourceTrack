@@ -34,3 +34,16 @@ This document maps the exact boundaries of data storage, deletion capabilities, 
 ## 4. Compliance Disclaimer
 
 SourceTrack / TrackIQ is a practical analytical tool designed with cookieless telemetry features to minimize data footprint. **SourceTrack does not claim or guarantee full legal GDPR, CCPA, or other regional compliance.** Customers are solely responsible for ensuring their tracking configurations, cookie notices, and customer data handling comply with all regional regulations.
+
+---
+
+## 5. Global Privacy Control (GPC) & Do Not Track (DNT) Handling
+
+SourceTrack respects browser-level privacy signals client-side and server-side:
+1. **Client-Side Early Abort**: If a visitor's browser broadcasts `navigator.globalPrivacyControl === true`, `navigator.doNotTrack === "1"`, or `window.doNotTrack === "1"`, the client-side tracker (`tracker.min.js` and `tracker.cookieless.min.js`) immediately aborts execution. It stores zero cookies/localStorage values and fires zero network beacons (zero POST requests to `/api/track` or `/api/conversion`).
+2. **Server-Side Counting & Full Isolation**: To provide site owners with visibility on GPC/DNT traffic, the server inspects the `Sec-GPC: 1` and `DNT: 1` request headers when serving the tracker script files. If a privacy signal is detected and the request can be attributed to a site via the `Referer` origin:
+   - The server logs a suppression entry in a dedicated, isolated Tinybird datasource (`privacy_signals`).
+   - The entry contains only the `site_id`, the `reason` (`gpc` or `dnt`), and a coarse hourly `timestamp` (zeroed minutes, seconds, and milliseconds).
+   - Absolutely no IP addresses, user agents, cookies, or unique visitor identifiers (such as `distinct_id` or UUIDs) are logged.
+   - This datasource is completely isolated from the main `events` datasource, guaranteeing that GPC/DNT suppressed visits never pollute unique visitor/session counts or multi-touch attribution math.
+3. **Caching and Counter Resolution**: Since the tracker script is served with cache headers (`public, max-age=86400, stale-while-revalidate=604800, immutable`), browsers load the script from their local cache on subsequent pageviews. As a result, the server only receives a script fetch request at most once per browser per 24 hours. The suppression counter is therefore presented in Setup & Health as an **honest floor of unique browser-days (daily unique visitors)** rather than a raw pageview count.
