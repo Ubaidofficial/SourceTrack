@@ -223,9 +223,18 @@ export async function visitorSessions(req, res) {
       LIMIT 500
     `
 
-    // MONEY-RAIL (NOT wired): reads event='$conversion' + conversion_value.
-    // Held on HogQL, flagged for separate review.
-    const rows = await _queryHogQL(sql, 'visitor_sessions')
+    // MONEY-RAIL: wired Tinybird-first (visitor_sessions) with HogQL fallback, via readTb.
+    // Pipe's NAMED 7-col row remaps to the positional shape the consumer destructures.
+    // conversion_value is a typed Float64 DEFAULT 0 (pageviews -> 0 -> null, same as HogQL's
+    // absent-bag -> null); a genuine $0-value $conversion renders null here vs 0 on HogQL —
+    // consistent with the already-deployed money-rail pipes and §6 (no fake $0).
+    const rows = await readTb(
+      'visitor_sessions',
+      { site_id: req.site.id, distinct_id },
+      sql,
+      'visitor_sessions',
+      tb => tb.map(r => [r.event_type, r.timestamp, r.page_url, r.utm_source, r.utm_medium, r.utm_campaign, r.conversion_value])
+    )
 
     const events = rows.map(([
       event, timestamp, pageUrl,

@@ -174,10 +174,33 @@ router.get('/latest', validateSiteKey, async (req, res) => {
     const cacheKey = `latest:${siteId}:${event_type||''}:${source||''}:${date_from||''}:${date_to||''}:${search||''}:${limit||''}`
     const cached = eventsCache.get(cacheKey)
     if (cached) return res.json(cached)
-    // MONEY-RAIL (NOT wired): the raw event log selects conversion_value,
-    // conversion_type, ai_source, first_touch_* attribution. Held on HogQL,
-    // flagged for separate review.
-    const rows = await _queryHogQL(sql, 'events_latest')
+    // MONEY-RAIL: wired Tinybird-first (events_latest) with HogQL fallback, via readTb.
+    // Optional filters map to the pipe's {% if defined %} params; date bounds reuse the
+    // SAME serializeHogQLDateTime boundary already validated above (so a bad date still 400s
+    // on the HogQL-building pass before we get here), rendered as a ClickHouse datetime
+    // string. limit is pre-clamped [1,500]/100 to match clampLimit() (the pipe does not
+    // re-clamp). The pipe's NAMED 50-col row remaps to the exact positional shape the
+    // consumer destructures below.
+    const tbParams = { site_id: req.site.id, limit_val: clampLimit(limit) }
+    if (event_type && event_type !== 'all') tbParams.event_type_filter = String(event_type)
+    if (source) tbParams.source_filter = String(source).trim().toLowerCase()
+    if (date_from) tbParams.date_from_ts = serializeHogQLDateTime(date_from, { exclusiveEndForDateOnly: false }).match(/'([^']+)'/)[1].slice(0, 19).replace('T', ' ')
+    if (date_to) tbParams.date_to_ts = serializeHogQLDateTime(date_to, { exclusiveEndForDateOnly: true }).match(/'([^']+)'/)[1].slice(0, 19).replace('T', ' ')
+    if (search) tbParams.search_filter = String(search).trim().toLowerCase()
+    const rows = await readTb('events_latest', tbParams, sql, 'events_latest', tb => tb.map(r => [
+      r.event_type, r.timestamp, r.distinct_id, r.page_url, r.referrer,
+      r.ai_source, r.is_conversion, r.device_type, r.country,
+      r.utm_source, r.utm_medium, r.utm_campaign, r.utm_content, r.utm_term,
+      r.gclid, r.fbclid, r.msclkid, r.ttclid,
+      r.ref_param, r.source_param, r.via_param,
+      r.first_touch_source, r.first_touch_medium, r.first_touch_campaign,
+      r.conversion_type, r.conversion_value, r.ingestion_method,
+      r.browser_name, r.browser_version, r.os_name, r.os_version,
+      r.gbraid, r.wbraid, r.li_fat_id, r.li_fatid, r.twclid, r.dclid, r.snapclid, r.pclid, r.sccid, r.ko_click_id,
+      r.utm_id, r.st_campaign_id, r.st_adgroup_id, r.st_ad_id, r.st_target_id,
+      r.st_network, r.st_device, r.st_matchtype,
+      r.raw_properties
+    ]))
 
     const events = rows.map(([
       event, timestamp, distinctId, pageUrl, referrer,
@@ -370,9 +393,12 @@ router.get('/edge-cases', validateSiteKey, async (req, res) => {
 
     // WIRED (page_url + counts; no money-rail columns).
     const domainRows = await readTb('edge_domains', { site_id: req.site.id }, multiDomainSql, 'edge_domains', tb => tb.map(r => [r.page_url, r.cnt]))
-    // MONEY-RAIL (NOT wired): both read ai_source. Held on HogQL, flagged.
-    const aiNoUtmRows = await _queryHogQL(aiNoUtmSql, 'edge_ai_no_utm')
-    const utmNoAiRows = await _queryHogQL(utmNoAiSql, 'edge_utm_no_ai')
+    // MONEY-RAIL: wired Tinybird-first (edge_ai_no_utm / edge_utm_no_ai) with HogQL
+    // fallback, via readTb. Both are bare count() reads; the pipe's `ai_source/utm_source
+    // IS NOT NULL AND != ''` (typed Nullable columns) matches HogQL's bag `!= ''`
+    // (JSONExtract yields '' not NULL) — identical filtered set, so identical count.
+    const aiNoUtmRows = await readTb('edge_ai_no_utm', { site_id: req.site.id }, aiNoUtmSql, 'edge_ai_no_utm', tb => [[tb?.[0]?.cnt ?? 0]])
+    const utmNoAiRows = await readTb('edge_utm_no_ai', { site_id: req.site.id }, utmNoAiSql, 'edge_utm_no_ai', tb => [[tb?.[0]?.cnt ?? 0]])
 
     const domains = new Set()
     for (const row of domainRows) {
