@@ -1,0 +1,77 @@
+DESCRIPTION >
+    Multitouch live pageview row-pull for getMultiTouchAttributionLive (the linear / time_decay /
+    u_shaped / w_shaped models). Faithful 1:1 port of the pvSql at
+    api/lib/attribution-engine.js:1733-1765 (queryName 'multitouch_pageviews_live').
+
+    REPLACES THE DEAD-HogQL LEG. With PostHog frozen (Jul 9) the HogQL pageviews returned nothing,
+    pageviewsByVisitor became {}, and every conversion fell to the :1866 "no pageviews -> 100%
+    Direct" branch — so four of five attribution models silently credited 100% Direct in prod
+    (correct revenue, fabricated source breakdown). This restores real touchpoints.
+
+    POSITIONAL output — 23 base columns in the EXACT order the consumer destructures (row[0]..row[22],
+    :1776-1798):
+      distinct_id, timestamp, utm_source, utm_medium, utm_campaign, referrer, ai_source, gclid,
+      gbraid, wbraid, fbclid, msclkid, ttclid, li_fat_id, li_fatid, twclid, dclid, snapclid, pclid,
+      sccid, ko_click_id, page_url, utm_term
+    followed by 0-2 dynamic custom columns consumed at row[23]/row[24] (:1829-1830). The seam maps
+    these NAMED rows back to positional arrays (attribution-engine.js) — a wrong key renders as
+    garbage and fails nowhere, so the order above is load-bearing.
+
+    Typed-column translation (SCOPE_v3 §2.6): properties.site_id -> site_id, event -> event_type.
+    NULLIF TRAP — DELIBERATELY NOT WRAPPED: all 23 base fields are Nullable(String) typed columns
+    (events.datasource), so they return NULL for a missing value, matching the HogQL bag NULL
+    exactly. They are selected RAW — no COALESCE/toString, which would coerce NULL -> '' and make
+    derived_source (:1823) pick 'direct' for a real source. The '' -> 'direct' bug does not bite
+    because the columns are Nullable, not DEFAULT-backed.
+
+    CUSTOM COLUMNS: the live code appends `properties.custom_<key> AS custom_<key>` for the 1-2 keys
+    the active groupBy/groupBy2 request (:1728-1731). Reproduced with the custom_key1/custom_key2
+    {% if defined %} pattern (mirrors session_report_pageviews.pipe); the caller passes the FULL bag
+    key (e.g. 'custom_plan'), read via nullIf(JSONExtractString(properties, {{ custom_key1 }}), '')
+    to match the HogQL bag NULL for a missing custom property.
+
+    Half-open window (timestamp >= lookback AND timestamp < to), ORDER BY timestamp ASC, LIMIT 100000
+    — byte-for-byte with :1759-1764.
+
+    NOT YET DEPLOYED — authored here; the founder deploys + adds to TINYBIRD_READ_PIPES (this
+    session's token is ST_Staging, non-ADMIN scope: `tb --cloud workspace current` -> "Forbidden:
+    Token does not have ADMIN scope", so it cannot deploy).
+
+NODE multitouch_pageviews_live_node
+SQL >
+    %
+    SELECT
+        distinct_id,
+        timestamp,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        referrer,
+        ai_source,
+        gclid,
+        gbraid,
+        wbraid,
+        fbclid,
+        msclkid,
+        ttclid,
+        li_fat_id,
+        li_fatid,
+        twclid,
+        dclid,
+        snapclid,
+        pclid,
+        sccid,
+        ko_click_id,
+        page_url,
+        utm_term
+        {% if defined(custom_key1) %}, nullIf(JSONExtractString(properties, {{ String(custom_key1, required=True) }}), '') AS custom_key1{% end %}
+        {% if defined(custom_key2) %}, nullIf(JSONExtractString(properties, {{ String(custom_key2, required=True) }}), '') AS custom_key2{% end %}
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$pageview'
+      AND timestamp >= {{ DateTime(lookback, required=True) }}
+      AND timestamp < {{ DateTime(to, required=True) }}
+    ORDER BY timestamp ASC
+    LIMIT 100000
+
+TYPE endpoint
