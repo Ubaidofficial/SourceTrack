@@ -1,0 +1,12 @@
+DESCRIPTION >
+    Setup & Health: privacy signals count, trailing 30d.
+
+NODE doctor_privacy_signals_30d_node
+SQL >
+    %
+    SELECT count() AS privacy_signals_30d
+    FROM privacy_signals
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND timestamp >= now() - INTERVAL 30 DAY
+
+TYPE endpoint

@@ -326,6 +326,85 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }))
 // tracker changes — and customers cache-bust by waiting for the deploy.
 const TRACKER_CACHE_HEADER = 'public, max-age=86400, stale-while-revalidate=604800, immutable'
 
+const trackerSiteCache = new NodeCache({ stdTTL: 300 })
+
+async function handlePrivacySuppression(req) {
+  try {
+    const secGpc = req.headers['sec-gpc']
+    const dnt = req.headers['dnt']
+    const isSuppressed = secGpc === '1' || dnt === '1'
+
+    if (!isSuppressed) return
+
+    const referer = req.headers.referer
+    if (!referer) return
+
+    let urlObj
+    try {
+      urlObj = new URL(referer)
+    } catch (_) {
+      return
+    }
+
+    const hostname = urlObj.hostname.toLowerCase()
+    const domain = hostname.replace(/^www\./i, '')
+
+    let site = trackerSiteCache.get(domain)
+    if (site === undefined) {
+      const supabase = getSupabase()
+      const { data, error } = await supabase
+        .from('sites')
+        .select('id, site_key, domain')
+        .or(`domain.eq.${domain},domain.eq.www.${domain}`)
+
+      if (error || !data || data.length === 0) {
+        trackerSiteCache.set(domain, null)
+        site = null
+      } else {
+        site = data[0]
+        trackerSiteCache.set(domain, site)
+      }
+    }
+
+    if (!site || !site.id) return
+
+    const reason = secGpc === '1' ? 'gpc' : 'dnt'
+
+    // Coarse hour bucket
+    const now = new Date()
+    now.setMinutes(0, 0, 0, 0)
+
+    const host = process.env.TINYBIRD_HOST
+    const token = process.env.TINYBIRD_APPEND_TOKEN
+
+    if (!host || !token) return
+
+    const url = `${host.replace(/\/$/, '')}/v0/events?name=privacy_signals`
+    const payload = JSON.stringify({
+      site_id: site.id,
+      reason,
+      timestamp: now.toISOString()
+    }) + '\n'
+
+    // Direct fire-and-forget POST to Tinybird Events API
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      body: payload
+    })
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(`Tinybird Events API responded ${res.status}: ${text}`)
+    }
+  } catch (err) {
+    // Fail silently to client, but log error loudly to server console
+    console.error('[privacy-suppression] failed:', err.message)
+  }
+}
+
 // Root alias required by tracker/loader.min.js
 app.get('/tracker.min.js', (req, res) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
@@ -334,6 +413,9 @@ app.get('/tracker.min.js', (req, res) => {
   res.setHeader('Cache-Control', TRACKER_CACHE_HEADER)
   res.type('application/javascript')
   res.sendFile(process.cwd() + '/tracker/tracker.min.js')
+  setImmediate(() => {
+    handlePrivacySuppression(req).catch(() => {})
+  })
 })
 
 app.get('/tracker.cookieless.min.js', (req, res) => {
@@ -343,6 +425,9 @@ app.get('/tracker.cookieless.min.js', (req, res) => {
   res.setHeader('Cache-Control', TRACKER_CACHE_HEADER)
   res.type('application/javascript')
   res.sendFile(process.cwd() + '/tracker/tracker.cookieless.min.js')
+  setImmediate(() => {
+    handlePrivacySuppression(req).catch(() => {})
+  })
 })
 
 app.use('/tracker', (req, res, next) => {

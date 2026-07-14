@@ -200,6 +200,17 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
   const paidParamsCount = results[3]?.[0]?.[0] ? parseInt(results[3][0][0], 10) : 0
   const tokenVerifyCount = tokenPromise ? (results[4]?.[0]?.[0] ? parseInt(results[4][0][0], 10) : 0) : 0
 
+  let privacySignalsCount = null
+  try {
+    const tb = await _queryTinybirdPipe('doctor_privacy_signals_30d', { site_id: posthogSiteId })
+    if (tb !== null) {
+      privacySignalsCount = tb?.[0]?.privacy_signals_30d ?? 0
+    }
+  } catch (err) {
+    if (forceRead) throw err
+    console.warn('[setup-doctor] doctor_privacy_signals_30d query failed:', err?.message || err)
+  }
+
   // 3. Process verification token results
   const tokenSupplied = sanitizedToken !== null
   const tokenMatched = tokenVerifyCount > 0
@@ -296,6 +307,20 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
           : 'Tracking is healthy. We received an event recently.'
       }
     }
+
+    if (privacySignalsCount !== null && privacySignalsCount > 0) {
+      checks.push({
+        label: 'Privacy signals (GPC/DNT)',
+        status: pageviews30d === 0 ? 'failed' : 'warning',
+        detail: `At least ${privacySignalsCount} browsers sent a privacy signal (GPC/DNT) and were not tracked in the last 30 days`
+      })
+
+      if (pageviews30d === 0) {
+        overallStatus = 'warning'
+        severity = 'warning'
+        message = `Tracking may need attention. At least ${privacySignalsCount} browsers sent a privacy signal (GPC/DNT) and were not tracked, with 0 pageviews recorded.`
+      }
+    }
   }
 
   // 5. Conversion verification
@@ -378,6 +403,9 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
       action_key: actionKey,
       message: actionMessage
     },
+    privacy_suppression: privacySignalsCount !== null ? {
+      suppressed_count: privacySignalsCount
+    } : null,
     checks
   }
 }

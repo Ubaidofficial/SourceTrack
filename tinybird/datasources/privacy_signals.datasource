@@ -1,0 +1,16 @@
+# SourceTrack — Privacy Signals datasource (GPC/DNT suppression counting)
+#
+
+# Token with append permissions to privacy_signals
+TOKEN "privacy_signals_append" APPEND
+TOKEN "dual_write_append" APPEND
+
+SCHEMA >
+    `site_id` String `json:$.site_id`,
+    `reason` LowCardinality(String) `json:$.reason`,
+    `timestamp` DateTime `json:$.timestamp`
+
+ENGINE "MergeTree"
+ENGINE_SORTING_KEY "site_id, timestamp"
+ENGINE_PARTITION_KEY "toYYYYMM(timestamp)"
+ENGINE_TTL "toDateTime(timestamp) + toIntervalDay(400)"
