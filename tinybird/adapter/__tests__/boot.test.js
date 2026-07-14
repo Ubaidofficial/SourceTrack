@@ -185,6 +185,7 @@ test('retry: surrender after maxRetries (persistent 5xx) fires onError exactly o
   process.env.TINYBIRD_HOST = HOST
   process.env.TINYBIRD_APPEND_TOKEN = TOKEN
   process.env.TINYBIRD_FLUSH_AT = '1000'
+  process.env.TINYBIRD_MAX_REQUEUE = '0' // isolate the onError-on-surrender path (re-queue is covered in ingest-durability.test.js)
   const fetch = mockFetchSeq([res500]) // always 500
   const cap = captureLogs()
   initTinybirdDualWrite({ fetch, retry: { sleep: () => Promise.resolve() } })
@@ -195,5 +196,6 @@ test('retry: surrender after maxRetries (persistent 5xx) fires onError exactly o
   assert.strictEqual(fetch.calls.length, 5, 'maxRetries=4 -> 5 total attempts then surrender')
   const failLines = cap.lines.filter((l) => l.includes('dual-write POST failed'))
   assert.strictEqual(failLines.length, 1, 'onError fired exactly once on surrender (not once per attempt)')
+  delete process.env.TINYBIRD_MAX_REQUEUE
   resetEnv()
 })
