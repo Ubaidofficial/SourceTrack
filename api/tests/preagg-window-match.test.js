@@ -81,3 +81,58 @@ test('the predicate gates all five pre-agg short-circuits in the route, before t
   assert.ok(guardAt > 0 && firstPreAggCall > 0 && guardAt < firstPreAggCall,
     'preAggWindowMatches is computed before the first getPreAggregatedAttribution call')
 })
+
+// ── Layer 3: metric allowlist — the pre-agg readers refuse metrics they cannot emit ─────────
+// Root cause of the "lookback 30 → 0" bug: the pre-agg short-circuit gated on model/window/dim but
+// NOT metric, so a pageview metric (sessions) routed to the conversion-only reader and returned 0
+// while every OTHER window fell to the live path and returned the real count. Two guards, both here:
+//   (1) the readers THROW on an unsupported metric (fail loud — never a 0 that reads as "no data", §6)
+//   (2) the route AND-ins the DERIVED served-metric set into all five short-circuits (→ falls to live)
+// The sets are derived from the row shapers, so they can never drift from what the readers emit.
+const { PREAGG_CONVERSION_METRICS, PREAGG_MULTITOUCH_METRICS, getPreAggregatedAttribution, getLinearAttribution } =
+  await import('../lib/attribution-engine.js')
+
+test('served-metric sets are DERIVED from the emitters and pin the current emit (drift guard)', () => {
+  // first_touch/last_touch reader emits exactly these (customers/avg_conversion_value included)
+  assert.deepStrictEqual(
+    [...PREAGG_CONVERSION_METRICS].sort(),
+    ['avg_conversion_value', 'conversions', 'customers', 'leads', 'revenue']
+  )
+  // the four multi-touch readers emit only revenue + conversions
+  assert.deepStrictEqual([...PREAGG_MULTITOUCH_METRICS].sort(), ['conversions', 'revenue'])
+})
+
+test('a pre-agg reader THROWS on a metric it cannot emit — never returns a fake zero', async () => {
+  // 'sessions' (Unique Visitors) is a pageview metric — the conversion readers cannot answer it. The
+  // guard is each reader's FIRST statement (before any Supabase call), so this rejects with no network hop.
+  await assert.rejects(
+    () => getPreAggregatedAttribution({ siteId: 's', dateFrom: '2026-07-01', dateTo: '2026-07-14', groupBy: 'channel', model: 'first_touch', metric: 'sessions' }),
+    /cannot serve metric 'sessions'/,
+    'first/last pre-agg reader refuses sessions'
+  )
+  await assert.rejects(
+    () => getLinearAttribution({ siteId: 's', dateFrom: '2026-07-01', dateTo: '2026-07-14', groupBy: 'channel', metric: 'sessions' }),
+    /cannot serve metric 'sessions'/,
+    'multi-touch reader refuses sessions'
+  )
+  // sanity: the metrics they DO serve pass the guard (are in the derived sets)
+  assert.ok(PREAGG_CONVERSION_METRICS.has('revenue') && PREAGG_MULTITOUCH_METRICS.has('conversions'))
+})
+
+test('the route AND-ins the DERIVED metric set into all five pre-agg short-circuits', () => {
+  const __dirname = dirname(fileURLToPath(import.meta.url))
+  const src = readFileSync(join(__dirname, '../routes/attribution.js'), 'utf8')
+  assert.match(src, /model === "first_touch"[^\n]*PREAGG_CONVERSION_METRICS\.has\(metric\)/,
+    'first_touch/last_touch short-circuit gated by PREAGG_CONVERSION_METRICS')
+  for (const model of ['linear', 'u_shaped', 'time_decay', 'w_shaped']) {
+    const re = new RegExp(`model === "${model}"[^\\n]*PREAGG_MULTITOUCH_METRICS\\.has\\(metric\\)`)
+    assert.match(src, re, `${model} short-circuit gated by PREAGG_MULTITOUCH_METRICS`)
+  }
+})
+
+test("getPreAggregatedAttribution preserves the full-row 'all' sentinel (internal callers)", () => {
+  const __dirname = dirname(fileURLToPath(import.meta.url))
+  const engineSrc = readFileSync(join(__dirname, '../lib/attribution-engine.js'), 'utf8')
+  assert.match(engineSrc, /metric !== 'all' && !PREAGG_CONVERSION_METRICS\.has\(metric\)/,
+    "reader guard exempts 'all' so campaigns/public-dashboard full-row callers keep working")
+})

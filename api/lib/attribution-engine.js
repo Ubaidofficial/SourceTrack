@@ -3033,6 +3033,44 @@ export function capUnmaterializedRange ({ groupBy, groupBy2, dateFrom, dateTo, m
   return { dateFrom: cappedFrom, capped: true }
 }
 
+// ── Pre-aggregated reader metric contracts (DERIVED from the emitters, never hand-typed) ──────
+// The pre-agg readers (getPreAggregatedAttribution + the four multi-touch readers) read pre-
+// materialized CONVERSION aggregates from attributed_conversions. They hold no pageview/session
+// data, so they can answer ONLY the metrics they emit per row. Deriving the served-metric sets
+// from the row shapers below means the allowlist can NEVER drift from the emit: add a field to a
+// shaper and the set grows with it; a hand-maintained list would be the next stale exemption.
+// A reader asked for a metric it cannot serve THROWS (fail loud) — never returns 0, which reads as
+// "no data" (the fake-zero class, §6). The route (attribution.js) AND-ins these sets into the five
+// pre-agg short-circuits so an unsupported metric falls through to the LIVE path; the throw is the
+// belt-and-braces if that guard is ever bypassed.
+function shapePreAggConversionRow (dim_value, stats) {
+  const customers = stats.customers
+  return {
+    dim_value,
+    revenue: parseFloat(stats.revenue.toFixed(2)),
+    conversions: stats.conversions,
+    leads: stats.leads,
+    customers: stats.customers,
+    avg_conversion_value: customers > 0 ? parseFloat((stats.revenue / customers).toFixed(2)) : 0
+  }
+}
+function shapeMultiTouchRow (dim_value, stats) {
+  return {
+    dim_value,
+    revenue: parseFloat(stats.revenue.toFixed(2)),
+    conversions: parseFloat(stats.conversions.toFixed(4))
+  }
+}
+// Row keys minus the dimension key = the metrics each reader family can serve. 'all' is a separate
+// full-row sentinel (some internal callers ask getPreAggregatedAttribution for the whole row).
+export const PREAGG_CONVERSION_METRICS = new Set(
+  Object.keys(shapePreAggConversionRow(null, { revenue: 0, conversions: 0, leads: 0, customers: 0 }))
+    .filter(k => k !== 'dim_value')
+)
+export const PREAGG_MULTITOUCH_METRICS = new Set(
+  Object.keys(shapeMultiTouchRow(null, { revenue: 0, conversions: 0 })).filter(k => k !== 'dim_value')
+)
+
 // Get pre-aggregated attribution from batch job results
 export async function getPreAggregatedAttribution({
   siteId,
@@ -3044,6 +3082,12 @@ export async function getPreAggregatedAttribution({
   filters = {},
   timezone = 'UTC'
 }) {
+  // Fail loud on a metric this reader cannot emit — never fall through to a 0 that reads as "no data"
+  // (§6). 'all' is the full-row sentinel some internal callers pass. The route allowlist keeps
+  // unsupported metrics out of here in the first place; this is the belt-and-braces.
+  if (metric !== 'all' && !PREAGG_CONVERSION_METRICS.has(metric)) {
+    throw new Error(`getPreAggregatedAttribution cannot serve metric '${metric}' — emits only [${[...PREAGG_CONVERSION_METRICS].join(', ')}] or 'all'; route it to the live flexible path`)
+  }
   const supabase = getSupabase()
 
   // Determine which attribution field to use
@@ -3164,21 +3208,12 @@ export async function getPreAggregatedAttribution({
     }
   }
 
-  // Format results
-  const results = Object.entries(aggregated).map(([dim_value, stats]) => {
-    const customers = stats.customers
-    return {
-      dim_value,
-      revenue: parseFloat(stats.revenue.toFixed(2)),
-      conversions: stats.conversions,
-      leads: stats.leads,
-      customers: stats.customers,
-      avg_conversion_value: customers > 0 ? parseFloat((stats.revenue / customers).toFixed(2)) : 0
-    }
-  })
+  // Format results (single-source-of-truth row shaper — PREAGG_CONVERSION_METRICS is derived from it)
+  const results = Object.entries(aggregated).map(([dim_value, stats]) => shapePreAggConversionRow(dim_value, stats))
 
-  // Guard the sort key per user request
-  const sortKey = ['revenue', 'conversions', 'leads', 'customers', 'avg_conversion_value'].includes(metric)
+  // Guard the sort key per user request — reuse the DERIVED served set (no parallel hand-typed list;
+  // 'all' isn't a real sort field, so it falls back to 'conversions' like any unsupported key).
+  const sortKey = metric !== 'all' && PREAGG_CONVERSION_METRICS.has(metric)
     ? metric
     : 'conversions'
 
@@ -3200,6 +3235,11 @@ export async function getUShapedAttribution({
   groupBy = 'source',
   metric = 'revenue'
 }) {
+  // Fail loud on a metric this reader cannot emit (§6 — never a 0 that reads as "no data"). The route
+  // allowlist keeps unsupported metrics out; this is the belt-and-braces if that guard is bypassed.
+  if (!PREAGG_MULTITOUCH_METRICS.has(metric)) {
+    throw new Error(`multi-touch pre-agg reader cannot serve metric '${metric}' — emits only [${[...PREAGG_MULTITOUCH_METRICS].join(', ')}]; route it to the live flexible path`)
+  }
   const supabase = getSupabase()
 
   const { data, error } = await supabase
@@ -3230,11 +3270,7 @@ export async function getUShapedAttribution({
     }
   }
 
-  const results = Object.entries(aggregated).map(([dim_value, stats]) => ({
-    dim_value,
-    revenue: parseFloat(stats.revenue.toFixed(2)),
-    conversions: parseFloat(stats.conversions.toFixed(4))
-  }))
+  const results = Object.entries(aggregated).map(([dim_value, stats]) => shapeMultiTouchRow(dim_value, stats))
 
   return results.sort((a, b) => b[metric] - a[metric])
 }
@@ -3247,6 +3283,11 @@ export async function getTimeDecayAttribution({
   groupBy = 'source',
   metric = 'revenue'
 }) {
+  // Fail loud on a metric this reader cannot emit (§6 — never a 0 that reads as "no data"). The route
+  // allowlist keeps unsupported metrics out; this is the belt-and-braces if that guard is bypassed.
+  if (!PREAGG_MULTITOUCH_METRICS.has(metric)) {
+    throw new Error(`multi-touch pre-agg reader cannot serve metric '${metric}' — emits only [${[...PREAGG_MULTITOUCH_METRICS].join(', ')}]; route it to the live flexible path`)
+  }
   const supabase = getSupabase()
 
   const { data, error } = await supabase
@@ -3274,11 +3315,7 @@ export async function getTimeDecayAttribution({
     }
   }
 
-  const results = Object.entries(aggregated).map(([dim_value, stats]) => ({
-    dim_value,
-    revenue: parseFloat(stats.revenue.toFixed(2)),
-    conversions: parseFloat(stats.conversions.toFixed(4))
-  }))
+  const results = Object.entries(aggregated).map(([dim_value, stats]) => shapeMultiTouchRow(dim_value, stats))
 
   return results.sort((a, b) => b[metric] - a[metric])
 }
@@ -3291,6 +3328,11 @@ export async function getWShapedAttribution({
   groupBy = 'source',
   metric = 'revenue'
 }) {
+  // Fail loud on a metric this reader cannot emit (§6 — never a 0 that reads as "no data"). The route
+  // allowlist keeps unsupported metrics out; this is the belt-and-braces if that guard is bypassed.
+  if (!PREAGG_MULTITOUCH_METRICS.has(metric)) {
+    throw new Error(`multi-touch pre-agg reader cannot serve metric '${metric}' — emits only [${[...PREAGG_MULTITOUCH_METRICS].join(', ')}]; route it to the live flexible path`)
+  }
   const supabase = getSupabase()
 
   const { data, error } = await supabase
@@ -3318,11 +3360,7 @@ export async function getWShapedAttribution({
     }
   }
 
-  const results = Object.entries(aggregated).map(([dim_value, stats]) => ({
-    dim_value,
-    revenue: parseFloat(stats.revenue.toFixed(2)),
-    conversions: parseFloat(stats.conversions.toFixed(4))
-  }))
+  const results = Object.entries(aggregated).map(([dim_value, stats]) => shapeMultiTouchRow(dim_value, stats))
 
   return results.sort((a, b) => b[metric] - a[metric])
 }
@@ -3335,6 +3373,11 @@ export async function getLinearAttribution({
   groupBy = 'source',
   metric = 'revenue'
 }) {
+  // Fail loud on a metric this reader cannot emit (§6 — never a 0 that reads as "no data"). The route
+  // allowlist keeps unsupported metrics out; this is the belt-and-braces if that guard is bypassed.
+  if (!PREAGG_MULTITOUCH_METRICS.has(metric)) {
+    throw new Error(`multi-touch pre-agg reader cannot serve metric '${metric}' — emits only [${[...PREAGG_MULTITOUCH_METRICS].join(', ')}]; route it to the live flexible path`)
+  }
   const supabase = getSupabase()
 
   const { data, error } = await supabase
@@ -3365,11 +3408,7 @@ export async function getLinearAttribution({
     }
   }
 
-  const results = Object.entries(aggregated).map(([dim_value, stats]) => ({
-    dim_value,
-    revenue: parseFloat(stats.revenue.toFixed(2)),
-    conversions: parseFloat(stats.conversions.toFixed(4))
-  }))
+  const results = Object.entries(aggregated).map(([dim_value, stats]) => shapeMultiTouchRow(dim_value, stats))
 
   return results.sort((a, b) => b[metric] - a[metric])
 }
