@@ -2139,7 +2139,15 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     LIMIT 50000
   `
 
-    const rows = await queryHogQL(sql, 'flexible_report_days_to_convert')
+    // Pipe-first (allowlist-gated, HogQL fallback via _pipeRead, mirrors :2852). The
+    // days_to_convert branch ALWAYS groups by first-touch source with no groupBy2/window/
+    // filters, so the pipe covers it unconditionally. Pipe named {dim_value,days_to_convert,
+    // conversions} -> the positional [dim,metric,conversions] the consumer destructures.
+    // Same +1-day-exclusive UTC bounds serializeHogQLDateRange gave the HogQL `sql`.
+    const _dtcFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+    const _dtcTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+    const _dtcTb = await _pipeRead('flexible_report_days_to_convert_by_site', { site_id: String(siteId), date_from: _dtcFrom, date_to: _dtcTo })
+    const rows = _dtcTb ? _dtcTb.map(r => [r.dim_value, r.days_to_convert, r.conversions]) : await _queryHogQL(sql, 'flexible_report_days_to_convert')
     const results = rows.map(([dimValue, daysToConvert, conversions]) => ({
       dim_value: dimValue || 'unknown',
       days_to_convert: Number(daysToConvert) || 0,
@@ -2198,7 +2206,14 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     LIMIT 50000
   `
 
-    const rows = await queryHogQL(sql, 'flexible_report_touchpoints_per_conversion')
+    // Pipe-first (allowlist-gated, HogQL fallback via _pipeRead, mirrors :2852). Like
+    // days_to_convert, this branch always groups by first-touch source with no groupBy2/
+    // window/filters, so the pipe covers it unconditionally. Pipe named {dim_value,
+    // touchpoints_per_conversion,conversions} -> the positional shape the consumer reads.
+    const _tpcFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+    const _tpcTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+    const _tpcTb = await _pipeRead('flexible_report_touchpoints_per_conversion_by_site', { site_id: String(siteId), date_from: _tpcFrom, date_to: _tpcTo })
+    const rows = _tpcTb ? _tpcTb.map(r => [r.dim_value, r.touchpoints_per_conversion, r.conversions]) : await _queryHogQL(sql, 'flexible_report_touchpoints_per_conversion')
     const results = rows.map(([dimValue, touchpointsPerConversion, conversions]) => ({
       dim_value: dimValue || 'unknown',
       touchpoints_per_conversion: Number(touchpointsPerConversion) || 0,
@@ -2891,7 +2906,17 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
         GROUP BY dim_value${dim2Expr ? ', dim_value2' : ''}
         LIMIT 50000
       `
-      const sessRows = await queryHogQL(sessSql, 'flexible_sessions')
+      // Pipe-first BASE-CASE ONLY (mirrors flexible_sessions_by_site's gate): dim=source,
+      // first_touch model, single dim, no custom_param, no filters. (refJoin is absent here
+      // because groupBy!=='date'.) dimExpr for source/first_touch is exactly the pipe's
+      // COALESCE(NULLIF(first_touch_source,''),'direct'); the sessSql uses the UNwindowed
+      // dimExpr, so the attribution window does not affect this leg. Anything else -> null
+      // pipe -> unchanged HogQL sessSql (the _pipeRead falsy-name no-dispatch path).
+      const _sessBase = groupBy === 'source' && model === 'first_touch' && !groupBy2 && !custKey1 && !custKey2 && filterClauses === ''
+      const _sessFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+      const _sessTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+      const _sessTb = await _pipeRead(_sessBase ? 'flexible_sessions_by_site' : null, { site_id: String(siteId), date_from: _sessFrom, date_to: _sessTo })
+      const sessRows = _sessTb ? _sessTb.map(r => [r.dim_value, r.sessions]) : await _queryHogQL(sessSql, 'flexible_sessions')
       sessionsByDim = {}
       for (const [d, s] of sessRows) {
         sessionsByDim[d || 'unknown'] = Number(s) || 1
