@@ -33,9 +33,15 @@ DESCRIPTION >
     Half-open window (timestamp >= lookback AND timestamp < to), ORDER BY timestamp ASC, LIMIT 100000
     — byte-for-byte with :1759-1764.
 
-    NOT YET DEPLOYED — authored here; the founder deploys + adds to TINYBIRD_READ_PIPES (this
-    session's token is ST_Staging, non-ADMIN scope: `tb --cloud workspace current` -> "Forbidden:
-    Token does not have ADMIN scope", so it cannot deploy).
+    OPTIONAL PARAM DECLARATIONS — the trap that 400'd deployment #10: custom_key1/custom_key2 are
+    optional (the consumer only requests them for a custom_param groupBy). They MUST carry a default
+    ({{ String(custom_key1, '') }}), NOT required=True — a required param inside a {% if defined %}
+    block still 400s ("Required parameter is not defined") on every call that omits it, i.e. the
+    common no-custom-grouping request. site_id/lookback/to stay required=True because the seam ALWAYS
+    passes them (same pattern as the serving first_touch_by_site.pipe). `tb --cloud deploy --check`
+    does NOT catch this — it injects __no_value__ placeholders, so it validated the broken required
+    version. The real gate is calling the DEPLOYED endpoint with real params (no custom keys, then
+    with them) and getting rows. Founder deploys + adds to TINYBIRD_READ_PIPES.
 
 NODE multitouch_pageviews_live_node
 SQL >
@@ -64,8 +70,8 @@ SQL >
         ko_click_id,
         page_url,
         utm_term
-        {% if defined(custom_key1) %}, nullIf(JSONExtractString(properties, {{ String(custom_key1, required=True) }}), '') AS custom_key1{% end %}
-        {% if defined(custom_key2) %}, nullIf(JSONExtractString(properties, {{ String(custom_key2, required=True) }}), '') AS custom_key2{% end %}
+        {% if defined(custom_key1) %}, nullIf(JSONExtractString(properties, {{ String(custom_key1, '') }}), '') AS custom_key1{% end %}
+        {% if defined(custom_key2) %}, nullIf(JSONExtractString(properties, {{ String(custom_key2, '') }}), '') AS custom_key2{% end %}
     FROM events
     WHERE site_id = {{ String(site_id, required=True) }}
       AND event_type = '$pageview'
