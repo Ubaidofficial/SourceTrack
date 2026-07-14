@@ -59,7 +59,11 @@ export function dualWriteEvent (raw) {
   if (!batcher) return false              // ON but no transport yet (pre-2d): no-op
   try {
     const normalized = normalizeEvent(raw) // pure: derives event_id, drops PII/site_key, never mutates `raw`
-    Promise.resolve(batcher.enqueue(normalized)).catch(() => {}) // never surface to producer
+    // Fire-and-forget to the producer, but NO LONGER a silent drop: a transport failure is handled
+    // durably inside the batcher (deliver() dead-letters permanent 4xx / re-queues 429-5xx before it
+    // rejects), so swallowing this reject here only avoids surfacing to the live capture path — it does
+    // not lose the event. (B1 — incident 2026-07-14.)
+    Promise.resolve(batcher.enqueue(normalized)).catch(() => {})
     return true
   } catch (err) {
     // A malformed event must NEVER break the live capture path — still return false.
@@ -69,6 +73,16 @@ export function dualWriteEvent (raw) {
     _dropLog(`[tinybird] dual-write normalize/enqueue failed (event dropped): ${msg} | event=${capLabel(raw && raw.event)}`)
     return false
   }
+}
+
+// BLOCK-UNTIL-DRAIN (B2). Awaited, bounded drain for the app's ordered shutdown. The batcher registers
+// its own SIGTERM drain (belt), but a signal handler cannot block index.js's process.exit(0) — so for
+// the HARD guarantee the ordered shutdown owner (api/index.js) should `await drainDualWrite()` BEFORE
+// it exits. Today that shutdown flushes only the (now-dead) PostHog buffer, not the Tinybird batcher.
+// No-op (resolves immediately) when nothing is wired. Never throws.
+export async function drainDualWrite (opts = {}) {
+  if (!_batcher || typeof _batcher.drain !== 'function') return { drained: true, remaining: 0 }
+  try { return await _batcher.drain(opts.deadlineMs) } catch (_) { return { drained: false, remaining: -1 } }
 }
 
 // Test-only accessor for deterministic flush/assertions.

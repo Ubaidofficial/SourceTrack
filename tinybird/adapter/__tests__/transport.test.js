@@ -166,7 +166,9 @@ test('failure isolation: a throwing transport never breaks the producer; chain r
   const fetch = mockFetch({ status: 500 })
   const transport = createRetryingTinybirdTransport({ ...FAKE, fetch, retry: { sleep: async () => {}, maxRetries: 1 } })
   process.env.TINYBIRD_DUAL_WRITE = 'true'
-  setDualWriteTransport(transport, { flushAt: 1, flushInterval: 0, onError: (e) => errs.push(e) })
+  // maxRequeue:0 → surrender immediately to onError (the bounded re-queue path is covered in
+  // ingest-durability.test.js; here we only assert failure isolation + chain recovery).
+  setDualWriteTransport(transport, { flushAt: 1, flushInterval: 0, onError: (e) => errs.push(e), maxRequeue: 0 })
 
   // dualWriteEvent (the producer's call) must return synchronously and NOT throw.
   const ok = dualWriteEvent({ site_id: 's', event: '$conversion', properties: { site_id: 's', order_id: 'o1' } })

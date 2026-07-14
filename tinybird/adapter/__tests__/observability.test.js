@@ -77,6 +77,7 @@ test('boot onError: a failing POST is LOGGED (msg+count+types), not silent, and 
   process.env.TINYBIRD_HOST = 'https://api.test.tinybird.co'
   process.env.TINYBIRD_APPEND_TOKEN = 'SECRET_TOKEN_should_never_log'
   process.env.TINYBIRD_FLUSH_AT = '1000' // buffer; we flush MANUALLY and await the deliver (so onError fires before restore)
+  process.env.TINYBIRD_MAX_REQUEUE = '0' // isolate onError-on-surrender (the bounded re-queue is covered in ingest-durability.test.js)
   const fetch = async () => { throw new Error('getaddrinfo ENOTFOUND boom-host') }
   // retry.sleep no-op: boot now wraps the transport in withRetry; a network error is
   // retryable, so inject an instant sleep to keep the deliver deterministic (no real
@@ -99,6 +100,7 @@ test('boot onError: a failing POST is LOGGED (msg+count+types), not silent, and 
   assert.ok(!blob.includes('leak@example.com'), 'NO PII (email) in logs')
   assert.ok(!blob.includes('ORDER-SECRET-9'), 'NO body value (order_id) in logs')
   assert.ok(!blob.includes('SECRET_TOKEN_should_never_log'), 'NO token in logs')
+  delete process.env.TINYBIRD_MAX_REQUEUE
   resetAll()
 })
 
