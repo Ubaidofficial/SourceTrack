@@ -1763,12 +1763,31 @@ export async function getMultiTouchAttributionLive({
     ORDER BY timestamp ASC
     LIMIT 100000
   `
-  // Pageviews stay on HogQL (no pipe wired for this leg) but go through the injectable
-  // _queryHogQL seam so the A/B harness controls both legs. On the harness ON leg this
-  // is an EXPECTED HogQL read (the multitouch target allowlists 'multitouch_pageviews_live'),
-  // so it does NOT trip the zero-fallback hit-guard — only the wired conversions read
-  // falling back would.
-  const pvRows = await _queryHogQL(pvSql, 'multitouch_pageviews_live')
+  // Tinybird cutover (allowlist-gated; null -> HogQL fallback via _pipeRead). This is THE fix:
+  // the HogQL leg is dead, so without this every conversion fell to the :1866 "no pageviews ->
+  // 100% Direct" branch and four of five models silently lied. SAME half-open window bounds the
+  // HogQL pvSql uses, formatted for ClickHouse DateTime params. The pipe returns NAMED rows; map
+  // them back to the EXACT positional order the destructure below reads (row[0]..row[22], custom at
+  // 23/24) — a wrong key renders as garbage and fails nowhere (the field-name trap). pvSql has no
+  // content filters (only site_id/event_type/window), so no filter gate is needed.
+  const _mtLb = lookbackStr.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+  const _mtTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
+  const _mtParams = { site_id: String(siteId), lookback: _mtLb, to: _mtTo }
+  if (custKey1) _mtParams.custom_key1 = `custom_${custKey1}`
+  if (custKey2 && custKey2 !== custKey1) _mtParams.custom_key2 = `custom_${custKey2}`
+  const _mtPv = await _pipeRead('multitouch_pageviews_live', _mtParams)
+  const pvRows = _mtPv
+    ? _mtPv.map(r => {
+        const base = [
+          r.distinct_id, r.timestamp, r.utm_source, r.utm_medium, r.utm_campaign, r.referrer, r.ai_source,
+          r.gclid, r.gbraid, r.wbraid, r.fbclid, r.msclkid, r.ttclid, r.li_fat_id, r.li_fatid, r.twclid,
+          r.dclid, r.snapclid, r.pclid, r.sccid, r.ko_click_id, r.page_url, r.utm_term
+        ]
+        if (custKey1) base.push(r.custom_key1)
+        if (custKey2 && custKey2 !== custKey1) base.push(r.custom_key2)
+        return base
+      })
+    : await _queryHogQL(pvSql, 'multitouch_pageviews_live')
 
   // Group pageviews by visitor distinct_id
   const pageviewsByVisitor = {}
