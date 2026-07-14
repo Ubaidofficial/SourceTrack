@@ -7,6 +7,7 @@ import NodeCache from 'node-cache'
 import { getSupabase } from './lib/supabase.js'
 import { ph } from './lib/posthog.js'
 import { initTinybirdDualWrite } from '../tinybird/adapter/boot.js'
+import { drainDualWrite } from '../tinybird/adapter/dual-write.js'
 
 import {
   defaultLimit,
@@ -632,6 +633,13 @@ async function shutdown(signal) {
       console.log('[shutdown] posthog buffer flushed')
     } catch (err) {
       console.error('[shutdown] posthog flush failed:', err?.message)
+    }
+    try {
+      const deadline = Number(process.env.TINYBIRD_SHUTDOWN_DRAIN_MS) || 8000
+      await drainDualWrite({ deadlineMs: deadline })
+      console.log('[shutdown] tinybird dual-write buffer drained')
+    } catch (err) {
+      console.error('[shutdown] tinybird dual-write drain failed:', err?.message)
     }
     clearTimeout(forceExit)
     process.exit(0)
