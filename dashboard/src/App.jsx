@@ -12,6 +12,7 @@ import Signup from './pages/Signup'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import Dashboard from './pages/Dashboard'
+import AttributionPage from './pages/AttributionPage'
 import Setup from './pages/Setup'
 import Settings from './pages/Settings'
 import Billing from './pages/Billing'
@@ -337,7 +338,7 @@ export default function App() {
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-              <Route path="/app/attribution" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/app/attribution" element={<ProtectedRoute><AttributionPage /></ProtectedRoute>} />
               <Route path="/journeys" element={<Navigate to="/leads" replace />} />
               <Route path="/ai-sources" element={<Navigate to="/app/attribution" replace />} />
               <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
