@@ -503,9 +503,12 @@ export const TARGETS = {
       realHog: ph.queryHogQL
     }
   },
-  // Multi-touch (W1-bb): the biggest unwired money-rail read. FUNCTION target. Only the
-  // CONVERSIONS read has a pipe (multitouch_conversions_by_site); the pageviews read stays
-  // HogQL on BOTH legs, so it's allowlisted (allowedHogReads) — it must not trip the guard.
+  // Multi-touch (W1-bb): the biggest money-rail read, NOW FULLY WIRED. FUNCTION target. BOTH the
+  // conversions read (multitouch_conversions_by_site) AND the pageviews read
+  // (multitouch_pageviews_live) have pipes — so NO allowedHogReads. Once the pageviews leg is
+  // wired, a HogQL read there is a REAL fallback, not an expected un-wired read; the hit-guard
+  // must flag it (either leg falling back to HogQL on the ON leg -> INVALID). The stale
+  // allowedHogReads:['multitouch_pageviews_live'] exemption that excused the old gap is removed.
   multitouch: async () => {
     const mod = await import('../../api/lib/attribution-engine.js')
     const tb = await import('../../api/lib/tinybird-read.js')
@@ -519,7 +522,7 @@ export const TARGETS = {
       },
       // result is grouped by dim_value (the source) — intersect on it, like ai-platform.
       cfg: { ...DEFAULT_CFG, idKeys: [...DEFAULT_CFG.idKeys, 'dim_value', 'dim_value2'] },
-      allowedHogReads: ['multitouch_pageviews_live'],
+      allowedHogReads: [], // fully wired — no expected HogQL reads; any fallback trips the guard
       meaningful: (A, B) => _sumConv(A) > 0 || _sumConv(B) > 0,
       realTb: tb.queryTinybirdPipe,
       realHog: ph.queryHogQL

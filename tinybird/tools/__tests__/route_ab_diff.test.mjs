@@ -316,32 +316,47 @@ test('touch-model targets: GREEN / RED-dominates / INCONCLUSIVE / hit-guard via 
 // ── multitouch function target (partially-wired: conversions=pipe, pageviews=HogQL) ──
 // Exercises allowedHogReads: the ON leg's expected pageviews HogQL read must NOT trip the
 // hit-guard, while the wired conversions read falling back to HogQL still does.
-test('multitouch target: allowedHogReads passes the un-wired pageviews leg; GREEN / RED / INCONCLUSIVE / hit-guard', async () => {
+test('multitouch target: both reads WIRED — GREEN / RED / INCONCLUSIVE / hit-guard on EITHER leg falling back', async () => {
   const t = await TARGETS.multitouch()
   const CONV_KEYS = ['uuid', 'distinct_id', 'timestamp', 'conversion_type', 'conversion_value', 'utm_source', 'utm_medium', 'utm_campaign', 'referrer', 'ai_source', 'country', 'device_type', 'utm_term', 'provider', 'attribution_status', 'stitching_method', 'ingestion_method', 'stripe_subscription_id', 'stripe_event_type']
   const conv = (val) => ({ uuid: 'c1', distinct_id: 'v1', timestamp: '2026-07-01T10:00:00Z', conversion_type: 'purchase', conversion_value: val, utm_source: 'google', utm_medium: 'cpc', utm_campaign: 'brand', referrer: null, ai_source: null, country: 'US', device_type: 'desktop', utm_term: null, provider: 'browser', attribution_status: 'attributed', stitching_method: 'browser', ingestion_method: 'server_routed', stripe_subscription_id: null, stripe_event_type: null })
   const toPos = (o) => CONV_KEYS.map((k) => o[k])
   const pvRow = (() => { const r = new Array(23).fill(null); r[0] = 'v1'; r[1] = '2026-07-01T09:00:00Z'; r[2] = 'google'; r[3] = 'cpc'; r[4] = 'brand'; return r })()
+  // Pageviews are now WIRED: the ON leg serves them from multitouch_pageviews_live as NAMED rows;
+  // the seam maps them back to the positional pvRow shape the OFF/HogQL leg returns.
+  const PV_COLS = ['distinct_id', 'timestamp', 'utm_source', 'utm_medium', 'utm_campaign', 'referrer', 'ai_source', 'gclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid', 'ttclid', 'li_fat_id', 'li_fatid', 'twclid', 'dclid', 'snapclid', 'pclid', 'sccid', 'ko_click_id', 'page_url', 'utm_term']
+  const pvNamed = Object.fromEntries(PV_COLS.map((k, i) => [k, pvRow[i]]))
   const base = { setDeps: t.setDeps, resetDeps: t.resetDeps, callFn: t.callFn, cfg: t.cfg, meaningful: t.meaningful, allowedHogReads: t.allowedHogReads, siteId: 's', params: { date_from: '2026-07-01', date_to: '2026-07-06' } }
   const offHog = (val) => async (_sql, name) => name === 'multitouch_conversions_live' ? [toPos(conv(val))] : name === 'multitouch_pageviews_live' ? [pvRow] : []
+  // ON leg serving BOTH pipes (conversions + pageviews) — the fully-wired happy path.
+  const onServed = (val) => async (p) => p === 'multitouch_conversions_by_site' ? [conv(val)] : p === 'multitouch_pageviews_live' ? [pvNamed] : null
 
-  const green = await runParity({ ...base, offLeg: { queryHog: offHog(49) }, onLeg: { queryTinybird: async (p) => p === 'multitouch_conversions_by_site' ? [conv(49)] : null } })
-  assert.strictEqual(green.state, 'GREEN', 'matching legs -> GREEN')
-  assert.strictEqual(green.guard.hogCalls.length, 0, 'pageviews (allowed) not a violation; conversions from pipe -> zero-fallback clean')
-  assert.ok(green.guard.tbCalls >= 1, 'ON leg dispatched the conversions pipe')
+  const green = await runParity({ ...base, offLeg: { queryHog: offHog(49) }, onLeg: { queryTinybird: onServed(49) } })
+  assert.strictEqual(green.state, 'GREEN', 'both pipes served, matching legs -> GREEN')
+  assert.strictEqual(green.guard.hogCalls.length, 0, 'BOTH reads served from pipes -> zero HogQL fallback (no allowlist excuses one anymore)')
+  assert.ok(green.guard.tbCalls >= 2, 'ON leg dispatched BOTH pipes (conversions + pageviews)')
 
-  const red = await runParity({ ...base, offLeg: { queryHog: offHog(49) }, onLeg: { queryTinybird: async (p) => p === 'multitouch_conversions_by_site' ? [conv(200)] : null } })
+  const red = await runParity({ ...base, offLeg: { queryHog: offHog(49) }, onLeg: { queryTinybird: onServed(200) } })
   assert.strictEqual(red.state, 'RED', 'divergent attributed revenue -> RED')
 
   const empty = await runParity({ ...base, offLeg: { queryHog: async (_s, name) => name === 'multitouch_pageviews_live' ? [pvRow] : [] }, onLeg: { queryTinybird: async (p) => p === 'multitouch_conversions_by_site' ? [] : null } })
   assert.strictEqual(empty.state, 'INCONCLUSIVE', 'no conversions -> empty window')
 
-  // pipe null -> the WIRED conversions read falls back to HogQL('multitouch_conversions_live')
-  // which is NOT allowlisted -> hit-guard INVALID (proves allowedHogReads is narrow).
-  const invalid = await runParity({ ...base, offLeg: { queryHog: offHog(49) }, onLeg: { queryTinybird: async () => null } })
-  assert.strictEqual(invalid.state, 'RED')
-  assert.strictEqual(invalid.guard.valid, false, 'conversions fallback trips the guard')
-  assert.ok(invalid.guard.hogCalls.includes('multitouch_conversions_live'), 'the wired read is the one flagged, not pageviews')
+  // hit-guard, CONVERSIONS leg: conversions pipe null (pageviews served) -> the wired conversions
+  // read falls back to HogQL('multitouch_conversions_live') -> INVALID, only that read flagged.
+  const convFallback = await runParity({ ...base, offLeg: { queryHog: offHog(49) }, onLeg: { queryTinybird: async (p) => p === 'multitouch_pageviews_live' ? [pvNamed] : null } })
+  assert.strictEqual(convFallback.state, 'RED')
+  assert.strictEqual(convFallback.guard.valid, false, 'conversions fallback trips the guard')
+  assert.deepStrictEqual(convFallback.guard.hogCalls, ['multitouch_conversions_live'], 'ONLY the conversions read flagged (early-return before pageviews)')
+
+  // hit-guard, PAGEVIEWS leg (NEW — exactly what wiring this leg buys): conversions pipe served,
+  // pageviews pipe null -> the NOW-WIRED pageviews read falls back to dead HogQL -> INVALID/RED.
+  // Before this PR the stale allowedHogReads:['multitouch_pageviews_live'] exemption excused this
+  // very fallback as GREEN — encoding the 100%-Direct bug as intended behavior.
+  const pvFallback = await runParity({ ...base, offLeg: { queryHog: offHog(49) }, onLeg: { queryTinybird: async (p) => p === 'multitouch_conversions_by_site' ? [conv(49)] : null } })
+  assert.strictEqual(pvFallback.state, 'RED', 'pageviews fallback to dead HogQL -> RED (no longer excused)')
+  assert.strictEqual(pvFallback.guard.valid, false, 'the pageviews HogQL fallback trips the guard')
+  assert.ok(pvFallback.guard.hogCalls.includes('multitouch_pageviews_live'), 'the pageviews read is now flagged, not excused')
 })
 
 // ── session-report function target (both reads wired; NodeCache trap) ─────────
