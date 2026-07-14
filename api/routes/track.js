@@ -5,7 +5,7 @@ import { normalizeUtm, redactPiiFromObject, isPathExcluded, extractCustomParams,
 import { resolveClientIp } from '../lib/ip-resolver.js'
 import { claimPageviewUsage } from '../lib/pageview-limits.js'
 import { checkIsDuplicate, registerConversion } from '../lib/shared-dedupe-cache.js'
-import { dualWriteEvent } from '../../tinybird/adapter/dual-write.js'
+import { dualWriteEvent, isDualWriteEnabled } from '../../tinybird/adapter/dual-write.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
 
 
@@ -135,11 +135,20 @@ export function isLeadForm({ form_id, form_name, form_action_path, page_path }) 
 }
 
 export async function track(req, res) {
+  // Ingest observability (incident 2026-07-14: /api/track returned 200 and persisted NOTHING, with
+  // ZERO write-path log lines). Every request-level outcome that does NOT enqueue an event to the
+  // batcher logs a reason here; the batcher logs the accepted→delivered|dropped lifecycle for events
+  // that DO enqueue (tinybird/adapter/batch.js). Together: no 200 without a persist-or-reason line.
+  // site_id (internal id) is safe to log; never the site_key or body (PII).
+  const logOutcome = (outcome, extra = '') => {
+    try { console.log(`[ingest-obs] ${outcome} site_id=${req.site?.id || 'unknown'} event=${req.body?.event || '$pageview'}${extra}`) } catch (_) {}
+  }
   try {
     // Silent bot drop — return 200 so crawlers don't retry/spam.
     // UA layer unchanged (ua_empty / ua_pattern still drop today).
     const ua = req.headers['user-agent'] || ''
     if (isBotUserAgent(ua)) {
+      logOutcome('rejected', ' reason=bot')
       return res.status(200).json({ success: true, data: { received: true, filtered: 'bot' }, error: null })
     }
 
@@ -150,6 +159,7 @@ export async function track(req, res) {
 
     // Check path exclusions
     if (req.body?.page_url && isPathExcluded(req.body.page_url, req.site?.excluded_paths)) {
+      logOutcome('rejected', ' reason=excluded_path')
       return res.status(200).json({ success: true, data: { received: true, filtered: 'excluded_path' }, error: null })
     }
 
@@ -318,6 +328,7 @@ export async function track(req, res) {
         const pvCheck = await claimPageviewUsage(req.site)
         if (!pvCheck.allowed) {
           console.warn('[track] Pageview limit reached for site', req.site?.id, '— limit:', pvCheck.limit, '— skipping capture')
+          logOutcome('limit-blocked', ` reason=pageview_limit limit=${pvCheck.limit}`)
           return res.status(402).json({
             success: false,
             data: { received: false, limit_reached: true },
@@ -403,7 +414,14 @@ export async function track(req, res) {
     // Wave-2 pageview cutover: Tinybird is the SOLE writer here (ph.capture removed;
     // flag-gated OFF -> no-op + no network when off).
     // No natural id on this path -> deriveEventId falls to a uuid.
-    dualWriteEvent({ distinctId, event: req.body.event || '$pageview', timestamp: clientTimestamp, properties: pageviewProps })
+    const enqueued = dualWriteEvent({ distinctId, event: req.body.event || '$pageview', timestamp: clientTimestamp, properties: pageviewProps })
+    // Tinybird is the SOLE writer here — if dual-write is ON but the event did NOT enqueue (no
+    // transport wired, or normalize rejected it), this 200 persists NOTHING. Make it visible.
+    // (Flag OFF is an intentional dev no-op, not logged. A normalize throw is already logged in
+    // dual-write.js; this catches the no-transport case and is a belt on the whole path.)
+    if (!enqueued && isDualWriteEnabled()) {
+      logOutcome('not-enqueued', ' reason=dualwrite_returned_false stage=pageview')
+    }
 
     // Form conversion auto-promotion
     if (req.body?.event === 'form_submit') {
@@ -411,6 +429,7 @@ export async function track(req, res) {
       if (!isIgnore && isLeadForm({ form_id, form_name, form_action_path, page_path })) {
         const anonId = req.body.anonymous_id || uuidv4()
         const isDup = checkIsDuplicate(req.site.id, anonId, req.body.page_url, false, 'form', 0, false)
+        if (isDup) logOutcome('dedup-skipped', ' stage=form_conversion')
         if (!isDup) {
           // Enforce monthly conversion limits (fail-open on DB errors)
           let limitAllowed = true
@@ -418,6 +437,7 @@ export async function track(req, res) {
             const limitCheck = await claimConversionUsage(req.site)
             if (!limitCheck.allowed) {
               limitAllowed = false
+              logOutcome('limit-blocked', ' reason=conversion_limit stage=form_conversion')
             }
           } catch (limitErr) {
             console.error('[track] conversion limit check failed, failing open:', limitErr.message || limitErr)
