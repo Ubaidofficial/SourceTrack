@@ -43,6 +43,35 @@ export function isBotUserAgent(ua) {
   return !ua || BOT_UA_PATTERN.test(ua)
 }
 
+// ── INGESTION bot filter (incident 2026-07-14) ────────────────────────────────────────────────
+// BOT_UA_PATTERN above is the REPORTING filter; applying it at INGESTION deleted real humans. The
+// correct axis at ingestion is NOT "crawler vs human" — it is "DOES THE AGENT EXECUTE JAVASCRIPT?",
+// because only a JS-executing client runs the tracker and POSTs to /api/track:
+//   • No-JS LINK-PREVIEW crawlers (the WhatsApp/Telegram/Facebook link-unfurlers, generic bot/crawl/
+//     spider) never run the tracker → they never legitimately arrive. Their tokens (`whatsapp`,
+//     `telegrambot`, …) ALSO appear in the UA of a REAL HUMAN inside the WhatsApp/Telegram in-app
+//     WebView. So these tokens must NOT gate ingestion — keeping them DELETES human events (200,
+//     gone forever, no PostHog fallback). Systematic loss on a WhatsApp-dominant .pk site.
+//   • JS-RENDERING BOTS — Googlebot (Web Rendering Service, evergreen Chromium), Bingbot, Applebot —
+//     DO render pages and DO hit /api/track. They MUST still drop at ingestion, or their renders
+//     land in `events` as fake visitors and pollute visitor/session/top-page counts. (This is the
+//     error the "crawlers don't run JS" heuristic caused; do not reason that way.)
+//   • Headless browsers / automation frameworks / non-browser HTTP libraries (curl/wget/python/
+//     selenium/…) execute against /api/track but are never a human → drop.
+// Net: ingestion drops JS-rendering search bots + automation + HTTP libraries, and lets EVERY real
+// browser and in-app WebView through. §6/§6.5: an ingestion drop is irreversible. The invariant
+// (JS-rendering bots DROPPED, every in-app WebView PASSES) is asserted in
+// api/tests/bot-filter-ingestion.test.js. The strict reporting filter (BOT_UA_PATTERN /
+// isBotUserAgent) is UNCHANGED, so analytics reads still exclude all crawlers.
+export const INGESTION_BOT_UA_PATTERN = /googlebot|bingbot|applebot|headlesschrome|\bheadless\b|phantomjs|selenium|puppeteer|playwright|webdriver|\bwget\b|curl\/|python-requests|python-urllib|\burllib\b|aiohttp|\bhttpx\b|axios\/|node-fetch|go-http|okhttp|java\/|libwww|lwp::|scrapy|guzzlehttp|apache-httpclient|winhttp|zgrab|masscan|nuclei|nikto|\bpostman\b|insomnia\/|dataforseo/i
+
+// UA-layer INGESTION check. Empty UA is kept as a drop (a real browser/WebView always sends one; an
+// empty UA is a script, never a human page load). Everything else that isn't a JS-rendering bot,
+// automation, or a non-browser HTTP client is LET IN.
+export function isIngestionBotUserAgent (ua) {
+  return !ua || INGESTION_BOT_UA_PATTERN.test(ua)
+}
+
 // A real browser UA starts with "Mozilla/". Scripted clients that spoof a
 // browser copy this too — which is why header_shape (below) needs a second
 // signal to separate them.

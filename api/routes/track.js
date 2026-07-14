@@ -10,7 +10,7 @@ import { claimConversionUsage } from '../lib/conversion-limits.js'
 
 
 import { getSupabase } from '../lib/supabase.js'
-import { isBotUserAgent, logWouldDropBot } from '../lib/bot-filter.js'
+import { isIngestionBotUserAgent, logWouldDropBot } from '../lib/bot-filter.js'
 
 async function updateTelemetryMetadata(site, body) {
   try {
@@ -144,10 +144,13 @@ export async function track(req, res) {
     try { console.log(`[ingest-obs] ${outcome} site_id=${req.site?.id || 'unknown'} event=${req.body?.event || '$pageview'}${extra}`) } catch (_) {}
   }
   try {
-    // Silent bot drop — return 200 so crawlers don't retry/spam.
-    // UA layer unchanged (ua_empty / ua_pattern still drop today).
+    // Silent bot drop — return 200 so crawlers don't retry/spam. INGESTION filter (isIngestion-
+    // BotUserAgent) gates on "does it execute JS?": it drops JS-rendering bots (googlebot/bingbot/
+    // applebot render pages and DO land here — else they pollute events as fake visitors) plus
+    // automation + HTTP libraries, but NOT the no-JS link-preview crawler tokens (whatsapp/telegram/…)
+    // that collide with real in-app-WebView humans. An ingestion drop deletes the event forever.
     const ua = req.headers['user-agent'] || ''
-    if (isBotUserAgent(ua)) {
+    if (isIngestionBotUserAgent(ua)) {
       logOutcome('rejected', ' reason=bot')
       return res.status(200).json({ success: true, data: { received: true, filtered: 'bot' }, error: null })
     }
