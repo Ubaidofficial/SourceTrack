@@ -1,6 +1,7 @@
-// Wave-3 read-cutover — sessions.js dispatch/fallback tests.
-// Wired: sessions_pageviews (pageview read) + sessions_conversions (money-rail
-// $conversion + conversion_value). visitor_sessions stays on HogQL.
+// Read-cutover — sessions.js dispatch/fallback tests. All money-rail reads wired via readTb:
+// sessions_pageviews + sessions_conversions (overview), and visitor_sessions (the per-visitor
+// $pageview/$conversion detail read, money-rail conversion_value). Pipes return NAMED rows;
+// readTb remaps them to the POSITIONAL shape the consumer destructures.
 
 import test from 'node:test'
 import assert from 'node:assert'
@@ -12,7 +13,7 @@ process.env.POSTHOG_API_KEY = 'mock-posthog-key'
 process.env.ENCRYPTION_KEY = '0000000000000000000000000000000000000000000000000000000000000000'
 
 const mod = await import('../routes/sessions.js')
-const { sessionsOverview, __setSessionsReadDeps, __resetSessionsReadDeps } = mod
+const { sessionsOverview, visitorSessions, __setSessionsReadDeps, __resetSessionsReadDeps } = mod
 const { normalizePipeTimestamp } = await import('../lib/tinybird-read.js')
 
 function mockRes () {
@@ -165,4 +166,64 @@ test('sessions overview — TS-NORMALIZE parity: SPACE-form pipe ts == ISO HogQL
   // Full parity: identical daily buckets AND identical aggregates (durations, etc.)
   assert.deepStrictEqual(resB.body.data.time_series, resA.body.data.time_series, 'identical daily buckets')
   assert.deepStrictEqual(resB.body, resA.body, 'SPACE pipe ts normalized to ISO -> byte-identical session output vs the HogQL ISO leg')
+})
+
+// ── visitor_sessions (per-visitor detail read, money-rail conversion_value) ──
+const vsReq = (query = { distinct_id: 'v1' }) => ({ site: { id: 'site-00' }, query })
+// HogQL SELECT order (sessions.js) — ground truth the positional consumer destructures.
+const VS_COLS = ['event_type', 'timestamp', 'page_url', 'utm_source', 'utm_medium', 'utm_campaign', 'conversion_value']
+const VS_PV = { event_type: '$pageview', timestamp: '2026-07-01T10:00:00Z', page_url: '/x', utm_source: 'google', utm_medium: 'cpc', utm_campaign: 'camp', conversion_value: 0 }
+const VS_CONV = { event_type: '$conversion', timestamp: '2026-07-01T10:05:00Z', page_url: '/checkout', utm_source: 'google', utm_medium: 'cpc', utm_campaign: 'camp', conversion_value: 120 }
+const vsPos = (named) => VS_COLS.map(k => named[k])
+
+test('sessions visitor — PARITY: named 7-col pipe rows == HogQL positional rows -> IDENTICAL session output', async () => {
+  __setSessionsReadDeps({ queryTinybird: async () => [VS_PV, VS_CONV], queryHog: async () => { throw new Error('HogQL called — pipe not served') } })
+  const resA = mockRes(); await visitorSessions(vsReq(), resA); __resetSessionsReadDeps()
+  __setSessionsReadDeps({ queryTinybird: async () => null, queryHog: async () => [vsPos(VS_PV), vsPos(VS_CONV)] })
+  const resB = mockRes(); await visitorSessions(vsReq(), resB); __resetSessionsReadDeps()
+  assert.deepStrictEqual(resA.body, resB.body, 'the 7-col named->positional remap matches the HogQL SELECT order exactly')
+  assert.strictEqual(resA.body.data.session_count, 1)
+  assert.notStrictEqual(resA.body.data.converting_session_index, null, 'the $120 conversion is recognized as a converting session')
+})
+
+test('sessions visitor — DISPATCH: served from pipe, HogQL NOT called, tenant + visitor scoped', async () => {
+  const tb = []
+  __setSessionsReadDeps({ queryTinybird: async (p, params) => { tb.push({ p, params }); return [VS_PV, VS_CONV] }, queryHog: async () => { throw new Error('HogQL called') } })
+  try {
+    const res = mockRes()
+    await visitorSessions(vsReq(), res)
+    assert.strictEqual(res.statusCode, 200)
+    assert.strictEqual(tb[0].p, 'visitor_sessions')
+    assert.deepStrictEqual(tb[0].params, { site_id: 'site-00', distinct_id: 'v1' }, 'scoped to authenticated site_id + requested visitor')
+  } finally { __resetSessionsReadDeps() }
+})
+
+test('sessions visitor — FALLBACK: pipe null -> HogQL positional rows -> same output', async () => {
+  __setSessionsReadDeps({ queryTinybird: async () => null, queryHog: async () => [vsPos(VS_PV), vsPos(VS_CONV)] })
+  try {
+    const res = mockRes()
+    await visitorSessions(vsReq(), res)
+    assert.strictEqual(res.body.data.session_count, 1)
+  } finally { __resetSessionsReadDeps() }
+})
+
+test('sessions visitor — FAIL-CLOSED: FORCE_READ + pipe null -> 500', async () => {
+  process.env.TINYBIRD_FORCE_READ = 'true'
+  __setSessionsReadDeps({ queryTinybird: async () => null, queryHog: async () => { throw new Error('should not reach') } })
+  try {
+    const res = mockRes()
+    await visitorSessions(vsReq(), res)
+    assert.strictEqual(res.statusCode, 500)
+  } finally { delete process.env.TINYBIRD_FORCE_READ; __resetSessionsReadDeps() }
+})
+
+test('sessions visitor — guard: missing distinct_id -> 400 (no read attempted)', async () => {
+  let called = false
+  __setSessionsReadDeps({ queryTinybird: async () => { called = true; return null }, queryHog: async () => { called = true; return [] } })
+  try {
+    const res = mockRes()
+    await visitorSessions(vsReq({}), res)
+    assert.strictEqual(res.statusCode, 400)
+    assert.strictEqual(called, false, 'no backend read before the guard')
+  } finally { __resetSessionsReadDeps() }
 })
