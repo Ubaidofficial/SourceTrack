@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "generate-assets": "node scripts/generate-assets.mjs",
+    "lint": "eslint src",
     "preview": "vite preview",
     "start": "node server.mjs"
   },
@@ -34,6 +35,10 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "globals": "^15.15.0",
     "postcss": "^8.4.45",
     "sharp": "^0.34.5",
     "tailwindcss": "^3.4.11",

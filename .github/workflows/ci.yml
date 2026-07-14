@@ -69,6 +69,15 @@ jobs:
       - name: Tinybird dual-write unit tests
         run: npm run qa:tinybird:unit
 
+      - name: Lint dashboard (no-undef gate)
+        # REQUIRED (no continue-on-error): `no-undef` is error-level, so a variable/component
+        # referenced but not in scope — the `formattedRevenue is not defined` white-screen class —
+        # fails the build BEFORE it can ship. `npm run build` passes on that bug; this does not.
+        # Everything else in eslint.config.js is warn-only, so `eslint src` exits 0 on warnings.
+        run: |
+          cd dashboard
+          npm run lint
+
       - name: Build dashboard production target
         run: |
           cd dashboard
