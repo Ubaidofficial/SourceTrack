@@ -1772,7 +1772,7 @@ export async function getMultiTouchAttributionLive({
   // content filters (only site_id/event_type/window), so no filter gate is needed.
   const _mtLb = lookbackStr.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
   const _mtTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
-  const _mtParams = { site_id: String(siteId), lookback: _mtLb, to: _mtTo }
+  const _mtParams = { site_id: String(siteId), date_from_ts: _mtLb, date_to_ts: _mtTo }
   if (custKey1) _mtParams.custom_key1 = `custom_${custKey1}`
   if (custKey2 && custKey2 !== custKey1) _mtParams.custom_key2 = `custom_${custKey2}`
   const _mtPv = await _pipeRead('multitouch_pageviews_live', _mtParams)
