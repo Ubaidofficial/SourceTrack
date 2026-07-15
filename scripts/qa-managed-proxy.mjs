@@ -50,7 +50,8 @@ async function startTestServer(extraEnv = {}) {
       NODE_ENV: 'test',
       ST_MOCK_DNS_RESOLVE: 'true',
       ST_MANAGED_PROXY_TARGET: 'proxy.sourcetrack.ai',
-      ST_PLATFORM_HOSTS: 'api.sourcetrack.ai,localhost,127.0.0.1',
+      ST_PLATFORM_HOSTS: 'api.sourcetrack.ai,localhost,127.0.0.1,api.srctk.com',
+      ST_PROXY_SECRET: 'test-secret-123',
       ...extraEnv
     }
   })
@@ -251,16 +252,56 @@ async function runTests() {
     assert.match(resPending.body || '', /domain inactive or pending/i)
     console.log('✅ Scenario 4 Passed.')
 
-    // 6. Test health path is open for pending domains
-    console.log('\nScenario 5: Verify health check path resolves on pending domain...')
+     // 6. Test health path is open for pending domains
+    console.log('\nScenario 5: Verify health check path resolves on pending domain (direct)...')
     const resHealthPending = await makeRequest({
       method: 'GET',
       path: '/.well-known/sourcetrack/proxy-health',
       host: testDomain
     })
     assert.strictEqual(resHealthPending.statusCode, 200)
-    assert.strictEqual(resHealthPending.body.status, 'ok')
-    assert.strictEqual(resHealthPending.body.service, 'sourcetrack-managed-proxy')
+    assert.strictEqual(resHealthPending.body.ok, true)
+    assert.strictEqual(resHealthPending.body.service, 'sourcetrack-proxy')
+
+    // Test 5a: Verified proxy request through cdn-host + correct secret
+    console.log('Test 5a: Verify health check with cdn-host + correct proxy secret...')
+    const resHealthProxy = await makeRequest({
+      method: 'GET',
+      path: '/.well-known/sourcetrack/proxy-health',
+      host: 'api.srctk.com',
+      headers: {
+        'cdn-host': testDomain,
+        'x-st-proxy-secret': 'test-secret-123'
+      }
+    })
+    assert.strictEqual(resHealthProxy.statusCode, 200)
+    assert.strictEqual(resHealthProxy.body.ok, true)
+    assert.strictEqual(resHealthProxy.body.service, 'sourcetrack-proxy')
+
+    // Test 5b: Spoofed proxy request (cdn-host, but NO secret)
+    console.log('Test 5b: Verify health check with cdn-host but NO proxy secret fails (404)...')
+    const resHealthSpoofNoSecret = await makeRequest({
+      method: 'GET',
+      path: '/.well-known/sourcetrack/proxy-health',
+      host: 'api.srctk.com',
+      headers: {
+        'cdn-host': testDomain
+      }
+    })
+    assert.strictEqual(resHealthSpoofNoSecret.statusCode, 404)
+
+    // Test 5c: Spoofed proxy request (cdn-host, but INVALID secret)
+    console.log('Test 5c: Verify health check with cdn-host but INVALID proxy secret fails (404)...')
+    const resHealthSpoofBadSecret = await makeRequest({
+      method: 'GET',
+      path: '/.well-known/sourcetrack/proxy-health',
+      host: 'api.srctk.com',
+      headers: {
+        'cdn-host': testDomain,
+        'x-st-proxy-secret': 'wrong-secret-999'
+      }
+    })
+    assert.strictEqual(resHealthSpoofBadSecret.statusCode, 404)
     console.log('✅ Scenario 5 Passed.')
 
     // 7. Verify CNAME check and SSL Self check transition
