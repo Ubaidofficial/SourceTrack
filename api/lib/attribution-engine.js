@@ -2828,10 +2828,15 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
   // slices; EVERYTHING else falls through to the unchanged HogQL `sql`. Common STRICT gate: single
   // dim, {revenue|conversions}, no _nd/window/custom joins, no filters, conversion_date, UTC. Both
   // pipes carry the external_event_id dedup for parity with the HogQL leg (#170).
-  const _flexPipeCommon =
-    !groupBy2 && (metric === 'revenue' || metric === 'conversions') &&
-    attributeBy === 'conversion_date' &&
+  // Shared base predicate (metric-agnostic): single dim, conversion_date, no custom_param, UTC,
+  // no filters. _flexPipeCommon = base + the revenue/conversions metric gate (existing cases
+  // unchanged, byte-identical boolean). The campaign sessions/leads cases reuse the base directly
+  // because they carry their OWN metrics (sessions/leads), which _flexPipeCommon deliberately excludes.
+  const _flexBaseCommon =
+    !groupBy2 && attributeBy === 'conversion_date' &&
     !custKey1 && !custKey2 && tz === 'UTC' && filterClauses === ''
+  const _flexPipeCommon =
+    _flexBaseCommon && (metric === 'revenue' || metric === 'conversions')
   // source × first_touch -> flexible_report_main_by_site (#168). The attribution window RE-ATTRIBUTES
   // source (windowedDimExpr is set for source), so this pipe — which reads the conversion's stored
   // first_touch_source, UNwindowed — can only match HogQL when NO window is active. Hence the extra
@@ -2864,8 +2869,22 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
   // page (campaigns.js sends model=last_touch, no window -> dead HogQL -> zeros).
   const _flexCampaignCase = _flexPipeCommon && !hasAttributionWindow && groupBy === 'campaign' &&
     (model === 'first_touch' || model === 'last_touch')
+  // campaign + sessions (Visitors column) and campaign + leads (Leads column) — the two dead
+  // Campaigns-page columns (campaigns.js calls getFlexibleReport for metric='sessions'/'leads',
+  // which _flexPipeCommon excludes -> pipe=NONE -> dead HogQL -> zeros). Same window-sensitive,
+  // first_touch|last_touch-only gate as _flexCampaignCase; each has its OWN pipe (different metric SQL:
+  // sessions = count(DISTINCT distinct_id) over $pageview, no dedup; leads = count() over LEAD-typed
+  // $conversion, dedup kept). Reuse _flexBaseCommon (the metric-agnostic base).
+  const _flexCampaignSessionsCase = _flexBaseCommon && !hasAttributionWindow && groupBy === 'campaign' &&
+    metric === 'sessions' && (model === 'first_touch' || model === 'last_touch')
+  const _flexCampaignLeadsCase = _flexBaseCommon && !hasAttributionWindow && groupBy === 'campaign' &&
+    metric === 'leads' && (model === 'first_touch' || model === 'last_touch')
   const _flexPipe = _flexCampaignCase
     ? 'flexible_report_campaign_by_site'
+    : _flexCampaignSessionsCase
+    ? 'flexible_report_campaign_sessions_by_site'
+    : _flexCampaignLeadsCase
+    ? 'flexible_report_campaign_leads_by_site'
     : _flexMainCase
     ? 'flexible_report_main_by_site'
     : _flexProviderCase
