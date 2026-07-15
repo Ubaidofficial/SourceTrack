@@ -4,12 +4,39 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { getSupabase } from '../lib/supabase.js'
+import { queryHogQL } from '../lib/posthog.js'
+import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 
 const router = Router()
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // All admin routes require super_admin role
 router.use(requireRole('super_admin'))
+
+// ── Tinybird read seam (W1 admin read cutover) — mirrors integrations.js/leads-server.js.
+// Unit tests inject stubs for the two read backends; production uses the real imports.
+let _queryTinybirdPipe = queryTinybirdPipe
+let _queryHogQL = queryHogQL
+export function __setAdminReadDeps ({ queryTinybird, queryHog } = {}) {
+  if (queryTinybird) _queryTinybirdPipe = queryTinybird
+  if (queryHog) _queryHogQL = queryHog
+}
+export function __resetAdminReadDeps () {
+  _queryTinybirdPipe = queryTinybirdPipe
+  _queryHogQL = queryHogQL
+}
+// Tinybird-first read: null (flag off / error) -> HogQL fallback; the pipe's NAMED rows are
+// remapped to the HogQL POSITIONAL shape (mapRows) so every downstream consumer is
+// byte-identical. Fail-closed under the test-only TINYBIRD_FORCE_READ. Tenant isolation:
+// pipes are called with the authenticated internal site.id, never client-supplied.
+async function readTb (pipeName, params, hogSql, hogName, mapRows) {
+  const tb = await _queryTinybirdPipe(pipeName, params)
+  if (tb !== null) return mapRows(tb)
+  if (process.env.TINYBIRD_FORCE_READ === 'true') {
+    throw new Error(`[tinybird-force-read] ${pipeName} returned null under TINYBIRD_FORCE_READ — dispatch path not exercised`)
+  }
+  return _queryHogQL(hogSql, hogName)
+}
 
 // --- Audit log helper ---
 async function auditLog(action, targetType = null, targetId = null, metadata = {}) {
@@ -204,16 +231,16 @@ router.post('/preview', async (req, res) => {
     }
 
     // Get install status via PostHog — filter by internal site.id
-    const { queryHogQL } = await import('../lib/posthog.js')
     let installInfo = null
     try {
-      const rows = await queryHogQL(`
+      // admin_preview_install pipe cols [event_type, timestamp] → consumer rows[0][0/1]
+      const rows = await readTb('admin_preview_install', { site_id: String(site.id) }, `
         SELECT event, timestamp
         FROM events
         WHERE properties.site_id = '${String(site.id).replace(/'/g, "''")}'
         ORDER BY timestamp DESC
         LIMIT 1
-      `, 'admin_preview_install')
+      `, 'admin_preview_install', tb => tb.map(r => [r.event_type, r.timestamp]))
       if (rows && rows.length > 0) {
         installInfo = {
           status: 'verified',
@@ -234,12 +261,14 @@ router.post('/preview', async (req, res) => {
     // Get recent event count (last 24h)
     let recentEventCount = 0
     try {
-      const ecRows = await queryHogQL(`
+      // admin_preview_recent has NO pipe — REUSE events_health_day (byte-identical 24h count()).
+      // pipe col `cnt` (scalar) → nested [[cnt]] (consumer ecRows[0][0]). HogQL tag kept unchanged.
+      const ecRows = await readTb('events_health_day', { site_id: String(site.id) }, `
         SELECT count()
         FROM events
         WHERE properties.site_id = '${String(site.id).replace(/'/g, "''")}'
           AND timestamp >= now() - INTERVAL 24 HOUR
-      `, 'admin_preview_recent')
+      `, 'admin_preview_recent', tb => [[tb?.[0]?.cnt ?? 0]])
       recentEventCount = Number(ecRows?.[0]?.[0]) || 0
     } catch { /* non-critical */ }
 
@@ -294,13 +323,14 @@ router.get('/preview/:siteKeyOrId', async (req, res) => {
       return res.status(404).json({ success: false, data: null, error: 'Site not found' })
     }
 
-    const { queryHogQL } = await import('../lib/posthog.js')
     const posthogSiteId = String(site.id).replace(/'/g, "''")
 
     // KPI summary: revenue, conversions, sessions, leads (last 30 days)
     let kpis = { revenue: 0, conversions: 0, sessions: 0, leads: 0 }
     try {
-      const kpiRows = await queryHogQL(`
+      // admin_preview_kpis pipe cols [revenue, conversions, sessions, leads] → nested single row
+      // [[rev, conv, sess, ld]] (consumer const [rev,conv,sess,ld] = kpiRows[0]).
+      const kpiRows = await readTb('admin_preview_kpis', { site_id: String(site.id) }, `
         SELECT
           sumIf(toFloatOrZero(toString(properties.conversion_value)), event = '$conversion') AS revenue,
           countIf(event = '$conversion') AS conversions,
@@ -309,7 +339,7 @@ router.get('/preview/:siteKeyOrId', async (req, res) => {
         FROM events
         WHERE properties.site_id = '${posthogSiteId}'
           AND timestamp >= now() - INTERVAL 30 DAY
-      `, 'admin_preview_kpis')
+      `, 'admin_preview_kpis', tb => [[tb?.[0]?.revenue, tb?.[0]?.conversions, tb?.[0]?.sessions, tb?.[0]?.leads]])
       if (kpiRows && kpiRows.length > 0) {
         const [rev, conv, sess, ld] = kpiRows[0]
         kpis = {
@@ -324,7 +354,8 @@ router.get('/preview/:siteKeyOrId', async (req, res) => {
     // Top 5 sources by revenue
     let sources = []
     try {
-      const srcRows = await queryHogQL(`
+      // admin_preview_sources pipe cols [source, revenue, conversions] → consumer .map([source,revenue,conversions])
+      const srcRows = await readTb('admin_preview_sources', { site_id: String(site.id) }, `
         SELECT
           COALESCE(properties.utm_source, 'direct') AS source,
           sumIf(toFloatOrZero(toString(properties.conversion_value)), event = '$conversion') AS revenue,
@@ -336,7 +367,7 @@ router.get('/preview/:siteKeyOrId', async (req, res) => {
         HAVING revenue > 0
         ORDER BY revenue DESC
         LIMIT 5
-      `, 'admin_preview_sources')
+      `, 'admin_preview_sources', tb => tb.map(r => [r.source, r.revenue, r.conversions]))
       sources = (srcRows || []).map(([source, revenue, conversions]) => ({
         dim_value: source,
         revenue: Number(revenue) || 0,
@@ -347,13 +378,15 @@ router.get('/preview/:siteKeyOrId', async (req, res) => {
     // Install status
     let install = { status: 'unknown' }
     try {
-      const instRows = await queryHogQL(`
+      // admin_preview_overview pipe cols [event_type, timestamp] → consumer instRows[0][0/1].
+      // NOTE: identical query to admin_preview_install — ported faithfully as its own pipe (not deduped).
+      const instRows = await readTb('admin_preview_overview', { site_id: String(site.id) }, `
         SELECT event, timestamp
         FROM events
         WHERE properties.site_id = '${posthogSiteId}'
         ORDER BY timestamp DESC
         LIMIT 1
-      `, 'admin_preview_overview')
+      `, 'admin_preview_overview', tb => tb.map(r => [r.event_type, r.timestamp]))
       if (instRows && instRows.length > 0) {
         install = {
           status: 'verified',
@@ -422,16 +455,17 @@ router.get('/site-detail', async (req, res) => {
     } catch { /* non-critical */ }
 
     // Check install status — filter by internal site.id
-    const { queryHogQL } = await import('../lib/posthog.js')
     let installStatus = null
     try {
-      const rows = await queryHogQL(`
+      // admin_site_detail pipe cols [event_type, timestamp, page_url] → consumer rows[0][0/1/2]
+      // and iterates all (≤50) rows for pageview/conversion presence.
+      const rows = await readTb('admin_site_detail', { site_id: String(site.id) }, `
         SELECT event, timestamp, properties.page_url AS page_url
         FROM events
         WHERE properties.site_id = '${String(site.id).replace(/'/g, "''")}'
         ORDER BY timestamp DESC
         LIMIT 50
-      `, 'admin_site_detail')
+      `, 'admin_site_detail', tb => tb.map(r => [r.event_type, r.timestamp, r.page_url]))
 
       let hasPageview = false
       let hasConversion = false
