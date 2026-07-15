@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { validateSiteKey } from '../middleware/auth.js'
 import { queryHogQL } from '../lib/posthog.js'
+import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { getSupabase } from '../lib/supabase.js'
 import { esc } from '../lib/utils.js'
 import { requireFeature } from '../lib/plan-features.js'
@@ -8,6 +9,31 @@ import { serializeHogQLDateRange, buildHogQLTimestampFilter } from '../lib/hogql
 import { normalizeSource } from '../lib/source-normalizer.js'
 
 const router = Router()
+
+// ── Tinybird read seam (W1 leads/journey read cutover) — mirrors dashboard.js/integrations.js.
+// Unit tests inject stubs for the two read backends; production uses the real imports.
+let _queryTinybirdPipe = queryTinybirdPipe
+let _queryHogQL = queryHogQL
+export function __setLeadsReadDeps ({ queryTinybird, queryHog } = {}) {
+  if (queryTinybird) _queryTinybirdPipe = queryTinybird
+  if (queryHog) _queryHogQL = queryHog
+}
+export function __resetLeadsReadDeps () {
+  _queryTinybirdPipe = queryTinybirdPipe
+  _queryHogQL = queryHogQL
+}
+// Tinybird-first read: null (flag off / error) -> HogQL fallback; the pipe's NAMED rows are
+// remapped to the HogQL POSITIONAL shape (mapRows) so every downstream consumer is
+// byte-identical. Fail-closed under the test-only TINYBIRD_FORCE_READ. Tenant isolation:
+// pipes are called with the authenticated site_id (req.site.id), never client-supplied.
+async function readTb (pipeName, params, hogSql, hogName, mapRows) {
+  const tb = await _queryTinybirdPipe(pipeName, params)
+  if (tb !== null) return mapRows(tb)
+  if (process.env.TINYBIRD_FORCE_READ === 'true') {
+    throw new Error(`[tinybird-force-read] ${pipeName} returned null under TINYBIRD_FORCE_READ — dispatch path not exercised`)
+  }
+  return _queryHogQL(hogSql, hogName)
+}
 
 router.get('/', validateSiteKey, async (req, res) => {
   try {
@@ -21,6 +47,11 @@ router.get('/', validateSiteKey, async (req, res) => {
     const limit = Math.min(parseInt(req.query.limit) || 50, 200)
 
     let dateFilter = ''
+    // Tinybird pipe DateTime boundaries (ClickHouse space format) — passed only when a range is
+    // active, matching the pipe's optional `{% if defined(date_from_ts) %}` block and the exact
+    // exclusive-end window buildHogQLTimestampFilter produces. Same derivation as events.js:187.
+    let dateFromTs = null
+    let dateToTs = null
     if (dateFrom || dateTo) {
       if (!dateFrom || !dateTo) {
         return res.status(400).json({
@@ -33,6 +64,8 @@ router.get('/', validateSiteKey, async (req, res) => {
       try {
         const range = serializeHogQLDateRange(dateFrom, dateTo, { exclusiveEnd: true })
         dateFilter = `AND ${buildHogQLTimestampFilter('timestamp', range)}`
+        dateFromTs = range.from.match(/'([^']+)'/)[1].slice(0, 19).replace('T', ' ')
+        dateToTs = range.to.match(/'([^']+)'/)[1].slice(0, 19).replace('T', ' ')
       } catch (err) {
         return res.status(400).json({ success: false, data: null, error: err.message })
       }
@@ -62,7 +95,17 @@ router.get('/', validateSiteKey, async (req, res) => {
       LIMIT ${limit}
     `
 
-    const rows = await queryHogQL(sql, 'leads_list')
+    // leads_list pipe cols → the L68 positional destructure order (mapped by NAME):
+    // [distinct_id, first_seen, last_seen, pageviews, conversions, total_revenue, source, medium,
+    //  campaign, ai_source, country, first_page_url, last_conversion_type].
+    // offset_val=0 — faithful port; real pagination is a SEPARATE change (parity gate depends on 0).
+    const rows = await readTb('leads_list',
+      { site_id: siteId, limit_val: limit, offset_val: 0, date_from_ts: dateFromTs, date_to_ts: dateToTs },
+      sql, 'leads_list',
+      tb => tb.map(r => [
+        r.distinct_id, r.first_seen, r.last_seen, r.pageviews, r.conversions, r.total_revenue,
+        r.source, r.medium, r.campaign, r.ai_source, r.country, r.first_page_url, r.last_conversion_type
+      ]))
 
     let leads = rows.map(([
       distinctId, firstSeen, lastSeen, pageviews, conversions, totalRevenue,
@@ -183,13 +226,17 @@ router.get('/', validateSiteKey, async (req, res) => {
     // the same unit the Dashboard KPI uses). Falls back to the page length on error.
     let total = leads.length
     try {
-      const countRows = await queryHogQL(`
+      // leads_count pipe col `leads_count` (scalar) → nested [[count]] (destructured as ?.[0]?.[0]).
+      const countRows = await readTb('leads_count',
+        { site_id: siteId, date_from_ts: dateFromTs, date_to_ts: dateToTs },
+        `
         SELECT count(DISTINCT distinct_id)
         FROM events
         WHERE properties.site_id = '${esc(siteId)}'
           AND event = '$conversion'
           ${dateFilter}
-      `, 'leads_count')
+      `, 'leads_count',
+        tb => [[tb?.[0]?.leads_count ?? 0]])
       const trueTotal = Number(countRows?.[0]?.[0])
       if (Number.isFinite(trueTotal)) total = trueTotal
     } catch (_e) {
@@ -244,7 +291,19 @@ router.get('/:leadId', validateSiteKey, async (req, res) => {
       LIMIT 1
     `
 
-    const rows = await queryHogQL(sql, 'lead_detail')
+    // lead_detail pipe cols → the L253 14-positional destructure order (mapped by NAME).
+    // Target order: [firstSeen, lastSeen, pageviews, conversions, totalRevenue, source, medium,
+    //  aiSource, country, firstPageUrl, campaign, firstTouchSource, firstTouchMedium, activeDays].
+    // NOTE: the pipe aliases first_touch_source/medium as `ft_source`/`ft_medium` (a rename forced by
+    // ClickHouse's "aggregate alias == input column" rejection) — mapped explicitly below.
+    const rows = await readTb('lead_detail',
+      { site_id: String(req.site.id), distinct_id: leadId },
+      sql, 'lead_detail',
+      tb => tb.map(r => [
+        r.first_seen, r.last_seen, r.pageviews, r.conversions, r.total_revenue,
+        r.source, r.medium, r.ai_source, r.country, r.first_page_url,
+        r.campaign, r.ft_source, r.ft_medium, r.active_days
+      ]))
 
     if (!rows || rows.length === 0) {
       return res.status(404).json({ success: false, data: null, error: 'Lead not found' })
