@@ -2855,7 +2855,18 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
   // conversion_type — CONVERSION-PROPERTY dim (plain COALESCE(...,'untyped'), no multiIf, no _nd,
   // model-independent) -> same Class-A treatment. (group_by=conversion_type, not filter_conversion_type.)
   const _flexConversionTypeCase = _flexPipeCommon && groupBy === 'conversion_type' && isTouchModel
-  const _flexPipe = _flexMainCase
+  // campaign — MODEL-DEPENDENT dim (GROUP_COLUMNS.campaign: utm_campaign for last_touch,
+  // first_touch_campaign for first_touch), so ONE pipe with a `model` param switches the column
+  // (not a model-independent Class-A dim like provider). WINDOW-SENSITIVE: windowedDimExpr is set
+  // for campaign (_win._w_campaign), so this un-windowed pipe can only match when NO window is
+  // active — hence !hasAttributionWindow (same guard as _flexMainCase). Non-direct models are
+  // EXCLUDED (held for parity) by the explicit first_touch|last_touch check. Fixes the Campaigns
+  // page (campaigns.js sends model=last_touch, no window -> dead HogQL -> zeros).
+  const _flexCampaignCase = _flexPipeCommon && !hasAttributionWindow && groupBy === 'campaign' &&
+    (model === 'first_touch' || model === 'last_touch')
+  const _flexPipe = _flexCampaignCase
+    ? 'flexible_report_campaign_by_site'
+    : _flexMainCase
     ? 'flexible_report_main_by_site'
     : _flexProviderCase
       ? 'flexible_report_provider_by_site'
@@ -2883,7 +2894,9 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     // the pipe's DateTime params — guarantees date-parity.
     const _fbFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
     const _fbTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
-    const _fbTb = await _pipeRead(_flexPipe, { site_id: String(siteId), date_from: _fbFrom, date_to: _fbTo, metric })
+    // `model` is consumed only by flexible_report_campaign_by_site (switches the campaign column);
+    // the other flex pipes don't declare it and Tinybird ignores undeclared query params.
+    const _fbTb = await _pipeRead(_flexPipe, { site_id: String(siteId), date_from: _fbFrom, date_to: _fbTo, metric, model })
     // Named pipe rows -> positional [dim_value, metric_value] so the unchanged consumer (row[0]/row[1],
     // !hasDim2) stays byte-identical. Null -> injectable HogQL fallback (harness controls both legs).
     rows = _fbTb ? _fbTb.map(r => [r.dim_value, r.metric_value]) : await _queryHogQL(sql, 'flexible_report')
