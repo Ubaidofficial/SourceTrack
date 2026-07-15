@@ -26,7 +26,10 @@ const ALLOWED_PATHS = new Set([
   '/track',
   '/api/conversion',
   '/api/tracker/id',
-  '/api/identify'
+  '/api/identify',
+  // Health check path — must be in allowlist so it reaches the pending-safe
+  // handler at line ~98 even when the gate's ALLOWED_PATHS check runs first.
+  '/.well-known/sourcetrack/proxy-health'
 ])
 
 /**
@@ -94,9 +97,10 @@ export async function managedProxyEarlyGate(req, res, next) {
       return res.status(404).send('Not Found')
     }
 
-    // 5. Handle pending-safe health check path first (accessible regardless of status)
+    // 5. Handle pending-safe health check path first (accessible regardless of status).
+    // Shape must match what dns-resolver.js verifySslAndRouting() asserts.
     if (req.path === '/.well-known/sourcetrack/proxy-health') {
-      return res.json({ status: 'ok', service: 'sourcetrack-managed-proxy' })
+      return res.json({ ok: true, service: 'sourcetrack-proxy' })
     }
 
     // 6. Enforce active status

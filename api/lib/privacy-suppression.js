@@ -30,23 +30,37 @@ export async function handlePrivacySuppression(req) {
       return
     }
 
-    const hostname = urlObj.hostname.toLowerCase()
-    const domain = hostname.replace(/^www\./i, '')
+    const hostname = urlObj.hostname.toLowerCase()          // e.g. "www.techrupt.pk"
+    const stripped = hostname.replace(/^www\./i, '')        // "techrupt.pk"
 
-    let site = trackerSiteCache.get(domain)
+    // Cache by the EXACT hostname (not the stripped form) so www.X and X resolve independently — a
+    // shared stripped key would defeat the exact-match preference below on a cache hit.
+    let site = trackerSiteCache.get(hostname)
     if (site === undefined) {
       const supabase = getSupabase()
+      // Match either stored form (bare or www-prefixed). NB: the incoming hostname is always one of
+      // these two, so no third clause is needed.
       const { data, error } = await supabase
         .from('sites')
-        .select('id, site_key, domain')
-        .or(`domain.eq.${domain},domain.eq.www.${domain}`)
+        .select('id, domain, created_at')
+        .or(`domain.eq.${stripped},domain.eq.www.${stripped}`)
 
       if (error || !data || data.length === 0) {
-        trackerSiteCache.set(domain, null)
+        trackerSiteCache.set(hostname, null)
         site = null
       } else {
-        site = data[0]
-        trackerSiteCache.set(domain, site)
+        // DETERMINISTIC pick — never index [0] off an unordered .or(). Postgres returns matching rows
+        // in arbitrary order, and prod carries duplicate www/bare rows for one domain (techrupt.pk had
+        // two). The EXACT hostname the visitor came from wins; otherwise the OLDEST row (created_at
+        // asc) is a stable tie-break. Attributing a GPC/DNT signal to the wrong site is silently wrong.
+        const exact = data.find((s) => (s.domain || '').toLowerCase() === hostname)
+        const oldest = [...data].sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0))[0]
+        site = exact || oldest
+        // Surface the ambiguity — do NOT resolve it silently.
+        if (data.length > 1) {
+          console.warn(`[privacy-suppression] AMBIGUOUS domain=${hostname} matched ${data.length} sites: ${data.map((s) => s.id).join(',')} — chose ${site.id}`)
+        }
+        trackerSiteCache.set(hostname, site)
       }
     }
 

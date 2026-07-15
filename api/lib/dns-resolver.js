@@ -97,7 +97,7 @@ export async function verifySslAndRouting(domain) {
     if (!res.ok) return false
     
     const body = await res.json()
-    return body && body.status === 'ok' && body.service === 'sourcetrack-managed-proxy'
+    return body && body.ok === true && body.service === 'sourcetrack-proxy'
   } catch (err) {
     // Any network connection failure, SSL handshake error, or timeout fails closed
     return false

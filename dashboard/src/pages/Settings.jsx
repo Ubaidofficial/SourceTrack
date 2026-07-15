@@ -42,6 +42,8 @@ export default function Settings() {
   const [proxyError, setProxyError]                 = useState('')
   const [proxySuccess, setProxySuccess]             = useState('')
   const [proxyCopied, setProxyCopied]               = useState(false)
+  // Background re-check counter — bounded to 15 polls (30 min at 2 min interval).
+  const [proxyPollCount, setProxyPollCount]         = useState(0)
 
   const [excludedPaths, setExcludedPaths]           = useState('')
   const [timezone, setTimezone]                     = useState('UTC')
@@ -122,6 +124,39 @@ export default function Settings() {
 
   useEffect(() => { loadSite() }, [user, activeSite])
 
+  // Background poller: while the proxy domain is pending (post-CNAME / SSL
+  // provisioning), silently re-call the verify endpoint every 2 minutes so
+  // the customer doesn't have to keep clicking "Check CNAME Status".
+  // Bounded: stops after 15 polls (~30 minutes) or when status resolves.
+  const PROXY_POLL_INTERVAL_MS = 2 * 60 * 1000  // 2 minutes
+  const PROXY_POLL_MAX         = 15              // 30 minutes total
+  const PENDING_STATUSES = new Set(['pending_dns', 'pending_ssl_or_routing'])
+
+  useEffect(() => {
+    const isPending = proxyConfig?.status && PENDING_STATUSES.has(proxyConfig.status)
+    if (!isPending || !activeSite?.site_key) return
+    if (proxyPollCount >= PROXY_POLL_MAX) return
+
+    const timerId = setTimeout(async () => {
+      try {
+        const data = await fetchApi(`/integrations/proxy-domain/verify?site_key=${activeSite.site_key}`, {
+          method: 'POST'
+        })
+        setProxyConfig(data)
+        setProxyPollCount(c => c + 1)
+        if (data.status === 'active') {
+          setProxySuccess('Custom tracking domain verified and active!')
+        }
+      } catch (_) {
+        // Non-fatal — will retry on next poll tick unless cap is hit.
+        setProxyPollCount(c => c + 1)
+      }
+    }, PROXY_POLL_INTERVAL_MS)
+
+    return () => clearTimeout(timerId)
+  }, [proxyConfig?.status, proxyPollCount, activeSite?.site_key])
+
+
   async function loadSite() {
     if (!activeSite?.site_key) {
       setSite(null)
@@ -160,6 +195,7 @@ export default function Settings() {
     try {
       const proxyData = await fetchApi(`/integrations/proxy-domain?site_key=${activeSite.site_key}`)
       setProxyConfig(proxyData)
+      setProxyPollCount(0)  // reset poll window on site load
       if (proxyData?.domain) {
         setProxyDomain(proxyData.domain)
       } else {
