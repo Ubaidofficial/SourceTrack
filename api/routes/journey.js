@@ -1,8 +1,34 @@
 import { queryHogQL } from '../lib/posthog.js'
+import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { esc } from '../lib/utils.js'
 import { deriveSessions, annotateSessions, sessionAggregates } from '../lib/sessionization.js'
 import { getSupabase } from '../lib/supabase.js'
 import { normalizeSource } from '../lib/source-normalizer.js'
+
+// ── Tinybird read seam (W1 leads/journey read cutover) — mirrors dashboard.js/integrations.js.
+// Unit tests inject stubs for the two read backends; production uses the real imports.
+let _queryTinybirdPipe = queryTinybirdPipe
+let _queryHogQL = queryHogQL
+export function __setJourneyReadDeps ({ queryTinybird, queryHog } = {}) {
+  if (queryTinybird) _queryTinybirdPipe = queryTinybird
+  if (queryHog) _queryHogQL = queryHog
+}
+export function __resetJourneyReadDeps () {
+  _queryTinybirdPipe = queryTinybirdPipe
+  _queryHogQL = queryHogQL
+}
+// Tinybird-first read: null (flag off / error) -> HogQL fallback; the pipe's NAMED rows are
+// remapped to the HogQL POSITIONAL shape (mapRows) so every downstream consumer is
+// byte-identical. Fail-closed under the test-only TINYBIRD_FORCE_READ. Tenant isolation:
+// pipes are called with the authenticated site_id (req.site.id), never client-supplied.
+async function readTb (pipeName, params, hogSql, hogName, mapRows) {
+  const tb = await _queryTinybirdPipe(pipeName, params)
+  if (tb !== null) return mapRows(tb)
+  if (process.env.TINYBIRD_FORCE_READ === 'true') {
+    throw new Error(`[tinybird-force-read] ${pipeName} returned null under TINYBIRD_FORCE_READ — dispatch path not exercised`)
+  }
+  return _queryHogQL(hogSql, hogName)
+}
 
 /**
  * Classify a session's entry source using UTM/referrer/AI data.
@@ -82,7 +108,21 @@ export async function journey(req, res) {
       LIMIT ${limit}
     `
 
-    const rows = await queryHogQL(sql, 'journey')
+    // journey pipe cols → the L87 positional destructure order (mapped by NAME). First pipe col is
+    // `event_type` (route positional 0 is `event`). The pipe hardcodes LIMIT 500 (no limit_val
+    // param) == the route's max/default limit, so default behavior is byte-identical.
+    const rows = await readTb('journey',
+      { site_id: posthogSiteId, visitor_id: visitorId },
+      sql, 'journey',
+      tb => tb.map(r => [
+        r.event_type, r.timestamp, r.page_url, r.referrer,
+        r.utm_source, r.utm_medium, r.utm_campaign,
+        r.ai_source, r.is_conversion, r.conversion_value,
+        r.conversion_type, r.device_type, r.browser_name, r.browser_version,
+        r.os_name, r.os_version, r.country, r.user_id,
+        r.order_id, r.destination_domain, r.destination_url,
+        r.source_system, r.ingestion_method
+      ]))
 
     const events = rows.map(([
       event, timestamp, pageUrl, referrer,
