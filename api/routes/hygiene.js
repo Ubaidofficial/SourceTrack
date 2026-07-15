@@ -110,11 +110,13 @@ router.get('/utms', validateSiteKey, async (req, res) => {
     const [[missingSource]] = await readTb('integ_missing_source', missingSourceSql, 'hygiene_missing_source', tb => [[tb?.[0]?.cnt ?? 0]])
     const campaignRows = await readTb('integ_campaigns', campaignSql, 'hygiene_campaigns', tb => tb.map(r => [r.campaign, r.cnt]))
     const referrerRows = await readTb('integ_referrers', referrerSql, 'hygiene_referrers', tb => tb.map(r => [r.referrer, r.cnt]))
-    // MONEY-RAIL (deliberately NOT wired): hygiene_missing_conv filters on
-    // properties.conversion_value AND event='$conversion' — a conversion-value-
-    // coupled read. Per the Wave-2 money-rail STOP rule it stays on HogQL only
-    // and is flagged for separate review. Behavior here is unchanged.
-    const [[missingConv]] = await _queryHogQL(missingConvSql, 'hygiene_missing_conv')
+    // MONEY-RAIL (WIRED but INERT): integ_missing_conv counts conversions with
+    // missing/zero value — a conversion-value-coupled read. Tinybird-primary via
+    // the integ_missing_conv pipe (same mapping as integrations.js:173), HogQL
+    // fallback on null. Stays inert until the pipe is allowlisted; money-rail, so
+    // requires staging parity before any prod allowlist flip. Pipe col cnt maps
+    // to the nested scalar [[cnt]].
+    const [[missingConv]] = await readTb('integ_missing_conv', missingConvSql, 'hygiene_missing_conv', tb => [[tb?.[0]?.cnt ?? 0]])
     const lowActivityRows = await readTb('integ_low_activity', lowActivitySql, 'hygiene_low_activity', tb => tb.map(r => [r.day, r.cnt]))
 
     const issues = []

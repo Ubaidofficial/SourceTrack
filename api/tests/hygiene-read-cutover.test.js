@@ -1,8 +1,10 @@
 // Phase-1 read-cutover Wave-2 — hygiene.js (/utms) dispatch/fallback tests.
 // Same contract as live-read-cutover.test.js: fallback (flag off = HogQL,
 // unchanged), dispatch (flag on = Tinybird, HogQL not called), fail-closed
-// (TINYBIRD_FORCE_READ + null = 500), and the missing-site guard. Also asserts
-// the money-rail read (hygiene_missing_conv) is NOT wired to Tinybird.
+// (TINYBIRD_FORCE_READ + null = 500), and the missing-site guard. All 5 reads
+// are now wired Tinybird-primary + HogQL fallback, including the money-rail read
+// (hygiene_missing_conv -> integ_missing_conv pipe). The wiring is INERT until
+// the pipe is allowlisted; money-rail, so it also needs staging parity first.
 
 import test from 'node:test'
 import assert from 'node:assert'
@@ -57,23 +59,25 @@ test('hygiene /utms — FALLBACK: flag off (pipe null) -> HogQL for all reads, u
     await handler(reqWithSite(), res)
     assert.strictEqual(res.body.success, true)
     assert.strictEqual(res.body.data.summary.missing_utm_source, 25, 'HogQL value surfaces')
-    // All 5 reads fell back to HogQL (4 wired + the money-rail one).
+    assert.strictEqual(res.body.data.summary.missing_conversion_value, 3, 'money-rail HogQL fallback value surfaces')
+    // All 5 reads (incl. the money-rail one) attempted Tinybird first, then fell back to HogQL.
     assert.deepStrictEqual(hog.sort(), [
       'hygiene_campaigns', 'hygiene_low_activity', 'hygiene_missing_conv',
       'hygiene_missing_source', 'hygiene_referrers'
     ])
-    assert.strictEqual(tb.length, 4, 'the 4 wired reads attempted Tinybird first')
+    assert.strictEqual(tb.length, 5, 'all 5 reads attempted Tinybird first')
   } finally { __resetHygieneReadDeps() }
 })
 
-test('hygiene /utms — DISPATCH: flag on -> Tinybird for wired reads, HogQL only for money-rail read', async () => {
+test('hygiene /utms — DISPATCH: flag on -> Tinybird for all 5 reads (incl. money-rail), HogQL bypassed', async () => {
   const tb = []; const hog = []
   __setHygieneReadDeps({
     queryTinybird: tbStub(tb, {
       integ_missing_source: [{ cnt: 42 }],
       integ_campaigns: [{ campaign: 'x', cnt: 5 }],
       integ_referrers: [{ referrer: 'r', cnt: 6 }],
-      integ_low_activity: [{ day: '2026-07-02', cnt: 1 }]
+      integ_low_activity: [{ day: '2026-07-02', cnt: 1 }],
+      integ_missing_conv: [{ cnt: 8 }] // money-rail pipe served from Tinybird
     }),
     queryHog: hogStub(hog, { missingSource: 7 })
   })
@@ -81,11 +85,32 @@ test('hygiene /utms — DISPATCH: flag on -> Tinybird for wired reads, HogQL onl
     const res = mockRes()
     await handler(reqWithSite('site-00'), res)
     assert.strictEqual(res.body.data.summary.missing_utm_source, 42, 'Tinybird value (42), not HogQL (7)')
-    // The 4 wired reads bypassed HogQL; ONLY the money-rail read used HogQL.
-    assert.deepStrictEqual(hog, ['hygiene_missing_conv'])
+    assert.strictEqual(res.body.data.summary.missing_conversion_value, 8, 'money-rail Tinybird value (8), not HogQL (3)')
+    // All 5 reads bypassed HogQL — none used the fallback.
+    assert.strictEqual(hog.length, 0, 'HogQL fully bypassed when all pipes serve')
     // Tenant isolation: each pipe called with the authenticated site id.
-    assert.deepStrictEqual(tb.map(c => c.pipe).sort(), ['integ_campaigns', 'integ_low_activity', 'integ_missing_source', 'integ_referrers'])
+    assert.deepStrictEqual(tb.map(c => c.pipe).sort(), ['integ_campaigns', 'integ_low_activity', 'integ_missing_conv', 'integ_missing_source', 'integ_referrers'])
     assert.ok(tb.every(c => c.params.site_id === 'site-00'), 'all pipes scoped to authenticated site_id')
+  } finally { __resetHygieneReadDeps() }
+})
+
+test('hygiene /utms — MONEY-RAIL PARTIAL: integ_missing_conv null -> that read falls back to HogQL, others Tinybird', async () => {
+  const tb = []; const hog = []
+  __setHygieneReadDeps({
+    queryTinybird: tbStub(tb, {
+      integ_missing_source: [{ cnt: 42 }],
+      integ_campaigns: [{ campaign: 'x', cnt: 5 }],
+      integ_referrers: [{ referrer: 'r', cnt: 6 }],
+      integ_low_activity: [{ day: '2026-07-02', cnt: 1 }]
+      // integ_missing_conv omitted -> null -> HogQL fallback
+    }),
+    queryHog: hogStub(hog, { missingSource: 7 })
+  })
+  try {
+    const res = mockRes()
+    await handler(reqWithSite('site-00'), res)
+    assert.strictEqual(res.body.data.summary.missing_conversion_value, 3, 'money-rail fell back to HogQL (3)')
+    assert.deepStrictEqual(hog, ['hygiene_missing_conv'], 'only the money-rail read used HogQL')
   } finally { __resetHygieneReadDeps() }
 })
 
