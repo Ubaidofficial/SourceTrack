@@ -683,7 +683,13 @@ function calculateConfidence(touchpoints, channel) {
 export async function processConversion(site, conversion) {
   const convValue = parseFloat(conversion.conversion_value || 0)
 
-  if (convValue < 0 || !conversion.distinct_id) {
+  // A refund is a LEGITIMATE negative $conversion (Phase 2): it MUST persist to
+  // attributed_conversions with its negative value so the existing Supabase SUM nets
+  // Dashboard/Attribution revenue (gross − refund). All OTHER negative values remain
+  // skipped as invalid. (Refund distinct_id 'stripe_refund:…' has no pageviews →
+  // attribution resolves to null/direct, unattributed — nets into Direct at the site
+  // level; per-source exactness is a documented deferred limitation.)
+  if ((convValue < 0 && conversion.conversion_type !== 'refund') || !conversion.distinct_id) {
     logWarn(`Skipping invalid conversion ${conversion.uuid}`)
     return
   }
