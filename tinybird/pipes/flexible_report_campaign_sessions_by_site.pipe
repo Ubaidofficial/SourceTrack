@@ -1,0 +1,56 @@
+DESCRIPTION >
+    Wave-3 flexible_report CAMPAIGN dim, metric='sessions', BASE-CASE (base-gated). One row per
+    campaign with count(DISTINCT distinct_id) over PAGEVIEWS. Faithful port of the BASE 'sessions'
+    slice of the main `sql` in getFlexibleReport (api/lib/attribution-engine.js:2391-2395 metricCol +
+    eventFilter, queryName 'flexible_report') for groupBy='campaign'. NOT money-rail (visitor count).
+
+    BASE CASE ONLY — reproduces the single narrow slice the Campaigns page hits for the Visitors
+    column (campaigns.js sends model=last_touch, NO attributionWindow, no filters, UTC):
+      - dim = campaign, model-switched (effectiveDimExpr = dimExpr = GROUP_COLUMNS['campaign'][model],
+        windowedDimExpr null when no attributionWindow):
+          last_touch  -> nullIf(utm_campaign, '')          (== GROUP_COLUMNS.campaign.last_touch,
+                          properties.utm_campaign; nullIf collapses '' -> NULL for PostHog-NULL parity)
+          first_touch -> nullIf(first_touch_campaign, '')  (== GROUP_COLUMNS.campaign.first_touch)
+        Both typed Nullable(String) (events.datasource:39/43) -> direct reads.
+      - metric = sessions: count(DISTINCT distinct_id) over event_type='$pageview' (live
+        metricCol :2392, eventFilter :2394). NO external_event_id dedup — the live dedup is appended
+        ONLY when eventFilter contains event='$conversion' (attribution-engine.js:2456); sessions
+        reads $pageview, so no dedup subquery.
+      - NO joins, NO filters, orderClause = ORDER BY metric_value DESC (non-date).
+      Everything else (other dims, non-direct/linear/ai_platforms models, other metrics, dim2,
+      custom_param, attributionWindow, any filter, date groupBy, non-UTC timezone) MUST fall through
+      to HogQL. The dispatch gate (_flexCampaignSessionsCase) enforces this: base predicate (single
+      dim, conversion_date, no custom_param, UTC, no filters) + !hasAttributionWindow + groupBy=campaign
+      + metric=sessions + model in {first_touch, last_touch}.
+
+    DATE SEMANTICS (identical to flexible_report_campaign_by_site): base case (tz='UTC') is a PLAIN
+    half-open range `timestamp >= <from> 00:00:00 UTC AND timestamp < <dateTo+1day> 00:00:00 UTC`.
+    The wiring caller passes serializeHogQLDateRange's +1-day-exclusive bounds. Non-UTC tz excluded by
+    the no-filters/UTC gate. §2.6: properties.site_id->site_id, event->event_type.
+
+    PARAM SHAPE: {{ String(site_id) }} referenced ONCE (no dedup subquery); date params once; `model`
+    is a String param with default. MANDATORY before deploy: `tb --cloud deploy --check`. VALUE-PARITY
+    NOT RUN — founder cross-store parity-gates (per-bucket count(DISTINCT distinct_id) + total) on the
+    staging fixture before any allowlist.
+    NOT YET PUSHED — INERT (not in TINYBIRD_READ_PIPES) until founder deploys + allowlists.
+
+NODE flexible_report_campaign_sessions_by_site_node
+SQL >
+    %
+    SELECT
+        {% if String(model, 'last_touch') == 'first_touch' %}
+        nullIf(first_touch_campaign, '')
+        {% else %}
+        nullIf(utm_campaign, '')
+        {% end %} AS dim_value,
+        count(DISTINCT distinct_id) AS metric_value
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$pageview'
+      AND timestamp >= {{ DateTime(date_from, required=True) }}
+      AND timestamp < {{ DateTime(date_to, required=True) }}
+    GROUP BY dim_value
+    ORDER BY metric_value DESC
+    LIMIT 50000
+
+TYPE endpoint

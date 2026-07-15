@@ -1,0 +1,84 @@
+DESCRIPTION >
+    Wave-3 flexible_report CAMPAIGN dim, metric='leads', BASE-CASE (base-gated). One row per campaign
+    with count() over LEAD-typed conversions. Faithful port of the BASE 'leads' slice of the main `sql`
+    in getFlexibleReport (api/lib/attribution-engine.js:2397-2402 metricCol + eventFilter, queryName
+    'flexible_report') for groupBy='campaign'. Clones flexible_report_campaign_by_site VERBATIM; the
+    ONLY changes are (a) agg -> count() and (b) the LEAD_TYPES conversion_type filter in the OUTER
+    WHERE. Dedup subquery unchanged ($conversion only).
+
+    BASE CASE ONLY — reproduces the single narrow slice the Campaigns page hits for the Leads column
+    (campaigns.js sends model=last_touch, NO attributionWindow, no filters, UTC):
+      - dim = campaign, model-switched (same as flexible_report_campaign_by_site):
+          last_touch  -> nullIf(utm_campaign, '')          (== GROUP_COLUMNS.campaign.last_touch)
+          first_touch -> nullIf(first_touch_campaign, '')  (== GROUP_COLUMNS.campaign.first_touch)
+      - metric = leads: count() over event_type='$conversion' AND the conversion is LEAD-typed:
+        live eventFilter (:2400-2401) = event='$conversion' AND
+        lower(COALESCE(toString(properties.conversion_type),'')) IN (<LEAD_TYPES, 14 values from
+        conversion-classifier.js:5>). Ported as lower(coalesce(conversion_type,'')) IN (...) — the
+        typed LowCardinality(Nullable(String)) conversion_type; coalesce(...,'') handles NULL exactly
+        like the live COALESCE(toString(...),''). §2.6: properties.conversion_type -> conversion_type.
+      - external_event_id DEDUP: IDENTICAL to flexible_report_campaign_by_site — the live dedup
+        subquery filters $conversion ONLY (attribution-engine.js:2456-2469 selects argMin(uuid) over
+        ALL $conversion, NOT conversion_type-filtered). So the dedup subquery is UNCHANGED here; the
+        LEAD_TYPES filter lives ONLY in the outer WHERE, matching the live leg exactly (the lead filter
+        and the dedup are independent ANDed clauses on the outer conversion set).
+      - NO other joins/filters, orderClause = ORDER BY metric_value DESC (non-date).
+      Everything else (other dims, non-direct/linear/ai_platforms models, other metrics, dim2,
+      custom_param, attributionWindow, any filter, date groupBy, non-UTC timezone) MUST fall through
+      to HogQL. The dispatch gate (_flexCampaignLeadsCase) enforces this: base predicate + !hasAttribution
+      Window + groupBy=campaign + metric=leads + model in {first_touch, last_touch}.
+
+    DATE SEMANTICS (identical to flexible_report_campaign_by_site): base case (tz='UTC') is a PLAIN
+    half-open range `timestamp >= <from> 00:00:00 UTC AND timestamp < <dateTo+1day> 00:00:00 UTC`.
+    §2.6: properties.site_id->site_id, event->event_type, uuid->event_id.
+
+    PARAM SHAPE: {{ String(site_id) }} referenced TWICE (outer + dedup subquery); date params once;
+    `model` is a String param with default. MANDATORY before deploy: `tb --cloud deploy --check`.
+    VALUE-PARITY NOT RUN — founder cross-store parity-gates (per-bucket count() over LEAD_TYPES + dedup
+    + total) on the staging fixture before any allowlist.
+    NOT YET PUSHED — INERT (not in TINYBIRD_READ_PIPES) until founder deploys + allowlists.
+
+NODE flexible_report_campaign_leads_by_site_node
+SQL >
+    %
+    SELECT
+        {% if String(model, 'last_touch') == 'first_touch' %}
+        nullIf(first_touch_campaign, '')
+        {% else %}
+        nullIf(utm_campaign, '')
+        {% end %} AS dim_value,
+        count() AS metric_value
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$conversion'
+      AND lower(coalesce(conversion_type, '')) IN (
+        'lead_created', 'qualified', 'opportunity', 'form', 'lead', 'signup', 'sign_up',
+        'trial', 'free_trial', 'meeting', 'book_demo', 'schedule_meeting', 'contact_form', 'mql'
+      )
+      AND timestamp >= {{ DateTime(date_from, required=True) }}
+      AND timestamp < {{ DateTime(date_to, required=True) }}
+      -- external_event_id dedup — faithful port of the HogQL leg (attribution-engine.js:2456-2469),
+      -- IDENTICAL to flexible_report_campaign_by_site. The subquery filters $conversion ONLY (NOT
+      -- conversion_type) — so it is unchanged by the LEAD_TYPES outer filter above. KEEP every
+      -- null/empty-keyed row; for a non-null key keep the GLOBAL-earliest-by-timestamp row (inner
+      -- subquery NOT date-filtered, matching HogQL). Tie-break id: Tinybird `event_id` (HogQL uses
+      -- PostHog `uuid`); for the base case a genuine duplicate shares campaign+lead-type, so the
+      -- surviving row's bucket contribution is identical regardless of which id wins -> parity holds.
+      AND (
+        external_event_id IS NULL
+        OR external_event_id = ''
+        OR event_id IN (
+          SELECT argMin(event_id, timestamp)
+          FROM events
+          WHERE site_id = {{ String(site_id, required=True) }}
+            AND event_type = '$conversion'
+            AND external_event_id IS NOT NULL
+            AND external_event_id != ''
+          GROUP BY external_event_id
+        )
+      )
+    GROUP BY dim_value
+    ORDER BY metric_value DESC
+    LIMIT 50000
+
+TYPE endpoint
