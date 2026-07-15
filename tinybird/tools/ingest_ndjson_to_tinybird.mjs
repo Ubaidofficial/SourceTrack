@@ -38,7 +38,14 @@ function parseArgs (argv) {
   return o
 }
 const args = parseArgs(process.argv.slice(2))
-const IN = args.in || 'tinybird/fixtures/events_sample.ndjson'
+// --in is REQUIRED. Previously it defaulted to the synthetic events_sample.ndjson
+// fixture, so a broken/absent flag silently ingested 989 junk `site-0x` rows into the
+// real datasource. Never fall back to the fixture — demand an explicit path or exit.
+const IN = args.in
+if (!IN || IN === 'true') {
+  console.error('ERROR: --in <file.ndjson> is required (no default — refusing to silently load the synthetic fixture).')
+  process.exit(2)
+}
 const ONLY_SITE = args['only-site-id'] || null
 const CONFIRM = args.confirm === 'true' || args.confirm === true
 const CHUNK = parseInt(args.chunk || '1000', 10)
