@@ -50,8 +50,20 @@ export async function managedProxyEarlyGate(req, res, next) {
       return res.status(400).json({ error: 'Malformed Host header' })
     }
 
-    // 2. Normalize host and strip port
-    const hostname = hostHeader.split(':')[0].trim().toLowerCase()
+    // 2. Determine if this request is a verified proxy request via Bunny CDN
+    const proxySecret = process.env.ST_PROXY_SECRET
+    const expectedPullZoneId = process.env.BUNNY_PULL_ZONE_ID
+    const matchesPullZone = !expectedPullZoneId || req.headers['cdn-pullzoneid'] === expectedPullZoneId
+    const isProxyRequest = proxySecret && req.headers['x-st-proxy-secret'] === proxySecret && matchesPullZone
+
+    let hostname
+    if (isProxyRequest && req.headers['cdn-host']) {
+      const cdnHost = req.headers['cdn-host'].trim().toLowerCase()
+      hostname = cdnHost.split(':')[0]
+    } else {
+      hostname = hostHeader.split(':')[0].trim().toLowerCase()
+    }
+
     if (!hostname) {
       return res.status(400).json({ error: 'Missing Host header' })
     }
