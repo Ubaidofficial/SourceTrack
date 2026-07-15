@@ -11,12 +11,24 @@ const VALID_CONVERSIONS = ['purchase', 'trial', 'lead', 'signup', 'meeting']
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-function normalizeDomain(input) {
+// Canonicalize a user-entered domain to ONE stored form: lowercased hostname with a leading "www."
+// stripped. So "www.Example.com", "https://example.com/x", and "example.com" all collapse to
+// "example.com" — the same normalization the tracker's Referer lookup (privacy-suppression.js) and the
+// sites_normalized_domain_uniq index use. Prevents a second site row for the same domain typed with/
+// without www. The URL parse also sanitizes the value (a valid hostname carries no PostgREST operator
+// characters), so it is safe to interpolate into the .or() filter below. Exported for unit tests.
+export function normalizeDomain(input) {
   const raw = String(input || '').trim().toLowerCase()
   if (!raw) return null
   try {
     const url = new URL(raw.includes('://') ? raw : `https://${raw}`)
-    return url.hostname
+    const host = url.hostname.replace(/^www\./i, '')
+    // new URL() lets commas / parens / semicolons through the hostname, and `host` is interpolated into
+    // the PostgREST .or() STRING filter below (NOT a parameterized value binding). Reject anything that
+    // is not plain hostname characters, or a crafted domain could break out of the filter and read
+    // another tenant's site (§6.5). This also rejects IPv6/ports, which are never registrable sites.
+    if (!/^[a-z0-9.-]+$/.test(host)) return null
+    return host
   } catch {
     return null
   }
@@ -177,16 +189,21 @@ router.post('/site', async (req, res) => {
       return res.status(400).json({ success: false, data: null, error: 'Please enter a valid domain, for example yoursite.com' })
     }
 
+    // Match EITHER stored form (bare or www-prefixed) so a pre-normalization "www." row is still found
+    // by a bare input — never create a second row for the same domain. Deterministic: oldest match wins
+    // (no .maybeSingle(), which would error if a tenant already has the duplicate pair pre-index).
     const query = getSupabase()
       .from('sites')
-      .select('id, site_key, domain, onboarding_completed, onboarding_state, business_type, company_id, owner_id')
-      .eq('domain', domain)
+      .select('id, site_key, domain, onboarding_completed, onboarding_state, business_type, company_id, owner_id, created_at')
+      .or(`domain.eq.${domain},domain.eq.www.${domain}`)
+      .order('created_at', { ascending: true })
 
     if (req.user.company_id) query.eq('company_id', req.user.company_id)
     else query.eq('owner_id', req.user.id)
 
-    const { data: existing, error: existingErr } = await query.maybeSingle()
+    const { data: matches, error: existingErr } = await query
     if (existingErr) throw existingErr
+    const existing = matches?.[0] || null
 
     // Step 1 Domain Policy:
     // 1. If same-domain site exists and is incomplete, resume/update it.
@@ -263,7 +280,15 @@ router.post('/site', async (req, res) => {
       .select('id, site_key, domain, onboarding_state, onboarding_completed, business_type')
       .single()
 
-    if (createErr) throw createErr
+    if (createErr) {
+      // sites_normalized_domain_uniq rejects a second site for the same normalized domain. The
+      // tenant-scoped check above only sees THIS account's sites, so a domain already tracked by a
+      // DIFFERENT account lands here — surface a clear message instead of a raw 500.
+      if (createErr.code === '23505') {
+        return res.status(409).json({ success: false, data: null, error: 'This domain is already being tracked by another account. If it is yours, contact support to transfer it.' })
+      }
+      throw createErr
+    }
 
     return res.status(200).json({
       success: true,
