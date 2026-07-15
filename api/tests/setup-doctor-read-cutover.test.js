@@ -1,8 +1,11 @@
 // Phase-1 read-cutover Wave-2 — setup-doctor.js dispatch/fallback tests.
-// Wires only the 2 pure health/count reads (doctor_pageviews_30d,
-// doctor_token_verify); the 3 conversion/attribution-coupled reads stay on
-// HogQL (money-rail hold). Proves: fallback (flag off = HogQL), dispatch
-// (flag on = Tinybird for the wired reads, HogQL for the held ones),
+// All 5 reads are now wired Tinybird-primary + HogQL fallback: the 2 pure
+// health/count reads (doctor_pageviews_30d, doctor_token_verify) plus the 3
+// money-rail reads (doctor_last_conversion, doctor_last_click_id,
+// doctor_paid_params_count). The wiring is INERT until the pipes are
+// allowlisted; the money-rail pipes additionally require staging parity before
+// any prod allowlist flip. Proves: fallback (flag off / pipe null = HogQL,
+// unchanged), dispatch (flag on = Tinybird, mapped to the consumer shape),
 // fail-closed (FORCE_READ + null throws), and no-token skips token_verify.
 
 import test from 'node:test'
@@ -48,40 +51,80 @@ function tbStub (calls, rowsByPipe /* object | null */) {
   }
 }
 
-test('setup-doctor — FALLBACK: flag off (pipe null) -> HogQL for wired + held reads', async () => {
+test('setup-doctor — FALLBACK: flag off (pipe null) -> HogQL for all 5 reads, unchanged', async () => {
   const tb = []; const hog = []
   __setSetupDoctorReadDeps({ queryTinybird: tbStub(tb, null), queryHog: hogStub(hog, { token: 5 }) })
   try {
     const r = await getSetupDiagnostics({ site: site(), verificationToken: 'verifyabc123' })
     assert.strictEqual(r.verification_token.token_matched, true, 'HogQL token count (5) surfaces')
-    // Both wired reads attempted Tinybird first, then fell back to HogQL.
-    assert.deepStrictEqual(tb.map(c => c.pipe).sort(), ['doctor_pageviews_30d', 'doctor_privacy_signals_30d', 'doctor_token_verify'])
-    assert.ok(hog.includes('doctor_pageviews_30d') && hog.includes('doctor_token_verify'), 'wired reads fell back to HogQL')
-    assert.ok(hog.includes('doctor_last_conversion') && hog.includes('doctor_last_click_id') && hog.includes('doctor_paid_params_count'), 'held reads on HogQL')
+    // All 5 reads attempted Tinybird first, then fell back to HogQL. The
+    // money-rail HogQL rows still surface their mapped consumer shape.
+    assert.deepStrictEqual(tb.map(c => c.pipe).sort(), [
+      'doctor_last_click_id', 'doctor_last_conversion', 'doctor_pageviews_30d',
+      'doctor_paid_params_count', 'doctor_privacy_signals_30d', 'doctor_token_verify'
+    ])
+    assert.ok(hog.includes('doctor_pageviews_30d') && hog.includes('doctor_token_verify'), 'health reads fell back to HogQL')
+    assert.ok(hog.includes('doctor_last_conversion') && hog.includes('doctor_last_click_id') && hog.includes('doctor_paid_params_count'), 'money-rail reads fell back to HogQL')
+    // HogQL-sourced money-rail shapes surface unchanged.
+    assert.strictEqual(r.conversion_setup.detected, true)
+    assert.strictEqual(r.conversion_setup.last_conversion_type, 'purchase')
+    assert.strictEqual(r.paid_tracking.parameters_detected, true, 'paid_params_count=4 from HogQL')
+    assert.strictEqual(r.paid_tracking.click_id_seen, true)
+    assert.strictEqual(r.paid_tracking.last_click_id_type, 'gclid')
   } finally { __resetSetupDoctorReadDeps() }
 })
 
-test('setup-doctor — DISPATCH: flag on -> Tinybird for wired reads, HogQL only for held (money-rail) reads', async () => {
+test('setup-doctor — DISPATCH: flag on -> Tinybird for all 5 reads (incl. money-rail), HogQL bypassed', async () => {
   const tb = []; const hog = []
   __setSetupDoctorReadDeps({
     queryTinybird: tbStub(tb, {
       doctor_pageviews_30d: [{ pageviews_30d: 100 }],
-      doctor_token_verify: [{ token_verify_count: 0 }] // NOT matched via Tinybird
+      doctor_token_verify: [{ token_verify_count: 0 }], // NOT matched via Tinybird
+      // Money-rail pipes served from Tinybird — named rows mapped to the
+      // consumer's positional/nested shapes.
+      doctor_last_conversion: [{ timestamp: '2026-07-10T00:00:00Z', conversion_type: 'signup' }],
+      doctor_last_click_id: [{ gclid: '', gbraid: '', wbraid: '', fbclid: 'fbx', msclkid: '', ttclid: '', twclid: '', li_fat_id: '', li_fatid: '', dclid: '', snapclid: '', pclid: '', sccid: '', ko_click_id: '' }],
+      doctor_paid_params_count: [{ paid_params_count: 9 }]
     }),
-    queryHog: hogStub(hog, { token: 5 }) // HogQL WOULD say matched — must NOT be used
+    queryHog: hogStub(hog, { token: 5 }) // HogQL WOULD differ — must NOT be used
   })
   try {
     const r = await getSetupDiagnostics({ site: site(), verificationToken: 'verifyabc123' })
     assert.strictEqual(r.verification_token.token_matched, false, 'Tinybird token (0) used, not HogQL (5)')
-    // Wired reads bypassed HogQL; held (money-rail) reads used HogQL.
-    assert.ok(!hog.includes('doctor_pageviews_30d'), 'pageviews read did NOT hit HogQL')
-    assert.ok(!hog.includes('doctor_token_verify'), 'token read did NOT hit HogQL')
-    assert.deepStrictEqual(hog.sort(), ['doctor_last_click_id', 'doctor_last_conversion', 'doctor_paid_params_count'])
-    // Tenant isolation + param contract on the wired pipes.
-    const pv = tb.find(c => c.pipe === 'doctor_pageviews_30d')
+    // No read hit HogQL: all 5 served from Tinybird.
+    assert.strictEqual(hog.length, 0, 'HogQL fully bypassed when all pipes serve')
+    // Money-rail mapped shapes surface from Tinybird, not HogQL.
+    assert.strictEqual(r.conversion_setup.detected, true)
+    assert.strictEqual(r.conversion_setup.last_conversion_at, '2026-07-10T00:00:00Z')
+    assert.strictEqual(r.conversion_setup.last_conversion_type, 'signup')
+    assert.strictEqual(r.paid_tracking.parameters_detected, true, 'paid_params_count=9 from Tinybird')
+    assert.strictEqual(r.paid_tracking.click_id_seen, true)
+    assert.strictEqual(r.paid_tracking.last_click_id_type, 'fbclid', 'click-id col order preserved (fbclid is index 3)')
+    // Tenant isolation + param contract on every wired pipe.
+    assert.ok(tb.every(c => c.params.site_id === 'site-00'), 'all pipes scoped to authenticated site_id')
     const tk = tb.find(c => c.pipe === 'doctor_token_verify')
-    assert.deepStrictEqual(pv.params, { site_id: 'site-00' })
     assert.deepStrictEqual(tk.params, { site_id: 'site-00', st_verify: 'verifyabc123' })
+  } finally { __resetSetupDoctorReadDeps() }
+})
+
+test('setup-doctor — MONEY-RAIL PARTIAL: money-rail pipes null -> those 3 fall back to HogQL, health reads still Tinybird', async () => {
+  const tb = []; const hog = []
+  __setSetupDoctorReadDeps({
+    queryTinybird: tbStub(tb, {
+      doctor_pageviews_30d: [{ pageviews_30d: 100 }],
+      doctor_token_verify: [{ token_verify_count: 0 }]
+      // money-rail pipes omitted -> tbStub returns null -> HogQL fallback
+    }),
+    queryHog: hogStub(hog, { token: 5 })
+  })
+  try {
+    const r = await getSetupDiagnostics({ site: site(), verificationToken: 'verifyabc123' })
+    // Only the 3 money-rail reads fell back to HogQL; health reads bypassed it.
+    assert.deepStrictEqual(hog.sort(), ['doctor_last_click_id', 'doctor_last_conversion', 'doctor_paid_params_count'])
+    // HogQL-sourced money-rail shapes surface (purchase / gclid / 4 from hogStub).
+    assert.strictEqual(r.conversion_setup.last_conversion_type, 'purchase')
+    assert.strictEqual(r.paid_tracking.last_click_id_type, 'gclid')
+    assert.strictEqual(r.paid_tracking.parameters_detected, true)
   } finally { __resetSetupDoctorReadDeps() }
 })
 

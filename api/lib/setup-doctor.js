@@ -97,9 +97,13 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
       console.warn('[setup-doctor] doctor_pageviews_30d query failed:', err?.message || err)
       return null
     }),
-    // [1] Last conversion in the last 30 days — MONEY-RAIL (NOT wired): reads
-    // event='$conversion' + conversion_type. HogQL only; flagged for review.
-    _queryHogQL(`
+    // [1] Last conversion in the last 30 days — MONEY-RAIL (WIRED but INERT):
+    // reads event='$conversion' + conversion_type. Tinybird-primary via the
+    // doctor_last_conversion pipe, HogQL fallback on null. Stays inert until the
+    // pipe is allowlisted; money-rail, so requires staging parity before any prod
+    // allowlist flip. Pipe cols (timestamp, conversion_type) map to the HogQL
+    // positional row [timestamp, conversion_type] (0-or-1 row).
+    readTb('doctor_last_conversion', { site_id: posthogSiteId }, `
       SELECT timestamp, properties.conversion_type AS conversion_type
       FROM events
       WHERE properties.site_id = '${esc(posthogSiteId)}'
@@ -107,13 +111,18 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
         AND timestamp >= now() - INTERVAL 30 DAY
       ORDER BY timestamp DESC
       LIMIT 1
-    `, 'doctor_last_conversion').catch(err => {
+    `, 'doctor_last_conversion', tb => tb.map(r => [r.timestamp, r.conversion_type])).catch(err => {
+      if (forceRead) throw err
       console.warn('[setup-doctor] doctor_last_conversion query failed:', err?.message || err)
       return null
     }),
-    // [2] Last event with click ID in the last 30 days — MONEY-RAIL (NOT wired):
-    // reads click-ID attribution params. HogQL only; flagged for review.
-    _queryHogQL(`
+    // [2] Last event with click ID in the last 30 days — MONEY-RAIL (WIRED but
+    // INERT): reads click-ID attribution params. Tinybird-primary via the
+    // doctor_last_click_id pipe, HogQL fallback on null. Inert until allowlisted;
+    // requires staging parity before any prod allowlist flip. The pipe SELECTs
+    // the 14 click-id cols in the SAME order as clickIdTypes below; map to that
+    // exact positional order so downstream index access stays byte-identical.
+    readTb('doctor_last_click_id', { site_id: posthogSiteId }, `
       SELECT properties.gclid, properties.gbraid, properties.wbraid, properties.fbclid, properties.msclkid, properties.ttclid, properties.twclid, properties.li_fat_id, properties.li_fatid, properties.dclid, properties.snapclid, properties.pclid, properties.sccid, properties.ko_click_id
       FROM events
       WHERE properties.site_id = '${esc(posthogSiteId)}'
@@ -136,14 +145,18 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
         )
       ORDER BY timestamp DESC
       LIMIT 1
-    `, 'doctor_last_click_id').catch(err => {
+    `, 'doctor_last_click_id', tb => tb.map(r => [r.gclid, r.gbraid, r.wbraid, r.fbclid, r.msclkid, r.ttclid, r.twclid, r.li_fat_id, r.li_fatid, r.dclid, r.snapclid, r.pclid, r.sccid, r.ko_click_id])).catch(err => {
+      if (forceRead) throw err
       console.warn('[setup-doctor] doctor_last_click_id query failed:', err?.message || err)
       return null
     }),
     // [3] Check if any paid params were seen at all in the last 30 days —
-    // MONEY-RAIL (NOT wired): reads click-ID + campaign-ID attribution params.
-    // HogQL only; flagged for review.
-    _queryHogQL(`
+    // MONEY-RAIL (WIRED but INERT): reads click-ID + campaign-ID attribution
+    // params. Tinybird-primary via the doctor_paid_params_count pipe, HogQL
+    // fallback on null. Inert until allowlisted; requires staging parity before
+    // any prod allowlist flip. Pipe col paid_params_count maps to the nested
+    // scalar [[count]].
+    readTb('doctor_paid_params_count', { site_id: posthogSiteId }, `
       SELECT count()
       FROM events
       WHERE properties.site_id = '${esc(posthogSiteId)}'
@@ -167,7 +180,8 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
           (properties.st_campaign_id != '' AND isNotNull(properties.st_campaign_id)) OR
           (properties.st_adgroup_id != '' AND isNotNull(properties.st_adgroup_id))
         )
-    `, 'doctor_paid_params_count').catch(err => {
+    `, 'doctor_paid_params_count', tb => [[tb?.[0]?.paid_params_count ?? 0]]).catch(err => {
+      if (forceRead) throw err
       console.warn('[setup-doctor] doctor_paid_params_count query failed:', err?.message || err)
       return null
     })
