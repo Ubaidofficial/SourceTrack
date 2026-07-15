@@ -7,6 +7,7 @@ import { claimIdempotencyKeys, logIngestionEvent, rollbackIdempotencyKeys } from
 import { resolveWebhookAnonymousId } from '../lib/identity-links.js'
 import { claimConversionUsage } from '../lib/conversion-limits.js'
 import { SUBSCRIPTION_EVENTS, mapSubscriptionEvent, buildSubscriptionIdempotencyKeys, checkoutConversionValue } from '../lib/stripe-subscription.js'
+import { REFUND_EVENT_TYPE, buildRefundIdempotencyKeys, buildRefundConversion } from '../lib/stripe-refund.js'
 import { writeConversionDirect } from '../../tinybird/adapter/conversion-write.js'
 
 
@@ -142,6 +143,70 @@ async function handleSubscriptionEvent(event, site, siteKey) {
   }
 }
 
+// Ingest a Stripe refund.created event as a compensating SIGNED $conversion
+// (negative conversion_value), so a signed-sum revenue MV nets it against the
+// original purchase (SCOPE_v3 §9). TINYBIRD-ONLY (founder decision Q1=A): NOT
+// ph.capture'd and NOT written to Supabase attributed_conversions.
+//
+// Identical to handleSubscriptionEvent (claim → write → rollback-on-failure →
+// logIngestionEvent) EXCEPT: (a) uses the refund helpers with their refund-specific
+// idempotency keys (provider_event_id + refund_id — NEVER order_id/payment_id,
+// which collide with the purchase's claim) and event_id=re_… dedup stamp; (b) SKIPS
+// the conversion-limit gate — a refund must never consume the customer's monthly
+// conversion quota; (c) validates the refund amount up front (buildRefundConversion
+// throws on an invalid amount, so a malformed refund is acked with 200 + logged
+// rather than 500-looped by Stripe forever).
+//
+// Returns { status, body } for the caller to send.
+async function handleRefundEvent(event, site, siteKey) {
+  const providerEventId = event.id
+  const refund = event?.data?.object || {}
+
+  // Amount validation up front. 200 (not 500) so Stripe does NOT retry a malformed
+  // refund forever. buildRefundConversion throws on an invalid amount — guard here.
+  const amount = Number(refund.amount)
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { status: 200, body: { received: true, ignored: true, reason: 'invalid refund amount' } }
+  }
+
+  const keys = buildRefundIdempotencyKeys(event)
+  if (keys.length === 0) {
+    return { status: 200, body: { received: true, ignored: true, reason: 'no refund idempotency key' } }
+  }
+
+  // Idempotency: claim → write → rollback-on-failure, so the claim is permanent only
+  // after the write succeeds (§6.5) and a Stripe retry re-attempts rather than dropping.
+  const claim = await claimIdempotencyKeys(siteKey, 'stripe', keys)
+  if (claim.duplicate) {
+    await logIngestionEvent(siteKey, 'stripe', { providerEventId, orderId: providerEventId, value: null, currency: null, status: 'duplicate' })
+    return { status: 200, body: { received: true, duplicate: true } }
+  }
+  if (!claim.success) {
+    await logIngestionEvent(siteKey, 'stripe', { providerEventId, orderId: providerEventId, value: null, currency: null, status: 'error', errorMessage: claim.error || 'Failed to claim idempotency keys' })
+    return { status: 500, body: { error: 'Temporary processing failure' } }
+  }
+
+  // NO claimConversionUsage gate — a refund must NOT consume the monthly quota.
+
+  const { distinctId, value, currency, properties } = buildRefundConversion(event, site)
+
+  try {
+    // MONEY PATH (Wave-1): Tinybird is the SOLE writer — DIRECT, AWAITED, RETRIED.
+    // properties.conversion_value is NEGATIVE; properties.event_id = refund.id (re_…),
+    // the dedup stamp that keeps this distinct from the purchase's order_id-derived id.
+    // On failure it THROWS → the catch rolls the claim back and returns 500 → Stripe redelivers.
+    await writeConversionDirect({ distinctId, event: '$conversion', properties })
+    await logIngestionEvent(siteKey, 'stripe', { providerEventId, orderId: properties.provider_event_id, value, currency, status: 'success' })
+    return { status: 200, body: { received: true } }
+  } catch (err) {
+    // Release the claim so Stripe's retry re-attempts instead of dropping.
+    try { await rollbackIdempotencyKeys(siteKey, 'stripe', keys) } catch (_) { /* best-effort */ }
+    console.error('[stripe-webhook] Refund event capture failed:', err.message)
+    await logIngestionEvent(siteKey, 'stripe', { providerEventId, orderId: properties.provider_event_id, value, currency, status: 'error', errorMessage: err.message || 'Refund conversion write failed' })
+    return { status: 500, body: { error: 'Temporary processing failure' } }
+  }
+}
+
 const router = Router()
 
 router.post('/:site_key', async (req, res) => {
@@ -215,6 +280,11 @@ router.post('/:site_key', async (req, res) => {
   // use the existing path below; everything else is ignored with a safe 200.
   if (SUBSCRIPTION_EVENTS.has(event.type)) {
     const r = await handleSubscriptionEvent(event, site, siteKey)
+    return res.status(r.status).json(r.body)
+  }
+  // Refunds: compensating SIGNED (negative) $conversion — Tinybird-only (§9).
+  if (event.type === REFUND_EVENT_TYPE) {
+    const r = await handleRefundEvent(event, site, siteKey)
     return res.status(r.status).json(r.body)
   }
   if (event.type !== 'checkout.session.completed') {
