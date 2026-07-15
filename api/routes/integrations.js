@@ -1,6 +1,7 @@
 import express from 'express'
 import crypto from 'crypto'
 import { queryHogQL } from '../lib/posthog.js'
+import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { getSupabase } from '../lib/supabase.js'
 import { esc, encryptSecret } from '../lib/utils.js'
 import { siteCache } from '../middleware/auth.js'
@@ -12,9 +13,36 @@ import { requireFeature } from '../lib/plan-features.js'
 
 const router = express.Router()
 
+// ── Tinybird read seam (W1 integrations read cutover) — mirrors dashboard.js/setup-doctor.js.
+// Unit tests inject stubs for the two read backends; production uses the real imports.
+let _queryTinybirdPipe = queryTinybirdPipe
+let _queryHogQL = queryHogQL
+export function __setIntegrationsReadDeps ({ queryTinybird, queryHog } = {}) {
+  if (queryTinybird) _queryTinybirdPipe = queryTinybird
+  if (queryHog) _queryHogQL = queryHog
+}
+export function __resetIntegrationsReadDeps () {
+  _queryTinybirdPipe = queryTinybirdPipe
+  _queryHogQL = queryHogQL
+}
+// Tinybird-first read: null (flag off / error) -> HogQL fallback; the pipe's NAMED rows are
+// remapped to the HogQL POSITIONAL shape (mapRows) so every downstream consumer is
+// byte-identical. Fail-closed under the test-only TINYBIRD_FORCE_READ. Tenant isolation:
+// pipes are called with the authenticated site_id (req.site.id), never client-supplied.
+async function readTb (pipeName, params, hogSql, hogName, mapRows) {
+  const tb = await _queryTinybirdPipe(pipeName, params)
+  if (tb !== null) return mapRows(tb)
+  if (process.env.TINYBIRD_FORCE_READ === 'true') {
+    throw new Error(`[tinybird-force-read] ${pipeName} returned null under TINYBIRD_FORCE_READ — dispatch path not exercised`)
+  }
+  return _queryHogQL(hogSql, hogName)
+}
+
 router.get('/overview', async (req, res) => {
   try {
     const safeSite = esc(String(req.site.id))
+    // Raw (unescaped) site id for Tinybird pipe params — esc() is for SQL interpolation only.
+    const posthogSiteId = String(req.site.id)
 
     // Install status query
     const installSql = `
@@ -135,16 +163,19 @@ router.get('/overview', async (req, res) => {
       aiRows,
       recentRows
     ] = await Promise.all([
-      queryHogQL(installSql, 'integ_install'),
-      queryHogQL(missingSourceSql, 'integ_missing_source'),
-      queryHogQL(campaignSql, 'integ_campaigns'),
-      queryHogQL(referrerSql, 'integ_referrers'),
-      queryHogQL(missingConvSql, 'integ_missing_conv'),
-      queryHogQL(lowActivitySql, 'integ_low_activity'),
-      queryHogQL(trafficSql, 'integ_traffic'),
-      queryHogQL(convSql, 'integ_conversions'),
-      queryHogQL(aiSql, 'integ_ai'),
-      queryHogQL(recentSql, 'integ_recent')
+      // integ_install → cols [event_type, timestamp, page_url] → positional [event, timestamp, pageUrl]
+      readTb('integ_install', { site_id: posthogSiteId }, installSql, 'integ_install', tb => tb.map(r => [r.event_type, r.timestamp, r.page_url])),
+      // integ_missing_source → scalar cnt → nested [[cnt]] (destructured as [[missingSource]])
+      readTb('integ_missing_source', { site_id: posthogSiteId }, missingSourceSql, 'integ_missing_source', tb => [[tb?.[0]?.cnt ?? 0]]),
+      readTb('integ_campaigns', { site_id: posthogSiteId }, campaignSql, 'integ_campaigns', tb => tb.map(r => [r.campaign, r.cnt])),
+      readTb('integ_referrers', { site_id: posthogSiteId }, referrerSql, 'integ_referrers', tb => tb.map(r => [r.referrer, r.cnt])),
+      // integ_missing_conv → scalar cnt → nested [[cnt]] (destructured as [[missingConv]])
+      readTb('integ_missing_conv', { site_id: posthogSiteId }, missingConvSql, 'integ_missing_conv', tb => [[tb?.[0]?.cnt ?? 0]]),
+      readTb('integ_low_activity', { site_id: posthogSiteId }, lowActivitySql, 'integ_low_activity', tb => tb.map(r => [r.day, r.cnt])),
+      readTb('integ_traffic', { site_id: posthogSiteId }, trafficSql, 'integ_traffic', tb => tb.map(r => [r.this_week, r.last_week])),
+      readTb('integ_conversions', { site_id: posthogSiteId }, convSql, 'integ_conversions', tb => tb.map(r => [r.today, r.yesterday])),
+      readTb('integ_ai', { site_id: posthogSiteId }, aiSql, 'integ_ai', tb => tb.map(r => [r.ai_source, r.cnt])),
+      readTb('integ_recent', { site_id: posthogSiteId }, recentSql, 'integ_recent', tb => tb.map(r => [r.cnt, r.last_ts]))
     ])
 
     // Install status
@@ -276,6 +307,8 @@ router.get('/google-ads/checklist', async (req, res) => {
   try {
     const siteKey = req.site?.site_key
     const safeSite = esc(String(req.site.id))
+    // Raw (unescaped) site id for Tinybird pipe params — esc() is for SQL interpolation only.
+    const posthogSiteId = String(req.site.id)
 
     const checklistSql = `
       SELECT
@@ -293,7 +326,13 @@ router.get('/google-ads/checklist', async (req, res) => {
     `
 
     const [rows, { data: connection, error: connError }] = await Promise.all([
-      queryHogQL(checklistSql, 'google_ads_checklist'),
+      // google_ads_checklist → 8 positional [total_events, utms_detected_count, click_id_detected_count,
+      // campaign_id_detected_count, adgroup_id_detected_count, ad_id_detected_count, last_paid_click_seen,
+      // last_conversion_attributed] (matches row[0..7] destructuring below).
+      readTb('google_ads_checklist', { site_id: posthogSiteId }, checklistSql, 'google_ads_checklist', tb => tb.map(r => [
+        r.total_events, r.utms_detected_count, r.click_id_detected_count, r.campaign_id_detected_count,
+        r.adgroup_id_detected_count, r.ad_id_detected_count, r.last_paid_click_seen, r.last_conversion_attributed
+      ])),
       getSupabase()
         .from('ad_platform_connections')
         .select('status')
