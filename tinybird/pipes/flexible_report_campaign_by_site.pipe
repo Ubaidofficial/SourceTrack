@@ -1,0 +1,94 @@
+DESCRIPTION >
+    Wave-3 flexible_report CAMPAIGN dim, BASE-CASE (base-gated). One row per campaign with the
+    requested metric. Faithful port of the BASE case of the main `sql` in getFlexibleReport
+    (api/lib/attribution-engine.js, queryName 'flexible_report') for groupBy='campaign'. MONEY-RAIL
+    for metric='revenue'. Clones flexible_report_main_by_site VERBATIM; the ONLY change is the
+    dim_value column (campaign, model-switched) — same metric switch, dedup, dates, GROUP/ORDER/LIMIT.
+
+    BASE CASE ONLY — reproduces the single narrow slice the Campaigns page hits (campaigns.js sends
+    model=last_touch, NO attributionWindow):
+      - dim = campaign, model-switched (effectiveDimExpr = dimExpr = GROUP_COLUMNS['campaign'][model],
+        windowedDimExpr null when no attributionWindow):
+          last_touch  -> GROUP_COLUMNS.campaign.last_touch  = properties.utm_campaign
+          first_touch -> GROUP_COLUMNS.campaign.first_touch = properties.first_touch_campaign
+        Both are TYPED Nullable(String) (events.datasource:39/43) -> direct reads, NO ASOF/pageview
+        join (the base last_touch dim is the conversion's OWN utm_campaign, not a derived touchpoint).
+      - NULL-vs-'' BUCKETING: the live HogQL groups the RAW column; PostHog stores missing as NULL,
+        Tinybird stores missing as '' (documented last_touch_by_site_agg.pipe:68-73). The JS consumer
+        coalesces null AND '' -> 'unknown' WITHOUT re-grouping, so separate NULL/'' pipe rows would
+        yield two 'unknown' items vs HogQL's one. nullIf(col,'') collapses '' -> NULL into a single
+        bucket, matching PostHog's single-NULL case. ORCHESTRATOR CONFIRMS this exact choice at parity.
+      - metric in {revenue, conversions} via the `metric` param (default 'conversions'):
+          revenue      -> SUM(toFloat64OrZero(toString(conversion_value)))  (== live
+                          SUM(toFloatOrZero(toString(properties.conversion_value))))
+          conversions  -> count()
+        both with eventFilter = event_type='$conversion'.
+      - ALL joins empty (no refJoin/qualifyingJoin/windowJoin/customJoin), NO filters, havingClause
+        empty, orderClause = ORDER BY metric_value DESC (non-date).
+      Everything else (other dims, non-direct/linear/ai_platforms models, sessions/leads/other metrics,
+      dim2, custom_param, attributionWindow, any filter, date groupBy, non-UTC timezone) MUST fall
+      through to HogQL. The dispatch gate (_flexCampaignCase) enforces this: !hasAttributionWindow +
+      model in {first_touch, last_touch} only.
+
+    DATE SEMANTICS (identical to flexible_report_main_by_site): base case (tz='UTC') is a PLAIN
+    half-open range `timestamp >= <from> 00:00:00 UTC AND timestamp < <dateTo+1day> 00:00:00 UTC`.
+    The wiring caller passes serializeHogQLDateRange's +1-day-exclusive bounds. Non-UTC tz excluded by
+    the no-filters/UTC gate.
+    MONEY: revenue cast toFloat64OrZero(toString(conversion_value)) — orchestrator value-verifies
+    revenue PRECISION cross-store before wiring. §2.6: properties.site_id->site_id, event->event_type.
+
+    external_event_id DEDUP (ported from the HogQL leg attribution-engine.js:2397-2409, IDENTICAL to
+    flexible_report_main_by_site): keep all null/empty-keyed rows; for a non-null key keep the
+    GLOBAL-earliest-by-timestamp row (inner subquery NOT date-filtered, matching HogQL). Tie-break on
+    event_id (HogQL uses uuid) — parity holds for the base case because a genuine duplicate shares
+    campaign+value, so the surviving row's bucket contribution is identical no matter which id wins.
+    PARAM SHAPE: {{ String(site_id) }} referenced TWICE (outer + dedup subquery); date params once;
+    `metric` and `model` are String params with defaults. MANDATORY before deploy:
+    `tb --cloud deploy --check`. VALUE-PARITY NOT RUN (orchestrator gates NULL-vs-'' bucketing +
+    revenue precision cross-store before any allowlist).
+    NOT YET PUSHED — INERT (not in TINYBIRD_READ_PIPES) until founder deploys + allowlists.
+
+NODE flexible_report_campaign_by_site_node
+SQL >
+    %
+    SELECT
+        {% if String(model, 'last_touch') == 'first_touch' %}
+        nullIf(first_touch_campaign, '')
+        {% else %}
+        nullIf(utm_campaign, '')
+        {% end %} AS dim_value,
+        {% if String(metric, 'conversions') == 'revenue' %}
+        SUM(toFloat64OrZero(toString(conversion_value)))
+        {% else %}
+        count()
+        {% end %} AS metric_value
+    FROM events
+    WHERE site_id = {{ String(site_id, required=True) }}
+      AND event_type = '$conversion'
+      AND timestamp >= {{ DateTime(date_from, required=True) }}
+      AND timestamp < {{ DateTime(date_to, required=True) }}
+      -- external_event_id dedup — faithful port of the HogQL leg (attribution-engine.js:2397-2409),
+      -- IDENTICAL to flexible_report_main_by_site. KEEP every null/empty-keyed row (never merge). For a
+      -- non-null key, keep exactly the GLOBAL-earliest-by-timestamp row: the inner subquery is
+      -- intentionally NOT date-filtered (matches HogQL exactly). Tie-break id: Tinybird `event_id`
+      -- (HogQL uses PostHog `uuid`); for the base case a genuine duplicate shares campaign+value, so the
+      -- surviving row's bucket contribution is identical regardless of which id wins -> parity holds.
+      -- §2.6: properties.site_id->site_id, uuid->event_id.
+      AND (
+        external_event_id IS NULL
+        OR external_event_id = ''
+        OR event_id IN (
+          SELECT argMin(event_id, timestamp)
+          FROM events
+          WHERE site_id = {{ String(site_id, required=True) }}
+            AND event_type = '$conversion'
+            AND external_event_id IS NOT NULL
+            AND external_event_id != ''
+          GROUP BY external_event_id
+        )
+      )
+    GROUP BY dim_value
+    ORDER BY metric_value DESC
+    LIMIT 50000
+
+TYPE endpoint
