@@ -96,7 +96,7 @@ Prefer **non-nullable + `DEFAULT`** over `Nullable(...)`. The read side's pervas
 | `distinct_id` | String | NOT NULL | the stitching join key |
 | `visitor_id` | String | NOT NULL | journey-projection sort key (alias/derive from distinct_id as used) |
 | `timestamp` | DateTime64(3) UTC, CODEC(DoubleDelta,ZSTD(1)) | NOT NULL | authoritative time (decision #4); adapter guarantees it |
-| `conversion_value` | Float64 | DEFAULT 0 | `SUM(toFloatOrZero())`; signed for refunds (§9) |
+| `conversion_value` | Nullable(Float64) | Nullable | NULL-safe reads only (`toFloat64OrZero`/`IS NULL`); NULL counts as missing/zero — NOT `DEFAULT 0`. Signed for refunds (§9) |
 | `currency` | LowCardinality(String) | Nullable | stripe/shopify/offline |
 | `conversion_type` | LowCardinality(String) | DEFAULT 'untyped' | WHERE+GROUP BY |
 | `ingestion_method` | LowCardinality(String) | NOT NULL | drives PROVIDER/ATTRIBUTION/STITCHING SQL |
