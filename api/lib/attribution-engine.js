@@ -3302,6 +3302,24 @@ export async function getPreAggregatedAttribution({
 // These functions are preserved here to prevent code removal. Do not delete them.
 
 // Get U-Shaped attribution (40/20/40) from pre-aggregated data
+// Bucket a stored multi-touch touch by the requested dim.
+//
+// The stored touch (nightly-attribution's tpBase) gained country/device/browser/landing_page in
+// 87ee5e7 (2026-06-24); every touch written BEFORE that lacks those keys. The previous expression
+// `touch[groupBy] || touch.source || 'direct'` therefore substituted the SOURCE value under the
+// requested dim's label on old-vintage rows — e.g. "google" rendered as a country, 200 OK, blended
+// into the same table as correctly-bucketed new rows. A confident wrong bucket on the money rail;
+// §6 rates that worse than a zero.
+//
+// ABSENT key -> 'unknown' (already a legitimate tpBase value), NEVER touch.source.
+// PRESENT key -> resolved exactly as before, so the KEEP set (source/medium/campaign/channel —
+// always emitted by tpBase, in every vintage) is byte-identical. Totals are unaffected either way:
+// only the bucket label changes, never the attributed_value being summed.
+function multiTouchDimValue (touch, groupBy) {
+  if (!(groupBy in touch)) return 'unknown'
+  return touch[groupBy] || touch.source || 'direct'
+}
+
 export async function getUShapedAttribution({
   siteId,
   dateFrom,
@@ -3335,7 +3353,7 @@ export async function getUShapedAttribution({
     }
     if (!Array.isArray(uShapedData)) uShapedData = []
     for (const touch of uShapedData) {
-      const dimValue = touch[groupBy] || touch.source || 'direct'
+      const dimValue = multiTouchDimValue(touch, groupBy)
       if (!aggregated[dimValue]) {
         aggregated[dimValue] = { revenue: 0, conversions: 0 }
       }
@@ -3382,7 +3400,7 @@ export async function getTimeDecayAttribution({
     }
     if (!Array.isArray(tdData)) tdData = []
     for (const touch of tdData) {
-      const dimValue = touch[groupBy] || touch.source || 'direct'
+      const dimValue = multiTouchDimValue(touch, groupBy)
       if (!aggregated[dimValue]) aggregated[dimValue] = { revenue: 0, conversions: 0 }
       aggregated[dimValue].revenue += parseFloat(touch.attributed_value || 0)
       aggregated[dimValue].conversions += parseFloat(touch.fraction || 0)
@@ -3427,7 +3445,7 @@ export async function getWShapedAttribution({
     }
     if (!Array.isArray(wsData)) wsData = []
     for (const touch of wsData) {
-      const dimValue = touch[groupBy] || touch.source || 'direct'
+      const dimValue = multiTouchDimValue(touch, groupBy)
       if (!aggregated[dimValue]) aggregated[dimValue] = { revenue: 0, conversions: 0 }
       aggregated[dimValue].revenue += parseFloat(touch.attributed_value || 0)
       aggregated[dimValue].conversions += parseFloat(touch.fraction || 0)
@@ -3472,8 +3490,7 @@ export async function getLinearAttribution({
     }
     if (!Array.isArray(linearData)) linearData = []
     for (const touch of linearData) {
-      // groupBy 'channel' uses stored channel field; others fall back to source
-      const dimValue = touch[groupBy] || touch.source || 'direct'
+      const dimValue = multiTouchDimValue(touch, groupBy)
       if (!aggregated[dimValue]) {
         aggregated[dimValue] = { revenue: 0, conversions: 0 }
       }
