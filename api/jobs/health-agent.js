@@ -2,6 +2,7 @@ import 'dotenv/config'
 import WebSocket from 'ws'
 import { getSupabase } from '../lib/supabase.js'
 import { queryTinybirdPipe } from '../lib/tinybird-read.js'
+import { fetchQuarantineSummary, classifyQuarantine } from '../lib/quarantine-alarm.js'
 
 const SLACK = process.env.SLACK_WEBHOOK_URL
 const API_URL = process.env.API_URL || 'http://localhost:3000'
@@ -10,7 +11,7 @@ const API_URL = process.env.API_URL || 'http://localhost:3000'
 // Everything else is warning-level. The money-rail business-logic checks
 // (nightly_job, conversions) are CRITICAL: a job that "succeeds" while processing
 // nothing must be able to turn this monitor red.
-const CRITICAL_CHECKS = new Set(['supabase', 'posthog', 'nightly_job', 'conversions'])
+const CRITICAL_CHECKS = new Set(['supabase', 'posthog', 'nightly_job', 'conversions', 'tinybird_quarantine'])
 
 // Sum recent $conversion rows across the monitored sites via the SAME pipe + token the
 // nightly reads (nightly_conversions_by_site) — so the monitor can NEVER measure a
@@ -73,10 +74,37 @@ export function evaluateConversions({ attributed48h = 0, storeConversions = null
   return { critical: false }
 }
 
+// Tinybird conversion-quarantine alarm body (SCOPE_v3 §11). Exported + dependency-
+// injected — like evaluateNightlyJob/evaluateConversions — so it is unit-testable
+// without a live Tinybird (stub fetchSummary / classify; token-free, no network).
+// Returns the same { _status?, ...rest } shape check() consumes, or throws on critical.
+export async function runQuarantineCheck ({
+  fetchSummary = fetchQuarantineSummary,
+  classify = classifyQuarantine,
+  env = process.env
+} = {}) {
+  let rows
+  try {
+    rows = await fetchSummary({
+      host: env.TINYBIRD_HOST,
+      token: env.TINYBIRD_READ_TOKEN,
+      lookbackHours: env.QUARANTINE_LOOKBACK_HOURS
+    })
+  } catch (e) {
+    // Unreachable/misconfigured Tinybird is NOT the same signal as a quarantined
+    // conversion — warn, never critical (per the module's alert policy).
+    return { _status: 'warning', warning: `quarantine check unavailable: ${e.message}` }
+  }
+  const c = classify(rows)
+  if (c.level === 'critical') throw new Error(c.summary)   // → 'error' + in CRITICAL_CHECKS → overall critical → Slack 🔴
+  if (c.level === 'warn') return { _status: 'warning', warning: c.summary }
+  return { ok: true, summary: c.summary, conversionRows: c.conversionRows, totalRows: c.totalRows }
+}
+
 // check() wraps an async fn.
 // Return { _status: 'warning', ...rest } from fn to report a warning without throwing.
 // Throw to report an error.
-async function check(name, fn) {
+export async function check(name, fn) {
   const t = Date.now()
   try {
     const result = await fn()
@@ -182,6 +210,11 @@ async function collectSnapshot() {
       if (missing.length > 0) throw new Error(`Missing: ${missing.join(', ')}`)
       return { all_present: true }
     }),
+
+    // 9. Tinybird conversion-quarantine alarm — CRITICAL when a $conversion is
+    // quarantined (silent revenue loss, SCOPE_v3 §11; see lib/quarantine-alarm.js).
+    // An unreachable/misconfigured Tinybird warns (not critical) via runQuarantineCheck.
+    check('tinybird_quarantine', () => runQuarantineCheck()),
 
     // 10. Health agent process memory — NOT the API server.
     // Measures this script's own Node.js process. Values will always be low (~20-60MB).
