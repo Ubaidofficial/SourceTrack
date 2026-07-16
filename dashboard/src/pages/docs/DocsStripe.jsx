@@ -109,10 +109,14 @@ const session = await stripe.checkout.sessions.create({
               <li>Under <strong>Select events to listen to</strong>, add:
                 <ul className="list-disc pl-5 mt-1">
                   <li><code>checkout.session.completed</code></li>
+                  <li><code>refund.created</code></li>
                 </ul>
               </li>
               <li>Click <strong>Add Endpoint</strong>.</li>
             </ol>
+            <DocsCallout type="info">
+              Refunds are recorded as negative conversions and automatically net your revenue by source — subscribe to <code>refund.created</code>.
+            </DocsCallout>
             <DocsCallout type="info">
               To secure your webhook, save the Stripe Webhook signing secret (starts with <code>whsec_</code>) in your SourceTrack dashboard under <strong>Integrations &rarr; Stripe settings</strong>. This allows SourceTrack to perform cryptographic HMAC verification of incoming payloads.
             </DocsCallout>
@@ -139,7 +143,7 @@ const session = await stripe.checkout.sessions.create({
           </h2>
           <ul className="list-disc pl-5 space-y-2 text-sm text-gray-700 dark:text-gray-300">
             <li>
-              <strong>Incorrect Webhook Event Types:</strong> Stripe triggers a variety of events like <code>payment_intent.succeeded</code> or <code>invoice.paid</code>. SourceTrack only parses the <code>checkout.session.completed</code> payload to ingest revenue. Listening to other events will result in ignored log entries.
+              <strong>Incorrect Webhook Event Types:</strong> Stripe triggers a variety of events like <code>payment_intent.succeeded</code>. SourceTrack parses <code>checkout.session.completed</code>, <code>refund.created</code>, and subscription lifecycle events; other events are safely ignored.
             </li>
             <li>
               <strong>Unmatched Metadata Key:</strong> If you use custom names like <code>metadata.st_aid</code>, SourceTrack's engine will not process it. Stick to <code>client_reference_id</code> or <code>metadata.anonymous_id</code>.
