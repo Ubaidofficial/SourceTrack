@@ -81,6 +81,9 @@ export default function DevelopersOfflineConversions() {
             HTTP Endpoint
           </h2>
           <Endpoint method="POST" path="/api/conversion/offline" description="Public Ingestion — validated by site_key" />
+          <DocsCallout type="info">
+            To record a refund, use the Stripe <code>refund.created</code> webhook; the offline conversion API accepts positive conversion values only.
+          </DocsCallout>
         </section>
 
         {/* Parameters */}
