@@ -2,9 +2,11 @@
 
 > ⚠️ **FRESHNESS GUARD — read before trusting.** This doc goes stale the moment features change (a 139M-inventory doc misled this very session). **Rules:** (1) verify against current code / `git log -1`, not this doc, for anything load-bearing; (2) CC must update this file in the SAME PR that adds/removes any feature; (3) keep the "Verified @" line below current.
 >
-> **Status: verified against `main` @ cb17cc24939c42f0bba3d78160c6f2b4123c2f8e.** **Verified @ cb17cc24939c42f0bba3d78160c6f2b4123c2f8e** (`cb17cc2`) · **Built:** 2026-07-16.
+> **Status: verified against `main` @ fc00e406be2cd62cf9ff2fdf81f0f000efb757c7.** **Verified @ fc00e406be2cd62cf9ff2fdf81f0f000efb757c7** (`fc00e40`) · **Built:** 2026-07-16.
 >
 > **Audit scope — verified by grep/execution against `main` @ `cb17cc2`:** §22 (the FULL mount list — see the correction there), §21, §15 team-invites, **and the reporting-surface tags in §3 · §4 · §5 · §8 · §9 · §20**, re-tagged 🚧 against the **dead-store gate that went live 2026-07-16 14:41** (PRs #248/#249/#250). **Everything else is still inherited from the draft and NOT re-verified** — it keeps its original 📜/🗺️/❓ tags. Where a section conflicts with §21/§22 or a 🚧 tag, the latter wins.
+>
+> **Re-baseline `cb17cc2` → `fc00e406` (2026-07-16), for the D1–D6 PostHog removal.** Re-verified by grep/execution, NOT by re-reading this doc: **§22** (mount count corrected **45 → 46** `/api/*`, **52 → 53** overall — a *second* incomplete-grep miss, see there), **§9** (KEEP set holds, but was **incomplete on the `model` axis** — see the 🔴 hole there), plus two NEW inventories for the removal: **§23** (bare `queryHogQL` call sites = the PR#4 spec) and **§24** (the PostHog touch-point map — **PostHog is reached from 4 independent places, not 1**). Intervening commits: #251 (doc), #252, #254, #253. Sections not listed here were **not** re-verified at `fc00e406`.
 
 
 **Built:** 2026-07-16, this session. **Reconciles:** live code inventory (my grep) + `SourceTrack_GTM.md` §5 truth-gate + `README.md` + `docs/paid_beta_go_no_go_master_audit.md` + `SELF_SERVE_PAID_BETA_AUDIT.md` + `docs/qa/full_functional_feature_browser_qa_140G-26.md` + `DATA_CAPTURE_SPEC.md` + `BUSINESS_DASHBOARDS_SPEC.md` + `docs/design/design.md` + June 20–29 chat history.
@@ -91,8 +93,12 @@
 - 🧪 **Ad-platform cost sync (Google + Meta) — BUILT + wired** (✅ verified @ `cb17cc2`): `ad-platforms.js` exposes `/google/sync`, `/meta/sync`, OAuth, `save-account` (gated `requireAdCostSync`); called by `Campaigns.jsx:350-353` + `ReportBuilder.jsx:528`. Positioned **V2** (PR #23 removed only the Integrations UI as a spec-leak; endpoints + callers survived). **END-TO-END UNPROVEN** (no real ad account has run it). Distinct from CSV cost import (separately live). **Truth-gate: do not market as working until proven.**
 
 ## 9. Report Builder & saved reports
-> **What actually returns data (@ `cb17cc2`, post-gate) — the KEEP set:**
-> - ✅ **Common dims** (`source`, `campaign`, `channel`, `medium`, `landing_page`, `country`, `device`, `browser`, `date`, `ai_source`) **× {`revenue`, `conversions`, `leads`, `customers`, `avg_conversion_value`}** at the site's default window → **Supabase pre-agg** (`PREAGG_CONVERSION_METRICS` resolves to exactly those five at runtime).
+> **KEEP set re-verified @ `fc00e406` — UNCHANGED by #252/#253/#254.** Executed proof: all 5 gate Sets (`GATED_GROUPS`, `GATED_METRICS`, `SESSION_REPORT_DIMS`, `SESSION_PIPE_METRICS`, `CLASS_A_DIMS`) are **identical** `cb17cc2` → `fc00e406` when both are imported and diffed, and `git diff --stat cb17cc2..fc00e406 -- api/lib/attribution-engine.js api/routes/attribution.js api/routes/export.js` is **empty** — the three files that decide what returns real data were never touched. (#252/#253 are frontend; #254 moved the 4 canonical Sets to `dashboard/src/lib/gate-constants.js` and **re-exports** them, so identity holds — that is what the anti-drift test asserts.)
+>
+> 🔴 **BUT the KEEP set below was INCOMPLETE: it never mentions the `model` axis, and the pre-agg differs by model.** `PREAGG_CONVERSION_METRICS` = {revenue, conversions, leads, customers, avg_conversion_value} applies **only to `first_touch` / `last_touch`** (`attribution.js:174`). The 4 multi-touch models use **`PREAGG_MULTITOUCH_METRICS` = {conversions, revenue} ONLY** (`attribution.js:195/211/227/…`). So **12 shapes are UNGATED and have NO pre-agg**: `{linear, u_shaped, time_decay, w_shaped}` × `{leads, customers, avg_conversion_value}`. They fall through to a **bare `queryHogQL`** (dead PostHog) → **0 rows → a fake zero / empty report (§6 violation)**. The `linear` branch (`attribution-engine.js:2088`) additionally **ignores `metric` entirely** — its SQL always computes revenue/conversions/touchpoints. The picker does **not** grey these (they're KEEP metrics, honest for touch models only). **Not covered by #248's gate. Founder decision — NOT fixed here (doc-only task).** Executed: `gatedReportReason({group_by:'source', metric:'leads', preAggWindowMatches:true})` → `null` (ungated), and `leads ∉ PREAGG_MULTITOUCH_METRICS`.
+>
+> **What actually returns data (@ `fc00e406`, post-gate) — the KEEP set:**
+> - ✅ **Common dims** (`source`, `campaign`, `channel`, `medium`, `landing_page`, `country`, `device`, `browser`, `date`, `ai_source`) **× {`revenue`, `conversions`, `leads`, `customers`, `avg_conversion_value`}** at the site's default window → **Supabase pre-agg** (`PREAGG_CONVERSION_METRICS` resolves to exactly those five at runtime) — **only for `model` ∈ {`first_touch`, `last_touch`}; multi-touch models keep only {revenue, conversions} (see the 🔴 hole above).**
 > - ✅ **Class-A dims** (`provider`, `attribution_status`, `stitching_method`, `conversion_type`) × those metrics → **Tinybird pipes**, at **any** window (window-tolerant).
 > - ✅ **The 4 `session_*` metrics** (`session_count`, `avg_session_duration`, `pages_per_session`, `conversion_sessions`) × the **7 `SESSION_REPORT_DIMS`** (`source`, `medium`, `campaign`, `landing_page`, `country`, `device`, `date`) → the **session pipes**. Any other dim there is 🚧 `unsupported_session_dim` (it used to fabricate a single 'unknown' bucket).
 > - ✅ `days_to_convert` + `touchpoints_per_conversion` → dedicated pipes.
@@ -216,10 +222,12 @@
 ## 22. ✅ MOUNT-VERIFY — RESOLVED @ `cb17cc2`
 > ❗ **CORRECTION (@ `cb17cc2`) — the previous count was INCOMPLETE.** It said "31 `/api/*` mounts" because the grep was **`app.use(`-only**. Express also mounts handlers **directly** via `app.<verb>(...)`, and that grep missed **18** of them — including the entire **`/api/attribution*`** surface (the Report Builder's own backend!), plus the whole ingestion rail (`/api/track`, `/api/collect`, `/api/conversion`, `/api/identify`, …). **Any future mount audit MUST grep `app.use(` AND `app.get|post|put|delete|all(`.**
 >
-> **TRUE COUNT: 45 `/api/*` mounts** = **31** router mounts (`app.use`) **+ 14** direct handlers (`app.<verb>`), plus **7** non-`/api` mounts (`/tracker` guard + static, `/tracker.min.js`, `/tracker.cookieless.min.js`, `/sp` proxy, `/health`, `/track`). Totals: 34 `app.use` + 18 `app.<verb>` = **52** mounts overall.
+> ❗❗ **SECOND CORRECTION (@ `fc00e406`) — the `cb17cc2` count was ALSO incomplete.** It said 45 `/api/*` / 52 overall because that grep was **anchored at line start** (`^app\.`) and `api/index.js:525` indents its handler by two spaces: **`  app.get('/api/diag/ip', …)`** was missed. `api/index.js` is **byte-identical** `cb17cc2` → `fc00e406` (`git diff --stat cb17cc2..fc00e406 -- api/index.js` is empty), so this is a **counting fix, not drift**. **The rule is now: grep `app.use(` AND `app.<verb>(`, AND allow leading whitespace** (`^[[:space:]]*app\.`). Two audits in a row missed mounts to a too-narrow grep.
+>
+> **TRUE COUNT @ `fc00e406`: 46 `/api/*` mounts** = **31** router mounts (`app.use`) **+ 15** direct handlers (`app.<verb>`), plus **7** non-`/api` mounts (`/tracker` guard + static, `/tracker.min.js`, `/tracker.cookieless.min.js`, `/sp` proxy, `/health`, `/track`). Totals: 34 `app.use` + 19 `app.<verb>` = **53** mounts overall.
 
-**The 14 DIRECT `/api/*` handlers the old list missed** (`grep -E "^app\.(get|post|put|delete|all)\(" api/index.js`):
-`POST /api/billing/webhook` · `POST /api/track` · `GET /api/pixel` · `POST /api/collect` · `POST /api/identify` · `POST /api/conversion` · `POST /api/conversion/offline` · **`GET /api/attribution`** · **`GET /api/attribution/explain`** · **`GET /api/attribution/verdicts`** · `GET /api/journey/:visitorId` · `GET /api/sessions/overview` · `GET /api/sessions` · `GET /api/health`
+**The 15 DIRECT `/api/*` handlers** (`grep -nE "^[[:space:]]*app\.(get|post|put|patch|delete|all)\([[:space:]]*['\"]" api/index.js`):
+`POST /api/billing/webhook` · `POST /api/track` · `GET /api/pixel` · `POST /api/collect` · `POST /api/identify` · `POST /api/conversion` · `POST /api/conversion/offline` · **`GET /api/attribution`** · **`GET /api/attribution/explain`** · **`GET /api/attribution/verdicts`** · `GET /api/journey/:visitorId` · `GET /api/sessions/overview` · `GET /api/sessions` · **`GET /api/diag/ip`** (⚠️ `index.js:525`, indented — the one the `cb17cc2` grep missed; **unaudited**: no intent classification, no consumer trace, and it is IP-adjacent — see §6 privacy) · `GET /api/health`
 *(non-`/api` direct: `GET /tracker.min.js` · `GET /tracker.cookieless.min.js` · `GET /health` · `POST /track`)*
 
 **The 31 `app.use` router mounts:**
@@ -252,3 +260,63 @@
 5. **Founder decisions opened by this audit:** (a) delete `api/routes/annotations.js` (0-ref, ready); (b) delete `ai-analytics.js` + its `admin.js:691` probe **together** — the probe currently misreports "AI Analytics: live"; (c) delete `AIAnalytics.jsx` + its `query-error-surfaces.test.js:34` entry together; (d) `ShareDashboard.jsx` / `FunnelChart.jsx` orphans; ~~(e) reconcile §8/§12 "auto ad-spend sync not built" vs the live `ad-platforms` sync endpoints~~ → ✅ **RESOLVED: §8 corrected** (🧪 built + wired, end-to-end unproven); §12 carried no ad-sync claim. Funnels likewise re-classified out of §21 → §3 + §20 row 12; (f) `/api/alerts` — keep as an API surface or retire.
 
 *Confidence: **§21, §22, and §15-invites = grep-verified against `main` @ `cb17cc2` (this audit)**. Sections 1–20 are inherited from the draft and were NOT re-verified: ✅ there = author's earlier grep; 📜 = from chats/audits, needs re-verify; 🗺️/❓ = unverified. Trust the §21/§22 tables over any other section where they conflict.*
+
+---
+
+## 23. 🔻 BARE `queryHogQL` CALL SITES — the PR#4 spec (✅ verified @ `fc00e406`)
+
+> **Method (why this list is short and the naive one is wrong).** `_queryHogQL` is **not** a Tinybird seam — it is a *mutable test-injection alias* (`attribution-engine.js:18 let _queryHogQL = queryHogQL`). The real seams are **`readTb()`** (routes) and **`_pipeRead()`** (engine): attempt a Tinybird pipe, fall back to HogQL. A call is **BARE only if no pipe is attempted on its own branch**. Grepping by identifier, or per-function, gives the WRONG answer: `getFlexibleReport` is one ~1000-line function with independent branches, so an earlier `_pipeRead` does not guard a later branch. Each site below was read individually.
+
+**BARE = 4 sites. ALL are in `getFlexibleReport` (`api/lib/attribution-engine.js`). ALL are money-rail.**
+
+| # | file:line | query name | Money-rail? | Reachable at the edge? |
+|---|---|---|---|---|
+| 1 | `api/lib/attribution-engine.js:2144` | `flexible_report_linear` | 🔴 **YES** — SQL sums `fractional_revenue` / `fractional_conversions` | 🔴 **YES** — `model=linear` × {`leads`,`customers`,`avg_conversion_value`} is **ungated + no multi-touch pre-agg** (see §9 🔴). Branch **ignores `metric`**. |
+| 2 | `api/lib/attribution-engine.js:2833` | `flexible_report_ltv` | 🔴 **YES** — `total_revenue` | ✅ No — `ltv_revenue` ∈ `GATED_METRICS` → 422 at the edge |
+| 3 | `api/lib/attribution-engine.js:2965` | `flexible_report` (**the `pipe=NONE` `else` branch** — `if (_flexPipe) {…} else { rows = await _queryHogQL(sql,'flexible_report') }`) | 🔴 **YES** — generic flex SQL; `metric` may be `revenue`/`conversions` | 🔴 **YES** for any ungated shape with no pipe (incl. the u_shaped/time_decay/w_shaped × leads/customers/avg_conversion_value fall-through) |
+| 4 | `api/lib/attribution-engine.js:3040` | `flexible_ai_share` | 🔴 **YES** — `SUM(conversion_value)` / `count()` | ✅ No — `ai_conversion_share`/`ai_revenue_share` ∈ `GATED_METRICS` → 422 |
+
+**NOT bare — behind a pipe attempt (do NOT include in PR#4's delete set; they are the Tinybird fallback leg):**
+`attribution-engine.js` **:142** `first_touch_by_site` · **:219** `last_touch_by_site` · **:301** / **:375** (non-direct) · **:512** + **:692** `aiplatform_*` · **:1104** / **:1123** `session_report_*` · **:1297** / **:1334** `attribution_explain_*` · **:1721** / **:1832** `multitouch_*` · **:2211** `days_to_convert` · **:2277** `touchpoints_per_conversion` · **:2963** (flex ternary) · **:3012** `flexible_sessions_by_site`.
+⚠️ **:142/:219/:301/:375 look bare** (unconditional `const rows = await _queryHogQL(...)`) but are **early-return fallbacks** — `_pipeRead('first_touch_by_site', …)` at **:131** returns first. Do not classify by shape.
+
+**ROUTES: zero bare sites.** All 11 route files that call HogQL (`sessions`, `alerts`, `leads-server`, `events`, `hygiene`, `seo-revenue`, `dashboard`, `admin`, `live`, `integrations`, `journey`) + `api/lib/setup-doctor.js` call it **only** as the `readTb()`/inline fallback after a pipe attempt — executed check: each file has exactly **1** `queryHogQL(` and **≥1** `_queryTinybirdPipe(`.
+
+## 24. 🔻 PostHog TOUCH-POINT MAP — D1–D6 (✅ verified @ `fc00e406`)
+
+> 🔴 **PostHog is reached from FOUR independent places, not one.** Deleting `api/lib/posthog.js` does **NOT** remove PostHog: `nightly-attribution.js` and `health-agent.js` each `fetch()` PostHog's query API **directly**, bypassing that module entirely. A `queryHogQL`-only inventory misses both — and the nightly **is** the money-rail.
+
+| # | Surface | Evidence | Money-rail? |
+|---|---|---|---|
+| D1 | **`api/lib/posthog.js`** — exports `ph` (:13), `queryHogQL` (:25), `fetchPageviews` (:129). `import { PostHog } from 'posthog-node'` (:1). Consumers: 12 files import `queryHogQL`; `fetchPageviews` → `api/routes/analytics.js:7` (injectable `_fetchPageviews`, pipe-first). | grep | 🔴 yes (via engine) |
+| D2 | **The `ph` client — WRITE-DEAD ALREADY.** **Zero live `ph.capture(` calls remain** (executed grep: no matches outside tests/comments). The only live uses are **`ph.shutdown()`** — `api/index.js:632` and the `process.on('exit')` handler at `posthog.js:23`. The client is instantiated with `POSTHOG_API_KEY` but never captures. | grep | ⚪ no (no writes) |
+| D3 | **`posthog-node`** — imported ONLY at `api/lib/posthog.js:1`; dep `package.json:36` (`^4.3.0`). | grep | — |
+| D4 | 🔴 **`api/jobs/nightly-attribution.js` — its OWN PostHog reader.** `queryPostHog()` at **:1350** is a **direct `fetch`** to `${POSTHOG_HOST}/api/projects/${POSTHOG_PROJECT_ID}/query/` with `Bearer POSTHOG_PERSONAL_API_KEY` (+ 429/5xx retry) — **does not import `api/lib/posthog.js`**. Call sites **:495**, **:616**, **:768**, all Tinybird-first fallbacks (`if (rows === null)`). Env read at :155–157. | read | 🔴 **YES — this is the attribution/revenue pre-agg writer** |
+| D5 | 🔴 **`api/jobs/health-agent.js` — its OWN PostHog check.** `check('posthog', …)` at **:136**: direct `fetch` to the same query API with `POSTHOG_PERSONAL_API_KEY`, body `SELECT 1`, marked **CRITICAL**. Env at :137/:139/:142 and again :182/:184/:187 (a second check). **Deleting PostHog while this check stays CRITICAL will red the health agent.** | read | ⚪ no (health) |
+| D6 | **Frontend — product analytics on the dashboard app itself (NOT the tracker).** `dashboard/src/lib/posthog.js` (`import posthog from 'posthog-js'` :1, `posthog.init` :31, `export default posthog` :44); single consumer `dashboard/src/App.jsx:8` (`initPostHog`). Dep `dashboard/package.json:23` (`posthog-js ^1.203.0`). ⚠️ **Distinct from the customer tracker** — do not conflate; §6 cookieless rules apply to the tracker, this is first-party app analytics. | grep | ⚪ no |
+
+**`POSTHOG_*` env references — CODE ONLY (env var VALUES are not visible to CC; this is the reference list for D1–D6):**
+**Server (6):** `POSTHOG_API_KEY` (`posthog.js:13`, `index.js:264`) · `POSTHOG_HOST` (`posthog.js:14,27`, `nightly-attribution.js:157`, `health-agent.js:137,182`) · `POSTHOG_PROJECT_ID` (`posthog.js:28`, `index.js:266`, `nightly-attribution.js:156`, `health-agent.js:139,184`) · `POSTHOG_PERSONAL_API_KEY` (`posthog.js:37`, `index.js:265`, `nightly-attribution.js:155`, `health-agent.js:142,187`) · `POSTHOG_FLUSH_AT` (`posthog.js:5,6`) · `POSTHOG_FLUSH_INTERVAL_MS` (`posthog.js:9,10`).
+**Frontend (3):** `VITE_POSTHOG_API_KEY` (`dashboard/src/lib/posthog.js:8`) · `VITE_POSTHOG_HOST` (:17) · `VITE_POSTHOG_UI_HOST` (:18).
+**Non-prod also reads these** (scripts/tinybird tools — out of the app's runtime, listed so D1–D6 doesn't break them): `scripts/qa-dedupe-regression.mjs:13`, `scripts/seed-duplicate-conversion.mjs:80`, `scripts/seed-multitouch-carrier.mjs:80`, `tinybird/qa/phase4_replay_verify.mjs:33-34`, `tinybird/tools/route_ab_diff.mjs:844-845`, `tinybird/tools/run_phase4_diff.mjs:73-84`, `tinybird/tools/phase4_touchpoint_diff.js:37`, `scripts/qa-referrer-domain-reporting.mjs:10`.
+⚠️ **A `grep POSTHOG_` without excluding `dist/`+`node_modules/` is polluted** by posthog-js bundle internals (`POSTHOG_TOOLBAR__`, `POSTHOG_INSTRUMENTED__`, `POSTHOG_DEBUG`, …) — those are **not** env vars. Scope to `process.env.POSTHOG_*` / `import.meta.env.VITE_POSTHOG_*` over source only.
+
+---
+
+## 25. DELTA LIST — what changed `cb17cc2` → `fc00e406` (review just this)
+
+**Code drift in the four intervening commits: NONE that affects this map.** #251 = doc-only; #252/#253 = frontend-only; #254 = moved the 4 canonical gate Sets to `dashboard/src/lib/gate-constants.js` with `api/lib/report-config-validation.js` **re-exporting** them (public surface byte-identical — 14 exports, same names/members/types). Executed: `api/index.js`, `attribution-engine.js`, `routes/attribution.js`, `routes/export.js` are **all byte-identical** `cb17cc2` → `fc00e406`.
+
+| # | Section | Change | Kind |
+|---|---|---|---|
+| 1 | Header | `Verified @` `cb17cc2` → **`fc00e406`**; re-baseline scope note added | freshness |
+| 2 | **§22** | `/api/*` mounts **45 → 46**; overall **52 → 53**; direct handlers **14 → 15**; **`GET /api/diag/ip`** added (`index.js:525`) | 🔴 **correction — my miss** |
+| 3 | **§22** | New grep rule: must also allow **leading whitespace** (`^[[:space:]]*app\.`), not just both forms | process fix |
+| 4 | **§9** | KEEP set **re-verified UNCHANGED** by #252/#253/#254 (5 gate Sets identical, 3 deciding files untouched) | confirmation |
+| 5 | **§9** | 🔴 **NEW HOLE**: 12 shapes = 4 multi-touch models × {leads, customers, avg_conversion_value} are **ungated + no pre-agg → bare dead-store → fake zeros (§6)**. Not covered by #248's gate. **Founder decision.** | 🔴 **new finding** |
+| 6 | **§23** (new) | Bare `queryHogQL` inventory = **4 sites, all in `getFlexibleReport`, all money-rail**. Routes have **zero**. | new (PR#4 spec) |
+| 7 | **§24** (new) | PostHog touch-point map: 🔴 **4 independent surfaces, not 1** — `nightly-attribution.js:1350` and `health-agent.js:136` `fetch()` PostHog **directly**, bypassing `api/lib/posthog.js` | 🔴 **new finding** |
+| 8 | **§24** | **`ph.capture` is already fully removed** — zero live capture calls; only `ph.shutdown()` remains. PostHog is **write-dead today**; D1–D6 is a **read**-decommission. | new finding |
+| 9 | **§24** | Full `POSTHOG_*` env reference list (9 names: 6 server + 3 `VITE_`), + the `dist/`-pollution warning | new (D1–D6 input) |
+
+**Not re-verified at `fc00e406`** (unchanged tags, still inherited): §1–§8, §10–§21 except where noted above. `GET /api/diag/ip` is newly *listed* but **not audited** (no consumer trace / intent class; IP-adjacent → §6 privacy review).
