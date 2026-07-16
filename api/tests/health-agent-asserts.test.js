@@ -32,24 +32,19 @@ test('nightly_job CRITICAL: last run is stale (> 26h)', () => {
   assert.match(v.reason, /stale/)
 })
 
-test('🔴 nightly_job CRITICAL: the outage signature — 0 processed while the store has recent conversions', () => {
+// REGRESSION (prod 2026-07-16): the silent-zero clause compared a PER-RUN count against a
+// ROLLING 48h count, so a normal "nothing new to attribute" run went CRITICAL whenever the
+// window still held conversions an EARLIER run had attributed — process.exit(1) every 30
+// min, cron permanently [CRASHED], while `conversions` graded ✅ attributed=2/store=2.
+// nightly_job asserts RUN HEALTH only; the outcome is evaluateConversions' job.
+test('🔴 nightly_job NOT critical: fresh success that processed 0 while the store holds 2 (the false positive that crashed the cron)', () => {
   const v = evaluateNightlyJob({ run: { status: 'success', ran_at: runAt(2), conversions_processed: 0 }, storeConversions: 2, now: NOW })
-  assert.equal(v.critical, true, 'a "successful" run that processed 0 while the store has 2 must be CRITICAL')
+  assert.equal(v.critical, false, 'a run with nothing new to attribute is healthy — the outcome is the conversions check')
 })
 
 test('nightly_job OK: fresh success that processed conversions', () => {
-  const v = evaluateNightlyJob({ run: { status: 'success', ran_at: runAt(2), conversions_processed: 12 }, storeConversions: 12, now: NOW })
+  const v = evaluateNightlyJob({ run: { status: 'success', ran_at: runAt(2), conversions_processed: 12 }, now: NOW })
   assert.equal(v.critical, false)
-})
-
-test('nightly_job OK: a genuine empty day (0 processed, store also 0) is NOT critical', () => {
-  const v = evaluateNightlyJob({ run: { status: 'success', ran_at: runAt(2), conversions_processed: 0 }, storeConversions: 0, now: NOW })
-  assert.equal(v.critical, false)
-})
-
-test('nightly_job does NOT assert the silent-zero rule when the store is unreachable (null)', () => {
-  const v = evaluateNightlyJob({ run: { status: 'success', ran_at: runAt(2), conversions_processed: 0 }, storeConversions: null, now: NOW })
-  assert.equal(v.critical, false, 'unknown store → cannot claim silent failure (posthog check covers connectivity)')
 })
 
 // ── evaluateConversions ──────────────────────────────────────────────────────
