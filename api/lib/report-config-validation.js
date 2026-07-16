@@ -14,6 +14,22 @@
 // Anything else falls to the engine's `pipe=NONE` branch, which calls queryHogQL DIRECTLY
 // (outside the TINYBIRD_FORCE_READ seam) and silently returns zeros. Those shapes are
 // DENIED here, at the edge, instead of querying a dead store.
+//
+// ── WHERE THE GATED_* SETS LIVE (and why not here) ───────────────────────────────────
+// The 4 canonical Sets below are imported from dashboard/src/lib/gate-constants.js and
+// RE-EXPORTED unchanged, so this module's public surface is identical for its consumers
+// (attribution.js, export.js, attribution-engine.js). They live under dashboard/ because
+// Railway builds the Dashboard service with rootDirectory=/dashboard — /api is not in that
+// build context, so a dashboard->api import passes CI (repo-root build) and then fails the
+// real Railway build. The API builds from the repo root, so this direction resolves in both;
+// same direction as api/lib/source-normalizer.js. Keep gate-constants.js PURE.
+import {
+  GATED_GROUPS,
+  GATED_METRICS,
+  SESSION_REPORT_DIMS,
+  SESSION_PIPE_METRICS
+} from '../../dashboard/src/lib/gate-constants.js'
+
 const ALLOWED_MODELS = new Set(['first_touch', 'last_touch', 'first_touch_non_direct', 'last_touch_non_direct', 'ai_platforms', 'linear', 'u_shaped', 'time_decay', 'w_shaped'])
 
 // ALLOWED_* = the KNOWN param vocabulary (unknown -> 400 "Invalid ..."). Deliberately
@@ -27,53 +43,6 @@ const ALLOWED_METRICS = new Set([
   'ai_revenue_share', 'ltv_revenue',
   'session_count', 'avg_session_duration', 'pages_per_session', 'conversion_sessions',
   'days_to_convert', 'touchpoints_per_conversion'
-])
-
-// ── GATED_* = known, but currently UNSERVABLE (dead PostHog) -> 422, not 400 ──────────
-// Dims with no pre-agg column AND no pipe, at ANY window/model. (`custom_param:*` is
-// matched by prefix in gatedReportReason.)
-const GATED_GROUPS = new Set(['keyword', 'referrer_domain'])
-
-// Metrics that reach a bare/`pipe=NONE` queryHogQL:
-//   ltv_revenue        -> engine :2791 bare queryHogQL
-//   ai_conversion_share / ai_revenue_share -> engine :2998 bare queryHogQL
-//   ai_conversions / ai_revenue            -> no pre-agg, no pipe -> :2923 else-branch
-// NOT gated (verified LIVE — gating these would break working money-rail paths):
-//   revenue/conversions/leads/customers/avg_conversion_value -> Supabase pre-agg
-//     (PREAGG_CONVERSION_METRICS resolves to exactly these five at runtime;
-//     avg_conversion_value IS pre-agg-served — gating it would break the shipped
-//     `ecom_aov` template and the campaign AOV read).
-//   days_to_convert / touchpoints_per_conversion -> dedicated Tinybird pipes.
-//   session_count/avg_session_duration/pages_per_session/conversion_sessions -> diverted
-//     to getSessionReport (Tinybird-primary when unfiltered), but ONLY for SESSION_REPORT_DIMS
-//     below — any other dim there fabricates a bucket, so it is gated as unsupported_session_dim.
-// ALSO gated:
-//   sessions / conversion_rate -> GATED ENTIRELY (founder decision, Option A). VERIFIED: neither
-//     routes to the session pipes on ANY dim — the metric switch `break`s for both, so they fall to
-//     the main flexible sql, where only revenue/conversions pass the pipe gate. They are dead
-//     PostHog on all 15 dims. (Only the 4 session_* metrics below reach getSessionReport.)
-//     Accepted cost: Report Builder loses Unique-Visitors-by-dim + the univ_cvr template. Backlogged.
-const GATED_METRICS = new Set([
-  'ltv_revenue', 'ai_conversion_share', 'ai_revenue_share', 'ai_conversions', 'ai_revenue',
-  'sessions', 'conversion_rate'
-])
-
-// The ONLY metrics that reach getSessionReport -> session_report_pageviews/_conversions.
-// (attribution-engine's metric switch: these four `return getSessionReport(...)`.)
-const SESSION_PIPE_METRICS = new Set(['session_count', 'avg_session_duration', 'pages_per_session', 'conversion_sessions'])
-
-// CANONICAL session dimension contract — the single source of truth. attribution-engine imports
-// this (it must NOT keep its own copy: a byte-identical duplicate allowlist is the exact bug this
-// module was created to kill). A session is derived from PAGEVIEWS ONLY; getSessionReport selects
-// distinct_id, timestamp, page_url, utm_source, utm_medium, utm_campaign, country, device_type, and
-// its conversion query selects only (distinct_id, timestamp). A dim is servable only if its value
-// is derivable from that set — anything else would FABRICATE a bucket (worse than a zero, §6).
-// Unsupported: channel (channelFromEvent needs referrer/ai_source/click-IDs — none selected, so
-// every non-UTM session would misclassify to Direct), keyword (utm_term), referrer_domain
-// (referrer), browser (browser_name), provider/attribution_status/stitching_method/conversion_type
-// (conversion properties), custom_param:* (entry event not retained).
-const SESSION_REPORT_DIMS = new Set([
-  'source', 'medium', 'campaign', 'landing_page', 'country', 'device', 'date'
 ])
 
 // Class-A dims = conversion-property dims whose Tinybird pipe is model-independent AND
