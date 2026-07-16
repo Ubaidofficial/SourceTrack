@@ -16,12 +16,13 @@ import {
   Legend
 } from 'chart.js'
 import {
-  Users, ArrowRight, RefreshCw, Zap, AlertTriangle
+  Users, ArrowRight, RefreshCw, Zap, AlertTriangle, Lock
 } from 'lucide-react'
 import MetricTile from '../components/MetricTile'
 import DashboardCard from '../components/DashboardCard'
 import DashboardTable from '../components/DashboardTable'
 import QueryError from '../components/QueryError'
+import { describeQueryError } from '../lib/queryError'
 import FilterBar from '../components/FilterBar'
 import JourneyModal from '../components/JourneyModal'
 import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
@@ -525,12 +526,29 @@ function DashboardWidgetCard({ report, site }) {
             <RefreshCw className="w-4 h-4 animate-spin text-st-gray dark:text-gray-400" />
           </div>
         ) : isError ? (
-          <div className="h-28 flex flex-col items-center justify-center text-center p-2">
-            <span className="text-red-500 text-xs font-semibold">⚠️ Query failed</span>
-            <p className="text-[9px] text-st-gray dark:text-gray-400 mt-1 leading-normal">
-              {error?.message || 'Configuration error'}
-            </p>
-          </div>
+          // Gated (422) -> calm Lock + "Temporarily unavailable": a deliberate server deny is
+          // not a failure, and retrying it cannot help. Otherwise -> honest generic copy.
+          //
+          // ANTI-DRIFT: no gated dim/metric list lives here. The server's error_code IS the
+          // source; describeQueryError is the only gate-derived helper this file touches.
+          // Inline rather than <QueryError> because that component is sized for a full surface
+          // (px-6 py-10) and this card is h-28 — same descriptor, compact shell.
+          (() => {
+            const desc = describeQueryError(error)
+            return (
+              <div className="h-28 flex flex-col items-center justify-center text-center p-2 gap-0.5">
+                {desc.isGated
+                  ? <Lock className="w-3.5 h-3.5 text-st-gray dark:text-gray-400" />
+                  : <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />}
+                <span className={`text-xs font-semibold ${desc.isGated ? 'text-st-black dark:text-dark-primary' : 'text-amber-600 dark:text-amber-400'}`}>
+                  {desc.title}
+                </span>
+                <p className="text-[9px] text-st-gray dark:text-gray-400 leading-normal line-clamp-3">
+                  {desc.message}
+                </p>
+              </div>
+            )
+          })()
         ) : results.length === 0 ? (
           <div className="h-28 flex items-center justify-center text-st-gray dark:text-gray-400 text-xs text-center p-4">
             {nightlyNotice ? (

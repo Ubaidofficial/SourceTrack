@@ -952,7 +952,11 @@ export default function ReportBuilder() {
         : cfg.datePreset
           ? `Last ${cfg.datePreset} days`
           : 'Date range',
-      filterCount: Object.keys(cfg.filters || {}).length
+      filterCount: Object.keys(cfg.filters || {}).length,
+      // A saved config can predate the gate. Derived from the same source the pickers use, so
+      // the drawer says "unavailable" up front instead of on Load. Won't flag the window-gated
+      // edge (that gate is dim-aware, runtime-only) — the locked state still catches it.
+      gateReason: metricGateReason(cfg.metric) || dimensionGateReason(cfg.groupBy, cfg.metric)
     }
   }
 
@@ -2436,6 +2440,14 @@ export default function ReportBuilder() {
                               {meta.filterCount > 0 && (
                                 <span className="bg-lime-50 text-lime-800 dark:bg-lime-950/20 dark:text-lime-400 px-1.5 py-0.5 rounded font-semibold">
                                   {meta.filterCount} filter{meta.filterCount > 1 ? 's' : ''}
+                                </span>
+                              )}
+                              {meta.gateReason && (
+                                <span
+                                  title={meta.gateReason}
+                                  className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded font-semibold"
+                                >
+                                  <Lock className="w-2.5 h-2.5" /> Unavailable
                                 </span>
                               )}
                             </div>
