@@ -51,17 +51,23 @@ async function storeConversionCount() {
   }
 }
 
-// Pure assertion: is the nightly attribution run healthy? CRITICAL on no run, a
-// non-success status, staleness, or a silent zero (processed 0 while the store has
-// recent conversions). Exported for tests.
-export function evaluateNightlyJob({ run, storeConversions = null, now = Date.now(), maxAgeHours = 26 }) {
+// Pure assertion: is the nightly attribution RUN healthy? CRITICAL on no run, a
+// non-success status, or staleness. Exported for tests.
+//
+// Deliberately does NOT assert a "silent zero" (processed 0 while the store has recent
+// conversions): that compared a PER-RUN count (run.conversions_processed) against a
+// ROLLING 48h count (storeConversions), so a normal "nothing new to attribute" run went
+// CRITICAL whenever the 48h window still held conversions an EARLIER run had already
+// attributed — a false positive that crash-looped the health cron in prod (2026-07-16:
+// nightly_job ❌ "processed 0 but store has 2" while conversions ✅ attributed=2/store=2).
+// The real silent-failure signal is the OUTCOME, which evaluateConversions already
+// asserts (attributed 0 while store > 0) and which is likewise a CRITICAL_CHECK.
+// Separation of concerns: nightly_job = run health; conversions = outcome.
+export function evaluateNightlyJob({ run, now = Date.now(), maxAgeHours = 26 }) {
   if (!run) return { critical: true, reason: 'No job runs found in job_runs table' }
   if (run.status !== 'success') return { critical: true, reason: `Last run status='${run.status}': ${run.error_message || 'no detail'}` }
   const hoursAgo = (now - new Date(run.ran_at).getTime()) / 3_600_000
   if (hoursAgo > maxAgeHours) return { critical: true, reason: `Last run was ${Math.round(hoursAgo)}h ago (> ${maxAgeHours}h) — stale` }
-  if ((run.conversions_processed ?? 0) === 0 && typeof storeConversions === 'number' && storeConversions > 0) {
-    return { critical: true, reason: `Job processed 0 conversions but the event store has ${storeConversions} in the last 48h — silent failure` }
-  }
   return { critical: false, hoursAgo: Math.round(hoursAgo) }
 }
 
@@ -150,8 +156,9 @@ async function collectSnapshot() {
     }),
 
     // 4. Nightly attribution job — CRITICAL assertion (not a passive observation).
-    // Red on: no run, non-success status, staleness (>26h), or a silent zero
-    // (0 processed while the event store has recent conversions).
+    // Red on: no run, non-success status, or staleness (>26h). RUN HEALTH ONLY — the
+    // outcome (are conversions actually landing?) is the `conversions` check below, which
+    // still reports store_conversions_48h. No storeConversionCount() fanout here.
     check('nightly_job', async () => {
       const { data: run } = await getSupabase()
         .from('job_runs')
@@ -159,10 +166,9 @@ async function collectSnapshot() {
         .eq('job_name', 'nightly-attribution')
         .order('ran_at', { ascending: false })
         .limit(1).single()
-      const storeConversions = await storeConversionCount()
-      const verdict = evaluateNightlyJob({ run, storeConversions })
+      const verdict = evaluateNightlyJob({ run })
       if (verdict.critical) throw new Error(verdict.reason)
-      return { last_run: run.ran_at, hours_ago: verdict.hoursAgo, conversions: run.conversions_processed, job_status: run.status, store_conversions_48h: storeConversions ?? 'unknown' }
+      return { last_run: run.ran_at, hours_ago: verdict.hoursAgo, conversions: run.conversions_processed, job_status: run.status }
     }),
 
     // 5. Active sites count
