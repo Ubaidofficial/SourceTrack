@@ -1,7 +1,45 @@
 import React, { useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import { ChevronRight } from 'lucide-react'
 import MarketingHeader from '../MarketingHeader'
 import MarketingFooter from '../MarketingFooter'
 import DocsSidebar from './DocsSidebar'
+import { entryForPath, sectionLabel } from './docsManifest'
+
+// Breadcrumb: Docs / <section> / <page> (or Developers / <page>). Derived from the
+// manifest; suppressed on the two root pages (/docs, /developers).
+function DocsBreadcrumbs() {
+  const { pathname } = useLocation()
+  if (pathname === '/docs' || pathname === '/developers') return null
+  const isDev = pathname.startsWith('/developers')
+  const root = isDev ? { label: 'Developers', to: '/developers' } : { label: 'Docs', to: '/docs' }
+  const entry = entryForPath(pathname)
+  const section = !isDev && entry ? sectionLabel(entry.section) : null
+
+  return (
+    <nav aria-label="Breadcrumb" className="mb-5">
+      <ol className="flex flex-wrap items-center gap-1 text-xs font-semibold text-gray-500 dark:text-gray-400">
+        <li>
+          <Link to={root.to} className="hover:text-gray-900 dark:hover:text-dark-text rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-st-lime">
+            {root.label}
+          </Link>
+        </li>
+        {section && (
+          <li className="flex items-center gap-1">
+            <ChevronRight className="w-3 h-3 text-gray-300 dark:text-gray-600" aria-hidden="true" />
+            <span>{section}</span>
+          </li>
+        )}
+        {entry && (
+          <li className="flex items-center gap-1">
+            <ChevronRight className="w-3 h-3 text-gray-300 dark:text-gray-600" aria-hidden="true" />
+            <span aria-current="page" className="text-gray-900 dark:text-dark-primary">{entry.title}</span>
+          </li>
+        )}
+      </ol>
+    </nav>
+  )
+}
 
 class DocsErrorBoundary extends React.Component {
   constructor(props) {
@@ -76,6 +114,7 @@ export default function DocsLayout({ children, isDeveloper = false }) {
 
         {/* Document Content */}
         <main className="flex-1 min-w-0 max-w-3xl">
+          <DocsBreadcrumbs />
           <DocsErrorBoundary>
             {children}
           </DocsErrorBoundary>
