@@ -1,29 +1,31 @@
-// Picker gating — derived from the SERVER's gate, never re-typed here.
+// Picker gating — derived from the canonical gate constants, never re-typed here.
 //
-// ── WHY THIS IMPORTS ACROSS api/ ────────────────────────────────────────────────────────
-// The server denies dead-store report shapes in `api/lib/report-config-validation.js`
-// (GATED_GROUPS / GATED_METRICS). The picker must offer exactly what the gate allows. A
-// hand-maintained copy here is EXACTLY the bug #248 was created to kill: `attribution.js`
-// and that module held byte-identical duplicate allowlists, and trimming one silently leaked
-// the gated shape through the other. This repo already has a live example of that failure
-// mode — `api/lib/plan-features.js` and `dashboard/src/lib/planFeatures.js` are a duplicated
-// pair that must be edited in lockstep.
+// ── WHY THE CONSTANTS ARE LOCAL, AND THE API REACHES IN ─────────────────────────────────
+// The picker must offer exactly what the server's gate allows. A hand-maintained copy here is
+// EXACTLY the bug #248 was created to kill: `attribution.js` and `report-config-validation.js`
+// held byte-identical duplicate allowlists, and trimming one silently leaked the gated shape
+// through the other. This repo already has a live example of that failure mode —
+// `api/lib/plan-features.js` and `dashboard/src/lib/planFeatures.js` must be edited in lockstep.
 //
-// So we import the ONE source instead of forking it. This is safe because
-// report-config-validation.js is PURE: zero imports, zero node-only APIs (no fs/path/process),
-// just Sets + pure functions. It holds no secrets — the API already echoes these same lists to
-// unauthenticated clients in its 400 "Must be one of: …" messages. Cross-boundary imports have
-// precedent here (api/tests import dashboard/src/lib/*).
+// So there is ONE source: ./gate-constants.js. api/lib/report-config-validation.js imports it
+// and re-exports it, which is why the anti-drift test can assert Set IDENTITY across the two.
 //
-// ⚠️ COUPLING TO PRESERVE: if report-config-validation.js ever gains a node-only import, this
-// client bundle breaks. Keep that module pure. `dashboard/vite.config.js` sets
-// `server.fs.allow` so the dev server can read it from outside the Vite root.
+// The direction matters. Railway builds the Dashboard service with rootDirectory=/dashboard, so
+// /api is NOT in that build context: importing from ../../../api/ resolves at the repo root (CI,
+// local dev) and then FAILS the real Railway dashboard build — that is how #252 shipped a green
+// CI and a broken prod deploy. The API service builds from the repo ROOT, so api->dashboard
+// resolves everywhere. Precedent: api/lib/source-normalizer.js re-exports from dashboard/src/lib
+// and is imported by live routes (dashboard.js, journey.js, leads-server.js).
+//
+// ⚠️ COUPLING TO PRESERVE: keep gate-constants.js PURE (zero imports, zero node APIs) — the API
+// reaches into it, so anything client-only there would break the server, and anything node-only
+// would break this bundle. NEVER import from api/ in this directory.
 import {
   GATED_GROUPS,
   GATED_METRICS,
   SESSION_REPORT_DIMS,
   SESSION_PIPE_METRICS
-} from '../../../api/lib/report-config-validation.js'
+} from './gate-constants.js'
 
 // The tone matches the server's gate copy + describeQueryError's gated state, so the tooltip
 // and the locked state a user hits say the same thing.
