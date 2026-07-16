@@ -8,6 +8,7 @@ import { serializeHogQLDateRange, serializeHogQLDateTime, buildHogQLTimestampFil
 import { LEAD_TYPES, classifyConversionType } from './conversion-classifier.js'
 import { isSubscriptionCheckoutCarrier } from './stripe-subscription.js'
 import { queryTinybirdPipe } from './tinybird-read.js'
+import { SESSION_REPORT_DIMS } from './report-config-validation.js'
 
 // Read-backend injection seam (test-only; production uses the real modules).
 // Tinybird reads are inert unless TINYBIRD_READ_ENABLED (+ optional
@@ -943,7 +944,59 @@ export function __evictSessionReportCache (siteId, dateFrom, dateTo, groupBy, me
   cache.del(cacheKey(`session:${groupBy}:${metric}:${JSON.stringify(filters)}:${groupBy2 || ''}`, siteId, dateFrom, dateTo))
 }
 
+// ── getSessionReport dimension contract ──────────────────────────────────────────────
+// A "session" here is derived from PAGEVIEWS ONLY. getSessionReport SELECTs exactly:
+// distinct_id, timestamp, page_url, utm_source, utm_medium, utm_campaign, country,
+// device_type (+ custom_*). Its conversion query selects only (distinct_id, timestamp).
+// So a dim is servable ONLY if its value is derivable from that set.
+//
+// SUPPORTED (real per-dim buckets):
+//   source · medium · campaign · landing_page · country · device · date
+//
+// UNSUPPORTED — the data is NOT fetched, so any value would be FABRICATED:
+//   channel            — channelFromEvent needs referrer + ai_source + the click IDs;
+//                        none are selected, so every non-UTM session would misclassify to
+//                        Direct. A systematic lie, not a gap. (Was: fabricated bucket.)
+//   keyword            — utm_term not selected
+//   referrer_domain    — referrer not selected
+//   browser            — browser_name not selected
+//   provider · attribution_status · stitching_method · conversion_type
+//                      — CONVERSION properties; the conv query selects only
+//                        (distinct_id, timestamp). A session is not a conversion.
+//                        (conversion_type previously returned a raw SQL STRING as the JS
+//                        group key, bucketing every session under that literal.)
+//   custom_param:*     — the entry event is not retained on the session (the old code read
+//                        a `sess.entry_event` that startSession never set).
+//
+// The list itself lives in lib/report-config-validation.js — the SINGLE source of truth the
+// edge gate also reads. Keeping a second copy here is exactly the duplicate-allowlist bug
+// that module exists to kill (the two would drift and the gate would leak). Re-exported for
+// callers/tests that already import it from the engine.
+export { SESSION_REPORT_DIMS }
+
+export function isSessionReportDim (dim) {
+  return typeof dim === 'string' && SESSION_REPORT_DIMS.has(dim)
+}
+
+// Throws a TYPED error for a dim this report cannot honestly serve. Callers surface it;
+// they must NOT fall back to a fabricated bucket.
+function assertSessionReportDim (dim, label) {
+  if (dim == null) return
+  if (!isSessionReportDim(dim)) {
+    const err = new Error(`Session metrics do not support the "${dim}" breakdown (${label}). Supported: ${[...SESSION_REPORT_DIMS].join(', ')}.`)
+    // `code` is what the route catch matches; `error_code` is the wire contract the frontend
+    // branches on (fetchApi propagates error_code). Set both so neither layer has to translate.
+    err.code = 'unsupported_session_dim'
+    err.error_code = 'unsupported_session_dim'
+    throw err
+  }
+}
+
 export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null) {
+  // Fail fast + honestly, BEFORE any query work: an unsupported dim used to silently
+  // collapse every session into one invented 'unknown' bucket.
+  assertSessionReportDim(groupBy, 'group_by')
+  assertSessionReportDim(groupBy2, 'group_by2')
   const key = cacheKey(`session:${groupBy}:${metric}:${JSON.stringify(filters)}:${groupBy2 || ''}`, siteId, dateFrom, dateTo)
   const cached = cache.get(key)
   if (cached) return cached
@@ -1125,42 +1178,31 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
     allSessions = allSessions.concat(sessions)
   }
 
-  // Group sessions by dimension
-  const dimKey = (sess) => {
-    if (groupBy.startsWith('custom_param:')) {
-      const key = groupBy.split(':')[1]
-      return sess.entry_event?.[`custom_${key}`] || 'unknown'
-    }
-    switch (groupBy) {
-      case 'conversion_type': return "COALESCE(NULLIF(any(properties.conversion_type), ''), 'untyped')"
-      case 'channel': return channelFromEvent(sess.entry_event || sess.events?.[0] || sess)
+  // Group sessions by dimension. ONE mapper for both dims — they had drifted (dim2 had no
+  // conversion_type/channel cases at all), and every unmapped dim fell to `default:
+  // 'unknown'`, fabricating a single bucket. A fabricated bucket is worse than a zero: it
+  // presents invented structure as the customer's real data (§6). Unsupported dims are now
+  // rejected up-front by assertSessionReportDim, so this mapper only ever sees a
+  // SESSION_REPORT_DIMS member.
+  const sessionDimKey = (dim) => (sess) => {
+    switch (dim) {
       case 'source': return sess.entry_source || 'direct'
       case 'medium': return sess.entry_medium || 'none'
       case 'campaign': return sess.entry_campaign || 'unknown'
       case 'landing_page': return sess.entry_page || '/'
-      case 'country': return sess.country || 'unknown'
-      case 'device': return sess.device_type || 'unknown'
+      // Were `sess.country` / `sess.device_type` — fields the session object NEVER had, so
+      // both dims bucketed 100% of sessions under a fabricated 'unknown'. The pageview
+      // SELECT does fetch country + device_type; startSession now carries them as
+      // entry_country / entry_device_type (same convention as entry_source/medium/campaign).
+      case 'country': return sess.entry_country || 'unknown'
+      case 'device': return sess.entry_device_type || 'unknown'
       case 'date': return sess.started_at.split('T')[0]
-      default: return 'unknown'
+      /* istanbul ignore next — assertSessionReportDim gates every other dim */
+      default: throw new Error(`getSessionReport: unsupported dimension "${dim}"`)
     }
   }
-
-  const dim2Key = groupBy2 ? (sess) => {
-    if (groupBy2.startsWith('custom_param:')) {
-      const key = groupBy2.split(':')[1]
-      return sess.entry_event?.[`custom_${key}`] || 'unknown'
-    }
-    switch (groupBy2) {
-      case 'source': return sess.entry_source || 'direct'
-      case 'medium': return sess.entry_medium || 'none'
-      case 'campaign': return sess.entry_campaign || 'unknown'
-      case 'landing_page': return sess.entry_page || '/'
-      case 'country': return sess.country || 'unknown'
-      case 'device': return sess.device_type || 'unknown'
-      case 'date': return sess.started_at.split('T')[0]
-      default: return 'unknown'
-    }
-  } : null
+  const dimKey = sessionDimKey(groupBy)
+  const dim2Key = groupBy2 ? sessionDimKey(groupBy2) : null
 
   const groups = new Map()
 
