@@ -5,6 +5,7 @@ import MarketingHeader from '../MarketingHeader'
 import MarketingFooter from '../MarketingFooter'
 import DocsSidebar from './DocsSidebar'
 import DocsSearch, { openDocsSearch } from './DocsSearch'
+import DocsToc from './DocsToc'
 import { entryForPath, sectionLabel } from './docsManifest'
 
 // Breadcrumb: Docs / <section> / <page> (or Developers / <page>). Derived from the
@@ -128,6 +129,9 @@ export default function DocsLayout({ children, isDeveloper = false }) {
             {children}
           </DocsErrorBoundary>
         </main>
+
+        {/* Right rail — "On this page" TOC (hidden < 1200px) */}
+        <DocsToc />
       </div>
 
       <MarketingFooter />
