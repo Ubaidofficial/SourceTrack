@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Search } from 'lucide-react'
 import MarketingHeader from '../MarketingHeader'
 import MarketingFooter from '../MarketingFooter'
 import DocsSidebar from './DocsSidebar'
+import DocsSearch, { openDocsSearch } from './DocsSearch'
 import { entryForPath, sectionLabel } from './docsManifest'
 
 // Breadcrumb: Docs / <section> / <page> (or Developers / <page>). Derived from the
@@ -81,8 +82,16 @@ export default function DocsLayout({ children, isDeveloper = false }) {
           </div>
         </aside>
 
-        {/* Mobile floating sidebar button */}
-        <div className="md:hidden fixed bottom-6 right-6 z-40">
+        {/* Mobile floating buttons — the sidebar (and its search input) is hidden on
+            mobile, so surface a magnifier alongside the nav Menu. */}
+        <div className="md:hidden fixed bottom-6 right-6 z-40 flex items-center gap-3">
+          <button
+            onClick={openDocsSearch}
+            aria-label="Search docs"
+            className="flex items-center justify-center w-12 h-12 bg-white dark:bg-dark-card text-st-black dark:text-dark-text border border-gray-200 dark:border-dark-border rounded-full shadow-xl transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-st-lime"
+          >
+            <Search className="w-5 h-5" aria-hidden="true" />
+          </button>
           <button
             onClick={() => setMobileNavOpen(true)}
             className="flex items-center gap-2 bg-st-black text-white dark:bg-st-lime dark:text-st-black px-5 py-3 rounded-full shadow-xl font-extrabold text-sm tracking-wide transition-all active:scale-95"
@@ -122,6 +131,7 @@ export default function DocsLayout({ children, isDeveloper = false }) {
       </div>
 
       <MarketingFooter />
+      <DocsSearch />
     </div>
   )
 }

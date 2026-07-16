@@ -1,7 +1,25 @@
 import { Link, useLocation } from 'react-router-dom'
-import { BookOpen } from 'lucide-react'
+import { BookOpen, Search } from 'lucide-react'
 import { SECTIONS, bySection } from './docsManifest'
 import LogoChip from './LogoChip'
+import { openDocsSearch } from './DocsSearch'
+
+// Opens the shared search overlay (owned by DocsLayout). Looks like an input but is
+// a button so a single Enter/click/tap opens the modal that owns real text entry.
+function SearchTrigger() {
+  return (
+    <button
+      type="button"
+      onClick={openDocsSearch}
+      className="w-full flex items-center gap-2.5 min-h-[44px] px-3 rounded-lg border border-gray-200 dark:border-dark-border-strong bg-white dark:bg-dark-card text-gray-400 dark:text-gray-500 hover:border-gray-300 dark:hover:border-gray-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-st-lime"
+      aria-label="Search docs"
+    >
+      <Search className="w-4 h-4 shrink-0" aria-hidden="true" />
+      <span className="text-[13px] font-semibold flex-1 text-left">Search docs…</span>
+      <kbd className="hidden lg:block text-[10px] font-bold border border-gray-200 dark:border-dark-border rounded px-1.5 py-0.5">⌘K</kbd>
+    </button>
+  )
+}
 
 // Nav derives from docsManifest (SECTIONS + bySection) — no duplicate lists.
 // User docs show the 'user' sections; the developer portal shows 'dev' sections
@@ -53,6 +71,7 @@ export default function DocsSidebar({ isDeveloper = false, onItemClick }) {
 
   return (
     <div className="space-y-6">
+      <SearchTrigger />
       {isDeveloper ? (
         <>
           {DEV_SECTIONS.map((sec) => (
