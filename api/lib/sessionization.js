@@ -97,6 +97,13 @@ function startSession(firstEvent, ts, index) {
     entry_source: firstEvent.utm_source || props.utm_source || null,
     entry_medium: firstEvent.utm_medium || props.utm_medium || null,
     entry_campaign: firstEvent.utm_campaign || props.utm_campaign || null,
+    // Same entry_* convention as the four above. getSessionReport's country/device
+    // breakdowns read these: the caller already SELECTs country + device_type per
+    // pageview, but the session dropped them, so both dims silently bucketed every
+    // session under a fabricated 'unknown'. Scalars (not the raw entry event) so nothing
+    // extra leaks into the journey/sessions API payloads that serialize a session.
+    entry_country: firstEvent.country || props.country || null,
+    entry_device_type: firstEvent.device_type || props.device_type || null,
     // Acquisition key is recorded once at session start and compared against
     // every subsequent event's key. Null means "session entered without any
     // UTM/click ID" — a non-null follow-up event still triggers a split.
