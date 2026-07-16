@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import ConversionExplanationModal from '../components/ConversionExplanationModal'
 import { describeQueryError } from '../lib/queryError'
+import { dimensionGateReason, metricGateReason } from '../lib/reportGating'
 import { hasFeature } from '../lib/planFeatures'
 import { useSite } from '../contexts/SiteContext'
 import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
@@ -235,6 +236,9 @@ function CustomSelect({ value, onChange, options, placeholder = 'Select option..
                 key={opt.value}
                 type="button"
                 disabled={isDisabled}
+                // `title` carries the reason a disabled option is greyed (the gate's copy).
+                // Native tooltip: no popover dep, and it still reaches keyboard/AT users.
+                title={opt.title || undefined}
                 onClick={() => {
                   onChange(opt.value)
                   setIsOpen(false)
@@ -1062,16 +1066,26 @@ export default function ReportBuilder() {
 
   const canPreview = site && metric && groupBy && effectiveDateFrom && effectiveDateTo
 
-  // Group By Options mapping
+  // Group By Options mapping.
+  // Gated dims are DISABLED, not hidden: they come back when their pipe lands, and hiding
+  // them would make the product look thinner than it is and conceal that they're returning.
+  // The gated set is DERIVED from the server's gate (lib/reportGating -> the same
+  // report-config-validation module the API denies with) — never re-typed here, so the picker
+  // cannot drift from what the gate actually allows.
+  const dimOption = (value, label) => {
+    const reason = dimensionGateReason(value, metric)
+    return { value, label: reason ? `${label} · Unavailable` : label, disabled: !!reason, title: reason || undefined }
+  }
+
   const groupByOptions = [
-    ...DIMENSIONS.map(d => ({ value: d.key, label: d.label })),
-    ...(site?.custom_url_params || []).map(p => ({ value: `custom_param:${p}`, label: `Custom: ${p}` }))
+    ...DIMENSIONS.map(d => dimOption(d.key, d.label)),
+    ...(site?.custom_url_params || []).map(p => dimOption(`custom_param:${p}`, `Custom: ${p}`))
   ]
 
   const groupBy2Options = [
     { value: '', label: 'None' },
-    ...DIMENSIONS.filter(d => d.key !== groupBy || d.key === 'date').map(d => ({ value: d.key, label: d.label })),
-    ...(site?.custom_url_params || []).filter(p => `custom_param:${p}` !== groupBy).map(p => ({ value: `custom_param:${p}`, label: `Custom: ${p}` }))
+    ...DIMENSIONS.filter(d => d.key !== groupBy || d.key === 'date').map(d => dimOption(d.key, d.label)),
+    ...(site?.custom_url_params || []).filter(p => `custom_param:${p}` !== groupBy).map(p => dimOption(`custom_param:${p}`, `Custom: ${p}`))
   ]
 
   // Attribution Model Options mapping
@@ -1743,25 +1757,36 @@ export default function ReportBuilder() {
                             <div className="px-3 py-1 text-[10px] font-semibold text-st-gray dark:text-gray-400 uppercase bg-gray-50 dark:bg-dark-hover">{group}</div>
                             {groupMetrics.map((m) => {
                               const isSelected = selectedMetrics.includes(m.key)
+                              // Dead-store gate (DERIVED from the server's gate) — distinct from
+                              // isMetricGated below, which is the DATA-availability gate ("revenue
+                              // not connected yet"). This one means: no live backend for this read,
+                              // so the server would deny it. Grey + explain instead of bouncing the
+                              // user into the locked state after they pick it.
+                              const deadStoreReason = metricGateReason(m.key)
                               return (
                                 <button
                                   key={m.key}
                                   type="button"
+                                  disabled={!!deadStoreReason}
+                                  title={deadStoreReason || undefined}
                                   onClick={() => {
                                     if (selectedMetrics.length < 4 || isSelected) toggleMetric(m.key)
                                     if (selectedMetrics.length === 1 && !isSelected) setShowMetricDropdown(false)
                                   }}
-                                  className={`w-full text-left px-3 py-1.5 text-xs hover:bg-gray-50 dark:hover:bg-dark-hover transition-colors flex items-center gap-2 ${
-                                    isSelected ? 'bg-lime-50 text-lime-800 dark:bg-lime-950/20 dark:text-lime-400 font-semibold' : 'text-gray-700 dark:text-gray-300'
+                                  className={`w-full text-left px-3 py-1.5 text-xs transition-colors flex items-center gap-2 ${
+                                    deadStoreReason
+                                      ? 'opacity-40 cursor-not-allowed text-gray-700 dark:text-gray-300'
+                                      : `hover:bg-gray-50 dark:hover:bg-dark-hover ${isSelected ? 'bg-lime-50 text-lime-800 dark:bg-lime-950/20 dark:text-lime-400 font-semibold' : 'text-gray-700 dark:text-gray-300'}`
                                   }`}
                                 >
-                                  <span className={`w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center text-[10px] ${isSelected ? 'bg-lime-500 border-lime-500 text-white' : 'border-gray-300'}`}>
-                                    {isSelected ? '✓' : ''}
+                                  <span className={`w-3.5 h-3.5 rounded border flex-shrink-0 flex items-center justify-center text-[10px] ${isSelected && !deadStoreReason ? 'bg-lime-500 border-lime-500 text-white' : 'border-gray-300'}`}>
+                                    {isSelected && !deadStoreReason ? '✓' : ''}
                                   </span>
                                   <div>
                                     <div className="flex items-center gap-1">
                                       <span>{m.label}</span>
-                                      {isMetricGated(m.key) && (
+                                      {deadStoreReason && <span className="text-[10px] text-st-gray dark:text-gray-400">· Unavailable</span>}
+                                      {!deadStoreReason && isMetricGated(m.key) && (
                                         <span className="text-[10px]" title="Required integration not fully connected or active">🔒</span>
                                       )}
                                     </div>
