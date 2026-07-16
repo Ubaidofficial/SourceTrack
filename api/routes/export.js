@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { getFlexibleReport } from '../lib/attribution-engine.js'
 import { requireFeature } from '../lib/plan-features.js'
 import { getSupabase as getSupabaseAdmin } from '../lib/supabase.js'
-import { ALLOWED_MODELS, ALLOWED_GROUPS, ALLOWED_METRICS } from '../lib/report-config-validation.js'
+import { ALLOWED_MODELS, ALLOWED_GROUPS, ALLOWED_METRICS, gatedReportReason } from '../lib/report-config-validation.js'
 import { serializeHogQLDateRange } from '../lib/hogql-date.js'
 
 const router = Router()
@@ -74,6 +74,18 @@ router.get('/report', async (req, res) => {
     }
     if (!ALLOWED_METRICS.has(metric)) {
       return res.status(400).json({ success: false, data: null, error: `Invalid metric: ${metric}` })
+    }
+
+    // ── DEAD-STORE GATE (Wave-4) ───────────────────────────────────────────────────
+    // Export calls getFlexibleReport DIRECTLY — it never reaches attribution.js's pre-agg
+    // short-circuit — so a gated shape here would hit the engine's `pipe=NONE` branch and
+    // silently export a CSV of zeros from a dead store. Deny instead. Export passes no
+    // attribution_window (the engine defaults to no-window), so the window axis is not
+    // applicable: preAggWindowMatches is left at its default (true) and only the
+    // dim/metric axes gate here.
+    const gateReason = gatedReportReason({ group_by, group_by2: req.query.group_by2 || null, metric })
+    if (gateReason) {
+      return res.status(422).json({ success: false, data: null, error: gateReason.message, error_code: gateReason.error_code, gated: true })
     }
 
     const posthogSiteId = String(req.site.id)

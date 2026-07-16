@@ -90,25 +90,32 @@ function stubDeps () {
   })
 }
 
-test('route: 90d keyword report is capped to the cap window and labeled honestly', async () => {
+// ── CONTRACT CHANGE (Wave-4 dead-store gate) ─────────────────────────────────
+// The cap above was written when PostHog was ALIVE: capping made the live windowJoin
+// COMPLETE and "return data". PostHog is now a DEAD store — the capped query returns
+// ZEROS, and the route labeled them "showing the last 31 days", i.e. it presented a fake
+// zero as a truthful capped result (§6). So keyword/referrer_domain/custom_param:* are now
+// DENIED at the edge (422, gated:true) instead of served-capped. These two route tests
+// therefore assert the NEW contract; the Layer-1 pure tests above are unchanged, because
+// capUnmaterializedRange itself is still correct — it is simply no longer reachable for
+// these dims through this route (flagged as newly-dead code for the delete PR).
+
+test('route: 90d keyword report is now GATED (422) — not served as capped zeros from a dead store', async () => {
   stubDeps()
   const res = mockRes()
   try { await attribution(keywordReq('2026-04-02', '2026-07-01'), res) } finally { __resetAttributionReadDeps() }
 
-  assert.strictEqual(res.statusCode, 200)
-  assert.strictEqual(res.body.success, true)
-  assert.strictEqual(res.body.data.range_capped, true, 'long keyword range is flagged capped')
-  assert.strictEqual(spanDays(res.body.data.date_from, '2026-07-01'), UNMATERIALIZED_DIM_MAX_DAYS,
-    'echoed date_from is the SERVED (capped) range, not the requested one')
-  assert.match(res.body.data.range_cap_notice, /last 31 days/, 'notice states the served window truthfully')
+  assert.strictEqual(res.statusCode, 422, 'gated, not 200-with-zeros')
+  assert.strictEqual(res.body.success, false)
+  assert.strictEqual(res.body.gated, true)
+  assert.match(res.body.error, /temporarily unavailable/, 'denies truthfully instead of faking a capped result')
 })
 
-test('route: a keyword report within the cap is NOT capped or relabeled', async () => {
+test('route: a SHORT keyword report is gated too (the cap never made a dead store live)', async () => {
   stubDeps()
   const res = mockRes()
   try { await attribution(keywordReq('2026-06-11', '2026-07-01'), res) } finally { __resetAttributionReadDeps() }
 
-  assert.strictEqual(res.body.success, true)
-  assert.ok(!res.body.data.range_capped, 'within-cap range is not flagged')
-  assert.strictEqual(res.body.data.date_from, '2026-06-11', 'requested range is served unchanged')
+  assert.strictEqual(res.statusCode, 422, 'within-cap keyword is still a dead-store read → gated')
+  assert.strictEqual(res.body.gated, true)
 })
