@@ -36,7 +36,7 @@ export default function DevelopersSecurity() {
             <li><strong>Network Context:</strong> Geolocation context resolved at the server level (country and city resolution only; raw IP addresses are discarded and never written to database tables).</li>
           </ul>
           <DocsCallout type="warning">
-            No Personally Identifiable Information (PII) like names, email addresses, phone numbers, or mailing addresses is collected, parsed, or stored by default.
+            Anonymous pageview tracking collects no Personally Identifiable Information (PII) — no names, email addresses, phone numbers, or mailing addresses — by default. PII such as an email address is stored only when you explicitly send it: via the Identify API, conversion webhooks, or a connected payment platform (e.g., Stripe customer details).
           </DocsCallout>
         </section>
 
