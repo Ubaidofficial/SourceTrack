@@ -24,6 +24,7 @@ import {
   BarChart3, X, Lock, Settings, Sparkles, AlertTriangle
 } from 'lucide-react'
 import ConversionExplanationModal from '../components/ConversionExplanationModal'
+import { describeQueryError } from '../lib/queryError'
 import { hasFeature } from '../lib/planFeatures'
 import { useSite } from '../contexts/SiteContext'
 import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
@@ -669,12 +670,14 @@ export default function ReportBuilder() {
     enabled: !!site && !activeGateError
   })
   // A failed query must NEVER render as an empty "no data" state — that is a silent lie about the
-  // customer's business. A timeout (Class-B shapes with no pipe: this dim × range is too expensive on
-  // the live HogQL query) gets a specific, honest message; any other failure gets a generic one.
-  const isTimeoutError = isError && error?.error_code === 'query_timeout'
-  const reportErrorMessage = isTimeoutError
-    ? 'This query timed out for the selected range. Try a narrower date range or a different dimension.'
-    : (isError ? "Couldn't load this report. Please try again, or pick a narrower range." : null)
+  // customer's business. Descriptors come from describeQueryError (the SINGLE source of truth this
+  // file previously duplicated inline, so a new branch had to be written twice to hold everywhere):
+  //   timeout -> narrow-the-range guidance
+  //   GATED   -> a calm "temporarily unavailable" state, NO retry (the server denied this shape
+  //              because it has no live backend; retrying cannot help)
+  //   other   -> generic fetch-error copy
+  const { title: reportErrorTitle, message: reportErrorMessage, isTimeout: isTimeoutError, isGated: isGatedError } =
+    isError ? describeQueryError(error) : { title: null, message: null, isTimeout: false, isGated: false }
 
   const { data: savedReports, isLoading: reportsLoading, refetch: refetchReports } = useQuery({
     queryKey: ['saved-reports', site?.site_key],
@@ -2152,8 +2155,11 @@ export default function ReportBuilder() {
                       </div>
                     ) : isError ? (
                       <div className="h-72 flex flex-col items-center justify-center gap-2 px-6 text-center">
-                        <AlertTriangle className="w-6 h-6 text-amber-500" />
-                        <p className="text-sm font-medium text-st-black dark:text-dark-primary">{isTimeoutError ? 'Query timed out' : "Couldn't load this report"}</p>
+                        {/* GATED = a deliberate server deny, not a failure: calm lock, no alarm, no retry. */}
+                        {isGatedError
+                          ? <Lock className="w-6 h-6 text-st-gray dark:text-gray-400" />
+                          : <AlertTriangle className="w-6 h-6 text-amber-500" />}
+                        <p className="text-sm font-medium text-st-black dark:text-dark-primary">{reportErrorTitle}</p>
                         <p className="text-xs text-st-gray dark:text-gray-400 max-w-md">{reportErrorMessage}</p>
                       </div>
                     ) : results.length === 0 ? (
