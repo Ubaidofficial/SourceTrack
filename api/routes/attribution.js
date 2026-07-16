@@ -3,18 +3,13 @@ import { requireFeature } from '../lib/plan-features.js'
 import { serializeHogQLDateRange } from '../lib/hogql-date.js'
 import { isValidTimezone } from '../lib/utils.js'
 
-const ALLOWED_MODELS = new Set(['first_touch', 'last_touch', 'first_touch_non_direct', 'last_touch_non_direct', 'ai_platforms', 'linear', 'u_shaped', 'time_decay', 'w_shaped'])
-const ALLOWED_GROUPS = new Set(['channel', 'source', 'medium', 'campaign', 'keyword', 'referrer_domain', 'ai_source', 'landing_page', 'country', 'device', 'browser', 'conversion_type', 'date', 'provider', 'attribution_status', 'stitching_method'])
-const ALLOWED_METRICS = new Set([
-  'revenue', 'conversions', 'sessions', 'leads', 'conversion_rate',
-  'avg_conversion_value', 'ai_conversions', 'ai_revenue', 'ai_conversion_share',
-  'ai_revenue_share', 'ltv_revenue',
-  'session_count', 'avg_session_duration', 'pages_per_session', 'conversion_sessions',
-  'days_to_convert', 'touchpoints_per_conversion'
-])
-const ALLOWED_GRANULARITY = new Set(['day', 'week', 'month', 'quarter', 'year'])
-const ALLOWED_WINDOWS = new Set(['ltv', '1', '7', '14', '30', '60', '90'])
-const ALLOWED_ATTRIBUTE_BY = new Set(['conversion_date', 'first_seen_date', 'original_source_date'])
+// These were a byte-identical DUPLICATE of lib/report-config-validation.js — trimming one
+// and not the other silently leaked the gated shape through export.js/saved-reports.js.
+// Now imported from that single source of truth.
+import {
+  ALLOWED_MODELS, ALLOWED_GROUPS, ALLOWED_METRICS, ALLOWED_GRANULARITY,
+  ALLOWED_WINDOWS, ALLOWED_ATTRIBUTE_BY, gatedReportReason
+} from '../lib/report-config-validation.js'
 
 export async function attribution(req, res) {
   try {
@@ -116,6 +111,34 @@ export async function attribution(req, res) {
       // the live re-attributing flexible path (correct numbers; #180 honest-timeout is the backstop).
       // Default views/presets resolve to the site window, so the common fast path is unaffected.
       const preAggWindowMatches = preAggregatedWindowMatches(resolvedWindow, req.site?.attribution_window_days)
+
+      // ── DEAD-STORE GATE (Wave-4) ────────────────────────────────────────────────────
+      // Must run AFTER preAggWindowMatches (the rule is window- AND dim-aware) and BEFORE
+      // the pre-agg short-circuit + the getFlexibleReport fall-through below.
+      // A shape that resolves to neither the Supabase pre-agg nor a Tinybird pipe reaches
+      // the engine's `pipe=NONE` branch, which calls queryHogQL DIRECTLY — outside the
+      // TINYBIRD_FORCE_READ seam — and silently returns ZEROS from a dead store. Deny it
+      // here with a truthful 422 instead (§6: never render a fake zero). The dashboard's
+      // existing error banner surfaces this; it is NOT a silent empty state.
+      // KEEP-set shapes are untouched: the pre-agg short-circuit at :151 and the Class-A
+      // pipe dispatch both run only after this returns null.
+      const gateReason = gatedReportReason({
+        group_by,
+        group_by2: req.query.group_by2 || null,
+        metric,
+        preAggWindowMatches
+      })
+      if (gateReason) {
+        return res.status(422).json({
+          success: false,
+          data: null,
+          error: gateReason.message,
+          // fetchApi propagates error_code (precedent: 'query_timeout'); the frontend's
+          // describeQueryError branches on it to render the calm gated state with NO retry.
+          error_code: gateReason.error_code,
+          gated: true
+        })
+      }
 
       if (req.query.attribute_by && !ALLOWED_ATTRIBUTE_BY.has(req.query.attribute_by)) {
         return res.status(400).json({
@@ -307,6 +330,21 @@ export async function attribution(req, res) {
     // Surface a STRUCTURED code so the dashboard shows an honest "narrow the range" message instead of
     // rendering the failure as an empty "no data" state (a silent lie about the customer's business).
     // NEVER leak the raw ClickHouse message to the client.
+    // getSessionReport throws a TYPED unsupported_session_dim for a dim it cannot honestly
+    // bucket (it used to fabricate a single 'unknown' bucket instead). That is a deliberate
+    // DENY, not a failure: surface it as a 422 with the structured code so the dashboard
+    // renders the calm gated state with NO retry — never a 500, never a fabricated bucket.
+    // (The edge gate normally catches this first; this is the engine-level backstop, and the
+    // path any non-gated caller of getSessionReport still lands on.)
+    if (err?.code === 'unsupported_session_dim') {
+      return res.status(422).json({
+        success: false,
+        data: null,
+        error_code: 'unsupported_session_dim',
+        error: msg,
+        gated: true
+      })
+    }
     const isTimeout = /max execution time|timed out|timeout|\b504\b|TIMEOUT_EXCEEDED/i.test(msg)
     console.error('[attribution] query failed:', msg)
     res.status(500).json({
