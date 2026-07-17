@@ -1,6 +1,6 @@
 # PostHog → Tinybird Migration — NEW-CHAT HANDOFF
 
-**Updated:** 2026-07-17 (fabrication-fix + allowlist + PR#4-step-1 + security session) · **Deep reference:** `POSTHOG_DECOMMISSION_SCAN.md` (full arc; session log appended) · **Repo:** `Ubaidofficial/SourceTrack` @ main `96fd8c0` (**#264 landing_page fix + #265 PR#4-step-1 MERGED**) (verify `git log -1`)
+**Updated:** 2026-07-17 (fabrication-fix + allowlist + PR#4-step-1 + security session + C2 schema-drift Phase-A findings) · **Deep reference:** `POSTHOG_DECOMMISSION_SCAN.md` (full arc; session log appended) · **Repo:** `Ubaidofficial/SourceTrack` @ main `96fd8c0` (**#264 landing_page fix + #265 PR#4-step-1 MERGED**) (verify `git log -1`)
 
 > Start-here doc for the new chat. Read this + skim the scan doc's tail and you're caught up.
 > Orchestrator = plan/verify/direct-merge · CC = files/logic/git · Antigravity = browser + **read-only** MCP (post-lockdown, see SECURITY).
@@ -110,6 +110,28 @@ Confirmed via Antigravity read-only pipe-diff + flag read:
 - **The allowlist MUST key SERVED to prod's 11-pipe set, not staging's.** Building off staging would gate 4 shapes that work in prod.
 - **Side fix (non-blocking):** deploy the 4 missing pipes to staging to mirror prod, OR validate against prod directly. Until then, trust prod truth, not staging greens.
 - **PIPE RE-VERIFY before PR#4:** re-confirm the 11 against **prod** — a wrong allowlist entry is exactly what PR#4 makes fatal.
+
+---
+
+## 🔴 SCHEMA CONVERGENCE (C2) — DRIFT FINDINGS (2026-07-17, read-only Phase-A)
+Two durable findings from classifying the schema-drift "44 divergences." Both verified against **live** DBs (read-only `information_schema`), not against CI output.
+
+### 1. CI DB-URL secrets mis-pointed TWICE (schema-drift was diffing the wrong DBs)
+- **First:** `STAGING_DB_URL` → **prod** (prior session; the pooler/IPv4 fix).
+- **Second:** `PROD_DB_URL` → **staging** — caught because schema-drift reported an impossible **"0 staging≠prod"**: it was diffing staging-against-staging. The headline **"44 divergences" was an artifact** (really migrations-vs-staging). Proof: CI's "prod" snapshot matched real *staging* on every distinguishing column (`qualified_by`=uuid, `admin_audit_log.action`=NOT NULL, revenue orphans absent) while **real prod** is the opposite on all three.
+- **No accidental prod write occurred:** `migrate-prod` is `if: false`; `migrate-staging` needs `schema-drift` green, and schema-drift has been **red on every run** (GitHub run history) → the migrate jobs were skipped on all runs.
+- **HARD RULE (precondition to enabling ANY migrate job):** verify **both** write-secrets resolve to their *named* DB before enabling. schema-drift must use the **Supabase Session pooler (IPv4)** URL — GitHub runners are IPv4-only; `db.<ref>.supabase.co` is IPv6-only.
+- **Both DB passwords → deferred rotation queue** (they transited a mis-pointed secret; fold into the post-migration rotation, see §SECURITY).
+
+### 2. 🔴 INTEGRITY GAP — prod is MISSING PRIMARY KEYs on 6 tables
+- **No PK in prod:** `companies`, `company_members`, `qa_notes`, `saved_reports`, `dashboard_widgets`, `admin_audit_log`. (Only `sites` has a PK — on `site_key`, `DB_1_pkey`; `lead_qualifications` has one on `id`.) Staging has these tightened; **the migration files never carried the constraints** (staging was hand-tightened, uncommitted).
+- **PK-add is SAFE — audited read-only on prod (2026-07-17):** 0 null `id`, 0 dup `id`, ≤12 rows each (admin_audit_log 11, companies 1, company_members 9, dashboard_widgets 0, qa_notes 0, saved_reports 12).
+- **Live-prod DDL, founder-gated, non-urgent.** Folds into the C2 held prod-DDL bundle.
+
+### The real 3-way (expect this from CI once `PROD_DB_URL` is fixed)
+- **52 divergences**, validated (reconstructed migrations-shadow reproduces CI's 44 exactly; column accounting reconciles to 408). Pattern: **staging is the tightened outlier; migrations ≈ prod baseline.** Per-row canonical target must be decided (mostly **STAGING** = the correct tight shape) → most rows need prod DDL, not just a migration-file edit.
+- **Money-rail (non-urgent, decide-later):** `revenue_ingestion_events.{payment_id,event_type,idempotency_key}` = prod-only orphans, code-unused, 0 data → drop; `lead_qualifications.qualified_by` = text in prod/migrations but app writes a uuid (`leads-server.js:424/435`, staging=uuid) → tighten to uuid (prod's 1 row is uuid-castable). Idempotency surface (`revenue_idempotency_keys` + `claim_revenue_idempotency_keys`) intact — unaffected.
+- **Stale docs to fix when C2 lands:** `schema-drift-ignore.json` + `20260712000200_orphan_schema_register.sql` claim `sites.custom_domain*` / `site_annotations` have "no CREATE migration" — **baseline creates both.**
 
 ---
 
