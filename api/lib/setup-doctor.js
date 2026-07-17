@@ -79,8 +79,10 @@ export async function getSetupDiagnostics({ site, verificationToken = null }) {
   const readTb = async (pipeName, params, hogSql, hogName, mapRows) => {
     const tb = await _queryTinybirdPipe(pipeName, params)
     if (tb !== null) return mapRows(tb)
-    if (forceRead) throw new Error(`[tinybird-force-read] ${pipeName} returned null under TINYBIRD_FORCE_READ — dispatch path not exercised`)
-    return _queryHogQL(hogSql, hogName)
+    // D1b: HogQL fallback DELETED — Tinybird is the sole read path. Null -> the DEPLOYED pipe is not
+    // serving -> throw loud, never a silent dead-store read. FIX THE PIPE, do not restore the read.
+    // (queryHogQL import/seam kept inert for the injectable cutover tests; D3 removes it.)
+    throw new Error(`[tinybird-force-read] ${pipeName} returned null — FIX THE PIPE, do not restore the read`)
   }
 
   // 2. Fetch HogQL queries in parallel

@@ -36,57 +36,46 @@ function tbStub (calls, rowsByPipe) {
   return async (pipe, params) => { calls.push({ pipe, params }); return rowsByPipe === null ? null : (rowsByPipe[pipe] ?? null) }
 }
 
-test('sessions overview — FALLBACK: flag off (pipe null) -> HogQL for pageviews + conversions', async () => {
-  const tb = []; const hog = []
-  __setSessionsReadDeps({ queryTinybird: tbStub(tb, null), queryHog: hogStub(hog) })
+test('sessions overview — D1b: pipe null -> 500 (HogQL fallback DELETED)', async () => {
+  const tb = []
+  __setSessionsReadDeps({ queryTinybird: tbStub(tb, null), queryHog: async () => { throw new Error('HogQL called — D1b deleted the fallback') } })
   try {
     const res = mockRes()
     await sessionsOverview(req(), res)
-    assert.strictEqual(res.body.success, true)
-    assert.deepStrictEqual(hog.sort(), ['sessions_conversions', 'sessions_pageviews'])
-    assert.deepStrictEqual(tb.map(c => c.pipe), ['sessions_pageviews', 'sessions_conversions'], 'both wired reads attempt Tinybird')
+    assert.strictEqual(res.statusCode, 500, 'a null pipe 500s loud instead of serving HogQL dead-store zeros')
+    assert.ok(tb.length >= 1, 'a read attempted Tinybird first')
   } finally { __resetSessionsReadDeps() }
 })
 
-test('sessions overview — DISPATCH conversions: sessions_conversions served from Tinybird; named→consumer shape == HogQL positional', async () => {
+test('sessions overview — D1b: sessions_conversions served from Tinybird; named row remaps to the consumer shape', async () => {
   const PV_NAMED = { distinct_id: 'v1', timestamp: '2026-07-01T10:00:00Z', page_url: '/x', utm_source: 'g', utm_medium: 'cpc', utm_campaign: 'camp' }
   const CONV_NAMED = { distinct_id: 'v1', timestamp: '2026-07-01T11:00:00Z', conversion_value: 42.5 }
-  const CONV_POS = ['v1', '2026-07-01T11:00:00Z', 42.5] // HogQL positional equivalent
-
-  // Run A: both reads via Tinybird (conversions named rows through readTb mapRows).
   const hogA = []
   __setSessionsReadDeps({
     queryTinybird: tbStub([], { sessions_pageviews: [PV_NAMED], sessions_conversions: [CONV_NAMED] }),
-    queryHog: hogStub(hogA)
+    queryHog: async () => { hogA.push('called'); throw new Error('HogQL called — pipe served, no fallback') }
   })
   const resA = mockRes(); await sessionsOverview(req(), resA); __resetSessionsReadDeps()
-
-  // Run B: conversions via HogQL positional (identical data); pageviews via Tinybird.
-  const hogB = []
-  __setSessionsReadDeps({
-    queryTinybird: tbStub([], { sessions_pageviews: [PV_NAMED] }), // conversions pipe null -> HogQL
-    queryHog: async (_sql, name) => { hogB.push(name); return name === 'sessions_conversions' ? [CONV_POS] : [] }
-  })
-  const resB = mockRes(); await sessionsOverview(req(), resB); __resetSessionsReadDeps()
-
-  assert.strictEqual(hogA.length, 0, 'conversions served from Tinybird — no HogQL call')
-  assert.strictEqual(resA.body.success, true)
-  assert.deepStrictEqual(resA.body, resB.body, 'named→positional conv remap yields identical session output')
+  assert.strictEqual(hogA.length, 0, 'both reads served from Tinybird — no HogQL call')
+  assert.strictEqual(resA.body.success, true, 'named->consumer conv remap yields a valid session response')
 })
 
-test('sessions overview — DISPATCH: flag on -> Tinybird for pageviews, HogQL only for conversions (money-rail)', async () => {
-  const tb = []; const hog = []
+test('sessions overview — D1b: both reads served from Tinybird, HogQL NOT called (money-rail)', async () => {
+  const tb = []
   __setSessionsReadDeps({
-    queryTinybird: tbStub(tb, { sessions_pageviews: [{ distinct_id: 'v1', timestamp: '2026-07-01T10:00:00Z', page_url: '/x', utm_source: 'g', utm_medium: 'cpc', utm_campaign: 'camp' }] }),
-    queryHog: hogStub(hog)
+    queryTinybird: tbStub(tb, {
+      sessions_pageviews: [{ distinct_id: 'v1', timestamp: '2026-07-01T10:00:00Z', page_url: '/x', utm_source: 'g', utm_medium: 'cpc', utm_campaign: 'camp' }],
+      sessions_conversions: [{ distinct_id: 'v1', timestamp: '2026-07-01T11:00:00Z', conversion_value: 42.5 }]
+    }),
+    queryHog: async () => { throw new Error('HogQL called — both pipes served') }
   })
   try {
     const res = mockRes()
     await sessionsOverview(req(), res)
     assert.strictEqual(res.body.success, true)
-    assert.deepStrictEqual(hog, ['sessions_conversions'], 'pageviews bypassed HogQL; only money-rail read used HogQL')
     const pv = tb.find(c => c.pipe === 'sessions_pageviews')
     assert.deepStrictEqual(pv.params, { site_id: 'site-00', date_from_ts: '2026-07-01 00:00:00', date_to_ts: '2026-07-03 00:00:00' })
+    assert.ok(tb.find(c => c.pipe === 'sessions_conversions'), 'the money-rail conversions read dispatched from the pipe')
   } finally { __resetSessionsReadDeps() }
 })
 
@@ -141,49 +130,30 @@ test('sessions overview — TS-NORMALIZE parity: SPACE-form pipe ts == ISO HogQL
 
   const pvNamedSpace = EV.map(e => ({ distinct_id: e.did, timestamp: e.space, page_url: e.url, utm_source: null, utm_medium: null, utm_campaign: null }))
   const convNamedSpace = [{ distinct_id: CONV.did, timestamp: CONV.space, conversion_value: CONV.val }]
-  const pvPosIso = EV.map(e => [e.did, e.iso, e.url, null, null, null])
-  const convPosIso = [[CONV.did, CONV.iso, CONV.val]]
-
-  // OFF leg (baseline): HogQL serves ISO positional rows; pipe null.
-  __setSessionsReadDeps({
-    queryTinybird: async () => null,
-    queryHog: async (_sql, name) => name === 'sessions_pageviews' ? pvPosIso : name === 'sessions_conversions' ? convPosIso : []
-  })
-  const resA = mockRes(); await sessionsOverview(req(), resA); __resetSessionsReadDeps()
-
-  // ON leg: Tinybird serves SPACE-form named rows; HogQL must NOT be called.
+  // D1b: Tinybird is the SOLE read path — serve SPACE-form named rows; HogQL is gone.
   __setSessionsReadDeps({
     queryTinybird: async (pipe) => pipe === 'sessions_pageviews' ? pvNamedSpace : pipe === 'sessions_conversions' ? convNamedSpace : null,
-    queryHog: async (_sql, name) => { throw new Error(`HogQL called for ${name} on the ON leg (zero-fallback violated)`) }
+    queryHog: async (_sql, name) => { throw new Error(`HogQL called for ${name} — pipe served, no fallback`) }
   })
   const resB = mockRes(); await sessionsOverview(req(), resB); __resetSessionsReadDeps()
 
-  assert.strictEqual(resA.body.success, true)
   assert.strictEqual(resB.body.success, true)
-  // Buckets are plain YYYY-MM-DD (proves started_at.split('T') works on the normalized ts)
-  assert.ok(resA.body.data.time_series.length >= 2, 'events span two days -> at least two daily buckets')
+  // SPACE-form pipe timestamps are normalized to ISO so both new Date() (duration) and the daily bucket
+  // key work: buckets are plain YYYY-MM-DD, and events spanning two days -> at least two buckets.
+  assert.ok(resB.body.data.time_series.length >= 2, 'events span two days -> at least two daily buckets')
   for (const t of resB.body.data.time_series) assert.match(t.date, /^\d{4}-\d{2}-\d{2}$/, 'daily bucket is a plain date, not the whole timestamp string')
-  // Full parity: identical daily buckets AND identical aggregates (durations, etc.)
-  assert.deepStrictEqual(resB.body.data.time_series, resA.body.data.time_series, 'identical daily buckets')
-  assert.deepStrictEqual(resB.body, resA.body, 'SPACE pipe ts normalized to ISO -> byte-identical session output vs the HogQL ISO leg')
 })
 
 // ── visitor_sessions (per-visitor detail read, money-rail conversion_value) ──
 const vsReq = (query = { distinct_id: 'v1' }) => ({ site: { id: 'site-00' }, query })
-// HogQL SELECT order (sessions.js) — ground truth the positional consumer destructures.
-const VS_COLS = ['event_type', 'timestamp', 'page_url', 'utm_source', 'utm_medium', 'utm_campaign', 'conversion_value']
 const VS_PV = { event_type: '$pageview', timestamp: '2026-07-01T10:00:00Z', page_url: '/x', utm_source: 'google', utm_medium: 'cpc', utm_campaign: 'camp', conversion_value: 0 }
 const VS_CONV = { event_type: '$conversion', timestamp: '2026-07-01T10:05:00Z', page_url: '/checkout', utm_source: 'google', utm_medium: 'cpc', utm_campaign: 'camp', conversion_value: 120 }
-const vsPos = (named) => VS_COLS.map(k => named[k])
 
-test('sessions visitor — PARITY: named 7-col pipe rows == HogQL positional rows -> IDENTICAL session output', async () => {
-  __setSessionsReadDeps({ queryTinybird: async () => [VS_PV, VS_CONV], queryHog: async () => { throw new Error('HogQL called — pipe not served') } })
+test('sessions visitor — D1b: served 7-col named pipe rows remap to the shape the consumer reads', async () => {
+  __setSessionsReadDeps({ queryTinybird: async () => [VS_PV, VS_CONV], queryHog: async () => { throw new Error('HogQL called — pipe served, no fallback') } })
   const resA = mockRes(); await visitorSessions(vsReq(), resA); __resetSessionsReadDeps()
-  __setSessionsReadDeps({ queryTinybird: async () => null, queryHog: async () => [vsPos(VS_PV), vsPos(VS_CONV)] })
-  const resB = mockRes(); await visitorSessions(vsReq(), resB); __resetSessionsReadDeps()
-  assert.deepStrictEqual(resA.body, resB.body, 'the 7-col named->positional remap matches the HogQL SELECT order exactly')
   assert.strictEqual(resA.body.data.session_count, 1)
-  assert.notStrictEqual(resA.body.data.converting_session_index, null, 'the $120 conversion is recognized as a converting session')
+  assert.notStrictEqual(resA.body.data.converting_session_index, null, 'the $120 conversion is recognized as a converting session (money field survives the 7-col remap)')
 })
 
 test('sessions visitor — DISPATCH: served from pipe, HogQL NOT called, tenant + visitor scoped', async () => {
@@ -198,12 +168,12 @@ test('sessions visitor — DISPATCH: served from pipe, HogQL NOT called, tenant 
   } finally { __resetSessionsReadDeps() }
 })
 
-test('sessions visitor — FALLBACK: pipe null -> HogQL positional rows -> same output', async () => {
-  __setSessionsReadDeps({ queryTinybird: async () => null, queryHog: async () => [vsPos(VS_PV), vsPos(VS_CONV)] })
+test('sessions visitor — D1b: pipe null -> 500 (HogQL fallback DELETED)', async () => {
+  __setSessionsReadDeps({ queryTinybird: async () => null, queryHog: async () => { throw new Error('HogQL called — D1b deleted the fallback') } })
   try {
     const res = mockRes()
     await visitorSessions(vsReq(), res)
-    assert.strictEqual(res.body.data.session_count, 1)
+    assert.strictEqual(res.statusCode, 500, 'a null visitor pipe 500s loud instead of a silent HogQL dead-store read')
   } finally { __resetSessionsReadDeps() }
 })
 

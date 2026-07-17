@@ -53,15 +53,14 @@ function tbStub (calls, rowsByPipe) {
   return async (pipe, params) => { calls.push({ pipe, params }); return rowsByPipe === null ? null : (rowsByPipe[pipe] ?? null) }
 }
 
-test('events /health — FALLBACK: flag off -> HogQL for all 3 health reads', async () => {
-  const tb = []; const hog = []
-  __setEventsReadDeps({ queryTinybird: tbStub(tb, null), queryHog: hogStub(hog) })
+test('events /health — D1b: pipe null -> 500 (HogQL fallback DELETED)', async () => {
+  const tb = []
+  __setEventsReadDeps({ queryTinybird: tbStub(tb, null), queryHog: async () => { throw new Error('HogQL called — D1b deleted the fallback') } })
   try {
     const res = mockRes()
     await healthHandler(reqSite(), res)
-    assert.strictEqual(res.body.data.count_hour, 9)
-    assert.deepStrictEqual(hog.sort(), ['events_health_day', 'events_health_hour', 'events_health_last'])
-    assert.strictEqual(tb.length, 3, 'all 3 health reads attempted Tinybird first')
+    assert.strictEqual(res.statusCode, 500, 'a null health pipe 500s loud, no HogQL dead-store read')
+    assert.ok(tb.length >= 1, 'a health read attempted Tinybird first')
   } finally { __resetEventsReadDeps() }
 })
 
@@ -122,15 +121,14 @@ test('events /edge-cases — DISPATCH: all three edge reads served from Tinybird
   } finally { __resetEventsReadDeps() }
 })
 
-test('events /edge-cases — FALLBACK: pipes null -> HogQL positional counts -> same values', async () => {
-  const tb = []; const hog = []
-  __setEventsReadDeps({ queryTinybird: tbStub(tb, null), queryHog: hogStub(hog) })
+test('events /edge-cases — D1b: pipes null -> 500 (no HogQL fallback)', async () => {
+  const tb = []
+  __setEventsReadDeps({ queryTinybird: tbStub(tb, null), queryHog: async () => { throw new Error('HogQL called — D1b deleted the fallback') } })
   try {
     const res = mockRes()
     await edgeHandler(reqSite(), res)
-    assert.strictEqual(res.body.data.ai_without_utm, 2, 'edge_ai_no_utm via HogQL fallback (hogStub=2)')
-    assert.strictEqual(res.body.data.utm_without_ai, 4, 'edge_utm_no_ai via HogQL fallback (hogStub=4)')
-    assert.deepStrictEqual(hog.sort(), ['edge_ai_no_utm', 'edge_domains', 'edge_utm_no_ai'], 'all three fell back')
+    assert.strictEqual(res.statusCode, 500, 'a null edge pipe 500s loud, no HogQL dead-store read')
+    assert.ok(tb.length >= 1, 'an edge read attempted Tinybird first')
   } finally { __resetEventsReadDeps() }
 })
 
@@ -162,14 +160,11 @@ const NAMED_CONV = {
 }
 const toPos = (named) => LATEST_COLS.map(k => named[k])
 
-test('events /latest — PARITY: named 50-col pipe row == HogQL positional row -> IDENTICAL events, money fields intact', async () => {
-  __setEventsReadDeps({ queryTinybird: async () => [NAMED_CONV], queryHog: async () => { throw new Error('HogQL called — pipe not served') } })
-  const resA = mockRes(); await latestHandler(reqSite(), resA); __resetEventsReadDeps()
-  __setEventsReadDeps({ queryTinybird: async () => null, queryHog: async () => [toPos(NAMED_CONV)] })
-  const resB = mockRes(); await latestHandler(reqSite(), resB); __resetEventsReadDeps()
-  assert.deepStrictEqual(resA.body, resB.body, 'the 50-col named->positional remap matches the HogQL SELECT order exactly')
-  const ev = resA.body.data.events[0]
-  assert.strictEqual(ev.conversion_value, 120, 'money field survives the remap')
+test('events /latest — D1b: served 50-col named pipe row remaps to the shape the consumer reads, money fields intact', async () => {
+  __setEventsReadDeps({ queryTinybird: async () => [NAMED_CONV], queryHog: async () => { throw new Error('HogQL called — pipe served, no fallback') } })
+  const res = mockRes(); await latestHandler(reqSite(), res); __resetEventsReadDeps()
+  const ev = res.body.data.events[0]
+  assert.strictEqual(ev.conversion_value, 120, 'money field survives the 50-col named->positional remap')
   assert.strictEqual(ev.conversion_type, 'closed_won')
   assert.strictEqual(ev.ai_source, 'ChatGPT')
   assert.strictEqual(ev.is_conversion, true)

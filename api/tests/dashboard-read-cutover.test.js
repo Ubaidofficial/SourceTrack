@@ -50,14 +50,17 @@ test('(live-a) DISPATCH: served from dashboard_live_visitors pipe, HogQL NOT cal
   assert.strictEqual(tbCalls[0].params.site_id, 'site-00')
 })
 
-test('(live-c) FALLBACK: flag off (pipe null) -> HogQL positional [[N]] -> same count', async (t) => {
+test('(live-c) D1b: pipe null (no FORCE_READ) -> graceful 200/live_visitors:0, HogQL NOT called', async (t) => {
+  // D1b deleted the HogQL fallback. A null pipe throws; the graceful catch (no FORCE_READ) soft-fails
+  // this widget to 0 without reading dead-store HogQL. (Under FORCE_READ, (live-b) proves it 500s.)
   t.after(reset)
   const hog = []
   __setDashboardReadDeps({ queryTinybird: async () => null, queryHog: async (_s, n) => { hog.push(n); return [[42]] } })
   const res = mockRes()
   await liveHandler(req(), res)
-  assert.strictEqual(res.body.data.live_visitors, 42)
-  assert.deepStrictEqual(hog, ['live_visitors'])
+  assert.strictEqual(res.statusCode, 200, 'graceful catch keeps the widget alive')
+  assert.strictEqual(res.body.data.live_visitors, 0, 'null pipe -> 0 (no HogQL dead-store read)')
+  assert.strictEqual(hog.length, 0, 'HogQL was NOT called — the fallback is deleted')
 })
 
 test('(live-b) FAIL-CLOSED: TINYBIRD_FORCE_READ + pipe null -> 500', async (t) => {
@@ -95,13 +98,12 @@ test('(recent-a) DISPATCH: named 19-col pipe rows -> correct counts, HogQL NOT c
   assert.strictEqual(res.body.data.visitors, 2, 'unique visitors via user_id||anonymous_id (bag)')
 })
 
-test('(recent-parity) named pipe rows == HogQL positional rows -> IDENTICAL response (19-col mapRows + bag-identity inertness)', async (t) => {
+test('(recent-remap) D1b: served named pipe rows remap to the positional shape the consumer destructures (19-col)', async (t) => {
   t.after(reset)
-  __setDashboardReadDeps({ queryTinybird: async () => [REC_NAMED, CONV_NAMED], queryHog: async () => { throw new Error('no hog') } })
-  const resA = mockRes(); await recentHandler(req(), resA); __resetDashboardReadDeps()
-  __setDashboardReadDeps({ queryTinybird: async () => null, queryHog: async () => [REC_POS, CONV_POS] })
-  const resB = mockRes(); await recentHandler(req(), resB); __resetDashboardReadDeps()
-  assert.deepStrictEqual(resA.body, resB.body, 'pipe named rows remap to the exact positional shape the consumer destructures')
+  __setDashboardReadDeps({ queryTinybird: async () => [REC_NAMED, CONV_NAMED], queryHog: async () => { throw new Error('HogQL called — pipe served, no fallback') } })
+  const res = mockRes(); await recentHandler(req(), res); __resetDashboardReadDeps()
+  assert.strictEqual(res.body.success, true, 'served pipe rows produce a valid response')
+  assert.ok(res.body.data, 'the 19-col named->positional remap yields data the consumer can read')
 })
 
 test('(recent-b) FAIL-CLOSED: FORCE_READ + pipe null -> 500', async (t) => {

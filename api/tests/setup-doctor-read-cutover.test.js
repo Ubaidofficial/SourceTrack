@@ -51,26 +51,18 @@ function tbStub (calls, rowsByPipe /* object | null */) {
   }
 }
 
-test('setup-doctor — FALLBACK: flag off (pipe null) -> HogQL for all 5 reads, unchanged', async () => {
+test('setup-doctor — D1b: pipe null (no FORCE_READ) -> each read degrades to not-detected, HogQL NOT called', async () => {
+  // D1b deleted the HogQL fallback. A null pipe throws; each read's `.catch` (no FORCE_READ) degrades
+  // to null WITHOUT reading dead-store HogQL, so the diagnostic fields show their not-detected defaults.
   const tb = []; const hog = []
-  __setSetupDoctorReadDeps({ queryTinybird: tbStub(tb, null), queryHog: hogStub(hog, { token: 5 }) })
+  __setSetupDoctorReadDeps({ queryTinybird: tbStub(tb, null), queryHog: async () => { hog.push('called'); throw new Error('HogQL called — D1b deleted the fallback') } })
   try {
     const r = await getSetupDiagnostics({ site: site(), verificationToken: 'verifyabc123' })
-    assert.strictEqual(r.verification_token.token_matched, true, 'HogQL token count (5) surfaces')
-    // All 5 reads attempted Tinybird first, then fell back to HogQL. The
-    // money-rail HogQL rows still surface their mapped consumer shape.
-    assert.deepStrictEqual(tb.map(c => c.pipe).sort(), [
-      'doctor_last_click_id', 'doctor_last_conversion', 'doctor_pageviews_30d',
-      'doctor_paid_params_count', 'doctor_privacy_signals_30d', 'doctor_token_verify'
-    ])
-    assert.ok(hog.includes('doctor_pageviews_30d') && hog.includes('doctor_token_verify'), 'health reads fell back to HogQL')
-    assert.ok(hog.includes('doctor_last_conversion') && hog.includes('doctor_last_click_id') && hog.includes('doctor_paid_params_count'), 'money-rail reads fell back to HogQL')
-    // HogQL-sourced money-rail shapes surface unchanged.
-    assert.strictEqual(r.conversion_setup.detected, true)
-    assert.strictEqual(r.conversion_setup.last_conversion_type, 'purchase')
-    assert.strictEqual(r.paid_tracking.parameters_detected, true, 'paid_params_count=4 from HogQL')
-    assert.strictEqual(r.paid_tracking.click_id_seen, true)
-    assert.strictEqual(r.paid_tracking.last_click_id_type, 'gclid')
+    assert.strictEqual(hog.length, 0, 'HogQL was NOT called — the fallback is deleted')
+    assert.ok(tb.length >= 1, 'reads attempted Tinybird first')
+    assert.strictEqual(r.conversion_setup.detected, false, 'null last_conversion degrades to not-detected')
+    assert.strictEqual(r.paid_tracking.parameters_detected, false, 'null paid-params degrades to not-detected')
+    assert.strictEqual(r.paid_tracking.click_id_seen, false, 'null click-id degrades to not-seen')
   } finally { __resetSetupDoctorReadDeps() }
 })
 
@@ -107,24 +99,23 @@ test('setup-doctor — DISPATCH: flag on -> Tinybird for all 5 reads (incl. mone
   } finally { __resetSetupDoctorReadDeps() }
 })
 
-test('setup-doctor — MONEY-RAIL PARTIAL: money-rail pipes null -> those 3 fall back to HogQL, health reads still Tinybird', async () => {
+test('setup-doctor — D1b MONEY-RAIL: money-rail pipes null -> degrade to not-detected, HogQL NOT called; health reads served', async () => {
   const tb = []; const hog = []
   __setSetupDoctorReadDeps({
     queryTinybird: tbStub(tb, {
       doctor_pageviews_30d: [{ pageviews_30d: 100 }],
       doctor_token_verify: [{ token_verify_count: 0 }]
-      // money-rail pipes omitted -> tbStub returns null -> HogQL fallback
+      // money-rail pipes omitted -> null -> throws -> .catch degrades to null (no HogQL)
     }),
-    queryHog: hogStub(hog, { token: 5 })
+    queryHog: async () => { hog.push('called'); throw new Error('HogQL called — D1b deleted the fallback') }
   })
   try {
     const r = await getSetupDiagnostics({ site: site(), verificationToken: 'verifyabc123' })
-    // Only the 3 money-rail reads fell back to HogQL; health reads bypassed it.
-    assert.deepStrictEqual(hog.sort(), ['doctor_last_click_id', 'doctor_last_conversion', 'doctor_paid_params_count'])
-    // HogQL-sourced money-rail shapes surface (purchase / gclid / 4 from hogStub).
-    assert.strictEqual(r.conversion_setup.last_conversion_type, 'purchase')
-    assert.strictEqual(r.paid_tracking.last_click_id_type, 'gclid')
-    assert.strictEqual(r.paid_tracking.parameters_detected, true)
+    assert.strictEqual(hog.length, 0, 'HogQL was NOT called for the money-rail reads')
+    // The 3 money-rail reads degrade to not-detected (no silent dead-store fallback); health reads served.
+    assert.strictEqual(r.conversion_setup.detected, false, 'null money-rail conversion read degrades to not-detected')
+    assert.strictEqual(r.paid_tracking.click_id_seen, false, 'null click-id read degrades to not-seen')
+    assert.strictEqual(r.paid_tracking.parameters_detected, false, 'null paid-params read degrades to not-detected')
   } finally { __resetSetupDoctorReadDeps() }
 })
 

@@ -98,23 +98,25 @@ test('(b) seo-revenue — FAIL-CLOSED: TINYBIRD_FORCE_READ + pipe null -> 500, n
   assert.ok(!hog.includes('seo-revenue-landing-pages'), 'no silent HogQL fallback for the wired read under force-read')
 })
 
-test('(c) seo-revenue — FALLBACK: flag off (pipe null) -> HogQL serves landing pages (byte-identical path)', async (t) => {
+test('(c) seo-revenue — D1b: pipe null (no FORCE_READ) -> degraded 200 (unknown bucket), no HogQL read', async (t) => {
+  // D1b deleted the HogQL fallback. A null pipe throws; seo-revenue's inner landing-lookup catch
+  // re-throws under FORCE_READ (500, see (b)) but in prod degrades the lookup to the 'unknown' bucket
+  // exactly as a timeout would — WITHOUT reading dead-store HogQL.
   t.after(() => { restoreSupabase(); __resetSeoRevenueReadDeps() })
   installSupabase({ conn: null, conversions: ONE_CONVERSION, gsc: [] })
-  const tbCalls = []; const hog = []
+  const tbCalls = []
   __setSeoRevenueReadDeps({
-    queryTinybird: async (pipe, params) => { tbCalls.push(pipe); return null }, // flag off
-    queryHog: async (_sql, name) => { hog.push(name); return name === 'seo-revenue-landing-pages' ? [['v1', '/hoglanding']] : [] }
+    queryTinybird: async (pipe, params) => { tbCalls.push(pipe); return null },
+    queryHog: async () => { throw new Error('HogQL called — D1b deleted the fallback') }
   })
   const res = mockRes()
   await handler(req(), res)
 
-  assert.strictEqual(res.body.success, true)
-  assert.deepStrictEqual(tbCalls, ['seo_revenue_landing_pages'], 'the wired read attempts Tinybird first')
-  assert.ok(hog.includes('seo-revenue-landing-pages'), 'flag off -> HogQL fallback served the landing pages')
+  assert.strictEqual(res.body.success, true, 'landing-lookup failure degrades to 200, not a HogQL read')
+  assert.deepStrictEqual(tbCalls, ['seo_revenue_landing_pages'], 'the wired read attempted Tinybird first')
   assert.strictEqual(res.body.landing_pages.length, 1)
-  assert.strictEqual(res.body.landing_pages[0].revenue, 100)
-  assert.notStrictEqual(res.body.landing_pages[0].page_path, 'unknown', 'HogQL positional row resolved the landing page')
+  assert.strictEqual(res.body.landing_pages[0].revenue, 100, 'revenue still allocated')
+  assert.strictEqual(res.body.landing_pages[0].page_path, 'unknown', 'without the pipe, landing pages degrade to unknown (no HogQL fallback)')
 })
 
 test('(d) seo-revenue — plan gate: feature not on plan -> 402', async (t) => {

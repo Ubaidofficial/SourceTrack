@@ -1,7 +1,6 @@
 import express from 'express'
 import { queryHogQL } from '../lib/posthog.js'
 import { queryTinybirdPipe } from '../lib/tinybird-read.js'
-import { esc } from '../lib/utils.js'
 
 const router = express.Router()
 
@@ -45,21 +44,12 @@ router.get('/', async (req, res) => {
       const live_visitors = Number(tbRows?.[0]?.live_visitors ?? 0)
       return res.json({ success: true, data: { live_visitors }, error: null })
     }
-    if (forceRead) {
-      throw new Error('[tinybird-force-read] live_visitors_bag returned null under TINYBIRD_FORCE_READ — dispatch path not exercised')
-    }
-
-    // ── HogQL fallback (unchanged — the pre-cutover behavior) ──
-    const sql = `
-      SELECT count(DISTINCT properties.anonymous_id) AS live_visitors
-      FROM events
-      WHERE event = '$pageview'
-        AND properties.site_id = '${esc(req.site.id)}'
-        AND timestamp >= now() - INTERVAL 5 MINUTE
-    `
-    const rows = await _queryHogQL(sql, 'live_visitors')
-    const live_visitors = Number(rows?.[0]?.[0] ?? 0)
-    res.json({ success: true, data: { live_visitors }, error: null })
+    // D1b: the HogQL fallback is DELETED — live_visitors_bag is the SOLE read path. A null means the
+    // DEPLOYED pipe is not serving -> throw instead of a silent dead-store read. FIX THE PIPE, do not
+    // restore the read. Under FORCE_READ the catch below 500s loud (staging dispatch-proof); in prod
+    // the catch's existing soft-fail keeps this non-critical realtime widget alive (0 is a valid live
+    // count — see PR body). The queryHogQL import/seam stays inert for D3.
+    throw new Error('[tinybird-force-read] live_visitors_bag returned null — FIX THE PIPE, do not restore the read')
   } catch (err) {
     console.error('Live visitors error:', err)
     if (forceRead) {
