@@ -176,12 +176,32 @@ test('🔴 KEEP SET: first/last-touch × the 8 mapped dims stay OPEN', () => {
   }
 })
 
-test('the non-direct + ai_platforms models have NO pre-agg short-circuit -> rule must not fire', () => {
+// The PRE-AGG DIM rule still must not fire for these models (they have no pre-agg short-circuit) —
+// but the SERVED allowlist is now the final authority, and it DOES deny them where no live backend
+// exists. This test previously asserted "byte-identical to the pre-change verdict", which is exactly
+// the stale-contract shape that pinned #258's bug open: it would now forbid the allowlist from
+// gating the non-direct models at all. Assert the real contract instead.
+test('non-direct + ai_platforms: the pre-agg DIM rule never fires (they have no short-circuit)', () => {
   for (const model of ['first_touch_non_direct', 'last_touch_non_direct', 'ai_platforms']) {
     for (const dim of gate.ALLOWED_GROUPS) {
-      const withModel = gate.gatedReportReason({ group_by: dim, metric: 'revenue', preAggWindowMatches: true, model, preAggMultiTouchMetric: true, preAggConversionMetric: true })
-      const without = gate.gatedReportReason({ group_by: dim, metric: 'revenue', preAggWindowMatches: true })
-      assert.deepEqual(withModel, without, `${model} × ${dim} must be byte-identical to the pre-change verdict`)
+      const r = gate.gatedReportReason({ group_by: dim, metric: 'revenue', preAggWindowMatches: true, model, preAggMultiTouchMetric: true, preAggConversionMetric: true })
+      // any denial here must come from a rule OTHER than the pre-agg dim contract, whose message
+      // names the model ("isn't available for the X attribution model")
+      if (r) assert.doesNotMatch(r.message, /attribution model\./, `${model} × ${dim} must not be denied by the PRE-AGG dim rule`)
+    }
+  }
+})
+
+test('🔴 the allowlist gates the two non-direct models off Class-A (approved blast radius)', () => {
+  for (const model of ['first_touch_non_direct', 'last_touch_non_direct']) {
+    for (const dim of ['source', 'medium', 'campaign', 'channel', 'country', 'device', 'browser', 'landing_page', 'date', 'ai_source']) {
+      const r = gate.gatedReportReason({ group_by: dim, metric: 'revenue', preAggWindowMatches: true, model, preAggConversionMetric: true })
+      assert.ok(r, `${model} × ${dim} has no pre-agg and no pipe -> must be denied, not a dead-store zero`)
+      assert.equal(r.error_code, 'gated_dead_store')
+    }
+    for (const dim of gate.CLASS_A_DIMS) {
+      assert.equal(gate.gatedReportReason({ group_by: dim, metric: 'revenue', preAggWindowMatches: true, model, preAggConversionMetric: true }), null,
+        `${model} × ${dim} IS served by its Class-A pipe`)
     }
   }
 })

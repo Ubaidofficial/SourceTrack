@@ -1,6 +1,7 @@
 import express from 'express'
-import { getFlexibleReport } from '../lib/attribution-engine.js'
+import { getFlexibleReport, PREAGG_CONVERSION_METRICS, PREAGG_MULTITOUCH_METRICS } from '../lib/attribution-engine.js'
 import { getSupabase } from '../lib/supabase.js'
+import { ALLOWED_MODELS, servedByDeployedBackend } from '../lib/report-config-validation.js'
 import { summarizeCurrencyStatus } from '../lib/ad-cost-imports.js'
 import { isValidTimezone, getLocalDateString, getNow } from '../lib/utils.js'
 
@@ -25,6 +26,38 @@ async function getCampaignsData(req) {
   }
 
   const model = req.query.model || 'last_touch'
+  // `model` was FREE-FORM from the query and never validated — it reached getFlexibleReport raw.
+  if (!ALLOWED_MODELS.has(model)) {
+    const err = new Error(`Invalid model. Must be one of: ${[...ALLOWED_MODELS].join(', ')}`)
+    err.statusCode = 400
+    throw err
+  }
+  // This route called getFlexibleReport with NO gate at all — the PR#4 blocker: an unserved shape
+  // fell to the engine's bare queryHogQL. Gate it against the SERVED allowlist.
+  //
+  // Deliberately servedByDeployedBackend(), NOT gatedReportReason(): this route's own columns are
+  // served by pipes that the legacy DENYLIST wrongly rejects. `sessions` is in GATED_METRICS (gated
+  // wholesale for the Report Builder), yet flexible_report_campaign_sessions_by_site serves
+  // campaign × sessions and powers this page's Visitors column today. The allowlist is the truth
+  // about what a live backend serves; the denylist is a Report-Builder-shaped rule. Asking the
+  // allowlist directly keeps the page working AND still guarantees no bare-queryHogQL read.
+  // viaRoutePreAgg:false + hasAttributionWindow:false — campaigns calls the engine directly and
+  // passes no attribution_window, so only the window-free engine pipes can serve it.
+  for (const m of ['revenue', 'conversions', 'sessions', 'leads']) {
+    const backing = servedByDeployedBackend({
+      model, group_by: dimension, group_by2: null, metric: m,
+      preAggConversionMetric: PREAGG_CONVERSION_METRICS.has(m),
+      preAggMultiTouchMetric: PREAGG_MULTITOUCH_METRICS.has(m),
+      viaRoutePreAgg: false,
+      hasAttributionWindow: false
+    })
+    if (!backing) {
+      const err = new Error(`A "${dimension}" breakdown of "${m}" is temporarily unavailable while reporting moves to the new analytics store.`)
+      err.statusCode = 422
+      err.error_code = 'gated_dead_store'
+      throw err
+    }
+  }
   const days = Math.min(Math.max(parseInt(req.query.days) || 30, 1), MAX_DAYS)
   const search = (req.query.search || '').trim().toLowerCase()
   const statusFilter = req.query.status || 'all'
@@ -282,6 +315,18 @@ async function overview(req, res) {
       error: null
     })
   } catch (err) {
+    // A GATE is not a failure: surface its own status + error_code so the frontend renders the calm
+    // "temporarily unavailable" state (describeQueryError branches on error_code) instead of the
+    // generic 500 "Please try again" — retrying a deny cannot help. The gate's message is authored
+    // and safe to return; only UNEXPECTED errors get the generic text.
+    if (err.statusCode) {
+      return res.status(err.statusCode).json({
+        success: false,
+        data: null,
+        error: err.message,
+        error_code: err.error_code || null
+      })
+    }
     // Log concise error server-side only, never leak raw provider text to frontend
     const safeLog = (err.message || '').slice(0, 300)
     console.error('[campaigns] overview failed:', safeLog)

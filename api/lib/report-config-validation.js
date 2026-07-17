@@ -94,6 +94,117 @@ const PREAGG_EXCLUDED_DIMS = new Set(['keyword', 'referrer_domain', 'provider', 
 // A custom_param:* dim has no pre-agg and no pipe -> always dead PostHog. Gated.
 const isGatedCustomParamDim = (dim) => typeof dim === 'string' && dim.startsWith('custom_param:')
 
+
+// ── THE SERVED ALLOWLIST (the PR#4 unblocker) ────────────────────────────────────────
+// The gate above is a DENYLIST: it names shapes that are broken. A denylist can only deny what
+// someone remembered, which is why four fabrication families reached prod (#256/#257/#258/#259).
+// Before PR#4 deletes the bare queryHogQL sites, we need the INVERSE: a positive statement of the
+// (model × dim × metric) shapes an actual live backend serves. Anything not on it is DENIED, so
+// nothing can silently fall through to a read we are about to delete.
+//
+// ⚠️ PROD-PIPE-DEPENDENT. Every pipe-backed entry below assumes the pipe is DEPLOYED IN PROD.
+// Ground truth = the founder's prod pipe-diff (staging is missing 4 and must NOT be used to verify).
+// HARD REQUIREMENT: re-verify this set against PROD — not staging, not a remembered table — before
+// PR#4 deletes anything. A wrong entry here is exactly what the deletion makes fatal.
+const PROD_DEPLOYED_PIPES = new Set([
+  'multitouch_conversions_by_site', 'multitouch_pageviews_live', 'aiplatform_conversions_by_site',
+  'flexible_report_main_by_site', 'flexible_report_provider_by_site',
+  'flexible_report_attribution_status_by_site', 'flexible_report_stitching_method_by_site',
+  'flexible_report_conversion_type_by_site', 'flexible_report_campaign_by_site',
+  'flexible_report_campaign_leads_by_site', 'flexible_report_campaign_sessions_by_site'
+])
+
+// The dims getMultiTouchAttributionLive buckets CORRECTLY (i.e. the bucket varies with the input).
+// Two ways a dim fails to qualify, both proven by the dim-variance sweep, both FABRICATIONS (§6):
+//   1. NO BRANCH in the chain (engine:1942-1969) -> dimVal keeps its `let dimVal = 'direct'` default
+//      (engine:1941) -> every row collapses into one bucket labelled with the requested dim.
+//      -> ai_source, browser.
+//   2. A BRANCH THAT READS A KEY THE SHARE DOES NOT HAVE -> the same collapse.
+//      -> landing_page: engine:1953 reads `share.page_url`, but the shares come from
+//         calculateAttribution() -> tpBase (nightly-attribution.js:1088-1098), which emits
+//         `landing_page` and NEVER `page_url`. So the ternary always takes its '/' branch and 100%
+//         of revenue lands in a single "/" bucket. Same root cause as #256 (a reader reading a key
+//         the touch constructor doesn't emit), different fallback.
+//         FOLLOW-UP: `share.page_url` -> `share.landing_page` makes this dim real; it is a money-rail
+//         reader change and needs its OWN KEEP + variance proof, so it is NOT bundled here. Gated
+//         until then — consistent with how every other family was handled (gate first, fix after).
+// Bound to the engine chain by the anti-drift test: every chain dim must be either IN this set or in
+// MULTITOUCH_BROKEN_BRANCH_DIMS, so a new dim cannot be silently assumed served.
+const MULTITOUCH_LIVE_DIMS = new Set(['source', 'medium', 'campaign', 'keyword', 'referrer_domain', 'channel', 'country', 'device', 'conversion_type', 'provider', 'attribution_status', 'stitching_method', 'date'])
+
+// Chain dims whose branch exists but is non-functional (see landing_page above). Documented so the
+// anti-drift test can tell "not implemented" apart from "implemented but broken".
+const MULTITOUCH_BROKEN_BRANCH_DIMS = new Set(['landing_page'])
+
+// Same for getAiPlatformAttributionLive (engine:776-790), whose default is 'unknown'. medium/campaign/
+// landing_page have no branch -> single fabricated bucket -> not served.
+const AIPLATFORM_LIVE_DIMS = new Set(['source', 'ai_source', 'channel', 'conversion_type', 'country', 'device', 'browser', 'provider', 'attribution_status', 'stitching_method', 'date'])
+
+/**
+ * Which LIVE backend serves this shape? Returns the backing id, or null when nothing does.
+ * Mirrors the real dispatch ORDER: route pre-agg short-circuit (attribution.js) -> engine
+ * getFlexibleReport (MULTI_TOUCH early return -> ai_platforms -> session metrics -> flex pipes).
+ * The anti-drift test binds this to the engine's ACTUAL dispatch cell-by-cell via the read seam.
+ */
+function servedReportShape ({
+  model, group_by, group_by2 = null, metric,
+  preAggWindowMatches = true, hasAttributionWindow = true,
+  // passed in, same convention as gatedReportReason: attribution-engine imports THIS module, so
+  // importing PREAGG_CONVERSION_METRICS / PREAGG_MULTITOUCH_METRICS back would be a cycle.
+  preAggConversionMetric = false, preAggMultiTouchMetric = false,
+  // Only attribution.js reaches the Supabase pre-agg — it owns the short-circuit. export.js and
+  // campaigns.js call getFlexibleReport DIRECTLY, so for them ONLY engine-dispatched pipes exist.
+  viaRoutePreAgg = true
+}) {
+  const dims = [group_by, group_by2].filter(Boolean)
+  if (!model || !metric || dims.length === 0) return null
+  if (dims.some(d => isGatedCustomParamDim(d))) return null          // no pre-agg, no pipe, ever
+  const every = (set) => dims.every(d => set.has(d))
+
+  // 1. session_* metrics -> getSessionReport (engine:2486-2492)
+  if (SESSION_PIPE_METRICS.has(metric)) {
+    return every(SESSION_REPORT_DIMS) ? 'session_report_pipes' : null
+  }
+  // 2/3. route pre-agg short-circuit — Supabase, not a pipe (attribution.js:179 / :200-248)
+  const preAggDims = every(PREAGG_DIMS) && !dims.some(d => PREAGG_EXCLUDED_DIMS.has(d))
+  if (viaRoutePreAgg && preAggWindowMatches && preAggDims) {
+    if (PREAGG_TOUCH_MODELS.has(model) && preAggConversionMetric) return 'supabase_preagg'
+    if (MULTI_TOUCH_MODELS.has(model) && preAggMultiTouchMetric) return 'supabase_preagg'
+  }
+  // 4. MULTI_TOUCH models fall to getMultiTouchAttributionLive (engine:2036) for everything else
+  if (MULTI_TOUCH_MODELS.has(model)) {
+    return every(MULTITOUCH_LIVE_DIMS) ? 'multitouch_conversions_by_site' : null
+  }
+  // 5. ai_platforms -> getAiPlatformAttributionLive (engine:2060)
+  if (model === 'ai_platforms') {
+    return every(AIPLATFORM_LIVE_DIMS) ? 'aiplatform_conversions_by_site' : null
+  }
+  // 6. Class-A conversion-property pipes (engine _flex*Case: _flexPipeCommon && isTouchModel)
+  if (ISTOUCH_MODELS.has(model) && !group_by2 && every(CLASS_A_DIMS) && CLASS_A_PIPE_METRICS.has(metric)) {
+    return `flexible_report_${group_by}_by_site`
+  }
+  // 7/8. window-SENSITIVE flex pipes — only dispatch when NO attribution window is active
+  if (!hasAttributionWindow && !group_by2 && PREAGG_TOUCH_MODELS.has(model)) {
+    if (group_by === 'campaign') {
+      if (CLASS_A_PIPE_METRICS.has(metric)) return 'flexible_report_campaign_by_site'
+      if (metric === 'sessions') return 'flexible_report_campaign_sessions_by_site'
+      if (metric === 'leads') return 'flexible_report_campaign_leads_by_site'
+    }
+    if (group_by === 'source' && model === 'first_touch' && CLASS_A_PIPE_METRICS.has(metric)) {
+      return 'flexible_report_main_by_site'
+    }
+  }
+  return null   // nothing live serves this shape -> the caller must gate it
+}
+
+/** Is the shape served by a backend that is actually DEPLOYED in prod? */
+function servedByDeployedBackend (shape) {
+  const backing = servedReportShape(shape)
+  if (!backing) return null
+  if (backing === 'supabase_preagg' || backing === 'session_report_pipes') return backing
+  return PROD_DEPLOYED_PIPES.has(backing) ? backing : null
+}
+
 const UNAVAILABLE_SUFFIX = 'is temporarily unavailable while reporting moves to the new analytics store.'
 
 /**
@@ -113,7 +224,7 @@ const UNAVAILABLE_SUFFIX = 'is temporarily unavailable while reporting moves to 
  * `PREAGG_CONVERSION_METRICS.has(metric)`. All default to inert values, so every existing caller
  * that omits them (e.g. export.js) behaves byte-identically.
  */
-function gatedReportReason ({ group_by, group_by2 = null, metric, preAggWindowMatches = true, model = null, preAggMultiTouchMetric = false, preAggConversionMetric = false }) {
+function gatedReportReason ({ group_by, group_by2 = null, metric, preAggWindowMatches = true, model = null, preAggMultiTouchMetric = false, preAggConversionMetric = false, hasAttributionWindow = true, viaRoutePreAgg = true }) {
   // Session metrics resolve through getSessionReport, which can only bucket by dims derivable
   // from its pageview SELECT. An unsupported dim there used to FABRICATE a single 'unknown'
   // bucket. Checked BEFORE the generic dim gate so the reason names the real constraint.
@@ -180,6 +291,24 @@ function gatedReportReason ({ group_by, group_by2 = null, metric, preAggWindowMa
       }
     }
   }
+  // ── THE ALLOWLIST CATCH-ALL ───────────────────────────────────────────────────────
+  // The specific rules above stay: they fire first and give a precise reason. This is the
+  // backstop that makes PR#4 safe — if NO live backend serves the shape, deny it, so nothing can
+  // reach a bare queryHogQL we are about to delete. `model` is required to evaluate it, so callers
+  // that don't pass one (legacy) are unaffected and behave exactly as before.
+  if (model) {
+    const backing = servedByDeployedBackend({
+      model, group_by, group_by2, metric, preAggWindowMatches, hasAttributionWindow,
+      preAggConversionMetric, preAggMultiTouchMetric, viaRoutePreAgg
+    })
+    if (!backing) {
+      return {
+        error_code: 'gated_dead_store',
+        message: `The "${group_by}" breakdown of "${metric}" ${UNAVAILABLE_SUFFIX}`
+      }
+    }
+  }
+
   // Dim-aware window gate: only Class-A dims survive a non-materialized window.
   if (!preAggWindowMatches && !CLASS_A_DIMS.has(group_by) && !CLASS_A_DIMS.has(group_by2)) {
     return {
@@ -415,6 +544,12 @@ export {
   PREAGG_TOUCH_MODELS,
   ISTOUCH_MODELS,
   CLASS_A_PIPE_METRICS,
+  MULTITOUCH_LIVE_DIMS,
+  MULTITOUCH_BROKEN_BRANCH_DIMS,
+  AIPLATFORM_LIVE_DIMS,
+  PROD_DEPLOYED_PIPES,
+  servedReportShape,
+  servedByDeployedBackend,
   PREAGG_EXCLUDED_DIMS,
   GATED_GROUPS,
   GATED_METRICS,
