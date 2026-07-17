@@ -88,8 +88,15 @@ jobs:
   #
   # FOUNDER SETUP (one-time; jobs no-op until done):
   #   1. Repository → Settings → Secrets and variables → Actions:
-  #        - Secrets:  STAGING_DB_URL, PROD_DB_URL   (postgres connection strings; PROD_DB_URL
-  #                    is used READ-ONLY by schema-drift — no job auto-writes DDL to prod)
+  #        - Secrets:  STAGING_DB_URL, PROD_DB_URL
+  #                    MUST be the Supabase SESSION POOLER (Supavisor) connection string, NOT the direct host.
+  #                    Dashboard → Project Settings → Database → Connection string → "Session pooler":
+  #                      host aws-0-<region>.pooler.supabase.com, port 5432, user postgres.<project-ref>.
+  #                    Do NOT use the direct host db.<project-ref>.supabase.co — it resolves to IPv6 ONLY
+  #                    (AAAA, no A record), and GitHub-hosted runners are IPv4-only, so psql dies with
+  #                    "connection to server db.<ref>.supabase.co ... Network is unreachable". The pooler
+  #                    host is IPv4-reachable. (Session mode / port 5432 also works for `supabase db push`.)
+  #                    PROD_DB_URL is used READ-ONLY by schema-drift — no job auto-writes DDL to prod.
   #        - Variable: SCHEMA_CI_ENABLED = "true"    (master switch — leave unset/false
   #                    and every job below is skipped, so this PR is safe to merge first)
   #
