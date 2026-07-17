@@ -308,35 +308,46 @@ test('🔴 TOTALS UNCHANGED: only the bucket LABEL moves, never the summed value
   assert.deepEqual(after, { unknown: 100, US: 100 })
 })
 
-// ── conversion_type: Class-A pipe for revenue/conversions, honest 422 for the rest ──────
-const CT = (over = {}) => gate.gatedReportReason({
-  group_by: 'conversion_type', group_by2: null, metric: 'revenue',
+// ── ALL 4 Class-A dims: pipe for revenue/conversions, honest 422 for the rest ────────────
+// The metric-aware gate is ONE code path over CLASS_A_DIMS (not a per-dim fork). provider,
+// attribution_status, stitching_method, and conversion_type all dispatch flexible_report_<dim>_
+// by_site on a touch model, and that pipe (_flexPipeCommon) emits revenue/conversions only. Every
+// other conversion metric would fall to a bare queryHogQL and render a fake zero (§6) -> gated.
+const CA = (dim, over = {}) => gate.gatedReportReason({
+  group_by: dim, group_by2: null, metric: 'revenue',
   preAggWindowMatches: true, model: 'first_touch',
   preAggMultiTouchMetric: false, preAggConversionMetric: true, ...over
 })
 
-test('🔴 conversion_type × {revenue, conversions} -> NOT gated (routes to the deployed Class-A pipe)', () => {
-  for (const model of ['first_touch', 'last_touch', 'first_touch_non_direct', 'last_touch_non_direct', 'linear', 'u_shaped', 'time_decay', 'w_shaped']) {
-    for (const metric of ['revenue', 'conversions']) {
-      assert.equal(CT({ model, metric, preAggMultiTouchMetric: metric !== 'leads' }), null, `${model} × conversion_type × ${metric} must reach its pipe`)
+test('🔴 Class-A × {revenue, conversions} -> NOT gated (routes to the deployed Class-A pipe)', () => {
+  for (const dim of gate.CLASS_A_DIMS) {
+    for (const model of ['first_touch', 'last_touch', 'first_touch_non_direct', 'last_touch_non_direct', 'linear', 'u_shaped', 'time_decay', 'w_shaped']) {
+      for (const metric of ['revenue', 'conversions']) {
+        assert.equal(CA(dim, { model, metric, preAggMultiTouchMetric: true }), null, `${model} × ${dim} × ${metric} must reach its pipe`)
+      }
     }
   }
 })
 
-test('🔴 conversion_type × {leads, customers, avg_conversion_value} on a TOUCH model -> 422 (no pipe, never a fake zero)', () => {
-  for (const model of gate.ISTOUCH_MODELS) {
-    for (const metric of ['leads', 'customers', 'avg_conversion_value']) {
-      const r = CT({ model, metric })
-      assert.ok(r, `${model} × conversion_type × ${metric} must be denied, not a bare-queryHogQL fake zero`)
-      assert.equal(r.error_code, 'gated_dead_store')
-      assert.doesNotMatch(r.message, /try again|retry/i)
+test('🔴 Class-A × {leads, customers, avg_conversion_value} on a TOUCH model -> 422 (no pipe, never a fake zero)', () => {
+  for (const dim of gate.CLASS_A_DIMS) {
+    for (const model of gate.ISTOUCH_MODELS) {
+      for (const metric of ['leads', 'customers', 'avg_conversion_value']) {
+        const r = CA(dim, { model, metric })
+        assert.ok(r, `${model} × ${dim} × ${metric} must be denied, not a bare-queryHogQL fake zero`)
+        assert.equal(r.error_code, 'gated_dead_store')
+        assert.doesNotMatch(r.message, /try again|retry/i)
+        assert.match(r.message, new RegExp(`"${dim}"`), 'the message names the actual dim')
+      }
     }
   }
 })
 
-test('conversion_type × leads on a MULTI-TOUCH model is NOT gated (getMultiTouchAttributionLive serves leads)', () => {
-  for (const model of gate.MULTI_TOUCH_MODELS) {
-    assert.equal(CT({ model, metric: 'leads', preAggMultiTouchMetric: false }), null, `${model} × conversion_type × leads is served by the multitouch pipe`)
+test('Class-A × leads on a MULTI-TOUCH model is NOT gated (getMultiTouchAttributionLive serves leads)', () => {
+  for (const dim of gate.CLASS_A_DIMS) {
+    for (const model of gate.MULTI_TOUCH_MODELS) {
+      assert.equal(CA(dim, { model, metric: 'leads', preAggMultiTouchMetric: false }), null, `${model} × ${dim} × leads is served by the multitouch pipe`)
+    }
   }
 })
 

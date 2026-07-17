@@ -163,20 +163,19 @@ function gatedReportReason ({ group_by, group_by2 = null, metric, preAggWindowMa
     }
   }
 
-  // conversion_type is a Class-A dim: on a TOUCH model it routes to flexible_report_conversion_type_
-  // by_site, which — like every Class-A pipe — serves revenue and conversions ONLY. Any other
-  // conversion metric (leads / customers / avg_conversion_value) has no conversion_type backend on
-  // these models, so it would fall to a bare queryHogQL and render a FAKE ZERO (§6). Deny it honestly.
-  // Multi-touch / ai_platforms route conversion_type through getMultiTouchAttributionLive instead,
-  // which serves leads too — so they are deliberately NOT gated here.
-  // (NOTE: provider/attribution_status/stitching_method × leads have the SAME dead-store gap today
-  // and are NOT gated — a pre-existing §6 hole, left unchanged per this change's scope; see the PR.)
+  // Class-A conversion-property dims (provider / attribution_status / stitching_method /
+  // conversion_type) route on a TOUCH model to flexible_report_<dim>_by_site, which — like every
+  // Class-A pipe (_flexPipeCommon) — serves revenue and conversions ONLY. Any other conversion metric
+  // (leads / customers / avg_conversion_value) has no Class-A backend on these models, so it would
+  // fall to a bare queryHogQL and render a FAKE ZERO (§6). Deny all four uniformly and honestly.
+  // Multi-touch / ai_platforms route these dims through getMultiTouchAttributionLive instead, which
+  // serves leads too — so they are deliberately NOT gated here (ISTOUCH_MODELS only).
   if (model && ISTOUCH_MODELS.has(model) && preAggConversionMetric && !CLASS_A_PIPE_METRICS.has(metric)) {
     for (const dim of [group_by, group_by2]) {
-      if (dim === 'conversion_type') {
+      if (dim && CLASS_A_DIMS.has(dim)) {
         return {
           error_code: 'gated_dead_store',
-          message: `A conversion type breakdown supports revenue and conversions; the "${metric}" metric ${UNAVAILABLE_SUFFIX}`
+          message: `A "${dim}" breakdown supports revenue and conversions; the "${metric}" metric ${UNAVAILABLE_SUFFIX}`
         }
       }
     }
