@@ -43,13 +43,20 @@ async function getCampaignsData(req) {
   // allowlist directly keeps the page working AND still guarantees no bare-queryHogQL read.
   // viaRoutePreAgg:false + hasAttributionWindow:false — campaigns calls the engine directly and
   // passes no attribution_window, so only the window-free engine pipes can serve it.
+  // D0: tz is hoisted above the gate and passed in. Campaigns renders in the SITE timezone, and a
+  // non-UTC tz breaks the flex-pipe base case (engine _flexBaseCommon) — so a non-UTC site would
+  // dead-read dead-store zeros on this page. The gate must see tz to deny it truthfully.
+  // (filtersPresent/attributeBy are inert here: campaigns applies no dim filters and always
+  // conversion_date, so their defaults hold.)
+  const tz = isValidTimezone(req.site?.timezone) ? req.site.timezone : 'UTC'
   for (const m of ['revenue', 'conversions', 'sessions', 'leads']) {
     const backing = servedByDeployedBackend({
       model, group_by: dimension, group_by2: null, metric: m,
       preAggConversionMetric: PREAGG_CONVERSION_METRICS.has(m),
       preAggMultiTouchMetric: PREAGG_MULTITOUCH_METRICS.has(m),
       viaRoutePreAgg: false,
-      hasAttributionWindow: false
+      hasAttributionWindow: false,
+      tz
     })
     if (!backing) {
       const err = new Error(`A "${dimension}" breakdown of "${m}" is temporarily unavailable while reporting moves to the new analytics store.`)
@@ -62,7 +69,6 @@ async function getCampaignsData(req) {
   const search = (req.query.search || '').trim().toLowerCase()
   const statusFilter = req.query.status || 'all'
 
-  const tz = isValidTimezone(req.site?.timezone) ? req.site.timezone : 'UTC'
   const now = getNow(req)
   const dateTo = getLocalDateString(now, tz)
   const dateFrom = getLocalDateString(new Date(now.getTime() - days * 86400000), tz)
@@ -377,6 +383,15 @@ async function exportCsv(req, res) {
       .send(csvContent)
   } catch (err) {
     console.error(err)
+    // A GATE is not a failure: surface its own status + error_code (same as overview()) so a
+    // dead-store shape returns a clean 422 "temporarily unavailable" instead of a raw 500 CSV error.
+    if (err.statusCode) {
+      return res.status(err.statusCode).json({
+        success: false,
+        error: err.message,
+        error_code: err.error_code || null
+      })
+    }
     res.status(500).json({ success: false, error: err.message || 'Campaigns export failed' })
   }
 }
