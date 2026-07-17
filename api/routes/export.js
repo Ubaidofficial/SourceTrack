@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { getFlexibleReport } from '../lib/attribution-engine.js'
+import { getFlexibleReport, PREAGG_CONVERSION_METRICS, PREAGG_MULTITOUCH_METRICS } from '../lib/attribution-engine.js'
 import { requireFeature } from '../lib/plan-features.js'
 import { getSupabase as getSupabaseAdmin } from '../lib/supabase.js'
 import { ALLOWED_MODELS, ALLOWED_GROUPS, ALLOWED_METRICS, gatedReportReason } from '../lib/report-config-validation.js'
@@ -83,7 +83,18 @@ router.get('/report', async (req, res) => {
     // attribution_window (the engine defaults to no-window), so the window axis is not
     // applicable: preAggWindowMatches is left at its default (true) and only the
     // dim/metric axes gate here.
-    const gateReason = gatedReportReason({ group_by, group_by2: req.query.group_by2 || null, metric })
+    // model + the metric flags were previously OMITTED here, so every model-aware gate (#256-#261)
+    // and the SERVED allowlist were inert for export — it could still CSV a dead-store shape.
+    // viaRoutePreAgg:false — export calls getFlexibleReport directly, so the Supabase pre-agg
+    // short-circuit is NOT available to it; only engine-dispatched pipes are.
+    // hasAttributionWindow:false — export passes no attribution_window (see above).
+    const gateReason = gatedReportReason({
+      group_by, group_by2: req.query.group_by2 || null, metric, model,
+      preAggConversionMetric: PREAGG_CONVERSION_METRICS.has(metric),
+      preAggMultiTouchMetric: PREAGG_MULTITOUCH_METRICS.has(metric),
+      viaRoutePreAgg: false,
+      hasAttributionWindow: false
+    })
     if (gateReason) {
       return res.status(422).json({ success: false, data: null, error: gateReason.message, error_code: gateReason.error_code, gated: true })
     }

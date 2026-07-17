@@ -131,7 +131,10 @@ export async function attribution(req, res) {
         // attribution-engine imports report-config-validation — the reverse would be a cycle.
         model,
         preAggMultiTouchMetric: PREAGG_MULTITOUCH_METRICS.has(metric),
-        preAggConversionMetric: PREAGG_CONVERSION_METRICS.has(metric)
+        preAggConversionMetric: PREAGG_CONVERSION_METRICS.has(metric),
+        // the window-sensitive flex pipes (main/campaign) only dispatch when NO window is active;
+        // the route resolves+injects the site's window above, so mirror that here.
+        hasAttributionWindow: !!(resolvedWindow && resolvedWindow !== 'ltv' && Number(resolvedWindow) > 0)
       })
       if (gateReason) {
         return res.status(422).json({
