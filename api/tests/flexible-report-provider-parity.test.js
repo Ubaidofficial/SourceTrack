@@ -1,8 +1,9 @@
-// flexible_report PROVIDER Class-A dim-swap — getFlexibleReport dispatch + the STRICT gate.
+// flexible_report PROVIDER Class-A dim-swap — getFlexibleReport dispatch + the STRICT gate — D1 (pipe-only).
 // provider is a conversion-property group_by (PROVIDER_SQL, model-independent), so ONE pipe
 // (flexible_report_provider_by_site) serves group_by=provider for all 4 touch models — including
-// last_touch_non_direct+provider, the live prod 504. Everything else (non-provider dim, filters,
-// dim2, non-UTC) must fall through to HogQL and MUST NOT hit the provider pipe.
+// last_touch_non_direct+provider, the live prod 504. D1: the pipe is the SOLE read path; there is NO
+// HogQL flexible_report leg anymore. Everything else (non-provider dim, filters, dim2, non-UTC) is a
+// non-dispatch shape that throws the [pr4/D1] pipe-only invariant and MUST NOT hit the provider pipe.
 
 import test from 'node:test'
 import assert from 'node:assert'
@@ -21,7 +22,6 @@ const TO = '2026-07-06'
 const PIPE = 'flexible_report_provider_by_site'
 
 const PIPE_ROWS = [{ dim_value: 'stripe', metric_value: 5 }, { dim_value: 'browser', metric_value: 3 }]
-const HOG_ROWS = [['stripe', 5], ['browser', 3]]
 
 async function run (deps, { model = 'last_touch_non_direct', groupBy = 'provider', metric = 'conversions', filters = {}, groupBy2 = null, window = null, site = 'site-prov' } = {}) {
   __evictFlexibleReportCache(site, model, FROM, TO, groupBy, metric, filters, groupBy2, 'day', window, 'conversion_date')
@@ -29,17 +29,14 @@ async function run (deps, { model = 'last_touch_non_direct', groupBy = 'provider
   try { return await getFlexibleReport(site, model, FROM, TO, groupBy, metric, filters, groupBy2, 'day', window, 'conversion_date') } finally { __resetAttributionReadDeps() }
 }
 
-test('DISPATCH: last_touch_non_direct + provider — pipe named rows == HogQL positional (byte-identical)', async () => {
+test('DISPATCH: last_touch_non_direct + provider — pipe named rows remap to the expected result shape', async () => {
   const pipeRes = await run({
     queryTinybird: async (pipe) => pipe === PIPE ? PIPE_ROWS : null,
-    queryHog: async (_sql, name) => { if (name === 'flexible_report') throw new Error('provider base case must come from the pipe, not HogQL'); return [] }
+    queryHog: async () => { throw new Error('D1: flexible_report HogQL leg is deleted — must not be called') }
   })
-  const hogRes = await run({
-    queryTinybird: async () => null,
-    queryHog: async (_sql, name) => name === 'flexible_report' ? HOG_ROWS : []
-  })
-  assert.deepStrictEqual(pipeRes, hogRes, 'pipe remap == HogQL positional -> identical')
+  assert.ok(Array.isArray(pipeRes) && pipeRes.length === 2, 'two provider rows returned')
   assert.strictEqual(pipeRes.find((r) => r.dim_value === 'stripe').conversions, 5, 'metric carried through')
+  assert.strictEqual(pipeRes.find((r) => r.dim_value === 'browser').conversions, 3, 'second row remapped correctly')
 })
 
 test('DISPATCH: provider pipe serves ALL 4 touch models (model-independent)', async () => {
@@ -63,17 +60,22 @@ test('WINDOW: provider + attribution window (the route ALWAYS injects >=30d) STI
   assert.ok(pipes.includes(PIPE), 'provider pipe dispatches WITH a window — the window is a no-op for a conversion-property dim')
 })
 
-test('WINDOW: source + first_touch + window does NOT dispatch (window re-attributes source; pipe would diverge)', async () => {
+test('WINDOW: source + first_touch + window does NOT dispatch (window re-attributes source; pipe would diverge) (D1: throws)', async () => {
   const pipes = []
-  await run({
-    queryTinybird: async (p) => { pipes.push(p); return null },
-    queryHog: async (_sql, name) => name === 'flexible_report' ? HOG_ROWS : []
-  }, { model: 'first_touch', groupBy: 'source', window: '30', site: 'site-src-window' })
+  await assert.rejects(
+    run({
+      queryTinybird: async (p) => { pipes.push(p); return null },
+      queryHog: async () => { throw new Error('D1: flexible_report HogQL leg is deleted — must not be called') }
+    }, { model: 'first_touch', groupBy: 'source', window: '30', site: 'site-src-window' }),
+    /\[pr4\/D1\]/,
+    'source + window is a non-dispatch shape — must throw the D1 pipe-only invariant'
+  )
   assert.ok(!pipes.includes('flexible_report_main_by_site'), 'main/source pipe MUST NOT dispatch with a window (windowedDimExpr re-attributes source)')
   assert.ok(!pipes.includes(PIPE), 'provider pipe not involved for a source group_by')
 })
 
-// ── THE GATE: non-provider / non-base shapes MUST fall through and NEVER hit the provider pipe ──
+// ── THE GATE: non-provider / non-base shapes MUST NOT hit the provider pipe. D1: they no longer fall
+//    through to HogQL — they throw the [pr4/D1] pipe-only invariant. ──
 for (const shape of [
   { name: 'group_by=source (the OTHER pipe, not provider)', opts: { groupBy: 'source', model: 'first_touch' } },
   { name: 'group_by=attribution_status (conversion-property, NOT yet wired)', opts: { groupBy: 'attribution_status' } },
@@ -82,12 +84,16 @@ for (const shape of [
   { name: 'provider + non-UTC timezone', opts: { filters: { timezone: 'America/New_York' } } },
   { name: 'provider + metric=avg_conversion_value (non base-case metric)', opts: { metric: 'avg_conversion_value' } }
 ]) {
-  test(`GATE: ${shape.name} does NOT dispatch the provider pipe`, async () => {
+  test(`GATE: ${shape.name} does NOT dispatch the provider pipe (D1: throws)`, async () => {
     const pipes = []
-    await run({
-      queryTinybird: async (p) => { pipes.push(p); return null },
-      queryHog: async (_sql, name) => name === 'flexible_report' ? HOG_ROWS : []
-    }, { site: `site-${shape.name.replace(/\W+/g, '-')}`, ...shape.opts })
+    await assert.rejects(
+      run({
+        queryTinybird: async (p) => { pipes.push(p); return null },
+        queryHog: async () => { throw new Error('D1: flexible_report HogQL leg is deleted — must not be called') }
+      }, { site: `site-${shape.name.replace(/\W+/g, '-')}`, ...shape.opts }),
+      /\[pr4\/D1\]/,
+      `${shape.name}: non-base shape must throw the D1 pipe-only invariant`
+    )
     assert.ok(!pipes.includes(PIPE), `provider pipe MUST NOT be queried for: ${shape.name}`)
   })
 }

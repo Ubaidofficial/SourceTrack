@@ -7,8 +7,10 @@
 // This test enumerates the route's real arg space for the flexible pipe-dispatch —
 //   {unfiltered | filtered} × {no-window | windowed} × {UTC | non-UTC} —
 // building args the way the ROUTE does (buildRouteArgs), and asserts EXACTLY which pipe dispatches
-// (or NONE → HogQL). A pipe whose gate mis-handles an arg dimension FAILS here, in CI, not in prod.
+// (or NONE). A pipe whose gate mis-handles an arg dimension FAILS here, in CI, not in prod.
 // When a new conversion-property pipe is wired, add its rows — the matrix is the contract.
+// D1: the HogQL fallback is gone — a no-pipe shape THROWS the [pr4/D1] pipe-only invariant instead of
+// reading HogQL. dispatchedPipe() catches that invariant and reports it as the NONE (no-dispatch) outcome.
 
 import test from 'node:test'
 import assert from 'node:assert'
@@ -38,7 +40,13 @@ async function dispatchedPipe ({ model, groupBy, metric = 'conversions', over = 
     queryTinybird: async (p) => { pipes.push(p); return [] },
     queryHog: async () => []
   })
-  try { await getFlexibleReport(SITE, model, FROM, TO, ...args) } finally { __resetAttributionReadDeps() }
+  try {
+    await getFlexibleReport(SITE, model, FROM, TO, ...args)
+  } catch (e) {
+    // D1: a no-pipe shape throws the [pr4/D1] pipe-only invariant instead of reading HogQL — that IS
+    // the "no flex pipe dispatched" outcome the matrix asserts as NONE. Re-throw anything unexpected.
+    if (!/\[pr4\/D1\]/.test(e.message)) throw e
+  } finally { __resetAttributionReadDeps() }
   return pipes.find((p) => p.startsWith('flexible_report')) || 'NONE'
 }
 

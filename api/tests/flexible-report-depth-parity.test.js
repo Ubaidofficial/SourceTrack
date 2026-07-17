@@ -77,48 +77,37 @@ test('touchpoints_per_conversion — PARITY: named pipe rows == HogQL positional
   assert.strictEqual(arr(pipeRes).find(r => r.dim_value === 'google').touchpoints_per_conversion, 2.3, 'average metric carried through the remap')
 })
 
-// ── flexible_sessions (conversion_rate denominator, BASE-CASE gated) ─────────
-// metric=conversion_rate: the main report comes from HogQL 'flexible_report' (not a base pipe);
-// then the sessions denominator dispatches flexible_sessions_by_site for the base slice.
-const MAIN_HOG = [['google', 5]] // google: 5 conversions (the conversion_rate numerator)
+// ── flexible_sessions (conversion_rate denominator) — D1: the conversion_rate MAIN read is GONE ────
+// conversion_rate is GATED ENTIRELY (dashboard/src/lib/gate-constants.js) → 422 at the route, so in
+// prod it never reaches the engine. Driven DIRECTLY here, its main numerator read is not a pipe
+// metric → pipe=NONE → the flexible_report read D1 DELETED → it now throws the [pr4/D1] "FIX THE
+// ALLOWLIST" invariant. The sessions denominator (flexible_sessions_by_site, engine:3032) is the
+// leg's ONLY trigger via `if (metric === 'conversion_rate')`, so it is now UNREACHABLE — the main
+// read throws first. That leg is dead code; its removal is logged for D1b. These 6 tests pin the D1
+// reality: every conversion_rate shape throws before any flexible_sessions dispatch.
+async function throwsD1 (opts) {
+  const pipes = []
+  await assert.rejects(
+    run({
+      queryTinybird: async (p) => { pipes.push(p); return null },
+      queryHog: async () => { throw new Error('D1: flexible_report HogQL leg is deleted — must not be called') }
+    }, { site: nextSite(), metric: 'conversion_rate', ...opts }),
+    /\[pr4\/D1\]/,
+    `conversion_rate ${JSON.stringify(opts)} must throw the D1 pipe-only invariant`
+  )
+  assert.ok(!pipes.includes('flexible_sessions_by_site'),
+    'flexible_sessions is unreachable — the conversion_rate main read throws before its denominator')
+}
 
-test('flexible_sessions — PARITY: pipe sessions == HogQL sessions -> identical conversion_rate', async () => {
-  const pipeRes = await run({
-    queryTinybird: async (p) => p === 'flexible_sessions_by_site' ? [{ dim_value: 'google', sessions: 100 }] : null,
-    queryHog: async (_s, name) => name === 'flexible_report' ? MAIN_HOG : (name === 'flexible_sessions' ? (() => { throw new Error('sessions must come from the pipe') })() : [])
-  }, { site: nextSite(), metric: 'conversion_rate' })
-  const hogRes = await run({
-    queryTinybird: async () => null,
-    queryHog: async (_s, name) => name === 'flexible_report' ? MAIN_HOG : (name === 'flexible_sessions' ? [['google', 100]] : [])
-  }, { site: nextSite(), metric: 'conversion_rate' })
-  assert.deepStrictEqual(arr(pipeRes), arr(hogRes), 'pipe sessions remap == HogQL positional sessions')
-  assert.strictEqual(arr(pipeRes).find(r => r.dim_value === 'google').conversion_rate, 5, '(5 conversions / 100 sessions) * 100 = 5%')
-})
+test('flexible_sessions — D1: conversion_rate base case throws [pr4/D1] (main read is the deleted pipe=NONE read)', () => throwsD1({}))
+test('flexible_sessions — D1: conversion_rate + source/first_touch throws before any flexible_sessions read', () => throwsD1({ groupBy: 'source', model: 'first_touch' }))
 
-test('flexible_sessions — DISPATCH: base case serves sessions from the pipe, no HogQL flexible_sessions', async () => {
-  const pipes = []; const hog = []
-  await run({
-    queryTinybird: async (p) => { pipes.push(p); return p === 'flexible_sessions_by_site' ? [{ dim_value: 'google', sessions: 100 }] : null },
-    queryHog: async (_s, name) => { hog.push(name); return name === 'flexible_report' ? MAIN_HOG : [] }
-  }, { site: 'site-sess-disp', metric: 'conversion_rate' })
-  assert.ok(pipes.includes('flexible_sessions_by_site'), 'base sessions dispatched the pipe')
-  assert.ok(!hog.includes('flexible_sessions'), 'no HogQL flexible_sessions read on the pipe-served base case')
-})
-
-// THE GATE: non-base sessions shapes MUST fall through to HogQL, never the pipe.
+// The former GATE shapes — all conversion_rate, all now throw [pr4/D1] at the main read (never the pipe).
 for (const shape of [
   { name: 'model=last_touch (non first_touch)', opts: { model: 'last_touch' } },
   { name: 'group_by=provider (non-source dim)', opts: { groupBy: 'provider' } },
   { name: 'a filter present', opts: { filters: { source: 'google' } } },
   { name: 'group_by2 present', opts: { groupBy2: 'medium' } },
 ]) {
-  test(`flexible_sessions GATE: ${shape.name} does NOT dispatch flexible_sessions_by_site`, async () => {
-    const pipes = []; const hog = []
-    await run({
-      queryTinybird: async (p) => { pipes.push(p); return null },
-      queryHog: async (_s, name) => { hog.push(name); return name === 'flexible_report' ? MAIN_HOG : [] }
-    }, { site: `site-sess-gate-${shape.name.replace(/\W+/g, '-')}`, metric: 'conversion_rate', ...shape.opts })
-    assert.ok(!pipes.includes('flexible_sessions_by_site'), `pipe MUST NOT be queried for: ${shape.name}`)
-    assert.ok(hog.includes('flexible_sessions'), `must fall through to HogQL flexible_sessions for: ${shape.name}`)
-  })
+  test(`flexible_sessions — D1: conversion_rate + ${shape.name} throws [pr4/D1] (never reaches flexible_sessions)`, () => throwsD1(shape.opts))
 }
