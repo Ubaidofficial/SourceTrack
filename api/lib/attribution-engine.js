@@ -2151,7 +2151,12 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     LIMIT 50000
   `
 
-    const rows = await queryHogQL(sql, 'flexible_report_linear')
+    // PR#4: the SERVED allowlist (report-config-validation.js) denies every shape that would reach
+    // this read, at all three callers, so it is UNREACHABLE. The bare queryHogQL is deleted rather
+    // than left to silently return dead-store zeros. If this ever throws, the allowlist has a hole:
+    // FIX THE ALLOWLIST — do not restore the read.
+    // Doubly unreachable: MULTI_TOUCH.has('linear') returns above, so this branch is dead code.
+    throw new Error('[pr4] flexible_report_linear: unreachable dead-store read (model=linear returns via MULTI_TOUCH); allowlist should have denied this shape')
     const results = rows.map(([dimValue, revenue, conversions, touchpoints]) => ({
       dim_value: dimValue || 'unknown',
       revenue: Number(revenue) || 0,
@@ -2840,7 +2845,12 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     LIMIT 50000
   `
 
-    const ltvRows = await queryHogQL(ltvSql, 'flexible_report_ltv')
+    // PR#4: the SERVED allowlist (report-config-validation.js) denies every shape that would reach
+    // this read, at all three callers, so it is UNREACHABLE. The bare queryHogQL is deleted rather
+    // than left to silently return dead-store zeros. If this ever throws, the allowlist has a hole:
+    // FIX THE ALLOWLIST — do not restore the read.
+    // ltv_revenue is in GATED_METRICS -> denied with 422 before the engine is entered.
+    throw new Error('[pr4] flexible_report_ltv: unreachable dead-store read (ltv_revenue is gated); allowlist should have denied this shape')
     const ltvResults = ltvRows.map((row) => {
       const dimValue = row[0]
       const dimValue2 = ltvDim2Expr ? row[1] : null
@@ -3047,7 +3057,12 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
       GROUP BY dim_value${dim2Expr ? ', dim_value2' : ''}
       LIMIT 50000
     `
-    const shareRows = await queryHogQL(shareSql, 'flexible_ai_share')
+    // PR#4: the SERVED allowlist (report-config-validation.js) denies every shape that would reach
+    // this read, at all three callers, so it is UNREACHABLE. The bare queryHogQL is deleted rather
+    // than left to silently return dead-store zeros. If this ever throws, the allowlist has a hole:
+    // FIX THE ALLOWLIST — do not restore the read.
+    // ai_conversion_share / ai_revenue_share are in GATED_METRICS -> denied with 422.
+    throw new Error('[pr4] flexible_ai_share: unreachable dead-store read (ai share metrics are gated); allowlist should have denied this shape')
     const aiByDim = {}
     for (const [d, v] of shareRows) {
       aiByDim[d || 'unknown'] = Number(v) || 0

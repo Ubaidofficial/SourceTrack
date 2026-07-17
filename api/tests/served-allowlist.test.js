@@ -197,3 +197,77 @@ test('all 3 callers wire the allowlist (attribution.js / export.js / campaigns.j
   assert.match(camp, /ALLOWED_MODELS\.has\(model\)/, 'campaigns.js validates model (was free-form)')
   assert.match(camp, /err\.statusCode/, 'campaigns.js propagates gate status (was a 500 retry)')
 })
+
+// ── PR#4: the bare dead-store reads are deleted and must not come back ───────────────────
+test('🔴 PR#4: NO bare (non-underscore) queryHogQL read remains in the engine', () => {
+  const code = ENGINE_SRC.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  // A BARE read is the non-underscore binding: it bypasses even the injectable seam, so it could not
+  // be intercepted or observed. All three (flexible_report_linear / _ltv / flexible_ai_share) are
+  // deleted. :2975's pipe=NONE read uses the INJECTABLE _queryHogQL and is deferred to D1-D5 — it is
+  // covered by the allowlist guard below, not by this one.
+  const bare = code.split('\n').filter(l => /[^_.\w]queryHogQL\(/.test(l) && !/^import/.test(l.trim()))
+  assert.deepEqual(bare, [], 'a bare queryHogQL read reappeared — it would silently return dead-store zeros')
+})
+
+test('🔴 PR#4: every surviving _queryHogQL is a pipe-FALLBACK (behind a pipe attempt)', () => {
+  const lines = ENGINE_SRC.split('\n')
+  const fns = []
+  lines.forEach((l, i) => { const m = l.match(/^(?:export )?(?:async )?function ([A-Za-z0-9_]+)/); if (m) fns.push({ n: m[1], l: i + 1 }) })
+  const fnAt = (ln) => { let c = fns[0]; for (const f of fns) { if (f.l <= ln) c = f; else break } return c }
+  const unguarded = []
+  lines.forEach((l, i) => {
+    if (!/_queryHogQL\(/.test(l)) return
+    if (/let _queryHogQL|_queryHogQL = queryHogQL|if \(queryHog\)/.test(l)) return
+    const ln = i + 1, f = fnAt(ln)
+    const body = lines.slice(f.l - 1, ln - 1).join('\n')
+    if (!/_pipeRead\(|_queryTinybirdPipe\(/.test(body)) unguarded.push(`${f.n}():${ln}`)
+  })
+  // attribution_explain_journey is the ONE no-pipe read, and it lives in getAttributionExplanation —
+  // outside getFlexibleReport's graph, so out of PR#4's scope (D1-D5 removes it with queryHogQL).
+  assert.deepEqual(unguarded.filter(u => !u.startsWith('getAttributionExplanation')), [],
+    'a no-pipe HogQL read appeared inside getFlexibleReport\'s graph')
+})
+
+test('🔴 PR#4: the 3 deleted sites throw a loud invariant (never a silent dead-store read)', () => {
+  for (const marker of ['flexible_report_linear', 'flexible_report_ltv', 'flexible_ai_share']) {
+    assert.match(ENGINE_SRC, new RegExp(`\\[pr4\\] ${marker}`), `${marker} must throw, not read`)
+  }
+  // the throws must tell the next reader to fix the ALLOWLIST, not restore the read
+  assert.match(ENGINE_SRC, /FIX THE ALLOWLIST — do not restore the read/)
+})
+
+// ── :2975 (pipe=NONE) is DEFERRED to D1-D5, so it must stay ALLOWLIST-GATED in the meantime ──────
+// It is deliberately NOT deleted here: 37 money-rail tests exercise that read to verify the HogQL
+// leg's generated SQL (window bounds, external_event_id dedup) and the pipe-dispatch matrix. D1-D5
+// removes queryHogQL wholesale and retires those tests in ONE coherent change. Until then the read
+// is harmless ONLY because the allowlist denies every shape that could reach it. These guards pin
+// that: if the gate loosens, :2975 silently starts reading a dead store again.
+test('🔴 :2975 pipe=NONE read is still present (deferred) and NOT a throw', () => {
+  assert.match(ENGINE_SRC, /rows = await _queryHogQL\(sql, 'flexible_report'\)/,
+    'the deferred pipe=NONE read must remain intact until D1-D5 deletes it with its tests')
+  assert.doesNotMatch(ENGINE_SRC, /\[pr4\] flexible_report: unreachable/,
+    'the pipe=NONE throw is deferred — it breaks 37 HogQL-leg tests that D1-D5 retires anyway')
+})
+
+test('🔴 :2975 is UNREACHABLE: the allowlist denies every no-pipe shape (422, never a dead read)', () => {
+  // Exhaustive over the real vocabulary: any shape with no live backend MUST be denied, at the gate,
+  // before the engine is entered. This is the invariant that keeps the deferred read harmless.
+  let denied = 0, servedNoPipe = []
+  for (const model of MODELS) for (const dim of DIMS) for (const metric of ['revenue', 'conversions', 'leads']) {
+    for (const win of [true, false]) {
+      const shape = {
+        model, group_by: dim, metric, preAggWindowMatches: true, hasAttributionWindow: win,
+        preAggConversionMetric: true, preAggMultiTouchMetric: true, viaRoutePreAgg: true
+      }
+      const backing = g.servedByDeployedBackend(shape)
+      const gated = g.gatedReportReason(shape)
+      if (!backing) {
+        // no live backend -> the gate MUST deny it, or it reaches :2975 and reads a dead store
+        assert.ok(gated, `${model} × ${dim} × ${metric} (window=${win}) has NO backing but is NOT gated -> would reach :2975`)
+        assert.equal(gated.error_code, 'gated_dead_store')
+        denied++
+      } else servedNoPipe.push(backing)
+    }
+  }
+  assert.ok(denied > 50, `exercised ${denied} no-backend shapes, all denied`)
+})
