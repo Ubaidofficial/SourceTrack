@@ -126,7 +126,11 @@ export async function attribution(req, res) {
         group_by,
         group_by2: req.query.group_by2 || null,
         metric,
-        preAggWindowMatches
+        preAggWindowMatches,
+        // Feeds the multi-touch pre-agg dim contract. Passed in (not imported) because
+        // attribution-engine imports report-config-validation — the reverse would be a cycle.
+        model,
+        preAggMultiTouchMetric: PREAGG_MULTITOUCH_METRICS.has(metric)
       })
       if (gateReason) {
         return res.status(422).json({
