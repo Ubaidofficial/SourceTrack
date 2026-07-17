@@ -35,7 +35,7 @@ const { calculateAttribution } = await import('../jobs/nightly-attribution.js')
 
 // ── ANTI-DRIFT: the constant IS tpBase's real emitted shape ─────────────────────────────
 // Derived by CALLING the real nightly builder, not by re-typing its keys. Add a dim to tpBase and
-// this fails until MULTITOUCH_PREAGG_DIMS grows — i.e. the dim un-gates itself, and drift can never
+// this fails until PREAGG_DIMS grows — i.e. the dim un-gates itself, and drift can never
 // silently resurrect the substitution. (The duplicate-allowlist bug #248, prevented by execution.)
 const NON_DIM_TOUCH_KEYS = new Set(['timestamp', 'fraction', 'attributed_value'])
 const emittedDimKeys = () => {
@@ -48,15 +48,38 @@ const emittedDimKeys = () => {
   return Object.keys(touch).filter(k => !NON_DIM_TOUCH_KEYS.has(k)).sort()
 }
 
-test('🔴 ANTI-DRIFT: MULTITOUCH_PREAGG_DIMS == tpBase\'s ACTUALLY-emitted dim keys', () => {
-  assert.deepEqual([...gate.MULTITOUCH_PREAGG_DIMS].sort(), emittedDimKeys())
+test('🔴 ANTI-DRIFT (source 1/2): PREAGG_DIMS == tpBase\'s ACTUALLY-emitted dim keys', () => {
+  assert.deepEqual([...gate.PREAGG_DIMS].sort(), emittedDimKeys())
+})
+
+// PREAGG_DIMS is now BOTH reader families' contract, so it is bound to BOTH sources. The
+// first/last-touch reader maps groupBy -> a real column via an if/else chain; anything it does not
+// map fell through to `else { selectField = sourceField }` (engine:3197-3199) — the lie this gate
+// closes. The dims it DOES map must be exactly PREAGG_DIMS.
+const ENGINE_SRC_FOR_MAP = readFileSync(join(ROOT, 'api/lib/attribution-engine.js'), 'utf8')
+const preAggMappedDims = () => {
+  const i = ENGINE_SRC_FOR_MAP.indexOf('let selectField, groupField')
+  const j = ENGINE_SRC_FOR_MAP.indexOf(".from('attributed_conversions')", i)
+  assert.ok(i > 0 && j > i, 'located getPreAggregatedAttribution\'s dim->column chain')
+  return [...new Set([...ENGINE_SRC_FOR_MAP.slice(i, j).matchAll(/groupBy === '([a-z_]+)'/g)].map(m => m[1]))].sort()
+}
+
+test('🔴 ANTI-DRIFT (source 2/2): PREAGG_DIMS == getPreAggregatedAttribution\'s MAPPED columns', () => {
+  assert.deepEqual(preAggMappedDims(), [...gate.PREAGG_DIMS].sort(),
+    'the first/last-touch reader must map exactly the contract dims — map one more and it un-gates itself')
+})
+
+test('🔴 the 3 unmapped dims are exactly what the first/last-touch gate denies', () => {
+  const mapped = preAggMappedDims()
+  const reaches = [...gate.ALLOWED_GROUPS].filter(d => !gate.PREAGG_EXCLUDED_DIMS.has(d))
+  assert.deepEqual(reaches.filter(d => !mapped.includes(d)).sort(), ['ai_source', 'conversion_type', 'date'])
 })
 
 test('the 3 always-broken dims are genuinely absent from the stored touch', () => {
   const keys = emittedDimKeys()
   for (const dim of ['ai_source', 'conversion_type', 'date']) {
     assert.ok(!keys.includes(dim), `${dim} must NOT be a touch key — that is why it is gated`)
-    assert.ok(!gate.MULTITOUCH_PREAGG_DIMS.has(dim), dim)
+    assert.ok(!gate.PREAGG_DIMS.has(dim), dim)
   }
 })
 
@@ -121,14 +144,57 @@ test('NOT gated when the route would not take the pre-agg branch (served correct
   }
 })
 
-test('🔴 NO COLLATERAL: first_touch / last_touch × every dim are untouched by the new rule', () => {
-  for (const model of ['first_touch', 'last_touch', 'first_touch_non_direct', 'last_touch_non_direct', 'ai_platforms']) {
+// ── first/last-touch: the SAME contract (the #256 rule covered multi-touch only) ─────────
+// This test previously asserted "first_touch/last_touch × every dim are untouched". That was true,
+// and it was PINNING THE BUG OPEN: the else->sourceField fallback in getPreAggregatedAttribution
+// kept returning the SOURCE under ai_source/conversion_type/date labels, 200 OK, on the DEFAULT
+// model. The contract below is what that assertion should always have been.
+const T = (over = {}) => gate.gatedReportReason({
+  group_by: 'source', group_by2: null, metric: 'revenue',
+  preAggWindowMatches: true, model: 'first_touch', preAggConversionMetric: true, ...over
+})
+
+test('🔴 LIE KILLED: first/last-touch × {ai_source, conversion_type, date} -> 422 gated_dead_store', () => {
+  for (const model of gate.PREAGG_TOUCH_MODELS) {
+    for (const dim of ['ai_source', 'conversion_type', 'date']) {
+      for (const metric of ['revenue', 'conversions', 'leads']) {
+        const r = T({ model, group_by: dim, metric })
+        assert.ok(r, `${model} × ${dim} × ${metric} must be denied, not served as the SOURCE`)
+        assert.equal(r.error_code, 'gated_dead_store')
+      }
+    }
+  }
+})
+
+test('🔴 KEEP SET: first/last-touch × the 8 mapped dims stay OPEN', () => {
+  for (const model of gate.PREAGG_TOUCH_MODELS) {
+    for (const dim of gate.PREAGG_DIMS) {
+      for (const metric of ['revenue', 'conversions', 'leads']) {
+        assert.equal(T({ model, group_by: dim, metric }), null, `${model} × ${dim} × ${metric}`)
+      }
+    }
+  }
+})
+
+test('the non-direct + ai_platforms models have NO pre-agg short-circuit -> rule must not fire', () => {
+  for (const model of ['first_touch_non_direct', 'last_touch_non_direct', 'ai_platforms']) {
     for (const dim of gate.ALLOWED_GROUPS) {
-      const withModel = gate.gatedReportReason({ group_by: dim, metric: 'revenue', preAggWindowMatches: true, model, preAggMultiTouchMetric: true })
+      const withModel = gate.gatedReportReason({ group_by: dim, metric: 'revenue', preAggWindowMatches: true, model, preAggMultiTouchMetric: true, preAggConversionMetric: true })
       const without = gate.gatedReportReason({ group_by: dim, metric: 'revenue', preAggWindowMatches: true })
       assert.deepEqual(withModel, without, `${model} × ${dim} must be byte-identical to the pre-change verdict`)
     }
   }
+})
+
+test('first/last-touch: NOT gated when the route would not take the pre-agg', () => {
+  // Class-A dims are skipped by the short-circuit -> served by their pipes
+  for (const dim of gate.PREAGG_EXCLUDED_DIMS) {
+    if (gate.GATED_GROUPS.has(dim)) continue
+    assert.equal(T({ group_by: dim }), null, `${dim} is pre-agg-excluded -> must NOT be gated here`)
+  }
+  // a metric the conversion reader cannot emit -> no short-circuit -> live path
+  // deepEqual: these are objects — assert.equal would compare identity, not value
+  assert.deepEqual(T({ group_by: 'date', metric: 'sessions', preAggConversionMetric: false }), gate.gatedReportReason({ group_by: 'date', metric: 'sessions' }), 'unchanged verdict')
 })
 
 test('BACKWARD-COMPAT: callers that omit model/preAggMultiTouchMetric (export.js) are unchanged', () => {
