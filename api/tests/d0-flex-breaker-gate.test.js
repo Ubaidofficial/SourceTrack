@@ -9,10 +9,18 @@
 //
 // Two anti-drift tests bind the gate to the engine BY EXECUTION so the rule can't rot:
 //   (1) gate verdict ⟺ engine dead-read set (drives the real getFlexibleReport via the read seam);
-//   (2) the gate's FLEX_BREAKING_FILTER_KEYS ⟺ the engine's filterClauses builder keys.
+//   (2) the gate's breaker set is the SAFETY property (see below), reframed by D0b.
 //
-// SCOPE: this file is D0's. It asserts the ROUTE gate, NOT engine dispatch. The engine-direct
-// parity/dispatch tests (flexible-report-*-parity, route-args-matrix) are D1's and stay untouched.
+// D0b extends this file: D0 left a SECOND fake — a FILTERED (or non-UTC multi-touch) request that
+// resolves to the Supabase pre-agg returned UNFILTERED numbers LABELED as filtered (§6 wrong-scope),
+// because the pre-agg readers can't honor content filters (and the multi-touch readers honor neither
+// filters nor tz). D0b gates those on the ROUTE, and adds `channel` as a gate-only breaker (no
+// conversion-metric backend can filter by it). Anti-drift #2 is reframed from D0's incidental 1:1 to
+// the real property so `channel` is a declared exception, not a drift failure.
+//
+// SCOPE: this file asserts the ROUTE gate, NOT engine dispatch. The engine-direct parity/dispatch
+// tests (flexible-report-*-parity, route-args-matrix) are D1's and stay untouched. Teaching the
+// pre-agg to actually HONOR filters (the feature restore) is D0b-honor, a separate later PR.
 
 import test from 'node:test'
 import assert from 'node:assert'
@@ -89,24 +97,49 @@ test('D0: campaign sessions + leads (own-metric flex pipes) are also tz-gated', 
   }
 })
 
-// ── 2. The breakers must NOT touch pre-agg / multi-touch / ai_platforms (they honor tz / refilter) ──
-test('D0: Supabase pre-agg (viaRoutePreAgg=true) is NOT denied by tz/filter — pre-agg honors tz', () => {
-  // first_touch × source × revenue routes to supabase_preagg for attribution.js; non-UTC + filtered
-  // must STILL be served (pre-agg buckets by local date; the D0 breakers are flex-PIPE only).
-  for (const extra of [{ tz: 'America/New_York' }, { filtersPresent: true }, { attributeBy: 'first_seen_date' }]) {
-    const r = g.gatedReportReason({
-      group_by: 'source', metric: 'revenue', model: 'first_touch',
-      preAggConversionMetric: true, preAggMultiTouchMetric: true,
-      viaRoutePreAgg: true, hasAttributionWindow: false, ...extra
-    })
-    assert.equal(r, null, `pre-agg source×first_touch must stay served (${JSON.stringify(extra)})`)
+// The gate as the ROUTE (attribution.js) invokes it: viaRoutePreAgg=true — the only path that reaches
+// the Supabase pre-agg short-circuit. Returns the error_code, or 'SERVED'.
+function gateRoute ({ model, groupBy, metric, groupBy2 = null, window = null, tz = 'UTC', filtersPresent = false, attributeBy = 'conversion_date' }) {
+  const r = g.gatedReportReason({
+    group_by: groupBy, group_by2: groupBy2, metric, model,
+    preAggConversionMetric: PREAGG_CONV.has(metric), preAggMultiTouchMetric: PREAGG_MT.has(metric),
+    viaRoutePreAgg: true, hasAttributionWindow: !!(window && window !== 'ltv' && Number(window) > 0),
+    tz, filtersPresent, attributeBy
+  })
+  return r ? r.error_code : 'SERVED'
+}
+
+// ── 2. Gate ONLY what the serving reader genuinely can't answer. D0b tightens D0's blanket
+//       "never gate pre-agg" into a per-reader-capability gate. ──
+test('D0b: first/last-touch pre-agg on the ROUTE — tz honored (served), a content filter now GATES', () => {
+  // first_touch × source × revenue routes to supabase_preagg (getPreAggregatedAttribution). It buckets
+  // by LOCAL date (tz honored) and honors customer_type -> those stay served. It DROPS every content
+  // filterClause axis -> a filtered request would return UNFILTERED numbers labeled as filtered (§6),
+  // so D0b gates it. attributeBy is out of D0b-gate scope (pre-agg ignores it — a separate residual).
+  assert.equal(gateRoute({ model: 'first_touch', groupBy: 'source', metric: 'revenue' }), 'SERVED', 'unfiltered UTC = fast path')
+  assert.equal(gateRoute({ model: 'first_touch', groupBy: 'source', metric: 'revenue', tz: 'America/New_York' }), 'SERVED', 'non-UTC pre-agg still served (buckets by local date)')
+  assert.equal(gateRoute({ model: 'last_touch', groupBy: 'campaign', metric: 'revenue', attributeBy: 'first_seen_date' }), 'SERVED', 'attributeBy not a D0b-gate axis for pre-agg')
+  assert.equal(gateRoute({ model: 'first_touch', groupBy: 'source', metric: 'revenue', filtersPresent: true }), 'gated_dead_store', 'filtered pre-agg now GATES (D0b)')
+  assert.equal(gateRoute({ model: 'last_touch', groupBy: 'country', metric: 'conversions', filtersPresent: true }), 'gated_dead_store', 'filtered pre-agg now GATES (D0b)')
+})
+
+test('D0b: multi-touch pre-agg on the ROUTE gates on filter OR non-UTC (reader honors NEITHER)', () => {
+  // linear/u_shaped/… × a PREAGG_DIM × revenue|conversions routes to the Supabase multi-touch reader
+  // (getUShaped/getTimeDecay/…). Those take no filters AND no timezone -> a filtered OR non-UTC
+  // request is wrong-scope. Unfiltered UTC stays served (byte-identical fast path).
+  for (const model of ['linear', 'u_shaped', 'time_decay', 'w_shaped']) {
+    assert.equal(gateRoute({ model, groupBy: 'source', metric: 'revenue' }), 'SERVED', `${model} unfiltered UTC served`)
+    assert.equal(gateRoute({ model, groupBy: 'source', metric: 'revenue', filtersPresent: true }), 'gated_dead_store', `${model} filtered gates`)
+    assert.equal(gateRoute({ model, groupBy: 'source', metric: 'revenue', tz: 'Asia/Tokyo' }), 'gated_dead_store', `${model} non-UTC gates (reader ignores tz)`)
   }
 })
 
-test('D0: multi-touch + ai_platforms live readers are NOT denied by the flex breakers', () => {
-  // linear × source and ai_platforms × ai_source resolve to live readers, not flex pipes.
+test('D0b: the multi-touch LIVE path (direct callers / non-preagg dims) still honors filters — NOT gated', () => {
+  // export/campaigns call getFlexibleReport DIRECTLY (viaRoutePreAgg=false) -> getMultiTouchAttribution-
+  // Live, which DOES honor source/medium/campaign/country/device_type/conversion_type. So a filtered
+  // multi-touch on the DIRECT path stays served — only the ROUTE pre-agg short-circuit is wrong-scope.
   for (const extra of [{ tz: 'America/New_York' }, { filtersPresent: true }]) {
-    assert.equal(gateDirect({ model: 'linear', groupBy: 'source', metric: 'revenue', ...extra }), 'SERVED', `linear×source (${JSON.stringify(extra)})`)
+    assert.equal(gateDirect({ model: 'linear', groupBy: 'source', metric: 'revenue', ...extra }), 'SERVED', `direct linear×source (${JSON.stringify(extra)})`)
     assert.equal(gateDirect({ model: 'ai_platforms', groupBy: 'ai_source', metric: 'revenue', ...extra }), 'SERVED', `ai_platforms×ai_source (${JSON.stringify(extra)})`)
   }
 })
@@ -155,12 +188,19 @@ test('🔴 ANTI-DRIFT: for the direct-caller path, gate-422 ⟺ engine reaches t
   assert.ok(gated > 100, `gate denied ${gated} shapes across the breaker conditions`)
 })
 
-// ── 4. ANTI-DRIFT #2: gate filter-key set ⟺ engine filterClauses builder keys ──
-test('🔴 ANTI-DRIFT: FLEX_BREAKING_FILTER_KEYS == the engine filterClauses builder keys', () => {
-  // Extract the keys the FLEX-PIPE filterClauses block reads. There are two filterClauses blocks
-  // in the engine; the flex-pipe one lives inside getFlexibleReport (the other is getSessionReport,
-  // a separate rail). Anchor inside getFlexibleReport, then bound to the `// LTV v1` comment that
-  // immediately follows the flex block.
+// ── 4. ANTI-DRIFT #2 (reframed by D0b): the breaker set is the SAFETY property, not an incidental 1:1
+// D0 asserted FLEX_BREAKING_FILTER_KEYS == the engine flex filterClauses keys EXACTLY. D0b breaks that
+// 1:1 on purpose: `channel` MUST gate (no conversion-metric backend can filter by it — getFlexible-
+// Report builds no channel clause, and the Supabase pre-agg ignores it), yet it is deliberately NOT a
+// flex filterClause key (there is no channel pipe). The real invariant is the safety property:
+//   (a) every engine flex filterClauses key IS a breaker  -> no clause-builder can silently un-gate;
+//   (b) every EXTRA breaker is a DECLARED gate-only key    -> it gates because NO serving backend can
+//       honor it, not because it builds a clause. Today that declared set is exactly {channel}.
+const DECLARED_GATE_ONLY_BREAKERS = new Set(['channel'])
+test('🔴 ANTI-DRIFT: breaker set ⊇ engine flex filterClauses keys; every extra is a declared gate-only breaker', () => {
+  // Extract the keys the FLEX-PIPE filterClauses block reads. There are two filterClauses blocks in
+  // the engine; the flex-pipe one lives inside getFlexibleReport (the other is getSessionReport, a
+  // separate rail that DOES filter by channel). Anchor inside getFlexibleReport, bound to `// LTV v1`.
   const fnStart = ENGINE_SRC.indexOf('export async function getFlexibleReport')
   assert.ok(fnStart > 0, 'getFlexibleReport not found — engine drifted')
   const start = ENGINE_SRC.indexOf("let filterClauses = ''", fnStart)
@@ -171,11 +211,23 @@ test('🔴 ANTI-DRIFT: FLEX_BREAKING_FILTER_KEYS == the engine filterClauses bui
   const engineKeys = new Set()
   for (const m of block.matchAll(/filters\.([a-z_]+)/g)) engineKeys.add(m[1])
   const gateKeys = new Set(g.FLEX_BREAKING_FILTER_KEYS)
-  assert.deepEqual([...engineKeys].sort(), [...gateKeys].sort(),
-    'the gate filter-key set drifted from the engine filterClauses builder — a filter would silently un-gate')
+  // (a) every engine flex clause key must be a breaker — else a filtered flex shape silently un-gates.
+  for (const k of engineKeys) {
+    assert.ok(gateKeys.has(k), `engine flex filterClauses key "${k}" is NOT a breaker — it would silently un-gate`)
+  }
+  // (b) every breaker NOT backed by a flex clause must be a declared gate-only key with a known reason.
+  for (const k of gateKeys) {
+    if (engineKeys.has(k)) continue
+    assert.ok(DECLARED_GATE_ONLY_BREAKERS.has(k),
+      `breaker "${k}" builds no engine flex clause and is not declared gate-only — declare WHY no backend honors it, or remove it`)
+  }
+  // channel specifically: MUST gate, and MUST remain absent from the flex builder. If a channel clause
+  // is ever added to getFlexibleReport, channel stops being gate-only — revisit D0b-honor.
+  assert.ok(gateKeys.has('channel'), 'channel must be a breaker (no conversion-metric backend filters by it)')
+  assert.ok(!engineKeys.has('channel'), 'channel gained a flex filterClause — no longer gate-only; move it out of DECLARED_GATE_ONLY_BREAKERS')
 })
 
-test('🔴 flexFiltersPresent mirrors engine truthiness (customer_type/min_conversions/timezone excluded)', () => {
+test('🔴 flexFiltersPresent: content filters + channel break; customer_type/min_conversions/timezone excluded', () => {
   assert.equal(g.flexFiltersPresent({}), false)
   assert.equal(g.flexFiltersPresent({ source: 'google' }), true)
   assert.equal(g.flexFiltersPresent({ conversion_type: 'purchase' }), true)
@@ -183,9 +235,12 @@ test('🔴 flexFiltersPresent mirrors engine truthiness (customer_type/min_conve
   assert.equal(g.flexFiltersPresent({ is_conversion: 'true' }), true)
   assert.equal(g.flexFiltersPresent({ is_conversion: 'false' }), false, 'is_conversion only builds a clause for "true"')
   assert.equal(g.flexFiltersPresent({ has_ai_source: 'false' }), true, 'has_ai_source=false DOES build a clause')
-  // NOT filterClause keys -> must not force a dead-store gate (they are pre-agg/post-agg or the tz axis)
+  // channel is a D0b gate-only breaker: no conversion-metric backend can filter by it -> it must gate.
+  assert.equal(g.flexFiltersPresent({ channel: 'organic' }), true, 'channel gates (D0b gate-only breaker)')
+  // NOT breakers -> must not force a gate. customer_type IS honored (pre-agg); min_conversions is a
+  // post-agg display cut (a known pre-agg over-inclusion residual, tracked for D0b-honor); timezone
+  // is the separate tz axis.
   assert.equal(g.flexFiltersPresent({ customer_type: 'new' }), false)
   assert.equal(g.flexFiltersPresent({ min_conversions: '5' }), false)
   assert.equal(g.flexFiltersPresent({ timezone: 'America/New_York' }), false, 'timezone is the tz axis, not a filter')
-  assert.equal(g.flexFiltersPresent({ channel: 'organic' }), false, 'channel builds no engine clause (D0b, not a dead read)')
 })

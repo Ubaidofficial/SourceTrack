@@ -114,17 +114,27 @@ const PROD_DEPLOYED_PIPES = new Set([
   'flexible_report_campaign_leads_by_site', 'flexible_report_campaign_sessions_by_site'
 ])
 
-// D0: the filter keys that build a non-empty `filterClauses` in getFlexibleReport
-// (attribution-engine.js:2663-2700) and therefore break _flexBaseCommon → a flex pipe cannot serve
-// the shape. The three route callers compute `filtersPresent` against THIS set so the gate denies
-// exactly the shapes the engine would dead-read. `customer_type` and `min_conversions` are
-// deliberately EXCLUDED: they do not build a filterClause (customer_type is applied only by the
-// Supabase pre-agg; min_conversions is a post-aggregation cut), so they don't force a dead read.
-// `timezone` is the separate `tz` axis, not a filterClause. An anti-drift test binds this set to the
-// engine's actual filterClauses builder so a future filter key cannot silently un-gate.
+// The filter keys the SERVING backends cannot correctly honor on a conversion-metric shape, so a
+// request carrying one must GATE (honest 422) rather than dead-read or return wrong-scope numbers.
+// The route callers compute `filtersPresent` against THIS set.
+//   - The first nine build a non-empty `filterClauses` in getFlexibleReport
+//     (attribution-engine.js:2663-2700) -> break _flexBaseCommon -> a flex pipe can't serve them.
+//     Anti-drift test #2 binds these nine to the engine's actual filterClauses builder.
+//   - `channel` (D0b) is a GATE-ONLY breaker: it is a breaker BECAUSE no conversion-metric backend
+//     can filter by it — getFlexibleReport builds NO channel clause (only getSessionReport does, on
+//     the session rail), and the Supabase pre-agg ignores it — so a channel-filtered conversion
+//     report would return channel-UNFILTERED data. It is deliberately NOT in the flex filterClauses
+//     builder (there is no channel pipe), so anti-drift #2 treats it as a declared exception, not a
+//     drift. (Adding a channel-aware pipe + honoring it is D0b-honor, a later PR.)
+// `customer_type` and `min_conversions` are deliberately EXCLUDED: customer_type IS honored (by the
+// Supabase pre-agg), and min_conversions is a post-aggregation display cut — neither forces a wrong
+// per-bucket number on the pre-agg fast path. (min_conversions is a KNOWN pre-agg over-inclusion
+// residual — the pre-agg ignores the HAVING cut — tracked for D0b-honor, not gated here.)
+// `timezone` is the separate `tz` axis, not a filterClause.
 const FLEX_BREAKING_FILTER_KEYS = new Set([
   'source', 'medium', 'campaign', 'ai_source', 'country', 'device_type',
-  'is_conversion', 'conversion_type', 'has_ai_source'
+  'is_conversion', 'conversion_type', 'has_ai_source',
+  'channel'
 ])
 
 // True when any filter that would build a filterClause is set. Mirrors the engine's truthiness:
@@ -203,8 +213,23 @@ function servedReportShape ({
   // 2/3. route pre-agg short-circuit — Supabase, not a pipe (attribution.js:179 / :200-248)
   const preAggDims = every(PREAGG_DIMS) && !dims.some(d => PREAGG_EXCLUDED_DIMS.has(d))
   if (viaRoutePreAgg && preAggWindowMatches && preAggDims) {
-    if (PREAGG_TOUCH_MODELS.has(model) && preAggConversionMetric) return 'supabase_preagg'
-    if (MULTI_TOUCH_MODELS.has(model) && preAggMultiTouchMetric) return 'supabase_preagg'
+    // D0b-GATE (honest gate only — teaching the pre-agg to actually honor filters is D0b-honor's job).
+    // The Supabase pre-agg readers can't honor content filters: first/last-touch (getPreAggregated-
+    // Attribution) honors tz + customer_type but drops every filterClause axis INCLUDING channel; the
+    // multi-touch readers (getUShaped/getTimeDecay/getWShaped/getLinear) take NEITHER filters NOR tz.
+    // When the route's pre-agg short-circuit OWNS this shape, a request it can't correctly answer would
+    // return UNFILTERED numbers labeled as filtered (§6 wrong-scope, worse than a zero). Return null so
+    // it gates -> honest 422, and RETURN HERE rather than falling through to rule 4's live pipe: the
+    // route pre-agg short-circuit fires regardless of filters, so the live pipe is NOT the backend the
+    // route would actually reach for a pre-agg dim. `filtersPresent` counts channel now (it is in
+    // FLEX_BREAKING_FILTER_KEYS). customer_type/min_conversions stay OUT of filtersPresent by design —
+    // pre-agg honors customer_type, so those shapes keep the fast path byte-identical.
+    if (PREAGG_TOUCH_MODELS.has(model) && preAggConversionMetric) {
+      return filtersPresent ? null : 'supabase_preagg'
+    }
+    if (MULTI_TOUCH_MODELS.has(model) && preAggMultiTouchMetric) {
+      return (filtersPresent || tz !== 'UTC') ? null : 'supabase_preagg'
+    }
   }
   // 4. MULTI_TOUCH models fall to getMultiTouchAttributionLive (engine:2036) for everything else
   if (MULTI_TOUCH_MODELS.has(model)) {
