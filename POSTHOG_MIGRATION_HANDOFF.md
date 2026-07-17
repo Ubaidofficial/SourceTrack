@@ -1,17 +1,17 @@
 # PostHog → Tinybird Migration — NEW-CHAT HANDOFF
 
-**Updated:** 2026-07-17 (fabrication-fix + allowlist + security session) · **Deep reference:** `POSTHOG_DECOMMISSION_SCAN.md` (full arc; session log appended) · **Repo:** `Ubaidofficial/SourceTrack` @ main `63761a7` (**allowlist PR #262 MERGED**; this docs update will advance HEAD) (verify `git log -1`)
+**Updated:** 2026-07-17 (fabrication-fix + allowlist + PR#4-step-1 + security session) · **Deep reference:** `POSTHOG_DECOMMISSION_SCAN.md` (full arc; session log appended) · **Repo:** `Ubaidofficial/SourceTrack` @ main `96fd8c0` (**#264 landing_page fix + #265 PR#4-step-1 MERGED**) (verify `git log -1`)
 
 > Start-here doc for the new chat. Read this + skim the scan doc's tail and you're caught up.
 > Orchestrator = plan/verify/direct-merge · CC = files/logic/git · Antigravity = browser + **read-only** MCP (post-lockdown, see SECURITY).
 >
-> **HOW TO RESUME:** paste this doc + CC's allowlist-PR report when it lands → orchestrator picks up at OPEN THREAD #1 (verify allowlist PR → merge → landing_page follow-up → re-verify prod pipes → PR#4 → D1–D6).
+> **HOW TO RESUME:** paste this doc → orchestrator picks up at OPEN THREAD #1 = **D1–D5 (the actual PostHog removal)**. Everything before it (fabrication fixes, allowlist, landing_page fix, PR#4 step 1) is merged. Re-verify prod's 11 pipes immediately before D1.
 
 ---
 
 ## ⚠️ WHAT CHANGED SINCE THE 2026-07-16 HANDOFF (read this first)
 The prior handoff ended at "PR#2 (picker trim) dispatched." **This session did NOT follow that plan.** The picker-trim/saved-report track was overtaken by a much bigger discovery: the attribution readers were **fabricating** data on many shapes, not just zeroing them. The session became a fabrication-hunt (five families), a rebuild of the gate into a positive **allowlist**, and a **security incident** (agent token leaks + an unenforced lockdown). Net:
-- **5 fabrication families found.** 4 fixed + merged (#256–#261). The 5th is **gated in #262 (MERGED)** — with a 1-line real fix queued as a follow-up.
+- **5 fabrication families found — ALL 5 NOW CLOSED.** 4 fixed/gated in #256–#262; the 5th (constant-collapse): multi-touch × landing_page **fixed in #264** (real producer fix, not the cosmetic 1-word swap — that was proven to be fabrication-for-fabrication); the other collapse dims stay gated → depth backlog.
 - **The gate has been rebuilt as an env-aware allowlist** (#262, **MERGED** `63761a7`) keyed to **prod's 11-pipe set** — the true precondition for PR#4/D1, replacing the old PR#2/#3 refinements. **HOLE=0, dim-variance clean, anti-drift test 10/10, CI green** — LIVE on main.
 - **Old PR#2 (picker trim) / PR#3 (saved-report):** no evidence they were built as standalone PRs this session — the intent (picker derives from the gate) is folded into the allowlist. **Verify before assuming; reconcile if they were merged.** (Confidence: INFERRED from session arc, not confirmed.)
 - **SECURITY:** Antigravity's "read-only lockdown" was policy-only, not enforced — it had `.env` read/write, Supabase DDL, Stripe-write, Railway-write, force-push, and leaked Tinybird tokens into chat. **Config lockdown now DONE.** **Secret rotation DEFERRED to post-migration (founder call) — this is an accepted open risk.**
@@ -36,10 +36,11 @@ The prior handoff ended at "PR#2 (picker trim) dispatched." **This session did N
 |---|---|---|
 | **D0** | Prove reads Tinybird-ready (staging FORCE_READ + CC static map) | ✅ DONE — core clean; depth gaps triaged |
 | **GATE** | Gate broken shapes so nothing reaches dead PostHog (422, not fake zeros) | ✅ **LIVE + API-CONFIRMED** (#248/#249/#250, prior session) |
-| **FAB** | Fix/gate the 5 fabrication families (confident-wrong on money rail) | 🔶 4 FIXED+MERGED (#256–#261); 5th GATED in **#262** |
-| **ALLOWLIST** | Rebuild gate as positive allowlist keyed to **prod's 11 pipes**; gate campaigns.js; HOLE→0 | ✅ **MERGED — #262 (`63761a7`)** (HOLE=0, variance clean, anti-drift 10/10). **PR#4 precondition met on the code side.** |
-| **PIPE RE-VERIFY** | Re-confirm prod's 11 pipes **against prod** (not staging, not a remembered table) | ⬜ **REQUIRED before PR#4 deletes anything** |
-| **D1 / PR#4** | Delete/throw the bare `queryHogQL` branches (`:2144/:2833/:2965/:3040`; `:2965` = the 60 HOLEs) — money-rail, LAST | ⬜ BLOCKED on ALLOWLIST + PIPE RE-VERIFY |
+| **FAB** | Fix/gate the 5 fabrication families (confident-wrong on money rail) | ✅ **ALL 5 CLOSED** (#256–#261 + #262 gate + **#264** landing_page real fix) |
+| **ALLOWLIST** | Rebuild gate as positive allowlist keyed to **prod's 11 pipes**; gate campaigns.js; HOLE→0 | ✅ **MERGED — #262 (`63761a7`)** (HOLE=0, variance clean, anti-drift 10/10). |
+| **PIPE RE-VERIFY** | Re-confirm prod's 11 pipes **against prod** (not staging, not a remembered table) | ✅ **DONE** — all 11 present in prod Railway `TINYBIRD_READ_PIPES` (founder-confirmed via prod env var, 2026-07-17). ⚠️ Both CC + Antigravity Tinybird MCPs are **staging-bound** (469905) — only the founder can read prod. **Re-glance once more right before D1 removes the fallback.** |
+| **PR#4 step 1** | Delete the 3 CLEANLY-removable bare `queryHogQL` reads | ✅ **MERGED — #265 (`96fd8c0`)**. Deleted `:2154` (dead linear), `:2843` (ltv gated), `:3050` (ai_share gated) — proven no-op (0 cells changed, 0 throws/432 cells). Line numbers had drifted from #262's (`:2144/:2833/:2965/:3040` → `:2154/:2843/:2975/:3050`) — RE-GREP always. |
+| **D1 / PR#4 step 2** | Delete `:2975` (pipe=NONE else) + its **37 HogQL-leg tests** + the pipe→HogQL fallbacks — money-rail, LAST | ⬜ **Deferred into D1–D5** (kept gated + guarded by 2 tests in #265: `:2975` stays intact-but-422-gated, and every no-backend shape asserted denied). Deleting it now = rewriting 37 money-rail tests twice; D1 deletes read+tests as one change. |
 | **D2** | Jobs off PostHog (nightly PostHog leg, health-agent posthog check + env) | ⬜ |
 | **D3** | Delete `api/lib/posthog.js` + `ph` client + `posthog-node` pkg | ⬜ |
 | **D4** | Frontend: telemetry env ✅ DONE · code (`posthog-js` + `dashboard/src/lib/posthog.js`) ⬜ | 🔶 env done, code pending |
@@ -59,9 +60,9 @@ All returned **confident-wrong data on the money rail** (§6: worse than a zero)
 | 2 | WRONG-DIM present-null | medium/campaign `null` → substituted `source` | ✅ FIXED #257 |
 | 3 | WRONG-DIM first/last-touch | pre-agg reader `else → sourceField` (8 real dims mapped, rest → source) | ✅ FIXED #258 |
 | 4 | Fake-zero HOLE | a "HOLE" (bare site) returns **HTTP 200 `results:[]`** = a fake zero, NOT an honest 422 | ✅ FIXED #259 (conversion_type→pipe) + #261 (Class-A × non-pipe metrics → 422) |
-| 5 | Constant-collapse | dims with **no branch** in a reader collapse every row to a constant: multi-touch × {ai_source, browser} → `'direct'`; ai_platforms × {medium, campaign, landing_page} → `'unknown'`; multi-touch × landing_page → `'/'` (reads `share.page_url`; `tpBase` emits `landing_page` — same root cause as #256) | ✅ **GATED in #262** (dim-variance sweep clean, 0 unexplained collapses). `landing_page` gets a **1-word real fix** (`share.page_url → share.landing_page`) in a **follow-up PR** (verified, not assumed — see below). The other collapses → depth backlog (need real pipes). |
+| 5 | Constant-collapse | dims with **no branch** in a reader collapse every row to a constant: multi-touch × {ai_source, browser} → `'direct'`; ai_platforms × {medium, campaign, landing_page} → `'unknown'`; multi-touch × landing_page → `'/'` | ✅ **CLOSED.** Gated in #262; **multi-touch × landing_page FIXED + un-gated in #264** (see below — the "1-word fix" was proven to be fabrication-for-fabrication; real fix = shared `parsePathname` + producer emits `landing_page`). The other collapses (multi-touch × {ai_source, browser}, ai_platforms × {medium, campaign, landing_page}) stay gated → depth backlog (need real pipes). **All 5 families now closed.** |
 
-**Nothing skipped.** 4 families return real data; the 5th returns honest 422s (no lie ships). Some dims are now *honestly unavailable* until real pipes/fixes land — logged as depth backlog + the landing_page follow-up.
+**Nothing skipped.** 4 families return real data; #5's multi-touch × landing_page now returns real data too (#264); the remaining collapse dims return honest 422s (no lie ships) until real pipes land — logged as depth backlog.
 
 **STANDING RULES earned (add to CC/agent bar on every money-rail PR):**
 - **Verify HTTP status, not the verdict label.** HOLE = 200-empty = fake zero. Hitting the shape and reading the real status is the only proof.
@@ -88,7 +89,7 @@ All returned **confident-wrong data on the money rail** (§6: worse than a zero)
 - **MULTITOUCH_LIVE_DIMS deviation (approved):** multi-touch serves only the **14 dims it actually branches on**; × {ai_source, browser} → GATED.
 - **Blast radius (approved, knowingly):** both non-direct models → 422 on 10/16 dims (usable only on the 4 Class-A dims). Honest (they fabricated dead-store zeros today). Frontend must render calm state. **PRODUCT GAP logged:** non-direct multi-touch × common dims needs real pipes (depth backlog, same path Class-A took).
 
-**FOLLOW-UP PR (queued, separate, right after allowlist):** `share.page_url → share.landing_page` in `getMultiTouchAttributionLive`; un-gate multi-touch × landing_page. **NOT assumed-trivial** — before shipping verify: (1) `calculateAttribution` is shared with nightly-attribution.js — does the nightly path read this share expecting `page_url`? (2) is `tpBase.landing_page` already normalized the way the report expects? (3) null/empty landing_page → real `'/'` fallback or distinct "unknown"? Proof: KEEP byte-identical except newly-real landing_page buckets; variance shows `/a` vs `/b` bucket.
+**LANDING_PAGE FIX — SHIPPED in #264 (`d34cc8b`), NOT the "1-word fix":** the proposed `share.page_url → share.landing_page` swap was **proven (by execution) to be fabrication-for-fabrication** — on the live path `share.landing_page` is already the constant string `"unknown"` (the `multitouch_pageviews_live` pipe returns `page_url` only; the pvObj never populated `landing_page`), so `new URL("unknown")` throws → still `'/'`. Real fix = **producer must emit `landing_page`**: extracted `parsePathname` to a shared `api/lib/url-normalize.js` imported by BOTH `attribution-engine.js` and `nightly-attribution.js` (nightly's duplicate deleted — single-source proven by grep, avoiding the #248 duplicate-source bug), the live pvObj now emits `landing_page: parsePathname(pageUrl)`, and the reader reads that key. Proof: live variance `/a` vs `/b` (was `/`), 4 cells GATED→SERVED, 405 byte-identical, nightly untouched (26/26 URL cases + 15/15 nightly tests). **Deep findings logged:** (a) three copies of `calculateAttribution` exist (engine live, nightly, and a "single source of truth" one imported by nobody = dead code — cleanup candidate); (b) the pre-agg path already read `landing_page` correctly, so multi-touch × landing_page × {revenue, conversions} was ALWAYS right — only the live path (leads/customers/avg) was broken; (c) **`/`-vs-`unknown` inconsistency:** the HogQL touch legs (`engine:2713/2749`) still `COALESCE(..., '/')` — flag for D1–D5 when those legs are removed.
 
 ---
 
@@ -135,7 +136,7 @@ Confirmed via Antigravity read-only pipe-diff + flag read:
 - **Path A: gate now, rebuild depth before v1.0.** Gating hides today's fabrications/zeros (§6-compliant), not a permanent cut.
 - **Allowlist SERVED = a deployed PROD pipe backs the shape.** Keyed to the 11-pipe prod set, re-verified against prod before PR#4.
 - **KEEP set (works in prod, no PostHog):** default-window common dims (source, campaign, channel, medium, landing_page, country, device, browser) × {revenue, conversions, leads, customers, avg_conversion_value} via Supabase pre-agg · Class-A dims (provider, attribution_status, stitching_method, conversion_type) × those metrics via Tinybird pipes · the 4 `session_*` metrics × 7 dims · days_to_convert · touchpoints.
-- **GATE set:** non-default attribution window (except Class-A, dim-aware) · keyword/referrer_domain/custom_param dims · exotic metrics (ltv_revenue, ai_*_share, ai_conversions, ai_revenue) · `sessions` + `conversion_rate` entirely · session_* × the other 8 dims · **multi-touch × {ai_source, browser}** ('direct'-collapse) · **ai_platforms × {medium, campaign, landing_page}** ('unknown'-collapse) · **multi-touch × landing_page** ('/'-collapse, until follow-up fix) · **both non-direct models × 10 common dims**.
+- **GATE set:** non-default attribution window (except Class-A, dim-aware) · keyword/referrer_domain/custom_param dims · exotic metrics (ltv_revenue, ai_*_share, ai_conversions, ai_revenue) · `sessions` + `conversion_rate` entirely · session_* × the other 8 dims · **multi-touch × {ai_source, browser}** ('direct'-collapse) · **ai_platforms × {medium, campaign, landing_page}** ('unknown'-collapse) · **both non-direct models × 10 common dims**. *(multi-touch × landing_page was here — now SERVED via #264.)*
 - **campaigns.js:** now gated via the allowlist (was ungated). Default `dimension=campaign` served by the 3 campaign pipes; {source, medium, ai_source} → 422 (were fake zeros).
 - **Nightly reprocess `_mv`:** delete (test-site synthetic); CLI reprocess untouched.
 
@@ -144,7 +145,7 @@ Confirmed via Antigravity read-only pipe-diff + flag read:
 ## PRE-V1.0 BUILD BACKLOG (rebuild depth before launch)
 | Priority | Item | Build-shape |
 |---|---|---|
-| HIGH | **multi-touch × landing_page fix** (5th family) | 1-word key fix + the 3 verification checks (follow-up PR) |
+| DONE | ~~multi-touch × landing_page fix~~ | ✅ shipped in #264 (shared `parsePathname` + producer emits `landing_page`) |
 | HIGH | Non-direct multi-touch × common dims | real pipes (2 shipped models currently 422 on 10/16 dims) |
 | HIGH | Campaigns {source,medium,ai_source} dims | pipes (campaign dim already served) |
 | HIGH | explain_journey narrative | clone deployed `attribution_explain_conversion` + `pageviews_by_visitors` |
@@ -158,8 +159,8 @@ Confirmed via Antigravity read-only pipe-diff + flag read:
 ---
 
 ## OPEN THREADS (what the new chat picks up)
-1. **✅ #262 MERGED (`63761a7`).** Next: **landing_page follow-up PR** (1-word `share.page_url → share.landing_page` fix + the 3 checks) → un-gates multi-touch × landing_page.
-2. **landing_page follow-up PR** (1-word fix + 3 checks) → un-gates multi-touch × landing_page.
+1. **✅ #262/#264/#265 MERGED.** All 5 fabrication families closed; allowlist live; PR#4 step 1 done; prod pipes verified. **Next = D1–D5 (the actual PostHog removal).**
+2. **D1–D5 — staged** (deletes irreversible code, highest-stakes stretch): **D1** delete `:2975` + its 37 HogQL-leg tests + pipe→HogQL fallbacks (money-rail — re-verify prod pipes IMMEDIATELY before, no safety net after); **D2** jobs off PostHog (nightly PostHog leg + health-agent check); **D3** delete `posthog.js` + `posthog-node` pkg (grep no importers first); **D4** frontend `posthog-js` + `dashboard/src/lib/posthog.js`; **D5** strip backend `POSTHOG_*` env (all services) + sub-processor/legal docs → **GDPR claim unlocks**.
 3. **PIPE RE-VERIFY against prod** (Antigravity read-only, or founder) — the 11 pipes — **before PR#4**.
 4. **PR#4:** delete/throw bare `queryHogQL` (`:2144/:2833/:2965/:3040`) — money-rail, LAST, only after HOLE=0 + pipe re-verify.
 5. **D1–D5:** the actual PostHog removal → GDPR claim unlocks.
@@ -191,7 +192,7 @@ gh pr merge <n> --repo Ubaidofficial/SourceTrack --squash --admin
 ---
 
 ## PR HISTORY THIS SESSION (all on main @ `0c572bb`)
-CONFIRMED via git log (founder-pasted): `63761a7` #262 · `0c572bb` #261 · `5851873` #260 · `67b11cd` #259 · `8253080` #258.
+CONFIRMED via git log (founder-pasted): `96fd8c0` #265 · `d34cc8b` #264 · `fabd930` #263 · `63761a7` #262 · `0c572bb` #261 · `5851873` #260 · `67b11cd` #259 · `8253080` #258.
 INFERRED from session arc (orchestrator-synthesis — verify if precision needed): `e7e8ca3` #257 · `ac9cdeb` #256 · `d545dff` #255 · `293ba2d` #254 · `fc00e406` #253.
 | PR | Scope |
 |---|---|
@@ -205,6 +206,9 @@ INFERRED from session arc (orchestrator-synthesis — verify if precision needed
 | #260 | Secrets-output governance (no secret VALUES in chat) |
 | #261 | Class-A dims × non-pipe metrics uniform gate (kill last fake-zero family #4) |
 | **#262** | env-aware SERVED allowlist (HOLE→0, gates family #5, campaigns.js gated+model-validated, anti-drift 10/10, variance clean) — **MERGED `63761a7`** |
+| **#263** | docs: first commit of this handoff + decommission scan into the repo — **MERGED `fabd930`** |
+| **#264** | landing_page real fix on live multi-touch reader: shared `parsePathname` (`url-normalize.js`) imported by engine + nightly (nightly dup deleted), producer emits `landing_page`, reader reads it. Proved the "1-word fix" was fabrication-for-fabrication. 4 cells GATED→SERVED, 405 byte-identical, single-source grep, nightly untouched — **MERGED `d34cc8b`** |
+| **#265** | PR#4 step 1: delete the 3 cleanly-removable bare `queryHogQL` reads (`:2154`/`:2843`/`:3050`) as loud invariant throws; proven no-op (0 cells changed, 0 throws/432); `:2975` deferred to D1–D5 with 2 guard tests — **MERGED `96fd8c0`** |
 
 ---
 
