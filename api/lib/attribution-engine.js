@@ -2978,11 +2978,21 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     // `model` is consumed only by flexible_report_campaign_by_site (switches the campaign column);
     // the other flex pipes don't declare it and Tinybird ignores undeclared query params.
     const _fbTb = await _pipeRead(_flexPipe, { site_id: String(siteId), date_from: _fbFrom, date_to: _fbTo, metric, model })
+    // D1: the HogQL fallback is DELETED — the pipe is the SOLE read path for flexible_report. PostHog is
+    // a dead store; the old fallback returned zeros. queryTinybirdPipe returns null ONLY on FAILURE (flag
+    // off, missing config, non-2xx, timeout); a successful-but-empty query returns [] (truthy). So a null
+    // here means the DEPLOYED pipe is not serving — NOT "no data". Throw loudly instead of reading a dead
+    // store. FIX THE PIPE (verify it is deployed + serving in the PROD Tinybird workspace); do not restore
+    // the read. Precedent: the [pr4] loud invariants above (flexible_report_linear/_ltv/_ai_share).
+    if (!_fbTb) throw new Error(`[pr4/D1] flexible_report pipe '${_flexPipe}' returned null — deployed pipe not serving; FIX THE PIPE, do not restore the HogQL read`)
     // Named pipe rows -> positional [dim_value, metric_value] so the unchanged consumer (row[0]/row[1],
-    // !hasDim2) stays byte-identical. Null -> injectable HogQL fallback (harness controls both legs).
-    rows = _fbTb ? _fbTb.map(r => [r.dim_value, r.metric_value]) : await _queryHogQL(sql, 'flexible_report')
+    // !hasDim2) stays byte-identical.
+    rows = _fbTb.map(r => [r.dim_value, r.metric_value])
   } else {
-    rows = await _queryHogQL(sql, 'flexible_report')
+    // D1: pipe=NONE is UNREACHABLE — the SERVED allowlist (report-config-validation.js) + the D0/D0b
+    // route gates deny every no-pipe flexible_report shape at all three callers. If this throws, the
+    // allowlist has a hole: FIX THE ALLOWLIST — do not restore the read.
+    throw new Error('[pr4/D1] flexible_report: unreachable pipe=NONE dead-store read; allowlist should have denied this shape — FIX THE ALLOWLIST')
   }
 
   const results = rows.map((row) => {

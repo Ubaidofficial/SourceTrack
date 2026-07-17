@@ -147,8 +147,10 @@ test('D0b: the multi-touch LIVE path (direct callers / non-preagg dims) still ho
 // ── 3. ANTI-DRIFT #1: gate verdict ⟺ engine dead-read set (executed against the real engine) ──
 test('🔴 ANTI-DRIFT: for the direct-caller path, gate-422 ⟺ engine reaches the pipe=NONE dead read', async () => {
   const SITE = 'd0-antidrift', FROM = '2026-07-01', TO = '2026-07-06'
-  // Pipe SERVES rows via the seam; a HogQL call is the dead-store stand-in (throws). So a throw ==
-  // the shape reached a pipe=NONE / non-dispatch read — exactly what D0 must gate.
+  // Pipe SERVES rows via the seam. D1: a pipe=NONE / non-dispatch shape no longer reads HogQL — it
+  // THROWS the [pr4/D1] pipe-only invariant. So a [pr4/D1] throw == the shape reached the dead-store
+  // (dead=true) — exactly what the gate must deny. (The queryHog DEADREAD guard is a belt-and-braces
+  // net; post-D1 the flexible_report HogQL leg is deleted, so it should never be reached.)
   async function engineDead ({ model, groupBy, metric, tz, filtersPresent, attributeBy }) {
     const filters = {}
     if (tz !== 'UTC') filters.timezone = tz
@@ -159,7 +161,7 @@ test('🔴 ANTI-DRIFT: for the direct-caller path, gate-422 ⟺ engine reaches t
       queryHog: async () => { throw new Error('DEADREAD') }
     })
     try { await getFlexibleReport(SITE, model, FROM, TO, groupBy, metric, filters, null, 'day', null, attributeBy); return false }
-    catch (e) { if (e.message === 'DEADREAD') return true; throw e }
+    catch (e) { if (e.message === 'DEADREAD' || /\[pr4\/D1\]/.test(e.message)) return true; throw e }
     finally { __resetAttributionReadDeps() }
   }
 

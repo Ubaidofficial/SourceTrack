@@ -203,8 +203,8 @@ test('🔴 PR#4: NO bare (non-underscore) queryHogQL read remains in the engine'
   const code = ENGINE_SRC.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
   // A BARE read is the non-underscore binding: it bypasses even the injectable seam, so it could not
   // be intercepted or observed. All three (flexible_report_linear / _ltv / flexible_ai_share) are
-  // deleted. :2975's pipe=NONE read uses the INJECTABLE _queryHogQL and is deferred to D1-D5 — it is
-  // covered by the allowlist guard below, not by this one.
+  // deleted. The pipe=NONE flexible_report read used the INJECTABLE _queryHogQL and is now DELETED by
+  // D1 (see the [pr4/D1] guard below) — it was never bare, so this guard was never about it.
   const bare = code.split('\n').filter(l => /[^_.\w]queryHogQL\(/.test(l) && !/^import/.test(l.trim()))
   assert.deepEqual(bare, [], 'a bare queryHogQL read reappeared — it would silently return dead-store zeros')
 })
@@ -236,17 +236,19 @@ test('🔴 PR#4: the 3 deleted sites throw a loud invariant (never a silent dead
   assert.match(ENGINE_SRC, /FIX THE ALLOWLIST — do not restore the read/)
 })
 
-// ── :2975 (pipe=NONE) is DEFERRED to D1-D5, so it must stay ALLOWLIST-GATED in the meantime ──────
-// It is deliberately NOT deleted here: 37 money-rail tests exercise that read to verify the HogQL
-// leg's generated SQL (window bounds, external_event_id dedup) and the pipe-dispatch matrix. D1-D5
-// removes queryHogQL wholesale and retires those tests in ONE coherent change. Until then the read
-// is harmless ONLY because the allowlist denies every shape that could reach it. These guards pin
-// that: if the gate loosens, :2975 silently starts reading a dead store again.
-test('🔴 :2975 pipe=NONE read is still present (deferred) and NOT a throw', () => {
-  assert.match(ENGINE_SRC, /rows = await _queryHogQL\(sql, 'flexible_report'\)/,
-    'the deferred pipe=NONE read must remain intact until D1-D5 deletes it with its tests')
-  assert.doesNotMatch(ENGINE_SRC, /\[pr4\] flexible_report: unreachable/,
-    'the pipe=NONE throw is deferred — it breaks 37 HogQL-leg tests that D1-D5 retires anyway')
+// ── D1: the flexible_report HogQL leg is now DELETED — the pipe is the SOLE read path ────────────
+// Both reads are gone: the pipe-attempted fallback (:2983) and the pipe=NONE else (:2985). A null
+// pipe read throws [pr4/D1] FIX THE PIPE; a no-pipe shape throws [pr4/D1] FIX THE ALLOWLIST. The
+// allowlist guard below still pins the invariant that no served shape reaches pipe=NONE.
+test('🔴 D1: the flexible_report pipe=NONE read is GONE, replaced by the [pr4/D1] loud invariant', () => {
+  assert.doesNotMatch(ENGINE_SRC, /rows = await _queryHogQL\(sql, 'flexible_report'\)/,
+    'D1 deleted the pipe=NONE HogQL read — it must not reappear')
+  assert.doesNotMatch(ENGINE_SRC, /_fbTb \? _fbTb\.map\([^)]*\) : await _queryHogQL\(sql, 'flexible_report'\)/,
+    'D1 deleted the pipe-attempted -> HogQL fallback too — the pipe is the sole read path')
+  assert.match(ENGINE_SRC, /\[pr4\/D1\] flexible_report: unreachable pipe=NONE/,
+    'the pipe=NONE branch now throws the [pr4/D1] FIX THE ALLOWLIST invariant')
+  assert.match(ENGINE_SRC, /\[pr4\/D1\] flexible_report pipe .* returned null/,
+    'a null pipe read now throws the [pr4/D1] FIX THE PIPE invariant')
 })
 
 test('🔴 :2975 is UNREACHABLE: the allowlist denies every no-pipe shape (422, never a dead read)', () => {
