@@ -8,7 +8,7 @@ import { isValidTimezone } from '../lib/utils.js'
 // Now imported from that single source of truth.
 import {
   ALLOWED_MODELS, ALLOWED_GROUPS, ALLOWED_METRICS, ALLOWED_GRANULARITY,
-  ALLOWED_WINDOWS, ALLOWED_ATTRIBUTE_BY, gatedReportReason
+  ALLOWED_WINDOWS, ALLOWED_ATTRIBUTE_BY, gatedReportReason, flexFiltersPresent
 } from '../lib/report-config-validation.js'
 
 export async function attribution(req, res) {
@@ -112,42 +112,9 @@ export async function attribution(req, res) {
       // Default views/presets resolve to the site window, so the common fast path is unaffected.
       const preAggWindowMatches = preAggregatedWindowMatches(resolvedWindow, req.site?.attribution_window_days)
 
-      // ── DEAD-STORE GATE (Wave-4) ────────────────────────────────────────────────────
-      // Must run AFTER preAggWindowMatches (the rule is window- AND dim-aware) and BEFORE
-      // the pre-agg short-circuit + the getFlexibleReport fall-through below.
-      // A shape that resolves to neither the Supabase pre-agg nor a Tinybird pipe reaches
-      // the engine's `pipe=NONE` branch, which calls queryHogQL DIRECTLY — outside the
-      // TINYBIRD_FORCE_READ seam — and silently returns ZEROS from a dead store. Deny it
-      // here with a truthful 422 instead (§6: never render a fake zero). The dashboard's
-      // existing error banner surfaces this; it is NOT a silent empty state.
-      // KEEP-set shapes are untouched: the pre-agg short-circuit at :151 and the Class-A
-      // pipe dispatch both run only after this returns null.
-      const gateReason = gatedReportReason({
-        group_by,
-        group_by2: req.query.group_by2 || null,
-        metric,
-        preAggWindowMatches,
-        // Feeds the multi-touch pre-agg dim contract. Passed in (not imported) because
-        // attribution-engine imports report-config-validation — the reverse would be a cycle.
-        model,
-        preAggMultiTouchMetric: PREAGG_MULTITOUCH_METRICS.has(metric),
-        preAggConversionMetric: PREAGG_CONVERSION_METRICS.has(metric),
-        // the window-sensitive flex pipes (main/campaign) only dispatch when NO window is active;
-        // the route resolves+injects the site's window above, so mirror that here.
-        hasAttributionWindow: !!(resolvedWindow && resolvedWindow !== 'ltv' && Number(resolvedWindow) > 0)
-      })
-      if (gateReason) {
-        return res.status(422).json({
-          success: false,
-          data: null,
-          error: gateReason.message,
-          // fetchApi propagates error_code (precedent: 'query_timeout'); the frontend's
-          // describeQueryError branches on it to render the calm gated state with NO retry.
-          error_code: gateReason.error_code,
-          gated: true
-        })
-      }
-
+      // attribute_by is validated BEFORE the gate: an invalid value must be a 400 (not a gate 422),
+      // and the gate reads the resolved attributeBy below (a non-conversion_date attributeBy breaks
+      // the flex-pipe base case, so the pipe won't dispatch — the gate must deny it, not dead-read).
       if (req.query.attribute_by && !ALLOWED_ATTRIBUTE_BY.has(req.query.attribute_by)) {
         return res.status(400).json({
           success: false,
@@ -156,12 +123,11 @@ export async function attribution(req, res) {
         })
       }
 
+      // Built ONCE here (hoisted above the dead-store gate) and REUSED for both the gate and the
+      // getFlexibleReport call below — no duplication. Site timezone drives the flexible path's
+      // local-date bucketing (filters.timezone -> getSessionReport/getFlexibleReport ->
+      // getDateFilterExpr). Same convention as campaigns/dashboard/analytics.
       const filters = {}
-      // Site timezone drives the flexible path's local-date bucketing (filters.timezone ->
-      // getSessionReport/getFlexibleReport -> getDateFilterExpr). Same convention as
-      // campaigns/dashboard/analytics. Was referenced un-defined at the getFlexibleReport
-      // call below (`filters.timezone = tz`), throwing `tz is not defined` on every
-      // non-pre-aggregated model and getting swallowed into analytics_unavailable:true.
       const tz = isValidTimezone(req.site?.timezone) ? req.site.timezone : 'UTC'
       if (req.query.filter_channel) filters.channel = req.query.filter_channel
       if (req.query.filter_source) filters.source = req.query.filter_source
@@ -176,6 +142,45 @@ export async function attribution(req, res) {
       if (req.query.filter_conversion_type) filters.conversion_type = req.query.filter_conversion_type
       if (req.query.filter_customer_type && ['new', 'returning'].includes(req.query.filter_customer_type)) {
         filters.customer_type = req.query.filter_customer_type
+      }
+
+      // ── DEAD-STORE GATE (Wave-4 + D0 tz/filter/attributeBy) ──────────────────────────
+      // Must run AFTER preAggWindowMatches (the rule is window- AND dim-aware) and BEFORE
+      // the pre-agg short-circuit + the getFlexibleReport fall-through below.
+      // A shape that resolves to neither the Supabase pre-agg nor a Tinybird pipe reaches
+      // the engine's `pipe=NONE` branch, which calls queryHogQL DIRECTLY — outside the
+      // TINYBIRD_FORCE_READ seam — and silently returns ZEROS from a dead store. Deny it
+      // here with a truthful 422 instead (§6: never render a fake zero). The dashboard's
+      // existing error banner surfaces this; it is NOT a silent empty state.
+      // D0: tz/filtersPresent/attributeBy are passed so the gate denies the flex-pipe shapes the
+      // engine cannot serve (non-UTC, filtered, or non-conversion_date) — which would dead-read.
+      const gateReason = gatedReportReason({
+        group_by,
+        group_by2: req.query.group_by2 || null,
+        metric,
+        preAggWindowMatches,
+        // Feeds the multi-touch pre-agg dim contract. Passed in (not imported) because
+        // attribution-engine imports report-config-validation — the reverse would be a cycle.
+        model,
+        preAggMultiTouchMetric: PREAGG_MULTITOUCH_METRICS.has(metric),
+        preAggConversionMetric: PREAGG_CONVERSION_METRICS.has(metric),
+        // the window-sensitive flex pipes (main/campaign) only dispatch when NO window is active;
+        // the route resolves+injects the site's window above, so mirror that here.
+        hasAttributionWindow: !!(resolvedWindow && resolvedWindow !== 'ltv' && Number(resolvedWindow) > 0),
+        tz,
+        filtersPresent: flexFiltersPresent(filters),
+        attributeBy: req.query.attribute_by || 'conversion_date'
+      })
+      if (gateReason) {
+        return res.status(422).json({
+          success: false,
+          data: null,
+          error: gateReason.message,
+          // fetchApi propagates error_code (precedent: 'query_timeout'); the frontend's
+          // describeQueryError branches on it to render the calm gated state with NO retry.
+          error_code: gateReason.error_code,
+          gated: true
+        })
       }
 
       // Use pre-aggregated data for first_touch, last_touch, and linear

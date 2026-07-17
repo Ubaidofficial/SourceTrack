@@ -114,6 +114,33 @@ const PROD_DEPLOYED_PIPES = new Set([
   'flexible_report_campaign_leads_by_site', 'flexible_report_campaign_sessions_by_site'
 ])
 
+// D0: the filter keys that build a non-empty `filterClauses` in getFlexibleReport
+// (attribution-engine.js:2663-2700) and therefore break _flexBaseCommon → a flex pipe cannot serve
+// the shape. The three route callers compute `filtersPresent` against THIS set so the gate denies
+// exactly the shapes the engine would dead-read. `customer_type` and `min_conversions` are
+// deliberately EXCLUDED: they do not build a filterClause (customer_type is applied only by the
+// Supabase pre-agg; min_conversions is a post-aggregation cut), so they don't force a dead read.
+// `timezone` is the separate `tz` axis, not a filterClause. An anti-drift test binds this set to the
+// engine's actual filterClauses builder so a future filter key cannot silently un-gate.
+const FLEX_BREAKING_FILTER_KEYS = new Set([
+  'source', 'medium', 'campaign', 'ai_source', 'country', 'device_type',
+  'is_conversion', 'conversion_type', 'has_ai_source'
+])
+
+// True when any filter that would build a filterClause is set. Mirrors the engine's truthiness:
+// is_conversion / has_ai_source only count as the string 'true'/'false' (engine:2685/2691/2694).
+function flexFiltersPresent (filters = {}) {
+  if (!filters || typeof filters !== 'object') return false
+  for (const key of FLEX_BREAKING_FILTER_KEYS) {
+    const v = filters[key]
+    if (v === undefined || v === null || v === '') continue
+    if (key === 'is_conversion') { if (v === 'true') return true; continue }
+    if (key === 'has_ai_source') { if (v === 'true' || v === 'false') return true; continue }
+    return true
+  }
+  return false
+}
+
 // The dims getMultiTouchAttributionLive buckets CORRECTLY (i.e. the bucket varies with the input).
 // Two ways a dim fails to qualify, both proven by the dim-variance sweep, both FABRICATIONS (§6):
 //   1. NO BRANCH in the chain (engine:1942-1969) -> dimVal keeps its `let dimVal = 'direct'` default
@@ -152,12 +179,22 @@ function servedReportShape ({
   preAggConversionMetric = false, preAggMultiTouchMetric = false,
   // Only attribution.js reaches the Supabase pre-agg — it owns the short-circuit. export.js and
   // campaigns.js call getFlexibleReport DIRECTLY, so for them ONLY engine-dispatched pipes exist.
-  viaRoutePreAgg = true
+  viaRoutePreAgg = true,
+  // D0 flex-pipe breakers. Every flexible_report_* pipe dispatches ONLY under the engine's
+  // _flexBaseCommon (attribution-engine.js:2897) — tz===UTC && no filterClauses && conversion_date.
+  // A request that trips any of these skips the pipe and reaches the pipe=NONE dead-store read
+  // (a §6 fake zero today). These default INERT so every existing caller is byte-identical.
+  // NOTE: only the FLEX PIPES (rules 6/7/8) are tz/filter/attributeBy sensitive. The Supabase
+  // pre-agg (honors tz + refilters), the multi-touch/ai_platforms live readers, and the session
+  // pipes are NOT gated by these — they resolve above/independently.
+  tz = 'UTC', filtersPresent = false, attributeBy = 'conversion_date'
 }) {
   const dims = [group_by, group_by2].filter(Boolean)
   if (!model || !metric || dims.length === 0) return null
   if (dims.some(d => isGatedCustomParamDim(d))) return null          // no pre-agg, no pipe, ever
   const every = (set) => dims.every(d => set.has(d))
+  // A flex pipe cannot serve these shapes (engine _flexBaseCommon) -> they would dead-read.
+  const flexBreaker = tz !== 'UTC' || filtersPresent || attributeBy !== 'conversion_date'
 
   // 1. session_* metrics -> getSessionReport (engine:2486-2492)
   if (SESSION_PIPE_METRICS.has(metric)) {
@@ -177,12 +214,13 @@ function servedReportShape ({
   if (model === 'ai_platforms') {
     return every(AIPLATFORM_LIVE_DIMS) ? 'aiplatform_conversions_by_site' : null
   }
-  // 6. Class-A conversion-property pipes (engine _flex*Case: _flexPipeCommon && isTouchModel)
-  if (ISTOUCH_MODELS.has(model) && !group_by2 && every(CLASS_A_DIMS) && CLASS_A_PIPE_METRICS.has(metric)) {
+  // 6. Class-A conversion-property pipes (engine _flex*Case: _flexPipeCommon && isTouchModel).
+  // flexBreaker: a non-UTC / filtered / non-conversion_date request skips the pipe -> dead read.
+  if (!flexBreaker && ISTOUCH_MODELS.has(model) && !group_by2 && every(CLASS_A_DIMS) && CLASS_A_PIPE_METRICS.has(metric)) {
     return `flexible_report_${group_by}_by_site`
   }
   // 7/8. window-SENSITIVE flex pipes — only dispatch when NO attribution window is active
-  if (!hasAttributionWindow && !group_by2 && PREAGG_TOUCH_MODELS.has(model)) {
+  if (!flexBreaker && !hasAttributionWindow && !group_by2 && PREAGG_TOUCH_MODELS.has(model)) {
     if (group_by === 'campaign') {
       if (CLASS_A_PIPE_METRICS.has(metric)) return 'flexible_report_campaign_by_site'
       if (metric === 'sessions') return 'flexible_report_campaign_sessions_by_site'
@@ -222,7 +260,7 @@ const UNAVAILABLE_SUFFIX = 'is temporarily unavailable while reporting moves to 
  * `PREAGG_CONVERSION_METRICS.has(metric)`. All default to inert values, so every existing caller
  * that omits them (e.g. export.js) behaves byte-identically.
  */
-function gatedReportReason ({ group_by, group_by2 = null, metric, preAggWindowMatches = true, model = null, preAggMultiTouchMetric = false, preAggConversionMetric = false, hasAttributionWindow = true, viaRoutePreAgg = true }) {
+function gatedReportReason ({ group_by, group_by2 = null, metric, preAggWindowMatches = true, model = null, preAggMultiTouchMetric = false, preAggConversionMetric = false, hasAttributionWindow = true, viaRoutePreAgg = true, tz = 'UTC', filtersPresent = false, attributeBy = 'conversion_date' }) {
   // Session metrics resolve through getSessionReport, which can only bucket by dims derivable
   // from its pageview SELECT. An unsupported dim there used to FABRICATE a single 'unknown'
   // bucket. Checked BEFORE the generic dim gate so the reason names the real constraint.
@@ -297,7 +335,8 @@ function gatedReportReason ({ group_by, group_by2 = null, metric, preAggWindowMa
   if (model) {
     const backing = servedByDeployedBackend({
       model, group_by, group_by2, metric, preAggWindowMatches, hasAttributionWindow,
-      preAggConversionMetric, preAggMultiTouchMetric, viaRoutePreAgg
+      preAggConversionMetric, preAggMultiTouchMetric, viaRoutePreAgg,
+      tz, filtersPresent, attributeBy
     })
     if (!backing) {
       return {
@@ -553,5 +592,7 @@ export {
   GATED_METRICS,
   SESSION_REPORT_DIMS,
   SESSION_PIPE_METRICS,
-  gatedReportReason
+  gatedReportReason,
+  FLEX_BREAKING_FILTER_KEYS,
+  flexFiltersPresent
 }

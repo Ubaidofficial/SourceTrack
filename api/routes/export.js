@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { getFlexibleReport, PREAGG_CONVERSION_METRICS, PREAGG_MULTITOUCH_METRICS } from '../lib/attribution-engine.js'
 import { requireFeature } from '../lib/plan-features.js'
 import { getSupabase as getSupabaseAdmin } from '../lib/supabase.js'
-import { ALLOWED_MODELS, ALLOWED_GROUPS, ALLOWED_METRICS, gatedReportReason } from '../lib/report-config-validation.js'
+import { ALLOWED_MODELS, ALLOWED_GROUPS, ALLOWED_METRICS, gatedReportReason, flexFiltersPresent } from '../lib/report-config-validation.js'
 import { serializeHogQLDateRange } from '../lib/hogql-date.js'
 
 const router = Router()
@@ -76,31 +76,10 @@ router.get('/report', async (req, res) => {
       return res.status(400).json({ success: false, data: null, error: `Invalid metric: ${metric}` })
     }
 
-    // ── DEAD-STORE GATE (Wave-4) ───────────────────────────────────────────────────
-    // Export calls getFlexibleReport DIRECTLY — it never reaches attribution.js's pre-agg
-    // short-circuit — so a gated shape here would hit the engine's `pipe=NONE` branch and
-    // silently export a CSV of zeros from a dead store. Deny instead. Export passes no
-    // attribution_window (the engine defaults to no-window), so the window axis is not
-    // applicable: preAggWindowMatches is left at its default (true) and only the
-    // dim/metric axes gate here.
-    // model + the metric flags were previously OMITTED here, so every model-aware gate (#256-#261)
-    // and the SERVED allowlist were inert for export — it could still CSV a dead-store shape.
-    // viaRoutePreAgg:false — export calls getFlexibleReport directly, so the Supabase pre-agg
-    // short-circuit is NOT available to it; only engine-dispatched pipes are.
-    // hasAttributionWindow:false — export passes no attribution_window (see above).
-    const gateReason = gatedReportReason({
-      group_by, group_by2: req.query.group_by2 || null, metric, model,
-      preAggConversionMetric: PREAGG_CONVERSION_METRICS.has(metric),
-      preAggMultiTouchMetric: PREAGG_MULTITOUCH_METRICS.has(metric),
-      viaRoutePreAgg: false,
-      hasAttributionWindow: false
-    })
-    if (gateReason) {
-      return res.status(422).json({ success: false, data: null, error: gateReason.message, error_code: gateReason.error_code, gated: true })
-    }
-
     const posthogSiteId = String(req.site.id)
 
+    // Filters + tz built ONCE and reused for the gate + the getFlexibleReport call (hoisted above
+    // the gate so the gate can see them — no duplication).
     const filters = {}
     const getFilterVal = (key) => req.query[`filter_${key}`] !== undefined ? req.query[`filter_${key}`] : reportConfig[`filter_${key}`]
 
@@ -124,7 +103,35 @@ router.get('/report', async (req, res) => {
     if (fHasAiSource) filters.has_ai_source = fHasAiSource
     if (fMinConversions) filters.min_conversions = fMinConversions
 
-    filters.timezone = req.site?.timezone || 'UTC'
+    const tz = req.site?.timezone || 'UTC'
+    filters.timezone = tz
+
+    // ── DEAD-STORE GATE (Wave-4 + D0 tz/filter) ─────────────────────────────────────
+    // Export calls getFlexibleReport DIRECTLY — it never reaches attribution.js's pre-agg
+    // short-circuit — so a gated shape here would hit the engine's `pipe=NONE` branch and
+    // silently export a CSV of zeros from a dead store. Deny instead. Export passes no
+    // attribution_window (the engine defaults to no-window), so the window axis is not
+    // applicable: preAggWindowMatches is left at its default (true).
+    // model + the metric flags were previously OMITTED here, so every model-aware gate (#256-#261)
+    // and the SERVED allowlist were inert for export — it could still CSV a dead-store shape.
+    // viaRoutePreAgg:false — export calls getFlexibleReport directly, so the Supabase pre-agg
+    // short-circuit is NOT available to it; only engine-dispatched pipes are.
+    // hasAttributionWindow:false — export passes no attribution_window (see above).
+    // D0: tz/filtersPresent passed — a non-UTC or filtered flex-pipe shape can't dispatch a pipe and
+    // would CSV dead-store zeros; deny it. attributeBy is conversion_date (export sets none).
+    const gateReason = gatedReportReason({
+      group_by, group_by2: req.query.group_by2 || null, metric, model,
+      preAggConversionMetric: PREAGG_CONVERSION_METRICS.has(metric),
+      preAggMultiTouchMetric: PREAGG_MULTITOUCH_METRICS.has(metric),
+      viaRoutePreAgg: false,
+      hasAttributionWindow: false,
+      tz,
+      filtersPresent: flexFiltersPresent(filters)
+    })
+    if (gateReason) {
+      return res.status(422).json({ success: false, data: null, error: gateReason.message, error_code: gateReason.error_code, gated: true })
+    }
+
     const results = await getFlexibleReport(posthogSiteId, model, date_from, date_to, group_by, metric, filters)
 
     if (!results || results.length === 0) {
