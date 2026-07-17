@@ -119,22 +119,20 @@ const PROD_DEPLOYED_PIPES = new Set([
 //   1. NO BRANCH in the chain (engine:1942-1969) -> dimVal keeps its `let dimVal = 'direct'` default
 //      (engine:1941) -> every row collapses into one bucket labelled with the requested dim.
 //      -> ai_source, browser.
-//   2. A BRANCH THAT READS A KEY THE SHARE DOES NOT HAVE -> the same collapse.
-//      -> landing_page: engine:1953 reads `share.page_url`, but the shares come from
-//         calculateAttribution() -> tpBase (nightly-attribution.js:1088-1098), which emits
-//         `landing_page` and NEVER `page_url`. So the ternary always takes its '/' branch and 100%
-//         of revenue lands in a single "/" bucket. Same root cause as #256 (a reader reading a key
-//         the touch constructor doesn't emit), different fallback.
-//         FOLLOW-UP: `share.page_url` -> `share.landing_page` makes this dim real; it is a money-rail
-//         reader change and needs its OWN KEEP + variance proof, so it is NOT bundled here. Gated
-//         until then — consistent with how every other family was handled (gate first, fix after).
+//   2. A BRANCH THAT READS A KEY THE SHARE DOES NOT HAVE -> the same collapse. landing_page was
+//      exactly this: engine:1953 read `share.page_url` while tpBase emits `landing_page`, so 100% of
+//      revenue landed in one "/" bucket. FIXED: the live pvObj now carries
+//      landing_page (parsePathname, the same normalizer the nightly uses) and the reader reads that
+//      key -> landing_page is SERVED again, proven by the dim-variance sweep (/a vs /b).
 // Bound to the engine chain by the anti-drift test: every chain dim must be either IN this set or in
 // MULTITOUCH_BROKEN_BRANCH_DIMS, so a new dim cannot be silently assumed served.
-const MULTITOUCH_LIVE_DIMS = new Set(['source', 'medium', 'campaign', 'keyword', 'referrer_domain', 'channel', 'country', 'device', 'conversion_type', 'provider', 'attribution_status', 'stitching_method', 'date'])
+const MULTITOUCH_LIVE_DIMS = new Set(['source', 'medium', 'campaign', 'keyword', 'referrer_domain', 'channel', 'landing_page', 'country', 'device', 'conversion_type', 'provider', 'attribution_status', 'stitching_method', 'date'])
 
-// Chain dims whose branch exists but is non-functional (see landing_page above). Documented so the
-// anti-drift test can tell "not implemented" apart from "implemented but broken".
-const MULTITOUCH_BROKEN_BRANCH_DIMS = new Set(['landing_page'])
+// Chain dims whose branch exists but is non-functional. EMPTY: landing_page — the only member — was
+// fixed. Kept (not deleted) as the documented home for this failure class: a branch that exists but
+// reads a key the share lacks. The anti-drift test still requires every chain dim to be in exactly
+// one of these two sets, so a future broken branch must be declared, never silently assumed served.
+const MULTITOUCH_BROKEN_BRANCH_DIMS = new Set([])
 
 // Same for getAiPlatformAttributionLive (engine:776-790), whose default is 'unknown'. medium/campaign/
 // landing_page have no branch -> single fabricated bucket -> not served.

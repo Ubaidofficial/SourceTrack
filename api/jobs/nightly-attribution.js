@@ -2,6 +2,7 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 import { getSupabase } from '../lib/supabase.js'
+import { parsePathname } from '../lib/url-normalize.js'
 import { esc } from '../lib/utils.js'
 import { queryTinybirdPipe, isTinybirdReadEnabled } from '../lib/tinybird-read.js'
 import { clampDays, classifyJourney, applyBackfill } from '../lib/backfill.js'
@@ -142,15 +143,6 @@ export function computeTerminalStatus({ processed = 0, fetched = 0, hardFailures
   return 'success'
 }
 
-function parsePathname(urlStr) {
-  if (!urlStr) return 'unknown'
-  try {
-    const url = urlStr.startsWith('/') ? new URL(urlStr, 'http://localhost') : new URL(urlStr)
-    return url.pathname || 'unknown'
-  } catch (_) {
-    return 'unknown'
-  }
-}
 
 const POSTHOG_PERSONAL_API_KEY = process.env.POSTHOG_PERSONAL_API_KEY
 const POSTHOG_PROJECT_ID = process.env.POSTHOG_PROJECT_ID

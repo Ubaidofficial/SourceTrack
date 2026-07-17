@@ -95,15 +95,33 @@ test('🔴 ANTI-DRIFT: MULTITOUCH_LIVE_DIMS + the broken-branch list == the engi
     if (d === 'keyword' || d === 'referrer_domain') continue // denied earlier by GATED_GROUPS
     assert.ok(chain.has(d), `allowlist claims multi-touch serves "${d}" but the chain has no branch`)
   }
-  // landing_page: branch exists but reads share.page_url, which tpBase never emits -> constant '/'
-  assert.ok(g.MULTITOUCH_BROKEN_BRANCH_DIMS.has('landing_page'))
-  assert.ok(!g.MULTITOUCH_LIVE_DIMS.has('landing_page'), 'landing_page must stay gated until the reader is fixed')
+  // landing_page: FIXED — the live pvObj now carries it (parsePathname, the nightly's normalizer)
+  // and the reader reads that key, so it is SERVED again and the broken-branch list is empty.
+  assert.ok(g.MULTITOUCH_LIVE_DIMS.has('landing_page'), 'landing_page is served again')
+  assert.equal(g.MULTITOUCH_BROKEN_BRANCH_DIMS.size, 0, 'no known-broken branch remains')
 })
 
-test('🔴 the landing_page fabrication is REAL and still present (un-gate only when this flips)', () => {
-  assert.match(ENGINE_SRC, /dimVal = share\.page_url \?/, 'engine:1953 still reads share.page_url')
-  // the shares come from calculateAttribution -> tpBase, which emits landing_page, never page_url
-  assert.doesNotMatch(ENGINE_SRC.slice(ENGINE_SRC.indexOf('const tpBase')), /page_url:/, 'tpBase emits no page_url')
+test('🔴 the landing_page fabrication is FIXED and cannot regress', () => {
+  // This guard previously asserted the fabrication was still present ("un-gate only when this
+  // flips"). It flipped — so it now pins the FIX instead.
+  assert.doesNotMatch(ENGINE_SRC, /dimVal = share\.page_url \?/, 'the reader must not read share.page_url again')
+  assert.match(ENGINE_SRC, /dimVal = share\.landing_page \|\| 'unknown'/, 'it reads the key tpBase emits')
+  // and the live pvObj must actually populate that key, or the read is 'unknown' for every row
+  assert.match(ENGINE_SRC, /landing_page: parsePathname\(pageUrl\)/, 'live pvObj carries a normalized landing_page')
+})
+
+test('🔴 SINGLE SOURCE: parsePathname is defined exactly once in the repo', async () => {
+  const { readdirSync, readFileSync, statSync } = await import('node:fs')
+  const walk = (d) => readdirSync(d).flatMap(f => {
+    if (f === 'node_modules' || f === 'dist' || f === '.git') return []
+    const p = `${d}/${f}`
+    return statSync(p).isDirectory() ? walk(p) : (/\.(js|mjs)$/.test(f) ? [p] : [])
+  })
+  const defs = walk(new URL('../..', import.meta.url).pathname.replace(/\/$/, ''))
+    .filter(p => !/\/tests?\//.test(p))
+    .filter(p => /function parsePathname/.test(readFileSync(p, 'utf8')))
+  assert.deepEqual(defs.map(p => p.split('/api/')[1]), ['lib/url-normalize.js'],
+    'a second copy of the normalizer is the duplicate-source bug #248 — both callers must import the one module')
 })
 
 test('🔴 AIPLATFORM_LIVE_DIMS == the ai_platforms reader\'s real chain', () => {
@@ -115,14 +133,15 @@ test('🔴 AIPLATFORM_LIVE_DIMS == the ai_platforms reader\'s real chain', () =>
 })
 
 // ── the fabrication families stay gated ─────────────────────────────────────────────────
-test('🔴 the 3 gated fabrication families are NOT served', () => {
+test('🔴 the remaining gated fabrication families are NOT served (landing_page is FIXED)', () => {
   const s = (model, dim, metric) => g.servedByDeployedBackend({
     model, group_by: dim, metric, preAggWindowMatches: true, hasAttributionWindow: false,
     preAggConversionMetric: true, preAggMultiTouchMetric: metric !== 'leads', viaRoutePreAgg: false
   })
   for (const m of g.MULTI_TOUCH_MODELS) {
     for (const d of ['ai_source', 'browser']) assert.equal(s(m, d, 'leads'), null, `${m} × ${d} ('direct' default)`)
-    assert.equal(s(m, 'landing_page', 'leads'), null, `${m} × landing_page (share.page_url mismatch)`)
+    // landing_page is now SERVED — the reader reads the key tpBase emits and the pvObj populates it
+    assert.equal(s(m, 'landing_page', 'leads'), 'multitouch_conversions_by_site', `${m} × landing_page is fixed`)
   }
   for (const d of ['medium', 'campaign', 'landing_page']) {
     assert.equal(s('ai_platforms', d, 'revenue'), null, `ai_platforms × ${d} ('unknown' default)`)
