@@ -19,6 +19,17 @@ import { dirname, join } from 'node:path'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '../..')
 
+// nightly-attribution resolves getSupabase() at module load, so importing it needs these set.
+// MOCK values — no network, no real project (CI has no .env; locally dotenv would mask this).
+// Same preamble as api/tests/nightly-honest-reporting.test.js, which imports the same module.
+process.env.NODE_ENV = 'test'
+process.env.SUPABASE_URL ||= 'https://mock-proj.supabase.co'
+process.env.SUPABASE_SERVICE_KEY ||= 'mock-service-role-key-value'
+process.env.POSTHOG_HOST ||= 'https://ph.example.test'
+process.env.POSTHOG_PROJECT_ID ||= '000000'
+process.env.POSTHOG_PERSONAL_API_KEY ||= 'mock-personal-key'
+process.env.POSTHOG_API_KEY ||= 'mock-project-key'
+
 const gate = await import('../lib/report-config-validation.js')
 const { calculateAttribution } = await import('../jobs/nightly-attribution.js')
 
