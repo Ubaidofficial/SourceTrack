@@ -147,18 +147,17 @@ const ENGINE_SRC = readFileSync(join(ROOT, 'api/lib/attribution-engine.js'), 'ut
 test('🔴 no reader substitutes touch.source under another dim label (all 4 use the helper)', () => {
   const code = ENGINE_SRC.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
   const substitutions = code.split('\n').filter(l => /touch\[groupBy\]\s*\|\|\s*touch\.source/.test(l))
-  // exactly ONE remains: the helper's PRESENT-key path, which preserves prior behaviour for keys
-  // tpBase always emits (source/medium/campaign). Zero remain at the 4 reader sites.
-  assert.equal(substitutions.length, 1, 'the expression must live ONLY inside multiTouchDimValue')
-  assert.equal((code.match(/multiTouchDimValue\(touch, groupBy\)/g) || []).length, 4, 'all 4 readers route through the helper')
+  // ZERO remain anywhere: the absent-key route (#256) and the present-null route (this PR) are both
+  // closed, so no code path can borrow touch.source under another dim's label.
+  assert.equal(substitutions.length, 0, 'the touch.source substitution must not exist anywhere')
+  // the 4 reader call sites (the test seam's own delegation is not a reader)
+  assert.equal((code.match(/const dimValue = multiTouchDimValue\(touch, groupBy\)/g) || []).length, 4, 'all 4 readers route through the helper')
 })
 
-// The helper is not exported (no production surface change); re-declare it VERBATIM to pin semantics.
-// If the real one drifts, the grep-assertions above fail.
-function multiTouchDimValue (touch, groupBy) {
-  if (!(groupBy in touch)) return 'unknown'
-  return touch[groupBy] || touch.source || 'direct'
-}
+// Bind to the REAL helper via its test seam. A re-typed copy here silently drifted once already
+// (it kept passing against the pre-fix expression after the real one changed) — that false green is
+// exactly what this money-rail test exists to prevent.
+const { __multiTouchDimValue: multiTouchDimValue } = await import('../lib/attribution-engine.js')
 const OLD = (touch, groupBy) => touch[groupBy] || touch.source || 'direct' // the pre-fix expression
 
 test('🔴 ABSENT key -> "unknown", NEVER touch.source (the old-vintage lie)', () => {
@@ -169,18 +168,47 @@ test('🔴 ABSENT key -> "unknown", NEVER touch.source (the old-vintage lie)', (
   }
 })
 
-test('🔴 KEEP SET byte-identical: present keys resolve exactly as before', () => {
+test('🔴 KEEP SET byte-identical: every NON-EMPTY value resolves exactly as before', () => {
   const touches = [
     { source: 'google', medium: 'cpc', campaign: 'q3', channel: 'Paid Search', timestamp: 't', country: 'US', device: 'mobile', browser: 'chrome', landing_page: '/pricing' },
-    { source: null, medium: null, campaign: null, channel: 'Direct', timestamp: 't', country: 'unknown', device: 'unknown', browser: 'unknown', landing_page: 'unknown' },
-    { source: 'direct', medium: 'none', campaign: null, channel: 'Direct', timestamp: 't' } // the no-pageview fallback share (engine:1928-1936)
+    { source: 'direct', medium: 'none', campaign: 'brand', channel: 'Direct', timestamp: 't' },
+    { source: 'chatgpt.com', medium: 'referral', campaign: 'x', channel: 'AI Search', timestamp: 't' }
   ]
   for (const touch of touches) {
     for (const dim of Object.keys(touch)) {
       if (dim === 'timestamp') continue
-      assert.equal(multiTouchDimValue(touch, dim), OLD(touch, dim), `present key "${dim}" must be byte-identical to the pre-fix result`)
+      assert.equal(multiTouchDimValue(touch, dim), OLD(touch, dim), `non-empty "${dim}" must be byte-identical to the pre-fix result`)
+      assert.equal(multiTouchDimValue(touch, dim), touch[dim], 'and it is simply the stored value')
     }
   }
+})
+
+test('🔴 SOURCE + CHANNEL byte-identical even when empty (source: null utm_source IS direct)', () => {
+  const t = { source: null, medium: null, campaign: null, channel: 'Direct', timestamp: 't' }
+  assert.equal(multiTouchDimValue(t, 'source'), 'direct', 'the established label for direct traffic')
+  assert.equal(multiTouchDimValue(t, 'source'), OLD(t, 'source'), 'byte-identical to pre-fix')
+  assert.equal(multiTouchDimValue(t, 'channel'), 'Direct')
+  assert.equal(multiTouchDimValue(t, 'channel'), OLD(t, 'channel'), 'byte-identical to pre-fix')
+})
+
+// ── the PROD case: present-but-null campaign/medium (2026-07-14) ────────────────────────
+test('🔴 PROD LIE KILLED: campaign=null with source=google/chatgpt.com -> "unknown", not a campaign', () => {
+  // the two prod touchpoints Antigravity confirmed on 2026-07-14
+  for (const source of ['google', 'chatgpt.com']) {
+    const t = { source, medium: null, campaign: null, channel: 'Paid Search', timestamp: '2026-07-14T00:00:00Z' }
+    assert.equal(OLD(t, 'campaign'), source, `pre-fix: rendered "${source}" as a CAMPAIGN`)
+    assert.equal(multiTouchDimValue(t, 'campaign'), 'unknown', 'must never borrow the source')
+    assert.equal(OLD(t, 'medium'), source, `pre-fix: rendered "${source}" as a MEDIUM`)
+    assert.equal(multiTouchDimValue(t, 'medium'), 'unknown', 'medium is nullable too — same fix')
+    // and the source dim itself is untouched
+    assert.equal(multiTouchDimValue(t, 'source'), source)
+  }
+})
+
+test('empty-string values are treated as empty, not as a real bucket', () => {
+  const t = { source: 'google', medium: '', campaign: '', channel: 'Paid Search', timestamp: 't' }
+  assert.equal(multiTouchDimValue(t, 'medium'), 'unknown')
+  assert.equal(multiTouchDimValue(t, 'campaign'), 'unknown')
 })
 
 test('new-vintage rows bucket by their REAL value (the fix does not blunt them)', () => {

@@ -3301,7 +3301,6 @@ export async function getPreAggregatedAttribution({
 //
 // These functions are preserved here to prevent code removal. Do not delete them.
 
-// Get U-Shaped attribution (40/20/40) from pre-aggregated data
 // Bucket a stored multi-touch touch by the requested dim.
 //
 // The stored touch (nightly-attribution's tpBase) gained country/device/browser/landing_page in
@@ -3311,15 +3310,38 @@ export async function getPreAggregatedAttribution({
 // into the same table as correctly-bucketed new rows. A confident wrong bucket on the money rail;
 // §6 rates that worse than a zero.
 //
-// ABSENT key -> 'unknown' (already a legitimate tpBase value), NEVER touch.source.
-// PRESENT key -> resolved exactly as before, so the KEEP set (source/medium/campaign/channel —
-// always emitted by tpBase, in every vintage) is byte-identical. Totals are unaffected either way:
-// only the bucket label changes, never the attributed_value being summed.
+// The same substitution had a SECOND route in: tpBase stores medium/campaign as `tp.utm_* || null`,
+// so a present-but-null key hit `|| touch.source` too (prod, 2026-07-14: campaign=null touchpoints
+// rendered as campaigns "google"/"chatgpt.com"). Absent and present-null are the same lie.
+//
+// ABSENT or EMPTY key -> 'unknown', NEVER touch.source. The sole exception is `source` itself,
+// where a null utm_source IS direct traffic and 'direct' is its established label (not a
+// substitution — it is what the original expression already produced).
+// A NON-EMPTY value is always returned as-is, so every real bucket — and the whole source and
+// channel dims — is byte-identical. Totals never move either way: only the bucket LABEL changes,
+// never the attributed_value being summed.
+// Exported ONLY as a test seam (same `__` convention as __setAttributionReadDeps /
+// __evictFlexibleReportCache below): the money-rail test must bind to THIS function, not to a
+// re-typed copy that can drift out of sync and false-green. No production caller imports it.
+export function __multiTouchDimValue (touch, groupBy) { return multiTouchDimValue(touch, groupBy) }
 function multiTouchDimValue (touch, groupBy) {
   if (!(groupBy in touch)) return 'unknown'
-  return touch[groupBy] || touch.source || 'direct'
+  const value = touch[groupBy]
+  if (value !== null && value !== undefined && value !== '') return value
+
+  // PRESENT-but-empty. tpBase stores `medium`/`campaign` as `tp.utm_* || null`, so a conversion
+  // with no utm_campaign carries campaign:null — and the old `|| touch.source` then rendered that
+  // touch's SOURCE as a campaign (prod, 2026-07-14: two touchpoints with campaign=null surfaced as
+  // campaigns "google" and "chatgpt.com" under Linear × Campaign). Same mislabel class as the
+  // absent-key bug, so it gets the same answer: 'unknown', NEVER touch.source.
+  //
+  // `source` is the ONE exception, and it is not a substitution: a null utm_source IS direct
+  // traffic, 'direct' is its established label, and it is what the previous expression already
+  // produced for this case — so the source dim stays byte-identical.
+  return groupBy === 'source' ? 'direct' : 'unknown'
 }
 
+// Get U-Shaped attribution (40/20/40) from pre-aggregated data
 export async function getUShapedAttribution({
   siteId,
   dateFrom,
