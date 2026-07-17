@@ -3,6 +3,7 @@ import { queryHogQL } from './posthog.js'
 import { deriveSessions, annotateSessions } from './sessionization.js'
 import { channelFromEvent, detectAiPlatformFromEvent } from './channel-classifier.js'
 import { getSupabase } from './supabase.js'
+import { parsePathname } from './url-normalize.js'
 import { esc, isGoogleSource, isValidTimezone, getLocalDateString, getPaddedUtcDateRange } from './utils.js'
 import { serializeHogQLDateRange, serializeHogQLDateTime, buildHogQLTimestampFilter } from './hogql-date.js'
 import { LEAD_TYPES, classifyConversionType } from './conversion-classifier.js'
@@ -1880,6 +1881,12 @@ export async function getMultiTouchAttributionLive({
       sccid: sccid || null,
       ko_click_id: ko_click_id || null,
       page_url: pageUrl || null,
+      // Mirrors nightly-attribution.js's touchpoint: the shares are built by the SHARED
+      // calculateAttribution() -> tpBase, which reads `tp.landing_page` and NEVER `tp.page_url`.
+      // This pvObj used to carry only page_url, so every share came back landing_page:'unknown' and
+      // the live landing_page report collapsed into one bucket. Same normalizer as the nightly, so
+      // the live path and the stored pre-agg shares bucket identically.
+      landing_page: parsePathname(pageUrl),
       utm_term: utmTerm || null,
       derived_source: (() => {
         const raw = utmSource || aiSource || (referrer ? (() => { try { return new URL(referrer).hostname.replace('www.', '') } catch (_) { return null } })() : null) || 'direct'
@@ -1950,7 +1957,10 @@ export async function getMultiTouchAttributionLive({
       else if (groupBy === 'referrer_domain') dimVal = share.referrer_domain || 'direct'
       else if (groupBy === 'channel') dimVal = share.channel || 'Direct'
       else if (groupBy === 'landing_page') {
-        dimVal = share.page_url ? (() => { try { return new URL(share.page_url).pathname } catch (_) { return '/' } })() : '/'
+        // tpBase emits `landing_page` (already normalized by parsePathname), never `page_url` —
+        // reading page_url here always fell to '/', putting 100% of revenue in one bucket. Read the
+        // key the share actually has; its 'unknown' fallback matches the pre-agg path's bucketing.
+        dimVal = share.landing_page || 'unknown'
       } else if (groupBy === 'country') dimVal = conv.country || 'unknown'
       else if (groupBy === 'device') dimVal = conv.device_type || 'unknown'
       else if (groupBy === 'conversion_type') dimVal = conv.conversion_type || 'untyped'
