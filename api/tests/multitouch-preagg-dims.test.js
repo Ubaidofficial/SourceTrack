@@ -69,16 +69,16 @@ test('🔴 ANTI-DRIFT (source 2/2): PREAGG_DIMS == getPreAggregatedAttribution\'
     'the first/last-touch reader must map exactly the contract dims — map one more and it un-gates itself')
 })
 
-test('🔴 the 3 unmapped dims are exactly what the first/last-touch gate denies', () => {
+test('🔴 the pre-agg reader\'s unmapped-and-unpiped dims are exactly what the gate denies', () => {
   const mapped = preAggMappedDims()
   const reaches = [...gate.ALLOWED_GROUPS].filter(d => !gate.PREAGG_EXCLUDED_DIMS.has(d))
-  assert.deepEqual(reaches.filter(d => !mapped.includes(d)).sort(), ['ai_source', 'conversion_type', 'date'])
+  assert.deepEqual(reaches.filter(d => !mapped.includes(d)).sort(), ['ai_source', 'date'])
 })
 
-test('the 3 always-broken dims are genuinely absent from the stored touch', () => {
+test('ai_source/date are genuinely absent from the stored touch (conversion_type is pipe-served)', () => {
   const keys = emittedDimKeys()
-  for (const dim of ['ai_source', 'conversion_type', 'date']) {
-    assert.ok(!keys.includes(dim), `${dim} must NOT be a touch key — that is why it is gated`)
+  for (const dim of ['ai_source', 'date']) {
+    assert.ok(!keys.includes(dim), `${dim} must NOT be a touch key — that is why the pre-agg reader can't serve it`)
     assert.ok(!gate.PREAGG_DIMS.has(dim), dim)
   }
 })
@@ -89,9 +89,9 @@ const G = (over = {}) => gate.gatedReportReason({
   preAggWindowMatches: true, model: 'linear', preAggMultiTouchMetric: true, ...over
 })
 
-test('🔴 LIE KILLED: multi-touch × {ai_source, conversion_type, date} -> 422 gated_dead_store', () => {
+test('🔴 LIE KILLED: multi-touch × {ai_source, date} -> 422 gated_dead_store', () => {
   for (const model of gate.MULTI_TOUCH_MODELS) {
-    for (const dim of ['ai_source', 'conversion_type', 'date']) {
+    for (const dim of ['ai_source', 'date']) {
       for (const metric of ['revenue', 'conversions']) {
         const r = G({ model, group_by: dim, metric })
         assert.ok(r, `${model} × ${dim} × ${metric} must be denied`)
@@ -154,9 +154,9 @@ const T = (over = {}) => gate.gatedReportReason({
   preAggWindowMatches: true, model: 'first_touch', preAggConversionMetric: true, ...over
 })
 
-test('🔴 LIE KILLED: first/last-touch × {ai_source, conversion_type, date} -> 422 gated_dead_store', () => {
+test('🔴 LIE KILLED: first/last-touch × {ai_source, date} -> 422 gated_dead_store', () => {
   for (const model of gate.PREAGG_TOUCH_MODELS) {
-    for (const dim of ['ai_source', 'conversion_type', 'date']) {
+    for (const dim of ['ai_source', 'date']) {
       for (const metric of ['revenue', 'conversions', 'leads']) {
         const r = T({ model, group_by: dim, metric })
         assert.ok(r, `${model} × ${dim} × ${metric} must be denied, not served as the SOURCE`)
@@ -308,17 +308,59 @@ test('🔴 TOTALS UNCHANGED: only the bucket LABEL moves, never the summed value
   assert.deepEqual(after, { unknown: 100, US: 100 })
 })
 
-// ── the route's pre-agg entry condition stays in lockstep with PREAGG_EXCLUDED_DIMS ─────
-test('PREAGG_EXCLUDED_DIMS matches the route\'s real short-circuit condition', () => {
-  const src = readFileSync(join(ROOT, 'api/routes/attribution.js'), 'utf8')
-  for (const model of gate.MULTI_TOUCH_MODELS) {
-    const line = src.split('\n').find(l => l.includes(`model === "${model}"`) && l.includes('PREAGG_MULTITOUCH_METRICS.has(metric)'))
-    assert.ok(line, `${model} short-circuit found`)
-    for (const dim of gate.PREAGG_EXCLUDED_DIMS) {
-      assert.ok(line.includes(`group_by !== "${dim}"`), `${model} short-circuit must still skip ${dim}`)
+// ── conversion_type: Class-A pipe for revenue/conversions, honest 422 for the rest ──────
+const CT = (over = {}) => gate.gatedReportReason({
+  group_by: 'conversion_type', group_by2: null, metric: 'revenue',
+  preAggWindowMatches: true, model: 'first_touch',
+  preAggMultiTouchMetric: false, preAggConversionMetric: true, ...over
+})
+
+test('🔴 conversion_type × {revenue, conversions} -> NOT gated (routes to the deployed Class-A pipe)', () => {
+  for (const model of ['first_touch', 'last_touch', 'first_touch_non_direct', 'last_touch_non_direct', 'linear', 'u_shaped', 'time_decay', 'w_shaped']) {
+    for (const metric of ['revenue', 'conversions']) {
+      assert.equal(CT({ model, metric, preAggMultiTouchMetric: metric !== 'leads' }), null, `${model} × conversion_type × ${metric} must reach its pipe`)
     }
-    // conversion_type must NOT be skipped — that is precisely why it reaches the readers and is gated
-    assert.ok(!line.includes('group_by !== "conversion_type"'), 'conversion_type is NOT pre-agg-excluded')
+  }
+})
+
+test('🔴 conversion_type × {leads, customers, avg_conversion_value} on a TOUCH model -> 422 (no pipe, never a fake zero)', () => {
+  for (const model of gate.ISTOUCH_MODELS) {
+    for (const metric of ['leads', 'customers', 'avg_conversion_value']) {
+      const r = CT({ model, metric })
+      assert.ok(r, `${model} × conversion_type × ${metric} must be denied, not a bare-queryHogQL fake zero`)
+      assert.equal(r.error_code, 'gated_dead_store')
+      assert.doesNotMatch(r.message, /try again|retry/i)
+    }
+  }
+})
+
+test('conversion_type × leads on a MULTI-TOUCH model is NOT gated (getMultiTouchAttributionLive serves leads)', () => {
+  for (const model of gate.MULTI_TOUCH_MODELS) {
+    assert.equal(CT({ model, metric: 'leads', preAggMultiTouchMetric: false }), null, `${model} × conversion_type × leads is served by the multitouch pipe`)
+  }
+})
+
+test('CLASS_A_PIPE_METRICS is exactly what the Class-A pipes emit', () => {
+  assert.deepEqual([...gate.CLASS_A_PIPE_METRICS].sort(), ['conversions', 'revenue'])
+})
+
+// ── the route's pre-agg entry conditions stay in lockstep with PREAGG_EXCLUDED_DIMS ─────
+// Every dim the gate treats as pre-agg-excluded MUST also be skipped by the route's short-circuit,
+// or the two disagree — one gates a shape the other silently serves through the broken pre-agg
+// reader. Checked for ALL 5 short-circuits (first/last-touch + the 4 multi-touch).
+test('PREAGG_EXCLUDED_DIMS matches the route\'s real short-circuit condition (all 5)', () => {
+  const src = readFileSync(join(ROOT, 'api/routes/attribution.js'), 'utf8')
+  const lines = [src.split('\n').find(l => l.includes('model === "first_touch"') && l.includes('PREAGG_CONVERSION_METRICS.has(metric)'))]
+  for (const model of gate.MULTI_TOUCH_MODELS) {
+    lines.push(src.split('\n').find(l => l.includes(`model === "${model}"`) && l.includes('PREAGG_MULTITOUCH_METRICS.has(metric)')))
+  }
+  assert.equal(lines.filter(Boolean).length, 5, 'all 5 pre-agg short-circuits located')
+  for (const line of lines) {
+    for (const dim of gate.PREAGG_EXCLUDED_DIMS) {
+      assert.ok(line.includes(`group_by !== "${dim}"`), `short-circuit must skip ${dim}`)
+    }
+    // conversion_type is now Class-A-routed -> it MUST be skipped (like its 3 siblings)
+    assert.ok(line.includes('group_by !== "conversion_type"'), 'conversion_type is now pre-agg-excluded (routes to its pipe)')
   }
 })
 

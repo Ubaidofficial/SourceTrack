@@ -75,12 +75,21 @@ const MULTI_TOUCH_MODELS = new Set(['linear', 'u_shaped', 'time_decay', 'w_shape
 // The two non-direct variants are NOT here: the route has no pre-agg short-circuit for them.
 const PREAGG_TOUCH_MODELS = new Set(['first_touch', 'last_touch'])
 
-// Dims the route's multi-touch pre-agg short-circuit explicitly SKIPS (attribution.js:195/211/
-// 227/243) — they fall through to getFlexibleReport -> getMultiTouchAttributionLive, which builds
-// dim_value from groupBy correctly (engine:1942-1960). They are NOT part of this bug and must NOT
-// be gated here. (conversion_type is deliberately absent: the route does NOT skip it, so it DOES
-// reach the readers and IS mislabelled.) Kept in lockstep with the route by the same test.
-const PREAGG_EXCLUDED_DIMS = new Set(['keyword', 'referrer_domain', 'provider', 'attribution_status', 'stitching_method'])
+// attribution-engine's `isTouchModel` — the models for which a Class-A dim dispatches its
+// flexible_report_<dim>_by_site pipe (engine:_flexConversionTypeCase etc. require isTouchModel).
+const ISTOUCH_MODELS = new Set(['first_touch', 'last_touch', 'first_touch_non_direct', 'last_touch_non_direct'])
+
+// Metrics the Class-A conversion-property pipes emit (engine:_flexPipeCommon = revenue|conversions).
+const CLASS_A_PIPE_METRICS = new Set(['revenue', 'conversions'])
+
+// Dims the route's pre-agg short-circuits explicitly SKIP (attribution.js:179 for first/last-touch,
+// :200/216/232/248 for multi-touch) — they fall through to getFlexibleReport, which serves them via
+// a live pipe: the 4 Class-A conversion-property dims dispatch flexible_report_<dim>_by_site (touch
+// models) or bucket honestly inside getMultiTouchAttributionLive (multi-touch, engine:1942-1960).
+// So they must NOT be gated by the pre-agg-dim rule. Kept in lockstep with the route by the same
+// test. (keyword/referrer_domain are here for the same skip reason but are denied earlier by
+// GATED_GROUPS — they have no pipe at all.)
+const PREAGG_EXCLUDED_DIMS = new Set(['keyword', 'referrer_domain', 'provider', 'attribution_status', 'stitching_method', 'conversion_type'])
 
 // A custom_param:* dim has no pre-agg and no pipe -> always dead PostHog. Gated.
 const isGatedCustomParamDim = (dim) => typeof dim === 'string' && dim.startsWith('custom_param:')
@@ -133,17 +142,12 @@ function gatedReportReason ({ group_by, group_by2 = null, metric, preAggWindowMa
     return { error_code: 'gated_dead_store', message: `The "${metric}" metric ${UNAVAILABLE_SUFFIX}` }
   }
 
-  // Multi-touch pre-agg dim contract. This mirrors the route's pre-agg ENTRY condition
-  // (attribution.js:195/211/227/243) exactly — model ∈ MULTI_TOUCH_MODELS, a pre-agg-servable
-  // metric, a matching window, and a dim the short-circuit does not skip — so it denies ONLY the
-  // shapes that actually reach the readers. Shapes served elsewhere are untouched: any other
-  // metric (e.g. leads) or a PREAGG_EXCLUDED_DIMS dim falls through to getFlexibleReport ->
-  // getMultiTouchAttributionLive, which buckets by groupBy honestly.
-  // BOTH reader families take the pre-agg on the same shape of condition (attribution.js:174 for
-  // first/last-touch, :195/211/227/243 for multi-touch): the model's family, a metric that family's
-  // reader can emit, a matching window, and a dim the short-circuit does not skip. Deny ONLY those —
-  // any other metric (e.g. leads on a multi-touch model) or a PREAGG_EXCLUDED_DIMS dim falls through
-  // to getFlexibleReport, which buckets by groupBy honestly.
+  // Pre-agg dim contract, BOTH reader families. Mirrors the route's pre-agg ENTRY condition
+  // (attribution.js:179 for first/last-touch, :200/216/232/248 for multi-touch): the model's family,
+  // a metric that family's reader can emit, a matching window, and a dim the short-circuit does not
+  // skip — so it denies ONLY the shapes that actually reach the readers. Shapes served elsewhere are
+  // untouched: any other metric (e.g. leads on a multi-touch model) or a PREAGG_EXCLUDED_DIMS dim
+  // falls through to getFlexibleReport, which buckets by groupBy honestly (via a pipe).
   const takesMultiTouchPreAgg = model && MULTI_TOUCH_MODELS.has(model) && preAggMultiTouchMetric
   const takesConversionPreAgg = model && PREAGG_TOUCH_MODELS.has(model) && preAggConversionMetric
   if ((takesMultiTouchPreAgg || takesConversionPreAgg) && preAggWindowMatches) {
@@ -154,6 +158,25 @@ function gatedReportReason ({ group_by, group_by2 = null, metric, preAggWindowMa
         return {
           error_code: 'gated_dead_store',
           message: `The "${dim}" breakdown isn't available for the "${model}" attribution model. That report can be broken down by: ${[...PREAGG_DIMS].join(', ')}.`
+        }
+      }
+    }
+  }
+
+  // conversion_type is a Class-A dim: on a TOUCH model it routes to flexible_report_conversion_type_
+  // by_site, which — like every Class-A pipe — serves revenue and conversions ONLY. Any other
+  // conversion metric (leads / customers / avg_conversion_value) has no conversion_type backend on
+  // these models, so it would fall to a bare queryHogQL and render a FAKE ZERO (§6). Deny it honestly.
+  // Multi-touch / ai_platforms route conversion_type through getMultiTouchAttributionLive instead,
+  // which serves leads too — so they are deliberately NOT gated here.
+  // (NOTE: provider/attribution_status/stitching_method × leads have the SAME dead-store gap today
+  // and are NOT gated — a pre-existing §6 hole, left unchanged per this change's scope; see the PR.)
+  if (model && ISTOUCH_MODELS.has(model) && preAggConversionMetric && !CLASS_A_PIPE_METRICS.has(metric)) {
+    for (const dim of [group_by, group_by2]) {
+      if (dim === 'conversion_type') {
+        return {
+          error_code: 'gated_dead_store',
+          message: `A conversion type breakdown supports revenue and conversions; the "${metric}" metric ${UNAVAILABLE_SUFFIX}`
         }
       }
     }
@@ -391,6 +414,8 @@ export {
   PREAGG_DIMS,
   MULTI_TOUCH_MODELS,
   PREAGG_TOUCH_MODELS,
+  ISTOUCH_MODELS,
+  CLASS_A_PIPE_METRICS,
   PREAGG_EXCLUDED_DIMS,
   GATED_GROUPS,
   GATED_METRICS,
