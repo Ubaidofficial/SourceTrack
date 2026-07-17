@@ -130,7 +130,8 @@ export async function attribution(req, res) {
         // Feeds the multi-touch pre-agg dim contract. Passed in (not imported) because
         // attribution-engine imports report-config-validation — the reverse would be a cycle.
         model,
-        preAggMultiTouchMetric: PREAGG_MULTITOUCH_METRICS.has(metric)
+        preAggMultiTouchMetric: PREAGG_MULTITOUCH_METRICS.has(metric),
+        preAggConversionMetric: PREAGG_CONVERSION_METRICS.has(metric)
       })
       if (gateReason) {
         return res.status(422).json({

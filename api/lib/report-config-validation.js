@@ -54,21 +54,26 @@ const ALLOWED_METRICS = new Set([
 // "non-default window is gated" would deny these four, which work today.
 const CLASS_A_DIMS = new Set(['provider', 'attribution_status', 'stitching_method', 'conversion_type'])
 
-// ── MULTI-TOUCH PRE-AGG DIM CONTRACT ─────────────────────────────────────────────────
-// The 4 multi-touch pre-agg readers (getLinearAttribution + siblings) bucket by touch[groupBy]
-// over the stored `attributed_conversions.*_attribution` JSONB. That touch is built by ONE
-// constructor — `tpBase` in api/jobs/nightly-attribution.js:1088-1098 — so these are exactly the
-// dims a multi-touch pre-agg report can bucket honestly. Any other dim used to hit
-// `touch[groupBy] || touch.source`, which returned the SOURCE value under the requested dim's
-// label (e.g. "google" as a country), 200 OK — a confident wrong bucket on the money rail, which
-// §6 rates worse than a zero. Those dims are now DENIED here instead.
-//   ANTI-DRIFT: api/tests/multitouch-preagg-dims.test.js calls the real calculateAttribution() and
-//   asserts this Set equals tpBase's actually-emitted dim keys. Add a dim to tpBase and it
-//   un-gates itself; drift fails CI rather than resurfacing the lie.
-const MULTITOUCH_PREAGG_DIMS = new Set(['source', 'medium', 'campaign', 'channel', 'country', 'device', 'browser', 'landing_page'])
+// ── PRE-AGG DIM CONTRACT (BOTH reader families) ──────────────────────────────────────
+// The dims a Supabase pre-agg report can bucket HONESTLY. Both families independently converged
+// on the same 8, and both used to silently substitute the SOURCE for anything else — returning
+// e.g. "google" under a `country` or `date` label, 200 OK. A confident wrong bucket on the money
+// rail; §6 rates that worse than a zero. Both are now DENIED here instead.
+//   1. the 4 MULTI-TOUCH readers bucket by touch[groupBy] over the stored *_attribution JSONB,
+//      built by ONE constructor — `tpBase` (nightly-attribution.js:1088-1098).   [fixed #256/#257]
+//   2. getPreAggregatedAttribution (first_touch/last_touch) maps groupBy to a real COLUMN, and its
+//      `else` fell back to sourceField (engine:3197-3199) for the 3 dims it does not map.
+//   ANTI-DRIFT: api/tests/multitouch-preagg-dims.test.js binds this Set to BOTH sources — the real
+//   calculateAttribution()'s emitted touch keys, AND getPreAggregatedAttribution's mapped columns.
+//   Add a dim to either and it un-gates itself; drift fails CI rather than resurfacing the lie.
+const PREAGG_DIMS = new Set(['source', 'medium', 'campaign', 'channel', 'country', 'device', 'browser', 'landing_page'])
 
-// The models whose reports resolve through those readers (attribution-engine's MULTI_TOUCH).
+// The models whose reports resolve through the multi-touch readers (attribution-engine's MULTI_TOUCH).
 const MULTI_TOUCH_MODELS = new Set(['linear', 'u_shaped', 'time_decay', 'w_shaped'])
+
+// The models whose reports resolve through getPreAggregatedAttribution (attribution.js:174).
+// The two non-direct variants are NOT here: the route has no pre-agg short-circuit for them.
+const PREAGG_TOUCH_MODELS = new Set(['first_touch', 'last_touch'])
 
 // Dims the route's multi-touch pre-agg short-circuit explicitly SKIPS (attribution.js:195/211/
 // 227/243) — they fall through to getFlexibleReport -> getMultiTouchAttributionLive, which builds
@@ -93,12 +98,13 @@ const UNAVAILABLE_SUFFIX = 'is temporarily unavailable while reporting moves to 
  * `preAggWindowMatches` is passed in (not computed) so this module stays dependency-free:
  * the caller already computes it via preAggregatedWindowMatches(resolvedWindow, siteDays).
  *
- * `model` + `preAggMultiTouchMetric` follow that SAME convention (attribution-engine imports this
- * module, so importing PREAGG_MULTITOUCH_METRICS back would be a cycle): the caller passes
- * `PREAGG_MULTITOUCH_METRICS.has(metric)`. Both default to the inert values, so every existing
- * caller that omits them (e.g. export.js) behaves byte-identically.
+ * `model` + `preAggMultiTouchMetric` + `preAggConversionMetric` follow that SAME convention
+ * (attribution-engine imports this module, so importing the PREAGG_* metric sets back would be a
+ * cycle): the caller passes `PREAGG_MULTITOUCH_METRICS.has(metric)` /
+ * `PREAGG_CONVERSION_METRICS.has(metric)`. All default to inert values, so every existing caller
+ * that omits them (e.g. export.js) behaves byte-identically.
  */
-function gatedReportReason ({ group_by, group_by2 = null, metric, preAggWindowMatches = true, model = null, preAggMultiTouchMetric = false }) {
+function gatedReportReason ({ group_by, group_by2 = null, metric, preAggWindowMatches = true, model = null, preAggMultiTouchMetric = false, preAggConversionMetric = false }) {
   // Session metrics resolve through getSessionReport, which can only bucket by dims derivable
   // from its pageview SELECT. An unsupported dim there used to FABRICATE a single 'unknown'
   // bucket. Checked BEFORE the generic dim gate so the reason names the real constraint.
@@ -133,14 +139,21 @@ function gatedReportReason ({ group_by, group_by2 = null, metric, preAggWindowMa
   // shapes that actually reach the readers. Shapes served elsewhere are untouched: any other
   // metric (e.g. leads) or a PREAGG_EXCLUDED_DIMS dim falls through to getFlexibleReport ->
   // getMultiTouchAttributionLive, which buckets by groupBy honestly.
-  if (model && MULTI_TOUCH_MODELS.has(model) && preAggMultiTouchMetric && preAggWindowMatches) {
+  // BOTH reader families take the pre-agg on the same shape of condition (attribution.js:174 for
+  // first/last-touch, :195/211/227/243 for multi-touch): the model's family, a metric that family's
+  // reader can emit, a matching window, and a dim the short-circuit does not skip. Deny ONLY those —
+  // any other metric (e.g. leads on a multi-touch model) or a PREAGG_EXCLUDED_DIMS dim falls through
+  // to getFlexibleReport, which buckets by groupBy honestly.
+  const takesMultiTouchPreAgg = model && MULTI_TOUCH_MODELS.has(model) && preAggMultiTouchMetric
+  const takesConversionPreAgg = model && PREAGG_TOUCH_MODELS.has(model) && preAggConversionMetric
+  if ((takesMultiTouchPreAgg || takesConversionPreAgg) && preAggWindowMatches) {
     for (const dim of [group_by, group_by2]) {
       if (!dim) continue
       if (PREAGG_EXCLUDED_DIMS.has(dim) || isGatedCustomParamDim(dim)) continue
-      if (!MULTITOUCH_PREAGG_DIMS.has(dim)) {
+      if (!PREAGG_DIMS.has(dim)) {
         return {
           error_code: 'gated_dead_store',
-          message: `The "${dim}" breakdown isn't available for multi-touch attribution models. Those reports can be broken down by: ${[...MULTITOUCH_PREAGG_DIMS].join(', ')}.`
+          message: `The "${dim}" breakdown isn't available for the "${model}" attribution model. That report can be broken down by: ${[...PREAGG_DIMS].join(', ')}.`
         }
       }
     }
@@ -375,8 +388,9 @@ export {
   ALLOWED_ATTRIBUTE_BY,
   ALLOWED_CHART_TYPES,
   CLASS_A_DIMS,
-  MULTITOUCH_PREAGG_DIMS,
+  PREAGG_DIMS,
   MULTI_TOUCH_MODELS,
+  PREAGG_TOUCH_MODELS,
   PREAGG_EXCLUDED_DIMS,
   GATED_GROUPS,
   GATED_METRICS,
