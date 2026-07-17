@@ -232,3 +232,19 @@ Carry-forward role: **honest orchestrator + senior MarTech engineer + SaaS QA ma
 ---
 
 **These guidelines are working if:** diffs contain only requested changes; migrations are reviewed-then-applied (never agent-applied); no secret or `auth.users` write ever appears in a diff; revenue/cost/GSC/privacy invariants hold in code; and "done" always means prod-verified on real data.
+
+### Secrets — output & chat (clarifies §0; added after a token was pasted into a chat report)
+- **NEVER paste, echo, or reproduce a secret VALUE in chat, task output, reports, tool results, or any
+  message** — not even to "show what was found." This is the same prohibition as print/log: a value in a
+  chat report is a leak. Reference secrets by NAME only (e.g. "the Tinybird prod read token",
+  "TINYBIRD_READ_ENABLED"), never the value.
+- This covers passing a secret as a URL/query param whose value then appears in output, and pasting the
+  result of any token/credential command.
+- **Commands that dump secrets** (`railway variables`, `printenv`, `env`, `cat .env*`, `tb token ls`, etc.):
+  do NOT paste raw output. Extract ONLY the specific non-secret name/boolean asked for
+  (e.g. `railway variables -s X | grep -o 'TINYBIRD_READ_ENABLED=[a-z]*'`). Never the full dump.
+- **Safe to report:** flag booleans (true/false), pipe/table/column names, row counts, HTTP statuses,
+  deploy IDs, commit SHAs. **Never safe:** any key, token, JWT, password, connection string, `.env` line,
+  or `site_key` value.
+- If a task cannot proceed without exposing a secret value, **STOP and report "blocked: would expose a
+  secret"** — exposing it is never the answer.
