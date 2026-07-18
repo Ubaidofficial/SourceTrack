@@ -1,6 +1,7 @@
 // Grade A2 — fail-closed dispatch proof for api/lib/attribution-engine.js.
-// Mirrors api/tests/sessions-read-cutover.test.js. For EACH of the 15 pipes across the
-// 11 dispatch sites, assert BOTH:
+// Mirrors api/tests/sessions-read-cutover.test.js. For EACH of the 16 pipes across the
+// 11 dispatch sites (explain now dispatches TWO pipes: attribution_explain_conversion +
+// the reused `journey` pipe), assert BOTH:
 //   (a) pipe returns rows -> result served from the pipe, HogQL NOT called (load-bearing:
 //       the HogQL stub THROWS, so the test fails if any wired read falls back to HogQL).
 //   (b) TINYBIRD_FORCE_READ + null -> the read THROWS (dispatch path was actually
@@ -106,25 +107,29 @@ test('session_report_conversions (b) FORCE_READ + null (pageviews served) -> thr
   await assert.rejects(getSessionReport('site-sess-cv-fc', FROM, TO, 'source', 'conversions'), /tinybird-force-read.*session_report_conversions/)
 })
 
-// ── 4. getAttributionExplanation: attribution_explain_conversion (journey stays HogQL) ─
+// ── 4. getAttributionExplanation: attribution_explain_conversion (D1c-1) + journey (D1c-2 reuses the `journey` pipe) ─
 const XCONV = { timestamp: '2026-07-01T10:00:00Z', conversion_value: 10, utm_source: 'g', utm_medium: 'cpc', utm_campaign: 'c', first_touch_source: 'g', first_touch_medium: 'cpc', first_touch_campaign: 'c', ai_source: null, page_url: '/', user_id: null, anonymous_id: 'v1', ingestion_method: 'server_routed' }
+const XJOURNEY = [{ event_type: '$pageview', timestamp: '2026-07-01T09:00:00Z', page_url: '/', utm_source: 'g', utm_medium: 'cpc', utm_campaign: 'c', ai_source: null, conversion_value: null }]
 
-test('attribution_explain_conversion (a) served from pipe (journey stays HogQL), NOT from HogQL', async (t) => {
+test('attribution_explain_conversion + journey (a) BOTH served from pipes, HogQL NOT called', async (t) => {
   t.after(__resetAttributionReadDeps)
-  const calls = []; const hog = []
-  __setAttributionReadDeps({
-    queryTinybird: tbServe(calls, { attribution_explain_conversion: [XCONV] }),
-    queryHog: async (_sql, name) => { hog.push(name); return [] } // journey (attribution_explain_journey) is legitimately HogQL
-  })
+  const calls = []
+  __setAttributionReadDeps({ queryTinybird: tbServe(calls, { attribution_explain_conversion: [XCONV], journey: XJOURNEY }), queryHog: HOG_THROW })
   await getAttributionExplanation('site-x', 'first_touch', 'v1')
-  assert.ok(calls.includes('attribution_explain_conversion'), 'the pipe was queried')
-  assert.ok(!hog.includes('attribution_explain_conversion'), '(a) conversion NOT served from HogQL — the pipe served it')
+  assert.ok(calls.includes('attribution_explain_conversion'), '(a) conversion served from its pipe')
+  assert.ok(calls.includes('journey'), '(a) journey served from the reused journey pipe')
 })
 test('attribution_explain_conversion (b) FORCE_READ + null -> throws', async (t) => {
   t.after(forceReadCleanup)
   process.env.TINYBIRD_FORCE_READ = 'true'
-  __setAttributionReadDeps({ queryTinybird: async () => null, queryHog: async () => [] })
+  __setAttributionReadDeps({ queryTinybird: async () => null, queryHog: HOG_THROW })
   await assert.rejects(getAttributionExplanation('site-x-fc', 'first_touch', 'v1'), /tinybird-force-read.*attribution_explain_conversion/)
+})
+test('journey (b) FORCE_READ + null (conversion served) -> throws', async (t) => {
+  t.after(forceReadCleanup)
+  process.env.TINYBIRD_FORCE_READ = 'true'
+  __setAttributionReadDeps({ queryTinybird: async (pipe) => pipe === 'attribution_explain_conversion' ? [XCONV] : null, queryHog: HOG_THROW })
+  await assert.rejects(getAttributionExplanation('site-x-jf', 'first_touch', 'v1'), /tinybird-force-read.*journey/)
 })
 
 // ── 5. getMultiTouchAttributionLive: multitouch_conversions_by_site + multitouch_pageviews_live ─
