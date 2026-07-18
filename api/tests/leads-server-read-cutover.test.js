@@ -64,8 +64,8 @@ const DETAIL_ROW = {
   first_page_url: '/', campaign: null, ft_source: 'google', ft_medium: 'organic', active_days: 3,
 }
 
-// ── GET / (leads_list + leads_count) ─────────────────────────────────────────
-test('(list-a) DISPATCH: leads_list + leads_count served, tenant-scoped, HogQL NOT called', async (t) => {
+// ── GET / (leads_list; totals now come from Supabase attributed_conversions, not leads_count) ──
+test('(list-a) DISPATCH: leads_list served, tenant-scoped, HogQL NOT called', async (t) => {
   t.after(reset)
   installSupabase()
   const tbCalls = []
@@ -73,7 +73,6 @@ test('(list-a) DISPATCH: leads_list + leads_count served, tenant-scoped, HogQL N
     queryTinybird: async (pipe, params) => {
       tbCalls.push({ pipe, params })
       if (pipe === 'leads_list') return []                        // empty -> no Supabase enrichment
-      if (pipe === 'leads_count') return [{ leads_count: 0 }]
       return null
     },
     queryHog: async () => { throw new Error('HogQL called — a leads pipe was not served (zero-fallback violated)') },
@@ -83,7 +82,7 @@ test('(list-a) DISPATCH: leads_list + leads_count served, tenant-scoped, HogQL N
   assert.strictEqual(res.statusCode, 200)
   const pipes = tbCalls.map(c => c.pipe)
   assert.ok(pipes.includes('leads_list'), 'leads_list dispatched')
-  assert.ok(pipes.includes('leads_count'), 'leads_count dispatched')
+  assert.ok(!pipes.includes('leads_count'), 'leads_count is retired — totals now come from Supabase attributed_conversions')
   assert.strictEqual(tbCalls.find(c => c.pipe === 'leads_list').params.site_id, 'site-00', 'tenant-scoped site_id')
 })
 
@@ -92,31 +91,13 @@ test('(list-loud-500) D1b-2: leads_list null -> 500 (main try, loud), HogQL fall
   installSupabase()
   const hog = []
   __setLeadsReadDeps({
-    queryTinybird: async (pipe) => (pipe === 'leads_list' ? null : [{ leads_count: 0 }]),
+    queryTinybird: async (pipe) => (pipe === 'leads_list' ? null : []),
     queryHog: async (_s, n) => { hog.push(n); return [] },
   })
   const res = mockRes()
   await listHandler(listReq(), res)
   assert.strictEqual(res.statusCode, 500, 'leads_list is in the main try -> a null pipe 500s loud (no HogQL fallback)')
   assert.strictEqual(hog.length, 0, 'HogQL was NOT called — the fallback is deleted')
-})
-
-test('(list-count-DEGRADE) leads_count null -> 200 degrade (inner catch swallows the throw)', async (t) => {
-  t.after(reset)
-  installSupabase()
-  const hog = []
-  __setLeadsReadDeps({
-    queryTinybird: async (pipe) => (pipe === 'leads_count' ? null : []), // leads_list served [] (page length 0)
-    queryHog: async (_s, n) => { hog.push(n); return [] },
-  })
-  const res = mockRes()
-  await listHandler(listReq(), res)
-  assert.strictEqual(hog.length, 0, 'HogQL was NOT called — the fallback is deleted')
-  // FINDING: the leads_count read is wrapped in its own try/catch (keep the page-length fallback,
-  // not a 500). The throw is swallowed even under FORCE_READ -> the endpoint still returns 200 with
-  // total = page length. The flip does NOT close this count's fake value; the inner catch must go.
-  assert.strictEqual(res.statusCode, 200, 'leads_count inner catch swallows the throw -> 200 degrade (flagged)')
-  assert.strictEqual(res.body.data.total, 0, 'total falls back to the page length (0), not the pipe count')
 })
 
 // ── GET /:leadId (lead_detail) ───────────────────────────────────────────────
