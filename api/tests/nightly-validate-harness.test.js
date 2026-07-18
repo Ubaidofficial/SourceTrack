@@ -67,6 +67,39 @@ test('processing_version (build metadata) is ignored, not diffed', () => {
   assert.deepEqual(diffAttributedConversionRecord(computed, stored), [])
 })
 
+// ── Timestamps compared as INSTANTS, not serialized strings (the 3/3 --validate false-mismatch) ──
+const TS_FIELDS = ['conversion_timestamp', 'first_touch_timestamp', 'last_touch_timestamp', 'ai_influenced_session_at']
+
+test('🔴 TIMESTAMP: pg "+00:00" vs JS "Z" for the SAME instant is NOT a mismatch (all 4 ts fields)', () => {
+  for (const f of TS_FIELDS) {
+    const computed = { ...baseRecord(), [f]: '2026-07-12T13:50:47.025Z' }
+    const stored = { ...baseRecord(), [f]: '2026-07-12T13:50:47.025+00:00' } // Postgres timestamptz rendering
+    assert.deepEqual(
+      diffAttributedConversionRecord(computed, stored), [],
+      `${f}: same instant, different serialization must NOT diff`
+    )
+  }
+})
+
+test('TIMESTAMP: a REAL instant difference is still flagged (fix did not over-loosen)', () => {
+  const computed = { ...baseRecord(), conversion_timestamp: '2026-07-12T13:50:47.025Z' }
+  const stored = { ...baseRecord(), conversion_timestamp: '2026-07-12T13:50:48.025+00:00' } // +1s = different instant
+  const diffs = diffAttributedConversionRecord(computed, stored)
+  assert.ok(diffs.some((d) => d.field === 'conversion_timestamp'), 'a real 1s instant difference must still diff')
+})
+
+test('TIMESTAMP: null vs a present timestamp is still a mismatch', () => {
+  const computed = { ...baseRecord(), last_touch_timestamp: null }
+  const stored = { ...baseRecord(), last_touch_timestamp: '2026-07-12T13:50:47.025+00:00' }
+  assert.ok(diffAttributedConversionRecord(computed, stored).some((d) => d.field === 'last_touch_timestamp'))
+})
+
+test('TIMESTAMP: null vs null is equal (no false mismatch on unset ai_influenced_session_at)', () => {
+  const computed = { ...baseRecord(), ai_influenced_session_at: null }
+  const stored = { ...baseRecord(), ai_influenced_session_at: null }
+  assert.deepEqual(diffAttributedConversionRecord(computed, stored), [])
+})
+
 // ── The same-timestamp tie fixture — the divergence an aggregate check would never catch ──────────
 test('🔴 SAME-TIMESTAMP TIE: touchpoint order changes attribution → pipe (timestamp,event_id) vs HogQL (timestamp) diverges', () => {
   const T = '2026-07-09T12:00:00Z'

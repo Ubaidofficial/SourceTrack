@@ -1422,6 +1422,17 @@ const _JSONB_RECORD_FIELDS = new Set([
   'linear_attribution', 'u_shaped_attribution', 'time_decay_attribution', 'w_shaped_attribution', 'confidence_signals'
 ])
 
+// Timestamp columns are compared as INSTANTS, never as serialized strings. Postgres timestamptz
+// renders "…+00:00" while the freshly-computed value (JS toISOString) renders "…Z" — the SAME instant,
+// different text. A string compare flags every row (proven: 3/3 --validate rows mismatched on exactly
+// these fields, money/splits clean). ALL FOUR timestamp fields are included — ai_influenced_session_at
+// was null in the sample but would false-mismatch on any AI-influenced row. This does NOT relax
+// conversion_value or the jsonb credit splits (those stay exact — a real instant difference, including a
+// same-timestamp tie surfacing via *_source, is still flagged).
+const _TIMESTAMP_RECORD_FIELDS = new Set([
+  'conversion_timestamp', 'first_touch_timestamp', 'last_touch_timestamp', 'ai_influenced_session_at'
+])
+
 // Recursively sort object keys (Postgres jsonb does NOT preserve object key order) but PRESERVE
 // array order (the credit splits are ordered by touchpoint — order is semantic, not incidental).
 function _normalizeJson (v) {
@@ -1433,8 +1444,18 @@ function _normalizeJson (v) {
   }
   return v
 }
+// Instant equality: null-safe, then epoch-ms compare so "+00:00" and "Z" (same instant) are equal.
+// Falls back to raw compare if either value is unparseable (a genuinely malformed timestamp still diffs).
+function _timestampInstantEqual (c, s) {
+  if ((c ?? null) === null || (s ?? null) === null) return (c ?? null) === (s ?? null)
+  const tc = new Date(c).getTime()
+  const ts = new Date(s).getTime()
+  if (Number.isNaN(tc) || Number.isNaN(ts)) return (c ?? null) === (s ?? null)
+  return tc === ts
+}
 function _recordFieldEqual (key, c, s) {
   if (_JSONB_RECORD_FIELDS.has(key)) return JSON.stringify(_normalizeJson(c ?? null)) === JSON.stringify(_normalizeJson(s ?? null))
+  if (_TIMESTAMP_RECORD_FIELDS.has(key)) return _timestampInstantEqual(c, s) // instant, not string (Z vs +00:00)
   if (key === 'conversion_value') return Number(c) === Number(s) // MONEY: exact, no tolerance
   return (c ?? null) === (s ?? null)
 }
