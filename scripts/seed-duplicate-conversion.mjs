@@ -41,9 +41,12 @@
 //   Needs (staging env): POSTHOG_PROJECT_ID=469905, POSTHOG_HOST, POSTHOG_API_KEY
 //   (+POSTHOG_PERSONAL_API_KEY for the pre-check read), TINYBIRD_HOST, TINYBIRD_APPEND_TOKEN +
 //   TINYBIRD_DUAL_WRITE=true (write), TINYBIRD_READ_TOKEN (pre-check).
-// Guards: refuses unless staging (POSTHOG_PROJECT_ID===469905 + fixture site_id); pre-check is
-// FAIL-CLOSED — aborts if the fixture already exists in EITHER store OR if EITHER store cannot be
-// verified (unlike #165's warn-and-proceed, which was a latent double-seed hole).
+// Guards (scripts/lib/staging-seed-guard.mjs): refuses to write unless (1) --i-am-targeting-staging is
+// passed, the SITE_ID is the de200000 fixture, and TINYBIRD_HOST is on the ST_Staging allowlist, AND
+// (2) a live probe confirms the target Tinybird workspace already holds the de200000 fixture (prod
+// SourceTrack has no such site — a prod token fails closed). Requires --i-am-targeting-staging in
+// addition to --confirm. Its own dedup pre-check is separately FAIL-CLOSED — aborts if the fixture
+// already exists OR if ST_Staging cannot be verified (no double-seed).
 
 // D3: PostHog is decommissioned — the ph.capture write + the queryHogQL PostHog pre-check were
 // removed. This seeder is now Tinybird-only and still functions END-TO-END: it writes via
@@ -52,6 +55,7 @@
 import { initTinybirdDualWrite } from '../tinybird/adapter/boot.js'
 import { dualWriteEvent, __getDualWriteBatcher } from '../tinybird/adapter/dual-write.js'
 import { esc } from '../api/lib/utils.js'
+import { assertStagingSeedTarget, assertStagingWorkspaceLive } from './lib/staging-seed-guard.mjs'
 
 const SITE_ID = 'de200000-babe-41d4-a716-446655441111'
 const EXTERNAL_EVENT_ID = 'dup_test_evt_001'   // shared non-null key -> exercises the dedup
@@ -59,6 +63,7 @@ const VISITOR = 'dup_test_visitor_001'
 const SOURCE = 'google'
 const VALUE = 49
 const CONFIRM = process.argv.includes('--confirm')
+const TARGETING_STAGING = process.argv.includes('--i-am-targeting-staging')
 
 // The two duplicate $conversion rows — distinct event_id, SAME external_event_id.
 const DUPS = [
@@ -79,18 +84,6 @@ const convProps = (d) => ({
   occurred_at: d.ts
 })
 
-function assertStaging () {
-  const proj = String(process.env.POSTHOG_PROJECT_ID || '')
-  if (proj !== '469905') {
-    console.error(`REFUSING: POSTHOG_PROJECT_ID=${proj || '<unset>'} is not staging (469905; prod is 416017). Aborting.`)
-    process.exit(3)
-  }
-  if (!SITE_ID.startsWith('de200000')) {
-    console.error('REFUSING: SITE_ID is not the staging fixture site. Aborting.')
-    process.exit(3)
-  }
-}
-
 // FAIL-CLOSED pre-checks: return a Number count, or null when the store could not be verified.
 async function tinybirdDupCount () {
   const host = process.env.TINYBIRD_HOST
@@ -107,6 +100,9 @@ async function tinybirdDupCount () {
 }
 
 async function main () {
+  const host = process.env.TINYBIRD_HOST
+  console.log(`[seed] write target — TINYBIRD_HOST=${host || '<unset>'}  SITE_ID=${SITE_ID}  (--i-am-targeting-staging=${TARGETING_STAGING})`)
+
   if (!CONFIRM) {
     console.log('DRY RUN (no --confirm) — nothing written. Would seed into ST_Staging:')
     for (const d of DUPS) console.log(`  $conversion ${VISITOR} @ ${d.ts}  event_id=${d.event_id} (${d.survives ? 'SURVIVES' : 'dropped'})  ${JSON.stringify(convProps(d))}`)
@@ -114,7 +110,13 @@ async function main () {
     return
   }
 
-  assertStaging()
+  // GATE 1 (pure): explicit staging opt-in + de200000 fixture + host on the ST_Staging allowlist.
+  const gate = assertStagingSeedTarget({ host, siteId: SITE_ID, targetingStaging: TARGETING_STAGING })
+  if (!gate.ok) { console.error(gate.reason); process.exit(3) }
+  // GATE 2 (live): the target workspace must already hold the de200000 fixture — prod has no such site.
+  const live = await assertStagingWorkspaceLive({ host, readToken: process.env.TINYBIRD_READ_TOKEN, siteId: SITE_ID })
+  if (!live.ok) { console.error(live.reason); process.exit(3) }
+  console.log(`[seed] staging workspace CONFIRMED — de200000 fixture holds ${live.count} events (prod SourceTrack has none).`)
 
   // FAIL-CLOSED: abort if the fixture already exists OR if ST_Staging cannot be verified.
   const tb = await tinybirdDupCount()
