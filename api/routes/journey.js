@@ -24,10 +24,9 @@ export function __resetJourneyReadDeps () {
 async function readTb (pipeName, params, hogSql, hogName, mapRows) {
   const tb = await _queryTinybirdPipe(pipeName, params)
   if (tb !== null) return mapRows(tb)
-  if (process.env.TINYBIRD_FORCE_READ === 'true') {
-    throw new Error(`[tinybird-force-read] ${pipeName} returned null under TINYBIRD_FORCE_READ — dispatch path not exercised`)
-  }
-  return _queryHogQL(hogSql, hogName)
+  // D1b-2: Tinybird is the SOLE read path. A null pipe throws (loud) instead of reading dead-store
+  // HogQL. The _queryHogQL seam/import stays for D3 (deleted with the engine legs). FIX THE PIPE.
+  throw new Error(`[tinybird-force-read] ${pipeName} returned null — FIX THE PIPE, do not restore the read`)
 }
 
 /**

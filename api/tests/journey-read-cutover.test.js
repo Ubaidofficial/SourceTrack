@@ -80,14 +80,24 @@ test('(b) served empty pipe -> 200 with empty journey, HogQL NOT called', async 
   assert.strictEqual(res.statusCode, 200)
 })
 
-test('(c) FAIL-CLOSED: FORCE_READ + pipe null -> 500 (loud, no dead-store zero)', async (t) => {
+test('(c) D1b-2: pipe null -> 500 (loud), HogQL fallback DELETED (no FORCE_READ needed)', async (t) => {
   t.after(reset)
-  process.env.TINYBIRD_FORCE_READ = 'true'
+  const hog = []
   __setJourneyReadDeps({
     queryTinybird: async () => null,
-    queryHog: async () => { throw new Error('should not reach HogQL under force-read') },
+    queryHog: async (_s, n) => { hog.push(n); return [] },
   })
   const res = mockRes()
   await journey(req(), res)
-  assert.strictEqual(res.statusCode, 500, 'a null journey pipe 500s loud instead of serving HogQL dead-store rows')
+  assert.strictEqual(res.statusCode, 500, 'a null journey pipe 500s loud — no dead-store HogQL read')
+  assert.strictEqual(hog.length, 0, 'HogQL was NOT called — the fallback is deleted')
+})
+
+test('(c-forceread) FORCE_READ + pipe null -> still 500 (unconditional throw)', async (t) => {
+  t.after(reset)
+  process.env.TINYBIRD_FORCE_READ = 'true'
+  __setJourneyReadDeps({ queryTinybird: async () => null, queryHog: async () => { throw new Error('should not reach HogQL') } })
+  const res = mockRes()
+  await journey(req(), res)
+  assert.strictEqual(res.statusCode, 500)
 })

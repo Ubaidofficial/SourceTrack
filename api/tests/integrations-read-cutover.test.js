@@ -71,16 +71,17 @@ test('(overview-a) DISPATCH: all 10 integ pipes served, tenant-scoped, HogQL NOT
   for (const c of tbCalls) assert.strictEqual(c.params.site_id, 'site-00', `${c.pipe} tenant-scoped`)
 })
 
-test('(overview-loud-500) FAIL-CLOSED: one pipe null under FORCE_READ -> 500 (Promise.all rejects, loud)', async (t) => {
+test('(overview-loud-500) D1b-2: one pipe null -> 500 (Promise.all rejects, loud), HogQL fallback DELETED', async (t) => {
   t.after(reset)
-  process.env.TINYBIRD_FORCE_READ = 'true'
+  const hog = []
   __setIntegrationsReadDeps({
     queryTinybird: async (pipe) => (pipe === 'integ_install' ? null : []),
-    queryHog: async () => { throw new Error('should not reach HogQL under force-read') },
+    queryHog: async (_s, n) => { hog.push(n); return [] },
   })
   const res = mockRes()
   await overviewHandler(req(), res)
   assert.strictEqual(res.statusCode, 500, 'a null pipe in the Promise.all 500s loud instead of serving HogQL dead-store rows')
+  assert.strictEqual(hog.length, 0, 'HogQL was NOT called — the fallback is deleted')
 })
 
 // ── /google-ads/checklist (google_ads_checklist pipe + Supabase connection) ──
@@ -99,15 +100,16 @@ test('(checklist-a) DISPATCH: google_ads_checklist served, tenant-scoped, HogQL 
   assert.strictEqual(tbCalls[0].params.site_id, 'site-00', 'tenant-scoped site_id')
 })
 
-test('(checklist-loud-500) FAIL-CLOSED: google_ads_checklist null under FORCE_READ -> 500 (loud)', async (t) => {
+test('(checklist-loud-500) D1b-2: google_ads_checklist null -> 500 (loud), HogQL fallback DELETED', async (t) => {
   t.after(reset)
   installSupabase()
-  process.env.TINYBIRD_FORCE_READ = 'true'
+  const hog = []
   __setIntegrationsReadDeps({
     queryTinybird: async () => null,
-    queryHog: async () => { throw new Error('should not reach HogQL under force-read') },
+    queryHog: async (_s, n) => { hog.push(n); return [] },
   })
   const res = mockRes()
   await checklistHandler(req(), res)
   assert.strictEqual(res.statusCode, 500, 'a null checklist pipe 500s loud')
+  assert.strictEqual(hog.length, 0, 'HogQL was NOT called — the fallback is deleted')
 })

@@ -93,21 +93,23 @@ test('(preview-a) DISPATCH: admin_preview_install + events_health_day served, te
   assert.strictEqual(res.body.data.install.status, 'verified', 'served install pipe row -> verified')
 })
 
-test('(preview-DEGRADE) FORCE_READ + admin_preview_install null -> 200 with install.status="error" (inner catch swallows)', async (t) => {
+test('(preview-DEGRADE) admin_preview_install null -> 200 with install.status="error" (inner catch swallows; HogQL DELETED)', async (t) => {
   t.after(reset)
   installSupabase()
-  process.env.TINYBIRD_FORCE_READ = 'true'
+  const hog = []
   __setAdminReadDeps({
     queryTinybird: async (pipe) => (pipe === 'admin_preview_install' ? null : [{ cnt: 0 }]),
-    queryHog: async () => { throw new Error('should not reach HogQL under force-read') },
+    queryHog: async (_s, n) => { hog.push(n); return [] },
   })
   const res = mockRes()
   await previewHandler({ body: { site_id: 'site-00' } }, res)
-  // FINDING: admin's inner try/catch (admin.js:253) swallows the readTb throw even under FORCE_READ.
-  // The endpoint stays 200 and renders install.status='error' — NOT a loud 500. The flip does not
-  // close this at the endpoint; removing the inner catch would (out of D1b-2 scope).
+  // FINDING: admin's inner try/catch (admin.js:253) swallows the readTb throw. The endpoint stays
+  // 200 and renders install.status='error' — NOT a loud 500. The flip removes the dead HogQL read
+  // (asserted below) but does NOT close the degrade at the endpoint; removing the inner catch would
+  // (out of D1b-2 scope). Even prod TINYBIRD_FORCE_READ=true cannot reach admin — the catch is inside.
   assert.strictEqual(res.statusCode, 200, 'admin degrades (inner catch swallows the throw), never 500')
   assert.strictEqual(res.body.data.install.status, 'error', 'install degrades to status="error", not a dead-store zero')
+  assert.strictEqual(hog.length, 0, 'HogQL was NOT called — the fallback is deleted')
 })
 
 // ── GET /preview/:siteKeyOrId (admin_preview_kpis + _sources + _overview) ─────
@@ -134,13 +136,13 @@ test('(overview-a) DISPATCH: kpis + sources + overview pipes served, tenant-scop
   assert.strictEqual(res.body.data.kpis.revenue, 100, 'kpis served from the pipe')
 })
 
-test('(overview-DEGRADE) FORCE_READ + admin_preview_kpis null -> 200 with kpis zeroed (inner catch swallows)', async (t) => {
+test('(overview-DEGRADE) admin_preview_kpis null -> 200 with kpis zeroed (inner catch swallows; HogQL DELETED)', async (t) => {
   t.after(reset)
   installSupabase()
-  process.env.TINYBIRD_FORCE_READ = 'true'
+  const hog = []
   __setAdminReadDeps({
     queryTinybird: async (pipe) => (pipe === 'admin_preview_kpis' ? null : []),
-    queryHog: async () => { throw new Error('should not reach HogQL under force-read') },
+    queryHog: async (_s, n) => { hog.push(n); return [] },
   })
   const res = mockRes()
   await overviewHandler({ params: { siteKeyOrId: 'site-00' } }, res)
@@ -148,6 +150,7 @@ test('(overview-DEGRADE) FORCE_READ + admin_preview_kpis null -> 200 with kpis z
   // closed by the flip; the inner catch must be removed to make it honest.
   assert.strictEqual(res.statusCode, 200, 'admin degrades (inner catch), never 500')
   assert.strictEqual(res.body.data.kpis.revenue, 0, 'kpis degrade to 0 (flagged fake zero survivor)')
+  assert.strictEqual(hog.length, 0, 'HogQL was NOT called — the fallback is deleted')
 })
 
 // ── GET /site-detail (admin_site_detail) ─────────────────────────────────────
@@ -167,17 +170,18 @@ test('(detail-a) DISPATCH: admin_site_detail served, tenant-scoped, HogQL NOT ca
   assert.strictEqual(res.body.data.install.status, 'verified', 'served detail pipe row -> verified')
 })
 
-test('(detail-DEGRADE) FORCE_READ + admin_site_detail null -> 200 with install.status="error" (inner catch swallows)', async (t) => {
+test('(detail-DEGRADE) admin_site_detail null -> 200 with install.status="error" (inner catch swallows; HogQL DELETED)', async (t) => {
   t.after(reset)
   installSupabase()
-  process.env.TINYBIRD_FORCE_READ = 'true'
+  const hog = []
   __setAdminReadDeps({
     queryTinybird: async () => null,
-    queryHog: async () => { throw new Error('should not reach HogQL under force-read') },
+    queryHog: async (_s, n) => { hog.push(n); return [] },
   })
   const res = mockRes()
   await detailHandler({ query: { site_key: 'sk_testkey_123' } }, res)
   // FINDING: admin.js:494 swallows the throw -> installStatus='error' at 200, not a loud 500.
   assert.strictEqual(res.statusCode, 200, 'admin degrades (inner catch), never 500')
   assert.strictEqual(res.body.data.install.status, 'error', 'install degrades to status="error"')
+  assert.strictEqual(hog.length, 0, 'HogQL was NOT called — the fallback is deleted')
 })
