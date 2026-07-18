@@ -50,16 +50,6 @@ function stubServed (overrides = {}) {
     queryHog: async () => { throw new Error('HogQL called — a pipe was not served (zero-fallback violated)') },
   })
 }
-// Calm HogQL fallback for every alarm (nothing fires) — used by fallback-path tests.
-const hogCalm = async (_sql, name) => {
-  switch (name) {
-    case 'alert_traffic': return [[100, 100]]
-    case 'alert_conversions': return [[10, 10]]
-    case 'alert_recent': return [[5, '2026-07-13T09:00:00Z']]
-    case 'alert_ai': return [['ChatGPT', 2]]
-    default: return [[0]]
-  }
-}
 const idsOf = (res) => res.body.data.alerts.map(a => a.id)
 const byId = (res, id) => res.body.data.alerts.find(a => a.id === id)
 
@@ -114,32 +104,24 @@ test('(conv-SILENT-zero) yesterday=0 -> guarded, no divide-by-zero alarm', async
   assert.ok(!idsOf(res).includes('conversion_drop'), 'yesterday>0 guard holds')
 })
 
-test('(conv-FALLBACK) pipe null -> HogQL positional [[today,yesterday]] -> same alarm', async (t) => {
+test('(conv-null-500) alert_conversions pipe null -> 500 (D1b deleted the HogQL fallback)', async (t) => {
   t.after(reset)
   __setAlertsReadDeps({
     queryTinybird: async (pipe) => (pipe === 'alert_conversions' ? null : NOFIRE[pipe] ?? null),
-    queryHog: async (_sql, name) => {
-      if (name === 'alert_conversions') return [[2, 10]]
-      throw new Error(`unexpected HogQL fallback: ${name}`)
-    },
+    queryHog: async () => { throw new Error('HogQL called — D1b deleted the fallback') },
   })
   const res = mockRes()
   await handler(req(), res)
-  const a = byId(res, 'conversion_drop')
-  assert.ok(a, 'alarm fires via HogQL fallback too')
-  assert.strictEqual(a.comparison, '2 vs 10 conversions')
+  assert.strictEqual(res.statusCode, 500, 'a null money-rail pipe 500s loud instead of serving HogQL dead-store zeros')
 })
 
-test('(conv-PARITY) named pipe rows == HogQL positional rows -> IDENTICAL response', async (t) => {
+test('(conv-remap) named pipe {today,yesterday} remaps to the shape the consumer reads', async (t) => {
   t.after(reset)
   stubServed({ alert_conversions: [{ today: 2, yesterday: 10 }] })
-  const resA = mockRes(); await handler(req(), resA); __resetAlertsReadDeps()
-  __setAlertsReadDeps({
-    queryTinybird: async (pipe) => (pipe === 'alert_conversions' ? null : NOFIRE[pipe] ?? null),
-    queryHog: async (_sql, name) => { if (name === 'alert_conversions') return [[2, 10]]; throw new Error(`unexpected: ${name}`) },
-  })
-  const resB = mockRes(); await handler(req(), resB); __resetAlertsReadDeps()
-  assert.deepStrictEqual(resA.body, resB.body, 'pipe named {today,yesterday} remaps to the exact [[today,yesterday]] the consumer reads')
+  const res = mockRes(); await handler(req(), res)
+  const a = byId(res, 'conversion_drop')
+  assert.ok(a, 'conversion_drop fires from the served pipe row')
+  assert.strictEqual(a.comparison, '2 vs 10 conversions', 'named pipe row remapped to the positional shape the consumer reads')
 })
 
 test('(conv-FAILCLOSED) FORCE_READ + pipe null -> 500 (no silent dead-HogQL fallback)', async (t) => {
@@ -197,30 +179,22 @@ test('(ai-SILENT-above) AI traffic above the band -> ai_traffic_low does NOT fir
   assert.ok(!idsOf(res).includes('ai_traffic_low'), 'no alarm above the band')
 })
 
-test('(ai-FALLBACK) pipe null -> HogQL positional [ai_source,cnt] rows -> same total/alarm', async (t) => {
+test('(ai-null-500) alert_ai pipe null -> 500 (no HogQL fallback)', async (t) => {
   t.after(reset)
   __setAlertsReadDeps({
     queryTinybird: async (pipe) => (pipe === 'alert_ai' ? null : NOFIRE[pipe] ?? null),
-    queryHog: async (_sql, name) => {
-      if (name === 'alert_ai') return [['ChatGPT', 4], ['Perplexity', 3]]
-      throw new Error(`unexpected HogQL fallback: ${name}`)
-    },
+    queryHog: async () => { throw new Error('HogQL called — D1b deleted the fallback') },
   })
   const res = mockRes()
   await handler(req(), res)
-  assert.ok(byId(res, 'ai_traffic_low'), 'alarm fires via HogQL fallback too (aiTotal=7)')
+  assert.strictEqual(res.statusCode, 500)
 })
 
-test('(ai-PARITY) named {ai_source,cnt} == HogQL positional [ai_source,cnt] -> IDENTICAL response', async (t) => {
+test('(ai-remap) named {ai_source,cnt} rows remap to the positional shape the consumer reduces over', async (t) => {
   t.after(reset)
   stubServed({ alert_ai: [{ ai_source: 'ChatGPT', cnt: 4 }, { ai_source: 'Perplexity', cnt: 3 }] })
-  const resA = mockRes(); await handler(req(), resA); __resetAlertsReadDeps()
-  __setAlertsReadDeps({
-    queryTinybird: async (pipe) => (pipe === 'alert_ai' ? null : NOFIRE[pipe] ?? null),
-    queryHog: async (_sql, name) => { if (name === 'alert_ai') return [['ChatGPT', 4], ['Perplexity', 3]]; throw new Error(`unexpected: ${name}`) },
-  })
-  const resB = mockRes(); await handler(req(), resB); __resetAlertsReadDeps()
-  assert.deepStrictEqual(resA.body, resB.body, 'pipe rows remap to the exact positional [ai_source,cnt] the consumer reduces over')
+  const res = mockRes(); await handler(req(), res)
+  assert.ok(byId(res, 'ai_traffic_low'), 'ai_traffic_low fires from the served pipe rows (aiTotal=7)')
 })
 
 test('(ai-FAILCLOSED) FORCE_READ + pipe null -> 500', async (t) => {
@@ -235,39 +209,35 @@ test('(ai-FAILCLOSED) FORCE_READ + pipe null -> 500', async (t) => {
   assert.strictEqual(res.statusCode, 500)
 })
 
-// ── Preserved from the original file: whole-route fallback, dispatch matrix, graceful 500 ──
-test('(fallback-all) flag off -> all four reads attempt Tinybird then fall back to HogQL', async (t) => {
+// ── D1b: whole-route null -> 500 (no HogQL fallback), dispatch matrix from served pipes ──
+test('(all-null-500) flag off + all four reads null -> 500 (HogQL fallback DELETED)', async (t) => {
   t.after(reset)
-  const tb = []; const hog = []
+  const tb = []
   __setAlertsReadDeps({
     queryTinybird: async (pipe) => { tb.push(pipe); return null },
-    queryHog: async (sql, name) => { hog.push(name); return hogCalm(sql, name) },
+    queryHog: async () => { throw new Error('HogQL called — D1b deleted the fallback') },
   })
   const res = mockRes()
   await handler(req(), res)
-  assert.strictEqual(res.body.success, true)
-  assert.deepStrictEqual(tb.sort(), ['alert_ai', 'alert_conversions', 'alert_recent', 'alert_traffic'], 'all four wired reads attempt Tinybird')
-  assert.deepStrictEqual(hog.sort(), ['alert_ai', 'alert_conversions', 'alert_recent', 'alert_traffic'], 'all four fall back to HogQL when the pipe returns null')
-  assert.deepStrictEqual(idsOf(res), [], 'calm HogQL data -> no alerts')
+  assert.strictEqual(res.statusCode, 500, 'a null pipe 500s loud instead of serving HogQL zeros')
+  assert.ok(tb.length >= 1, 'at least one read attempted Tinybird before the throw')
 })
 
-test('(dispatch-matrix) flag on -> traffic_drop + install_silent fire from Tinybird pipes', async (t) => {
+test('(dispatch-matrix) all pipes served -> traffic_drop + install_silent fire from Tinybird, HogQL NOT called', async (t) => {
   t.after(reset)
-  const hog = []
   __setAlertsReadDeps({
     queryTinybird: async (pipe) => {
       if (pipe === 'alert_traffic') return [{ this_week: 40, last_week: 200 }] // 40 < 100 -> traffic_drop
       if (pipe === 'alert_recent') return [{ cnt: 0, last_ts: null }]          // 0 -> install_silent
-      return null // conversions + ai fall back
+      return NOFIRE[pipe] ?? null // conversions + ai served calm (no null -> no throw)
     },
-    queryHog: async (sql, name) => { hog.push(name); return hogCalm(sql, name) },
+    queryHog: async () => { throw new Error('HogQL called — all pipes were served') },
   })
   const res = mockRes()
   await handler(req(), res)
   const ids = idsOf(res)
   assert.ok(ids.includes('traffic_drop'), 'traffic_drop from Tinybird alert_traffic (40 vs 200)')
   assert.ok(ids.includes('install_silent'), 'install_silent from Tinybird alert_recent (0)')
-  assert.deepStrictEqual(hog.sort(), ['alert_ai', 'alert_conversions'], 'only the unserved reads fell back to HogQL')
 })
 
 test('(missing-site) no req.site -> 500 (graceful)', async (t) => {

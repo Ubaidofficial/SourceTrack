@@ -51,21 +51,14 @@ function tbStub (calls, rowsByPipe /* object or null */) {
   }
 }
 
-test('hygiene /utms — FALLBACK: flag off (pipe null) -> HogQL for all reads, unchanged', async () => {
-  const tb = []; const hog = []
-  __setHygieneReadDeps({ queryTinybird: tbStub(tb, null), queryHog: hogStub(hog, { missingSource: 25 }) })
+test('hygiene /utms — D1b: pipe null -> 500 (HogQL fallback DELETED)', async () => {
+  const tb = []
+  __setHygieneReadDeps({ queryTinybird: tbStub(tb, null), queryHog: async () => { throw new Error('HogQL called — D1b deleted the fallback') } })
   try {
     const res = mockRes()
     await handler(reqWithSite(), res)
-    assert.strictEqual(res.body.success, true)
-    assert.strictEqual(res.body.data.summary.missing_utm_source, 25, 'HogQL value surfaces')
-    assert.strictEqual(res.body.data.summary.missing_conversion_value, 3, 'money-rail HogQL fallback value surfaces')
-    // All 5 reads (incl. the money-rail one) attempted Tinybird first, then fell back to HogQL.
-    assert.deepStrictEqual(hog.sort(), [
-      'hygiene_campaigns', 'hygiene_low_activity', 'hygiene_missing_conv',
-      'hygiene_missing_source', 'hygiene_referrers'
-    ])
-    assert.strictEqual(tb.length, 5, 'all 5 reads attempted Tinybird first')
+    assert.strictEqual(res.statusCode, 500, 'a null pipe 500s loud instead of serving HogQL dead-store zeros')
+    assert.ok(tb.length >= 1, 'a read attempted Tinybird first')
   } finally { __resetHygieneReadDeps() }
 })
 
@@ -94,23 +87,22 @@ test('hygiene /utms — DISPATCH: flag on -> Tinybird for all 5 reads (incl. mon
   } finally { __resetHygieneReadDeps() }
 })
 
-test('hygiene /utms — MONEY-RAIL PARTIAL: integ_missing_conv null -> that read falls back to HogQL, others Tinybird', async () => {
-  const tb = []; const hog = []
+test('hygiene /utms — D1b MONEY-RAIL: integ_missing_conv null -> 500 (no silent HogQL fallback for the money-rail read)', async () => {
+  const tb = []
   __setHygieneReadDeps({
     queryTinybird: tbStub(tb, {
       integ_missing_source: [{ cnt: 42 }],
       integ_campaigns: [{ campaign: 'x', cnt: 5 }],
       integ_referrers: [{ referrer: 'r', cnt: 6 }],
       integ_low_activity: [{ day: '2026-07-02', cnt: 1 }]
-      // integ_missing_conv omitted -> null -> HogQL fallback
+      // integ_missing_conv omitted -> null -> throws (HogQL fallback DELETED)
     }),
-    queryHog: hogStub(hog, { missingSource: 7 })
+    queryHog: async () => { throw new Error('HogQL called — D1b deleted the fallback') }
   })
   try {
     const res = mockRes()
     await handler(reqWithSite('site-00'), res)
-    assert.strictEqual(res.body.data.summary.missing_conversion_value, 3, 'money-rail fell back to HogQL (3)')
-    assert.deepStrictEqual(hog, ['hygiene_missing_conv'], 'only the money-rail read used HogQL')
+    assert.strictEqual(res.statusCode, 500, 'the money-rail read null 500s loud instead of a silent HogQL dead-store fallback')
   } finally { __resetHygieneReadDeps() }
 })
 

@@ -42,17 +42,21 @@ function tbStub (rowsOrNull, calls) {
   return async (pipe, params) => { calls.push({ pipe, params }); return rowsOrNull }
 }
 
-test('live.js — FALLBACK: flag off (pipe null) -> HogQL path, value unchanged', async () => {
+test('live.js — D1b: pipe null (no FORCE_READ) -> soft-fail 200/live_visitors:0, HogQL NOT called', async () => {
+  // D1b deleted the HogQL fallback. A null pipe throws; live.js's catch soft-fails this non-critical
+  // realtime widget to 0 (a valid live count) in prod — it does NOT read HogQL. (Under FORCE_READ the
+  // next test proves it 500s loud instead.)
   const tbCalls = []; const hogCalls = []
   __setLiveReadDeps({
-    queryTinybird: tbStub(null, tbCalls),          // mirrors flag-off real client
+    queryTinybird: tbStub(null, tbCalls),          // mirrors flag-off / not-serving real client
     queryHog: hogStub(7, hogCalls)
   })
   try {
     const res = mockRes()
     await handler(reqWithSite(), res)
-    assert.strictEqual(res.body.data.live_visitors, 7, 'HogQL value surfaces')
-    assert.strictEqual(hogCalls.length, 1, 'HogQL WAS called (fallback fired)')
+    assert.strictEqual(res.statusCode, 200, 'soft-fail keeps the realtime widget alive')
+    assert.strictEqual(res.body.data.live_visitors, 0, 'null pipe -> 0 (no HogQL dead-store read)')
+    assert.strictEqual(hogCalls.length, 0, 'HogQL was NOT called — the fallback is deleted')
     assert.strictEqual(tbCalls.length, 1, 'Tinybird was attempted first')
   } finally { __resetLiveReadDeps() }
 })

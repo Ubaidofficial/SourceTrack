@@ -36,8 +36,10 @@ router.get('/utms', validateSiteKey, async (req, res) => {
     const readTb = async (pipeName, hogSql, hogName, toRows) => {
       const tb = await _queryTinybirdPipe(pipeName, { site_id: tbSiteId })
       if (tb !== null) return toRows(tb)
-      if (forceRead) throw new Error(`[tinybird-force-read] ${pipeName} returned null under TINYBIRD_FORCE_READ — dispatch path not exercised`)
-      return _queryHogQL(hogSql, hogName)
+      // D1b: HogQL fallback DELETED — Tinybird is the sole read path. Null -> the DEPLOYED pipe is not
+      // serving -> throw loud (500), never a silent dead-store read. FIX THE PIPE, do not restore the
+      // read. (queryHogQL import/seam kept inert for the injectable cutover tests; D3 removes it.)
+      throw new Error(`[tinybird-force-read] ${pipeName} returned null — FIX THE PIPE, do not restore the read`)
     }
 
     // Missing UTM source on pageviews

@@ -32,10 +32,11 @@ export function __resetDashboardReadDeps () {
 async function readTb (pipeName, params, hogSql, hogName, mapRows) {
   const tb = await _queryTinybirdPipe(pipeName, params)
   if (tb !== null) return mapRows(tb)
-  if (process.env.TINYBIRD_FORCE_READ === 'true') {
-    throw new Error(`[tinybird-force-read] ${pipeName} returned null under TINYBIRD_FORCE_READ — dispatch path not exercised`)
-  }
-  return _queryHogQL(hogSql, hogName)
+  // D1b: the HogQL fallback is DELETED — Tinybird is the SOLE read path for this reader. PostHog is a
+  // dead store; the old fallback served zeros (§6). A null means the DEPLOYED pipe is not serving ->
+  // throw loud (500) instead of a silent dead-store read. FIX THE PIPE, do not restore the read. The
+  // queryHogQL import/seam stays inert (the injectable cutover tests force the null via it); D3 removes it.
+  throw new Error(`[tinybird-force-read] ${pipeName} returned null — FIX THE PIPE, do not restore the read`)
 }
 // Under the test-only TINYBIRD_FORCE_READ, a route's graceful catch would otherwise swallow
 // the fail-closed throw into a 200 with empty data. This makes the failure visible (500).
