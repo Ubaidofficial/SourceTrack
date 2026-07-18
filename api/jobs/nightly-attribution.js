@@ -4,7 +4,7 @@ dotenv.config()
 import { getSupabase } from '../lib/supabase.js'
 import { parsePathname } from '../lib/url-normalize.js'
 import { esc } from '../lib/utils.js'
-import { queryTinybirdPipe, isTinybirdReadEnabled } from '../lib/tinybird-read.js'
+import { queryTinybirdPipe, isTinybirdReadEnabled, isPipeReadAllowed } from '../lib/tinybird-read.js'
 import { clampDays, classifyJourney, applyBackfill } from '../lib/backfill.js'
 import { purgeSiteRetention } from '../lib/retention-purge.js'
 import { runGscDailySync } from '../lib/gsc-daily-sync.js'
@@ -1422,6 +1422,17 @@ const _JSONB_RECORD_FIELDS = new Set([
   'linear_attribution', 'u_shaped_attribution', 'time_decay_attribution', 'w_shaped_attribution', 'confidence_signals'
 ])
 
+// Timestamp columns are compared as INSTANTS, never as serialized strings. Postgres timestamptz
+// renders "…+00:00" while the freshly-computed value (JS toISOString) renders "…Z" — the SAME instant,
+// different text. A string compare flags every row (proven: 3/3 --validate rows mismatched on exactly
+// these fields, money/splits clean). ALL FOUR timestamp fields are included — ai_influenced_session_at
+// was null in the sample but would false-mismatch on any AI-influenced row. This does NOT relax
+// conversion_value or the jsonb credit splits (those stay exact — a real instant difference, including a
+// same-timestamp tie surfacing via *_source, is still flagged).
+const _TIMESTAMP_RECORD_FIELDS = new Set([
+  'conversion_timestamp', 'first_touch_timestamp', 'last_touch_timestamp', 'ai_influenced_session_at'
+])
+
 // Recursively sort object keys (Postgres jsonb does NOT preserve object key order) but PRESERVE
 // array order (the credit splits are ordered by touchpoint — order is semantic, not incidental).
 function _normalizeJson (v) {
@@ -1433,8 +1444,18 @@ function _normalizeJson (v) {
   }
   return v
 }
+// Instant equality: null-safe, then epoch-ms compare so "+00:00" and "Z" (same instant) are equal.
+// Falls back to raw compare if either value is unparseable (a genuinely malformed timestamp still diffs).
+function _timestampInstantEqual (c, s) {
+  if ((c ?? null) === null || (s ?? null) === null) return (c ?? null) === (s ?? null)
+  const tc = new Date(c).getTime()
+  const ts = new Date(s).getTime()
+  if (Number.isNaN(tc) || Number.isNaN(ts)) return (c ?? null) === (s ?? null)
+  return tc === ts
+}
 function _recordFieldEqual (key, c, s) {
   if (_JSONB_RECORD_FIELDS.has(key)) return JSON.stringify(_normalizeJson(c ?? null)) === JSON.stringify(_normalizeJson(s ?? null))
+  if (_TIMESTAMP_RECORD_FIELDS.has(key)) return _timestampInstantEqual(c, s) // instant, not string (Z vs +00:00)
   if (key === 'conversion_value') return Number(c) === Number(s) // MONEY: exact, no tolerance
   return (c ?? null) === (s ?? null)
 }
@@ -1458,7 +1479,14 @@ export async function validateSite (site, { days = 1 } = {}) {
   const { from, to } = conversionPipeWindow(days)
   const pipeRows = await _queryPipe('nightly_conversions_by_site', { site_id: String(site.id), date_from: from, date_to: to })
   if (pipeRows === null) {
-    throw new Error(`[validate] conversions pipe returned null for site ${site.site_key} — refusing to validate off the dead HogQL fallback. Confirm the pipe is deployed + TINYBIRD_READ_* is set.`)
+    // A wrong site_id returns [] (0 rows), NOT null — so a null is a READ-LAYER condition, never the
+    // site param. Name the exact cause so the operator fixes env, not chases a phantom param bug.
+    const reason = !_tbReadEnabled()
+      ? 'TINYBIRD_READ_ENABLED is off'
+      : !isPipeReadAllowed('nightly_conversions_by_site')
+        ? 'nightly_conversions_by_site is NOT in the TINYBIRD_READ_PIPES allowlist — unset TINYBIRD_READ_PIPES, or add this pipe (a direct MCP/SQL query bypasses this allowlist, which is why it works there but returns null here)'
+        : 'the pipe fetch returned null — missing TINYBIRD_HOST/TINYBIRD_READ_TOKEN, a non-2xx from Tinybird, or a network error (see the [tinybird-read] warning above)'
+    throw new Error(`[validate] conversions pipe returned null for site ${site.site_key} (site_id=${site.id}) — ${reason}. NOT a site_id/site_key param bug (a wrong id → [] , not null).`)
   }
   const out = { site: site.site_key, total: 0, matched: 0, missing: [], mismatched: [], realTies: 0 }
   for (const row of pipeRows) {
@@ -1485,9 +1513,13 @@ export async function validateSite (site, { days = 1 } = {}) {
   return out
 }
 
-async function runValidation (siteKey) {
-  const { data: site, error } = await supabase.from('sites').select('*').eq('site_key', siteKey).maybeSingle()
-  if (error || !site) { console.error(`[validate] site not found: ${siteKey} (${error?.message || 'no row'})`); process.exit(2) }
+async function runValidation (idOrKey) {
+  // Accept EITHER the site_key OR the Supabase site.id. The id is the natural identifier operators
+  // have — it is what events.site_id / attributed_conversions.site_id carry — so resolving by key
+  // first, then id, removes the "I pasted the site_id and got 'not found'" friction.
+  let { data: site } = await supabase.from('sites').select('*').eq('site_key', idOrKey).maybeSingle()
+  if (!site) { site = (await supabase.from('sites').select('*').eq('id', idOrKey).maybeSingle()).data }
+  if (!site) { console.error(`[validate] site not found by site_key OR id: ${idOrKey}`); process.exit(2) }
   const r = await validateSite(site, { days: validateDays })
   console.log(`[validate] site=${r.site} total=${r.total} matched=${r.matched} mismatched=${r.mismatched.length} missing=${r.missing.length} realTies=${r.realTies}`)
   // `missing` = a pipe-served conversion (source event present) with NO attributed_conversions row —
