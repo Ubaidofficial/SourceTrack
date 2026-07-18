@@ -1,4 +1,3 @@
-import { queryHogQL } from '../lib/posthog.js'
 import { queryTinybirdPipe, normalizePipeTimestamp } from '../lib/tinybird-read.js'
 import { deriveSessions, sessionAggregates, annotateSessions } from '../lib/sessionization.js'
 import { esc } from '../lib/utils.js'
@@ -9,14 +8,11 @@ import { serializeHogQLDateRange, buildHogQLTimestampFilter } from '../lib/hogql
 // tests inject stubs for the two read backends. Production never calls the
 // setter, so it uses the real imports and behaves identically.
 let _queryTinybirdPipe = queryTinybirdPipe
-let _queryHogQL = queryHogQL
-export function __setSessionsReadDeps ({ queryTinybird, queryHog } = {}) {
+export function __setSessionsReadDeps ({ queryTinybird } = {}) {
   if (queryTinybird) _queryTinybirdPipe = queryTinybird
-  if (queryHog) _queryHogQL = queryHog
 }
 export function __resetSessionsReadDeps () {
   _queryTinybirdPipe = queryTinybirdPipe
-  _queryHogQL = queryHogQL
 }
 
 // Tinybird-first read helper: null return (flag off / error) -> HogQL fallback;

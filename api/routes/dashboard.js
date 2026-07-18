@@ -1,6 +1,5 @@
 import { Router } from 'express'
 import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
-import { queryHogQL } from '../lib/posthog.js'
 import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { getSupabase as getSupabaseAdmin } from '../lib/supabase.js'
 import { esc, isValidTimezone, getLocalDateString, getPaddedUtcDateRange, getNow, cappedRate } from '../lib/utils.js'
@@ -16,14 +15,11 @@ const router = Router()
 // ── Tinybird read seam (Grade B dashboard cutover) — mirrors analytics.js/seo-revenue.js.
 // Unit tests inject stubs for the two read backends; production uses the real imports.
 let _queryTinybirdPipe = queryTinybirdPipe
-let _queryHogQL = queryHogQL
-export function __setDashboardReadDeps ({ queryTinybird, queryHog } = {}) {
+export function __setDashboardReadDeps ({ queryTinybird } = {}) {
   if (queryTinybird) _queryTinybirdPipe = queryTinybird
-  if (queryHog) _queryHogQL = queryHog
 }
 export function __resetDashboardReadDeps () {
   _queryTinybirdPipe = queryTinybirdPipe
-  _queryHogQL = queryHogQL
 }
 // Tinybird-first read: null (flag off / error) -> HogQL fallback; the pipe's NAMED rows are
 // remapped to the HogQL POSITIONAL shape (mapRows) so every downstream consumer is

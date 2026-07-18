@@ -1,5 +1,4 @@
 import NodeCache from 'node-cache'
-import { queryHogQL } from './posthog.js'
 import { deriveSessions, annotateSessions } from './sessionization.js'
 import { channelFromEvent, detectAiPlatformFromEvent } from './channel-classifier.js'
 import { getSupabase } from './supabase.js'
@@ -16,14 +15,11 @@ import { SESSION_REPORT_DIMS } from './report-config-validation.js'
 // TINYBIRD_READ_PIPES allowlist) is on — queryTinybirdPipe returns null when
 // gated, and the 4 touch models fall back to _queryHogQL exactly as before.
 let _queryTinybirdPipe = queryTinybirdPipe
-let _queryHogQL = queryHogQL
-export function __setAttributionReadDeps ({ queryTinybird, queryHog } = {}) {
+export function __setAttributionReadDeps ({ queryTinybird } = {}) {
   if (queryTinybird) _queryTinybirdPipe = queryTinybird
-  if (queryHog) _queryHogQL = queryHog
 }
 export function __resetAttributionReadDeps () {
   _queryTinybirdPipe = queryTinybirdPipe
-  _queryHogQL = queryHogQL
 }
 
 // Fail-closed dispatch guard — mirrors readTb() in api/routes/{alerts,sessions,live,
@@ -119,22 +115,6 @@ function cacheKey(model, siteId, dateFrom, dateTo) {
 export async function firstTouchAttribution(siteId, dateFrom, dateTo) {
   const { from: fromDate, to: toDate } = serializeHogQLDateRange(dateFrom, dateTo)
 
-  const sql = `
-    SELECT
-      COALESCE(NULLIF(properties.first_touch_source, ''), 'direct') AS source,
-      COALESCE(NULLIF(properties.first_touch_medium, ''), 'none') AS medium,
-      properties.first_touch_campaign AS campaign,
-      count() AS conversions,
-      SUM(toFloatOrZero(toString(properties.conversion_value))) AS revenue
-    FROM events
-    WHERE properties.site_id = '${esc(siteId)}'
-      AND event = '$conversion'
-      AND timestamp >= ${fromDate}
-      AND timestamp < ${toDate}
-    GROUP BY source, medium, campaign
-    ORDER BY revenue DESC
-    LIMIT 50000
-  `
 
   // Tinybird cutover (allowlist-gated; null → HogQL fallback). Reuse the SAME
   // window bounds HogQL uses to guarantee date-parity; format for ClickHouse DateTime params.
@@ -157,54 +137,6 @@ export async function firstTouchAttribution(siteId, dateFrom, dateTo) {
 export async function lastTouchAttribution(siteId, dateFrom, dateTo) {
   const { from: fromDate, to: toDate } = serializeHogQLDateRange(dateFrom, dateTo)
 
-  const sql = `
-    SELECT
-      COALESCE(
-        NULLIF(lt.utm_source, ''),
-        NULLIF(lt.ai_source, ''),
-        'direct'
-      ) AS source,
-      COALESCE(NULLIF(lt.utm_medium, ''), 'none')   AS medium,
-      COALESCE(lt.utm_campaign, '')                  AS campaign,
-      count()                                         AS conversions,
-      SUM(toFloatOrZero(toString(e.properties.conversion_value))) AS revenue
-    FROM events e
-    LEFT JOIN (
-      SELECT
-        e_inner.uuid AS conversion_uuid,
-        argMax(pv.utm_source,   pv.timestamp) AS utm_source,
-        argMax(pv.utm_medium,   pv.timestamp) AS utm_medium,
-        argMax(pv.utm_campaign, pv.timestamp) AS utm_campaign,
-        argMax(pv.ai_source,   pv.timestamp) AS ai_source
-      FROM events e_inner
-      LEFT JOIN (
-        SELECT
-          distinct_id,
-          timestamp,
-          properties.utm_source AS utm_source,
-          properties.utm_medium AS utm_medium,
-          properties.utm_campaign AS utm_campaign,
-          properties.ai_source AS ai_source
-        FROM events
-        WHERE properties.site_id = '${esc(siteId)}'
-          AND event = '$pageview'
-      ) pv
-        ON pv.distinct_id = e_inner.distinct_id
-        AND pv.timestamp <= e_inner.timestamp
-      WHERE e_inner.properties.site_id = '${esc(siteId)}'
-        AND e_inner.event = '$conversion'
-        AND e_inner.timestamp >= ${fromDate}
-        AND e_inner.timestamp < ${toDate}
-      GROUP BY conversion_uuid
-    ) lt ON e.uuid = lt.conversion_uuid
-    WHERE e.properties.site_id = '${esc(siteId)}'
-      AND e.event = '$conversion'
-      AND e.timestamp >= ${fromDate}
-      AND e.timestamp < ${toDate}
-    GROUP BY source, medium, campaign
-    ORDER BY revenue DESC
-    LIMIT 50000
-  `
 
   // Tinybird cutover (allowlist-gated; null → HogQL fallback). Reuse the SAME
   // window bounds HogQL uses to guarantee date-parity; format for ClickHouse DateTime params.
@@ -235,51 +167,6 @@ function isDirectCondition(tableAlias = 'events') {
 export async function firstTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
   const { from: fromDate, to: toDate } = serializeHogQLDateRange(dateFrom, dateTo)
 
-  const sql = `
-    SELECT
-      COALESCE(NULLIF(ft.utm_source, ''), 'direct') AS source,
-      COALESCE(NULLIF(ft.utm_medium, ''), 'none') AS medium,
-      ft.utm_campaign AS campaign,
-      count() AS conversions,
-      SUM(toFloatOrZero(toString(e.properties.conversion_value))) AS revenue
-    FROM events e
-    LEFT JOIN (
-      SELECT
-        e_inner.uuid AS conversion_uuid,
-        argMin(pv.utm_source, pv.timestamp) AS utm_source,
-        argMin(pv.utm_medium, pv.timestamp) AS utm_medium,
-        argMin(pv.utm_campaign, pv.timestamp) AS utm_campaign
-      FROM events e_inner
-      LEFT JOIN (
-        SELECT
-          distinct_id,
-          timestamp,
-          properties.utm_source AS utm_source,
-          properties.utm_medium AS utm_medium,
-          properties.utm_campaign AS utm_campaign
-        FROM events
-        WHERE properties.site_id = '${esc(siteId)}'
-          AND event = '$pageview'
-          AND properties.utm_source IS NOT NULL
-          AND properties.utm_source != ''
-          AND properties.utm_source != 'direct'
-      ) pv
-        ON pv.distinct_id = e_inner.distinct_id
-        AND pv.timestamp <= e_inner.timestamp
-      WHERE e_inner.properties.site_id = '${esc(siteId)}'
-        AND e_inner.event = '$conversion'
-        AND e_inner.timestamp >= ${fromDate}
-        AND e_inner.timestamp < ${toDate}
-      GROUP BY conversion_uuid
-    ) ft ON e.uuid = ft.conversion_uuid
-    WHERE e.properties.site_id = '${esc(siteId)}'
-      AND e.event = '$conversion'
-      AND e.timestamp >= ${fromDate}
-      AND e.timestamp < ${toDate}
-    GROUP BY source, medium, campaign
-    ORDER BY revenue DESC
-    LIMIT 50000
-  `
 
   // Tinybird cutover (allowlist-gated; null → HogQL fallback). Reuse the SAME
   // window bounds HogQL uses to guarantee date-parity; format for ClickHouse DateTime params.
@@ -302,51 +189,6 @@ export async function firstTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
 export async function lastTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
   const { from: fromDate, to: toDate } = serializeHogQLDateRange(dateFrom, dateTo)
 
-  const sql = `
-    SELECT
-      COALESCE(NULLIF(lt.utm_source, ''), 'direct') AS source,
-      COALESCE(NULLIF(lt.utm_medium, ''), 'none') AS medium,
-      lt.utm_campaign AS campaign,
-      count() AS conversions,
-      SUM(toFloatOrZero(toString(e.properties.conversion_value))) AS revenue
-    FROM events e
-    LEFT JOIN (
-      SELECT
-        e_inner.uuid AS conversion_uuid,
-        argMax(pv.utm_source, pv.timestamp) AS utm_source,
-        argMax(pv.utm_medium, pv.timestamp) AS utm_medium,
-        argMax(pv.utm_campaign, pv.timestamp) AS utm_campaign
-      FROM events e_inner
-      LEFT JOIN (
-        SELECT
-          distinct_id,
-          timestamp,
-          properties.utm_source AS utm_source,
-          properties.utm_medium AS utm_medium,
-          properties.utm_campaign AS utm_campaign
-        FROM events
-        WHERE properties.site_id = '${esc(siteId)}'
-          AND event = '$pageview'
-          AND properties.utm_source IS NOT NULL
-          AND properties.utm_source != ''
-          AND properties.utm_source != 'direct'
-      ) pv
-        ON pv.distinct_id = e_inner.distinct_id
-        AND pv.timestamp <= e_inner.timestamp
-      WHERE e_inner.properties.site_id = '${esc(siteId)}'
-        AND e_inner.event = '$conversion'
-        AND e_inner.timestamp >= ${fromDate}
-        AND e_inner.timestamp < ${toDate}
-      GROUP BY conversion_uuid
-    ) lt ON e.uuid = lt.conversion_uuid
-    WHERE e.properties.site_id = '${esc(siteId)}'
-      AND e.event = '$conversion'
-      AND e.timestamp >= ${fromDate}
-      AND e.timestamp < ${toDate}
-    GROUP BY source, medium, campaign
-    ORDER BY revenue DESC
-    LIMIT 50000
-  `
 
   // Tinybird cutover (allowlist-gated; null → HogQL fallback). Reuse the SAME
   // window bounds HogQL uses to guarantee date-parity; format for ClickHouse DateTime params.
@@ -449,36 +291,6 @@ export async function getAiPlatformAttributionLive({
   const safeSite = esc(siteId)
 
   // 1. Fetch conversions
-  const convSql = `
-    SELECT
-      uuid,
-      distinct_id,
-      timestamp,
-      properties.conversion_type AS conversion_type,
-      toFloatOrZero(toString(properties.conversion_value)) AS conversion_value,
-      properties.utm_source AS utm_source,
-      properties.utm_medium AS utm_medium,
-      properties.utm_campaign AS utm_campaign,
-      properties.referrer AS referrer,
-      properties.ai_source AS ai_source,
-      properties.country AS country,
-      properties.device_type AS device_type,
-      properties.utm_term AS utm_term,
-      properties.provider AS provider,
-      properties.attribution_status AS attribution_status,
-      properties.stitching_method AS stitching_method,
-      properties.ingestion_method AS ingestion_method,
-      properties.browser_name AS browser_name,
-      properties.browser AS browser,
-      properties.page_url AS page_url
-    FROM events
-    WHERE properties.site_id = '${safeSite}'
-      AND event = '$conversion'
-      AND timestamp >= ${fromDate}
-      AND timestamp < ${toDate}
-    ORDER BY timestamp DESC
-    LIMIT 10000
-  `
   // LEG 1 — Tinybird cutover (allowlist-gated; null → HogQL fallback). Same window
   // extraction as the touch models. The pipe returns NAMED rows; remap to the EXACT
   // 20-field positional array the destructure below consumes, so all downstream
@@ -924,24 +736,6 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
   const customSelect = selectParts.length > 0 ? ',\n      ' + selectParts.join(',\n      ') : ''
 
   // Query pageviews for session derivation
-  const sql = `
-    SELECT
-      distinct_id AS distinct_id,
-      timestamp,
-      properties.page_url,
-      properties.utm_source,
-      properties.utm_medium,
-      properties.utm_campaign,
-      properties.country,
-      properties.device_type${customSelect}
-    FROM events
-    WHERE properties.site_id = '${safeSite}'
-      AND event = '$pageview'
-      AND timestamp >= ${fromDate}
-      AND timestamp < ${toDate}${filterClauses}
-    ORDER BY distinct_id ASC, timestamp ASC
-    LIMIT 50000
-  `
 
   // Tinybird cutover (allowlist-gated; null -> HogQL fallback). SAME window bounds HogQL
   // uses; format for ClickHouse DateTime params. Pipe named rows -> HogQL positional order
@@ -972,18 +766,6 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
     : _pipeNull('session_report_pageviews')
 
   // Also query conversions for conversion_sessions metric
-  const convSql = `
-    SELECT
-      distinct_id AS distinct_id,
-      timestamp
-    FROM events
-    WHERE properties.site_id = '${safeSite}'
-      AND event = '$conversion'
-      AND timestamp >= ${fromDate}
-      AND timestamp < ${toDate}${filterClauses}
-    ORDER BY distinct_id ASC, timestamp ASC
-    LIMIT 50000
-  `
 
   const _tbConv = _sessionPipeEligible ? await _pipeRead('session_report_conversions', { site_id: String(siteId), date_from_ts: _tbFrom, date_to_ts: _tbTo }) : null
   const convRows = _tbConv
@@ -1131,28 +913,6 @@ export async function getAttributionExplanation(siteId, model, distinctId) {
   const safeId = esc(distinctId)
 
   // 1. Fetch the conversion event for this visitor
-  const convSql = `
-    SELECT
-      timestamp,
-      toFloatOrZero(toString(properties.conversion_value)) AS conversion_value,
-      properties.utm_source,
-      properties.utm_medium,
-      properties.utm_campaign,
-      properties.first_touch_source,
-      properties.first_touch_medium,
-      properties.first_touch_campaign,
-      properties.ai_source,
-      properties.page_url,
-      properties.user_id,
-      properties.anonymous_id,
-      properties.ingestion_method
-    FROM events
-    WHERE properties.site_id = '${safeSite}'
-      AND event = '$conversion'
-      AND distinct_id = '${safeId}'
-    ORDER BY timestamp DESC
-    LIMIT 1
-  `
   // Tinybird cutover (allowlist-gated; null -> HogQL fallback). No date window — keyed by
   // distinct_id, LIMIT 1. Pipe named rows -> HogQL positional order so the destructure below
   // is byte-identical. #155 central-normalizes the pipe timestamp; no raw new Date()/.split('T')
@@ -1179,22 +939,6 @@ export async function getAttributionExplanation(siteId, model, distinctId) {
   }
 
   // 2. Fetch all events (journey) for this visitor
-  const journeySql = `
-    SELECT
-      event,
-      timestamp,
-      properties.page_url,
-      properties.utm_source,
-      properties.utm_medium,
-      properties.utm_campaign,
-      properties.ai_source,
-      properties.conversion_value
-    FROM events
-    WHERE properties.site_id = '${safeSite}'
-      AND distinct_id = '${safeId}'
-    ORDER BY timestamp ASC
-    LIMIT 500
-  `
   // Journey read — Tinybird-sole (D1c-2), the LAST engine leg off dead PostHog. REUSES the
   // already-deployed `journey` pipe (it serves the /journey route): its SELECT is a strict
   // superset of the 8 columns this leg consumes, with byte-identical WHERE/params/ORDER/LIMIT
@@ -1202,9 +946,8 @@ export async function getAttributionExplanation(siteId, model, distinctId) {
   // for the /journey route fails loudly here). A null pipe throws the loud force-read invariant —
   // no HogQL fallback, PostHog is dead. The pipe PARAM is named `visitor_id` but filters the
   // `distinct_id` TYPED column (journey.pipe's convention, identity rule #19a), so the engine's
-  // distinctId is passed as visitor_id. journeySql above is now orphaned — D3 sweeps it with
-  // posthog.js (consistent with D1c-1's deferred SQL-builder policy). The _queryHogQL seam stays
-  // inert for the injectable cutover tests (they force the throw and assert HogQL is never called).
+  // distinctId is passed as visitor_id. (D3 removed the old journeySql HogQL builder and the
+  // queryHogQL import/seam entirely — the cutover tests inject their pipe stubs via queryTinybird.)
   const _jTb = await _pipeRead('journey', { site_id: String(siteId), visitor_id: String(distinctId) })
   const journeyRows = _jTb
     ? _jTb.map(r => [r.event_type, r.timestamp, r.page_url, r.utm_source, r.utm_medium, r.utm_campaign, r.ai_source, r.conversion_value])
@@ -1554,35 +1297,6 @@ export async function getMultiTouchAttributionLive({
   const safeSite = esc(siteId)
 
   // 1. Fetch conversions
-  const convSql = `
-    SELECT
-      uuid,
-      distinct_id,
-      timestamp,
-      properties.conversion_type AS conversion_type,
-      toFloatOrZero(toString(properties.conversion_value)) AS conversion_value,
-      properties.utm_source AS utm_source,
-      properties.utm_medium AS utm_medium,
-      properties.utm_campaign AS utm_campaign,
-      properties.referrer AS referrer,
-      properties.ai_source AS ai_source,
-      properties.country AS country,
-      properties.device_type AS device_type,
-      properties.utm_term AS utm_term,
-      properties.provider AS provider,
-      properties.attribution_status AS attribution_status,
-      properties.stitching_method AS stitching_method,
-      properties.ingestion_method AS ingestion_method,
-      properties.stripe_subscription_id AS stripe_subscription_id,
-      properties.stripe_event_type AS stripe_event_type
-    FROM events
-    WHERE properties.site_id = '${safeSite}'
-      AND event = '$conversion'
-      AND timestamp >= ${fromDate}
-      AND timestamp < ${toDate}
-    ORDER BY timestamp DESC
-    LIMIT 10000
-  `
   // Tinybird cutover (allowlist-gated; null -> HogQL fallback). Reuse the SAME window
   // bounds HogQL uses to guarantee date-parity; format for ClickHouse DateTime params.
   // Pipe named rows are remapped to the HogQL POSITIONAL order so the mapRows below is
@@ -1649,39 +1363,6 @@ export async function getMultiTouchAttributionLive({
   if (custKey2 && custKey2 !== custKey1) selectParts.push(`properties.custom_${custKey2} AS custom_${custKey2}`)
   const customPvSelect = selectParts.length > 0 ? ',\n      ' + selectParts.join(',\n      ') : ''
 
-  const pvSql = `
-    SELECT
-      distinct_id,
-      timestamp,
-      properties.utm_source AS utm_source,
-      properties.utm_medium AS utm_medium,
-      properties.utm_campaign AS utm_campaign,
-      properties.referrer AS referrer,
-      properties.ai_source AS ai_source,
-      properties.gclid AS gclid,
-      properties.gbraid AS gbraid,
-      properties.wbraid AS wbraid,
-      properties.fbclid AS fbclid,
-      properties.msclkid AS msclkid,
-      properties.ttclid AS ttclid,
-      properties.li_fat_id AS li_fat_id,
-      properties.li_fatid AS li_fatid,
-      properties.twclid AS twclid,
-      properties.dclid AS dclid,
-      properties.snapclid AS snapclid,
-      properties.pclid AS pclid,
-      properties.sccid AS sccid,
-      properties.ko_click_id AS ko_click_id,
-      properties.page_url AS page_url,
-      properties.utm_term AS utm_term${customPvSelect}
-    FROM events
-    WHERE properties.site_id = '${safeSite}'
-      AND event = '$pageview'
-      AND timestamp >= ${lookbackStr}
-      AND timestamp < ${toDate}
-    ORDER BY timestamp ASC
-    LIMIT 100000
-  `
   // Tinybird cutover (allowlist-gated; null -> HogQL fallback via _pipeRead). This is THE fix:
   // the HogQL leg is dead, so without this every conversion fell to the :1866 "no pageviews ->
   // 100% Direct" branch and four of five models silently lied. SAME half-open window bounds the
@@ -1972,60 +1653,6 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
 
   // Linear attribution: legacy, dead code kept for safety / documentation
   if (model === 'linear') {
-    const sql = `
-    SELECT
-      dim_value,
-      sum(fractional_revenue) AS revenue,
-      sum(fractional_conversions) AS conversions,
-      count() AS touchpoints
-    FROM (
-      SELECT
-        ${groupBy === 'channel' ? `CASE
-          WHEN pv.properties.utm_medium IN ('cpc','ppc','paid','paid_search','paidsearch') THEN 'Paid Search'
-          WHEN pv.properties.utm_medium IN ('paid_social','paidsocial') OR pv.properties.utm_source IN ('facebook','instagram','linkedin','twitter','tiktok') THEN 'Paid Social'
-          WHEN pv.properties.utm_medium = 'email' OR pv.properties.utm_source = 'email' THEN 'Email'
-          WHEN pv.properties.utm_medium IN ('affiliate','partner') THEN 'Affiliate'
-          WHEN pv.properties.utm_source IS NOT NULL AND pv.properties.utm_source != '' THEN 'Organic Search'
-          ELSE 'Direct'
-        END` : `COALESCE(NULLIF(toString(pv.properties.utm_source), ''), 'direct')`} AS dim_value,
-        toFloatOrZero(toString(cv.properties.conversion_value)) / touch_counts.touch_count AS fractional_revenue,
-        1 / touch_counts.touch_count AS fractional_conversions
-      FROM events cv
-      INNER JOIN (
-        SELECT
-          cv_inner.uuid AS conversion_uuid,
-          count() AS touch_count
-        FROM events cv_inner
-        INNER JOIN events pv_inner
-          ON pv_inner.distinct_id = cv_inner.distinct_id
-          AND pv_inner.properties.site_id = cv_inner.properties.site_id
-          AND pv_inner.event = '$pageview'
-          AND pv_inner.timestamp <= cv_inner.timestamp
-          AND pv_inner.properties.utm_source IS NOT NULL
-          AND pv_inner.properties.utm_source != ''
-        WHERE cv_inner.properties.site_id = '${safeSite}'
-          AND cv_inner.event = '$conversion'
-          AND cv_inner.timestamp >= ${fromDate}
-          AND cv_inner.timestamp < ${toDate}
-        GROUP BY cv_inner.uuid
-        HAVING touch_count > 0
-      ) touch_counts ON touch_counts.conversion_uuid = cv.uuid
-      INNER JOIN events pv
-        ON pv.distinct_id = cv.distinct_id
-        AND pv.properties.site_id = cv.properties.site_id
-        AND pv.event = '$pageview'
-        AND pv.timestamp <= cv.timestamp
-        AND pv.properties.utm_source IS NOT NULL
-        AND pv.properties.utm_source != ''
-      WHERE cv.properties.site_id = '${safeSite}'
-        AND cv.event = '$conversion'
-        AND cv.timestamp >= ${fromDate}
-        AND cv.timestamp < ${toDate}
-    )
-    GROUP BY dim_value
-    ORDER BY revenue DESC
-    LIMIT 50000
-  `
 
     // PR#4: the SERVED allowlist (report-config-validation.js) denies every shape that would reach
     // this read, at all three callers, so it is UNREACHABLE. The bare queryHogQL is deleted rather
@@ -2054,42 +1681,6 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
   // Excludes conversions with zero eligible UTM touchpoints.
   // Group by first-touch source only. attributionWindow and groupBy2 not supported.
   if (metric === 'days_to_convert') {
-    const sql = `
-    SELECT
-      dim_value,
-      round(avg(days_gap), 1) AS days_to_convert,
-      count() AS conversions
-    FROM (
-      SELECT
-        cv.uuid AS conversion_uuid,
-        argMin(COALESCE(NULLIF(toString(pv.utm_source), ''), 'direct'), pv.timestamp) AS dim_value,
-        dateDiff('day', min(pv.timestamp), cv.timestamp) AS days_gap
-      FROM (
-        SELECT uuid, distinct_id, timestamp
-        FROM events
-        WHERE properties.site_id = '${safeSite}'
-          AND event = '$conversion'
-          AND timestamp >= ${fromDate}
-          AND timestamp < ${toDate}
-      ) cv
-      INNER JOIN (
-        SELECT distinct_id, timestamp, properties.utm_source AS utm_source
-        FROM events
-        WHERE properties.site_id = '${safeSite}'
-          AND event = '$pageview'
-          AND properties.utm_source IS NOT NULL
-          AND properties.utm_source != ''
-      ) pv
-        ON pv.distinct_id = cv.distinct_id
-        AND pv.timestamp <= cv.timestamp
-      GROUP BY cv.uuid, cv.timestamp
-      HAVING days_gap >= 0
-    )
-    GROUP BY dim_value
-    HAVING conversions > 0
-    ORDER BY days_to_convert ASC
-    LIMIT 50000
-  `
 
     // Pipe-first (allowlist-gated, HogQL fallback via _pipeRead, mirrors :2852). The
     // days_to_convert branch ALWAYS groups by first-touch source with no groupBy2/window/
@@ -2120,43 +1711,6 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
   // Does not require UTM source on touchpoints (counts all pageviews).
   // Group by first-touch source only. attributionWindow and groupBy2 not supported.
   if (metric === 'touchpoints_per_conversion') {
-    const sql = `
-    SELECT
-      dim_value,
-      round(avg(touch_count), 1) AS touchpoints_per_conversion,
-      count() AS conversions
-    FROM (
-      SELECT
-        cv.uuid AS conversion_uuid,
-        COALESCE(
-          argMinIf(toString(pv.utm_source), pv.timestamp, pv.utm_source IS NOT NULL AND pv.utm_source != ''),
-          NULLIF(toString(cv.utm_source), ''),
-          'direct'
-        ) AS dim_value,
-        countIf(pv.event = '$pageview') AS touch_count
-      FROM (
-        SELECT uuid, distinct_id, timestamp, properties.utm_source AS utm_source
-        FROM events
-        WHERE properties.site_id = '${safeSite}'
-          AND event = '$conversion'
-          AND timestamp >= ${fromDate}
-          AND timestamp < ${toDate}
-      ) cv
-      INNER JOIN (
-        SELECT distinct_id, timestamp, event, properties.utm_source AS utm_source
-        FROM events
-        WHERE properties.site_id = '${safeSite}'
-      ) pv
-        ON pv.distinct_id = cv.distinct_id
-        AND pv.timestamp <= cv.timestamp
-      GROUP BY cv.uuid, cv.utm_source
-      HAVING touch_count > 0
-    )
-    GROUP BY dim_value
-    HAVING conversions > 0
-    ORDER BY touchpoints_per_conversion DESC
-    LIMIT 50000
-  `
 
     // Pipe-first (allowlist-gated, HogQL fallback via _pipeRead, mirrors :2852). Like
     // days_to_convert, this branch always groups by first-touch source with no groupBy2/
@@ -2748,20 +2302,6 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     return finalLtvResult
   }
 
-  const sql = `
-    SELECT
-      ${effectiveDimExpr} AS dim_value${effectiveDim2Expr ? `,\n      ${effectiveDim2Expr} AS dim_value2` : ''},
-      ${metricCol} AS metric_value
-      ${extraSelect}
-    FROM events${refJoin}${qualifyingJoin}${windowJoin}${customJoin}
-    WHERE properties.site_id = '${safeSite}'
-      AND ${getDateFilterExpr('timestamp', tz, dateFrom, dateTo)}
-      ${eventFilter}${filterClauses}
-    GROUP BY dim_value${effectiveDim2Expr ? ', dim_value2' : ''}
-    ${havingClause}
-    ${orderClause}
-    LIMIT 50000
-  `
   // flexible_report pipe-first wiring (allowlist-gated, HogQL fallback). Materialized base-case
   // slices; EVERYTHING else falls through to the unchanged HogQL `sql`. Common STRICT gate: single
   // dim, {revenue|conversions}, no _nd/window/custom joins, no filters, conversion_date, UTC. Both
