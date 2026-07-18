@@ -154,6 +154,23 @@ Multiple tokens are queued for rotation:
 - `deploy_token` (currently referenced in a shell env var).
 - Pre-existing Tinybird tokens exposed in previous logs and session transcripts.
 
+### 19. Nightly attribution: pipe-vs-HogQL parity was never empirically established (now unobtainable)
+
+The nightly (`api/jobs/nightly-attribution.js`) writes the money rail (`attributed_conversions`). D2 moved its conversion + touchpoint reads from PostHog/HogQL onto Tinybird pipes. The B1 `--validate` byte-diff harness (`scripts` flags on the nightly, `api/tests/nightly-validate-harness.test.js`) **never compared a pipe-computed row against a HogQL-computed row for the same conversion** — and it structurally cannot:
+
+- `$conversion` events were written **Tinybird-only** (`writeConversionDirect`, no `ph.capture` — `api/routes/stripe-webhook.js`), so they were **never dual-written**. No real conversion ever existed in both stores.
+- Of 182 staging `attributed_conversions` rows, 179 were processed in the HogQL era; their source events live only in PostHog, so the pipe returns nothing for them → they land in `missing`. The 3 comparable rows were all processed post-cutover **by the pipe itself**, so their `--validate` diff is a **determinism** check (recompute-vs-stored off the same pipe), **not** parity.
+- PostHog is decommissioned (D3); the corpus cannot be reconstructed. Phase 9 spec'd a Tinybird-vs-PostHog overlap reconciliation but it was never cleanly run for the money path (a non-recoverable `+339ms` PostHog ingestion timestamp shift, a prod-PostHog `403`, and a windowed-path OOM — see `tinybird/GATE3_RECONCILIATION_CONTRACT.md`, `tinybird/PHASE9_VALIDATION_HARNESS_SPEC.md`).
+
+**This is a pre-existing gap D2 surfaced, not one it created.** Verified: no test or script has ever reconciled `attributed_conversions` against Stripe or any independent anchor (the first nightly validation harness in git history *is* D2 B1, #292). The pre-D2 HogQL path was itself an **unvalidated read writing the money rail**. D2 swapped one unvalidated read for another **while net-adding** assurance — B1's determinism harness and B0's fail-closed guard (#290).
+
+What we rely on instead (and the standing gate for removing the HogQL fallback in B3):
+- **Determinism** — `--validate` recompute-vs-stored across N rows (money fields exact; timestamps compared as instants).
+- **Correctness-by-construction** — an adversarial fixture (deliberate same-timestamp tie + all 4 credit models + AI-influenced touch + $0 carrier) asserted against **hand-computed** expected values, never a recompute. The tie is the one divergence known to occur in production-shaped data (`realTies=1`) and the one thing `--validate` cannot test.
+- **Stripe reconciliation** of real revenue — Tinybird `$conversion`s vs Stripe, the true source of truth for webhook-sourced conversions (HogQL never was). **Covers webhook-sourced revenue only** — tracker and manual conversions have no independent anchor and never did.
+
+Status: pipe-vs-HogQL parity for the nightly write path is **UNVERIFIED and will remain so** — recorded here rather than implied by a green harness.
+
 
 ## Recently fixed
 
