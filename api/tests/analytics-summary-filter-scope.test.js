@@ -45,22 +45,29 @@ const PV = ['v1', 'v2', 'v3', 'v4'].map(id => ({
 }))
 
 // Two conversions on different channels: $100 Organic Search + $900 Direct = $1000 unfiltered.
+// Fixture keys are the REAL attributed_conversions columns (first_touch_* — the map + SELECT read
+// exactly these). NOTE: this mock returns rows regardless of the .select() string, so a unit test
+// can NEVER catch a non-existent-column error — that gap is covered by the static column check in
+// api/tests/analytics-conversion-columns.test.js (the compensating control).
 const CONV = [
-  { conversion_value: 100, first_touch_source: 'google', first_touch_channel: 'Organic Search', country: 'US', device: 'desktop', browser: 'Chrome', landing_page: '/', ai_influenced_source: null, conversion_timestamp: '2026-07-10T10:00:00Z', conversion_date: '2026-07-10', distinct_id: 'c1', anonymous_id: 'c1' },
-  { conversion_value: 900, first_touch_source: 'direct', first_touch_channel: 'Direct', country: 'GB', device: 'mobile', browser: 'Safari', landing_page: '/pricing', ai_influenced_source: null, conversion_timestamp: '2026-07-11T10:00:00Z', conversion_date: '2026-07-11', distinct_id: 'c2', anonymous_id: 'c2' },
+  { conversion_value: 100, first_touch_source: 'google', first_touch_channel: 'Organic Search', first_touch_country: 'US', first_touch_device: 'desktop', first_touch_browser: 'Chrome', first_touch_landing_page: '/', ai_influenced_source: null, conversion_timestamp: '2026-07-10T10:00:00Z', conversion_date: '2026-07-10', distinct_id: 'c1', anonymous_id: 'c1' },
+  { conversion_value: 900, first_touch_source: 'direct', first_touch_channel: 'Direct', first_touch_country: 'GB', first_touch_device: 'mobile', first_touch_browser: 'Safari', first_touch_landing_page: '/pricing', ai_influenced_source: null, conversion_timestamp: '2026-07-11T10:00:00Z', conversion_date: '2026-07-11', distinct_id: 'c2', anonymous_id: 'c2' },
 ]
 
-// Stub the attributed_conversions read (site+date scoped in code; we return the full set and let the
-// handler's own filter logic scope it). getSupabase() is a singleton -> monkeypatch .from.
+// Stub the attributed_conversions read. getSupabase() is a singleton -> monkeypatch .from.
+// installSupabase(rows) -> { data: rows, error: null }; installSupabaseError(msg) -> { data: null,
+// error } to exercise the read-failure path (supabase-js returns an error WITHOUT throwing).
 const _client = getSupabase()
 const _realFrom = _client.from
-function installSupabase (rows) {
+function installResult (result) {
   const chain = () => {
-    const b = { select: () => b, eq: () => b, gte: () => b, lte: () => b, then: (r) => Promise.resolve({ data: rows, error: null }).then(r) }
+    const b = { select: () => b, eq: () => b, gte: () => b, lte: () => b, then: (r) => Promise.resolve(result).then(r) }
     return b
   }
   _client.from = () => chain()
 }
+function installSupabase (rows) { installResult({ data: rows, error: null }) }
+function installSupabaseError (msg = 'column "x" does not exist') { installResult({ data: null, error: { message: msg } }) }
 function restoreSupabase () { _client.from = _realFrom }
 
 function stubPageviews () {
@@ -83,6 +90,17 @@ test('(c) no filter -> revenue KPIs are the full unfiltered totals (baseline unc
   assert.strictEqual(k.conversion_rate, 50, '2 converters / 4 visitors')
   assert.strictEqual(k.revenue_per_visitor, 250, '1000 / 4')
   assert.strictEqual(res.body.data.revenue_by_source.google, 100)
+  assert.strictEqual(res.body.data.revenue_unavailable_reason, null, 'unfiltered success -> no unavailable reason')
+})
+
+// ── 🔴 REGRESSION GUARD (the #278 prod bug): unfiltered revenue must be the real totals, NOT null ──
+test('(regression) unfiltered -> revenue is NON-NULL (the gate must not fire on an empty filter set)', async (t) => {
+  t.after(reset)
+  installSupabase(CONV); stubPageviews()
+  const res = mockRes()
+  await summaryHandler(req(), res)
+  assert.notStrictEqual(res.body.data.kpis.total_revenue, null, 'empty filters must NOT gate revenue (this was the #278 regression)')
+  assert.strictEqual(res.body.data.kpis.total_revenue, 1000)
 })
 
 // ── (a) PASS-THROUGH — Channel filter scopes the revenue rail ─────────────────
@@ -125,6 +143,7 @@ test('(b) OS:Windows -> revenue KPIs are NULL (gated, not unfiltered numbers)', 
   assert.strictEqual(res.body.data.revenue_by_source, null, 'per-source revenue map gated too')
   assert.strictEqual(res.body.data.timeseries.revenue, null, 'revenue timeseries gated too')
   assert.ok(res.body.data.top_sources.every(s => s.revenue === null), 'top_sources revenue overlay gated too')
+  assert.strictEqual(res.body.data.revenue_unavailable_reason, 'unsupported_filter', 'distinguishable reason: gated dim')
   // pageview KPIs still serve (the gate is revenue-only)
   assert.strictEqual(k.unique_visitors, 4, 'visitor KPI unaffected by the revenue gate')
 })
@@ -135,4 +154,26 @@ test('(b2) a mixed request with any gated dim gates revenue even if another dim 
   const res = mockRes()
   await summaryHandler(req(['Channel:Organic Search', 'OS:Windows']), res)
   assert.strictEqual(res.body.data.kpis.total_revenue, null, 'OS (gated) present -> revenue cannot be honestly scoped -> null')
+})
+
+// ── 🔴 (d) READ-ERROR vs EMPTY — a broken query must NOT masquerade as "no conversions" (step 4) ──
+test('(d) conversions read ERROR -> revenue NULL + reason "read_error" (never a fake 0)', async (t) => {
+  t.after(reset)
+  installSupabaseError('column "landing_page" does not exist'); stubPageviews()
+  const res = mockRes()
+  await summaryHandler(req(), res)  // unfiltered — the exact #278 shape, but now with a failing read
+  const k = res.body.data.kpis
+  assert.strictEqual(k.total_revenue, null, 'a failed read must NOT render as $0')
+  assert.strictEqual(k.conversion_count, null, 'a failed read must NOT render as 0 conversions')
+  assert.strictEqual(res.body.data.revenue_unavailable_reason, 'read_error', 'distinguishable from a legitimate empty (reason=null)')
+})
+
+test('(d2) legitimate EMPTY (query OK, zero rows) -> revenue 0, reason null (truthful, distinguishable)', async (t) => {
+  t.after(reset)
+  installSupabase([]); stubPageviews()   // query succeeds, genuinely no conversions
+  const res = mockRes()
+  await summaryHandler(req(), res)
+  assert.strictEqual(res.body.data.kpis.total_revenue, 0, 'genuine zero is truthful (not null)')
+  assert.strictEqual(res.body.data.kpis.conversion_count, 0)
+  assert.strictEqual(res.body.data.revenue_unavailable_reason, null, 'empty is NOT an error — distinguishable signal')
 })

@@ -53,13 +53,18 @@ const PIPE_FILTER_PARAM = {
 // (hide, don't fake) rather than returned unfiltered. Channel/Source classification is
 // nightly-populated on the conversion row (channelFromEvent, same classifier as filter_channel);
 // see the PR note on stale-until-reprocess parity.
-const CONVERSION_FILTER_COLUMN = {
+// Values MUST be REAL attributed_conversions columns — the table has only first_touch_*/last_touch_*
+// geo/device/browser/landing_page (no unprefixed country/device/browser/landing_page). A wrong name
+// makes the SELECT error out, which used to render as "no conversions" (see the read-error guard
+// below). api/tests/analytics-conversion-columns.test.js binds this map + the SELECT to the baseline
+// migration's column set so a non-existent column fails CI, not prod.
+export const CONVERSION_FILTER_COLUMN = {
   Channel: 'first_touch_channel',
   Source: 'first_touch_source',
-  Country: 'country',
-  Device: 'device',
-  Browser: 'browser',
-  Page: 'landing_page',
+  Country: 'first_touch_country',
+  Device: 'first_touch_device',
+  Browser: 'first_touch_browser',
+  Page: 'first_touch_landing_page',
   'AI Source': 'ai_influenced_source'
 }
 
@@ -333,20 +338,32 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
     // PostHog server-routed events can't support reliably — suppressed (response below).
 
     // ─── Revenue join from attributed_conversions ────────────────────────────
+    // Columns MUST all exist (see CONVERSION_FILTER_COLUMN note). A read that FAILS (bad column,
+    // RLS, network) is NOT the same as zero rows: the supabase-js client returns {data:null,error}
+    // WITHOUT throwing, so a failed query must be detected via `error`, logged loud, and surfaced as
+    // an unavailable state — never silently rendered as "no conversions" (that silent degradation is
+    // exactly the §6 fake-zero class: a broken query masqueraded as empty data before this fix).
     let conversions = []
+    let conversionsReadFailed = false
     try {
-      const { data: convRows } = await supabase
+      const { data: convRows, error: convErr } = await supabase
         .from('attributed_conversions')
-        .select('conversion_date, conversion_value, first_touch_source, first_touch_channel, country, device, browser, landing_page, ai_influenced_source, conversion_timestamp, distinct_id, anonymous_id')
+        .select('conversion_date, conversion_value, first_touch_source, first_touch_channel, first_touch_country, first_touch_device, first_touch_browser, first_touch_landing_page, ai_influenced_source, conversion_timestamp, distinct_id, anonymous_id')
         .eq('site_id', siteId)
         .gte('conversion_date', currentPadded.from)
         .lte('conversion_date', currentPadded.to)
-      conversions = (convRows || []).filter(r => {
-        const localDate = getLocalDateString(new Date(r.conversion_timestamp || r.conversion_date), tz)
-        return localDate >= localDateFrom && localDate <= localDateTo
-      })
-    } catch (_e) {
-      // attributed_conversions table may be empty for very new sites — fail silently.
+      if (convErr) {
+        conversionsReadFailed = true
+        console.error('[analytics/summary] attributed_conversions read FAILED (not empty):', convErr.message || convErr)
+      } else {
+        conversions = (convRows || []).filter(r => {
+          const localDate = getLocalDateString(new Date(r.conversion_timestamp || r.conversion_date), tz)
+          return localDate >= localDateFrom && localDate <= localDateTo
+        })
+      }
+    } catch (e) {
+      conversionsReadFailed = true
+      console.error('[analytics/summary] attributed_conversions read THREW:', e?.message || e)
     }
 
     // §6 wrong-scope closure: scope the revenue rail to the SAME filter the pageview KPIs honor.
@@ -361,22 +378,28 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
       if (!col) { revenueGated = true; continue }
       ;(revFilterCols[col] ||= new Set()).add(f.value)
     }
-    if (!revenueGated) {
+    if (!revenueGated && !conversionsReadFailed) {
       for (const [col, vals] of Object.entries(revFilterCols)) {
         conversions = conversions.filter(r => vals.has(r[col] ?? ''))
       }
     }
 
-    const totalRevenue = revenueGated ? null : conversions.reduce((s, r) => s + (Number(r.conversion_value) || 0), 0)
-    const conversionCount = revenueGated ? null : conversions.length
+    // Revenue KPIs are null (hidden) when the shape can't be honestly scoped (gated dim) OR the read
+    // failed (unknown value — must NOT render 0). A distinguishable reason is emitted below so the UI
+    // can tell "unsupported filter" from "temporarily unavailable" from a legitimate zero.
+    const revenueUnavailable = revenueGated || conversionsReadFailed
+    const revenueUnavailableReason = conversionsReadFailed ? 'read_error' : (revenueGated ? 'unsupported_filter' : null)
+
+    const totalRevenue = revenueUnavailable ? null : conversions.reduce((s, r) => s + (Number(r.conversion_value) || 0), 0)
+    const conversionCount = revenueUnavailable ? null : conversions.length
     // Rate numerator = DISTINCT converters (same canonical visitor identity the
     // denominator uses — distinct_id/anonymous_id), NOT raw conversion rows. A
     // visitor converting N times is one converter. cappedRate also guards >100%.
     // Numerator (scoped conversions) and denominator (scoped uniqueVisitors) now match — the old
     // unfiltered-numerator ÷ filtered-denominator was what produced the bogus 100%.
     const distinctConverters = countDistinctConverters(conversions)
-    const conversionRate = revenueGated ? null : cappedRate(distinctConverters, uniqueVisitors)
-    const revenuePerVisitor = revenueGated ? null : (uniqueVisitors > 0 ? totalRevenue / uniqueVisitors : 0)
+    const conversionRate = revenueUnavailable ? null : cappedRate(distinctConverters, uniqueVisitors)
+    const revenuePerVisitor = revenueUnavailable ? null : (uniqueVisitors > 0 ? totalRevenue / uniqueVisitors : 0)
 
     // Revenue time series — bucketed the same way as visitor time series
     const revenueBuckets = {}
@@ -405,13 +428,14 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
     const allBuckets = new Set([...fullBuckets, ...Object.keys(dayVisitorBuckets), ...Object.keys(revenueBuckets), ...Object.keys(dayCounts)])
     const labels = [...allBuckets].sort()
     const visitors_timeseries = labels.map(l => dayVisitorBuckets[l] || 0)
-    // Gated (Entry/Exit/OS): null the revenue series/map too — a wrong-scope leak is a leak on
-    // every revenue surface, not only the KPI cards. Pass-through dims already scoped `conversions`.
-    const revenue_timeseries = revenueGated ? null : labels.map(l => revenueBuckets[l] || 0)
+    // Unavailable (gated dim OR read error): null the revenue series/map too — a wrong-scope leak or
+    // a broken read is a leak on every revenue surface, not only the KPI cards. Pass-through dims
+    // already scoped `conversions`.
+    const revenue_timeseries = revenueUnavailable ? null : labels.map(l => revenueBuckets[l] || 0)
 
     // Per-source revenue map
-    const revenueBySource = revenueGated ? null : {}
-    if (!revenueGated) {
+    const revenueBySource = revenueUnavailable ? null : {}
+    if (!revenueUnavailable) {
       conversions.forEach(r => {
         const src = r.first_touch_source || 'Direct'
         revenueBySource[src] = (revenueBySource[src] || 0) + (Number(r.conversion_value) || 0)
@@ -435,7 +459,8 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
           revenue_per_visitor: revenuePerVisitor
         },
         top_pages: topPages,
-        top_sources: topSources.map(s => ({ ...s, revenue: revenueGated ? null : (revenueBySource[s.source] || 0) })),
+        top_sources: topSources.map(s => ({ ...s, revenue: revenueUnavailable ? null : (revenueBySource[s.source] || 0) })),
+        revenue_unavailable_reason: revenueUnavailableReason,
         ai_sources: aiSources,
         devices: deviceCounts,
         top_countries: topCountries,
