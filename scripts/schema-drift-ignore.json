@@ -1,11 +1,9 @@
 {
-  "_doc": "KNOWN, REVIEWED schema-drift exceptions consumed by scripts/schema-drift-check.mjs (--ignore). Every entry is an explicit decision, never a silent skip. Entries here are prod ORPHANS with NO code references whose exact DDL could not be committed by CC (no prod-DDL access); they await a founder decision: capture-from-prod (pg_dump -t) and formalize as a migration, OR DROP from prod. Remove the entry the moment the object is formalized or dropped — the check then re-enforces it.",
+  "_doc": "KNOWN, REVIEWED schema-drift exceptions consumed by scripts/schema-drift-check.mjs (--ignore). Every entry is an explicit, reviewed decision — never a silent skip. Keep this list MINIMAL: a permanent exception reported on every run is how a check gets tuned out (which is how drift ran unnoticed for weeks). Green-when-clean, loud-when-new. REMOVE an entry the moment the divergence is converged. Prior 'unknown prod-orphan' deferrals (sites.custom_domain*, site_annotations.*) were resolved and removed 2026-07-18 (custom_domain converged via 20260718120000_c2_convergence_round2; site_annotations is fully defined in 00000000000000_baseline_schema.sql).",
   "ignore": [
-    "sites.custom_domain*",
-    "site_annotations.*"
+    "sites.owner_id"
   ],
   "_rationale": {
-    "sites.custom_domain*": "Prod-only columns, NO code reference anywhere (git grep custom_domain in api/dashboard = empty). Exact column names/types unknown to CC. Capture via `pg_dump --schema-only -t sites` from prod, or DROP.",
-    "site_annotations.*": "Table exists in prod only, NO code reference anywhere, NO CREATE migration. Exact DDL unknown to CC. Capture via `pg_dump --schema-only -t site_annotations` from prod, or DROP."
+    "sites.owner_id": "DELIBERATE founder decision — NOT drift-by-neglect. prod's sites.owner_id has DEFAULT gen_random_uuid(); staging has no default. Intentionally left divergent for now (reconciling the default is a separate planned change, not part of C2 convergence). REMOVE this entry once the default is converged across environments so the check re-enforces the column. Documented in PR #291 and KNOWN_ISSUES."
   }
 }
