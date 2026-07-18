@@ -308,7 +308,7 @@ export default function Leads() {
         </div>
       </div>
 
-      <DashboardCard title="All Leads" subtitle={`${totalLeads} leads in range`}>
+      <DashboardCard title="All Leads" subtitle={leads.length >= 100 ? 'Showing the 100 most recent' : `${leads.length} shown`}>
         {isLoading ? (
           <div className="py-12 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-st-black mx-auto" />
@@ -317,8 +317,13 @@ export default function Leads() {
           <QueryError isError={isError} error={error} onRetry={refetch} />
         ) : leads.length === 0 ? (
           <div className="py-12 text-center space-y-2">
-            {search || filterAI !== 'all' ? (
-              <p className="text-sm text-st-gray dark:text-gray-400">No leads match your filters.</p>
+            {search ? (
+              <div className="space-y-1">
+                <p className="text-sm text-st-gray dark:text-gray-400">No matches for "{search}" in the leads loaded for this range.</p>
+                <p className="text-xs text-st-gray dark:text-gray-500">Search currently covers the leads loaded for the selected date range, not your full history — widen the date range to surface older visitors.</p>
+              </div>
+            ) : filterAI !== 'all' ? (
+              <p className="text-sm text-st-gray dark:text-gray-400">No leads match this filter in the range shown.</p>
             ) : (
               <>
                 <p className="text-sm font-medium text-st-black dark:text-dark-primary">No leads yet</p>

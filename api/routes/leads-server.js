@@ -212,30 +212,34 @@ router.get('/', validateSiteKey, async (req, res) => {
       leads = leads.filter(l => !l.ai_source)
     }
 
-    const totalRevenue = leads.reduce((s, l) => s + l.revenue, 0)
-    const totalConversions = leads.reduce((s, l) => s + l.conversions, 0)
-
-    // True lead count = DISTINCT converting identities in range, NOT the page size.
-    // `leads.length` is capped at the query LIMIT, so it undercounts; this separate
-    // aggregate gives the real total (a "lead" = a distinct visitor with a conversion,
-    // the same unit the Dashboard KPI uses). Falls back to the page length on error.
-    let total = leads.length
+    // Full-window totals (distinct converters / conversions / revenue) from attributed_conversions —
+    // Supabase is the §5 source of truth for conversions & revenue, and the exact source Analytics
+    // reads (which shows these correctly). ONE query so the three are internally consistent
+    // (converters ≤ conversions), and full-WINDOW rather than a reduce over the ≤LIMIT page: a
+    // revenue-bearing converter can sit beyond the page (leads sort last_seen desc), which made all
+    // three page-scoped values wrong (KPI undercount + the "No revenue" banner despite real revenue).
+    // The page-derived values are kept ONLY as a degraded fallback if the aggregate read fails — loud
+    // log, never a silent zero (that silent-degradation was the #278/#280 class).
+    let total = new Set(leads.filter(l => Number(l.conversions) > 0).map(l => l.id)).size
+    let totalConversions = leads.reduce((s, l) => s + l.conversions, 0)
+    let totalRevenue = leads.reduce((s, l) => s + l.revenue, 0)
     try {
-      // leads_count pipe col `leads_count` (scalar) → nested [[count]] (destructured as ?.[0]?.[0]).
-      const countRows = await readTb('leads_count',
-        { site_id: siteId, date_from_ts: dateFromTs, date_to_ts: dateToTs },
-        `
-        SELECT count(DISTINCT distinct_id)
-        FROM events
-        WHERE properties.site_id = '${esc(siteId)}'
-          AND event = '$conversion'
-          ${dateFilter}
-      `, 'leads_count',
-        tb => [[tb?.[0]?.leads_count ?? 0]])
-      const trueTotal = Number(countRows?.[0]?.[0])
-      if (Number.isFinite(trueTotal)) total = trueTotal
-    } catch (_e) {
-      // Count query failed — keep the page-length fallback rather than 500.
+      let convQ = getSupabase()
+        .from('attributed_conversions')
+        .select('distinct_id, conversion_value')
+        .eq('site_id', siteId)
+      if (dateFrom && dateTo) convQ = convQ.gte('conversion_date', dateFrom).lte('conversion_date', dateTo)
+      const { data: convAgg, error: aggErr } = await convQ
+      if (aggErr) {
+        console.error('[leads] attributed_conversions totals read FAILED (keeping page fallback):', aggErr.message || aggErr)
+      } else {
+        const convRows = convAgg || []
+        total = new Set(convRows.map(r => r.distinct_id)).size
+        totalConversions = convRows.length
+        totalRevenue = convRows.reduce((s, r) => s + (Number(r.conversion_value) || 0), 0)
+      }
+    } catch (e) {
+      console.error('[leads] attributed_conversions totals read THREW (keeping page fallback):', e?.message || e)
     }
 
     return res.status(200).json({
