@@ -17,3 +17,14 @@ ALTER TABLE public.site_support_notes ENABLE ROW LEVEL SECURITY;
 -- Only the postgres user and the service_role key can read/write.
 -- Because the API uses the service_role key (via getSupabase()),
 -- the server logic governs access (requireRole('super_admin')).
+
+-- Indexes on both FK columns, which were unindexed at table creation:
+--   site_id    — ON DELETE CASCADE; this is the admin route's primary filter column.
+--   admin_user_id — ON DELETE SET NULL; indexed for reverse-lookup (audits by user).
+-- Both indexes were applied directly to staging + prod on 2026-07-18.
+-- This block is a repo-record catch-up so fresh environments (CI, local) match.
+CREATE INDEX IF NOT EXISTS idx_site_support_notes_site_created
+  ON public.site_support_notes (site_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_site_support_notes_admin_user
+  ON public.site_support_notes (admin_user_id);
