@@ -125,6 +125,35 @@ Within `getFlexibleReport`, queries for the metrics `revenue`, `conversions`, an
 To avoid untested blast-radius risks, the calculations inside `getMultiTouchAttributionLive`, `getSessionReport`, and `getAiPlatformAttributionLive` have been reverted to query using UTC. Consequently, users selecting linear/u_shaped/time_decay or viewing sessions will still see timezone discrepancies (e.g. conversions showing on different days compared to the dashboard).
 - **Follow-up Task**: `Task-0: Lock timezone ground truth for linear/u-shaped/time-decay and session calculations, then roll out timezone-aware query bounds (getDateFilterExpr) with targeted integration tests.`
 
+### 13. Stale click-ID-blind channel CASE classifier in 3 pipes
+
+Three pipes (`session_report_pageviews`, `session_report_conversions`, and `seo_revenue_landing_pages`) contain a click-ID-blind channel classifier that disagrees with `channelFromEvent` in the JS engine and other pipes. This causes live mis-classification in session reports and SEO revenue. A dedicated PR is required to copy CC's corrected SQL over to these pipes.
+
+### 14. admin and leads_count swallow Tinybird throws
+
+The `/admin` endpoints (containing 6 inner catches) and the `/leads/count` endpoint swallow the Tinybird read error throws. Instead of propagating the error to trigger a proper 500 error, they catch the error internally and return an HTTP 200 response with zeroed KPIs. This means `TINYBIRD_FORCE_READ=true` cannot reach the handler-level catches. The inner try-catch blocks in these handlers need to be stripped.
+
+### 15. Scoped summary revenue regression (#278)
+
+An invalid `attributed_conversions` SELECT query (attempting to select columns `country`, `device`, `browser`, and `landing_page` that do not exist — only `first_touch_*` equivalents exist) was rejected by PostgREST, swallowed by an internal try/catch, and rendered in the UI as "no conversions." This represents the same silent-degradation pattern as the §6 fake zeros. The conversions read logic must be modified to distinguish database query failures from true zero-row results (being resolved in PR #280).
+
+### 16. Unit test mocks (installSupabase) swallow select query schema errors
+
+The unit test mocks for Supabase (`installSupabase`) return predefined fixtures regardless of the `.select()` query string. Because of this, unit tests can never detect an invalid-column or invalid-select query error (such as the one shipped in #278). A static schema anti-drift verification check is required as a compensating control.
+
+### 17. C2 Schema Convergence open decisions
+
+The migrations for C2 schema convergence are authored but NOT applied to any database (staging first, then prod). Several critical decisions remain open:
+- `sites.owner_id` default constraint is left commented out (likely a design bug rather than intended default).
+- Money-rail rows (converting `revenue_ingestion_events` 3 columns and `lead_qualifications.qualified_by` from text to UUID) are excluded pending a founder per-row review.
+- The migration `20260620134500_add_site_support_notes.sql` is flagged as dangling (applied to neither staging nor prod) awaiting a founder apply-or-delete decision.
+
+### 18. Token rotation queue
+
+Multiple tokens are queued for rotation:
+- `deploy_token` (currently referenced in a shell env var).
+- Pre-existing Tinybird tokens exposed in previous logs and session transcripts.
+
 
 ## Recently fixed
 
