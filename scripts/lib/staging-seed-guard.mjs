@@ -6,12 +6,15 @@
 // ACTUAL write target: dualWriteEvent() sends to TINYBIRD_HOST/TINYBIRD_APPEND_TOKEN. So a run with
 // PROD Tinybird creds would seed test fixtures straight into prod — the wave1_/gate0_-in-prod hole.
 //
-// WHAT DISTINGUISHES STAGING FROM PROD: ST_Staging (staging) and SourceTrack (prod) live in the SAME
-// `imubaid93` org. ST_Staging is Frankfurt (europe-west3 GCP). A host allowlist rejects a wrong-region
-// prod host, but if prod shares the region a host STRING cannot tell them apart — and an append/read
-// token cannot resolve its own workspace NAME via the Tinybird API. So the authoritative runtime check
-// is FIXTURE PRESENCE: the de200000 staging fixture site holds events in ST_Staging and does NOT exist
-// in prod SourceTrack. Two layers, both fail-closed:
+// WHAT DISTINGUISHES STAGING FROM PROD: the `imubaid93` org has THREE workspaces —
+//   • ST_Staging          (STAGING, 3ad4c1a8-…)  ← the ONLY staging workspace; Frankfurt (europe-west3 GCP)
+//   • SourceTrack         (PROD,    3c371bb9-…)
+//   • imubaid93_workspace (neither, 3b8a6b92-…)  ← older notes wrongly called THIS staging; it is not.
+// A host allowlist rejects a wrong-region prod host, but if prod shares the region a host STRING cannot
+// tell them apart — and an append/read token cannot resolve its own workspace NAME via the Tinybird API.
+// So the authoritative runtime check is FIXTURE PRESENCE: the de200000 staging fixture site holds events
+// in ST_Staging and does NOT exist in prod SourceTrack. Founder-validated (tb --cloud sql): ST_Staging
+// = 159 de200000 events, SourceTrack (prod) = 0. Two layers, both fail-closed:
 //   (1) assertStagingSeedTarget  — PURE, token-free: explicit --i-am-targeting-staging flag + de200000
 //       site + host on the staging allowlist. A prod-shaped host is rejected here (unit-tested).
 //   (2) assertStagingWorkspaceLive — LIVE: the target workspace must already hold the de200000 fixture,
@@ -19,11 +22,12 @@
 
 import { esc } from '../../api/lib/utils.js'
 
-// Known ST_Staging (Frankfurt) Tinybird host(s). Fail-closed: an unlisted host is refused. If staging
-// ever moves region, add the new host here — the startup echo prints the resolved host to compare.
-// NOTE (flagged to founder): inferred from the docs (ST_Staging = Frankfurt) + the europe-west3 host in
-// the test suite — NOT verified against the live staging env. If it differs the guard REFUSES (safe),
-// it never falls open.
+// Known ST_Staging (workspace 3ad4c1a8-…, Frankfurt) Tinybird host(s). Fail-closed: an unlisted host is
+// refused. If staging ever moves region, add the new host here — the startup echo prints the resolved
+// host to compare. NOTE (flagged to founder): inferred from the docs (ST_Staging = Frankfurt) + the
+// europe-west3 host in the test suite — NOT verified against the live staging env. If it differs the
+// guard REFUSES (safe); it never falls open. The live fixture-presence probe below is the authoritative
+// staging check regardless of this host value.
 export const STAGING_TINYBIRD_HOSTS = ['https://api.europe-west3.gcp.tinybird.co']
 
 const normHost = (h) => String(h || '').trim().replace(/\/+$/, '').toLowerCase()
