@@ -40,9 +40,10 @@ The prior handoff ended at "PR#2 (picker trim) dispatched." **This session did N
 | **ALLOWLIST** | Rebuild gate as positive allowlist keyed to **prod's 11 pipes**; gate campaigns.js; HOLE→0 | ✅ **MERGED — #262 (`63761a7`)** (HOLE=0, variance clean, anti-drift 10/10). |
 | **PIPE RE-VERIFY** | Re-confirm prod's 11 pipes **against prod** (not staging, not a remembered table) | ✅ **DONE** — all 11 present in prod Railway `TINYBIRD_READ_PIPES` (founder-confirmed via prod env var, 2026-07-17). ⚠️ Both CC + Antigravity Tinybird MCPs are **staging-bound** (469905) — only the founder can read prod. **Re-glance once more right before D1 removes the fallback.** |
 | **PR#4 step 1** | Delete the 3 CLEANLY-removable bare `queryHogQL` reads | ✅ **MERGED — #265 (`96fd8c0`)**. Deleted `:2154` (dead linear), `:2843` (ltv gated), `:3050` (ai_share gated) — proven no-op (0 cells changed, 0 throws/432 cells). Line numbers had drifted from #262's (`:2144/:2833/:2965/:3040` → `:2154/:2843/:2975/:3050`) — RE-GREP always. |
-| **D1 / PR#4 step 2** | Delete `:2975` (pipe=NONE else) + its **37 HogQL-leg tests** + the pipe→HogQL fallbacks — money-rail, LAST | ⬜ **Deferred into D1–D5** (kept gated + guarded by 2 tests in #265: `:2975` stays intact-but-422-gated, and every no-backend shape asserted denied). Deleting it now = rewriting 37 money-rail tests twice; D1 deletes read+tests as one change. |
+| **D1 / PR#4 step 2** | Delete `:2975` (pipe=NONE else) + its **37 HogQL-leg tests** + the pipe→HogQL fallbacks — money-rail, LAST | ✅ **DONE** — Split and completed as D1a (#272 flexible_report pipe-only, deleted the :2985 pipe=NONE else + 37 HogQL-leg tests), D1b-1 (#273, 8 tested route readers), D1b-2 (#274, 4 untested readers, tests-first), D1b-3 (#276, analytics pipe-serve), D1b-3b (#277, analytics fallback removed). |
+| **D1c** | Flip 13 engine legs & build explain pipe | ⏳ **IN PROGRESS** — Split: D1c-1 (flip 13 engine legs + delete dead conversion_rate/flexible_sessions block) · D1c-2 (build attribution_explain_journey pipe by cloning journey.pipe). Real execution order: D1c-1 → D1c-2 → D3 → D2 → D4-code → D5/GDPR. |
 | **D2** | Jobs off PostHog (nightly PostHog leg, health-agent posthog check + env) | ⬜ |
-| **D3** | Delete `api/lib/posthog.js` + `ph` client + `posthog-node` pkg | ⬜ |
+| **D3** | Delete `api/lib/posthog.js` + `ph` client + `posthog-node` pkg | ⬜ **BLOCKED** — After D1c-1, queryHogQL has exactly ONE functional caller: explain journey (attribution-engine.js:1335). D3 is blocked SOLELY on D1c-2. |
 | **D4** | Frontend: telemetry env ✅ DONE · code (`posthog-js` + `dashboard/src/lib/posthog.js`) ⬜ | 🔶 env done, code pending |
 | **D5** | Strip backend `POSTHOG_*` env (all services) + update sub-processor/legal docs → **GDPR claim unlocks** | ⬜ |
 | **D6** | Orphan cleanup (ai-analytics/annotations) folds in | ⬜ |
@@ -244,3 +245,27 @@ INFERRED from session arc (orchestrator-synthesis — verify if precision needed
 - **Two Stripe webhooks (don't conflate):** billing.js = own subscription billing; stripe-webhook.js `/:site_key` = buyer purchases → $conversion (not connected in prod).
 - **Standing lesson (5th time this session):** each fabrication family hid from the previous family's check. Verify the **property** (dim varies with input, HTTP status is real), not the **symptom** — and prove a new check's own false-positive modes before trusting it.
 - **🔴 Secrets exposed in transcript/.env pending rotation (deferred):** Tinybird tokens (2+), Stripe `sk_test`, PostHog `phc_` (likely publishable/safe), and — via Antigravity's `read_file(.env)` — assume the whole prod `.env` (Supabase service-role, JWT secret, etc.). **Reference by NAME only; never paste values (#260).**
+
+---
+
+## SESSION (2026-07-18)
+
+### PR History & Merges
+- **#272 D1a:** flexible_report is pipe-only; delete the pipe=NONE HogQL fallback + retire its tests.
+- **#273 D1b-1:** route-reader HogQL fallback removed (Tinybird-only) for the 8 tested readers (alerts, sessions, events, seo-revenue, hygiene, dashboard, live, setup-doctor). *Finding:* 4 of 8 (live, dashboard, seo-revenue, setup-doctor) degrade to 0/unknown on empty responses instead of throwing.
+- **#274 D1b-2:** 4 untested route readers cut over to Tinybird-only (admin, leads-server, integrations, journey), writing tests first. *Finding:* admin (6 inner catches) + leads_count swallow the throw and return 200 with zeroed KPIs. `TINYBIRD_FORCE_READ=true` cannot reach handler-level catches.
+- **#275:** C2 schema convergence migrations: AUTHORED, NOT APPLIED. Primary keys backfill with safety duplicate check checks.
+- **#276 D1b-3:** analytics pipes serve the 2 user-reachable shapes: `filter_channel` (faithful SQL port of `channelFromEvent` including click-IDs, display, affiliate, SMS) + multi-value comma-list filters. Mandatory §11 parity test added (SQL transcription === `channelFromEvent` across 24 fixtures).
+- **#277 D1b-3b:** analytics HogQL fallback removed; `analytics.js` has 0 `posthog.js` imports. Item C malformed-date -> 400. Analytics is now the last route reader off HogQL.
+- **#278:** /summary revenue KPIs scoped to the active filter (§6 wrong-scope closure). *Warning:* Shipped a regression (swallowed invalid select columns, fixed in #280).
+- **#279:** Channel + Campaign tabs read from pageviews; "conversions-as-visitors" proxy deleted.
+- **#280:** #278 regression fix (CI blocked by GitHub Actions startup failure).
+
+### Tinybird PROD Deployments
+- **#18:** 5 pageview pipes deployed to prod.
+- **#19:** `sources_ref` with `channel` column deployed.
+
+### Production Verification (Founder-Confirmed)
+- **Channel filter works end-to-end:** "Channel: Paid Search" returns real filtered data across all pageview panels. Paid Search is a channel the stale CASE could not produce, confirming the faithful port is live. The §6 fake-zero on the Channel filter is dead.
+- **§5 prod-serving gate closed:** `tb --cloud deploy --check` against prod returns "No changes to be deployed" for all 13 D1c-1 pipes.
+- **Benign engine-leg pipe errors:** Verification reveals bare-param pokes missing `site_id` cause benign errors (`multitouch_pageviews_live` 39/59, `multitouch_conversions` 2/48, `first_touch_by_site` 1/3, `aiplatform_conversions` 1/7) but cannot affect the app as the route itself returns 422 first.

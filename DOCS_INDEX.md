@@ -20,6 +20,8 @@
 | `SESSION_LOG.md` | Running log of sessions 75+ with dates, branches, summaries, QA status | Sometimes | Current |
 | `IMPLEMENTATION_GAP_LIST.md` | Structured inventory — implemented vs design-required vs missing | Sometimes | Current |
 | `BUG_REVIEW_LOG.md` | Code review issues, potential regressions, risk assessments | Before handoff | Current |
+| `POSTHOG_MIGRATION_HANDOFF.md` | PostHog to Tinybird handoff log for current session | Every session | Current |
+| `POSTHOG_DECOMMISSION_SCAN.md` | Chronological scanning, verification, and positioning log for PostHog removal | Every session | Current |
 
 ## Current Source of Truth
 

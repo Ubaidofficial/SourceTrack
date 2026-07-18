@@ -168,6 +168,11 @@ Plus:
 - **Forward-only:** never modify an already-applied migration; write a new timestamped one.
 - **Schema drift is real:** prod ≠ staging, and prod is often *tighter*. Verify the actual constraint on **prod** (read-only) before assuming repo schema = live schema.
 
+### Tinybird Pipe Deploys
+- **Founder-Only:** All Tinybird pipe deployments to the production workspace are strictly founder-gated.
+- **Pre-deploy Gate:** Running `tb --cloud deploy --check` against production is the mandatory pre-deploy check. Seeing "No changes to be deployed" doubles as a deployment-parity validation for all local `.pipe` files.
+- **Deploy-then-merge:** Deploy Tinybird pipes *before* merging the backend code that depends on new endpoints, parameters, or columns.
+
 ---
 
 ## 9. Verification Principles
@@ -194,6 +199,12 @@ Plus:
 - **Orchestrator (planning chat)** — plans, dispatches, verifies. Read-only Supabase + PostHog MCP. Reviews SQL and hand-applies migrations on human go. Doesn't write code.
 - **Claude Code (CC)** — executes: files, logic, DB-migration *files*. No Railway, no browser. Subject to §0, §7, §8.
 - **Browser E2E agent (Antigravity)** — visual verification only. **Browser tooling + read-only MCP only** — no DB writes, no secret/Railway access (post-incident lockdown). If blocked on login, it stops and reports; it never works around auth.
+- **Worktree Isolation Mandatory:** Each agent operates exclusively in its own designated git worktree to prevent branch switching or commit collisions. The 4 mandatory worktrees are:
+  - `~/Desktop/trackiq` (Founder use, **MERGES ONLY**)
+  - `~/Desktop/trackiq-ccdesktop` (Claude Desktop Agent)
+  - `~/Desktop/trackiq-cccli` (Claude Code CLI Agent)
+  - `~/Desktop/trackiq-antigravity` (Google Antigravity Agent)
+  *Note: Two collisions occurred on 2026-07-18 before worktrees existed (CC CLI's commit landed on CC Desktop's branch; CC Desktop's checkout was auto-switched mid-task).*
 
 Every agent task arrives as a copy/paste-ready prompt prefixed with the relevant standing rules and **labeled `[→ CC]` or `[→ ANTIGRAVITY]`**. Treat an agent "PASS" as a claim to verify, not a fact.
 

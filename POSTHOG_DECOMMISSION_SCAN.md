@@ -408,3 +408,28 @@ Line numbers had drifted AGAIN (`:2144/:2833/:2965/:3040` → `:2154/:2843/:2975
 
 ### POSITION (2026-07-17 late)
 All 5 fabrication families closed · allowlist live at all 3 callers · bare reads deleted (except gated+guarded `:2975`) · prod pipes verified (all 11). **Only D1–D5 remains** = the actual PostHog removal → GDPR unlock. D1–D5 inherits exactly two things: (1) delete `:2975` + its 37 HogQL-leg tests as one change; (2) `PROD_DEPLOYED_PIPES` is load-bearing — re-glance prod pipes the moment D1 removes the fallback (no safety net after). Natural safe stopping point: everything committed + known-good.
+
+## SESSION (2026-07-18) — D1a/D1b complete, analytics off HogQL, D3 blocked on one leg
+
+### Status & Core Findings
+All D1a and D1b migration steps have been completed, meaning all frontend-facing analytics endpoints have successfully cut over to Tinybird-only query engines with no active HogQL fallbacks.
+
+- **#272 D1a:** Completed the deletion of the vestigial `pipe=NONE` HogQL fallback and retired all 37 HogQL-leg tests, establishing `flexible_report` as pipe-only.
+- **#273 D1b-1:** Removed the HogQL fallback from 8 tested route readers. *Finding:* 4 of 8 (live, dashboard, seo-revenue, setup-doctor) degrade to 0/unknown on empty responses instead of throwing.
+- **#274 D1b-2:** 4 untested route readers (admin, leads-server, integrations, journey) cut over to Tinybird-only. *Finding:* `admin` (6 inner catches) + `leads_count` swallow the throws and return 200 with zeroed KPIs. `TINYBIRD_FORCE_READ=true` cannot reach handler-level catches.
+- **#275:** Authored (but did not apply) C2 schema convergence migrations (Groups A/B/E, PK adds, Group C).
+- **#276 D1b-3:** Wired the `filter_channel` (faithful SQL port of `channelFromEvent` including click-IDs, display, affiliate, SMS) + multi-value comma-list filters on 5 pageview pipes. Parity test (24 fixtures) added.
+- **#277 D1b-3b:** Analytics HogQL fallback removed. `analytics.js` now has 0 imports of `posthog.js`.
+- **#278:** /summary revenue KPIs scoped to the active filter (§6 wrong-scope closure). Shipped a regression (invalid column references) fixed in #280.
+- **#279:** Channel + Campaign tabs read from pageviews; "conversions-as-visitors" proxy deleted.
+- **#280:** Regression fix for #278.
+
+### Production Verification (Founder-Confirmed)
+- **Channel filter works end-to-end:** "Channel: Paid Search" returns real filtered data across all pageview panels. Paid Search is a channel the stale CASE could not produce, confirming the faithful port is live. The §6 fake-zero on the Channel filter is dead.
+- **§5 prod-serving gate closed:** `tb --cloud deploy --check` against prod returns "No changes to be deployed" for all 13 D1c-1 pipes.
+- **Benign engine-leg pipe errors:** Verification reveals bare-param pokes missing `site_id` cause benign errors (`multitouch_pageviews_live` 39/59, `multitouch_conversions` 2/48, `first_touch_by_site` 1/3, `aiplatform_conversions` 1/7) but cannot affect the app as the route itself returns 422 first.
+
+### Next Path (D1c / D3 Blockers)
+After these changes, `queryHogQL` has exactly one functional caller left in the entire backend: the journey-explain path (`explain journey` inside `attribution-engine.js:1335`).
+- **D1c-1:** Flip the remaining 13 engine legs and delete the dead `conversion_rate`/`flexible_sessions` block.
+- **D1c-2 (The blocker for D3):** Clone `journey.pipe` to build `attribution_explain_journey` pipe, allowing D3 (`api/lib/posthog.js` deletion) to be unblocked.
