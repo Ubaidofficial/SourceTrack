@@ -139,8 +139,15 @@ jobs:
         run: node scripts/schema-drift-check.mjs --ignore=scripts/schema-drift-ignore.json migrations=/tmp/migrations.json staging=/tmp/staging.json prod=/tmp/prod.json
 
   # Auto-apply pending migrations to STAGING on merge to main (after tests + drift pass).
+  # TEMPORARILY HARD-DISABLED (`if: false`, mirroring migrate-prod). schema-drift (a READ-ONLY check)
+  # and this DDL WRITER shared the SAME `SCHEMA_CI_ENABLED` gate, so arming the drift check also armed
+  # this writer — and STAGING_DB_URL currently resolves to PROD, making that coupling a live risk
+  # (a "staging" apply would write DDL to prod). schema-drift's own gate is intentionally left intact
+  # so the founder can still run it to verify the repoint. Re-enable this job by restoring the original
+  # gate below ONLY after STAGING_DB_URL is verified to point at nrsvpwzekfrdrzkoecfk (staging).
+  # Original gate: ${{ vars.SCHEMA_CI_ENABLED == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
   migrate-staging:
-    if: ${{ vars.SCHEMA_CI_ENABLED == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    if: false   # HARD-DISABLED until STAGING_DB_URL is verified to point at staging (see comment above); never auto-apply DDL to a PROD-pointing URL.
     needs: [build-and-test, schema-drift]
     runs-on: ubuntu-latest
     steps:
