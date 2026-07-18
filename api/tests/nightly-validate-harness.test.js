@@ -14,7 +14,7 @@ process.env.POSTHOG_HOST = 'https://ph.example.test'
 process.env.POSTHOG_PROJECT_ID = '416017'
 process.env.POSTHOG_PERSONAL_API_KEY = 'mock-key'
 
-const { diffAttributedConversionRecord, calculateAttribution, processConversion, __setNightlyReadDeps, __resetNightlyReadDeps } = await import('../jobs/nightly-attribution.js')
+const { diffAttributedConversionRecord, calculateAttribution, processConversion, validateSite, __setNightlyReadDeps, __resetNightlyReadDeps } = await import('../jobs/nightly-attribution.js')
 
 // A minimal but representative computed record (only the money-rail-relevant fields).
 const baseRecord = () => ({
@@ -103,6 +103,21 @@ const pvRow = (ts, utm_source) => ({
   ttclid: null, li_fat_id: null, li_fatid: null, twclid: null, dclid: null, snapclid: null, pclid: null,
   sccid: null, ko_click_id: null, page_url: 'https://x/p', utm_term: null, country: 'US',
   device_type: 'desktop', browser_name: 'Chrome'
+})
+
+test('🔴 validateSite passes site.id (Supabase uuid) to the pipe — NEVER the site_key', async (t) => {
+  t.after(__resetNightlyReadDeps)
+  // Tinybird events.site_id holds the SUPABASE site.id, not the site_key. A regression that passed
+  // site_key here would match 0 rows on every site (silent dead-store fallback). Bind the param.
+  let captured = null
+  __setNightlyReadDeps({
+    tbReadEnabled: () => true,
+    queryPipe: async (pipe, params) => { if (pipe === 'nightly_conversions_by_site') { captured = params.site_id; return [] } return null }
+  })
+  const site = { id: 'SUPABASE-ID-441111', site_key: 'SITE-KEY-440000' } // id !== site_key, deliberately
+  await validateSite(site, { days: 1 })
+  assert.equal(captured, 'SUPABASE-ID-441111', 'the conversions pipe must be called with site.id')
+  assert.notEqual(captured, 'SITE-KEY-440000', 'never the site_key — that would match 0 rows on every site')
 })
 
 test('dryRun returns { record, touchpoints }; same-timestamp touchpoints surface as a detectable tie', async (t) => {
