@@ -4,7 +4,6 @@ import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
 import UAParser from 'ua-parser-js'
 import geoip from 'geoip-lite'
 import { getSupabase } from '../lib/supabase.js'
-import { fetchPageviews } from '../lib/posthog.js'
 import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { serializeHogQLDateRange } from '../lib/hogql-date.js'
 import { sourceFromEvent, topSourcesByVisitor } from '../lib/channel-classifier.js'
@@ -22,20 +21,17 @@ import { isBotUserAgent } from '../lib/bot-filter.js'
 
 const router = express.Router()
 
-// ── Tinybird read seam (Grade B pageviews cutover) ───────────────────────────
-// Mirrors the seo-revenue.js/sessions.js pattern. The HogQL leg here is
-// fetchPageviews() itself (it wraps queryHogQL). The 5 pipes SELECT their columns
-// with the SAME output aliases fetchPageviews produces (url, referrer, …, os,
-// ai_source, anonymous_id, timestamp), so pipe rows are consumed with NO remap.
+// ── Tinybird read seam (pageviews) ───────────────────────────────────────────
+// D1b-3b: analytics is Tinybird-SOLE — the fetchPageviews()/HogQL fallback is DELETED (analytics no
+// longer imports posthog.js; this unblocks D3). The 5 pipes SELECT their columns with the aliases the
+// consumers read (url, referrer, …, os, ai_source, anonymous_id, timestamp), so pipe rows are consumed
+// with NO remap. Only the pipe read is injectable now.
 let _queryTinybirdPipe = queryTinybirdPipe
-let _fetchPageviews = fetchPageviews
-export function __setAnalyticsReadDeps ({ queryTinybird, fetchPv } = {}) {
+export function __setAnalyticsReadDeps ({ queryTinybird } = {}) {
   if (queryTinybird) _queryTinybirdPipe = queryTinybird
-  if (fetchPv) _fetchPageviews = fetchPv
 }
 export function __resetAnalyticsReadDeps () {
   _queryTinybirdPipe = queryTinybirdPipe
-  _fetchPageviews = fetchPageviews
 }
 
 // A drill-down {type} -> the pipe's optional filter param name. The 9 types are
@@ -58,13 +54,11 @@ function toChDateTime (expr) {
   return d && !Number.isNaN(d.getTime()) ? d.toISOString().slice(0, 19).replace('T', ' ') : null
 }
 
-// Build the pipe params from the SAME serializeHogQLDateRange fetchPageviews uses,
-// so the pipe's `timestamp >= date_from_ts AND < date_to_ts` window is byte-identical
-// to the HogQL `>= from AND < to` window (both half-open, +1-day exclusive end).
-// Returns null (→ HogQL fallback, NOT the pipe) when the request can't be faithfully
-// represented: an unknown filter type, or two filters of the SAME type (the pipe
-// carries one param per type — matching every real caller; a duplicate would silently
-// drop a filter and skew counts, so we fall back instead).
+// Build the pipe params via serializeHogQLDateRange, so the pipe's
+// `timestamp >= date_from_ts AND < date_to_ts` window is the same half-open, +1-day-exclusive window
+// the reports were built against. Returns null when the request can't be represented as a pipe call:
+// an unparseable date range, or an unknown filter type. D1b-3b: dispatchPageviews maps null -> 400
+// (client error), never a HogQL read. Same-type filters MERGE into a comma-list (Item B), not null.
 export function buildPageviewPipeParams (siteId, dateFrom, dateTo, { limit = 50000, filters = [] } = {}) {
   let range
   try { range = serializeHogQLDateRange(dateFrom, dateTo) } catch (_e) { return null }
@@ -83,22 +77,28 @@ export function buildPageviewPipeParams (siteId, dateFrom, dateTo, { limit = 500
   return params
 }
 
-// Tinybird-first pageviews read. Pipe name == opts.queryName (summary / sources_ai /
-// sources_ref / browsers / os). null pipe result (flag off / error) -> fetchPageviews
-// (HogQL). Fail-closed under the test-only TINYBIRD_FORCE_READ. Tenant isolation:
-// site_id is the authenticated req.site.id, never client-supplied.
+// Tinybird-SOLE pageviews read (D1b-3b: HogQL fallback deleted). Pipe name == opts.queryName
+// (summary / sources_ai / sources_ref / browsers / os). A null pipe result throws loud (the deployed
+// pipe is not serving); an unrepresentable request throws a 400. Tenant isolation: site_id is the
+// authenticated req.site.id, never client-supplied.
 async function dispatchPageviews (siteId, dateFrom, dateTo, opts = {}) {
   const pipeName = opts.queryName
   const params = buildPageviewPipeParams(siteId, dateFrom, dateTo, opts)
-  if (params !== null) {
-    const tb = await _queryTinybirdPipe(pipeName, params)
-    if (tb !== null) return tb
-    if (process.env.TINYBIRD_FORCE_READ === 'true') {
-      throw new Error(`[tinybird-force-read] ${pipeName} returned null under TINYBIRD_FORCE_READ — dispatch path not exercised`)
-    }
+  // D1b-3b Item C: no pipe representation (unparseable date range at buildPageviewPipeParams:66/69,
+  // or an unsupported filter type at :77) is a CLIENT error, never a dead-store read. The UI never
+  // produces it (dates are computed ISO; every UI filter type is pipe-mapped) — this guards malformed
+  // API calls with a 400 instead of the old silent HogQL fall-through.
+  if (params === null) {
+    const err = new Error('This analytics query cannot be served: invalid date range or unsupported filter.')
+    err.statusCode = 400
+    throw err
   }
-  // params === null (request not representable as a pipe call) OR pipe null: HogQL.
-  return _fetchPageviews(siteId, dateFrom, dateTo, opts)
+  const tb = await _queryTinybirdPipe(pipeName, params)
+  if (tb !== null) return tb
+  // D1b-3b: the pipe is the SOLE read path for analytics — the HogQL fallback is DELETED. A null here
+  // means the DEPLOYED pipe is not serving; throw loud instead of a silent dead-store read (PostHog is
+  // dead). FIX THE PIPE (verify it is deployed + serving in the prod workspace); do not restore the read.
+  throw new Error(`[tinybird-force-read] ${pipeName} returned null — FIX THE PIPE, do not restore the read`)
 }
 
 // ─── Filter parsing ──────────────────────────────────────────────────────────
@@ -404,7 +404,7 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
         applied_filters: filters
       }
     })
-  } catch (err) { console.error('[analytics/summary]', err.message); res.status(500).json({ success: false, error: 'Summary failed' }) }
+  } catch (err) { console.error('[analytics/summary]', err.message); res.status(err.statusCode || 500).json({ success: false, error: err.statusCode ? err.message : 'Summary failed' }) }
 })
 
 // ─── Sources tab: channel / referrer / campaign / medium ────────────────────
@@ -681,7 +681,7 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
     return res.json({ success: true, data: { tab, rows: out } })
   } catch (err) {
     console.error('[analytics/sources]', err.message)
-    res.status(500).json({ success: false, error: 'Sources failed' })
+    res.status(err.statusCode || 500).json({ success: false, error: err.statusCode ? err.message : 'Sources failed' })
   }
 })
 
@@ -900,7 +900,7 @@ router.get('/browsers', requireUserAuth, validateSiteKey, requireSiteMembership,
     res.json({ success: true, data: results })
   } catch (err) {
     console.error('[analytics/browsers]', err.message)
-    res.status(500).json({ success: false, error: 'Browser breakdown failed' })
+    res.status(err.statusCode || 500).json({ success: false, error: err.statusCode ? err.message : 'Browser breakdown failed' })
   }
 })
 
@@ -931,7 +931,7 @@ router.get('/os', requireUserAuth, validateSiteKey, requireSiteMembership, async
     res.json({ success: true, data: results })
   } catch (err) {
     console.error('[analytics/os]', err.message)
-    res.status(500).json({ success: false, error: 'OS breakdown failed' })
+    res.status(err.statusCode || 500).json({ success: false, error: err.statusCode ? err.message : 'OS breakdown failed' })
   }
 })
 
