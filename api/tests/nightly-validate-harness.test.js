@@ -14,7 +14,7 @@ process.env.POSTHOG_HOST = 'https://ph.example.test'
 process.env.POSTHOG_PROJECT_ID = '416017'
 process.env.POSTHOG_PERSONAL_API_KEY = 'mock-key'
 
-const { diffAttributedConversionRecord, calculateAttribution } = await import('../jobs/nightly-attribution.js')
+const { diffAttributedConversionRecord, calculateAttribution, processConversion, __setNightlyReadDeps, __resetNightlyReadDeps } = await import('../jobs/nightly-attribution.js')
 
 // A minimal but representative computed record (only the money-rail-relevant fields).
 const baseRecord = () => ({
@@ -93,4 +93,30 @@ test('🔴 SAME-TIMESTAMP TIE: touchpoint order changes attribution → pipe (ti
     diffAttributedConversionRecord(computed, stored).some(d => d.field === 'first_touch_source'),
     'the harness flags the tie-order divergence that an aggregate check cannot'
   )
+})
+
+// The tie-COUNTER plumbing: dryRun returns { record, touchpoints } so validateSite can tally REAL
+// same-timestamp ties from the pipe-read touchpoints. Proves the input the tally consumes is present.
+const pvRow = (ts, utm_source) => ({
+  visitor_id: 'v1', distinct_id: 'v1', timestamp: ts, utm_source, utm_medium: 'cpc', utm_campaign: 'c',
+  referrer: null, ai_source: null, gclid: null, gbraid: null, wbraid: null, fbclid: null, msclkid: null,
+  ttclid: null, li_fat_id: null, li_fatid: null, twclid: null, dclid: null, snapclid: null, pclid: null,
+  sccid: null, ko_click_id: null, page_url: 'https://x/p', utm_term: null, country: 'US',
+  device_type: 'desktop', browser_name: 'Chrome'
+})
+
+test('dryRun returns { record, touchpoints }; same-timestamp touchpoints surface as a detectable tie', async (t) => {
+  t.after(__resetNightlyReadDeps)
+  const T = '2026-07-09T10:00:00Z' // two pageviews at the SAME timestamp → a real tie
+  __setNightlyReadDeps({
+    tbReadEnabled: () => true,
+    queryPipe: async (pipe) => pipe === 'pageviews_by_visitors' ? [pvRow(T, 'google'), pvRow(T, 'facebook')] : null
+  })
+  const conv = { uuid: 'c1', distinct_id: 'v1', timestamp: '2026-07-09T12:00:00Z', conversion_type: 'purchase', conversion_value: 100 }
+  const res = await processConversion({ id: 's1', site_key: 'sk', attribution_window_days: 30 }, conv, { dryRun: true })
+
+  assert.ok(res && res.record && Array.isArray(res.touchpoints), 'dryRun returns { record, touchpoints }')
+  const ts = res.touchpoints.map((tp) => tp.timestamp)
+  assert.equal(ts.length, 2, 'both same-timestamp touchpoints are in the window')
+  assert.notEqual(ts.length, new Set(ts).size, 'the two identical timestamps register as a real tie (validateSite realTies++)')
 })

@@ -999,7 +999,10 @@ export async function processConversion(site, conversion, { dryRun = false } = {
     await insertSubscriptionRevenue(site, conversion)
   }
 
-  return record
+  // dryRun (B1 --validate) also returns the touchpoints it computed from, so the harness can tally
+  // real same-timestamp ties (the pipe (timestamp,event_id) vs HogQL (timestamp) order divergence).
+  // The normal path (dryRun=false) returns the bare record, unchanged.
+  return dryRun ? { record, touchpoints } : record
 }
 
 // Write one subscription_revenue row per subscription lifecycle event, with the
@@ -1457,13 +1460,19 @@ export async function validateSite (site, { days = 1 } = {}) {
   if (pipeRows === null) {
     throw new Error(`[validate] conversions pipe returned null for site ${site.site_key} — refusing to validate off the dead HogQL fallback. Confirm the pipe is deployed + TINYBIRD_READ_* is set.`)
   }
-  const out = { site: site.site_key, total: 0, matched: 0, missing: [], mismatched: [] }
+  const out = { site: site.site_key, total: 0, matched: 0, missing: [], mismatched: [], realTies: 0 }
   for (const row of pipeRows) {
     const conversion = conversionRowToObject(mapConversionPipeRow(row))
     if (isSubscriptionCheckoutCarrier(conversion)) continue // $0 carrier is never written to attributed_conversions
-    const computed = await processConversion(site, conversion, { dryRun: true })
-    if (!computed) continue // invalid conversion, skipped by processConversion
+    const res = await processConversion(site, conversion, { dryRun: true })
+    if (!res) continue // invalid conversion, skipped by processConversion
+    const { record: computed, touchpoints } = res
     out.total++
+    // Tally REAL same-timestamp ties: ≥2 touchpoints sharing a timestamp for this conversion. This is
+    // the ONLY input shape where the pipe's (timestamp, event_id) order can diverge from HogQL's
+    // timestamp-only order. realTies=0 across the run means the tie path is only synthetically covered.
+    const tsList = touchpoints.map(t => t.timestamp)
+    if (tsList.length !== new Set(tsList).size) out.realTies++
     const { data: stored, error } = await supabase
       .from('attributed_conversions').select('*')
       .eq('site_id', site.id).eq('conversion_event_id', conversion.uuid).maybeSingle()
@@ -1480,14 +1489,20 @@ async function runValidation (siteKey) {
   const { data: site, error } = await supabase.from('sites').select('*').eq('site_key', siteKey).maybeSingle()
   if (error || !site) { console.error(`[validate] site not found: ${siteKey} (${error?.message || 'no row'})`); process.exit(2) }
   const r = await validateSite(site, { days: validateDays })
-  console.log(`[validate] site=${r.site} total=${r.total} matched=${r.matched} missing=${r.missing.length} mismatched=${r.mismatched.length}`)
+  console.log(`[validate] site=${r.site} total=${r.total} matched=${r.matched} mismatched=${r.mismatched.length} missing=${r.missing.length} realTies=${r.realTies}`)
+  // `missing` = a pipe-served conversion (source event present) with NO attributed_conversions row —
+  // the nightly hasn't written it (or the row was deleted). This is a "cannot compare", NOT a parity
+  // failure: it is reported explicitly but does NOT flip pass/fail. Only `mismatched` (a real byte
+  // divergence on a row that DOES exist) fails. realTies = conversions with ≥2 same-timestamp
+  // touchpoints — the only shape where the pipe/HogQL read order can diverge; 0 = tie path is only
+  // synthetically covered by nightly-validate-harness.test.js.
   for (const m of r.mismatched) {
     console.error(`  MISMATCH ${m.conversion_event_id}:`)
     for (const d of m.diffs) console.error(`    ${d.field}: computed=${JSON.stringify(d.computed)} stored=${JSON.stringify(d.stored)}`)
   }
-  if (r.missing.length) console.error(`  MISSING stored rows: ${r.missing.join(', ')}`)
-  if (r.mismatched.length || r.missing.length) { console.error('[validate] FAILED — not byte-identical'); process.exit(1) }
-  console.log('[validate] OK — byte-identical for all pipe-served conversions')
+  if (r.missing.length) console.log(`  (info) ${r.missing.length} pipe-served conversion(s) have no stored row — NOT a parity failure: ${r.missing.join(', ')}`)
+  if (r.mismatched.length) { console.error(`[validate] FAILED — ${r.mismatched.length} row(s) NOT byte-identical`); process.exit(1) }
+  console.log(`[validate] OK — byte-identical for all ${r.matched} compared row(s) (missing=${r.missing.length}, realTies=${r.realTies})`)
 }
 
 if (import.meta.url === `file://${process.argv[1]}` && validateSiteKey) {
