@@ -1195,12 +1195,21 @@ export async function getAttributionExplanation(siteId, model, distinctId) {
     ORDER BY timestamp ASC
     LIMIT 500
   `
-  // Journey stays on HogQL (no pipe for this leg) but via the injectable _queryHogQL seam so
-  // the A/B harness controls both legs. On the harness ON leg this is an EXPECTED HogQL read
-  // (the explain target allowlists 'attribution_explain_journey'), so it does NOT trip the
-  // zero-fallback hit-guard — only the wired conversion read falling back would.
-  const journeyRows = await _queryHogQL(journeySql, 'attribution_explain_journey')
-  const journey = (journeyRows || []).map(([evt, ts, url, src, med, camp, ais, cv]) => ({
+  // Journey read — Tinybird-sole (D1c-2), the LAST engine leg off dead PostHog. REUSES the
+  // already-deployed `journey` pipe (it serves the /journey route): its SELECT is a strict
+  // superset of the 8 columns this leg consumes, with byte-identical WHERE/params/ORDER/LIMIT
+  // (verified in recon; pinned by explain-journey-pipe-parity.test.js so an edit to journey.pipe
+  // for the /journey route fails loudly here). A null pipe throws the loud force-read invariant —
+  // no HogQL fallback, PostHog is dead. The pipe PARAM is named `visitor_id` but filters the
+  // `distinct_id` TYPED column (journey.pipe's convention, identity rule #19a), so the engine's
+  // distinctId is passed as visitor_id. journeySql above is now orphaned — D3 sweeps it with
+  // posthog.js (consistent with D1c-1's deferred SQL-builder policy). The _queryHogQL seam stays
+  // inert for the injectable cutover tests (they force the throw and assert HogQL is never called).
+  const _jTb = await _pipeRead('journey', { site_id: String(siteId), visitor_id: String(distinctId) })
+  const journeyRows = _jTb
+    ? _jTb.map(r => [r.event_type, r.timestamp, r.page_url, r.utm_source, r.utm_medium, r.utm_campaign, r.ai_source, r.conversion_value])
+    : _pipeNull('journey')
+  const journey = journeyRows.map(([evt, ts, url, src, med, camp, ais, cv]) => ({
     event: evt,
     timestamp: ts,
     page_url: url || null,

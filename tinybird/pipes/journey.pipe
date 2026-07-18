@@ -22,7 +22,10 @@ DESCRIPTION >
     destination_domain/destination_url/source_system aren't explicitly named
     in §2.6's enumerated bag list either, but per the typed-vs-bag rule
     (anything not in the TYPED table is bag) they're routed the same way.
-    NOT YET PUSHED — validated read-only via `tb --cloud sql` only.
+    DEPLOYED + serving in prod (`tb --cloud deploy --check` = "No changes to be
+    deployed"). Serves the /journey route AND, as of D1c-2, the explain-journey
+    engine leg (attribution-engine.js) — a strict superset of the 8 columns that
+    leg reads; explain-journey-pipe-parity.test.js pins that coverage.
 
 NODE journey_node
 SQL >
