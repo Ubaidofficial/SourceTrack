@@ -79,9 +79,22 @@ test('--ignore column-prefix glob (table.prefix*) suppresses the unformalized pr
   assert.doesNotMatch(r.out, /custom_domain|site_annotations/)
 })
 
-test('the committed schema-drift-ignore.json is well-formed and only defers the two known orphans', async () => {
+test('the committed schema-drift-ignore.json defers ONLY the deliberate sites.owner_id exception', async () => {
   const { readFileSync } = await import('node:fs')
   const p = new URL('../../scripts/schema-drift-ignore.json', import.meta.url).pathname
   const j = JSON.parse(readFileSync(p, 'utf8'))
-  assert.deepEqual(j.ignore.sort(), ['site_annotations.*', 'sites.custom_domain*'])
+  // Exactly ONE deferral: the deliberate sites.owner_id default-divergence (founder decision).
+  assert.deepEqual(j.ignore, ['sites.owner_id'])
+  // The two prod orphans converged 2026-07-18 — they MUST NOT be deferred anymore (removing them
+  // is precisely what re-enforces the drift check on those objects). Assert explicit absence so a
+  // future re-add is caught.
+  assert.ok(!j.ignore.includes('site_annotations.*'), 'site_annotations.* converged — must not be re-ignored')
+  assert.ok(!j.ignore.includes('sites.custom_domain*'), 'sites.custom_domain* converged — must not be re-ignored')
+  // Every deferral must carry a documented rationale; owner_id's must state it is a deliberate,
+  // reviewed exception (not drift-by-neglect).
+  for (const k of j.ignore) assert.ok(j._rationale?.[k], `ignore "${k}" must have a _rationale entry`)
+  assert.match(j._rationale['sites.owner_id'], /deliberate|intentional|founder decision/i)
+  // No stale rationale for the removed orphans.
+  assert.ok(!('site_annotations.*' in (j._rationale || {})), 'stale site_annotations rationale must be removed')
+  assert.ok(!('sites.custom_domain*' in (j._rationale || {})), 'stale custom_domain rationale must be removed')
 })
