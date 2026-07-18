@@ -23,6 +23,7 @@ const handlerFor = (path) => {
 }
 const osHandler = handlerFor('/os')
 const browsersHandler = handlerFor('/browsers')
+const sourcesHandler = handlerFor('/sources')
 
 function mockRes () {
   const res = { statusCode: 200, body: null }
@@ -156,4 +157,99 @@ test("(parity) /os: pipe os='' is dropped by if(!r.os), not bucketed", async (t)
   __setAnalyticsReadDeps({ queryTinybird: async () => ROWS_PIPE })
   const res = mockRes(); await osHandler(req({ days: '30' }), res)
   assert.deepStrictEqual(res.body.data.map(d => d.os), ['Windows'], 'the empty-os visitor is dropped, not bucketed')
+})
+
+test('/sources tab=channel & tab=campaign fetch from pageviews and reconcile', async (t) => {
+  t.after(__resetAnalyticsReadDeps)
+
+  // Mock pageview rows returned by Tinybird (now containing channel column)
+  const ROWS = [
+    ROW({ anonymous_id: 'v1', channel: 'Paid Social', utm_campaign: 'black_friday', utm_source: 'facebook', referrer: 'https://l.facebook.com/' }),
+    ROW({ anonymous_id: 'v2', channel: 'Paid Social', utm_campaign: 'black_friday', utm_source: 'facebook', referrer: 'https://l.facebook.com/' }),
+    ROW({ anonymous_id: 'v3', channel: 'Organic Search', utm_campaign: 'untagged', utm_source: 'google', referrer: 'https://google.com/' })
+  ]
+
+  // Mock global fetch for Supabase select from attributed_conversions
+  const originalFetch = globalThis.fetch
+  globalThis.fetch = async (url, options) => {
+    if (url.includes('/rest/v1/attributed_conversions')) {
+      return {
+        status: 200,
+        ok: true,
+        text: async () => JSON.stringify([
+          {
+            first_touch_channel: 'Paid Social',
+            first_touch_campaign: 'black_friday',
+            conversion_value: 100,
+            conversion_timestamp: '2026-07-10T10:05:00Z',
+            conversion_date: '2026-07-10'
+          }
+        ]),
+        headers: new Headers({ 'content-type': 'application/json' })
+      }
+    }
+    return originalFetch(url, options)
+  }
+
+  t.after(() => {
+    globalThis.fetch = originalFetch
+  })
+
+  const queryTinybirdCalls = []
+  __setAnalyticsReadDeps({
+    queryTinybird: async (pipe, params) => {
+      queryTinybirdCalls.push(pipe)
+      return ROWS
+    }
+  })
+
+  // Test Channel tab
+  {
+    const res = mockRes()
+    await sourcesHandler({ site: { id: 'site-00', timezone: 'UTC' }, query: { days: '30', tab: 'channel' } }, res)
+    assert.strictEqual(res.statusCode, 200)
+    assert.strictEqual(res.body.success, true)
+    const rows = res.body.data.rows
+
+    // Paid Social should have 2 visitors (v1, v2) and $100 revenue
+    const paidSocial = rows.find(r => r.name === 'Paid Social')
+    assert.ok(paidSocial)
+    assert.strictEqual(paidSocial.visitors, 2)
+    assert.strictEqual(paidSocial.revenue, 100)
+
+    // Organic Search should have 1 visitor (v3) and $0 revenue
+    const organicSearch = rows.find(r => r.name === 'Organic Search')
+    assert.ok(organicSearch)
+    assert.strictEqual(organicSearch.visitors, 1)
+    assert.strictEqual(organicSearch.revenue, 0)
+
+    const totalChannelVisitors = rows.reduce((acc, r) => acc + r.visitors, 0)
+    assert.strictEqual(totalChannelVisitors, 3, 'Total channel visitors should equal 3')
+  }
+
+  // Test Campaign tab
+  {
+    const res = mockRes()
+    await sourcesHandler({ site: { id: 'site-00', timezone: 'UTC' }, query: { days: '30', tab: 'campaign' } }, res)
+    assert.strictEqual(res.statusCode, 200)
+    assert.strictEqual(res.body.success, true)
+    const rows = res.body.data.rows
+
+    // black_friday should have 2 visitors (v1, v2) and $100 revenue
+    const blackFriday = rows.find(r => r.name === 'black_friday')
+    assert.ok(blackFriday)
+    assert.strictEqual(blackFriday.visitors, 2)
+    assert.strictEqual(blackFriday.revenue, 100)
+
+    // untagged should have 1 visitor (v3) and $0 revenue
+    const untagged = rows.find(r => r.name === 'untagged')
+    assert.ok(untagged)
+    assert.strictEqual(untagged.visitors, 1)
+    assert.strictEqual(untagged.revenue, 0)
+
+    const totalCampaignVisitors = rows.reduce((acc, r) => acc + r.visitors, 0)
+    assert.strictEqual(totalCampaignVisitors, 3, 'Total campaign visitors should equal 3')
+  }
+
+  assert.deepStrictEqual(queryTinybirdCalls, ['sources_ref', 'sources_ref'], 'Both tab checks fetched from sources_ref pageview pipe')
 })
