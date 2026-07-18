@@ -26,6 +26,12 @@ const backfillDays = process.argv.find(arg => arg.startsWith('--days='))?.split(
 const backfillDryRun = process.argv.includes('--dry-run');
 const backfillConfirm = process.argv.includes('--confirm');
 
+// ── D2 B1 — write-path validation (--validate-site=<key> [--validate-days=N]) ────
+// Recompute attributed_conversions from the Tinybird pipe (dry-run, NO writes) and byte-diff against
+// the stored rows. Read-only; never mutates any store. See runValidation / validateSite below.
+const validateSiteKey = process.argv.find(arg => arg.startsWith('--validate-site='))?.split('=')[1];
+const validateDays = Number(process.argv.find(arg => arg.startsWith('--validate-days='))?.split('=')[1]) || 1;
+
 if (isReprocess) {
   const dbUrl = process.env.SUPABASE_URL || '';
   const STAGING_REF = 'nrsvpwzekfrdrzkoecfk';
@@ -110,6 +116,20 @@ export function mapConversionPipeRow (r) {
     r.stripe_invoice_id, r.currency, r.provider_event_id, r.occurred_at,
     r.stripe_event_type, r.provider
   ]
+}
+
+// SINGLE SOURCE OF TRUTH for the conversion row[0..13] → object mapping — shared by processSite,
+// the backfill loop, and the B1 --validate harness, so they can NEVER drift. Positional order
+// matches mapConversionPipeRow and the HogQL conversion SELECT exactly.
+export function conversionRowToObject (row) {
+  return {
+    uuid: row[0], distinct_id: row[1], timestamp: row[2],
+    conversion_type: row[3], conversion_value: row[4], external_event_id: row[5] || null,
+    webhook_customer_id: row[6] || null, stripe_subscription_id: row[7] || null,
+    stripe_invoice_id: row[8] || null, currency: row[9] || null,
+    provider_event_id: row[10] || null, occurred_at: row[11] || null,
+    stripe_event_type: row[12] || null, provider: row[13] || null
+  }
 }
 
 // Map a pageviews_by_visitors pipe row (named) to the EXACT positional array the
@@ -371,14 +391,7 @@ async function runBackfill() {
   const records = []
   const journey = { complete: 0, possibly_truncated: 0, no_journey: 0 }
   for (const row of (rows || [])) {
-    const conversion = {
-      uuid: row[0], distinct_id: row[1], timestamp: row[2],
-      conversion_type: row[3], conversion_value: row[4], external_event_id: row[5] || null,
-      webhook_customer_id: row[6] || null, stripe_subscription_id: row[7] || null,
-      stripe_invoice_id: row[8] || null, currency: row[9] || null,
-      provider_event_id: row[10] || null, occurred_at: row[11] || null,
-      stripe_event_type: row[12] || null, provider: row[13] || null
-    }
+    const conversion = conversionRowToObject(row)
     if (!conversion.uuid || !conversion.distinct_id || !conversion.timestamp) {
       logWarn(`Skipping invalid conversion ${conversion.uuid}`)
       continue
@@ -516,22 +529,7 @@ export async function processSite(site) {
   
   for (const row of rows) {
     try {
-      const conversion = {
-        uuid: row[0],
-        distinct_id: row[1],
-        timestamp: row[2],
-        conversion_type: row[3],
-        conversion_value: row[4],
-        external_event_id: row[5] || null,
-        webhook_customer_id: row[6] || null,
-        stripe_subscription_id: row[7] || null,
-        stripe_invoice_id: row[8] || null,
-        currency: row[9] || null,
-        provider_event_id: row[10] || null,
-        occurred_at: row[11] || null,
-        stripe_event_type: row[12] || null,
-        provider: row[13] || null
-      }
+      const conversion = conversionRowToObject(row)
 
       // processConversion() ALWAYS runs in full — the subscription_identity seed
       // (and, when gated, subscription_revenue insert) must still happen off this
@@ -683,7 +681,11 @@ function calculateConfidence(touchpoints, channel) {
   return Math.min(100, Math.max(0, score))
 }
 
-export async function processConversion(site, conversion) {
+// `dryRun` (D2 B1 --validate) computes and RETURNS the exact attributed_conversions `record` with
+// ZERO side effects — it skips the subscription_identity / subscription_revenue writes below. The
+// record itself is unaffected (it is built purely from the conversion + touchpoints + attribution),
+// so the byte-diff harness compares the true production record shape without mutating any store.
+export async function processConversion(site, conversion, { dryRun = false } = {}) {
   const convValue = parseFloat(conversion.conversion_value || 0)
 
   // A refund is a LEGITIMATE negative $conversion (Phase 2): it MUST persist to
@@ -970,9 +972,11 @@ export async function processConversion(site, conversion) {
   // conversion, so it never locks an 'unknown' row that would block a later
   // self-stitching invoice.paid. Write-once: the chronologically-first
   // (ORDER BY timestamp ASC) stitched event wins via the ignoreDuplicates upsert.
-  const seedRow = buildSubscriptionIdentitySeed({ conversion, touchpoints, record })
-  if (seedRow) {
-    await upsertSubscriptionIdentity(site, seedRow)
+  if (!dryRun) {
+    const seedRow = buildSubscriptionIdentitySeed({ conversion, touchpoints, record })
+    if (seedRow) {
+      await upsertSubscriptionIdentity(site, seedRow)
+    }
   }
 
   // Step 3: write the lifecycle/revenue row — gated on a subscription id PLUS an
@@ -991,11 +995,14 @@ export async function processConversion(site, conversion) {
   // exclusion or swap it for a stripe_invoice_id check: trial_start/
   // trial_converted/churn funnel events legitimately have stripe_subscription_id
   // but no stripe_invoice_id, and must still reach this insert.
-  if (conversion.webhook_customer_id && conversion.stripe_subscription_id && !isSubscriptionCheckoutCarrier(conversion)) {
+  if (!dryRun && conversion.webhook_customer_id && conversion.stripe_subscription_id && !isSubscriptionCheckoutCarrier(conversion)) {
     await insertSubscriptionRevenue(site, conversion)
   }
 
-  return record
+  // dryRun (B1 --validate) also returns the touchpoints it computed from, so the harness can tally
+  // real same-timestamp ties (the pipe (timestamp,event_id) vs HogQL (timestamp) order divergence).
+  // The normal path (dryRun=false) returns the bare record, unchanged.
+  return dryRun ? { record, touchpoints } : record
 }
 
 // Write one subscription_revenue row per subscription lifecycle event, with the
@@ -1403,7 +1410,104 @@ function sleep(ms) {
 // Auto-run the nightly job ONLY when executed directly (node api/jobs/nightly-attribution.js /
 // cron), NOT when imported (unit tests importing calculateAttribution). Standard ESM idiom; no
 // change to production run behavior. Required so the reconciliation unit test can import this module.
-if (import.meta.url === `file://${process.argv[1]}`) {
+// ── D2 B1 — byte-identical write-path validation (--validate-site) ──────────────────────────────
+// Recompute each conversion's attributed_conversions record FROM THE TINYBIRD PIPE (dry-run, no
+// writes) and diff it against the row currently STORED in Supabase (written historically by the HogQL
+// path). Byte-identical bar: EXACT equality on the money rail — conversion_value + the four jsonb
+// credit splits — with NO tolerance, and ORDER-SENSITIVE on the splits (a touchpoint reorder, e.g. the
+// same-timestamp tie-break divergence where the pipe orders by (timestamp, event_id) but HogQL by
+// timestamp only, IS a mismatch — the exact class an aggregate check can never catch).
+
+const _JSONB_RECORD_FIELDS = new Set([
+  'linear_attribution', 'u_shaped_attribution', 'time_decay_attribution', 'w_shaped_attribution', 'confidence_signals'
+])
+
+// Recursively sort object keys (Postgres jsonb does NOT preserve object key order) but PRESERVE
+// array order (the credit splits are ordered by touchpoint — order is semantic, not incidental).
+function _normalizeJson (v) {
+  if (Array.isArray(v)) return v.map(_normalizeJson)
+  if (v && typeof v === 'object') {
+    const out = {}
+    for (const k of Object.keys(v).sort()) out[k] = _normalizeJson(v[k])
+    return out
+  }
+  return v
+}
+function _recordFieldEqual (key, c, s) {
+  if (_JSONB_RECORD_FIELDS.has(key)) return JSON.stringify(_normalizeJson(c ?? null)) === JSON.stringify(_normalizeJson(s ?? null))
+  if (key === 'conversion_value') return Number(c) === Number(s) // MONEY: exact, no tolerance
+  return (c ?? null) === (s ?? null)
+}
+
+// Returns [{ field, computed, stored }] for every field of the freshly-computed record that differs
+// from the stored row. Empty = byte-identical for the fields the nightly writes. DB-only columns
+// (id/created_at/updated_at/…) are ignored — they are not keys of `computed`.
+export function diffAttributedConversionRecord (computed, stored) {
+  const mismatches = []
+  for (const key of Object.keys(computed)) {
+    if (key === 'processing_version') continue // build metadata, not attribution truth
+    if (!_recordFieldEqual(key, computed[key], stored?.[key])) {
+      mismatches.push({ field: key, computed: computed[key], stored: stored?.[key] ?? null })
+    }
+  }
+  return mismatches
+}
+
+// Driver — PIPE-SERVED conversions only (fail closed; never validate off the dead HogQL store).
+export async function validateSite (site, { days = 1 } = {}) {
+  const { from, to } = conversionPipeWindow(days)
+  const pipeRows = await _queryPipe('nightly_conversions_by_site', { site_id: String(site.id), date_from: from, date_to: to })
+  if (pipeRows === null) {
+    throw new Error(`[validate] conversions pipe returned null for site ${site.site_key} — refusing to validate off the dead HogQL fallback. Confirm the pipe is deployed + TINYBIRD_READ_* is set.`)
+  }
+  const out = { site: site.site_key, total: 0, matched: 0, missing: [], mismatched: [], realTies: 0 }
+  for (const row of pipeRows) {
+    const conversion = conversionRowToObject(mapConversionPipeRow(row))
+    if (isSubscriptionCheckoutCarrier(conversion)) continue // $0 carrier is never written to attributed_conversions
+    const res = await processConversion(site, conversion, { dryRun: true })
+    if (!res) continue // invalid conversion, skipped by processConversion
+    const { record: computed, touchpoints } = res
+    out.total++
+    // Tally REAL same-timestamp ties: ≥2 touchpoints sharing a timestamp for this conversion. This is
+    // the ONLY input shape where the pipe's (timestamp, event_id) order can diverge from HogQL's
+    // timestamp-only order. realTies=0 across the run means the tie path is only synthetically covered.
+    const tsList = touchpoints.map(t => t.timestamp)
+    if (tsList.length !== new Set(tsList).size) out.realTies++
+    const { data: stored, error } = await supabase
+      .from('attributed_conversions').select('*')
+      .eq('site_id', site.id).eq('conversion_event_id', conversion.uuid).maybeSingle()
+    if (error) throw new Error(`[validate] stored-row read failed for ${conversion.uuid}: ${error.message}`)
+    if (!stored) { out.missing.push(conversion.uuid); continue }
+    const diffs = diffAttributedConversionRecord(computed, stored)
+    if (diffs.length === 0) out.matched++
+    else out.mismatched.push({ conversion_event_id: conversion.uuid, diffs })
+  }
+  return out
+}
+
+async function runValidation (siteKey) {
+  const { data: site, error } = await supabase.from('sites').select('*').eq('site_key', siteKey).maybeSingle()
+  if (error || !site) { console.error(`[validate] site not found: ${siteKey} (${error?.message || 'no row'})`); process.exit(2) }
+  const r = await validateSite(site, { days: validateDays })
+  console.log(`[validate] site=${r.site} total=${r.total} matched=${r.matched} mismatched=${r.mismatched.length} missing=${r.missing.length} realTies=${r.realTies}`)
+  // `missing` = a pipe-served conversion (source event present) with NO attributed_conversions row —
+  // the nightly hasn't written it (or the row was deleted). This is a "cannot compare", NOT a parity
+  // failure: it is reported explicitly but does NOT flip pass/fail. Only `mismatched` (a real byte
+  // divergence on a row that DOES exist) fails. realTies = conversions with ≥2 same-timestamp
+  // touchpoints — the only shape where the pipe/HogQL read order can diverge; 0 = tie path is only
+  // synthetically covered by nightly-validate-harness.test.js.
+  for (const m of r.mismatched) {
+    console.error(`  MISMATCH ${m.conversion_event_id}:`)
+    for (const d of m.diffs) console.error(`    ${d.field}: computed=${JSON.stringify(d.computed)} stored=${JSON.stringify(d.stored)}`)
+  }
+  if (r.missing.length) console.log(`  (info) ${r.missing.length} pipe-served conversion(s) have no stored row — NOT a parity failure: ${r.missing.join(', ')}`)
+  if (r.mismatched.length) { console.error(`[validate] FAILED — ${r.mismatched.length} row(s) NOT byte-identical`); process.exit(1) }
+  console.log(`[validate] OK — byte-identical for all ${r.matched} compared row(s) (missing=${r.missing.length}, realTies=${r.realTies})`)
+}
+
+if (import.meta.url === `file://${process.argv[1]}` && validateSiteKey) {
+  runValidation(validateSiteKey).catch(err => { console.error(`[validate] ${err.message}`); process.exit(1) })
+} else if (import.meta.url === `file://${process.argv[1]}`) {
   main()
     .then(() => {
       // Backfill is a manual, single-site op — it must NOT write a nightly job_run
