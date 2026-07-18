@@ -482,6 +482,17 @@ export async function processSite(site) {
       fellBack = true                     // pipe expected but returned null → HogQL fallback; a 0 here is SUSPECT
     }
   }
+  // B0 (D2) — FAIL CLOSED before any WRITE, and BEFORE touching the dead store. The reprocess path
+  // DELETEs all of a site's attributed_conversions then re-INSERTs; the suffix/_mv path upserts.
+  // Both bypass the Tinybird pipe (usePipe excludes reprocess + suffix), so their read would resolve
+  // to the HogQL fallback — which post-D3 is the DEAD PostHog store. Deleting/writing the money rail
+  // off a dead read would silently wipe or corrupt it. Until B2 migrates these reads onto Tinybird,
+  // refuse to proceed unless the conversions were POSITIVELY pipe-served (served === true). A
+  // non-pipe-served reprocess/suffix read is untrusted — abort loudly (the caller counts this as a
+  // hard failure) rather than read HogQL and write off it.
+  if ((isReprocess || suffixFilterClause) && !served) {
+    throw new Error(`[nightly] FAIL-CLOSED: ${isReprocess ? 'reprocess' : 'suffix-filter'} write for site ${site.site_key} would run off a NON-pipe-served read (served=${served}, fellBack=${fellBack}) — the HogQL fallback is the dead PostHog store. Refusing to delete/write the money rail off an untrusted read; migrate this read onto Tinybird (D2 B2) first.`)
+  }
   if (rows === null) {
     try {
       rows = await queryPostHog(conversionsQuery)

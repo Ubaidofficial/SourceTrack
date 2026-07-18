@@ -94,14 +94,15 @@ test('backfill fell-back signal is set when the pipe returns null (silent dead-s
   await assert.rejects(fetchBackfillConversions({ site: SITE, days: 30, hogqlQuery: 'SELECT 1' }))
 })
 
-test('reprocess/suffix exclusion is INTACT — processSite skips the pipe for the _mv test site (same usePipe guard as isReprocess)', async (t) => {
+test('reprocess/suffix exclusion + B0 fail-closed — processSite skips the pipe AND aborts for the _mv test site', async (t) => {
   t.after(__resetNightlyReadDeps)
   const calls = []
   __setNightlyReadDeps({ tbReadEnabled: () => true, queryPipe: async (pipe) => { calls.push(pipe); return [] } })
-  // The suffix-filter test site sets suffixFilterClause → usePipe=false (the same clause
-  // as `!isReprocess`), so the conversion read must NOT hit the pipe.
+  // The suffix-filter test site sets suffixFilterClause → usePipe=false (the same clause as
+  // `!isReprocess`), so the conversion read must NOT hit the pipe. Post-B0 (D2), a non-pipe-served
+  // suffix read FAILS CLOSED — it throws before reading the dead HogQL store, instead of silently
+  // processing off it. (Full B0 coverage: api/tests/nightly-suffix-fail-closed.test.js.)
   const suffixSite = { id: 'test-mv', site_key: 'de400000-babe-41d4-a716-446655440000', attribution_window_days: 30 }
-  const r = await processSite(suffixSite)
-  assert.ok(!calls.includes('nightly_conversions_by_site'), 'suffix/reprocess path must NOT use the conversion pipe (HogQL only)')
-  assert.equal(r.served, false)
+  await assert.rejects(processSite(suffixSite), /FAIL-CLOSED:.*suffix-filter/, 'suffix path fails closed (B0)')
+  assert.ok(!calls.includes('nightly_conversions_by_site'), 'suffix/reprocess path must NOT use the conversion pipe')
 })
