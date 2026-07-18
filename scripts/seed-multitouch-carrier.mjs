@@ -38,8 +38,11 @@
 //   Needs (staging env, injected by railway run): POSTHOG_PROJECT_ID=469905, POSTHOG_HOST,
 //   POSTHOG_API_KEY (+ POSTHOG_PERSONAL_API_KEY for the pre-check read), TINYBIRD_HOST,
 //   TINYBIRD_APPEND_TOKEN + TINYBIRD_DUAL_WRITE=true (write), TINYBIRD_READ_TOKEN (pre-check).
-// Guards: refuses unless staging (POSTHOG_PROJECT_ID===469905 and staging fixture site_id),
-// and aborts if a sub_test_carrier_001 conversion already exists in EITHER store (no double-seed).
+// Guards (scripts/lib/staging-seed-guard.mjs): refuses to write unless (1) --i-am-targeting-staging is
+// passed, the SITE_ID is the de200000 fixture, and TINYBIRD_HOST is on the ST_Staging allowlist, AND
+// (2) a live probe confirms the target Tinybird workspace already holds the de200000 fixture (prod
+// SourceTrack has no such site — a prod token fails closed). Also aborts if sub_test_carrier_001 already
+// exists (no double-seed). Requires --i-am-targeting-staging in addition to --confirm to actually write.
 
 // D3: PostHog is decommissioned — the ph.capture write + the queryHogQL PostHog pre-check were
 // removed. This seeder is now Tinybird-only and still functions END-TO-END: it writes via
@@ -49,6 +52,7 @@
 import { initTinybirdDualWrite } from '../tinybird/adapter/boot.js'
 import { dualWriteEvent, __getDualWriteBatcher } from '../tinybird/adapter/dual-write.js'
 import { esc } from '../api/lib/utils.js'
+import { assertStagingSeedTarget, assertStagingWorkspaceLive } from './lib/staging-seed-guard.mjs'
 
 const SITE_ID = 'de200000-babe-41d4-a716-446655441111'
 const SUB_ID = 'sub_test_carrier_001'
@@ -56,6 +60,7 @@ const VISITOR = 'carrier_test_visitor_001'   // single-touch => delta 1.0
 const PV_TS = '2026-07-03T10:00:00.000Z'      // in-window
 const CONV_TS = '2026-07-03T11:00:00.000Z'    // in-window, after the pv
 const CONFIRM = process.argv.includes('--confirm')
+const TARGETING_STAGING = process.argv.includes('--i-am-targeting-staging')
 
 // The ONE prior sourced (google) pageview — this is what puts the carrier in the 'google' bucket.
 const pvProps = {
@@ -80,18 +85,6 @@ const convProps = {
   occurred_at: CONV_TS
 }
 
-function assertStaging () {
-  const proj = String(process.env.POSTHOG_PROJECT_ID || '')
-  if (proj !== '469905') {
-    console.error(`REFUSING: POSTHOG_PROJECT_ID=${proj || '<unset>'} is not staging (469905; prod is 416017). Aborting.`)
-    process.exit(3)
-  }
-  if (!SITE_ID.startsWith('de200000')) {
-    console.error('REFUSING: SITE_ID is not the staging fixture site. Aborting.')
-    process.exit(3)
-  }
-}
-
 async function tinybirdCarrierCount () {
   const host = process.env.TINYBIRD_HOST
   const token = process.env.TINYBIRD_READ_TOKEN
@@ -106,6 +99,9 @@ async function tinybirdCarrierCount () {
 }
 
 async function main () {
+  const host = process.env.TINYBIRD_HOST
+  console.log(`[seed] write target — TINYBIRD_HOST=${host || '<unset>'}  SITE_ID=${SITE_ID}  (--i-am-targeting-staging=${TARGETING_STAGING})`)
+
   if (!CONFIRM) {
     console.log('DRY RUN (no --confirm) — nothing written. Would seed into ST_Staging:')
     console.log(`  $pageview   ${VISITOR} @ ${PV_TS}  ${JSON.stringify(pvProps)}`)
@@ -114,7 +110,13 @@ async function main () {
     return
   }
 
-  assertStaging()
+  // GATE 1 (pure): explicit staging opt-in + de200000 fixture + host on the ST_Staging allowlist.
+  const gate = assertStagingSeedTarget({ host, siteId: SITE_ID, targetingStaging: TARGETING_STAGING })
+  if (!gate.ok) { console.error(gate.reason); process.exit(3) }
+  // GATE 2 (live): the target workspace must already hold the de200000 fixture — prod has no such site.
+  const live = await assertStagingWorkspaceLive({ host, readToken: process.env.TINYBIRD_READ_TOKEN, siteId: SITE_ID })
+  if (!live.ok) { console.error(live.reason); process.exit(3) }
+  console.log(`[seed] staging workspace CONFIRMED — de200000 fixture holds ${live.count} events (prod SourceTrack has none).`)
 
   // No double-seed: abort if the carrier already exists in ST_Staging.
   const tb = await tinybirdCarrierCount()
