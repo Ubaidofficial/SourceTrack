@@ -23,6 +23,14 @@ const CONVERSION_TYPE_BADGE = {
   booking: { bg: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/20 dark:text-indigo-400 border border-indigo-200/30 dark:border-indigo-900/30', label: 'Booking' }
 }
 
+// Same preset set + control as Campaigns.jsx (the app's existing date-range pattern — reused, not
+// rebuilt). Default is 30 days so existing behavior is unchanged.
+const DATE_RANGES = [
+  { label: '7 days', days: 7 },
+  { label: '30 days', days: 30 },
+  { label: '90 days', days: 90 }
+]
+
 export default function Leads() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -34,8 +42,11 @@ export default function Leads() {
   const [journeyLead, setJourneyLead] = useState(null)
   const [statusMap, setStatusMap] = useState({})
   const [selectedLeads, setSelectedLeads] = useState(new Set())
+  const [dateRange, setDateRange] = useState(30)
 
-  const dateFrom = format(subDays(new Date(), 30), 'yyyy-MM-dd')
+  // Both dates already flow to /leads, which forwards date_from_ts/date_to_ts to the leads_list +
+  // leads_count pipes (backend already supports the window). Default 30 keeps existing behavior.
+  const dateFrom = format(subDays(new Date(), dateRange), 'yyyy-MM-dd')
   const dateTo = format(new Date(), 'yyyy-MM-dd')
 
   useEffect(() => {
@@ -285,6 +296,16 @@ export default function Leads() {
           <option value="first_touch">First Touch</option>
           <option value="last_touch">Last Touch</option>
         </select>
+        <div className="flex bg-gray-100 dark:bg-[#181B1B] rounded-lg p-1">
+          {DATE_RANGES.map(dr => (
+            <button key={dr.label} onClick={() => setDateRange(dr.days)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                dateRange === dr.days ? 'bg-white dark:bg-[#252929] text-st-black dark:text-dark-primary shadow-sm' : 'text-st-gray dark:text-gray-400 hover:text-gray-700 dark:hover:text-dark-text'
+              }`}>
+              {dr.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <DashboardCard title="All Leads" subtitle={`${totalLeads} leads in range`}>

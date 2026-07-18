@@ -390,3 +390,14 @@ As a consequence, the 5 real-target A/B self-test blocks in `tinybird/tools/__te
 The `qa:attribution` harness (`scripts/qa-attribution-harness.mjs` + `qa-attribution-integration.mjs`, ~82 tests) is **not in the CI gate** (ci.yml runs `qa:attribution:unit`, not this harness) and is currently **unrunnable locally** without `POSTHOG_API_KEY` — it `import`s `attribution-engine.js`, which transitively constructs the PostHog client at module load. When **D3 deletes `posthog.js`**, that import chain changes and this 82-test suite is at risk of becoming permanently unrunnable / silently dead.
 
 **D3 must explicitly do ONE of:** (a) port the harness off PostHog (drive it purely through the injectable read seam / fixtures, no PostHog client at load), or (b) formally retire it with a recorded rationale. An 82-test attribution suite must not disappear as a side effect of the decommission — decide, don't drop. (Surfaced during D1c-1 test accounting, 2026-07-18.)
+
+### Leads "Total Conversions" KPI is page-scoped (undercounts) — leads-server.js:220 (2026-07-18)
+`GET /leads` computes `total_conversions = leads.reduce((s,l)=>s+l.conversions,0)` over the **returned page only** (`leads-server.js:220`, LIMIT ≤200). So the "Total Conversions" KPI on the All Leads page:
+- changes as the page size / limit changes (a KPI must not depend on pagination), and
+- undercounts once a site has more than the page limit of leads.
+
+Contrast with "Total Leads" (`total`), which is a correct full-range aggregate from the `leads_count` pipe. This page/full-range mismatch is why "Total Conversions 2" can sit below "Total Leads 4" for the same window.
+
+**Log-don't-fix now:** the fix needs `leads-server.js` (add a full-range conversion-count aggregate, e.g. a `sum(conversions)`/`countIf($conversion)` pipe read, instead of the page reduce). That file is **HOT** (D3 is concurrently removing an inert `queryHogQL` seam there) — defer until D3 merges to avoid a collision. Surfaced during the All Leads QA (Defect 2 investigation).
+
+> ⚠️ Separately, Defect 2's headline "Total Leads N vs table showing more rows" is an unresolved definition question: `leads_count` counts distinct **converters** while `leads_list` (the table) admits `conversions>0 OR pageviews>0` (converted-OR-engaged). Whether "4 vs 2" is also a prod deploy-drift (a `leads_count` that ignores `date_from_ts`) is **unverified** — it needs a prod Tinybird read (the CLI agent's MCP is staging-bound; prod site `473fba5e` has 0 events there). Not fixed pending that proof.
