@@ -380,8 +380,7 @@ As a consequence, the 5 real-target A/B self-test blocks in `tinybird/tools/__te
 
 **What this means:**
 - Pipe-vs-dead-store parity for these legs was certified POINT-IN-TIME before the flip (the §5 prod-serving gate: all 13 pipes confirmed serving) and is **no longer continuously harness-enforced**.
-- The `route_ab_diff` harness LOGIC (diff/tolerance/hit-guard/cache-eviction/fn-target/composite-key) is still fully covered by the stub-driven self-tests, which do not depend on a live OFF leg.
-- The harness tool + its TARGET registry are left intact; the tool is coupled to the dead read layer and is retired wholesale in D3.
+- ~~The `route_ab_diff` harness LOGIC is still covered by the stub-driven self-tests.~~ **SUPERSEDED (D3, this PR):** `route_ab_diff.mjs` + its self-test are now **DELETED**; the still-needed `buildRouteArgs`/`ROUTE_ARG_DEFAULTS` were extracted verbatim to `tinybird/tools/route-args.mjs` (the `route-args-matrix.test.js` CI gate imports it). See the D3 entry below.
 - Fail-closed behavior for these legs is now enforced by the dedicated `*-read-cutover` / `*-parity` suites (a null pipe MUST throw), not by A/B parity.
 
 **Re-establish if needed:** once D1c-2 lands the `attribution_explain_journey` pipe and D3 removes the dead read layer, no OFF leg exists anywhere — cross-store A/B is retired by design. Any future parity concern becomes a pipe-vs-pipe or pipe-vs-expected-fixture check.
@@ -391,8 +390,10 @@ The `qa:attribution` harness (`scripts/qa-attribution-harness.mjs` + `qa-attribu
 
 **D3 must explicitly do ONE of:** (a) port the harness off PostHog (drive it purely through the injectable read seam / fixtures, no PostHog client at load), or (b) formally retire it with a recorded rationale. An 82-test attribution suite must not disappear as a side effect of the decommission — decide, don't drop. (Surfaced during D1c-1 test accounting, 2026-07-18.)
 
-### All Leads page — 3 page-local defects, fix as ONE post-D3 leads-server.js PR (2026-07-18)
-All three are `GET /leads` bugs where a **page-limited** result (`leads_list`, LIMIT 100 — see the limit note) is treated as the whole dataset. The table sorts LAST SEEN desc, so anything past row 100 (e.g. the two 7/09-seeded converters) is invisible to every page-local computation below. All three need `api/routes/leads-server.js`, which is **HOT** (D3 is removing an inert `queryHogQL` seam there) — **do NOT touch until D3 merges**; then fix all three in one PR.
+**RESOLVED (D3, this PR):** neither port nor retire was needed — deleting `posthog.js` removed the transitive PostHog-client construction from `attribution-engine.js`, so `qa-attribution-harness.mjs` (the pure `calculateAttribution` math) now RUNS again: **6/6 green** ("ALL TESTS PASSED"). The harness is UNbroken, not lost. Its `qa-attribution-integration.mjs` half still needs a `SOURCETRACK_SITE_KEY` staging fixture (operator-provided, §0) to run — unrelated to PostHog. Not yet CI-gated; wiring it in is a possible separate follow-up once the integration half has a fixture.
+
+### All Leads page — 4 page-local defects, fix as ONE post-D3 leads-server.js PR (2026-07-18)
+All four are `GET /leads` bugs where a **page-limited** result (`leads_list`, LIMIT 100 — see the limit note) is treated as the whole dataset. The table sorts LAST SEEN desc, so anything past row 100 (e.g. the two 7/09-seeded converters) is invisible to every page-local computation below. All four need `api/routes/leads-server.js`, which is **HOT** (D3 removes an inert `queryHogQL` seam there) — **do NOT touch until D3 merges**; then fix all four in one PR with ONE full-window server-side aggregate covering: `total_conversions`, `total_revenue`, the table's own row count, and server-side search.
 
 Ground truth (prod Supabase `attributed_conversions`, techrupt.pk, 30d and all-time): **4 distinct converters, 4 conversion rows, $999.99**, cross-validated with Analytics. So `leads_count = 4` ("TOTAL LEADS 4") is **CORRECT** — there is no deploy-drift; earlier speculation about `leads_count` ignoring `date_from_ts` was **disproved** by this ground truth.
 
@@ -402,4 +403,20 @@ Ground truth (prod Supabase `attributed_conversions`, techrupt.pk, 30d and all-t
 
 3. **Search is page-local** (`leads-server.js:205-209`). `leads_list` has **no search param**; the route filters client-side over the ≤100 already-loaded rows, so searching `wave1_`/`gate0_` returns "No leads match your filters" for visitors that provably exist beyond row 100 — the UI reports absence when it means "not in what I loaded" (same silent-lie family as #278). **Fix:** either a real **server-side search param** on `leads_list`, or **relabel** the empty state so it can't claim a visitor doesn't exist.
 
+4. **`total_revenue` / "No revenue in this period" banner is page-scoped** (same root cause as #1, `leads-server.js:220`). The All Leads "No revenue in this period" banner evaluates revenue over the ≤100 returned rows; the two revenue-bearing converters sit beyond row 100, so the banner claims **no revenue while the site has $999.99**. **Fix:** compute `total_revenue` from the **full-window server-side aggregate** alongside #1's `total_conversions` (never over the returned page). Found in prod QA 2026-07-18.
+
 **Limit reconciliation (for the fix):** effective page size is **100**, not 50. `Leads.jsx` sends `limit=100`; `leads-server.js:46` (`… || 50`) and `leads_list.pipe:103` (`Int32(limit_val, 50)`) both carry a `50` fallback that never fires because the frontend always sends 100. Any full-window fix must not rely on the page size at all.
+
+## D3 — PostHog read layer deleted; cross-store HogQL diffing retired (2026-07-18)
+
+D3 deleted `api/lib/posthog.js` and every importer. `queryHogQL` has zero functional callers; the inert route/lib seams are gone; the write-dead `ph` client was unwired from `api/index.js`. A source-text guard (`api/tests/no-posthog-import.test.js`, in CI-gated `qa:identity:unit`) blocks any file under `api/lib`/`api/routes`/`api/jobs` from re-importing the deleted module.
+
+**Retired tooling (coupled to the dead read layer / no HogQL OFF leg):**
+- `route_ab_diff.mjs` + its self-test — the pipe-vs-HogQL A/B harness. `buildRouteArgs`/`ROUTE_ARG_DEFAULTS` (still used by the `route-args-matrix.test.js` CI gate) were extracted verbatim to `tinybird/tools/route-args.mjs`.
+- `phase4_touchpoint_diff.js`, `run_phase4_diff.mjs`, `phase4_replay_verify.mjs` — the Phase-9 cross-store parity drivers. The 5 model-credit functions (`creditFirstTouch`, `creditFirstTouchNonDirect`, `creditLastTouchNonDirect`, `aggregateModelCredits`, `compareAggregateBuckets`) + their pure helper closure were extracted verbatim to `tinybird/tools/attribution-credit-math.js` (posthog-free), keeping `phase9-agg-models.test.js` green.
+- Dead cross-store QA scripts `qa-dedupe-regression.mjs`, `qa-referrer-domain-reporting.mjs` deleted. Fixture seeders `seed-duplicate-conversion.mjs` / `seed-multitouch-carrier.mjs` severed to Tinybird-only (still function end-to-end).
+
+**Accepted gap (recorded, not a regression):** cross-store HogQL diffing is **retired** — there is no PostHog OFF leg to diff against anymore. The **model credit math itself remains covered** by `phase9-agg-models.test.js` (against `attribution-credit-math.js`). What is lost is only the ability to diff `last_touch` and `ai_platforms` (Phase 9 was incomplete for those two — they ship to prod without a cross-store validation harness). Any future parity concern is pipe-vs-pipe or pipe-vs-expected-fixture, not pipe-vs-HogQL.
+
+**Recovery** (all deleted files exist at the pre-D3 commit `8435504`, until PostHog data is decommissioned in D5):
+`git show 8435504:api/lib/posthog.js` · `git show 8435504:tinybird/tools/route_ab_diff.mjs` · `git show 8435504:tinybird/tools/phase4_touchpoint_diff.js` · `git show 8435504:tinybird/tools/run_phase4_diff.mjs` · `git show 8435504:tinybird/qa/phase4_replay_verify.mjs` · `git show 8435504:scripts/qa-dedupe-regression.mjs` · `git show 8435504:scripts/qa-referrer-domain-reporting.mjs`

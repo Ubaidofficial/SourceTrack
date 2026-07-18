@@ -23,7 +23,6 @@ process.env.SUPABASE_SERVICE_KEY = 'mock-service-role-key-value'
 process.env.POSTHOG_API_KEY = 'mock-posthog-key'
 process.env.ENCRYPTION_KEY = '0000000000000000000000000000000000000000000000000000000000000000'
 
-const { ph } = await import('../lib/posthog.js')
 const { getSupabase } = await import('../lib/supabase.js')
 const { track } = await import('../routes/track.js')
 const { default: proxyRouter } = await import('../routes/proxy.js')
@@ -45,14 +44,6 @@ function resetDualWrite () {
   delete process.env.TINYBIRD_DUAL_WRITE
 }
 
-// ── ph.capture mock (mirrors api/tests/pii-sanitization.test.js / form-conversion-promotion.test.js) ──
-const originalCapture = ph.capture
-let captureCalls = []
-function mockCapture () {
-  captureCalls = []
-  ph.capture = (args) => { captureCalls.push(args); return Promise.resolve() }
-}
-function restoreCapture () { ph.capture = originalCapture }
 
 // ── Supabase mock (mirrors api/tests/pii-sanitization.test.js) ──────────────────
 // pv_limit: Infinity short-circuits claimPageviewUsage before any DB/RPC call
@@ -80,10 +71,10 @@ function restoreSupabase () { client.from = originalFrom }
 const UA = 'Mozilla/5.0'
 
 test('pageview dual-write wiring — track.js POST /api/track', async (t) => {
-  t.beforeEach(() => { mockCapture(); resetDualWrite() })
-  t.afterEach(() => { restoreCapture(); resetDualWrite() })
+  t.beforeEach(() => { resetDualWrite() })
+  t.afterEach(() => { resetDualWrite() })
 
-  await t.test('anonymous pageview (no anonymous_id): ph.capture and dual-write share the SAME distinct_id', async () => {
+  await t.test('anonymous pageview (no anonymous_id): dual-write uses the resolved distinct_id', async () => {
     process.env.TINYBIRD_DUAL_WRITE = 'true'
     const rec = recorder()
     setDualWriteTransport(rec.transport, BATCH_OPTS)
@@ -97,8 +88,6 @@ test('pageview dual-write wiring — track.js POST /api/track', async (t) => {
 
     await track(reqMock, resMock)
 
-    assert.strictEqual(captureCalls.length, 0, 'ph.capture removed (Wave-2 pageview cutover)')
-
     await __getDualWriteBatcher().flush()
     const lines = rec.lines()
     assert.strictEqual(lines.length, 1, 'dual-write fired exactly once')
@@ -106,7 +95,7 @@ test('pageview dual-write wiring — track.js POST /api/track', async (t) => {
     assert.match(lines[0].distinct_id, /^[0-9a-f-]{36}$/, 'anonymous -> dual-write got a single generated uuid distinct_id')
   })
 
-  await t.test('flag OFF: no ph.capture AND no dual-write', async () => {
+  await t.test('flag OFF: no dual-write', async () => {
     resetDualWrite() // TINYBIRD_DUAL_WRITE unset
     const rec = recorder()
     setDualWriteTransport(rec.transport, BATCH_OPTS) // transport injected, but flag is OFF
@@ -119,8 +108,6 @@ test('pageview dual-write wiring — track.js POST /api/track', async (t) => {
     const resMock = { status: () => ({ json: () => {} }) }
 
     await track(reqMock, resMock)
-
-    assert.strictEqual(captureCalls.length, 0, 'ph.capture removed — never called')
     assert.strictEqual(rec.lines().length, 0, 'no dual-write when flag is off')
   })
 })
@@ -129,10 +116,10 @@ test('pageview dual-write wiring — proxy.js POST /sp/e', async (t) => {
   const layer = proxyRouter.stack.find((s) => s.route?.path === '/e' && s.route?.methods.post)
   const handler = layer.route.stack[layer.route.stack.length - 1].handle
 
-  t.beforeEach(() => { mockCapture(); resetDualWrite(); mockSupabaseSite({ id: 'site-proxy-e', plan: 'free', pv_limit: Infinity, trial_ends_at: null }) })
-  t.afterEach(() => { restoreCapture(); resetDualWrite(); restoreSupabase() })
+  t.beforeEach(() => { resetDualWrite(); mockSupabaseSite({ id: 'site-proxy-e', plan: 'free', pv_limit: Infinity, trial_ends_at: null }) })
+  t.afterEach(() => { resetDualWrite(); restoreSupabase() })
 
-  await t.test('anonymous proxied pageview (no anonymous_id): ph.capture and dual-write share the SAME distinct_id', async () => {
+  await t.test('anonymous proxied pageview (no anonymous_id): dual-write uses the resolved distinct_id', async () => {
     process.env.TINYBIRD_DUAL_WRITE = 'true'
     const rec = recorder()
     setDualWriteTransport(rec.transport, BATCH_OPTS)
@@ -142,8 +129,6 @@ test('pageview dual-write wiring — proxy.js POST /sp/e', async (t) => {
 
     await handler(req, res)
 
-    assert.strictEqual(captureCalls.length, 0, 'ph.capture removed (Wave-2 pageview cutover)')
-
     await __getDualWriteBatcher().flush()
     const lines = rec.lines()
     assert.strictEqual(lines.length, 1)
@@ -151,7 +136,7 @@ test('pageview dual-write wiring — proxy.js POST /sp/e', async (t) => {
     assert.ok(!('site_key' in lines[0]), 'site_key dropped by the adapter')
   })
 
-  await t.test('flag OFF: no ph.capture AND no dual-write', async () => {
+  await t.test('flag OFF: no dual-write', async () => {
     resetDualWrite()
     const rec = recorder()
     setDualWriteTransport(rec.transport, BATCH_OPTS)
@@ -160,8 +145,6 @@ test('pageview dual-write wiring — proxy.js POST /sp/e', async (t) => {
     const res = { json: () => {} }
 
     await handler(req, res)
-
-    assert.strictEqual(captureCalls.length, 0, 'ph.capture removed — never called')
     assert.strictEqual(rec.lines().length, 0)
   })
 })
@@ -170,10 +153,10 @@ test('pageview dual-write wiring — proxy.js GET /sp/pixel.gif', async (t) => {
   const layer = proxyRouter.stack.find((s) => s.route?.path === '/pixel.gif' && s.route?.methods.get)
   const handler = layer.route.stack[layer.route.stack.length - 1].handle
 
-  t.beforeEach(() => { mockCapture(); resetDualWrite(); mockSupabaseSite({ id: 'site-pixel-1', plan: 'free', pv_limit: Infinity, trial_ends_at: null }) })
-  t.afterEach(() => { restoreCapture(); resetDualWrite(); restoreSupabase() })
+  t.beforeEach(() => { resetDualWrite(); mockSupabaseSite({ id: 'site-pixel-1', plan: 'free', pv_limit: Infinity, trial_ends_at: null }) })
+  t.afterEach(() => { resetDualWrite(); restoreSupabase() })
 
-  await t.test('anonymous pixel pageview (no uid): ph.capture and dual-write share the SAME distinct_id', async () => {
+  await t.test('anonymous pixel pageview (no uid): dual-write uses the resolved distinct_id', async () => {
     process.env.TINYBIRD_DUAL_WRITE = 'true'
     const rec = recorder()
     setDualWriteTransport(rec.transport, BATCH_OPTS)
@@ -182,8 +165,6 @@ test('pageview dual-write wiring — proxy.js GET /sp/pixel.gif', async (t) => {
     const res = { set: () => {}, end: () => {} }
 
     await handler(req, res)
-
-    assert.strictEqual(captureCalls.length, 0, 'ph.capture removed (Wave-2 pageview cutover)')
 
     await __getDualWriteBatcher().flush()
     const lines = rec.lines()
@@ -194,7 +175,7 @@ test('pageview dual-write wiring — proxy.js GET /sp/pixel.gif', async (t) => {
     assert.ok(!('site_key' in lines[0]), 'site_key dropped by the adapter')
   })
 
-  await t.test('flag OFF: no ph.capture AND no dual-write', async () => {
+  await t.test('flag OFF: no dual-write', async () => {
     resetDualWrite()
     const rec = recorder()
     setDualWriteTransport(rec.transport, BATCH_OPTS)
@@ -203,8 +184,6 @@ test('pageview dual-write wiring — proxy.js GET /sp/pixel.gif', async (t) => {
     const res = { set: () => {}, end: () => {} }
 
     await handler(req, res)
-
-    assert.strictEqual(captureCalls.length, 0, 'ph.capture removed — never called')
     assert.strictEqual(rec.lines().length, 0)
   })
 })

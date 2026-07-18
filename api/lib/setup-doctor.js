@@ -1,4 +1,3 @@
-import { queryHogQL } from './posthog.js'
 import { queryTinybirdPipe } from './tinybird-read.js'
 import { esc, sanitizeVerificationToken } from './utils.js'
 
@@ -7,14 +6,11 @@ import { esc, sanitizeVerificationToken } from './utils.js'
 // unit tests inject stubs for the two read backends. Production never calls the
 // setter, so it uses the real imports and behaves identically.
 let _queryTinybirdPipe = queryTinybirdPipe
-let _queryHogQL = queryHogQL
-export function __setSetupDoctorReadDeps ({ queryTinybird, queryHog } = {}) {
+export function __setSetupDoctorReadDeps ({ queryTinybird } = {}) {
   if (queryTinybird) _queryTinybirdPipe = queryTinybird
-  if (queryHog) _queryHogQL = queryHog
 }
 export function __resetSetupDoctorReadDeps () {
   _queryTinybirdPipe = queryTinybirdPipe
-  _queryHogQL = queryHogQL
 }
 
 function normalizeDomain(d) {

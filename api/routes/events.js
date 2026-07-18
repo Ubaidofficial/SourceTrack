@@ -1,6 +1,5 @@
 import { Router } from 'express'
 import { validateSiteKey, requireSiteMembership } from '../middleware/auth.js'
-import { queryHogQL } from '../lib/posthog.js'
 import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { esc } from '../lib/utils.js'
 import { getDedupeSummary } from './conversion.js'
@@ -12,14 +11,11 @@ const router = Router()
 // Mirrors the merged live.js/hygiene.js pattern (no ESM module mocker): unit
 // tests inject stubs for the two read backends; production uses the real imports.
 let _queryTinybirdPipe = queryTinybirdPipe
-let _queryHogQL = queryHogQL
-export function __setEventsReadDeps ({ queryTinybird, queryHog } = {}) {
+export function __setEventsReadDeps ({ queryTinybird } = {}) {
   if (queryTinybird) _queryTinybirdPipe = queryTinybird
-  if (queryHog) _queryHogQL = queryHog
 }
 export function __resetEventsReadDeps () {
   _queryTinybirdPipe = queryTinybirdPipe
-  _queryHogQL = queryHogQL
 }
 
 // Tinybird-first read helper: null (flag off / error) -> HogQL fallback; rows
@@ -39,10 +35,9 @@ import NodeCache from 'node-cache'
 const eventsCache = new NodeCache({ stdTTL: 60, checkperiod: 30 })
 
 // Tool/test-only seam: evict the /health NodeCache entry (key `health:<siteId>`)
-// so an A/B parity run can force a fresh OFF-vs-ON dispatch — otherwise the ON leg
-// reads the OFF leg's cached result within the 120s TTL and masks divergence
-// (route_ab_diff.mjs events-health target). Mirrors the __set*ReadDeps seams;
-// never used on the live request path.
+// so a read-cutover test can force a fresh pipe dispatch — otherwise a second run
+// reads the first run's cached result within the 120s TTL and masks the dispatch
+// decision. Mirrors the __set*ReadDeps seams; never used on the live request path.
 export function __evictHealthCache (siteId) { eventsCache.del(`health:${siteId}`) }
 
 function isValidDate(value) {

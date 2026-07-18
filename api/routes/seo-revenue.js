@@ -1,7 +1,6 @@
 import express from 'express'
 import crypto from 'crypto'
 import { getSupabase } from '../lib/supabase.js'
-import { queryHogQL } from '../lib/posthog.js'
 import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { normalizePath } from '../lib/url-normalization.js'
 import { esc } from '../lib/utils.js'
@@ -14,14 +13,11 @@ const router = express.Router()
 // Mirrors the merged live.js/hygiene.js pattern (no ESM module mocker): unit
 // tests inject stubs for the two read backends; production uses the real imports.
 let _queryTinybirdPipe = queryTinybirdPipe
-let _queryHogQL = queryHogQL
-export function __setSeoRevenueReadDeps ({ queryTinybird, queryHog } = {}) {
+export function __setSeoRevenueReadDeps ({ queryTinybird } = {}) {
   if (queryTinybird) _queryTinybirdPipe = queryTinybird
-  if (queryHog) _queryHogQL = queryHog
 }
 export function __resetSeoRevenueReadDeps () {
   _queryTinybirdPipe = queryTinybirdPipe
-  _queryHogQL = queryHogQL
 }
 
 // Tinybird-first read helper: null (flag off / error) -> HogQL fallback; rows

@@ -5,7 +5,6 @@ import helmet from 'helmet'
 import cors from 'cors'
 import NodeCache from 'node-cache'
 import { getSupabase } from './lib/supabase.js'
-import { ph } from './lib/posthog.js'
 import { initTinybirdDualWrite } from '../tinybird/adapter/boot.js'
 import { drainDualWrite } from '../tinybird/adapter/dual-write.js'
 
@@ -259,11 +258,6 @@ app.use((req, res, next) => {
   next();
 });
 const PORT = process.env.PORT || 3000
-
-// Warn if PostHog vars missing but don't crash — Railway injects these at runtime
-if (!process.env.POSTHOG_API_KEY) console.warn('WARN: POSTHOG_API_KEY is not set')
-if (!process.env.POSTHOG_PERSONAL_API_KEY) console.warn('WARN: POSTHOG_PERSONAL_API_KEY is not set')
-if (!process.env.POSTHOG_PROJECT_ID) console.warn('WARN: POSTHOG_PROJECT_ID is not set')
 
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
   .split(',')
@@ -610,11 +604,10 @@ const server = app.listen(PORT, () => {
 })
 
 // Graceful shutdown — Railway sends SIGTERM ~10s before SIGKILL on deploys.
-// Single ordered owner: drain in-flight HTTP requests, THEN flush the PostHog
-// buffer (so $pageview captures from those in-flight requests are delivered
-// before exit — otherwise a claimed quota unit could outlive its event), THEN
-// exit. ph's own SIGTERM handler is intentionally removed so nothing races
-// process.exit() ahead of this flush.
+// Single ordered owner: drain in-flight HTTP requests, THEN drain the Tinybird
+// dual-write buffer (so events from those in-flight requests are delivered before
+// exit — otherwise a claimed quota unit could outlive its event), THEN exit.
+// (PostHog is decommissioned; the old ph.shutdown() flush was removed in D3.)
 let shuttingDown = false
 async function shutdown(signal) {
   if (shuttingDown) return
@@ -628,12 +621,6 @@ async function shutdown(signal) {
   forceExit.unref()
   server.close(async () => {
     console.log('[shutdown] http server closed')
-    try {
-      await ph.shutdown()
-      console.log('[shutdown] posthog buffer flushed')
-    } catch (err) {
-      console.error('[shutdown] posthog flush failed:', err?.message)
-    }
     try {
       const deadline = Number(process.env.TINYBIRD_SHUTDOWN_DRAIN_MS) || 8000
       await drainDualWrite({ deadlineMs: deadline })

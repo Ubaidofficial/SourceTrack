@@ -366,12 +366,8 @@ test('Form Capture Cookieless Tracker Unit Tests', async (t) => {
 // the canonical top-level discriminator, always set from the event name.
 async function driveTrackDW (reqMock, resMock) {
   const { track } = await import('../routes/track.js')
-  const { ph } = await import('../lib/posthog.js')
   const { setDualWriteTransport, __getDualWriteBatcher } = await import('../../tinybird/adapter/dual-write.js')
   const { gunzipSync } = await import('node:zlib')
-  const originalCapture = ph.capture
-  let phCalled = false
-  ph.capture = () => { phCalled = true }
   const payloads = []
   const prevFlag = process.env.TINYBIRD_DUAL_WRITE
   process.env.TINYBIRD_DUAL_WRITE = 'true'
@@ -380,13 +376,12 @@ async function driveTrackDW (reqMock, resMock) {
     await track(reqMock, resMock)
     const b = __getDualWriteBatcher(); if (b) await b.flush()
   } finally {
-    ph.capture = originalCapture
     setDualWriteTransport(null)
     if (prevFlag === undefined) delete process.env.TINYBIRD_DUAL_WRITE
     else process.env.TINYBIRD_DUAL_WRITE = prevFlag
   }
   const lines = payloads.flatMap(p => gunzipSync(p).toString('utf8').trim().split('\n').filter(Boolean).map(l => JSON.parse(l)))
-  return { lines, phCalled }
+  return { lines }
 }
 
 test('Form Ingestion Backend Route Integration Tests', async (t) => {
@@ -427,9 +422,7 @@ test('Form Ingestion Backend Route Integration Tests', async (t) => {
       }
     }
 
-    const { lines, phCalled } = await driveTrackDW(reqMock, resMock)
-
-    assert.strictEqual(phCalled, false, 'Wave-2: ph.capture removed (Tinybird sole writer)')
+    const { lines } = await driveTrackDW(reqMock, resMock)
     assert.strictEqual(lines.length, 1)
     const props = lines[0]
     assert.strictEqual(props.event_type, 'form_submit')
@@ -471,9 +464,7 @@ test('Form Ingestion Backend Route Integration Tests', async (t) => {
       }
     }
 
-    const { lines, phCalled } = await driveTrackDW(reqMock, resMock)
-
-    assert.strictEqual(phCalled, false, 'Wave-2: ph.capture removed (Tinybird sole writer)')
+    const { lines } = await driveTrackDW(reqMock, resMock)
     assert.strictEqual(lines.length, 1)
     const props = lines[0]
     assert.strictEqual(props.form_id, null)
@@ -506,9 +497,7 @@ test('Form Ingestion Backend Route Integration Tests', async (t) => {
       }
     }
 
-    const { lines, phCalled } = await driveTrackDW(reqMock, resMock)
-
-    assert.strictEqual(phCalled, false, 'Wave-2: ph.capture removed (Tinybird sole writer)')
+    const { lines } = await driveTrackDW(reqMock, resMock)
     assert.strictEqual(lines.length, 1)
     const props = lines[0]
     // event_type is the canonical top-level discriminator on the Tinybird row —
@@ -542,8 +531,7 @@ test('Form Ingestion Backend Route Integration Tests', async (t) => {
           return { json: (data) => assert.strictEqual(data.success, true) }
         }
       }
-      const { lines, phCalled } = await driveTrackDW(reqMock, resMock)
-      assert.strictEqual(phCalled, false, 'Wave-2: ph.capture removed (Tinybird sole writer)')
+      const { lines } = await driveTrackDW(reqMock, resMock)
       return lines[0]
     }
 

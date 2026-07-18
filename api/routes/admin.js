@@ -4,7 +4,6 @@ import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { getSupabase } from '../lib/supabase.js'
-import { queryHogQL } from '../lib/posthog.js'
 import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 
 const router = Router()
@@ -16,14 +15,11 @@ router.use(requireRole('super_admin'))
 // ── Tinybird read seam (W1 admin read cutover) — mirrors integrations.js/leads-server.js.
 // Unit tests inject stubs for the two read backends; production uses the real imports.
 let _queryTinybirdPipe = queryTinybirdPipe
-let _queryHogQL = queryHogQL
-export function __setAdminReadDeps ({ queryTinybird, queryHog } = {}) {
+export function __setAdminReadDeps ({ queryTinybird } = {}) {
   if (queryTinybird) _queryTinybirdPipe = queryTinybird
-  if (queryHog) _queryHogQL = queryHog
 }
 export function __resetAdminReadDeps () {
   _queryTinybirdPipe = queryTinybirdPipe
-  _queryHogQL = queryHogQL
 }
 // Tinybird-first read: null (flag off / error) -> HogQL fallback; the pipe's NAMED rows are
 // remapped to the HogQL POSITIONAL shape (mapRows) so every downstream consumer is

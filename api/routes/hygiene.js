@@ -1,6 +1,5 @@
 import { Router } from 'express'
 import { validateSiteKey } from '../middleware/auth.js'
-import { queryHogQL } from '../lib/posthog.js'
 import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { esc } from '../lib/utils.js'
 
@@ -11,14 +10,11 @@ const router = Router()
 // unit tests inject stubs for the two read backends. Production never calls the
 // setter, so it uses the real imports and behaves identically.
 let _queryTinybirdPipe = queryTinybirdPipe
-let _queryHogQL = queryHogQL
-export function __setHygieneReadDeps ({ queryTinybird, queryHog } = {}) {
+export function __setHygieneReadDeps ({ queryTinybird } = {}) {
   if (queryTinybird) _queryTinybirdPipe = queryTinybird
-  if (queryHog) _queryHogQL = queryHog
 }
 export function __resetHygieneReadDeps () {
   _queryTinybirdPipe = queryTinybirdPipe
-  _queryHogQL = queryHogQL
 }
 
 router.get('/utms', validateSiteKey, async (req, res) => {

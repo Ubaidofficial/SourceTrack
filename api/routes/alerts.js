@@ -1,6 +1,5 @@
 import { Router } from 'express'
 import { validateSiteKey } from '../middleware/auth.js'
-import { queryHogQL } from '../lib/posthog.js'
 import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 import { esc } from '../lib/utils.js'
 import { requireFeature } from '../lib/plan-features.js'
@@ -11,14 +10,11 @@ const router = Router()
 // Mirrors the merged live.js/hygiene.js pattern (no ESM module mocker): unit
 // tests inject stubs for the two read backends; production uses the real imports.
 let _queryTinybirdPipe = queryTinybirdPipe
-let _queryHogQL = queryHogQL
-export function __setAlertsReadDeps ({ queryTinybird, queryHog } = {}) {
+export function __setAlertsReadDeps ({ queryTinybird } = {}) {
   if (queryTinybird) _queryTinybirdPipe = queryTinybird
-  if (queryHog) _queryHogQL = queryHog
 }
 export function __resetAlertsReadDeps () {
   _queryTinybirdPipe = queryTinybirdPipe
-  _queryHogQL = queryHogQL
 }
 
 // Tinybird-first read helper: null (flag off / error) -> HogQL fallback; rows

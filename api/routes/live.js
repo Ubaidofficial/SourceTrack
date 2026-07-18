@@ -1,5 +1,4 @@
 import express from 'express'
-import { queryHogQL } from '../lib/posthog.js'
 import { queryTinybirdPipe } from '../lib/tinybird-read.js'
 
 const router = express.Router()
@@ -10,14 +9,11 @@ const router = express.Router()
 // read backends. Production NEVER calls the setter, so it uses the real imports
 // and behaves identically.
 let _queryTinybirdPipe = queryTinybirdPipe
-let _queryHogQL = queryHogQL
-export function __setLiveReadDeps ({ queryTinybird, queryHog } = {}) {
+export function __setLiveReadDeps ({ queryTinybird } = {}) {
   if (queryTinybird) _queryTinybirdPipe = queryTinybird
-  if (queryHog) _queryHogQL = queryHog
 }
 export function __resetLiveReadDeps () {
   _queryTinybirdPipe = queryTinybirdPipe
-  _queryHogQL = queryHogQL
 }
 
 // Parent mount in api/index.js applies requireUserAuth + validateSiteKey +

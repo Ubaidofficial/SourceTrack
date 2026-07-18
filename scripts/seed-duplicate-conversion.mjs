@@ -45,7 +45,10 @@
 // FAIL-CLOSED — aborts if the fixture already exists in EITHER store OR if EITHER store cannot be
 // verified (unlike #165's warn-and-proceed, which was a latent double-seed hole).
 
-import { ph, queryHogQL } from '../api/lib/posthog.js'
+// D3: PostHog is decommissioned — the ph.capture write + the queryHogQL PostHog pre-check were
+// removed. This seeder is now Tinybird-only and still functions END-TO-END: it writes via
+// dualWriteEvent and fail-closed pre-checks against ST_Staging (the PostHog half of the pre-check
+// is gone, not broken — it was a second store that no longer exists).
 import { initTinybirdDualWrite } from '../tinybird/adapter/boot.js'
 import { dualWriteEvent, __getDualWriteBatcher } from '../tinybird/adapter/dual-write.js'
 import { esc } from '../api/lib/utils.js'
@@ -102,17 +105,10 @@ async function tinybirdDupCount () {
     return c == null ? null : Number(c)
   } catch { return null }
 }
-async function posthogDupCount () {
-  try {
-    const rows = await queryHogQL(`SELECT count() FROM events WHERE properties.site_id='${esc(SITE_ID)}' AND event='$conversion' AND properties.external_event_id='${esc(EXTERNAL_EVENT_ID)}'`, 'seed_dup_precheck')
-    const c = rows?.[0]?.[0]
-    return c == null ? null : Number(c)
-  } catch { return null }
-}
 
 async function main () {
   if (!CONFIRM) {
-    console.log('DRY RUN (no --confirm) — nothing written. Would seed into ST_Staging + PostHog 469905:')
+    console.log('DRY RUN (no --confirm) — nothing written. Would seed into ST_Staging:')
     for (const d of DUPS) console.log(`  $conversion ${VISITOR} @ ${d.ts}  event_id=${d.event_id} (${d.survives ? 'SURVIVES' : 'dropped'})  ${JSON.stringify(convProps(d))}`)
     console.log(`Expected post-dedup: google bucket 2->1 conversions, $98->$49 (DUP_A survives). Re-run with --confirm to write.`)
     return
@@ -120,28 +116,26 @@ async function main () {
 
   assertStaging()
 
-  // FAIL-CLOSED: abort if the fixture already exists OR if either store cannot be verified.
-  const [tb, phc] = await Promise.all([tinybirdDupCount(), posthogDupCount()])
-  if (tb === null || phc === null) {
-    console.error(`ABORT (fail-closed): could not verify both stores (ST_Staging=${tb}, PostHog=${phc}). Refusing to seed without a clean pre-check.`)
+  // FAIL-CLOSED: abort if the fixture already exists OR if ST_Staging cannot be verified.
+  const tb = await tinybirdDupCount()
+  if (tb === null) {
+    console.error(`ABORT (fail-closed): could not verify ST_Staging (${tb}). Refusing to seed without a clean pre-check.`)
     process.exit(2)
   }
-  if (tb > 0 || phc > 0) {
-    console.error(`ABORT: duplicate fixture ${EXTERNAL_EVENT_ID} already present (ST_Staging=${tb}, PostHog=${phc}). No double-seed.`)
+  if (tb > 0) {
+    console.error(`ABORT: duplicate fixture ${EXTERNAL_EVENT_ID} already present (ST_Staging=${tb}). No double-seed.`)
     process.exit(2)
   }
-  console.log(`pre-check clear (ST_Staging=${tb}, PostHog=${phc}). Seeding 2 duplicate conversions...`)
+  console.log(`pre-check clear (ST_Staging=${tb}). Seeding 2 duplicate conversions...`)
 
   initTinybirdDualWrite()
   for (const d of DUPS) {
     const props = convProps(d)
-    ph.capture({ distinctId: VISITOR, event: '$conversion', timestamp: new Date(d.ts), properties: props })
     dualWriteEvent({ distinctId: VISITOR, event: '$conversion', timestamp: d.ts, properties: props })
   }
 
   const b = __getDualWriteBatcher(); if (b) await b.flush()
-  await ph.flush()
-  console.log(`SEEDED 2x $conversion (${EXTERNAL_EVENT_ID}) into ST_Staging + PostHog 469905. Expect google to dedup 2->1 / $98->$49; DUP_A survives.`)
+  console.log(`SEEDED 2x $conversion (${EXTERNAL_EVENT_ID}) into ST_Staging. Expect google to dedup 2->1 / $98->$49; DUP_A survives.`)
 }
 
 main().catch((e) => { console.error(e); process.exit(1) })

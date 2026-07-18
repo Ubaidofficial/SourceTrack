@@ -22,7 +22,6 @@ process.env.SUPABASE_SERVICE_KEY = 'mock-service-role-key-value'
 process.env.POSTHOG_API_KEY = 'mock-posthog-key'
 process.env.ENCRYPTION_KEY = '0000000000000000000000000000000000000000000000000000000000000000'
 
-const { ph } = await import('../lib/posthog.js')
 const { getSupabase } = await import('../lib/supabase.js')
 const { encryptSecret } = await import('../lib/utils.js')
 const { stripeWebhookRouter } = await import('../routes/stripe-webhook.js')
@@ -52,12 +51,6 @@ function recorder () {
 // $conversion now takes the DIRECT, AWAITED writer (writeConversionDirect), not the
 // fire-and-forget batcher — inject its transport factory instead of setDualWriteTransport.
 function resetDualWrite () { __resetConversionWriteTransportFactory(); delete process.env.TINYBIRD_DUAL_WRITE }
-
-// ── ph.capture mock ─────────────────────────────────────────────────────────
-const originalCapture = ph.capture
-let captureCalls = []
-function mockCapture () { captureCalls = []; ph.capture = (args) => { captureCalls.push(args); return Promise.resolve() } }
-function restoreCapture () { ph.capture = originalCapture }
 
 // ── Supabase mock: sites lookup + idempotency-claim rpc + benign inserts ─────
 const client = getSupabase()
@@ -106,16 +99,15 @@ const subscriptionEvent = () => ({
 })
 
 for (const [label, makeEvent] of [['checkout.session.completed', checkoutEvent], ['invoice.paid (subscription)', subscriptionEvent]]) {
-  test(`stripe-webhook dual-write — ${label}: Tinybird dual-write fires once; ph.capture NOT called (Wave-1 cutover)`, async (t) => {
-    t.after(() => { restoreCapture(); restoreSupabase(); resetDualWrite() })
-    mockCapture(); mockSupabase(); resetDualWrite()
+  test(`stripe-webhook dual-write — ${label}: Tinybird dual-write fires once (Wave-1 cutover)`, async (t) => {
+    t.after(() => { restoreSupabase(); resetDualWrite() })
+    mockSupabase(); resetDualWrite()
     process.env.TINYBIRD_DUAL_WRITE = 'true'
     const rec = recorder(); __setConversionWriteTransportFactory(() => rec.transport)
 
     const res = await drive(makeEvent())
 
     assert.strictEqual(res.statusCode, 200, `2xx (body: ${JSON.stringify(res.body)})`)
-    assert.strictEqual(captureCalls.length, 0, 'ph.capture must NOT be called (Wave-1: Tinybird is the sole $conversion writer)')
 
     // Awaited direct write — no batcher flush needed.
     const lines = rec.lines()
@@ -126,15 +118,14 @@ for (const [label, makeEvent] of [['checkout.session.completed', checkoutEvent],
     assert.ok(!('site_key' in lines[0]), 'site_key dropped by the adapter')
   })
 
-  test(`stripe-webhook dual-write — ${label}: flag OFF => no ph.capture AND no dual-write`, async (t) => {
-    t.after(() => { restoreCapture(); restoreSupabase(); resetDualWrite() })
-    mockCapture(); mockSupabase(); resetDualWrite() // TINYBIRD_DUAL_WRITE unset
+  test(`stripe-webhook dual-write — ${label}: flag OFF => no dual-write`, async (t) => {
+    t.after(() => { restoreSupabase(); resetDualWrite() })
+    mockSupabase(); resetDualWrite() // TINYBIRD_DUAL_WRITE unset
     const rec = recorder(); __setConversionWriteTransportFactory(() => rec.transport)
 
     const res = await drive(makeEvent())
 
     assert.strictEqual(res.statusCode, 200)
-    assert.strictEqual(captureCalls.length, 0, 'ph.capture removed — never called')
     // Post-cutover: with the flag off, $conversion is written NOWHERE (Tinybird is the
     // sole writer and it is gated). Prod runs with TINYBIRD_DUAL_WRITE=true (Gate 0).
     assert.strictEqual(rec.lines().length, 0, 'no dual-write when flag is off')
