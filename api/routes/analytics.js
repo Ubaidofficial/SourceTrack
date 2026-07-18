@@ -46,6 +46,23 @@ const PIPE_FILTER_PARAM = {
   Channel: 'filter_channel'
 }
 
+// Revenue-side filter scoping (§6 wrong-scope closure). Maps a UI filter type -> the
+// attributed_conversions column that expresses it, so the revenue/conversions KPIs scope to the
+// SAME slice the pageview metrics do. A filter type ABSENT here (Entry, Exit, OS) has no
+// conversion-row dimension: when such a filter is active the revenue KPIs are GATED to null
+// (hide, don't fake) rather than returned unfiltered. Channel/Source classification is
+// nightly-populated on the conversion row (channelFromEvent, same classifier as filter_channel);
+// see the PR note on stale-until-reprocess parity.
+const CONVERSION_FILTER_COLUMN = {
+  Channel: 'first_touch_channel',
+  Source: 'first_touch_source',
+  Country: 'country',
+  Device: 'device',
+  Browser: 'browser',
+  Page: 'landing_page',
+  'AI Source': 'ai_influenced_source'
+}
+
 // HogQL serialized `toDateTime('ISO')` expr -> the pipe's ClickHouse DateTime
 // literal 'YYYY-MM-DD HH:MM:SS' (UTC, second precision). Same helper as sessions.js.
 function toChDateTime (expr) {
@@ -320,7 +337,7 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
     try {
       const { data: convRows } = await supabase
         .from('attributed_conversions')
-        .select('conversion_date, conversion_value, first_touch_source, first_touch_channel, conversion_timestamp, distinct_id, anonymous_id')
+        .select('conversion_date, conversion_value, first_touch_source, first_touch_channel, country, device, browser, landing_page, ai_influenced_source, conversion_timestamp, distinct_id, anonymous_id')
         .eq('site_id', siteId)
         .gte('conversion_date', currentPadded.from)
         .lte('conversion_date', currentPadded.to)
@@ -332,14 +349,34 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
       // attributed_conversions table may be empty for very new sites — fail silently.
     }
 
-    const totalRevenue = conversions.reduce((s, r) => s + (Number(r.conversion_value) || 0), 0)
-    const conversionCount = conversions.length
+    // §6 wrong-scope closure: scope the revenue rail to the SAME filter the pageview KPIs honor.
+    // For each active filter that maps to an attributed_conversions column, narrow `conversions`
+    // (same-type filters OR together, cross-type AND — mirrors the pageview pipe semantics). A
+    // filter with NO conversion column (Entry/Exit/OS, or any unknown type) cannot be honored on
+    // the revenue rail -> gate the money KPIs to null instead of leaking unfiltered numbers.
+    let revenueGated = false
+    const revFilterCols = {}
+    for (const f of filters) {
+      const col = CONVERSION_FILTER_COLUMN[f.type]
+      if (!col) { revenueGated = true; continue }
+      ;(revFilterCols[col] ||= new Set()).add(f.value)
+    }
+    if (!revenueGated) {
+      for (const [col, vals] of Object.entries(revFilterCols)) {
+        conversions = conversions.filter(r => vals.has(r[col] ?? ''))
+      }
+    }
+
+    const totalRevenue = revenueGated ? null : conversions.reduce((s, r) => s + (Number(r.conversion_value) || 0), 0)
+    const conversionCount = revenueGated ? null : conversions.length
     // Rate numerator = DISTINCT converters (same canonical visitor identity the
     // denominator uses — distinct_id/anonymous_id), NOT raw conversion rows. A
     // visitor converting N times is one converter. cappedRate also guards >100%.
+    // Numerator (scoped conversions) and denominator (scoped uniqueVisitors) now match — the old
+    // unfiltered-numerator ÷ filtered-denominator was what produced the bogus 100%.
     const distinctConverters = countDistinctConverters(conversions)
-    const conversionRate = cappedRate(distinctConverters, uniqueVisitors)
-    const revenuePerVisitor = uniqueVisitors > 0 ? totalRevenue / uniqueVisitors : 0
+    const conversionRate = revenueGated ? null : cappedRate(distinctConverters, uniqueVisitors)
+    const revenuePerVisitor = revenueGated ? null : (uniqueVisitors > 0 ? totalRevenue / uniqueVisitors : 0)
 
     // Revenue time series — bucketed the same way as visitor time series
     const revenueBuckets = {}
@@ -368,14 +405,18 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
     const allBuckets = new Set([...fullBuckets, ...Object.keys(dayVisitorBuckets), ...Object.keys(revenueBuckets), ...Object.keys(dayCounts)])
     const labels = [...allBuckets].sort()
     const visitors_timeseries = labels.map(l => dayVisitorBuckets[l] || 0)
-    const revenue_timeseries = labels.map(l => revenueBuckets[l] || 0)
+    // Gated (Entry/Exit/OS): null the revenue series/map too — a wrong-scope leak is a leak on
+    // every revenue surface, not only the KPI cards. Pass-through dims already scoped `conversions`.
+    const revenue_timeseries = revenueGated ? null : labels.map(l => revenueBuckets[l] || 0)
 
     // Per-source revenue map
-    const revenueBySource = {}
-    conversions.forEach(r => {
-      const src = r.first_touch_source || 'Direct'
-      revenueBySource[src] = (revenueBySource[src] || 0) + (Number(r.conversion_value) || 0)
-    })
+    const revenueBySource = revenueGated ? null : {}
+    if (!revenueGated) {
+      conversions.forEach(r => {
+        const src = r.first_touch_source || 'Direct'
+        revenueBySource[src] = (revenueBySource[src] || 0) + (Number(r.conversion_value) || 0)
+      })
+    }
 
     res.json({
       success: true,
@@ -394,7 +435,7 @@ router.get('/summary', requireUserAuth, validateSiteKey, requireSiteMembership, 
           revenue_per_visitor: revenuePerVisitor
         },
         top_pages: topPages,
-        top_sources: topSources.map(s => ({ ...s, revenue: revenueBySource[s.source] || 0 })),
+        top_sources: topSources.map(s => ({ ...s, revenue: revenueGated ? null : (revenueBySource[s.source] || 0) })),
         ai_sources: aiSources,
         devices: deviceCounts,
         top_countries: topCountries,
