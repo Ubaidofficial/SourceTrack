@@ -1,9 +1,10 @@
 // ai_platforms Tinybird read-cutover — TOKEN-FREE, NO network.
 // Exercises the two legs of getAiPlatformAttributionLive via the
 // __setAttributionReadDeps seam: (1) conversions named→positional remap yields
-// downstream objects identical to the HogQL positional input; (2) LEG-2 OFFSET
-// paging collects all rows across ≥2 pages and stops at a short page;
-// (3) pipe-null falls back to _queryHogQL for each leg.
+// the expected downstream objects; (2) LEG-2 OFFSET paging collects all rows
+// across ≥2 pages and stops at a short page; (3) post-D1c-1, a null pipe on
+// EITHER leg throws the loud tinybird-force-read invariant (the HogQL fallback
+// is gone), never a silent dead-store read.
 //
 // NOTE: this is a wiring/shape unit test only — real cross-store parity is gated
 // on the staging A/B (touch_ab_diff), NOT on this test.
@@ -25,11 +26,6 @@ const {
 
 const PAGE = 5000 // must match AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE
 
-// Canonical conversion (20 fields, exact order of the LEG-1 destructure).
-const CONV_FIELDS = ['uuid', 'distinct_id', 'timestamp', 'conversion_type', 'conversion_value',
-  'utm_source', 'utm_medium', 'utm_campaign', 'referrer', 'ai_source', 'country', 'device_type',
-  'utm_term', 'provider', 'attribution_status', 'stitching_method', 'ingestion_method',
-  'browser_name', 'browser', 'page_url']
 const convData = (over = {}) => ({
   uuid: 'c1', distinct_id: 'v1', timestamp: '2026-06-15T12:00:00Z',
   conversion_type: 'purchase', conversion_value: 100,
@@ -39,7 +35,6 @@ const convData = (over = {}) => ({
   stitching_method: 'browser', ingestion_method: 'server_routed',
   browser_name: 'Chrome', browser: 'Chrome', page_url: '/checkout', ...over
 })
-const positionalConv = d => CONV_FIELDS.map(f => d[f])
 
 const namedPv = (over = {}) => ({
   visitor_id: 'v1', distinct_id: 'v1', timestamp: '2026-06-10T00:00:00Z',
@@ -51,26 +46,20 @@ const namedPv = (over = {}) => ({
 
 const ARGS = { siteId: 'site-1', dateFrom: '2026-06-01', dateTo: '2026-06-29', groupBy: 'source', metric: 'revenue', attributionWindow: '30' }
 
-test('LEG 1 — conversions named→positional remap: Tinybird conv leg == HogQL conv leg', async (t) => {
+test('LEG 1 — conversions named→positional remap: pipe named rows → expected downstream output', async (t) => {
   t.after(__resetAttributionReadDeps)
   const d = convData() // conversion carries ai_source so credit works with zero pageviews
 
-  // Run A: conversions via Tinybird (named rows), pageviews gated → HogQL returns none.
+  // conversions via Tinybird (named rows); LEG-2 pageviews pipe serves an empty page
+  // (short page → paging stops immediately, no throw). HogQL must never be touched.
   __setAttributionReadDeps({
-    queryTinybird: async (pipe) => pipe === 'aiplatform_conversions_by_site' ? [{ ...d }] : null,
-    queryHog: async (_sql, name) => name.startsWith('aiplatform_pageviews_live_batch_') ? [] : []
+    queryTinybird: async (pipe) => pipe === 'aiplatform_conversions_by_site' ? [{ ...d }] : [],
+    queryHog: async () => { throw new Error('HogQL must not be called when the pipes serve') }
   })
   const runA = await getAiPlatformAttributionLive({ ...ARGS })
 
-  // Run B: conversions via HogQL (positional rows) with identical data.
-  __setAttributionReadDeps({
-    queryTinybird: async () => null,
-    queryHog: async (_sql, name) => name === 'aiplatform_conversions_live' ? [positionalConv(d)] : []
-  })
-  const runB = await getAiPlatformAttributionLive({ ...ARGS })
-
-  assert.deepEqual(runA, [{ dim_value: 'ChatGPT', revenue: 100, conversions: 1 }])
-  assert.deepEqual(runA, runB, 'named→positional remap must produce identical downstream output')
+  assert.deepEqual(runA, [{ dim_value: 'ChatGPT', revenue: 100, conversions: 1 }],
+    'named→positional remap must produce the expected downstream output')
 })
 
 test('LEG 2 — OFFSET paging collects all rows across 2 pages and stops at the short page', async (t) => {
@@ -99,23 +88,29 @@ test('LEG 2 — OFFSET paging collects all rows across 2 pages and stops at the 
     'credit from the page-2 AI pageview proves page-2 rows were collected (no drop)')
 })
 
-test('LEG 1+2 — pipe null falls back to _queryHogQL for each leg', async (t) => {
+test('LEG 1 — conversions pipe null throws the tinybird-force-read invariant, HogQL NOT called', async (t) => {
   t.after(__resetAttributionReadDeps)
-  const d = convData()
-  const tbPipes = []
-  const hogNames = []
   __setAttributionReadDeps({
-    queryTinybird: async (pipe) => { tbPipes.push(pipe); return null }, // both legs gated
-    queryHog: async (_sql, name) => {
-      hogNames.push(name)
-      return name === 'aiplatform_conversions_live' ? [positionalConv(d)] : [] // pv batch → empty
-    }
+    queryTinybird: async () => null, // LEG1 conv pipe gated → throw before LEG2 runs
+    queryHog: async () => { throw new Error('HogQL must not be called after the pipe returns null') }
   })
+  await assert.rejects(
+    getAiPlatformAttributionLive({ ...ARGS }),
+    /tinybird-force-read.*aiplatform_conversions_by_site returned null/,
+    'LEG1 null pipe must throw the loud force-read invariant, not fall back'
+  )
+})
 
-  const res = await getAiPlatformAttributionLive({ ...ARGS })
-  assert.deepEqual(res, [{ dim_value: 'ChatGPT', revenue: 100, conversions: 1 }])
-  assert.ok(tbPipes.includes('aiplatform_conversions_by_site'), 'LEG1 pipe was attempted')
-  assert.ok(tbPipes.includes('pageviews_by_visitors'), 'LEG2 pipe was attempted')
-  assert.ok(hogNames.includes('aiplatform_conversions_live'), 'LEG1 fell back to HogQL')
-  assert.ok(hogNames.some(n => n.startsWith('aiplatform_pageviews_live_batch_')), 'LEG2 fell back to HogQL')
+test('LEG 2 — pageviews pipe null throws the tinybird-force-read invariant, HogQL NOT called', async (t) => {
+  t.after(__resetAttributionReadDeps)
+  const d = convData({ ai_source: '' }) // no conversion-level AI → LEG2 pageviews are required
+  __setAttributionReadDeps({
+    queryTinybird: async (pipe) => pipe === 'aiplatform_conversions_by_site' ? [{ ...d }] : null, // LEG2 gated
+    queryHog: async () => { throw new Error('HogQL must not be called after the pipe returns null') }
+  })
+  await assert.rejects(
+    getAiPlatformAttributionLive({ ...ARGS }),
+    /tinybird-force-read.*pageviews_by_visitors returned null/,
+    'LEG2 null pipe must throw the loud force-read invariant, not fall back'
+  )
 })

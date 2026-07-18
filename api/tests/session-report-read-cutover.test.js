@@ -1,7 +1,10 @@
-// W1-bc1 read-cutover — getSessionReport dispatch parity. BOTH reads are wired pipe-first
+// W1-bc1 read-cutover — getSessionReport dispatch. BOTH reads are wired pipe-first
 // (session_report_pageviews + session_report_conversions); grouping happens in JS
-// (deriveSessions) so it's identical on both legs. Proves the pipe named-row remap ==
-// the HogQL positional shape. NOTE: getSessionReport caches on its full key, so each
+// (deriveSessions). Post-D1c-1 the HogQL fallback is gone: a null/gated pipe throws
+// the loud tinybird-force-read invariant instead of serving dead-store zeros. The
+// FILTER GATE (content filter → pipe ineligible) therefore now THROWS rather than
+// diverting to HogQL — a filtered session report can't serve real data until a
+// filter-aware pipe exists. NOTE: getSessionReport caches on its full key, so each
 // run evicts first (via the __evictSessionReportCache seam) to avoid a cross-run cache hit.
 
 import test from 'node:test'
@@ -26,10 +29,7 @@ const PV = [
   { distinct_id: 'v1', timestamp: '2026-07-01T10:00:00Z', page_url: '/a', utm_source: 'google', utm_medium: 'cpc', utm_campaign: 'brand', country: 'US', device_type: 'desktop' },
   { distinct_id: 'v2', timestamp: '2026-07-02T10:00:00Z', page_url: '/b', utm_source: 'google', utm_medium: 'cpc', utm_campaign: 'brand', country: 'US', device_type: 'desktop' }
 ]
-const PV_KEYS = ['distinct_id', 'timestamp', 'page_url', 'utm_source', 'utm_medium', 'utm_campaign', 'country', 'device_type']
-const pvPos = (o) => PV_KEYS.map((k) => o[k])
 const CONV = [{ distinct_id: 'v1', timestamp: '2026-07-01T10:05:00Z' }]
-const convPos = (o) => [o.distinct_id, o.timestamp]
 
 async function run (deps) {
   __evictSessionReportCache(SITE, FROM, TO, ...R) // fresh dispatch, no cross-run cache hit
@@ -37,17 +37,12 @@ async function run (deps) {
   try { return await getSessionReport(SITE, FROM, TO, ...R) } finally { __resetAttributionReadDeps() }
 }
 
-test('DISPATCH: named pipe rows and positional HogQL rows produce the identical session report', async () => {
+test('DISPATCH: named pipe rows produce the expected session report, HogQL untouched', async () => {
   const pipeRes = await run({
     queryTinybird: async (pipe) => pipe === 'session_report_pageviews' ? PV : pipe === 'session_report_conversions' ? CONV : null,
     queryHog: async () => { throw new Error('HogQL must not be called on the pipe path') }
   })
-  const hogRes = await run({
-    queryTinybird: async () => null,
-    queryHog: async (_sql, name) => name === 'session_report_pageviews' ? PV.map(pvPos) : name === 'session_report_conversions' ? CONV.map(convPos) : []
-  })
-  assert.deepStrictEqual(pipeRes, hogRes, 'pipe named-row remap == HogQL positional -> byte-identical output')
-  // sanity: source 'google' aggregated 2 sessions
+  // source 'google' aggregated 2 sessions
   const google = pipeRes.find((r) => r.dim_value === 'google')
   assert.ok(google && google.session_count === 2, 'both visitors folded into source=google, session_count=2')
 })
@@ -61,18 +56,22 @@ test('DISPATCH: pipe path serves WITHOUT touching HogQL (zero fallback)', async 
   assert.strictEqual(hogCalled, false, 'both wired reads served from the pipe; HogQL untouched')
 })
 
-test('FILTER GATE: a content filter (filters.source) does NOT dispatch the pipe (would over-count) -> HogQL', async () => {
+test('FILTER GATE: a content filter (filters.source) makes the pipe ineligible -> THROWS force-read, no HogQL', async () => {
   const F = ['source', 'session_count', { source: 'google' }, null]
   __evictSessionReportCache(SITE, FROM, TO, ...F)
-  const pipes = []; const hogNames = []
+  const pipes = []
   __setAttributionReadDeps({
     queryTinybird: async (pipe) => { pipes.push(pipe); return pipe === 'session_report_pageviews' ? PV : pipe === 'session_report_conversions' ? CONV : null },
-    queryHog: async (_sql, name) => { hogNames.push(name); return name === 'session_report_pageviews' ? PV.map(pvPos) : name === 'session_report_conversions' ? CONV.map(convPos) : [] }
+    queryHog: async () => { throw new Error('HogQL must not be called — the fallback is gone post-D1c-1') }
   })
-  try { await getSessionReport(SITE, FROM, TO, ...F) } finally { __resetAttributionReadDeps() }
-  assert.ok(!pipes.includes('session_report_pageviews'), 'filtered -> pageviews pipe NOT queried (pipe ignores filter_* params)')
-  assert.ok(!pipes.includes('session_report_conversions'), 'filtered -> conversions pipe NOT queried')
-  assert.ok(hogNames.includes('session_report_pageviews'), 'filtered -> falls back to HogQL, which applies filterClauses')
+  try {
+    await assert.rejects(
+      getSessionReport(SITE, FROM, TO, ...F),
+      /tinybird-force-read.*session_report_pageviews returned null/,
+      'a filtered (pipe-ineligible) session report must throw the loud force-read invariant, not serve dead-store zeros'
+    )
+  } finally { __resetAttributionReadDeps() }
+  assert.ok(!pipes.includes('session_report_pageviews'), 'filtered -> pageviews pipe gated out (ineligible), never queried')
 })
 
 test('FILTER GATE: unfiltered request STILL dispatches the pipe (gate only diverts filtered)', async () => {

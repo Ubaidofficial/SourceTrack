@@ -1,7 +1,9 @@
-// W1-bc2 read-cutover — getAttributionExplanation dispatch parity. The CONVERSION read is
-// wired pipe-first (attribution_explain_conversion); the journey read stays HogQL. Returns
-// a SINGLE object (or null). Proves the pipe named-row remap == the HogQL positional shape,
-// and that null (no conversion) short-circuits identically on both legs.
+// W1-bc2 read-cutover — getAttributionExplanation dispatch. The CONVERSION read is wired
+// pipe-first (attribution_explain_conversion) and, post-D1c-1, THROWS the loud
+// tinybird-force-read invariant on a null pipe (no HogQL fallback). The JOURNEY read
+// intentionally STAYS on HogQL — it is the one remaining functional _queryHogQL caller,
+// retired separately in D1c-2 (build attribution_explain_journey pipe). Returns a SINGLE
+// object (or null); an empty ([], not null) conversion pipe = no conversion -> null.
 
 import test from 'node:test'
 import assert from 'node:assert'
@@ -25,8 +27,6 @@ const conv = {
   first_touch_source: 'google', first_touch_medium: 'cpc', first_touch_campaign: 'brand',
   ai_source: null, page_url: '/checkout', user_id: null, anonymous_id: 'v1', ingestion_method: 'server_routed'
 }
-const CONV_KEYS = ['timestamp', 'conversion_value', 'utm_source', 'utm_medium', 'utm_campaign', 'first_touch_source', 'first_touch_medium', 'first_touch_campaign', 'ai_source', 'page_url', 'user_id', 'anonymous_id', 'ingestion_method']
-const convPos = (o) => CONV_KEYS.map((k) => o[k])
 // Journey positional: [event, timestamp, page_url, utm_source, utm_medium, utm_campaign, ai_source, conversion_value]
 const JOURNEY = [
   ['$pageview', '2026-07-01T10:00:00Z', '/a', 'google', 'cpc', 'brand', null, null],
@@ -38,18 +38,24 @@ async function run (deps) {
   try { return await getAttributionExplanation(SITE, MODEL, DID) } finally { __resetAttributionReadDeps() }
 }
 
-test('DISPATCH: named pipe conversion row vs positional HogQL -> identical explanation object', async () => {
+test('DISPATCH: named pipe conversion row -> explanation object, journey from HogQL', async () => {
   const pipeRes = await run({
     queryTinybird: async (pipe) => pipe === 'attribution_explain_conversion' ? [conv] : null,
     queryHog: async (_sql, name) => name === 'attribution_explain_journey' ? JOURNEY : (() => { throw new Error('conversion must come from the pipe, not HogQL') })()
   })
-  const hogRes = await run({
-    queryTinybird: async () => null,
-    queryHog: async (_sql, name) => name === 'attribution_explain_conversion' ? [convPos(conv)] : name === 'attribution_explain_journey' ? JOURNEY : []
-  })
-  assert.ok(pipeRes && hogRes, 'both legs produced an explanation')
-  assert.deepStrictEqual(pipeRes, hogRes, 'pipe named-row remap == HogQL positional -> byte-identical explanation')
+  assert.ok(pipeRes, 'the pipe conversion leg produced an explanation')
   assert.strictEqual(pipeRes.conversion.value, 49, 'conversion value carried through the pipe')
+})
+
+test('FORCE-READ: conversion pipe null throws the tinybird-force-read invariant, HogQL NOT called', async () => {
+  await assert.rejects(
+    run({
+      queryTinybird: async () => null, // conversion pipe gated → throw before the journey read
+      queryHog: async () => { throw new Error('HogQL must not be called after the conversion pipe returns null') }
+    }),
+    /tinybird-force-read.*attribution_explain_conversion returned null/,
+    'a null conversion pipe must throw the loud force-read invariant, not fall back'
+  )
 })
 
 test('DISPATCH: pipe conversion serves WITHOUT touching HogQL for the conversion read', async () => {
@@ -62,15 +68,10 @@ test('DISPATCH: pipe conversion serves WITHOUT touching HogQL for the conversion
   assert.ok(hogNames.includes('attribution_explain_journey'), 'journey stays on HogQL (un-wired leg)')
 })
 
-test('no conversion for the visitor -> null on BOTH legs (pipe [] and HogQL [])', async () => {
+test('no conversion for the visitor -> null (empty [] pipe result, NOT a throw)', async () => {
   const pipeNull = await run({
     queryTinybird: async (pipe) => pipe === 'attribution_explain_conversion' ? [] : null, // empty (not null) = no conversion
     queryHog: async () => []
   })
-  const hogNull = await run({
-    queryTinybird: async () => null,
-    queryHog: async () => []
-  })
-  assert.strictEqual(pipeNull, null, 'empty pipe result -> null (no conversion)')
-  assert.strictEqual(hogNull, null, 'empty HogQL result -> null')
+  assert.strictEqual(pipeNull, null, 'empty pipe result -> null (no conversion); an empty array is a served answer, not a null-pipe throw')
 })

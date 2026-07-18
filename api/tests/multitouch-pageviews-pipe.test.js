@@ -85,33 +85,10 @@ test('(fix) 3-touchpoint path -> linear = 1/3 each; Direct is NOT 100%, AI Searc
   assert.ok(dims['Direct'] > 0 && dims['Direct'] < 0.9, 'Direct is present but NOT 100%')
 })
 
-// ── 3. DISPATCH: named pipe rows == positional HogQL rows -> byte-identical (the field-name trap) ──
-test('(parity) named pipe pageviews == positional HogQL pageviews -> identical result', async () => {
-  const COLS = ['distinct_id', 'timestamp', 'utm_source', 'utm_medium', 'utm_campaign', 'referrer', 'ai_source', 'gclid', 'gbraid', 'wbraid', 'fbclid', 'msclkid', 'ttclid', 'li_fat_id', 'li_fatid', 'twclid', 'dclid', 'snapclid', 'pclid', 'sccid', 'ko_click_id', 'page_url', 'utm_term']
-  const toPos = (named) => COLS.map(k => named[k])
-  // pipe leg
-  __setAttributionReadDeps({
-    queryTinybird: async (pipe) => pipe === 'multitouch_conversions_by_site' ? [conv] : (pipe === 'multitouch_pageviews_live' ? THREE_TOUCH : null),
-    queryHog: async () => { throw new Error('no hog on the pipe leg') },
-  })
-  let pipeRes; try { pipeRes = await getMultiTouchAttributionLive(CALL) } finally { __resetAttributionReadDeps() }
-  // HogQL leg (pipe null -> positional pageviews via HogQL)
-  __setAttributionReadDeps({
-    queryTinybird: async () => null,
-    queryHog: async (_s, name) => name === 'multitouch_conversions_live' ? [] : name === 'multitouch_pageviews_live' ? THREE_TOUCH.map(toPos) : [],
-  })
-  // conversions must come from somewhere on the HogQL leg — serve them positionally too
-  __resetAttributionReadDeps()
-  const CONV_COLS = ['uuid', 'distinct_id', 'timestamp', 'conversion_type', 'conversion_value', 'utm_source', 'utm_medium', 'utm_campaign', 'referrer', 'ai_source', 'country', 'device_type', 'utm_term', 'provider', 'attribution_status', 'stitching_method', 'ingestion_method', 'stripe_subscription_id', 'stripe_event_type']
-  __setAttributionReadDeps({
-    queryTinybird: async () => null,
-    queryHog: async (_s, name) => name === 'multitouch_conversions_live' ? [CONV_COLS.map(k => conv[k])] : name === 'multitouch_pageviews_live' ? THREE_TOUCH.map(toPos) : [],
-  })
-  let hogRes; try { hogRes = await getMultiTouchAttributionLive(CALL) } finally { __resetAttributionReadDeps() }
-  assert.deepStrictEqual(arr(pipeRes), arr(hogRes), 'pipe named-row remap == HogQL positional -> identical')
-})
-
-// ── 4. FAIL-CLOSED: FORCE_READ + pipe null -> throws (no silent dead-HogQL bypass) ──
+// ── 3. FAIL-CLOSED: FORCE_READ + pipe null -> throws (no silent dead-HogQL bypass) ──
+// (The former named-vs-positional-HogQL parity test was removed in D1c-1: the HogQL leg is
+// gone, so there is no positional cross-check to run. The named-row remap's field-name-trap
+// coverage is fully carried by test 2's exact 3-channel 1/3 split above.)
 test('(fail-closed) TINYBIRD_FORCE_READ + pageviews pipe null -> throws', async (t) => {
   process.env.TINYBIRD_FORCE_READ = 'true'
   t.after(() => { delete process.env.TINYBIRD_FORCE_READ; __resetAttributionReadDeps() })

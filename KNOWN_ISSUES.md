@@ -371,3 +371,22 @@ Action: evaluate SSR (Next.js/Astro) for the marketing landing page post-launch.
 ### Per-conversion explain is single-touch-only
 Step-by-step explanations (via `/api/attribution/explain` and the Conversion Explanation Modal) are designed and supported for single-touch models only (`first_touch`, `last_touch`, `first_touch_non_direct`, `last_touch_non_direct`, `ai_platforms`).
 Advanced multi-touch models (`linear`, `time_decay`, `u_shaped`, `w_shaped`) are designed for aggregate attribution reporting, and querying `/api/attribution/explain` for them will return a clean explanation object indicating this limitation rather than raising errors or crashing.
+
+## D1c-1 — route_ab_diff A/B coverage retired for the Tinybird-sole engine legs (2026-07-18)
+
+D1c-1 flipped the 13 category-A attribution-engine legs to Tinybird-sole: a null pipe now throws the loud `[tinybird-force-read]` invariant instead of falling back to the dead-store read path (§6 — no dead-store zeros).
+
+As a consequence, the 5 real-target A/B self-test blocks in `tinybird/tools/__tests__/route_ab_diff.test.mjs` — touch-model, multitouch, session-report, session-report cache-trap, and explain — were removed. Those blocks drove the real engine targets through the harness's OFF (dead-store) leg to compare pipe-vs-dead-store. With that leg gone, there is no OFF leg to compare against, so those targets can no longer be A/B'd.
+
+**What this means:**
+- Pipe-vs-dead-store parity for these legs was certified POINT-IN-TIME before the flip (the §5 prod-serving gate: all 13 pipes confirmed serving) and is **no longer continuously harness-enforced**.
+- The `route_ab_diff` harness LOGIC (diff/tolerance/hit-guard/cache-eviction/fn-target/composite-key) is still fully covered by the stub-driven self-tests, which do not depend on a live OFF leg.
+- The harness tool + its TARGET registry are left intact; the tool is coupled to the dead read layer and is retired wholesale in D3.
+- Fail-closed behavior for these legs is now enforced by the dedicated `*-read-cutover` / `*-parity` suites (a null pipe MUST throw), not by A/B parity.
+
+**Re-establish if needed:** once D1c-2 lands the `attribution_explain_journey` pipe and D3 removes the dead read layer, no OFF leg exists anywhere — cross-store A/B is retired by design. Any future parity concern becomes a pipe-vs-pipe or pipe-vs-expected-fixture check.
+
+### D3 SCOPE — the qa:attribution harness (82 tests) must not vanish silently
+The `qa:attribution` harness (`scripts/qa-attribution-harness.mjs` + `qa-attribution-integration.mjs`, ~82 tests) is **not in the CI gate** (ci.yml runs `qa:attribution:unit`, not this harness) and is currently **unrunnable locally** without `POSTHOG_API_KEY` — it `import`s `attribution-engine.js`, which transitively constructs the PostHog client at module load. When **D3 deletes `posthog.js`**, that import chain changes and this 82-test suite is at risk of becoming permanently unrunnable / silently dead.
+
+**D3 must explicitly do ONE of:** (a) port the harness off PostHog (drive it purely through the injectable read seam / fixtures, no PostHog client at load), or (b) formally retire it with a recorded rationale. An 82-test attribution suite must not disappear as a side effect of the decommission — decide, don't drop. (Surfaced during D1c-1 test accounting, 2026-07-18.)

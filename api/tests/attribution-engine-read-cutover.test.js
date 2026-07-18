@@ -127,25 +127,29 @@ test('attribution_explain_conversion (b) FORCE_READ + null -> throws', async (t)
   await assert.rejects(getAttributionExplanation('site-x-fc', 'first_touch', 'v1'), /tinybird-force-read.*attribution_explain_conversion/)
 })
 
-// ── 5. getMultiTouchAttributionLive: multitouch_conversions_by_site (pageviews stay HogQL) ─
+// ── 5. getMultiTouchAttributionLive: multitouch_conversions_by_site + multitouch_pageviews_live ─
 const MTCONV = { uuid: 'u1', distinct_id: 'v1', timestamp: '2026-07-01T12:00:00Z', conversion_type: 'purchase', conversion_value: 10, utm_source: 'g', utm_medium: 'cpc', utm_campaign: 'c', referrer: null, ai_source: null, country: 'US', device_type: 'desktop', utm_term: null, provider: 'stripe', attribution_status: 'attributed', stitching_method: 'browser', ingestion_method: 'webhook_stripe', stripe_subscription_id: null, stripe_event_type: 'checkout.session.completed' }
+const MTPV = { distinct_id: 'v1', timestamp: '2026-07-01T09:00:00Z', utm_source: 'g', utm_medium: 'cpc', utm_campaign: 'c' }
 
-test('multitouch_conversions_by_site (a) served from pipe (pageviews stay HogQL), NOT from HogQL', async (t) => {
+test('multitouch_conversions_by_site + multitouch_pageviews_live (a) BOTH served, HogQL NOT called', async (t) => {
   t.after(__resetAttributionReadDeps)
-  const calls = []; const hog = []
-  __setAttributionReadDeps({
-    queryTinybird: tbServe(calls, { multitouch_conversions_by_site: [MTCONV] }),
-    queryHog: async (_sql, name) => { hog.push(name); return [] } // multitouch_pageviews_live is legitimately HogQL
-  })
+  const calls = []
+  __setAttributionReadDeps({ queryTinybird: tbServe(calls, { multitouch_conversions_by_site: [MTCONV], multitouch_pageviews_live: [MTPV] }), queryHog: HOG_THROW })
   await getMultiTouchAttributionLive({ siteId: 'site-mt', model: 'linear', groupBy: 'source', dateFrom: FROM, dateTo: TO })
-  assert.ok(calls.includes('multitouch_conversions_by_site'), 'the pipe was queried')
-  assert.ok(!hog.includes('multitouch_conversions_live'), '(a) conversions NOT served from HogQL — the pipe served them')
+  assert.ok(calls.includes('multitouch_conversions_by_site'), '(a) conversions served from the pipe')
+  assert.ok(calls.includes('multitouch_pageviews_live'), '(a) pageviews served from the pipe')
 })
 test('multitouch_conversions_by_site (b) FORCE_READ + null -> throws', async (t) => {
   t.after(forceReadCleanup)
   process.env.TINYBIRD_FORCE_READ = 'true'
-  __setAttributionReadDeps({ queryTinybird: async () => null, queryHog: async () => [] })
+  __setAttributionReadDeps({ queryTinybird: async () => null, queryHog: HOG_THROW })
   await assert.rejects(getMultiTouchAttributionLive({ siteId: 'site-mt-fc', model: 'linear', groupBy: 'source', dateFrom: FROM, dateTo: TO }), /tinybird-force-read.*multitouch_conversions_by_site/)
+})
+test('multitouch_pageviews_live (b) FORCE_READ + null (conversions served) -> throws', async (t) => {
+  t.after(forceReadCleanup)
+  process.env.TINYBIRD_FORCE_READ = 'true'
+  __setAttributionReadDeps({ queryTinybird: async (pipe) => pipe === 'multitouch_conversions_by_site' ? [MTCONV] : null, queryHog: HOG_THROW })
+  await assert.rejects(getMultiTouchAttributionLive({ siteId: 'site-mt-pv-fc', model: 'linear', groupBy: 'source', dateFrom: FROM, dateTo: TO }), /tinybird-force-read.*multitouch_pageviews_live/)
 })
 
 // ── 6. getFlexibleReport: the 5 flexible_report_* pipes (L2852 _flexPipe dispatch) ──

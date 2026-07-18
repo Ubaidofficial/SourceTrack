@@ -1,6 +1,8 @@
 // Touch-model Tinybird read-cutover — TOKEN-FREE, NO network.
-// Verifies the 4 touch-model functions try their Phase-9-green aggregate pipe
-// first and fall back to HogQL on null, via the __setAttributionReadDeps seam.
+// Verifies the 4 touch-model functions serve their Phase-9-green aggregate pipe
+// and, post-D1c-1, THROW the loud tinybird-force-read invariant on a null pipe
+// (the HogQL fallback is gone — a null pipe is a broken pipe, never a silent
+// dead-store read), via the __setAttributionReadDeps seam.
 // Pins the function→pipe mapping (esp. lastTouch → last_touch_by_site_agg, the
 // aggregate pipe, NOT the row-level last_touch_by_site).
 //
@@ -43,9 +45,9 @@ const PIPE_EXPECTED = [
   { source: 'direct', medium: 'none', campaign: 'brand', conversions: 2, revenue: 0 }
 ]
 
-// Positional rows exactly as queryHogQL returns them.
+// Positional rows a live HogQL fallback WOULD return — the seam still injects a
+// queryHog that hands these back, to prove it is never invoked post-cutover.
 const HOGQL_ROWS = [['bing', 'organic', 'q1', 4, 12.0]]
-const HOGQL_EXPECTED = [{ source: 'bing', medium: 'organic', campaign: 'q1', conversions: 4, revenue: 12 }]
 
 for (const { fn, pipe } of CASES) {
   test(`${fn.name} — PIPE HIT: serves ${pipe}, maps named rows, does NOT call HogQL`, async (t) => {
@@ -63,7 +65,7 @@ for (const { fn, pipe } of CASES) {
     assert.equal(hogCalled, false, 'HogQL must NOT be called on a pipe hit')
   })
 
-  test(`${fn.name} — FALLBACK: pipe null → HogQL is called and its rows are returned`, async (t) => {
+  test(`${fn.name} — FORCE-READ: pipe null → throws the tinybird-force-read invariant, HogQL NOT called`, async (t) => {
     t.after(__resetAttributionReadDeps)
     let hogCalled = false
     __setAttributionReadDeps({
@@ -71,8 +73,11 @@ for (const { fn, pipe } of CASES) {
       queryHog: async () => { hogCalled = true; return HOGQL_ROWS }
     })
 
-    const result = await fn('site-123', DATE_FROM, DATE_TO)
-    assert.equal(hogCalled, true, 'HogQL MUST be called when the pipe returns null')
-    assert.deepEqual(result, HOGQL_EXPECTED)
+    await assert.rejects(
+      fn('site-123', DATE_FROM, DATE_TO),
+      new RegExp(`tinybird-force-read.*${pipe} returned null`),
+      'a null pipe must throw the loud force-read invariant, not fall back'
+    )
+    assert.equal(hogCalled, false, 'HogQL must NOT be called when the pipe returns null')
   })
 }

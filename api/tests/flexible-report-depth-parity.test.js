@@ -1,11 +1,13 @@
-// flexible_report DEPTH parity — the three attribution-depth reads wired off dead PostHog:
+// flexible_report DEPTH — the two attribution-depth reads, now Tinybird-SOLE (D1c-1):
 //   days_to_convert -> flexible_report_days_to_convert_by_site
 //   touchpoints_per_conversion -> flexible_report_touchpoints_per_conversion_by_site
-//   flexible_sessions (conversion_rate denominator) -> flexible_sessions_by_site  [BASE-CASE gated]
-// Each proves (1) the pipe named-row remap == the HogQL positional shape (byte-identical result,
-// so the AVERAGE metrics are preserved) and (2) dispatch/no-HogQL/tenant-scope. flexible_sessions
-// also proves the base-case gate: non-base shapes never touch the pipe. Distinct sites per leg
-// avoid the module NodeCache (main key + the sessions sub-key) bleeding one leg into the next.
+// Each proves (1) the pipe named-row remap yields the expected AVERAGE metric and (2)
+// dispatch/no-HogQL/tenant-scope. Post-D1c-1 the HogQL fallback is gone — a null pipe throws
+// the loud tinybird-force-read invariant, never a dead-store read. The former third leg,
+// flexible_sessions (the conversion_rate denominator, flexible_sessions_by_site), was DELETED
+// in D1c-1: conversion_rate is gated → its main read throws [pr4/D1] before the denominator is
+// ever reached, so the whole block was dead. The throwsD1 cases below pin that reality.
+// Distinct sites per leg avoid the module NodeCache bleeding one leg into the next.
 
 import test from 'node:test'
 import assert from 'node:assert'
@@ -33,19 +35,25 @@ const arr = (r) => Array.isArray(r) ? r : r.results
 
 // ── days_to_convert (AVERAGE metric) ────────────────────────────────────────
 const DTC_PIPE = [{ dim_value: 'google', days_to_convert: 3.5, conversions: 4 }, { dim_value: 'direct', days_to_convert: 1, conversions: 2 }]
-const DTC_HOG = [['google', 3.5, 4], ['direct', 1, 2]]
 
-test('days_to_convert — PARITY: named pipe rows == HogQL positional -> identical (avg preserved)', async () => {
+test('days_to_convert — REMAP: named pipe rows -> expected avg metric (byte-identical shape)', async () => {
   const pipeRes = await run({
     queryTinybird: async (p) => p === 'flexible_report_days_to_convert_by_site' ? DTC_PIPE : null,
     queryHog: async (_s, name) => { if (name === 'flexible_report_days_to_convert') throw new Error('must come from the pipe'); return [] }
   }, { site: nextSite(), metric: 'days_to_convert' })
-  const hogRes = await run({
-    queryTinybird: async () => null,
-    queryHog: async (_s, name) => name === 'flexible_report_days_to_convert' ? DTC_HOG : []
-  }, { site: nextSite(), metric: 'days_to_convert' })
-  assert.deepStrictEqual(arr(pipeRes), arr(hogRes), 'pipe remap == HogQL positional')
   assert.strictEqual(arr(pipeRes).find(r => r.dim_value === 'google').days_to_convert, 3.5, 'average metric carried through the remap')
+  assert.strictEqual(arr(pipeRes).find(r => r.dim_value === 'direct').days_to_convert, 1, 'second dim carried through')
+})
+
+test('days_to_convert — FORCE-READ: null pipe throws the tinybird-force-read invariant, HogQL NOT called', async () => {
+  await assert.rejects(
+    run({
+      queryTinybird: async () => null,
+      queryHog: async () => { throw new Error('HogQL must not be called after the pipe returns null') }
+    }, { site: nextSite(), metric: 'days_to_convert' }),
+    /tinybird-force-read.*flexible_report_days_to_convert_by_site returned null/,
+    'a null depth pipe must throw the loud force-read invariant, not fall back'
+  )
 })
 
 test('days_to_convert — DISPATCH: served from pipe, HogQL NOT called, tenant-scoped', async () => {
@@ -62,29 +70,35 @@ test('days_to_convert — DISPATCH: served from pipe, HogQL NOT called, tenant-s
 
 // ── touchpoints_per_conversion (AVERAGE metric) ─────────────────────────────
 const TPC_PIPE = [{ dim_value: 'google', touchpoints_per_conversion: 2.3, conversions: 4 }]
-const TPC_HOG = [['google', 2.3, 4]]
 
-test('touchpoints_per_conversion — PARITY: named pipe rows == HogQL positional -> identical (avg preserved)', async () => {
+test('touchpoints_per_conversion — REMAP: named pipe rows -> expected avg metric (byte-identical shape)', async () => {
   const pipeRes = await run({
     queryTinybird: async (p) => p === 'flexible_report_touchpoints_per_conversion_by_site' ? TPC_PIPE : null,
     queryHog: async (_s, name) => { if (name === 'flexible_report_touchpoints_per_conversion') throw new Error('must come from the pipe'); return [] }
   }, { site: nextSite(), metric: 'touchpoints_per_conversion' })
-  const hogRes = await run({
-    queryTinybird: async () => null,
-    queryHog: async (_s, name) => name === 'flexible_report_touchpoints_per_conversion' ? TPC_HOG : []
-  }, { site: nextSite(), metric: 'touchpoints_per_conversion' })
-  assert.deepStrictEqual(arr(pipeRes), arr(hogRes), 'pipe remap == HogQL positional')
   assert.strictEqual(arr(pipeRes).find(r => r.dim_value === 'google').touchpoints_per_conversion, 2.3, 'average metric carried through the remap')
 })
 
-// ── flexible_sessions (conversion_rate denominator) — D1: the conversion_rate MAIN read is GONE ────
+test('touchpoints_per_conversion — FORCE-READ: null pipe throws the tinybird-force-read invariant, HogQL NOT called', async () => {
+  await assert.rejects(
+    run({
+      queryTinybird: async () => null,
+      queryHog: async () => { throw new Error('HogQL must not be called after the pipe returns null') }
+    }, { site: nextSite(), metric: 'touchpoints_per_conversion' }),
+    /tinybird-force-read.*flexible_report_touchpoints_per_conversion_by_site returned null/,
+    'a null depth pipe must throw the loud force-read invariant, not fall back'
+  )
+})
+
+// ── flexible_sessions (conversion_rate denominator) — the conversion_rate MAIN read is GONE ────
 // conversion_rate is GATED ENTIRELY (dashboard/src/lib/gate-constants.js) → 422 at the route, so in
 // prod it never reaches the engine. Driven DIRECTLY here, its main numerator read is not a pipe
 // metric → pipe=NONE → the flexible_report read D1 DELETED → it now throws the [pr4/D1] "FIX THE
-// ALLOWLIST" invariant. The sessions denominator (flexible_sessions_by_site, engine:3032) is the
-// leg's ONLY trigger via `if (metric === 'conversion_rate')`, so it is now UNREACHABLE — the main
-// read throws first. That leg is dead code; its removal is logged for D1b. These 6 tests pin the D1
-// reality: every conversion_rate shape throws before any flexible_sessions dispatch.
+// ALLOWLIST" invariant. The sessions denominator (flexible_sessions_by_site) was the leg's ONLY
+// trigger via `if (metric === 'conversion_rate')`, and the main read throws first — so that whole
+// block was dead. D1c-1 DELETED it (flexible_sessions_by_site is no longer dispatched anywhere in
+// the engine). These 6 tests pin that reality: every conversion_rate shape throws before any
+// flexible_sessions dispatch (and there is no longer a flexible_sessions dispatch to reach).
 async function throwsD1 (opts) {
   const pipes = []
   await assert.rejects(
