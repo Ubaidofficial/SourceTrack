@@ -30,12 +30,14 @@ const req = (timezone, siteId) => ({
   query: { model: 'first_touch_non_direct', date_from: '2026-07-01', date_to: '2026-07-06', group_by: 'source', metric: 'session_count' }
 })
 
-// One google pageview -> one session -> source 'google', session_count 1 (positional HogQL shape).
-const PV = [['v1', '2026-07-01T10:00:00Z', '/a', 'google', 'cpc', 'brand', 'US', 'desktop']]
+// One google pageview -> one session -> source 'google', session_count 1. NAMED
+// session_report_pageviews pipe rows (the seam maps these). Post-D1c-1 the session-report
+// read is Tinybird-SOLE — serve it from the PIPE (a null pipe would now throw, not fall back).
+const PV = [{ distinct_id: 'v1', timestamp: '2026-07-01T10:00:00Z', page_url: '/a', utm_source: 'google', utm_medium: 'cpc', utm_campaign: 'brand', country: 'US', device_type: 'desktop' }]
 function stubDeps () {
   __setAttributionReadDeps({
-    queryTinybird: async () => null, // force the HogQL leg
-    queryHog: async (_sql, name) => name === 'session_report_pageviews' ? PV : name === 'session_report_conversions' ? [] : []
+    queryTinybird: async (pipe) => pipe === 'session_report_pageviews' ? PV : pipe === 'session_report_conversions' ? [] : null,
+    queryHog: async () => { throw new Error('HogQL must not be called — the session-report read is Tinybird-sole post-D1c-1') }
   })
 }
 

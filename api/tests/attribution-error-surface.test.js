@@ -31,8 +31,8 @@ const req = (siteId) => ({
 
 test('a THROWN read surfaces as a real 500 — NOT masked as analytics_unavailable:200', async () => {
   __setAttributionReadDeps({
-    queryTinybird: async () => null, // force the HogQL leg
-    queryHog: async () => { throw new Error('simulated read-wiring failure') }
+    queryTinybird: async () => { throw new Error('simulated read-wiring failure') }, // the read is the pipe (Tinybird-sole)
+    queryHog: async () => { throw new Error('HogQL must not be called post-D1c-1') }
   })
   const res = mockRes()
   try { await attribution(req('site-err-1'), res) } finally { __resetAttributionReadDeps() }
@@ -45,8 +45,8 @@ test('a THROWN read surfaces as a real 500 — NOT masked as analytics_unavailab
 
 test('a read returning [] stays the HONEST empty shape — 200 success, no analytics_unavailable', async () => {
   __setAttributionReadDeps({
-    queryTinybird: async () => null,
-    queryHog: async () => [] // query succeeded, zero rows
+    queryTinybird: async (pipe) => (pipe === 'session_report_pageviews' || pipe === 'session_report_conversions') ? [] : null, // pipe served zero rows
+    queryHog: async () => { throw new Error('HogQL must not be called post-D1c-1') }
   })
   const res = mockRes()
   try { await attribution(req('site-err-2'), res) } finally { __resetAttributionReadDeps() }
@@ -59,8 +59,8 @@ test('a read returning [] stays the HONEST empty shape — 200 success, no analy
 
 test('a ClickHouse max-execution-time (504) surfaces error_code: query_timeout — honest, no raw leak, not empty', async () => {
   __setAttributionReadDeps({
-    queryTinybird: async () => null, // force the HogQL leg
-    queryHog: async () => { throw new Error('HogQL flexible_report failed (504): "Query has hit the max execution time before completing... You may need to materialize."') }
+    queryTinybird: async () => { throw new Error('Tinybird session_report_pageviews failed (504): "Query has hit the max execution time before completing... You may need to materialize."') }, // pipe read timeout
+    queryHog: async () => { throw new Error('HogQL must not be called post-D1c-1') }
   })
   const res = mockRes()
   try { await attribution(req('site-timeout'), res) } finally { __resetAttributionReadDeps() }
@@ -75,8 +75,8 @@ test('a ClickHouse max-execution-time (504) surfaces error_code: query_timeout �
 
 test('a non-timeout failure gets error_code: query_failed (not mislabeled as timeout)', async () => {
   __setAttributionReadDeps({
-    queryTinybird: async () => null,
-    queryHog: async () => { throw new Error('simulated read-wiring failure') }
+    queryTinybird: async () => { throw new Error('simulated read-wiring failure') }, // pipe read failure
+    queryHog: async () => { throw new Error('HogQL must not be called post-D1c-1') }
   })
   const res = mockRes()
   try { await attribution(req('site-generic'), res) } finally { __resetAttributionReadDeps() }

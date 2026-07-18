@@ -27,19 +27,30 @@ export function __resetAttributionReadDeps () {
 }
 
 // Fail-closed dispatch guard — mirrors readTb() in api/routes/{alerts,sessions,live,
-// hygiene,events}.js + api/lib/setup-doctor.js EXACTLY. Under the TEST-ONLY
-// TINYBIRD_FORCE_READ, a pipe that was ATTEMPTED but returned null THROWS (proving the
-// dispatch path was actually exercised) instead of a silent HogQL bypass. Flag UNSET →
-// returns the pipe result unchanged (non-null → served; null → each site's existing
-// inline HogQL fallback), so production behavior is byte-identical to today. `pipeName`
-// is falsy ONLY when no pipe was attempted for this shape (the flexible_report NONE case;
-// a filter-ineligible session read) — a legitimate no-dispatch, never a failure.
+// hygiene,events}.js + api/lib/setup-doctor.js. Under the TEST-ONLY TINYBIRD_FORCE_READ,
+// a pipe that was ATTEMPTED but returned null THROWS here (proving the dispatch path was
+// actually exercised). Flag UNSET → returns the pipe result unchanged (non-null → served;
+// null → the caller decides). Post-D1c-1 every ENGINE-leg caller treats a null pipe as a
+// hard failure — it throws via _pipeNull (the HogQL fallback is DELETED). `pipeName` falsy
+// (the flexible_report NONE case; a filter-ineligible session read) returns null the same
+// way, and the caller throws the same way — a shape the deployed pipes MUST cover now, no
+// longer a silent no-dispatch pass. (The one exception is a non-null empty [] result, e.g.
+// attribution_explain_conversion with no conversion, which is a served answer, not null.)
 async function _pipeRead (pipeName, params) {
   const tb = pipeName ? await _queryTinybirdPipe(pipeName, params) : null
   if (pipeName && tb === null && process.env.TINYBIRD_FORCE_READ === 'true') {
     throw new Error(`[tinybird-force-read] ${pipeName} returned null under TINYBIRD_FORCE_READ — dispatch path not exercised`)
   }
   return tb
+}
+
+// D1c: the engine legs are Tinybird-sole — the HogQL fallback is DELETED. A pipe that returns null
+// means the DEPLOYED pipe is not serving; throw loud instead of a silent dead-store read (PostHog is
+// dead). FIX THE PIPE (verify it is deployed + serving in the prod workspace); do not restore the read.
+// The _queryHogQL/_pipeRead seam stays for the one remaining HogQL leg (attribution_explain_journey,
+// D1c-2) and is removed with posthog.js in D3.
+function _pipeNull (pipeName) {
+  throw new Error(`[tinybird-force-read] ${pipeName} returned null — FIX THE PIPE, do not restore the read`)
 }
 
 export function getDateFilterExpr(timestampCol, tz, dateFrom, dateTo) {
@@ -140,14 +151,7 @@ export async function firstTouchAttribution(siteId, dateFrom, dateTo) {
     }))
   }
 
-  const rows = await _queryHogQL(sql, 'first_touch_attribution')
-  return rows.map(([source, medium, campaign, conversions, revenue]) => ({
-    source,
-    medium,
-    campaign: campaign || null,
-    conversions: Number(conversions) || 0,
-    revenue: Number(revenue) || 0
-  }))
+  _pipeNull('first_touch_by_site')
 }
 
 export async function lastTouchAttribution(siteId, dateFrom, dateTo) {
@@ -217,14 +221,7 @@ export async function lastTouchAttribution(siteId, dateFrom, dateTo) {
     }))
   }
 
-  const rows = await _queryHogQL(sql, 'last_touch_attribution')
-  return rows.map(([source, medium, campaign, conversions, revenue]) => ({
-    source,
-    medium,
-    campaign: campaign || null,
-    conversions: Number(conversions) || 0,
-    revenue: Number(revenue) || 0
-  }))
+  _pipeNull('last_touch_by_site_agg')
 }
 
 // Direct classification helper — used by non-direct attribution models.
@@ -299,14 +296,7 @@ export async function firstTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
     }))
   }
 
-  const rows = await _queryHogQL(sql, 'first_touch_non_direct_attribution')
-  return rows.map(([source, medium, campaign, conversions, revenue]) => ({
-    source,
-    medium,
-    campaign: campaign || null,
-    conversions: Number(conversions) || 0,
-    revenue: Number(revenue) || 0
-  }))
+  _pipeNull('first_touch_non_direct_by_site')
 }
 
 export async function lastTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
@@ -373,14 +363,7 @@ export async function lastTouchNonDirectAttribution(siteId, dateFrom, dateTo) {
     }))
   }
 
-  const rows = await _queryHogQL(sql, 'last_touch_non_direct_attribution')
-  return rows.map(([source, medium, campaign, conversions, revenue]) => ({
-    source,
-    medium,
-    campaign: campaign || null,
-    conversions: Number(conversions) || 0,
-    revenue: Number(revenue) || 0
-  }))
+  _pipeNull('last_touch_non_direct_by_site')
 }
 
 // Safe JS-based multi-touch attribution helper redirecting to the new pipeline
@@ -510,7 +493,7 @@ export async function getAiPlatformAttributionLive({
       r.country, r.device_type, r.utm_term, r.provider, r.attribution_status,
       r.stitching_method, r.ingestion_method, r.browser_name, r.browser, r.page_url
     ])
-    : await _queryHogQL(convSql, 'aiplatform_conversions_live')
+    : _pipeNull('aiplatform_conversions_by_site')
 
   const conversions = convRows.map(([
     uuid, distinctId, timestamp, conversionType, conversionValue,
@@ -597,7 +580,7 @@ export async function getAiPlatformAttributionLive({
         page_size: AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE,
         page_offset: _tbPageOffset
       })
-      if (_tbPv === null) break
+      if (_tbPv === null) _pipeNull('pageviews_by_visitors')
       for (const r of _tbPv) {
         _tbBuffer.push({
           distinctId: r.distinct_id,
@@ -636,122 +619,6 @@ export async function getAiPlatformAttributionLive({
         pageviewsByVisitor[distinctId].push(pvObj)
       }
       continue
-    }
-
-    const escapedIds = batchIds.map(id => `'${esc(id)}'`)
-
-    // Keyset (cursor) pagination, NOT OFFSET: PostHog's HogQL API rejects any
-    // query containing an OFFSET clause when authenticated with a personal API
-    // key — confirmed via a real call, fails even at OFFSET 0 ("OFFSET is not
-    // supported on queries made with a personal API key"). The standard
-    // tiebreaker-safe keyset idiom (`timestamp > X OR (timestamp = X AND
-    // uuid > Y)`) ALSO fails here — verified this is a distinct HogQL/ClickHouse
-    // bug with the `(A OR (B AND C))` boolean-nesting shape itself, reproduced
-    // even with zero timestamp/date values involved. The working alternative,
-    // verified end-to-end against real data (13 pages, 316/316 rows, zero
-    // duplicates): compare a single computed sort-key string with one plain
-    // `>` predicate instead of a boolean OR/AND structure.
-    let pageNum = 0
-    let cursor = null
-    while (true) {
-      const cursorClause = cursor ? `\n          AND concat(toString(timestamp), '|', uuid) > '${esc(cursor)}'` : ''
-      const batchPvSql = `
-        SELECT
-          distinct_id,
-          timestamp,
-          properties.utm_source AS utm_source,
-          properties.utm_medium AS utm_medium,
-          properties.utm_campaign AS utm_campaign,
-          properties.referrer AS referrer,
-          properties.ai_source AS ai_source,
-          properties.gclid AS gclid,
-          properties.gbraid AS gbraid,
-          properties.wbraid AS wbraid,
-          properties.fbclid AS fbclid,
-          properties.msclkid AS msclkid,
-          properties.ttclid AS ttclid,
-          properties.li_fat_id AS li_fat_id,
-          properties.li_fatid AS li_fatid,
-          properties.twclid AS twclid,
-          properties.dclid AS dclid,
-          properties.snapclid AS snapclid,
-          properties.pclid AS pclid,
-          properties.sccid AS sccid,
-          properties.ko_click_id AS ko_click_id,
-          properties.page_url AS page_url,
-          properties.utm_term AS utm_term,
-          concat(toString(timestamp), '|', uuid) AS _cursor_key
-        FROM events
-        WHERE properties.site_id = '${safeSite}'
-          AND event = '$pageview'
-          AND timestamp >= ${lookbackStr}
-          AND timestamp < ${toDate}
-          AND distinct_id IN (${escapedIds.join(',')})${cursorClause}
-        ORDER BY _cursor_key ASC
-        LIMIT ${AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE}
-      `
-      const pvRows = await _queryHogQL(batchPvSql, `aiplatform_pageviews_live_batch_${batchIdx}_page_${pageNum}`)
-
-      for (const row of pvRows) {
-        const distinctId = row[0]
-        const timestamp = row[1]
-        const utmSource = row[2]
-        const utmMedium = row[3]
-        const utmCampaign = row[4]
-        const referrer = row[5]
-        const aiSource = row[6]
-        const gclid = row[7]
-        const gbraid = row[8]
-        const wbraid = row[9]
-        const fbclid = row[10]
-        const msclkid = row[11]
-        const ttclid = row[12]
-        const li_fat_id = row[13]
-        const li_fatid = row[14]
-        const twclid = row[15]
-        const dclid = row[16]
-        const snapclid = row[17]
-        const pclid = row[18]
-        const sccid = row[19]
-        const ko_click_id = row[20]
-        const pageUrl = row[21]
-        const utmTerm = row[22]
-        const cursorKey = row[23]
-
-        const pvObj = {
-          timestamp,
-          utm_source: utmSource || null,
-          utm_medium: utmMedium || null,
-          utm_campaign: utmCampaign || null,
-          referrer: referrer || null,
-          ai_source: aiSource || null,
-          gclid: gclid || null,
-          gbraid: gbraid || null,
-          wbraid: wbraid || null,
-          fbclid: fbclid || null,
-          msclkid: msclkid || null,
-          ttclid: ttclid || null,
-          li_fat_id: li_fat_id || null,
-          li_fatid: li_fatid || null,
-          twclid: twclid || null,
-          dclid: dclid || null,
-          snapclid: snapclid || null,
-          pclid: pclid || null,
-          sccid: sccid || null,
-          ko_click_id: ko_click_id || null,
-          page_url: pageUrl || null,
-          utm_term: utmTerm || null
-        }
-
-        if (!pageviewsByVisitor[distinctId]) pageviewsByVisitor[distinctId] = []
-        pageviewsByVisitor[distinctId].push(pvObj)
-        cursor = cursorKey
-      }
-
-      if (pvRows.length < AI_ATTRIBUTION_PAGEVIEW_PAGE_SIZE) {
-        break
-      }
-      pageNum++
     }
   }
 
@@ -1102,7 +969,7 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
         if (custKey2 && custKey2 !== custKey1) base.push(r.custom_key2)
         return base
       })
-    : await _queryHogQL(sql, 'session_report_pageviews')
+    : _pipeNull('session_report_pageviews')
 
   // Also query conversions for conversion_sessions metric
   const convSql = `
@@ -1121,7 +988,7 @@ export async function getSessionReport(siteId, dateFrom, dateTo, groupBy, metric
   const _tbConv = _sessionPipeEligible ? await _pipeRead('session_report_conversions', { site_id: String(siteId), date_from_ts: _tbFrom, date_to_ts: _tbTo }) : null
   const convRows = _tbConv
     ? _tbConv.map(r => [r.distinct_id, r.timestamp])
-    : await _queryHogQL(convSql, 'session_report_conversions')
+    : _pipeNull('session_report_conversions')
 
   // Build events array per visitor
   const eventsByVisitor = new Map()
@@ -1295,7 +1162,7 @@ export async function getAttributionExplanation(siteId, model, distinctId) {
   const _tbConv = await _pipeRead('attribution_explain_conversion', { site_id: String(siteId), distinct_id: String(distinctId) })
   const convRows = _tbConv
     ? _tbConv.map(r => [r.timestamp, r.conversion_value, r.utm_source, r.utm_medium, r.utm_campaign, r.first_touch_source, r.first_touch_medium, r.first_touch_campaign, r.ai_source, r.page_url, r.user_id, r.anonymous_id, r.ingestion_method])
-    : await _queryHogQL(convSql, 'attribution_explain_conversion')
+    : _pipeNull('attribution_explain_conversion')
   if (!convRows || convRows.length === 0) {
     return null
   }
@@ -1719,7 +1586,7 @@ export async function getMultiTouchAttributionLive({
   const _tbConv = await _pipeRead('multitouch_conversions_by_site', { site_id: String(siteId), date_from: _tbFrom, date_to: _tbTo })
   const convRows = _tbConv
     ? _tbConv.map(r => [r.uuid, r.distinct_id, r.timestamp, r.conversion_type, r.conversion_value, r.utm_source, r.utm_medium, r.utm_campaign, r.referrer, r.ai_source, r.country, r.device_type, r.utm_term, r.provider, r.attribution_status, r.stitching_method, r.ingestion_method, r.stripe_subscription_id, r.stripe_event_type])
-    : await _queryHogQL(convSql, 'multitouch_conversions_live')
+    : _pipeNull('multitouch_conversions_by_site')
 
   const conversions = convRows.map(([uuid, distinctId, timestamp, conversionType, conversionValue, utmSource, utmMedium, utmCampaign, referrer, aiSource, country, deviceType, utmTerm, rawProvider, rawAttrStatus, rawStitchMethod, rawIngestionMethod, stripeSubscriptionId, stripeEventType]) => {
     const ingestionMethod = rawIngestionMethod || null
@@ -1830,7 +1697,7 @@ export async function getMultiTouchAttributionLive({
         if (custKey2 && custKey2 !== custKey1) base.push(r.custom_key2)
         return base
       })
-    : await _queryHogQL(pvSql, 'multitouch_pageviews_live')
+    : _pipeNull('multitouch_pageviews_live')
 
   // Group pageviews by visitor distinct_id
   const pageviewsByVisitor = {}
@@ -2223,7 +2090,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     const _dtcFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
     const _dtcTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
     const _dtcTb = await _pipeRead('flexible_report_days_to_convert_by_site', { site_id: String(siteId), date_from: _dtcFrom, date_to: _dtcTo })
-    const rows = _dtcTb ? _dtcTb.map(r => [r.dim_value, r.days_to_convert, r.conversions]) : await _queryHogQL(sql, 'flexible_report_days_to_convert')
+    const rows = _dtcTb ? _dtcTb.map(r => [r.dim_value, r.days_to_convert, r.conversions]) : _pipeNull('flexible_report_days_to_convert_by_site')
     const results = rows.map(([dimValue, daysToConvert, conversions]) => ({
       dim_value: dimValue || 'unknown',
       days_to_convert: Number(daysToConvert) || 0,
@@ -2289,7 +2156,7 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     const _tpcFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
     const _tpcTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
     const _tpcTb = await _pipeRead('flexible_report_touchpoints_per_conversion_by_site', { site_id: String(siteId), date_from: _tpcFrom, date_to: _tpcTo })
-    const rows = _tpcTb ? _tpcTb.map(r => [r.dim_value, r.touchpoints_per_conversion, r.conversions]) : await _queryHogQL(sql, 'flexible_report_touchpoints_per_conversion')
+    const rows = _tpcTb ? _tpcTb.map(r => [r.dim_value, r.touchpoints_per_conversion, r.conversions]) : _pipeNull('flexible_report_touchpoints_per_conversion_by_site')
     const results = rows.map(([dimValue, touchpointsPerConversion, conversions]) => ({
       dim_value: dimValue || 'unknown',
       touchpoints_per_conversion: Number(touchpointsPerConversion) || 0,
@@ -3012,45 +2879,6 @@ export async function getFlexibleReport(siteId, model, dateFrom, dateTo, groupBy
     }
     return item
   })
-
-  if (metric === 'conversion_rate' && results.length > 0) {
-    const sessKey = cacheKey(`sessions:${groupBy}${groupBy2 || ''}:${attributionWindow || 'ltv'}`, siteId, dateFrom, dateTo)
-    let sessionsByDim = cache.get(sessKey)
-    if (!sessionsByDim) {
-      const sessSql = `
-        SELECT
-          ${dimExpr} AS dim_value${dim2Expr ? `,\n          ${dim2Expr} AS dim_value2` : ''},
-          count(DISTINCT distinct_id) AS sessions
-        FROM events${refJoin}${customJoin}
-        WHERE properties.site_id = '${safeSite}'
-          AND event = '$pageview'
-          AND timestamp >= ${fromDate}
-          AND timestamp < ${toDate}${filterClauses}
-        GROUP BY dim_value${dim2Expr ? ', dim_value2' : ''}
-        LIMIT 50000
-      `
-      // Pipe-first BASE-CASE ONLY (mirrors flexible_sessions_by_site's gate): dim=source,
-      // first_touch model, single dim, no custom_param, no filters. (refJoin is absent here
-      // because groupBy!=='date'.) dimExpr for source/first_touch is exactly the pipe's
-      // COALESCE(NULLIF(first_touch_source,''),'direct'); the sessSql uses the UNwindowed
-      // dimExpr, so the attribution window does not affect this leg. Anything else -> null
-      // pipe -> unchanged HogQL sessSql (the _pipeRead falsy-name no-dispatch path).
-      const _sessBase = groupBy === 'source' && model === 'first_touch' && !groupBy2 && !custKey1 && !custKey2 && filterClauses === ''
-      const _sessFrom = fromDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
-      const _sessTo = toDate.match(/'([^']+)'/)[1].replace('T', ' ').replace(/Z$/, '')
-      const _sessTb = await _pipeRead(_sessBase ? 'flexible_sessions_by_site' : null, { site_id: String(siteId), date_from: _sessFrom, date_to: _sessTo })
-      const sessRows = _sessTb ? _sessTb.map(r => [r.dim_value, r.sessions]) : await _queryHogQL(sessSql, 'flexible_sessions')
-      sessionsByDim = {}
-      for (const [d, s] of sessRows) {
-        sessionsByDim[d || 'unknown'] = Number(s) || 1
-      }
-      cache.set(sessKey, sessionsByDim, 60)
-    }
-    for (const item of results) {
-      const sess = sessionsByDim[item.dim_value] || 1
-      item.conversion_rate = sess > 0 ? ((item.conversion_rate / sess) * 100) : 0
-    }
-  }
 
   if ((metric === 'ai_conversion_share' || metric === 'ai_revenue_share') && results.length > 0) {
     const shareSql = `
