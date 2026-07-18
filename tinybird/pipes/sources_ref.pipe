@@ -62,7 +62,27 @@ SQL >
         JSONExtractString(properties, 'os_name') AS os,
         ai_source,
         distinct_id AS anonymous_id,
-        timestamp
+        timestamp,
+        multiIf(
+          ai_source IS NOT NULL AND ai_source != '', 'AI Search',
+          (gclid IS NOT NULL AND gclid != '') OR (gbraid IS NOT NULL AND gbraid != '') OR (wbraid IS NOT NULL AND wbraid != '') OR (msclkid IS NOT NULL AND msclkid != ''), 'Paid Search',
+          lower(trim(COALESCE(utm_medium, ''))) IN ('cpc','ppc','paid','paid_search','paidsearch','sem'), 'Paid Search',
+          (fbclid IS NOT NULL AND fbclid != '') OR (ttclid IS NOT NULL AND ttclid != '') OR (li_fat_id IS NOT NULL AND li_fat_id != '') OR (li_fatid IS NOT NULL AND li_fatid != '') OR (twclid IS NOT NULL AND twclid != '') OR (snapclid IS NOT NULL AND snapclid != '') OR (pclid IS NOT NULL AND pclid != '') OR (sccid IS NOT NULL AND sccid != ''), 'Paid Social',
+          lower(trim(COALESCE(utm_medium, ''))) IN ('paid_social','paidsocial','social_paid'), 'Paid Social',
+          dclid IS NOT NULL AND dclid != '', 'Display',
+          lower(trim(COALESCE(utm_medium, ''))) IN ('display','banner','gdn','expandable','retargeting'), 'Display',
+          lower(trim(COALESCE(utm_medium, ''))) IN ('affiliate','affiliates','partner','cpa','cps'), 'Affiliate',
+          lower(trim(COALESCE(utm_medium, ''))) IN ('email','e-mail','newsletter','mailing','edm'), 'Email',
+          lower(trim(COALESCE(utm_medium, ''))) IN ('sms','text','mms'), 'SMS',
+          arrayExists(h -> position(if(referrer IS NOT NULL AND referrer != '' AND domain(referrer) = domain(page_url), '', lower(COALESCE(referrer, ''))), h) > 0, ['google.','bing.','yahoo.','duckduckgo.','ecosia.','kagi.','brave.','yandex.','baidu.']), 'Organic Search',
+          lower(trim(COALESCE(utm_source, ''))) IN ('google','bing','yahoo','duckduckgo','baidu','yandex','brave','ecosia') AND lower(trim(COALESCE(utm_medium, ''))) = '', 'Organic Search',
+          arrayExists(h -> position(if(referrer IS NOT NULL AND referrer != '' AND domain(referrer) = domain(page_url), '', lower(COALESCE(referrer, ''))), h) > 0, ['facebook.com','instagram.com','linkedin.com','twitter.com','x.com','tiktok.com','pinterest.com','reddit.com','youtube.com','snapchat.com','threads.net']), 'Organic Social',
+          lower(trim(COALESCE(utm_source, ''))) IN ('facebook','instagram','linkedin','twitter','x','tiktok','pinterest','reddit','youtube','snapchat') AND lower(trim(COALESCE(utm_medium, ''))) = '', 'Organic Social',
+          lower(trim(COALESCE(utm_source, ''))) IN ('mailchimp','klaviyo','hubspot','sendgrid','customer.io','brevo','activecampaign','drip','omnisend','postmark','mailerlite'), 'Email',
+          length(if(referrer IS NOT NULL AND referrer != '' AND domain(referrer) = domain(page_url), '', lower(COALESCE(referrer, '')))) > 5, 'Referral',
+          lower(trim(COALESCE(utm_source, ''))) = '' OR lower(trim(COALESCE(utm_source, ''))) = 'direct', 'Direct',
+          'Other Campaign'
+        ) AS channel
     FROM events
     WHERE site_id = {{ String(site_id, required=True) }}
       AND event_type = '$pageview'

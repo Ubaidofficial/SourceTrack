@@ -557,37 +557,55 @@ router.get('/sources', requireUserAuth, validateSiteKey, requireSiteMembership, 
     }
 
     if (tab === 'channel' || tab === 'campaign') {
-      // Pull from attributed_conversions
-      const col = tab === 'channel' ? 'first_touch_channel' : 'first_touch_source'
-      const campaignCol = 'first_touch_campaign'
-      const selectCols = tab === 'campaign'
-        ? `${campaignCol}, conversion_value, conversion_timestamp, conversion_date`
-        : `${col}, conversion_value, conversion_timestamp, conversion_date`
-      const { data: rawRows } = await supabase
-        .from('attributed_conversions')
-        .select(selectCols)
-        .eq('site_id', siteId)
-        .gte('conversion_date', padded.from)
-        .lte('conversion_date', padded.to)
+      const rawRows = await dispatchPageviews(siteId, padded.from, padded.to, { filters, limit: 50000, queryName: 'sources_ref' })
 
-      const rows = (rawRows || []).filter(r => {
-        const localDate = getLocalDateString(new Date(r.conversion_timestamp || r.conversion_date), tz)
+      const rows = rawRows.filter(r => {
+        const localDate = getLocalDateString(new Date(r.timestamp), tz)
         return localDate >= localDateFrom && localDate <= localDateTo
       })
 
-      const groupCol = tab === 'campaign' ? campaignCol : col
       const groups = {}
       rows.forEach(r => {
-        const key = r[groupCol] || (tab === 'channel' ? 'Direct' : 'untagged')
-        groups[key] = groups[key] || { name: key, conversions: 0, revenue: 0 }
-        groups[key].conversions++
-        groups[key].revenue += Number(r.conversion_value) || 0
+        const key = tab === 'channel'
+          ? (r.channel || 'Direct')
+          : (r.utm_campaign || 'untagged')
+        groups[key] = groups[key] || { name: key, visitors_set: new Set() }
+        if (r.anonymous_id) groups[key].visitors_set.add(r.anonymous_id)
       })
-      // Visitors-by-channel is not available without join — return conversions count
-      // as the "visitors" proxy so the row bar still has something to render.
+
+      let revenueByKey = {}
+      try {
+        const selectCols = tab === 'campaign'
+          ? 'first_touch_campaign, conversion_value, conversion_timestamp, conversion_date'
+          : 'first_touch_channel, conversion_value, conversion_timestamp, conversion_date'
+        const { data: rawConvRows } = await supabase
+          .from('attributed_conversions')
+          .select(selectCols)
+          .eq('site_id', siteId)
+          .gte('conversion_date', padded.from)
+          .lte('conversion_date', padded.to)
+
+        const convRows = (rawConvRows || []).filter(r => {
+          const localDate = getLocalDateString(new Date(r.conversion_timestamp || r.conversion_date), tz)
+          return localDate >= localDateFrom && localDate <= localDateTo
+        })
+
+        convRows.forEach(r => {
+          const key = tab === 'campaign'
+            ? (r.first_touch_campaign || 'untagged')
+            : (r.first_touch_channel || 'Direct')
+          revenueByKey[key] = (revenueByKey[key] || 0) + (Number(r.conversion_value) || 0)
+        })
+      } catch (_e) { /* table may be empty */ }
+
       const out = Object.values(groups)
-        .map(g => ({ ...g, visitors: g.conversions }))
-        .sort((a, b) => b.revenue - a.revenue || b.conversions - a.conversions)
+        .map(g => ({
+          name: g.name,
+          visitors: g.visitors_set.size,
+          revenue: revenueByKey[g.name] || 0
+        }))
+        .sort((a, b) => b.revenue - a.revenue || b.visitors - a.visitors)
+        .slice(0, 100)
       return res.json({ success: true, data: { tab, rows: out } })
     }
 
