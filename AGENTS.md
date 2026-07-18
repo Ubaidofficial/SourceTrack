@@ -197,6 +197,8 @@ Plus:
 
 Every agent task arrives as a copy/paste-ready prompt prefixed with the relevant standing rules and **labeled `[→ CC]` or `[→ ANTIGRAVITY]`**. Treat an agent "PASS" as a claim to verify, not a fact.
 
+- **NEVER use `git stash`** (`stash push`/`pop`/`apply`/`branch`). Git's stash stack is **shared across all worktrees of the repo**, so a `pop`/`apply` from your worktree can grab — and conflict with — another branch's or another agent's stashed work, and a failed pop leaves conflict markers on unrelated files. To set changes aside or compare against another ref, use a **temporary detached worktree** (`git worktree add --detach <path> <ref>`; remove with `git worktree remove --force`) or a **WIP commit on your own branch**. Never touch the stash. (Incident 2026-07-18: an agent's `git stash pop` grabbed a different branch's WIP and left `UU` conflict markers on `SESSION_LOG.md` / `SESSION_STATE.md` / `api/routes/analytics.js`; recovered without loss, but the shared-stack hazard is real.)
+
 ---
 
 ## 12. Communication & Operating Stance

@@ -356,3 +356,8 @@ As a consequence, the 5 real-target A/B self-test blocks in `tinybird/tools/__te
 - Fail-closed behavior for these legs is now enforced by the dedicated `*-read-cutover` / `*-parity` suites (a null pipe MUST throw), not by A/B parity.
 
 **Re-establish if needed:** once D1c-2 lands the `attribution_explain_journey` pipe and D3 removes the dead read layer, no OFF leg exists anywhere — cross-store A/B is retired by design. Any future parity concern becomes a pipe-vs-pipe or pipe-vs-expected-fixture check.
+
+### D3 SCOPE — the qa:attribution harness (82 tests) must not vanish silently
+The `qa:attribution` harness (`scripts/qa-attribution-harness.mjs` + `qa-attribution-integration.mjs`, ~82 tests) is **not in the CI gate** (ci.yml runs `qa:attribution:unit`, not this harness) and is currently **unrunnable locally** without `POSTHOG_API_KEY` — it `import`s `attribution-engine.js`, which transitively constructs the PostHog client at module load. When **D3 deletes `posthog.js`**, that import chain changes and this 82-test suite is at risk of becoming permanently unrunnable / silently dead.
+
+**D3 must explicitly do ONE of:** (a) port the harness off PostHog (drive it purely through the injectable read seam / fixtures, no PostHog client at load), or (b) formally retire it with a recorded rationale. An 82-test attribution suite must not disappear as a side effect of the decommission — decide, don't drop. (Surfaced during D1c-1 test accounting, 2026-07-18.)
