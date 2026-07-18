@@ -117,52 +117,43 @@ test('(a2) /browsers DISPATCH: served from pipe, fetchPageviews NOT called', asy
   assert.deepStrictEqual(res.body.data.map(d => d.browser).sort(), ['Chrome', 'Safari'])
 })
 
-// ── (b) FAIL-CLOSED ───────────────────────────────────────────────────────────
+// ── (b) D1b-3b: pipe null -> 500 (HogQL fallback DELETED, unconditional) ───────
 
-test('(b) /os FAIL-CLOSED: TINYBIRD_FORCE_READ + pipe null -> 500, no silent HogQL bypass', async (t) => {
-  t.after(() => { delete process.env.TINYBIRD_FORCE_READ; __resetAnalyticsReadDeps() })
-  process.env.TINYBIRD_FORCE_READ = 'true'
-  const hog = []
-  __setAnalyticsReadDeps({ queryTinybird: async () => null, fetchPv: async () => { hog.push('hog'); return [] } })
+test('(b) /os: pipe null -> 500 (HogQL fallback DELETED), no dead-store read', async (t) => {
+  t.after(__resetAnalyticsReadDeps)
+  __setAnalyticsReadDeps({ queryTinybird: async () => null })
   const res = mockRes()
   await osHandler(req({ days: '30' }), res)
-  assert.strictEqual(res.statusCode, 500)
-  assert.strictEqual(hog.length, 0, 'no silent HogQL fallback for the wired read under force-read')
+  assert.strictEqual(res.statusCode, 500, 'a null pipe 500s loud (FIX THE PIPE), never a silent HogQL fall-through')
 })
 
-// ── (c) FALLBACK ──────────────────────────────────────────────────────────────
-
-test('(c) /browsers FALLBACK: flag off (pipe null) -> fetchPageviews (HogQL) serves', async (t) => {
+test('(c) /browsers: pipe null -> 500 (no HogQL fallback), the wired read attempted Tinybird', async (t) => {
   t.after(__resetAnalyticsReadDeps)
-  const tb = []; const hog = []
-  __setAnalyticsReadDeps({
-    queryTinybird: async (pipe) => { tb.push(pipe); return null },
-    fetchPv: async () => { hog.push('hog'); return [ROW({ browser: 'Chrome', anonymous_id: 'v1' })] }
-  })
+  const tb = []
+  __setAnalyticsReadDeps({ queryTinybird: async (pipe) => { tb.push(pipe); return null } })
   const res = mockRes()
   await browsersHandler(req({ days: '30' }), res)
-  assert.strictEqual(res.body.success, true)
-  assert.deepStrictEqual(tb, ['browsers'], 'the wired read attempts Tinybird first')
-  assert.strictEqual(hog.length, 1, 'flag off -> HogQL fallback served')
-  assert.strictEqual(res.body.data[0].browser, 'Chrome')
+  assert.strictEqual(res.statusCode, 500, 'null pipe -> 500, no dead-store HogQL read')
+  assert.deepStrictEqual(tb, ['browsers'], 'the wired read attempted Tinybird')
 })
 
-// ── (parity) the os JSONExtract '' vs HogQL null divergence is INERT ──────────
-
-test("(parity) /os: pipe os='' and HogQL os=null yield IDENTICAL output (if(!r.os) drops both)", async (t) => {
+// ── (item-c) unrepresentable request -> 400 (client error), not HogQL, not a pipe call ──
+test('(item-c) /os unsupported filter type -> 400, no pipe call, no HogQL', async (t) => {
   t.after(__resetAnalyticsReadDeps)
-  // Same logical rows, two wire values for a MISSING os: pipe emits '' (JSONExtractString),
-  // HogQL emits null (properties.os_name). The missing-os visitor (v1) must be dropped by
-  // BOTH via `if (!r.os) continue`, leaving only Windows (v2) — byte-identical response.
+  const tb = []
+  __setAnalyticsReadDeps({ queryTinybird: async (p) => { tb.push(p); return [] } })
+  const res = mockRes()
+  await osHandler(req({ days: '30', f: ['Bogus:x'] }), res)
+  assert.strictEqual(res.statusCode, 400, 'an unrepresentable request is a 400 client error, not a dead-store read')
+  assert.strictEqual(tb.length, 0, 'no pipe call for an unrepresentable request')
+})
+
+// ── (parity) the os JSONExtract '' rows are dropped, not bucketed ─────────────
+
+test("(parity) /os: pipe os='' is dropped by if(!r.os), not bucketed", async (t) => {
+  t.after(__resetAnalyticsReadDeps)
   const ROWS_PIPE = [ROW({ os: '', anonymous_id: 'v1' }), ROW({ os: 'Windows', anonymous_id: 'v2' })]
-  const ROWS_HOG = [ROW({ os: null, anonymous_id: 'v1' }), ROW({ os: 'Windows', anonymous_id: 'v2' })]
-
-  __setAnalyticsReadDeps({ queryTinybird: async () => ROWS_PIPE, fetchPv: async () => { throw new Error('no hog on ON leg') } })
-  const resA = mockRes(); await osHandler(req({ days: '30' }), resA); __resetAnalyticsReadDeps()
-
-  __setAnalyticsReadDeps({ queryTinybird: async () => null, fetchPv: async () => ROWS_HOG })
-  const resB = mockRes(); await osHandler(req({ days: '30' }), resB); __resetAnalyticsReadDeps()
-
-  assert.deepStrictEqual(resA.body, resB.body, "os='' (pipe) collapses identically to os=null (HogQL)")
-  assert.deepStrictEqual(resA.body.data.map(d => d.os), ['Windows'], 'the empty/null-os visitor is dropped, not bucketed')
+  __setAnalyticsReadDeps({ queryTinybird: async () => ROWS_PIPE })
+  const res = mockRes(); await osHandler(req({ days: '30' }), res)
+  assert.deepStrictEqual(res.body.data.map(d => d.os), ['Windows'], 'the empty-os visitor is dropped, not bucketed')
 })
