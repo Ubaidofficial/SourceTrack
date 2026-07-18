@@ -423,3 +423,15 @@ D3 deleted `api/lib/posthog.js` and every importer. `queryHogQL` has zero functi
 
 **Recovery** (all deleted files exist at the pre-D3 commit `8435504`, until PostHog data is decommissioned in D5):
 `git show 8435504:api/lib/posthog.js` · `git show 8435504:tinybird/tools/route_ab_diff.mjs` · `git show 8435504:tinybird/tools/phase4_touchpoint_diff.js` · `git show 8435504:tinybird/tools/run_phase4_diff.mjs` · `git show 8435504:tinybird/qa/phase4_replay_verify.mjs` · `git show 8435504:scripts/qa-dedupe-regression.mjs` · `git show 8435504:scripts/qa-referrer-domain-reporting.mjs`
+
+### CI false-green: `scripts/` is not exercised by any test suite (2026-07-18)
+D3 deleted `api/lib/posthog.js` and `tinybird/tools/phase4_touchpoint_diff.js`, yet two stale PRs still read as green:
+- **#167** (`scripts/bench-live-vs-nightly.mjs`) imports the deleted `api/lib/posthog.js` — it would crash on run, but **no CI suite imports or executes anything under `scripts/`**, so `build-and-test` stays green. A broken import in `scripts/` is a **false green**.
+- **#133** adds a test importing the deleted `phase4_touchpoint_diff.js`; its green CI is stale (it ran pre-D3, and PR CI is not re-run against current `main` until rebased). Green on an old base ≠ green on `main`.
+
+Consider a lightweight guard: `node --check` / import-smoke over `scripts/*.mjs` in CI, or a `grep -rl 'lib/posthog.js' scripts/ tinybird/tools/` tripwire. Green CI on a broken import is a false signal. (Surfaced triaging #133/#167.)
+
+### Migration-ledger divergence (prod ↔ staging) — repair DEFERRED until CI secrets are fixed (2026-07-18)
+The two Supabase `supabase_migrations.schema_migrations` ledgers have diverged: **identical migrations carry different version numbers per environment**, and **prod's ledger is stale since `20260713081319`** — even though four migrations were hand-applied to prod today (2026-07-18). The ledger no longer reflects what is actually applied. No open PR addresses this (schema/baseline capture ≠ ledger repair; #190 does not fix it).
+
+🔴 **Do NOT start the repair yet:** `STAGING_DB_URL` currently resolves to PROD (see #293), so a ledger write intended for "staging" could hit prod. Scope the `schema_migrations` reconciliation only **after** the CI-secret repoint is verified to point at `nrsvpwzekfrdrzkoecfk`. (Surfaced 2026-07-18.)
