@@ -362,11 +362,13 @@ Action: create a 1200×630 image and deploy to `https://sourcetrack.ai/og-image.
 The landing page is a React SPA. Helmet adds meta tags but social crawlers (Slack, iMessage, WhatsApp) don't execute JS. OG preview images and descriptions may not show when sharing the URL.
 Action: evaluate SSR (Next.js/Astro) for the marketing landing page post-launch.
 
-### annotations table migration not applied
-`supabase/migrations/20260519000005_custom_properties_annotations_attribution_window.sql` must be run manually in Supabase SQL editor. Until then:
-- Annotations API returns HTTP 503 (gracefully).
-- `custom_properties` column does not exist on `attributed_conversions`.
-- `attribution_window_days` column does not exist on `sites` (defaults to 30 in code).
+### annotations migration (20260519000005) — custom_properties IS present (corrected 2026-07-18)
+CORRECTION: a direct prod↔staging column diff (2026-07-18) confirms **`custom_properties` EXISTS on
+`attributed_conversions` in BOTH environments** (jsonb, nullable). The earlier claim that
+`20260519000005` was "unapplied" / that `custom_properties` "does not exist" does **NOT** hold at the
+schema level — that column is applied in both.
+- NOT covered by that diff (still open — verify before relying on them): whether `attribution_window_days`
+  exists on `sites` in both envs, and the annotations-API 503 path. Do not assume these are resolved.
 
 ### Per-conversion explain is single-touch-only
 Step-by-step explanations (via `/api/attribution/explain` and the Conversion Explanation Modal) are designed and supported for single-touch models only (`first_touch`, `last_touch`, `first_touch_non_direct`, `last_touch_non_direct`, `ai_platforms`).
