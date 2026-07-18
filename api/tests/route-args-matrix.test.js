@@ -23,7 +23,7 @@ process.env.ENCRYPTION_KEY = '00000000000000000000000000000000000000000000000000
 
 const { getFlexibleReport, __setAttributionReadDeps, __resetAttributionReadDeps, __evictFlexibleReportCache } =
   await import('../lib/attribution-engine.js')
-const { buildRouteArgs } = await import('../../tinybird/tools/route_ab_diff.mjs')
+const { buildRouteArgs } = await import('../../tinybird/tools/route-args.mjs')
 
 const SITE = 'site-matrix'
 const FROM = '2026-07-01'

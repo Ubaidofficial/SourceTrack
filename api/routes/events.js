@@ -39,10 +39,9 @@ import NodeCache from 'node-cache'
 const eventsCache = new NodeCache({ stdTTL: 60, checkperiod: 30 })
 
 // Tool/test-only seam: evict the /health NodeCache entry (key `health:<siteId>`)
-// so an A/B parity run can force a fresh OFF-vs-ON dispatch — otherwise the ON leg
-// reads the OFF leg's cached result within the 120s TTL and masks divergence
-// (route_ab_diff.mjs events-health target). Mirrors the __set*ReadDeps seams;
-// never used on the live request path.
+// so a read-cutover test can force a fresh pipe dispatch — otherwise a second run
+// reads the first run's cached result within the 120s TTL and masks the dispatch
+// decision. Mirrors the __set*ReadDeps seams; never used on the live request path.
 export function __evictHealthCache (siteId) { eventsCache.del(`health:${siteId}`) }
 
 function isValidDate(value) {

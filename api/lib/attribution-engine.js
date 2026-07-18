@@ -803,11 +803,11 @@ export async function getAttribution(siteId, model, dateFrom, dateTo) {
 // channelFromEvent is imported from ./channel-classifier.js (shared with nightly job)
 export { channelFromEvent }
 
-// Tool/test-only seam: evict getSessionReport's NodeCache entry for a report so an A/B
-// parity run forces a fresh OFF-vs-ON dispatch — otherwise the ON leg reads the OFF leg's
-// cached result within the 60s TTL and masks divergence (route_ab_diff.mjs session-report
-// target, mirroring events-health's __evictHealthCache). Must reproduce the cacheKey below
-// EXACTLY. Never used on a live request path.
+// Test-only seam: evict getSessionReport's NodeCache entry for a report so a read-cutover
+// test can force a fresh pipe dispatch — otherwise a second run reads the first run's cached
+// result within the 60s TTL and masks the dispatch decision (session-report-read-cutover.test.js;
+// mirrors events-health's __evictHealthCache). Must reproduce the cacheKey below EXACTLY.
+// Never used on a live request path.
 export function __evictSessionReportCache (siteId, dateFrom, dateTo, groupBy, metric, filters = {}, groupBy2 = null) {
   cache.del(cacheKey(`session:${groupBy}:${metric}:${JSON.stringify(filters)}:${groupBy2 || ''}`, siteId, dateFrom, dateTo))
 }
