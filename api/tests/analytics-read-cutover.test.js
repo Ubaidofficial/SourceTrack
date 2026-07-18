@@ -53,7 +53,7 @@ test('buildPageviewPipeParams — half-open window with +1-day EXCLUSIVE end + l
   })
 })
 
-test('buildPageviewPipeParams — filter mapping; duplicate/unknown type -> null (HogQL fallback, never a dropped filter)', () => {
+test('buildPageviewPipeParams — same-type MERGES to a comma-list; Channel mapped; unknown -> null', () => {
   const p = buildPageviewPipeParams('s1', '2026-07-01', '2026-07-02', {
     filters: [{ type: 'Source', value: 'google' }, { type: 'Country', value: 'US' }, { type: 'OS', value: 'Windows' }, { type: 'AI Source', value: 'ChatGPT' }]
   })
@@ -61,10 +61,28 @@ test('buildPageviewPipeParams — filter mapping; duplicate/unknown type -> null
   assert.strictEqual(p.filter_country, 'US')
   assert.strictEqual(p.filter_os, 'Windows')
   assert.strictEqual(p.filter_ai_source, 'ChatGPT')
-  // two filters of the SAME type: the pipe carries one param per type -> fall back to HogQL
-  assert.strictEqual(buildPageviewPipeParams('s1', '2026-07-01', '2026-07-02', { filters: [{ type: 'Source', value: 'a' }, { type: 'Source', value: 'b' }] }), null)
-  // unknown filter type -> fall back to HogQL
+  // D1b-3 Item B: two filters of the SAME type MERGE into one comma-list (the pipe reads splitByChar).
+  assert.strictEqual(buildPageviewPipeParams('s1', '2026-07-01', '2026-07-02', { filters: [{ type: 'Source', value: 'a' }, { type: 'Source', value: 'b' }] }).filter_source, 'a,b')
+  // a single value stays byte-identical to before (1-item list == equality).
+  assert.strictEqual(buildPageviewPipeParams('s1', '2026-07-01', '2026-07-02', { filters: [{ type: 'Source', value: 'a' }] }).filter_source, 'a')
+  // D1b-3 Item A: Channel is now pipe-mapped -> filter_channel (was the reachable HogQL-forcing shape).
+  assert.strictEqual(buildPageviewPipeParams('s1', '2026-07-01', '2026-07-02', { filters: [{ type: 'Channel', value: 'Organic Search' }] }).filter_channel, 'Organic Search')
+  // a genuinely unknown filter type still -> null (HogQL until the fallback is removed in the follow-up).
   assert.strictEqual(buildPageviewPipeParams('s1', '2026-07-01', '2026-07-02', { filters: [{ type: 'Bogus', value: 'x' }] }), null)
+})
+
+test('(dispatch) Channel + multi-value Source served from the pipe with merged params, fetchPageviews NOT called', async (t) => {
+  t.after(__resetAnalyticsReadDeps)
+  const tbCalls = []
+  __setAnalyticsReadDeps({
+    queryTinybird: async (pipe, params) => { tbCalls.push({ pipe, params }); return [ROW({ os: 'Windows', anonymous_id: 'v1' })] },
+    fetchPv: async () => { throw new Error('fetchPageviews (HogQL) called — Channel/multi-value must be pipe-served now') }
+  })
+  const res = mockRes()
+  await osHandler(req({ days: '30', f: ['Channel:Organic Search', 'Source:google', 'Source:bing'] }), res)
+  assert.strictEqual(res.body.success, true)
+  assert.strictEqual(tbCalls[0].params.filter_channel, 'Organic Search', 'Channel reaches the pipe as filter_channel')
+  assert.strictEqual(tbCalls[0].params.filter_source, 'google,bing', 'two Source filters merged into a comma-list')
 })
 
 // ── (a) DISPATCH — served from pipe, HogQL NOT called (load-bearing) ──────────

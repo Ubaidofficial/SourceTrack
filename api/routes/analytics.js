@@ -43,7 +43,11 @@ export function __resetAnalyticsReadDeps () {
 const PIPE_FILTER_PARAM = {
   Page: 'filter_page', Entry: 'filter_entry', Exit: 'filter_exit',
   Source: 'filter_source', Country: 'filter_country', Device: 'filter_device',
-  Browser: 'filter_browser', OS: 'filter_os', 'AI Source': 'filter_ai_source'
+  Browser: 'filter_browser', OS: 'filter_os', 'AI Source': 'filter_ai_source',
+  // D1b-3 Item A: Channel is now pipe-served — the 5 pageview pipes carry a filter_channel
+  // guard that ports channelFromEvent (channel-classifier.js) into SQL. Was the last UI-reachable
+  // shape forcing the dead-PostHog fallback (a Channel-tab click → §6 fake zeros).
+  Channel: 'filter_channel'
 }
 
 // HogQL serialized `toDateTime('ISO')` expr -> the pipe's ClickHouse DateTime
@@ -68,12 +72,13 @@ export function buildPageviewPipeParams (siteId, dateFrom, dateTo, { limit = 500
   const dateToTs = toChDateTime(range.to)
   if (!dateFromTs || !dateToTs) return null
   const params = { site_id: siteId, date_from_ts: dateFromTs, date_to_ts: dateToTs, limit_val: Number(limit) || 50000 }
-  const seen = new Set()
   for (const f of (filters || [])) {
     const key = PIPE_FILTER_PARAM[f.type]
-    if (!key || seen.has(key)) return null
-    seen.add(key)
-    params[key] = f.value
+    if (!key) return null   // unknown filter type has no pipe param -> HogQL (until the fallback is removed)
+    // D1b-3 Item B: MERGE same-type filters into one comma-list param instead of returning null.
+    // The pipe reads `has(splitByChar(',', {{filter_x}}), col)` (or arrayExists for substring dims),
+    // so a single value is byte-identical to before and N values become an OR/IN over the list.
+    params[key] = key in params ? `${params[key]},${f.value}` : f.value
   }
   return params
 }

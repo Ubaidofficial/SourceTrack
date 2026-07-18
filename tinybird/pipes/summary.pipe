@@ -91,31 +91,55 @@ SQL >
       AND timestamp >= {{ DateTime(date_from_ts, required=True) }}
       AND timestamp < {{ DateTime(date_to_ts, required=True) }}
       {% if defined(filter_page) %}
-      AND page_url ILIKE concat('%', {{ String(filter_page, required=True) }}, '%')
+      AND arrayExists(x -> page_url ILIKE concat('%', x, '%'), splitByChar(',', {{ String(filter_page, required=True) }}))
       {% end %}
       {% if defined(filter_entry) %}
-      AND page_url ILIKE concat('%', {{ String(filter_entry, required=True) }}, '%')
+      AND arrayExists(x -> page_url ILIKE concat('%', x, '%'), splitByChar(',', {{ String(filter_entry, required=True) }}))
       {% end %}
       {% if defined(filter_exit) %}
-      AND page_url ILIKE concat('%', {{ String(filter_exit, required=True) }}, '%')
+      AND arrayExists(x -> page_url ILIKE concat('%', x, '%'), splitByChar(',', {{ String(filter_exit, required=True) }}))
       {% end %}
       {% if defined(filter_source) %}
-      AND referrer = {{ String(filter_source, required=True) }}
+      AND has(splitByChar(',', {{ String(filter_source, required=True) }}), referrer)
       {% end %}
       {% if defined(filter_country) %}
-      AND country = {{ String(filter_country, required=True) }}
+      AND has(splitByChar(',', {{ String(filter_country, required=True) }}), country)
       {% end %}
       {% if defined(filter_device) %}
-      AND device_type = {{ String(filter_device, required=True) }}
+      AND has(splitByChar(',', {{ String(filter_device, required=True) }}), device_type)
       {% end %}
       {% if defined(filter_browser) %}
-      AND browser_name = {{ String(filter_browser, required=True) }}
+      AND has(splitByChar(',', {{ String(filter_browser, required=True) }}), browser_name)
       {% end %}
       {% if defined(filter_os) %}
-      AND JSONExtractString(properties, 'os_name') = {{ String(filter_os, required=True) }}
+      AND has(splitByChar(',', {{ String(filter_os, required=True) }}), JSONExtractString(properties, 'os_name'))
       {% end %}
       {% if defined(filter_ai_source) %}
-      AND ai_source = {{ String(filter_ai_source, required=True) }}
+      AND has(splitByChar(',', {{ String(filter_ai_source, required=True) }}), ai_source)
+      {% end %}
+      {% if defined(filter_channel) %}
+      AND has(splitByChar(',', {{ String(filter_channel, required=True) }}),
+        multiIf(
+          ai_source IS NOT NULL AND ai_source != '', 'AI Search',
+          (gclid IS NOT NULL AND gclid != '') OR (gbraid IS NOT NULL AND gbraid != '') OR (wbraid IS NOT NULL AND wbraid != '') OR (msclkid IS NOT NULL AND msclkid != ''), 'Paid Search',
+          lower(trim(COALESCE(utm_medium, ''))) IN ('cpc','ppc','paid','paid_search','paidsearch','sem'), 'Paid Search',
+          (fbclid IS NOT NULL AND fbclid != '') OR (ttclid IS NOT NULL AND ttclid != '') OR (li_fat_id IS NOT NULL AND li_fat_id != '') OR (li_fatid IS NOT NULL AND li_fatid != '') OR (twclid IS NOT NULL AND twclid != '') OR (snapclid IS NOT NULL AND snapclid != '') OR (pclid IS NOT NULL AND pclid != '') OR (sccid IS NOT NULL AND sccid != ''), 'Paid Social',
+          lower(trim(COALESCE(utm_medium, ''))) IN ('paid_social','paidsocial','social_paid'), 'Paid Social',
+          dclid IS NOT NULL AND dclid != '', 'Display',
+          lower(trim(COALESCE(utm_medium, ''))) IN ('display','banner','gdn','expandable','retargeting'), 'Display',
+          lower(trim(COALESCE(utm_medium, ''))) IN ('affiliate','affiliates','partner','cpa','cps'), 'Affiliate',
+          lower(trim(COALESCE(utm_medium, ''))) IN ('email','e-mail','newsletter','mailing','edm'), 'Email',
+          lower(trim(COALESCE(utm_medium, ''))) IN ('sms','text','mms'), 'SMS',
+          arrayExists(h -> position(if(referrer IS NOT NULL AND referrer != '' AND domain(referrer) = domain(page_url), '', lower(COALESCE(referrer, ''))), h) > 0, ['google.','bing.','yahoo.','duckduckgo.','ecosia.','kagi.','brave.','yandex.','baidu.']), 'Organic Search',
+          lower(trim(COALESCE(utm_source, ''))) IN ('google','bing','yahoo','duckduckgo','baidu','yandex','brave','ecosia') AND lower(trim(COALESCE(utm_medium, ''))) = '', 'Organic Search',
+          arrayExists(h -> position(if(referrer IS NOT NULL AND referrer != '' AND domain(referrer) = domain(page_url), '', lower(COALESCE(referrer, ''))), h) > 0, ['facebook.com','instagram.com','linkedin.com','twitter.com','x.com','tiktok.com','pinterest.com','reddit.com','youtube.com','snapchat.com','threads.net']), 'Organic Social',
+          lower(trim(COALESCE(utm_source, ''))) IN ('facebook','instagram','linkedin','twitter','x','tiktok','pinterest','reddit','youtube','snapchat') AND lower(trim(COALESCE(utm_medium, ''))) = '', 'Organic Social',
+          lower(trim(COALESCE(utm_source, ''))) IN ('mailchimp','klaviyo','hubspot','sendgrid','customer.io','brevo','activecampaign','drip','omnisend','postmark','mailerlite'), 'Email',
+          length(if(referrer IS NOT NULL AND referrer != '' AND domain(referrer) = domain(page_url), '', lower(COALESCE(referrer, '')))) > 5, 'Referral',
+          lower(trim(COALESCE(utm_source, ''))) = '' OR lower(trim(COALESCE(utm_source, ''))) = 'direct', 'Direct',
+          'Other Campaign'
+        )
+      )
       {% end %}
     ORDER BY timestamp DESC
     LIMIT {{ Int32(limit_val, 10000) }}
