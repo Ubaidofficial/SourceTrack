@@ -803,7 +803,6 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
   const { shopifyWebhookRouter } = await import('../routes/shopify-webhook.js')
   const { default: proxyRouter } = await import('../routes/proxy.js')
   const { default: webhookIncomingRouter } = await import('../routes/webhook-incoming.js')
-  const { ph } = await import('../lib/posthog.js')
   const { setDualWriteTransport, __getDualWriteBatcher } = await import('../../tinybird/adapter/dual-write.js')
   const client = getSupabase()
 
@@ -823,10 +822,7 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
 
   const originalFrom = client.from
   const originalRpc = client.rpc
-  const originalCapture = ph.capture
 
-  let captureCalled = false
-  ph.capture = () => { captureCalled = true }
   // Wave-1 revenue cutover: $conversion is written to Tinybird only. Spy the dual-write
   // transport to assert it fires (ph.capture must NOT — asserted via captureCalled=false).
   let dualWriteFired = false
@@ -889,14 +885,12 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
     mockRpcError = null
     mockIdempotencyResult = true
     rpcCallCount = 0
-    captureCalled = false
     dualWriteFired = false
   })
 
   t.after(() => {
     client.from = originalFrom
     client.rpc = originalRpc
-    ph.capture = originalCapture
     setDualWriteTransport(null)
     delete process.env.TINYBIRD_DUAL_WRITE
     delete Stripe.prototype.webhooks
@@ -921,7 +915,6 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
     await conversion(req, res)
     assert.strictEqual(statusVal, 200)
     assert.strictEqual(jsonVal.success, true)
-    assert.strictEqual(captureCalled, false, 'Wave-1: ph.capture removed from the revenue rail')
     const _b = __getDualWriteBatcher(); if (_b) await _b.flush()
     assert.strictEqual(dualWriteFired, true, 'Tinybird dual-write is the sole $conversion writer')
     assert.strictEqual(rpcCallCount, 1)
@@ -947,7 +940,6 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
     assert.strictEqual(statusVal, 402)
     assert.strictEqual(jsonVal.success, false)
     assert.strictEqual(jsonVal.error, 'Conversion limit reached for your plan')
-    assert.strictEqual(captureCalled, false)
     assert.strictEqual(rpcCallCount, 1)
   })
 
@@ -970,7 +962,6 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
     await conversion(req, res)
     assert.strictEqual(statusVal, 200)
     assert.strictEqual(jsonVal.success, true)
-    assert.strictEqual(captureCalled, false, 'Wave-1: ph.capture removed from the revenue rail')
     const _b = __getDualWriteBatcher(); if (_b) await _b.flush()
     assert.strictEqual(dualWriteFired, true, 'Tinybird dual-write is the sole $conversion writer')
     assert.strictEqual(rpcCallCount, 1)
@@ -1076,7 +1067,6 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
       assert.strictEqual(jsonVal.success, false)
       assert.strictEqual(jsonVal.ignored, true)
       assert.strictEqual(jsonVal.error, 'Conversion limit reached for your plan')
-      assert.strictEqual(captureCalled, false)
     } finally {
       client.from = originalFrom
     }
@@ -1155,7 +1145,6 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
       assert.strictEqual(jsonVal.success, false)
       assert.strictEqual(jsonVal.ignored, true)
       assert.strictEqual(jsonVal.error, 'Conversion limit reached for your plan')
-      assert.strictEqual(captureCalled, false)
     } finally {
       client.from = originalFrom
     }
@@ -1181,7 +1170,6 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
 
     // Wait a tiny bit since proxy executes in the background
     await new Promise(resolve => setTimeout(resolve, 30))
-    assert.strictEqual(captureCalled, false)
     assert.strictEqual(rpcCallCount, 1)
   })
 
@@ -1634,7 +1622,6 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
     assert.strictEqual(statusVal, 402)
     assert.strictEqual(jsonVal.success, false)
     assert.strictEqual(jsonVal.error, 'Conversion limit reached for your plan')
-    assert.strictEqual(captureCalled, false)
     assert.strictEqual(rpcCallCount, 1)
   })
 
@@ -1702,7 +1689,6 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
 
     assert.strictEqual(statusVal, 402)
     assert.strictEqual(jsonVal.success, false)
-    assert.strictEqual(captureCalled, false)
     assert.strictEqual(deleteCalled, true, 'Rollback should be called on over-limit block')
     assert.strictEqual(eqFilters.site_key, 'sk-123')
     assert.strictEqual(eqFilters.provider, 'browser_conversion')
@@ -1712,7 +1698,6 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
     // 2. Second request with same order_id: now limit is lifted (allowed: true)
     mockRpcResult = [{ allowed: true, current_count: 10 }]
     mockIdempotencyResult = true
-    captureCalled = false
     dualWriteFired = false
     statusVal = null
     jsonVal = null
@@ -1723,7 +1708,6 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
 
     assert.strictEqual(statusVal, 200)
     assert.strictEqual(jsonVal.success, true)
-    assert.strictEqual(captureCalled, false, 'Wave-1: ph.capture removed from the revenue rail')
     const _b2 = __getDualWriteBatcher(); if (_b2) await _b2.flush()
     assert.strictEqual(dualWriteFired, true, 'Retry dual-writes to Tinybird after the limit is lifted')
   })
@@ -1801,7 +1785,6 @@ test('Conversion Routes Ingestion and Fail-Open Integration Tests', async (t) =>
       assert.strictEqual(jsonVal.success, false)
       assert.strictEqual(jsonVal.error, 'Conversion limit reached for your plan')
       // No PostHog capture should have occurred
-      assert.strictEqual(captureCalled, false)
     } finally {
       client.from = originalFrom
     }
@@ -1949,14 +1932,9 @@ test('claimPageviewUsage — pageview limit enforcement helper (140G-4)', async 
 
 test('track.js handler — pageview quota integration (140G-4)', async (t) => {
   const { track } = await import('../routes/track.js')
-  const { ph } = await import('../lib/posthog.js')
   const { setDualWriteTransport, __getDualWriteBatcher } = await import('../../tinybird/adapter/dual-write.js')
   const client = getSupabase()
 
-  const originalCapture = ph.capture
-  let captureCalled = false
-  let lastCaptureArgs = null
-  ph.capture = (args) => { captureCalled = true; lastCaptureArgs = args }
   // Wave-2: pageviews are written to Tinybird only. Spy the dual-write to assert it fires.
   let dualWriteFired = false
   process.env.TINYBIRD_DUAL_WRITE = 'true'
@@ -1987,15 +1965,12 @@ test('track.js handler — pageview quota integration (140G-4)', async (t) => {
   }
 
   t.afterEach(() => {
-    captureCalled = false
-    lastCaptureArgs = null
     dualWriteFired = false
     mockRpcResult = null
     mockRpcError = null
   })
 
   t.after(() => {
-    ph.capture = originalCapture
     setDualWriteTransport(null)
     delete process.env.TINYBIRD_DUAL_WRITE
     client.rpc = originalRpc
@@ -2027,7 +2002,6 @@ test('track.js handler — pageview quota integration (140G-4)', async (t) => {
     const req = makeReq('$pageview')
     const res = makeRes()
     await track(req, res)
-    assert.strictEqual(captureCalled, false, 'Wave-2: ph.capture removed from the pageview rail')
     await flushDW()
     assert.strictEqual(dualWriteFired, true, '$pageview dual-writes to Tinybird')
   })
@@ -2038,7 +2012,6 @@ test('track.js handler — pageview quota integration (140G-4)', async (t) => {
     const res = makeRes()
     await track(req, res)
     assert.strictEqual(res.statusCode, 402, 'must return 402 when limit reached')
-    assert.strictEqual(captureCalled, false, 'ph.capture must NOT be called when limit reached')
     assert.strictEqual(res.json_body.error, 'Monthly pageview limit reached')
     assert.strictEqual(res.json_body.data.limit_reached, true)
   })
@@ -2054,7 +2027,6 @@ test('track.js handler — pageview quota integration (140G-4)', async (t) => {
     const res = makeRes()
     await track(req, res)
     assert.strictEqual(pvRpcCalled, false, 'custom event must NOT claim pageview quota')
-    assert.strictEqual(captureCalled, false, 'Wave-2: ph.capture removed from the pageview rail')
     await flushDW()
     assert.strictEqual(dualWriteFired, true, 'custom event dual-writes to Tinybird')
     client.rpc = savedRpc
@@ -2072,7 +2044,6 @@ test('track.js handler — pageview quota integration (140G-4)', async (t) => {
     const res = makeRes()
     await track(req, res)
     assert.strictEqual(pvRpcCalled, false, 'bot must not claim quota')
-    assert.strictEqual(captureCalled, false, 'bot must not be captured')
     client.rpc = savedRpc
   })
 
@@ -2089,7 +2060,6 @@ test('track.js handler — pageview quota integration (140G-4)', async (t) => {
     const res = makeRes()
     await track(req, res)
     assert.strictEqual(pvRpcCalled, false, 'excluded path must not claim quota')
-    assert.strictEqual(captureCalled, false, 'excluded path must not be captured')
     client.rpc = savedRpc
   })
 
@@ -2099,7 +2069,6 @@ test('track.js handler — pageview quota integration (140G-4)', async (t) => {
     const res = makeRes()
     await track(req, res)
     // Fail open: despite RPC error, capture must still proceed
-    assert.strictEqual(captureCalled, false, 'Wave-2: ph.capture removed from the pageview rail')
     await flushDW()
     assert.strictEqual(dualWriteFired, true, 'fail-open: dual-write must proceed on RPC error')
     assert.notStrictEqual(res.statusCode, 402, 'fail-open: must not return 402 on RPC error')
@@ -2109,15 +2078,10 @@ test('track.js handler — pageview quota integration (140G-4)', async (t) => {
 test('Proxy and Legacy Ingestion Quota & Status Enforcement Tests (140G-4)', async (t) => {
   const { default: proxyRouter } = await import('../routes/proxy.js')
   const { default: analyticsRouter } = await import('../routes/analytics.js')
-  const { ph } = await import('../lib/posthog.js')
   const { setDualWriteTransport, __getDualWriteBatcher } = await import('../../tinybird/adapter/dual-write.js')
   const client = getSupabase()
 
   // Mock PostHog capture
-  const originalCapture = ph.capture
-  let captureCalled = false
-  let lastCaptureArgs = null
-  ph.capture = (args) => { captureCalled = true; lastCaptureArgs = args }
   // Wave-2: pageviews are written to Tinybird only. Spy the dual-write to assert it fires.
   let dualWriteFired = false
   process.env.TINYBIRD_DUAL_WRITE = 'true'
@@ -2179,8 +2143,6 @@ test('Proxy and Legacy Ingestion Quota & Status Enforcement Tests (140G-4)', asy
   }
 
   t.afterEach(() => {
-    captureCalled = false
-    lastCaptureArgs = null
     dualWriteFired = false
     mockRpcResult = null
     mockRpcError = null
@@ -2192,7 +2154,6 @@ test('Proxy and Legacy Ingestion Quota & Status Enforcement Tests (140G-4)', asy
   })
 
   t.after(() => {
-    ph.capture = originalCapture
     setDualWriteTransport(null)
     delete process.env.TINYBIRD_DUAL_WRITE
     client.rpc = originalRpc
@@ -2229,8 +2190,6 @@ test('Proxy and Legacy Ingestion Quota & Status Enforcement Tests (140G-4)', asy
     const layer = proxyRouter.stack.find(s => s.route?.path === '/e' && s.route?.methods.post)
     const handler = layer.route.stack[layer.route.stack.length - 1].handle
     await handler(req, res)
-
-    assert.strictEqual(captureCalled, false, 'over limit proxy pageview must skip PostHog capture')
     assert.strictEqual(rpcCalls.length, 1, 'must attempt to claim quota')
     assert.strictEqual(rpcCalls[0].fn, 'claim_site_pageview_usage')
   })
@@ -2247,8 +2206,6 @@ test('Proxy and Legacy Ingestion Quota & Status Enforcement Tests (140G-4)', asy
     const layer = proxyRouter.stack.find(s => s.route?.path === '/e' && s.route?.methods.post)
     const handler = layer.route.stack[layer.route.stack.length - 1].handle
     await handler(req, res)
-
-    assert.strictEqual(captureCalled, false, 'Wave-2: ph.capture removed from the pageview rail')
     await flushDW()
     assert.strictEqual(dualWriteFired, true, 'non-pageview event dual-writes to Tinybird')
     assert.strictEqual(rpcCalls.length, 0, 'must not call pageview quota RPC')
@@ -2267,8 +2224,6 @@ test('Proxy and Legacy Ingestion Quota & Status Enforcement Tests (140G-4)', asy
     const layer = proxyRouter.stack.find(s => s.route?.path === '/e' && s.route?.methods.post)
     const handler = layer.route.stack[layer.route.stack.length - 1].handle
     await handler(req, res)
-
-    assert.strictEqual(captureCalled, false, 'expired trial site must skip capture')
     assert.strictEqual(rpcCalls.length, 0, 'expired trial site must not write to counter DB')
   })
 
@@ -2287,7 +2242,6 @@ test('Proxy and Legacy Ingestion Quota & Status Enforcement Tests (140G-4)', asy
     await handler(req, res)
 
     assert.strictEqual(res.ended, true)
-    assert.strictEqual(captureCalled, false, 'over limit pixel must skip capture')
     assert.strictEqual(rpcCalls.length, 1)
     assert.strictEqual(rpcCalls[0].fn, 'claim_site_pageview_usage')
   })
@@ -2305,8 +2259,6 @@ test('Proxy and Legacy Ingestion Quota & Status Enforcement Tests (140G-4)', asy
     const layer = proxyRouter.stack.find(s => s.route?.path === '/pixel.gif' && s.route?.methods.get)
     const handler = layer.route.stack[layer.route.stack.length - 1].handle
     await handler(req, res)
-
-    assert.strictEqual(captureCalled, false, 'expired trial pixel must skip capture')
     assert.strictEqual(rpcCalls.length, 0)
   })
 

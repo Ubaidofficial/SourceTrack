@@ -117,7 +117,11 @@ test('3. Cross-Deduplication Logic', async (t) => {
 
 test('4. Route-Level Ingestion & Promotion Integration Tests', async (t) => {
   const { track } = await import('../routes/track.js')
-  const { ph } = await import('../lib/posthog.js')
+  // D3: PostHog is decommissioned — the route is Tinybird-sole (dualWriteEvent). This test asserts
+  // the promotion behavior (a lead form_submit promotes to a $conversion event) on the DUAL-WRITE
+  // output, not the removed ph.capture. Events map to normalized lines keyed by event_type.
+  const { setDualWriteTransport, __getDualWriteBatcher } = await import('../../tinybird/adapter/dual-write.js')
+  const { gunzipSync } = await import('node:zlib')
 
   const siteMock = {
     id: 101,
@@ -126,19 +130,27 @@ test('4. Route-Level Ingestion & Promotion Integration Tests', async (t) => {
     custom_url_params: null
   }
 
-  let captureCalls = []
-  const originalCapture = ph.capture
-  ph.capture = (payload) => {
-    captureCalls.push(payload)
+  let payloads = []
+  const prevFlag = process.env.TINYBIRD_DUAL_WRITE
+  process.env.TINYBIRD_DUAL_WRITE = 'true'
+  setDualWriteTransport(async (p) => { payloads.push(p) }, { flushAt: 1000, flushInterval: 0 })
+
+  // Drive track() and return the normalized dual-write lines it emitted (gzipped ndjson).
+  async function drive (reqMock, resMock) {
+    payloads = []
+    await track(reqMock, resMock)
+    const b = __getDualWriteBatcher(); if (b) await b.flush()
+    return payloads.flatMap(p => gunzipSync(p).toString('utf8').trim().split('\n').filter(Boolean).map(l => JSON.parse(l)))
   }
 
   t.beforeEach(() => {
-    captureCalls = []
     shortWindowCache.flushAll()
   })
 
   t.after(() => {
-    ph.capture = originalCapture
+    setDualWriteTransport(null)
+    if (prevFlag === undefined) delete process.env.TINYBIRD_DUAL_WRITE
+    else process.env.TINYBIRD_DUAL_WRITE = prevFlag
   })
 
   await t.test('eligible public lead form_submit emits $conversion with conversion_type="form"', async () => {
@@ -167,14 +179,15 @@ test('4. Route-Level Ingestion & Promotion Integration Tests', async (t) => {
       }
     }
 
-    await track(reqMock, resMock)
+    const lines = await drive(reqMock, resMock)
 
-    // Should capture 2 events: standard 'form_submit' and promoted '$conversion'
-    assert.strictEqual(captureCalls.length, 2)
-    assert.strictEqual(captureCalls[0].event, 'form_submit')
-    assert.strictEqual(captureCalls[1].event, '$conversion')
-    assert.strictEqual(captureCalls[1].properties.conversion_type, 'form')
-    assert.strictEqual(captureCalls[1].properties.is_conversion, true)
+    // Two events dual-written: standard 'form_submit' and promoted '$conversion'
+    assert.strictEqual(lines.length, 2)
+    assert.strictEqual(lines[0].event_type, 'form_submit')
+    assert.strictEqual(lines[1].event_type, '$conversion')
+    // The adapter flattens the event bag to top-level typed columns (no nested `properties`).
+    assert.strictEqual(lines[1].conversion_type, 'form')
+    assert.strictEqual(lines[1].is_conversion, true)
   })
 
   await t.test('ignore_conversion=true prevents $conversion promotion', async () => {
@@ -204,16 +217,15 @@ test('4. Route-Level Ingestion & Promotion Integration Tests', async (t) => {
       }
     }
 
-    await track(reqMock, resMock)
+    const lines = await drive(reqMock, resMock)
 
-    // Should capture only 1 event: standard 'form_submit' (promotion skipped)
-    assert.strictEqual(captureCalls.length, 1)
-    assert.strictEqual(captureCalls[0].event, 'form_submit')
+    // Only 1 event dual-written: standard 'form_submit' (promotion skipped)
+    assert.strictEqual(lines.length, 1)
+    assert.strictEqual(lines[0].event_type, 'form_submit')
   })
 
   await t.test('excluded forms (e.g. search, login, newsletter) do not emit $conversion', async () => {
     const runExcludeTest = async (form_id, page_path) => {
-      captureCalls = []
       const reqMock = {
         headers: { 'user-agent': 'Mozilla/5.0' },
         site: siteMock,
@@ -238,10 +250,10 @@ test('4. Route-Level Ingestion & Promotion Integration Tests', async (t) => {
         }
       }
 
-      await track(reqMock, resMock)
-      // Should capture only 1 event (standard 'form_submit')
-      assert.strictEqual(captureCalls.length, 1)
-      assert.strictEqual(captureCalls[0].event, 'form_submit')
+      const lines = await drive(reqMock, resMock)
+      // Only 1 event dual-written (standard 'form_submit')
+      assert.strictEqual(lines.length, 1)
+      assert.strictEqual(lines[0].event_type, 'form_submit')
     }
 
     // 1. Search form

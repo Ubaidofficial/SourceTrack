@@ -41,7 +41,11 @@
 // Guards: refuses unless staging (POSTHOG_PROJECT_ID===469905 and staging fixture site_id),
 // and aborts if a sub_test_carrier_001 conversion already exists in EITHER store (no double-seed).
 
-import { ph, queryHogQL } from '../api/lib/posthog.js'
+// D3: PostHog is decommissioned — the ph.capture write + the queryHogQL PostHog pre-check were
+// removed. This seeder is now Tinybird-only and still functions END-TO-END: it writes via
+// dualWriteEvent and pre-checks ST_Staging. The PostHog half of the pre-check is gone (not
+// broken); with PostHog removed there is no second store to fall back to, so a missing
+// TINYBIRD_READ_TOKEN now means "proceed without a pre-check" rather than "fall back to PostHog".
 import { initTinybirdDualWrite } from '../tinybird/adapter/boot.js'
 import { dualWriteEvent, __getDualWriteBatcher } from '../tinybird/adapter/dual-write.js'
 import { esc } from '../api/lib/utils.js'
@@ -100,16 +104,10 @@ async function tinybirdCarrierCount () {
     return Number(body?.data?.[0]?.c) || 0
   } catch { return null }
 }
-async function posthogCarrierCount () {
-  try {
-    const rows = await queryHogQL(`SELECT count() FROM events WHERE properties.site_id='${esc(SITE_ID)}' AND event='$conversion' AND properties.stripe_subscription_id='${esc(SUB_ID)}'`, 'seed_carrier_precheck')
-    return Number(rows?.[0]?.[0]) || 0
-  } catch { return null }
-}
 
 async function main () {
   if (!CONFIRM) {
-    console.log('DRY RUN (no --confirm) — nothing written. Would seed into ST_Staging + PostHog 469905:')
+    console.log('DRY RUN (no --confirm) — nothing written. Would seed into ST_Staging:')
     console.log(`  $pageview   ${VISITOR} @ ${PV_TS}  ${JSON.stringify(pvProps)}`)
     console.log(`  $conversion ${VISITOR} @ ${CONV_TS}  ${JSON.stringify(convProps)}`)
     console.log('Bucket to inspect post-seed: google (touchpoint source). Re-run with --confirm to write.')
@@ -118,26 +116,22 @@ async function main () {
 
   assertStaging()
 
-  // No double-seed: abort if the carrier already exists in EITHER store.
-  const [tb, phc] = await Promise.all([tinybirdCarrierCount(), posthogCarrierCount()])
-  if ((tb || 0) > 0 || (phc || 0) > 0) {
-    console.error(`ABORT: carrier ${SUB_ID} already present (ST_Staging=${tb}, PostHog=${phc}). No double-seed.`)
+  // No double-seed: abort if the carrier already exists in ST_Staging.
+  const tb = await tinybirdCarrierCount()
+  if ((tb || 0) > 0) {
+    console.error(`ABORT: carrier ${SUB_ID} already present (ST_Staging=${tb}). No double-seed.`)
     process.exit(2)
   }
-  if (tb === null) console.warn('WARN: could not verify ST_Staging (no TINYBIRD_READ_TOKEN/HOST) — proceeding on the PostHog pre-check.')
-  if (phc === null) console.warn('WARN: could not verify PostHog (queryHogQL failed) — proceeding on the ST_Staging pre-check.')
-  console.log(`pre-check clear (ST_Staging=${tb ?? 'n/a'}, PostHog=${phc ?? 'n/a'}). Seeding...`)
+  if (tb === null) console.warn('WARN: could not verify ST_Staging (no TINYBIRD_READ_TOKEN/HOST) — proceeding without a pre-check.')
+  console.log(`pre-check clear (ST_Staging=${tb ?? 'n/a'}). Seeding...`)
 
   initTinybirdDualWrite() // wire the real Tinybird transport from env
 
-  ph.capture({ distinctId: VISITOR, event: '$pageview', timestamp: new Date(PV_TS), properties: pvProps })
   dualWriteEvent({ distinctId: VISITOR, event: '$pageview', timestamp: PV_TS, properties: pvProps })
-  ph.capture({ distinctId: VISITOR, event: '$conversion', timestamp: new Date(CONV_TS), properties: convProps })
   dualWriteEvent({ distinctId: VISITOR, event: '$conversion', timestamp: CONV_TS, properties: convProps })
 
   const b = __getDualWriteBatcher(); if (b) await b.flush()
-  await ph.flush()
-  console.log(`SEEDED ${SUB_ID} for ${VISITOR} @ ${CONV_TS} into ST_Staging + PostHog 469905. Inspect the 'google' bucket (delta 1.0).`)
+  console.log(`SEEDED ${SUB_ID} for ${VISITOR} @ ${CONV_TS} into ST_Staging. Inspect the 'google' bucket (delta 1.0).`)
 }
 
 main().catch((e) => { console.error(e); process.exit(1) })

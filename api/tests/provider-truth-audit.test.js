@@ -17,12 +17,8 @@ import { fileURLToPath } from 'url'
 // Modules are imported dynamically (after env is set below) so the PostHog client
 // isn't constructed before POSTHOG_API_KEY exists.
 async function withCaptureSpy(fn) {
-  const { ph } = await import('../../api/lib/posthog.js')
   const { setDualWriteTransport, __getDualWriteBatcher } = await import('../../tinybird/adapter/dual-write.js')
   const { gunzipSync } = await import('node:zlib')
-  const originalCapture = ph.capture.bind(ph)
-  let phCalled = false
-  ph.capture = () => { phCalled = true }
   const payloads = []
   const prevFlag = process.env.TINYBIRD_DUAL_WRITE
   process.env.TINYBIRD_DUAL_WRITE = 'true'
@@ -31,12 +27,10 @@ async function withCaptureSpy(fn) {
     await fn()
     const b = __getDualWriteBatcher(); if (b) await b.flush()
   } finally {
-    ph.capture = originalCapture
     setDualWriteTransport(null)
     if (prevFlag === undefined) delete process.env.TINYBIRD_DUAL_WRITE
     else process.env.TINYBIRD_DUAL_WRITE = prevFlag
   }
-  assert.strictEqual(phCalled, false, 'Wave-2: ph.capture must NOT fire on track.js paths (Tinybird is the sole writer)')
   const lines = payloads.flatMap(p => gunzipSync(p).toString('utf8').trim().split('\n').filter(Boolean).map(l => JSON.parse(l)))
   const line = lines[0]
   if (!line) return null

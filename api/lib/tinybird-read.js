@@ -32,8 +32,8 @@
 // the deployed pageviews_by_visitors pipe and Tinybird Forward docs; this
 // client originally shipped the repeated-key format (self-flagged unverified)
 // and returned first-visitor-only data whenever a batch had >1 visitor.
-// Same convention as tinybird/tools/phase4_touchpoint_diff.js's
-// fetchTinybirdRows (comma-join, with the same empirical citation).
+// (Same comma-join convention the retired phase4 diff tool's
+// fetchTinybirdRows used, with the same empirical citation.)
 // ASSUMPTION: element values contain no literal comma — inherent to Tinybird's
 // comma convention. distinct_ids here are UUIDs/generated ids (comma-free);
 // a warning below fires if that ever changes.

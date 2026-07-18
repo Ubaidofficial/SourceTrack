@@ -11,7 +11,7 @@ if (!process.env.POSTHOG_API_KEY) process.env.POSTHOG_API_KEY = 'mock-unused-by-
 const {
   creditFirstTouch, creditFirstTouchNonDirect, creditLastTouchNonDirect,
   aggregateModelCredits, compareAggregateBuckets
-} = await import('../../tinybird/tools/phase4_touchpoint_diff.js')
+} = await import('../../tinybird/tools/attribution-credit-math.js')
 
 const pv = (distinct_id, timestamp, utm_source, utm_medium = null, utm_campaign = null) =>
   ({ distinct_id, timestamp, utm_source, utm_medium, utm_campaign })
