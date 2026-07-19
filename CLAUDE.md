@@ -187,6 +187,10 @@ Plus:
 - **Real-env only:** verify on staging/prod URLs — **never localhost.** A localhost pass proves nothing about production.
 - **"Is it real?" checks pull identifying rows, not just aggregate counts.** A count can look healthy while every underlying row is test/seed data (e.g. "68 members" that were 59 orphans). For real-vs-test questions, select the rows and inspect them.
 - **Verify every "handled elsewhere / handled by X" claim against the actual data path.** Design docs describe *intended* architecture; these assumptions have been proven wrong repeatedly. Trace the real code path before trusting "it's covered."
+- **Greps miss non-import references — before calling any file/table "dead" or "orphaned", check the three classes an import/usage grep cannot see:**
+  1. **Hardcoded file manifests.** `scripts/qa-static-launch-check.mjs` lists backend files by path in its own arrays; deleting `ai-analytics.js` reddened CI (#315) because it was still named there. For any file deletion, grep the basename as a **plain STRING repo-wide** (manifests, configs, CI yml, Dockerfiles) — not just imports/routes.
+  2. **Postgres triggers/functions.** `disposable_email_domains` + `paas_subdomain_blocklist` looked orphaned in JS but are read by the live trigger `enforce_free_tier_abuse_guards ON sites` — free-tier abuse prevention is **server-enforced at the DB layer** (the JS `abuse-guards.js` is vestigial). Before dropping a table, check `pg_trigger`/`pg_proc`, not just JS.
+  3. **Title/route maps keyed by a path STRING.** `dashboard/src/components/Layout.jsx`'s `PAGE_TITLES` maps route paths to titles; a deleted page leaves a stale key an import grep never finds. Grep the path string too.
 - Demand raw `git diff` + CI green before accepting any "done."
 
 ---

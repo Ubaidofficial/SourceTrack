@@ -273,3 +273,37 @@ INFERRED from session arc (orchestrator-synthesis — verify if precision needed
 - **Channel filter works end-to-end:** "Channel: Paid Search" returns real filtered data across all pageview panels. Paid Search is a channel the stale CASE could not produce, confirming the faithful port is live. The §6 fake-zero on the Channel filter is dead.
 - **§5 prod-serving gate closed:** `tb --cloud deploy --check` against prod returns "No changes to be deployed" for all 13 D1c-1 pipes.
 - **Benign engine-leg pipe errors:** Verification reveals bare-param pokes missing `site_id` cause benign errors (`multitouch_pageviews_live` 39/59, `multitouch_conversions` 2/48, `first_touch_by_site` 1/3, `aiplatform_conversions` 1/7) but cannot affect the app as the route itself returns 422 first.
+
+---
+
+## SESSION (2026-07-19) — ✅ MIGRATION OFFICIALLY COMPLETE
+
+PostHog is fully decommissioned. **Tinybird (ClickHouse) is the sole analytics read layer.** This section records what is true NOW, with evidence. The read-path claims below were **verified against source** on this branch's base (`origin/main` @ #321) — file:line cited.
+
+### D1–D6 — all done (PR by step)
+- **D1** — route/reader HogQL fallback removed; readers Tinybird-only: **#272** (D1a flexible_report), **#273** (D1b-1, 8 readers), **#274** (D1b-2, 4 readers), **#276** (D1b-3 analytics pipes), **#277** (D1b-3b analytics fallback). *(2026-07-18)*
+- **D2** — nightly + API boot + health-agent off PostHog: **#304** (drop `POSTHOG_*` from the API boot guard + remove `posthog-node`), **#306** (health-agent: retire the posthog check, `data_flow` → Tinybird), **#307** (B2: delete the `_mv`/suffix conversion-read branches, keep reprocess).
+- **B3** — nightly reads fail closed (prerequisite for deleting the fallback): **#308** (retry transient 429/5xx/network), **#309** (normal-path conversions fail closed per-site), **#310** (touchpoints fail closed + surface `fellBack`), **#311** (delete `queryPostHog` — nightly is Tinybird-sole; **no fallback path remains**).
+- **D4** — frontend/dashboard PostHog removed: **#312** (clean delete of dormant analytics; `VITE_POSTHOG_*` gone; CI guard added).
+- **D5** — env + code + GDPR copy: **#313** (code-half; corrected one factually-false deletion claim, gated the rest), **#314** (applied the gated removals; **project 416017 confirmed deleted**).
+- **D6** — orphan cleanup: **#315** (delete dead `ai-analytics`/`annotations` routes + page).
+- **Agent-doc correction:** **#316** (`CLAUDE.md` + `AGENTS.md` — Tinybird is the read layer, not PostHog).
+
+### PostHog project 416017 — DELETED
+Founder deleted the project via the PostHog UI. Confirmed by the MCP token response going **403 → 404** (the project no longer resolves). The corpus is non-recoverable (see `KNOWN_ISSUES.md` §19).
+
+### Env vars — stripped
+`POSTHOG_*` / `VITE_POSTHOG_*` removed from **6 services × 2 environments — 12/12 verified** (orchestrator Railway MCP check). Backend `POSTHOG_*` was intentionally retained until D5; it is now gone.
+
+### Zero PostHog network requests
+Confirmed in **prod and staging browser smoke** — the dashboard issues no PostHog requests.
+
+### Reads now — the contract (VERIFIED against source)
+- **`queryTinybirdPipe`** (`api/lib/tinybird-read.js`): gated by `TINYBIRD_READ_ENABLED` + the `TINYBIRD_READ_PIPES` allowlist (`isPipeReadAllowed` → returns `null` if disallowed, `:138`). Retries transient failures — **HTTP 429, HTTP ≥ 500, or a network throw/timeout (AbortError)** — up to **3 attempts total** (`MAX_ATTEMPTS = 3`, loop `:172`), per-attempt 15s timeout (fresh AbortController), backoff = `Retry-After` seconds or `min(60s, 2000·2^attempt)`. Returns **`null` on exhaustion** (`:228`), **`[]` for a served-empty** result (a success — never retried), and **never throws** to the caller (contract stated at `:117,:127-128`).
+- **Callers fail CLOSED on `null` — there is NO fallback path** (`queryPostHog` was **deleted in #311**):
+  - `readTb` (`api/routes/dashboard.js:35`) **throws** `[tinybird-force-read] … FIX THE PIPE` on null (returns `mapRows(tb)` only when `tb !== null`).
+  - engine `_pipeNull` (`api/lib/attribution-engine.js:50`, called at `:135/:157/:187/:209/:309/:396`) **throws** on null.
+  - the nightly (`api/jobs/nightly-attribution.js`) **aborts** the conversion/touchpoint read on null (fails the site closed, `queryFailed`) rather than falling back — comments at `:190/:461/:476/:727` explicitly document "do NOT fall through to `queryPostHog`."
+
+### Two KNOWN EXCEPTIONS (honest) — a bug, NOT a data-source fallback
+`/admin` (6 inner catches) and `/leads/count` **swallow the Tinybird throw into an HTTP 200 with zeroed KPIs** (`KNOWN_ISSUES.md` **§14**), so `TINYBIRD_FORCE_READ=true` cannot reach their handler-level catches. This is a **known silent-degradation bug** — fix is to strip the inner try/catch. It is **not** a fallback to another store: there is no other store, PostHog is gone. Calling it a "fallback" would misdescribe it.
