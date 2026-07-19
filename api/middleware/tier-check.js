@@ -20,7 +20,7 @@ import { normalizePlan } from '../lib/plan-features.js'
 // PostHog only). The counter was effectively always 0. It has been replaced by the
 // atomic claim_site_pageview_usage RPC in api/lib/pageview-limits.js, called in-handler.
 //
-// See: docs/qa/pageview_limit_enforcement_140G-4.md for full audit and rationale.
+// See: docs/archive/qa/pageview_limit_enforcement_140G-4.md for full audit and rationale.
 export async function checkTierLimit(req, res, next) {
   try {
     const plan = normalizePlan(req.site?.plan || 'free')
