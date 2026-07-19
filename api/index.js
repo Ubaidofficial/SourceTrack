@@ -78,7 +78,11 @@ import { handlePrivacySuppression } from './lib/privacy-suppression.js'
 
 // Fail fast on missing required environment variables. Better to crash on
 // startup than to fail every request with a cryptic 500 later.
-const REQUIRED_ENV = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY', 'POSTHOG_HOST', 'POSTHOG_API_KEY']
+// POSTHOG_HOST / POSTHOG_API_KEY are NOT required to boot: D3 deleted api/lib/posthog.js
+// (the `ph` client), so no request path in the API reads them. Keeping them here would make
+// D5 (stripping POSTHOG_* from Railway) hard-exit all six services on startup. The remaining
+// POSTHOG_* readers are jobs (nightly-attribution, health-agent), not the API boot path.
+const REQUIRED_ENV = ['SUPABASE_URL', 'SUPABASE_SERVICE_KEY']
 const missingEnv = REQUIRED_ENV.filter(k => !process.env[k])
 if (missingEnv.length) {
   console.error(`[startup] Missing required env vars: ${missingEnv.join(', ')}`)
