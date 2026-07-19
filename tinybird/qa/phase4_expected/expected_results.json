@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "note": "Expected comparator outcomes for the committed cc-4a/cc-4c/cc-4d snapshots. Derived from the fixture designs (PHASE4_4A_FIXTURE_PLAN.md, PHASE4_4C_PLAN.md §3-5, PHASE4_4D_PLAN.md §4) and confirmed against the live stores 2026-07-03. The replay verifier (tinybird/qa/phase4_replay_verify.mjs) fails if the comparators produce anything else."
+    "note": "Expected comparator outcomes for the committed cc-4a/cc-4c/cc-4d snapshots. Derived from the fixture designs (tinybird/archive/PHASE4_4A_FIXTURE_PLAN.md, tinybird/archive/PHASE4_4C_PLAN.md §3-5, tinybird/archive/PHASE4_4D_PLAN.md §4) and confirmed against the live stores 2026-07-03. The replay verifier (tinybird/qa/phase4_replay_verify.mjs) fails if the comparators produce anything else."
   },
   "pattern_b": {
     "models_covered": ["time_decay", "linear", "u_shaped", "w_shaped"],
