@@ -24,7 +24,7 @@ import { initTinybirdDualWrite } from '../tinybird/adapter/boot.js'
 import { dualWriteEvent, __getDualWriteBatcher } from '../tinybird/adapter/dual-write.js'
 import { esc } from '../api/lib/utils.js'
 import { assertStagingSeedTarget, assertStagingWorkspaceLive } from './lib/staging-seed-guard.mjs'
-import { FIXTURE_SITE_ID, V1, V2 } from './lib/attribution-fixture.mjs'
+import { FIXTURE_SITE_ID, V1, V2, V3, V4 } from './lib/attribution-fixture.mjs'
 
 const CONFIRM = process.argv.includes('--confirm')
 const TARGETING_STAGING = process.argv.includes('--i-am-targeting-staging')
@@ -51,13 +51,36 @@ const v2CarrierProps = {
   stripe_event_type: 'checkout.session.completed', stripe_subscription_id: V2.subscriptionId,
   ingestion_method: 'webhook_stripe', occurred_at: V2.conversionTs
 }
+// V3 — single-touchpoint conversion.
+const v3PvProps = {
+  site_id: FIXTURE_SITE_ID, event_id: V3.touch.event_id,
+  utm_source: V3.touch.utm_source, utm_medium: V3.touch.utm_medium, utm_campaign: V3.touch.utm_campaign,
+  page_url: 'https://www.example.com/', server_timestamp: V3.touch.ts
+}
+const v3ConvProps = {
+  site_id: FIXTURE_SITE_ID, event_id: V3.conversionEventId,
+  conversion_value: V3.conversionValue, currency: 'USD', conversion_type: 'purchase',
+  ingestion_method: 'server_routed', occurred_at: V3.conversionTs
+}
+// V4 — one touch, two duplicate conversions sharing external_event_id (dedup → 1 stored row).
+const v4PvProps = {
+  site_id: FIXTURE_SITE_ID, event_id: V4.touch.event_id,
+  utm_source: V4.touch.utm_source, utm_medium: V4.touch.utm_medium, utm_campaign: V4.touch.utm_campaign,
+  page_url: 'https://www.example.com/', server_timestamp: V4.touch.ts
+}
+const v4ConvProps = (c) => ({
+  site_id: FIXTURE_SITE_ID, event_id: c.event_id, external_event_id: V4.externalEventId,
+  conversion_value: V4.conversionValue, currency: 'USD', conversion_type: 'purchase',
+  ingestion_method: 'server_routed', occurred_at: c.ts
+})
 
 // Fixture already present? (idempotent — abort rather than double-seed.)
 async function fixturePresent () {
   const host = process.env.TINYBIRD_HOST
   const token = process.env.TINYBIRD_READ_TOKEN
   if (!host || !token) return null
-  const q = `SELECT count() AS c FROM events WHERE site_id='${esc(FIXTURE_SITE_ID)}' AND event_id IN ('${esc(V1.conversionEventId)}','${esc(V2.conversionEventId)}') FORMAT JSON`
+  const markers = [V1.conversionEventId, V2.conversionEventId, V3.conversionEventId, ...V4.conversions.map((c) => c.event_id)]
+  const q = `SELECT count() AS c FROM events WHERE site_id='${esc(FIXTURE_SITE_ID)}' AND event_id IN (${markers.map((m) => `'${esc(m)}'`).join(',')}) FORMAT JSON`
   try {
     const res = await fetch(`${host.replace(/\/$/, '')}/v0/sql?q=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${token}` } })
     if (!res.ok) return null
@@ -76,7 +99,11 @@ async function main () {
     V1.touchpoints.forEach((tp) => console.log(`  V1 $pageview   ${V1.visitor} @ ${tp.ts}  ${JSON.stringify(pvProps(tp))}`))
     console.log(`  V1 $conversion ${V1.visitor} @ ${V1.conversionTs}  ${JSON.stringify(v1ConvProps)}`)
     console.log(`  V2 $pageview   ${V2.visitor} @ ${V2.touchTs}  ${JSON.stringify(v2PvProps)}`)
-    console.log(`  V2 $conversion ${V2.visitor} @ ${V2.conversionTs}  ${JSON.stringify(v2CarrierProps)} (carrier $0)`)
+    console.log(`  V2 $conversion ${V2.visitor} @ ${V2.conversionTs}  ${JSON.stringify(v2CarrierProps)} (carrier $0 → excluded)`)
+    console.log(`  V3 $pageview   ${V3.visitor} @ ${V3.touch.ts}  ${JSON.stringify(v3PvProps)}`)
+    console.log(`  V3 $conversion ${V3.visitor} @ ${V3.conversionTs}  ${JSON.stringify(v3ConvProps)} (single-touch $${V3.conversionValue})`)
+    console.log(`  V4 $pageview   ${V4.visitor} @ ${V4.touch.ts}  ${JSON.stringify(v4PvProps)}`)
+    V4.conversions.forEach((c) => console.log(`  V4 $conversion ${V4.visitor} @ ${c.ts}  ${JSON.stringify(v4ConvProps(c))} (dup external_event_id → dedupe to 1)`))
     console.log('After seeding: run the nightly against staging, then node scripts/verify-attribution-fixture.mjs')
     return
   }
@@ -98,9 +125,13 @@ async function main () {
   dualWriteEvent({ distinctId: V1.visitor, event: '$conversion', timestamp: V1.conversionTs, properties: v1ConvProps })
   dualWriteEvent({ distinctId: V2.visitor, event: '$pageview', timestamp: V2.touchTs, properties: v2PvProps })
   dualWriteEvent({ distinctId: V2.visitor, event: '$conversion', timestamp: V2.conversionTs, properties: v2CarrierProps })
+  dualWriteEvent({ distinctId: V3.visitor, event: '$pageview', timestamp: V3.touch.ts, properties: v3PvProps })
+  dualWriteEvent({ distinctId: V3.visitor, event: '$conversion', timestamp: V3.conversionTs, properties: v3ConvProps })
+  dualWriteEvent({ distinctId: V4.visitor, event: '$pageview', timestamp: V4.touch.ts, properties: v4PvProps })
+  for (const c of V4.conversions) dualWriteEvent({ distinctId: V4.visitor, event: '$conversion', timestamp: c.ts, properties: v4ConvProps(c) })
 
   const b = __getDualWriteBatcher(); if (b) await b.flush()
-  console.log('SEEDED V1 (4-touch journey + $100 purchase) and V2 ($0 carrier). Run the nightly, then verify-attribution-fixture.mjs.')
+  console.log('SEEDED V1 (4-touch journey + $100), V2 ($0 carrier), V3 (single-touch $50), V4 (dup external_event_id). Run the nightly, then verify-attribution-fixture.mjs.')
 }
 
 main().catch((e) => { console.error(e); process.exit(1) })

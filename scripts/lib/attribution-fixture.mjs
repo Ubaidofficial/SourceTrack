@@ -49,14 +49,56 @@ export const V1 = {
   ]
 }
 
-// Visitor V2 — a $0 subscription-checkout CARRIER conversion (single google touch). Proves the carrier
-// is excluded from revenue (conversion_value 0), never inflating the money rail.
+// Visitor V2 — a $0 subscription-checkout CARRIER conversion (single google touch). isSubscriptionCheckoutCarrier
+// matches it, so the nightly `continue`s and NEVER writes an attributed_conversions row (nightly-attribution.js
+// line ~1494). Proves the carrier never inflates the money rail — it must be ABSENT, not merely $0.
 export const V2 = {
   visitor: 'fixt_v2_carrier',
   touchTs: '2026-07-10T09:00:00.000Z',
   conversionTs: '2026-07-10T10:00:00.000Z',
   conversionEventId: 'fixt_v2_carrier_conv',
   subscriptionId: 'sub_fixt_carrier_v2'
+}
+// The exact carrier conversion shape isSubscriptionCheckoutCarrier keys on (provider=stripe, purchase, $0,
+// has subscription id, checkout.session.completed). Shared by the seeder and the coverage unit test.
+export const V2_CARRIER_SHAPE = {
+  provider: 'stripe', conversion_type: 'purchase', conversion_value: 0,
+  stripe_subscription_id: V2.subscriptionId, stripe_event_type: 'checkout.session.completed'
+}
+
+// Visitor V3 — a SINGLE-touchpoint conversion. With nothing to split credit across, all 4 models must
+// degrade to giving the one touch 100% (fraction 1.0, full value). google/cpc → Paid Search; last touch
+// is not Direct, so no AI stitching (ai_influenced_* stay null).
+export const V3 = {
+  visitor: 'fixt_v3_singletouch',
+  touch: { event_id: 'fixt_v3_tp', ts: '2026-07-12T00:00:00.000Z', utm_source: 'google', utm_medium: 'cpc', utm_campaign: 'brand' },
+  conversionTs: '2026-07-12T06:00:00.000Z',
+  conversionValue: 50,
+  conversionEventId: 'fixt_v3_conv'
+}
+export const V3_EXPECTED = {
+  conversion_value: 50,
+  first_touch_source: 'google', first_touch_channel: 'Paid Search',
+  last_touch_source: 'google', last_touch_channel: 'Paid Search',
+  ai_influenced_source: null, ai_influenced_session_at: null,
+  linear_attribution: [{ source: 'google', channel: 'Paid Search', fraction: 1, attributed_value: 50 }],
+  u_shaped_attribution: [{ source: 'google', channel: 'Paid Search', fraction: 1, attributed_value: 50 }],
+  time_decay_attribution: [{ source: 'google', channel: 'Paid Search', fraction: 1, attributed_value: 50 }],
+  w_shaped_attribution: [{ source: 'google', channel: 'Paid Search', fraction: 1, attributed_value: 50 }]
+}
+
+// Visitor V4 — a DUPLICATE conversion: two $conversion events sharing one external_event_id but with
+// DIFFERENT conversion_event_id. The attributed_conversions partial-unique (site_id, external_event_id)
+// collapses them → exactly ONE stored row survives (the other upsert hits 23505 → skipped_duplicate).
+export const V4 = {
+  visitor: 'fixt_v4_dedup',
+  touch: { event_id: 'fixt_v4_tp', ts: '2026-07-13T00:00:00.000Z', utm_source: 'google', utm_medium: 'cpc', utm_campaign: 'brand' },
+  externalEventId: 'fixt_dup_evt',
+  conversionValue: 75,
+  conversions: [
+    { event_id: 'fixt_v4_conv_a', ts: '2026-07-13T06:00:00.000Z' },
+    { event_id: 'fixt_v4_conv_b', ts: '2026-07-13T07:00:00.000Z' } // same external_event_id → deduped away
+  ]
 }
 
 // HAND-COMPUTED expected attributed_conversions values for V1 (pipe order). Split entries carry the
