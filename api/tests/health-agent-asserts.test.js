@@ -4,12 +4,15 @@
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
 
 process.env.NODE_ENV = 'test'
 process.env.SUPABASE_URL = 'https://mock-proj.supabase.co'
 process.env.SUPABASE_SERVICE_KEY = 'mock-service-role-key-value'
 
-const { evaluateNightlyJob, evaluateConversions } = await import('../jobs/health-agent.js')
+const { evaluateNightlyJob, evaluateConversions, evaluateDataFlow, CRITICAL_CHECKS, REQUIRED_ENV_VARS } = await import('../jobs/health-agent.js')
 
 const NOW = Date.parse('2026-07-12T09:00:00Z')
 const runAt = (hoursAgo) => new Date(NOW - hoursAgo * 3_600_000).toISOString()
@@ -59,4 +62,62 @@ test('conversions OK: some attributed', () => {
 
 test('conversions OK: 0 attributed but store also empty (genuine quiet period)', () => {
   assert.equal(evaluateConversions({ attributed48h: 0, storeConversions: 0 }).critical, false)
+})
+
+// ── evaluateDataFlow (D2: PostHog pageview count → Tinybird events_health_day fan-out) ──
+// Semantics preserved from the retired global count===0 check; see the exact status strings.
+
+test('data_flow OK: at least one monitored site has tracked events in 24h', async () => {
+  const v = await evaluateDataFlow({ sites: [{ id: 'a' }, { id: 'b' }], queryPipe: async () => [{ cnt: 5 }] })
+  assert.equal(v._status, undefined, 'no _status → check() grades it ok')
+  assert.equal(v.events_24h, 10)
+  assert.equal(v.sites_checked, 2)
+})
+
+test('data_flow WARNING: ALL qualifying sites return 0 events (analog of old global count===0)', async () => {
+  const v = await evaluateDataFlow({ sites: [{ id: 'a' }, { id: 'b' }], queryPipe: async () => [{ cnt: 0 }] })
+  assert.equal(v._status, 'warning')
+  assert.equal(v.events_24h, 0)
+  assert.match(v.warning, /Zero tracked events/)
+})
+
+test('🔴 data_flow ERROR: ANY site pipe read FAILS (null) → throws (check() → status error)', async () => {
+  // second site fails after the first succeeds — must still throw
+  let n = 0
+  await assert.rejects(
+    evaluateDataFlow({ sites: [{ id: 'a' }, { id: 'b' }], queryPipe: async () => (n++ === 0 ? [{ cnt: 3 }] : null) }),
+    /events_health_day read failed for site b/
+  )
+})
+
+test('data_flow SKIPPED: zero qualifying sites → explicit skipped status, NOT a silent pass', async () => {
+  let called = false
+  const v = await evaluateDataFlow({ sites: [], queryPipe: async () => { called = true; return [{ cnt: 0 }] } })
+  assert.equal(v._status, 'skipped')
+  assert.match(v.reason, /no qualifying sites/)
+  assert.equal(v.sites_checked, 0)
+  assert.equal(called, false, 'no pipe read when there are no sites')
+})
+
+// ── D2 structural retirements: posthog check + POSTHOG_* env ──────────────────
+
+test('posthog is no longer a CRITICAL_CHECK (retired — store being decommissioned)', () => {
+  assert.equal(CRITICAL_CHECKS.has('posthog'), false)
+  // the surviving critical checks are unchanged
+  for (const k of ['supabase', 'nightly_job', 'conversions', 'tinybird_quarantine']) {
+    assert.ok(CRITICAL_CHECKS.has(k), `${k} must remain critical`)
+  }
+})
+
+test('the posthog liveness check is deleted from the snapshot', () => {
+  const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../jobs/health-agent.js'), 'utf8')
+  assert.doesNotMatch(src, /check\(\s*['"]posthog['"]/, "check('posthog', ...) must not exist")
+})
+
+test('env_vars no longer requires any POSTHOG_* var (unblocks D5)', () => {
+  for (const k of ['POSTHOG_API_KEY', 'POSTHOG_PERSONAL_API_KEY', 'POSTHOG_PROJECT_ID', 'POSTHOG_HOST']) {
+    assert.equal(REQUIRED_ENV_VARS.includes(k), false, `${k} must not be required`)
+  }
+  assert.ok(REQUIRED_ENV_VARS.includes('SUPABASE_URL'), 'Supabase URL stays required')
+  assert.ok(REQUIRED_ENV_VARS.includes('SUPABASE_SERVICE_KEY'), 'Supabase service key stays required')
 })
