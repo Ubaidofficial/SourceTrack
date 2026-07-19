@@ -2470,7 +2470,6 @@ test('Public Dashboard Rate Limiter Tests (Session 140G-18)', async (t) => {
     conversionGlobalIpLimit
   } = await import('../middleware/rate-limit.js')
   const { default: proxyRouter } = await import('../routes/proxy.js')
-  const { publicDashboardRouter } = await import('../routes/public-dashboard.js')
 
   const runLimiter = (limiter, req) => {
     const fullReq = {
@@ -2596,12 +2595,6 @@ test('Public Dashboard Rate Limiter Tests (Session 140G-18)', async (t) => {
     assert.ok(handlersPixel.includes(trackIpLimit), 'GET /sp/pixel.gif must include trackIpLimit')
     assert.ok(handlersPixel.includes(trackSiteLimit), 'GET /sp/pixel.gif must include trackSiteLimit')
     assert.ok(handlersPixel.includes(trackGlobalIpLimit), 'GET /sp/pixel.gif must include trackGlobalIpLimit')
-
-    // 4. GET /api/public/:token route stack
-    const layerPublic = publicDashboardRouter.stack.find(s => s.route?.path === '/:token' && s.route?.methods.get)
-    assert.ok(layerPublic, 'GET /api/public/:token route should exist')
-    const handlersPublic = layerPublic.route.stack.map(s => s.handle)
-    assert.ok(handlersPublic.includes(publicDashboardLimit), 'GET /api/public/:token must include publicDashboardLimit')
   })
 })
 

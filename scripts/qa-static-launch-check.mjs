@@ -67,7 +67,6 @@ const backendFiles = [
   'api/routes/dashboard.js',
   'api/routes/events.js',
   'api/routes/export.js',
-  'api/routes/public-dashboard.js',
   'api/routes/sites.js',
   'api/routes/saved-reports.js',
   'api/routes/attribution.js',
@@ -275,17 +274,6 @@ if (checkFileExists('api/routes/sites.js')) {
       console.error(`❌ Security warning in api/routes/sites.js: contains forbidden field '${f}'`);
       securityPass = false;
     }
-  }
-}
-
-// 2. public-dashboard.js scope rejection check
-if (checkFileExists('api/routes/public-dashboard.js')) {
-  const content = readFile('api/routes/public-dashboard.js');
-  const checkFields = ['site_key', 'site_id', 'siteKey', 'siteId'];
-  const hasRejection = checkFields.every(f => content.includes(f));
-  if (!hasRejection) {
-    console.error(`❌ Security warning in api/routes/public-dashboard.js: does not reject all scope override fields.`);
-    securityPass = false;
   }
 }
 
