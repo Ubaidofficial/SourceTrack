@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '../contexts/AuthContext'
-import { supabase } from '../lib/supabase'
+import { useActiveSite } from '../hooks/useActiveSite'
 import { getEventHealth, getEdgeCases, fetchApi, getLatestEvents } from '../lib/api'
 import {
   RefreshCw,
@@ -47,8 +46,7 @@ function normalizeEventName(eventName = '') {
 }
 
 export default function EventDebugger({ isEmbedded = false }) {
-  const { user } = useAuth()
-  const [site, setSite] = useState(null)
+  const { site } = useActiveSite()
   const [events, setEvents] = useState([])
   const [health, setHealth] = useState(null)
   const [edge, setEdge] = useState(null)
@@ -65,26 +63,6 @@ export default function EventDebugger({ isEmbedded = false }) {
     date_to: '',
     search: ''
   })
-
-  useEffect(() => {
-    async function load() {
-      const { data: member } = await supabase
-        .from('company_members')
-        .select('company_id')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      const query = supabase.from('sites').select('site_key, name, domain').limit(1)
-      if (member?.company_id) {
-        query.eq('company_id', member.company_id)
-      } else {
-        query.eq('owner_id', user.id)
-      }
-      const { data } = await query.maybeSingle()
-      setSite(data)
-    }
-    load()
-  }, [user])
 
   const buildLatestEventsPath = useCallback(() => {
     const params = new URLSearchParams({ site_key: site.site_key, limit: '100' })

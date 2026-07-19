@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
-import { supabase } from '../lib/supabase'
+import { useActiveSite } from '../hooks/useActiveSite'
 import { CreditCard, ExternalLink, Zap, CheckCircle2 } from 'lucide-react'
 import { normalizePlan } from '../lib/planFeatures'
 import { getPlanLabel } from '../lib/billing'
@@ -38,8 +37,7 @@ const PLANS = [
 ]
 
 export default function Billing() {
-  const { user } = useAuth()
-  const [site, setSite]             = useState(null)
+  const { site, siteLoading } = useActiveSite('pv_limit')
   const [billingStatus, setBillingStatus] = useState(null)
   const [usage, setUsage]           = useState(0)
   const [loading, setLoading]       = useState(true)
@@ -47,47 +45,37 @@ export default function Billing() {
   const [upgradeLoading, setUpgradeLoading] = useState(null)
   const [acceptedTerms, setAcceptedTerms]   = useState(false)
 
-  useEffect(() => { loadData() }, [user])
-
-  async function loadData() {
-    try {
-      const { data: member } = await supabase
-        .from('company_members')
-        .select('company_id')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      const query = supabase.from('sites').select('*').limit(1)
-      if (member?.company_id) query.eq('company_id', member.company_id)
-      else query.eq('owner_id', user.id)
-
-      const { data } = await query.maybeSingle()
-      setSite(data)
-
-      if (data) {
-        try {
-          const statusData = await getBillingStatus(data.site_key)
-          setBillingStatus(statusData)
-        } catch (statusErr) {
-          console.error('[Billing] Failed to fetch billing status:', statusErr)
-        }
-
-        // Read usage from the service-role API (site_usage_monthly) — the same
-        // source the ingestion limiter increments. The old client-direct count on
-        // the dead `pageviews` table always returned 0.
-        try {
-          const usageData = await fetchApi(`/billing/usage?${new URLSearchParams({ site_key: data.site_key })}`)
-          setUsage(usageData?.pageview_count ?? 0)
-        } catch (usageErr) {
-          console.error('[Billing] Failed to fetch usage:', usageErr)
-        }
+  // Billing status + usage are keyed on the ACTIVE site's site_key (from the selector,
+  // via useActiveSite) so they re-fetch on a site switch; cancellable so a stale in-flight
+  // fetch can't land on the wrong site. Loading clears once the context resolves with no
+  // site, or once the fetch completes.
+  useEffect(() => {
+    if (siteLoading) return
+    if (!site?.site_key) { setLoading(false); return }
+    let cancelled = false
+    ;(async () => {
+      setLoading(true)
+      try {
+        const statusData = await getBillingStatus(site.site_key)
+        if (!cancelled) setBillingStatus(statusData)
+      } catch (statusErr) {
+        console.error('[Billing] Failed to fetch billing status:', statusErr)
       }
-    } catch (_e) {
-      /* silent */
-    } finally {
-      setLoading(false)
-    }
-  }
+
+      // Read usage from the service-role API (site_usage_monthly) — the same
+      // source the ingestion limiter increments. The old client-direct count on
+      // the dead `pageviews` table always returned 0.
+      try {
+        const usageData = await fetchApi(`/billing/usage?${new URLSearchParams({ site_key: site.site_key })}`)
+        if (!cancelled) setUsage(usageData?.pageview_count ?? 0)
+      } catch (usageErr) {
+        console.error('[Billing] Failed to fetch usage:', usageErr)
+      }
+
+      if (!cancelled) setLoading(false)
+    })()
+    return () => { cancelled = true }
+  }, [site?.site_key, siteLoading])
 
   async function handleUpgrade(planKey) {
     if (!acceptedTerms) return

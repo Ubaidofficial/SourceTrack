@@ -1,41 +1,20 @@
 import { useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, Link } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
 import { fetchApi } from '../lib/api'
-import { useAuth } from '../contexts/AuthContext'
+import { useActiveSite } from '../hooks/useActiveSite'
 import { Search, AlertTriangle, RefreshCw, BarChart2, MousePointer, Eye, DollarSign, Award, ChevronRight } from 'lucide-react'
 import { formatCurrency, formatPercent } from '../utils/numbers'
 import { hasRevenueData } from './seoRevenueTruthGate'
 import QueryError from '../components/QueryError'
 
 export default function SEORevenue() {
-  const { user } = useAuth()
   const navigate = useNavigate()
   const [days, setDays] = useState(30)
   const [selectedPagePath, setSelectedPagePath] = useState(null)
 
-  // 1. Fetch site context
-  const { data: site } = useQuery({
-    queryKey: ['site-seo-revenue', user?.id],
-    queryFn: async () => {
-      const { data: member } = await supabase
-        .from('company_members')
-        .select('company_id')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      const query = supabase.from('sites').select('site_key, name, domain').limit(1)
-      if (member?.company_id) {
-        query.eq('company_id', member.company_id)
-      } else {
-        query.eq('owner_id', user.id)
-      }
-      const { data } = await query.maybeSingle()
-      return data
-    },
-    enabled: !!user
-  })
+  // 1. Site context comes from the selector (SiteContext) — never limit(1).
+  const { site } = useActiveSite()
 
   // Calculate standard GSC daily performance lag ranges (skip today's date)
   const dateRange = useMemo(() => {

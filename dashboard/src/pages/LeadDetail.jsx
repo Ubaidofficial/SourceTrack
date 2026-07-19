@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useParams, useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
 import { fetchApi } from '../lib/api'
-import { useAuth } from '../contexts/AuthContext'
+import { useActiveSite } from '../hooks/useActiveSite'
 import {
   ArrowLeft, Copy, Check, Globe, Clock, MousePointerClick,
   DollarSign, MapPin, Bot, Route, Layers, Sparkles, UserCircle, Hash, Calendar,
@@ -25,33 +24,12 @@ function truncateId(id) {
 }
 
 export default function LeadDetail() {
-  const { user } = useAuth()
   const { leadId } = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [showJourney, setShowJourney] = useState(false)
-  const [site, setSite] = useState(null)
+  const { site } = useActiveSite()
   const [copied, setCopied] = useState(false)
-
-  useEffect(() => {
-    async function load() {
-      const { data: member } = await supabase
-        .from('company_members')
-        .select('company_id')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      const query = supabase.from('sites').select('site_key').limit(1)
-      if (member?.company_id) {
-        query.eq('company_id', member.company_id)
-      } else {
-        query.eq('owner_id', user.id)
-      }
-      const { data } = await query.maybeSingle()
-      setSite(data)
-    }
-    load()
-  }, [user])
 
   const { data: lead, isLoading, isError } = useQuery({
     queryKey: ['lead-detail', site?.site_key, leadId],
