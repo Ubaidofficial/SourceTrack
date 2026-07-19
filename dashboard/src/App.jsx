@@ -5,7 +5,6 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { SiteProvider } from './contexts/SiteContext'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { fetchApi } from './lib/api'
-import { initPostHog } from './lib/posthog'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
@@ -323,8 +322,6 @@ function AppRootRedirect() {
 }
 
 export default function App() {
-  initPostHog()
-
   return (
     <HelmetProvider>
     <QueryClientProvider client={queryClient}>
