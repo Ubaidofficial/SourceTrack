@@ -468,3 +468,17 @@ Four separate defects:
 4. **A weekly job runs ~11x/day.** Frequency correlates with deploys, so something invokes it outside its cron. With `usage_email_log` empty, the dedup guard is unproven — a real customer could receive one email per deploy. Root-cause the invocation source before onboarding anyone.
 
 Not a migration item. Logged because #1 is a launch blocker of the same class as the money rail, and #2 is the exact "green means nothing happened" pattern this project has been eliminating elsewhere.
+
+### D5 has a hard ordering dependency on THREE backend boot guards (2026-07-19)
+Stripping `POSTHOG_*` from Railway (D5) is not safe on its own — three separate boot/runtime guards still read those vars, and each turns a missing var into a hard failure. A code scan (2026-07-19) found these were all hidden inside the single D2 "Jobs off PostHog" row:
+
+1. **`api/index.js` REQUIRED_ENV** hard-exited the API on missing `POSTHOG_HOST`/`POSTHOG_API_KEY` → D5 would have failed **all six services** on boot. ✅ **FIXED (this PR)** — the two vars are removed from REQUIRED_ENV and a spawn-based boot test (`api/tests/boot-without-posthog-env.test.js`) guards it. This was the silent blocker.
+2. **`api/jobs/nightly-attribution.js:175`** still refuses to boot without `POSTHOG_PERSONAL_API_KEY`/`POSTHOG_PROJECT_ID`, because `queryPostHog` and its three fallback sites (`:511`, `:617`, `:773`) still use them. This guard **must stay until D2·B3** removes those readers — removing the guard first turns a config error into a runtime crash on a money-rail path. **Still open.**
+3. **`api/jobs/health-agent.js:213`** requires four `POSTHOG_*` vars, and its `:137`/`:182` checks fetch PostHog directly. **Still open** (see below).
+
+**Net ordering constraint: D5 cannot run until D2·B3 (nightly) and the health-agent decision (D2·health-agent) are both resolved.** Only the boot-guard (item 1) is cleared.
+
+### health-agent will report 🔴 unhealthy once PostHog is decommissioned (2026-07-19)
+`api/jobs/health-agent.js` has two direct HogQL fetches — `:137` (`SELECT 1` liveness) and `:182` (`count()` of `$pageview` in the last 24h) — plus an env check at `:213` requiring `POSTHOG_API_KEY`/`POSTHOG_PERSONAL_API_KEY`/`POSTHOG_PROJECT_ID`/`POSTHOG_HOST`. On a PostHog error today the `check()` wrapper catches and reports that check as `status:'error'` (it does **not** skip or throw the job). Because `posthog` ∈ `CRITICAL_CHECKS`, that error escalates to an **overall critical → Slack 🔴**. So once PostHog is decommissioned (D5): the `posthog` check goes **critical/🔴 (a false alarm)**, and `data_flow` + `env_vars` go to non-critical `error`.
+
+These checks are **not migrated or retired** — that is a design decision, deliberately left open (reported, not edited). Equivalent Tinybird pipes are **deployed but tenant-scoped (`site_id required`), not the global project-wide probe health-agent does today**: liveness ≈ `doctor_token_verify` (events in last 15 min) or `events_health_last` (last event ts); pageview volume ≈ `events_health_day` (any event, 24h) or `doctor_pageviews_30d` (pageviews, 30d). A faithful replacement needs either a new global health pipe or a per-site fan-out. **Migrate or retire the two checks + drop the four `POSTHOG_*` from the `:213` env list before D5, or health-agent alarms 🔴 the moment PostHog goes dark.**
