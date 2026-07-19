@@ -115,11 +115,12 @@ if (fs.existsSync(onboardingFile)) {
   assertRule(content.includes('SetupDoctorCard'), 'Onboarding.jsx imports/uses SetupDoctorCard')
 }
 
-const snippetFile = path.join(rootDir, 'dashboard/src/pages/Snippet.jsx')
-if (fs.existsSync(snippetFile)) {
-  const content = fs.readFileSync(snippetFile, 'utf8')
-  assertRule(content.includes('SetupDoctorCard'), 'Snippet.jsx imports/uses SetupDoctorCard')
-  assertRule(!content.includes('onClick={handleTest}'), 'Snippet.jsx does not have a competing Verify installation button')
+// Setup.jsx is the live install page (its dead duplicate page was deleted).
+const setupPageFile = path.join(rootDir, 'dashboard/src/pages/Setup.jsx')
+if (fs.existsSync(setupPageFile)) {
+  const content = fs.readFileSync(setupPageFile, 'utf8')
+  assertRule(content.includes('SetupDoctorCard'), 'Setup.jsx imports/uses SetupDoctorCard')
+  assertRule(!content.includes('onClick={handleTest}'), 'Setup.jsx does not have a competing Verify installation button')
 }
 
 if (fs.existsSync(setupDoctorCardFile)) {

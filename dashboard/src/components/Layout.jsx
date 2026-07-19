@@ -40,7 +40,6 @@ const PAGE_TITLES = {
   '/leads': 'All Leads',
   '/campaigns': 'Campaigns',
   '/report-builder': 'Report Builder',
-  '/journey': 'Visitor Journeys',
   '/app/integrations': 'Integrations',
   '/snippet': 'Install Tracking',
   '/debugger': 'Live Events',
