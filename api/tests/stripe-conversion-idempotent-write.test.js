@@ -24,7 +24,7 @@ const {
 const { getSupabase } = await import('../lib/supabase.js')
 const { encryptSecret } = await import('../lib/utils.js')
 const { stripeWebhookRouter } = await import('../routes/stripe-webhook.js')
-const { setDualWriteTransport, dualWriteEvent } = await import('../../tinybird/adapter/dual-write.js')
+const { setDualWriteTransport, dualWriteEvent, __getDualWriteBatcher } = await import('../../tinybird/adapter/dual-write.js')
 
 const ANON_ID = '11111111-1111-4111-8111-111111111111'
 function recorder () {
@@ -158,10 +158,21 @@ test('(e) pageview path unchanged: dualWriteEvent has NO read-check, returns tru
   let readChecked = false
   __setConversionReadCheck(async () => { readChecked = true; return 1 }) // would skip IF the pageview path used it
   let transportCalled = false
+  // flushAt:1 keeps enqueue-triggered AUTO-FLUSH coverage — the same delivery mechanism prod's
+  // fire-and-forget pageview path uses (prod runs the default flushAt=20 threshold via boot.js, and
+  // never calls flush()/drain() explicitly on the hot path).
   setDualWriteTransport(async () => { transportCalled = true }, { flushAt: 1, flushInterval: 0 })
   const ret = dualWriteEvent({ distinctId: 'v1', event: '$pageview', properties: { site_id: 's1' } })
   assert.strictEqual(ret, true, 'pageview stays fire-and-forget (returns true sync)')
-  await new Promise(r => setTimeout(r, 10))
+  // Deterministically await delivery, not a fixed timer. dualWriteEvent returns true SYNC and the
+  // enqueue-triggered auto-flush lands the delivery in the batcher's in-flight `chain`; drain() awaits
+  // that chain to settle (batch.js: Promise.allSettled([flushed, chain])). The old setTimeout(10) raced
+  // it under event-loop contention (POST landing after the timer — 0/24 in isolation, flaky under load).
+  // FAIL-CLOSED: assert the batcher is present so a null accessor cannot silently skip the wait and
+  // let the race back in (this is the dual-write money-rail delivery assertion).
+  const b = __getDualWriteBatcher()
+  assert.ok(b, 'batcher present — the delivery wait must not be skipped')
+  await b.drain()
   assert.strictEqual(readChecked, false, 'the conversion read-check is NEVER invoked on the pageview path')
   assert.strictEqual(transportCalled, true, 'pageview still delivered via the batcher')
   __resetConversionReadCheck()
