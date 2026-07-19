@@ -119,7 +119,7 @@ nightly conversions/backfill/touchpoints · first/last touch (+non-direct) · ai
 | 4 | `attribution-engine.js:2998` | **AI-share** flexible report — bare queryHogQL | `flexible_report_ai_share_by_site` | build gap |
 | 5 | `attribution-engine.js:2923` | flexible_report else-branch — long-tail dim/metric combos (`_flexPipe===null`) | per-dim/metric flex pipes | build gap |
 | 6 | `attribution-engine.js:2970` | flexible_sessions non-base shapes (conversion_rate on non-source dims) | `flexible_sessions_by_site` (non-base) | build gap |
-| 7 | `nightly-attribution.js:482` | reprocess + `_mv` test-site paths bypass the pipe (LIKE/suffix filter pipe can't express) | — | job bypass |
+| 7 | `nightly-attribution.js:482` | reprocess + `_mv` test-site paths bypass the pipe (LIKE/suffix filter pipe can't express) | — | job bypass — ✅ `_mv`/suffix branches DELETED (D2·B2); reprocess kept + fail-closed |
 
 **Critical nuance:** #2/#3/#4 use **bare `queryHogQL`** — they bypass the injectable seam, so **D1 (removing the helper fallback) does NOT touch them.** They keep calling dead PostHog until explicitly piped or deleted. This is why decommission is genuinely blocked, not just cleanup.
 
@@ -141,7 +141,7 @@ My lean per gap (founder confirms). **Build list is small; the decommission-bloc
 
 | # | Gap | UI-reachable | Sold? | Build-shape | **Recommended** |
 |---|---|---|---|---|---|
-| 7 | nightly `_mv`/reprocess | ❌ CLI-only, hardcoded synthetic site | no | n/a | **RETIRE (free)** — delete `_mv` branch :444 |
+| 7 | nightly `_mv`/reprocess | ❌ CLI-only, hardcoded synthetic site | no | n/a | ✅ **DONE (D2·B2)** — `_mv` + `--reprocess-suffix-filter` branches deleted; CLI reprocess kept |
 | 1 | explain_journey | ✅ explain modal (2 pages) | partial | **CLONE** (sibling pipe deployed) | **BUILD (cheap)** — visible journey story |
 | 4 | ai_share | ✅ picker, silently zeros | no | **CLONE** (dim-swap + 1 predicate) | **BUILD (cheap)** — on-brand (AI moat) |
 | 3 | ltv_revenue | ✅ picker, silently zeros | no gate | NOVEL (per-user LTV rollup) | **RETIRE** — drop picker entry (unless a named launch promise) |
@@ -196,7 +196,7 @@ Each backlog item, on landing, re-adds its picker entry + re-tags ✅ live in FE
 
 **Genuinely-working set (what survives):** 4 Class-A dims × {revenue, conversions} · first/last/multitouch via Supabase pre-agg · 4 session metrics (unfiltered only) · days_to_convert + touchpoints_per_conversion · all D0 core reads.
 
-**Branch handling (revised):** :2102 linear → **throw, don't delete** (pre-agg serves happy path; Class-A dims are pre-agg-ineligible → still reach it). :1292 journey → separate decision (explain modal, own handler). :2923 else → reachable via campaigns.js → **throw** (caught by graceful banner) not delete. :2791 ltv / :2998 ai_share / :2970 sessions → deletable once removed from server allowlists. :444 `_mv` → deletable.
+**Branch handling (revised):** :2102 linear → **throw, don't delete** (pre-agg serves happy path; Class-A dims are pre-agg-ineligible → still reach it). :1292 journey → separate decision (explain modal, own handler). :2923 else → reachable via campaigns.js → **throw** (caught by graceful banner) not delete. :2791 ltv / :2998 ai_share / :2970 sessions → deletable once removed from server allowlists. :444 `_mv` → ✅ DELETED (D2·B2).
 
 **Also surfaced:** saved reports persist gated configs → need a migration/deprecation path. 2 pre-existing bugs in `getSessionReport` dim switch (:1134-1145): conversion_type returns raw SQL as a JS key; Class-A dims have no case → collapse to a fake 'unknown' bucket. So session-metrics × Class-A-dims is also broken.
 
