@@ -1,5 +1,12 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
+> **Handoff:** Session 143-POSTHOG-DECOMMISSION-COMPLETE — PostHog→Tinybird migration OFFICIALLY COMPLETE + 3 dead-code clusters + a site-selector launch-blocker fixed & browser-verified — **PASS.** (2026-07-19; 22 PRs #300–#321 merged; zero open PRs.)
+> - **Migration complete (D1–D6):** PostHog fully decommissioned; Tinybird is the sole read layer. Project 416017 deleted (MCP token 403→404). `queryPostHog` deleted (#311) — reads fail CLOSED on null (`readTb`/`_pipeNull` throw, nightly aborts), **no fallback path**. `POSTHOG_*`/`VITE_POSTHOG_*` stripped 12/12 across 6 services × 2 envs. Full record + source-verified read-path contract in `POSTHOG_MIGRATION_HANDOFF.md`. Two known exceptions — admin + leads_count swallow the throw into a 200 — are a **bug, not a fallback** (`KNOWN_ISSUES.md` §14).
+> - **Dead-code cleanup (3 clusters):** #317 Cluster 1 (11 zero-importer files), #318 Cluster 2 (4 zero-import deps), #319 Cluster 3 (`Snippet.jsx` + travelling co-edits).
+> - **Site-selector launch blocker (#320 + #321):** 10 dashboard pages queried `sites … limit(1)` at mount and ignored the selector — a multi-site (V1) customer saw the wrong site. Fixed with one shared `useActiveSite()` hook; Setup.jsx's null-context race fixed by gating the extra-column fetch on `activeSite.id`. **Browser-verified on staging against a pre-change baseline snapshot.**
+> - **Carried forward** (`KNOWN_ISSUES.md` §14, §18, §20–§24): nightly 02:00 UTC first-run verification (restartPolicy NEVER → a failure = ~24h attribution gap, no retry); `sourcetrack-email` cron has NEVER sent (build-time buildCommand + null startCommand, cause unexplained); key rotation (`RESEND_API_KEY`, staging `SUPABASE_SERVICE_KEY`, `DEEPSEEK_API_KEY`, `ST_LOG_HASH_SECRET`, `TINYBIRD_READ_TOKEN`); Share/public-reports must be **REMOVED** (design §23 = V2; Settings links a 404); Report Builder gated-metric **wiring** (data exists); orphaned `qa-*.mjs` audit.
+> - **NOT TOUCHED — separate pass:** ~18 docs (README.md, SYSTEM.md, ARCHITECTURE.md, `docs/` audits) still describe PostHog as live.
+>
 > **Handoff:** Session 142-D2-SCHEMA-CI-TRUST — D2 attribution validation, prod-vs-prod CI bug found & fixed, schema drift 11→0 — **PASS (partial; D2 not closed).**
 > - **CI was comparing PROD against PROD**: `schema-drift`'s `STAGING_DB_URL` GitHub secret resolved to the PROD Supabase host (IPv6-only, unreachable from runners) — the check had NEVER been capable of detecting real drift, for any prior session. Root-caused (#269), secrets rotated to Session Pooler strings for both envs, `migrate-staging` hard-disabled (`if: false`, #293) as a belt while the repoint was unverified. `schema-drift` now genuinely compares migrations/staging/prod and reports **GREEN — no drift across 408 columns**.
 > - **Schema convergence: 11 drifted tables → 0** (one documented exception: `sites.owner_id` default, founder decision, in `schema-drift-ignore.json`). Added PKs to 6 prod tables that had none, `sites.id` SET NOT NULL both envs, `site_annotations` applied to staging with full RLS/FK/index (an earlier draft missed these — would have shipped an unprotected multi-tenant table; the DDL-extraction lesson is now in agent memory). `attributed_conversions`/`pageviews` column drift closed. (#275, #288, #291, #294)
@@ -781,6 +788,51 @@
 > - Staging schema, Stripe E2E, identity stitching, seeded journeys, and webhook/E2E revenue attribution remain blocked.
 >
 >
+
+## Session 143-POSTHOG-DECOMMISSION-COMPLETE — Migration Close-Out + Cleanup + Site-Selector Fix
+
+**Date:** 2026-07-19
+**Branch:** `main`
+**Status:** PASS — migration officially complete; all PRs CI-green and founder-merged; zero open PRs.
+
+### Completed (22 PRs, #300–#321)
+**PostHog→Tinybird migration (D1–D6 — see `POSTHOG_MIGRATION_HANDOFF.md` for the full source-verified contract):**
+- **#300, #301** — D2 B3 gate fixtures (adversarial construction + field-coverage matrix).
+- **#302** — seed-guard gates on the append-token WORKSPACE id, not the host.
+- **#303** — fixture fix: `V1_EXPECTED.last_touch_source` null → 'direct'.
+- **#305** — dual-write test: await batcher `drain()` instead of a fixed timer.
+- **#304, #306, #307** — D2: drop `POSTHOG_*` from the API boot guard + remove `posthog-node`; take health-agent off PostHog; delete the `_mv`/suffix conversion-read branches (keep reprocess).
+- **#308, #309, #310, #311** — B3: retry transient reads (429/5xx/network); normal-path + touchpoints reads fail closed per-site; **delete `queryPostHog`** (nightly Tinybird-sole, no fallback).
+- **#312** — D4: remove PostHog from the frontend (`VITE_POSTHOG_*` gone; CI guard).
+- **#313, #314** — D5: GDPR/code-half corrections + apply the gated removals (project 416017 deleted).
+- **#315** — D6: orphan cleanup (dead `ai-analytics`/`annotations` routes + page).
+- **#316** — correct `CLAUDE.md` + `AGENTS.md` (Tinybird is the read layer).
+
+**Dead-code cleanup (3 clusters):**
+- **#317** — Cluster 1: delete 11 zero-importer files (6 components, 3 pages, `attribution-model.js` + its test).
+- **#318** — Cluster 2: remove 4 zero-import deps (`@anthropic-ai/sdk`, `resend`, `serve`, `class-variance-authority`); `RESEND_API_KEY` untouched (REST send path).
+- **#319** — Cluster 3: delete `Snippet.jsx` (dead duplicate of `Setup.jsx`) + travelling co-edits (re-point `qa-setup-doctor` to `Setup.jsx`; remove the stale `/journey` title-map entry).
+
+**Site-selector launch blocker (#320 + #321):**
+- 10 dashboard pages ran a mount-time `sites … limit(1)` and never subscribed to `SiteContext`, so a multi-site (V1) customer saw the wrong site. Fixed with one shared `useActiveSite()` hook (`dashboard/src/hooks/useActiveSite.js`); pages needing columns `/sites` doesn't return fetch them scoped to `.eq('id', activeSite.id)`.
+- Setup.jsx had a distinct **ordering race** (a `limit(1)` fallback fired while the context was null and could resolve last, overwriting the correct site) — fixed by deleting the fallback and gating the extra-column fetch on `activeSite.id`.
+- **Browser-verified on staging against a pre-change baseline snapshot** (multi-site switching).
+
+### Not Done — Carried Forward (see `KNOWN_ISSUES.md`)
+- **§20** Nightly 02:00 UTC first live B3 run unverified (`restartPolicy: NEVER` → a failure is a ~24h attribution gap, no retry).
+- **§21** `sourcetrack-email` cron misconfigured — weekly emails have NEVER sent (build-time `buildCommand`, null `startCommand`); 6 UI fixes didn't persist; cause unknown.
+- **§18** Key rotation outstanding: `RESEND_API_KEY`, staging `SUPABASE_SERVICE_KEY`, `DEEPSEEK_API_KEY`, `ST_LOG_HASH_SECRET`, `TINYBIRD_READ_TOKEN`.
+- **§22** Share/public-reports: REMOVE (design §23 = V2) — `public-dashboard.js` + `ShareDashboard.jsx` + Settings `/share` links (currently a 404).
+- **§23** Report Builder: 11 metrics + 2 dimensions gated 422 — data exists, this is wiring not building.
+- **§24** `qa-setup-doctor.mjs` not wired into CI and failing unnoticed; audit all `scripts/qa-*.mjs` for orphans.
+- **~18 docs still describe PostHog as live** (README.md, SYSTEM.md, ARCHITECTURE.md, `docs/` audits) — separate, larger pass; NOT touched this session.
+
+### Files changed (docs close-out)
+- `POSTHOG_MIGRATION_HANDOFF.md` (migration-complete section)
+- `KNOWN_ISSUES.md` (§18 extended; §20–§24 added)
+- `SESSION_HANDOFF.md`
+- `SESSION_LOG.md`
+- `CLAUDE.md` (§10 — three reference classes greps miss)
 
 ## Session 142-D2-SCHEMA-CI-TRUST — D2 Attribution Validation + CI Trust Restoration
 **Date:** 2026-07-18 | **Branch:** `main` | **Build:** ✅ passing (build-and-test, schema-drift, qa:tinybird:unit 464/464, qa:identity:unit)

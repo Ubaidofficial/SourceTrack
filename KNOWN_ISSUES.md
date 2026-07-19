@@ -153,6 +153,7 @@ The migrations for C2 schema convergence are authored but NOT applied to any dat
 Multiple tokens are queued for rotation:
 - `deploy_token` (currently referenced in a shell env var).
 - Pre-existing Tinybird tokens exposed in previous logs and session transcripts.
+- **Outstanding as of 2026-07-19:** `RESEND_API_KEY`, staging `SUPABASE_SERVICE_KEY`, `DEEPSEEK_API_KEY`, `ST_LOG_HASH_SECRET`, `TINYBIRD_READ_TOKEN`.
 
 ### 19. Nightly attribution: pipe-vs-HogQL parity was never empirically established (now unobtainable)
 
@@ -170,6 +171,26 @@ What we rely on instead (and the standing gate for removing the HogQL fallback i
 - **Stripe reconciliation** of real revenue — Tinybird `$conversion`s vs Stripe, the true source of truth for webhook-sourced conversions (HogQL never was). **Covers webhook-sourced revenue only** — tracker and manual conversions have no independent anchor and never did.
 
 Status: pipe-vs-HogQL parity for the nightly write path is **UNVERIFIED and will remain so** — recorded here rather than implied by a green harness.
+
+### 20. Nightly 02:00 UTC verification pending (first live B3 run)
+
+The nightly attribution job (`api/jobs/nightly-attribution.js`) now runs **Tinybird-sole with fail-closed reads** (B3, #308–#311, migration complete 2026-07-19). Its **first live 02:00 UTC run has NOT been verified.** `restartPolicy: NEVER` means a failed run is a **~24h attribution gap with no retry** — a failure silently drops a day of the money rail (`attributed_conversions`) until the next night. Action: verify the first live run's outcome and add alerting on a failed/absent run.
+
+### 21. sourcetrack-email cron misconfigured — weekly emails have NEVER sent
+
+The `sourcetrack-email` service is misconfigured: `buildCommand` runs the job at **build time**, and `startCommand` is null, so the deployed cron boots `bootstrap.js` and crashes. Result: **weekly emails have never been sent.** Six UI fix attempts have not persisted the config; the cause is unexplained. Needs a root-cause pass (Railway service config vs. repo; why the UI change does not stick).
+
+### 22. Share / public reports — REMOVE, do not finish (design §23 = V2)
+
+`api/routes/public-dashboard.js` + `dashboard/src/pages/ShareDashboard.jsx` + the `/share` links in `Settings.jsx` are a partially-built public-reports feature. The design doc **§23 lists Public reports as V2**, so the correct action is to **REMOVE** these, not finish them. Settings currently renders links to a **404 route** (customer-facing defect). Scope: delete the two files + the Settings `/share` links.
+
+### 23. Report Builder — 11 metrics + 2 dimensions gated 422 (wiring, not building)
+
+Report Builder gates **11 metrics + 2 dimensions** behind a 422 whose copy references a "completed migration." The underlying **data EXISTS** — sessions / conversion_rate / AI metrics all render on other pages — so this is **wiring the gated shapes to their existing pipes, not building new data.** Action: untrim the pickers / connect the reads to the live pipes.
+
+### 24. Orphaned `qa-*.mjs` scripts — audit needed
+
+`scripts/qa-setup-doctor.mjs` is **not wired into CI** and has been failing unnoticed (a stale `Dashboard.jsx`/`SetupDoctorCard` assertion — Dashboard dropped the card at some earlier point). Unknown how many other `scripts/qa-*.mjs` are similarly orphaned (authored, never invoked by any CI workflow or `package.json` script). Action: for each `scripts/qa-*.mjs`, confirm it is invoked by CI or an npm script, or retire it.
 
 
 ## Recently fixed
