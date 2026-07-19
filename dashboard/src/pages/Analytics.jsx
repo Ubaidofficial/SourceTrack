@@ -4,14 +4,12 @@ import { useQuery } from '@tanstack/react-query'
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Filler } from 'chart.js'
 import { Chart } from 'react-chartjs-2'
 import { fetchApi } from '../lib/api'
-import { supabase } from '../lib/supabase'
-import { useAuth } from '../contexts/AuthContext'
 import { useTheme } from '../contexts/ThemeContext'
 import { Eye, RefreshCw, Copy, Check, BarChart3, Globe, Monitor } from 'lucide-react'
 import { safeNumber } from '../utils/numbers'
 import { tooltipPlugin, CHART_COLORS } from '../utils/chartTooltip'
 import { SourceIcon, normalizeSource } from '../components/SourceIcon'
-import { useSite } from '../contexts/SiteContext'
+import { useActiveSite } from '../hooks/useActiveSite'
 import { useCountUp } from '../utils/useCountUp'
 import QueryError from '../components/QueryError'
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Filler)
@@ -208,8 +206,7 @@ function SourceTabList({ rows, tab, toggleFilter, isActive, faviconEl }) {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function Analytics() {
-  const { user } = useAuth()
-  const { activeSite } = useSite()
+  const { site, activeSite } = useActiveSite('cookieless_mode')
   const { theme } = useTheme()
   const [searchParams, setSearchParams] = useSearchParams()
   const [days, setDays] = useState(30)
@@ -221,21 +218,6 @@ export default function Analytics() {
   const [copied, setCopied] = useState(false)
 
   const filterQuery = filters.length ? '&' + filters.map(f => `f=${encodeURIComponent(`${f.type}:${f.value}`)}`).join('&') : ''
-
-  // ─── Site ──────────────────────────────────────────────────────────────────
-  const { data: site } = useQuery({
-    queryKey: ['site', user?.id],
-    queryFn: async () => {
-      const { data: member } = await supabase
-        .from('company_members').select('company_id').eq('user_id', user.id).maybeSingle()
-      const query = supabase.from('sites').select('site_key, name, domain, cookieless_mode').limit(1)
-      if (member?.company_id) query.eq('company_id', member.company_id)
-      else query.eq('owner_id', user.id)
-      const { data } = await query.maybeSingle()
-      return data
-    },
-    enabled: !!user
-  })
 
   // ─── Summary ─────────────────────────────────────────────────────────────────
   const { data: summary, isLoading, isError, error, refetch } = useQuery({

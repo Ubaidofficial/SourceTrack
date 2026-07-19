@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams, Link, useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
 import { fetchApi } from '../lib/api'
 import { format, subDays, startOfMonth } from 'date-fns'
-import { useAuth } from '../contexts/AuthContext'
 import { Bar, Line, Pie } from 'react-chartjs-2'
 import {
   Chart as ChartJS,
@@ -27,7 +25,7 @@ import ConversionExplanationModal from '../components/ConversionExplanationModal
 import { describeQueryError } from '../lib/queryError'
 import { dimensionGateReason, metricGateReason } from '../lib/reportGating'
 import { hasFeature } from '../lib/planFeatures'
-import { useSite } from '../contexts/SiteContext'
+import { useActiveSite } from '../hooks/useActiveSite'
 import { DirectInfo, isDirectLabel } from '../components/DirectInfo'
 import { SourceIcon, SourceChip } from '../components/SourceIcon'
 
@@ -440,13 +438,11 @@ function DateRangePopover({
 }
 
 export default function ReportBuilder() {
-  const { user } = useAuth()
   const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const { activeSite } = useSite()
+  const { site, activeSite } = useActiveSite('custom_url_params')
   const isPreview = activeSite?.support_preview || false
-  const [site, setSite] = useState(null)
 
   // Report state
   const [uiMode, setUiMode] = useState('builder') // 'hub' or 'builder'
@@ -495,26 +491,6 @@ export default function ReportBuilder() {
 
   // Personalization other categories disclosure state
   const [showOtherCategories, setShowOtherCategories] = useState(false)
-
-  useEffect(() => {
-    async function load() {
-      const { data: member } = await supabase
-        .from('company_members')
-        .select('company_id')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      const query = supabase.from('sites').select('site_key, name, plan, custom_url_params, business_type').limit(1)
-      if (member?.company_id) {
-        query.eq('company_id', member.company_id)
-      } else {
-        query.eq('owner_id', user.id)
-      }
-      const { data } = await query.maybeSingle()
-      setSite(data)
-    }
-    load()
-  }, [user])
 
   // Gating status hooks
   const { data: stripeStatus } = useQuery({
