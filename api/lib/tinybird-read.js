@@ -117,11 +117,24 @@ export function isPipeReadAllowed(pipeName) {
  * missing config, network error, non-2xx response) — never throws.
  * Callers MUST fall back to the existing HogQL path on a null return.
  *
+ * RETRY (B3 step 1 prerequisite): a TRANSIENT read failure — HTTP 429, HTTP >= 500, or a
+ * network throw / timeout (AbortError) — is retried up to 3 attempts total, so a single
+ * blip does not surface as null (which, once B3 makes the nightly fail-closed, would fail
+ * a whole run). Backoff honours a Retry-After header (seconds) when present, else
+ * min(60s, 2000 * 2^attempt). The 15s timeout is PER ATTEMPT (fresh AbortController each).
+ * DETERMINISTIC failures are NOT retried: not-allowed / missing-config (returned before the
+ * loop) and any 4xx other than 429 (a bad param fails identically every time). The return
+ * contract is UNCHANGED: [] for a served-empty result, null after retries are exhausted,
+ * never throws. A served-empty ([]) result is a SUCCESS and is never retried.
+ *
  * @param {string} pipeName - the pipe's file name without extension, e.g. 'pageviews_by_visitors'
  * @param {object} params - template params; array values are sent as ONE comma-joined value (see wire-format note)
+ * @param {object} [deps] - injectable seam for tests only; production uses global fetch + real timers
+ * @param {Function} [deps.fetchImpl] - fetch implementation (default: global fetch)
+ * @param {Function} [deps.sleep] - async delay (default: real setTimeout); injected so tests never wait
  * @returns {Promise<Array<object>|null>} rows as named objects (Tinybird's own shape), or null
  */
-export async function queryTinybirdPipe(pipeName, params = {}) {
+export async function queryTinybirdPipe(pipeName, params = {}, { fetchImpl = fetch, sleep = (ms) => new Promise(r => setTimeout(r, ms)) } = {}) {
   if (!isPipeReadAllowed(pipeName)) return null
 
   const host = process.env.TINYBIRD_HOST
@@ -146,39 +159,71 @@ export async function queryTinybirdPipe(pipeName, params = {}) {
     }
   }
 
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS)
-
-  try {
-    const res = await fetch(url.toString(), {
-      headers: { Authorization: `Bearer ${token}` },
-      signal: controller.signal
-    })
-
-    if (!res.ok) {
-      const raw = await res.text()
-      console.warn(`[tinybird-read] pipe '${pipeName}' failed (${res.status}) — falling back to HogQL: ${raw.slice(0, 200)}`)
-      return null
-    }
-
-    const body = await res.json()
-    // CENTRAL timestamp normalization at the read boundary — no consumer sees a raw
-    // ClickHouse 'YYYY-MM-DD HH:MM:SS' timestamp (see normalizePipeRowTimestamps).
-    const rows = Array.isArray(body.data) ? normalizePipeRowTimestamps(body.data) : null
-    // POSITIVE dispatch signal (W4 decommission prereq): a NON-NULL array is the genuine
-    // pipe-served branch; a null result takes the HogQL fallback and MUST stay silent here.
-    // Emitted via console.LOG (not console.debug): per the runtime finding, console.debug lines did
-    // not surface in the prod log pipeline while console.log (request_completed) did — so an absent
-    // served-log was wrongly read as "pipe never called". NOT logInfo either: its PII-sanitizer's
-    // Stripe `st_`-prefix regex false-positives on first_touch/last_touch pipe names, mangling them
-    // to [REDACTED_KEY]. Pipe name + ROW COUNT only — never row content/values (no PII).
-    if (rows) console.log(`[tinybird-read] served pipe '${pipeName}' rows=${Array.isArray(rows) ? rows.length : 0}`)
-    return rows
-  } catch (err) {
-    const msg = err?.name === 'AbortError' ? 'timed out' : (err?.message || String(err))
-    console.warn(`[tinybird-read] pipe '${pipeName}' threw (${msg}) — falling back to HogQL.`)
-    return null
-  } finally {
-    clearTimeout(timeout)
+  // TRANSIENT-failure retry (429 / 5xx / network throw / timeout), up to MAX_ATTEMPTS total.
+  // Backoff mirrors the nightly's queryPostHog: Retry-After seconds if the server gives one,
+  // else min(60s, 2000 * 2^attempt). A fresh AbortController per attempt — the 15s timeout is
+  // per-attempt, and an aborted controller can never be reused.
+  const MAX_ATTEMPTS = 3
+  const nextBackoffMs = (attempt, retryAfterHdr) => {
+    const ra = parseInt(retryAfterHdr || '0', 10)
+    return ra > 0 ? ra * 1000 : Math.min(60_000, 2000 * Math.pow(2, attempt))
   }
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS)
+    try {
+      const res = await fetchImpl(url.toString(), {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: controller.signal
+      })
+
+      // TRANSIENT HTTP (429 / 5xx): retry with backoff unless this was the last attempt.
+      // On the last attempt fall through to the unchanged non-2xx handler below.
+      if ((res.status === 429 || res.status >= 500) && attempt < MAX_ATTEMPTS - 1) {
+        const waitMs = nextBackoffMs(attempt, res.headers.get('retry-after'))
+        console.warn(`[tinybird-read] pipe '${pipeName}' got ${res.status} — retrying in ${waitMs}ms (attempt ${attempt + 1}/${MAX_ATTEMPTS})`)
+        await sleep(waitMs)
+        continue
+      }
+
+      if (!res.ok) {
+        const raw = await res.text()
+        console.warn(`[tinybird-read] pipe '${pipeName}' failed (${res.status}) — falling back to HogQL: ${raw.slice(0, 200)}`)
+        return null
+      }
+
+      const body = await res.json()
+      // CENTRAL timestamp normalization at the read boundary — no consumer sees a raw
+      // ClickHouse 'YYYY-MM-DD HH:MM:SS' timestamp (see normalizePipeRowTimestamps).
+      const rows = Array.isArray(body.data) ? normalizePipeRowTimestamps(body.data) : null
+      // POSITIVE dispatch signal (W4 decommission prereq): a NON-NULL array is the genuine
+      // pipe-served branch; a null result takes the HogQL fallback and MUST stay silent here.
+      // Emitted via console.LOG (not console.debug): per the runtime finding, console.debug lines did
+      // not surface in the prod log pipeline while console.log (request_completed) did — so an absent
+      // served-log was wrongly read as "pipe never called". NOT logInfo either: its PII-sanitizer's
+      // Stripe `st_`-prefix regex false-positives on first_touch/last_touch pipe names, mangling them
+      // to [REDACTED_KEY]. Pipe name + ROW COUNT only — never row content/values (no PII).
+      // A served-empty ([]) result is a SUCCESS — returned here, never retried.
+      if (rows) console.log(`[tinybird-read] served pipe '${pipeName}' rows=${Array.isArray(rows) ? rows.length : 0}`)
+      return rows
+    } catch (err) {
+      // Network error or timeout (AbortError) — transient: retry unless this was the last attempt.
+      const msg = err?.name === 'AbortError' ? 'timed out' : (err?.message || String(err))
+      if (attempt < MAX_ATTEMPTS - 1) {
+        const waitMs = nextBackoffMs(attempt, null)
+        console.warn(`[tinybird-read] pipe '${pipeName}' threw (${msg}) — retrying in ${waitMs}ms (attempt ${attempt + 1}/${MAX_ATTEMPTS})`)
+        await sleep(waitMs)
+        continue
+      }
+      console.warn(`[tinybird-read] pipe '${pipeName}' threw (${msg}) — falling back to HogQL.`)
+      return null
+    } finally {
+      clearTimeout(timeout)
+    }
+  }
+  // Exhausted all attempts on a transient failure without hitting a terminal return above
+  // (e.g. a retryable status on the final attempt already returned via the non-2xx handler).
+  // Kept explicit so the null contract holds no matter how the loop exits.
+  return null
 }
