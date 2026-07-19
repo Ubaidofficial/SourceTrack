@@ -1,5 +1,15 @@
 > For future sessions, start with [DEVELOPER_CONTEXT.md](DEVELOPER_CONTEXT.md) and [NEXT_SESSION_PROMPT.md](NEXT_SESSION_PROMPT.md).
 >
+> **Handoff:** Session 142-D2-SCHEMA-CI-TRUST — D2 attribution validation, prod-vs-prod CI bug found & fixed, schema drift 11→0 — **PASS (partial; D2 not closed).**
+> - **CI was comparing PROD against PROD**: `schema-drift`'s `STAGING_DB_URL` GitHub secret resolved to the PROD Supabase host (IPv6-only, unreachable from runners) — the check had NEVER been capable of detecting real drift, for any prior session. Root-caused (#269), secrets rotated to Session Pooler strings for both envs, `migrate-staging` hard-disabled (`if: false`, #293) as a belt while the repoint was unverified. `schema-drift` now genuinely compares migrations/staging/prod and reports **GREEN — no drift across 408 columns**.
+> - **Schema convergence: 11 drifted tables → 0** (one documented exception: `sites.owner_id` default, founder decision, in `schema-drift-ignore.json`). Added PKs to 6 prod tables that had none, `sites.id` SET NOT NULL both envs, `site_annotations` applied to staging with full RLS/FK/index (an earlier draft missed these — would have shipped an unprotected multi-tenant table; the DDL-extraction lesson is now in agent memory). `attributed_conversions`/`pageviews` column drift closed. (#275, #288, #291, #294)
+> - **D2 B0 shipped (#290)**: reprocess/suffix reads that bypass the Tinybird pipe now THROW before touching the dead HogQL store instead of silently falling back. The `de400000` `_mv` suffix site was hitting this path every cron run — staging-only, zero prod impact, now fails loud not silent.
+> - **D2 B1 shipped (#292, #296)**: found and fixed a harness false-positive — the diff compared timestamps as SERIALIZED STRINGS (pg `+00:00` vs JS `toISOString()` `Z`) instead of instants. All 3 comparable rows are now byte-identical. **Money-rail finding, written down not implied**: pipe-vs-HogQL parity for the nightly write path was NEVER empirically established and is now unobtainable — `$conversion` events were Tinybird-only from the start, never dual-written. Verified this was a pre-existing gap D2 surfaced, not one it created (#299).
+> - **D2 B3 gate items 1+2 shipped (#300, #301)**: hand-computed adversarial construction fixture (same-timestamp tie, 4 credit models, AI-influence, $0-carrier exclusion, dedup) — CI-enforced, asserted against construction truth, never a recompute. The construction test caught the builder's own literal error mid-build (facebook/social → `Other Campaign` not `Paid Social`) — proof it does real work.
+> - **Seeder prod-safety hole found & fixed (#298)**: `assertStaging()` gated on a DEAD PostHog env var while `TINYBIRD_APPEND_TOKEN` silently decided the real write target. Confirmed prod's `$999.99` "revenue" (techrupt.pk) is 100% synthetic `cs_prod_gate0_…`/`cs_prod_wave1_…` sessions, never real Stripe charges — but the seeders themselves never fired at prod (prod holds 0 `de200000` events; the leak's real mechanism is still unknown). Guard rebuilt with a validated fixture-presence probe + host allowlist, negative-proven.
+> - **Merged this session:** #269, #280, #282–#301 (~24 PRs). **Zero open PRs at session end.**
+> - **NOT DONE — carried to next session:** TASK 1 staging E2E (seed→backfill→verify via `railway run`, commands ready in this entry's full write-up), Stripe reconciliation (B3 gate item 5, scoped, needs founder's Stripe dashboard — abandoned as a prod check since prod revenue is synthetic), `TINYBIRD_READ_TOKEN` rotation (pasted to chat twice, treat as compromised), All Leads prod browser verification, B2/B3 not started.
+>
 > **Handoff:** Session 141-SESSIONS-READ-FLIP-VERIFY — Staging Live Sessions-Path Read Flip Verification — **PASS.**
 > - **Verified Staging Live Read Flip**: Verified that the sessions-path read flip is active and fully functional on the deployed staging environment (`https://sourcetrack-dashboard-staging.up.railway.app`).
 > - **API Parity Verification**: Direct API calls to `/api/sessions/overview` for the realistic SaaS test site (`de200000-babe-41d4-a716-446655440000` / ID `de200000-babe-41d4-a716-446655441111`) for the window `2026-07-01` to `2026-07-06` return results matching the A/B parity proof baseline exactly:
@@ -772,6 +782,63 @@
 >
 >
 
+## Session 142-D2-SCHEMA-CI-TRUST — D2 Attribution Validation + CI Trust Restoration
+**Date:** 2026-07-18 | **Branch:** `main` | **Build:** ✅ passing (build-and-test, schema-drift, qa:tinybird:unit 464/464, qa:identity:unit)
+**Status:** **PASS (partial — D2 not fully closed, see Not Done below).**
+
+### Completed
+1. Root-caused `schema-drift` CI comparing PROD against PROD: `STAGING_DB_URL` secret held a prod IPv6-only host, unreachable from runners. The check had never once produced a trustworthy result. Fixed workflow (#269), founder rotated both DB secrets to Session Pooler strings after resetting the compromised staging password.
+2. Hard-disabled `migrate-staging` (`if: false`, #293) as a second, independent lock before the secret repoint was verified — it previously shared a gate with the read-only drift check, so a false-green would have armed a DDL writer pointed at prod.
+3. Converged schema drift 11 tables → 0 (one documented exception). Applied `20260718104500`/`104600`/`104700`/`110000`/`120000` migrations across both envs: added PKs to 6 prod tables that had none (`company_members`, `companies`, `qa_notes`, `saved_reports`, `dashboard_widgets`, `admin_audit_log`), `sites.id` SET NOT NULL, `lead_qualifications.qualified_by` text→uuid, `attributed_conversions` varchar→text, `site_annotations` applied to staging with full FK/index/RLS/policy (an earlier draft omitted these and would have shipped an unprotected table — corrected before applying).
+4. `sites.owner_id` left as the sole documented exception (prod `DEFAULT gen_random_uuid()`, staging none — founder decision) via a rationale'd entry in `schema-drift-ignore.json` (#294), not an empty ignore list.
+5. Verified `schema-drift` now runs a real 3-way diff (migrations/staging/prod) over 408 columns — GREEN.
+6. Shipped D2 B0 (#290): `processSite` throws before any dead-store read on reprocess/suffix-filtered requests instead of silently falling back. Confirmed the `de400000` `_mv` suffix site was hitting this path every cron run (staging-only, zero prod impact).
+7. Shipped D2 B1 validate harness (#292, #296): found and fixed a false-positive comparing timestamps as serialized strings instead of parsed instants. 3/3 comparable rows now byte-identical; `conversion_value` and all 4 credit-split columns held exact-equality throughout.
+8. Confirmed pipe-vs-HogQL parity for the nightly write path was never empirically establishable (`$conversion` events were Tinybird-only from day one, never dual-written) and is now permanently unobtainable post-D3. Verified this is a pre-existing gap D2 surfaced, not one it created. Written into `KNOWN_ISSUES.md` (#299).
+9. Shipped D2 B3 gate items 1+2 (#300, #301): hand-computed adversarial construction fixture — same-timestamp tie, 4 credit models, AI-influenced touch, $0-carrier exclusion (asserted absent, not zero), single-touchpoint degradation, external_event_id dedup. Construction test caught a real classifier error mid-build (facebook/social → `Other Campaign` not `Paid Social`).
+10. Found and fixed a seeder prod-safety hole (#298): `assertStaging()` gated on a dead PostHog env var while `TINYBIRD_APPEND_TOKEN` silently decided the real write target. Confirmed prod's $999.99 "revenue" on techrupt.pk is 100% synthetic seed data (event IDs hand-built to resemble Stripe sessions) but disproved these specific seeders as the leak mechanism (prod holds 0 `de200000` events). Rebuilt guard with a host allowlist + live fixture-presence probe, both negative-proven.
+11. Corrected standing memory error: 3 workspaces exist in the Tinybird org (`SourceTrack` prod, `ST_Staging` staging, `imubaid93_workspace` — previously mislabeled as staging).
+12. Triaged and closed 5 stale PRs (#37, #133, #167, #190, #191) — none merged. #37's SSRF fix was already shipped and further hardened by #42; merging the stale branch would have reverted the later hardening.
+13. Merged #269, #280, #282–#301 (~24 PRs total). Zero open PRs at session end.
+
+### Files changed
+- [.github/workflows/ci.yml](.github/workflows/ci.yml)
+- [supabase/migrations/20260718104500_c2_convergence_groups_a_b_e.sql](supabase/migrations/20260718104500_c2_convergence_groups_a_b_e.sql) [NEW]
+- [supabase/migrations/20260718104600_c2_convergence_primary_keys.sql](supabase/migrations/20260718104600_c2_convergence_primary_keys.sql) [NEW]
+- [supabase/migrations/20260718104700_c2_convergence_group_c.sql](supabase/migrations/20260718104700_c2_convergence_group_c.sql) [NEW]
+- [supabase/migrations/20260718110000_c2_convergence_money_rail.sql](supabase/migrations/20260718110000_c2_convergence_money_rail.sql) [NEW]
+- [supabase/migrations/20260718120000_c2_convergence_round2.sql](supabase/migrations/20260718120000_c2_convergence_round2.sql) [NEW]
+- [scripts/schema-drift-ignore.json](scripts/schema-drift-ignore.json)
+- [api/jobs/nightly-attribution.js](api/jobs/nightly-attribution.js)
+- [api/tests/nightly-reprocess-fail-closed.test.js](api/tests/nightly-reprocess-fail-closed.test.js) [NEW]
+- [api/tests/nightly-suffix-fail-closed.test.js](api/tests/nightly-suffix-fail-closed.test.js) [NEW]
+- [api/tests/nightly-validate-harness.test.js](api/tests/nightly-validate-harness.test.js) [NEW]
+- [api/tests/schema-drift-check.test.js](api/tests/schema-drift-check.test.js)
+- [scripts/lib/staging-seed-guard.mjs](scripts/lib/staging-seed-guard.mjs) [NEW]
+- [scripts/seed-multitouch-carrier.mjs](scripts/seed-multitouch-carrier.mjs)
+- [scripts/seed-duplicate-conversion.mjs](scripts/seed-duplicate-conversion.mjs)
+- [api/tests/seed-staging-guard.test.js](api/tests/seed-staging-guard.test.js) [NEW]
+- [api/routes/leads-server.js](api/routes/leads-server.js)
+- [dashboard/src/pages/Leads.jsx](dashboard/src/pages/Leads.jsx)
+- [api/tests/leads-totals-full-window.test.js](api/tests/leads-totals-full-window.test.js) [NEW]
+- [KNOWN_ISSUES.md](KNOWN_ISSUES.md)
+- [SESSION_HANDOFF.md](SESSION_HANDOFF.md)
+
+### Blockers Discovered
+1. `STAGING_DB_URL` GitHub secret pointed at PROD — contained same-session (SCHEMA_CI_ENABLED flipped false immediately on suspicion; migrate-staging `if: false` now a permanent second lock).
+2. `TINYBIRD_READ_TOKEN` full JWT pasted to chat twice — decoded and confirmed staging-scoped both times, but treat as compromised; rotation not yet done.
+3. Migration ledger (`supabase_migrations.schema_migrations`) diverged between envs — repair explicitly deferred until the DB-secret repoint above was verified (now confirmed via schema-drift GREEN).
+
+### Not Done — Carried Forward
+1. Staging E2E for the construction fixture — 3 `railway run` commands prepared, not yet executed (seed → backfill → verify).
+2. B3 gate item 5 (Stripe reconciliation) — redirected; prod has no real revenue to reconcile against.
+3. Rotate `TINYBIRD_READ_TOKEN`.
+4. All Leads prod browser verification (#289 shipped, never checked live).
+5. B2 (migrate suffix/reprocess reads onto Tinybird) and B3 close-out (remove `queryPostHog` + `POSTHOG_*`) — not started.
+6. Seed-data purge (`wave1_`/`gate0_` still in prod, unlabelled).
+7. GSC verification — untouched this session.
+
+7. **GSC verification** (100-user cap, unverified-app screen) — separate launch-blocker track, untouched this session.
 ## Session 139N-2 — Attribution Model Deterministic Test Fixtures
 **Date:** 2026-06-12 | **Branch:** `main` | **Build:** ✅ passing (node --check, git diff --check, qa:static, dashboard vite build, qa:env-safety, qa:attribution:unit)
 **Status:** **PASS.**
