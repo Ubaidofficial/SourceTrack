@@ -1204,7 +1204,7 @@ export default function Settings() {
             </p>
             <div className="bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-lg p-3 text-[11px] text-amber-800 dark:text-amber-300 space-y-1.5 font-sans">
               <p>• Database attribution records and stitched identity mappings will be permanently deleted from our app database.</p>
-              <p>• <strong>PostHog Deletion Limitation:</strong> Visitor erasure sends a best-effort deletion request to our analytics backend where supported. However, this is not independently verified and full raw-event purge verification is still pending.</p>
+              <p>• <strong>Event Store Deletion Limitation:</strong> Visitor erasure sends a best-effort deletion request to our event store (Tinybird) where supported. However, this is not independently verified and full raw-event purge verification is still pending.</p>
               <p>• <strong>Sanitization Note:</strong> Ingestion-side PII sanitization is locally implemented to filter sensitive keys, but live staging/production verification remains pending.</p>
               <p>• Third-party Stripe customer and billing records are not affected or queried during visitor data deletion.</p>
             </div>
