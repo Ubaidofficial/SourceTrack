@@ -49,6 +49,14 @@ async function main () {
   // V1 — multi-touch journey; V3 — single-touch.
   const { data: v1, error: e1 } = await sel().eq('conversion_event_id', V1.conversionEventId).maybeSingle()
   if (e1) { console.error(`[verify] query error: ${e1.message}`); process.exit(2) }
+  // POSITIVE PRECONDITION — the V1 anchor MUST exist. Without it the fixture was never seeded + attributed,
+  // and the absence-based checks below (V2 carrier "no row", V4 "exactly 1 row") would pass VACUOUSLY on an
+  // empty fixture, reporting false "ok"s (observed once when the seeder had refused). Fail fast so absence
+  // can never be mistaken for success.
+  if (!v1) {
+    console.error('[verify] PRECONDITION FAILED: the V1 anchor conversion has NO attributed_conversions row — the fixture was not seeded + attributed on staging (did the seeder refuse, or the nightly not run?). Absence-based checks are meaningless on an empty fixture; refusing to report a pass.')
+    process.exit(2)
+  }
   checkRow('V1', v1, V1_EXPECTED, fails)
 
   const { data: v3 } = await sel().eq('conversion_event_id', V3.conversionEventId).maybeSingle()
