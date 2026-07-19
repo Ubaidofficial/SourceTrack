@@ -3,7 +3,6 @@ dotenv.config()
 
 import { getSupabase } from '../lib/supabase.js'
 import { parsePathname } from '../lib/url-normalize.js'
-import { esc } from '../lib/utils.js'
 import { queryTinybirdPipe, isTinybirdReadEnabled, isPipeReadAllowed } from '../lib/tinybird-read.js'
 import { clampDays, classifyJourney, applyBackfill } from '../lib/backfill.js'
 import { purgeSiteRetention } from '../lib/retention-purge.js'
@@ -178,17 +177,24 @@ export function computeRunErrorMessage({ status, hardFailures = 0, suspectEmpty 
 }
 
 
-const POSTHOG_PERSONAL_API_KEY = process.env.POSTHOG_PERSONAL_API_KEY
-const POSTHOG_PROJECT_ID = process.env.POSTHOG_PROJECT_ID
-const POSTHOG_HOST = process.env.POSTHOG_HOST
 
 async function main() {
   const startTime = Date.now()
   log('Starting nightly attribution job')
 
-  if (!POSTHOG_PERSONAL_API_KEY || !POSTHOG_PROJECT_ID || !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
     logError('Missing required environment variables')
     throw new Error("Missing required environment variables")
+  }
+
+  // B3 step 4 — reads-disabled decision. PostHog is DECOMMISSIONED (queryPostHog is deleted), so
+  // there is NO fallback read path. If Tinybird reads are off, every conversion/touchpoint read has
+  // no source. REFUSE TO START loudly (option a) rather than run and silently write nothing: prod does
+  // NOT set TINYBIRD_FORCE_READ, so this is the path that bites during a real incident. This guard runs
+  // before the backfill dispatch and the run lock, so both cron and --backfill-site fail fast here.
+  if (!_tbReadEnabled()) {
+    logError('TINYBIRD_READ_ENABLED is off — the nightly has no read path (PostHog is decommissioned). Refusing to run.')
+    throw new Error('TINYBIRD_READ_ENABLED is off — no read path (PostHog decommissioned); set TINYBIRD_READ_ENABLED=true')
   }
 
   // Backfill mode short-circuits the nightly lock + all-sites loop: it targets one
@@ -391,19 +397,10 @@ async function runBackfill() {
     logWarn('No --confirm flag → running DRY-RUN. Pass --confirm to persist writes.')
   }
 
-  const conversionsQuery = `
-    SELECT uuid, distinct_id, timestamp, properties.conversion_type, properties.conversion_value, properties.external_event_id, properties.webhook_customer_id, properties.stripe_subscription_id, properties.stripe_invoice_id, properties.currency, properties.provider_event_id, properties.occurred_at, properties.stripe_event_type, properties.provider
-    FROM events
-    WHERE event = '$conversion'
-      AND properties.site_id = '${esc(site.id)}'
-      AND timestamp >= now() - INTERVAL ${days} DAY
-    ORDER BY timestamp ASC
-    LIMIT 5000
-  `
-  // Read the SAME Tinybird store the cron reads, over the backfill's OWN --days=N window
-  // (fallback to HogQL on null). This is the ONLY path that can reach a conversion older
-  // than the 24h cron window (e.g. wave1_454a720e, 2026-07-09).
-  const { rows, served, fellBack } = await fetchBackfillConversions({ site, days, hogqlQuery: conversionsQuery })
+  // Read the SAME Tinybird store the cron reads, over the backfill's OWN --days=N window. This is the
+  // ONLY path that can reach a conversion older than the 24h cron window (e.g. wave1_454a720e,
+  // 2026-07-09). No HogQL fallback — PostHog is decommissioned (B3 step 4).
+  const { rows, served, fellBack } = await fetchBackfillConversions({ site, days })
   if (served) log(`BACKFILL: nightly_conversions_by_site SERVED ${rows.length} rows (${days}d window)`)
   if (fellBack) logWarn(`BACKFILL: nightly_conversions_by_site returned null → fell back to HogQL/PostHog (a dead store would over-report "${rows.length} found"; require the served-pipe log line)`)
   log(`Found ${rows?.length || 0} $conversion event(s) in the ${days}d window`)
@@ -461,38 +458,8 @@ async function runBackfill() {
 export async function processSite(site) {
   log(`Processing site: ${site.site_key}`)
 
-  const lookbackInterval = isReprocess ? '90 DAY' : '24 HOUR'
-
-  const conversionsQuery = `
-    SELECT
-      uuid,
-      distinct_id,
-      timestamp,
-      properties.conversion_type,
-      properties.conversion_value,
-      properties.external_event_id,
-      properties.webhook_customer_id,
-      properties.stripe_subscription_id,
-      properties.stripe_invoice_id,
-      properties.currency,
-      properties.provider_event_id,
-      properties.occurred_at,
-      properties.stripe_event_type,
-      properties.provider
-    FROM events
-    WHERE event = '$conversion'
-      AND properties.site_id = '${esc(site.id)}'
-      AND timestamp >= now() - INTERVAL ${lookbackInterval}
-    ORDER BY timestamp ASC
-    LIMIT 1000
-  `
-
-  log(`conversionsQuery: ${conversionsQuery}`)
-
-  // CONVERSION READ CUTOVER → Tinybird. All producers write $conversion to Tinybird
-  // only (Wave-1 cutover); PostHog is a dead store for new events. The pipe cannot
-  // express the reprocess 90-day LIKE window, so the reprocess path keeps the HogQL
-  // query. `served`/`fellBack` feed the dead-store guard (computeTerminalStatus).
+  // CONVERSION READ → Tinybird only. PostHog is decommissioned (queryPostHog deleted, B3 step 4);
+  // there is no HogQL fallback. `served`/`fellBack` feed the dead-store guard (computeTerminalStatus).
   let rows = null
   let served = false
   let fellBack = false
@@ -526,20 +493,12 @@ export async function processSite(site) {
   if (isReprocess && !served) {
     throw new Error(`[nightly] FAIL-CLOSED: reprocess write for site ${site.site_key} would run off a NON-pipe-served read (served=${served}, fellBack=${fellBack}) — the HogQL fallback is the dead PostHog store. Refusing to delete/write the money rail off an untrusted read; migrate this read onto Tinybird first.`)
   }
-  // Post-B3-step-2 this block is reached ONLY when Tinybird reads are DISABLED by config
-  // (usePipe was false because !_tbReadEnabled, and it is not the reprocess path, which threw
-  // above). With reads ENABLED, a null pipe already fail-closed and returned above — it never
-  // falls here. This is the legitimate pre-cutover HogQL path; step 4 deletes queryPostHog.
+  // INVARIANT (B3 step 4): with reads ENABLED a null pipe already fail-closed above; with reads
+  // DISABLED main() refuses to start (no fallback — PostHog is decommissioned). So rows===null here
+  // is unreachable on the cron/backfill path — throw loudly rather than silently "find no conversions"
+  // (a direct call with reads off would otherwise no-op). The worker catch counts this as a hard failure.
   if (rows === null) {
-    try {
-      rows = await queryPostHog(conversionsQuery)
-      log(`conversionsQuery returned ${rows ? rows.length : 0} rows`)
-    } catch (error) {
-      // A THROWN query is a FAILURE, not "no conversions" (the #184 root lie: an outage
-      // was byte-identical, in job_runs, to a real empty day). failed>=1 + queryFailed.
-      logWarn(`Conversion read failed for site ${site.site_key}: ${error.message}`)
-      return { processed: 0, failed: 1, fetched: 0, queryFailed: true, served, fellBack }
-    }
+    throw new Error(`[nightly] no conversions read path for site ${site.site_key} — TINYBIRD_READ_ENABLED must be on (PostHog is decommissioned)`)
   }
 
   if (!rows || rows.length === 0) {
@@ -624,11 +583,10 @@ export function conversionPipeWindow (days) {
 
 // The backfill conversion read (--backfill-site + --days=N). Backfill targets ONE site
 // by id — no suffix/reprocess LIKE — so the Tinybird pipe fits, over the backfill's OWN
-// --days=N window (NOT the cron lookback). Returns { rows: positional[], served, fellBack }
-// with HogQL fallback on a null pipe. served/fellBack make a silent fallback to a dead
-// PostHog VISIBLE — a backfill that falls back and reports "N upserted" off an empty
-// store is the same lie as the nightly's swallowed outage.
-export async function fetchBackfillConversions ({ site, days, hogqlQuery }) {
+// --days=N window (NOT the cron lookback). Returns { rows: positional[], served, fellBack }.
+// Tinybird-only — PostHog is decommissioned (B3 step 4); a null pipe FAILS CLOSED (throws),
+// making a silent fallback to a dead store impossible.
+export async function fetchBackfillConversions ({ site, days }) {
   let rows = null
   let served = false
   let fellBack = false
@@ -639,16 +597,17 @@ export async function fetchBackfillConversions ({ site, days, hogqlQuery }) {
     else { fellBack = true }
   }
   if (fellBack) {
-    // B3 step 2 — FAIL CLOSED, same as the cron path. Post-#308 a null pipe = the read FAILED
-    // after retries. Do NOT read the dead PostHog store (it returns [] with no throw → "N found"
-    // off an empty store — the exact lie the fellBack warn was added to make visible). Backfill is
-    // a manual, single-site op with NO worker loop to isolate and it does NOT reach totalHardFailures;
-    // throw so runBackfill's own terminal catch exits non-zero (its existing failure path — no new
-    // machinery). The reads-DISABLED case (fellBack=false) still uses HogQL below until step 4.
-    throw new Error(`[backfill] FAIL-CLOSED: conversions pipe returned null (read failed after retries) for site ${site.site_key} — refusing to backfill the money rail off the dead HogQL store`)
+    // B3 step 2 — FAIL CLOSED. Post-#308 a null pipe = the read FAILED after retries. Backfill is a
+    // manual, single-site op with NO worker loop and it does NOT reach totalHardFailures; throw so
+    // runBackfill's own terminal catch exits non-zero (its existing failure path — no new machinery).
+    throw new Error(`[backfill] FAIL-CLOSED: conversions pipe returned null (read failed after retries) for site ${site.site_key} — refusing to backfill the money rail off the dead store`)
   }
-  if (rows === null) rows = await queryPostHog(hogqlQuery)
-  return { rows: rows || [], served, fellBack }
+  if (rows === null) {
+    // reads DISABLED (the block above was skipped) — main() refuses to start reads-off, so this is an
+    // unreachable invariant on the real path; throw rather than silently report "0 found".
+    throw new Error(`[backfill] no conversions read path for site ${site.site_key} — TINYBIRD_READ_ENABLED must be on (PostHog is decommissioned)`)
+  }
+  return { rows, served, fellBack }
 }
 
 // Guarded source backfill for subscription_revenue: the ONLY path that can
@@ -735,42 +694,6 @@ export async function processConversion(site, conversion, { dryRun = false } = {
   // Per-site attribution window — default 30d if not configured, max 90d
   const windowDays = Math.min(90, Math.max(1, site.attribution_window_days || 30))
 
-  const touchpointsQuery = `
-    SELECT
-      timestamp,
-      properties.utm_source,
-      properties.utm_medium,
-      properties.utm_campaign,
-      properties.referrer,
-      properties.ai_source,
-      properties.gclid,
-      properties.gbraid,
-      properties.wbraid,
-      properties.fbclid,
-      properties.msclkid,
-      properties.ttclid,
-      properties.li_fat_id,
-      properties.li_fatid,
-      properties.twclid,
-      properties.dclid,
-      properties.snapclid,
-      properties.pclid,
-      properties.sccid,
-      properties.ko_click_id,
-      properties.page_url,
-      properties.country,
-      properties.device_type,
-      properties.browser_name
-    FROM events
-    WHERE event = '$pageview'
-      AND distinct_id = '${esc(conversion.distinct_id)}'
-      AND properties.site_id = '${esc(site.id)}'
-      AND timestamp <= toDateTime('${esc(conversion.timestamp)}')
-      AND timestamp >= toDateTime('${esc(conversion.timestamp)}') - INTERVAL ${windowDays} DAY
-    ORDER BY timestamp ASC
-    LIMIT 500
-  `
-
   // TOUCHPOINT READ CUTOVER → Tinybird (pageviews are Tinybird-only post-Wave-2). The
   // pipe takes a SHARED lookback_from/date_to, which is NOT equivalent to the per-
   // conversion window — so we fetch a SUPERSET for this ONE visitor and re-apply the
@@ -810,16 +733,12 @@ export async function processConversion(site, conversion, { dryRun = false } = {
       throw new Error(`[nightly] FAIL-CLOSED: touchpoints pipe returned null (read failed after retries) for conversion ${conversion.uuid} (site ${site.site_key}) — skipping, refusing to attribute off the dead HogQL store`)
     }
   }
-  // Reached ONLY when Tinybird reads are DISABLED (the _tbReadEnabled block above was skipped). With
-  // reads ENABLED, a null touchpoints pipe already fail-closed (threw) above — it never falls here.
-  // Legitimate pre-cutover HogQL leg; step 4 deletes queryPostHog.
+  // INVARIANT (B3 step 4): with reads ENABLED a null touchpoints pipe already fail-closed (threw)
+  // above; with reads DISABLED main() refuses to start (no fallback — PostHog is decommissioned). So
+  // touchpointRows===null here is unreachable on the real path — throw rather than silently attribute
+  // off zero touchpoints. (A served-empty [] is real data, handled above → written normally.)
   if (touchpointRows === null) {
-    try {
-      touchpointRows = await queryPostHog(touchpointsQuery)
-    } catch (error) {
-      logWarn(`Failed to fetch touchpoints for ${conversion.uuid}: ${error.message}`)
-      touchpointRows = []
-    }
+    throw new Error(`[nightly] no touchpoints read path for conversion ${conversion.uuid} (site ${site.site_key}) — TINYBIRD_READ_ENABLED must be on (PostHog is decommissioned)`)
   }
 
   const touchpoints = (touchpointRows || []).map(row => {
@@ -1402,40 +1321,6 @@ async function runFreeTierAutoArchive() {
   log(`Free-tier auto-archive: archived ${toArchive.length} inactive sites`)
 }
 
-async function queryPostHog(query, attempt = 0) {
-  const host = POSTHOG_HOST.replace(/\/$/, '')
-  const url = `${host}/api/projects/${POSTHOG_PROJECT_ID}/query/`
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${POSTHOG_PERSONAL_API_KEY}`
-    },
-    body: JSON.stringify({
-      query: { kind: 'HogQLQuery', query: query }
-    })
-  })
-
-  // Retry on rate limit (429) and transient 5xx with exponential backoff.
-  // PostHog returns Retry-After in seconds when it knows the wait.
-  if ((response.status === 429 || response.status >= 500) && attempt < 3) {
-    const retryAfterHdr = parseInt(response.headers.get('retry-after') || '0', 10)
-    const backoffMs = retryAfterHdr > 0 ? retryAfterHdr * 1000 : Math.min(60_000, 2000 * Math.pow(2, attempt))
-    logWarn(`PostHog ${response.status} — retrying in ${backoffMs}ms (attempt ${attempt + 1}/3)`)
-    await sleep(backoffMs)
-    return queryPostHog(query, attempt + 1)
-  }
-
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`PostHog API error (${response.status}): ${errorText}`)
-  }
-
-  const data = await response.json()
-  return data.results || []
-}
-
 function log(message) {
   console.log(`[${new Date().toISOString()}] ${message}`)
 }
@@ -1538,7 +1423,6 @@ export async function validateSite (site, { days = 1 } = {}) {
     const conversion = conversionRowToObject(mapConversionPipeRow(row))
     if (isSubscriptionCheckoutCarrier(conversion)) continue // $0 carrier is never written to attributed_conversions
     const res = await processConversion(site, conversion, { dryRun: true })
-    if (!res) continue // invalid conversion, skipped by processConversion
     const { record: computed, touchpoints } = res
     out.total++
     // Tally REAL same-timestamp ties: ≥2 touchpoints sharing a timestamp for this conversion. This is

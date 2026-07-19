@@ -6,9 +6,9 @@
 // blocks reintroduction: a new `import { ph } from '../lib/posthog.js'` fails HERE, in CI, loudly.
 //
 // SCOPE NOTE: this guards against importing the deleted MODULE, not against PostHog references in
-// general. api/jobs/nightly-attribution.js legitimately still reads POSTHOG_* env directly and does
-// its own fetch to the PostHog query API (its queryPostHog is D2 scope, not D3) — that is fine and
-// intentionally NOT flagged here. Only an `import`/`require`/dynamic-`import` of posthog.js is caught.
+// general. (api/jobs/nightly-attribution.js's own queryPostHog + POSTHOG_* env reads were deleted in
+// B3 step 4 — the nightly is Tinybird-sole now — so nothing here does its own PostHog fetch anymore.)
+// Only an `import`/`require`/dynamic-`import` of posthog.js is caught.
 
 import test from 'node:test'
 import assert from 'node:assert/strict'
