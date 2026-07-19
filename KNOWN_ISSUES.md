@@ -452,3 +452,19 @@ Consider a lightweight guard: `node --check` / import-smoke over `scripts/*.mjs`
 The two Supabase `supabase_migrations.schema_migrations` ledgers have diverged: **identical migrations carry different version numbers per environment**, and **prod's ledger is stale since `20260713081319`** — even though four migrations were hand-applied to prod today (2026-07-18). The ledger no longer reflects what is actually applied. No open PR addresses this (schema/baseline capture ≠ ledger repair; #190 does not fix it).
 
 🔴 **Do NOT start the repair yet:** `STAGING_DB_URL` currently resolves to PROD (see #293), so a ledger write intended for "staging" could hit prod. Scope the `schema_migrations` reconciliation only **after** the CI-secret repoint is verified to point at `nrsvpwzekfrdrzkoecfk`. (Surfaced 2026-07-18.)
+
+### Weekly email reports have NEVER sent in production (2026-07-19)
+
+`job_runs` (prod): **226 runs of `email-reports-weekly`, 2026-06-28 → 2026-07-19, every one `status='success'`, every one `error_message='Sent 0, skipped 4, errors 0'`. Zero sends, ever.** `usage_email_log` is empty (0 rows). Verified by direct read-only query against prod Supabase (`zxjjjsipafojhzkkumvh`), not agent-reported.
+
+Four separate defects:
+
+1. **Untested customer-facing path (launch blocker).** No weekly attribution report has ever been delivered. Prod has 4 sites — 2 free, 1 trial stale since 2026-06-26, 1 founder-owned (techrupt.pk) — so "skipped 4" is likely CORRECT behaviour, not a failure. But the send path has never executed end-to-end. First real customer = first live test.
+
+2. **Honest-reporting defect.** 226 no-op runs recorded as `success`. A genuine send failure would be indistinguishable from today's output. Same failure class `computeTerminalStatus` was built to prevent on the nightly (`suspectEmpty` → `failed`); the email job has no equivalent guard.
+
+3. **`sourcetrack-email` cron never ran the job at all.** Railway Start Command is null → falls back to `npm start` → `api/bootstrap.js` → boots the Express API, not `api/jobs/email-reports.js`. Independent of commit `227b5cf` (2026-07-07), which added the `ST_MANAGED_PROXY_TARGET` fatal check and merely converted a silent no-op into a loud crash. Check the other cron services for the same missing Start Command.
+
+4. **A weekly job runs ~11x/day.** Frequency correlates with deploys, so something invokes it outside its cron. With `usage_email_log` empty, the dedup guard is unproven — a real customer could receive one email per deploy. Root-cause the invocation source before onboarding anyone.
+
+Not a migration item. Logged because #1 is a launch blocker of the same class as the money rail, and #2 is the exact "green means nothing happened" pattern this project has been eliminating elsewhere.
