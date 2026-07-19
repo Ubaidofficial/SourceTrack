@@ -483,7 +483,16 @@ export async function processSite(site) {
       served = true
       rows = pipeRows.map(mapConversionPipeRow)
     } else {
-      fellBack = true                     // pipe expected but returned null → HogQL fallback; a 0 here is SUSPECT
+      // B3 step 2 — FAIL CLOSED per-site. Post-#308 the read retries 429/5xx/network up to 3
+      // attempts, so a null here means the read FAILED, not a transient blip. Do NOT fall through
+      // to queryPostHog: the dead PostHog store returns [] with no throw, so this site would be
+      // absorbed as an empty day — silently under-writing the money rail (the exact defect). Mark
+      // the site queryFailed (→ totalHardFailures → computeTerminalStatus 'failed') WITHOUT throwing,
+      // so the OTHER sites in the run still process. SHORT-CIRCUIT: no conversions were fetched, so
+      // there is nothing to loop over — the per-conversion touchpoint reads are never reached.
+      fellBack = true
+      logWarn(`Conversion pipe read returned null (failed after retries) for site ${site.site_key} — FAIL-CLOSED per-site, not reading the dead HogQL store`)
+      return { processed: 0, failed: 0, fetched: 0, queryFailed: true, served: false, fellBack: true }
     }
   }
   // B0 (D2) — FAIL CLOSED before any WRITE, and BEFORE touching the dead store. The reprocess path
@@ -496,6 +505,10 @@ export async function processSite(site) {
   if (isReprocess && !served) {
     throw new Error(`[nightly] FAIL-CLOSED: reprocess write for site ${site.site_key} would run off a NON-pipe-served read (served=${served}, fellBack=${fellBack}) — the HogQL fallback is the dead PostHog store. Refusing to delete/write the money rail off an untrusted read; migrate this read onto Tinybird first.`)
   }
+  // Post-B3-step-2 this block is reached ONLY when Tinybird reads are DISABLED by config
+  // (usePipe was false because !_tbReadEnabled, and it is not the reprocess path, which threw
+  // above). With reads ENABLED, a null pipe already fail-closed and returned above — it never
+  // falls here. This is the legitimate pre-cutover HogQL path; step 4 deletes queryPostHog.
   if (rows === null) {
     try {
       rows = await queryPostHog(conversionsQuery)
@@ -603,6 +616,15 @@ export async function fetchBackfillConversions ({ site, days, hogqlQuery }) {
     const pipeRows = await _queryPipe('nightly_conversions_by_site', { site_id: String(site.id), date_from: from, date_to: to })
     if (pipeRows) { served = true; rows = pipeRows.map(mapConversionPipeRow) }
     else { fellBack = true }
+  }
+  if (fellBack) {
+    // B3 step 2 — FAIL CLOSED, same as the cron path. Post-#308 a null pipe = the read FAILED
+    // after retries. Do NOT read the dead PostHog store (it returns [] with no throw → "N found"
+    // off an empty store — the exact lie the fellBack warn was added to make visible). Backfill is
+    // a manual, single-site op with NO worker loop to isolate and it does NOT reach totalHardFailures;
+    // throw so runBackfill's own terminal catch exits non-zero (its existing failure path — no new
+    // machinery). The reads-DISABLED case (fellBack=false) still uses HogQL below until step 4.
+    throw new Error(`[backfill] FAIL-CLOSED: conversions pipe returned null (read failed after retries) for site ${site.site_key} — refusing to backfill the money rail off the dead HogQL store`)
   }
   if (rows === null) rows = await queryPostHog(hogqlQuery)
   return { rows: rows || [], served, fellBack }
