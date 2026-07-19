@@ -348,7 +348,7 @@ export async function track(req, res) {
     // additive Tinybird dual-write below carries the IDENTICAL anonymous
     // distinct_id ph.capture received — calling uuidv4() a second time here
     // would silently break visitor stitching between PostHog and Tinybird for
-    // anonymous pageviews (tinybird/PHASE2C_PAGEVIEW_DUALWRITE_PLAN.md §2.1).
+    // anonymous pageviews (tinybird/archive/PHASE2C_PAGEVIEW_DUALWRITE_PLAN.md §2.1).
     const distinctId = req.body.anonymous_id || uuidv4()
     // properties hoisted to a const (behavior-identical) so the dual-write call
     // reuses the exact same object the existing ph.capture sends.

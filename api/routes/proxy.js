@@ -103,7 +103,7 @@ router.post('/e',
     // additive Tinybird dual-write below carries the IDENTICAL anonymous
     // distinct_id ph.capture received — calling uuidv4() a second time here
     // would silently break visitor stitching between PostHog and Tinybird for
-    // anonymous pageviews/events (tinybird/PHASE2C_PAGEVIEW_DUALWRITE_PLAN.md §2.2).
+    // anonymous pageviews/events (tinybird/archive/PHASE2C_PAGEVIEW_DUALWRITE_PLAN.md §2.2).
     const distinctId = anonymous_id || uuidv4()
     const pageviewProps = {
       ...sanitizedProperties,
@@ -229,7 +229,7 @@ router.get('/pixel.gif',
     // additive Tinybird dual-write below carries the IDENTICAL anonymous
     // distinct_id ph.capture received — calling uuidv4() a second time here
     // would silently break visitor stitching between PostHog and Tinybird for
-    // anonymous pixel pageviews (tinybird/PHASE2C_PAGEVIEW_DUALWRITE_PLAN.md §2.3).
+    // anonymous pixel pageviews (tinybird/archive/PHASE2C_PAGEVIEW_DUALWRITE_PLAN.md §2.3).
     const distinctId = uid || uuidv4()
     const pageviewProps = { site_id: site.id, site_key, event_type: 'pixel', country: enriched.country, device_type: enriched.device_type, server_timestamp: enriched.server_timestamp, proxy: true }
 

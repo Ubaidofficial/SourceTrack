@@ -1,6 +1,6 @@
 // Phase 2c gap-close — pageview dual-write wiring regression tests.
 //
-// Covers the 3 sites wired in tinybird/PHASE2C_PAGEVIEW_DUALWRITE_PLAN.md:
+// Covers the 3 sites wired in tinybird/archive/PHASE2C_PAGEVIEW_DUALWRITE_PLAN.md:
 //   track.js:332 (POST /api/track), proxy.js /sp/e, proxy.js /sp/pixel.gif.
 //
 // The load-bearing assertion (plan §2, hard requirement #1): ph.capture and

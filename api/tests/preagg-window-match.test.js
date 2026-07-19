@@ -134,5 +134,5 @@ test("getPreAggregatedAttribution preserves the full-row 'all' sentinel (interna
   const __dirname = dirname(fileURLToPath(import.meta.url))
   const engineSrc = readFileSync(join(__dirname, '../lib/attribution-engine.js'), 'utf8')
   assert.match(engineSrc, /metric !== 'all' && !PREAGG_CONVERSION_METRICS\.has\(metric\)/,
-    "reader guard exempts 'all' so campaigns/public-dashboard full-row callers keep working")
+    "reader guard exempts 'all' so campaigns full-row callers keep working")
 })

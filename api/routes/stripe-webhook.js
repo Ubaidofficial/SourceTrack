@@ -403,7 +403,7 @@ router.post('/:site_key', async (req, res) => {
       // isSubscriptionCheckoutCarrier (stripe-subscription.js) at both read sites
       // (nightly-attribution.js processSite, attribution-engine.js
       // getMultiTouchAttributionLive); historical rows are not backfilled (fix-forward
-      // only, count-only impact — see tinybird/PHASE7_ATTRIBUTED_CONVERSIONS_DOUBLE_UPSERT_PROPOSAL.md).
+      // only, count-only impact — see tinybird/archive/PHASE7_ATTRIBUTED_CONVERSIONS_DOUBLE_UPSERT_PROPOSAL.md).
       conversion_value: checkoutConversionValue(session.mode, value),
       currency,
       conversion_type: 'purchase',
