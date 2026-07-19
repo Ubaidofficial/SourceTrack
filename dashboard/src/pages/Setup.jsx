@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useAuth } from '../contexts/AuthContext'
-import { useSite } from '../contexts/SiteContext'
-import { supabase } from '../lib/supabase'
+import { useActiveSite } from '../hooks/useActiveSite'
 import { fetchApi } from '../lib/api'
 import {
   Copy, Check, Code, RefreshCw, ChevronRight, Send,
@@ -18,9 +16,7 @@ import EventDebugger from './EventDebugger'
 
 
 export default function Setup() {
-  const { user } = useAuth()
-  const { activeSite } = useSite()
-  const [site, setSite] = useState(null)
+  const { site, activeSite } = useActiveSite('cookieless_mode, cross_domain_domains, cross_domain_cookie_domain')
   const [copied, setCopied] = useState(false)
   const [proxyDomain, setProxyDomain] = useState(null)
   const [showPrivacyNotes, setShowPrivacyNotes] = useState(false)
@@ -67,43 +63,26 @@ export default function Setup() {
   const [gtmPresent, setGtmPresent] = useState(false)
   const [detectionLoading, setDetectionLoading] = useState(false)
 
-  // Load site details
+  // Proxy-domain lookup for the ACTIVE site — drives the snippet's tracker URL.
+  // Keyed on the resolved site_key (from the selector, via useActiveSite) so it re-runs
+  // on a site switch, and cancellable + reset-first so a stale in-flight lookup can't
+  // leave the previous site's proxy domain showing.
   useEffect(() => {
-    async function load() {
-      if (!user) return
-
-      let targetSite = activeSite
-      if (!targetSite) {
-        const { data: member } = await supabase
-          .from('company_members')
-          .select('company_id')
-          .eq('user_id', user.id)
-          .maybeSingle()
-
-        const query = supabase.from('sites').select('id, site_key, name, domain, cookieless_mode, cross_domain_domains, cross_domain_cookie_domain, last_seen_at, onboarding_completed').limit(1)
-        if (member?.company_id) {
-          query.eq('company_id', member.company_id)
-        } else {
-          query.eq('owner_id', user.id)
+    if (!site?.site_key) return
+    let cancelled = false
+    setProxyDomain(null)
+    ;(async () => {
+      try {
+        const proxyData = await fetchApi(`/integrations/proxy-domain?site_key=${encodeURIComponent(site.site_key)}`)
+        if (!cancelled && proxyData && proxyData.status === 'active') {
+          setProxyDomain(proxyData.domain)
         }
-        const { data } = await query.maybeSingle()
-        targetSite = data
+      } catch (_err) {
+        // Optional proxy-domain lookup failed; fall back to default tracker URL.
       }
-      setSite(targetSite)
-
-      if (targetSite?.site_key) {
-        try {
-          const proxyData = await fetchApi(`/integrations/proxy-domain?site_key=${encodeURIComponent(targetSite.site_key)}`)
-          if (proxyData && proxyData.status === 'active') {
-            setProxyDomain(proxyData.domain)
-          }
-        } catch (_err) {
-          // Optional proxy-domain lookup failed; fall back to default tracker URL.
-        }
-      }
-    }
-    load()
-  }, [user, activeSite])
+    })()
+    return () => { cancelled = true }
+  }, [site?.site_key])
 
   // Fire platform detection when the Install tab is shown and the registered
   // domain is known. Advisory only: failures are swallowed silently.

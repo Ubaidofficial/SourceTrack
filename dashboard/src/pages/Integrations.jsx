@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, Link } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
 import { fetchApi } from '../lib/api'
-import { useAuth } from '../contexts/AuthContext'
-import { useSite } from '../contexts/SiteContext'
+import { useActiveSite } from '../hooks/useActiveSite'
 import {
   Code, Bug, Copy, Check, ShieldCheck, AlertTriangle,
   ExternalLink, Globe, Tag, ShoppingCart, Plug, Mail, Radio, Trash, Play, RefreshCw,
@@ -126,33 +124,11 @@ const CollapsibleRow = ({
 }
 
 export default function Integrations() {
-  const { user } = useAuth()
   const navigate = useNavigate()
-  const { activeSite } = useSite()
+  const { site, activeSite } = useActiveSite()
   const isPreview = activeSite?.support_preview || false
-  const [site, setSite] = useState(null)
   const [copied, setCopied] = useState(false)
   const [copiedPixel, setCopiedPixel] = useState(false)
-
-  useEffect(() => {
-    async function load() {
-      const { data: member } = await supabase
-        .from('company_members')
-        .select('company_id')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      const query = supabase.from('sites').select('site_key, name, domain, plan').limit(1)
-      if (member?.company_id) {
-        query.eq('company_id', member.company_id)
-      } else {
-        query.eq('owner_id', user.id)
-      }
-      const { data } = await query.maybeSingle()
-      setSite(data)
-    }
-    load()
-  }, [user])
 
   const { data, isLoading: overviewLoading } = useQuery({
     queryKey: ['integrations-overview', site?.site_key],

@@ -1,11 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
 import { fetchApi } from '../lib/api'
 import { format, subDays } from 'date-fns'
-import { useAuth } from '../contexts/AuthContext'
-import { useSite } from '../contexts/SiteContext'
+import { useActiveSite } from '../hooks/useActiveSite'
 import {
   Search, Download, Filter, Pencil, Check,
   UploadCloud, AlertTriangle, HelpCircle, X, Loader2, RefreshCw
@@ -223,15 +221,13 @@ function CurrencyWarning({ status, spendCur, trackCur }) {
 }
 
 export default function Campaigns() {
-  const { user } = useAuth()
   const navigate = useNavigate()
-  const { activeSite } = useSite()
+  const { site, activeSite } = useActiveSite()
   const isPreview = activeSite?.support_preview || false
   const [spendMap, setSpendMap] = useState({}) // { campaignName: spend }
   const [editingSpend, setEditingSpend] = useState(null)
   const [spendInput, setSpendInput] = useState('')
   const [savingState, setSavingState] = useState({ campaign: null, status: 'idle' }) // 'idle' | 'saving' | 'success' | 'error'
-  const [site, setSite] = useState(null)
   const [activeDim, setActiveDim] = useState('campaign')
   const [dateRange, setDateRange] = useState(30)
   const [search, setSearch] = useState('')
@@ -249,31 +245,6 @@ export default function Campaigns() {
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState(null) // { success: boolean, count: number, error?: string }
   const [currencyStatus, setCurrencyStatus] = useState({ status: 'ok', spendCurrency: 'USD' })
-
-  useEffect(() => {
-    async function load() {
-      const { data: member } = await supabase
-        .from('company_members')
-        .select('company_id')
-        .eq('user_id', user.id)
-        .maybeSingle()
-
-      const query = supabase
-        .from('sites')
-        .select('site_key, name, plan')
-        .limit(1)
-
-      if (member?.company_id) {
-        query.eq('company_id', member.company_id)
-      } else {
-        query.eq('owner_id', user.id)
-      }
-
-      const { data } = await query.maybeSingle()
-      setSite(data)
-    }
-    load()
-  }, [user])
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
