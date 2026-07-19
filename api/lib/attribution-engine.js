@@ -43,8 +43,9 @@ async function _pipeRead (pipeName, params) {
 // D1c: the engine legs are Tinybird-sole — the HogQL fallback is DELETED. A pipe that returns null
 // means the DEPLOYED pipe is not serving; throw loud instead of a silent dead-store read (PostHog is
 // dead). FIX THE PIPE (verify it is deployed + serving in the prod workspace); do not restore the read.
-// The _queryHogQL/_pipeRead seam stays for the one remaining HogQL leg (attribution_explain_journey,
-// D1c-2) and is removed with posthog.js in D3.
+// There is NO HogQL leg left: the last one (attribution_explain_journey) was re-pointed at the
+// deployed `journey` pipe (see getAttributionExplanation + explain-journey-pipe-parity.test.js), and
+// the _queryHogQL builder/import was deleted with posthog.js in D3. Every engine read is Tinybird-sole.
 function _pipeNull (pipeName) {
   throw new Error(`[tinybird-force-read] ${pipeName} returned null — FIX THE PIPE, do not restore the read`)
 }

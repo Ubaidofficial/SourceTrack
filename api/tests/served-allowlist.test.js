@@ -222,8 +222,9 @@ test('🔴 PR#4: every surviving _queryHogQL is a pipe-FALLBACK (behind a pipe a
     const body = lines.slice(f.l - 1, ln - 1).join('\n')
     if (!/_pipeRead\(|_queryTinybirdPipe\(/.test(body)) unguarded.push(`${f.n}():${ln}`)
   })
-  // attribution_explain_journey is the ONE no-pipe read, and it lives in getAttributionExplanation —
-  // outside getFlexibleReport's graph, so out of PR#4's scope (D1-D5 removes it with queryHogQL).
+  // attribution_explain_journey WAS the one no-pipe HogQL read; it was re-pointed at the deployed
+  // `journey` pipe (D1c-2) and queryHogQL was deleted (D3 + B3 step 4), so getAttributionExplanation
+  // is now _pipeRead-guarded like everything else — this exclusion is vestigial (kept defensively).
   assert.deepEqual(unguarded.filter(u => !u.startsWith('getAttributionExplanation')), [],
     'a no-pipe HogQL read appeared inside getFlexibleReport\'s graph')
 })

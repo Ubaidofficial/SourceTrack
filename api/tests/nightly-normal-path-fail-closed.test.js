@@ -69,6 +69,20 @@ test('🔴 a pipe returning [] (served-empty) stays a SUCCESSFUL empty day, NOT 
   assert.equal(fetchCalls(), 0, 'a served-empty result never falls to queryPostHog')
 })
 
+test('reads DISABLED → processSite THROWS the no-read-path invariant, never silently no-ops (B3 step 4)', async (t) => {
+  t.after(__resetNightlyReadDeps)
+  t.after(restoreFetch)
+  spyFetch()
+  // TINYBIRD_READ_ENABLED off + queryPostHog deleted → there is no read path. usePipe is false, the
+  // pipe is not queried (tripwire), and rows stays null → the invariant must THROW, not report empty.
+  __setNightlyReadDeps({ tbReadEnabled: () => false, queryPipe: async () => { throw new Error('pipe must not be queried with reads disabled') } })
+  await assert.rejects(
+    processSite({ id: 's1', site_key: 'sk_a' }),
+    /no conversions read path|TINYBIRD_READ_ENABLED must be on/,
+    'reads-disabled must fail loudly (main() also refuses to start) — never a silent empty day'
+  )
+})
+
 test('one site failing its read does NOT abort the loop: the second site is still processed', async (t) => {
   t.after(__resetNightlyReadDeps)
   t.after(restoreFetch)
