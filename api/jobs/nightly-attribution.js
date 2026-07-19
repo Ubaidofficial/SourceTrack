@@ -85,6 +85,7 @@ async function _writeJobRun({ status, conversions_processed, error_message, dura
 let _processed = 0
 let _fetched = 0        // event-store rows returned across all sites
 let _hardFailures = 0   // sites whose query threw (or that threw) — a real failure, not a no-op
+let _fellBack = 0       // sites whose conversions read fell back (pipe returned null) — INFORMATIONAL, not policy
 let _suspectEmpty = false // reads enabled but NO site pipe-served → a fetched=0 is a suspect dead read, not an empty day
 let _lockAborted = false // another run held the lock: this run wrote nothing, must not claim a terminal row
 const _t0 = Date.now()
@@ -160,6 +161,20 @@ export function computeTerminalStatus({ processed = 0, fetched = 0, hardFailures
   if (processed === 0 && fetched > 0) return 'failed'
   if (processed === 0 && fetched === 0 && suspectEmpty) return 'failed'
   return 'success'
+}
+
+// Deterministic run error_message from the aggregates — exported for tests. Mirrors the branches
+// computeTerminalStatus keys on, then appends the INFORMATIONAL fellBack count when non-zero, so
+// job_runs records how many sites' conversions pipe returned null. `null` on a non-failed status.
+// fellBack does NOT drive status (queryFailed does — computeTerminalStatus); this is visibility only.
+export function computeRunErrorMessage({ status, hardFailures = 0, suspectEmpty = false, fetched = 0, fellBack = 0 } = {}) {
+  const base = status !== 'failed' ? null
+    : hardFailures > 0
+      ? `${hardFailures} site event-store query(ies) failed — a real failure, not an empty day`
+      : suspectEmpty
+        ? 'Conversion read fell back to HogQL for EVERY site (Tinybird pipe never served) and returned 0 — SUSPECT dead read, not an empty day'
+        : `Processed 0 conversions while the event store returned ${fetched} row(s) — nothing was written`
+  return base && fellBack > 0 ? `${base} [${fellBack} site(s) fell back: conversions pipe returned null]` : base
 }
 
 
@@ -249,6 +264,7 @@ async function main() {
     let totalFetched = 0        // rows the event store actually returned (across sites)
     let totalHardFailures = 0   // sites whose query threw, or that threw outright
     let totalServed = 0         // sites whose conversion read was PIPE-SERVED (positive signal)
+    let totalFellBack = 0       // sites whose conversion read fell back (pipe returned null) — visibility only
     let cursor = 0
 
     async function worker() {
@@ -261,6 +277,10 @@ async function main() {
           totalFetched += result.fetched || 0
           if (result.queryFailed) totalHardFailures++
           if (result.served) totalServed++
+          if (result.fellBack) {
+            totalFellBack++       // surface the fell-back count at the RUN level (was invisible before B3 step 3)
+            logWarn(`Site ${site.site_key} conversions read FELL BACK — the Tinybird pipe returned null (fail-closed; counted in the run summary)`)
+          }
         } catch (error) {
           logWarn(`Site ${site.site_key} failed: ${error.message}`)
           totalFailed++
@@ -277,10 +297,11 @@ async function main() {
     await Promise.all(Array.from({ length: workerCount }, worker))
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(2)
-    log(`Completed: ${totalProcessed} conversions processed, ${totalFailed} failed, ${duration}s`)
+    log(`Completed: ${totalProcessed} conversions processed, ${totalFailed} failed, ${totalFellBack} fell back, ${duration}s`)
     _processed = totalProcessed
     _fetched = totalFetched
     _hardFailures = totalHardFailures
+    _fellBack = totalFellBack
     // Dead-store guard (item 5): reads are enabled and there ARE sites, but NOT ONE was
     // pipe-served → every conversion read silently fell back to HogQL (empty PostHog). A
     // 0 here is SUSPECT, not a real empty day. (Genuine empty day: the pipe SERVES [].)
@@ -778,8 +799,20 @@ export async function processConversion(site, conversion, { dryRun = false } = {
         .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))  // ORDER BY timestamp ASC
         .slice(0, 500)                                                   // LIMIT 500
         .map(mapTouchpointPipeRow)
+    } else {
+      // B3 step 3 (Half A) — FAIL CLOSED. Post-#308 a null pipe = the touchpoints read FAILED after
+      // retries, not a blip. Do NOT fall through to queryPostHog: the dead PostHog store returns []
+      // with no throw, so we would write the conversion with touchpoint_count:0 — AFTERWARDS
+      // indistinguishable from a genuine no-touchpoint conversion (no column records read provenance;
+      // Q4b). That is silent MIS-attribution, worse than a missing row. THROW so processSite's
+      // per-conversion catch SKIPS this conversion (failed++, nothing written) rather than writing it
+      // wrong. A served-empty [] is handled above (pv=[] → touchpointRows=[] → written normally).
+      throw new Error(`[nightly] FAIL-CLOSED: touchpoints pipe returned null (read failed after retries) for conversion ${conversion.uuid} (site ${site.site_key}) — skipping, refusing to attribute off the dead HogQL store`)
     }
   }
+  // Reached ONLY when Tinybird reads are DISABLED (the _tbReadEnabled block above was skipped). With
+  // reads ENABLED, a null touchpoints pipe already fail-closed (threw) above — it never falls here.
+  // Legitimate pre-cutover HogQL leg; step 4 deletes queryPostHog.
   if (touchpointRows === null) {
     try {
       touchpointRows = await queryPostHog(touchpointsQuery)
@@ -1570,12 +1603,7 @@ if (import.meta.url === `file://${process.argv[1]}` && validateSiteKey) {
       // no-op (a swallowed outage). See computeTerminalStatus.
       const status = computeTerminalStatus({ processed: _processed, fetched: _fetched, hardFailures: _hardFailures, suspectEmpty: _suspectEmpty })
       const dur = Date.now() - _t0
-      const errMsg = status !== 'failed' ? null
-        : _hardFailures > 0
-          ? `${_hardFailures} site event-store query(ies) failed — a real failure, not an empty day`
-          : _suspectEmpty
-            ? 'Conversion read fell back to HogQL for EVERY site (Tinybird pipe never served) and returned 0 — SUSPECT dead read, not an empty day'
-            : `Processed 0 conversions while the event store returned ${_fetched} row(s) — nothing was written`
+      const errMsg = computeRunErrorMessage({ status, hardFailures: _hardFailures, suspectEmpty: _suspectEmpty, fetched: _fetched, fellBack: _fellBack })
       _writeJobRun({ status, conversions_processed: _processed, error_message: errMsg, duration_ms: dur })
       if (status === 'success') {
         _slackAlert('✅', 'Attribution Job — SUCCESS', `Processed ${_processed} conversions in ${dur}ms`)
