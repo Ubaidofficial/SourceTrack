@@ -32,6 +32,16 @@
 //              → [0.125, 0.125, 0.25, 0.5]     / [12.5, 12.5, 25, 50]   (clean: Σraw=2.0)
 //   W-shaped   anchors {0, middleIdx=1, 3}=0.3, other idx2=0.1 → [0.3,0.3,0.1,0.3] / [30,30,10,30]
 //   (last entry of each is the reconciliation remainder — here it lands exactly on the formula value.)
+//
+// last_touch_source IS NOT split[].source — a DELIBERATE field divergence, not drift. The stored SCALAR
+// last_touch_source is derived-source-backfilled (utm_source → derived_source → null, nightly-attribution.js:924),
+// whereas each split-array .source is utm_source || null only (tpBase, nightly-attribution.js:1099 — NO derived
+// fallback). For the SAME touchpoint these two fields can legitimately disagree — the scalar can hold a referrer
+// hostname or 'direct' where the split entry holds null. Here V1's converting touch (fixt_tp4_direct) has no
+// utm_source and no referrer, so the scalar resolves to 'direct' (derived_source default) while the split-array
+// source at index 3 stays null. That is why last_touch_source is 'direct' but every model's split[3].source is
+// null below — intentional, not a bug. Any consumer joining last_touch_source against linear_attribution[].source
+// MUST account for it.
 
 export const FIXTURE_SITE_ID = 'de200000-babe-41d4-a716-446655441111' // ST_Staging fixture (guarded write target)
 
@@ -108,7 +118,7 @@ export const V1_EXPECTED = {
   conversion_value: 100,
   first_touch_source: 'google',
   first_touch_channel: 'Paid Search',
-  last_touch_source: null,
+  last_touch_source: 'direct', // scalar is derived-source-backfilled → 'direct' (see header note); split[3].source stays null — different field
   last_touch_channel: 'Direct',
   ai_influenced_source: 'AI Search',
   ai_influenced_session_at: '2026-07-01T00:00:00.000Z', // the AI touch instant (compared as instant)
