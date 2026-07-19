@@ -9,7 +9,7 @@
 > **Re-baseline `cb17cc2` → `fc00e406` (2026-07-16), for the D1–D6 PostHog removal.** Re-verified by grep/execution, NOT by re-reading this doc: **§22** (mount count corrected **45 → 46** `/api/*`, **52 → 53** overall — a *second* incomplete-grep miss, see there), **§9** (KEEP set holds, but was **incomplete on the `model` axis** — see the 🔴 hole there), plus two NEW inventories for the removal: **§23** (bare `queryHogQL` call sites = the PR#4 spec) and **§24** (the PostHog touch-point map — **PostHog is reached from 4 independent places, not 1**). Intervening commits: #251 (doc), #252, #254, #253. Sections not listed here were **not** re-verified at `fc00e406`.
 
 
-**Built:** 2026-07-16, this session. **Reconciles:** live code inventory (my grep) + `SourceTrack_GTM.md` §5 truth-gate + `README.md` + `docs/paid_beta_go_no_go_master_audit.md` + `SELF_SERVE_PAID_BETA_AUDIT.md` + `docs/qa/full_functional_feature_browser_qa_140G-26.md` + `DATA_CAPTURE_SPEC.md` + `BUSINESS_DASHBOARDS_SPEC.md` + `docs/design/design.md` + June 20–29 chat history.
+**Built:** 2026-07-16, this session. **Reconciles:** live code inventory (my grep) + `SourceTrack_GTM.md` §5 truth-gate + `README.md` + `docs/paid_beta_go_no_go_master_audit.md` + `SELF_SERVE_PAID_BETA_AUDIT.md` + `docs/archive/qa/full_functional_feature_browser_qa_140G-26.md` + `DATA_CAPTURE_SPEC.md` + `BUSINESS_DASHBOARDS_SPEC.md` + `docs/design/design.md` + June 20–29 chat history.
 
 > **Purpose:** kill the "what does the app actually do" surprises. This supersedes my earlier from-memory list, which was materially incomplete (missed CAPI, outbound webhook, subscription rail, coverage score, ops surfaces; mis-stated MRR + UTM builder + outbound decoration).
 

@@ -464,6 +464,6 @@ The session order was re-prioritized to address the **Attribution and Tracking T
 ## Session 140Z-G3-D0-A — Production Auth Route Smoke Test [BLOCKED]
 
 *   **Goal:** Verify deployed production authentication routes, redirects, and assets, and document required Supabase Auth Redirect URL settings.
-*   **Files involved:** `docs/qa/production_login_auth_smoke_140Z-G3-D0.md`, `scripts/qa-production-auth-smoke.mjs`, `docs/release_checklist_gate.md`, `scripts/qa-release-readiness.mjs`.
+*   **Files involved:** `docs/archive/qa/production_login_auth_smoke_140Z-G3-D0.md`, `scripts/qa-production-auth-smoke.mjs`, `docs/release_checklist_gate.md`, `scripts/qa-release-readiness.mjs`.
 *   **Paid beta blocker:** Yes.
 *   **Verification:** Run `node scripts/qa-production-auth-smoke.mjs`.
