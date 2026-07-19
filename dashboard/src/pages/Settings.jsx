@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useSite } from '../contexts/SiteContext'
 import { supabase } from '../lib/supabase'
 import { getBillingPortal, fetchApi } from '../lib/api'
-import { Copy, Check, ExternalLink, Globe, Link2, CreditCard, Link, ShieldCheck, Trash2, AlertTriangle, Clock, Key, X, HelpCircle } from 'lucide-react'
+import { Copy, Check, ExternalLink, Globe, CreditCard, Link, ShieldCheck, Trash2, AlertTriangle, Clock, Key, X, HelpCircle } from 'lucide-react'
 import UTMBuilder from '../components/UTMBuilder'
 import { getTrialInfo, getPlanLabel, isPaidPlan } from '../lib/billing'
 import { hasFeature } from '../lib/planFeatures'
@@ -19,10 +19,6 @@ export default function Settings() {
   const [name, setName]                 = useState('')
   const [domain, setDomain]             = useState('')
   const [saving, setSaving]             = useState(false)
-  const [shareEnabled, setShareEnabled]         = useState(false)
-  const [shareToken, setShareToken]             = useState(null)
-  const [shareLoading, setShareLoading]         = useState(false)
-  const [shareCopied, setShareCopied]           = useState(false)
   const [cookielessMode, setCookielessMode]         = useState(false)
   const [cookielessLoading, setCookielessLoading]   = useState(false)
   const [retentionDays, setRetentionDays]           = useState(0)
@@ -177,8 +173,6 @@ export default function Settings() {
 
     setSite(data)
     if (data) {
-      setShareEnabled(!!data.public_share_enabled)
-      setShareToken(data.public_share_token || null)
       setCookielessMode(!!data.cookieless_mode)
       setRetentionDays(data.data_retention_days || 0)
       setAttrWindow(data.attribution_window_days || 30)
@@ -329,33 +323,6 @@ export default function Settings() {
     } finally {
       setLoadingPortal(false)
     }
-  }
-
-  const handleShareToggle = async () => {
-    if (!site || !activeSite || site.id !== activeSite.id || site.site_key !== activeSite.site_key) return
-    setShareLoading(true)
-    try {
-      const newEnabled = !shareEnabled
-      const { data, error } = await supabase
-        .from('sites')
-        .update({ public_share_enabled: newEnabled })
-        .eq('id', site.id)
-        .select('public_share_token, public_share_enabled')
-        .single()
-      if (error) throw error
-      setShareEnabled(!!data.public_share_enabled)
-      setShareToken(data.public_share_token || null)
-    } catch (_err) {
-      setMessage('Error updating share settings')
-    } finally {
-      setShareLoading(false)
-    }
-  }
-
-  const handleShareCopy = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/share/${shareToken}`)
-    setShareCopied(true)
-    setTimeout(() => setShareCopied(false), 2000)
   }
 
   const handleCookielessToggle = async () => {
@@ -661,51 +628,6 @@ export default function Settings() {
             </button>
           )}
         </form>
-      </section>
-
-      {/* ── Public Dashboard ───────────────────────────────────────────── */}
-      <section className="bg-white dark:bg-[#1A1C1C] border border-gray-200 dark:border-gray-800 rounded-xl p-6 space-y-4">
-        <div className="flex items-center gap-2">
-          <Globe className="w-4 h-4 text-st-gray dark:text-gray-400" />
-          <h3 className="text-sm font-bold text-st-black dark:text-dark-primary">Public Dashboard</h3>
-        </div>
-        <p className="text-xs text-st-gray dark:text-gray-400">Share a read-only view of your analytics — no login required.</p>
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-600 dark:text-gray-400">{shareEnabled ? 'Sharing enabled' : 'Sharing disabled'}</span>
-          {!isPreview ? (
-            <button
-              onClick={handleShareToggle}
-              disabled={shareLoading}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
-                shareEnabled ? 'bg-st-black dark:bg-white' : 'bg-gray-200 dark:bg-gray-800'
-              }`}
-            >
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white dark:bg-st-black shadow transition-transform ${
-                shareEnabled ? 'translate-x-6' : 'translate-x-1'
-              }`} />
-            </button>
-          ) : (
-            <span className="text-xs text-st-gray italic">Hidden in Support Preview</span>
-          )}
-        </div>
-        {shareEnabled && shareToken && (
-          <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 flex items-center gap-2">
-            <Link2 className="w-4 h-4 text-st-gray dark:text-gray-400 shrink-0" />
-            <span className="text-xs text-st-gray dark:text-gray-400 truncate flex-1">
-              {`${window.location.origin}/share/${shareToken}`}
-            </span>
-            <button onClick={handleShareCopy} className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
-              {shareCopied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 text-st-gray dark:text-gray-400" />}
-            </button>
-            <a
-              href={`${window.location.origin}/share/${shareToken}`}
-              target="_blank" rel="noopener noreferrer"
-              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
-            >
-              <ExternalLink className="w-4 h-4 text-st-gray dark:text-gray-400" />
-            </a>
-          </div>
-        )}
       </section>
 
       {/* ── Cookieless Tracking ───────────────────────────────────────── */}
