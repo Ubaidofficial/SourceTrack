@@ -11,7 +11,7 @@
 // The pageview event_id is set explicitly so the pipe's (timestamp, event_id) tie-break is deterministic.
 //
 // GUARD (scripts/lib/staging-seed-guard.mjs): refuses to write unless --i-am-targeting-staging + the
-// de200000 fixture site + a staging host, AND a live probe confirms the target workspace holds the
+// de200000 fixture site + the append token's decoded workspace == ST_Staging, AND a live probe holds the
 // de200000 fixture (prod SourceTrack has none → fails closed). Requires --i-am-targeting-staging AND
 // --confirm to write. Dry-run (default) prints the plan and touches nothing.
 //
@@ -23,7 +23,7 @@
 import { initTinybirdDualWrite } from '../tinybird/adapter/boot.js'
 import { dualWriteEvent, __getDualWriteBatcher } from '../tinybird/adapter/dual-write.js'
 import { esc } from '../api/lib/utils.js'
-import { assertStagingSeedTarget, assertStagingWorkspaceLive } from './lib/staging-seed-guard.mjs'
+import { assertStagingSeedTarget, assertStagingWorkspaceLive, decodeTinybirdWorkspaceId } from './lib/staging-seed-guard.mjs'
 import { FIXTURE_SITE_ID, V1, V2, V3, V4 } from './lib/attribution-fixture.mjs'
 
 const CONFIRM = process.argv.includes('--confirm')
@@ -92,7 +92,8 @@ async function fixturePresent () {
 
 async function main () {
   const host = process.env.TINYBIRD_HOST
-  console.log(`[seed] write target — TINYBIRD_HOST=${host || '<unset>'}  SITE_ID=${FIXTURE_SITE_ID}  (--i-am-targeting-staging=${TARGETING_STAGING})`)
+  const workspaceId = decodeTinybirdWorkspaceId(process.env.TINYBIRD_APPEND_TOKEN)
+  console.log(`[seed] write target — workspace=${workspaceId || '<undecodable>'}  SITE_ID=${FIXTURE_SITE_ID}  (--i-am-targeting-staging=${TARGETING_STAGING})`)
 
   if (!CONFIRM) {
     console.log('DRY RUN (no --confirm) — nothing written. Would seed into ST_Staging:')
@@ -109,7 +110,7 @@ async function main () {
   }
 
   // GATE 1 (pure) + GATE 2 (live): confirm the write target is the staging workspace.
-  const gate = assertStagingSeedTarget({ host, siteId: FIXTURE_SITE_ID, targetingStaging: TARGETING_STAGING })
+  const gate = assertStagingSeedTarget({ appendToken: process.env.TINYBIRD_APPEND_TOKEN, siteId: FIXTURE_SITE_ID, targetingStaging: TARGETING_STAGING })
   if (!gate.ok) { console.error(gate.reason); process.exit(3) }
   const live = await assertStagingWorkspaceLive({ host, readToken: process.env.TINYBIRD_READ_TOKEN, siteId: FIXTURE_SITE_ID })
   if (!live.ok) { console.error(live.reason); process.exit(3) }
